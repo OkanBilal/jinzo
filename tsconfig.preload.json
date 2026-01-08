@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2020"],
+    "jsx": "preserve",
+    "outDir": ".vite/build",
+    "types": ["node"]
+  },
+  "include": [
+    "src/preload/**/*"
+  ]
+}

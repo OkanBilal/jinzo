@@ -1,0 +1,1390 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "1ba119f0-cda2-4e49-a4fd-1beb3db03d86",
+  "prevId": "f07b13b9-ff0f-4560-8570-e9929e8a1e13",
+  "tables": {
+    "accounts": {
+      "name": "accounts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'default'"
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "company": {
+          "name": "company",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "job_title": {
+          "name": "job_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "locale": {
+          "name": "locale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "website": {
+          "name": "website",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "avatar_url": {
+          "name": "avatar_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "bio": {
+          "name": "bio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "idx_accounts_email": {
+          "name": "idx_accounts_email",
+          "columns": [
+            "email"
+          ],
+          "isUnique": false
+        },
+        "idx_accounts_display_name": {
+          "name": "idx_accounts_display_name",
+          "columns": [
+            "display_name"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "app_states": {
+      "name": "app_states",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "is_connected": {
+          "name": "is_connected",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "connection_id": {
+          "name": "connection_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "icon_path": {
+          "name": "icon_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "highlighted": {
+          "name": "highlighted",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "enabled_features": {
+          "name": "enabled_features",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "config": {
+          "name": "config",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "idx_app_states_connected": {
+          "name": "idx_app_states_connected",
+          "columns": [
+            "is_connected"
+          ],
+          "isUnique": false
+        },
+        "idx_app_states_sort": {
+          "name": "idx_app_states_sort",
+          "columns": [
+            "sort_order"
+          ],
+          "isUnique": false
+        },
+        "idx_app_states_updated_at": {
+          "name": "idx_app_states_updated_at",
+          "columns": [
+            "updated_at"
+          ],
+          "isUnique": false
+        },
+        "idx_app_states_created_at": {
+          "name": "idx_app_states_created_at",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "app_states_connection_id_connections_id_fk": {
+          "name": "app_states_connection_id_connections_id_fk",
+          "tableFrom": "app_states",
+          "tableTo": "connections",
+          "columnsFrom": [
+            "connection_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "check_enabled_features_json": {
+          "name": "check_enabled_features_json",
+          "value": "json_valid(\"app_states\".\"enabled_features\") OR \"app_states\".\"enabled_features\" IS NULL"
+        },
+        "check_config_json": {
+          "name": "check_config_json",
+          "value": "json_valid(\"app_states\".\"config\") OR \"app_states\".\"config\" IS NULL"
+        }
+      }
+    },
+    "ChatMessage": {
+      "name": "ChatMessage",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "sessionId": {
+          "name": "sessionId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "idx_chat_messages_session": {
+          "name": "idx_chat_messages_session",
+          "columns": [
+            "sessionId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "ChatMessage_sessionId_ChatSession_id_fk": {
+          "name": "ChatMessage_sessionId_ChatSession_id_fk",
+          "tableFrom": "ChatMessage",
+          "tableTo": "ChatSession",
+          "columnsFrom": [
+            "sessionId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ChatSession": {
+      "name": "ChatSession",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "initialQuery": {
+          "name": "initialQuery",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "idx_chat_sessions_updated_at": {
+          "name": "idx_chat_sessions_updated_at",
+          "columns": [
+            "updatedAt"
+          ],
+          "isUnique": false
+        },
+        "idx_chat_sessions_created_at": {
+          "name": "idx_chat_sessions_created_at",
+          "columns": [
+            "createdAt"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "connection_resources": {
+      "name": "connection_resources",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "connection_id": {
+          "name": "connection_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "external_id": {
+          "name": "external_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "selected": {
+          "name": "selected",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_seen_at": {
+          "name": "last_seen_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_ingest_at": {
+          "name": "last_ingest_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "uniq_resources_conn_ext": {
+          "name": "uniq_resources_conn_ext",
+          "columns": [
+            "connection_id",
+            "external_id"
+          ],
+          "isUnique": true
+        },
+        "idx_resources_kind": {
+          "name": "idx_resources_kind",
+          "columns": [
+            "kind"
+          ],
+          "isUnique": false
+        },
+        "idx_resources_selected": {
+          "name": "idx_resources_selected",
+          "columns": [
+            "selected"
+          ],
+          "isUnique": false
+        },
+        "idx_resources_conn": {
+          "name": "idx_resources_conn",
+          "columns": [
+            "connection_id"
+          ],
+          "isUnique": false
+        },
+        "idx_resources_last_ingest": {
+          "name": "idx_resources_last_ingest",
+          "columns": [
+            "last_ingest_at"
+          ],
+          "isUnique": false
+        },
+        "idx_resources_last_seen": {
+          "name": "idx_resources_last_seen",
+          "columns": [
+            "last_seen_at"
+          ],
+          "isUnique": false
+        },
+        "idx_resources_last_seen_selected": {
+          "name": "idx_resources_last_seen_selected",
+          "columns": [
+            "last_seen_at",
+            "selected"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "connection_resources_connection_id_connections_id_fk": {
+          "name": "connection_resources_connection_id_connections_id_fk",
+          "tableFrom": "connection_resources",
+          "tableTo": "connections",
+          "columnsFrom": [
+            "connection_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "check_metadata_json": {
+          "name": "check_metadata_json",
+          "value": "json_valid(\"connection_resources\".\"metadata\") OR \"connection_resources\".\"metadata\" IS NULL"
+        }
+      }
+    },
+    "connection_sync_state": {
+      "name": "connection_sync_state",
+      "columns": {
+        "connection_id": {
+          "name": "connection_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cursor": {
+          "name": "cursor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_sync_at": {
+          "name": "last_sync_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_success_at": {
+          "name": "last_success_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_error_at": {
+          "name": "last_error_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "backoff_until": {
+          "name": "backoff_until",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "etag": {
+          "name": "etag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idx_sync_state_last_sync": {
+          "name": "idx_sync_state_last_sync",
+          "columns": [
+            "last_sync_at"
+          ],
+          "isUnique": false
+        },
+        "idx_sync_state_last_success": {
+          "name": "idx_sync_state_last_success",
+          "columns": [
+            "last_success_at"
+          ],
+          "isUnique": false
+        },
+        "idx_sync_state_backoff_until": {
+          "name": "idx_sync_state_backoff_until",
+          "columns": [
+            "backoff_until"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "connection_sync_state_connection_id_connections_id_fk": {
+          "name": "connection_sync_state_connection_id_connections_id_fk",
+          "tableFrom": "connection_sync_state",
+          "tableTo": "connections",
+          "columnsFrom": [
+            "connection_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "check_cursor_json": {
+          "name": "check_cursor_json",
+          "value": "json_valid(\"connection_sync_state\".\"cursor\") OR \"connection_sync_state\".\"cursor\" IS NULL"
+        }
+      }
+    },
+    "connection_tokens": {
+      "name": "connection_tokens",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "connection_id": {
+          "name": "connection_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "access_token_enc": {
+          "name": "access_token_enc",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "refresh_token_enc": {
+          "name": "refresh_token_enc",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "token_type": {
+          "name": "token_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "key_version": {
+          "name": "key_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "is_current": {
+          "name": "is_current",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "idx_ct_conn": {
+          "name": "idx_ct_conn",
+          "columns": [
+            "connection_id"
+          ],
+          "isUnique": false
+        },
+        "idx_ct_current": {
+          "name": "idx_ct_current",
+          "columns": [
+            "is_current"
+          ],
+          "isUnique": false
+        },
+        "idx_ct_expires": {
+          "name": "idx_ct_expires",
+          "columns": [
+            "expires_at"
+          ],
+          "isUnique": false
+        },
+        "idx_ct_created_at": {
+          "name": "idx_ct_created_at",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "idx_ct_token_hash": {
+          "name": "idx_ct_token_hash",
+          "columns": [
+            "token_hash"
+          ],
+          "isUnique": false
+        },
+        "idx_ct_expires_current": {
+          "name": "idx_ct_expires_current",
+          "columns": [
+            "expires_at",
+            "is_current"
+          ],
+          "isUnique": false
+        },
+        "uniq_ct_conn_current": {
+          "name": "uniq_ct_conn_current",
+          "columns": [
+            "connection_id"
+          ],
+          "isUnique": true,
+          "where": "\"connection_tokens\".\"is_current\" = 1"
+        }
+      },
+      "foreignKeys": {
+        "connection_tokens_connection_id_connections_id_fk": {
+          "name": "connection_tokens_connection_id_connections_id_fk",
+          "tableFrom": "connection_tokens",
+          "tableTo": "connections",
+          "columnsFrom": [
+            "connection_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "connections": {
+      "name": "connections",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'active'"
+        },
+        "scopes": {
+          "name": "scopes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "connected_at": {
+          "name": "connected_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "idx_connections_provider": {
+          "name": "idx_connections_provider",
+          "columns": [
+            "provider"
+          ],
+          "isUnique": false
+        },
+        "idx_connections_status": {
+          "name": "idx_connections_status",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "idx_connections_connected_at": {
+          "name": "idx_connections_connected_at",
+          "columns": [
+            "connected_at"
+          ],
+          "isUnique": false
+        },
+        "idx_connections_updated_at": {
+          "name": "idx_connections_updated_at",
+          "columns": [
+            "updated_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "check_metadata_json": {
+          "name": "check_metadata_json",
+          "value": "json_valid(\"connections\".\"metadata\") OR \"connections\".\"metadata\" IS NULL"
+        },
+        "check_scopes_json": {
+          "name": "check_scopes_json",
+          "value": "json_valid(\"connections\".\"scopes\") OR \"connections\".\"scopes\" IS NULL"
+        }
+      }
+    },
+    "FeedItemChunk": {
+      "name": "FeedItemChunk",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "feed_item_id": {
+          "name": "feed_item_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "chunk_index": {
+          "name": "chunk_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token_count": {
+          "name": "token_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "idx_feed_item_chunks_feed_item": {
+          "name": "idx_feed_item_chunks_feed_item",
+          "columns": [
+            "feed_item_id"
+          ],
+          "isUnique": false
+        },
+        "idx_feed_item_chunks_chunk_index": {
+          "name": "idx_feed_item_chunks_chunk_index",
+          "columns": [
+            "feed_item_id",
+            "chunk_index"
+          ],
+          "isUnique": false
+        },
+        "uniq_feed_item_chunks_item_idx": {
+          "name": "uniq_feed_item_chunks_item_idx",
+          "columns": [
+            "feed_item_id",
+            "chunk_index"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "FeedItemChunk_feed_item_id_FeedItem_id_fk": {
+          "name": "FeedItemChunk_feed_item_id_FeedItem_id_fk",
+          "tableFrom": "FeedItemChunk",
+          "tableTo": "FeedItem",
+          "columnsFrom": [
+            "feed_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "FeedItem": {
+      "name": "FeedItem",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "itemType": {
+          "name": "itemType",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "date": {
+          "name": "date",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "imageUrl": {
+          "name": "imageUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "embedding": {
+          "name": "embedding",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "connection_id": {
+          "name": "connection_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "FeedItem_url_unique": {
+          "name": "FeedItem_url_unique",
+          "columns": [
+            "url"
+          ],
+          "isUnique": true
+        },
+        "idx_feed_items_connection": {
+          "name": "idx_feed_items_connection",
+          "columns": [
+            "connection_id"
+          ],
+          "isUnique": false
+        },
+        "idx_feed_items_resource": {
+          "name": "idx_feed_items_resource",
+          "columns": [
+            "resource_id"
+          ],
+          "isUnique": false
+        },
+        "idx_feed_items_source": {
+          "name": "idx_feed_items_source",
+          "columns": [
+            "source"
+          ],
+          "isUnique": false
+        },
+        "idx_feed_items_url": {
+          "name": "idx_feed_items_url",
+          "columns": [
+            "url"
+          ],
+          "isUnique": false
+        },
+        "idx_feed_items_date": {
+          "name": "idx_feed_items_date",
+          "columns": [
+            "date"
+          ],
+          "isUnique": false
+        },
+        "idx_feed_items_created_at": {
+          "name": "idx_feed_items_created_at",
+          "columns": [
+            "createdAt"
+          ],
+          "isUnique": false
+        },
+        "idx_feed_items_source_date": {
+          "name": "idx_feed_items_source_date",
+          "columns": [
+            "source",
+            "date"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "FeedItem_connection_id_connections_id_fk": {
+          "name": "FeedItem_connection_id_connections_id_fk",
+          "tableFrom": "FeedItem",
+          "tableTo": "connections",
+          "columnsFrom": [
+            "connection_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "FeedItem_resource_id_connection_resources_id_fk": {
+          "name": "FeedItem_resource_id_connection_resources_id_fk",
+          "tableFrom": "FeedItem",
+          "tableTo": "connection_resources",
+          "columnsFrom": [
+            "resource_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "check_metadata_json": {
+          "name": "check_metadata_json",
+          "value": "json_valid(\"FeedItem\".\"metadata\") OR \"FeedItem\".\"metadata\" IS NULL"
+        }
+      }
+    },
+    "vec_chunk_map": {
+      "name": "vec_chunk_map",
+      "columns": {
+        "vec_rowid": {
+          "name": "vec_rowid",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "chunk_id": {
+          "name": "chunk_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "vec_chunk_map_chunk_id_unique": {
+          "name": "vec_chunk_map_chunk_id_unique",
+          "columns": [
+            "chunk_id"
+          ],
+          "isUnique": true
+        },
+        "idx_vec_chunk_map_chunk": {
+          "name": "idx_vec_chunk_map_chunk",
+          "columns": [
+            "chunk_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "vec_chunk_map_chunk_id_FeedItemChunk_id_fk": {
+          "name": "vec_chunk_map_chunk_id_FeedItemChunk_id_fk",
+          "tableFrom": "vec_chunk_map",
+          "tableTo": "FeedItemChunk",
+          "columnsFrom": [
+            "chunk_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "vec_chunks": {
+      "name": "vec_chunks",
+      "columns": {
+        "rowid": {
+          "name": "rowid",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "embedding": {
+          "name": "embedding",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "vec_feed_item_map": {
+      "name": "vec_feed_item_map",
+      "columns": {
+        "vec_rowid": {
+          "name": "vec_rowid",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "feed_item_id": {
+          "name": "feed_item_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "vec_feed_item_map_feed_item_id_unique": {
+          "name": "vec_feed_item_map_feed_item_id_unique",
+          "columns": [
+            "feed_item_id"
+          ],
+          "isUnique": true
+        },
+        "idx_vec_feed_item_map_feed_item": {
+          "name": "idx_vec_feed_item_map_feed_item",
+          "columns": [
+            "feed_item_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "vec_feed_item_map_vec_rowid_vec_feed_items_rowid_fk": {
+          "name": "vec_feed_item_map_vec_rowid_vec_feed_items_rowid_fk",
+          "tableFrom": "vec_feed_item_map",
+          "tableTo": "vec_feed_items",
+          "columnsFrom": [
+            "vec_rowid"
+          ],
+          "columnsTo": [
+            "rowid"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "vec_feed_item_map_feed_item_id_FeedItem_id_fk": {
+          "name": "vec_feed_item_map_feed_item_id_FeedItem_id_fk",
+          "tableFrom": "vec_feed_item_map",
+          "tableTo": "FeedItem",
+          "columnsFrom": [
+            "feed_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "vec_feed_items": {
+      "name": "vec_feed_items",
+      "columns": {
+        "rowid": {
+          "name": "rowid",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "embedding": {
+          "name": "embedding",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}
