@@ -1,0 +1,63 @@
+import { Close } from "../../../../../components/ui/icons"
+import Text, { Muted } from "../../../../../components/ui/text";
+interface ConnectionModalWrapperProps {
+  open: boolean;
+  onClose: () => void;
+  appName: string;
+  appIcon: string;
+  children: React.ReactNode;
+}
+
+export function ConnectionModalWrapper({
+  open,
+  onClose,
+  appName,
+  appIcon,
+  children,
+}: ConnectionModalWrapperProps) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative z-50 w-full max-w-2xl bg-primary-50 dark:bg-primary-950 border border-primary-200 dark:border-primary-900 rounded-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-2">
+            <img
+              src={appIcon}
+              alt={appName}
+              className="w-10 h-10"
+              width={256}
+              height={256}
+            />
+            <Text variant="h3">{appName}</Text>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 flex cursor-pointer items-center justify-center rounded-full text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
+          >
+            <Close className="w-4 h-4 " />
+          </button>
+        </div>
+        <div className="p-6 min-h-75">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+interface LoadingStateProps {
+  message?: string;
+}
+
+export function LoadingState({ message = "Loading..." }: LoadingStateProps) {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="text-center space-y-3">
+        <Muted className="shine-text">{message}</Muted>
+      </div>
+    </div>
+  );
+}

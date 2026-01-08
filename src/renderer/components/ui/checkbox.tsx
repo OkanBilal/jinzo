@@ -1,0 +1,70 @@
+"use client";
+
+import * as React from "react";
+
+export interface CheckboxProps {
+  checked?: boolean;
+  onChange?: (checked: boolean) => void;
+  disabled?: boolean;
+  className?: string;
+}
+
+export function Checkbox({
+  checked = false,
+  onChange,
+  disabled = false,
+  className = "",
+}: CheckboxProps) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!disabled && onChange) {
+      onChange(e.target.checked);
+    }
+  };
+
+  return (
+    <label
+      className={`inline-flex items-center justify-center ${
+        disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+      } ${className}`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={handleChange}
+        disabled={disabled}
+        className="hidden"
+      />
+      <div
+        className={`
+          w-5 h-5 rounded-md border transition-all duration-200 flex items-center justify-center
+          ${
+            checked
+              ? "bg-primary-500 dark:bg-primary-500 border-primary-600 dark:border-primary-500"
+              : "bg-white dark:bg-primary-900 border-primary-300 dark:border-primary-700"
+          }
+          ${
+            !disabled &&
+            "hover:border-primary-500 dark:hover:border-primary-400"
+          }
+        `}
+      >
+        {checked && (
+          <svg
+            className="w-3.5 h-3.5 text-white dark:text-primary-900"
+            viewBox="0 0 16 16"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M13.5 4.5L6 12L2.5 8.5"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+      </div>
+    </label>
+  );
+}

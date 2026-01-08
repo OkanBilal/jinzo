@@ -1,0 +1,107 @@
+import {
+  Body,
+  Muted,
+  ErrorText,
+  BodyMedium,
+  Caption,
+} from "../../../../../components/ui/text";
+import {
+  SecondaryButton,
+  WarningButton,
+  DangerButton,
+  LinkButton,
+} from "../../../../../components/ui/button";
+
+interface Resource {
+  id: string;
+  name: string;
+  [key: string]: any;
+}
+
+interface ManageResourcesStepProps {
+  resources: Resource[];
+  onAddNew: () => void;
+  onRemove: (resourceId: string) => void;
+  onRevoke: () => void;
+  loading: boolean;
+  error: string;
+  resourceLabel?: string;
+  resourceLabelPlural?: string;
+  addButtonLabel?: string;
+  revokeButtonLabel?: string;
+  renderResourceItem?: (resource: Resource) => React.ReactNode;
+}
+
+export function ManageResourcesStep({
+  resources,
+  onAddNew,
+  onRemove,
+  onRevoke,
+  loading,
+  error,
+  resourceLabel = "resource",
+  resourceLabelPlural = "resources",
+  addButtonLabel = "Add Resources",
+  revokeButtonLabel = "Revoke Access",
+  renderResourceItem,
+}: ManageResourcesStepProps) {
+  const count = resources.length;
+  const label = count === 1 ? resourceLabel : resourceLabelPlural;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <Muted>
+          {count} {label} connected
+        </Muted>
+        <SecondaryButton onClick={onAddNew} disabled={loading} size="sm" >
+          {addButtonLabel}
+        </SecondaryButton>
+      </div>
+
+      <div className="min-h-12 max-h-52 overflow-y-auto border border-primary-200 dark:border-primary-900 rounded-xl">
+        {count === 0 ? (
+          <div className="p-8 text-center text-primary-500 dark:text-primary-400">
+            <Body>No {resourceLabelPlural} connected yet.</Body>
+            <LinkButton onClick={onAddNew} disabled={loading} className="mt-3">
+              Add {resourceLabelPlural}
+            </LinkButton>
+          </div>
+        ) : (
+          resources.map((resource) => (
+            <div
+              key={resource.id}
+              className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-900 last:border-b-0"
+            >
+              {renderResourceItem ? (
+                renderResourceItem(resource)
+              ) : (
+                <div className="flex-1">
+                  <BodyMedium>{resource.name}</BodyMedium>
+                  {resource.source && (
+                    <Caption className="mt-0.5">{resource.source}</Caption>
+                  )}
+                </div>
+              )}
+              <WarningButton
+                onClick={() => onRemove(resource.id)}
+                disabled={loading}
+                size="xs"
+              >
+                Remove
+              </WarningButton>
+            </div>
+          ))
+        )}
+      </div>
+
+      {error && <ErrorText>{error}</ErrorText>}
+
+      <div className="flex justify-end">
+        <DangerButton onClick={onRevoke} disabled={loading}>
+          {revokeButtonLabel}
+        </DangerButton>
+      </div>
+    </div>
+  );
+}

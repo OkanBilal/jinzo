@@ -1,6 +1,15 @@
 import { app } from "electron";
 import { initializeDatabase, closeDatabase } from "./db/client";
 import { registerDatabaseHandlers, unregisterDatabaseHandlers } from "./ipc/databaseHandlers";
+import { registerAccountHandlers } from "./ipc/accountHandlers";
+import { registerAppsHandlers } from "./ipc/appsHandlers";
+import { registerChatHandlers } from "./ipc/chatHandlers";
+import { registerCronHandlers } from "./ipc/cronHandlers";
+import { registerFeedHandlers } from "./ipc/feedHandlers";
+import { registerMcpHandlers } from "./ipc/mcpHandlers";
+import { registerOllamaHandlers } from "./ipc/ollamaHandlers";
+import { registerConnectionCredentialsHandlers } from "./ipc/connectionCredentialsHandlers";
+import { registerConnectionsHandlers } from "./ipc/connectionsHandlers";
 import { createMainWindow } from "./windows/mainWindow";
 
 /**
@@ -19,6 +28,15 @@ async function initializeApp() {
 
     // Register IPC handlers
     registerDatabaseHandlers();
+    registerAccountHandlers();
+    registerAppsHandlers();
+    registerChatHandlers();
+    registerCronHandlers();
+    registerFeedHandlers();
+    registerMcpHandlers();
+    registerOllamaHandlers();
+    registerConnectionCredentialsHandlers();
+    registerConnectionsHandlers();
 
     // Create main window
     createMainWindow();

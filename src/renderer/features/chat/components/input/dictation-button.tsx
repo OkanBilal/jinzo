@@ -1,0 +1,29 @@
+import { Microphone } from "../../../../components/ui/icons";
+
+import { DictationButtonProps } from "./types";
+
+export default function DictationButton({
+  isRecording,
+  onToggle,
+}: DictationButtonProps) {
+  const buttonClass = `p-1.5 rounded-full transition-all duration-200 ${
+    isRecording
+      ? "bg-primary-300 dark:bg-primary-700/50 animate-pulse"
+      : "hover:bg-primary-200 dark:hover:bg-primary-800"
+  }`;
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={buttonClass}
+      aria-label={isRecording ? "Stop recording" : "Start voice input"}
+      title={isRecording ? "Stop recording" : "Voice input"}
+    >
+      <Microphone
+        className="dark:text-primary-400 text-primary-500"
+        isRecording={isRecording}
+      />
+    </button>
+  );
+}

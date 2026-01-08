@@ -23,7 +23,7 @@ export const apps = [
   {
     id: "apple-music",
     name: "Apple Music",
-    imageSrc: "/apps/apple-music-skeuomorphic.png",
+    imageSrc: "assets/apps/apple-music-skeuomorphic.png",
     imageAlt: "Apple Music",
   },
   // {
