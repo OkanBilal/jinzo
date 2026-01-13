@@ -7,7 +7,10 @@ import WelcomeHeader from "../features/home/components/welcome-header";
 import ChatInput from "../features/chat/components/input";
 import { AppState } from "../features/chat/components/input/types";
 import { useCreatePrompts } from "../features/home/hooks/use-create-prompts";
-import { useCreateChatSessionMutation, useGetAppsQuery } from "../lib/redux/api";
+import {
+  useCreateChatSessionMutation,
+  useGetAppsQuery,
+} from "../lib/redux/api";
 import { useAppSelector } from "../lib/redux/hooks";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -64,26 +67,18 @@ export default function HomePage() {
   // };
 
   return (
-    <div
-      className={`min-h-screen  w-full flex items-center justify-center px-4 pb-40 transition-all duration-300 ${
-        isLeaving ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
-      }`}
-    >
-      <div className="w-full flex flex-col items-center gap-6">
-        <div className="w-full max-w-200 flex flex-col items-center gap-6">
-          {/* <LottieHero /> */}
-          <WelcomeHeader />
-          <ChatInput
-            query={query}
-            apps={apps}
-            onQueryChange={setQuery}
-            onSubmit={handleSubmit}
-            loading={submitting}
-            selectedApp={selectedApp}
-            onSelectedAppChange={setSelectedApp}
-          />
-          {/* <PromptMarquee prompts={prompts} onSelect={handlePromptSelect} /> */}
-        </div>
+    <div className={`h-screen w-full flex items-end justify-center px-4 pb-12`}>
+      <div className="w-full max-w-200 mx-auto px-4">
+        <ChatInput
+          query={query}
+          apps={apps}
+          onQueryChange={setQuery}
+          onSubmit={handleSubmit}
+          loading={submitting}
+          selectedApp={selectedApp}
+          onSelectedAppChange={setSelectedApp}
+        />
+        {/* <PromptMarquee prompts={prompts} onSelect={handlePromptSelect} /> */}
       </div>
     </div>
   );

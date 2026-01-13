@@ -8,8 +8,6 @@ import {
   PromptItem,
 } from ".";
 
-const FEED_API_ENDPOINT = "/api/feed";
-
 const ITEM_TYPE_BUILDERS = {
   "podcast-episode": buildPodcastPromptsFromItems,
   issue: buildGitHubPromptsFromItems,
@@ -22,31 +20,19 @@ function normalizeItemTypes(itemType: string | string[]): string[] {
   return Array.isArray(itemType) ? itemType : [itemType];
 }
 
-function buildFeedQueryParams(
-  itemTypes: string[],
-  limit: number
-): URLSearchParams {
-  const params = new URLSearchParams();
-  itemTypes.forEach((type) => params.append("itemType", type));
-  params.set("limit", String(limit));
-  return params;
-}
-
 async function fetchFeedItems(
   itemTypes: string[],
   limit: number
 ): Promise<FeedRow[]> {
   try {
-    const params = buildFeedQueryParams(itemTypes, limit);
-    const url = `${FEED_API_ENDPOINT}?${params.toString()}`;
-
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) {
-      console.error("Feed API error:", res.status);
+    const response = await window.api.feed.getItems({ itemTypes, limit });
+    
+    if (!response.success) {
+      console.error("Feed API error:", response.error);
       return [];
     }
 
-    return await res.json();
+    return response.data || [];
   } catch (error) {
     console.error("Error fetching feed items:", error);
     return [];

@@ -114,7 +114,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         handler: 'connections:getByProvider',
         args: [provider],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, connection: response.data } : { success: false, connection: null as any },
+      transformResponse: (response: any) => response.success ? { success: true, connection: response.data.connection } : { success: false, connection: null as any },
       providesTags: ['Apps'],
     }),
 
@@ -132,7 +132,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         handler: 'connections:getGithubRepos',
         args: [connectionId],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, repos: response.data } : { success: false, repos: [] },
+      transformResponse: (response: any) => response.success ? { success: true, repos: response.data.repos } : { success: false, repos: [] },
     }),
 
     getRaindropCollections: builder.query<{ success: boolean; collections: RaindropCollection[] }, string>({
@@ -140,33 +140,33 @@ export const connectionsApi = baseApi.injectEndpoints({
         handler: 'connections:getRaindropCollections',
         args: [connectionId],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, collections: response.data } : { success: false, collections: [] },
+      transformResponse: (response: any) => response.success ? { success: true, collections: response.data.collections } : { success: false, collections: [] },
     }),
 
     getSelectedRepos: builder.query<{ success: boolean; repos: SelectedRepo[]; connectionId: string }, string>({
       query: (provider) => ({
-        handler: 'connections:getResources',
+        handler: 'connections:getSelectedResources',
         args: [provider],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, repos: response.data.resources, connectionId: response.data.connectionId } : { success: false, repos: [], connectionId: '' },
+      transformResponse: (response: any) => response.success ? { success: true, repos: response.data.repos, connectionId: response.data.connectionId } : { success: false, repos: [], connectionId: '' },
       providesTags: ['Apps'],
     }),
 
     getSelectedCollections: builder.query<{ success: boolean; collections: SelectedCollection[]; connectionId: string }, string>({
       query: (provider) => ({
-        handler: 'connections:getResources',
+        handler: 'connections:getSelectedResources',
         args: [provider],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, collections: response.data.resources, connectionId: response.data.connectionId } : { success: false, collections: [], connectionId: '' },
+      transformResponse: (response: any) => response.success ? { success: true, collections: response.data.collections, connectionId: response.data.connectionId } : { success: false, collections: [], connectionId: '' },
       providesTags: ['Apps'],
     }),
 
     getSelectedPodcasts: builder.query<{ success: boolean; podcasts: SelectedPodcast[]; connectionId: string }, string>({
       query: (provider) => ({
-        handler: 'connections:getResources',
+        handler: 'connections:getSelectedResources',
         args: [provider],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, podcasts: response.data.resources, connectionId: response.data.connectionId } : { success: false, podcasts: [], connectionId: '' },
+      transformResponse: (response: any) => response.success ? { success: true, podcasts: response.data.podcasts, connectionId: response.data.connectionId } : { success: false, podcasts: [], connectionId: '' },
       providesTags: ['Apps'],
     }),
 

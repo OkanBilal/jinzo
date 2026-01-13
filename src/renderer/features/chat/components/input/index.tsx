@@ -206,7 +206,7 @@ export default function ChatInput({
           apps={apps}
           onSelectApp={handleAppSelect}
           dropdownRef={appMentionDropdownRef}
-          openUpward={isChatPage}
+          openUpward={true}
           searchTerm={appSearchTerm}
         />
       </div>
@@ -219,7 +219,7 @@ export default function ChatInput({
               onImageUpload={handleImageUpload}
               onDocumentUpload={handleDocumentUpload}
               dropdownRef={dropdownRef}
-              openUpward={isChatPage}
+              openUpward={true}
               uploadedFiles={uploadedFiles}
               onRemoveFile={handleRemoveFile}
             />
@@ -236,7 +236,7 @@ export default function ChatInput({
               connectedApps={connectedApps}
               onOpenModal={openAppsModal}
               dropdownRef={appsDropdownRef}
-              openUpward={isChatPage}
+              openUpward={true}
               selectedApp={selectedApp}
               onClearSelectedApp={handleClearSelectedApp}
             />
@@ -257,7 +257,7 @@ export default function ChatInput({
               isOpen={isModelDropdownOpen}
               onToggle={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
               dropdownRef={modelDropdownRef}
-              openUpward={isChatPage}
+              openUpward={true}
             />
           </div>
           <div className="flex items-center space-x-2">

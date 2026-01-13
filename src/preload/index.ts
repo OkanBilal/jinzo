@@ -83,7 +83,8 @@ const api = {
       ipcRenderer.invoke("connections:toggleHackerNews", payload),
     saveResources: (payload: { provider: string; connectionId: string; resources?: any[]; sources?: string[] }) => 
       ipcRenderer.invoke("connections:saveResources", payload),
-    removeResource: (resourceId: string) => ipcRenderer.invoke("connections:removeResource", resourceId),
+    deleteResource: (resourceId: string) => ipcRenderer.invoke("connections:deleteResource", resourceId),
+    revoke: (provider: string) => ipcRenderer.invoke("connections:revoke", provider),
     getByProvider: (provider: string) => ipcRenderer.invoke("connections:getByProvider", provider),
     getSelectedResources: (provider: string) => ipcRenderer.invoke("connections:getSelectedResources", provider),
     getRssStatus: () => ipcRenderer.invoke("connections:getRssStatus"),

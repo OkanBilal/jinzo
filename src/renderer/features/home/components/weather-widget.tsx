@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Refresh } from "../../../components/ui/icons";
@@ -122,21 +120,14 @@ export default function WeatherWidget() {
     if (isExpanded && weatherData) {
       setLoadingInsight(true);
       try {
-        const response = await fetch("/api/ollama/weather-insight", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            temperature: weatherData.temperature,
-            weatherCode: weatherData.weathercode || 0,
-            windspeed: weatherData.windspeed,
-            location: coords,
-          }),
+        const response = await window.api.ollama.getWeatherInsight({
+          temperature: weatherData.temperature,
+          weatherCode: weatherData.weathercode || 0,
+          windspeed: weatherData.windspeed,
+          location: coords,
         });
 
-        const result = await response.json();
-        setAiInsight(result.insight || "Have a great day!");
+        setAiInsight(response.success ? (response.data?.insight || "Have a great day!") : "Have a great day!");
       } catch (error) {
         console.error("Failed to fetch AI insight:", error);
         setAiInsight("Unable to fetch insight at this time.");
@@ -153,21 +144,14 @@ export default function WeatherWidget() {
       setIsExpanded(true);
       setLoadingInsight(true);
       try {
-        const response = await fetch("/api/ollama/weather-insight", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            temperature: data.temperature,
-            weatherCode: data.weathercode || 0,
-            windspeed: data.windspeed,
-            location: coords,
-          }),
+        const response = await window.api.ollama.getWeatherInsight({
+          temperature: data.temperature,
+          weatherCode: data.weathercode || 0,
+          windspeed: data.windspeed,
+          location: coords,
         });
 
-        const result = await response.json();
-        setAiInsight(result.insight || "Have a great day!");
+        setAiInsight(response.success ? (response.data?.insight || "Have a great day!") : "Have a great day!");
       } catch (error) {
         console.error("Failed to fetch AI insight:", error);
         setAiInsight("Unable to fetch insight at this time.");

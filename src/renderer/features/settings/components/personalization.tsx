@@ -1,5 +1,3 @@
-"use client";
-
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { toast } from "sonner";
@@ -54,15 +52,13 @@ export default function PersonalizationSettings() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/account", {
-        cache: "no-store",
-      });
+      const response = await window.api.account.get();
 
-      if (!response.ok) {
-        throw new Error("Unable to load personalization details");
+      if (!response.success) {
+        throw new Error(response.error || "Unable to load personalization details");
       }
 
-      const data: PersonalizationResponse = await response.json();
+      const data = response.data as PersonalizationResponse;
       setForm({
         displayName: data.displayName ?? "",
         email: data.email ?? "",
@@ -103,19 +99,14 @@ export default function PersonalizationSettings() {
     setError(null);
 
     try {
-      const response = await fetch("/api/account", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+      const response = await window.api.account.update(form);
 
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        const message = body?.error || body?.errors?.body || "Could not save";
+      if (!response.success) {
+        const message = response.errors?.body || response.error || "Could not save";
         throw new Error(message);
       }
 
-      const updated: PersonalizationResponse = await response.json();
+      const updated = response.data as PersonalizationResponse;
       setForm({
         displayName: updated.displayName ?? "",
         email: updated.email ?? "",

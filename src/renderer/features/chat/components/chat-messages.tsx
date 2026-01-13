@@ -22,7 +22,7 @@ const ChatMessages = forwardRef<HTMLUListElement, ChatMessagesProps>(
         aria-label="Chat messages"
       >
         {messages.map((message) => (
-          <li key={message.id} className="max-w-4xl mx-auto">
+          <li key={message.id} className="max-w-200 mx-auto">
             <ChatMessageComponent message={message} />
           </li>
         ))}

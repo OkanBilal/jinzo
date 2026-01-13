@@ -23,7 +23,10 @@ export function registerConnectionCredentialsHandlers() {
       const db = getDb();
       const { provider, connectionId, ...credentials } = payload;
 
+      console.log("[saveCredentials] Received payload:", { provider, connectionId, hasCredentials: Object.keys(credentials).length > 0 });
+
       if (!provider || !connectionId) {
+        console.error("[saveCredentials] Missing required fields:", { provider, connectionId });
         return { success: false, error: "Provider and connectionId are required" };
       }
 

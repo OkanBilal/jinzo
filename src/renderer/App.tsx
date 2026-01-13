@@ -13,10 +13,9 @@ export default function App() {
     <ReduxProvider>
       <Router>
         <div className="flex h-screen dark:bg-primary-950 bg-primary-50 antialiased">
-          <Sidebar />
+          {/* <Sidebar /> */}
           <ConfigPanel />
           <Toaster richColors position="top-right" />
-          {/* Main Content */}
           <main className="flex-1 overflow-auto">
             <Routes>
               <Route path="/" element={<Home />} />

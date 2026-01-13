@@ -184,20 +184,19 @@ class DatabaseClient {
       return results;
     }
 
-    // Example: Load sqlite-vec extension for vector operations
-    // Uncomment when you have the extension available
-    /*
+    // Load sqlite-vec extension for vector operations
     try {
-      const vecExtPath = this.getExtensionPath("sqlite-vec");
-      if (vecExtPath && fs.existsSync(vecExtPath)) {
-        this.sqlite.loadExtension(vecExtPath);
-        results.push({
-          success: true,
-          extensionName: "sqlite-vec",
-          message: "Vector extension loaded successfully",
-        });
-      }
+      // Import sqlite-vec dynamically
+      const sqliteVec = require("sqlite-vec");
+      sqliteVec.load(this.sqlite);
+      results.push({
+        success: true,
+        extensionName: "sqlite-vec",
+        message: "Vector extension loaded successfully",
+      });
+      console.log("sqlite-vec extension loaded successfully");
     } catch (error) {
+      console.error("Failed to load sqlite-vec extension:", error);
       results.push({
         success: false,
         extensionName: "sqlite-vec",
@@ -205,7 +204,6 @@ class DatabaseClient {
         message: "Failed to load vector extension",
       });
     }
-    */
 
     return results;
   }

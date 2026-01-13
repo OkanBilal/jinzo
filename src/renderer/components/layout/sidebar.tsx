@@ -13,6 +13,7 @@ import {
   useGetAppsQuery,
   useGetChatSessionsQuery,
   useDeleteChatSessionMutation,
+  useRunFeedSyncMutation,
   ChatSession,
 } from "../../lib/redux/api";
 import { useIsActive } from "../../lib/navigation";
@@ -57,6 +58,7 @@ export default function Sidebar() {
     useGetChatSessionsQuery();
   const [deleteChatSession, { isLoading: isDeleting }] =
     useDeleteChatSessionMutation();
+  const [runFeedSync, { isLoading: isSyncing }] = useRunFeedSyncMutation();
 
   const connectedApps = useMemo(() => {
     return apps.filter((app) => app.isConnected).map((app) => app.id);
@@ -104,6 +106,18 @@ export default function Sidebar() {
 
   const handleCancelDelete = () => {
     setSessionToDelete(null);
+  };
+
+  const handleSyncFeed = async () => {
+    try {
+      toast.loading("Syncing feeds...", { id: "feed-sync" });
+      const result = await runFeedSync().unwrap();
+      toast.success("Feeds synced successfully!", { id: "feed-sync" });
+      console.log("Feed sync result:", result);
+    } catch (error) {
+      console.error("Failed to sync feeds:", error);
+      toast.error("Failed to sync feeds", { id: "feed-sync" });
+    }
   };
 
   return (
@@ -178,7 +192,28 @@ export default function Sidebar() {
           </div>
 
           {/* Settings at bottom */}
-          <div className="">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={handleSyncFeed}
+              disabled={isSyncing}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-primary-700 dark:text-primary-300 hover:text-primary-900 dark:hover:text-primary-50 hover:bg-primary-100 dark:hover:bg-primary-900/50 rounded-lg transition-colors disabled:opacity-50"
+              title="Sync all feeds"
+            >
+              <svg
+                className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              <span className="text-xs">Sync</span>
+            </button>
             {NAV_ITEMS.map((item) => {
               const isSettingsItem = item.label === SETTINGS_LABEL;
               if (isSettingsItem) {

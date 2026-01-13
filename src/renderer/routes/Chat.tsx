@@ -7,7 +7,7 @@ import {
   ChatMessages,
   LoadingIndicator,
 } from "../features/chat/components";
-import PromptInput from "../features/chat/components/input";
+import ChatInput from "../features/chat/components/input";
 import { AppState } from "../features/chat/components/input/types";
 import { useChat } from "../features/chat/hooks/use-chat";
 import { usePageMount } from "../features/chat/hooks/use-page-mount";
@@ -30,7 +30,7 @@ function ChatContent() {
   );
 
   const thinkingConfig = useThinkingConfig();
-  console.log("Thinking Config:", thinkingConfig);
+  //console.log("Thinking Config:", thinkingConfig);
 
   const sessionId = params.id ? Number(params.id) : null;
 
@@ -194,11 +194,9 @@ function ChatContent() {
 
   return (
     <div
-      className={`h-screen fade-in w-full flex flex-col transition-all duration-300 ${
-        mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-0"
-      }`}
+      className={`h-screen w-full flex flex-col`}
     >
-      <div className="shrink-0 px-4 pt-4 max-w-4xl mx-auto w-full">
+      <div className="shrink-0 px-4 pt-4 max-w-200 mx-auto w-full">
         <ChatHeader title={chatTitle} />
       </div>
       <div className="flex-1 overflow-hidden px-4 mx-auto w-full">
@@ -208,8 +206,8 @@ function ChatContent() {
           isLoading={isLoading}
         />
       </div>
-      <div className="shrink-0 px-4 pb-12 max-w-232.5 mx-auto w-full">
-        <PromptInput
+      <div className="shrink-0 px-4 pb-12 max-w-200 mx-auto w-full">
+        <ChatInput
           apps={apps}
           query={input}
           onQueryChange={setInput}

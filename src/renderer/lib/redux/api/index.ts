@@ -64,6 +64,7 @@ export {
   feedApi,
   useGetFeedItemsQuery,
   useGetCombinedFeedQuery,
+  useRunFeedSyncMutation,
 } from "./feedApi";
 export type { FeedSource, FeedQueryParams } from "./feedApi";
 

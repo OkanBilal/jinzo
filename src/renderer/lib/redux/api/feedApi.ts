@@ -41,6 +41,14 @@ export const feedApi = baseApi.injectEndpoints({
       transformResponse: (response: any) => response.success ? response.data : [],
       providesTags: ['Feed'],
     }),
+
+    runFeedSync: builder.mutation<{ success: boolean; data: any }, void>({
+      query: () => ({
+        handler: 'cron:runFeedSync',
+        args: [],
+      }),
+      invalidatesTags: ['Feed'],
+    }),
   }),
   overrideExisting: false,
 });
@@ -48,4 +56,5 @@ export const feedApi = baseApi.injectEndpoints({
 export const {
   useGetFeedItemsQuery,
   useGetCombinedFeedQuery,
+  useRunFeedSyncMutation,
 } = feedApi;

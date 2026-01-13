@@ -754,7 +754,10 @@ export function registerConnectionsHandlers() {
     try {
       const db = getDb();
       
+      console.log("[getByProvider] Fetching connection for provider:", provider);
+      
       if (!provider) {
+        console.error("[getByProvider] Provider is required");
         return { success: false, error: "Provider is required" };
       }
 
@@ -764,7 +767,10 @@ export function registerConnectionsHandlers() {
         .where(eq(connections.provider, provider))
         .get();
 
+      console.log("[getByProvider] Found connection:", connection ? { id: connection.id, provider: connection.provider, status: connection.status } : "NOT FOUND");
+
       if (!connection) {
+        console.error("[getByProvider] Connection not found for provider:", provider);
         return { success: false, error: `${provider} connection not found` };
       }
 
@@ -784,7 +790,7 @@ export function registerConnectionsHandlers() {
         },
       };
     } catch (error) {
-      console.error("Error fetching connection:", error);
+      console.error("[getByProvider] Error fetching connection:", error);
       return { success: false, error: "Failed to fetch connection" };
     }
   });
@@ -1093,6 +1099,97 @@ export function registerConnectionsHandlers() {
     } catch (error) {
       console.error("Error toggling RSS:", error);
       return { success: false, error: "Failed to toggle RSS" };
+    }
+  });
+
+  // Delete a resource
+  ipcMain.handle("connections:deleteResource", async (_, resourceId: string) => {
+    try {
+      const db = getDb();
+
+      if (!resourceId) {
+        return { success: false, error: "Resource ID is required" };
+      }
+
+      console.log("[deleteResource] Deleting resource:", resourceId);
+
+      // Delete the resource
+      await db
+        .delete(connectionResources)
+        .where(eq(connectionResources.id, resourceId))
+        .run();
+
+      console.log("[deleteResource] Resource deleted successfully");
+
+      return { success: true };
+    } catch (error) {
+      console.error("[deleteResource] Error:", error);
+      return { success: false, error: "Failed to delete resource" };
+    }
+  });
+
+  // Revoke a connection
+  ipcMain.handle("connections:revoke", async (_, provider: string) => {
+    try {
+      const db = getDb();
+
+      if (!provider) {
+        return { success: false, error: "Provider is required" };
+      }
+
+      console.log("[revokeConnection] Revoking connection for provider:", provider);
+
+      // Get the connection
+      const connection = await db
+        .select()
+        .from(connections)
+        .where(eq(connections.provider, provider))
+        .get();
+
+      if (!connection) {
+        return { success: false, error: `${provider} connection not found` };
+      }
+
+      // Update connection status to revoked
+      await db
+        .update(connections)
+        .set({
+          status: "revoked",
+          updatedAt: new Date(),
+        })
+        .where(eq(connections.id, connection.id))
+        .run();
+
+      // Mark all tokens as not current
+      await db
+        .update(connectionTokens)
+        .set({ isCurrent: false })
+        .where(eq(connectionTokens.connectionId, connection.id))
+        .run();
+
+      // Delete all resources
+      await db
+        .delete(connectionResources)
+        .where(eq(connectionResources.connectionId, connection.id))
+        .run();
+
+      // Update app state
+      await db
+        .update(appStates)
+        .set({
+          isConnected: false,
+          connectionId: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(appStates.id, provider))
+        .run();
+
+      console.log("[revokeConnection] Connection revoked successfully");
+
+      return { success: true };
+    } catch (error) {
+      console.error("[revokeConnection] Error:", error);
+      return { success: false, error: "Failed to revoke connection" };
     }
   });
 }

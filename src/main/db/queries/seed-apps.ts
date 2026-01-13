@@ -15,7 +15,6 @@ export async function seedApps(): Promise<void> {
       isConnected: false,
       connectionId: null,
       displayName: app.name,
-      iconType: "image" as const,
       iconPath: app.imageSrc,
       highlighted: app.highlighted || false,
       sortOrder: apps.indexOf(app),

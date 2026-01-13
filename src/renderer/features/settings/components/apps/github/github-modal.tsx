@@ -78,9 +78,33 @@ export default function GitHubModal({
         setCurrentRepos(result.repos);
         setConnectionId(result.connectionId);
         setStep("manage");
+      } else {
+        // If no repos found but connection exists, go to manage step with empty list
+        setCurrentRepos([]);
+        const connResult = await getConnection("github").unwrap();
+        if (connResult.success) {
+          setConnectionId(connResult.connection.id);
+          setStep("manage");
+        } else {
+          setStep("setToken");
+        }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load repos");
+      console.error("[loadCurrentRepos] Error:", err);
+      try {
+        const connResult = await getConnection("github").unwrap();
+        if (connResult.success) {
+          setCurrentRepos([]);
+          setConnectionId(connResult.connection.id);
+          setStep("manage");
+        } else {
+          setStep("setToken");
+        }
+      } catch (connErr) {
+        console.error("[loadCurrentRepos] Connection check error:", connErr);
+        setError(err instanceof Error ? err.message : "Failed to load repos");
+        setStep("setToken");
+      }
     }
   };
 
@@ -129,21 +153,22 @@ export default function GitHubModal({
     setIsProcessing(true);
 
     try {
-      const startTime = Date.now();
+      const startTime = Date.now();      
       const connectionResult = await getConnection("github").unwrap();
 
       if (!connectionResult.success) {
+        console.error("[GitHub] Failed to get connection:", connectionResult);
         throw new Error("Failed to get connection");
       }
 
       const connId = connectionResult.connection.id;
       setConnectionId(connId);
 
-      await saveCredentials({
+      const credResult = await saveCredentials({
         provider: "github",
         connectionId: connId,
         token,
-      }).unwrap();
+      }).unwrap();      
       setIsFirstConnection(true);
 
       onSuccess?.();
@@ -151,8 +176,10 @@ export default function GitHubModal({
       const reposResult = await getGitHubRepos(connId).unwrap();
 
       if (!reposResult.success) {
+        console.error("[GitHub] Failed to fetch repos:", reposResult);
         throw new Error("Failed to fetch repositories");
       }
+
 
       const elapsed = Date.now() - startTime;
       const minLoadingTime = 800;
@@ -163,7 +190,9 @@ export default function GitHubModal({
       setRepos(reposResult.repos);
       setStep("add");
     } catch (err: any) {
-      setError(err?.data?.error || err.message || "An error occurred");
+      console.error("[GitHub] Error in credential submit:", err);
+      const errorMessage = err?.data?.error || err?.message || "An error occurred";
+      setError(errorMessage);
     } finally {
       setIsProcessing(false);
     }
