@@ -10,6 +10,7 @@ import { registerMcpHandlers } from "./ipc/mcpHandlers";
 import { registerOllamaHandlers } from "./ipc/ollamaHandlers";
 import { registerConnectionCredentialsHandlers } from "./ipc/connectionCredentialsHandlers";
 import { registerConnectionsHandlers } from "./ipc/connectionsHandlers";
+import { registerSeedHandlers } from "./ipc/seedHandlers";
 import { createMainWindow } from "./windows/mainWindow";
 
 /**
@@ -37,6 +38,7 @@ async function initializeApp() {
     registerOllamaHandlers();
     registerConnectionCredentialsHandlers();
     registerConnectionsHandlers();
+    registerSeedHandlers();
 
     // Create main window
     createMainWindow();

@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { executeFeedTool } from "./tools/feed-tools";
+import { executeCronTool } from "./tools/cron-tools";
 
 let serverInstance: McpServer | null = null;
 
@@ -24,7 +25,7 @@ export function createFeedMCPServer(): McpServer {
 
   server.tool(
     "feed_list",
-    "List feed items with optional filtering",
+    "View existing feed items in the database with optional filtering. Does NOT fetch new items - use trigger_feed_sync for that",
     {
       limit: z
         .number()
@@ -84,7 +85,7 @@ export function createFeedMCPServer(): McpServer {
 
   server.tool(
     "feed_search",
-    "Search feed items by keyword",
+    "Search existing stored feed items by keyword. Use trigger_feed_sync first to get latest data",
     {
       query: z
         .string()
@@ -117,6 +118,37 @@ export function createFeedMCPServer(): McpServer {
     async (params) => {
       try {
         const result = await executeFeedTool("feed_search", params);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                error: error.message || "Tool execution failed",
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    "trigger_feed_sync",
+    "Sync/refresh/update feeds - fetches new items from external sources (GitHub, Hacker News, Raindrop, RSS)",
+    {},
+    async (params) => {
+      try {
+        const result = await executeCronTool("trigger_feed_sync", params);
         return {
           content: [
             {

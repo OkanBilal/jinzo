@@ -133,7 +133,7 @@ export const FEED_TOOLS: OllamaToolDefinition[] = [
     function: {
       name: "feed_list",
       description:
-        "List feed items with optional filtering by source, item type, and date range. Returns paginated results sorted by date (newest first).",
+        "View and browse existing feed items already stored in the database with optional filtering by source, item type, and date range. Returns paginated results sorted by date (newest first). NOTE: This does NOT fetch new items from external sources - use trigger_feed_sync to refresh/update the feed with new items.",
       parameters: {
         type: "object",
         properties: {
@@ -175,7 +175,7 @@ export const FEED_TOOLS: OllamaToolDefinition[] = [
     function: {
       name: "feed_search",
       description:
-        "Search feed items by keyword. Searches in title, description, and URL. Can be filtered by source, item type, and date range.",
+        "Search existing feed items already in the database by keyword. Searches in title, description, and URL. Can be filtered by source, item type, and date range. NOTE: This searches only stored items - use trigger_feed_sync first if you need the latest data.",
       parameters: {
         type: "object",
         properties: {

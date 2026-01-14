@@ -155,22 +155,25 @@ class DatabaseClient {
    * Resolve migrations folder for dev/prod
    */
   private getMigrationsFolder(): string | null {
-    // In dev, migrations are in src/main/db/migrations
-    // After build, they'll be in .vite/build/db/migrations
-    const devPath = path.join(__dirname, "migrations");
-    if (fs.existsSync(devPath)) return devPath;
+    // Try multiple paths in order
+    const possiblePaths = [
+      // Dev: adjacent to this file (if compiled in place)
+      path.join(__dirname, "migrations"),
+      // Vite build: .vite/build/db/migrations
+      path.join(__dirname, "db", "migrations"),
+      // Prod: resources/migrations
+      process.resourcesPath ? path.join(process.resourcesPath, "migrations") : null,
+    ].filter(Boolean) as string[];
 
-    // Try relative to current file location for build output
-    const buildPath = path.join(__dirname, "..", "db", "migrations");
-    if (fs.existsSync(buildPath)) return buildPath;
-
-    // Prod: migrations under resources/migrations during packaging
-    if (process.resourcesPath) {
-      const prodPath = path.join(process.resourcesPath, "migrations");
-      if (fs.existsSync(prodPath)) return prodPath;
+    for (const migrationPath of possiblePaths) {
+      if (fs.existsSync(migrationPath)) {
+        console.log(`Found migrations at: ${migrationPath}`);
+        return migrationPath;
+      }
     }
 
     console.warn("Migrations folder not found in any expected location");
+    console.warn("Checked paths:", possiblePaths);
     return null;
   }
 

@@ -20,7 +20,7 @@ export function createMainWindow(): BrowserWindow {
       nodeIntegration: false,
       sandbox: false,
     },
-    titleBarStyle: "hiddenInset",
+    titleBarStyle: "default",
     trafficLightPosition: { x: 16, y: 16 },
   });
 

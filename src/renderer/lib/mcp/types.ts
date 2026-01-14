@@ -43,6 +43,16 @@ export interface FeedSearchResult {
   query: string;
 }
 
+export interface CronSyncResult {
+  success: boolean;
+  itemsProcessed?: number;
+  itemsInserted?: number;
+  chunksCreated?: number;
+  embeddingsGenerated?: number;
+  duration?: number;
+  error?: string;
+}
+
 export interface OllamaToolCall {
   function: {
     name: string;

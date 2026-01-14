@@ -90,6 +90,12 @@ const api = {
     getRssStatus: () => ipcRenderer.invoke("connections:getRssStatus"),
     toggleRss: (enabled: boolean) => ipcRenderer.invoke("connections:toggleRss", enabled),
   },
+  // Seed operations
+  seed: {
+    apps: () => ipcRenderer.invoke("seed:apps"),
+    connections: () => ipcRenderer.invoke("seed:connections"),
+    all: () => ipcRenderer.invoke("seed:all"),
+  },
 };
 
 // Expose protected methods that allow the renderer process

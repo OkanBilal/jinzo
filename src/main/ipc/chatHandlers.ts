@@ -56,10 +56,6 @@ export function getChatConfig(): ChatConfig {
 // Helper Functions
 // ============================================================================
 
-type StreamEvent =
-  | { type: "chunk"; content: string }
-  | { type: "final"; payload: ChatResponse }
-  | { type: "error"; error: string };
 
 function buildJsonSchema(schema: StructuredOutputSchema): object {
   const properties: Record<string, any> = {};

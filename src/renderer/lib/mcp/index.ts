@@ -5,5 +5,8 @@ export {
   feedList,
   feedSearch,
   FEED_TOOLS,
-} from "./tools/feed-tools";
+  executeCronTool,
+  triggerFeedSync,
+  CRON_TOOLS,
+} from "./tools";
 export * from "./types";
