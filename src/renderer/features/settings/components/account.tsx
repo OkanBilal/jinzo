@@ -3,13 +3,13 @@ import type { FormEvent } from "react";
 import { toast } from "sonner";
 
 import { Button }  from "../../../components/ui/button";
-import Select from "../../../components/ui/select";
 import { Heading2, Muted } from "../../../components/ui/text";
 import {
   AccountFormValues,
   AccountResponse,
   FieldProps,
 } from "../../../features/settings/types/account";
+import Select from "@/components/ui/select";
 
 // TODO Refactor default form values into a constant for reuse
 
@@ -168,8 +168,6 @@ export default function AccountSettings() {
                     setForm((prev) => ({ ...prev, timezone: val }));
                     setIsDirty(true);
                   }}
-                  isOpen={isTimezoneDropdownOpen}
-                  onToggle={() => setIsTimezoneDropdownOpen(!isTimezoneDropdownOpen)}
                   placeholder="Select timezone"
                 />
               </Field>
@@ -181,8 +179,6 @@ export default function AccountSettings() {
                     setForm((prev) => ({ ...prev, locale: val }));
                     setIsDirty(true);
                   }}
-                  isOpen={isLocaleDropdownOpen}
-                  onToggle={() => setIsLocaleDropdownOpen(!isLocaleDropdownOpen)}
                   placeholder="Select language"
                 />
               </Field>

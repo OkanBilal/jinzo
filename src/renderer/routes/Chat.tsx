@@ -193,20 +193,18 @@ function ChatContent() {
   };
 
   return (
-    <div
-      className={`h-screen w-full flex flex-col`}
-    >
-      <div className="shrink-0 px-4 pt-4 max-w-200 mx-auto w-full">
+    <div className={`h-full w-full flex flex-col`}>
+      <div className="shrink-0  pt-6 max-w-200 mx-auto w-full">
         <ChatHeader title={chatTitle} />
       </div>
-      <div className="flex-1 overflow-hidden px-4 mx-auto w-full">
+      <div className="flex-1 overflow-hidden  mx-auto w-full max-w-200">
         <ChatMessages
           ref={messagesRef}
           messages={messages}
           isLoading={isLoading}
         />
       </div>
-      <div className="shrink-0 px-4 pb-12 max-w-200 mx-auto w-full">
+      <div className="shrink-0  pb-8 max-w-200 mx-auto w-full">
         <ChatInput
           apps={apps}
           query={input}

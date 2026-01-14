@@ -43,6 +43,6 @@ const ipcBaseQuery = (): BaseQueryFn<
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: ipcBaseQuery(),
-  tagTypes: ['Apps', 'Chat', 'ChatConfig', 'Feed', 'Models', 'Ollama', 'Connections'],
+  tagTypes: ['Apps', 'Chat', 'ChatConfig', 'Feed', 'Models', 'Ollama', 'Connections', 'Account'],
   endpoints: () => ({}),
 });

@@ -8,6 +8,13 @@ export {
 export type { AppState, UpdateAppConnectionPayload } from "./appsApi";
 
 export {
+  accountApi,
+  useGetAccountQuery,
+  useUpdateAccountMutation,
+} from "./accountApi";
+export type { Account, UpdateAccountPayload } from "./accountApi";
+
+export {
   connectionsApi,
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,

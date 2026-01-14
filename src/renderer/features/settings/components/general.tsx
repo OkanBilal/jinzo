@@ -3,13 +3,13 @@ import type { FormEvent } from "react";
 import { toast } from "sonner";
 import { useDarkMode } from "../../../hooks/useDarkMode";
 import { Button } from "../../../components/ui/button";
-import Select from "../../../components/ui/select";
 import { Heading2, Muted } from "../../../components/ui/text";
 import {
   AccountFormValues,
   AccountResponse,
   FieldProps,
 } from "../../../features/settings/types/account";
+import Select from "@/components/ui/select";
 
 export const EMPTY_FORM = {
   displayName: "",
@@ -182,8 +182,6 @@ export default function GeneralSettings() {
                       toggleDarkMode();
                       toast.success(`Theme changed to ${theme}`);
                     }}
-                    isOpen={isThemeDropdownOpen}
-                    onToggle={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}
                     placeholder="Select theme"
                   />
                 ) : (
@@ -210,8 +208,6 @@ export default function GeneralSettings() {
                     setForm((prev) => ({ ...prev, timezone: val }));
                     setIsDirty(true);
                   }}
-                  isOpen={isTimezoneDropdownOpen}
-                  onToggle={() => setIsTimezoneDropdownOpen(!isTimezoneDropdownOpen)}
                   placeholder="Select timezone"
                 />
               </Field>
@@ -223,8 +219,6 @@ export default function GeneralSettings() {
                     setForm((prev) => ({ ...prev, locale: val }));
                     setIsDirty(true);
                   }}
-                  isOpen={isLocaleDropdownOpen}
-                  onToggle={() => setIsLocaleDropdownOpen(!isLocaleDropdownOpen)}
                   placeholder="Select language"
                 />
               </Field>

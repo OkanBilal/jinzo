@@ -1,62 +1,68 @@
-import { useRef } from "react";
-import { Caption } from "./text";
-import DropdownWrapper from "./dropdown-wrapper";
-import { useClickOutside } from "../../features/chat/hooks/use-click-outside";
+import { ReactNode, useRef, useState } from "react";
+import { useClickOutside } from "@/features/chat/hooks/use-click-outside";
 
-interface SelectOption {
-  value: string;
+interface SelectOption<T extends string = string> {
+  value: T;
   label: string;
-  description?: string;
+  icon?: ReactNode;
 }
 
-interface SelectProps {
-  value: string;
-  options: SelectOption[];
-  onChange: (value: string) => void;
-  isOpen: boolean;
-  onToggle: () => void;
+interface SelectProps<T extends string = string> {
+  value: T;
+  options: SelectOption<T>[];
+  onChange: (value: T) => void;
   placeholder?: string;
-  showDescription?: boolean;
 }
 
-export default function Select({
+export default function Select<T extends string = string>({
   value,
   options,
   onChange,
-  isOpen,
-  onToggle,
-  placeholder = "Select option",
-  showDescription = false,
-}: SelectProps) {
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  placeholder = "Select an option",
+}: SelectProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  useClickOutside(dropdownRef, () => {
-    if (isOpen) onToggle();
+  useClickOutside(containerRef, () => {
+    if (isOpen) setIsOpen(false);
   });
 
   const selectedOption = options.find((opt) => opt.value === value);
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div ref={containerRef} className="relative">
+      {/* Trigger Button */}
       <button
-        ref={buttonRef}
         type="button"
-        onClick={onToggle}
-        className="w-full px-2.5 py-2 rounded-2xl bg-primary-50 dark:bg-primary-900 border border-primary-200 dark:border-primary-800/50 text-primary-800 dark:text-primary-200 text-sm focus:outline-none cursor-pointer flex items-center justify-between transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`
+          w-full px-3 py-2.5 
+          bg-primary-950/2 dark:bg-primary/4 
+          border border-primary-950/10 dark:border-primary/10
+          text-primary-800 dark:text-primary-200 
+          text-sm focus:outline-none cursor-pointer 
+          flex items-center justify-between 
+          transition-all
+          shadow-[inset_0_0.5px_0_rgba(0,0,0,0.03)] dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]
+          ${
+            isOpen
+              ? "rounded-t-xl shadow-lg"
+              : "rounded-xl hover:bg-primary-950/4 dark:hover:bg-primary/6"
+          }
+        `}
       >
-        <div className="flex flex-col items-start">
-          <span className={showDescription ? "font-medium" : ""}>
+        <div className="flex items-center gap-2">
+          {selectedOption?.icon}
+          <span
+            className={
+              selectedOption ? "" : "text-primary-500 dark:text-primary-400"
+            }
+          >
             {selectedOption?.label || placeholder}
           </span>
-          {showDescription && selectedOption?.description && (
-            <Caption className="text-xs text-primary-500 dark:text-primary-400">
-              {selectedOption.description}
-            </Caption>
-          )}
         </div>
         <svg
-          className={`w-4 h-4 transition-transform ${
+          className={`w-4 h-4 transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
           }`}
           fill="none"
@@ -72,44 +78,57 @@ export default function Select({
         </svg>
       </button>
 
-      <DropdownWrapper isOpen={isOpen} minWidth="w-full" usePortal={true} triggerRef={buttonRef} dropdownRef={dropdownRef}>
-        <div className="max-h-60 overflow-auto">
-          {options.map((option) => (
-            <button
-              type="button"
-              key={option.value}
-              onClick={() => {
-                if (option.value !== value) {
+      {/* Options List - Absolute positioned */}
+      {isOpen && (
+        <div
+          className="absolute top-full left-0 right-0 z-50 
+            bg-primary/98 dark:bg-primary-900/98
+            border border-t-0 border-primary-950/10 dark:border-primary/10 
+            rounded-b-xl shadow-lg overflow-hidden
+            animate-slideDown"
+        >
+          <div className="max-h-60 overflow-auto noscrollbar">
+            {options.map((option, index) => (
+              <button
+                type="button"
+                key={option.value}
+                onClick={() => {
                   onChange(option.value);
-                }
-                onToggle();
-              }}
-              className={`w-full cursor-pointer text-left transition-colors px-2.5 py-2 first:rounded-t-xl last:rounded-b-xl hover:bg-primary-100 dark:hover:bg-primary-600/20 text-sm ${
-                value === option.value
-                  ? "bg-primary-200 dark:bg-primary-800/50 text-primary-900 dark:text-primary-100 font-medium"
-                  : "hover:bg-primary-100 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-200"
-              }`}
-            >
-              <div
-                className={showDescription ? "font-medium text-sm" : "text-sm"}
-              >
-                {option.label}
-              </div>
-              {showDescription && option.description && (
-                <Caption
-                  className={`text-xs  ${
+                  setIsOpen(false);
+                }}
+                style={{
+                  animation: `slideIn 0.20s ease-out ${index * 0.025}s both`,
+                }}
+                className={`
+                  w-full cursor-pointer text-left 
+                  transition-colors px-3 py-2.5 
+                  text-sm flex items-center gap-2
+                  ${
                     value === option.value
-                      ? "text-primary-600 dark:text-primary-300"
-                      : "text-primary-500 dark:text-primary-400"
-                  }`}
-                >
-                  {option.description}
-                </Caption>
-              )}
-            </button>
-          ))}
+                      ? "bg-primary-950/5 dark:bg-primary/8 text-primary-900 dark:text-primary-100 font-medium"
+                      : "hover:bg-primary-950/3 dark:hover:bg-primary/5 text-primary-700 dark:text-primary-200"
+                  }
+                `}
+              >
+                {option.icon}
+                <span className="truncate">{option.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </DropdownWrapper>
+      )}
+      <style>{`
+                @keyframes slideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-5px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+            `}</style>
     </div>
   );
 }

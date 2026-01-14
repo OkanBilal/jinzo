@@ -58,7 +58,7 @@ export default function DropdownWrapper({
   const dropdown = (
     <div
       ref={dropdownRef}
-      className={`${usePortal ? "fixed" : "absolute"} ${!usePortal ? positionClass : ""} ${!usePortal ? verticalClass : ""} ${minWidth} ${originClass} z-100 bg-primary-50/20 dark:bg-primary-900/20 border border-primary-200/50 dark:border-primary-900 rounded-xl backdrop-blur-xl transition-all`}
+      className={`${usePortal ? "fixed" : "absolute"} ${!usePortal ? positionClass : ""} ${!usePortal ? verticalClass : ""} ${minWidth} ${originClass} z-100 bg-white/95 dark:bg-primary-900/95 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-xl shadow-lg transition-all`}
       style={
         usePortal && coords
           ? {

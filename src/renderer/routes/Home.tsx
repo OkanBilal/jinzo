@@ -67,8 +67,8 @@ export default function HomePage() {
   // };
 
   return (
-    <div className={`h-screen w-full flex items-end justify-center px-4 pb-12`}>
-      <div className="w-full max-w-200 mx-auto px-4">
+    <div className={`h-full w-full flex items-end justify-center px-8 pb-8`}>
+      <div className="w-full max-w-200 mx-auto">
         <ChatInput
           query={query}
           apps={apps}

@@ -32,7 +32,7 @@ export default function FileUploadDropdown({
         aria-label="Upload file"
         aria-expanded={isOpen}
       >
-        <Attach className="dark:text-primary-400 text-primary-500" />
+        <Attach className="dark:text-primary-400 rotate-135  text-primary-500" />
       </button>
       {uploadedFiles.map((uploadedFile, index) => (
         <div

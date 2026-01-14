@@ -21,7 +21,7 @@ export default function SendButton({ loading, onSubmit }: SendButtonProps) {
         </span>
       )}
       <ChevronUp
-        className={`w-6 h-6 text-primary-900 transition-opacity ${
+        className={`w-5 h-5 text-primary-900 transition-opacity ${
           loading ? "opacity-0" : "opacity-100"
         }`}
       />

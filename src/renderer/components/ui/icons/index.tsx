@@ -9,6 +9,7 @@ export { default as Bell } from "./bell";
 export { default as Calendar } from "./calendar";
 export { default as Chat } from "./chat";
 export { default as Check } from "./check";
+export { default as ChevronDown } from "./chevron-down";
 export { default as ChevronUp } from "./chevron-up";
 export { default as Clipboard } from "./clipboard";
 export { default as Close } from "./close";
