@@ -83,8 +83,58 @@ export {
 export type { OllamaModel, OllamaModelsResponse } from "./ollamaApi";
 
 export {
+  moodApi,
+  useGetMoodsQuery,
+  useGetMoodByIdQuery,
+  useLazyGetMoodByIdQuery,
+  useCreateMoodMutation,
+  useUpdateMoodMutation,
+  useDeleteMoodMutation,
+  useArchiveMoodMutation,
+} from "./moodApi";
+export type { Mood, CreateMoodPayload, UpdateMoodPayload } from "./moodApi";
+
+export {
+  appSettingsApi,
+  useGetAppSettingsQuery,
+  useLazyGetAppSettingsQuery,
+  useSetActiveMoodMutation,
+} from "./appSettingsApi";
+export type { AppSettings } from "./appSettingsApi";
+
+export {
+  mcpApi,
+  useListMcpToolsQuery,
+  useCallMcpToolMutation,
+} from "./mcpApi";
+export type { McpTool, McpToolsResponse, CallToolPayload, CallToolResponse } from "./mcpApi";
+
+export {
+  cronApi,
+  useRunFeedSyncMutation as useCronRunFeedSyncMutation,
+} from "./cronApi";
+export type { CronSyncStats, CronSyncResult } from "./cronApi";
+
+export {
   setSelectedModel,
   setThinkingLevel,
+  setThinkingEnabled,
+  setToolMode,
   setModelCapabilities,
+  setStructuredOutputEnabled,
+  setStructuredOutputSchema,
 } from "../slices/chatSlice";
 export type { ChatState, ModelCapabilities } from "../slices/chatSlice";
+
+export {
+  setActiveMoodId,
+  setSelectedMoodForEdit,
+} from "../slices/moodSlice";
+export type { MoodState } from "../slices/moodSlice";
+
+export {
+  setDarkMode,
+  setSidebarCollapsed,
+  setFontSize,
+} from "../slices/appSettingsSlice";
+export type { AppSettingsState } from "../slices/appSettingsSlice";

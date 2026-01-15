@@ -1,11 +1,297 @@
+/* ==========================================================================
+   IMPORTS
+   ========================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Nabla&display=swap");
 @import "tailwindcss";
 
-body {
-  margin: 0;
-  padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+/* ==========================================================================
+   CSS VARIABLES & THEME
+   ========================================================================== */
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
 }
 
-* {
-  box-sizing: border-box;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --font-sans: var(--font-inter);
+
+  --color-primary: #ffffff;
+  --color-primary-50: #f8f4ee;
+  --color-primary-100: #fcfbf2;
+  --color-primary-150: #dad8ce;
+  --color-primary-200: #cecdc3;
+  --color-primary-300: #b7b5ac;
+  --color-primary-400: #a09d95;
+  --color-primary-500: #878580;
+  --color-primary-600: #6f6e69;
+  --color-primary-700: #575653;
+  --color-primary-800: #403e3c;
+  --color-primary-850: #141313;
+  --color-primary-900: #242424;
+  --color-primary-950: #100f0f;
+}
+
+
+/* ==========================================================================
+   ANIMATIONS
+   ========================================================================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes marquee-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shine {
+  0% {
+    background-position: 200% 0%;
+  }
+  100% {
+    background-position: -200% 0%;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes blur-reveal {
+  from {
+    filter: blur(12px);
+    opacity: 0;
+  }
+  to {
+    filter: blur(0);
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   COMPONENT STYLES
+   ========================================================================== */
+
+/* Button Components
+   ========================================================================== */
+
+.metallic-button {
+  padding: 4px 4px;
+  border: none;
+  outline: none;
+  color: #100f0f;
+  background: linear-gradient(
+    45deg,
+    #878580 5%,
+    #f8f4ee 10%,
+    #cecdc3 30%,
+    #dad8ce 50%,
+    #cecdc3 70%,
+    #f8f4ee 80%,
+    #878580 95%
+  );
+  text-shadow: 1px 1px 2px rgba(248, 244, 238, 0.5);
+  border-radius: 999px;
+  box-shadow: 0 2px 5px rgba(16, 15, 15, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.metallic-button:hover {
+  transform: translateY(-2px);
+}
+
+.metallic-button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(16, 15, 15, 0.3);
+}
+
+/* Text Components
+   ========================================================================== */
+
+
+.shine-text {
+  color: transparent;
+  background-clip: text !important;
+  animation: shine 1.5s linear infinite;
+}
+
+.dark .shine-text {
+  background:
+    radial-gradient(circle at center, rgb(24 24 27 / 85%), transparent) -200%
+      50% / 200% 100% no-repeat,
+    #b7b5ac;
+}
+
+.light .shine-text {
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.55), #f000) -200%
+      50% / 200% 100% no-repeat,
+    #000;
+}
+
+/* Input Components
+   ========================================================================== */
+
+input[type="range"].slider {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-primary-700);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+input[type="range"].slider::-webkit-slider-thumb:hover {
+  background: var(--color-primary-800);
+}
+
+input[type="range"].slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-primary-700);
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s ease;
+}
+
+input[type="range"].slider::-moz-range-thumb:hover {
+  background: var(--color-primary-800);
+}
+
+@media (prefers-color-scheme: dark) {
+  input[type="range"].slider::-webkit-slider-thumb {
+    background: var(--color-primary-200);
+  }
+
+  input[type="range"].slider::-webkit-slider-thumb:hover {
+    background: var(--color-primary-100);
+  }
+
+  input[type="range"].slider::-moz-range-thumb {
+    background: var(--color-primary-200);
+  }
+
+  input[type="range"].slider::-moz-range-thumb:hover {
+    background: var(--color-primary-100);
+  }
+}
+
+/* Marquee Components
+   ========================================================================== */
+
+.marquee-container {
+  overflow: hidden;
+  position: relative;
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-left 30s linear infinite;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+.marquee-fade {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 10%,
+    black 90%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 10%,
+    black 90%,
+    transparent
+  );
+}
+
+/* ==========================================================================
+   UTILITY CLASSES
+   ========================================================================== */
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+.fade-in {
+  animation: fade 2s ease normal backwards;
+}
+
+.noscrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.noscrollbar::-webkit-scrollbar {
+  display: none;
 }

@@ -23,8 +23,8 @@ import {
 } from "@/lib/redux/slices/chatSlice";
 import { useThinkingConfig } from "@/features/chat/hooks/use-thinking-config";
 import { useModelCapabilities } from "@/features/chat/hooks/use-model-capabilities";
-import { StructuredOutputModal } from "@/components/layout/structured-output-modal";
-import { getModelIcon } from "@/utils/model-icons";
+import { StructuredOutputModal } from "@/components/layout/config-panel/structured-output-modal";
+import { getModelIcon } from "@/lib/model-icons";
 
 const FADE_IN_DELAY = 50;
 
@@ -242,7 +242,7 @@ function PanelContent() {
         </ConfigSection>
 
         <ConfigSection title="Advanced">
-          <Body className="text-primary-500 dark:text-primary-400 text-sm">
+          <Body className="text-primary-500 dark:text-primary-400 text-sm mb-12">
             Advanced configuration options will appear here.
           </Body>
         </ConfigSection>

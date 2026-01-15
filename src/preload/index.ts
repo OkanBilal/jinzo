@@ -96,6 +96,20 @@ const api = {
     connections: () => ipcRenderer.invoke("seed:connections"),
     all: () => ipcRenderer.invoke("seed:all"),
   },
+  // Mood operations
+  mood: {
+    getAll: () => ipcRenderer.invoke("mood:getAll"),
+    getById: (moodId: string) => ipcRenderer.invoke("mood:getById", moodId),
+    create: (payload: unknown) => ipcRenderer.invoke("mood:create", payload),
+    update: (moodId: string, payload: unknown) => ipcRenderer.invoke("mood:update", moodId, payload),
+    delete: (moodId: string) => ipcRenderer.invoke("mood:delete", moodId),
+    archive: (moodId: string) => ipcRenderer.invoke("mood:archive", moodId),
+  },
+  // App settings operations
+  appSettings: {
+    get: () => ipcRenderer.invoke("appSettings:get"),
+    setActiveMood: (moodId: string | null) => ipcRenderer.invoke("appSettings:setActiveMood", moodId),
+  },
 };
 
 // Expose protected methods that allow the renderer process

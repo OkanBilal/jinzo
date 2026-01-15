@@ -23,7 +23,6 @@ export default function HomePage() {
   const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
-  const [isLeaving, setIsLeaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = useCallback(
@@ -43,8 +42,7 @@ export default function HomePage() {
           toast.error("Failed to create chat session");
           return;
         }
-        setIsLeaving(true);
-        setTimeout(() => navigate(`/chat/${sessionId}`), 20);
+        navigate(`/chat/${sessionId}`);
       } catch {
         toast.error("Couldn't create chat session. Please try again.");
       } finally {

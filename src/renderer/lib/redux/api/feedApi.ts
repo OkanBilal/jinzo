@@ -12,7 +12,8 @@ export type FeedSource =
   | 'aworkinglibrary';
 
 export interface FeedQueryParams {
-  source: FeedSource;
+  sources?: string[];
+  itemTypes?: string[];
   limit?: number;
   page?: number;
 }
@@ -20,16 +21,17 @@ export interface FeedQueryParams {
 export const feedApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getFeedItems: builder.query<FeedItem[], FeedQueryParams>({
-      query: ({ source, limit = 10, page = 1 }) => ({
+      query: ({ sources, itemTypes, limit = 10 }) => ({
         handler: 'feed:getItems',
         args: [{
-          sources: source ? [source] : undefined,
+          sources,
+          itemTypes,
           limit,
         }],
       }),
       transformResponse: (response: any) => response.success ? response.data : [],
-      providesTags: (_result, _error, { source }) => [
-        { type: 'Feed', id: source },
+      providesTags: (_result, _error, { sources, itemTypes }) => [
+        { type: 'Feed', id: `${sources?.join(',') || 'all'}-${itemTypes?.join(',') || 'all'}` },
       ],
     }),
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useMemo, useRef } from "react";
+import { Suspense, useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ChatHeader,
@@ -10,7 +10,6 @@ import {
 import ChatInput from "../features/chat/components/input";
 import { AppState } from "../features/chat/components/input/types";
 import { useChat } from "../features/chat/hooks/use-chat";
-import { usePageMount } from "../features/chat/hooks/use-page-mount";
 import { useThinkingConfig } from "../features/chat/hooks/use-thinking-config";
 import { useGetAppsQuery, useGetChatMessagesQuery } from "../lib/redux/api";
 import { useAppSelector } from "../lib/redux/hooks";
@@ -30,14 +29,9 @@ function ChatContent() {
   );
 
   const thinkingConfig = useThinkingConfig();
-  //console.log("Thinking Config:", thinkingConfig);
 
   const sessionId = params.id ? Number(params.id) : null;
 
-  const mounted = usePageMount();
-  const [chatTitleExplicit, setChatTitleExplicit] = useState<string | null>(
-    null
-  );
   const [selectedApp, setSelectedApp] = useState<AppState | null>(null);
 
   const { data: messagesData, isLoading: isLoadingMessages } =
@@ -61,16 +55,19 @@ function ChatContent() {
 
   const initialStreamTriggeredRef = useRef(false);
 
+  // Reset initial stream trigger when session changes
   useEffect(() => {
     initialStreamTriggeredRef.current = false;
   }, [sessionId]);
 
+  // Redirect if invalid session ID
   useEffect(() => {
     if (!sessionId || isNaN(sessionId)) {
       navigate("/", { replace: true });
     }
   }, [sessionId, navigate]);
 
+  // Sync messages from API to local state
   useEffect(() => {
     if (!sessionId || isNaN(sessionId) || !messagesData) {
       return;
@@ -86,30 +83,21 @@ function ChatContent() {
     replaceMessages(uiMessages);
   }, [sessionId, messagesData, replaceMessages]);
 
-  useEffect(() => {
-    if (chatTitleExplicit || !messagesData || messagesData.length === 0) {
-      return;
-    }
-
-    const firstUserMsg = messagesData.find((m) => m.role === "user");
-    if (firstUserMsg) {
-      setTimeout(() => setChatTitleExplicit(firstUserMsg.content), 0);
-    }
-  }, [chatTitleExplicit, messagesData]);
-
+  // Derive chat title from messages
   const chatTitle = useMemo(() => {
-    if (chatTitleExplicit) return chatTitleExplicit;
     if (messagesData && messagesData.length > 0) {
       const firstUserMsg = messagesData.find((m) => m.role === "user");
       return firstUserMsg ? firstUserMsg.content : "Chat";
     }
     return "Chat";
-  }, [chatTitleExplicit, messagesData]);
+  }, [messagesData]);
 
+  // Focus input on mount
   useEffect(() => {
     focusInput();
   }, [focusInput]);
 
+  // Trigger initial streaming response for new chats
   useEffect(() => {
     if (
       !sessionId ||
@@ -138,28 +126,26 @@ function ChatContent() {
 
     initialStreamTriggeredRef.current = true;
 
-    (async () => {
-      await sendTextStreaming(
-        lastUserMessage.content,
-        selectedModel,
-        sessionId,
-        {
-          skipUserMessage: true,
-          requestOptions: {
-            skipUserSave: true,
-            mode: toolMode,
-            thinkingEnabled: thinkingConfig.shouldShowThinkingToggle
-              ? thinkingEnabled
-              : undefined,
-            thinkingLevel: thinkingConfig.shouldShowThinkingLevel
-              ? thinkingLevel
-              : undefined,
-            structuredOutputEnabled,
-            structuredOutputSchema,
-          },
-        }
-      );
-    })();
+    sendTextStreaming(
+      lastUserMessage.content,
+      selectedModel,
+      sessionId,
+      {
+        skipUserMessage: true,
+        requestOptions: {
+          skipUserSave: true,
+          mode: toolMode,
+          thinkingEnabled: thinkingConfig.shouldShowThinkingToggle
+            ? thinkingEnabled
+            : undefined,
+          thinkingLevel: thinkingConfig.shouldShowThinkingLevel
+            ? thinkingLevel
+            : undefined,
+          structuredOutputEnabled,
+          structuredOutputSchema,
+        },
+      }
+    );
   }, [
     messagesData,
     selectedModel,
@@ -173,38 +159,47 @@ function ChatContent() {
     structuredOutputSchema,
   ]);
 
-  const handleSend = (): void => {
+  const handleSend = useCallback((): void => {
     if (!input.trim()) return;
-    (async () => {
-      await sendMessageStreaming(selectedModel, {
-        requestOptions: {
-          mode: toolMode,
-          thinkingEnabled: thinkingConfig.shouldShowThinkingToggle
-            ? thinkingEnabled
-            : undefined,
-          thinkingLevel: thinkingConfig.shouldShowThinkingLevel
-            ? thinkingLevel
-            : undefined,
-          structuredOutputEnabled,
-          structuredOutputSchema,
-        },
-      });
-    })();
-  };
+    
+    sendMessageStreaming(selectedModel, {
+      requestOptions: {
+        mode: toolMode,
+        thinkingEnabled: thinkingConfig.shouldShowThinkingToggle
+          ? thinkingEnabled
+          : undefined,
+        thinkingLevel: thinkingConfig.shouldShowThinkingLevel
+          ? thinkingLevel
+          : undefined,
+        structuredOutputEnabled,
+        structuredOutputSchema,
+      },
+    });
+  }, [
+    input,
+    selectedModel,
+    sendMessageStreaming,
+    toolMode,
+    thinkingConfig,
+    thinkingEnabled,
+    thinkingLevel,
+    structuredOutputEnabled,
+    structuredOutputSchema,
+  ]);
 
   return (
     <div className={`h-full w-full flex flex-col`}>
       <div className="shrink-0  pt-6 max-w-200 mx-auto w-full">
         <ChatHeader title={chatTitle} />
       </div>
-      <div className="flex-1 overflow-hidden  mx-auto w-full max-w-200">
+      <div className="flex-1 overflow-hidden  mx-auto w-full max-w-200 ">
         <ChatMessages
           ref={messagesRef}
           messages={messages}
           isLoading={isLoading}
         />
       </div>
-      <div className="shrink-0  pb-8 max-w-200 mx-auto w-full">
+      <div className="shrink-0 pb-8 max-w-200 mx-auto w-full">
         <ChatInput
           apps={apps}
           query={input}

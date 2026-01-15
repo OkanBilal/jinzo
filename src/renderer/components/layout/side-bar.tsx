@@ -1,68 +1,91 @@
 import { useState, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Settings } from "@/components/ui/icons";
+import { Settings, Plus } from "@/components/ui/icons";
 import {
   useGetChatSessionsQuery,
-  useDeleteChatSessionMutation,
   useGetAppsQuery,
   useGetAccountQuery,
-  ChatSession,
+  useSetActiveMoodMutation,
+  useGetFeedItemsQuery,
+  useCreateMoodMutation,
 } from "@/lib/redux/api";
 import { toast } from "sonner";
 import SettingsModal from "@/features/settings/components/settings-modal";
+import { MoodModal, type MoodFormData } from "./sidebar/mood-modal";
 import UserProfile from "./sidebar/user-profile";
 import SearchBar from "./sidebar/search-bar";
-import NewChatButton from "./sidebar/new-chat-button";
 import ChatSessionList from "./sidebar/chat-session-list";
 import DeleteConfirmationModal from "./sidebar/delete-confirmation-modal";
+import WritingPostsList from "./sidebar/writing-posts-list";
+import MoodSelector from "./sidebar/mood-selector";
+import NewButton from "./sidebar/new-button";
+import { useActiveMood } from "@/hooks/useActiveMood";
+import { useSidebarConfig } from "@/hooks/useSidebarConfig";
+import { useDeleteChatSession } from "@/hooks/useDeleteChatSession";
 
 export default function FrostedSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [sessionToDelete, setSessionToDelete] = useState<ChatSession | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isMoodModalOpen, setIsMoodModalOpen] = useState(false);
 
   const { data: sessions, isLoading } = useGetChatSessionsQuery();
   const { data: account } = useGetAccountQuery();
-  const [deleteChatSession, { isLoading: isDeleting }] = useDeleteChatSessionMutation();
+  const { activeMoodId, moods } = useActiveMood();
+  const sidebarConfig = useSidebarConfig();
+  const { data: feedItems = [], isLoading: isLoadingFeed } =
+    useGetFeedItemsQuery(
+      {
+        itemTypes: sidebarConfig.itemType === "post" ? ["post"] : [],
+        limit: 50,
+      },
+      {
+        skip: sidebarConfig.itemType !== "post",
+      }
+    );
   const { data: apps = [], refetch: refetchApps } = useGetAppsQuery();
-
   const connectedApps = useMemo(() => {
     return apps.filter((app) => app.isConnected).map((app) => app.id);
   }, [apps]);
 
-  const filteredSessions = useMemo(() => {
-    if (!sessions || !searchQuery.trim()) return sessions || [];
-    const query = searchQuery.toLowerCase().trim();
-    return sessions.filter((session) => {
-      const title = session.title || session.initialQuery || "";
-      return title.toLowerCase().includes(query);
+  const [setActiveMood] = useSetActiveMoodMutation();
+  const [createMood] = useCreateMoodMutation();
+
+  const {
+    sessionToDelete,
+    isDeleting,
+    handleDeleteClick,
+    handleConfirmDelete,
+    handleCancelDelete,
+  } = useDeleteChatSession();
+
+  const filterItems = <T extends Record<string, any>>(
+    items: T[] | undefined,
+    query: string
+  ): T[] => {
+    if (!items || !query.trim()) return items || [];
+    const lowerQuery = query.toLowerCase().trim();
+    return items.filter((item) => {
+      const title = (item.title || item.initialQuery || "").toString();
+      const description = (item.description || "").toString();
+      return (
+        title.toLowerCase().includes(lowerQuery) ||
+        description.toLowerCase().includes(lowerQuery)
+      );
     });
-  }, [sessions, searchQuery]);
-
-  const handleDeleteClick = (session: ChatSession, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setSessionToDelete(session);
   };
 
-  const handleConfirmDelete = async () => {
-    if (!sessionToDelete) return;
-    try {
-      await deleteChatSession(sessionToDelete.id).unwrap();
-      toast.success("Chat deleted");
-      setSessionToDelete(null);
-    } catch (error) {
-      console.error("Failed to delete chat:", error);
-      toast.error("Failed to delete chat");
-    }
-  };
+  const filteredSessions = useMemo(
+    () => filterItems(sessions, searchQuery),
+    [sessions, searchQuery]
+  );
 
-  const handleCancelDelete = () => {
-    setSessionToDelete(null);
-  };
+  const filteredFeedItems = useMemo(
+    () => filterItems(feedItems, searchQuery),
+    [feedItems, searchQuery]
+  );
 
   const handleRefreshApps = async () => {
     await refetchApps();
@@ -73,18 +96,40 @@ export default function FrostedSidebar() {
     setSearchQuery("");
   };
 
+  const handleCreateMood = async (moodData: MoodFormData) => {
+    try {
+      await createMood(moodData).unwrap();
+      toast.success("Mood created successfully");
+    } catch (error) {
+      console.error("Error creating mood:", error);
+      toast.error("Failed to create mood");
+      throw error;
+    }
+  };
+
+  const handleMoodChange = async (moodId: string) => {
+    try {
+      await setActiveMood(moodId || null).unwrap();
+    } catch (error) {
+      console.error("Error changing mood:", error);
+      toast.error("Failed to change mood");
+    }
+  };
+
   return (
     <>
       <aside
-        className="fixed top-0 bottom-0 left-0 w-72 z-30 bg-transparent"
+        className="fixed top-0 bottom-0 left-0 z-30 transition-all duration-300"
+        style={{ width: sidebarConfig.width }}
         role="complementary"
         aria-label="Chat sessions sidebar"
       >
         <div className="h-full overflow-hidden flex flex-col">
-          <div className="p-4 pt-12 shrink-0">
+          <div className="px-4 pt-12 shrink-0">
             <div
-              className={`flex items-center mb-4 transition-all duration-300 ${isSearchExpanded ? "gap-0" : "gap-3"
-                }`}
+              className={`flex items-center  transition-all duration-300 ${
+                isSearchExpanded ? "gap-0" : "gap-3"
+              }`}
             >
               <UserProfile
                 avatarUrl={account?.avatarUrl}
@@ -99,28 +144,73 @@ export default function FrostedSidebar() {
                 onClear={handleSearchClear}
               />
             </div>
-            <NewChatButton onClick={() => navigate("/")} />
           </div>
-
-          <div
-            className="flex-1 overflow-y-auto noscrollbar px-3"
-            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-          >
-            <ChatSessionList
-              sessions={filteredSessions}
-              isLoading={isLoading}
-              currentPath={location.pathname}
-              onDeleteSession={handleDeleteClick}
+          <div className="p-4">
+            <NewButton
+              onClick={() => navigate("/")}
+              title={sidebarConfig.title}
             />
           </div>
-
-          <div className="p-6" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              className="w-full flex items-center gap-3 cursor-pointer"
+          <div
+            className="flex-1 overflow-y-auto noscrollbar px-4"
+            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+          >
+            <div
+              key={sidebarConfig.itemType}
+              className="animate-fadeIn"
+              style={{
+                animation: "fadeIn 300ms ease-in-out",
+              }}
             >
-              <Settings className="w-5 h-5 text-primary-600 dark:text-primary-400 cursor-pointer" />
-            </button>
+              {sidebarConfig.itemType === "chat" && (
+                <ChatSessionList
+                  sessions={filteredSessions}
+                  isLoading={isLoading}
+                  currentPath={location.pathname}
+                  onDeleteSession={handleDeleteClick}
+                />
+              )}
+              {sidebarConfig.itemType === "post" && (
+                <WritingPostsList
+                  posts={filteredFeedItems}
+                  isLoading={isLoadingFeed}
+                />
+              )}
+            </div>
+          </div>
+          <div
+            className="px-4 py-4 space-y-3"
+            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <button
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="shrink-0 flex items-center justify-center transition-transform duration-300 cursor-pointer hover:rotate-90"
+                  aria-label="Settings"
+                  title="Settings"
+                >
+                  <Settings className="size-5 text-primary-600 dark:text-primary-400 hover:text-primary-400 dark:hover:text-primary-100 transition-colors duration-300" />
+                </button>
+              </div>
+              <div className="">
+                <MoodSelector
+                  moods={moods}
+                  activeMoodId={activeMoodId}
+                  onMoodChange={handleMoodChange}
+                />
+              </div>
+              <div>
+                <button
+                  onClick={() => setIsMoodModalOpen(true)}
+                  className=" cursor-pointer transition-transform duration-300  hover:rotate-90"
+                  aria-label="Create new mood"
+                  title="Create new mood"
+                >
+                  <Plus className="size-5 text-primary-600 dark:text-primary-400 hover:text-primary-400 dark:hover:text-primary-100 transition-colors duration-300" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </aside>
@@ -139,6 +229,13 @@ export default function FrostedSidebar() {
         isDeleting={isDeleting}
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
+      />
+
+      <MoodModal
+        isOpen={isMoodModalOpen}
+        onClose={() => setIsMoodModalOpen(false)}
+        onSave={handleCreateMood}
+        mode="create"
       />
     </>
   );

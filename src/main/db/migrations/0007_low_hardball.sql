@@ -1,0 +1,1 @@
+ALTER TABLE `moods` ADD `icon` text;

@@ -56,69 +56,6 @@ async function ensureConnectionExists(
   return connectionId;
 }
 
-/**
- * Uncomment this function if you need to reset all connections
- * 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function cleanExistingData() {
-  console.log("🧹 Cleaning existing connections data...");
-
-  try {
-    await db.delete(connectionSyncState);
-    await db.delete(connectionResources);
-    await db.delete(connections);
-
-    await db
-      .update(appStates)
-      .set({
-        isConnected: false,
-        connectionId: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(appStates.id, "github"));
-
-    await db
-      .update(appStates)
-      .set({
-        isConnected: false,
-        connectionId: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(appStates.id, "raindrop"));
-
-    await db
-      .update(appStates)
-      .set({
-        isConnected: false,
-        connectionId: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(appStates.id, "hackernews"));
-
-    await db
-      .update(appStates)
-      .set({
-        isConnected: false,
-        connectionId: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(appStates.id, "podcast"));
-
-    await db
-      .update(appStates)
-      .set({
-        isConnected: false,
-        connectionId: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(appStates.id, "apple-music"));
-
-    console.log("✅ Existing data cleaned");
-  } catch (error) {
-    console.error("⚠️  Error cleaning data:", error);
-  }
-}
-*/
 
 export async function seedConnections(): Promise<void> {
   console.log("🌱 Seeding connections...");

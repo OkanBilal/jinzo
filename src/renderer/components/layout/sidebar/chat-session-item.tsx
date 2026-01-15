@@ -27,7 +27,7 @@ export default function ChatSessionItem({
             : "bg-transparent hover:bg-primary-950/3 dark:hover:bg-primary/5"
         }`}
       >
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
             <Body
               className={`font-normal line-clamp-1  ${
@@ -47,7 +47,7 @@ export default function ChatSessionItem({
             className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-primary-100 dark:hover:bg-primary-400/20 cursor-pointer rounded-md"
             aria-label="Delete chat"
           >
-            <Close className="w-3 h-3 text-primary-600 dark:text-primary-400" />
+            <Close className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
           </button>
         </div>
       </Link>

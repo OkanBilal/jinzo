@@ -1,9 +1,4 @@
-import React from "react";
 
 export default function Feed() {
-  return (
-    <div className="p-8">
-
-    </div>
-  );
+  return <div className="p-8"></div>;
 }

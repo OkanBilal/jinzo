@@ -4,19 +4,37 @@ import storage from 'redux-persist/lib/storage';
 
 import { baseApi } from './api/baseApi';
 import chatReducer from './slices/chatSlice';
+import moodReducer from './slices/moodSlice';
+import appSettingsReducer from './slices/appSettingsSlice';
 
-const persistConfig = {
+const chatPersistConfig = {
   key: 'chat',
   storage,
   whitelist: ['selectedModel', 'thinkingLevel', 'thinkingEnabled', 'toolMode'],
 };
 
-const persistedChatReducer = persistReducer(persistConfig, chatReducer);
+const moodPersistConfig = {
+  key: 'mood',
+  storage,
+  whitelist: ['activeMoodId'],
+};
+
+const appSettingsPersistConfig = {
+  key: 'appSettings',
+  storage,
+  whitelist: ['isDarkMode', 'sidebarCollapsed', 'fontSize'],
+};
+
+const persistedChatReducer = persistReducer(chatPersistConfig, chatReducer);
+const persistedMoodReducer = persistReducer(moodPersistConfig, moodReducer);
+const persistedAppSettingsReducer = persistReducer(appSettingsPersistConfig, appSettingsReducer);
 
 export const store = configureStore({
   reducer: {
     [baseApi.reducerPath]: baseApi.reducer,
     chat: persistedChatReducer,
+    mood: persistedMoodReducer,
+    appSettings: persistedAppSettingsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -104,7 +104,7 @@ export default function SettingsModal({
 function ModalBackdrop({ onClick }: ModalBackdropProps) {
   return (
     <div
-      className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+      className="absolute inset-0 bg-black/60"
       onClick={onClick}
       aria-hidden="true"
     />

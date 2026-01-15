@@ -8,7 +8,7 @@ import type {
     StructuredOutputSchema,
     StructuredOutputProperty,
 } from "@/lib/redux/slices/chatSlice";
-import Select from "../ui/select";
+import Select from "../../ui/select";
 
 interface StructuredOutputModalProps {
     isOpen: boolean;

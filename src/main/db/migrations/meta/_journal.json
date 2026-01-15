@@ -36,6 +36,27 @@
       "when": 1763156458231,
       "tag": "0004_easy_havok",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1768419199686,
+      "tag": "0005_worthless_layla_miller",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1768423322113,
+      "tag": "0006_omniscient_millenium_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1768464892350,
+      "tag": "0007_low_hardball",
+      "breakpoints": true
     }
   ]
 }

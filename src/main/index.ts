@@ -11,6 +11,8 @@ import { registerOllamaHandlers } from "./ipc/ollamaHandlers";
 import { registerConnectionCredentialsHandlers } from "./ipc/connectionCredentialsHandlers";
 import { registerConnectionsHandlers } from "./ipc/connectionsHandlers";
 import { registerSeedHandlers } from "./ipc/seedHandlers";
+import { registerMoodHandlers } from "./ipc/moodHandlers";
+import { registerAppSettingsHandlers } from "./ipc/appSettingsHandlers";
 import { createMainWindow } from "./windows/mainWindow";
 
 /**
@@ -39,6 +41,8 @@ async function initializeApp() {
     registerConnectionCredentialsHandlers();
     registerConnectionsHandlers();
     registerSeedHandlers();
+    registerMoodHandlers();
+    registerAppSettingsHandlers();
 
     // Create main window
     createMainWindow();
