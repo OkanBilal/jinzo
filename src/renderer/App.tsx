@@ -3,7 +3,7 @@ import { HashRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Home from "./routes/Home";
 import Chat from "./routes/Chat";
 import Feed from "./routes/Feed";
-import FrostedSidebar from "./components/layout/side-bar";
+import FrostedSidebar from "./components/layout/sidebar";
 import ConfigPanel from "./components/layout/config-panel";
 import { Toaster } from "sonner";
 import { ReduxProvider } from "./components/providers/redux-provider";
