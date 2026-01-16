@@ -1,9 +1,6 @@
-"use client";
-
 import { useState, useEffect } from "react";
 
-
-import { Close }from "../../../../../components/ui/icons";
+import { Close } from "../../../../../components/ui/icons";
 import Text, {
   Body,
   Muted,
@@ -27,11 +24,7 @@ type SpotifyModalProps = {
 
 type Step = "setToken" | "add" | "manage";
 
-const SpotifyModal = ({
-  open,
-  onClose,
-  isConnected,
-}: SpotifyModalProps) => {
+const SpotifyModal = ({ open, onClose, isConnected }: SpotifyModalProps) => {
   const [step, setStep] = useState<Step>("setToken");
   const [accessToken, setAccessToken] = useState("");
   const [selectedSources, setSelectedSources] = useState<string[]>([]);

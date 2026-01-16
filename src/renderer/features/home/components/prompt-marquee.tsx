@@ -1,6 +1,3 @@
-"use client";
-
-
 export default function PromptMarquee({
   prompts,
   onSelect,

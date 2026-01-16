@@ -1,7 +1,10 @@
-"use client";
-
 import { useState } from "react";
-import { Attach, Picture, Document, Close } from "../../../../components/ui/icons";
+import {
+  Attach,
+  Picture,
+  Document,
+  Close,
+} from "../../../../components/ui/icons";
 import DropdownWrapper from "../../../../components/ui/dropdown-wrapper";
 
 import { FileUploadDropdownProps } from "./types";
@@ -58,7 +61,7 @@ export default function FileUploadDropdown({
                     className="absolute cursor-pointer inset-0 bg-black/50 flex items-center justify-center transition-opacity"
                     aria-label="Remove image"
                   >
-                <Close className="w-4 h-4 text-primary-600 dark:text-primary-300" />
+                    <Close className="w-4 h-4 text-primary-600 dark:text-primary-300" />
                   </button>
                 )}
               </div>
@@ -75,8 +78,8 @@ export default function FileUploadDropdown({
                   className="flex items-center gap-2 cursor-pointer"
                   aria-label="Remove document"
                 >
-                <Close className="w-4 h-4 text-primary-600 dark:text-primary-300" />
-                <span className="text-xs text-primary-700 dark:text-primary-200 max-w-25 truncate">
+                  <Close className="w-4 h-4 text-primary-600 dark:text-primary-300" />
+                  <span className="text-xs text-primary-700 dark:text-primary-200 max-w-25 truncate">
                     {uploadedFile.file.name}
                   </span>
                 </button>

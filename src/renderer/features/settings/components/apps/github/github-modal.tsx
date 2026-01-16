@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 
 import { Lock } from "../../../../../components/ui/icons";
@@ -153,7 +151,7 @@ export default function GitHubModal({
     setIsProcessing(true);
 
     try {
-      const startTime = Date.now();      
+      const startTime = Date.now();
       const connectionResult = await getConnection("github").unwrap();
 
       if (!connectionResult.success) {
@@ -168,7 +166,7 @@ export default function GitHubModal({
         provider: "github",
         connectionId: connId,
         token,
-      }).unwrap();      
+      }).unwrap();
       setIsFirstConnection(true);
 
       onSuccess?.();
@@ -180,7 +178,6 @@ export default function GitHubModal({
         throw new Error("Failed to fetch repositories");
       }
 
-
       const elapsed = Date.now() - startTime;
       const minLoadingTime = 800;
       const remainingTime = Math.max(0, minLoadingTime - elapsed);
@@ -191,7 +188,8 @@ export default function GitHubModal({
       setStep("add");
     } catch (err: any) {
       console.error("[GitHub] Error in credential submit:", err);
-      const errorMessage = err?.data?.error || err?.message || "An error occurred";
+      const errorMessage =
+        err?.data?.error || err?.message || "An error occurred";
       setError(errorMessage);
     } finally {
       setIsProcessing(false);

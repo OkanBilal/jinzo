@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { AppIconProps, AppItem } from "../../../chat/components/input/types";
 import Text, { Heading2, BodyMedium } from "../../../../components/ui/text";
@@ -157,10 +155,7 @@ export default function AppsSettings({
         isConnected={isConnected("spotify")}
       />
 
-      <RssModal
-        open={showRssModal}
-        onClose={() => setShowRssModal(false)}
-      />
+      <RssModal open={showRssModal} onClose={() => setShowRssModal(false)} />
     </div>
   );
 }

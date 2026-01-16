@@ -1,9 +1,13 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { HashRouter as Router, Routes, Route, Link, useNavigate } from "react-router-dom";
+import {
+  HashRouter as Router,
+  Routes,
+  Route,
+  useNavigate,
+} from "react-router-dom";
 import { useDispatch } from "react-redux";
 import Home from "./routes/Home";
 import Chat from "./routes/Chat";
-import Feed from "./routes/Feed";
 import FrostedSidebar from "./components/layout/sidebar";
 import ConfigPanel from "./components/layout/config-panel";
 import { Toaster } from "sonner";
@@ -35,7 +39,7 @@ function MoodChangeHandler() {
 
 function AppContent() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
-  
+
   const { activeMood } = useActiveMood();
   const theme = useTheme();
 
@@ -48,7 +52,7 @@ function AppContent() {
         console.error("Failed to parse mood uiConfig:", error);
       }
     }
-    return "18rem"; 
+    return "18rem";
   }, [activeMood]);
 
   const configPanelWidth = useMemo(() => {
@@ -66,11 +70,11 @@ function AppContent() {
   return (
     <Router>
       <MoodChangeHandler />
-      <div 
+      <div
         className="app-root flex flex-col h-screen antialiased"
-        style={{ 
+        style={{
           backgroundColor: theme.backgroundColor,
-          transition: 'background-color 300ms ease-in-out'
+          transition: "background-color 300ms ease-in-out",
         }}
       >
         <div
@@ -79,20 +83,23 @@ function AppContent() {
         />
         <div className="flex h-full">
           <FrostedSidebar />
-          <ConfigPanel isOpen={isConfigOpen} onToggle={setIsConfigOpen} width={configPanelWidth} />
+          <ConfigPanel
+            isOpen={isConfigOpen}
+            onToggle={setIsConfigOpen}
+            width={configPanelWidth}
+          />
           <Toaster richColors position="top-right" />
           <main
             className="flex-1 m-2 overflow-hidden transition-all duration-300 ease-out"
-            style={{ 
+            style={{
               marginLeft: mainMarginLeft,
-              marginRight: isConfigOpen ? configPanelWidth : '0.5rem',
-              transition: 'margin 300ms ease-out'
+              marginRight: isConfigOpen ? configPanelWidth : "0.5rem",
+              transition: "margin 300ms ease-out",
             }}
           >
             <div className="h-full bg-primary dark:bg-primary-950 rounded-2xl overflow-auto">
               <Routes>
                 <Route path="/" element={<Home />} />
-                <Route path="/feed" element={<Feed />} />
                 <Route path="/chat/:id" element={<Chat />} />
               </Routes>
             </div>

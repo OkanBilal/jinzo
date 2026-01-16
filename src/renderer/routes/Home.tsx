@@ -1,13 +1,8 @@
-"use client";
-
 import { useCallback, useState } from "react";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
-import LottieHero from "../features/home/components/lottie-hero";
-import PromptMarquee from "../features/home/components/prompt-marquee";
-import WelcomeHeader from "../features/home/components/welcome-header";
 import ChatInput from "../features/chat/components/input";
 import { AppState } from "../features/chat/components/input/types";
 import { useCreatePrompts } from "../features/home/hooks/use-create-prompts";

@@ -1,6 +1,11 @@
-"use client";
-
-import { Suspense, useEffect, useState, useMemo, useRef, useCallback } from "react";
+import {
+  Suspense,
+  useEffect,
+  useState,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ChatHeader,
@@ -11,7 +16,12 @@ import ChatInput from "../features/chat/components/input";
 import { AppState } from "../features/chat/components/input/types";
 import { useChat } from "../features/chat/hooks/use-chat";
 import { useThinkingConfig } from "../features/chat/hooks/use-thinking-config";
-import { useGetAppsQuery, useGetChatMessagesQuery, useGetChatSessionQuery, useGenerateChatSessionTitleMutation } from "../lib/redux/api";
+import {
+  useGetAppsQuery,
+  useGetChatMessagesQuery,
+  useGetChatSessionQuery,
+  useGenerateChatSessionTitleMutation,
+} from "../lib/redux/api";
 import { useAppSelector } from "../lib/redux/hooks";
 
 function ChatContent() {
@@ -139,26 +149,21 @@ function ChatContent() {
 
     initialStreamTriggeredRef.current = true;
 
-    sendTextStreaming(
-      lastUserMessage.content,
-      selectedModel,
-      sessionId,
-      {
-        skipUserMessage: true,
-        requestOptions: {
-          skipUserSave: true,
-          mode: toolMode,
-          thinkingEnabled: thinkingConfig.shouldShowThinkingToggle
-            ? thinkingEnabled
-            : undefined,
-          thinkingLevel: thinkingConfig.shouldShowThinkingLevel
-            ? thinkingLevel
-            : undefined,
-          structuredOutputEnabled,
-          structuredOutputSchema,
-        },
-      }
-    );
+    sendTextStreaming(lastUserMessage.content, selectedModel, sessionId, {
+      skipUserMessage: true,
+      requestOptions: {
+        skipUserSave: true,
+        mode: toolMode,
+        thinkingEnabled: thinkingConfig.shouldShowThinkingToggle
+          ? thinkingEnabled
+          : undefined,
+        thinkingLevel: thinkingConfig.shouldShowThinkingLevel
+          ? thinkingLevel
+          : undefined,
+        structuredOutputEnabled,
+        structuredOutputSchema,
+      },
+    });
   }, [
     messagesData,
     selectedModel,
@@ -190,7 +195,7 @@ function ChatContent() {
 
   const handleSend = useCallback((): void => {
     if (!input.trim()) return;
-    
+
     sendMessageStreaming(selectedModel, {
       requestOptions: {
         mode: toolMode,

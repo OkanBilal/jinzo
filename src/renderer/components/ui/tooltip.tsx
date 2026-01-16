@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useRef, useEffect, ReactNode } from "react";
 import { cn } from "../../lib/cn";
 
@@ -23,9 +21,11 @@ const positionStyles: Record<TooltipPosition, string> = {
 
 const arrowStyles: Record<TooltipPosition, string> = {
   top: "top-full left-1/2 -translate-x-1/2 border-t-primary-800 dark:border-t-primary-950 border-x-transparent border-b-transparent",
-  bottom: "bottom-full left-1/2 -translate-x-1/2 border-b-primary-800 dark:border-b-primary-950 border-x-transparent border-t-transparent",
+  bottom:
+    "bottom-full left-1/2 -translate-x-1/2 border-b-primary-800 dark:border-b-primary-950 border-x-transparent border-t-transparent",
   left: "left-full top-1/2 -translate-y-1/2 border-l-primary-800 dark:border-l-primary-950 border-y-transparent border-r-transparent",
-  right: "right-full top-1/2 -translate-y-1/2 border-r-primary-800 dark:border-r-primary-950 border-y-transparent border-l-transparent",
+  right:
+    "right-full top-1/2 -translate-y-1/2 border-r-primary-800 dark:border-r-primary-950 border-y-transparent border-l-transparent",
 };
 
 export default function Tooltip({
@@ -57,7 +57,7 @@ export default function Tooltip({
       timeoutRef.current = null;
     }
     setIsVisible(false);
-    
+
     setTimeout(() => {
       setShouldRender(false);
     }, 100);

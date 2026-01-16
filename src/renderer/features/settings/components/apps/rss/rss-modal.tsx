@@ -1,8 +1,11 @@
-"use client";
-
 import { useState, useEffect, useCallback } from "react";
 
-import { BodyMedium, Caption, Muted, ErrorText } from "../../../../../components/ui/text";
+import {
+  BodyMedium,
+  Caption,
+  Muted,
+  ErrorText,
+} from "../../../../../components/ui/text";
 import { ConnectionModalWrapper, LoadingState } from "../shared";
 import {
   GhostButton,

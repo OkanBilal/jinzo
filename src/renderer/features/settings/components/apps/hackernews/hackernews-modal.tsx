@@ -1,14 +1,20 @@
-"use client";
-
 import { useState, useEffect, useCallback } from "react";
 
-import { BodyMedium, Caption, Muted, ErrorText } from "../../../../../components/ui/text";
+import {
+  BodyMedium,
+  Caption,
+  Muted,
+  ErrorText,
+} from "../../../../../components/ui/text";
 import {
   ConnectionModalWrapper,
   LoadingState,
   RevokeConfirmModal,
 } from "../shared";
-import { PrimaryButton, DangerButton } from "../../../../../components/ui/button";
+import {
+  PrimaryButton,
+  DangerButton,
+} from "../../../../../components/ui/button";
 import {
   useLazyGetHackerNewsStatusQuery,
   useUpdateHackerNewsSettingsMutation,

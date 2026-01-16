@@ -1,5 +1,3 @@
-"use client";
-
 import McpIcon from "../../../../components/ui/icons/mcp";
 
 interface McpToggleButtonProps {

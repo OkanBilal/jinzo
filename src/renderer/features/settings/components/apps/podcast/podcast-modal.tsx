@@ -1,8 +1,11 @@
-"use client";
-
 import { useState, useEffect, useCallback } from "react";
 
-import { BodyMedium, Body, Muted, ErrorText } from "../../../../../components/ui/text";
+import {
+  BodyMedium,
+  Body,
+  Muted,
+  ErrorText,
+} from "../../../../../components/ui/text";
 import {
   ConnectionModalWrapper,
   LoadingState,

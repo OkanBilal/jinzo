@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect, useCallback } from "react";
 
 import { Caption, BodyMedium } from "../../../../../components/ui/text";

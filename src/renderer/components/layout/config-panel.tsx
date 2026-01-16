@@ -1,4 +1,3 @@
-"use client";
 import { useState, useEffect, useCallback } from "react";
 import { Config, ConfigClose } from "@/components/ui/icons";
 import { Heading3, Body } from "@/components/ui/text";

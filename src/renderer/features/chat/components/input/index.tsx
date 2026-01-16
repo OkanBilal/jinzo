@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useRef, useMemo, useEffect } from "react";
 
 import SettingsModal from "../../../../features/settings/components/settings-modal";
