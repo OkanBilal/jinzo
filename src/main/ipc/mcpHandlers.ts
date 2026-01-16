@@ -1,5 +1,12 @@
 import { ipcMain } from "electron";
-import { executeFeedTool, executeCronTool, FEED_TOOLS, CRON_TOOLS } from "../../renderer/lib/mcp";
+import {
+  executeEntityTool,
+  executeSyncTool,
+  executeMoodTool,
+  ENTITY_TOOLS,
+  SYNC_TOOLS,
+  MOOD_TOOLS,
+} from "../../renderer/lib/mcp";
 
 /**
  * Register all IPC handlers for MCP (Model Context Protocol) operations
@@ -8,7 +15,7 @@ export function registerMcpHandlers() {
   // List available MCP tools
   ipcMain.handle("mcp:listTools", async () => {
     try {
-      const allTools = [...FEED_TOOLS, ...CRON_TOOLS];
+      const allTools = [...ENTITY_TOOLS, ...SYNC_TOOLS, ...MOOD_TOOLS];
       const tools = allTools.map((tool) => ({
         name: tool.function.name,
         description: tool.function.description,
@@ -32,12 +39,15 @@ export function registerMcpHandlers() {
         return { success: false, error: "Tool name is required" };
       }
 
-      // Check if it's a cron tool
+      // Route to appropriate tool executor based on tool name
       let result;
-      if (name === 'trigger_feed_sync') {
-        result = await executeCronTool(name, toolParams || {});
+      if (name === 'trigger_entity_sync' || name === 'trigger_feed_sync') {
+        result = await executeSyncTool(name, toolParams || {});
+      } else if (name === 'switch_to_writing_mood' || name === 'switch_to_chat_mood') {
+        result = await executeMoodTool(name, toolParams || {});
       } else {
-        result = await executeFeedTool(name, toolParams || {});
+        // Default to entity tools (entity_list, entity_search, feed_list, feed_search)
+        result = await executeEntityTool(name, toolParams || {});
       }
 
       return {

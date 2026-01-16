@@ -1,14 +1,21 @@
 export {
-  executeFeedTool,
-  feedList,
-  feedSearch,
-  FEED_TOOLS,
+  executeEntityTool,
+  executeFeedTool, // deprecated
+  entityList,
+  entitySearch,
+  feedList, // deprecated
+  feedSearch, // deprecated
+  ENTITY_TOOLS,
+  FEED_TOOLS, // deprecated
 } from "./feed-tools";
 
 export {
-  executeCronTool,
-  triggerFeedSync,
-  CRON_TOOLS,
+  executeSyncTool,
+  executeCronTool, // deprecated
+  triggerEntitySync,
+  triggerFeedSync, // deprecated
+  SYNC_TOOLS,
+  CRON_TOOLS, // deprecated
 } from "./cron-tools";
 
 export {

@@ -1,23 +1,59 @@
-import type { ItemTypeId, SourceId } from "../rag";
-
-export interface FeedListParams {
+export interface EntityListParams {
   limit?: number;
   offset?: number;
-  sources?: SourceId[];
-  itemTypes?: ItemTypeId[];
+  kinds?: string[];
+  connectionIds?: string[];
   startDate?: string;
   endDate?: string;
 }
 
-export interface FeedSearchParams {
+export interface EntitySearchParams {
   query: string;
   limit?: number;
-  sources?: SourceId[];
-  itemTypes?: ItemTypeId[];
+  kinds?: string[];
+  connectionIds?: string[];
   startDate?: string;
   endDate?: string;
 }
 
+export interface EntityResult {
+  id: string;
+  title: string;
+  url: string;
+  body: string | null;
+  summary: string | null;
+  kind: string;
+  occurredAt: string;
+  connectionId: string | null;
+  metadata: string | null;
+}
+
+export interface EntityListResult {
+  entities: EntityResult[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface EntitySearchResult {
+  entities: EntityResult[];
+  total: number;
+  query: string;
+}
+
+/**
+ * @deprecated Use EntityListParams instead
+ */
+export type FeedListParams = EntityListParams;
+
+/**
+ * @deprecated Use EntitySearchParams instead
+ */
+export type FeedSearchParams = EntitySearchParams;
+
+/**
+ * @deprecated Use EntityResult instead
+ */
 export interface FeedItemResult {
   id: number;
   title: string;
@@ -30,28 +66,30 @@ export interface FeedItemResult {
   metadata: string | null;
 }
 
-export interface FeedListResult {
-  items: FeedItemResult[];
-  total: number;
-  limit: number;
-  offset: number;
-}
+/**
+ * @deprecated Use EntityListResult instead
+ */
+export type FeedListResult = EntityListResult;
 
-export interface FeedSearchResult {
-  items: FeedItemResult[];
-  total: number;
-  query: string;
-}
+/**
+ * @deprecated Use EntitySearchResult instead
+ */
+export type FeedSearchResult = EntitySearchResult;
 
-export interface CronSyncResult {
+export interface SyncResult {
   success: boolean;
-  itemsProcessed?: number;
-  itemsInserted?: number;
+  entitiesProcessed?: number;
+  entitiesInserted?: number;
   chunksCreated?: number;
   embeddingsGenerated?: number;
   duration?: number;
   error?: string;
 }
+
+/**
+ * @deprecated Use SyncResult instead
+ */
+export type CronSyncResult = SyncResult;
 
 export interface OllamaToolCall {
   function: {

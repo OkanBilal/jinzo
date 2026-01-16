@@ -12,7 +12,7 @@ export async function getConnectionByProvider(
 ): Promise<{ id: string; metadata?: any } | null> {
   try {
     const db = getDb();
-    const connection = await db
+    const connection = db
       .select()
       .from(connections)
       .where(eq(connections.provider, provider))
@@ -40,7 +40,7 @@ export async function getConnectionTokens(
 ): Promise<{ accessToken?: string; refreshToken?: string } | null> {
   try {
     const db = getDb();
-    const token = await db
+    const token = db
       .select()
       .from(connectionTokens)
       .where(
@@ -92,7 +92,7 @@ export async function getSelectedResources(
       whereConditions.push(eq(connectionResources.kind, kind));
     }
 
-    const resources = await db
+    const resources = db
       .select()
       .from(connectionResources)
       .where(and(...whereConditions))

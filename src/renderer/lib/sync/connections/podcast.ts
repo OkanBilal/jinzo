@@ -1,9 +1,9 @@
-import type { FeedItem } from "../../cron";
+import type { EntityInput } from "..";
 import {
   getConnectionWithTokens,
   getSelectedResources,
   normalizeDateToIso,
-} from "../../cron/connection-utils";
+} from "../connection-utils";
 
 const TADDY_API_URL = "https://api.taddy.org";
 const DEFAULT_EPISODE_LIMIT = 5;
@@ -43,12 +43,12 @@ function buildPodcastQuery(): string {
   `;
 }
 
-function mapEpisodeToFeedItem(
+function mapEpisodeToEntityInput(
   episode: any,
   seriesData: any,
   connectionId?: string,
   resourceId?: string
-): FeedItem | null {
+): EntityInput | null {
   if (!episode.name || !episode.audioUrl) {
     return null;
   }
@@ -56,20 +56,21 @@ function mapEpisodeToFeedItem(
   const dateIso = normalizeDateToIso(episode.datePublished);
 
   return {
+    kind: "podcast_episode",
     title: episode.name as string,
     url: episode.audioUrl as string,
-    description: (episode.description as string) ?? null,
-    date: dateIso,
-    source: "podcast",
-    imageUrl: ((episode.imageUrl || seriesData.imageUrl) as string) ?? null,
+    body: (episode.description as string) ?? null,
+    summary: episode.description?.substring(0, 500) || null,
+    occurredAt: dateIso,
+    externalId: episode.uuid,
+    connectionId: connectionId || null,
+    resourceId: resourceId || null,
     metadata: {
       podcastName: seriesData.name,
       podcastUuid: seriesData.uuid,
       episodeUuid: episode.uuid,
+      imageUrl: (episode.imageUrl || seriesData.imageUrl) ?? null,
     },
-    itemType: "podcast-episode",
-    connectionId: connectionId || null,
-    resourceId: resourceId || null,
   };
 }
 
@@ -79,7 +80,7 @@ export async function fetchPodcastByName(
   connectionId?: string,
   resourceId?: string,
   credentials?: { apiKey: string; userId: string }
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   const taddyCredentials = credentials || (await getCredentials());
   if (!taddyCredentials) {
     console.warn(
@@ -123,9 +124,9 @@ export async function fetchPodcastByName(
 
     return episodes
       .map((ep: any) =>
-        mapEpisodeToFeedItem(ep, series, connectionId, resourceId)
+        mapEpisodeToEntityInput(ep, series, connectionId, resourceId)
       )
-      .filter((item: FeedItem | null): item is FeedItem => item !== null);
+      .filter((item: EntityInput | null): item is EntityInput => item !== null);
   } catch (error) {
     console.error(`Failed to fetch podcast "${podcastName}":`, error);
     return [];
@@ -171,7 +172,7 @@ async function getSelectedPodcasts(
 
 export async function fetchPodcastsFromConnectionResources(
   episodesPerPodcast = 5
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   const connection = await getConnection();
   if (!connection) {
     console.warn("⚠️  Skipping Podcasts: No active connection found");
@@ -184,7 +185,7 @@ export async function fetchPodcastsFromConnectionResources(
     return [];
   }
 
-  const allItems: FeedItem[] = [];
+  const allItems: EntityInput[] = [];
   const credentials = { apiKey: connection.apiKey, userId: connection.userId };
 
   for (const resource of podcasts) {

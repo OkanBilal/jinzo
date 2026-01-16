@@ -1,4 +1,4 @@
-import type { CronJobResult, CronJobStats } from "../cron";
+import type { SyncJobResult, SyncJobStats } from ".";
 
 export function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
@@ -7,14 +7,14 @@ export function formatDuration(ms: number): string {
 }
 
 export function calculateStats(
-  stats: CronJobStats,
-  totalItems: number,
+  stats: SyncJobStats,
+  totalEntities: number,
   duration: number
-): CronJobResult["stats"] {
+): SyncJobResult["stats"] {
   return {
-    avgEmbeddingTime: totalItems > 0 ? Math.round(duration / totalItems) : 0,
+    avgEmbeddingTime: totalEntities > 0 ? Math.round(duration / totalEntities) : 0,
     itemsPerSecond:
-      duration > 0 ? Math.round((totalItems / duration) * 1000) : 0,
+      duration > 0 ? Math.round((totalEntities / duration) * 1000) : 0,
     avgChunksPerItem:
       stats.inserted > 0
         ? parseFloat((stats.totalChunks / stats.inserted).toFixed(2))
@@ -23,23 +23,23 @@ export function calculateStats(
 }
 
 export function createSuccessResult(
-  stats: CronJobStats,
-  totalItems: number,
+  stats: SyncJobStats,
+  totalEntities: number,
   duration: number
-): CronJobResult {
+): SyncJobResult {
   return {
     success: true,
     inserted: stats.inserted,
     skipped: stats.skipped,
     errors: stats.errors,
-    total: totalItems,
+    total: totalEntities,
     totalChunks: stats.totalChunks,
     duration,
-    stats: calculateStats(stats, totalItems, duration),
+    stats: calculateStats(stats, totalEntities, duration),
   };
 }
 
-export function createFailureResult(duration: number): CronJobResult {
+export function createFailureResult(duration: number): SyncJobResult {
   return {
     success: false,
     inserted: 0,
@@ -56,7 +56,7 @@ export function createFailureResult(duration: number): CronJobResult {
   };
 }
 
-export function createEmptyResult(duration: number): CronJobResult {
+export function createEmptyResult(duration: number): SyncJobResult {
   return {
     success: true,
     inserted: 0,

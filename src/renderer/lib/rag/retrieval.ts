@@ -1,8 +1,8 @@
 import { getSqlite } from "../../../main/db/client";
 import { generateEmbeddingCached } from "./embed";
 import { float32ToBuffer } from "./float-to-buffer";
-import { MIN_TOKEN_LENGTH, DEFAULT_DECAY_LAMBDA, TIME_CONSTANTS, DISTANCE_BOUNDS, BM25_PARAMS,MAX_PER_SOURCE_RATIO } from "../config";
-import { RetrievalOptions, RetrievedFeedItem } from "./types";
+import { MIN_TOKEN_LENGTH, DEFAULT_DECAY_LAMBDA, TIME_CONSTANTS, DISTANCE_BOUNDS, BM25_PARAMS, MAX_PER_SOURCE_RATIO } from "../config";
+import { RetrievalOptions, RetrievedEntity } from "./types";
 
 // TODO query expansion, synonym handling
 
@@ -18,8 +18,8 @@ function getAverageDocLength(): number {
   const result = sqlite
     .prepare(
       `
-    SELECT AVG(LENGTH(title) + COALESCE(LENGTH(description), 0)) as avg_length
-    FROM FeedItem
+    SELECT AVG(LENGTH(title) + COALESCE(LENGTH(body), 0)) as avg_length
+    FROM entities
   `
     )
     .get() as { avg_length: number };
@@ -79,17 +79,17 @@ function calculateChunkBonus(chunkCount: number): number {
 }
 
 function buildFilterConditions(
-  sourceFilter?: string[],
-  itemTypeFilter?: string[]
+  kindFilter?: string[],
+  connectionIdFilter?: string[]
 ): string[] {
   const conditions: string[] = [];
 
-  if (sourceFilter && sourceFilter.length > 0) {
-    conditions.push(`f.source IN (${sourceFilter.map(() => "?").join(",")})`);
+  if (kindFilter && kindFilter.length > 0) {
+    conditions.push(`e.kind IN (${kindFilter.map(() => "?").join(",")})`);
   }
-  if (itemTypeFilter && itemTypeFilter.length > 0) {
+  if (connectionIdFilter && connectionIdFilter.length > 0) {
     conditions.push(
-      `f.itemType IN (${itemTypeFilter.map(() => "?").join(",")})`
+      `e.connection_id IN (${connectionIdFilter.map(() => "?").join(",")})`
     );
   }
   return conditions;
@@ -97,17 +97,17 @@ function buildFilterConditions(
 
 function buildQueryParams(
   qVecBuffer: Buffer,
-  sourceFilter?: string[],
-  itemTypeFilter?: string[],
+  kindFilter?: string[],
+  connectionIdFilter?: string[],
   limit?: number
 ): any[] {
   const params: any[] = [qVecBuffer];
 
-  if (sourceFilter && sourceFilter.length > 0) {
-    params.push(...sourceFilter);
+  if (kindFilter && kindFilter.length > 0) {
+    params.push(...kindFilter);
   }
-  if (itemTypeFilter && itemTypeFilter.length > 0) {
-    params.push(...itemTypeFilter);
+  if (connectionIdFilter && connectionIdFilter.length > 0) {
+    params.push(...connectionIdFilter);
   }
   if (limit) {
     params.push(limit);
@@ -115,18 +115,18 @@ function buildQueryParams(
   return params;
 }
 
-export async function findRelevantFeedItems(
+export async function findRelevantEntities(
   question: string,
   options: RetrievalOptions = {}
-): Promise<RetrievedFeedItem[]> {
+): Promise<RetrievedEntity[]> {
   const {
     topK = 5,
     minScore = -1,
     recencyWeight = 0.1,
     semanticWeight = 0.7,
     keywordWeight = 0.3,
-    sourceFilter,
-    itemTypeFilter,
+    kindFilter,
+    connectionIdFilter,
     rerank = true,
   } = options;
 
@@ -137,25 +137,25 @@ export async function findRelevantFeedItems(
     const chunkLimit = rerank ? topK * 10 : topK * 3;
     let query = `
       SELECT 
-        f.id,
-        f.title,
-        f.url,
-        f.description,
-        f.source,
-        f.date,
-        f.imageUrl,
-        f.itemType,
-        f.metadata,
+        e.id,
+        e.title,
+        e.url,
+        e.body,
+        e.summary,
+        e.kind,
+        e.occurred_at as occurredAt,
+        e.connection_id as connectionId,
+        e.metadata,
         c.content as chunk_content,
-        c.chunk_index,
+        c.chunk_index as chunk_index,
         vec_distance_cosine(v.embedding, ?) as distance
-      FROM vec_chunks v
-      JOIN vec_chunk_map m ON m.vec_rowid = v.rowid
-      JOIN FeedItemChunk c ON c.id = m.chunk_id
-      JOIN FeedItem f ON f.id = c.feed_item_id
+      FROM vec_entity_chunks v
+      JOIN vec_entity_chunk_map m ON m.vec_rowid = v.rowid
+      JOIN entity_chunks c ON c.id = m.chunk_id
+      JOIN entities e ON e.id = c.entity_id
     `;
-    const whereConditions = buildFilterConditions(sourceFilter, itemTypeFilter);
-    const params = buildQueryParams(qVecBuffer, sourceFilter, itemTypeFilter);
+    const whereConditions = buildFilterConditions(kindFilter, connectionIdFilter);
+    const params = buildQueryParams(qVecBuffer, kindFilter, connectionIdFilter);
     if (whereConditions.length > 0) {
       query += ` WHERE ${whereConditions.join(" AND ")}`;
     }
@@ -165,51 +165,51 @@ export async function findRelevantFeedItems(
     `;
     params.push(chunkLimit);
     const chunkRows = sqlite.prepare(query).all(...params) as any[];
-    const itemScores = new Map<
-      number,
+    const entityScores = new Map<
+      string,
       {
-        item: any;
+        entity: any;
         bestChunkDistance: number;
         chunks: Array<{ content: string; distance: number; index: number }>;
       }
     >();
     for (const row of chunkRows) {
-      if (!itemScores.has(row.id)) {
-        itemScores.set(row.id, {
-          item: row,
+      if (!entityScores.has(row.id)) {
+        entityScores.set(row.id, {
+          entity: row,
           bestChunkDistance: row.distance,
           chunks: [],
         });
       }
-      const itemData = itemScores.get(row.id)!;
-      itemData.chunks.push({
+      const entityData = entityScores.get(row.id)!;
+      entityData.chunks.push({
         content: row.chunk_content,
         distance: row.distance,
         index: row.chunk_index,
       });
-      if (row.distance < itemData.bestChunkDistance) {
-        itemData.bestChunkDistance = row.distance;
+      if (row.distance < entityData.bestChunkDistance) {
+        entityData.bestChunkDistance = row.distance;
       }
     }
-    const rows = Array.from(itemScores.values()).map(
-      ({ item, bestChunkDistance, chunks }) => ({
-        ...item,
+    const rows = Array.from(entityScores.values()).map(
+      ({ entity, bestChunkDistance, chunks }) => ({
+        ...entity,
         distance: bestChunkDistance,
         chunkCount: chunks.length,
         relevantChunks: chunks.slice(0, 3),
       })
     );
-    let scored: RetrievedFeedItem[] = rows.map((r) => {
+    let scored: RetrievedEntity[] = rows.map((r) => {
       const semanticSimilarity = distanceToSimilarity(r.distance);
       const chunkTexts =
         r.relevantChunks?.map((c: any) => c.content).join(" ") || "";
-      const textContent = [r.title, r.description, chunkTexts]
+      const textContent = [r.title, r.body || r.summary, chunkTexts]
         .filter(Boolean)
         .join(" ");
       const kwScore = keywordScore(question, textContent);
       const chunkBonus = calculateChunkBonus(r.chunkCount);
       const recency = timestampDecayBoost(
-        new Date(r.date),
+        new Date(r.occurredAt),
         DEFAULT_DECAY_LAMBDA
       );
       const hybridScore =
@@ -221,11 +221,11 @@ export async function findRelevantFeedItems(
         id: r.id,
         title: r.title,
         url: r.url,
-        description: r.description,
-        source: r.source,
-        date: new Date(r.date),
-        imageUrl: r.imageUrl,
-        itemType: r.itemType,
+        body: r.body,
+        summary: r.summary,
+        kind: r.kind,
+        occurredAt: new Date(r.occurredAt),
+        connectionId: r.connectionId,
         score: hybridScore,
         semanticScore: semanticSimilarity,
         keywordScore: kwScore,
@@ -250,7 +250,7 @@ export async function findRelevantFeedItems(
         .slice(0, topK);
     }
     console.log(
-      `🔍 Chunk-based search: Found ${chunkRows.length} chunks from ${itemScores.size} items, returning ${scored.length} items`
+      `🔍 Chunk-based search: Found ${chunkRows.length} chunks from ${entityScores.size} entities, returning ${scored.length} entities`
     );
     return scored;
   } catch (error) {
@@ -260,18 +260,18 @@ export async function findRelevantFeedItems(
 }
 
 function diversityRerank(
-  items: RetrievedFeedItem[],
+  items: RetrievedEntity[],
   topK: number
-): RetrievedFeedItem[] {
-  const result: RetrievedFeedItem[] = [];
-  const sourceCounts = new Map<string, number>();
-  const MAX_PER_SOURCE = Math.ceil(topK * MAX_PER_SOURCE_RATIO);
+): RetrievedEntity[] {
+  const result: RetrievedEntity[] = [];
+  const kindCounts = new Map<string, number>();
+  const MAX_PER_KIND = Math.ceil(topK * MAX_PER_SOURCE_RATIO);
 
   for (const item of items) {
-    const currentCount = sourceCounts.get(item.source) || 0;
-    if (currentCount < MAX_PER_SOURCE && result.length < topK) {
+    const currentCount = kindCounts.get(item.kind) || 0;
+    if (currentCount < MAX_PER_KIND && result.length < topK) {
       result.push(item);
-      sourceCounts.set(item.source, currentCount + 1);
+      kindCounts.set(item.kind, currentCount + 1);
     }
     if (result.length >= topK) break;
   }

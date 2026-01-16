@@ -63,6 +63,24 @@ export interface QueryAnalysis {
 
 // Retrieval
 
+export type RetrievedEntity = {
+  id: string;
+  title: string;
+  url: string;
+  body: string | null;
+  summary: string | null;
+  kind: string;
+  occurredAt: Date;
+  connectionId: string | null;
+  score: number;
+  semanticScore: number;
+  keywordScore: number;
+  metadata?: any;
+};
+
+/**
+ * @deprecated Use RetrievedEntity instead
+ */
 export type RetrievedFeedItem = {
   id: number;
   title: string;
@@ -84,7 +102,11 @@ export type RetrievalOptions = {
   recencyWeight?: number;
   semanticWeight?: number;
   keywordWeight?: number;
+  kindFilter?: string[];
+  connectionIdFilter?: string[];
+  /** @deprecated Use kindFilter instead */
   sourceFilter?: string[];
+  /** @deprecated Use kindFilter instead */
   itemTypeFilter?: string[];
   rerank?: boolean;
 };

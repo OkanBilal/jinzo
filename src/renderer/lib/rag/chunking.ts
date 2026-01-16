@@ -90,26 +90,31 @@ function chunkText(text: string, config: ChunkConfig = {}): TextChunk[] {
   return filterChunksBySize(chunks, cfg.minChunkSize);
 }
 
-function chunkFeedItem(
+function chunkEntity(
   title: string,
-  description: string | null,
+  body: string | null,
   config: ChunkConfig = {}
 ): TextChunk[] {
   const titleText = `${title}`;
-  const descText = description || "";
+  const bodyText = body || "";
 
-  if (!descText) {
+  if (!bodyText) {
     return [createChunk(titleText, 0)];
   }
 
-  if (descText.length < MIN_DESCRIPTION_LENGTH) {
-    const combined = `${titleText} — ${descText}`;
+  if (bodyText.length < MIN_DESCRIPTION_LENGTH) {
+    const combined = `${titleText} — ${bodyText}`;
     return [createChunk(combined, 0)];
   }
 
-  const fullText = `${titleText}\n\n${descText}`;
+  const fullText = `${titleText}\n\n${bodyText}`;
   return chunkText(fullText, config);
 }
+
+/**
+ * @deprecated Use chunkEntity instead
+ */
+const chunkFeedItem = chunkEntity;
 
 function getOptimalChunkConfig(textLength: number): ChunkConfig {
   if (textLength < TEXT_LENGTH_THRESHOLDS.VERY_SHORT) {
@@ -192,7 +197,8 @@ function analyzeTextStructure(text: string): {
 
 export {
   chunkText,
-  chunkFeedItem,
+  chunkEntity,
+  chunkFeedItem, // deprecated alias
   getOptimalChunkConfig,
   analyzeTextStructure,
 };

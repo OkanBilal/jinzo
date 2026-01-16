@@ -102,7 +102,7 @@ const SpotifyModal = ({ open, onClose, isConnected }: SpotifyModalProps) => {
       const connId = connData.connection.id;
       setConnectionId(connId);
 
-      const res = await fetch("/api/connections/credentials", {
+      const res = await fetch("/api/connections/credentials", { //TODO: update to ipc
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

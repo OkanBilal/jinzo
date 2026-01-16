@@ -1,10 +1,10 @@
-import type { FeedItem } from "../../cron";
+import type { EntityInput } from "..";
 import {
   getConnectionWithTokens,
   getSelectedResources,
   normalizeLimit,
   normalizeDateToIso,
-} from "../../cron/connection-utils";
+} from "../connection-utils";
 
 const RAINDROP_API_BASE = "https://api.raindrop.io/rest/v1";
 const MAX_PER_PAGE = 50;
@@ -27,25 +27,26 @@ function extractTags(tags: any): string[] {
   return Array.isArray(tags) ? tags : [];
 }
 
-function mapRaindropToFeedItem(
+function mapRaindropToEntityInput(
   raindrop: any,
   connectionId?: string,
   resourceId?: string
-): FeedItem {
+): EntityInput {
   return {
+    kind: "bookmark",
     title: raindrop.title || DEFAULT_TITLE,
     url: raindrop.link,
-    description: raindrop.excerpt || null,
-    date: normalizeDateToIso(raindrop.created),
-    source: "raindrop",
-    imageUrl: raindrop.cover || null,
+    body: raindrop.excerpt || null,
+    summary: raindrop.excerpt?.substring(0, 500) || null,
+    occurredAt: normalizeDateToIso(raindrop.created),
+    externalId: String(raindrop._id),
+    connectionId: connectionId || null,
+    resourceId: resourceId || null,
     metadata: {
       tags: extractTags(raindrop.tags),
       collectionId: raindrop.collection?.$id || null,
+      imageUrl: raindrop.cover || null,
     },
-    itemType: "bookmark",
-    connectionId: connectionId || null,
-    resourceId: resourceId || null,
   };
 }
 
@@ -97,7 +98,7 @@ export async function fetchRaindropItems(
   connectionId?: string,
   resourceId?: string,
   token?: string
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   const raindropToken = token || (await getCredentials());
 
   if (!raindropToken) {
@@ -126,7 +127,7 @@ export async function fetchRaindropItems(
     return data.items
       .slice(0, limit)
       .map((item: any) =>
-        mapRaindropToFeedItem(item, connectionId, resourceId)
+        mapRaindropToEntityInput(item, connectionId, resourceId)
       );
   } catch (error) {
     console.error("Error fetching Raindrop items:", error);
@@ -136,7 +137,7 @@ export async function fetchRaindropItems(
 
 export async function fetchRaindropFromConnectionResources(
   itemsPerCollection = 10
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   const connection = await getRaindropConnection();
   if (!connection) {
     console.warn("⚠️  Skipping Raindrop: No active connection found");
@@ -149,7 +150,7 @@ export async function fetchRaindropFromConnectionResources(
     return [];
   }
 
-  const allItems: FeedItem[] = [];
+  const allItems: EntityInput[] = [];
 
   for (const resource of collections) {
     try {

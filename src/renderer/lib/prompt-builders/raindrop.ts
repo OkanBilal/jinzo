@@ -1,18 +1,18 @@
-import { parseMetadata, FeedRow, PromptItem } from "./types";
+import { parseMetadata, EntityRow, PromptItem } from "./types";
 
 const RAINDROP_ICON = "/apps/raindrop-skeuomorphic.png";
 
-function extractTags(item: FeedRow): string[] {
-  const meta = parseMetadata(item.metadata);
+function extractTags(entity: EntityRow): string[] {
+  const meta = parseMetadata(entity.metadata);
   return Array.isArray(meta?.tags) ? meta.tags : [];
 }
 
-function collectUniqueTags(items: FeedRow[]): Set<string> {
+function collectUniqueTags(entities: EntityRow[]): Set<string> {
   const tags = new Set<string>();
 
-  for (const item of items) {
-    const itemTags = extractTags(item);
-    for (const tag of itemTags) {
+  for (const entity of entities) {
+    const entityTags = extractTags(entity);
+    for (const tag of entityTags) {
       tags.add(tag);
     }
   }
@@ -20,12 +20,12 @@ function collectUniqueTags(items: FeedRow[]): Set<string> {
   return tags;
 }
 
-export function buildRaindropPromptsFromItems(items: FeedRow[]): PromptItem[] {
-  if (items.length === 0) {
+export function buildRaindropPromptsFromEntities(entities: EntityRow[]): PromptItem[] {
+  if (entities.length === 0) {
     return [];
   }
 
-  const tags = collectUniqueTags(items);
+  const tags = collectUniqueTags(entities);
 
   const generalPrompt: PromptItem = {
     label: "My bookmarks",
@@ -41,3 +41,8 @@ export function buildRaindropPromptsFromItems(items: FeedRow[]): PromptItem[] {
 
   return [generalPrompt, ...tagPrompts];
 }
+
+/**
+ * @deprecated Use buildRaindropPromptsFromEntities instead
+ */
+export const buildRaindropPromptsFromItems = buildRaindropPromptsFromEntities;

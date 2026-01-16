@@ -1,18 +1,23 @@
-import type { FeedRow, PromptItem } from "./types";
+import type { EntityRow, PromptItem } from "./types";
 
 const APPLE_MUSIC_ICON = "/apps/apple-music-skeuomorphic.png";
 
-export function buildAppleMusicPromptsFromItems(
-  items: FeedRow[]
+export function buildAppleMusicPromptsFromEntities(
+  entities: EntityRow[]
 ): PromptItem[] {
-  if (items.length === 0) {
+  if (entities.length === 0) {
     return [];
   }
 
-  return items.map(
-    (item): PromptItem => ({
-      label: item.title,
+  return entities.map(
+    (entity): PromptItem => ({
+      label: entity.title,
       imageSrc: APPLE_MUSIC_ICON,
     })
   );
 }
+
+/**
+ * @deprecated Use buildAppleMusicPromptsFromEntities instead
+ */
+export const buildAppleMusicPromptsFromItems = buildAppleMusicPromptsFromEntities;

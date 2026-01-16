@@ -1,12 +1,12 @@
 import { Octokit } from "@octokit/rest";
 
-import type { FeedItem } from "../../cron";
+import type { EntityInput } from "..";
 import {
   getConnectionWithTokens,
   getSelectedResources,
   normalizeLimit,
   normalizeDateToIso,
-} from "../../cron/connection-utils";
+} from "../connection-utils";
 
 const MAX_ITEMS_PER_PAGE = 100;
 const DEFAULT_LIMIT = 5;
@@ -96,7 +96,7 @@ export async function fetchIssues(
   connectionId?: string,
   resourceId?: string,
   token?: string
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   const octokit = await getOctokit(token);
   
   if (!octokit) {
@@ -112,26 +112,28 @@ export async function fetchIssues(
       per_page: normalizeLimit(limit, 1, MAX_ITEMS_PER_PAGE),
     });
 
-    return items.data.map((i): FeedItem => {
+    return items.data.map((i): EntityInput => {
       const labels = extractLabels(i.labels);
       const repoId = formatRepoIdentifier(owner, repo);
 
       return {
+        kind: "issue",
         title: i.title,
         url: i.html_url,
-        description: i.body || null,
-        date: normalizeDateToIso(i.created_at),
-        source: "github",
-        imageUrl: null,
+        body: i.body || null,
+        summary: i.body?.substring(0, 500) || null,
+        occurredAt: normalizeDateToIso(i.created_at),
+        externalId: `${repoId}#${i.number}`,
+        connectionId: connectionId || null,
+        resourceId: resourceId || null,
         metadata: {
-          body: i.body ?? null,
+          provider: "github",
           number: i.number,
           repo: repoId,
           labels,
+          state: i.state,
+          assignee: i.assignee?.login || null,
         },
-        itemType: "issue",
-        connectionId: connectionId || null,
-        resourceId: resourceId || null,
       };
     });
   } catch (error) {
@@ -147,7 +149,7 @@ export async function fetchPullRequests(
   connectionId?: string,
   resourceId?: string,
   token?: string
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   const octokit = await getOctokit(token);
   
   if (!octokit) {
@@ -163,26 +165,29 @@ export async function fetchPullRequests(
       per_page: normalizeLimit(limit, 1, MAX_ITEMS_PER_PAGE),
     });
 
-    return items.data.map((pr): FeedItem => {
+    return items.data.map((pr): EntityInput => {
       const labels = extractLabels(pr.labels);
       const repoId = formatRepoIdentifier(owner, repo);
 
       return {
+        kind: "pull_request",
         title: pr.title,
         url: pr.html_url,
-        description: pr.body || null,
-        date: normalizeDateToIso(pr.created_at),
-        source: "github",
-        imageUrl: null,
+        body: pr.body || null,
+        summary: pr.body?.substring(0, 500) || null,
+        occurredAt: normalizeDateToIso(pr.created_at),
+        externalId: `${repoId}#${pr.number}`,
+        connectionId: connectionId || null,
+        resourceId: resourceId || null,
         metadata: {
-          body: pr.body ?? null,
+          provider: "github",
           number: pr.number,
           repo: repoId,
           labels,
+          state: pr.state,
+          draft: pr.draft,
+          mergeable: pr.mergeable,
         },
-        itemType: "pull-request",
-        connectionId: connectionId || null,
-        resourceId: resourceId || null,
       };
     });
   } catch (error) {
@@ -194,7 +199,7 @@ export async function fetchPullRequests(
 export async function fetchGitHubFromConnectionResources(
   issuesPerRepo = 10,
   prsPerRepo = 5
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
 
   const connection = await getConnection();
   if (!connection) {
@@ -209,7 +214,7 @@ export async function fetchGitHubFromConnectionResources(
   }
 
 
-  const allItems: FeedItem[] = [];
+  const allItems: EntityInput[] = [];
 
   for (const resource of repos) {
     const parsed = parseRepoIdentifier(resource.externalId);

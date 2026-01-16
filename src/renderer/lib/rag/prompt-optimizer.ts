@@ -1,4 +1,4 @@
-import { PromptBuilderOptions, RetrievedFeedItem } from "../rag";
+import { PromptBuilderOptions, RetrievedEntity } from "../rag";
 import { SourceId, ItemTypeId, QueryAnalysis } from "../rag/types";
 
 import {
@@ -90,11 +90,11 @@ export function estimateTokens(text: string): number {
 }
 
 export function optimizeContext(
-  items: RetrievedFeedItem[],
+  items: RetrievedEntity[],
   maxTokens: number = DEFAULT_MAX_TOKENS,
   includeMetadata = false
-): RetrievedFeedItem[] {
-  const optimized: RetrievedFeedItem[] = [];
+): RetrievedEntity[] {
+  const optimized: RetrievedEntity[] = [];
   let currentTokens = 0;
 
   for (const item of items) {
@@ -111,23 +111,23 @@ export function optimizeContext(
 }
 
 export function formatItemForContext(
-  item: RetrievedFeedItem,
+  item: RetrievedEntity,
   includeMetadata = false
 ): string {
   const parts = [
-    `Source: ${item.source}`,
-    `Type: ${item.itemType || "unknown"}`,
+    `Source: ${item.kind}`,
+    `Type: ${item.kind}`,
     `Title: ${item.title}`,
     `URL: ${item.url}`,
   ];
 
-  if (item.description) {
-    parts.push(`Content: ${item.description}`);
+  if (item.summary) {
+    parts.push(`Content: ${item.summary}`);
   }
-  if (item.date) {
-    parts.push(`Date: ${item.date.toLocaleDateString()}`);
+  if (item.occurredAt) {
+    parts.push(`Date: ${item.occurredAt.toLocaleDateString()}`);
   }
-  if (item.itemType === "bookmark" && item.metadata?.tags) {
+  if (item.kind === "bookmark" && item.metadata?.tags) {
     const tags = Array.isArray(item.metadata.tags) ? item.metadata.tags : [];
     if (tags.length > 0) {
       parts.push(`Tags: ${tags.join(", ")}`);
@@ -141,12 +141,12 @@ export function formatItemForContext(
 
 function buildOptimizedPrompt(
   question: string,
-  items: RetrievedFeedItem[],
+  items: RetrievedEntity[],
   options: PromptBuilderOptions = {}
 ): {
   systemPrompt: string;
   userPrompt: string;
-  usedItems: RetrievedFeedItem[];
+  usedItems: RetrievedEntity[];
 } {
   const {
     maxTokens = DEFAULT_MAX_TOKENS,
@@ -160,8 +160,8 @@ function buildOptimizedPrompt(
   let sortedItems = [...items];
   if (prioritizeSources.length > 0) {
     sortedItems = sortedItems.sort((a, b) => {
-      const aIndex = prioritizeSources.indexOf(a.source as SourceId);
-      const bIndex = prioritizeSources.indexOf(b.source as SourceId);
+      const aIndex = prioritizeSources.indexOf(a.kind as SourceId);
+      const bIndex = prioritizeSources.indexOf(b.kind as SourceId);
       const aPriority = aIndex === -1 ? Infinity : aIndex;
       const bPriority = bIndex === -1 ? Infinity : bIndex;
       return aPriority - bPriority || b.score - a.score;

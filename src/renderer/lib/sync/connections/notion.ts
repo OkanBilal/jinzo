@@ -1,4 +1,4 @@
-import { FeedItem } from "@/lib/cron";
+import type { EntityInput } from "@/lib/sync";
 
 const NOTION_API_BASE = "https://api.notion.com/v1";
 const NOTION_TOKEN = process.env.NOTION_TOKEN;
@@ -13,11 +13,6 @@ const DEFAULT_PROP_NAMES = {
   DATE: "Date",
   DESCRIPTION: "Description",
   IMAGE: "Image",
-} as const;
-
-const DEFAULT_SOURCE_NAMES = {
-  DATABASE: "notion",
-  BOOKMARK: "Notion Bookmark",
 } as const;
 
 const DEFAULT_LIMITS = {
@@ -36,15 +31,17 @@ export type NotionDatabaseMap = {
   dateProp?: string;
   descriptionProp?: string;
   imageProp?: string;
-  sourceName?: string;
   limit?: number;
   filter?: any;
   sorts?: any[];
+  connectionId?: string;
+  resourceId?: string;
 };
 
 export type NotionBookmarksOptions = {
   limit?: number;
-  sourceName?: string;
+  connectionId?: string;
+  resourceId?: string;
 };
 
 function plain(rt?: NotionText[] | null): string {
@@ -126,7 +123,7 @@ function buildBlockChildrenUrl(blockId: string, pageSize: number): string {
   return `${NOTION_API_BASE}/blocks/${blockId}/children?page_size=${normalized}`;
 }
 
-function mapDatabasePageToFeedItem(
+function mapDatabasePageToEntityInput(
   page: any,
   databaseId: string,
   propMapping: {
@@ -135,12 +132,13 @@ function mapDatabasePageToFeedItem(
     dateProp: string;
     descriptionProp: string;
     imageProp: string;
-    sourceName: string;
     limit: number;
     filter?: any;
     sorts?: any[];
+    connectionId?: string;
+    resourceId?: string;
   }
-): FeedItem {
+): EntityInput {
   const props = page?.properties ?? {};
   const title = plain(props?.[propMapping.titleProp]?.title) || DEFAULT_TITLE;
   const url =
@@ -153,27 +151,30 @@ function mapDatabasePageToFeedItem(
   const tags = extractTags(props);
 
   return {
+    kind: "notion_page",
     title,
     url,
-    description,
-    date,
-    source: propMapping.sourceName,
-    imageUrl,
+    body: description,
+    summary: description?.substring(0, 500) || null,
+    occurredAt: date,
+    externalId: page?.id || null,
+    connectionId: propMapping.connectionId || null,
+    resourceId: propMapping.resourceId || null,
     metadata: {
       notion: {
         page_id: page?.id ?? null,
         database_id: databaseId,
       },
       tags,
+      imageUrl,
     },
-    itemType: "notion",
   };
 }
 
 export async function fetchNotionDatabaseItems(
   databaseId: string,
   map: NotionDatabaseMap = {}
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   const headers = notionHeaders();
   if (!headers) {
     console.error("Notion API error: NOTION_TOKEN not configured");
@@ -186,10 +187,11 @@ export async function fetchNotionDatabaseItems(
     dateProp: map.dateProp ?? DEFAULT_PROP_NAMES.DATE,
     descriptionProp: map.descriptionProp ?? DEFAULT_PROP_NAMES.DESCRIPTION,
     imageProp: map.imageProp ?? DEFAULT_PROP_NAMES.IMAGE,
-    sourceName: map.sourceName ?? DEFAULT_SOURCE_NAMES.DATABASE,
     limit: map.limit ?? DEFAULT_LIMITS.DATABASE,
     filter: map.filter,
     sorts: map.sorts,
+    connectionId: map.connectionId,
+    resourceId: map.resourceId,
   };
 
   try {
@@ -214,7 +216,7 @@ export async function fetchNotionDatabaseItems(
     return results
       .slice(0, propMapping.limit)
       .map((page: any) =>
-        mapDatabasePageToFeedItem(page, databaseId, propMapping)
+        mapDatabasePageToEntityInput(page, databaseId, propMapping)
       );
   } catch (error) {
     console.error("Error fetching Notion database items:", error);
@@ -225,7 +227,7 @@ export async function fetchNotionDatabaseItems(
 export async function fetchNotionBookmarkBlocks(
   blockId: string,
   opts: NotionBookmarksOptions = {}
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   const headers = notionHeaders();
   if (!headers) {
     console.error("Notion API error: NOTION_TOKEN not configured");
@@ -233,7 +235,6 @@ export async function fetchNotionBookmarkBlocks(
   }
 
   const limit = opts.limit ?? DEFAULT_LIMITS.BOOKMARKS;
-  const sourceName = opts.sourceName ?? DEFAULT_SOURCE_NAMES.BOOKMARK;
 
   try {
     const res = await fetch(buildBlockChildrenUrl(blockId, limit), { headers });
@@ -246,23 +247,25 @@ export async function fetchNotionBookmarkBlocks(
     const data = await res.json();
     const results: any[] = Array.isArray(data?.results) ? data.results : [];
 
-    const items: FeedItem[] = [];
+    const items: EntityInput[] = [];
     for (const block of results) {
       if (block?.type !== "bookmark") continue;
       const url: string | undefined = block?.bookmark?.url;
       if (!url) continue;
 
       items.push({
+        kind: "notion_bookmark",
         title: url,
         url,
-        description: null,
-        date: block?.created_time ?? new Date().toISOString(),
-        source: sourceName,
-        imageUrl: null,
+        body: null,
+        summary: null,
+        occurredAt: block?.created_time ?? new Date().toISOString(),
+        externalId: block?.id || null,
+        connectionId: opts.connectionId || null,
+        resourceId: opts.resourceId || null,
         metadata: {
           notion: { block_id: block?.id ?? null, parent_id: blockId },
         },
-        itemType: "notion",
       });
 
       if (items.length >= limit) break;

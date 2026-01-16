@@ -3,7 +3,7 @@ import Parser from "rss-parser";
 
 import { getDb } from "../../../../main/db/client";
 import { connectionResources, connections } from "../../../../main/db/schema";
-import { FeedItem, extractImageFromHtml, pickUrl } from "../../cron";
+import { EntityInput, extractImageFromHtml, pickUrl } from "..";
 
 const DEFAULT_TITLE = "No title";
 const FALLBACK_URL = "#";
@@ -63,26 +63,36 @@ function extractDate(item: any): string {
 
 export async function fetchRssFeed(
   url: string,
-  sourceName: string
-): Promise<FeedItem[]> {
+  sourceName: string,
+  connectionId?: string,
+  resourceId?: string
+): Promise<EntityInput[]> {
   try {
     const feed = await parser.parseURL(url);
     const items = feed.items ?? [];
 
-    return items.map((item): FeedItem => {
+    return items.map((item): EntityInput => {
       const imageUrl = findImageUrl(item);
       const description = extractDescription(item);
       const date = extractDate(item);
 
       return {
+        kind: "rss_article",
         title: item.title ?? DEFAULT_TITLE,
         url: item.link ?? FALLBACK_URL,
-        description,
-        date,
-        source: sourceName,
-        imageUrl,
-        metadata: null,
-        itemType: "article",
+        body: description,
+        summary: description?.substring(0, 500) || null,
+        occurredAt: date,
+        externalId: item.guid || item.link || null,
+        connectionId: connectionId || null,
+        resourceId: resourceId || null,
+        metadata: {
+          source: sourceName,
+          imageUrl,
+          feedUrl: url,
+          author: item.creator || item.author || null,
+          categories: item.categories || [],
+        },
       };
     });
   } catch (error) {
@@ -93,7 +103,7 @@ export async function fetchRssFeed(
 
 export async function fetchRssFromConnectionResources(
   limit: number = 10
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   try {
     const db = getDb();
     
@@ -125,14 +135,19 @@ export async function fetchRssFromConnectionResources(
       return [];
     }
 
-    const allItems: FeedItem[] = [];
+    const allItems: EntityInput[] = [];
 
     for (const resource of resources) {
       const feedUrl = resource.url || resource.externalId;
       const feedName = resource.name || "RSS Feed";
 
       try {
-        const items = await fetchRssFeed(feedUrl, feedName);
+        const items = await fetchRssFeed(
+          feedUrl,
+          feedName,
+          connection.id,
+          resource.id
+        );
         allItems.push(...items.slice(0, limit));
       } catch (error) {
         console.error(`Failed to fetch RSS feed ${feedName}:`, error);

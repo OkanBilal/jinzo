@@ -1,9 +1,9 @@
-import type { FeedItem } from "../../cron";
+import type { EntityInput } from "..";
 import {
   getConnectionByProvider,
   getSelectedResources as getSelectedResourcesUtil,
   normalizeDateToIso,
-} from "../../cron/connection-utils";
+} from "../connection-utils";
 
 const HN_API_BASE = "https://hacker-news.firebaseio.com/v0";
 const HN_SITE_BASE = "https://news.ycombinator.com";
@@ -28,39 +28,39 @@ function normalizeStoryDate(timestamp?: number): string {
   return normalizeDateToIso(timestamp);
 }
 
-function mapStoryToFeedItem(
+function mapStoryToEntityInput(
   story: any,
   connectionId?: string,
   resourceId?: string
-): FeedItem {
+): EntityInput {
   const hnUrl = buildHackerNewsUrl(story.id);
   const canonical = typeof story.url === "string" ? story.url : hnUrl;
   const dateIso = normalizeStoryDate(story.time);
 
   return {
+    kind: "hn_story",
     title: story.title ?? DEFAULT_TITLE,
     url: hnUrl,
-    description: typeof story.text === "string" ? story.text : null,
-    date: dateIso,
-    source: "hackernews",
-    imageUrl: null,
+    body: typeof story.text === "string" ? story.text : null,
+    summary: story.title ?? DEFAULT_TITLE,
+    occurredAt: dateIso,
+    externalId: String(story.id),
+    connectionId: connectionId || null,
+    resourceId: resourceId || null,
     metadata: {
       source_url: canonical,
       by: story.by,
       score: story.score,
       descendants: story.descendants,
     },
-    itemType: "news",
-    connectionId: connectionId || null,
-    resourceId: resourceId || null,
   };
 }
 
-async function mapCommentToFeedItem(
+async function mapCommentToEntityInput(
   comment: any,
   connectionId?: string,
   resourceId?: string
-): Promise<FeedItem | null> {
+): Promise<EntityInput | null> {
   const hnUrl = buildHackerNewsUrl(comment.id);
   const dateIso = normalizeStoryDate(comment.time);
 
@@ -88,20 +88,20 @@ async function mapCommentToFeedItem(
   }
 
   return {
+    kind: "hn_comment",
     title: `Comment on: ${parentTitle}`,
     url: hnUrl,
-    description: comment.text || null,
-    date: dateIso,
-    source: "hackernews",
-    imageUrl: null,
+    body: comment.text || null,
+    summary: comment.text?.substring(0, 500) || null,
+    occurredAt: dateIso,
+    externalId: String(comment.id),
+    connectionId: connectionId || null,
+    resourceId: resourceId || null,
     metadata: {
       by: comment.by,
       parent: comment.parent,
       commentId: comment.id,
     },
-    itemType: "user-comment",
-    connectionId: connectionId || null,
-    resourceId: resourceId || null,
   };
 }
 
@@ -109,7 +109,7 @@ export async function fetchHackerNews(
   limit = DEFAULT_LIMIT,
   connectionId?: string,
   resourceId?: string
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   try {
     const response = await fetch(`${HN_API_BASE}/topstories.json`);
     if (!response.ok) return [];
@@ -121,11 +121,11 @@ export async function fetchHackerNews(
       ids.slice(0, limit).map(async (id) => {
         const story = await fetchItemById(id);
         if (!story) return null;
-        return mapStoryToFeedItem(story, connectionId, resourceId);
+        return mapStoryToEntityInput(story, connectionId, resourceId);
       })
     );
 
-    return items.filter((item): item is FeedItem => item !== null);
+    return items.filter((item): item is EntityInput => item !== null);
   } catch (error) {
     console.error("Failed to fetch Hacker News stories:", error);
     return [];
@@ -137,7 +137,7 @@ export async function fetchUserSubmissions(
   limit = DEFAULT_LIMIT,
   connectionId?: string,
   resourceId?: string
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   try {
     const userResponse = await fetch(`${HN_API_BASE}/user/${username}.json`);
     if (!userResponse.ok) {
@@ -164,14 +164,14 @@ export async function fetchUserSubmissions(
         if (!item) return null;
 
         if (item.type === "story") {
-          return mapStoryToFeedItem(item, connectionId, resourceId);
+          return mapStoryToEntityInput(item, connectionId, resourceId);
         }
 
         return null;
       })
     );
 
-    return items.filter((item): item is FeedItem => item !== null);
+    return items.filter((item): item is EntityInput => item !== null);
   } catch (error) {
     console.error(`Failed to fetch submissions for user ${username}:`, error);
     return [];
@@ -183,7 +183,7 @@ export async function fetchUserComments(
   limit = DEFAULT_LIMIT,
   connectionId?: string,
   resourceId?: string
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   try {
     const userResponse = await fetch(`${HN_API_BASE}/user/${username}.json`);
     if (!userResponse.ok) {
@@ -204,7 +204,7 @@ export async function fetchUserComments(
       return [];
     }
 
-    const comments: FeedItem[] = [];
+    const comments: EntityInput[] = [];
 
     for (const id of ids) {
       if (comments.length >= limit) break;
@@ -213,7 +213,7 @@ export async function fetchUserComments(
       if (!item) continue;
 
       if (item.type === "comment") {
-        const commentItem = await mapCommentToFeedItem(
+        const commentItem = await mapCommentToEntityInput(
           item,
           connectionId,
           resourceId
@@ -268,7 +268,7 @@ export async function fetchHackerNewsFromConnectionResources(
   topStoriesLimit = 10,
   userSubmissionsLimit = 10,
   userCommentsLimit = 10
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   const connection = await getConnection();
   if (!connection) {
     console.warn("⚠️  Skipping HackerNews: No active connection found");
@@ -281,7 +281,7 @@ export async function fetchHackerNewsFromConnectionResources(
     return [];
   }
 
-  const allItems: FeedItem[] = [];
+  const allItems: EntityInput[] = [];
 
   for (const resource of resources) {
     try {

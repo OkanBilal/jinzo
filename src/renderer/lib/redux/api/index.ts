@@ -70,12 +70,46 @@ export type {
 } from "./chatApi";
 
 export {
+  entitiesApi,
+  useGetEntitiesQuery,
+  useLazyGetEntitiesQuery,
+  useGetEntityByIdQuery,
+  useLazyGetEntityByIdQuery,
+  useCreateEntityMutation,
+  useUpdateEntityMutation,
+  useDeleteEntityMutation,
+  useSearchEntitiesQuery,
+  useLazySearchEntitiesQuery,
+  useGetTasksQuery,
+  useGetTaskByEntityIdQuery,
+  useUpdateTaskStatusMutation,
+  useGetIssuesQuery,
+  useGetIssueByEntityIdQuery,
+  useUpdateIssueStateMutation,
+  useGetPlaylistItemsQuery,
+} from "./entitiesApi";
+export type {
+  Entity,
+  EntityQueryParams,
+  CreateEntityPayload,
+  UpdateEntityPayload,
+  Task,
+  Issue,
+  PlaylistItem,
+} from "./entitiesApi";
+
+export {
   feedApi,
-  useGetFeedItemsQuery,
-  useGetCombinedFeedQuery,
-  useRunFeedSyncMutation,
+  useGetFeedEventsQuery,
+  useGetRecentFeedEventsQuery,
 } from "./feedApi";
-export type { FeedSource, FeedQueryParams } from "./feedApi";
+export type { FeedEvent, FeedEventQueryParams } from "./feedApi";
+
+export {
+  syncApi,
+  useRunEntitySyncMutation,
+} from "./syncApi";
+export type { SyncStats, SyncResult } from "./syncApi";
 
 export {
   ollamaApi,
@@ -110,12 +144,6 @@ export {
   useCallMcpToolMutation,
 } from "./mcpApi";
 export type { McpTool, McpToolsResponse, CallToolPayload, CallToolResponse } from "./mcpApi";
-
-export {
-  cronApi,
-  useRunFeedSyncMutation as useCronRunFeedSyncMutation,
-} from "./cronApi";
-export type { CronSyncStats, CronSyncResult } from "./cronApi";
 
 export {
   setSelectedModel,

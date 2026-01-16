@@ -1,17 +1,17 @@
-import { parseMetadata, FeedRow, PromptItem } from "./types";
+import { parseMetadata, EntityRow, PromptItem } from "./types";
 
 const GITHUB_ICON = "/apps/github-skeuomorphic.png";
 
-function extractRepoName(item: FeedRow): string | undefined {
-  const meta = parseMetadata(item.metadata);
+function extractRepoName(entity: EntityRow): string | undefined {
+  const meta = parseMetadata(entity.metadata);
   return meta?.repo;
 }
 
-function collectUniqueRepos(items: FeedRow[]): Set<string> {
+function collectUniqueRepos(entities: EntityRow[]): Set<string> {
   const repos = new Set<string>();
 
-  for (const item of items) {
-    const repo = extractRepoName(item);
+  for (const entity of entities) {
+    const repo = extractRepoName(entity);
     if (repo) {
       repos.add(repo);
     }
@@ -20,12 +20,12 @@ function collectUniqueRepos(items: FeedRow[]): Set<string> {
   return repos;
 }
 
-export function buildGitHubPromptsFromItems(items: FeedRow[]): PromptItem[] {
-  if (items.length === 0) {
+export function buildGitHubPromptsFromEntities(entities: EntityRow[]): PromptItem[] {
+  if (entities.length === 0) {
     return [];
   }
 
-  const repos = collectUniqueRepos(items);
+  const repos = collectUniqueRepos(entities);
 
   return Array.from(repos).map(
     (repo): PromptItem => ({
@@ -34,3 +34,8 @@ export function buildGitHubPromptsFromItems(items: FeedRow[]): PromptItem[] {
     })
   );
 }
+
+/**
+ * @deprecated Use buildGitHubPromptsFromEntities instead
+ */
+export const buildGitHubPromptsFromItems = buildGitHubPromptsFromEntities;

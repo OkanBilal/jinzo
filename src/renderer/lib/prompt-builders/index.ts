@@ -1,14 +1,15 @@
 
 export * from "./types";
 
-export { buildPodcastPromptsFromItems } from "./podcast";
-export { buildGitHubPromptsFromItems } from "./github";
-export { buildAppleMusicPromptsFromItems } from "./apple-music";
-export { buildRaindropPromptsFromItems } from "./raindrop";
-export { buildHackerNewsPromptsFromItems } from "./hackernews";
+export { buildPodcastPromptsFromEntities, buildPodcastPromptsFromItems } from "./podcast";
+export { buildGitHubPromptsFromEntities, buildGitHubPromptsFromItems } from "./github";
+export { buildAppleMusicPromptsFromEntities, buildAppleMusicPromptsFromItems } from "./apple-music";
+export { buildRaindropPromptsFromEntities, buildRaindropPromptsFromItems } from "./raindrop";
+export { buildHackerNewsPromptsFromEntities, buildHackerNewsPromptsFromItems } from "./hackernews";
 
 export {
-  buildPromptsByItemType,
+  buildPromptsByKind,
+  buildPromptsByItemType, // deprecated
   buildPodcastPrompts,
   buildGitHubPrompts,
   buildAppleMusicPrompts,

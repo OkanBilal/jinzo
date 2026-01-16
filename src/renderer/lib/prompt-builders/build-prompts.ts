@@ -1,90 +1,102 @@
 import {
-  FeedRow,
-  buildPodcastPromptsFromItems,
-  buildGitHubPromptsFromItems,
-  buildAppleMusicPromptsFromItems,
-  buildRaindropPromptsFromItems,
-  buildHackerNewsPromptsFromItems,
+  EntityRow,
+  buildPodcastPromptsFromEntities,
+  buildGitHubPromptsFromEntities,
+  buildAppleMusicPromptsFromEntities,
+  buildRaindropPromptsFromEntities,
+  buildHackerNewsPromptsFromEntities,
   PromptItem,
 } from ".";
 
-const ITEM_TYPE_BUILDERS = {
-  "podcast-episode": buildPodcastPromptsFromItems,
-  issue: buildGitHubPromptsFromItems,
-  "apple-music-playlist": buildAppleMusicPromptsFromItems,
-  bookmark: buildRaindropPromptsFromItems,
-  news: buildHackerNewsPromptsFromItems,
+const KIND_BUILDERS = {
+  podcast_episode: buildPodcastPromptsFromEntities,
+  issue: buildGitHubPromptsFromEntities,
+  pull_request: buildGitHubPromptsFromEntities,
+  apple_music_playlist: buildAppleMusicPromptsFromEntities,
+  apple_music_track: buildAppleMusicPromptsFromEntities,
+  bookmark: buildRaindropPromptsFromEntities,
+  hn_story: buildHackerNewsPromptsFromEntities,
+  hn_comment: buildHackerNewsPromptsFromEntities,
 } as const;
 
-function normalizeItemTypes(itemType: string | string[]): string[] {
-  return Array.isArray(itemType) ? itemType : [itemType];
+function normalizeKinds(kind: string | string[]): string[] {
+  return Array.isArray(kind) ? kind : [kind];
 }
 
-async function fetchFeedItems(
-  itemTypes: string[],
+async function fetchEntities(
+  kinds: string[],
   limit: number
-): Promise<FeedRow[]> {
+): Promise<EntityRow[]> {
   try {
-    const response = await window.api.feed.getItems({ itemTypes, limit });
+    // Fetch entities for each kind and combine results
+    const allEntities: EntityRow[] = [];
     
-    if (!response.success) {
-      console.error("Feed API error:", response.error);
-      return [];
+    for (const kind of kinds) {
+      const response = await window.api.entities.getAll({ kind, limit });
+      
+      if (response.success && response.data) {
+        allEntities.push(...response.data);
+      }
     }
-
-    return response.data || [];
+    
+    return allEntities;
   } catch (error) {
-    console.error("Error fetching feed items:", error);
+    console.error("Error fetching entities:", error);
     return [];
   }
 }
 
 function hasBuilder(
-  itemType: string
-): itemType is keyof typeof ITEM_TYPE_BUILDERS {
-  return itemType in ITEM_TYPE_BUILDERS;
+  kind: string
+): kind is keyof typeof KIND_BUILDERS {
+  return kind in KIND_BUILDERS;
 }
 
-function buildPromptsForType(itemType: string, items: FeedRow[]): PromptItem[] {
-  if (!hasBuilder(itemType)) {
+function buildPromptsForKind(kind: string, entities: EntityRow[]): PromptItem[] {
+  if (!hasBuilder(kind)) {
     return [];
   }
 
-  const builder = ITEM_TYPE_BUILDERS[itemType];
-  return builder(items);
+  const builder = KIND_BUILDERS[kind];
+  return builder(entities);
 }
 
-export async function buildPromptsByItemType(
-  itemType: string | string[]
+export async function buildPromptsByKind(
+  kind: string | string[]
 ): Promise<PromptItem[]> {
-  const itemTypes = normalizeItemTypes(itemType);
+  const kinds = normalizeKinds(kind);
 
-  const items = await fetchFeedItems(itemTypes, 5);
+  const entities = await fetchEntities(kinds, 5);
 
   const allPrompts: PromptItem[] = [];
-  for (const type of itemTypes) {
-    const typePrompts = buildPromptsForType(type, items);
-    allPrompts.push(...typePrompts);
+  for (const k of kinds) {
+    const kindPrompts = buildPromptsForKind(k, entities);
+    allPrompts.push(...kindPrompts);
   }
   return allPrompts;
 }
 
+/**
+ * @deprecated Use buildPromptsByKind instead
+ */
+export const buildPromptsByItemType = buildPromptsByKind;
+
 export async function buildPodcastPrompts(): Promise<PromptItem[]> {
-  return buildPromptsByItemType("podcast-episode");
+  return buildPromptsByKind("podcast_episode");
 }
 
 export async function buildGitHubPrompts(): Promise<PromptItem[]> {
-  return buildPromptsByItemType("issue");
+  return buildPromptsByKind(["issue", "pull_request"]);
 }
 
 export async function buildAppleMusicPrompts(): Promise<PromptItem[]> {
-  return buildPromptsByItemType("apple-music-playlist");
+  return buildPromptsByKind(["apple_music_playlist", "apple_music_track"]);
 }
 
 export async function buildRaindropPrompts(): Promise<PromptItem[]> {
-  return buildPromptsByItemType("bookmark");
+  return buildPromptsByKind("bookmark");
 }
 
 export async function buildHackerNewsPrompts(): Promise<PromptItem[]> {
-  return buildPromptsByItemType("news");
+  return buildPromptsByKind(["hn_story", "hn_comment"]);
 }

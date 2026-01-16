@@ -1,81 +1,81 @@
 import { getDb } from "../../../../main/db/client";
-import { feedItems } from "../../../../main/db/schema";
+import { entities } from "../../../../main/db/schema";
 import { and, desc, gte, lte, or, like, inArray, sql } from "drizzle-orm";
 import type {
-  FeedListParams,
-  FeedSearchParams,
-  FeedListResult,
-  FeedSearchResult,
-  FeedItemResult,
+  EntityListParams,
+  EntitySearchParams,
+  EntityListResult,
+  EntitySearchResult,
+  EntityResult,
   OllamaToolDefinition,
 } from "../types";
 
-function toFeedItemResult(row: any): FeedItemResult {
+function toEntityResult(row: any): EntityResult {
   return {
     id: row.id,
     title: row.title,
     url: row.url,
-    description: row.description,
-    itemType: row.itemType,
-    date: row.date.toISOString(),
-    source: row.source,
-    imageUrl: row.imageUrl,
+    body: row.body,
+    summary: row.summary,
+    kind: row.kind,
+    occurredAt: row.occurredAt instanceof Date ? row.occurredAt.toISOString() : row.occurredAt,
+    connectionId: row.connectionId,
     metadata: row.metadata,
   };
 }
 
-export async function feedList(
-  params: FeedListParams
-): Promise<FeedListResult> {
+export async function entityList(
+  params: EntityListParams
+): Promise<EntityListResult> {
   const db = getDb();
   const limit = params.limit || 10;
   const offset = params.offset || 0;
 
   const conditions = [];
 
-  if (params.sources && params.sources.length > 0) {
-    conditions.push(inArray(feedItems.source, params.sources));
+  if (params.kinds && params.kinds.length > 0) {
+    conditions.push(inArray(entities.kind, params.kinds));
   }
 
-  if (params.itemTypes && params.itemTypes.length > 0) {
-    conditions.push(inArray(feedItems.itemType, params.itemTypes));
+  if (params.connectionIds && params.connectionIds.length > 0) {
+    conditions.push(inArray(entities.connectionId, params.connectionIds));
   }
 
   if (params.startDate) {
-    conditions.push(gte(feedItems.date, new Date(params.startDate)));
+    conditions.push(gte(entities.occurredAt, new Date(params.startDate)));
   }
   if (params.endDate) {
-    conditions.push(lte(feedItems.date, new Date(params.endDate)));
+    conditions.push(lte(entities.occurredAt, new Date(params.endDate)));
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
   const items = await db
     .select()
-    .from(feedItems)
+    .from(entities)
     .where(whereClause)
-    .orderBy(desc(feedItems.date))
+    .orderBy(desc(entities.occurredAt))
     .limit(limit)
     .offset(offset);
 
   const totalResult = await db
     .select({ count: sql<number>`count(*)` })
-    .from(feedItems)
+    .from(entities)
     .where(whereClause);
 
   const total = totalResult[0]?.count || 0;
 
   return {
-    items: items.map(toFeedItemResult),
+    entities: items.map(toEntityResult),
     total,
     limit,
     offset,
   };
 }
 
-export async function feedSearch(
-  params: FeedSearchParams
-): Promise<FeedSearchResult> {
+export async function entitySearch(
+  params: EntitySearchParams
+): Promise<EntitySearchResult> {
   const db = getDb();
   const limit = params.limit || 10;
   const conditions = [];
@@ -83,88 +83,98 @@ export async function feedSearch(
   const searchPattern = `%${params.query}%`;
   conditions.push(
     or(
-      like(feedItems.title, searchPattern),
-      like(feedItems.description, searchPattern),
-      like(feedItems.url, searchPattern)
+      like(entities.title, searchPattern),
+      like(entities.body, searchPattern),
+      like(entities.summary, searchPattern),
+      like(entities.url, searchPattern)
     )!
   );
 
-  if (params.sources && params.sources.length > 0) {
-    conditions.push(inArray(feedItems.source, params.sources));
+  if (params.kinds && params.kinds.length > 0) {
+    conditions.push(inArray(entities.kind, params.kinds));
   }
 
-  if (params.itemTypes && params.itemTypes.length > 0) {
-    conditions.push(inArray(feedItems.itemType, params.itemTypes));
+  if (params.connectionIds && params.connectionIds.length > 0) {
+    conditions.push(inArray(entities.connectionId, params.connectionIds));
   }
 
   if (params.startDate) {
-    conditions.push(gte(feedItems.date, new Date(params.startDate)));
+    conditions.push(gte(entities.occurredAt, new Date(params.startDate)));
   }
   if (params.endDate) {
-    conditions.push(lte(feedItems.date, new Date(params.endDate)));
+    conditions.push(lte(entities.occurredAt, new Date(params.endDate)));
   }
 
   const whereClause = and(...conditions);
 
   const items = await db
     .select()
-    .from(feedItems)
+    .from(entities)
     .where(whereClause)
-    .orderBy(desc(feedItems.date))
+    .orderBy(desc(entities.occurredAt))
     .limit(limit);
 
   const totalResult = await db
     .select({ count: sql<number>`count(*)` })
-    .from(feedItems)
+    .from(entities)
     .where(whereClause);
 
   const total = totalResult[0]?.count || 0;
 
   return {
-    items: items.map(toFeedItemResult),
+    entities: items.map(toEntityResult),
     total,
     query: params.query,
   };
 }
 
-export const FEED_TOOLS: OllamaToolDefinition[] = [
+/**
+ * @deprecated Use entityList instead
+ */
+export const feedList = entityList;
+
+/**
+ * @deprecated Use entitySearch instead
+ */
+export const feedSearch = entitySearch;
+
+export const ENTITY_TOOLS: OllamaToolDefinition[] = [
   {
     type: "function",
     function: {
-      name: "feed_list",
+      name: "entity_list",
       description:
-        "View and browse existing feed items already stored in the database with optional filtering by source, item type, and date range. Returns paginated results sorted by date (newest first). NOTE: This does NOT fetch new items from external sources - use trigger_feed_sync to refresh/update the feed with new items.",
+        "View and browse existing entities already stored in the database with optional filtering by kind, connection, and date range. Returns paginated results sorted by date (newest first). NOTE: This does NOT fetch new items from external sources - use trigger_entity_sync to refresh/update with new items.",
       parameters: {
         type: "object",
         properties: {
           limit: {
             type: "number",
-            description: "Maximum number of items to return (default: 10)",
+            description: "Maximum number of entities to return (default: 10)",
           },
           offset: {
             type: "number",
-            description: "Number of items to skip for pagination (default: 0)",
+            description: "Number of entities to skip for pagination (default: 0)",
           },
-          sources: {
+          kinds: {
             type: "array",
             items: { type: "string" },
             description:
-              "Filter by sources (e.g., ['github', 'hackernews', 'raindrop'])",
+              "Filter by entity kinds (e.g., ['issue', 'bookmark', 'podcast_episode', 'hn_story'])",
           },
-          itemTypes: {
+          connectionIds: {
             type: "array",
             items: { type: "string" },
-            description:
-              "Filter by item types (e.g., ['repository', 'article', 'bookmark'])",
+            description: "Filter by connection IDs",
           },
           startDate: {
             type: "string",
             description:
-              "Filter items from this date onwards (ISO 8601 format)",
+              "Filter entities from this date onwards (ISO 8601 format)",
           },
           endDate: {
             type: "string",
-            description: "Filter items up to this date (ISO 8601 format)",
+            description: "Filter entities up to this date (ISO 8601 format)",
           },
         },
       },
@@ -173,41 +183,40 @@ export const FEED_TOOLS: OllamaToolDefinition[] = [
   {
     type: "function",
     function: {
-      name: "feed_search",
+      name: "entity_search",
       description:
-        "Search existing feed items already in the database by keyword. Searches in title, description, and URL. Can be filtered by source, item type, and date range. NOTE: This searches only stored items - use trigger_feed_sync first if you need the latest data.",
+        "Search existing entities already in the database by keyword. Searches in title, body, summary, and URL. Can be filtered by kind, connection, and date range. NOTE: This searches only stored entities - use trigger_entity_sync first if you need the latest data.",
       parameters: {
         type: "object",
         properties: {
           query: {
             type: "string",
             description:
-              "Search query to match against title, description, or URL",
+              "Search query to match against title, body, summary, or URL",
           },
           limit: {
             type: "number",
             description: "Maximum number of results to return (default: 10)",
           },
-          sources: {
+          kinds: {
             type: "array",
             items: { type: "string" },
             description:
-              "Filter by sources (e.g., ['github', 'hackernews', 'raindrop'])",
+              "Filter by entity kinds (e.g., ['issue', 'bookmark', 'podcast_episode'])",
           },
-          itemTypes: {
+          connectionIds: {
             type: "array",
             items: { type: "string" },
-            description:
-              "Filter by item types (e.g., ['repository', 'article', 'bookmark'])",
+            description: "Filter by connection IDs",
           },
           startDate: {
             type: "string",
             description:
-              "Filter items from this date onwards (ISO 8601 format)",
+              "Filter entities from this date onwards (ISO 8601 format)",
           },
           endDate: {
             type: "string",
-            description: "Filter items up to this date (ISO 8601 format)",
+            description: "Filter entities up to this date (ISO 8601 format)",
           },
         },
         required: ["query"],
@@ -216,16 +225,28 @@ export const FEED_TOOLS: OllamaToolDefinition[] = [
   },
 ];
 
-export async function executeFeedTool(
+/**
+ * @deprecated Use ENTITY_TOOLS instead
+ */
+export const FEED_TOOLS = ENTITY_TOOLS;
+
+export async function executeEntityTool(
   toolName: string,
   params: any
 ): Promise<any> {
   switch (toolName) {
-    case "feed_list":
-      return feedList(params as FeedListParams);
-    case "feed_search":
-      return feedSearch(params as FeedSearchParams);
+    case "entity_list":
+    case "feed_list": // backward compat
+      return entityList(params as EntityListParams);
+    case "entity_search":
+    case "feed_search": // backward compat
+      return entitySearch(params as EntitySearchParams);
     default:
       throw new Error(`Unknown tool: ${toolName}`);
   }
 }
+
+/**
+ * @deprecated Use executeEntityTool instead
+ */
+export const executeFeedTool = executeEntityTool;

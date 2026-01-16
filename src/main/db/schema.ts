@@ -9,6 +9,11 @@ import {
   check,
 } from "drizzle-orm/sqlite-core";
 
+
+/* -----------------------------
+   ACCOUNTS / SETTINGS
+------------------------------ */
+
 export const accounts = sqliteTable(
   "accounts",
   {
@@ -35,19 +40,42 @@ export const accounts = sqliteTable(
   ]
 );
 
+export const appSettings = sqliteTable("app_settings", {
+  id: text("id").primaryKey().notNull().default("default"),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+
+  activeMoodId: text("active_mood_id").references(() => moods.id, {
+    onDelete: "set null",
+  }),
+
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+
+/* -----------------------------
+   CONNECTIONS / TOKENS / SYNC
+------------------------------ */
+
 export const connections = sqliteTable(
   "connections",
   {
     id: text("id").primaryKey(),
-    provider: text("provider").notNull(),
-    type: text("type").notNull(),
+    provider: text("provider").notNull(), // github|linear|notion|gmail|rss|...
+    type: text("type").notNull(), // oauth|api_key|local|...
     displayName: text("display_name"),
     status: text("status", {
       enum: ["active", "revoked", "error", "disabled"],
     })
       .notNull()
       .default("active"),
-    scopes: text("scopes"), // JSON/CSV
+    scopes: text("scopes"), // JSON
     metadata: text("metadata"), // JSON
     connectedAt: integer("connected_at", { mode: "timestamp" })
       .notNull()
@@ -62,11 +90,11 @@ export const connections = sqliteTable(
     index("idx_connections_connected_at").on(t.connectedAt),
     index("idx_connections_updated_at").on(t.updatedAt),
     check(
-      "check_metadata_json",
+      "check_connections_metadata_json",
       sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`
     ),
     check(
-      "check_scopes_json",
+      "check_connections_scopes_json",
       sql`json_valid(${t.scopes}) OR ${t.scopes} IS NULL`
     ),
   ]
@@ -83,7 +111,7 @@ export const connectionTokens = sqliteTable(
     refreshTokenEnc: blob("refresh_token_enc"),
     tokenType: text("token_type"),
     expiresAt: integer("expires_at", { mode: "timestamp" }),
-    tokenHash: blob("token_hash"), // SHA-256(plain) result
+    tokenHash: blob("token_hash"),
     keyVersion: integer("key_version").notNull().default(1),
     isCurrent: integer("is_current", { mode: "boolean" })
       .notNull()
@@ -98,7 +126,6 @@ export const connectionTokens = sqliteTable(
     index("idx_ct_expires").on(t.expiresAt),
     index("idx_ct_created_at").on(t.createdAt),
     index("idx_ct_token_hash").on(t.tokenHash),
-    index("idx_ct_expires_current").on(t.expiresAt, t.isCurrent),
     uniqueIndex("uniq_ct_conn_current")
       .on(t.connectionId)
       .where(sql`${t.isCurrent} = 1`),
@@ -111,20 +138,20 @@ export const connectionSyncState = sqliteTable(
     connectionId: text("connection_id")
       .primaryKey()
       .references(() => connections.id, { onDelete: "cascade" }),
-    cursor: text("cursor"), // JSON: since, pageToken, etag...
+    cursor: text("cursor"), // JSON
     lastSyncAt: integer("last_sync_at", { mode: "timestamp" }),
     lastSuccessAt: integer("last_success_at", { mode: "timestamp" }),
     lastErrorAt: integer("last_error_at", { mode: "timestamp" }),
     lastError: text("last_error"),
     backoffUntil: integer("backoff_until", { mode: "timestamp" }),
-    etag: text("etag"), // HTTP caching
+    etag: text("etag"),
   },
   (t) => [
     index("idx_sync_state_last_sync").on(t.lastSyncAt),
     index("idx_sync_state_last_success").on(t.lastSuccessAt),
     index("idx_sync_state_backoff_until").on(t.backoffUntil),
     check(
-      "check_cursor_json",
+      "check_sync_cursor_json",
       sql`json_valid(${t.cursor}) OR ${t.cursor} IS NULL`
     ),
   ]
@@ -137,8 +164,8 @@ export const connectionResources = sqliteTable(
     connectionId: text("connection_id")
       .notNull()
       .references(() => connections.id, { onDelete: "cascade" }),
-    externalId: text("external_id").notNull(), // Notion db id, GitHub repo full_name, vb.
-    kind: text("kind").notNull(), // 'notion_database'|'github_repo'|'calendar'...
+    externalId: text("external_id").notNull(), // repo full_name, notion db id, ...
+    kind: text("kind").notNull(), // github_repo|notion_db|rss_feed|...
     name: text("name"),
     url: text("url"),
     selected: integer("selected", { mode: "boolean" }).notNull().default(true),
@@ -146,7 +173,6 @@ export const connectionResources = sqliteTable(
     lastSeenAt: integer("last_seen_at", { mode: "timestamp" }),
     lastIngestAt: integer("last_ingest_at", { mode: "timestamp" }),
   },
-
   (t) => [
     uniqueIndex("uniq_resources_conn_ext").on(t.connectionId, t.externalId),
     index("idx_resources_kind").on(t.kind),
@@ -154,13 +180,16 @@ export const connectionResources = sqliteTable(
     index("idx_resources_conn").on(t.connectionId),
     index("idx_resources_last_ingest").on(t.lastIngestAt),
     index("idx_resources_last_seen").on(t.lastSeenAt),
-    index("idx_resources_last_seen_selected").on(t.lastSeenAt, t.selected),
     check(
-      "check_metadata_json",
+      "check_resources_metadata_json",
       sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`
     ),
   ]
 );
+
+/* -----------------------------
+   MOODS / APP STATE
+------------------------------ */
 
 export const appStates = sqliteTable(
   "app_states",
@@ -204,23 +233,6 @@ export const appStates = sqliteTable(
   ]
 );
 
-export const appSettings = sqliteTable("app_settings", {
-  id: text("id").primaryKey().notNull().default("default"),
-  accountId: text("account_id")
-    .notNull()
-    .references(() => accounts.id, { onDelete: "cascade" }),
-
-  activeMoodId: text("active_mood_id").references(() => moods.id, {
-    onDelete: "set null",
-  }),
-
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`),
-});
 
 export const moods = sqliteTable(
   "moods",
@@ -235,8 +247,8 @@ export const moods = sqliteTable(
     systemPrompt: text("system_prompt"),
     model: text("model"),
     icon: text("icon"),
-    themeConfig: text("theme_config"), // JSON (colors, typography, etc.)
-    uiConfig: text("ui_config"), // JSON (layout, tabs, shortcuts, etc.)
+    themeConfig: text("theme_config"), // JSON
+    uiConfig: text("ui_config"), // JSON
     isArchived: integer("is_archived", { mode: "boolean" })
       .notNull()
       .default(false),
@@ -255,11 +267,11 @@ export const moods = sqliteTable(
     index("idx_moods_sort").on(t.sortOrder),
     index("idx_moods_updated").on(t.updatedAt),
     check(
-      "check_theme_json",
+      "check_moods_theme_json",
       sql`json_valid(${t.themeConfig}) OR ${t.themeConfig} IS NULL`
     ),
     check(
-      "check_ui_json",
+      "check_moods_ui_json",
       sql`json_valid(${t.uiConfig}) OR ${t.uiConfig} IS NULL`
     ),
   ]
@@ -274,7 +286,6 @@ export const moodConnections = sqliteTable(
     connectionId: text("connection_id")
       .notNull()
       .references(() => connections.id, { onDelete: "cascade" }),
-
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
@@ -295,12 +306,9 @@ export const moodResources = sqliteTable(
     resourceId: text("resource_id")
       .notNull()
       .references(() => connectionResources.id, { onDelete: "cascade" }),
-
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-
     sortOrder: integer("sort_order").notNull().default(0),
-    metadata: text("metadata"), // JSON: mood-specific notes, tags, etc.
-
+    metadata: text("metadata"), // JSON
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -310,7 +318,7 @@ export const moodResources = sqliteTable(
     index("idx_mood_resource_resource").on(t.resourceId),
     index("idx_mood_resource_sort").on(t.moodId, t.sortOrder),
     check(
-      "check_metadata_json",
+      "check_mood_resources_metadata_json",
       sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`
     ),
   ]
@@ -348,21 +356,312 @@ export const moodAppOverrides = sqliteTable(
   ]
 );
 
+/* -----------------------------
+   UNIFIED CANONICAL CONTENT: ENTITIES
+------------------------------ */
+
+export const entities = sqliteTable(
+  "entities",
+  {
+    id: text("id").primaryKey(), // uuid
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+
+    // What is it?
+    kind: text("kind").notNull(),
+    // examples: task|issue|doc|bookmark|rss_article|podcast_episode|playlist|email|video|hn_item
+
+    // Source / mapping
+    connectionId: text("connection_id").references(() => connections.id, {
+      onDelete: "set null",
+    }),
+    resourceId: text("resource_id").references(() => connectionResources.id, {
+      onDelete: "set null",
+    }),
+    externalId: text("external_id"), // provider id
+    url: text("url"),
+
+    // Common searchable content
+    title: text("title"),
+    body: text("body"), // markdown/plain (long)
+    summary: text("summary"), // short (for lists/LLM)
+    metadata: text("metadata"), // JSON provider-specific
+
+    // Timestamps
+    occurredAt: integer("occurred_at", { mode: "timestamp" }), // publishedAt / happenedAt
+    sourceUpdatedAt: integer("source_updated_at", { mode: "timestamp" }),
+    etag: text("etag"),
+    isDeleted: integer("is_deleted", { mode: "boolean" }).notNull().default(false),
+
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    uniqueIndex("uniq_entities_source")
+      .on(t.connectionId, t.kind, t.externalId),
+    index("idx_entities_account_kind").on(t.accountId, t.kind),
+    index("idx_entities_conn").on(t.connectionId),
+    index("idx_entities_resource").on(t.resourceId),
+    index("idx_entities_occurred").on(t.occurredAt),
+    index("idx_entities_updated").on(t.updatedAt),
+    check(
+      "check_entities_metadata_json",
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`
+    ),
+  ]
+);
+
+export const entityChunks = sqliteTable(
+  "entity_chunks",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    entityId: text("entity_id")
+      .notNull()
+      .references(() => entities.id, { onDelete: "cascade" }),
+    chunkIndex: integer("chunk_index").notNull(),
+    content: text("content").notNull(),
+    tokenCount: integer("token_count"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    uniqueIndex("uniq_entity_chunk").on(t.entityId, t.chunkIndex),
+    index("idx_entity_chunks_entity").on(t.entityId),
+  ]
+);
+
+export const vecEntityChunks = sqliteTable("vec_entity_chunks", {
+  rowid: integer("rowid").primaryKey(),
+  embedding: blob("embedding"),
+});
+
+export const vecEntityChunkMap = sqliteTable(
+  "vec_entity_chunk_map",
+  {
+    vecRowid: integer("vec_rowid")
+      .primaryKey()
+      .references(() => vecEntityChunks.rowid, { onDelete: "cascade" }),
+    chunkId: integer("chunk_id")
+      .notNull()
+      .unique()
+      .references(() => entityChunks.id, { onDelete: "cascade" }),
+  },
+  (t) => [index("idx_vec_entity_chunk_map_chunk").on(t.chunkId)]
+);
+
+/* -----------------------------
+   ACTIONABLE DOMAIN TABLES
+   - keep canonical text in entities
+   - keep queryable state here
+------------------------------ */
+
+export const tasks = sqliteTable(
+  "tasks",
+  {
+    entityId: text("entity_id")
+      .primaryKey()
+      .references(() => entities.id, { onDelete: "cascade" }),
+
+    status: text("status", { enum: ["todo", "doing", "done", "canceled"] })
+      .notNull()
+      .default("todo"),
+    dueAt: integer("due_at", { mode: "timestamp" }),
+    priority: integer("priority").notNull().default(0),
+    labels: text("labels"), // JSON array
+  },
+  (t) => [
+    index("idx_tasks_status").on(t.status),
+    index("idx_tasks_due").on(t.dueAt),
+    check(
+      "check_tasks_labels_json",
+      sql`json_valid(${t.labels}) OR ${t.labels} IS NULL`
+    ),
+  ]
+);
+
+export const issues = sqliteTable(
+  "issues",
+  {
+    entityId: text("entity_id")
+      .primaryKey()
+      .references(() => entities.id, { onDelete: "cascade" }),
+
+    provider: text("provider").notNull(), // github|linear|jira
+    state: text("state").notNull(), // open|closed|in_progress|...
+    number: integer("number"), // github issue no
+    repo: text("repo"), // owner/name or project key
+    assignee: text("assignee"),
+    labels: text("labels"), // JSON array
+    closedAt: integer("closed_at", { mode: "timestamp" }),
+    priority: integer("priority").notNull().default(0),
+  },
+  (t) => [
+    index("idx_issues_provider_state").on(t.provider, t.state),
+    index("idx_issues_repo").on(t.repo),
+    check(
+      "check_issues_labels_json",
+      sql`json_valid(${t.labels}) OR ${t.labels} IS NULL`
+    ),
+  ]
+);
+
+/* Optional: playlist membership if you need local ordering/queue */
+export const playlistItems = sqliteTable(
+  "playlist_items",
+  {
+    playlistEntityId: text("playlist_entity_id")
+      .notNull()
+      .references(() => entities.id, { onDelete: "cascade" }),
+    itemEntityId: text("item_entity_id")
+      .notNull()
+      .references(() => entities.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    addedAt: integer("added_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    metadata: text("metadata"), // JSON
+  },
+  (t) => [
+    uniqueIndex("uniq_playlist_item").on(t.playlistEntityId, t.itemEntityId),
+    index("idx_playlist_items_order").on(t.playlistEntityId, t.position),
+    check(
+      "check_playlist_items_metadata_json",
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`
+    ),
+  ]
+);
+
+/* -----------------------------
+   OUTBOX: tool actions (offline-first retries)
+------------------------------ */
+
+export const outbox = sqliteTable(
+  "outbox",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+
+    entityId: text("entity_id").references(() => entities.id, {
+      onDelete: "set null",
+    }),
+    connectionId: text("connection_id").references(() => connections.id, {
+      onDelete: "cascade",
+    }),
+
+    actionType: text("action_type").notNull(), // 'github.issue.update'|'linear.issue.create'...
+    payload: text("payload").notNull(), // JSON
+    status: text("status", { enum: ["queued", "running", "done", "error"] })
+      .notNull()
+      .default("queued"),
+    attempts: integer("attempts").notNull().default(0),
+    nextRunAt: integer("next_run_at", { mode: "timestamp" }),
+    lastError: text("last_error"),
+
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_outbox_status_next").on(t.status, t.nextRunAt),
+    index("idx_outbox_account").on(t.accountId),
+    check("check_outbox_payload_json", sql`json_valid(${t.payload})`),
+  ]
+);
+
+/* -----------------------------
+   FEED = EVENT LOG (timeline + retrieval trigger)
+------------------------------ */
+
+
+export const feedItems = sqliteTable(
+  "feed_items",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+
+    connectionId: text("connection_id").references(() => connections.id, {
+      onDelete: "set null",
+    }),
+    resourceId: text("resource_id").references(() => connectionResources.id, {
+      onDelete: "set null",
+    }),
+
+    // which entity this event is about (optional but strongly recommended)
+    entityId: text("entity_id").references(() => entities.id, {
+      onDelete: "set null",
+    }),
+
+    // 'entity.created'|'entity.updated'|'task.completed'|'sync.error'...
+    eventType: text("event_type").notNull(),
+
+    // for UI list grouping/filter
+    itemType: text("item_type"), // task|issue|doc|rss_article|...
+    title: text("title").notNull(),
+    summary: text("summary"), // short textual context (LLM-friendly)
+    url: text("url"),
+
+    // state snapshot at that time (JSON)
+    snapshot: text("snapshot"), // JSON
+    metadata: text("metadata"), // JSON
+
+    // event time (remote or local)
+    occurredAt: integer("occurred_at", { mode: "timestamp" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+
+    // embeddings
+    embedding: blob("embedding"),
+  },
+  (t) => [
+    index("idx_feed_account_time").on(t.accountId, t.occurredAt),
+    index("idx_feed_entity_time").on(t.entityId, t.occurredAt),
+    index("idx_feed_conn_time").on(t.connectionId, t.occurredAt),
+    index("idx_feed_event_time").on(t.eventType, t.occurredAt),
+    index("idx_feed_item_type_time").on(t.itemType, t.occurredAt),
+    check(
+      "check_feed_snapshot_json",
+      sql`json_valid(${t.snapshot}) OR ${t.snapshot} IS NULL`
+    ),
+    check(
+      "check_feed_metadata_json",
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`
+    ),
+  ]
+);
+
+
+
+/* -----------------------------
+   CHAT (as you had)
+------------------------------ */
+
 export const chatSessions = sqliteTable(
-  "ChatSession",
+  "chat_sessions",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     title: text("title"),
-    initialQuery: text("initialQuery"),
+    initialQuery: text("initial_query"),
     model: text("model"),
     moodId: text("mood_id").references(() => moods.id, {
       onDelete: "set null",
     }),
     systemPromptSnapshot: text("system_prompt_snapshot"),
-    createdAt: integer("createdAt", { mode: "timestamp" })
+    createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
-    updatedAt: integer("updatedAt", { mode: "timestamp" })
+    updatedAt: integer("updated_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
   },
@@ -372,125 +671,21 @@ export const chatSessions = sqliteTable(
     index("idx_chat_sessions_mood").on(t.moodId),
   ]
 );
+
 export const chatMessages = sqliteTable(
-  "ChatMessage",
+  "chat_messages",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    sessionId: integer("sessionId")
+    sessionId: integer("session_id")
       .notNull()
       .references(() => chatSessions.id, { onDelete: "cascade" }),
-    role: text("role", {
-      enum: ["system", "user", "assistant", "tool"],
-    }).notNull(),
+    role: text("role", { enum: ["system", "user", "assistant", "tool"] })
+      .notNull(),
     content: text("content").notNull(),
     model: text("model"),
-    createdAt: integer("createdAt", { mode: "timestamp" })
+    createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
   },
-
   (t) => [index("idx_chat_messages_session").on(t.sessionId)]
-);
-
-export const feedItems = sqliteTable(
-  "FeedItem",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    title: text("title").notNull(),
-    url: text("url").notNull().unique(),
-    description: text("description"),
-    itemType: text("itemType"),
-    date: integer("date", { mode: "timestamp" }).notNull(),
-    createdAt: integer("createdAt", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-    source: text("source").notNull(),
-    imageUrl: text("imageUrl"),
-    metadata: text("metadata"),
-    embedding: blob("embedding"),
-    connectionId: text("connection_id").references(() => connections.id, {
-      onDelete: "cascade",
-    }),
-    resourceId: text("resource_id").references(() => connectionResources.id, {
-      onDelete: "cascade",
-    }),
-  },
-
-  (t) => [
-    index("idx_feed_items_connection").on(t.connectionId),
-    index("idx_feed_items_resource").on(t.resourceId),
-    index("idx_feed_items_source").on(t.source),
-    index("idx_feed_items_url").on(t.url),
-    index("idx_feed_items_date").on(t.date),
-    index("idx_feed_items_created_at").on(t.createdAt),
-    index("idx_feed_items_source_date").on(t.source, t.date),
-    check(
-      "check_metadata_json",
-      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`
-    ),
-  ]
-);
-
-export const vecFeedItems = sqliteTable("vec_feed_items", {
-  rowid: integer("rowid").primaryKey(),
-  embedding: blob("embedding"),
-});
-
-export const vecFeedItemMap = sqliteTable(
-  "vec_feed_item_map",
-  {
-    vecRowid: integer("vec_rowid")
-      .primaryKey()
-      .references(() => vecFeedItems.rowid, { onDelete: "cascade" }),
-    feedItemId: integer("feed_item_id")
-      .notNull()
-      .unique()
-      .references(() => feedItems.id, { onDelete: "cascade" }),
-  },
-
-  (t) => [index("idx_vec_feed_item_map_feed_item").on(t.feedItemId)]
-);
-
-export const feedItemChunks = sqliteTable(
-  "FeedItemChunk",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    feedItemId: integer("feed_item_id")
-      .notNull()
-      .references(() => feedItems.id, { onDelete: "cascade" }),
-    chunkIndex: integer("chunk_index").notNull(),
-    content: text("content").notNull(),
-    tokenCount: integer("token_count"),
-    createdAt: integer("createdAt", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-  },
-
-  (t) => [
-    index("idx_feed_item_chunks_feed_item").on(t.feedItemId),
-    index("idx_feed_item_chunks_chunk_index").on(t.feedItemId, t.chunkIndex),
-    uniqueIndex("uniq_feed_item_chunks_item_idx").on(
-      t.feedItemId,
-      t.chunkIndex
-    ),
-  ]
-);
-
-export const vecChunks = sqliteTable("vec_chunks", {
-  rowid: integer("rowid").primaryKey(),
-  embedding: blob("embedding"),
-});
-
-export const vecChunkMap = sqliteTable(
-  "vec_chunk_map",
-  {
-    vecRowid: integer("vec_rowid").primaryKey(),
-    chunkId: integer("chunk_id")
-      .notNull()
-      .unique()
-      .references(() => feedItemChunks.id, { onDelete: "cascade" }),
-  },
-  (t) => ({
-    idxChunk: index("idx_vec_chunk_map_chunk").on(t.chunkId),
-  })
 );

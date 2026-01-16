@@ -6,7 +6,7 @@ import {
   useGetAppsQuery,
   useGetAccountQuery,
   useSetActiveMoodMutation,
-  useGetFeedItemsQuery,
+  useGetEntitiesQuery,
 } from "@/lib/redux/api";
 import { toast } from "sonner";
 import SettingsModal from "@/features/settings/components/settings-modal";
@@ -34,10 +34,10 @@ export default function FrostedSidebar() {
   const { data: account } = useGetAccountQuery();
   const { activeMoodId, moods } = useActiveMood();
   const sidebarConfig = useSidebarConfig();
-  const { data: feedItems = [], isLoading: isLoadingFeed } =
-    useGetFeedItemsQuery(
+  const { data: entities = [], isLoading: isLoadingEntities } =
+    useGetEntitiesQuery(
       {
-        itemTypes: sidebarConfig.itemType === "post" ? ["post"] : [],
+        kinds: sidebarConfig.itemType === "post" ? ["post"] : [],
         limit: 50,
       },
       {
@@ -80,9 +80,9 @@ export default function FrostedSidebar() {
     [sessions, searchQuery]
   );
 
-  const filteredFeedItems = useMemo(
-    () => filterItems(feedItems, searchQuery),
-    [feedItems, searchQuery]
+  const filteredEntities = useMemo(
+    () => filterItems(entities, searchQuery),
+    [entities, searchQuery]
   );
 
   const handleRefreshApps = async () => {
@@ -162,8 +162,12 @@ export default function FrostedSidebar() {
                 )}
                 {sidebarConfig.itemType === "post" && (
                   <WritingPostsList
-                    posts={filteredFeedItems}
-                    isLoading={isLoadingFeed}
+                    posts={filteredEntities.map((entity) => ({
+                      url: entity.url,
+                      title: entity.title,
+                      description: entity.summary || "",
+                    }))}
+                    isLoading={isLoadingEntities}
                   />
                 )}
               </div>

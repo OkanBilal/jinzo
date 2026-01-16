@@ -2,10 +2,9 @@ import { useState } from "react";
 import { Caption } from "@/components/ui/text";
 import { ArrowUp } from "@/components/ui/icons";
 import WritingPostItem from "./writing-post-item";
-import type { FeedItem } from "@/lib/cron/types";
 
 interface WritingPostsListProps {
-  posts: FeedItem[];
+  posts: { url: string, title: string; description: string }[]; 
   isLoading: boolean;
 }
 

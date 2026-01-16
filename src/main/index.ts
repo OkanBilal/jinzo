@@ -4,8 +4,9 @@ import { registerDatabaseHandlers, unregisterDatabaseHandlers } from "./ipc/data
 import { registerAccountHandlers } from "./ipc/accountHandlers";
 import { registerAppsHandlers } from "./ipc/appsHandlers";
 import { registerChatHandlers } from "./ipc/chatHandlers";
-import { registerCronHandlers } from "./ipc/cronHandlers";
-import { registerFeedHandlers } from "./ipc/feedHandlers";
+import { registerSyncHandlers, unregisterSyncHandlers } from "./ipc/syncHandlers";
+import { registerFeedHandlers, unregisterFeedHandlers } from "./ipc/feedHandlers";
+import { registerEntitiesHandlers, unregisterEntitiesHandlers } from "./ipc/entitiesHandlers";
 import { registerMcpHandlers } from "./ipc/mcpHandlers";
 import { registerOllamaHandlers } from "./ipc/ollamaHandlers";
 import { registerConnectionCredentialsHandlers } from "./ipc/connectionCredentialsHandlers";
@@ -34,8 +35,9 @@ async function initializeApp() {
     registerAccountHandlers();
     registerAppsHandlers();
     registerChatHandlers();
-    registerCronHandlers();
+    registerSyncHandlers();
     registerFeedHandlers();
+    registerEntitiesHandlers();
     registerMcpHandlers();
     registerOllamaHandlers();
     registerConnectionCredentialsHandlers();
@@ -63,6 +65,8 @@ async function cleanupApp() {
     
     // Unregister IPC handlers
     unregisterDatabaseHandlers();
+    unregisterFeedHandlers();
+    unregisterEntitiesHandlers();
     
     // Close database
     await closeDatabase();

@@ -10,6 +10,23 @@ export type JSONValue =
   | { [key: string]: JSONValue }
   | JSONValue[];
 
+export type EntityRow = {
+  id: string;
+  title: string;
+  url: string;
+  body: string | null;
+  summary: string | null;
+  kind: string;
+  occurredAt: string;
+  connectionId: string | null;
+  resourceId: string | null;
+  externalId: string | null;
+  metadata?: JSONValue | null;
+};
+
+/**
+ * @deprecated Use EntityRow instead
+ */
 export type FeedRow = {
   title: string;
   url: string;
@@ -21,7 +38,7 @@ export type FeedRow = {
   metadata?: JSONValue | null;
 };
 
-export type PromptBuilder = (items: FeedRow[]) => PromptItem[];
+export type PromptBuilder = (entities: EntityRow[]) => PromptItem[];
 
 
 export function parseMetadata(raw: unknown): Record<string, any> | undefined {

@@ -6,20 +6,20 @@ import {
   fetchSpotifyFromConnectionResources,
   fetchGitHubFromConnectionResources,
   fetchHackerNewsFromConnectionResources,
-} from "../../../renderer/lib/cron/connections";
-import type { FeedItem } from "../../../renderer/lib/cron/types";
-import { FETCH_LIMITS } from "../../../renderer/lib/config";
+} from "./connections";
+import type { EntityInput } from "./types";
+import { FETCH_LIMITS } from "../config";
 
-export async function fetchAllFeedItems(): Promise<FeedItem[]> {
+export async function fetchAllEntities(): Promise<EntityInput[]> {
   try {
     const [
-      githubItems,
-      raindropItems,
-      hackerNewsItems,
-      podcastItems,
-      appleMusicItems,
-      spotifyItems,
-      rssItems,
+      githubEntities,
+      raindropEntities,
+      hackerNewsEntities,
+      podcastEntities,
+      appleMusicEntities,
+      spotifyEntities,
+      rssEntities,
     ] = await Promise.all([
       fetchGitHubFromConnectionResources(
         FETCH_LIMITS.GITHUB_ISSUES,
@@ -37,20 +37,20 @@ export async function fetchAllFeedItems(): Promise<FeedItem[]> {
       fetchRssFromConnectionResources(FETCH_LIMITS.RSS),
     ]);
 
-    const items = [
-      ...githubItems,
-      ...raindropItems,
-      ...hackerNewsItems,
-      ...podcastItems,
-      ...appleMusicItems,
-      ...spotifyItems,
-      ...rssItems,
+    const entities = [
+      ...githubEntities,
+      ...raindropEntities,
+      ...hackerNewsEntities,
+      ...podcastEntities,
+      ...appleMusicEntities,
+      ...spotifyEntities,
+      ...rssEntities,
     ];
 
-    console.log(`📥 Fetched ${items.length} items from sources`);
-    return items;
+    console.log(`📥 Fetched ${entities.length} entities from sources`);
+    return entities;
   } catch (error) {
-    console.error("Error fetching feed items:", error);
+    console.error("Error fetching entities:", error);
     throw error;
   }
 }

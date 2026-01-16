@@ -17,7 +17,7 @@ import {
 import {
   analyzeQuery,
   buildOptimizedPrompt,
-  findRelevantFeedItems,
+  findRelevantEntities,
 } from "../../renderer/lib/rag";
 import { NO_RELEVANT_CONTENT_SYSTEM_PROMPT } from "../../renderer/lib/config";
 import { getMCPClient } from "../../renderer/lib/mcp";
@@ -105,7 +105,7 @@ async function handleMCPMode(
     {
       role: "system",
       content:
-        "You are a helpful assistant with access to feed management tools. Use the available tools to answer user questions about their feed items.",
+        "You are a helpful assistant with access to management tools. Use the available tools to answer user questions about their management items.",
     },
     { role: "user", content: question },
   ];
@@ -318,7 +318,7 @@ async function handleRAGMode(
   const qa = analyzeQuery(question);
   console.log("Analyzed query:", qa);
 
-  const relevant = await findRelevantFeedItems(question, {
+  const relevant = await findRelevantEntities(question, {
     topK: options.topK ?? config.topK,
     minScore: options.minScore ?? config.minScore,
     semanticWeight: 0.7,
@@ -361,9 +361,9 @@ async function handleRAGMode(
     sources = optimized.usedItems.map((item) => ({
       title: item.title,
       url: item.url,
-      source: item.source,
-      itemType: item.itemType,
-      date: item.date,
+      source: item.kind,
+      itemType: item.kind,
+      date: item.occurredAt,
       score: item.score,
       semanticScore: item.semanticScore,
       keywordScore: item.keywordScore,

@@ -1,9 +1,9 @@
-import type { FeedItem } from "../../cron";
+import type { EntityInput } from "..";
 import {
   getConnectionWithTokens,
   getConnectionByProvider,
   getSelectedResources,
-} from "../../cron/connection-utils";
+} from "../connection-utils";
 
 const SPOTIFY_API_BASE = "https://api.spotify.com/v1";
 const DEFAULT_LIMIT = 10;
@@ -46,7 +46,6 @@ function buildArtistUrl(artistId: string): string {
 
 function processImageUrl(images: any[] | undefined): string | null {
   if (!images || images.length === 0) return null;
-  // Spotify returns images sorted by size, get the first one (largest)
   return images[0]?.url || null;
 }
 
@@ -55,109 +54,117 @@ function normalizeDateToIso(dateString: string | undefined): string {
   return new Date(dateString).toISOString();
 }
 
-function mapPlaylistToFeedItem(
+function mapPlaylistToEntityInput(
   playlist: any,
   connectionId?: string,
   resourceId?: string
-): FeedItem {
+): EntityInput {
+  const description = playlist.description || `${playlist.tracks.total} tracks`;
   return {
+    kind: "spotify_playlist",
     title: playlist.name,
     url: buildPlaylistUrl(playlist.id),
-    description: playlist.description || `${playlist.tracks.total} tracks`,
-    date: normalizeDateToIso(playlist.tracks.items?.[0]?.added_at),
-    source: "spotify",
-    imageUrl: processImageUrl(playlist.images),
+    body: description,
+    summary: description?.substring(0, 500) || null,
+    occurredAt: normalizeDateToIso(playlist.tracks.items?.[0]?.added_at),
+    externalId: playlist.id,
+    connectionId,
+    resourceId,
     metadata: {
       owner: playlist.owner?.display_name,
       totalTracks: playlist.tracks?.total,
       isPublic: playlist.public,
+      imageUrl: processImageUrl(playlist.images),
     },
-    itemType: "spotify-playlist",
-    connectionId,
-    resourceId,
   };
 }
 
-function mapTrackToFeedItem(
+function mapTrackToEntityInput(
   track: any,
   playedAt?: string,
   connectionId?: string,
   resourceId?: string
-): FeedItem {
+): EntityInput {
   const artists = track.artists?.map((a: any) => a.name).join(", ") || "Unknown";
+  const description = `${artists} - ${track.album?.name || ""}`;
   
   return {
+    kind: "spotify_track",
     title: track.name,
     url: buildTrackUrl(track.id),
-    description: `${artists} - ${track.album?.name || ""}`,
-    date: normalizeDateToIso(playedAt || track.album?.release_date),
-    source: "spotify",
-    imageUrl: processImageUrl(track.album?.images),
+    body: description,
+    summary: description,
+    occurredAt: normalizeDateToIso(playedAt || track.album?.release_date),
+    externalId: track.id,
+    connectionId,
+    resourceId,
     metadata: {
       artists,
       album: track.album?.name,
       duration: track.duration_ms,
       explicit: track.explicit,
+      imageUrl: processImageUrl(track.album?.images),
     },
-    itemType: "spotify-track",
-    connectionId,
-    resourceId,
   };
 }
 
-function mapAlbumToFeedItem(
+function mapAlbumToEntityInput(
   album: any,
   connectionId?: string,
   resourceId?: string
-): FeedItem {
+): EntityInput {
   const artists = album.artists?.map((a: any) => a.name).join(", ") || "Unknown";
+  const description = `${artists} - ${album.total_tracks} tracks`;
   
   return {
+    kind: "spotify_album",
     title: album.name,
     url: buildAlbumUrl(album.id),
-    description: `${artists} - ${album.total_tracks} tracks`,
-    date: normalizeDateToIso(album.release_date),
-    source: "spotify",
-    imageUrl: processImageUrl(album.images),
+    body: description,
+    summary: description,
+    occurredAt: normalizeDateToIso(album.release_date),
+    externalId: album.id,
+    connectionId,
+    resourceId,
     metadata: {
       artists,
       totalTracks: album.total_tracks,
       releaseDate: album.release_date,
       albumType: album.album_type,
+      imageUrl: processImageUrl(album.images),
     },
-    itemType: "spotify-album",
-    connectionId,
-    resourceId,
   };
 }
 
-function mapArtistToFeedItem(
+function mapArtistToEntityInput(
   artist: any,
   connectionId?: string,
   resourceId?: string
-): FeedItem {
+): EntityInput {
+  const description = `${artist.followers?.total || 0} followers`;
   return {
+    kind: "spotify_artist",
     title: artist.name,
     url: buildArtistUrl(artist.id),
-    description: `${artist.followers?.total || 0} followers`,
-    date: new Date().toISOString(),
-    source: "spotify",
-    imageUrl: processImageUrl(artist.images),
+    body: description,
+    summary: description,
+    occurredAt: new Date().toISOString(),
+    externalId: artist.id,
+    connectionId,
+    resourceId,
     metadata: {
       genres: artist.genres,
       popularity: artist.popularity,
       followers: artist.followers?.total,
+      imageUrl: processImageUrl(artist.images),
     },
-    itemType: "spotify-artist",
-    connectionId,
-    resourceId,
   };
 }
 
 export async function fetchUserPlaylists(
   connectionId?: string,
   resourceId?: string
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   try {
     const credentials = await getCredentials();
 
@@ -178,7 +185,7 @@ export async function fetchUserPlaylists(
 
     const data = await res.json();
     return data.items.map((pl: any) =>
-      mapPlaylistToFeedItem(pl, connectionId, resourceId)
+      mapPlaylistToEntityInput(pl, connectionId, resourceId)
     );
   } catch (error) {
     console.error("Error fetching Spotify playlists:", error);
@@ -189,7 +196,7 @@ export async function fetchUserPlaylists(
 export async function fetchSpotifyRecentlyPlayed(
   connectionId?: string,
   resourceId?: string
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   try {
     const credentials = await getCredentials();
 
@@ -214,7 +221,7 @@ export async function fetchSpotifyRecentlyPlayed(
 
     const data = await res.json();
     return data.items.map((item: any) =>
-      mapTrackToFeedItem(item.track, item.played_at, connectionId, resourceId)
+      mapTrackToEntityInput(item.track, item.played_at, connectionId, resourceId)
     );
   } catch (error) {
     console.error("Error fetching Spotify recently played:", error);
@@ -225,7 +232,7 @@ export async function fetchSpotifyRecentlyPlayed(
 export async function fetchTopTracks(
   connectionId?: string,
   resourceId?: string
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   try {
     const credentials = await getCredentials();
 
@@ -246,7 +253,7 @@ export async function fetchTopTracks(
 
     const data = await res.json();
     return data.items.map((track: any) =>
-      mapTrackToFeedItem(track, undefined, connectionId, resourceId)
+      mapTrackToEntityInput(track, undefined, connectionId, resourceId)
     );
   } catch (error) {
     console.error("Error fetching Spotify top tracks:", error);
@@ -257,7 +264,7 @@ export async function fetchTopTracks(
 export async function fetchTopArtists(
   connectionId?: string,
   resourceId?: string
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   try {
     const credentials = await getCredentials();
 
@@ -278,7 +285,7 @@ export async function fetchTopArtists(
 
     const data = await res.json();
     return data.items.map((artist: any) =>
-      mapArtistToFeedItem(artist, connectionId, resourceId)
+      mapArtistToEntityInput(artist, connectionId, resourceId)
     );
   } catch (error) {
     console.error("Error fetching Spotify top artists:", error);
@@ -289,7 +296,7 @@ export async function fetchTopArtists(
 export async function fetchSavedAlbums(
   connectionId?: string,
   resourceId?: string
-): Promise<FeedItem[]> {
+): Promise<EntityInput[]> {
   try {
     const credentials = await getCredentials();
 
@@ -310,7 +317,7 @@ export async function fetchSavedAlbums(
 
     const data = await res.json();
     return data.items.map((item: any) =>
-      mapAlbumToFeedItem(item.album, connectionId, resourceId)
+      mapAlbumToEntityInput(item.album, connectionId, resourceId)
     );
   } catch (error) {
     console.error("Error fetching Spotify saved albums:", error);
@@ -319,7 +326,7 @@ export async function fetchSavedAlbums(
 }
 
 export async function fetchSpotifyFromConnectionResources(): Promise<
-  FeedItem[]
+  EntityInput[]
 > {
   const connection = await getConnectionByProvider("spotify");
   if (!connection) return [];
@@ -327,7 +334,7 @@ export async function fetchSpotifyFromConnectionResources(): Promise<
   const resources = await getSelectedResources(connection.id);
   if (resources.length === 0) return [];
 
-  const allItems: FeedItem[] = [];
+  const allItems: EntityInput[] = [];
 
   for (const resource of resources) {
     const sourceType = resource.externalId;
