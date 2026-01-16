@@ -127,8 +127,20 @@
    COMPONENT STYLES
    ========================================================================== */
 
+
+/* Block Note Theming Overrides for Dark Mode */
+
+.bn-container[data-theming-css-demo][data-color-scheme="dark"] {
+  --bn-colors-editor-text: var(--color-primary-200);
+  --bn-colors-editor-background: var(--color-primary-950);
+}
+
+
 /* Button Components
    ========================================================================== */
+
+
+
 
 .metallic-button {
   padding: 4px 4px;

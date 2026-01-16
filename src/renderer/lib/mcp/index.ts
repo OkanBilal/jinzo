@@ -8,5 +8,9 @@ export {
   executeCronTool,
   triggerFeedSync,
   CRON_TOOLS,
+  executeMoodTool,
+  switchToWritingMood,
+  switchToChatMood,
+  MOOD_TOOLS,
 } from "./tools";
 export * from "./types";

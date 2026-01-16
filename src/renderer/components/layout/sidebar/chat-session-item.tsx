@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Close } from "@/components/ui/icons";
-import { Body, Caption } from "@/components/ui/text";
+import { Body, BodyMedium, Caption, Timestamp } from "@/components/ui/text";
 import { ChatSession } from "@/lib/redux/api";
 import { formatDate } from "@/lib/format-date";
 
@@ -38,9 +38,9 @@ export default function ChatSessionItem({
             >
               {title}
             </Body>
-            <Caption className="text-primary-400 dark:text-primary-500 text-xs">
+            <Timestamp className="">
               {formatDate(new Date(session.createdAt).toISOString())}
-            </Caption>
+            </Timestamp>
           </div>
           <button
             onClick={(e) => onDelete(session, e)}

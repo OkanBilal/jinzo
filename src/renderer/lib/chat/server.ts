@@ -11,8 +11,8 @@ async function saveMessage(
   content: string,
   model: string
 ): Promise<void> {
-  if (!sessionId) {
-    console.warn("Cannot persist message: no session ID provided");
+  if (!sessionId || typeof sessionId !== 'number' || sessionId <= 0) {
+    console.warn("Cannot persist message: invalid session ID provided", sessionId);
     return;
   }
 
@@ -22,6 +22,17 @@ async function saveMessage(
 
   try {
     const db = getDb();
+    
+    // Verify session exists before inserting message
+    const session = await db.query.chatSessions.findFirst({
+      where: eq(chatSessions.id, sessionId),
+    });
+    
+    if (!session) {
+      console.warn("Cannot persist message: session does not exist", sessionId);
+      return;
+    }
+    
     const result = await db
       .insert(chatMessages)
       .values({ sessionId, role, content, model })

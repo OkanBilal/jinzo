@@ -191,6 +191,17 @@ const Caption = ({
   </Text>
 );
 
+const Timestamp = ({
+  children,
+  className,  
+  align,
+  ...props
+}: Omit<TextProps, "variant">) => (
+  <Text variant="timestamp" className={className} align={align} {...props}>
+    {children}
+  </Text>
+);
+
 export {
   Heading1,
   Heading2,
@@ -201,4 +212,5 @@ export {
   Label,
   ErrorText,
   Caption,
+  Timestamp,
 };

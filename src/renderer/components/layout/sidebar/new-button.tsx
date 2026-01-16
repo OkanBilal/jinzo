@@ -11,10 +11,10 @@ export default function NewButton({ onClick, title }: NewButtonProps) {
   return (
     <Button
       variant="subtle"
-      size="md"
+      size="lg"
       onClick={onClick}
       fullWidth
-      className="justify-start"
+      className="justify-start p-4"
       style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
     >
       <Plus className="w-4 h-4 text-primary-600 dark:text-primary-400" />

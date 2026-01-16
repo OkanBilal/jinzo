@@ -23,6 +23,9 @@ import ModelSelectDropdown from "../../../../features/chat/components/input/mode
 //import McpToggleButton from "@/features/chat/components/input/mcp-toggle-button";
 import SendButton from "./send-button";
 import { ChatInputProps, AppState, UploadedFile } from "./types";
+import { useActiveMood } from "@/hooks/useActiveMood";
+import { Apps } from "@/components/ui/icons";
+import Text from "@/components/ui/text";
 
 const DEFAULT_PLACEHOLDER = "Ask jinzo anything...";
 
@@ -51,6 +54,7 @@ export default function ChatInput({
   const [isAppMentionOpen, setIsAppMentionOpen] = useState(false);
   const [appSearchTerm, setAppSearchTerm] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const { isWritingMood } = useActiveMood();
 
   const connectedApps = useMemo(() => {
     return apps.filter((app) => app.isConnected).map((app) => app.id);
@@ -193,12 +197,14 @@ export default function ChatInput({
   };
 
   return (
-    <div className={`w-full flex flex-col pb-2 rounded-3xl 
+    <div
+      className={`w-full flex flex-col pb-2 rounded-3xl 
     bg-linear-to-b from-white/70 to-primary-50/60 dark:from-primary-900/80 dark:to-primary-900/20 
     backdrop-blur-[20px] saturate-180  border border-white/40 dark:border-white/8 
     shadow-[0_2px_8px_rgba(0,0,0,0.08),0_4px_16px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.8)] 
     dark:shadow-[0_2px_8px_rgba(0,0,0,0.25),0_4px_16px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.16)] 
-    cursor-pointer transition-all ${className || ''}`}>
+    cursor-pointer transition-all ${className || ""}`}
+    >
       <div className="relative">
         <InputForm
           query={query}
@@ -234,17 +240,22 @@ export default function ChatInput({
               onChange={handleFileChange}
               className="hidden"
             />
-            <ConnectAppsDropdown
-              isOpen={isAppsDropdownOpen}
-              onToggle={toggleAppsDropdown}
-              apps={apps}
-              connectedApps={connectedApps}
-              onOpenModal={openAppsModal}
-              dropdownRef={appsDropdownRef}
-              openUpward={true}
-              selectedApp={selectedApp}
-              onClearSelectedApp={handleClearSelectedApp}
-            />
+            {!isWritingMood ? (
+              <button
+                type="button"
+                onClick={openAppsModal}
+                className="flex cursor-pointer items-center hover:bg-primary-200/60 dark:hover:bg-primary-700/40 transition-colors rounded-2xl pl-2 pr-2 py-1.5"
+                aria-haspopup="true"
+              >
+                <Apps className="w-4.5 h-4.5 mr-1 text-primary-500 dark:text-primary-400" />
+                <Text
+                  variant="body"
+                  className="text-primary-700 dark:text-primary-400"
+                >
+                  Apps
+                </Text>
+              </button>
+            ) : null}
             {/* <McpToggleButton
               enabled={toolMode === 'mcp'}
               onToggle={() => {

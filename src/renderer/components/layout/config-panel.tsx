@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Config, ConfigClose } from "@/components/ui/icons";
 import { Heading3, Body } from "@/components/ui/text";
 import { Slider } from "@/components/ui/slider";
@@ -10,6 +10,7 @@ import {
   useGetChatConfigQuery,
   useUpdateChatConfigMutation,
   useGetOllamaModelsQuery,
+  useGetAppsQuery,
 } from "@/lib/redux/api";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import {
@@ -25,16 +26,27 @@ import { useThinkingConfig } from "@/features/chat/hooks/use-thinking-config";
 import { useModelCapabilities } from "@/features/chat/hooks/use-model-capabilities";
 import { StructuredOutputModal } from "@/components/layout/config-panel/structured-output-modal";
 import { getModelIcon } from "@/lib/model-icons";
+import { useActiveMood } from "@/hooks/useActiveMood";
+import { ChatMessages } from "@/features/chat/components";
+import ChatInput from "@/features/chat/components/input";
+import { AppState } from "@/features/chat/components/input/types";
+import { useChat } from "@/features/chat/hooks/use-chat";
 
 const FADE_IN_DELAY = 50;
 
 interface ConfigPanelProps {
   isOpen: boolean;
   onToggle: (open: boolean) => void;
+  width?: string;
 }
 
-export default function ConfigPanel({ isOpen, onToggle }: ConfigPanelProps) {
+export default function ConfigPanel({
+  isOpen,
+  onToggle,
+  width = "40rem",
+}: ConfigPanelProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const { isWritingMood } = useActiveMood();
 
   const handleToggle = () => onToggle(!isOpen);
 
@@ -55,8 +67,16 @@ export default function ConfigPanel({ isOpen, onToggle }: ConfigPanelProps) {
       <FrostedButton
         onClick={handleToggle}
         className={`fixed z-40 p-2.5 rounded-full transition-all duration-300 ease-out ${
-          isOpen ? "top-7 right-77" : "top-7 right-5"
+          isOpen ? "right-[calc(var(--config-width)+1.75rem)]" : "top-7 right-5"
         }`}
+        style={
+          isOpen
+            ? ({
+                "--config-width": width,
+                top: "1.75rem",
+              } as React.CSSProperties)
+            : ({ top: "1.75rem", right: "1.25rem" } as React.CSSProperties)
+        }
         aria-label={isOpen ? "Close configuration" : "Open configuration"}
       >
         {isOpen ? (
@@ -66,18 +86,23 @@ export default function ConfigPanel({ isOpen, onToggle }: ConfigPanelProps) {
         )}
       </FrostedButton>
       <div
-        className={`block fixed top-0 bottom-0 right-0 w-72 overflow-hidden transition-all duration-300 ease-out bg-transparent ${
-          isVisible
-            ? "translate-x-0 z-50 "
-            : "translate-x-72 -z-10 pointer-events-none"
+        className={`block fixed top-0 bottom-0 right-0 overflow-hidden transition-all duration-300 ease-out bg-transparent ${
+          isVisible ? "translate-x-0 z-50 " : "pointer-events-none"
         }`}
+        style={{
+          width: width,
+          transform: isVisible ? "translateX(0)" : `translateX(${width})`,
+          zIndex: isVisible ? 50 : -10,
+        }}
         role="complementary"
         aria-label="Configuration panel"
       >
-        <div className="flex items-center justify-between px-4 pt-6 ">
-          <Heading3>Configuration</Heading3>
-        </div>
-        <PanelContent />
+        {!isWritingMood ? (
+          <div className="flex items-center justify-between px-4 pt-6 ">
+            <Heading3>Configuration</Heading3>
+          </div>
+        ) : null}
+        {isWritingMood ? <WritingConfigContent /> : <PanelContent />}
       </div>
     </>
   );
@@ -254,6 +279,91 @@ function PanelContent() {
         schema={structuredOutputSchema}
         onSave={handleStructuredOutputSchemaChange}
       />
+    </div>
+  );
+}
+
+function WritingConfigContent() {
+  const selectedModel = useAppSelector((state) => state.chat.selectedModel);
+  const thinkingEnabled = useAppSelector((state) => state.chat.thinkingEnabled);
+  const thinkingLevel = useAppSelector((state) => state.chat.thinkingLevel);
+  const toolMode = useAppSelector((state) => state.chat.toolMode);
+  const structuredOutputEnabled = useAppSelector(
+    (state) => state.chat.structuredOutputEnabled
+  );
+  const structuredOutputSchema = useAppSelector(
+    (state) => state.chat.structuredOutputSchema
+  );
+
+  const thinkingConfig = useThinkingConfig();
+
+  const [selectedApp, setSelectedApp] = useState<AppState | null>(null);
+  const { data: apps = [] } = useGetAppsQuery();
+
+  const {
+    messages,
+    input,
+    setInput,
+    isLoading,
+    sendMessageStreaming,
+    focusInput,
+    refs: { messagesRef },
+  } = useChat({ initialMessages: [] });
+
+  useEffect(() => {
+    focusInput();
+  }, [focusInput]);
+
+  const handleSend = useCallback((): void => {
+    if (!input.trim()) return;
+
+    sendMessageStreaming(selectedModel, {
+      requestOptions: {
+        mode: toolMode,
+        thinkingEnabled: thinkingConfig.shouldShowThinkingToggle
+          ? thinkingEnabled
+          : undefined,
+        thinkingLevel: thinkingConfig.shouldShowThinkingLevel
+          ? thinkingLevel
+          : undefined,
+        structuredOutputEnabled,
+        structuredOutputSchema,
+      },
+    });
+  }, [
+    input,
+    selectedModel,
+    sendMessageStreaming,
+    toolMode,
+    thinkingConfig,
+    thinkingEnabled,
+    thinkingLevel,
+    structuredOutputEnabled,
+    structuredOutputSchema,
+  ]);
+
+  return (
+    <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 bg-primary-950/70 mx-3 -pb-4  rounded-2xl overflow-hidden">
+      <div className="flex-1 overflow-hidden ">
+        <ChatMessages
+          ref={messagesRef}
+          messages={messages}
+          isLoading={isLoading}
+        />
+      </div>
+      <div className="shrink-0 p-3 pb-6">
+        <ChatInput
+          apps={apps}
+          query={input}
+          onQueryChange={setInput}
+          onSubmit={handleSend}
+          loading={isLoading}
+          placeholder="Message"
+          isChatPage={true}
+          selectedApp={selectedApp}
+          onSelectedAppChange={setSelectedApp}
+        />
+      </div>
     </div>
   );
 }

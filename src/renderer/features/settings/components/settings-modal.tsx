@@ -1,6 +1,6 @@
 "use client";
-
-import React from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import {
   Apps,
@@ -38,8 +38,13 @@ export default function SettingsModal({
   section,
   onRefresh,
 }: SettingsModalProps) {
-  const [activeSection, setActiveSection] =
-    React.useState<SettingsSection>(section);
+  const [activeSection, setActiveSection] = useState<SettingsSection>(section);
+
+  useEffect(() => {
+    if (open) {
+      setActiveSection(section);
+    }
+  }, [open, section]);
 
   if (!open) return null;
 
@@ -76,8 +81,8 @@ export default function SettingsModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center p-4 ">
+  const modalContent = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <ModalBackdrop onClick={onClose} />
       <ModalContent onClose={onClose}>
         <div className="flex h-full w-full">
@@ -99,6 +104,8 @@ export default function SettingsModal({
       </ModalContent>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
 
 function ModalBackdrop({ onClick }: ModalBackdropProps) {
@@ -112,7 +119,7 @@ function ModalBackdrop({ onClick }: ModalBackdropProps) {
 }
 
 function ModalContent({ children, onClose }: ModalContentProps) {
-  React.useEffect(() => {
+  useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };

@@ -109,6 +109,11 @@ const api = {
   appSettings: {
     get: () => ipcRenderer.invoke("appSettings:get"),
     setActiveMood: (moodId: string | null) => ipcRenderer.invoke("appSettings:setActiveMood", moodId),
+    onMoodChanged: (callback: (data: { activeMoodId: string | null }) => void) => {
+      const listener = (_: any, data: { activeMoodId: string | null }) => callback(data);
+      ipcRenderer.on('mood:changed', listener);
+      return () => ipcRenderer.removeListener('mood:changed', listener);
+    },
   },
 };
 

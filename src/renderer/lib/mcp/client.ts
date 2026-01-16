@@ -1,10 +1,11 @@
 import { executeFeedTool, FEED_TOOLS } from "./tools/feed-tools";
 import { executeCronTool, CRON_TOOLS } from "./tools/cron-tools";
+import { executeMoodTool, MOOD_TOOLS } from "./tools/mood-tools";
 import type { OllamaToolDefinition } from "./types";
 
 export class FeedMCPClient {
   getTools(): OllamaToolDefinition[] {
-    return [...FEED_TOOLS, ...CRON_TOOLS];
+    return [...FEED_TOOLS, ...CRON_TOOLS, ...MOOD_TOOLS];
   }
 
   async executeTool(toolName: string, params: any): Promise<any> {
@@ -12,6 +13,10 @@ export class FeedMCPClient {
       // Check if it's a cron tool
       if (toolName === 'trigger_feed_sync') {
         return await executeCronTool(toolName, params);
+      }
+      // Check if it's a mood tool
+      if (toolName === 'switch_to_writing_mode' || toolName === 'switch_to_chat_mode') {
+        return await executeMoodTool(toolName, params);
       }
       // Otherwise it's a feed tool
       return await executeFeedTool(toolName, params);
@@ -21,7 +26,7 @@ export class FeedMCPClient {
   }
 
   getTool(toolName: string): OllamaToolDefinition | undefined {
-    return [...FEED_TOOLS, ...CRON_TOOLS].find((tool) => tool.function.name === toolName);
+    return [...FEED_TOOLS, ...CRON_TOOLS, ...MOOD_TOOLS].find((tool) => tool.function.name === toolName);
   }
 }
 

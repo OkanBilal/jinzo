@@ -171,6 +171,14 @@ async function handleMCPMode(
     await saveMessage(sessionId, "assistant", fullAnswer, model);
   }
 
+  // Check if mood was switched
+  const moodSwitched = toolCalls.some(tc => 
+    tc.tool === 'switch_to_writing_mode' || tc.tool === 'switch_to_chat_mode'
+  );
+  const switchedToMood = toolCalls.find(tc => 
+    tc.tool === 'switch_to_writing_mode' || tc.tool === 'switch_to_chat_mode'
+  )?.tool === 'switch_to_writing_mode' ? 'writing' : 'chat';
+
   window?.webContents.send('chat:stream-final', {
     answer: fullAnswer,
     sources: [],
@@ -180,6 +188,8 @@ async function handleMCPMode(
       totalRetrieved: 0,
       usedInContext: toolCalls.length,
       cached: false,
+      moodSwitched,
+      switchedToMood: moodSwitched ? switchedToMood : undefined,
       breakdown: toolCalls.reduce(
         (acc, tc) => {
           acc[tc.tool] = (acc[tc.tool] || 0) + 1;

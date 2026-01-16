@@ -189,7 +189,7 @@ function ChatContent() {
 
   return (
     <div className={`h-full w-full flex flex-col`}>
-      <div className="shrink-0  pt-6 max-w-200 mx-auto w-full">
+      <div className="shrink-0 pt-6 max-w-200 mx-auto w-full">
         <ChatHeader title={chatTitle} />
       </div>
       <div className="flex-1 overflow-hidden  mx-auto w-full max-w-200 ">

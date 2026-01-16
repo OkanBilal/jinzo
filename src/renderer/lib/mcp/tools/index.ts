@@ -10,3 +10,10 @@ export {
   triggerFeedSync,
   CRON_TOOLS,
 } from "./cron-tools";
+
+export {
+  executeMoodTool,
+  switchToWritingMood,
+  switchToChatMood,
+  MOOD_TOOLS,
+} from "./mood-tools";

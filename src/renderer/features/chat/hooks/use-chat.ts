@@ -217,6 +217,7 @@ export const useChat = (options: UseChatOptions = {}): UseChatReturn => {
               )
             );
             setIsLoading(false);
+            
             // Clean up listeners
             unsubscribeChunk?.();
             unsubscribeFinal?.();

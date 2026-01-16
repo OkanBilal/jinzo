@@ -51,6 +51,9 @@
     "vite": "^5.4.21"
   },
   "dependencies": {
+    "@blocknote/core": "^0.46.1",
+    "@blocknote/mantine": "^0.46.1",
+    "@blocknote/react": "^0.46.1",
     "@lottiefiles/dotlottie-react": "^0.17.12",
     "@modelcontextprotocol/sdk": "^1.25.2",
     "@number-flow/react": "^0.5.10",
@@ -61,6 +64,7 @@
     "better-sqlite3": "^12.5.0",
     "drizzle-orm": "^0.45.1",
     "electron-squirrel-startup": "^1.0.1",
+    "frimousse": "^0.3.0",
     "motion": "^12.24.10",
     "nanoid": "^5.1.6",
     "ollama": "^0.6.3",
