@@ -26,9 +26,12 @@ const api = {
     getConfig: () => ipcRenderer.invoke("chat:getConfig"),
     updateConfig: (payload: unknown) => ipcRenderer.invoke("chat:updateConfig", payload),
     getSessions: () => ipcRenderer.invoke("chat:getSessions"),
+    getSessionById: (sessionId: number) => ipcRenderer.invoke("chat:getSessionById", sessionId),
     getMessages: (sessionId: number) => ipcRenderer.invoke("chat:getMessages", sessionId),
     createSession: (payload: unknown) => ipcRenderer.invoke("chat:createSession", payload),
     deleteSession: (sessionId: number) => ipcRenderer.invoke("chat:deleteSession", sessionId),
+    updateTitle: (sessionId: number, title: string) => ipcRenderer.invoke("chat:updateTitle", sessionId, title),
+    generateTitle: (sessionId: number, model?: string) => ipcRenderer.invoke("chat:generateTitle", sessionId, model),
     send: (payload: unknown) => ipcRenderer.invoke("chat:send", payload),
     onStreamChunk: (callback: (data: { sessionId: number; content: string }) => void) => {
       const listener = (_: any, data: { sessionId: number; content: string }) => callback(data);

@@ -57,6 +57,8 @@ export {
   useGetChatMessagesQuery,
   useGetChatSessionsQuery,
   useDeleteChatSessionMutation,
+  useUpdateChatSessionTitleMutation,
+  useGenerateChatSessionTitleMutation,
 } from "./chatApi";
 export type {
   ChatSession,

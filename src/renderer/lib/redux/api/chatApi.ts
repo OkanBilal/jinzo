@@ -80,7 +80,7 @@ export const chatApi = baseApi.injectEndpoints({
 
     getChatSession: builder.query<ChatSession, number>({
       query: (sessionId) => ({
-        handler: 'chat:getMessages',
+        handler: 'chat:getSessionById',
         args: [sessionId],
       }),
       transformResponse: (response: any) => response.success ? response.data : null,
@@ -115,6 +115,27 @@ export const chatApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Chat'],
     }),
+
+    updateChatSessionTitle: builder.mutation<{ title: string }, { sessionId: number; title: string }>({
+      query: ({ sessionId, title }) => ({
+        handler: 'chat:updateTitle',
+        args: [sessionId, title],
+      }),
+      transformResponse: (response: any) => response.success ? response.data : null,
+      invalidatesTags: ['Chat'],
+    }),
+
+    generateChatSessionTitle: builder.mutation<{ title: string }, { sessionId: number; model?: string }>({
+      query: ({ sessionId, model }) => ({
+        handler: 'chat:generateTitle',
+        args: [sessionId, model],
+      }),
+      transformResponse: (response: any) => response.success ? response.data : null,
+      invalidatesTags: (_result, _error, { sessionId }) => [
+        'Chat',
+        { type: 'Chat', id: sessionId },
+      ],
+    }),
   }),
   overrideExisting: false,
 });
@@ -127,4 +148,6 @@ export const {
   useGetChatMessagesQuery,
   useGetChatSessionsQuery,
   useDeleteChatSessionMutation,
+  useUpdateChatSessionTitleMutation,
+  useGenerateChatSessionTitleMutation,
 } = chatApi;

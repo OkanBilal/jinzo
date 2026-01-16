@@ -14,7 +14,11 @@ import {
   normalizeChatRequest,
   type StructuredOutputSchema,
 } from "../../renderer/lib/chat";
-import { analyzeQuery, buildOptimizedPrompt, findRelevantFeedItems } from "../../renderer/lib/rag";
+import {
+  analyzeQuery,
+  buildOptimizedPrompt,
+  findRelevantFeedItems,
+} from "../../renderer/lib/rag";
 import { NO_RELEVANT_CONTENT_SYSTEM_PROMPT } from "../../renderer/lib/config";
 import { getMCPClient } from "../../renderer/lib/mcp";
 import { DEFAULT_MODEL } from "../../renderer/lib/config/chat";
@@ -23,14 +27,13 @@ import { DEFAULT_MODEL } from "../../renderer/lib/config/chat";
 // Chat Config Management
 // ============================================================================
 
-
 export interface ChatConfig {
   temperature: number;
   top_p: number;
   topK: number;
   minScore: number;
   selectedModel: string;
-  toolMode: 'chat' | 'rag' | 'mcp';
+  toolMode: "chat" | "rag" | "mcp";
   structuredOutputEnabled: boolean;
   structuredOutputSchema: StructuredOutputSchema;
 }
@@ -41,7 +44,7 @@ const DEFAULT_CONFIG: ChatConfig = {
   topK: 10,
   minScore: 0.1,
   selectedModel: DEFAULT_MODEL,
-  toolMode: 'chat',
+  toolMode: "chat",
   structuredOutputEnabled: false,
   structuredOutputSchema: { properties: [] },
 };
@@ -55,7 +58,6 @@ export function getChatConfig(): ChatConfig {
 // ============================================================================
 // Helper Functions
 // ============================================================================
-
 
 function buildJsonSchema(schema: StructuredOutputSchema): object {
   const properties: Record<string, any> = {};
@@ -160,7 +162,10 @@ async function handleMCPMode(
         const delta = part.message?.content || "";
         if (delta) {
           fullAnswer += delta;
-          window?.webContents.send('chat:stream-chunk', { sessionId, content: delta });
+          window?.webContents.send("chat:stream-chunk", {
+            sessionId,
+            content: delta,
+          });
         }
       }
     }
@@ -172,14 +177,20 @@ async function handleMCPMode(
   }
 
   // Check if mood was switched
-  const moodSwitched = toolCalls.some(tc => 
-    tc.tool === 'switch_to_writing_mode' || tc.tool === 'switch_to_chat_mode'
+  const moodSwitched = toolCalls.some(
+    (tc) =>
+      tc.tool === "switch_to_writing_mode" || tc.tool === "switch_to_chat_mode"
   );
-  const switchedToMood = toolCalls.find(tc => 
-    tc.tool === 'switch_to_writing_mode' || tc.tool === 'switch_to_chat_mode'
-  )?.tool === 'switch_to_writing_mode' ? 'writing' : 'chat';
+  const switchedToMood =
+    toolCalls.find(
+      (tc) =>
+        tc.tool === "switch_to_writing_mode" ||
+        tc.tool === "switch_to_chat_mode"
+    )?.tool === "switch_to_writing_mode"
+      ? "writing"
+      : "chat";
 
-  window?.webContents.send('chat:stream-final', {
+  window?.webContents.send("chat:stream-final", {
     answer: fullAnswer,
     sources: [],
     sessionId,
@@ -248,7 +259,10 @@ Do not include any text outside the JSON object. Your entire response must be pa
     });
 
     fullAnswer = response.message.content || "";
-    window?.webContents.send('chat:stream-chunk', { sessionId, content: fullAnswer });
+    window?.webContents.send("chat:stream-chunk", {
+      sessionId,
+      content: fullAnswer,
+    });
   } else {
     const llmStream = await ollama.chat({
       model,
@@ -267,7 +281,10 @@ Do not include any text outside the JSON object. Your entire response must be pa
       const delta = part.message?.content || "";
       if (delta) {
         fullAnswer += delta;
-        window?.webContents.send('chat:stream-chunk', { sessionId, content: delta });
+        window?.webContents.send("chat:stream-chunk", {
+          sessionId,
+          content: delta,
+        });
       }
     }
   }
@@ -276,7 +293,7 @@ Do not include any text outside the JSON object. Your entire response must be pa
     await saveMessage(sessionId, "assistant", fullAnswer, model);
   }
 
-  window?.webContents.send('chat:stream-final', {
+  window?.webContents.send("chat:stream-final", {
     answer: fullAnswer,
     sources: [],
     sessionId,
@@ -411,7 +428,10 @@ Do not include any text outside the JSON object. Your entire response must be pa
     });
 
     fullAnswer = response.message.content || "";
-    window?.webContents.send('chat:stream-chunk', { sessionId, content: fullAnswer });
+    window?.webContents.send("chat:stream-chunk", {
+      sessionId,
+      content: fullAnswer,
+    });
   } else {
     const llmStream = await ollama.chat({
       model,
@@ -430,7 +450,10 @@ Do not include any text outside the JSON object. Your entire response must be pa
       const delta = part.message?.content || "";
       if (delta) {
         fullAnswer += delta;
-        window?.webContents.send('chat:stream-chunk', { sessionId, content: delta });
+        window?.webContents.send("chat:stream-chunk", {
+          sessionId,
+          content: delta,
+        });
       }
     }
   }
@@ -439,7 +462,7 @@ Do not include any text outside the JSON object. Your entire response must be pa
     await saveMessage(sessionId, "assistant", fullAnswer, model);
   }
 
-  window?.webContents.send('chat:stream-final', {
+  window?.webContents.send("chat:stream-final", {
     answer: fullAnswer,
     sources,
     sessionId,
@@ -463,46 +486,62 @@ export function registerChatHandlers() {
   });
 
   // Update chat config
-  ipcMain.handle("chat:updateConfig", async (_, payload: Partial<ChatConfig>) => {
-    try {
-      if (typeof payload.temperature === "number") {
-        chatConfig.temperature = Math.max(0, Math.min(2, payload.temperature));
-      }
+  ipcMain.handle(
+    "chat:updateConfig",
+    async (_, payload: Partial<ChatConfig>) => {
+      try {
+        if (typeof payload.temperature === "number") {
+          chatConfig.temperature = Math.max(
+            0,
+            Math.min(2, payload.temperature)
+          );
+        }
 
-      if (typeof payload.top_p === "number") {
-        chatConfig.top_p = Math.max(0, Math.min(1, payload.top_p));
-      }
+        if (typeof payload.top_p === "number") {
+          chatConfig.top_p = Math.max(0, Math.min(1, payload.top_p));
+        }
 
-      if (typeof payload.topK === "number") {
-        chatConfig.topK = Math.max(1, Math.min(100, payload.topK));
-      }
+        if (typeof payload.topK === "number") {
+          chatConfig.topK = Math.max(1, Math.min(100, payload.topK));
+        }
 
-      if (typeof payload.minScore === "number") {
-        chatConfig.minScore = Math.max(0, Math.min(1, payload.minScore));
-      }
+        if (typeof payload.minScore === "number") {
+          chatConfig.minScore = Math.max(0, Math.min(1, payload.minScore));
+        }
 
-      if (typeof payload.selectedModel === "string") {
-        chatConfig.selectedModel = payload.selectedModel;
-      }
+        if (typeof payload.selectedModel === "string") {
+          chatConfig.selectedModel = payload.selectedModel;
+        }
 
-      if (payload.toolMode === 'chat' || payload.toolMode === 'rag' || payload.toolMode === 'mcp') {
-        chatConfig.toolMode = payload.toolMode;
-      }
+        if (
+          payload.toolMode === "chat" ||
+          payload.toolMode === "rag" ||
+          payload.toolMode === "mcp"
+        ) {
+          chatConfig.toolMode = payload.toolMode;
+        }
 
-      if (typeof payload.structuredOutputEnabled === 'boolean') {
-        chatConfig.structuredOutputEnabled = payload.structuredOutputEnabled;
-      }
+        if (typeof payload.structuredOutputEnabled === "boolean") {
+          chatConfig.structuredOutputEnabled = payload.structuredOutputEnabled;
+        }
 
-      if (payload.structuredOutputSchema && Array.isArray(payload.structuredOutputSchema.properties)) {
-        chatConfig.structuredOutputSchema = payload.structuredOutputSchema;
-      }
+        if (
+          payload.structuredOutputSchema &&
+          Array.isArray(payload.structuredOutputSchema.properties)
+        ) {
+          chatConfig.structuredOutputSchema = payload.structuredOutputSchema;
+        }
 
-      return { success: true, data: getChatConfig() };
-    } catch (error: any) {
-      console.error("Error updating chat config:", error);
-      return { success: false, error: error?.message || "Failed to update config" };
+        return { success: true, data: getChatConfig() };
+      } catch (error: any) {
+        console.error("Error updating chat config:", error);
+        return {
+          success: false,
+          error: error?.message || "Failed to update config",
+        };
+      }
     }
-  });
+  );
 
   // Get chat sessions list
   ipcMain.handle("chat:getSessions", async () => {
@@ -537,6 +576,39 @@ export function registerChatHandlers() {
     } catch (error) {
       console.error("Failed to list chat sessions:", error);
       return { success: false, error: "Failed to list sessions" };
+    }
+  });
+
+  // Get single session by ID
+  ipcMain.handle("chat:getSessionById", async (_, sessionId: number) => {
+    try {
+      const db = getDb();
+      if (!sessionId || typeof sessionId !== "number" || sessionId <= 0) {
+        return { success: false, error: "Invalid session ID" };
+      }
+
+      const session = await db.query.chatSessions.findFirst({
+        where: eq(chatSessions.id, sessionId),
+      });
+
+      if (!session) {
+        return { success: false, error: "Session not found" };
+      }
+
+      return {
+        success: true,
+        data: {
+          id: session.id,
+          title: session.title,
+          initialQuery: session.initialQuery,
+          model: session.model,
+          createdAt: session.createdAt,
+          updatedAt: session.updatedAt,
+        },
+      };
+    } catch (error) {
+      console.error("Failed to get chat session:", error);
+      return { success: false, error: "Failed to get session" };
     }
   });
 
@@ -606,6 +678,122 @@ export function registerChatHandlers() {
     }
   });
 
+  // Update chat session title
+  ipcMain.handle(
+    "chat:updateTitle",
+    async (_, sessionId: number, title: string) => {
+      try {
+        const db = getDb();
+        if (!sessionId || typeof sessionId !== "number") {
+          return { success: false, error: "Invalid session ID" };
+        }
+
+        if (!title || typeof title !== "string" || title.trim().length === 0) {
+          return { success: false, error: "Invalid title" };
+        }
+
+        const session = await db.query.chatSessions.findFirst({
+          where: eq(chatSessions.id, sessionId),
+        });
+
+        if (!session) {
+          return { success: false, error: "Session not found" };
+        }
+
+        await db
+          .update(chatSessions)
+          .set({ title: title.trim() })
+          .where(eq(chatSessions.id, sessionId));
+
+        return { success: true, data: { title: title.trim() } };
+      } catch (error: any) {
+        console.error("Failed to update chat session title:", error);
+        return { success: false, error: error?.message || "Unknown error" };
+      }
+    }
+  );
+
+  // Generate title for chat session using LLM
+  ipcMain.handle(
+    "chat:generateTitle",
+    async (_, sessionId: number, model?: string) => {
+      try {
+        const db = getDb();
+        if (!sessionId || typeof sessionId !== "number") {
+          return { success: false, error: "Invalid session ID" };
+        }
+
+        const session = await db.query.chatSessions.findFirst({
+          where: eq(chatSessions.id, sessionId),
+        });
+
+        if (!session) {
+          return { success: false, error: "Session not found" };
+        }
+
+        // Get the first few messages from the session
+        const messages = await db
+          .select()
+          .from(chatMessages)
+          .where(eq(chatMessages.sessionId, sessionId))
+          .orderBy(chatMessages.createdAt)
+          .limit(4);
+
+        if (messages.length < 2) {
+          return {
+            success: false,
+            error: "Not enough messages to generate title",
+          };
+        }
+
+        const userMessage = messages.find((m) => m.role === "user");
+        const assistantMessage = messages.find((m) => m.role === "assistant");
+
+        if (!userMessage || !assistantMessage) {
+          return {
+            success: false,
+            error: "Need both user and assistant messages",
+          };
+        }
+
+        const selectedModel = model || session.model || DEFAULT_MODEL;
+
+        // Generate title using LLM
+        const response = await ollama.chat({
+          model: selectedModel, // TODO use lower-capacity model for title generation
+          stream: false,
+          messages: [
+            {
+              role: "system",
+              content: `You are a title generator. Generate a short, concise title (3-6 words) that summarizes the conversation topic. Respond with ONLY the title, no quotes, no punctuation at the end, no explanation.`,
+            },
+            {
+              role: "user",
+              content: `User asked: "${userMessage.content.slice(0, 500)}"\n\nAssistant replied: "${assistantMessage.content.slice(0, 500)}"\n\nGenerate a short title for this conversation:`,
+            },
+          ],
+          options: {
+            temperature: 0.3,
+          },
+        });
+
+        const generatedTitle =
+          response.message.content?.trim().slice(0, 60) || session.title;
+
+        // Update the session title
+        await db
+          .update(chatSessions)
+          .set({ title: generatedTitle })
+          .where(eq(chatSessions.id, sessionId));
+
+        return { success: true, data: { title: generatedTitle } };
+      } catch (error: any) {
+        console.error("Failed to generate chat session title:", error);
+        return { success: false, error: error?.message || "Unknown error" };
+      }
+    }
+  );
+
   // Delete chat session
   ipcMain.handle("chat:deleteSession", async (_, sessionId: number) => {
     try {
@@ -639,7 +827,8 @@ export function registerChatHandlers() {
         return { success: false, error: validation.error };
       }
 
-      const { question, model, sessionId, options } = normalizeChatRequest(payload);
+      const { question, model, sessionId, options } =
+        normalizeChatRequest(payload);
 
       if (!options.skipUserSave) {
         await saveMessage(sessionId, "user", question, model);
@@ -653,8 +842,11 @@ export function registerChatHandlers() {
       );
 
       if (cached) {
-        event.sender.send('chat:stream-chunk', { sessionId, content: cached.answer });
-        event.sender.send('chat:stream-final', cached);
+        event.sender.send("chat:stream-chunk", {
+          sessionId,
+          content: cached.answer,
+        });
+        event.sender.send("chat:stream-final", cached);
         return { success: true, cached: true };
       }
 
@@ -664,18 +856,36 @@ export function registerChatHandlers() {
       // Start streaming in background
       (async () => {
         try {
-          if (toolMode === 'mcp') {
-            await handleMCPMode(question, model, sessionId, options, event.sender.id);
-          } else if (toolMode === 'rag') {
-            await handleRAGMode(question, model, sessionId, options, event.sender.id);
+          if (toolMode === "mcp") {
+            await handleMCPMode(
+              question,
+              model,
+              sessionId,
+              options,
+              event.sender.id
+            );
+          } else if (toolMode === "rag") {
+            await handleRAGMode(
+              question,
+              model,
+              sessionId,
+              options,
+              event.sender.id
+            );
           } else {
-            await handleChatMode(question, model, sessionId, options, event.sender.id);
+            await handleChatMode(
+              question,
+              model,
+              sessionId,
+              options,
+              event.sender.id
+            );
           }
         } catch (error: any) {
           console.error("Chat streaming error:", error);
-          event.sender.send('chat:stream-error', { 
-            sessionId, 
-            error: error?.message || "Unknown error" 
+          event.sender.send("chat:stream-error", {
+            sessionId,
+            error: error?.message || "Unknown error",
           });
         }
       })();

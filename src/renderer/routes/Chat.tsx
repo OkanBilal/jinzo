@@ -11,7 +11,7 @@ import ChatInput from "../features/chat/components/input";
 import { AppState } from "../features/chat/components/input/types";
 import { useChat } from "../features/chat/hooks/use-chat";
 import { useThinkingConfig } from "../features/chat/hooks/use-thinking-config";
-import { useGetAppsQuery, useGetChatMessagesQuery } from "../lib/redux/api";
+import { useGetAppsQuery, useGetChatMessagesQuery, useGetChatSessionQuery, useGenerateChatSessionTitleMutation } from "../lib/redux/api";
 import { useAppSelector } from "../lib/redux/hooks";
 
 function ChatContent() {
@@ -39,6 +39,10 @@ function ChatContent() {
       skip: !sessionId || isNaN(sessionId),
     });
 
+  const { data: sessionData } = useGetChatSessionQuery(sessionId ?? 0, {
+    skip: !sessionId || isNaN(sessionId),
+  });
+
   const { data: apps = [] } = useGetAppsQuery();
 
   const {
@@ -54,10 +58,15 @@ function ChatContent() {
   } = useChat({ initialMessages: [], sessionId });
 
   const initialStreamTriggeredRef = useRef(false);
+  const titleGeneratedRef = useRef(false);
+  const wasLoadingRef = useRef(false);
+
+  const [generateTitle] = useGenerateChatSessionTitleMutation();
 
   // Reset initial stream trigger when session changes
   useEffect(() => {
     initialStreamTriggeredRef.current = false;
+    titleGeneratedRef.current = false;
   }, [sessionId]);
 
   // Redirect if invalid session ID
@@ -83,14 +92,18 @@ function ChatContent() {
     replaceMessages(uiMessages);
   }, [sessionId, messagesData, replaceMessages]);
 
-  // Derive chat title from messages
+  // Get chat title from session data
   const chatTitle = useMemo(() => {
+    if (sessionData?.title) {
+      return sessionData.title;
+    }
+    // Fallback to first user message if no title
     if (messagesData && messagesData.length > 0) {
       const firstUserMsg = messagesData.find((m) => m.role === "user");
-      return firstUserMsg ? firstUserMsg.content : "Chat";
+      return firstUserMsg ? firstUserMsg.content.slice(0, 60) : "Chat";
     }
     return "Chat";
-  }, [messagesData]);
+  }, [sessionData, messagesData]);
 
   // Focus input on mount
   useEffect(() => {
@@ -158,6 +171,22 @@ function ChatContent() {
     structuredOutputEnabled,
     structuredOutputSchema,
   ]);
+
+  // Generate title after first response completes
+  useEffect(() => {
+    if (wasLoadingRef.current && !isLoading) {
+      // Loading just finished
+      if (
+        sessionId &&
+        initialStreamTriggeredRef.current &&
+        !titleGeneratedRef.current
+      ) {
+        titleGeneratedRef.current = true;
+        generateTitle({ sessionId, model: selectedModel });
+      }
+    }
+    wasLoadingRef.current = isLoading;
+  }, [isLoading, sessionId, selectedModel, generateTitle]);
 
   const handleSend = useCallback((): void => {
     if (!input.trim()) return;

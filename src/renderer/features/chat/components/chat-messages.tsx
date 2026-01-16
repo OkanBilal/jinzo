@@ -16,7 +16,7 @@ const ChatMessages = forwardRef<HTMLUListElement, ChatMessagesProps>(
     return (
       <ul
         ref={ref}
-        className="w-full h-full overflow-y-auto pr-2 space-y-8 pb-12 noscrollbar"
+        className="w-full h-full overflow-y-auto  space-y-8 pb-12 noscrollbar"
         role="log"
         aria-live="polite"
         aria-label="Chat messages"
@@ -26,11 +26,6 @@ const ChatMessages = forwardRef<HTMLUListElement, ChatMessagesProps>(
             <ChatMessageComponent message={message} />
           </li>
         ))}
-        {isLoading && (
-          <li className="max-w-4xl mx-auto">
-            <LoadingIndicator />
-          </li>
-        )}
       </ul>
     );
   }

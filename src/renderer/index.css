@@ -295,6 +295,45 @@ input[type="range"].slider::-moz-range-thumb:hover {
   animation: blink 1s step-end infinite;
 }
 
+.animate-blur-reveal {
+  animation: blur-reveal 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Streaming Text Animation
+   ========================================================================== */
+
+/* Fresh text that just appeared - blur to clear animation */
+.fresh-text-blur {
+  display: inline;
+  animation: fresh-blur-in 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fresh-blur-in {
+  0% {
+    filter: blur(4px);
+    opacity: 0.4;
+  }
+  100% {
+    filter: blur(0);
+    opacity: 1;
+  }
+}
+
+/* Typing cursor */
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  margin-left: 2px;
+  background-color: var(--color-primary-600);
+  animation: blink 1s step-end infinite;
+  vertical-align: middle;
+}
+
+.dark .typing-cursor {
+  background-color: var(--color-primary-400);
+}
+
 .fade-in {
   animation: fade 2s ease normal backwards;
 }

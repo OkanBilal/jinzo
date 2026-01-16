@@ -4,6 +4,8 @@ import remarkGfm from "remark-gfm";
 import { Check, Clipboard } from "../../../components/ui/icons";
 import { useCopyToClipboard } from "../../../features/chat/hooks/use-copy-to-clipboard";
 import { useIsUserMessage } from "../../../features/chat/hooks/use-is-user-message";
+import { StreamingText } from "./streaming-text";
+import { markdownComponents } from "./markdown-components";
 
 export const ChatMessageComponent = memo(
   ({ message, showTimestamp = false }: ChatMessageProps) => {
@@ -36,139 +38,30 @@ export const ChatMessageComponent = memo(
             className={` rounded-2xl transition-all duration-200 ${
               isUser
                 ? "px-4 py-3 dark:bg-primary-900 text-primary-950 bg-primary-50 dark:text-primary-50 whitespace-pre-wrap wrap-break-word"
-                : "px-4 py-3 text-inherit"
+                : "px-0 py-3 text-inherit"
             }`}
           >
             {isUser ? (
               <p className="text-sm">{message.text}</p>
             ) : (
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    h1: ({ children }) => (
-                      <h1 className="text-xl font-bold mt-4 mb-2 text-primary-900 dark:text-primary-100">
-                        {children}
-                      </h1>
-                    ),
-                    h2: ({ children }) => (
-                      <h2 className="text-lg font-semibold mt-3 mb-2 text-primary-900 dark:text-primary-100">
-                        {children}
-                      </h2>
-                    ),
-                    h3: ({ children }) => (
-                      <h3 className="text-base font-semibold mt-2 mb-1 text-primary-900 dark:text-primary-100">
-                        {children}
-                      </h3>
-                    ),
-                    p: ({ children }) => (
-                      <p className="mb-2 text-sm leading-relaxed text-primary-800 dark:text-primary-200">
-                        {children}
-                      </p>
-                    ),
-                    ul: ({ children }) => (
-                      <ul className="list-disc text-sm list-inside mb-2 space-y-1 text-primary-800 dark:text-primary-200">
-                        {children}
-                      </ul>
-                    ),
-                    ol: ({ children }) => (
-                      <ol className="list-decimal list-inside mb-2 space-y-1 text-primary-800 dark:text-primary-200">
-                        {children}
-                      </ol>
-                    ),
-                    li: ({ children }) => (
-                      <li className="ml-2 text-primary-800 dark:text-primary-200">
-                        {children}
-                      </li>
-                    ),
-                    table: ({ children }) => (
-                      <div className="overflow-x-auto my-4 rounded-lg border border-primary-300 dark:border-primary-700">
-                        <table className="min-w-full border-collapse">
-                          {children}
-                        </table>
-                      </div>
-                    ),
-                    thead: ({ children }) => (
-                      <thead className="bg-primary-100 dark:bg-primary-800">
-                        {children}
-                      </thead>
-                    ),
-                    tbody: ({ children }) => (
-                      <tbody className="bg-white dark:bg-primary-950">
-                        {children}
-                      </tbody>
-                    ),
-                    tr: ({ children }) => (
-                      <tr className="border-b border-primary-200 dark:border-primary-700 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors">
-                        {children}
-                      </tr>
-                    ),
-                    th: ({ children }) => (
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-primary-900 dark:text-primary-100 border-r border-primary-200 dark:border-primary-700 last:border-r-0">
-                        {children}
-                      </th>
-                    ),
-                    td: ({ children }) => (
-                      <td className="px-4 py-3 text-sm text-primary-800 dark:text-primary-200 border-r border-primary-200 dark:border-primary-700 last:border-r-0">
-                        {children}
-                      </td>
-                    ),
-                    code: ({ className, children }) => {
-                      const isInline = !className;
-                      if (isInline) {
-                        return (
-                          <code className="px-1.5 py-0.5 rounded bg-primary-200 dark:bg-primary-800 text-primary-900 dark:text-primary-100 text-sm font-mono">
-                            {children}
-                          </code>
-                        );
-                      }
-                      return (
-                        <code className="block p-3 rounded-lg bg-primary-100 dark:bg-primary-900 text-primary-900 dark:text-primary-100 text-sm font-mono overflow-x-auto">
-                          {children}
-                        </code>
-                      );
-                    },
-                    pre: ({ children }) => (
-                      <pre className="my-2 rounded-lg overflow-hidden">
-                        {children}
-                      </pre>
-                    ),
-                    a: ({ href, children }) => (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 underline transition-colors"
-                      >
-                        {children}
-                      </a>
-                    ),
-                    blockquote: ({ children }) => (
-                      <blockquote className="border-l-4 border-primary-400 dark:border-primary-600 pl-4 py-1 my-2 italic text-primary-700 dark:text-primary-300">
-                        {children}
-                      </blockquote>
-                    ),
-                    strong: ({ children }) => (
-                      <strong className="font-semibold text-primary-900 dark:text-primary-100">
-                        {children}
-                      </strong>
-                    ),
-                    em: ({ children }) => (
-                      <em className="italic text-primary-800 dark:text-primary-200">
-                        {children}
-                      </em>
-                    ),
-                    hr: () => (
-                      <hr className="my-4 border-primary-300 dark:border-primary-700" />
-                    ),
-                  }}
-                >
-                  {message.text}
-                </ReactMarkdown>
-                {/* {Boolean((message.metadata as any)?.streaming) && (
-                  <span className="ml-0.5 opacity-70 animate-pulse">▋</span>
-                )} */}
-              </div>
+              <>
+                {(message.metadata as any)?.streaming ? (
+                  <StreamingText
+                    text={message.text}
+                    isStreaming={true}
+                    revealSpeed={4}
+                  />
+                ) : (
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={markdownComponents}
+                    >
+                      {message.text}
+                    </ReactMarkdown>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
