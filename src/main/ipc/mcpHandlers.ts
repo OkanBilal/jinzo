@@ -43,7 +43,7 @@ export function registerMcpHandlers() {
       let result;
       if (name === 'trigger_entity_sync' || name === 'trigger_feed_sync') {
         result = await executeSyncTool(name, toolParams || {});
-      } else if (name === 'switch_to_writing_mood' || name === 'switch_to_chat_mood') {
+      } else if (name === 'switch_to_journal_mood' || name === 'switch_to_chat_mood') {
         result = await executeMoodTool(name, toolParams || {});
       } else {
         // Default to entity tools (entity_list, entity_search, feed_list, feed_search)

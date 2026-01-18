@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { Caption } from "@/components/ui/text";
 import { ArrowUp } from "@/components/ui/icons";
-import WritingPostItem from "./writing-post-item";
+import PostItem from "./post-item";
 
-interface WritingPostsListProps {
+interface PostsListProps {
   posts: { url: string, title: string; description: string }[]; 
   isLoading: boolean;
 }
 
-export default function WritingPostsList({
+export default function PostsList({
   posts,
   isLoading,
-}: WritingPostsListProps) {
+}: PostsListProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
   if (isLoading) {
@@ -59,7 +59,7 @@ export default function WritingPostsList({
                 animation: `slideIn 0.15s ease-out ${index * 0.05}s both`,
               }}
             >
-              <WritingPostItem
+              <PostItem
                 title={post.title}
                 description={post.description}
               />

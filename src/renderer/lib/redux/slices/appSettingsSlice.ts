@@ -4,14 +4,14 @@ export interface AppSettingsState {
   isDarkMode: boolean;
   sidebarCollapsed: boolean;
   fontSize: "small" | "medium" | "large";
-  writingMode: boolean;
+  journalMood: boolean;
 }
 
 const initialState: AppSettingsState = {
   isDarkMode: false,
   sidebarCollapsed: false,
   fontSize: "medium",
-  writingMode: false,
+  journalMood: false,
 };
 
 const appSettingsSlice = createSlice({
@@ -30,12 +30,12 @@ const appSettingsSlice = createSlice({
     ) => {
       state.fontSize = action.payload;
     },
-    setWritingMode: (state, action: PayloadAction<boolean>) => {
-      state.writingMode = action.payload;
+    setJournalMood: (state, action: PayloadAction<boolean>) => {
+      state.journalMood = action.payload;
     },
   },
 });
 
-export const { setDarkMode, setSidebarCollapsed, setFontSize, setWritingMode } =
+export const { setDarkMode, setSidebarCollapsed, setFontSize, setJournalMood } =
   appSettingsSlice.actions;
 export default appSettingsSlice.reducer;

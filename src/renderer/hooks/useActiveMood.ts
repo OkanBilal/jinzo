@@ -6,7 +6,7 @@ import { useGetAppSettingsQuery, useGetMoodsQuery } from "@/lib/redux/api";
  * @returns {object} Object containing active mood data
  * @returns {string} activeMoodId - ID of the active mood
  * @returns {object|undefined} activeMood - Full mood object if found
- * @returns {boolean} isWritingMood - True if active mood is writing mode
+ * @returns {boolean} isJournalMood - True if active mood is journal mood
  * @returns {string|undefined} moodSlug - Slug of the active mood
  */
 export function useActiveMood() {
@@ -20,13 +20,13 @@ export function useActiveMood() {
   }, [moods, activeMoodId]);
 
   const moodSlug = activeMood?.slug;
-  const isWritingMood = moodSlug === "writing";
+  const isJournalMood = moodSlug === "journal";
 
   return {
     activeMoodId,
     activeMood,
     moodSlug,
-    isWritingMood,
+    isJournalMood,
     moods,
   };
 }

@@ -11,7 +11,7 @@ interface MoodModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (moodData: MoodFormData) => Promise<void>;
-  mode: "create" | "edit";
+  mood: "create" | "edit";
   initialData?: Partial<MoodFormData>;
 }
 
@@ -31,7 +31,7 @@ export function MoodModal({
   isOpen,
   onClose,
   onSave,
-  mode,
+  mood,
   initialData,
 }: MoodModalProps) {
   const isBrowser = useSyncExternalStore(
@@ -201,7 +201,7 @@ export function MoodModal({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-black/5 dark:border-white/10">
           <Heading3 >
-            {mode === "create" ? "Create New Mood" : "Edit Mood"}
+            {mood === "create" ? "Create New Mood" : "Edit Mood"}
           </Heading3>
           <button
             onClick={onClose}
@@ -234,7 +234,7 @@ export function MoodModal({
               type="text"
               value={formData.name}
               onChange={(e) => handleChange("name", e.target.value)}
-              placeholder="e.g., Work Focus, Creative Mode, Deep Research"
+              placeholder="e.g., Work Focus, Creative Mood, Deep Research"
               hasError={!!errors.name}
               className="w-full"
               autoFocus
@@ -451,7 +451,7 @@ export function MoodModal({
             variant="primary"
             size="sm"
           >
-            {mode === "create" ? "Create Mood" : "Save Changes"}
+            {mood === "create" ? "Create Mood" : "Save Changes"}
           </Button>
         </div>
       </div>

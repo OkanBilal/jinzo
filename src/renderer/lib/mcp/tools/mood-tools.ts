@@ -62,10 +62,10 @@ async function ensureAppSettingsRow() {
 }
 
 /**
- * Switch to writing mood
- * This activates the writing mood which shows the BlockNote editor
+ * Switch to journal mood
+ * This activates the journal mood which shows the BlockNote editor
  */
-export async function switchToWritingMood(): Promise<MoodSwitchResult> {
+export async function switchToJournalMood(): Promise<MoodSwitchResult> {
   try {
     const db = getDb();
     
@@ -77,13 +77,13 @@ export async function switchToWritingMood(): Promise<MoodSwitchResult> {
       where: eq(moods.accountId, ACCOUNT_ID),
     });
     
-    const writingMood = allMoods.find((m) => m.slug === "writing");
+    const journalMood = allMoods.find((m) => m.slug === "journal");
 
-    if (!writingMood) {
+    if (!journalMood) {
       return {
         success: false,
-        mood: "writing",
-        message: "Writing mood not found. Please create a mood with slug 'writing' first.",
+        mood: "journal",
+        message: "Journal mood not found. Please create a mood with slug 'journal' first.",
         error: "Mood not found",
       };
     }
@@ -92,25 +92,25 @@ export async function switchToWritingMood(): Promise<MoodSwitchResult> {
     await db
       .update(appSettings)
       .set({ 
-        activeMoodId: writingMood.id,
+        activeMoodId: journalMood.id,
         updatedAt: sql`(unixepoch())`,
       })
       .where(eq(appSettings.id, SETTINGS_ID));
 
     // Notify renderer of mood change
-    broadcastMoodChange(writingMood.id);
+    broadcastMoodChange(journalMood.id);
 
     return {
       success: true,
-      mood: "writing",
-      message: "Successfully switched to writing mode. The editor is now ready for you to write.",
+      mood: "journal",
+      message: "Successfully switched to journal mood. The editor is now ready for you to write.",
     };
   } catch (error) {
-    console.error("Failed to switch to writing mood:", error);
+    console.error("Failed to switch to journal mood:", error);
     return {
       success: false,
-      mood: "writing",
-      message: "Failed to switch to writing mood",
+      mood: "journal",
+      message: "Failed to switch to journal mood",
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
   }
@@ -118,7 +118,7 @@ export async function switchToWritingMood(): Promise<MoodSwitchResult> {
 
 /**
  * Switch to chat mood (default)
- * This deactivates writing mode and returns to normal chat
+ * This deactivates journal mood and returns to normal chat
  */
 export async function switchToChatMood(): Promise<MoodSwitchResult> {
   try {
@@ -150,7 +150,7 @@ export async function switchToChatMood(): Promise<MoodSwitchResult> {
       return {
         success: true,
         mood: "chat",
-        message: "Successfully switched to chat mode.",
+        message: "Successfully switched to chat mood.",
       };
     }
 
@@ -169,7 +169,7 @@ export async function switchToChatMood(): Promise<MoodSwitchResult> {
     return {
       success: true,
       mood: "chat",
-      message: "Successfully switched to chat mode.",
+      message: "Successfully switched to chat mood.",
     };
   } catch (error) {
     console.error("Failed to switch to chat mood:", error);
@@ -186,9 +186,9 @@ export const MOOD_TOOLS: OllamaToolDefinition[] = [
   {
     type: "function",
     function: {
-      name: "switch_to_writing_mode",
+      name: "switch_to_journal_mood",
       description:
-        "Switch to writing mode. Use this when the user wants to: write, start writing, open editor, enter writing mode, write something, create a document, or compose text. This activates the BlockNote editor on the home screen.",
+        "Switch to journal mood. Use this when the user wants to: write, start writing, open editor, enter journal mood, write something, create a document, or compose text. This activates the BlockNote editor on the home screen.",
       parameters: {
         type: "object",
         properties: {},
@@ -199,9 +199,9 @@ export const MOOD_TOOLS: OllamaToolDefinition[] = [
   {
     type: "function",
     function: {
-      name: "switch_to_chat_mode",
+      name: "switch_to_chat_mood",
       description:
-        "Switch to chat mode. Use this when the user wants to: chat, go back to chat, exit writing mode, leave editor, return to chat, or talk. This returns to the normal chat interface.",
+        "Switch to chat mood. Use this when the user wants to: chat, go back to chat, exit journal mood, leave editor, return to chat, or talk. This returns to the normal chat interface.",
       parameters: {
         type: "object",
         properties: {},
@@ -216,9 +216,9 @@ export async function executeMoodTool(
   params?: any
 ): Promise<any> {
   switch (toolName) {
-    case "switch_to_writing_mode":
-      return switchToWritingMood();
-    case "switch_to_chat_mode":
+    case "switch_to_journal_mood":
+      return switchToJournalMood();
+    case "switch_to_chat_mood":
       return switchToChatMood();
     default:
       throw new Error(`Unknown mood tool: ${toolName}`);

@@ -52,7 +52,7 @@ export default function ChatInput({
   const [isAppMentionOpen, setIsAppMentionOpen] = useState(false);
   const [appSearchTerm, setAppSearchTerm] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const { isWritingMood } = useActiveMood();
+  const { isJournalMood } = useActiveMood();
 
   const connectedApps = useMemo(() => {
     return apps.filter((app) => app.isConnected).map((app) => app.id);
@@ -238,7 +238,7 @@ export default function ChatInput({
               onChange={handleFileChange}
               className="hidden"
             />
-            {!isWritingMood ? (
+            {!isJournalMood ? (
               <button
                 type="button"
                 onClick={openAppsModal}

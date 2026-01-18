@@ -20,7 +20,7 @@ export {
 
 export {
   executeMoodTool,
-  switchToWritingMood,
+  switchToJournalMood,
   switchToChatMood,
   MOOD_TOOLS,
 } from "./mood-tools";

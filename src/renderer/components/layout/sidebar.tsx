@@ -14,7 +14,7 @@ import UserProfile from "./sidebar/user-profile";
 import SearchBar from "./sidebar/search-bar";
 import ChatSessionList from "./sidebar/chat-session-list";
 import DeleteConfirmationModal from "./sidebar/delete-confirmation-modal";
-import WritingPostsList from "./sidebar/writing-posts-list";
+import PostsList from "./sidebar/post-list";
 import MoodSelector from "./sidebar/mood-selector";
 import NewButton from "./sidebar/new-button";
 import CreateMoodView from "./sidebar/create-mood-view";
@@ -161,7 +161,7 @@ export default function FrostedSidebar() {
                   />
                 )}
                 {sidebarConfig.itemType === "post" && (
-                  <WritingPostsList
+                  <PostsList
                     posts={filteredEntities.map((entity) => ({
                       url: entity.url,
                       title: entity.title,

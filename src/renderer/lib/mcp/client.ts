@@ -15,7 +15,7 @@ export class FeedMCPClient {
         return await executeSyncTool(toolName, params);
       }
       // Check if it's a mood tool
-      if (toolName === 'switch_to_writing_mood' || toolName === 'switch_to_chat_mood') {
+      if (toolName === 'switch_to_journal_mood' || toolName === 'switch_to_chat_mood') {
         return await executeMoodTool(toolName, params);
       }
       // Otherwise it's an entity tool (entity_list, entity_search, feed_list, feed_search)

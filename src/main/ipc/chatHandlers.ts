@@ -179,15 +179,15 @@ async function handleMCPMode(
   // Check if mood was switched
   const moodSwitched = toolCalls.some(
     (tc) =>
-      tc.tool === "switch_to_writing_mode" || tc.tool === "switch_to_chat_mode"
+      tc.tool === "switch_to_journal_mood" || tc.tool === "switch_to_chat_mood"
   );
   const switchedToMood =
     toolCalls.find(
       (tc) =>
-        tc.tool === "switch_to_writing_mode" ||
-        tc.tool === "switch_to_chat_mode"
-    )?.tool === "switch_to_writing_mode"
-      ? "writing"
+        tc.tool === "switch_to_journal_mood" ||
+        tc.tool === "switch_to_chat_mood"
+    )?.tool === "switch_to_journal_mood"
+      ? "journal"
       : "chat";
 
   window?.webContents.send("chat:stream-final", {

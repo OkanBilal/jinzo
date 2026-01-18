@@ -19,7 +19,7 @@ export default function HomePage() {
   const { data: apps = [] } = useGetAppsQuery();
   const [createChatSession] = useCreateChatSessionMutation();
   const model = useAppSelector((state) => state.chat.selectedModel);
-  const { isWritingMood } = useActiveMood();
+  const { isJournalMood } = useActiveMood();
 
   const navigate = useNavigate();
 
@@ -34,7 +34,7 @@ export default function HomePage() {
       },
       {
         type: "paragraph",
-        content: "Welcome to Writing Mode ✍️",
+        content: "Welcome to Journal Mood ✍️",
       },
       {
         type: "paragraph",
@@ -84,7 +84,7 @@ export default function HomePage() {
 
   return (
     <>
-      {isWritingMood ? (
+      {isJournalMood ? (
         <div className=" w-full py-12 px-6">
           <BlockNoteView editor={editor} theme="dark" data-theming-css-demo />
         </div>

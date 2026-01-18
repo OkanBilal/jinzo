@@ -171,12 +171,12 @@ export function createFeedMCPServer(): McpServer {
   );
 
   server.tool(
-    "switch_to_writing_mood",
-    "Switch to writing mood to activate the BlockNote editor for document editing",
+    "switch_to_journal_mood",
+    "Switch to journal mood to activate the BlockNote editor for document editing",
     {},
     async (params) => {
       try {
-        const result = await executeMoodTool("switch_to_writing_mood", params);
+        const result = await executeMoodTool("switch_to_journal_mood", params);
         return {
           content: [
             {

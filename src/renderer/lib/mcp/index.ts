@@ -16,7 +16,7 @@ export {
   SYNC_TOOLS,
   CRON_TOOLS, // deprecated
   executeMoodTool,
-  switchToWritingMood,
+  switchToJournalMood,
   switchToChatMood,
   MOOD_TOOLS,
 } from "./tools";

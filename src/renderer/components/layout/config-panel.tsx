@@ -45,7 +45,7 @@ export default function ConfigPanel({
   width = "40rem",
 }: ConfigPanelProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const { isWritingMood } = useActiveMood();
+  const { isJournalMood } = useActiveMood();
 
   const handleToggle = () => onToggle(!isOpen);
 
@@ -96,12 +96,12 @@ export default function ConfigPanel({
         role="complementary"
         aria-label="Configuration panel"
       >
-        {!isWritingMood ? (
+        {!isJournalMood ? (
           <div className="flex items-center justify-between px-4 pt-6 ">
             <Heading3>Configuration</Heading3>
           </div>
         ) : null}
-        {isWritingMood ? <WritingConfigContent /> : <PanelContent />}
+        {isJournalMood ? <JournalContent /> : <PanelContent />}
       </div>
     </>
   );
@@ -282,7 +282,7 @@ function PanelContent() {
   );
 }
 
-function WritingConfigContent() {
+function JournalContent() {
   const selectedModel = useAppSelector((state) => state.chat.selectedModel);
   const thinkingEnabled = useAppSelector((state) => state.chat.thinkingEnabled);
   const thinkingLevel = useAppSelector((state) => state.chat.thinkingLevel);
