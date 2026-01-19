@@ -77,7 +77,7 @@ function sanitizeMoodPayload(payload: unknown): {
   }
 
   // Icon (optional)
-  const icon = sanitizeString(raw.icon, 10);
+  const icon = sanitizeString(raw.icon, 50);
   if (icon) {
     data.icon = icon;
   }

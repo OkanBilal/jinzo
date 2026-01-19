@@ -135,6 +135,10 @@
   --bn-colors-editor-background: var(--color-primary-950);
 }
 
+.bn-container[data-theming-css-demo][data-color-scheme="light"] {
+  --bn-colors-editor-text: var(--color-primary-800);
+  --bn-colors-editor-background: var(--color-primary);
+}
 
 /* Button Components
    ========================================================================== */

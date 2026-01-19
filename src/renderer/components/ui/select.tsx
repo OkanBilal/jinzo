@@ -1,5 +1,7 @@
 import { ReactNode, useRef, useState } from "react";
 import { useClickOutside } from "@/features/chat/hooks/use-click-outside";
+import { useActiveMood } from "@/hooks/useActiveMood";
+import { useDarkMode } from "@/hooks/useDarkMode";
 
 interface SelectOption<T extends string = string> {
   value: T;
@@ -28,6 +30,41 @@ export default function Select<T extends string = string>({
   });
 
   const selectedOption = options.find((opt) => opt.value === value);
+  const { activeMood, activeMoodId, moods } = useActiveMood();
+  const { darkMode } = useDarkMode();
+
+  // Get background color from active mood theme
+  const getDropdownBackground = () => {
+    // First check if we're in preview mode (create mood view)
+    const appRoot = document.querySelector('.app-root') as HTMLElement;
+    const previewBg = appRoot ? getComputedStyle(appRoot).getPropertyValue('--mood-preview-bg').trim() : '';
+    if (previewBg) {
+      return previewBg;
+    }
+    
+    if (!activeMood?.themeConfig) {
+      return darkMode ? 'rgb(17 24 39 / 0.98)' : 'rgb(255 255 255 / 0.98)';
+    }
+    
+    try {
+      const themeConfig = JSON.parse(activeMood.themeConfig);
+      const bgColor = darkMode ? themeConfig.darkBackground : themeConfig.lightBackground;
+      
+      if (!bgColor) {
+        return darkMode ? 'rgb(17 24 39 / 0.98)' : 'rgb(255 255 255 / 0.98)';
+      }
+      
+      // For gradients, return as is; for solid colors, remove opacity to prevent transparency
+      if (bgColor.startsWith('linear-gradient')) {
+        return bgColor;
+      } else {
+        // Remove opacity suffix if present (e.g., #RRGGBBAA -> #RRGGBB)
+        return bgColor.length === 9 ? bgColor.slice(0, 7) : bgColor;
+      }
+    } catch (e) {
+      return darkMode ? 'rgb(17 24 39 / 0.98)' : 'rgb(255 255 255 / 0.98)';
+    }
+  };
 
   return (
     <div ref={containerRef} className="relative">
@@ -82,10 +119,12 @@ export default function Select<T extends string = string>({
       {isOpen && (
         <div
           className="absolute top-full left-0 right-0 z-50 
-            bg-primary/98 dark:bg-primary-900/98
             border border-t-0 border-primary-950/10 dark:border-primary/10 
             rounded-b-xl shadow-lg overflow-hidden
             animate-slideDown"
+          style={{
+            background: getDropdownBackground(),
+          }}
         >
           <div className="max-h-60 overflow-auto noscrollbar">
             {options.map((option, index) => (

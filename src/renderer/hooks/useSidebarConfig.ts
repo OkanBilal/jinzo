@@ -7,6 +7,7 @@ export interface SidebarConfig {
   width: string;
   title: string;
   itemType: SidebarItemType;
+  defaultRoute: string;
 }
 
 /**
@@ -22,6 +23,7 @@ export function useSidebarConfig(): SidebarConfig {
       width: "18rem",
       title: "Chat",
       itemType: "chat",
+      defaultRoute: "/",
     };
 
     // Parse uiConfig from active mood if available
@@ -32,6 +34,7 @@ export function useSidebarConfig(): SidebarConfig {
           width: config.sidebar?.width || defaultConfig.width,
           title: config.sidebar?.title || defaultConfig.title,
           itemType: (config.sidebar?.itemType || defaultConfig.itemType) as SidebarItemType,
+          defaultRoute: config.sidebar?.defaultRoute || defaultConfig.defaultRoute,
         };
       } catch (error) {
         console.error("Failed to parse mood uiConfig:", error);

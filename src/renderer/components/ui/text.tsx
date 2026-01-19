@@ -50,7 +50,7 @@ const variantStyles: Record<TextVariant, string> = {
   errorSmall: "text-xs text-red-600 dark:text-red-400",
 
   caption: "text-xs text-primary-500 dark:text-primary-400",
-  timestamp: "text-xs text-primary-400",
+  timestamp: "text-xs text-primary-500 font-medium",
 };
 
 const defaultElements: Record<TextVariant, ElementType> = {

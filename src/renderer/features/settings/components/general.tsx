@@ -46,8 +46,7 @@ const THEME_OPTIONS = [
 ];
 
 export default function GeneralSettings() {
-    const { darkMode, toggleDarkMode } = useDarkMode();
-  const theme = darkMode === null ? "system" : darkMode ? "dark" : "light";
+    const { theme, setTheme } = useDarkMode();
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState<AccountFormValues>(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
@@ -175,12 +174,11 @@ export default function GeneralSettings() {
               <Field label="Theme" htmlFor="theme">
                 {mounted ? (
                   <Select
-                    value={theme || "system"}
+                    value={theme}
                     options={THEME_OPTIONS}
-                    onChange={() => {
-                      console.log("Changing theme from", theme);
-                      toggleDarkMode();
-                      toast.success(`Theme changed to ${theme}`);
+                    onChange={(value) => {
+                      setTheme(value as "light" | "dark" | "system");
+                      toast.success(`Theme changed to ${value}`);
                     }}
                     placeholder="Select theme"
                   />

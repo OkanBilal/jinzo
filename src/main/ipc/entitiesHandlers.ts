@@ -1,5 +1,5 @@
 import { ipcMain } from "electron";
-import { desc, eq, and, like, or, sql } from "drizzle-orm";
+import { desc, eq, and, like, or, sql, inArray } from "drizzle-orm";
 import { getDb } from "../db/client";
 import {
   entities,
@@ -93,15 +93,25 @@ export function registerEntitiesHandlers() {
     "entities:getAll",
     async (
       _,
-      options: { kind?: string; connectionId?: string; limit?: number } = {}
+      options: { kinds?: string[]; kind?: string; connectionIds?: string[]; connectionId?: string; limit?: number } = {}
     ) => {
       try {
         const db = getDb();
-        const { kind, connectionId, limit = 50 } = options;
+        const { kinds, kind, connectionIds, connectionId, limit = 50 } = options;
 
         const conditions = [];
-        if (kind) conditions.push(eq(entities.kind, kind));
-        if (connectionId) conditions.push(eq(entities.connectionId, connectionId));
+        // Support both 'kinds' array and legacy 'kind' string
+        if (kinds && kinds.length > 0) {
+          conditions.push(inArray(entities.kind, kinds));
+        } else if (kind) {
+          conditions.push(eq(entities.kind, kind));
+        }
+        // Support both 'connectionIds' array and legacy 'connectionId' string
+        if (connectionIds && connectionIds.length > 0) {
+          conditions.push(inArray(entities.connectionId, connectionIds));
+        } else if (connectionId) {
+          conditions.push(eq(entities.connectionId, connectionId));
+        }
         conditions.push(eq(entities.isDeleted, false));
 
         const whereClause =

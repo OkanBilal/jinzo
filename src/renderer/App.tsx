@@ -8,31 +8,34 @@ import {
 import { useDispatch } from "react-redux";
 import Home from "./routes/Home";
 import Chat from "./routes/Chat";
+import Doc from "./routes/Doc";
 import FrostedSidebar from "./components/layout/sidebar";
 import ConfigPanel from "./components/layout/config-panel";
 import { Toaster } from "sonner";
 import { ReduxProvider } from "./components/providers/redux-provider";
 import { useActiveMood } from "./hooks/useActiveMood";
 import { useTheme } from "./hooks/useTheme";
+import { useSidebarConfig } from "./hooks/useSidebarConfig";
 import { baseApi } from "./lib/redux/api/baseApi";
 
 // Component to handle mood changes and navigation synchronously
 function MoodChangeHandler() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const sidebarConfig = useSidebarConfig();
 
   useEffect(() => {
     const unsubscribe = window.api.appSettings.onMoodChanged((data) => {
       // Invalidate cache AND navigate at the same time
       dispatch(baseApi.util.invalidateTags(["AppSettings"]));
-      // Navigate to home immediately
-      navigate("/");
+      // Navigate to the mood's default route
+      navigate(sidebarConfig.defaultRoute);
     });
 
     return () => {
       unsubscribe();
     };
-  }, [dispatch, navigate]);
+  }, [dispatch, navigate, sidebarConfig.defaultRoute]);
 
   return null;
 }
@@ -71,10 +74,13 @@ function AppContent() {
     <Router>
       <MoodChangeHandler />
       <div
-        className="app-root flex flex-col h-screen antialiased"
+        className="app-root flex flex-col h-screen antialiased "
         style={{
-          backgroundColor: theme.backgroundColor,
-          transition: "background-color 300ms ease-in-out",
+          ...(theme.backgroundColor?.startsWith("linear-gradient")
+            ? { background: theme.backgroundColor }
+            : { backgroundColor: theme.backgroundColor }),
+          transition:
+            "background 300ms ease-in-out, background-color 300ms ease-in-out",
         }}
       >
         <div
@@ -101,6 +107,8 @@ function AppContent() {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/chat/:id" element={<Chat />} />
+                <Route path="/doc" element={<Doc />} />
+                <Route path="/doc/:id" element={<Doc />} />
               </Routes>
             </div>
           </main>

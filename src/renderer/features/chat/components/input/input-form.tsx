@@ -19,7 +19,7 @@ export default function InputForm({
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
         placeholder={placeholder}
-        className="rounded-3xl w-full dark:bg-transparent dark:text-primary-200 text-primary-700 bg-primary-50/70 px-6 py-5 
+        className="rounded-3xl w-full dark:bg-transparent dark:text-primary-200 text-primary-700  px-6 py-5 
         placeholder:text-primary-500 dark:placeholder:text-primary-600 placeholder:text-md outline-none"
       />
     </form>

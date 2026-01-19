@@ -1,4 +1,6 @@
 import { Mood } from "@/lib/redux/api";
+import { parseIcon } from "@/lib/icon-registry";
+import { Chat } from "@/components/ui/icons/mood";
 
 interface MoodSelectorProps {
   moods: Mood[];
@@ -24,24 +26,34 @@ function MoodSelector({
         title="No mood"
         aria-label="No mood"
       >
-        💬
+        <Chat className="size-4.5" />
       </button>
 
-      {moods.map((mood) => (
-        <button
-          key={mood.id}
-          onClick={() => onMoodChange(mood.id)}
-          className={`shrink-0  flex items-center justify-center size-8 hover:bg-primary-100/30 rounded-lg p-1 font-semibold uppercase transition-all duration-300 cursor-pointer ${
-            activeMoodId === mood.id
-              ? " text-primary-500 dark:text-primary-200"
-              : " text-primary-400 dark:text-primary-500 opacity-60"
-          }`}
-          title={mood.name}
-          aria-label={mood.name}
-        >
-          {mood.icon}
-        </button>
-      ))}
+      {moods.map((mood) => {
+        const icon = parseIcon(mood.icon);
+        const isActive = activeMoodId === mood.id;
+        
+        return (
+          <button
+            key={mood.id}
+            onClick={() => onMoodChange(mood.id)}
+            className={`shrink-0 flex items-center justify-center size-8 hover:bg-primary-100/30 rounded-lg p-1 transition-all duration-300 cursor-pointer ${
+              isActive
+                ? "text-primary-500 dark:text-primary-200"
+                : "text-primary-400 dark:text-primary-500 opacity-60"
+            }`}
+            title={mood.name}
+            aria-label={mood.name}
+          >
+            {icon.type === "emoji" ? (
+              <span className="text-lg font-medium">{icon.value as string}</span>
+            ) : (
+              // @ts-ignore - Dynamic component
+              <icon.value className="size-4.5" />
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

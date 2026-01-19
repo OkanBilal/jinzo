@@ -342,8 +342,8 @@ function JournalContent() {
   ]);
 
   return (
-    <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 bg-primary-950/70 mx-3 -pb-4  rounded-2xl overflow-hidden">
-      <div className="flex-1 overflow-hidden ">
+    <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 dark:bg-primary-950/50 bg-primary mx-3 -pb-4  rounded-2xl overflow-hidden">
+      <div className="flex-1 overflow-hidden p-3">
         <ChatMessages
           ref={messagesRef}
           messages={messages}

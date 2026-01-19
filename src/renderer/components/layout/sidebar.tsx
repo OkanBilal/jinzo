@@ -37,7 +37,7 @@ export default function FrostedSidebar() {
   const { data: entities = [], isLoading: isLoadingEntities } =
     useGetEntitiesQuery(
       {
-        kinds: sidebarConfig.itemType === "post" ? ["post"] : [],
+        kinds: sidebarConfig.itemType === "post" ? ["doc"] : [],
         limit: 50,
       },
       {
@@ -97,6 +97,20 @@ export default function FrostedSidebar() {
   const handleMoodChange = async (moodId: string) => {
     try {
       await setActiveMood(moodId || null).unwrap();
+      
+      // Navigate to the new mood's default route
+      const selectedMood = moods.find((m) => m.id === moodId);
+      if (selectedMood?.uiConfig) {
+        try {
+          const config = JSON.parse(selectedMood.uiConfig);
+          const defaultRoute = config.sidebar?.defaultRoute || "/";
+          navigate(defaultRoute);
+        } catch {
+          navigate("/");
+        }
+      } else {
+        navigate("/");
+      }
     } catch (error) {
       console.error("Error changing mood:", error);
       toast.error("Failed to change mood");
@@ -137,7 +151,7 @@ export default function FrostedSidebar() {
             </div>
             <div className="p-4">
               <NewButton
-                onClick={() => navigate("/")}
+                onClick={() => navigate(sidebarConfig.defaultRoute)}
                 title={sidebarConfig.title}
               />
             </div>
