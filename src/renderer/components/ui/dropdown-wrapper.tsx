@@ -28,6 +28,10 @@ export default function DropdownWrapper({
   const internalDropdownRef = useRef<HTMLDivElement>(null);
   const dropdownRef = externalDropdownRef || internalDropdownRef;
 
+  // Call hooks before any conditional returns
+  const { activeMood } = useActiveMood();
+  const { darkMode } = useDarkMode();
+
   useEffect(() => {
     if (isOpen && usePortal && triggerRef?.current) {
       const rect = triggerRef.current.getBoundingClientRect();
@@ -40,25 +44,6 @@ export default function DropdownWrapper({
       setCoords(null);
     }
   }, [isOpen, usePortal, triggerRef, openUpward, position]);
-
-  if (!isOpen) return null;
-  
-  // Portal kullanıyorsa koordinatlar hesaplanana kadar render etme
-  if (usePortal && !coords) return null;
-
-  const positionClass = position === "right" ? "right-0" : "left-0";
-  const verticalClass = openUpward ? "bottom-12" : "top-8";
-
-  const originClass = openUpward
-    ? position === "right"
-      ? "origin-bottom-right"
-      : "origin-bottom-left"
-    : position === "right"
-      ? "origin-top-right"
-      : "origin-top-left";
-
-  const { activeMood, activeMoodId, moods } = useActiveMood();
-  const { darkMode } = useDarkMode();
 
   // Get background color from active mood theme
   const getDropdownBackground = () => {
@@ -92,6 +77,27 @@ export default function DropdownWrapper({
       return darkMode ? 'rgb(17 24 39 / 0.95)' : 'rgb(255 255 255 / 0.95)';
     }
   };
+
+  if (!isOpen) return null;
+  
+  // Portal kullanıyorsa koordinatlar hesaplanana kadar render etme
+  if (usePortal && !coords) return null;
+
+  if (!isOpen) return null;
+  
+  // Portal kullanıyorsa koordinatlar hesaplanana kadar render etme
+  if (usePortal && !coords) return null;
+
+  const positionClass = position === "right" ? "right-0" : "left-0";
+  const verticalClass = openUpward ? "bottom-12" : "top-8";
+
+  const originClass = openUpward
+    ? position === "right"
+      ? "origin-bottom-right"
+      : "origin-bottom-left"
+    : position === "right"
+      ? "origin-top-right"
+      : "origin-top-left";
 
   const dropdown = (
     <div

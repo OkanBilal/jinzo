@@ -4,7 +4,7 @@ import { Chat } from "@/components/ui/icons/mood";
 
 interface MoodSelectorProps {
   moods: Mood[];
-  activeMoodId: string;
+  activeMoodId: string | null;
   onMoodChange: (moodId: string) => void;
 }
 

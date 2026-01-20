@@ -1,58 +1,25 @@
-import {
-  Suspense,
-  useEffect,
-  useState,
-  useMemo,
-  useRef,
-  useCallback,
-} from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import {
   ChatHeader,
   ChatMessages,
   LoadingIndicator,
-} from "../features/chat/components";
-import ChatInput from "../features/chat/components/input";
-import { AppState } from "../features/chat/components/input/types";
-import { useChat } from "../features/chat/hooks/use-chat";
-import { useThinkingConfig } from "../features/chat/hooks/use-thinking-config";
+} from "@/features/chat/components";
+import ChatInput from "@/features/chat/components/input";
+import { AppState } from "@/features/chat/components/input/types";
 import {
-  useGetAppsQuery,
-  useGetChatMessagesQuery,
-  useGetChatSessionQuery,
-  useGenerateChatSessionTitleMutation,
-} from "../lib/redux/api";
-import { useAppSelector } from "../lib/redux/hooks";
+  useChat,
+  useChatConfig,
+  useChatSession,
+  useInitialStream,
+  useTitleGeneration,
+} from "@/features/chat/hooks";
+import { useGetAppsQuery } from "@/lib/redux/api";
 
 function ChatContent() {
-  const params = useParams();
-  const navigate = useNavigate();
-  const selectedModel = useAppSelector((state) => state.chat.selectedModel);
-  const thinkingEnabled = useAppSelector((state) => state.chat.thinkingEnabled);
-  const thinkingLevel = useAppSelector((state) => state.chat.thinkingLevel);
-  const toolMode = useAppSelector((state) => state.chat.toolMode);
-  const structuredOutputEnabled = useAppSelector(
-    (state) => state.chat.structuredOutputEnabled
-  );
-  const structuredOutputSchema = useAppSelector(
-    (state) => state.chat.structuredOutputSchema
-  );
-
-  const thinkingConfig = useThinkingConfig();
-
-  const sessionId = params.id ? Number(params.id) : null;
-
   const [selectedApp, setSelectedApp] = useState<AppState | null>(null);
+  const initialStreamTriggeredRef = useRef(false);
 
-  const { data: messagesData, isLoading: isLoadingMessages } =
-    useGetChatMessagesQuery(sessionId ?? 0, {
-      skip: !sessionId || isNaN(sessionId),
-    });
-
-  const { data: sessionData } = useGetChatSessionQuery(sessionId ?? 0, {
-    skip: !sessionId || isNaN(sessionId),
-  });
-
+  const { selectedModel, getRequestOptions } = useChatConfig();
   const { data: apps = [] } = useGetAppsQuery();
 
   const {
@@ -65,32 +32,19 @@ function ChatContent() {
     focusInput,
     replaceMessages,
     refs: { messagesRef },
-  } = useChat({ initialMessages: [], sessionId });
+  } = useChat({ initialMessages: [] });
 
-  const initialStreamTriggeredRef = useRef(false);
-  const titleGeneratedRef = useRef(false);
-  const wasLoadingRef = useRef(false);
-
-  const [generateTitle] = useGenerateChatSessionTitleMutation();
-
-  // Reset initial stream trigger when session changes
-  useEffect(() => {
-    initialStreamTriggeredRef.current = false;
-    titleGeneratedRef.current = false;
-  }, [sessionId]);
-
-  // Redirect if invalid session ID
-  useEffect(() => {
-    if (!sessionId || isNaN(sessionId)) {
-      navigate("/", { replace: true });
-    }
-  }, [sessionId, navigate]);
+  const {
+    sessionId,
+    isValidSession,
+    messagesData,
+    isLoadingMessages,
+    chatTitle,
+  } = useChatSession();
 
   // Sync messages from API to local state
   useEffect(() => {
-    if (!sessionId || isNaN(sessionId) || !messagesData) {
-      return;
-    }
+    if (!isValidSession || !messagesData) return;
 
     const uiMessages = messagesData.map((m) => ({
       id: String(m.id),
@@ -100,133 +54,62 @@ function ChatContent() {
     }));
 
     replaceMessages(uiMessages);
-  }, [sessionId, messagesData, replaceMessages]);
-
-  // Get chat title from session data
-  const chatTitle = useMemo(() => {
-    if (sessionData?.title) {
-      return sessionData.title;
-    }
-    // Fallback to first user message if no title
-    if (messagesData && messagesData.length > 0) {
-      const firstUserMsg = messagesData.find((m) => m.role === "user");
-      return firstUserMsg ? firstUserMsg.content.slice(0, 60) : "Chat";
-    }
-    return "Chat";
-  }, [sessionData, messagesData]);
+  }, [isValidSession, messagesData, replaceMessages]);
 
   // Focus input on mount
   useEffect(() => {
     focusInput();
   }, [focusInput]);
 
-  // Trigger initial streaming response for new chats
+  // Reset initial stream trigger when session changes
   useEffect(() => {
-    if (
-      !sessionId ||
-      !messagesData ||
-      messagesData.length === 0 ||
-      initialStreamTriggeredRef.current
-    ) {
-      return;
-    }
+    initialStreamTriggeredRef.current = false;
+  }, [sessionId]);
 
-    const hasAssistantMessage = messagesData.some(
-      (message) => message.role === "assistant"
-    );
+  const handleInitialStream = useCallback(
+    (content: string) => {
+      if (!sessionId) return;
+      initialStreamTriggeredRef.current = true;
 
-    if (hasAssistantMessage) {
-      return;
-    }
+      sendTextStreaming(content, selectedModel, sessionId, {
+        skipUserMessage: true,
+        requestOptions: {
+          skipUserSave: true,
+          ...getRequestOptions(),
+        },
+      });
+    },
+    [sessionId, selectedModel, sendTextStreaming, getRequestOptions]
+  );
 
-    const lastUserMessage = [...messagesData]
-      .filter((message) => message.role === "user")
-      .pop();
-
-    if (!lastUserMessage) {
-      return;
-    }
-
-    initialStreamTriggeredRef.current = true;
-
-    sendTextStreaming(lastUserMessage.content, selectedModel, sessionId, {
-      skipUserMessage: true,
-      requestOptions: {
-        skipUserSave: true,
-        mode: toolMode,
-        thinkingEnabled: thinkingConfig.shouldShowThinkingToggle
-          ? thinkingEnabled
-          : undefined,
-        thinkingLevel: thinkingConfig.shouldShowThinkingLevel
-          ? thinkingLevel
-          : undefined,
-        structuredOutputEnabled,
-        structuredOutputSchema,
-      },
-    });
-  }, [
+  useInitialStream({
+    sessionId,
     messagesData,
     selectedModel,
-    sendTextStreaming,
-    sessionId,
-    toolMode,
-    thinkingEnabled,
-    thinkingLevel,
-    thinkingConfig,
-    structuredOutputEnabled,
-    structuredOutputSchema,
-  ]);
+    onTriggerStream: handleInitialStream,
+  });
 
-  // Generate title after first response completes
-  useEffect(() => {
-    if (wasLoadingRef.current && !isLoading) {
-      // Loading just finished
-      if (
-        sessionId &&
-        initialStreamTriggeredRef.current &&
-        !titleGeneratedRef.current
-      ) {
-        titleGeneratedRef.current = true;
-        generateTitle({ sessionId, model: selectedModel });
-      }
-    }
-    wasLoadingRef.current = isLoading;
-  }, [isLoading, sessionId, selectedModel, generateTitle]);
+  useTitleGeneration({
+    sessionId,
+    selectedModel,
+    isLoading,
+    shouldGenerate: initialStreamTriggeredRef.current,
+  });
 
   const handleSend = useCallback((): void => {
     if (!input.trim()) return;
 
     sendMessageStreaming(selectedModel, {
-      requestOptions: {
-        mode: toolMode,
-        thinkingEnabled: thinkingConfig.shouldShowThinkingToggle
-          ? thinkingEnabled
-          : undefined,
-        thinkingLevel: thinkingConfig.shouldShowThinkingLevel
-          ? thinkingLevel
-          : undefined,
-        structuredOutputEnabled,
-        structuredOutputSchema,
-      },
+      requestOptions: getRequestOptions(),
     });
-  }, [
-    input,
-    selectedModel,
-    sendMessageStreaming,
-    toolMode,
-    thinkingConfig,
-    thinkingEnabled,
-    thinkingLevel,
-    structuredOutputEnabled,
-    structuredOutputSchema,
-  ]);
+  }, [input, selectedModel, sendMessageStreaming, getRequestOptions]);
 
   return (
-    <div className={`h-full w-full flex flex-col`}>
+    <div className="h-full w-full flex flex-col">
       <div className="shrink-0 pt-6 max-w-200 mx-auto w-full">
         <ChatHeader title={chatTitle} />
       </div>
-      <div className="flex-1 overflow-hidden  mx-auto w-full max-w-200 ">
+      <div className="flex-1 overflow-hidden mx-auto w-full max-w-200">
         <ChatMessages
           ref={messagesRef}
           messages={messages}

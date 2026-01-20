@@ -1,119 +1,39 @@
-import React, { useState, useMemo, useEffect } from "react";
-import {
-  HashRouter as Router,
-  Routes,
-  Route,
-  useNavigate,
-} from "react-router-dom";
-import { useDispatch } from "react-redux";
-import Home from "./routes/Home";
-import Chat from "./routes/Chat";
-import Doc from "./routes/Doc";
-import FrostedSidebar from "./components/layout/sidebar";
-import ConfigPanel from "./components/layout/config-panel";
+import { useState } from "react";
+import { HashRouter as Router } from "react-router-dom";
 import { Toaster } from "sonner";
 import { ReduxProvider } from "./components/providers/redux-provider";
-import { useActiveMood } from "./hooks/useActiveMood";
-import { useTheme } from "./hooks/useTheme";
-import { useSidebarConfig } from "./hooks/useSidebarConfig";
-import { baseApi } from "./lib/redux/api/baseApi";
-
-// Component to handle mood changes and navigation synchronously
-function MoodChangeHandler() {
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const sidebarConfig = useSidebarConfig();
-
-  useEffect(() => {
-    const unsubscribe = window.api.appSettings.onMoodChanged((data) => {
-      // Invalidate cache AND navigate at the same time
-      dispatch(baseApi.util.invalidateTags(["AppSettings"]));
-      // Navigate to the mood's default route
-      navigate(sidebarConfig.defaultRoute);
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [dispatch, navigate, sidebarConfig.defaultRoute]);
-
-  return null;
-}
+import FrostedSidebar from "./components/layout/sidebar";
+import ConfigPanel from "./components/layout/config-panel";
+import {
+  MoodChangeHandler,
+  AppRoutes,
+  AppLayout,
+  MainContent,
+} from "./components/app";
+import { useLayoutConfig } from "./hooks/useLayoutConfig";
 
 function AppContent() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
-
-  const { activeMood } = useActiveMood();
-  const theme = useTheme();
-
-  const mainMarginLeft = useMemo(() => {
-    if (activeMood?.uiConfig) {
-      try {
-        const config = JSON.parse(activeMood.uiConfig);
-        return config.main?.margin || "18rem";
-      } catch (error) {
-        console.error("Failed to parse mood uiConfig:", error);
-      }
-    }
-    return "18rem";
-  }, [activeMood]);
-
-  const configPanelWidth = useMemo(() => {
-    if (activeMood?.uiConfig) {
-      try {
-        const config = JSON.parse(activeMood.uiConfig);
-        return config.configPanel?.width || "18rem";
-      } catch (error) {
-        console.error("Failed to parse mood uiConfig:", error);
-      }
-    }
-    return "18rem";
-  }, [activeMood]);
+  const { mainMarginLeft, configPanelWidth } = useLayoutConfig();
 
   return (
     <Router>
       <MoodChangeHandler />
-      <div
-        className="app-root flex flex-col h-screen antialiased "
-        style={{
-          ...(theme.backgroundColor?.startsWith("linear-gradient")
-            ? { background: theme.backgroundColor }
-            : { backgroundColor: theme.backgroundColor }),
-          transition:
-            "background 300ms ease-in-out, background-color 300ms ease-in-out",
-        }}
-      >
-        <div
-          className="fixed top-0 left-0 right-0 h-8 z-50"
-          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+      <AppLayout>
+        <FrostedSidebar />
+        <ConfigPanel
+          isOpen={isConfigOpen}
+          onToggle={setIsConfigOpen}
+          width={configPanelWidth}
         />
-        <div className="flex h-full">
-          <FrostedSidebar />
-          <ConfigPanel
-            isOpen={isConfigOpen}
-            onToggle={setIsConfigOpen}
-            width={configPanelWidth}
-          />
-          <Toaster richColors position="top-right" />
-          <main
-            className="flex-1 m-2 overflow-hidden transition-all duration-300 ease-out"
-            style={{
-              marginLeft: mainMarginLeft,
-              marginRight: isConfigOpen ? configPanelWidth : "0.5rem",
-              transition: "margin 300ms ease-out",
-            }}
-          >
-            <div className="h-full bg-primary dark:bg-primary-950 rounded-2xl overflow-auto">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/chat/:id" element={<Chat />} />
-                <Route path="/doc" element={<Doc />} />
-                <Route path="/doc/:id" element={<Doc />} />
-              </Routes>
-            </div>
-          </main>
-        </div>
-      </div>
+        <Toaster richColors position="top-right" />
+        <MainContent
+          marginLeft={mainMarginLeft}
+          marginRight={isConfigOpen ? configPanelWidth : "0.5rem"}
+        >
+          <AppRoutes />
+        </MainContent>
+      </AppLayout>
     </Router>
   );
 }
