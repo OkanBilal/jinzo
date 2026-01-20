@@ -60,7 +60,7 @@ export function SelectResourcesStep<T extends SelectableResource>({
         </Muted>
       )}
 
-      <div className="max-h-52 overflow-y-auto border border-primary-200 dark:border-primary-900 rounded-xl">
+      <div className="max-h-52 overflow-y-auto border border-primary-200 dark:border-primary-800 rounded-xl">
         {resources.length === 0 ? (
           <div className="p-8 text-center text-primary-500 dark:text-primary-400">
             <BodyMedium>{emptyMessage}</BodyMedium>
@@ -71,7 +71,7 @@ export function SelectResourcesStep<T extends SelectableResource>({
             return (
               <div
                 key={resource.id}
-                className="flex items-center justify-between px-4 py-4 border-b border-primary-200 dark:border-primary-900 last:border-b-0"
+                className="flex items-center justify-between px-4 py-4 border-b border-primary-200 dark:border-primary-800 last:border-b-0"
               >
                 <div
                   className="flex-1 cursor-pointer"

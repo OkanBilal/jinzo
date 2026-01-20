@@ -59,7 +59,7 @@ export function ManageResourcesStep({
         </SecondaryButton>
       </div>
 
-      <div className="min-h-12 max-h-52 overflow-y-auto border border-primary-200 dark:border-primary-900 rounded-xl">
+      <div className="min-h-12 max-h-52  overflow-y-auto border border-primary-200 dark:border-primary-800 rounded-xl">
         {count === 0 ? (
           <div className="p-8 text-center text-primary-500 dark:text-primary-400">
             <Body>No {resourceLabelPlural} connected yet.</Body>
@@ -71,7 +71,7 @@ export function ManageResourcesStep({
           resources.map((resource) => (
             <div
               key={resource.id}
-              className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-900 last:border-b-0"
+              className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-800 last:border-b-0"
             >
               {renderResourceItem ? (
                 renderResourceItem(resource)

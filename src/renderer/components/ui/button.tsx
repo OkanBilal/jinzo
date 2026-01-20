@@ -13,7 +13,7 @@ export type ButtonVariant =
   | "subtle"
   | "frosted";
 
-export type ButtonSize = "xs" | "sm" | "md" | "lg";
+export type ButtonSize =  "xxs" | "xs" | "sm" | "md" | "lg";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -26,7 +26,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "cursor-pointer text-primary-500 dark:text-primary bg-primary-950 dark:bg-[#037AFF] hover:bg-primary-900 dark:hover:bg-[#0166DB]",
+    "cursor-pointer text-primary-500 dark:text-primary bg-primary-950 dark:bg-[#037AFF] hover:bg-primary-900 dark:hover:bg-[#0166DB] min-w-14",
   secondary:
     "cursor-pointer bg-primary-200/60 dark:bg-primary-700/40 hover:bg-primary-200 dark:hover:bg-primary-700 text-primary-700 dark:text-primary-200",
   ghost:
@@ -38,7 +38,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   success:
     "cursor-pointer bg-green-950 text-green-600 dark:bg-green-950 dark:text-green-500 hover:bg-green-900 dark:hover:bg-green-900",
   icon: "cursor-pointer p-1 rounded-md text-primary-600 dark:text-primary-200 hover:bg-primary-200/40 dark:hover:bg-primary-900/50",
-  link: "cursor-pointer text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 underline-offset-4 hover:underline",
+  link: "cursor-pointer text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 underline-offset-4 hover:underline ",
   subtle:
     "cursor-pointer flex items-center gap-2 bg-primary-950/2 dark:bg-primary/4 hover:bg-primary-950/4 dark:hover:bg-primary/8 transition-all duration-200  active:scale-[0.99]",
   frosted:
@@ -46,9 +46,10 @@ const variantStyles: Record<ButtonVariant, string> = {
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  xs: "px-2 py-1 text-xs rounded-lg",
-  sm: "px-2 py-1.5 text-sm rounded-xl",
-  md: "px-2 py-2 text-sm rounded-[10px]",
+  xxs: "px-0 py-1 text-xs",
+  xs: "px-2 py-1.5 text-xs rounded-lg",
+  sm: "px-2 py-2 text-sm rounded-xl",
+  md: "px-2.5 py-2.5 text-sm rounded-xl",
   lg: "px-3 py-2.5 text-base rounded-xl",
 };
 

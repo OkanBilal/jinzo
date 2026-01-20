@@ -14,6 +14,7 @@ interface SelectProps<T extends string = string> {
   options: SelectOption<T>[];
   onChange: (value: T) => void;
   placeholder?: string;
+  useFixedBackground?: boolean;
 }
 
 export default function Select<T extends string = string>({
@@ -21,6 +22,7 @@ export default function Select<T extends string = string>({
   options,
   onChange,
   placeholder = "Select an option",
+  useFixedBackground = false,
 }: SelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -35,6 +37,11 @@ export default function Select<T extends string = string>({
 
   // Get background color from active mood theme
   const getDropdownBackground = () => {
+    // If using fixed background, return undefined to use CSS class instead
+    if (useFixedBackground) {
+      return undefined;
+    }
+
     // First check if we're in preview mode (create mood view)
     const appRoot = document.querySelector('.app-root') as HTMLElement;
     const previewBg = appRoot ? getComputedStyle(appRoot).getPropertyValue('--mood-preview-bg').trim() : '';
@@ -65,6 +72,11 @@ export default function Select<T extends string = string>({
       return darkMode ? 'rgb(17 24 39 / 0.98)' : 'rgb(255 255 255 / 0.98)';
     }
   };
+
+  // Fixed background class matching dropdown wrapper style
+  const fixedBackgroundClass = useFixedBackground
+    ? "bg-linear-to-b from-primary to-primary-50 dark:from-primary-900 dark:to-primary-950"
+    : "";
 
   return (
     <div ref={containerRef} className="relative">
@@ -118,10 +130,10 @@ export default function Select<T extends string = string>({
       {/* Options List - Absolute positioned */}
       {isOpen && (
         <div
-          className="absolute top-full left-0 right-0 z-50 
+          className={`absolute top-full left-0 right-0 z-50 
             border border-t-0 border-primary-950/10 dark:border-primary/10 
             rounded-b-xl shadow-lg overflow-hidden
-            animate-slideDown"
+            animate-slideDown ${fixedBackgroundClass}`}
           style={{
             background: getDropdownBackground(),
           }}

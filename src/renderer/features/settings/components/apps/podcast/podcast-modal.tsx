@@ -398,8 +398,8 @@ function PodcastsStep({
 
       {error && <ErrorText>{error}</ErrorText>}
 
-      <div className="flex justify-between gap-3 pt-2">
-        <LinkButton onClick={onBack} disabled={loading} className="px-1">
+      <div className="flex justify-between gap-3 pt-2 ">
+        <LinkButton size="xxs" onClick={onBack} disabled={loading} className="px-1">
           Back
         </LinkButton>
         <PrimaryButton

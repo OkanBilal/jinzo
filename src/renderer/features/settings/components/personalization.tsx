@@ -175,7 +175,7 @@ export default function PersonalizationSettings() {
                 />
               </Field>
               <Field
-                label="Email"
+                label="Emaıl"
                 description="Used for notifications"
                 htmlFor="email"
               >
@@ -197,7 +197,7 @@ export default function PersonalizationSettings() {
                   placeholder="e.g. Laurel"
                 />
               </Field>
-              <Field label="Job Title" htmlFor="jobTitle">
+              <Field label="Job Tıtle" htmlFor="jobTitle">
                 <Input
                   id="jobTitle"
                   value={form.jobTitle}
@@ -216,7 +216,7 @@ export default function PersonalizationSettings() {
               </h3>
             </div>
             <div className="flex flex-col gap-4">
-              <Field label="Website" htmlFor="website">
+              <Field label="Websıte" htmlFor="website">
                 <Input
                   id="website"
                   value={form.website}
@@ -234,7 +234,7 @@ export default function PersonalizationSettings() {
                   placeholder="https://cdn.example.com/me.png"
                 />
               </Field>
-              <Field label="Bio" htmlFor="bio">
+              <Field label="Bıo" htmlFor="bio">
                 <Textarea
                   id="bio"
                   className="resize-none"

@@ -93,7 +93,7 @@ export default function SettingsModal({
             <button
               onClick={onClose}
               aria-label="Close modal"
-              className="absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full cursor-pointer text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
+              className="absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full cursor-pointer text-primary-600 dark:text-primary-200 hover:bg-primary-200 dark:hover:bg-primary-950/60 transition-colors"
             >
               <Close className="w-4 h-4" />
             </button>
@@ -128,7 +128,7 @@ function ModalContent({ children, onClose }: ModalContentProps) {
 
   return (
     <div
-      className="relative z-40 w-full max-w-200 mx-auto bg-primary-50 dark:bg-primary-900/30 border border-primary-200 backdrop-blur-2xl dark:border-primary-900 rounded-3xl shadow-2xl h-[60vh] overflow-hidden flex"
+      className="relative z-40 w-full max-w-200 mx-auto glass-morphism  rounded-3xl  h-[60vh] overflow-hidden flex"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
@@ -173,8 +173,8 @@ function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               onClick={() => onSectionChange(item.id)}
               className={`w-full cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-colors flex items-center gap-3 ${
                 isActive
-                  ? " text-primary-900 dark:text-primary-200"
-                  : "text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-950"
+                  ? " text-primary-900 dark:text-primary-100 hover:bg-primary-100 dark:hover:bg-primary-950/60 bg-primary-50 dark:bg-primary-950/60"
+                  : "text-primary-700 dark:text-primary-200 hover:bg-primary-50 dark:hover:bg-primary-950/60"
               }`}
             >
               {IconComponent ? (

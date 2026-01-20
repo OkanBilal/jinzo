@@ -24,7 +24,7 @@ export function RevokeConfirmModal({
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onCancel}
       />
-      <div className="relative z-70 w-full max-w-md bg-primary-50 dark:bg-primary-950 border border-primary-200 dark:border-primary-900 rounded-2xl overflow-hidden shadow-2xl">
+      <div className="relative z-70 w-full max-w-md bg-primary-50 dark:bg-primary-950 border border-primary-200 dark:border-primary-800 rounded-2xl overflow-hidden shadow-2xl">
         <div className="p-6">
           <Text variant="h3" className="mb-3">
             Revoke {appName} Access?

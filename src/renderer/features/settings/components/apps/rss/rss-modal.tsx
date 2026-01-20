@@ -12,6 +12,7 @@ import {
   PrimaryButton,
   WarningButton,
   DangerButton,
+  LinkButton,
 } from "../../../../../components/ui/button";
 import {
   useLazyGetRssStatusQuery,
@@ -300,7 +301,7 @@ function EnableStep({
             className="sr-only peer"
             disabled={loading}
           />
-          <div className="w-11 h-6 bg-primary-300 dark:bg-primary-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-0.5 after:bg-white after:border-primary-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-900 dark:peer-checked:bg-primary-300"></div>
+          <div className="w-11 h-6 bg-primary-300 dark:bg-primary-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-0.5 after:bg-white after:border-primary-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-800 dark:peer-checked:bg-primary-300"></div>
         </label>
       </div>
 
@@ -396,11 +397,11 @@ function AddFeedsStep({
       </div>
 
       {feedsToAdd.length > 0 && (
-        <div className="max-h-40 overflow-y-auto border border-primary-200 dark:border-primary-900 rounded-xl">
+        <div className="max-h-40 overflow-y-auto border border-primary-200 dark:border-primary-800 rounded-xl">
           {feedsToAdd.map((feed) => (
             <div
               key={feed.url}
-              className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-900 last:border-b-0"
+              className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-800 last:border-b-0"
             >
               <div className="flex-1 min-w-0">
                 <BodyMedium>{feed.name}</BodyMedium>
@@ -422,9 +423,9 @@ function AddFeedsStep({
       {error && <ErrorText>{error}</ErrorText>}
 
       <div className="flex justify-between gap-3 pt-2">
-        <GhostButton onClick={onBack} disabled={loading}>
+        <LinkButton size="xxs" onClick={onBack} disabled={loading} className="px-1">
           Back
-        </GhostButton>
+        </LinkButton>
         <PrimaryButton
           onClick={onSave}
           disabled={loading || feedsToAdd.length === 0}
@@ -465,7 +466,7 @@ function ManageFeedsStep({
         </PrimaryButton>
       </div>
 
-      <div className="max-h-52 overflow-y-auto border border-primary-200 dark:border-primary-900 rounded-xl">
+      <div className="max-h-52 overflow-y-auto border border-primary-200 dark:border-primary-800 rounded-xl">
         {feeds.length === 0 ? (
           <div className="p-8 text-center">
             <Muted>No RSS feeds connected yet.</Muted>
@@ -481,7 +482,7 @@ function ManageFeedsStep({
           feeds.map((feed) => (
             <div
               key={feed.id}
-              className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-900 last:border-b-0"
+              className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-800 last:border-b-0"
             >
               <div className="flex-1">
                 <BodyMedium>{feed.name}</BodyMedium>

@@ -63,7 +63,7 @@ export default function AppsSettings({
     return (
       <div
         key={app.id}
-        className="flex items-center  justify-between p-2 rounded-xl hover:bg-primary-100 dark:hover:bg-primary-800 "
+        className="flex items-center justify-between p-2 rounded-xl hover:bg-primary-100 dark:hover:bg-primary-950/60 "
         role="listitem"
       >
         <div className="flex items-center gap-3">
@@ -95,7 +95,7 @@ export default function AppsSettings({
           </Text>
 
           {connectedAppsList.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6 mt-2">
               <Text variant="labelSmall" className="mb-2">
                 Connected
               </Text>
@@ -108,7 +108,7 @@ export default function AppsSettings({
           {notConnectedAppsList.length > 0 && (
             <div>
               <Text variant="labelSmall" className="mb-2">
-                Available
+                Avaılable
               </Text>
               <div className="space-y-1" role="list">
                 {notConnectedAppsList.map(renderAppItem)}

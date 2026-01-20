@@ -23,7 +23,7 @@ export function ConnectionModalWrapper({
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative z-50 w-full max-w-2xl bg-primary-50 dark:bg-primary-950 border border-primary-200 dark:border-primary-900 rounded-2xl overflow-hidden">
+      <div className="relative z-50 w-full max-w-2xl rounded-2xl overflow-hidden glass-morphism">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
             <img

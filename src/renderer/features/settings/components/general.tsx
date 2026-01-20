@@ -46,7 +46,7 @@ const THEME_OPTIONS = [
 ];
 
 export default function GeneralSettings() {
-    const { theme, setTheme } = useDarkMode();
+  const { theme, setTheme } = useDarkMode();
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState<AccountFormValues>(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
@@ -88,7 +88,7 @@ export default function GeneralSettings() {
       setIsDirty(false);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "An unexpected error occurred"
+        err instanceof Error ? err.message : "An unexpected error occurred",
       );
     } finally {
       setLoading(false);
@@ -110,7 +110,8 @@ export default function GeneralSettings() {
       const response = await window.api.account.update(form);
 
       if (!response.success) {
-        const message = response.errors?.body || response.error || "Could not save";
+        const message =
+          response.errors?.body || response.error || "Could not save";
         throw new Error(message);
       }
 
@@ -149,7 +150,7 @@ export default function GeneralSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <Heading2 className="mb-1">Account</Heading2>
+        <Heading2>Account</Heading2>
       </div>
 
       {error && (
@@ -174,6 +175,7 @@ export default function GeneralSettings() {
               <Field label="Theme" htmlFor="theme">
                 {mounted ? (
                   <Select
+                    useFixedBackground={true}
                     value={theme}
                     options={THEME_OPTIONS}
                     onChange={(value) => {
@@ -198,8 +200,9 @@ export default function GeneralSettings() {
               </h3>
             </div>
             <div className="flex flex-col gap-4">
-              <Field label="Time Zone" htmlFor="timezone">
+              <Field label="Tıme Zone" htmlFor="timezone">
                 <Select
+                  useFixedBackground={true}
                   value={form.timezone}
                   options={TIMEZONE_OPTIONS}
                   onChange={(val) => {
@@ -211,6 +214,7 @@ export default function GeneralSettings() {
               </Field>
               <Field label="Language" htmlFor="locale">
                 <Select
+                  useFixedBackground={true}
                   value={form.locale}
                   options={LOCALE_OPTIONS}
                   onChange={(val) => {
@@ -240,6 +244,8 @@ export default function GeneralSettings() {
               </Button>
               <Button
                 type="submit"
+                size="md"
+                variant="primary"
                 disabled={!isDirty || saving}
                 isLoading={saving}
               >
