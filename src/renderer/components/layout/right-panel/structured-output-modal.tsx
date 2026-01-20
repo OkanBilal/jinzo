@@ -103,7 +103,7 @@ export function StructuredOutputModal({
     <div className="fixed inset-0 z-100 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/70 " onClick={onClose} />
       <div
-        className="relative z-40 w-full max-w-200 bg-white/95 dark:bg-primary-900/95  border border-black/10 dark:border-white/10 rounded-3xl shadow-2xl"
+        className="relative z-40 w-full max-w-200 glass-morphism rounded-2xl "
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"

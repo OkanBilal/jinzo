@@ -24,7 +24,7 @@ function AppContent() {
         <Toaster richColors position="top-right" />
         <MainContent
           marginLeft={mainMarginLeft}
-          marginRight={isConfigOpen ? rightPanelWidth : "0.4rem"}
+          marginRight={isConfigOpen ? rightPanelWidth : "0.5rem"}
         >
           <MainRoutes />
         </MainContent>

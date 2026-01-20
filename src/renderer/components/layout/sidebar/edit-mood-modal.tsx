@@ -23,6 +23,7 @@ interface EditMoodModalProps {
   mood: Mood | null;
   onClose: () => void;
   onSuccess?: () => void;
+  sidebarWidth?: string;
 }
 
 function parseThemeConfig(themeConfig: string | null): {
@@ -62,6 +63,7 @@ export default function EditMoodModal({
   mood,
   onClose,
   onSuccess,
+  sidebarWidth = "18rem",
 }: EditMoodModalProps) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("");
@@ -70,6 +72,7 @@ export default function EditMoodModal({
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [showGradients, setShowGradients] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState("");
+  const [isClosing, setIsClosing] = useState(false);
 
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
@@ -100,6 +103,21 @@ export default function EditMoodModal({
     }
   }, [mood]);
 
+  // Reset closing state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setIsClosing(false);
+    }
+  }, [isOpen]);
+
+  // Handle animated close
+  const handleAnimatedClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+    }, 200);
+  };
+
   useClickOutside(emojiPickerRef, () => {
     if (isEmojiPickerOpen) setIsEmojiPickerOpen(false);
   });
@@ -107,8 +125,8 @@ export default function EditMoodModal({
   // Handle escape key
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
+      if (event.key === "Escape" && !isClosing) {
+        handleAnimatedClose();
       }
     };
 
@@ -116,7 +134,9 @@ export default function EditMoodModal({
       document.addEventListener("keydown", handleEscape);
       return () => document.removeEventListener("keydown", handleEscape);
     }
-  }, [isOpen, onClose]);
+
+    return undefined;
+  }, [isOpen, isClosing]);
 
   const handlePresetColor = (index: number) => {
     setSelectedColorIndex(index);
@@ -169,15 +189,19 @@ export default function EditMoodModal({
   const currentVariant = getThemeVariant(selectedColorPair, darkMode);
 
   return createPortal(
-    <div className="fixed inset-0 z-100 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+    <div className="fixed inset-0 z-100">
       <div
-        className="relative z-40 w-full max-w-80 max-h-[85vh] overflow-hidden rounded-3xl
-          bg-linear-to-b from-white/90 to-primary-50/80 dark:from-primary-900/95 dark:to-primary-900/80
-          backdrop-blur-xl saturate-180 border border-white/40 dark:border-white/10
-          shadow-[0_8px_32px_rgba(0,0,0,0.16),0_4px_16px_rgba(0,0,0,0.12)]
-          dark:shadow-[0_8px_32px_rgba(0,0,0,0.5),0_4px_16px_rgba(0,0,0,0.4)]"
-        style={{ animation: "scaleIn 150ms ease-out" }}
+        className="absolute inset-0 bg-black/50 transition-opacity duration-200"
+        style={{ opacity: isClosing ? 0 : 1 }}
+        onClick={handleAnimatedClose}
+      />
+      <div
+        className="absolute left-0 bottom-0 z-40 min-h-[calc(60vh-2rem)] overflow-hidden rounded-t-3xl"
+        style={{
+          width: sidebarWidth,
+          animation: isClosing ? "slideDownOut 200ms ease-in forwards" : "slideUp 200ms ease-out",
+          background: currentVariant.preview,
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -546,7 +570,7 @@ export default function EditMoodModal({
             {isLoading ? "Saving..." : "Save Changes"}
           </button>
           <button
-            onClick={onClose}
+            onClick={handleAnimatedClose}
             className="w-full py-2 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 transition-colors cursor-pointer"
           >
             Cancel

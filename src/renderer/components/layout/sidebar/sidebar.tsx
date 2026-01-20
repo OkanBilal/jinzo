@@ -136,6 +136,7 @@ export default function FrostedSidebar() {
         isOpen={editModalState.isOpen}
         mood={editModalState.mood}
         onClose={handleCloseEditModal}
+        sidebarWidth={sidebarConfig.width}
       />
 
       <DeleteMoodModal

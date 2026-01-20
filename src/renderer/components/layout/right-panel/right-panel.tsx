@@ -57,7 +57,7 @@ function ToggleButton({ isOpen, width, onClick }: ToggleButtonProps) {
   return (
     <FrostedButton
       onClick={onClick}
-      className={`fixed z-40 p-2.5 rounded-full transition-all duration-300 ease-out ${
+      className={`fixed z-40 p-2.5 rounded-full! transition-all duration-300 ease-out ${
         isOpen ? "right-[calc(var(--config-width)+1.75rem)]" : "top-7 right-5"
       }`}
       style={

@@ -75,11 +75,7 @@ export default function MoodContextMenu({
   return createPortal(
     <div
       ref={menuRef}
-      className="fixed z-100 min-w-36 py-1.5 rounded-xl overflow-hidden
-        bg-linear-to-b from-white/90 to-primary-50/80 dark:from-primary-900/95 dark:to-primary-900/80
-        backdrop-blur-xl saturate-180 border border-white/40 dark:border-white/10
-        shadow-[0_4px_16px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.08)]
-        dark:shadow-[0_4px_16px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,0,0,0.3)]"
+      className="fixed z-100 min-w-36 rounded-xl overflow-hidden glass-morphism"
       style={{
         left: adjustedPosition.x,
         top: adjustedPosition.y,
@@ -91,7 +87,7 @@ export default function MoodContextMenu({
           onEdit();
           onClose();
         }}
-        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-primary-700 dark:text-primary-200
+        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-primary-700 dark:text-primary-200
           hover:bg-primary-100/50 dark:hover:bg-primary/10 transition-colors cursor-pointer"
       >
         <PencilIcon className="size-4" />
@@ -102,7 +98,7 @@ export default function MoodContextMenu({
           onDelete();
           onClose();
         }}
-        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 dark:text-red-400
+        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-red-600 dark:text-red-400
           hover:bg-red-100/50 dark:hover:bg-red-900/20 transition-colors cursor-pointer"
       >
         <Trash className="size-4" />
