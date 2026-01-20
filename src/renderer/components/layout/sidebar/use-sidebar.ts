@@ -5,8 +5,10 @@ import {
   useGetAppsQuery,
   useGetAccountQuery,
   useSetActiveMoodMutation,
-  useGetEntitiesQuery,
   useDeleteMoodMutation,
+  useGetJournalEntriesQuery,
+  useCreateJournalDraftMutation,
+  useDeleteJournalMutation,
   type Mood,
 } from "@/lib/redux/api";
 import { toast } from "sonner";
@@ -66,6 +68,12 @@ export function useSidebar() {
     isDeleting: boolean;
   }>({ mood: null, isDeleting: false });
 
+  // Delete journal state
+  const [deleteJournalState, setDeleteJournalState] = useState<{
+    journalId: string | null;
+    isDeleting: boolean;
+  }>({ journalId: null, isDeleting: false });
+
   // Data queries
   const { data: sessions, isLoading: isLoadingSessions } =
     useGetChatSessionsQuery();
@@ -73,16 +81,37 @@ export function useSidebar() {
   const { activeMoodId, moods } = useActiveMood();
   const sidebarConfig = useSidebarConfig();
 
-  const { data: entities = [], isLoading: isLoadingEntities } =
-    useGetEntitiesQuery(
-      {
-        kinds: sidebarConfig.itemType === "post" ? ["doc"] : [],
-        limit: 50,
-      },
-      {
-        skip: sidebarConfig.itemType !== "post",
-      }
+  // Journal entries for post mode
+  const { data: journalEntries = [], isLoading: isLoadingJournal } =
+    useGetJournalEntriesQuery(
+      { limit: 50 },
+      { skip: sidebarConfig.itemType !== "post" }
     );
+
+  const [createJournalDraft] = useCreateJournalDraftMutation();
+  const [deleteJournal] = useDeleteJournalMutation();
+
+  // Convert journal entries to a format compatible with existing entity type
+  const entities = useMemo(() => {
+    return journalEntries.map((entry) => ({
+      id: entry.id,
+      accountId: entry.accountId,
+      kind: "journal_entry",
+      title: entry.title || "Untitled",
+      url: `/doc/${entry.id}`,
+      body: entry.body,
+      summary: entry.summary,
+      occurredAt: entry.occurredAt || entry.createdAt,
+      connectionId: null,
+      resourceId: null,
+      externalId: null,
+      metadata: entry.metadata,
+      createdAt: entry.createdAt,
+      updatedAt: entry.updatedAt,
+    }));
+  }, [journalEntries]);
+
+  const isLoadingEntities = isLoadingJournal;
 
   const { data: apps = [], refetch: refetchApps } = useGetAppsQuery();
 
@@ -142,8 +171,23 @@ export function useSidebar() {
     }
   };
 
-  const handleNewClick = () => {
-    navigate(sidebarConfig.defaultRoute);
+  const handleNewClick = async () => {
+    if (sidebarConfig.itemType === "post") {
+      // Create a new journal draft and navigate to it
+      try {
+        const result = await createJournalDraft({
+          accountId: account?.id || "default",
+        }).unwrap();
+        if (result?.id) {
+          navigate(`/doc/${result.id}`);
+        }
+      } catch (error) {
+        console.error("Failed to create journal draft:", error);
+        toast.error("Failed to create new post");
+      }
+    } else {
+      navigate(sidebarConfig.defaultRoute);
+    }
   };
 
   const handleOpenSettings = () => {
@@ -250,6 +294,33 @@ export function useSidebar() {
     setDeleteMoodState({ mood: null, isDeleting: false });
   };
 
+  // Delete journal handlers
+  const handleDeleteJournal = async (journalId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    // Confirm deletion
+    if (!confirm("Are you sure you want to delete this post?")) {
+      return;
+    }
+
+    setDeleteJournalState({ journalId, isDeleting: true });
+
+    try {
+      await deleteJournal(journalId).unwrap();
+      toast.success("Post deleted");
+
+      // Navigate away if we were viewing the deleted post
+      if (location.pathname === `/doc/${journalId}`) {
+        navigate("/doc");
+      }
+    } catch (error) {
+      console.error("Error deleting journal:", error);
+      toast.error("Failed to delete post");
+    } finally {
+      setDeleteJournalState({ journalId: null, isDeleting: false });
+    }
+  };
+
   return {
     // Location
     currentPath: location.pathname,
@@ -307,5 +378,8 @@ export function useSidebar() {
     handleDeleteMood,
     handleConfirmDeleteMood,
     handleCancelDeleteMood,
+
+    // Journal handlers
+    handleDeleteJournal,
   };
 }

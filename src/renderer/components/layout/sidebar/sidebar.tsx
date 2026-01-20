@@ -55,6 +55,7 @@ export default function FrostedSidebar() {
     handleDeleteMood,
     handleConfirmDeleteMood,
     handleCancelDeleteMood,
+    handleDeleteJournal,
   } = useSidebar();
 
   return (
@@ -93,6 +94,7 @@ export default function FrostedSidebar() {
               isLoadingEntities={isLoadingEntities}
               currentPath={currentPath}
               onDeleteSession={deleteSession.handleDeleteClick}
+              onDeletePost={handleDeleteJournal}
             />
 
             <SidebarFooter

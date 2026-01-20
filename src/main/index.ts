@@ -14,6 +14,7 @@ import { registerConnectionsHandlers } from "./ipc/connectionsHandlers";
 import { registerSeedHandlers } from "./ipc/seedHandlers";
 import { registerMoodHandlers } from "./ipc/moodHandlers";
 import { registerAppSettingsHandlers } from "./ipc/appSettingsHandlers";
+import { registerJournalHandlers, unregisterJournalHandlers } from "./ipc/journalHandlers";
 import { createMainWindow } from "./windows/mainWindow";
 
 /**
@@ -45,6 +46,7 @@ async function initializeApp() {
     registerSeedHandlers();
     registerMoodHandlers();
     registerAppSettingsHandlers();
+    registerJournalHandlers();
 
     // Create main window
     createMainWindow();
@@ -67,6 +69,7 @@ async function cleanupApp() {
     unregisterDatabaseHandlers();
     unregisterFeedHandlers();
     unregisterEntitiesHandlers();
+    unregisterJournalHandlers();
     
     // Close database
     await closeDatabase();

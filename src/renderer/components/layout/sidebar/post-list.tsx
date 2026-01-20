@@ -1,18 +1,33 @@
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Caption } from "@/components/ui/text";
 import { ArrowUp } from "@/components/ui/icons";
 import PostItem from "./post-item";
 
+interface Post {
+  id: string;
+  url: string;
+  title: string;
+  description: string;
+  status?: "draft" | "published";
+  updatedAt?: string;
+  createdAt?: string;
+}
+
 interface PostsListProps {
-  posts: { url: string, title: string; description: string }[]; 
+  posts: Post[];
   isLoading: boolean;
+  onDeletePost?: (postId: string, e: MouseEvent) => void;
 }
 
 export default function PostsList({
   posts,
   isLoading,
+  onDeletePost,
 }: PostsListProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -34,6 +49,17 @@ export default function PostsList({
     );
   }
 
+  const handlePostClick = (post: Post) => {
+    navigate(post.url);
+  };
+
+  // Sort posts by createdAt (newest first)
+  const sortedPosts = [...posts].sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return dateB - dateA;
+  });
+
   return (
     <div className="pb-3">
       <button
@@ -52,19 +78,26 @@ export default function PostsList({
 
       {isExpanded && (
         <div className="space-y-0.5">
-          {posts.map((post, index) => (
-            <div
-              key={post.url}
-              style={{
-                animation: `slideIn 0.15s ease-out ${index * 0.05}s both`,
-              }}
-            >
-              <PostItem
-                title={post.title}
-                description={post.description}
-              />
-            </div>
-          ))}
+          {sortedPosts.map((post, index) => {
+            const isActive = location.pathname === post.url;
+            return (
+              <div
+                key={post.id}
+                style={{
+                  animation: `slideIn 0.15s ease-out ${index * 0.05}s both`,
+                }}
+              >
+                <PostItem
+                  title={post.title}
+                  description={post.description}
+                  status={post.status}
+                  isActive={isActive}
+                  onClick={() => handlePostClick(post)}
+                  onDelete={onDeletePost ? (e) => onDeletePost(post.id, e) : undefined}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
       <style>{`

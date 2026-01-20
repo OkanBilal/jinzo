@@ -1,16 +1,27 @@
 import type { CSSProperties, MouseEvent } from "react";
 import ChatSessionList from "./chat-session-list";
 import PostsList from "./post-list";
-import type { ChatSession, Entity } from "@/lib/redux/api";
+import type { ChatSession } from "@/lib/redux/api";
+
+interface JournalEntity {
+  id: string;
+  url: string;
+  title: string | null;
+  summary: string | null;
+  metadata: { status?: "draft" | "published" } | null;
+  updatedAt: string;
+  createdAt: string;
+}
 
 interface SidebarContentProps {
   itemType: "chat" | "post";
   sessions: ChatSession[];
-  entities: Entity[];
+  entities: JournalEntity[];
   isLoadingSessions: boolean;
   isLoadingEntities: boolean;
   currentPath: string;
   onDeleteSession: (session: ChatSession, e: MouseEvent) => void;
+  onDeletePost?: (postId: string, e: MouseEvent) => void;
 }
 
 export function SidebarContent({
@@ -21,6 +32,7 @@ export function SidebarContent({
   isLoadingEntities,
   currentPath,
   onDeleteSession,
+  onDeletePost,
 }: SidebarContentProps) {
   return (
     <div
@@ -45,11 +57,16 @@ export function SidebarContent({
         {itemType === "post" && (
           <PostsList
             posts={entities.map((entity) => ({
+              id: entity.id,
               url: entity.url,
-              title: entity.title,
+              title: entity.title || "Untitled",
               description: entity.summary || "",
+              status: entity.metadata?.status,
+              updatedAt: entity.updatedAt,
+              createdAt: entity.createdAt,
             }))}
             isLoading={isLoadingEntities}
+            onDeletePost={onDeletePost}
           />
         )}
       </div>

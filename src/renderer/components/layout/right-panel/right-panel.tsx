@@ -5,7 +5,7 @@ import { useLayoutConfig } from "@/hooks/useLayoutConfig";
 import { ConfigContent } from "./config-content";
 import { JournalContent } from "./journal-content";
 
-const FADE_IN_DELAY = 50;
+const FADE_IN_DELAY = 60;
 
 interface RightPanelProps {
   isOpen: boolean;
@@ -58,7 +58,7 @@ function ToggleButton({ isOpen, width, onClick }: ToggleButtonProps) {
     <FrostedButton
       onClick={onClick}
       className={`fixed z-40 p-2.5 rounded-full! transition-all duration-300 ease-out ${
-        isOpen ? "right-[calc(var(--config-width)+1.75rem)]" : "top-7 right-5"
+        isOpen ? "right-[calc(var(--config-width)+1.25rem)]" : "top-7 right-5"
       }`}
       style={
         isOpen
@@ -85,6 +85,7 @@ interface PanelProps {
   component: string;
 }
 
+// TODO move to separate file
 const PANEL_COMPONENTS: Record<string, React.ComponentType> = {
   config: ConfigContent,
   journal: JournalContent,

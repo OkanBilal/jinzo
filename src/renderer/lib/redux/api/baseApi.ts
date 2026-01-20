@@ -59,6 +59,7 @@ export const baseApi = createApi({
     'Moods',
     'AppSettings',
     'McpTools',
+    'Journal',
   ],
   endpoints: () => ({}),
 });

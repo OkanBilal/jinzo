@@ -385,7 +385,7 @@ export default function CreateMoodView({
             style={{ transform: showGradients ? "translateX(-100%)" : "translateX(0)" }}
           >
             {/* Solid Colors Row */}
-            <div className="flex items-center gap-2 p-3 min-w-full">
+            <div className="flex items-center gap-2 px-4 py-3 ml-2 min-w-full">
               {solidColors.map((colorPair, index) => {
                 const variant = getThemeVariant(colorPair, darkMode);
                 return (
@@ -416,7 +416,7 @@ export default function CreateMoodView({
                   setShowGradients(true);
                   setSelectedColorIndex(0);
                 }}
-                className="ml-auto shrink-0 p-1 rounded-lg hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
+                className="ml-auto shrink-0 p-1 mr-1 rounded-lg hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
                 title="Show Gradients"
               >
                 <svg
@@ -436,14 +436,14 @@ export default function CreateMoodView({
             </div>
 
             {/* Gradient Colors Row */}
-            <div className="flex items-center gap-2 p-3 min-w-full">
+            <div className="flex items-center gap-2 px-4 mr-2 py-3 min-w-full">
               <button
                 type="button"
                 onClick={() => {
                   setShowGradients(false);
                   setSelectedColorIndex(0);
                 }}
-                className="shrink-0 p-1 rounded-lg hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
+                className="shrink-0 p-1 -ml-2 mr-1 rounded-lg hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
                 title="Show Solid Colors"
               >
                 <svg

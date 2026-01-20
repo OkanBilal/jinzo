@@ -183,7 +183,8 @@ export function registerConnectionsHandlers() {
         return { success: false, error: "HackerNews connection not found" };
       }
 
-      const metadata = connection.metadata ? JSON.parse(connection.metadata) : {};
+      const parsedMetadata = connection.metadata ? JSON.parse(connection.metadata) : null;
+      const metadata = parsedMetadata && typeof parsedMetadata === 'object' ? parsedMetadata : {};
       const enabled = connection.status === "active";
 
       const resources = await db
@@ -782,10 +783,13 @@ export function registerConnectionsHandlers() {
             provider: connection.provider,
             displayName: connection.displayName,
             status: connection.status,
-            metadata:
-              typeof connection.metadata === "string"
-                ? JSON.parse(connection.metadata)
-                : connection.metadata || {},
+            metadata: (() => {
+              if (typeof connection.metadata === "string") {
+                const parsed = JSON.parse(connection.metadata);
+                return parsed && typeof parsed === 'object' ? parsed : {};
+              }
+              return connection.metadata || {};
+            })(),
           },
         },
       };

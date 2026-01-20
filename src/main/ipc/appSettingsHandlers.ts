@@ -8,6 +8,21 @@ const SETTINGS_ID = "default";
 
 type AppSettingsRecord = typeof appSettings.$inferSelect;
 
+async function ensureDefaultAccount(): Promise<void> {
+  const db = getDb();
+  
+  const existing = await db.query.accounts.findFirst({
+    where: eq(accounts.id, ACCOUNT_ID),
+  });
+
+  if (!existing) {
+    await db
+      .insert(accounts)
+      .values({ id: ACCOUNT_ID })
+      .onConflictDoNothing();
+  }
+}
+
 async function ensureAppSettingsRow(): Promise<AppSettingsRecord> {
   const db = getDb();
   
@@ -18,6 +33,9 @@ async function ensureAppSettingsRow(): Promise<AppSettingsRecord> {
   if (existing) {
     return existing;
   }
+
+  // Ensure default account exists first (foreign key constraint)
+  await ensureDefaultAccount();
 
   // Create default settings
   await db

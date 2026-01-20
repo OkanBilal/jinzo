@@ -6,6 +6,7 @@ import { baseApi } from './api/baseApi';
 import chatReducer from './slices/chatSlice';
 import moodReducer from './slices/moodSlice';
 import appSettingsReducer from './slices/appSettingsSlice';
+import journalEditingReducer from './slices/journalEditingSlice';
 
 const chatPersistConfig = {
   key: 'chat',
@@ -35,6 +36,7 @@ export const store = configureStore({
     chat: persistedChatReducer,
     mood: persistedMoodReducer,
     appSettings: persistedAppSettingsReducer,
+    journalEditing: journalEditingReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -24,3 +24,9 @@ export {
   switchToChatMood,
   MOOD_TOOLS,
 } from "./mood-tools";
+
+export {
+  executeJournalTool,
+  appendToJournal,
+  JOURNAL_TOOLS,
+} from "./journal-tools";

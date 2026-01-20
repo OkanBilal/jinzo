@@ -45,11 +45,6 @@ export const solidColors: ThemeColor[] = [
     dark: { value: "#2A2D2095", preview: "#2A2D20" },
   },
   {
-    name: "Mint",
-    light: { value: "#D4EDE399", preview: "#D4EDE3" },
-    dark: { value: "#1A2D2695", preview: "#1A2D26" },
-  },
-  {
     name: "Forest",
     light: { value: "#C8E6D999", preview: "#C8E6D9" },
     dark: { value: "#142D2295", preview: "#142D22" },
@@ -64,17 +59,17 @@ export const solidColors: ThemeColor[] = [
 // 8 Gradient Colors - light variants are soft pastels, dark variants are deep/rich
 export const gradientColors: ThemeColor[] = [
   {
-    name: "Aurora",
+    name: "Ocean Waves",
     light: {
-      value: "linear-gradient(135deg, #FFD4E8 0%, #FFE4C8 50%, #FFF4D4 100%)",
+      value: "linear-gradient(0deg, #4BE1F4 0%, #A5C3C3 50%, #DBD7CA 100%)",
       preview:
-        "linear-gradient(135deg, #FFD4E8 0%, #FFE4C8 50%, #FFF4D4 100%)",
+        "linear-gradient(135deg, #4BE1F4 0%, #A5C3C3 50%, #DBD7CA 100%)",
     },
     dark: {
       value:
-        "linear-gradient(135deg, #2D1A26 0%, #2D2318 50%, #2D2A1A 100%)",
+        "linear-gradient(0deg, #0A5264 0%, #2A3A3E 50%, #3D3328 100%)",
       preview:
-        "linear-gradient(135deg, #3D2A36 0%, #3D3328 50%, #3D3A2A 100%)",
+        "linear-gradient(135deg, #0A5264 0%, #2A3A3E 50%, #3D3328 100%)",
     },
   },
   {
@@ -130,17 +125,6 @@ export const gradientColors: ThemeColor[] = [
     dark: {
       value: "linear-gradient(180deg, #2D1A26 0%, #2A1A33 100%)",
       preview: "linear-gradient(180deg, #3D2A36 0%, #3A2A43 100%)",
-    },
-  },
-  {
-    name: "Twilight",
-    light: {
-      value: "linear-gradient(180deg, #E0E7FF 0%, #C7D2FE 100%)",
-      preview: "linear-gradient(180deg, #E0E7FF 0%, #C7D2FE 100%)",
-    },
-    dark: {
-      value: "linear-gradient(180deg, #1A1A33 0%, #14142D 100%)",
-      preview: "linear-gradient(180deg, #2A2A43 0%, #24243D 100%)",
     },
   },
   {
