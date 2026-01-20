@@ -17,11 +17,11 @@ export default function NewButton({ onClick, title }: NewButtonProps) {
       className="justify-start p-4"
       style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
     >
-      <Plus className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+      <Plus className="w-4 h-4 text-primary-800 dark:text-primary-400" />
       <Body className="text-primary-900 dark:text-primary-100 font-medium">
         New {title}
       </Body>
-      <Caption className="ml-auto text-primary-500 dark:text-primary-400">
+      <Caption className="ml-auto text-primary-800 dark:text-primary-400">
         ⌘ N
       </Caption>
     </Button>

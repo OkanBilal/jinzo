@@ -51,7 +51,7 @@ export default function Alert({
         </Text>
         <div className="flex gap-3 mt-4">
           <Button
-            className="flex-1 rounded-full"
+            className="flex-1 rounded-full!"
             variant="secondary"
             onClick={onSecondary}
             disabled={isPrimaryLoading}
@@ -59,8 +59,8 @@ export default function Alert({
             {secondaryButtonText}
           </Button>
           <Button
-            className="flex-1 rounded-full"
-            variant="primary"
+            className="flex-1 rounded-full!"
+            variant="danger"
             onClick={onPrimary}
             disabled={isPrimaryLoading}
           >

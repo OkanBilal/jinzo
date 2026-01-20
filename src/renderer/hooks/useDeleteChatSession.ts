@@ -6,9 +6,9 @@ export function useDeleteChatSession() {
   const [sessionToDelete, setSessionToDelete] = useState<ChatSession | null>(null);
   const [deleteChatSession, { isLoading: isDeleting }] = useDeleteChatSessionMutation();
 
-  const handleDeleteClick = (session: ChatSession, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleDeleteClick = (session: ChatSession, e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     setSessionToDelete(session);
   };
 

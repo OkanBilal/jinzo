@@ -18,6 +18,7 @@ export { default as Heart } from "./heart";
 export { default as Home } from "./home";
 export { default as Incognito } from "./incognito";
 export { default as Mitts } from "./mitts";
+export { default as Opencode } from "./opencode";
 export { default as Price } from "./price";
 export { default as Rocket } from "./rocket";
 export { default as Scan } from "./scan";

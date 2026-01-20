@@ -33,7 +33,7 @@ export function SidebarFooter({
             aria-label="Settings"
             title="Settings"
           >
-            <Settings className="size-5 text-primary-600 dark:text-primary-400 hover:text-primary-400 dark:hover:text-primary-100 transition-colors duration-300" />
+            <Settings className="size-5 text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-100 transition-colors duration-300" />
           </button>
         </div>
         <div className="">
@@ -51,7 +51,7 @@ export function SidebarFooter({
             aria-label="Create new mood"
             title="Create new mood"
           >
-            <Plus className="size-5 text-primary-600 dark:text-primary-400 hover:text-primary-400 dark:hover:text-primary-100 transition-colors duration-300" />
+            <Plus className="size-5 text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-100 transition-colors duration-300" />
           </button>
         </div>
       </div>

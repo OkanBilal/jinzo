@@ -45,11 +45,11 @@ export default function ChatSessionList({
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center justify-between active:scale-99 transition-all duration-200 bg-transparent hover:bg-primary-950/3 dark:hover:bg-primary/5 cursor-pointer px-2 py-2 mb-2 rounded-lg "
       >
-        <Caption className="text-primary-600 dark:text-primary-400 font-medium ">
+        <Caption className="text-primary-700 dark:text-primary-400 font-medium ">
           Chat
         </Caption>
         <ArrowUp
-          className={`w-4 h-4 text-primary-600 dark:text-primary-400 transition-transform duration-150 ease-in-out ${
+          className={`w-4 h-4 text-primary-700 dark:text-primary-400 transition-transform duration-150 ease-in-out ${
             isExpanded ? "rotate-180" : "rotate-90"
           }`}
         />

@@ -2,6 +2,7 @@ import { useState, type MouseEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Caption } from "@/components/ui/text";
 import { ArrowUp } from "@/components/ui/icons";
+import { useUpdateJournalDraftMutation } from "@/lib/redux/api";
 import PostItem from "./post-item";
 
 interface Post {
@@ -28,6 +29,15 @@ export default function PostsList({
   const [isExpanded, setIsExpanded] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const [updateJournalDraft] = useUpdateJournalDraftMutation();
+
+  const handleRenamePost = async (postId: string, newTitle: string) => {
+    try {
+      await updateJournalDraft({ id: postId, payload: { title: newTitle } });
+    } catch (error) {
+      console.error("Failed to rename post:", error);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -64,13 +74,13 @@ export default function PostsList({
     <div className="pb-3">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-2 py-2 mb-2 rounded-lg transition-colors"
+        className="w-full flex items-center justify-between active:scale-99 transition-all duration-200 bg-transparent hover:bg-primary-950/3 dark:hover:bg-primary/5 cursor-pointer px-2 py-2 mb-2 rounded-lg "
       >
-        <Caption className="text-primary-600 dark:text-primary-400 font-medium">
+        <Caption className="text-primary-700 dark:text-primary-400 font-medium ">
           Posts
         </Caption>
         <ArrowUp
-          className={`w-4 h-4 text-primary-600 dark:text-primary-400 transition-transform duration-150 ease-in-out ${
+          className={`w-4 h-4 text-primary-700 dark:text-primary-400 transition-transform duration-150 ease-in-out ${
             isExpanded ? "rotate-180" : "rotate-90"
           }`}
         />
@@ -94,6 +104,7 @@ export default function PostsList({
                   isActive={isActive}
                   onClick={() => handlePostClick(post)}
                   onDelete={onDeletePost ? (e) => onDeletePost(post.id, e) : undefined}
+                  onRename={(newTitle) => handleRenamePost(post.id, newTitle)}
                 />
               </div>
             );

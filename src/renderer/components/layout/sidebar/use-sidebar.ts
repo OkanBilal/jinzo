@@ -295,15 +295,16 @@ export function useSidebar() {
   };
 
   // Delete journal handlers
-  const handleDeleteJournal = async (journalId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteJournalClick = (journalId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setDeleteJournalState({ journalId, isDeleting: false });
+  };
 
-    // Confirm deletion
-    if (!confirm("Are you sure you want to delete this post?")) {
-      return;
-    }
+  const handleConfirmDeleteJournal = async () => {
+    const journalId = deleteJournalState.journalId;
+    if (!journalId) return;
 
-    setDeleteJournalState({ journalId, isDeleting: true });
+    setDeleteJournalState((prev) => ({ ...prev, isDeleting: true }));
 
     try {
       await deleteJournal(journalId).unwrap();
@@ -319,6 +320,10 @@ export function useSidebar() {
     } finally {
       setDeleteJournalState({ journalId: null, isDeleting: false });
     }
+  };
+
+  const handleCancelDeleteJournal = () => {
+    setDeleteJournalState({ journalId: null, isDeleting: false });
   };
 
   return {
@@ -380,6 +385,9 @@ export function useSidebar() {
     handleCancelDeleteMood,
 
     // Journal handlers
-    handleDeleteJournal,
+    deleteJournalState,
+    handleDeleteJournalClick,
+    handleConfirmDeleteJournal,
+    handleCancelDeleteJournal,
   };
 }

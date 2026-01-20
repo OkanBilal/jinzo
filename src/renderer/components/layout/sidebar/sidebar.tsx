@@ -55,7 +55,10 @@ export default function FrostedSidebar() {
     handleDeleteMood,
     handleConfirmDeleteMood,
     handleCancelDeleteMood,
-    handleDeleteJournal,
+    deleteJournalState,
+    handleDeleteJournalClick,
+    handleConfirmDeleteJournal,
+    handleCancelDeleteJournal,
   } = useSidebar();
 
   return (
@@ -94,7 +97,7 @@ export default function FrostedSidebar() {
               isLoadingEntities={isLoadingEntities}
               currentPath={currentPath}
               onDeleteSession={deleteSession.handleDeleteClick}
-              onDeletePost={handleDeleteJournal}
+              onDeletePost={handleDeleteJournalClick}
             />
 
             <SidebarFooter
@@ -123,6 +126,15 @@ export default function FrostedSidebar() {
         isDeleting={deleteSession.isDeleting}
         onConfirm={deleteSession.handleConfirmDelete}
         onCancel={deleteSession.handleCancelDelete}
+      />
+
+      <DeleteConfirmationModal
+        isOpen={!!deleteJournalState.journalId}
+        isDeleting={deleteJournalState.isDeleting}
+        onConfirm={handleConfirmDeleteJournal}
+        onCancel={handleCancelDeleteJournal}
+        title="Delete Post?"
+        description="This action cannot be undone. The post will be permanently deleted."
       />
 
       <MoodContextMenu

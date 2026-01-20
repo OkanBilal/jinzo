@@ -34,6 +34,7 @@ export const iconRegistry: Record<string, IconComponent> = {
     textitalic: Icons.Textitalic,
     user: Icons.User,
     vinyl: Icons.Vinyl,
+    opencode: Icons.Opencode,
 };
 
 // Icons available for mood selection - derived from iconRegistry

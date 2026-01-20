@@ -5,6 +5,8 @@ interface DeleteConfirmationModalProps {
     isDeleting: boolean;
     onConfirm: () => void;
     onCancel: () => void;
+    title?: string;
+    description?: string;
 }
 
 export default function DeleteConfirmationModal({
@@ -12,12 +14,14 @@ export default function DeleteConfirmationModal({
     isDeleting,
     onConfirm,
     onCancel,
+    title = "Delete Conversation?",
+    description = "This action cannot be undone. The conversation will be permanently deleted.",
 }: DeleteConfirmationModalProps) {
     return (
         <Alert
             isOpen={isOpen}
-            title="Delete Conversation?"
-            description="This action cannot be undone. The conversation will be permanently deleted."
+            title={title}
+            description={description}
             primaryButtonText="Delete"
             secondaryButtonText="Cancel"
             onPrimary={onConfirm}
