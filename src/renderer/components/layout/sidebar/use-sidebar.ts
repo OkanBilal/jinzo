@@ -6,6 +6,8 @@ import {
   useGetAccountQuery,
   useSetActiveMoodMutation,
   useGetEntitiesQuery,
+  useDeleteMoodMutation,
+  type Mood,
 } from "@/lib/redux/api";
 import { toast } from "sonner";
 import { useActiveMood } from "@/hooks/useActiveMood";
@@ -37,6 +39,32 @@ export function useSidebar() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCreatingMood, setIsCreatingMood] = useState(false);
+  const [isViewingPresetMoods, setIsViewingPresetMoods] = useState(false);
+
+  // Create mood menu state
+  const [createMoodMenuState, setCreateMoodMenuState] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+  }>({ isOpen: false, position: { x: 0, y: 0 } });
+
+  // Context menu state
+  const [contextMenuState, setContextMenuState] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    targetMood: Mood | null;
+  }>({ isOpen: false, position: { x: 0, y: 0 }, targetMood: null });
+
+  // Edit modal state
+  const [editModalState, setEditModalState] = useState<{
+    isOpen: boolean;
+    mood: Mood | null;
+  }>({ isOpen: false, mood: null });
+
+  // Delete mood state
+  const [deleteMoodState, setDeleteMoodState] = useState<{
+    mood: Mood | null;
+    isDeleting: boolean;
+  }>({ mood: null, isDeleting: false });
 
   // Data queries
   const { data: sessions, isLoading: isLoadingSessions } =
@@ -63,6 +91,7 @@ export function useSidebar() {
   }, [apps]);
 
   const [setActiveMood] = useSetActiveMoodMutation();
+  const [deleteMood] = useDeleteMoodMutation();
 
   const deleteSession = useDeleteChatSession();
 
@@ -125,12 +154,100 @@ export function useSidebar() {
     setIsSettingsOpen(false);
   };
 
+  // Create mood menu handlers
+  const handleOpenCreateMoodMenu = (event: React.MouseEvent) => {
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    setCreateMoodMenuState({
+      isOpen: true,
+      position: { x: rect.left + rect.width / 2, y: rect.top },
+    });
+  };
+
+  const handleCloseCreateMoodMenu = () => {
+    setCreateMoodMenuState({ isOpen: false, position: { x: 0, y: 0 } });
+  };
+
   const handleStartCreatingMood = () => {
     setIsCreatingMood(true);
+    setIsViewingPresetMoods(false);
+  };
+
+  const handleStartViewingPresetMoods = () => {
+    setIsViewingPresetMoods(true);
+    setIsCreatingMood(false);
   };
 
   const handleStopCreatingMood = () => {
     setIsCreatingMood(false);
+    setIsViewingPresetMoods(false);
+  };
+
+  // Context menu handlers
+  const handleMoodContextMenu = (mood: Mood, event: React.MouseEvent) => {
+    event.preventDefault();
+    setContextMenuState({
+      isOpen: true,
+      position: { x: event.clientX, y: event.clientY },
+      targetMood: mood,
+    });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenuState({
+      isOpen: false,
+      position: { x: 0, y: 0 },
+      targetMood: null,
+    });
+  };
+
+  // Edit mood handlers
+  const handleEditMood = () => {
+    if (contextMenuState.targetMood) {
+      setEditModalState({
+        isOpen: true,
+        mood: contextMenuState.targetMood,
+      });
+    }
+  };
+
+  const handleCloseEditModal = () => {
+    setEditModalState({ isOpen: false, mood: null });
+  };
+
+  // Delete mood handlers
+  const handleDeleteMood = () => {
+    if (contextMenuState.targetMood) {
+      setDeleteMoodState({
+        mood: contextMenuState.targetMood,
+        isDeleting: false,
+      });
+    }
+  };
+
+  const handleConfirmDeleteMood = async () => {
+    if (!deleteMoodState.mood) return;
+
+    setDeleteMoodState((prev) => ({ ...prev, isDeleting: true }));
+
+    try {
+      await deleteMood(deleteMoodState.mood.id).unwrap();
+
+      // If the deleted mood was active, clear it
+      if (activeMoodId === deleteMoodState.mood.id) {
+        await setActiveMood(null).unwrap();
+      }
+
+      toast.success("Mood deleted");
+      setDeleteMoodState({ mood: null, isDeleting: false });
+    } catch (error) {
+      console.error("Error deleting mood:", error);
+      toast.error("Failed to delete mood");
+      setDeleteMoodState((prev) => ({ ...prev, isDeleting: false }));
+    }
+  };
+
+  const handleCancelDeleteMood = () => {
+    setDeleteMoodState({ mood: null, isDeleting: false });
   };
 
   return {
@@ -142,6 +259,13 @@ export function useSidebar() {
     isSearchExpanded,
     isSettingsOpen,
     isCreatingMood,
+    isViewingPresetMoods,
+    createMoodMenuState,
+
+    // Context menu state
+    contextMenuState,
+    editModalState,
+    deleteMoodState,
 
     // Data
     account,
@@ -168,8 +292,20 @@ export function useSidebar() {
     handleNewClick,
     handleOpenSettings,
     handleCloseSettings,
+    handleOpenCreateMoodMenu,
+    handleCloseCreateMoodMenu,
     handleStartCreatingMood,
+    handleStartViewingPresetMoods,
     handleStopCreatingMood,
     handleRefreshApps,
+
+    // Context menu handlers
+    handleMoodContextMenu,
+    handleCloseContextMenu,
+    handleEditMood,
+    handleCloseEditModal,
+    handleDeleteMood,
+    handleConfirmDeleteMood,
+    handleCancelDeleteMood,
   };
 }

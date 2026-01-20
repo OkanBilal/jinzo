@@ -39,7 +39,7 @@ export default function ModelSelectDropdown({
   
   return (
     <div className=" relative" ref={dropdownRef}>
-      <div className="flex cursor-pointer items-center hover:bg-primary-200/60 dark:hover:bg-primary-700/40 transition-colors rounded-3xl">
+      <div className="flex cursor-pointer items-center  hover:bg-primary-200/60 dark:hover:bg-primary-700/40 transition-colors rounded-3xl">
         <button
           type="button"
           onClick={onToggle}
@@ -56,31 +56,28 @@ export default function ModelSelectDropdown({
         isOpen={isOpen}
         openUpward={openUpward}
         minWidth="min-w-48"
+        useFixedBackground={true}
       >
-        <ul
-          className="max-h-80 overflow-auto first:rounded-t-xl last:rounded-b-xl"
-          role="menu"
-        >
+        <div className="max-h-80 overflow-auto">
           {modelList.map((m) => (
-            <li key={m} role="menuitem">
-              <button
-                type="button"
-                onClick={() => {
-                  onModelChange(m);
-                  onToggle();
-                }}
-                className={`w-full text-left px-4 py-3 backdrop-blur-xl text-sm transition-colors flex items-center gap-2 ${
-                  model === m
-                    ? "bg-primary-200 dark:bg-primary-800/50 text-primary-900 dark:text-primary-100 font-medium"
-                    : "hover:bg-primary-100 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-200"
-                }`}
-              >
-                {getModelIcon(m)}
-                {m}
-              </button>
-            </li>
+            <button
+              key={m}
+              type="button"
+              onClick={() => {
+                onModelChange(m);
+                onToggle();
+              }}
+              className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl ${
+                model === m
+                  ? "bg-primary-200 dark:bg-primary-800/50 text-primary-900 dark:text-primary-100 font-medium"
+                  : "hover:bg-primary-100 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100"
+              }`}
+            >
+              {getModelIcon(m)}
+              {m}
+            </button>
           ))}
-        </ul>
+        </div>
       </DropdownWrapper>
     </div>
   );

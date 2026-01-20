@@ -42,7 +42,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   subtle:
     "cursor-pointer flex items-center gap-2 bg-primary-950/2 dark:bg-primary/4 hover:bg-primary-950/4 dark:hover:bg-primary/8 transition-all duration-200  active:scale-[0.99]",
   frosted:
-    "cursor-pointer bg-gradient-to-b from-white/70 to-primary-50/60 dark:from-primary-900/80 dark:to-primary-900/20 backdrop-blur-[20px] saturate-180 border border-white/40 dark:border-white/8 shadow-[0_2px_8px_rgba(0,0,0,0.08),0_4px_16px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.8)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.25),0_4px_16px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.16)] text-primary-800 dark:text-primary-200 transition-all duration-300 ease-out hover:scale-105",
+    "cursor-pointer glass-morphism text-primary-800 dark:text-primary-200 transition-all duration-300 ease-out hover:scale-105",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {

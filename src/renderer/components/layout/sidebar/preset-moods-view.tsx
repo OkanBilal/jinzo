@@ -1,0 +1,139 @@
+import { useState } from "react";
+import { Heading3 } from "@/components/ui/text";
+import { useCreateMoodMutation, useSetActiveMoodMutation } from "@/lib/redux/api";
+import { toast } from "sonner";
+import { useDarkMode } from "@/hooks/useDarkMode";
+import {
+  solidColors,
+  gradientColors,
+  getThemeVariant,
+} from "@/lib/config/mood-themes";
+import { parseIcon } from "@/lib/icon-registry";
+import { predefinedMoods, type PredefinedMood } from "./predefined-moods";
+
+interface PresetMoodsViewProps {
+  onClose: () => void;
+  onSuccess?: () => void;
+}
+
+export default function PresetMoodsView({
+  onClose,
+  onSuccess,
+}: PresetMoodsViewProps) {
+  const [selectedTemplate, setSelectedTemplate] = useState<PredefinedMood | null>(null);
+  const [createMood, { isLoading }] = useCreateMoodMutation();
+  const [setActiveMood] = useSetActiveMoodMutation();
+  const { darkMode } = useDarkMode();
+
+  const handleCreate = async () => {
+    if (!selectedTemplate) {
+      toast.error("Please select a mood template");
+      return;
+    }
+
+    try {
+      const templateColors = selectedTemplate.showGradients ? gradientColors : solidColors;
+      const templateColorPair = templateColors[selectedTemplate.themeColorIndex] || solidColors[0];
+
+      const themeConfig = JSON.stringify({
+        lightBackground: templateColorPair.light.value,
+        darkBackground: templateColorPair.dark.value,
+      });
+
+      const result = await createMood({
+        name: selectedTemplate.name,
+        icon: selectedTemplate.icon,
+        themeConfig,
+        systemPrompt: selectedTemplate.systemPrompt,
+      }).unwrap();
+
+      if (result?.id) {
+        await setActiveMood(result.id).unwrap();
+      }
+
+      toast.success("Mood created!");
+      onSuccess?.();
+      onClose();
+    } catch (error) {
+      console.error("Error creating mood:", error);
+      toast.error("Failed to create mood");
+    }
+  };
+
+  return (
+    <div
+      className="flex flex-col h-full"
+      style={{ animation: "fadeIn 300ms ease-in-out" }}
+    >
+      <div className="flex flex-col items-center pt-8 pb-6 px-4">
+        <Heading3 className="text-center text-primary-800 dark:text-primary">
+          Preset Moods
+        </Heading3>
+        <p className="text-sm text-primary-500 dark:text-primary-400 mt-1 text-center">
+          Choose a preset to get started quickly
+        </p>
+      </div>
+
+      <div className="flex-1 px-4 overflow-y-auto noscrollbar">
+        <div className="grid grid-cols-2 gap-3">
+          {predefinedMoods.map((template) => {
+            const templateIcon = parseIcon(template.icon);
+            const templateColors = template.showGradients ? gradientColors : solidColors;
+            const templateColorPair = templateColors[template.themeColorIndex] || solidColors[0];
+            const templateVariant = getThemeVariant(templateColorPair, darkMode);
+            const isSelected = selectedTemplate?.id === template.id;
+
+            return (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => setSelectedTemplate(template)}
+                className={`flex flex-col items-center gap-2 p-4 rounded-2xl transition-all cursor-pointer
+                  ${isSelected
+                    ? "ring-2 ring-primary ring-offset-2 ring-offset-transparent scale-[1.02]"
+                    : "hover:scale-[1.02]"
+                  }`}
+                style={{ background: templateVariant.preview }}
+              >
+                <span className="text-2xl">
+                  {templateIcon.type === "emoji" ? (
+                    templateIcon.value as string
+                  ) : (
+                    (() => {
+                      const IconComp = templateIcon.value as React.ComponentType<{ className?: string }>;
+                      return <IconComp className="size-7 text-primary-800 dark:text-primary" />;
+                    })()
+                  )}
+                </span>
+                <span className="text-sm font-medium text-primary-700 dark:text-primary-200">
+                  {template.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="p-4 space-y-2">
+        <button
+          onClick={handleCreate}
+          disabled={isLoading || !selectedTemplate}
+          className="w-full py-2.5 px-4 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer
+            disabled:opacity-50 disabled:cursor-not-allowed
+            bg-primary-900/10 dark:bg-primary/10
+            hover:bg-primary-900/15 dark:hover:bg-primary/15
+            text-primary-800 dark:text-primary
+            hover:scale-[1.02] active:scale-[0.98]"
+        >
+          {isLoading ? "Creating..." : "Create"}
+        </button>
+        <button
+          onClick={onClose}
+          className="w-full py-2 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}

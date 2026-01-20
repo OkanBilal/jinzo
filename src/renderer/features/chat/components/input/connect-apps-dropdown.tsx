@@ -93,6 +93,7 @@ export default function ConnectAppsDropdown({
           isOpen={isOpen}
           openUpward={openUpward}
           minWidth="min-w-60"
+          useFixedBackground={true}
         >
           <ul className="max-h-80 overflow-auto cursor-pointer" role="menu">
             {apps

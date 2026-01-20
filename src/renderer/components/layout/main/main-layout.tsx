@@ -1,11 +1,11 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useTheme } from "@/hooks/useTheme";
 
-interface AppLayoutProps {
+interface MainLayoutProps {
   children: ReactNode;
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function MainLayout({ children }: MainLayoutProps) {
   const theme = useTheme();
 
   const backgroundStyle = theme.backgroundColor?.startsWith("linear-gradient")

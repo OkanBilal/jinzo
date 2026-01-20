@@ -5,6 +5,11 @@ import { SidebarContent } from "./sidebar-content";
 import DeleteConfirmationModal from "./delete-confirmation-modal";
 import NewButton from "./new-button";
 import CreateMoodView from "./create-mood-view";
+import PresetMoodsView from "./preset-moods-view";
+import CreateMoodMenu from "./create-mood-menu";
+import MoodContextMenu from "./mood-context-menu";
+import EditMoodModal from "./edit-mood-modal";
+import DeleteMoodModal from "./delete-mood-modal";
 import { useSidebar } from "./use-sidebar";
 
 export default function FrostedSidebar() {
@@ -14,6 +19,11 @@ export default function FrostedSidebar() {
     isSearchExpanded,
     isSettingsOpen,
     isCreatingMood,
+    isViewingPresetMoods,
+    createMoodMenuState,
+    contextMenuState,
+    editModalState,
+    deleteMoodState,
     account,
     sessions,
     entities,
@@ -32,9 +42,19 @@ export default function FrostedSidebar() {
     handleNewClick,
     handleOpenSettings,
     handleCloseSettings,
+    handleOpenCreateMoodMenu,
+    handleCloseCreateMoodMenu,
     handleStartCreatingMood,
+    handleStartViewingPresetMoods,
     handleStopCreatingMood,
     handleRefreshApps,
+    handleMoodContextMenu,
+    handleCloseContextMenu,
+    handleEditMood,
+    handleCloseEditModal,
+    handleDeleteMood,
+    handleConfirmDeleteMood,
+    handleCancelDeleteMood,
   } = useSidebar();
 
   return (
@@ -47,6 +67,8 @@ export default function FrostedSidebar() {
       >
         {isCreatingMood ? (
           <CreateMoodView onClose={handleStopCreatingMood} />
+        ) : isViewingPresetMoods ? (
+          <PresetMoodsView onClose={handleStopCreatingMood} />
         ) : (
           <div className="h-full overflow-hidden flex flex-col">
             <SidebarHeader
@@ -77,8 +99,9 @@ export default function FrostedSidebar() {
               moods={moods}
               activeMoodId={activeMoodId}
               onMoodChange={handleMoodChange}
+              onMoodContextMenu={handleMoodContextMenu}
               onSettingsClick={handleOpenSettings}
-              onCreateMoodClick={handleStartCreatingMood}
+              onPlusClick={handleOpenCreateMoodMenu}
             />
           </div>
         )}
@@ -98,6 +121,36 @@ export default function FrostedSidebar() {
         isDeleting={deleteSession.isDeleting}
         onConfirm={deleteSession.handleConfirmDelete}
         onCancel={deleteSession.handleCancelDelete}
+      />
+
+      <MoodContextMenu
+        isOpen={contextMenuState.isOpen}
+        position={contextMenuState.position}
+        mood={contextMenuState.targetMood}
+        onEdit={handleEditMood}
+        onDelete={handleDeleteMood}
+        onClose={handleCloseContextMenu}
+      />
+
+      <EditMoodModal
+        isOpen={editModalState.isOpen}
+        mood={editModalState.mood}
+        onClose={handleCloseEditModal}
+      />
+
+      <DeleteMoodModal
+        mood={deleteMoodState.mood}
+        isDeleting={deleteMoodState.isDeleting}
+        onConfirm={handleConfirmDeleteMood}
+        onCancel={handleCancelDeleteMood}
+      />
+
+      <CreateMoodMenu
+        isOpen={createMoodMenuState.isOpen}
+        position={createMoodMenuState.position}
+        onCreateMood={handleStartCreatingMood}
+        onPresetMoods={handleStartViewingPresetMoods}
+        onClose={handleCloseCreateMoodMenu}
       />
     </>
   );

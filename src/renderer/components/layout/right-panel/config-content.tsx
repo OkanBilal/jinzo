@@ -1,13 +1,12 @@
-import { Body } from "@/components/ui/text";
+import { Body, Heading3 } from "@/components/ui/text";
 import { Slider } from "@/components/ui/slider";
 import { Toggle } from "@/components/ui/toggle";
 import Select from "@/components/ui/select";
-import { ConfigSection } from "./config-section";
 import { StructuredOutputToggle } from "./structured-output-toggle";
 import { StructuredOutputModal } from "./structured-output-modal";
-import { usePanelConfig } from "./use-panel-config";
+import { useRightPanelConfig } from "./use-right-panel-config";
 
-export function PanelContent() {
+export function ConfigContent() {
   const {
     selectedModel,
     thinkingLevel,
@@ -28,10 +27,13 @@ export function PanelContent() {
     handleStructuredOutputEnabledChange,
     handleStructuredOutputSchemaChange,
     setIsStructuredOutputModalOpen,
-  } = usePanelConfig();
+  } = useRightPanelConfig();
 
   return (
     <div className="flex-1 overflow-auto noscrollbar p-3">
+              <div className="flex items-center justify-between py-2 ">
+          <Heading3>Configuration</Heading3>
+        </div>
       <div className="flex flex-col gap-4">
         <ConfigSection title="Model">
           <Select
@@ -111,3 +113,20 @@ export function PanelContent() {
     </div>
   );
 }
+
+interface ConfigSectionProps {
+  title: string;
+  children: React.ReactNode;
+}
+
+export function ConfigSection({ title, children }: ConfigSectionProps) {
+  return (
+    <div className="p-1 ">
+      <Body className="font-semibold mb-2 text-primary-800 dark:text-primary-200">
+        {title}
+      </Body>
+      {children}
+    </div>
+  );
+}
+

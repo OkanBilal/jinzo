@@ -1,4 +1,4 @@
-import { apps } from "./apps";
+import { apps } from "../data/apps";
 
 import { appStates } from "../schema";
 import { getDb, initializeDatabase } from "../client";

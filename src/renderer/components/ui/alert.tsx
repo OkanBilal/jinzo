@@ -40,11 +40,7 @@ export default function Alert({
       style={{
         animation: "scaleIn 150ms ease-out",
       }}
-        className="rounded-3xl p-6
-    bg-linear-to-b from-white/70 to-primary-50/60 dark:from-primary-900/80 dark:to-primary-900/20 
-    backdrop-blur-[20px] saturate-180  border border-white/40 dark:border-white/8 
-    shadow-[0_2px_8px_rgba(0,0,0,0.08),0_4px_16px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.8)] 
-    dark:shadow-[0_2px_8px_rgba(0,0,0,0.25),0_4px_16px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.16)] max-w-75 w-full"
+        className="rounded-3xl p-6 glass-morphism max-w-75 w-full"
         onClick={(e) => e.stopPropagation()}
       >
         <Body className="text-primary-900 dark:text-primary-100 font-semibold mb-4 ">

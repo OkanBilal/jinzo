@@ -7,16 +7,18 @@ interface SidebarFooterProps {
   moods: Mood[];
   activeMoodId: string | null;
   onMoodChange: (moodId: string) => void;
+  onMoodContextMenu?: (mood: Mood, event: React.MouseEvent) => void;
   onSettingsClick: () => void;
-  onCreateMoodClick: () => void;
+  onPlusClick: (event: React.MouseEvent) => void;
 }
 
 export function SidebarFooter({
   moods,
   activeMoodId,
   onMoodChange,
+  onMoodContextMenu,
   onSettingsClick,
-  onCreateMoodClick,
+  onPlusClick,
 }: SidebarFooterProps) {
   return (
     <div
@@ -39,12 +41,13 @@ export function SidebarFooter({
             moods={moods}
             activeMoodId={activeMoodId}
             onMoodChange={onMoodChange}
+            onContextMenu={onMoodContextMenu}
           />
         </div>
         <div>
           <button
-            onClick={onCreateMoodClick}
-            className=" cursor-pointer transition-transform duration-300  hover:rotate-90"
+            onClick={onPlusClick}
+            className=" cursor-pointer transition-transform duration-300  hover:rotate-45"
             aria-label="Create new mood"
             title="Create new mood"
           >

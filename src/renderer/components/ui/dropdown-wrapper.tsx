@@ -12,6 +12,7 @@ interface DropdownWrapperProps {
   usePortal?: boolean;
   triggerRef?: React.RefObject<HTMLElement | null>;
   dropdownRef?: React.RefObject<HTMLDivElement | null>;
+  useFixedBackground?: boolean;
 }
 
 export default function DropdownWrapper({
@@ -23,6 +24,7 @@ export default function DropdownWrapper({
   usePortal = false,
   triggerRef,
   dropdownRef: externalDropdownRef,
+  useFixedBackground = false,
 }: DropdownWrapperProps) {
   const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
   const internalDropdownRef = useRef<HTMLDivElement>(null);
@@ -47,25 +49,30 @@ export default function DropdownWrapper({
 
   // Get background color from active mood theme
   const getDropdownBackground = () => {
+    // If using fixed background, return the glassmorphism gradient matching the chat input
+    if (useFixedBackground) {
+      return undefined; // Will use CSS class instead
+    }
+
     // First check if we're in preview mode (create mood view)
     const appRoot = document.querySelector('.app-root') as HTMLElement;
     const previewBg = appRoot ? getComputedStyle(appRoot).getPropertyValue('--mood-preview-bg').trim() : '';
     if (previewBg) {
       return previewBg;
     }
-    
+
     if (!activeMood?.themeConfig) {
       return darkMode ? 'rgb(17 24 39 / 0.95)' : 'rgb(255 255 255 / 0.95)';
     }
-    
+
     try {
       const themeConfig = JSON.parse(activeMood.themeConfig);
       const bgColor = darkMode ? themeConfig.darkBackground : themeConfig.lightBackground;
-      
+
       if (!bgColor) {
         return darkMode ? 'rgb(17 24 39 / 0.95)' : 'rgb(255 255 255 / 0.95)';
       }
-      
+
       // For gradients, return as is; for solid colors, remove opacity to prevent transparency
       if (bgColor.startsWith('linear-gradient')) {
         return bgColor;
@@ -77,6 +84,11 @@ export default function DropdownWrapper({
       return darkMode ? 'rgb(17 24 39 / 0.95)' : 'rgb(255 255 255 / 0.95)';
     }
   };
+
+  // Fixed background class matching chat input style
+  const fixedBackgroundClass = useFixedBackground
+    ? "bg-linear-to-b from-white/90 to-primary-50/80 dark:from-primary-900/95 dark:to-primary-900/80"
+    : "";
 
   if (!isOpen) return null;
   
@@ -102,7 +114,7 @@ export default function DropdownWrapper({
   const dropdown = (
     <div
       ref={dropdownRef}
-      className={`${usePortal ? "fixed" : "absolute"} ${!usePortal ? positionClass : ""} ${!usePortal ? verticalClass : ""} ${minWidth} ${originClass} z-100 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-xl shadow-lg transition-all`}
+      className={`${usePortal ? "fixed" : "absolute"} ${!usePortal ? positionClass : ""} ${!usePortal ? verticalClass : ""} ${minWidth} ${originClass} ${fixedBackgroundClass} z-100 glass-morphism rounded-xl transition-all`}
       style={{
         background: getDropdownBackground(),
         ...(usePortal && coords ? {

@@ -18,7 +18,7 @@ import { useThinkingConfig } from "@/features/chat/hooks/use-thinking-config";
 import { useModelCapabilities } from "@/features/chat/hooks/use-model-capabilities";
 import { getModelIcon } from "@/lib/model-icons";
 
-export function usePanelConfig() {
+export function useRightPanelConfig() {
   const dispatch = useAppDispatch();
   const selectedModel = useAppSelector((state) => state.chat.selectedModel);
   const thinkingLevel = useAppSelector((state) => state.chat.thinkingLevel);

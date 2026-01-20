@@ -30,6 +30,7 @@ export default function CreateMoodView({
   const [selectedColorIndex, setSelectedColorIndex] = useState(0);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [showGradients, setShowGradients] = useState(false);
+  const [systemPrompt, setSystemPrompt] = useState("");
 
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const originalBackgroundColor = useRef<string>("");
@@ -87,6 +88,7 @@ export default function CreateMoodView({
         name: name.trim(),
         icon: iconValue,
         themeConfig,
+        systemPrompt: systemPrompt.trim() || undefined,
       }).unwrap();
 
       // Switch to the newly created mood
@@ -170,12 +172,12 @@ export default function CreateMoodView({
             onChange={(e) => setName(e.target.value)}
             placeholder="Mood name..."
             className="w-full px-3 py-2 border-0! shadow-none!
-              bg-primary-950/10! dark:bg-primary/4 
+              bg-primary-950/10! dark:bg-primary/4
               dark:placeholder:text-primary-100!
               placeholder:text-primary-700!
               text-primary-800 dark:text-primary
-              text-sm focus:outline-none 
-              flex items-center justify-between 
+              text-sm focus:outline-none
+              flex items-center justify-between
               transition-all
             dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]"
             autoFocus
@@ -353,85 +355,137 @@ export default function CreateMoodView({
           )}
         </div>
 
-        {/* Theme Selector - Apple Style */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Text className="text-xs text-primary-500 dark:text-primary-400">
-              {showGradients ? "Gradients" : "Solid Colors"}
-            </Text>
-            <button
-              type="button"
-              onClick={() => {
-                setShowGradients(!showGradients);
-                setSelectedColorIndex(0); // Reset selection when switching categories
-              }}
-              className="text-xs text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              {showGradients ? (
-                <>
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 19l-7-7 7-7"
-                    />
-                  </svg>
-                  Solid
-                </>
-              ) : (
-                <>
-                  Gradient
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </>
-              )}
-            </button>
-          </div>
-          <div
-            className="flex items-center justify-between p-3 rounded-xl gap-2
-              bg-primary-950/5 dark:bg-primary/4 border-primary-950/10 dark:border-primary/10
+        {/* System Prompt */}
+        <div className="space-y-2">
+          <Text className="text-xs text-primary-500 dark:text-primary-400">
+            System Prompt
+          </Text>
+          <textarea
+            value={systemPrompt}
+            onChange={(e) => setSystemPrompt(e.target.value)}
+            placeholder="Enter a system prompt to customize AI behavior..."
+            rows={4}
+            className="w-full px-3 py-2 border-0 shadow-none resize-none
+              bg-primary-950/10 dark:bg-primary/4
+              placeholder:text-primary-700 dark:placeholder:text-primary-100
               text-primary-800 dark:text-primary
-              text-sm focus:outline-none 
-              transition-all
-              shadow-[inset_0_0.5px_0_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]"
+              text-sm focus:outline-none
+              rounded-xl transition-all
+              dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]"
+          />
+        </div>
+
+        {/* Theme Selector - Animated Slide */}
+        <div
+          className="rounded-xl overflow-hidden
+            bg-primary-950/5 dark:bg-primary/4
+            shadow-[inset_0_0.5px_0_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]"
+        >
+          <div
+            className="flex transition-transform duration-300 ease-in-out"
+            style={{ transform: showGradients ? "translateX(-100%)" : "translateX(0)" }}
           >
-            {currentColors.map((colorPair, index) => {
-              const variant = getThemeVariant(colorPair, darkMode);
-              return (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => handlePresetColor(index)}
-                  className={`
-                    w-5 h-5 rounded-full transition-all duration-200 cursor-pointer
-                    ${
-                      selectedColorIndex === index
-                        ? "ring-2 ring-primary ring-offset-1 ring-offset-primary-900 scale-110"
-                        : "hover:scale-110"
-                    }
-                  `}
-                  style={{ background: variant.preview }}
-                  title={colorPair.name}
-                />
-              );
-            })}
+            {/* Solid Colors Row */}
+            <div className="flex items-center gap-2 p-3 min-w-full">
+              {solidColors.map((colorPair, index) => {
+                const variant = getThemeVariant(colorPair, darkMode);
+                return (
+                  <button
+                    key={`solid-${index}`}
+                    type="button"
+                    onClick={() => {
+                      if (!showGradients) {
+                        handlePresetColor(index);
+                      }
+                    }}
+                    className={`
+                      w-5 h-5 rounded-full transition-all duration-200 cursor-pointer shrink-0
+                      ${
+                        !showGradients && selectedColorIndex === index
+                          ? "ring-2 ring-primary ring-offset-1 ring-offset-primary-900 scale-110"
+                          : "hover:scale-110"
+                      }
+                    `}
+                    style={{ background: variant.preview }}
+                    title={colorPair.name}
+                  />
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGradients(true);
+                  setSelectedColorIndex(0);
+                }}
+                className="ml-auto shrink-0 p-1 rounded-lg hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
+                title="Show Gradients"
+              >
+                <svg
+                  className="w-4 h-4 text-primary-500 dark:text-primary-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Gradient Colors Row */}
+            <div className="flex items-center gap-2 p-3 min-w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGradients(false);
+                  setSelectedColorIndex(0);
+                }}
+                className="shrink-0 p-1 rounded-lg hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
+                title="Show Solid Colors"
+              >
+                <svg
+                  className="w-4 h-4 text-primary-500 dark:text-primary-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
+              {gradientColors.map((colorPair, index) => {
+                const variant = getThemeVariant(colorPair, darkMode);
+                return (
+                  <button
+                    key={`gradient-${index}`}
+                    type="button"
+                    onClick={() => {
+                      if (showGradients) {
+                        handlePresetColor(index);
+                      }
+                    }}
+                    className={`
+                      w-5 h-5 rounded-full transition-all duration-200 cursor-pointer shrink-0
+                      ${
+                        showGradients && selectedColorIndex === index
+                          ? "ring-2 ring-primary ring-offset-1 ring-offset-primary-900 scale-110"
+                          : "hover:scale-110"
+                      }
+                    `}
+                    style={{ background: variant.preview }}
+                    title={colorPair.name}
+                  />
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

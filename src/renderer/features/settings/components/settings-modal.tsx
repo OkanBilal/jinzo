@@ -81,10 +81,10 @@ export default function SettingsModal({
   };
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 ">
       <ModalBackdrop onClick={onClose} />
       <ModalContent onClose={onClose}>
-        <div className="flex h-full w-full">
+        <div className="flex h-full w-full glass-morphism">
           <Sidebar
             activeSection={activeSection}
             onSectionChange={setActiveSection}
@@ -162,8 +162,8 @@ function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   ];
 
   return (
-    <div className="w-56 shrink-0 bg-primary-100 dark:bg-primary-950 p-4 pt-16 overflow-y-auto">
-      <nav className="space-y-1">
+    <div className="w-56 shrink-0  p-4 pt-16 overflow-y-auto ">
+      <nav className="space-y-1 ">
         {menuItems.map((item) => {
           const IconComponent = item.icon;
           const isActive = activeSection === item.id;
@@ -173,8 +173,8 @@ function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               onClick={() => onSectionChange(item.id)}
               className={`w-full cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-colors flex items-center gap-3 ${
                 isActive
-                  ? "bg-primary-50 dark:bg-primary-800 text-primary-900 dark:text-primary-200"
-                  : "text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900"
+                  ? " text-primary-900 dark:text-primary-200"
+                  : "text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-950"
               }`}
             >
               {IconComponent ? (

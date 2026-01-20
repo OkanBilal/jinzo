@@ -6,12 +6,14 @@ interface MoodSelectorProps {
   moods: Mood[];
   activeMoodId: string | null;
   onMoodChange: (moodId: string) => void;
+  onContextMenu?: (mood: Mood, event: React.MouseEvent) => void;
 }
 
 function MoodSelector({
   moods,
   activeMoodId,
   onMoodChange,
+  onContextMenu,
 }: MoodSelectorProps) {
   return (
     <div className="flex items-center gap-1 overflow-x-auto noscrollbar px-1">
@@ -32,11 +34,15 @@ function MoodSelector({
       {moods.map((mood) => {
         const icon = parseIcon(mood.icon);
         const isActive = activeMoodId === mood.id;
-        
+
         return (
           <button
             key={mood.id}
             onClick={() => onMoodChange(mood.id)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              onContextMenu?.(mood, e);
+            }}
             className={`shrink-0 flex items-center justify-center size-8 hover:bg-primary-100/30 rounded-lg p-1 transition-all duration-300 cursor-pointer ${
               isActive
                 ? "text-primary-500 dark:text-primary-200"

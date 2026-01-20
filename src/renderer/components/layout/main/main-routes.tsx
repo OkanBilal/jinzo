@@ -3,7 +3,7 @@ import Home from "@/routes/Home";
 import Chat from "@/routes/Chat";
 import Doc from "@/routes/Doc";
 
-export function AppRoutes() {
+export function MainRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />

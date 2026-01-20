@@ -1,26 +1,25 @@
 import { useState, useEffect } from "react";
-import { Config, ConfigClose } from "@/components/ui/icons";
-import { Heading3 } from "@/components/ui/text";
+import { RightPanelClose, RightPanelOpen } from "@/components/ui/icons";
 import { FrostedButton } from "@/components/ui/button";
-import { useActiveMood } from "@/hooks/useActiveMood";
-import { PanelContent } from "./panel-content";
+import { useLayoutConfig } from "@/hooks/useLayoutConfig";
+import { ConfigContent } from "./config-content";
 import { JournalContent } from "./journal-content";
 
 const FADE_IN_DELAY = 50;
 
-interface ConfigPanelProps {
+interface RightPanelProps {
   isOpen: boolean;
   onToggle: (open: boolean) => void;
   width?: string;
 }
 
-export default function ConfigPanel({
+export default function RightPanel({
   isOpen,
   onToggle,
-  width = "40rem",
-}: ConfigPanelProps) {
+  width = "0rem",
+}: RightPanelProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const { isJournalMood } = useActiveMood();
+  const { rightPanelComponent } = useLayoutConfig();
 
   const handleToggle = () => onToggle(!isOpen);
 
@@ -38,15 +37,11 @@ export default function ConfigPanel({
 
   return (
     <>
-      <ToggleButton
-        isOpen={isOpen}
-        width={width}
-        onClick={handleToggle}
-      />
+      <ToggleButton isOpen={isOpen} width={width} onClick={handleToggle} />
       <Panel
         isVisible={isVisible}
         width={width}
-        isJournalMood={isJournalMood}
+        component={rightPanelComponent}
       />
     </>
   );
@@ -73,12 +68,12 @@ function ToggleButton({ isOpen, width, onClick }: ToggleButtonProps) {
             } as React.CSSProperties)
           : ({ top: "1.75rem", right: "1.25rem" } as React.CSSProperties)
       }
-      aria-label={isOpen ? "Close configuration" : "Open configuration"}
+      aria-label={isOpen ? "Close right panel" : "Open right panel"}
     >
       {isOpen ? (
-        <ConfigClose className="w-4.5 h-4.5" />
+        <RightPanelClose className="w-4.5 h-4.5" />
       ) : (
-        <Config className="w-4.5 h-4.5" />
+        <RightPanelOpen className="w-4.5 h-4.5" />
       )}
     </FrostedButton>
   );
@@ -87,10 +82,17 @@ function ToggleButton({ isOpen, width, onClick }: ToggleButtonProps) {
 interface PanelProps {
   isVisible: boolean;
   width: string;
-  isJournalMood: boolean;
+  component: string;
 }
 
-function Panel({ isVisible, width, isJournalMood }: PanelProps) {
+const PANEL_COMPONENTS: Record<string, React.ComponentType> = {
+  config: ConfigContent,
+  journal: JournalContent,
+};
+
+function Panel({ isVisible, width, component }: PanelProps) {
+  const PanelContent = PANEL_COMPONENTS[component] || ConfigContent;
+
   return (
     <div
       className={`block fixed top-0 bottom-0 right-0 overflow-hidden transition-all duration-300 ease-out bg-transparent ${
@@ -102,14 +104,9 @@ function Panel({ isVisible, width, isJournalMood }: PanelProps) {
         zIndex: isVisible ? 50 : -10,
       }}
       role="complementary"
-      aria-label="Configuration panel"
+      aria-label="Right panel"
     >
-      {!isJournalMood && (
-        <div className="flex items-center justify-between px-4 pt-6 ">
-          <Heading3>Configuration</Heading3>
-        </div>
-      )}
-      {isJournalMood ? <JournalContent /> : <PanelContent />}
+      <PanelContent />
     </div>
   );
 }

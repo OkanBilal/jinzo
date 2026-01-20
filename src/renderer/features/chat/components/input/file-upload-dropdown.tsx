@@ -96,7 +96,11 @@ export default function FileUploadDropdown({
         </div>
       ))}
 
-      <DropdownWrapper isOpen={isOpen} openUpward={openUpward}>
+      <DropdownWrapper
+        isOpen={isOpen}
+        openUpward={openUpward}
+        useFixedBackground={true}
+      >
         {[
           { label: "Images", Icon: Picture, onClick: onImageUpload },
           { label: "Documents", Icon: Document, onClick: onDocumentUpload },
@@ -106,7 +110,7 @@ export default function FileUploadDropdown({
             type="button"
             onClick={onClick}
             role="menuitem"
-            className="flex w-full text-left text-sm first:rounded-t-xl last:rounded-b-xl items-center px-2.5 py-2.5 hover:bg-primary-100 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-200 cursor-pointer"
+            className="flex w-full text-left text-sm first:rounded-t-xl last:rounded-b-xl items-center px-2.5 py-2.5 hover:bg-primary-100 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100 cursor-pointer"
           >
             <Icon className="mr-2 w-4 h-4" />
             {label}

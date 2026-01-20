@@ -32,6 +32,7 @@ export default function AppMentionDropdown({
         isOpen={isOpen}
         openUpward={openUpward}
         minWidth="min-w-64"
+        useFixedBackground={true}
       >
         {connectedApps.length === 0 ? (
           <div className="px-4 py-3 text-sm text-primary-500 dark:text-primary-400">
