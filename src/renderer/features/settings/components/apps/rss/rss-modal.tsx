@@ -13,6 +13,7 @@ import {
   WarningButton,
   DangerButton,
   LinkButton,
+  SecondaryButton,
 } from "../../../../../components/ui/button";
 import {
   useLazyGetRssStatusQuery,
@@ -461,9 +462,9 @@ function ManageFeedsStep({
         <Muted>
           {feeds.length} {feeds.length === 1 ? "feed" : "feeds"} connected
         </Muted>
-        <PrimaryButton onClick={onAddNew} disabled={loading} size="sm">
+        <SecondaryButton onClick={onAddNew} disabled={loading} size="sm">
           Add Feed
-        </PrimaryButton>
+        </SecondaryButton>
       </div>
 
       <div className="max-h-52 overflow-y-auto border border-primary-200 dark:border-primary-800 rounded-xl">
