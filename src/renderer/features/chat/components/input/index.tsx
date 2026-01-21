@@ -4,7 +4,7 @@ import SettingsModal from "../../../../features/settings/components/settings-mod
 import { useSpeechRecognition } from "../../../../features/chat/hooks/use-speech-recognition";
 import { useClickOutside } from "../../../../hooks/use-click-outside";
 import { useEscapeKey } from "../../../../hooks/use-escape-key";
-import { useGetOllamaModelsQuery } from "../../../../lib/redux/api";
+import { useGetOllamaModelsQuery, useUpdateChatConfigMutation } from "../../../../lib/redux/api";
 import { useAppDispatch, useAppSelector } from "../../../../lib/redux/hooks";
 import {
   setSelectedModel,
@@ -40,6 +40,7 @@ export default function ChatInput({
   const model = useAppSelector((state) => state.chat.selectedModel);
   // const toolMode = useAppSelector((state) => state.chat.toolMode);
   const { data: modelsData } = useGetOllamaModelsQuery();
+  const [updateConfig] = useUpdateChatConfigMutation();
   const models = modelsData?.models || [];
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
@@ -64,6 +65,7 @@ export default function ChatInput({
 
   const handleModelChange = (newModel: string) => {
     dispatch(setSelectedModel(newModel));
+    updateConfig({ selectedModel: newModel });
   };
 
   useClickOutside(dropdownRef, () => setIsDropdownOpen(false));

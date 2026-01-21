@@ -6,7 +6,7 @@ import { BrowserWindow } from "electron";
 import {
   getCurrentEditingJournalId,
   type JournalMetadata,
-} from "../../../../main/ipc/journalHandlers";
+} from "../../../../main/ipc/journal";
 
 const JOURNAL_KIND = "journal_entry";
 

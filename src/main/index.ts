@@ -1,20 +1,29 @@
 import { app } from "electron";
 import { initializeDatabase, closeDatabase } from "./db/client";
-import { registerDatabaseHandlers, unregisterDatabaseHandlers } from "./ipc/databaseHandlers";
-import { registerAccountHandlers } from "./ipc/accountHandlers";
-import { registerAppsHandlers } from "./ipc/appsHandlers";
-import { registerChatHandlers } from "./ipc/chatHandlers";
-import { registerSyncHandlers } from "./ipc/syncHandlers";
-import { registerFeedHandlers, unregisterFeedHandlers } from "./ipc/feedHandlers";
-import { registerEntitiesHandlers, unregisterEntitiesHandlers } from "./ipc/entitiesHandlers";
-import { registerMcpHandlers } from "./ipc/mcpHandlers";
-import { registerOllamaHandlers } from "./ipc/ollamaHandlers";
-import { registerConnectionCredentialsHandlers } from "./ipc/connectionCredentialsHandlers";
-import { registerConnectionsHandlers } from "./ipc/connectionsHandlers";
-import { registerSeedHandlers } from "./ipc/seedHandlers";
-import { registerMoodHandlers } from "./ipc/moodHandlers";
-import { registerAppSettingsHandlers } from "./ipc/appSettingsHandlers";
-import { registerJournalHandlers, unregisterJournalHandlers } from "./ipc/journalHandlers";
+import {
+  registerDatabaseHandlers,
+  unregisterDatabaseHandlers,
+} from "./ipc/database";
+import { registerAccountHandlers } from "./ipc/account";
+import { registerAppsHandlers } from "./ipc/apps";
+import { registerChatHandlers, unregisterChatHandlers } from "./ipc/chat";
+import { registerSyncHandlers } from "./ipc/sync";
+import { registerFeedHandlers, unregisterFeedHandlers } from "./ipc/feed";
+import {
+  registerEntitiesHandlers,
+  unregisterEntitiesHandlers,
+} from "./ipc/entities";
+import { registerMcpHandlers } from "./ipc/mcp";
+import { registerOllamaHandlers } from "./ipc/ollama";
+import { registerConnectionCredentialsHandlers } from "./ipc/connectionCredentials";
+import { registerConnectionsHandlers } from "./ipc/connections";
+import { registerSeedHandlers } from "./ipc/seed";
+import { registerMoodHandlers } from "./ipc/mood";
+import { registerAppSettingsHandlers } from "./ipc/appSettings";
+import {
+  registerJournalHandlers,
+  unregisterJournalHandlers,
+} from "./ipc/journal";
 import { createMainWindow } from "./windows/mainWindow";
 
 /**
@@ -64,16 +73,17 @@ async function initializeApp() {
 async function cleanupApp() {
   try {
     console.log("Cleaning up application...");
-    
+
     // Unregister IPC handlers
     unregisterDatabaseHandlers();
     unregisterFeedHandlers();
     unregisterEntitiesHandlers();
     unregisterJournalHandlers();
-    
+    unregisterChatHandlers();
+
     // Close database
     await closeDatabase();
-    
+
     console.log("Application cleanup completed");
   } catch (error) {
     console.error("Error during cleanup:", error);
