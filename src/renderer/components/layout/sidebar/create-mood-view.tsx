@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import Text, { Heading3 } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
 import { useCreateMoodMutation, useSetActiveMoodMutation } from "@/lib/redux/api";
-import { toast } from "sonner";
+import { toast } from "@/components/toast";
 import { EmojiPicker } from "frimousse";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useDarkMode } from "@/hooks/useDarkMode";

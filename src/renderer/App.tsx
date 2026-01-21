@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { HashRouter as Router } from "react-router-dom";
-import { Toaster } from "sonner";
 import { ReduxProvider } from "./components/providers/redux-provider";
+import { Toaster } from "./components/toast";
 import FrostedSidebar from "./components/layout/sidebar";
 import ConfigPanel from "./components/layout/right-panel";
 import {
@@ -19,9 +19,9 @@ function AppContent() {
   return (
     <Router>
       <MoodChangeHandler />
+      <Toaster />
       <MainLayout>
         <FrostedSidebar />
-        <Toaster richColors position="top-right" />
         <MainContent
           marginLeft={mainMarginLeft}
           marginRight={isConfigOpen ? rightPanelWidth : "0.5rem"}

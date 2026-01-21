@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/toast";
 
 import { Button } from "../../../components/ui/button";
 import { Input, Textarea } from "../../../components/ui/input";

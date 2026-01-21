@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Heading3 } from "@/components/ui/text";
 import { useCreateMoodMutation, useSetActiveMoodMutation } from "@/lib/redux/api";
-import { toast } from "sonner";
+import { toast } from "@/components/toast";
 import { useDarkMode } from "@/hooks/useDarkMode";
 import {
   solidColors,
@@ -9,7 +9,7 @@ import {
   getThemeVariant,
 } from "@/lib/mood-themes";
 import { parseIcon } from "@/lib/icon-registry";
-import { predefinedMoods, type PredefinedMood } from "./predefined-moods";
+import { predefinedMoods, type PredefinedMood } from "@/lib/predefined-moods";
 
 interface PresetMoodsViewProps {
   onClose: () => void;
@@ -74,7 +74,7 @@ export default function PresetMoodsView({
         </p>
       </div>
 
-      <div className="flex-1 px-4 overflow-y-auto noscrollbar">
+      <div className="flex-1 px-4 py-2 noscrollbar">
         <div className="grid grid-cols-2 gap-3">
           {predefinedMoods.map((template) => {
             const templateIcon = parseIcon(template.icon);
@@ -88,9 +88,9 @@ export default function PresetMoodsView({
                 key={template.id}
                 type="button"
                 onClick={() => setSelectedTemplate(template)}
-                className={`flex flex-col items-center gap-2 p-4 rounded-2xl transition-all cursor-pointer
+                className={`flex flex-col items-center gap-2 p-2 rounded-2xl transition-all cursor-pointer
                   ${isSelected
-                    ? "ring-2 ring-primary ring-offset-2 ring-offset-transparent scale-[1.02]"
+                    ? ""
                     : "hover:scale-[1.02]"
                   }`}
                 style={{ background: templateVariant.preview }}
@@ -101,7 +101,10 @@ export default function PresetMoodsView({
                   ) : (
                     (() => {
                       const IconComp = templateIcon.value as React.ComponentType<{ className?: string }>;
-                      return <IconComp className="size-7 text-primary-800 dark:text-primary" />;
+                      const iconColorClass = template.name === "Claude" 
+                        ? "text-[#D97757] dark:text-primary"
+                        : "text-primary-800 dark:text-primary";
+                      return <IconComp className={`size-6 ${iconColorClass}`} />;
                     })()
                   )}
                 </span>

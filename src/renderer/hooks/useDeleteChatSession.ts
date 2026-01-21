@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useDeleteChatSessionMutation, ChatSession } from "@/lib/redux/api";
-import { toast } from "sonner";
+import { toast } from "@/components/toast";
 
 export function useDeleteChatSession() {
   const [sessionToDelete, setSessionToDelete] = useState<ChatSession | null>(null);
@@ -14,13 +14,17 @@ export function useDeleteChatSession() {
 
   const handleConfirmDelete = async () => {
     if (!sessionToDelete) return;
+    const deletePromise = deleteChatSession(sessionToDelete.id).unwrap();
+    toast.promise(deletePromise, {
+      loading: "Deleting chat…",
+      success: "Chat deleted",
+      error: "Delete failed",
+    });
     try {
-      await deleteChatSession(sessionToDelete.id).unwrap();
-      toast.success("Chat deleted");
+      await deletePromise;
       setSessionToDelete(null);
     } catch (error) {
       console.error("Failed to delete chat:", error);
-      toast.error("Failed to delete chat");
     }
   };
 

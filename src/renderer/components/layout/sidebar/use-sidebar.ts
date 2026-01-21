@@ -11,7 +11,7 @@ import {
   useDeleteJournalMutation,
   type Mood,
 } from "@/lib/redux/api";
-import { toast } from "sonner";
+import { toast } from "@/components/toast";
 import { useActiveMood } from "@/hooks/useActiveMood";
 import { useSidebarConfig } from "@/hooks/useSidebarConfig";
 import { useDeleteChatSession } from "@/hooks/useDeleteChatSession";

@@ -25,20 +25,19 @@ export default function Alert({
 }: AlertProps) {
   if (!isOpen) return null;
 
-
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 "
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 "
       onClick={onSecondary}
     >
       <div
-      style={{
-        animation: "scaleIn 150ms ease-out",
-      }}
-        className="rounded-3xl p-6 glass-morphism max-w-75 w-full"
+        style={{
+          animation: "scaleIn 150ms ease-out",
+        }}
+        className="rounded-3xl px-7 py-6 glass-morphism max-w-80 w-full"
         onClick={(e) => e.stopPropagation()}
       >
-        <Body className="text-primary-900 dark:text-primary-100 font-semibold mb-4 ">
+        <Body className="text-primary-900 dark:text-primary-100 font-semibold mb-3 ">
           {title}
         </Body>
         <Text className="text-primary-700 text-2xl dark:text-primary-400 ">
@@ -47,19 +46,21 @@ export default function Alert({
         <div className="flex gap-3 mt-4">
           <Button
             className="flex-1 rounded-full!"
-            variant="secondary"
-            onClick={onSecondary}
-            disabled={isPrimaryLoading}
-          >
-            {secondaryButtonText}
-          </Button>
-          <Button
-            className="flex-1 rounded-full!"
             variant="danger"
+            size="sm"
             onClick={onPrimary}
             disabled={isPrimaryLoading}
           >
             {isPrimaryLoading ? "Loading..." : primaryButtonText}
+          </Button>
+          <Button
+            className="flex-1 rounded-full!"
+            variant="secondary"
+            size="sm"
+            onClick={onSecondary}
+            disabled={isPrimaryLoading}
+          >
+            {secondaryButtonText}
           </Button>
         </div>
       </div>
