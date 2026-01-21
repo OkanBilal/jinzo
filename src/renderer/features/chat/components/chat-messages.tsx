@@ -1,9 +1,8 @@
 import { forwardRef, useEffect, useRef } from "react";
-import { LoadingIndicator } from "./loading-indicator";
 import { ChatMessage, ChatMessageComponent } from "./chat-message";
 
 const ChatMessages = forwardRef<HTMLUListElement, ChatMessagesProps>(
-  ({ messages, isLoading }, ref) => {
+  ({ messages}, ref) => {
     const prevCountRef = useRef<number>(messages.length);
     useEffect(() => {
       const countChanged = messages.length !== prevCountRef.current;

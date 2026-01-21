@@ -2,8 +2,8 @@ import { useState, useRef, useMemo, useEffect } from "react";
 
 import SettingsModal from "../../../../features/settings/components/settings-modal";
 import { useSpeechRecognition } from "../../../../features/chat/hooks/use-speech-recognition";
-import { useClickOutside } from "../../../../features/chat/hooks/use-click-outside";
-import { useEscapeKey } from "../../../../features/chat/hooks/use-escape-key";
+import { useClickOutside } from "../../../../hooks/use-click-outside";
+import { useEscapeKey } from "../../../../hooks/use-escape-key";
 import { useGetOllamaModelsQuery } from "../../../../lib/redux/api";
 import { useAppDispatch, useAppSelector } from "../../../../lib/redux/hooks";
 import {
@@ -11,14 +11,12 @@ import {
   //setToolMode
 } from "../../../../lib/redux/slices/chatSlice";
 import AppMentionDropdown from "../../../../features/chat/components/input/app-mention-dropdown";
-import ConnectAppsDropdown from "../../../../features/chat/components/input/connect-apps-dropdown";
 import DictationButton from "../../../../features/chat/components/input/dictation-button";
 import FileUploadDropdown, {
   FILE_TYPES,
 } from "../../../../features/chat/components/input/file-upload-dropdown";
 import InputForm from "../../../../features/chat/components/input/input-form";
 import ModelSelectDropdown from "../../../../features/chat/components/input/model-select-dropdown";
-//import McpToggleButton from "@/features/chat/components/input/mcp-toggle-button";
 import SendButton from "./send-button";
 import { ChatInputProps, AppState, UploadedFile } from "./types";
 import { Apps } from "@/components/ui/icons";
@@ -33,7 +31,6 @@ export default function ChatInput({
   onSubmit,
   placeholder = DEFAULT_PLACEHOLDER,
   loading = false,
-  isChatPage = false,
   selectedApp,
   onSelectedAppChange,
   className,
@@ -46,7 +43,7 @@ export default function ChatInput({
   const models = modelsData?.models || [];
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
-  const [isAppsDropdownOpen, setIsAppsDropdownOpen] = useState(false);
+  const [, setIsAppsDropdownOpen] = useState(false);
   const [isAppsModalOpen, setIsAppsModalOpen] = useState(false);
   const [isAppMentionOpen, setIsAppMentionOpen] = useState(false);
   const [appSearchTerm, setAppSearchTerm] = useState("");
@@ -133,17 +130,6 @@ export default function ChatInput({
     }
   };
 
-  const handleClearSelectedApp = () => {
-    if (onSelectedAppChange) {
-      onSelectedAppChange(null);
-    }
-    if (selectedApp && query.includes(`@${selectedApp.displayName}`)) {
-      const newQuery = query.replace(`@${selectedApp.displayName}`, "").trim();
-      onQueryChange(newQuery);
-    }
-  };
-
-  const toggleAppsDropdown = () => setIsAppsDropdownOpen((v) => !v);
   const openAppsModal = () => {
     setIsAppsDropdownOpen(false);
     setIsAppsModalOpen(true);

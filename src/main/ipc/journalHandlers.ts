@@ -84,27 +84,12 @@ function computeWordCount(text: string | null | undefined): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-function deriveTitle(body: string | null | undefined, existingTitle: string | null): string {
-  if (!body) return existingTitle || "Untitled";
-
-  // Get first non-empty line
-  const lines = body.split("\n");
-  for (const line of lines) {
-    const trimmed = line.trim();
-    // Strip markdown heading markers
-    const cleaned = trimmed.replace(/^#+\s*/, "").trim();
-    if (cleaned) {
-      return cleaned.slice(0, 100); // Limit title length
-    }
-  }
-  return existingTitle || "Untitled";
-}
 
 function deriveSummary(body: string | null | undefined): string {
   if (!body) return "";
 
   // Simple markdown stripping - remove common markdown syntax
-  let text = body
+  const text = body
     .replace(/^#+\s*/gm, "") // headings
     .replace(/\*\*([^*]+)\*\*/g, "$1") // bold
     .replace(/\*([^*]+)\*/g, "$1") // italic

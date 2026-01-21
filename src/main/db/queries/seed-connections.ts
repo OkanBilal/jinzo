@@ -18,7 +18,7 @@ async function ensureConnectionExists(
   displayName: string,
   type: string,
   defaultStatus: "active" | "revoked" | "error" | "disabled",
-  metadata: any
+  metadata: unknown
 ) {
   const existing = await db.query.connections.findFirst({
     where: eq(connections.provider, provider),

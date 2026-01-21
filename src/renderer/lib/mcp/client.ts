@@ -13,11 +13,11 @@ export class FeedMCPClient {
     try {
       // Check if it's a sync tool
       if (toolName === 'trigger_entity_sync' || toolName === 'trigger_feed_sync') {
-        return await executeSyncTool(toolName, params);
+        return await executeSyncTool(toolName);
       }
       // Check if it's a mood tool
       if (toolName === 'switch_to_journal_mood' || toolName === 'switch_to_chat_mood') {
-        return await executeMoodTool(toolName, params);
+        return await executeMoodTool(toolName);
       }
       // Check if it's a journal tool
       if (toolName === 'append_to_journal') {

@@ -2,7 +2,7 @@ import { memo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Check, Clipboard } from "../../../components/ui/icons";
-import { useCopyToClipboard } from "../../../features/chat/hooks/use-copy-to-clipboard";
+import { useCopyToClipboard } from "../../../hooks/use-copy-to-clipboard";
 import { useIsUserMessage } from "../../../features/chat/hooks/use-is-user-message";
 import { StreamingText } from "./streaming-text";
 import { markdownComponents } from "./markdown-components";

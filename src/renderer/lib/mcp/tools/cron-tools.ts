@@ -6,7 +6,6 @@ import {
   createEntityChunkMap,
   processAndInsertEntities,
   createSuccessResult,
-  createFailureResult,
   createEmptyResult,
 } from "../../sync";
 
@@ -93,7 +92,6 @@ export const CRON_TOOLS = SYNC_TOOLS;
 
 export async function executeSyncTool(
   toolName: string,
-  params?: any
 ): Promise<any> {
   switch (toolName) {
     case "trigger_entity_sync":

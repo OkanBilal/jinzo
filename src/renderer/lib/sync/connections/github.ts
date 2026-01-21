@@ -185,8 +185,7 @@ export async function fetchPullRequests(
           repo: repoId,
           labels,
           state: pr.state,
-          draft: pr.draft,
-          mergeable: pr.mergeable,
+          draft: pr.draft ?? false,
         },
       };
     });
@@ -222,29 +221,25 @@ export async function fetchGitHubFromConnectionResources(
 
     const { owner, repo } = parsed;
 
-    try {
-      const issues = await fetchIssues(
-        owner,
-        repo,
-        issuesPerRepo,
-        connection.id,
-        resource.id,
-        connection.token
-      );
+    const issues = await fetchIssues(
+      owner,
+      repo,
+      issuesPerRepo,
+      connection.id,
+      resource.id,
+      connection.token
+    );
 
-      const prs = await fetchPullRequests(
-        owner,
-        repo,
-        prsPerRepo,
-        connection.id,
-        resource.id,
-        connection.token
-      );
+    const prs = await fetchPullRequests(
+      owner,
+      repo,
+      prsPerRepo,
+      connection.id,
+      resource.id,
+      connection.token
+    );
 
-      allItems.push(...issues, ...prs);
-    } catch (error) {
-      throw error;
-    }
+    allItems.push(...issues, ...prs);
   }
 
   return allItems;

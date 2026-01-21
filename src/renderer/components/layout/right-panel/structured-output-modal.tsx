@@ -166,7 +166,6 @@ interface PropertyRowProps {
 }
 
 function PropertyRow({ property, onUpdate, onRemove }: PropertyRowProps) {
-  const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
 
   const typeOptions = [
     { value: "string", label: "string" },

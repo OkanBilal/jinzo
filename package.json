@@ -19,7 +19,8 @@
     "db:clean:dev": "rm -f .data/jinzo.db .data/jinzo.db-shm .data/jinzo.db-wal && npm run db:push",
     "db:clean:runtime": "rm -f ~/Library/Application\\ Support/jinzo/jinzo.db ~/Library/Application\\ Support/jinzo/jinzo.db-shm ~/Library/Application\\ Support/jinzo/jinzo.db-wal && echo 'Runtime database cleaned. Restart the app to recreate.'",
     "db:clean:all": "npm run db:clean:dev && npm run db:clean:runtime",
-    "lint": "echo \"No linting configured\""
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix"
   },
   "keywords": [],
   "author": {
@@ -38,15 +39,22 @@
     "@electron-forge/plugin-vite": "^7.11.1",
     "@electron/fuses": "^1.8.0",
     "@electron/rebuild": "^4.0.2",
+    "@eslint/js": "^9.39.2",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "^10.4.23",
     "drizzle-kit": "^0.31.8",
     "electron": "40.0.0",
+    "eslint": "^9.39.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "globals": "^17.0.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "tsx": "^4.21.0",
+    "typescript-eslint": "^8.53.1",
     "vite": "^7.3.1"
   },
   "dependencies": {

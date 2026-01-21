@@ -54,9 +54,6 @@ export default function GeneralSettings() {
   const [error, setError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
-  const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
-  const [isTimezoneDropdownOpen, setIsTimezoneDropdownOpen] = useState(false);
-  const [isLocaleDropdownOpen, setIsLocaleDropdownOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);

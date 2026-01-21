@@ -54,7 +54,6 @@ function MoodSelector({
             {icon.type === "emoji" ? (
               <span className="text-lg font-medium">{icon.value as string}</span>
             ) : (
-              // @ts-ignore - Dynamic component
               <icon.value className="size-4.5" />
             )}
           </button>

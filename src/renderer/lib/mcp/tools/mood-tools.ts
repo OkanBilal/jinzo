@@ -213,7 +213,6 @@ export const MOOD_TOOLS: OllamaToolDefinition[] = [
 
 export async function executeMoodTool(
   toolName: string,
-  params?: any
 ): Promise<any> {
   switch (toolName) {
     case "switch_to_journal_mood":

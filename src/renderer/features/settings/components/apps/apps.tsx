@@ -51,8 +51,7 @@ export default function AppsSettings({
       setShowSpotifyModal(true);
     } else if (appId === "rss") {
       setShowRssModal(true);
-    } else {
-    }
+    } else { /* empty */ }
   };
 
   const connectedAppsList = apps.filter((app) => isConnected(app.id));

@@ -38,12 +38,15 @@ export default function SettingsModal({
   onRefresh,
 }: SettingsModalProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>(section);
+  const [prevOpen, setPrevOpen] = useState(open);
 
-  useEffect(() => {
-    if (open) {
-      setActiveSection(section);
-    }
-  }, [open, section]);
+  // Reset activeSection when modal opens (adjust state during render, not in effect)
+  if (open && !prevOpen) {
+    setPrevOpen(open);
+    setActiveSection(section);
+  } else if (!open && prevOpen) {
+    setPrevOpen(open);
+  }
 
   if (!open) return null;
 

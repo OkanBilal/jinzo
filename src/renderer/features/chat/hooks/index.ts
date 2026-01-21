@@ -5,3 +5,6 @@ export { useChatSession } from './use-chat-session';
 export { useInitialStream } from './use-initial-stream';
 export { useTitleGeneration } from './use-title-generation';
 export { useChat } from './use-chat';
+export { useCreateChat } from './use-create-chat';
+export { useSpeechRecognition } from './use-speech-recognition';
+export { useIsUserMessage } from './use-is-user-message';

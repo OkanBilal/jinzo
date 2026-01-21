@@ -1,6 +1,6 @@
 import { eq, and } from "drizzle-orm";
 import { getDb, getSqlite } from "../../../main/db/client";
-import { entities, entityChunks, vecEntityChunks, vecEntityChunkMap } from "../../../main/db/schema";
+import { entities, entityChunks, } from "../../../main/db/schema";
 import type { ChunkData, ItemChunkInfo } from "./types";
 import { EntityInput } from "./types";
 import { v4 as uuidv4 } from "uuid";
@@ -20,8 +20,6 @@ export async function insertEntity(
 ): Promise<InsertEntityResult> {
   try {
     const db = getDb();
-    const sqlite = getSqlite();
-    const embeddingBuf = Buffer.from(Float32Array.from(embedding).buffer);
     const entityId = uuidv4();
 
     // Check if entity already exists by URL and connectionId

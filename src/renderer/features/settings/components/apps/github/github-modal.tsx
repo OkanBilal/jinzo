@@ -162,6 +162,7 @@ export default function GitHubModal({
       const connId = connectionResult.connection.id;
       setConnectionId(connId);
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const credResult = await saveCredentials({
         provider: "github",
         connectionId: connId,

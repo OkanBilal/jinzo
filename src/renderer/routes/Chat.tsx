@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState, useCallback, useRef } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import {
   ChatHeader,
   ChatMessages,
@@ -17,7 +17,7 @@ import { useGetAppsQuery } from "@/lib/redux/api";
 
 function ChatContent() {
   const [selectedApp, setSelectedApp] = useState<AppState | null>(null);
-  const initialStreamTriggeredRef = useRef(false);
+  const [triggeredSessionId, setTriggeredSessionId] = useState<number | null>(null);
 
   const { selectedModel, getRequestOptions } = useChatConfig();
   const { data: apps = [] } = useGetAppsQuery();
@@ -61,15 +61,10 @@ function ChatContent() {
     focusInput();
   }, [focusInput]);
 
-  // Reset initial stream trigger when session changes
-  useEffect(() => {
-    initialStreamTriggeredRef.current = false;
-  }, [sessionId]);
-
   const handleInitialStream = useCallback(
     (content: string) => {
       if (!sessionId) return;
-      initialStreamTriggeredRef.current = true;
+      setTriggeredSessionId(sessionId);
 
       sendTextStreaming(content, selectedModel, sessionId, {
         skipUserMessage: true,
@@ -93,7 +88,7 @@ function ChatContent() {
     sessionId,
     selectedModel,
     isLoading,
-    shouldGenerate: initialStreamTriggeredRef.current,
+    shouldGenerate: triggeredSessionId === sessionId,
   });
 
   const handleSend = useCallback((): void => {

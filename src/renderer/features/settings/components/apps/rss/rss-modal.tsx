@@ -8,7 +8,6 @@ import {
 } from "../../../../../components/ui/text";
 import { ConnectionModalWrapper, LoadingState } from "../shared";
 import {
-  GhostButton,
   PrimaryButton,
   WarningButton,
   DangerButton,

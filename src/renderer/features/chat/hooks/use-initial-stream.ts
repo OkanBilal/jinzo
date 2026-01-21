@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import type { ChatMessage } from "@/lib/redux/api";
 
 interface UseInitialStreamOptions {
@@ -14,12 +14,7 @@ export function useInitialStream({
   selectedModel,
   onTriggerStream,
 }: UseInitialStreamOptions) {
-  const initialStreamTriggeredRef = useRef(false);
-
-  // Reset trigger when session changes
-  useEffect(() => {
-    initialStreamTriggeredRef.current = false;
-  }, [sessionId]);
+  const [triggeredSessionId, setTriggeredSessionId] = useState<number | null>(null);
 
   // Trigger initial streaming response for new chats
   useEffect(() => {
@@ -27,7 +22,7 @@ export function useInitialStream({
       !sessionId ||
       !messagesData ||
       messagesData.length === 0 ||
-      initialStreamTriggeredRef.current
+      triggeredSessionId === sessionId
     ) {
       return;
     }
@@ -48,11 +43,12 @@ export function useInitialStream({
       return;
     }
 
-    initialStreamTriggeredRef.current = true;
+    setTriggeredSessionId(sessionId);
     onTriggerStream(lastUserMessage.content);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messagesData, selectedModel, sessionId, onTriggerStream]);
 
   return {
-    wasTriggered: initialStreamTriggeredRef.current,
+    wasTriggered: triggeredSessionId === sessionId,
   };
 }

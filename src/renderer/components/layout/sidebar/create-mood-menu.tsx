@@ -1,4 +1,4 @@
-import { Plus, Preset } from "@/components/ui/icons";
+import { Preset } from "@/components/ui/icons";
 import { Bolt } from "@/components/ui/icons/mood";
 import { useRef, useEffect } from "react";
 import { createPortal } from "react-dom";

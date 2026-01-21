@@ -4,7 +4,7 @@ import { registerDatabaseHandlers, unregisterDatabaseHandlers } from "./ipc/data
 import { registerAccountHandlers } from "./ipc/accountHandlers";
 import { registerAppsHandlers } from "./ipc/appsHandlers";
 import { registerChatHandlers } from "./ipc/chatHandlers";
-import { registerSyncHandlers, unregisterSyncHandlers } from "./ipc/syncHandlers";
+import { registerSyncHandlers } from "./ipc/syncHandlers";
 import { registerFeedHandlers, unregisterFeedHandlers } from "./ipc/feedHandlers";
 import { registerEntitiesHandlers, unregisterEntitiesHandlers } from "./ipc/entitiesHandlers";
 import { registerMcpHandlers } from "./ipc/mcpHandlers";

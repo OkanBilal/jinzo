@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGenerateChatSessionTitleMutation } from "@/lib/redux/api";
 
 interface UseTitleGenerationOptions {
@@ -14,28 +14,24 @@ export function useTitleGeneration({
   isLoading,
   shouldGenerate,
 }: UseTitleGenerationOptions) {
-  const titleGeneratedRef = useRef(false);
+  const [generatedForSessionId, setGeneratedForSessionId] = useState<number | null>(null);
   const wasLoadingRef = useRef(false);
 
   const [generateTitle] = useGenerateChatSessionTitleMutation();
 
-  // Reset when session changes
-  useEffect(() => {
-    titleGeneratedRef.current = false;
-  }, [sessionId]);
-
   // Generate title after first response completes
   useEffect(() => {
     if (wasLoadingRef.current && !isLoading) {
-      if (sessionId && shouldGenerate && !titleGeneratedRef.current) {
-        titleGeneratedRef.current = true;
+      if (sessionId && shouldGenerate && generatedForSessionId !== sessionId) {
+        setGeneratedForSessionId(sessionId);
         generateTitle({ sessionId, model: selectedModel });
       }
     }
     wasLoadingRef.current = isLoading;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, sessionId, selectedModel, generateTitle, shouldGenerate]);
 
   return {
-    titleGenerated: titleGeneratedRef.current,
+    titleGenerated: generatedForSessionId === sessionId,
   };
 }

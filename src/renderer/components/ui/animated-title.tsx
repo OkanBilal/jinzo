@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface AnimatedTitleProps {
@@ -7,15 +7,8 @@ interface AnimatedTitleProps {
 }
 
 export function AnimatedTitle({ title, className = "" }: AnimatedTitleProps) {
-  const [hasChanged, setHasChanged] = useState(false);
-  const initialTitleRef = useRef(title);
-
-  useEffect(() => {
-    // Only trigger animation if the title changed from the initial value
-    if (title !== initialTitleRef.current && !hasChanged) {
-      setHasChanged(true);
-    }
-  }, [title, hasChanged]);
+  const [initialTitle] = useState(title);
+  const hasChanged = title !== initialTitle;
 
   // No animation until title has been regenerated
   if (!hasChanged) {

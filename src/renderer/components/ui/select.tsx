@@ -1,5 +1,5 @@
 import { ReactNode, useRef, useState } from "react";
-import { useClickOutside } from "@/features/chat/hooks/use-click-outside";
+import { useClickOutside } from "@/hooks/use-click-outside";
 import { useActiveMood } from "@/hooks/useActiveMood";
 import { useDarkMode } from "@/hooks/useDarkMode";
 
@@ -32,7 +32,7 @@ export default function Select<T extends string = string>({
   });
 
   const selectedOption = options.find((opt) => opt.value === value);
-  const { activeMood, activeMoodId, moods } = useActiveMood();
+  const { activeMood } = useActiveMood();
   const { darkMode } = useDarkMode();
 
   // Get background color from active mood theme
@@ -68,6 +68,7 @@ export default function Select<T extends string = string>({
         // Remove opacity suffix if present (e.g., #RRGGBBAA -> #RRGGBB)
         return bgColor.length === 9 ? bgColor.slice(0, 7) : bgColor;
       }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       return darkMode ? 'rgb(17 24 39 / 0.98)' : 'rgb(255 255 255 / 0.98)';
     }

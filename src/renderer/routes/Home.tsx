@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import ChatInput from "@/features/chat/components/input";
 import { AppState } from "@/features/chat/components/input/types";
-import { useCreateChat } from "@/features/home/hooks";
+import { useCreateChat } from "@/features/chat/hooks";
 import { useGetAppsQuery } from "@/lib/redux/api";
 
 export default function HomePage() {

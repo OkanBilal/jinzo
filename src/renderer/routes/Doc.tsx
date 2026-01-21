@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useCallback, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useCallback, useState } from "react";
+import { useParams } from "react-router-dom";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import type { Block } from "@blocknote/core";
@@ -17,7 +17,6 @@ import {
 } from "@/lib/redux/api";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { useJournalAutosave } from "@/hooks/useJournalAutosave";
-import { Heading1, Heading2 } from "@/components/ui/text";
 import { SecondaryButton, SuccessButton } from "@/components/ui/button";
 
 // Utility to convert BlockNote content to markdown-ish text
@@ -135,9 +134,9 @@ function JournalEditor({ entityId }: JournalEditorProps) {
   const dispatch = useAppDispatch();
   const { data: journal, isLoading } = useGetJournalByIdQuery(entityId);
   console.log("Loaded journal:", journal);
-  const [saveJournal, { isLoading: isSavingExplicit }] =
+  const [saveJournal] =
     useSaveJournalMutation();
-  const [publishJournal, { isLoading: isPublishing }] =
+  const [publishJournal] =
     usePublishJournalMutation();
 
   const { queueSave, flush, isDirty, isSaving, lastSavedAt } =

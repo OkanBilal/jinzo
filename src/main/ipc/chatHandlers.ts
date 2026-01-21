@@ -49,7 +49,7 @@ const DEFAULT_CONFIG: ChatConfig = {
   structuredOutputSchema: { properties: [] },
 };
 
-let chatConfig: ChatConfig = { ...DEFAULT_CONFIG };
+const chatConfig: ChatConfig = { ...DEFAULT_CONFIG };
 
 export function getChatConfig(): ChatConfig {
   return { ...chatConfig };

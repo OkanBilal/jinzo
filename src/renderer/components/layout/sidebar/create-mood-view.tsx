@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useCreateMoodMutation, useSetActiveMoodMutation } from "@/lib/redux/api";
 import { toast } from "sonner";
 import { EmojiPicker } from "frimousse";
-import { useClickOutside } from "@/features/chat/hooks/use-click-outside";
+import { useClickOutside } from "@/hooks/use-click-outside";
 import { useDarkMode } from "@/hooks/useDarkMode";
 import {
   solidColors,
@@ -115,9 +115,6 @@ export default function CreateMoodView({
   const currentVariant = getThemeVariant(selectedColorPair, darkMode);
   const backgroundColor = currentVariant.value;
 
-  // Text colors based on app dark mode
-  const textPrimary = darkMode ? "text-primary" : "text-primary-800";
-  const textMuted = darkMode ? "text-primary-400" : "text-primary-500";
 
   // Apply live preview when color changes
   useEffect(() => {
@@ -300,7 +297,7 @@ export default function CreateMoodView({
                       <EmojiPicker.List
                         className="select-none pb-1.5"
                         components={{
-                          CategoryHeader: ({ category, ...props }) => (
+                          CategoryHeader: ({ ...props }) => (
                             <div
                               className="px-2 pt-0 pb-1.5 font-medium text-primary-600 dark:text-primary-400 text-xs"
                              style={{ background: currentVariant.preview }}

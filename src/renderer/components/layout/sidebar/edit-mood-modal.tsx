@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Text, { Heading3 } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { useUpdateMoodMutation } from "@/lib/redux/api";
 import type { Mood } from "@/lib/redux/api";
 import { toast } from "sonner";
 import { EmojiPicker } from "frimousse";
-import { useClickOutside } from "@/features/chat/hooks/use-click-outside";
+import { useClickOutside } from "@/hooks/use-click-outside";
 import { useDarkMode } from "@/hooks/useDarkMode";
 import {
   solidColors,
@@ -73,50 +73,52 @@ export default function EditMoodModal({
   const [showGradients, setShowGradients] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState("");
   const [isClosing, setIsClosing] = useState(false);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  const [prevMoodId, setPrevMoodId] = useState<string | null>(mood?.id ?? null);
 
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   const [updateMood, { isLoading }] = useUpdateMoodMutation();
   const { darkMode } = useDarkMode();
 
-  // Initialize form when mood changes
-  useEffect(() => {
-    if (mood) {
-      setName(mood.name);
-      setSystemPrompt(mood.systemPrompt || "");
+  // Initialize form when mood changes (adjust state during render)
+  if (mood && mood.id !== prevMoodId) {
+    setPrevMoodId(mood.id);
+    setName(mood.name);
+    setSystemPrompt(mood.systemPrompt || "");
 
-      // Parse icon
-      const parsedIcon = parseIcon(mood.icon);
-      if (parsedIcon.type === "icon") {
-        setIconMode("icon");
-        const iconName = mood.icon?.replace("icon:", "") || "";
-        setIcon(iconName);
-      } else {
-        setIconMode("emoji");
-        setIcon(parsedIcon.value as string);
-      }
-
-      // Parse theme config
-      const { colorIndex, isGradient } = parseThemeConfig(mood.themeConfig);
-      setSelectedColorIndex(colorIndex);
-      setShowGradients(isGradient);
+    // Parse icon
+    const parsedIcon = parseIcon(mood.icon);
+    if (parsedIcon.type === "icon") {
+      setIconMode("icon");
+      const iconName = mood.icon?.replace("icon:", "") || "";
+      setIcon(iconName);
+    } else {
+      setIconMode("emoji");
+      setIcon(parsedIcon.value as string);
     }
-  }, [mood]);
 
-  // Reset closing state when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setIsClosing(false);
-    }
-  }, [isOpen]);
+    // Parse theme config
+    const { colorIndex, isGradient } = parseThemeConfig(mood.themeConfig);
+    setSelectedColorIndex(colorIndex);
+    setShowGradients(isGradient);
+  }
+
+  // Reset closing state when modal opens (adjust state during render)
+  if (isOpen && !prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    setIsClosing(false);
+  } else if (!isOpen && prevIsOpen) {
+    setPrevIsOpen(isOpen);
+  }
 
   // Handle animated close
-  const handleAnimatedClose = () => {
+  const handleAnimatedClose = useCallback(() => {
     setIsClosing(true);
     setTimeout(() => {
       onClose();
     }, 200);
-  };
+  }, [onClose]);
 
   useClickOutside(emojiPickerRef, () => {
     if (isEmojiPickerOpen) setIsEmojiPickerOpen(false);
@@ -136,7 +138,7 @@ export default function EditMoodModal({
     }
 
     return undefined;
-  }, [isOpen, isClosing]);
+  }, [isOpen, isClosing, handleAnimatedClose]);
 
   const handlePresetColor = (index: number) => {
     setSelectedColorIndex(index);

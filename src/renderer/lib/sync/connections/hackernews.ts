@@ -284,36 +284,32 @@ export async function fetchHackerNewsFromConnectionResources(
   const allItems: EntityInput[] = [];
 
   for (const resource of resources) {
-    try {
-      if (resource.kind === "hn_top_stories") {
-        const items = await fetchHackerNews(
-          topStoriesLimit,
-          connection.id,
-          resource.id
-        );
-        allItems.push(...items);
-      } else if (
-        resource.kind === "hn_user_submissions" &&
-        connection.username
-      ) {
-        const items = await fetchUserSubmissions(
-          connection.username,
-          userSubmissionsLimit,
-          connection.id,
-          resource.id
-        );
-        allItems.push(...items);
-      } else if (resource.kind === "hn_user_comments" && connection.username) {
-        const items = await fetchUserComments(
-          connection.username,
-          userCommentsLimit,
-          connection.id,
-          resource.id
-        );
-        allItems.push(...items);
-      }
-    } catch (error) {
-      throw error;
+    if (resource.kind === "hn_top_stories") {
+      const items = await fetchHackerNews(
+        topStoriesLimit,
+        connection.id,
+        resource.id
+      );
+      allItems.push(...items);
+    } else if (
+      resource.kind === "hn_user_submissions" &&
+      connection.username
+    ) {
+      const items = await fetchUserSubmissions(
+        connection.username,
+        userSubmissionsLimit,
+        connection.id,
+        resource.id
+      );
+      allItems.push(...items);
+    } else if (resource.kind === "hn_user_comments" && connection.username) {
+      const items = await fetchUserComments(
+        connection.username,
+        userCommentsLimit,
+        connection.id,
+        resource.id
+      );
+      allItems.push(...items);
     }
   }
 

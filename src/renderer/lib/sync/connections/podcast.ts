@@ -189,19 +189,15 @@ export async function fetchPodcastsFromConnectionResources(
   const credentials = { apiKey: connection.apiKey, userId: connection.userId };
 
   for (const resource of podcasts) {
-    try {
-      const items = await fetchPodcastByName(
-        resource.name,
-        episodesPerPodcast,
-        connection.id,
-        resource.id,
-        credentials
-      );
+    const items = await fetchPodcastByName(
+      resource.name,
+      episodesPerPodcast,
+      connection.id,
+      resource.id,
+      credentials
+    );
 
-      allItems.push(...items);
-    } catch (error) {
-      throw error;
-    }
+    allItems.push(...items);
   }
 
   return allItems;

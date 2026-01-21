@@ -1,4 +1,4 @@
-import Text, { Body, Caption } from "@/components/ui/text";
+import Text, { Body } from "@/components/ui/text";
 import { Button } from "./button";
 
 interface AlertProps {
@@ -22,14 +22,9 @@ export default function Alert({
   onPrimary,
   onSecondary,
   isPrimaryLoading = false,
-  primaryButtonVariant = "primary",
 }: AlertProps) {
   if (!isOpen) return null;
 
-  const primaryButtonClasses =
-    primaryButtonVariant === "danger"
-      ? "bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white"
-      : "bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white";
 
   return (
     <div

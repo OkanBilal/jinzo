@@ -37,6 +37,7 @@ export function useChatSession(options: UseChatSessionOptions = {}) {
     if (isValidSession && messagesData && options.onMessagesLoaded) {
       options.onMessagesLoaded(messagesData);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isValidSession, messagesData, options.onMessagesLoaded]);
 
   // Get chat title from session data

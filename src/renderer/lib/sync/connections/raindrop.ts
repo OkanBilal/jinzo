@@ -153,19 +153,15 @@ export async function fetchRaindropFromConnectionResources(
   const allItems: EntityInput[] = [];
 
   for (const resource of collections) {
-    try {
-      const items = await fetchRaindropItems(
-        resource.externalId,
-        itemsPerCollection,
-        connection.id,
-        resource.id,
-        connection.token
-      );
+    const items = await fetchRaindropItems(
+      resource.externalId,
+      itemsPerCollection,
+      connection.id,
+      resource.id,
+      connection.token
+    );
 
-      allItems.push(...items);
-    } catch (error) {
-      throw error;
-    }
+    allItems.push(...items);
   }
   return allItems;
 }

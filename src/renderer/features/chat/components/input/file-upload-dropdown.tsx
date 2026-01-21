@@ -47,7 +47,6 @@ export default function FileUploadDropdown({
           {uploadedFile.type === "image" ? (
             <div className="flex items-center gap-2 bg-primary-100 dark:bg-primary-800 rounded-2xl px-1.5 py-1 mr-1">
               <div className="relative w-5 h-5 rounded overflow-hidden group">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={uploadedFile.preview}
                   alt={uploadedFile.file.name}

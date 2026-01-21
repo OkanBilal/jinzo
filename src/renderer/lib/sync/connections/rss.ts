@@ -90,7 +90,7 @@ export async function fetchRssFeed(
           source: sourceName,
           imageUrl,
           feedUrl: url,
-          author: item.creator || item.author || null,
+          author: item.creator || (item as any).author || null,
           categories: item.categories || [],
         },
       };

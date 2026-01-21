@@ -1,7 +1,7 @@
 import { ipcMain } from "electron";
 import { eq, and, desc } from "drizzle-orm";
 import { getDb } from "../db/client";
-import { moods, accounts } from "../db/schema";
+import { moods } from "../db/schema";
 import { nanoid } from "nanoid";
 
 const ACCOUNT_ID = "default";
@@ -18,7 +18,6 @@ type MoodPayload = {
   sortOrder?: number;
 };
 
-type MoodRecord = typeof moods.$inferSelect;
 
 function sanitizeString(value: unknown, maxLength: number): string | undefined {
   if (typeof value !== "string") return undefined;

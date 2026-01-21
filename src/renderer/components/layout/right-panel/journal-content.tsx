@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAppSelector } from "@/lib/redux/hooks";
 import { useGetAppsQuery } from "@/lib/redux/api";
 import { useThinkingConfig } from "@/features/chat/hooks/use-thinking-config";

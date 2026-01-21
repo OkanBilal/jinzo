@@ -80,6 +80,7 @@ export default function DropdownWrapper({
         // Remove opacity suffix if present (e.g., #RRGGBBAA -> #RRGGBB)
         return bgColor.length === 9 ? bgColor.slice(0, 7) : bgColor;
       }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       return darkMode ? 'rgb(17 24 39 / 0.95)' : 'rgb(255 255 255 / 0.95)';
     }

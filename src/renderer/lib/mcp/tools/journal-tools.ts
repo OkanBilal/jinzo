@@ -5,7 +5,6 @@ import { eq, and } from "drizzle-orm";
 import { BrowserWindow } from "electron";
 import {
   getCurrentEditingJournalId,
-  type JournalEntry,
   type JournalMetadata,
 } from "../../../../main/ipc/journalHandlers";
 
@@ -45,7 +44,7 @@ function computeWordCount(text: string | null | undefined): number {
 function deriveSummary(body: string | null | undefined): string {
   if (!body) return "";
 
-  let text = body
+  const text = body
     .replace(/^#+\s*/gm, "")
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/\*([^*]+)\*/g, "$1")

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Caption } from "@/components/ui/text";
-import { ArrowUp, ChevronDown, ChevronUp } from "@/components/ui/icons";
+import { ArrowUp } from "@/components/ui/icons";
 import { ChatSession } from "@/lib/redux/api";
 import ChatSessionItem from "./chat-session-item";
 

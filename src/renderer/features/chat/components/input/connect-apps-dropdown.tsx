@@ -28,8 +28,7 @@ export default function ConnectAppsDropdown({
   const handleConnect = (appId: string) => {
     if (appId === "github") {
       setShowGitHubModal(true);
-    } else {
-    }
+    } else { /* empty */ }
   };
 
   const handleClearApp = (e: React.MouseEvent) => {

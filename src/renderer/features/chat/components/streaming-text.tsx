@@ -111,18 +111,14 @@ export const StreamingText = memo(
       return undefined;
     }, [isStreaming, displayedLength, text.length]);
 
-    // Reset when text is cleared
-    useEffect(() => {
-      if (text.length === 0) {
-        setDisplayedLength(0);
-        setFreshStart(0);
-      }
-    }, [text.length]);
-
     // Split text into stable and fresh portions
     const { stableText, freshText } = useMemo(() => {
-      const displayedText = text.slice(0, displayedLength);
-      const safeStableEnd = Math.min(freshStart, displayedLength);
+      // Reset when text is empty
+      const effectiveDisplayedLength = text.length === 0 ? 0 : displayedLength;
+      const effectiveFreshStart = text.length === 0 ? 0 : freshStart;
+      
+      const displayedText = text.slice(0, effectiveDisplayedLength);
+      const safeStableEnd = Math.min(effectiveFreshStart, effectiveDisplayedLength);
       return {
         stableText: displayedText.slice(0, safeStableEnd),
         freshText: displayedText.slice(safeStableEnd),
