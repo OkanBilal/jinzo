@@ -1,3 +1,4 @@
+import { FETCH_LIMITS } from "../../chat/config";
 import {
   fetchPodcastsFromConnectionResources,
   fetchRaindropFromConnectionResources,
@@ -8,7 +9,6 @@ import {
   fetchHackerNewsFromConnectionResources,
 } from "./connections";
 import type { EntityInput } from "./types";
-import { FETCH_LIMITS } from "../config";
 
 export async function fetchAllEntities(): Promise<EntityInput[]> {
   try {

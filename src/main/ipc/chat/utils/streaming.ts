@@ -1,5 +1,5 @@
 import { BrowserWindow } from "electron";
-import type { ChatResponse } from "../../../../renderer/lib/chat";
+import { ChatResponse } from "../types";
 
 export function sendStreamChunk(
   senderId: number,

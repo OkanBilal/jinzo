@@ -1,4 +1,4 @@
-import { IMAGE_SRC_REGEX } from "../config";
+import { IMAGE_SRC_REGEX } from "../../chat/config";
 
 export function extractImageFromHtml(html?: string | null): string | null {
   if (!html) return null;

@@ -1,4 +1,4 @@
-import type { EntityInput } from "@/lib/sync";
+import { EntityInput } from "../types";
 
 const NOTION_API_BASE = "https://api.notion.com/v1";
 const NOTION_TOKEN = process.env.NOTION_TOKEN;

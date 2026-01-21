@@ -1,5 +1,5 @@
-import { analyzeQuery } from "../rag";
-import { SourceId, ItemTypeId } from "../rag";
+import { analyzeQuery, ItemTypeId, SourceId } from "./utils/rag";
+
 
 export type QueryAnalysis = ReturnType<typeof analyzeQuery>;
 

@@ -1,4 +1,4 @@
-import type { StructuredOutputSchema } from "../../../../renderer/lib/chat";
+import { StructuredOutputSchema } from "../types";
 
 export function buildJsonSchema(schema: StructuredOutputSchema): object {
   const properties: Record<string, any> = {};

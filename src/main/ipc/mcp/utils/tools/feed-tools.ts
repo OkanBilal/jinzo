@@ -1,5 +1,5 @@
-import { getDb } from "../../../../main/db/client";
-import { entities } from "../../../../main/db/schema";
+import { getDb } from "../../../../db/client";
+import { entities } from "../../../../db/schema";
 import { and, desc, gte, lte, or, like, inArray, sql } from "drizzle-orm";
 import type {
   EntityListParams,

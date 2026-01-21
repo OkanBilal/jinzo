@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useActiveMood } from "./useActiveMood";
 import { useDarkMode } from "./useDarkMode";
-import { getDefaultBackground } from "@/lib/config/theme";
+import { getDefaultBackground } from "@/lib/theme";
 
 export interface ThemeConfig {
   backgroundColor?: string;

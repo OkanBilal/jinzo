@@ -1,7 +1,5 @@
 import ollama from "ollama";
 
-import type { ChatOptions } from "../../../../renderer/lib/chat";
-import { saveMessage } from "../../../../renderer/lib/chat";
 import { getChatConfig } from "../config";
 import {
   sendStreamChunk,
@@ -9,7 +7,9 @@ import {
   mergeOptionsWithConfig,
   getStructuredSchema,
   buildStructuredSystemPrompt,
+  saveMessage,
 } from "../utils";
+import { ChatOptions } from "../types";
 
 const CHAT_SYSTEM_PROMPT = "You are a helpful AI assistant.";
 

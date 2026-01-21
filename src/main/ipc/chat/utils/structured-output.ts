@@ -1,5 +1,5 @@
-import type { ChatOptions, StructuredOutputSchema } from "../../../../renderer/lib/chat";
 import type { ChatConfig } from "../config";
+import { ChatOptions, StructuredOutputSchema } from "../types";
 import { buildJsonSchema } from "./schema";
 
 export function shouldUseStructuredOutput(

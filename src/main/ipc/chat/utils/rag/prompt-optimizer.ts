@@ -11,7 +11,7 @@ import {
   USER_PROMPT_SUFFIX,
   SOURCES,
   ITEM_TYPES,
-} from "../../lib/config";
+} from "../../config";
 
 function createRegex(pattern: string): RegExp {
   return new RegExp(pattern, "i");

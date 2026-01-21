@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useActiveMood } from "@/hooks/useActiveMood";
 import { useDarkMode } from "@/hooks/useDarkMode";
-import { getDefaultDropdownBackground } from "@/lib/config/theme";
+import { getDefaultDropdownBackground } from "@/lib/theme";
 
 interface DropdownWrapperProps {
   isOpen: boolean;

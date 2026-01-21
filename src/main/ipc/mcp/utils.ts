@@ -1,8 +1,4 @@
-import {
-  ENTITY_TOOLS,
-  SYNC_TOOLS,
-  MOOD_TOOLS,
-} from "../../../renderer/lib/mcp";
+import { ENTITY_TOOLS, MOOD_TOOLS, SYNC_TOOLS } from "./utils/tools";
 
 export function getAllTools() {
   return [...ENTITY_TOOLS, ...SYNC_TOOLS, ...MOOD_TOOLS];

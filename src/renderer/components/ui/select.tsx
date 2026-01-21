@@ -2,7 +2,7 @@ import { ReactNode, useRef, useState } from "react";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useActiveMood } from "@/hooks/useActiveMood";
 import { useDarkMode } from "@/hooks/useDarkMode";
-import { getDefaultDropdownBackground } from "@/lib/config/theme";
+import { getDefaultDropdownBackground } from "@/lib/theme";
 
 interface SelectOption<T extends string = string> {
   value: T;

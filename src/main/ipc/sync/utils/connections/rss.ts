@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import Parser from "rss-parser";
 
-import { getDb } from "../../../../main/db/client";
-import { connectionResources, connections } from "../../../../main/db/schema";
+import { getDb } from "../../../../db/client";
+import { connectionResources, connections } from "../../../../db/schema";
 import { EntityInput, extractImageFromHtml, pickUrl } from "..";
 
 const DEFAULT_TITLE = "No title";

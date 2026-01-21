@@ -4,13 +4,11 @@ import ollama from "ollama";
 
 import { getDb } from "../../db/client";
 import { chatSessions, chatMessages } from "../../db/schema";
-import {
-  ChatRequestBody,
-  validateChatRequest,
-  normalizeChatRequest,
-  saveMessage,
-} from "../../../renderer/lib/chat";
-import { DEFAULT_MODEL } from "../../../renderer/lib/config/chat";
+
+import { saveMessage, validateChatRequest } from "./utils";
+import { ChatRequestBody } from "./types";
+import { normalizeChatRequest } from "./utils/validation";
+import { DEFAULT_MODEL } from "./config";
 
 export function registerSessionHandlers() {
   // Get chat sessions list

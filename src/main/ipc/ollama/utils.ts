@@ -1,8 +1,5 @@
-import {
-  DEFAULT_EMBEDDING_PATTERNS,
-  DEFAULT_OLLAMA_HOST,
-  EMBEDDING_FAMILY_PATTERNS,
-} from "../../../renderer/lib/config";
+
+import { DEFAULT_EMBEDDING_PATTERNS, DEFAULT_OLLAMA_HOST, EMBEDDING_FAMILY_PATTERNS } from "../chat/config";
 import type { OllamaModel, OllamaShowResponse } from "./types";
 
 export function getOllamaHost(): string {

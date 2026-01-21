@@ -1,4 +1,4 @@
-import type { EntityInput } from "@/lib/sync";
+import { EntityInput } from "../types";
 
 interface YouTubeThumbnail {
   url: string;

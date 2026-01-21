@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { DEFAULT_MODEL } from "../../config";
+import { DEFAULT_MODEL } from "../../../../main/ipc/chat/config";
 
 export interface ModelCapabilities {
   completion?: boolean;

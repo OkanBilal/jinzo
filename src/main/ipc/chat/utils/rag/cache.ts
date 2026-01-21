@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { CacheEntry, CacheStats } from "../rag";
-import { CACHE_DEFAULTS } from "../config";
+import { CACHE_DEFAULTS } from "../../config";
 
 function minutesToMilliseconds(minutes: number): number {
   return minutes * 60 * 1000;

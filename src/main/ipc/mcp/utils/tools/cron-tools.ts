@@ -1,13 +1,6 @@
+import { createChunksForEntities, createEmptyResult, createEntityChunkMap, createSuccessResult, fetchAllEntities, generateChunkEmbeddings, processAndInsertEntities } from "../../../sync/utils";
 import type { OllamaToolDefinition, SyncResult } from "../types";
-import {
-  fetchAllEntities,
-  createChunksForEntities,
-  generateChunkEmbeddings,
-  createEntityChunkMap,
-  processAndInsertEntities,
-  createSuccessResult,
-  createEmptyResult,
-} from "../../sync";
+
 
 /**
  * Trigger an entity synchronization job

@@ -1,17 +1,12 @@
 import { ipcMain } from "electron";
 
-import {
-  ChatRequestBody,
-  validateChatRequest,
-  normalizeChatRequest,
-  saveMessage,
-  getCachedResponse,
-} from "../../../renderer/lib/chat";
 import { getChatConfig, updateChatConfig, type ChatConfig } from "./config";
 import { registerSessionHandlers, unregisterSessionHandlers } from "./session";
 import { registerMessageHandlers, unregisterMessageHandlers } from "./messages";
 import { handleChatMode, handleRAGMode, handleMCPMode } from "./modes";
-import { sendStreamError } from "./utils";
+import { getCachedResponse, saveMessage, sendStreamError, validateChatRequest } from "./utils";
+import { normalizeChatRequest } from "./utils/validation";
+import { ChatRequestBody } from "./types";
 
 export function registerChatHandlers() {
   // Get chat config

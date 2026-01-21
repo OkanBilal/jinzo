@@ -1,6 +1,6 @@
 import type { OllamaToolDefinition } from "../types";
-import { getDb } from "../../../../main/db/client";
-import { moods, appSettings } from "../../../../main/db/schema";
+import { getDb } from "../../../../db/client";
+import { moods, appSettings } from "../../../../db/schema";
 import { eq, sql } from "drizzle-orm";
 import { BrowserWindow } from "electron";
 

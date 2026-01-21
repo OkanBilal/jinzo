@@ -10,7 +10,7 @@ import {
   solidColors,
   gradientColors,
   getThemeVariant,
-} from "@/lib/config/mood-themes";
+} from "@/lib/mood-themes";
 import { availableIcons } from "@/lib/icon-registry";
 
 type IconPickerMode = "emoji" | "icon";

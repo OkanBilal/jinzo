@@ -1,7 +1,7 @@
 import ollama from "ollama";
 
 import { cachedEmbedding, embeddingCache } from "../rag";
-import { DEFAULT_EMBEDDING_CONFIG } from "../config";
+import { DEFAULT_EMBEDDING_CONFIG } from "../../config";
 
 const PREPROCESSING_PATTERNS = {
   MULTIPLE_SPACES: /\s+/g,

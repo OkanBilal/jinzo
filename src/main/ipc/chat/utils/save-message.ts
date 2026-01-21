@@ -1,11 +1,8 @@
 import { eq } from "drizzle-orm";
+import { getDb } from "../../../db/client";
+import { chatMessages, chatSessions } from "../../../db/schema";
 
-import { getDb } from "../../../main/db/client";
-import { chatSessions, chatMessages } from "../../../main/db/schema";
-import { responseCache } from "../../../renderer/lib/rag/cache";
-import { ChatResponse } from "../../../renderer/lib/chat/types";
-
-async function saveMessage(
+export async function saveMessage(
   sessionId: number,
   role: "user" | "assistant",
   content: string,
@@ -52,41 +49,3 @@ async function saveMessage(
     );
   }
 }
-
-function generateCacheKey(question: string, model: string) {
-  return { question, model };
-}
-
-function getCachedResponse(
-  question: string,
-  model: string,
-  sessionId: number | null,
-  noCache?: boolean
-): ChatResponse | null {
-  if (noCache) {
-    return null;
-  }
-
-  const cacheKey = generateCacheKey(question, model);
-  const cachedAnswer = responseCache.get(cacheKey);
-
-  if (!cachedAnswer) {
-    return null;
-  }
-
-  console.log("✓ Response cache hit");
-
-  return {
-    answer: cachedAnswer as string,
-    sessionId,
-    sources: [],
-    metadata: {
-      queryType: "cached",
-      totalRetrieved: 0,
-      usedInContext: 0,
-      cached: true,
-    },
-  };
-}
-
-export { saveMessage, getCachedResponse };

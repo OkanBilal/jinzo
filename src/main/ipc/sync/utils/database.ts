@@ -1,9 +1,9 @@
 import { eq, and } from "drizzle-orm";
-import { getDb, getSqlite } from "../../../main/db/client";
-import { entities, entityChunks, } from "../../../main/db/schema";
 import type { ChunkData, ItemChunkInfo } from "./types";
 import { EntityInput } from "./types";
 import { v4 as uuidv4 } from "uuid";
+import { getDb, getSqlite } from "../../../db/client";
+import { entities, entityChunks } from "../../../db/schema";
 
 const DEFAULT_ACCOUNT_ID = "default";
 

@@ -1,4 +1,4 @@
-import { SOURCES, ITEM_TYPES } from "../../lib/config";
+import { SOURCES, ITEM_TYPES } from "../../config";
 
 // Cache
 export interface CacheEntry<T> {

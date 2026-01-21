@@ -8,7 +8,7 @@ import {
   createSuccessResult,
   createFailureResult,
   createEmptyResult,
-} from "../../../renderer/lib/sync";
+} from "./utils";
 
 export function registerSyncHandlers() {
   // Run the sync job to fetch and process entities

@@ -1,8 +1,8 @@
-import { getSqlite } from "../../../main/db/client";
 import { generateEmbeddingCached } from "./embed";
 import { float32ToBuffer } from "./float-to-buffer";
-import { MIN_TOKEN_LENGTH, DEFAULT_DECAY_LAMBDA, TIME_CONSTANTS, DISTANCE_BOUNDS, BM25_PARAMS, MAX_PER_SOURCE_RATIO } from "../config";
+import { MIN_TOKEN_LENGTH, DEFAULT_DECAY_LAMBDA, TIME_CONSTANTS, DISTANCE_BOUNDS, BM25_PARAMS, MAX_PER_SOURCE_RATIO } from "../../config";
 import { RetrievalOptions, RetrievedEntity } from "./types";
+import { getSqlite } from "../../../../db/client";
 
 // TODO query expansion, synonym handling
 

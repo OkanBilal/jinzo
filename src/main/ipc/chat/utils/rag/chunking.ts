@@ -5,7 +5,7 @@ import {
   MIN_DESCRIPTION_LENGTH,
   SPLIT_PATTERNS,
   TEXT_LENGTH_THRESHOLDS,
-} from "../config";
+} from "../../config";
 
 function estimateTokenCount(text: string): number {
   return Math.ceil(text.length / CHARS_PER_TOKEN);

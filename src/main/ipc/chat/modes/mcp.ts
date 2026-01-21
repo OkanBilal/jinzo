@@ -1,11 +1,10 @@
 import ollama from "ollama";
 import type { Message, Tool } from "ollama";
 
-import type { ChatOptions } from "../../../../renderer/lib/chat";
-import { saveMessage } from "../../../../renderer/lib/chat";
-import { getMCPClient } from "../../../../renderer/lib/mcp";
 import { getChatConfig } from "../config";
-import { sendStreamChunk, sendStreamFinal, mergeOptionsWithConfig } from "../utils";
+import { sendStreamChunk, sendStreamFinal, mergeOptionsWithConfig, saveMessage } from "../utils";
+import { ChatOptions } from "../types";
+import { getMCPClient } from "../../mcp/utils/index";
 
 const MCP_SYSTEM_PROMPT =
   "You are a helpful assistant with access to management tools. Use the available tools to answer user questions about their management items.";

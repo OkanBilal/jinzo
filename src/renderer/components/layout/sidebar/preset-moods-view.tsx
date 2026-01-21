@@ -7,7 +7,7 @@ import {
   solidColors,
   gradientColors,
   getThemeVariant,
-} from "@/lib/config/mood-themes";
+} from "@/lib/mood-themes";
 import { parseIcon } from "@/lib/icon-registry";
 import { predefinedMoods, type PredefinedMood } from "./predefined-moods";
 

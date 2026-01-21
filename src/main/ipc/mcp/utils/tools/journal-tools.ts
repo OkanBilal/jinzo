@@ -1,12 +1,12 @@
 import type { OllamaToolDefinition } from "../types";
-import { getDb } from "../../../../main/db/client";
-import { entities } from "../../../../main/db/schema";
+import { getDb } from "../../../../db/client";
+import { entities } from "../../../../db/schema";
 import { eq, and } from "drizzle-orm";
 import { BrowserWindow } from "electron";
 import {
   getCurrentEditingJournalId,
   type JournalMetadata,
-} from "../../../../main/ipc/journal";
+} from "../../../journal";
 
 const JOURNAL_KIND = "journal_entry";
 

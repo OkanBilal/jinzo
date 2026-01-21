@@ -1,21 +1,16 @@
 import ollama from "ollama";
 
-import type { ChatOptions, ChatResponse } from "../../../../renderer/lib/chat";
-import { saveMessage } from "../../../../renderer/lib/chat";
-import {
-  analyzeQuery,
-  buildOptimizedPrompt,
-  findRelevantEntities,
-} from "../../../../renderer/lib/rag";
-import { NO_RELEVANT_CONTENT_SYSTEM_PROMPT } from "../../../../renderer/lib/config";
-import { getChatConfig } from "../config";
+import { getChatConfig, NO_RELEVANT_CONTENT_SYSTEM_PROMPT } from "../config";
 import {
   sendStreamChunk,
   sendStreamFinal,
   mergeOptionsWithConfig,
   getStructuredSchema,
   buildStructuredSystemPrompt,
+  saveMessage,
 } from "../utils";
+import { ChatOptions, ChatResponse } from "../types";
+import { analyzeQuery, buildOptimizedPrompt, findRelevantEntities } from "../utils/rag";
 
 export async function handleRAGMode(
   question: string,

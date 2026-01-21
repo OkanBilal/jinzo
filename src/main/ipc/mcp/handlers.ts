@@ -1,15 +1,17 @@
 import { ipcMain } from "electron";
-import {
-  executeEntityTool,
-  executeSyncTool,
-  executeMoodTool,
-} from "../../../renderer/lib/mcp";
+
 import {
   getAllTools,
   formatToolsForResponse,
   isSyncTool,
   isMoodTool,
 } from "./utils";
+import {
+  executeSyncTool,
+  executeMoodTool,
+  executeEntityTool,
+} from "./utils/index";
+
 
 /**
  * Register all IPC handlers for MCP (Model Context Protocol) operations

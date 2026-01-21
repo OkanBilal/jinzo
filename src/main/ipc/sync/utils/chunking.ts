@@ -1,6 +1,6 @@
+import { chunkEntity, generateEmbeddingsBatch, getOptimalChunkConfig, preprocessTextForEmbedding } from "../../chat/utils/rag";
 import type { ChunkData, ItemChunkInfo, EntityInput } from "./types";
-import { chunkEntity, getOptimalChunkConfig } from "../rag/chunking";
-import { generateEmbeddingsBatch, preprocessTextForEmbedding } from "../rag";
+
 
 
 export function createChunksForEntities(entities: EntityInput[]): ChunkData[] {

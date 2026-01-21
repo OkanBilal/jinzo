@@ -1,6 +1,6 @@
-import type { ChatOptions } from "../../../../renderer/lib/chat";
-import type { SourceId, ItemTypeId } from "../../../../renderer/lib/rag";
 import type { ChatConfig } from "../config";
+import { ChatOptions } from "../types";
+import { ItemTypeId, SourceId } from "./rag";
 
 export interface MergedChatOptions {
   temperature: number;
