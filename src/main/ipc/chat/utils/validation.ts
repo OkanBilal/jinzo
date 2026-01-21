@@ -1,5 +1,4 @@
-import { ValidationResult } from "@/lib/chat/types";
-import { ChatRequestBody } from "../types";
+import { ChatRequestBody, ValidationResult } from "../types";
 import { DEFAULT_MODEL } from "../config";
 
 
