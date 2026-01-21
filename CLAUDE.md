@@ -17,6 +17,10 @@ npm run db:seed         # Seed apps and connections
 npm run db:clean:dev    # Reset dev database
 npm run db:clean:runtime  # Reset runtime database (~/Library/Application Support/jinzo/)
 
+# Linting
+npm run lint            # Run ESLint on src/
+npm run lint:fix        # Run ESLint with auto-fix
+
 # Build & Package
 npm run package         # Package app for current platform
 npm run make            # Create distributable
@@ -36,6 +40,7 @@ Jinzo is an Electron desktop app built with React, using a local SQLite database
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
 - Namespaced by domain: `api.chat`, `api.entities`, `api.feed`, `api.sync`, etc.
+- After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
 - React app with Redux Toolkit, React Router (HashRouter)
@@ -93,9 +98,10 @@ Domain-specific views on entities:
 
 ### UI Structure
 
-- `src/renderer/components/layout/` - Sidebar, config panel
+- `src/renderer/components/` - Shared UI components and layout (sidebar, config panel)
 - `src/renderer/features/` - Feature modules (chat, home, settings)
-- `src/renderer/hooks/` - Custom hooks (useActiveMood, useTheme)
+- `src/renderer/hooks/` - Global custom hooks (useActiveMood, useTheme, useClickOutside)
+- `src/renderer/routes/` - Route components (Chat.tsx, Home.tsx)
 - Styling: Tailwind CSS v4
 
 ### Connections (External Services)
