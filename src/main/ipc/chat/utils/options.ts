@@ -1,4 +1,5 @@
 import type { ChatOptions } from "../../../../renderer/lib/chat";
+import type { SourceId, ItemTypeId } from "../../../../renderer/lib/rag";
 import type { ChatConfig } from "../config";
 
 export interface MergedChatOptions {
@@ -10,9 +11,9 @@ export interface MergedChatOptions {
   noCache?: boolean;
   includeMetadata?: boolean;
   skipUserSave?: boolean;
-  sourceFilter?: string[];
-  itemTypeFilter?: string[];
-  prioritizeSources?: string[];
+  sourceFilter?: SourceId[];
+  itemTypeFilter?: ItemTypeId[];
+  prioritizeSources?: SourceId[];
 }
 
 export function mergeOptionsWithConfig(

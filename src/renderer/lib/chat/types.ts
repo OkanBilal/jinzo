@@ -26,13 +26,13 @@ export interface ChatResponse {
     error?: string;
     breakdown?: Record<string, number>;
     appliedFilters?: {
-      sources: string[];
-      itemTypes: string[];
+      sources: SourceId[];
+      itemTypes: ItemTypeId[];
       topK: number;
     };
     detectedFromQuery?: {
-      sources: string[];
-      itemTypes: string[];
+      sources: SourceId[];
+      itemTypes: ItemTypeId[];
     };
   };
 }
