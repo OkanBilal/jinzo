@@ -2,6 +2,7 @@ import { ReactNode, useRef, useState } from "react";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useActiveMood } from "@/hooks/useActiveMood";
 import { useDarkMode } from "@/hooks/useDarkMode";
+import { getDefaultDropdownBackground } from "@/lib/config/theme";
 
 interface SelectOption<T extends string = string> {
   value: T;
@@ -50,7 +51,7 @@ export default function Select<T extends string = string>({
     }
     
     if (!activeMood?.themeConfig) {
-      return darkMode ? 'rgb(17 24 39 / 0.98)' : 'rgb(255 255 255 / 0.98)';
+      return getDefaultDropdownBackground(darkMode, 0.98);
     }
     
     try {
@@ -58,7 +59,7 @@ export default function Select<T extends string = string>({
       const bgColor = darkMode ? themeConfig.darkBackground : themeConfig.lightBackground;
       
       if (!bgColor) {
-        return darkMode ? 'rgb(17 24 39 / 0.98)' : 'rgb(255 255 255 / 0.98)';
+        return getDefaultDropdownBackground(darkMode, 0.98);
       }
       
       // For gradients, return as is; for solid colors, remove opacity to prevent transparency
@@ -70,7 +71,7 @@ export default function Select<T extends string = string>({
       }
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
-      return darkMode ? 'rgb(17 24 39 / 0.98)' : 'rgb(255 255 255 / 0.98)';
+      return getDefaultDropdownBackground(darkMode, 0.98);
     }
   };
 

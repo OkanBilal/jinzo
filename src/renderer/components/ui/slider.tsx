@@ -80,18 +80,11 @@ export function Slider({
         onChange={handleChange}
         onMouseUp={handleMouseUp}
         onTouchEnd={handleMouseUp}
-        className="w-full h-1.5 rounded-lg appearance-none cursor-pointer slider"
+        className="w-full h-1.5 rounded-lg appearance-none cursor-pointer [--slider-track:rgba(0,0,0,0.06)] dark:[--slider-track:rgba(255,255,255,0.1)]"
         style={{
-          background: `linear-gradient(to right, #037AFF 0%, #037AFF ${percentage}%, #0000000f ${percentage}%, #0000000f 100%)`,
+          background: `linear-gradient(to right, #037AFF 0%, #037AFF ${percentage}%, var(--slider-track) ${percentage}%, var(--slider-track) 100%)`,
         }}
       />
-      <style>{`
-                @media (prefers-color-scheme: dark) {
-                    input[type="range"].slider {
-                        background: linear-gradient(to right, #037AFF 0%, #037AFF ${percentage}%, #ffffff1a ${percentage}%, #ffffff1a 100%) !important;
-                    }
-                }
-            `}</style>
       {(minLabel || maxLabel) && (
         <div className="flex justify-between">
           {minLabel && (

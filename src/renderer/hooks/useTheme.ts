@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useActiveMood } from "./useActiveMood";
 import { useDarkMode } from "./useDarkMode";
+import { getDefaultBackground } from "@/lib/config/theme";
 
 export interface ThemeConfig {
   backgroundColor?: string;
@@ -25,7 +26,7 @@ export function useTheme(): ThemeConfig {
 
   const themeConfig = useMemo(() => {
     const defaultConfig: ThemeConfig = {
-      backgroundColor: darkMode ? "#00000060" : "#ffffff60",
+      backgroundColor: getDefaultBackground(darkMode),
     };
 
     if (activeMood?.themeConfig) {

@@ -67,9 +67,9 @@ export const gradientColors: ThemeColor[] = [
     },
     dark: {
       value:
-        "linear-gradient(0deg, #0A5264 0%, #2A3A3E 50%, #3D3328 100%)",
+        "linear-gradient(180deg, #22336B 0%, #196AB4 33%, #CE8A63 66%, #C5683F 100%)",
       preview:
-        "linear-gradient(135deg, #0A5264 0%, #2A3A3E 50%, #3D3328 100%)",
+        "linear-gradient(135deg, #22336B 0%, #196AB4 33%, #CE8A63 66%, #C5683F 100%)",
     },
   },
   {

@@ -39,7 +39,7 @@ export default function ModelSelectDropdown({
   
   return (
     <div className=" relative" ref={dropdownRef}>
-      <div className="flex cursor-pointer items-center  hover:bg-primary-200/60 dark:hover:bg-primary-700/40 transition-colors rounded-3xl">
+      <div className="flex cursor-pointer items-center  hover:bg-primary-200/30 dark:hover:bg-primary-700/40 transition-colors rounded-3xl">
         <button
           type="button"
           onClick={onToggle}
@@ -67,10 +67,10 @@ export default function ModelSelectDropdown({
                 onModelChange(m);
                 onToggle();
               }}
-              className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl ${
+              className={`w-full text-left px-4 py-3 cursor-pointer text-sm transition-colors flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl ${
                 model === m
-                  ? "bg-primary-200 dark:bg-primary-800/50 text-primary-900 dark:text-primary-100 font-medium"
-                  : "hover:bg-primary-100 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100"
+                  ? "bg-primary-200/60 dark:bg-primary-800/50 text-primary-900 dark:text-primary-100 font-medium"
+                  : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100"
               }`}
             >
               {getModelIcon(m)}

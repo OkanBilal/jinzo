@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Trash } from "@/components/ui/icons";
+import { Edit, Trash } from "@/components/ui/icons";
 import type { Mood } from "@/lib/redux/api";
 
 interface MoodContextMenuProps {
@@ -10,24 +10,6 @@ interface MoodContextMenuProps {
   onEdit: () => void;
   onDelete: () => void;
   onClose: () => void;
-}
-
-function PencilIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={24}
-      height={24}
-      fill="none"
-      viewBox="0 0 24 24"
-      className={className}
-    >
-      <path
-        fill="currentColor"
-        d="M16.293 2.293a1 1 0 0 1 1.414 0l4 4a1 1 0 0 1 0 1.414l-13 13A1 1 0 0 1 8 21H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 .293-.707l13-13ZM14 5.414 5 14.414V19h4.586l9-9L14 5.414Zm4 1.172 2.586-2.586-2.586-2.586L15.414 4 18 6.586Z"
-      />
-    </svg>
-  );
 }
 
 export default function MoodContextMenu({
@@ -90,7 +72,7 @@ export default function MoodContextMenu({
         className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-primary-700 dark:text-primary-200
           hover:bg-primary-100/50 dark:hover:bg-primary/10 transition-colors cursor-pointer"
       >
-        <PencilIcon className="size-4" />
+        <Edit className="size-4" />
         <span>Edit</span>
       </button>
       <button

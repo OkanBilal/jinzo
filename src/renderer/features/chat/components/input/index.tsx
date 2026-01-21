@@ -223,7 +223,7 @@ export default function ChatInput({
             <button
               type="button"
               onClick={openAppsModal}
-              className="flex cursor-pointer items-center hover:bg-primary-200/60 dark:hover:bg-primary-700/40 transition-colors rounded-2xl pl-2 pr-2 py-1.5"
+              className="flex cursor-pointer items-center hover:bg-primary-200/30 dark:hover:bg-primary-700/40 transition-colors rounded-2xl pl-2 pr-2 py-1.5"
               aria-haspopup="true"
             >
               <Apps className="w-4.5 h-4.5 mr-1 text-primary-500 dark:text-primary-400" />

@@ -31,7 +31,7 @@ export default function FileUploadDropdown({
       <button
         type="button"
         onClick={onToggle}
-        className="p-1.5 hover:bg-primary-200 dark:hover:bg-primary-800 rounded-full transition-colors cursor-pointer"
+        className="p-1.5 hover:bg-primary-200/30 dark:hover:bg-primary-800 rounded-full transition-colors cursor-pointer"
         aria-label="Upload file"
         aria-expanded={isOpen}
       >
@@ -109,7 +109,7 @@ export default function FileUploadDropdown({
             type="button"
             onClick={onClick}
             role="menuitem"
-            className="flex w-full text-left text-sm first:rounded-t-xl last:rounded-b-xl items-center px-2.5 py-2.5 hover:bg-primary-100 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100 cursor-pointer"
+            className="flex w-full text-left text-sm first:rounded-t-xl last:rounded-b-xl items-center px-2.5 py-2.5 hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100 cursor-pointer"
           >
             <Icon className="mr-2 w-4 h-4" />
             {label}

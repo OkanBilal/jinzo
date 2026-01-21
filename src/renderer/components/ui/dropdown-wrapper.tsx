@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useActiveMood } from "@/hooks/useActiveMood";
 import { useDarkMode } from "@/hooks/useDarkMode";
+import { getDefaultDropdownBackground } from "@/lib/config/theme";
 
 interface DropdownWrapperProps {
   isOpen: boolean;
@@ -62,7 +63,7 @@ export default function DropdownWrapper({
     }
 
     if (!activeMood?.themeConfig) {
-      return darkMode ? 'rgb(17 24 39 / 0.95)' : 'rgb(255 255 255 / 0.95)';
+      return getDefaultDropdownBackground(darkMode);
     }
 
     try {
@@ -70,7 +71,7 @@ export default function DropdownWrapper({
       const bgColor = darkMode ? themeConfig.darkBackground : themeConfig.lightBackground;
 
       if (!bgColor) {
-        return darkMode ? 'rgb(17 24 39 / 0.95)' : 'rgb(255 255 255 / 0.95)';
+        return getDefaultDropdownBackground(darkMode);
       }
 
       // For gradients, return as is; for solid colors, remove opacity to prevent transparency
@@ -82,7 +83,7 @@ export default function DropdownWrapper({
       }
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
-      return darkMode ? 'rgb(17 24 39 / 0.95)' : 'rgb(255 255 255 / 0.95)';
+      return getDefaultDropdownBackground(darkMode);
     }
   };
 
