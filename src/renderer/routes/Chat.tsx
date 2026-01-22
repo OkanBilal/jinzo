@@ -27,7 +27,7 @@ function ChatContent() {
     input,
     setInput,
     isLoading,
-    sendMessageStreaming,
+    //sendMessageStreaming,
     sendTextStreaming,
     focusInput,
     replaceMessages,
@@ -62,7 +62,7 @@ function ChatContent() {
   }, [focusInput]);
 
   const handleInitialStream = useCallback(
-    (content: string) => {
+    (content: string, messageId: number) => {
       if (!sessionId) return;
       setTriggeredSessionId(sessionId);
 
@@ -70,6 +70,7 @@ function ChatContent() {
         skipUserMessage: true,
         requestOptions: {
           skipUserSave: true,
+          userMessageId: messageId, // Track which user message triggered this generation
           ...getRequestOptions(),
         },
       });
@@ -92,12 +93,14 @@ function ChatContent() {
   });
 
   const handleSend = useCallback((): void => {
-    if (!input.trim()) return;
+    if (!input.trim() || !sessionId) return;
 
-    sendMessageStreaming(selectedModel, {
+    // Use sendTextStreaming with the sessionId from URL to ensure messages are persisted
+    sendTextStreaming(input, selectedModel, sessionId, {
       requestOptions: getRequestOptions(),
     });
-  }, [input, selectedModel, sendMessageStreaming, getRequestOptions]);
+    setInput("");
+  }, [input, sessionId, selectedModel, sendTextStreaming, getRequestOptions, setInput]);
 
   return (
     <div className="h-full w-full flex flex-col">

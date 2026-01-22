@@ -131,25 +131,25 @@ export default function PostItem({
           onChange={(e) => setNewTitle(e.target.value)}
           onBlur={handleRenameSubmit}
           onKeyDown={handleRenameKeyDown}
-          className="w-full text-sm font-normal  rounded-lg px-2 py-1 text-primary-900 dark:text-primary-100 focus:outline-none "
+          className="w-full text-sm font-normal rounded-lg px-2 py-1 text-primary-900 dark:text-primary-100 focus:outline-none "
         />
       </div>
     );
   }
 
   return (
-    <div
-      onClick={onClick}
-      className={`group px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-        isActive
-          ? "bg-primary-200/60 dark:bg-primary-700/40"
-          : "hover:bg-primary-100/50 dark:hover:bg-primary-800/30"
-      }`}
-    >
-      <div className="flex items-center justify-between gap-2">
+    <div className="relative group">
+      <div
+        onClick={onClick}
+        className={`block px-3 py-2 rounded-xl cursor-pointer group-hover:scale-[1.02] transition-all duration-200 ease-out active:scale-[0.98] ${
+          isActive
+            ? "bg-primary-950/5 dark:bg-primary/5"
+            : "bg-transparent hover:bg-primary-950/3 dark:hover:bg-primary/5"
+        }`}
+      >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <Body className=" text-primary-900 dark:text-primary-100 line-clamp-1 leading-snug">
+            <Body className="text-primary-900 dark:text-primary-100 line-clamp-1 leading-snug">
               {title}
             </Body>
             {status === "draft" && (
@@ -164,17 +164,17 @@ export default function PostItem({
             </Muted>
           )}
         </div>
-        {(onDelete || onRename) && (
-          <button
-            ref={buttonRef}
-            onClick={handleOptionClick}
-            className="shrink-0 cursor-pointer opacity-0 group-hover:opacity-100 transition-all"
-            aria-label="Post options"
-          >
-            <Option className="w-5 h-5 text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200" />
-          </button>
-        )}
       </div>
+      {(onDelete || onRename) && (
+        <button
+          ref={buttonRef}
+          onClick={handleOptionClick}
+          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer rounded-md z-10"
+          aria-label="Post options"
+        >
+          <Option className="w-5 h-5 text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200" />
+        </button>
+      )}
 
       {/* Dropdown Menu */}
       {isDropdownOpen &&

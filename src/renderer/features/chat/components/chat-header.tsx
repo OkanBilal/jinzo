@@ -1,14 +1,11 @@
-import { AnimatedTitle } from "../../../components/ui/animated-title";
+import { Heading3 } from "@/components/ui/text";
 
 export const ChatHeader = ({ title }: ChatHeaderProps) => {
   return (
     <header className="flex items-center justify-between" role="banner">
-      <div className="overflow-hidden">
-        <AnimatedTitle
-          title={title}
-          className="text-lg font-semibold text-primary-900 dark:text-primary-50 mb-1 block"
-        />
-      </div>
+      <Heading3 className=" text-primary-900 dark:text-primary-50 mb-1 block">
+        {title}
+      </Heading3>
     </header>
   );
 };

@@ -87,7 +87,7 @@ export default function PostsList({
       </button>
 
       {isExpanded && (
-        <div className="space-y-0.5">
+        <div className="space-y-1">
           {sortedPosts.map((post, index) => {
             const isActive = location.pathname === post.url;
             return (

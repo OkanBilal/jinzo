@@ -8,6 +8,7 @@ import {
   getStructuredSchema,
   buildStructuredSystemPrompt,
   saveMessage,
+  getConversationHistory,
 } from "../utils";
 import { ChatOptions } from "../types";
 
@@ -24,19 +25,32 @@ export async function handleChatMode(
   const mergedOptions = mergeOptionsWithConfig(options, config);
   const structuredSchema = getStructuredSchema(options, config);
 
+  // Fetch conversation history to maintain context across messages
+  const history = await getConversationHistory(sessionId, { maxPairs: 10 });
+
+  // Build messages array with system prompt, history, and current question
+  const baseMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+    { role: "system", content: CHAT_SYSTEM_PROMPT },
+    ...history,
+    { role: "user", content: question },
+  ];
+
   let fullAnswer = "";
 
   if (structuredSchema) {
     const enhancedPrompt = buildStructuredSystemPrompt(CHAT_SYSTEM_PROMPT, structuredSchema);
     console.log("Using structured output schema");
 
+    const structuredMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+      { role: "system", content: enhancedPrompt },
+      ...history,
+      { role: "user", content: question },
+    ];
+
     const response = await ollama.chat({
       model,
       stream: false,
-      messages: [
-        { role: "system", content: enhancedPrompt },
-        { role: "user", content: question },
-      ],
+      messages: structuredMessages,
       format: "json",
       options: {
         temperature: mergedOptions.temperature,
@@ -50,10 +64,7 @@ export async function handleChatMode(
     const llmStream = await ollama.chat({
       model,
       stream: true,
-      messages: [
-        { role: "system", content: CHAT_SYSTEM_PROMPT },
-        { role: "user", content: question },
-      ],
+      messages: baseMessages,
       options: {
         temperature: mergedOptions.temperature,
         top_p: mergedOptions.top_p,

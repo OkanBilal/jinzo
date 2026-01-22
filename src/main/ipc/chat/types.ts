@@ -64,6 +64,8 @@ export interface ChatOptions {
   thinkingLevel?: 'low' | 'medium' | 'high';
   structuredOutputEnabled?: boolean;
   structuredOutputSchema?: StructuredOutputSchema;
+  /** User message ID for idempotency tracking - prevents duplicate generations */
+  userMessageId?: number;
 }
 
 export interface ChatRequestBody {

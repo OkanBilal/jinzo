@@ -19,10 +19,13 @@ export function useChatSession(options: UseChatSessionOptions = {}) {
   const { data: messagesData, isLoading: isLoadingMessages } =
     useGetChatMessagesQuery(sessionId ?? 0, {
       skip: !isValidSession,
+      // Refetch when component remounts to sync with DB after navigation
+      refetchOnMountOrArgChange: true,
     });
 
   const { data: sessionData } = useGetChatSessionQuery(sessionId ?? 0, {
     skip: !isValidSession,
+    refetchOnMountOrArgChange: true,
   });
 
   // Redirect if invalid session ID

@@ -5,7 +5,16 @@ interface UseInitialStreamOptions {
   sessionId: number | null;
   messagesData: ChatMessage[] | undefined;
   selectedModel: string;
-  onTriggerStream: (content: string) => void;
+  onTriggerStream: (content: string, messageId: number) => void;
+}
+
+// Module-level tracking to persist across component remounts
+// Tracks user message IDs that have already had generation triggered
+const triggeredMessageIds = new Set<number>();
+
+// Clear triggered message IDs for a session (call when session is deleted)
+export function clearTriggeredMessageId(messageId: number) {
+  triggeredMessageIds.delete(messageId);
 }
 
 export function useInitialStream({
@@ -43,8 +52,18 @@ export function useInitialStream({
       return;
     }
 
+    // Check if we've already triggered generation for this specific message ID
+    // This persists across component remounts and prevents duplicate generation
+    if (triggeredMessageIds.has(lastUserMessage.id)) {
+      // Mark as triggered for this component instance too
+      setTriggeredSessionId(sessionId);
+      return;
+    }
+
+    // Mark this message as having generation triggered (module-level, survives remount)
+    triggeredMessageIds.add(lastUserMessage.id);
     setTriggeredSessionId(sessionId);
-    onTriggerStream(lastUserMessage.content);
+    onTriggerStream(lastUserMessage.content, lastUserMessage.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messagesData, selectedModel, sessionId, onTriggerStream]);
 

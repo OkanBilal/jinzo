@@ -145,7 +145,7 @@ export default function ChatSessionItem({
     <div className="relative group">
       <Link
         to={`/chat/${session.id}`}
-        className={`block pl-3 pr-3 py-1.5 rounded-xl transition-all duration-200 ease-out active:scale-[0.98] ${
+        className={`block pl-3 pr-3 py-1.5 group-hover:scale-[1.02] rounded-xl transition-all duration-200 ease-out  active:scale-[0.98] ${
           isActive
             ? "bg-primary-950/5 dark:bg-primary/5"
             : "bg-transparent hover:bg-primary-950/3 dark:hover:bg-primary/5"
@@ -155,7 +155,7 @@ export default function ChatSessionItem({
           <div className="line-clamp-1">
             <AnimatedTitle
               title={title}
-              className={`text-sm font-normal ${
+              className={`text-sm font-medium ${
                 isActive
                   ? "text-primary-900 dark:text-primary"
                   : "text-primary-800 dark:text-primary-100"
@@ -170,7 +170,7 @@ export default function ChatSessionItem({
       <button
         ref={buttonRef}
         onClick={handleOptionClick}
-        className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer rounded-md z-10"
+        className="absolute  right-2 top-1/2  -translate-y-1/2 opacity-0 group-hover:opacity-100  transition-opacity p-1 cursor-pointer rounded-md z-10"
         aria-label="Chat options"
       >
         <Option className="w-5 h-5 text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200" />

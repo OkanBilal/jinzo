@@ -8,6 +8,7 @@ import {
   getStructuredSchema,
   buildStructuredSystemPrompt,
   saveMessage,
+  getConversationHistory,
 } from "../utils";
 import { ChatOptions, ChatResponse } from "../types";
 import { analyzeQuery, buildOptimizedPrompt, findRelevantEntities } from "../utils/rag";
@@ -102,17 +103,30 @@ export async function handleRAGMode(
   const structuredSchema = getStructuredSchema(options, config);
   let fullAnswer = "";
 
+  // Fetch conversation history to maintain context across messages
+  const history = await getConversationHistory(sessionId, { maxPairs: 10 });
+
+  // Build messages array with system prompt, history, and current question with RAG context
+  const baseMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+    { role: "system", content: systemPrompt },
+    ...history,
+    { role: "user", content: userPrompt },
+  ];
+
   if (structuredSchema) {
     const enhancedPrompt = buildStructuredSystemPrompt(systemPrompt, structuredSchema);
     console.log("Using structured output schema");
 
+    const structuredMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+      { role: "system", content: enhancedPrompt },
+      ...history,
+      { role: "user", content: userPrompt },
+    ];
+
     const response = await ollama.chat({
       model,
       stream: false,
-      messages: [
-        { role: "system", content: enhancedPrompt },
-        { role: "user", content: userPrompt },
-      ],
+      messages: structuredMessages,
       format: "json",
       options: {
         temperature: mergedOptions.temperature,
@@ -126,10 +140,7 @@ export async function handleRAGMode(
     const llmStream = await ollama.chat({
       model,
       stream: true,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
+      messages: baseMessages,
       options: {
         temperature: mergedOptions.temperature,
         top_p: mergedOptions.top_p,

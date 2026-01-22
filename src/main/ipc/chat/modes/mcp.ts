@@ -2,7 +2,7 @@ import ollama from "ollama";
 import type { Message, Tool } from "ollama";
 
 import { getChatConfig } from "../config";
-import { sendStreamChunk, sendStreamFinal, mergeOptionsWithConfig, saveMessage } from "../utils";
+import { sendStreamChunk, sendStreamFinal, mergeOptionsWithConfig, saveMessage, getConversationHistory } from "../utils";
 import { ChatOptions } from "../types";
 import { getMCPClient } from "../../mcp/utils/index";
 
@@ -23,8 +23,12 @@ export async function handleMCPMode(
   const mcpClient = getMCPClient();
   const tools = mcpClient.getTools();
 
+  // Fetch conversation history to maintain context across messages
+  const history = await getConversationHistory(sessionId, { maxPairs: 10 });
+
   const messages: Message[] = [
     { role: "system", content: MCP_SYSTEM_PROMPT },
+    ...history,
     { role: "user", content: question },
   ];
 
