@@ -81,7 +81,7 @@ export function ConfigContent() {
           />
         </ConfigSection>
 
-        <ConfigSection title="Tools">
+        <ConfigSection title="Mode">
           <Select
             value={toolMode}
             options={toolModeOptions}

@@ -1,5 +1,5 @@
-import { ReactNode, useRef, useState } from "react";
-import { useClickOutside } from "@/hooks/use-click-outside";
+import { ReactNode, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useActiveMood } from "@/hooks/useActiveMood";
 import { useDarkMode } from "@/hooks/useDarkMode";
 import { getDefaultDropdownBackground } from "@/lib/theme";
@@ -27,10 +27,40 @@ export default function Select<T extends string = string>({
 }: SelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
 
-  useClickOutside(containerRef, () => {
-    if (isOpen) setIsOpen(false);
-  });
+  // Update dropdown position when opened
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+  }, [isOpen]);
+
+  // Close dropdown when clicking outside (using portal, need to check both refs)
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        containerRef.current && 
+        !containerRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
 
   const selectedOption = options.find((opt) => opt.value === value);
   const { activeMood } = useActiveMood();
@@ -129,15 +159,19 @@ export default function Select<T extends string = string>({
         </svg>
       </button>
 
-      {/* Options List - Absolute positioned */}
-      {isOpen && (
+      {/* Options List - Portal rendered to body */}
+      {isOpen && createPortal(
         <div
-          className={`absolute top-full left-0 right-0 z-50 
+          ref={dropdownRef}
+          className={`fixed z-9999 
             border border-t-0 border-primary-950/10 dark:border-primary/10 
             rounded-b-xl shadow-lg overflow-hidden
             animate-slideDown ${fixedBackgroundClass}`}
           style={{
             background: getDropdownBackground(),
+            top: dropdownPosition.top,
+            left: dropdownPosition.left,
+            width: dropdownPosition.width,
           }}
         >
           <div className="max-h-60 overflow-auto noscrollbar">
@@ -168,7 +202,8 @@ export default function Select<T extends string = string>({
               </button>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       <style>{`
                 @keyframes slideIn {

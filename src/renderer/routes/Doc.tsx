@@ -18,6 +18,7 @@ import {
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { useJournalAutosave } from "@/hooks/useJournalAutosave";
 import { SecondaryButton, SuccessButton } from "@/components/ui/button";
+import { Textitalic } from "@/components/ui/icons/mood";
 
 // Utility to convert BlockNote content to markdown-ish text
 function blocksToMarkdown(blocks: Block[]): string {
@@ -344,12 +345,12 @@ function JournalEditor({ entityId }: JournalEditorProps) {
 function EmptyJournalState() {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center text-center px-6">
-      <div className="text-6xl mb-4">✍️</div>
+        <Textitalic className="w-12 h-12 text-primary-700 dark:text-primary-300 mb-4" />
       <h2 className="text-xl font-semibold text-primary-800 dark:text-primary-200 mb-2">
         Welcome to Journal
       </h2>
       <p className="text-primary-500 dark:text-primary-400 max-w-md">
-        Select an existing post from the sidebar or create a new one to start
+        Select an existing post from the left or create a new one to start
         writing.
       </p>
     </div>

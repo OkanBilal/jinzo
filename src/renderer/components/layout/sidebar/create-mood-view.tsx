@@ -249,8 +249,8 @@ export default function CreateMoodView({
                   }}
                   className={`flex-1 py-2 text-xs font-medium transition-colors cursor-pointer ${
                     iconMode === "emoji"
-                      ? "text-primary-700 dark:text-primary bg-primary-950/5 dark:bg-primary/10"
-                      : "text-primary-400 dark:text-primary-500 hover:text-primary-600 dark:hover:text-primary-300"
+                      ? "text-primary-900 dark:text-primary bg-primary-950/5 dark:bg-primary/10"
+                      : "text-primary-700 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-100"
                   }`}
                 >
                   Emoji
@@ -263,8 +263,8 @@ export default function CreateMoodView({
                   }}
                   className={`flex-1 py-2 text-xs font-medium transition-colors cursor-pointer ${
                     iconMode === "icon"
-                      ? "text-primary-700 dark:text-primary bg-primary-950/5 dark:bg-primary/10"
-                      : "text-primary-400 dark:text-primary-500 hover:text-primary-600 dark:hover:text-primary-300"
+                      ? "text-primary-900 dark:text-primary bg-primary-950/5 dark:bg-primary/10"
+                      : "text-primary-700 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-100"
                   }`}
                 >
                   Icon
@@ -337,7 +337,7 @@ export default function CreateMoodView({
                         className={`flex items-center justify-center size-8 rounded-lg transition-all cursor-pointer ${
                           icon === name
                             ? "bg-primary-950/15 dark:bg-primary/20 text-primary-700 dark:text-primary"
-                            : "hover:bg-primary-950/8 dark:hover:bg-primary/10 text-primary-500 dark:text-primary-400"
+                            : "hover:bg-primary-950/8 dark:hover:bg-primary/10 text-primary-800 dark:text-primary-200"
                         }`}
                         title={name}
                       >
