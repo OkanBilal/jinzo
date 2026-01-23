@@ -35,7 +35,7 @@ Jinzo is an Electron desktop app built with React, using a local SQLite database
 **Main Process** (`src/main/`)
 - Entry point: `src/main/index.ts` - initializes database, registers IPC handlers, creates window
 - Database client: `src/main/db/client.ts` - singleton with better-sqlite3, Drizzle ORM, sqlite-vec extension
-- IPC handlers: `src/main/ipc/` - each file exports `registerXxxHandlers()` functions
+- Modules: `src/main/modules/` - domain modules with layered architecture
 
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
@@ -46,21 +46,42 @@ Jinzo is an Electron desktop app built with React, using a local SQLite database
 - React app with Redux Toolkit, React Router (HashRouter)
 - Routes: `/` (Home), `/chat/:id` (Chat)
 
+### Module Architecture (`src/main/modules/`)
+
+Each domain module follows a layered pattern:
+```
+module/
+├── index.ts           # Public exports
+├── {module}.ipc.ts    # IPC handler registration (registerXxxIpc/unregisterXxxIpc)
+├── {module}.controller.ts  # Request handling, validation dispatch
+├── {module}.service.ts     # Business logic
+├── {module}.repo.ts        # Database queries (Drizzle)
+├── {module}.dto.ts         # Type definitions, response formatters
+├── {module}.validation.ts  # Input validation
+└── {module}.constants.ts   # Module constants
+```
+
+Example: `src/main/modules/account/` handles user account CRUD with this exact structure.
+
 ### Data Flow
 
 1. **IPC Communication**: Renderer calls `window.api.namespace.method()` → Preload invokes IPC → Main handles
-2. **Redux Integration**: `src/renderer/lib/redux/api/baseApi.ts` wraps IPC in RTK Query
-3. **State Management**: RTK Query for server state, Redux slices for UI state (`chatSlice`, `moodSlice`, `appSettingsSlice`)
+2. **Module Flow**: IPC handler → Controller → Service → Repository → Database
+3. **Redux Integration**: `src/renderer/lib/redux/api/baseApi.ts` wraps IPC in RTK Query
+4. **State Management**: RTK Query for server state, Redux slices for UI state (`chatSlice`, `moodSlice`, `appSettingsSlice`)
 
 ### Database Schema (`src/main/db/schema.ts`)
 
 Core tables:
+- `providers` - LLM/agent runtimes (ollama, copilot_cli, claude_code)
 - `entities` - Unified canonical content (tasks, issues, bookmarks, articles, podcasts, videos, etc.)
 - `entityChunks` / `vecEntityChunks` - Chunked content with embeddings for vector search
 - `connections` / `connectionResources` - External service connections (GitHub, Raindrop, RSS, etc.)
 - `feedItems` - Event log/timeline entries
-- `chatSessions` / `chatMessages` - Chat history
+- `chatSessions` / `chatMessages` - Chat history with provider/model tracking
 - `moods` - User-defined UI/prompt configurations
+- `runs` / `runContext` / `runArtifacts` / `runCommands` - Terminal/code-writing flow (agent runs)
+- `tools` / `toolCalls` / `moodToolPermissions` - Tool registry and invocation tracking
 
 Domain-specific views on entities:
 - `tasks` - Actionable tasks (status, priority, due date)
@@ -69,9 +90,9 @@ Domain-specific views on entities:
 
 ### Key Subsystems
 
-**Sync System** (`src/renderer/lib/sync/`)
-- `fetchers.ts` - Orchestrates fetching from all connections
-- `connections/` - Provider-specific fetchers (GitHub, Raindrop, HackerNews, RSS, Spotify, Apple Music, Podcasts)
+**Sync System** (`src/main/modules/sync/`)
+- `sync.service.ts` - Orchestrates fetching from all connections
+- `connections/` - Provider-specific fetchers (GitHub, Raindrop, RSS, Spotify, Apple Music, Podcasts, YouTube, Notion)
 - Produces `EntityInput[]` which gets persisted to `entities` table
 
 **RAG Pipeline** (`src/renderer/lib/rag/`)
@@ -80,15 +101,14 @@ Domain-specific views on entities:
 - `chunking.ts` - Text chunking strategies
 - `prompt-optimizer.ts` - Builds context-aware prompts
 
-**MCP Tools** (`src/renderer/lib/mcp/`)
+**MCP Tools** (`src/main/modules/mcp/`)
 - Model Context Protocol integration for tool use
-- Tools: entity list/search, sync trigger, mood switching
+- Tools in `tools/`: entity-tools, sync-tools, mood-tools, journal-tools
 - Server/client pattern for Ollama tool calling
 
-**Chat Modes** (`src/main/ipc/chatHandlers.ts`)
-- `chat` - Direct LLM conversation
-- `rag` - Query analysis → entity retrieval → augmented prompt
-- `mcp` - Tool-enabled conversation with entity/sync/mood tools
+**Chat System** (`src/main/modules/chat/`)
+- Supports multiple modes: direct chat, RAG-augmented, MCP tool-enabled
+- Tracks provider/model per session and per message
 
 ### Configuration
 
@@ -108,7 +128,7 @@ Domain-specific views on entities:
 
 Each connection type has:
 - Modal in `src/renderer/features/settings/components/apps/`
-- Fetcher in `src/renderer/lib/sync/connections/`
+- Fetcher in `src/main/modules/sync/connections/`
 - IPC handlers for credentials and resource management
 
-Supported: GitHub, Raindrop, HackerNews, RSS, Spotify, Apple Music, Podcasts
+Supported: GitHub, Raindrop, HackerNews, RSS, Spotify, Apple Music, Podcasts, YouTube, Notion
