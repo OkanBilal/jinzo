@@ -1,4 +1,4 @@
-import { Body, Heading3 } from "@/components/ui/text";
+import { Body } from "@/components/ui/text";
 import { Slider } from "@/components/ui/slider";
 import { Toggle } from "@/components/ui/toggle";
 import Select from "@/components/ui/select";
@@ -31,9 +31,11 @@ export function ConfigContent() {
 
   return (
     <div className="flex-1 overflow-auto noscrollbar p-3">
-              <div className="flex items-center justify-between py-2 ">
-          <Heading3>Configuration</Heading3>
-        </div>
+      <div className="flex items-center justify-between pt-6 pb-4 ">
+        <Body className="text-left text-base! text-primary-800 dark:text-primary font-medium ">
+          Configuration
+        </Body>
+      </div>
       <div className="flex flex-col gap-4">
         <ConfigSection title="Model">
           <Select
@@ -129,4 +131,3 @@ export function ConfigSection({ title, children }: ConfigSectionProps) {
     </div>
   );
 }
-

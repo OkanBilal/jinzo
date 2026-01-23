@@ -142,7 +142,7 @@ export default function PostItem({
     <div className="relative group">
       <div
         onClick={onClick}
-        className={`block px-3 py-2 rounded-xl cursor-pointer group-hover:scale-[1.02] transition-all duration-200 ease-out active:scale-[0.98] ${
+        className={`block px-3 py-2 rounded-xl cursor-pointer group-hover:scale-[1.01] transition-all duration-200 ease-out active:scale-[0.99] ${
           isActive
             ? "bg-primary-950/5 dark:bg-primary/5"
             : "bg-transparent hover:bg-primary-950/3 dark:hover:bg-primary/5"

@@ -1,0 +1,144 @@
+import { useNavigate, useLocation } from "react-router-dom";
+import { Body, Caption } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
+import {
+  Apps,
+  Calendar,
+  Bell,
+  Personalize,
+  Security,
+  Agent,
+  General,
+  ChevronUp,
+} from "@/components/ui/icons";
+import type { SettingsSection } from "@/features/chat/components/input/types";
+
+interface SettingsViewProps {
+  onClose: () => void;
+}
+
+const menuItems: Array<{
+  id: SettingsSection;
+  label: string;
+  icon: React.ElementType | null;
+}> = [
+  { id: "general", label: "General", icon: General },
+  { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "personalization", label: "Personalization", icon: Personalize },
+  { id: "apps", label: "Apps", icon: Apps },
+  { id: "agent", label: "Agent", icon: Agent },
+  { id: "schedules", label: "Schedules", icon: Calendar },
+  { id: "security", label: "Security", icon: Security },
+];
+
+export default function SettingsView({ onClose }: SettingsViewProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if we're on the settings page and which section is active
+  const isOnSettingsPage = location.pathname === "/settings";
+  const searchParams = new URLSearchParams(location.search);
+  const activeSection = searchParams.get("section") as SettingsSection | null;
+
+  const handleSectionClick = (sectionId: SettingsSection) => {
+    navigate(`/settings?section=${sectionId}`);
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex flex-col items-start pt-12 pb-2 px-4">
+        <Body className="text-left text-base! text-primary-800 dark:text-primary font-medium ">
+          Settings
+        </Body>
+        <p className="text-[13px] text-primary-500 dark:text-primary-400  text-left">
+          Manage your preferences
+        </p>
+      </div>
+
+      <div className="flex-1 px-4 py-2 overflow-y-auto noscrollbar">
+        <nav className="space-y-1">
+          {menuItems.map((item, index) => {
+            const IconComponent = item.icon;
+            const isActive = isOnSettingsPage && activeSection === item.id;
+            return (
+              <Button
+                key={item.id}
+                style={{
+                  animation: `slideIn 0.15s ease-out ${index * 0.05}s both`,
+                }}
+                onClick={() => handleSectionClick(item.id)}
+                className={`w-full cursor-pointer text-left px-3 py-3 rounded-xl text-sm transition-all flex items-center gap-3
+                  ${
+                    isActive
+                      ? "bg-primary-950/5 dark:bg-primary/5 text-primary-900 dark:text-primary-100"
+                      : "text-primary-700 dark:text-primary-200 g-transparent hover:bg-primary-950/3 dark:hover:bg-primary/5"
+                  }
+                  hover:scale-[1.01] active:scale-[0.99]`}
+              >
+                {IconComponent ? (
+                  <IconComponent
+                    className={`w-4.5 h-4.5 ${isActive ? "text-primary-800 dark:text-primary-100" : "text-primary-600 dark:text-primary-200"}`}
+                  />
+                ) : (
+                  <div className="w-4.5 h-4.5 rounded bg-primary-300 dark:bg-primary-700" />
+                )}
+                <span className="font-medium">{item.label}</span>
+              </Button>
+            );
+          })}
+        </nav>
+        <style>{`
+                @keyframes slideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+            `}</style>
+      </div>
+
+      <div
+        className="px-3 pb-3 group"
+        style={{
+          animation: `slideUp 0.2s ease-out 0.1s both`,
+        }}
+      >
+        <Button
+          tooltip={"Close settings"}
+          variant="subtle"
+          tooltipPosition="top-right"
+          tooltipShortcut="Esc"
+          size="lg"
+          onClick={onClose}
+          fullWidth
+          className="justify-start cursor-pointer pt-1!  hover:scale-100! bg-transparent! transition-transform duration-200"
+          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+        >
+          <ChevronUp className="w-4.5 h-4.5 rotate-270 text-primary-800 dark:text-primary-400" />
+          <Body className="text-primary-900 dark:text-primary-100 ml-0.5 font-medium">
+            Back to app
+          </Body>
+          <Caption className="ml-auto text-primary-800 dark:text-primary-400">
+            Esc
+          </Caption>
+        </Button>
+      </div>
+      <style>{`
+                @keyframes slideUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+            `}</style>
+    </div>
+  );
+}

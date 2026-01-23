@@ -119,6 +119,7 @@ export default function Select<T extends string = string>({
         onClick={() => setIsOpen(!isOpen)}
         className={`
           w-full px-3 py-2.5 
+          min-w-50
           bg-primary-950/2 dark:bg-primary/4 
           border border-primary-950/10 dark:border-primary/10
           text-primary-800 dark:text-primary-200 

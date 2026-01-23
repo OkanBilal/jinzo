@@ -48,7 +48,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   icon: "cursor-pointer p-1 rounded-md text-primary-600 dark:text-primary-200 hover:bg-primary-200/40 dark:hover:bg-primary-900/50",
   link: "cursor-pointer text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 underline-offset-4 hover:underline ",
   subtle:
-    "cursor-pointer flex items-center gap-2 bg-primary-950/2 dark:bg-primary/4 hover:bg-primary-950/4 dark:hover:bg-primary/8 transition-all duration-100  active:scale-[0.99]",
+    "cursor-pointer flex items-center gap-2 bg-primary-950/2 dark:bg-primary/4 hover:bg-primary-950/4 dark:hover:bg-primary/8 transition-all duration-100 active:scale-[0.99]",
   frosted:
     "cursor-pointer glass-morphism text-primary-800 dark:text-primary-200 transition-all duration-100 ease-out hover:scale-105",
   bare: "cursor-pointer",
@@ -63,7 +63,7 @@ const sizeStyles: Record<ButtonSize, string> = {
 };
 
 const baseStyles =
-  " items-center active:scale-[0.98] hover:scale-[1.02] duration-100 transition-all justify-center font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
+  " items-center active:scale-[0.99] hover:scale-[1.01] duration-100 transition-all justify-center font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (

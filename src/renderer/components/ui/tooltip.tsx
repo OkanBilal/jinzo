@@ -2,7 +2,15 @@ import { useState, useRef, useEffect, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
 
-export type TooltipPosition = "top" | "bottom" | "left" | "right";
+export type TooltipPosition =
+  | "top"
+  | "bottom"
+  | "left"
+  | "right"
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right";
 
 export interface TooltipProps {
   content: ReactNode;
@@ -59,6 +67,22 @@ export default function Tooltip({
         top = rect.top + rect.height / 2;
         left = rect.right + gap;
         break;
+      case "top-left":
+        top = rect.top - gap;
+        left = rect.right;
+        break;
+      case "top-right":
+        top = rect.top - gap;
+        left = rect.left;
+        break;
+      case "bottom-left":
+        top = rect.bottom + gap;
+        left = rect.right;
+        break;
+      case "bottom-right":
+        top = rect.bottom + gap;
+        left = rect.left;
+        break;
     }
 
     setCoords({ top, left });
@@ -108,6 +132,14 @@ export default function Tooltip({
         return "translate(-100%, -50%)";
       case "right":
         return "translate(0, -50%)";
+      case "top-left":
+        return "translate(-100%, -100%)";
+      case "top-right":
+        return "translate(0, -100%)";
+      case "bottom-left":
+        return "translate(-100%, 0)";
+      case "bottom-right":
+        return "translate(0, 0)";
     }
   };
 

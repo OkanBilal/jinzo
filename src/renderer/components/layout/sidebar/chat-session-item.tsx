@@ -146,7 +146,7 @@ export default function ChatSessionItem({
     <div className="relative group">
       <Link
         to={`/chat/${session.id}`}
-        className={`block pl-3 pr-3 py-1.5 group-hover:scale-[1.02] rounded-xl transition-all duration-200 ease-out  active:scale-[0.98] ${
+        className={`block pl-3 pr-3 py-1.5 group-hover:scale-[1.01] rounded-xl transition-all duration-200 ease-out  active:scale-[0.99] ${
           isActive
             ? "bg-primary-950/5 dark:bg-primary/5"
             : "bg-transparent hover:bg-primary-950/3 dark:hover:bg-primary/5"

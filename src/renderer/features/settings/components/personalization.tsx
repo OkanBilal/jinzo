@@ -4,7 +4,7 @@ import { toast } from "@/components/toast";
 
 import { Button } from "../../../components/ui/button";
 import { Input, Textarea } from "../../../components/ui/input";
-import { Heading2, Muted } from "../../../components/ui/text";
+import { Heading2 } from "../../../components/ui/text";
 
 interface PersonalizationFormValues {
   displayName: string;
@@ -20,14 +20,6 @@ interface PersonalizationResponse extends PersonalizationFormValues {
   id: string;
   createdAt: string | null;
   updatedAt: string | null;
-}
-
-interface FieldProps {
-  label: string;
-  description?: string;
-  htmlFor?: string;
-  className?: string;
-  children: React.ReactNode;
 }
 
 const EMPTY_FORM: PersonalizationFormValues = {
@@ -55,7 +47,9 @@ export default function PersonalizationSettings() {
       const response = await window.api.account.get();
 
       if (!response.success) {
-        throw new Error(response.error || "Unable to load personalization details");
+        throw new Error(
+          response.error || "Unable to load personalization details",
+        );
       }
 
       const data = response.data as PersonalizationResponse;
@@ -72,7 +66,7 @@ export default function PersonalizationSettings() {
       setIsDirty(false);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "An unexpected error occurred"
+        err instanceof Error ? err.message : "An unexpected error occurred",
       );
     } finally {
       setLoading(false);
@@ -102,7 +96,8 @@ export default function PersonalizationSettings() {
       const response = await window.api.account.update(form);
 
       if (!response.success) {
-        const message = response.errors?.body || response.error || "Could not save";
+        const message =
+          response.errors?.body || response.error || "Could not save";
         throw new Error(message);
       }
 
@@ -137,9 +132,9 @@ export default function PersonalizationSettings() {
   }, [lastSavedAt]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Heading2 className="mb-1">Personalization</Heading2>
+    <div className="space-y-2">
+      <div className="mb-8">
+        <Heading2>Personalization</Heading2>
       </div>
 
       {error && (
@@ -153,102 +148,124 @@ export default function PersonalizationSettings() {
           Loading personalization...
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <section className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold text-primary-700 dark:text-primary-200">
-                General Information
-              </h3>
-            </div>
-            <div className="flex flex-col gap-4">
-              <Field
-                label="Name"
-                description="Displayed across the app"
-                htmlFor="displayName"
-              >
-                <Input
-                  id="displayName"
-                  value={form.displayName}
-                  onChange={handleChange("displayName")}
-                  disabled={saving}
-                  placeholder="e.g. Alex Smith"
-                />
-              </Field>
-              <Field
-                label="Emaıl"
-                description="Used for notifications"
-                htmlFor="email"
-              >
-                <Input
-                  id="email"
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange("email")}
-                  disabled={saving}
-                  placeholder="you@example.com"
-                />
-              </Field>
-              <Field label="Company" htmlFor="company">
-                <Input
-                  id="company"
-                  value={form.company}
-                  onChange={handleChange("company")}
-                  disabled={saving}
-                  placeholder="e.g. Laurel"
-                />
-              </Field>
-              <Field label="Job Tıtle" htmlFor="jobTitle">
-                <Input
-                  id="jobTitle"
-                  value={form.jobTitle}
-                  onChange={handleChange("jobTitle")}
-                  disabled={saving}
-                  placeholder="e.g. Product Lead"
-                />
-              </Field>
-            </div>
-          </section>
+        <form onSubmit={handleSubmit} className="space-y-0">
+          {/* Display Name */}
+          <SettingsRow
+            title="Display Name"
+            description="Your name displayed across the app"
+          >
+            <Input
+              id="displayName"
+              value={form.displayName}
+              onChange={handleChange("displayName")}
+              disabled={saving}
+              placeholder="e.g. Alex Smith"
+              className="dark:bg-primary-900/50! focus:dark:bg-primary-900/70! "
+            />
+          </SettingsRow>
 
-          <section className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold text-primary-700 dark:text-primary-200">
-                Profile Details
-              </h3>
-            </div>
-            <div className="flex flex-col gap-4">
-              <Field label="Websıte" htmlFor="website">
-                <Input
-                  id="website"
-                  value={form.website}
-                  onChange={handleChange("website")}
-                  disabled={saving}
-                  placeholder="https://"
-                />
-              </Field>
-              <Field label="Avatar URL" htmlFor="avatarUrl">
-                <Input
-                  id="avatarUrl"
-                  value={form.avatarUrl}
-                  onChange={handleChange("avatarUrl")}
-                  disabled={saving}
-                  placeholder="https://cdn.example.com/me.png"
-                />
-              </Field>
-              <Field label="Bıo" htmlFor="bio">
-                <Textarea
-                  id="bio"
-                  className="resize-none"
-                  value={form.bio}
-                  onChange={handleChange("bio")}
-                  disabled={saving}
-                  placeholder="Tell us a little about yourself"
-                />
-              </Field>
-            </div>
-          </section>
+          <SettingsDivider />
 
-          <div className="flex flex-col gap-3 border-t border-primary-100 dark:border-primary-900 pt-4 md:flex-row md:items-center md:justify-between">
-            <div className="text-xs text-primary-500 dark:text-primary-300">
+          {/* Email */}
+          <SettingsRow title="Email" description="Used for notifications">
+            <Input
+              id="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange("email")}
+              disabled={saving}
+              placeholder="you@example.com"
+              className="dark:bg-primary-900/50! focus:dark:bg-primary-900/70! "
+            />
+          </SettingsRow>
+
+          <SettingsDivider />
+
+          {/* Company */}
+          <SettingsRow
+            title="Company"
+            description="Your organization or workplace"
+          >
+            <Input
+              id="company"
+              value={form.company}
+              onChange={handleChange("company")}
+              disabled={saving}
+              placeholder="e.g. Laurel"
+              className="dark:bg-primary-900/50! focus:dark:bg-primary-900/70! "
+            />
+          </SettingsRow>
+
+          <SettingsDivider />
+
+          {/* Job Title */}
+          <SettingsRow title="Job Title" description="Your role or position">
+            <Input
+              id="jobTitle"
+              value={form.jobTitle}
+              onChange={handleChange("jobTitle")}
+              disabled={saving}
+              placeholder="e.g. Product Lead"
+              className="dark:bg-primary-900/50! focus:dark:bg-primary-900/70! "
+            />
+          </SettingsRow>
+
+          <SettingsDivider />
+
+          {/* Website */}
+          <SettingsRow
+            title="Website"
+            description="Your personal or company website"
+          >
+            <Input
+              id="website"
+              value={form.website}
+              onChange={handleChange("website")}
+              disabled={saving}
+              placeholder="https://"
+              className="dark:bg-primary-900/50! focus:dark:bg-primary-900/70! "
+            />
+          </SettingsRow>
+
+          <SettingsDivider />
+
+          {/* Avatar URL */}
+          <SettingsRow
+            title="Avatar URL"
+            description="Link to your profile picture"
+          >
+            <Input
+              id="avatarUrl"
+              value={form.avatarUrl}
+              onChange={handleChange("avatarUrl")}
+              disabled={saving}
+              placeholder="https://cdn.example.com/me.png"
+              className="dark:bg-primary-900/50! focus:dark:bg-primary-900/70! min-w-80!"
+            />
+          </SettingsRow>
+
+          <SettingsDivider />
+
+          {/* Bio */}
+          <SettingsRow
+            title="Bio"
+            description="Tell us a little about yourself"
+          >
+            <Textarea
+              id="bio"
+              className="resize-none w-80! h-16 dark:bg-primary-900/50! focus:dark:bg-primary-900/70!"
+              value={form.bio}
+              onChange={handleChange("bio")}
+              disabled={saving}
+              placeholder="A short description..."
+            />
+          </SettingsRow>
+
+          <SettingsDivider />
+
+          {/* Save Button Row */}
+          <div className="flex items-center justify-between pt-6">
+            <div className="text-xs text-primary-500 dark:text-primary-400">
               {lastSavedLabel
                 ? `Last saved: ${lastSavedLabel}`
                 : "Not saved yet"}
@@ -278,20 +295,34 @@ export default function PersonalizationSettings() {
   );
 }
 
-function Field({
-  label,
+// Settings Row Component - Left: title/description, Right: component
+function SettingsRow({
+  title,
   description,
-  htmlFor,
-  className = "",
   children,
-}: FieldProps) {
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <label className={`space-y-1.5 ${className}`} htmlFor={htmlFor}>
-      <span className="text-xs font-medium uppercase tracking-wide text-primary-500 dark:text-primary-300">
-        {label}
-      </span>
-      {description && <Muted className="text-[11px]">{description}</Muted>}
-      {children}
-    </label>
+    <div className="flex items-center justify-between py-7">
+      <div className="flex-1 pr-8">
+        <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100">
+          {title}
+        </h3>
+        {description && (
+          <p className="text-sm text-primary-500 dark:text-primary-500 mt-1.5">
+            {description}
+          </p>
+        )}
+      </div>
+      <div className="shrink-0">{children}</div>
+    </div>
   );
+}
+
+// Divider Component
+function SettingsDivider() {
+  return <div className="border-b border-primary-200 dark:border-primary-800/50" />;
 }

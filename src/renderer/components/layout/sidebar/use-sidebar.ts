@@ -190,12 +190,23 @@ export function useSidebar() {
     }
   };
 
+  // Store the path before opening settings
+  const [previousPath, setPreviousPath] = useState<string | null>(null);
+
   const handleOpenSettings = () => {
+    setPreviousPath(location.pathname + location.search);
     setIsSettingsOpen(true);
+    navigate("/settings?section=general");
   };
 
   const handleCloseSettings = () => {
     setIsSettingsOpen(false);
+    if (previousPath) {
+      navigate(previousPath);
+      setPreviousPath(null);
+    } else {
+      navigate("/");
+    }
   };
 
   // Create mood menu handlers

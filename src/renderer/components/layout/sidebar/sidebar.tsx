@@ -1,4 +1,3 @@
-import SettingsModal from "@/features/settings/components/settings-modal";
 import { SidebarHeader } from "./sidebar-header";
 import { SidebarFooter } from "./sidebar-footer";
 import { SidebarContent } from "./sidebar-content";
@@ -6,6 +5,7 @@ import DeleteConfirmationModal from "./delete-confirmation-modal";
 import NewButton from "./new-button";
 import CreateMoodView from "./create-mood-view";
 import PresetMoodsView from "./preset-moods-view";
+import SettingsView from "./settings-view";
 import CreateMoodMenu from "./create-mood-menu";
 import MoodContextMenu from "./mood-context-menu";
 import EditMoodModal from "./edit-mood-modal";
@@ -69,7 +69,9 @@ export default function Sidebar() {
         role="complementary"
         aria-label="Chat sessions sidebar"
       >
-        {isCreatingMood ? (
+        {isSettingsOpen ? (
+          <SettingsView onClose={handleCloseSettings} />
+        ) : isCreatingMood ? (
           <CreateMoodView onClose={handleStopCreatingMood} />
         ) : isViewingPresetMoods ? (
           <PresetMoodsView onClose={handleStopCreatingMood} />
@@ -111,15 +113,6 @@ export default function Sidebar() {
           </div>
         )}
       </aside>
-
-      <SettingsModal
-        open={isSettingsOpen}
-        apps={apps}
-        connectedApps={connectedApps}
-        onClose={handleCloseSettings}
-        section={"general"}
-        onRefresh={handleRefreshApps}
-      />
 
       <DeleteConfirmationModal
         isOpen={!!deleteSession.sessionToDelete}

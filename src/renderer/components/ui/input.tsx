@@ -8,7 +8,7 @@ import {
 import { cn } from "../../lib/cn";
 
 const baseInputClasses =
-	"w-full rounded-xl border border-primary-200/70 dark:border-primary-800 bg-white/80 dark:bg-primary-950/40 px-3 py-2 text-sm text-primary-900 dark:text-primary-100 shadow-sm placeholder:text-primary-400/80 dark:placeholder:text-primary-500 focus:outline-none transition disabled:opacity-60 disabled:cursor-not-allowed";
+	"w-full rounded-xl border min-w-60 border-primary-200/70 dark:border-primary-800 bg-white/80 dark:bg-primary-950/40 px-3 py-2 text-sm text-primary-900 dark:text-primary-100 shadow-sm placeholder:text-primary-400/80 dark:placeholder:text-primary-500 focus:outline-none transition disabled:opacity-60 disabled:cursor-not-allowed";
 
 const errorClasses =
 	"border-red-300 focus:ring-red-300 focus:border-red-400 dark:border-red-800 dark:focus:ring-red-600";
@@ -40,7 +40,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 			ref={ref}
 			className={cn(
 				baseInputClasses,
-				"resize-y min-h-30",
+				"resize-y min-h-16",
 				hasError && errorClasses,
 				className
 			)}

@@ -325,8 +325,8 @@ export default function GeneralSettings() {
   }, [lastSavedAt]);
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="space-y-2">
+      <div className="mb-8">
         <Heading2>General</Heading2>
       </div>
 
@@ -341,17 +341,13 @@ export default function GeneralSettings() {
           Loading account information...
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <section className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold text-primary-700 dark:text-primary-200">
-                Appearance
-              </h3>
-              <p className="text-xs text-primary-500 dark:text-primary-400 mt-1">
-                Color mode
-              </p>
-            </div>
-            <div className="flex gap-4">
+        <form onSubmit={handleSubmit} className="space-y-0">
+          {/* Appearance Section */}
+          <SettingsRow
+            title="Appearance"
+            description="Choose your preferred color mode"
+          >
+            <div className="flex gap-3">
               {mounted ? (
                 <>
                   <ThemePreviewCard
@@ -389,54 +385,59 @@ export default function GeneralSettings() {
                   />
                 </>
               ) : (
-                <div className="flex gap-4">
+                <div className="flex gap-3">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="flex flex-col items-center gap-2">
-                      <div className="w-32 h-24 rounded-xl bg-primary-100 dark:bg-primary-800 animate-pulse" />
-                      <div className="w-12 h-4 rounded bg-primary-100 dark:bg-primary-800 animate-pulse" />
+                      <div className="w-24 h-16 rounded-xl bg-primary-100 dark:bg-primary-800 animate-pulse" />
+                      <div className="w-10 h-3 rounded bg-primary-100 dark:bg-primary-800 animate-pulse" />
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          </section>
+          </SettingsRow>
 
-          <section className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold text-primary-700 dark:text-primary-200">
-                Language & Time Settings
-              </h3>
-            </div>
-            <div className="flex flex-col gap-4">
-              <Field label="Tıme Zone" htmlFor="timezone">
-                <Select
-                  useFixedBackground={true}
-                  value={form.timezone}
-                  options={TIMEZONE_OPTIONS}
-                  onChange={(val) => {
-                    setForm((prev) => ({ ...prev, timezone: val }));
-                    setIsDirty(true);
-                  }}
-                  placeholder="Select timezone"
-                />
-              </Field>
-              <Field label="Language" htmlFor="locale">
-                <Select
-                  useFixedBackground={true}
-                  value={form.locale}
-                  options={LOCALE_OPTIONS}
-                  onChange={(val) => {
-                    setForm((prev) => ({ ...prev, locale: val }));
-                    setIsDirty(true);
-                  }}
-                  placeholder="Select language"
-                />
-              </Field>
-            </div>
-          </section>
+          <SettingsDivider />
 
-          <div className="flex flex-col gap-3 pt-4 md:flex-row md:items-center md:justify-between">
-            <div className="text-xs text-primary-500 dark:text-primary-300">
+          {/* Timezone */}
+          <SettingsRow
+            title="Time Zone"
+            description="Set your local timezone for accurate scheduling"
+          >
+            <Select
+              useFixedBackground={true}
+              value={form.timezone}
+              options={TIMEZONE_OPTIONS}
+              onChange={(val) => {
+                setForm((prev) => ({ ...prev, timezone: val }));
+                setIsDirty(true);
+              }}
+              placeholder="Select timezone"
+            />
+          </SettingsRow>
+          <SettingsDivider />
+          {/* Language */}
+          <SettingsRow
+            title="Language"
+            description="Choose your preferred language"
+          >
+            <Select
+              useFixedBackground={true}
+              value={form.locale}
+              options={LOCALE_OPTIONS}
+              onChange={(val) => {
+                setForm((prev) => ({ ...prev, locale: val }));
+                setIsDirty(true);
+              }}
+              placeholder="Select language"
+            />
+          </SettingsRow>
+
+          <SettingsDivider />
+
+          {/* Save Button Row */}
+          <div className="flex items-center justify-between pt-6">
+            <div className="text-xs text-primary-500 dark:text-primary-400">
               {lastSavedLabel
                 ? `Last saved: ${lastSavedLabel}`
                 : "Not saved yet"}
@@ -466,6 +467,38 @@ export default function GeneralSettings() {
       )}
     </div>
   );
+}
+
+// Settings Row Component - Left: title/description, Right: component
+function SettingsRow({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between py-7">
+      <div className="flex-1 pr-8">
+        <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100">
+          {title}
+        </h3>
+        {description && (
+          <p className="text-sm text-primary-500 dark:text-primary-500 mt-1.5">
+            {description}
+          </p>
+        )}
+      </div>
+      <div className="shrink-0">{children}</div>
+    </div>
+  );
+}
+
+// Divider Component
+function SettingsDivider() {
+  return <div className="border-b border-primary-200 dark:border-primary-800/50" />;
 }
 
 function Field({
