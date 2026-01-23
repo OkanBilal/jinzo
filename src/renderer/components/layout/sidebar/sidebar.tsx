@@ -12,7 +12,7 @@ import EditMoodModal from "./edit-mood-modal";
 import DeleteMoodModal from "./delete-mood-modal";
 import { useSidebar } from "./use-sidebar";
 
-export default function FrostedSidebar() {
+export default function Sidebar() {
   const {
     currentPath,
     searchQuery,
@@ -85,7 +85,7 @@ export default function FrostedSidebar() {
               onSearchClear={handleSearchClear}
             />
 
-            <div className="p-4">
+            <div className="px-4 py-3">
               <NewButton onClick={handleNewClick} title={sidebarConfig.title} />
             </div>
 

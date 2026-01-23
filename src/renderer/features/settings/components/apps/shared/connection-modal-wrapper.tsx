@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { Close } from "../../../../../components/ui/icons"
 import Text, { Muted } from "../../../../../components/ui/text";
 interface ConnectionModalWrapperProps {
@@ -35,12 +36,12 @@ export function ConnectionModalWrapper({
             />
             <Text variant="h3">{appName}</Text>
           </div>
-          <button
+          <Button
             onClick={onClose}
             className="p-2 flex cursor-pointer items-center justify-center rounded-full text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
           >
             <Close className="w-4 h-4 " />
-          </button>
+          </Button>
         </div>
         <div className="p-6 min-h-75">{children}</div>
       </div>

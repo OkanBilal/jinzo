@@ -7,6 +7,7 @@ import GitHubModal from "../../../../features/settings/components/apps/github/gi
 
 import { AppListItemProps, ConnectAppsDropdownProps } from "./types";
 import Text from "../../../../components/ui/text";
+import { Button } from "@/components/ui/button";
 
 export default function ConnectAppsDropdown({
   isOpen,
@@ -42,7 +43,7 @@ export default function ConnectAppsDropdown({
     <>
       <div className=" relative " ref={dropdownRef}>
         {selectedApp ? (
-          <button
+          <Button
             type="button"
             onClick={handleClearApp}
             className="group flex cursor-pointer items-center hover:bg-primary-200/60 dark:hover:bg-primary-700/40 transition-colors rounded-2xl pl-1 pr-2 py-1 gap-1"
@@ -70,9 +71,9 @@ export default function ConnectAppsDropdown({
                 {selectedApp.displayName}
               </Text>
             )}
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             type="button"
             onClick={onToggle}
             className="flex cursor-pointer items-center hover:bg-primary-200/60 dark:hover:bg-primary-700/40 transition-colors rounded-2xl pl-2 pr-2 py-1.5"
@@ -86,7 +87,7 @@ export default function ConnectAppsDropdown({
             >
               Apps
             </Text>
-          </button>
+          </Button>
         )}
         <DropdownWrapper
           isOpen={isOpen}
@@ -110,13 +111,13 @@ export default function ConnectAppsDropdown({
               })}
           </ul>
           <div className="px-2 py-2">
-            <button
+            <Button
               type="button"
               onClick={onOpenModal}
               className="w-full cursor-pointer text-primary-900 dark:text-primary-200 text-xs font-medium px-3 py-2 rounded-xl bg-primary-200/60 dark:bg-primary-700/40 hover:bg-primary-200 dark:hover:bg-primary-700 transition-colors"
             >
               Connect More
-            </button>
+            </Button>
           </div>
         </DropdownWrapper>
       </div>
@@ -139,7 +140,7 @@ function AppListItem({ app, isConnected, onConnect }: AppListItemProps) {
       className="flex items-center justify-between px-2.5 py-2 first:rounded-t-lg hover:bg-primary-100 dark:hover:bg-primary-600/20 text-sm"
       role="menuitem"
     >
-      <button
+      <Button
         onClick={() => onConnect(id)}
         className="cursor-pointer flex items-center gap-2 flex-1 text-left"
       >
@@ -164,15 +165,15 @@ function AppListItem({ app, isConnected, onConnect }: AppListItemProps) {
         <Text variant="body" className="text-primary-800 dark:text-primary-200">
           {name}
         </Text>
-      </button>
-      <button onClick={() => onConnect(id)} className="cursor-pointer shrink-0">
+      </Button>
+      <Button onClick={() => onConnect(id)} className="cursor-pointer shrink-0">
         <Text
           variant="bodySmall"
           className="text-primary-800 dark:text-primary-200"
         >
           {isConnected ? "Connected" : "Connect"}
         </Text>
-      </button>
+      </Button>
     </li>
   );
 }

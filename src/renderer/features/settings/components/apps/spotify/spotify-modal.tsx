@@ -9,11 +9,10 @@ import Text, {
   BodyMedium,
 } from "../../../../../components/ui/text";
 import {
-  SecondaryButton,
   WarningButton,
   DangerButton,
-  PrimaryButton,
   LinkButton,
+  Button,
 } from "../../../../../components/ui/button";
 
 type SpotifyModalProps = {
@@ -252,12 +251,12 @@ const SpotifyModal = ({ open, onClose, isConnected }: SpotifyModalProps) => {
             />
             <Text variant="h3">Spotify Connection</Text>
           </div>
-          <button
+          <Button
             onClick={onClose}
             className="p-2 flex cursor-pointer items-center justify-center rounded-lg text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
           >
             <Close className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
         <div className="p-6 min-h-75">
           <div className="transition-opacity duration-200">
@@ -335,13 +334,14 @@ const CredentialsStep = ({
     {error && <ErrorText>{error}</ErrorText>}
 
     <div className="flex justify-end gap-3 pt-2">
-      <PrimaryButton
+      <Button
+        variant="primary"
         onClick={onNext}
         disabled={isLoading || !accessToken.trim()}
         isLoading={isLoading}
       >
         {isLoading ? "Connecting..." : "Continue"}
-      </PrimaryButton>
+      </Button>
     </div>
 
     <div className="mt-4 p-4 bg-primary-100 dark:bg-primary-800 rounded-xl">
@@ -458,13 +458,14 @@ const SourcesStep = ({
       {error && <ErrorText>{error}</ErrorText>}
 
       <div className="flex justify-end gap-3 pt-2">
-        <PrimaryButton
+        <Button
+          variant="primary"
           onClick={onFinish}
           disabled={isLoading || selectedSources.length === 0}
           isLoading={isLoading}
         >
           {isLoading ? "Saving..." : `Save ${selectedSources.length} Sources`}
-        </PrimaryButton>
+        </Button>
       </div>
     </div>
   );
@@ -484,9 +485,9 @@ const ManageStep = ({
         {existingSources.length}{" "}
         {existingSources.length === 1 ? "source" : "sources"} connected
       </Muted>
-      <SecondaryButton onClick={onAddMore} disabled={loading} size="sm">
+      <Button variant="secondary" onClick={onAddMore} disabled={loading} size="sm">
         Add Sources
-      </SecondaryButton>
+      </Button>
     </div>
 
     <div className="max-h-64 overflow-y-auto border border-primary-200 dark:border-primary-900 rounded-xl">

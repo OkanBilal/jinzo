@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Refresh } from "../../../components/ui/icons";
+import { Button } from "@/components/ui/button";
 
 function getWeatherIcon(code?: number): WeatherIcon {
   if (code == null) return DEFAULT_WEATHER_ICON;
@@ -204,14 +205,14 @@ export default function WeatherWidget() {
             )}
           </span>
           {isExpanded ? (
-            <button
+            <Button
               onClick={handleRefresh}
               className="absolute z-40 top-2 right-2 p-1 rounded-full hover:bg-primary-200/50 dark:hover:bg-primary-800/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Refresh weather data"
               disabled={isRefreshing || loadingInsight}
             >
               <Refresh className={`w-4 h-4 text-primary-700 dark:text-primary-400 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
+            </Button>
           ) : null}
         </div>
 

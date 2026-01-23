@@ -6,6 +6,7 @@ import { useCopyToClipboard } from "../../../hooks/use-copy-to-clipboard";
 import { useIsUserMessage } from "../../../features/chat/hooks/use-is-user-message";
 import { StreamingText } from "./streaming-text";
 import { markdownComponents } from "./markdown-components";
+import { Button } from "@/components/ui/button";
 
 export const ChatMessageComponent = memo(
   ({ message, showTimestamp = false }: ChatMessageProps) => {
@@ -117,9 +118,9 @@ export const ChatMessageComponent = memo(
                 : "opacity-0 translate-y-1 pointer-events-none"
             }`}
           >
-            <button
+            <Button
               onClick={handleCopy}
-              className={`flex items-center gap-1 active:scale-[0.97]  hover:bg-primary-200/60 dark:hover:bg-primary-900 p-1  rounded-md ease-out duration-150 hover:scale-105  cursor-pointer `}
+              className={`flex items-center gap-1 active:scale-[0.98] hover:bg-primary-200/60 dark:hover:bg-primary-900 p-1 rounded-md ease-out duration-150 hover:scale-105  cursor-pointer `}
               aria-label="Copy message to clipboard"
             >
               {isCopied ? (
@@ -127,7 +128,7 @@ export const ChatMessageComponent = memo(
               ) : (
                 <Clipboard className="text-primary-300 w-5.5 h-5.5" />
               )}
-            </button>
+            </Button>
           </div>
 
           {showTimestamp && message.timestamp && (

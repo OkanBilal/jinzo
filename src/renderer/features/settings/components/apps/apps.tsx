@@ -8,6 +8,7 @@ import PodcastModal from "../../components/apps/podcast/podcast-modal";
 import RaindropModal from "../../components/apps/raindrop/raindrop-modal";
 import RssModal from "../../components/apps/rss/rss-modal";
 import SpotifyModal from "../../components/apps/spotify/spotify-modal";
+import { Button } from "@/components/ui/button";
 
 interface AppsSettingsProps {
   apps: AppItem[];
@@ -69,7 +70,7 @@ export default function AppsSettings({
           <AppIcon app={app} />
           <BodyMedium>{app.displayName}</BodyMedium>
         </div>
-        <button
+        <Button
           onClick={() => handleConnect(app.id)}
           className={` rounded-lg cursor-pointer transition-colors ${
             connected
@@ -78,7 +79,7 @@ export default function AppsSettings({
           }`}
         >
           <Text variant="button">{connected ? "Connected" : "Connect"}</Text>
-        </button>
+        </Button>
       </div>
     );
   };

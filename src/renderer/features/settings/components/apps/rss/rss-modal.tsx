@@ -7,13 +7,7 @@ import {
   ErrorText,
 } from "../../../../../components/ui/text";
 import { ConnectionModalWrapper, LoadingState } from "../shared";
-import {
-  PrimaryButton,
-  WarningButton,
-  DangerButton,
-  LinkButton,
-  SecondaryButton,
-} from "../../../../../components/ui/button";
+import { Button } from "../../../../../components/ui/button";
 import {
   useLazyGetRssStatusQuery,
   useUpdateRssSettingsMutation,
@@ -308,13 +302,14 @@ function EnableStep({
       {error && <ErrorText>{error}</ErrorText>}
 
       <div className="flex justify-end gap-3 pt-2">
-        <PrimaryButton
+        <Button
+          variant="primary"
           onClick={onContinue}
           disabled={loading}
           isLoading={loading}
         >
           {enabled ? "Add Feeds" : "Save"}
-        </PrimaryButton>
+        </Button>
       </div>
     </div>
   );
@@ -386,12 +381,13 @@ function AddFeedsStep({
                 if (e.key === "Enter") onAddFeed();
               }}
             />
-            <PrimaryButton
+            <Button
+              variant="primary"
               onClick={onAddFeed}
               disabled={loading || !feedName.trim() || !feedUrl.trim()}
             >
               Add
-            </PrimaryButton>
+            </Button>
           </div>
         </div>
       </div>
@@ -407,14 +403,15 @@ function AddFeedsStep({
                 <BodyMedium>{feed.name}</BodyMedium>
                 <Caption className="truncate">{feed.url}</Caption>
               </div>
-              <WarningButton
+              <Button
+                variant="warning"
                 onClick={() => onRemoveFeed(feed.url)}
                 disabled={loading}
                 size="xs"
                 className="ml-3"
               >
                 Remove
-              </WarningButton>
+              </Button>
             </div>
           ))}
         </div>
@@ -423,16 +420,23 @@ function AddFeedsStep({
       {error && <ErrorText>{error}</ErrorText>}
 
       <div className="flex justify-between gap-3 pt-2">
-        <LinkButton size="xxs" onClick={onBack} disabled={loading} className="px-1">
+        <Button
+          variant="link"
+          size="xxs"
+          onClick={onBack}
+          disabled={loading}
+          className="px-1"
+        >
           Back
-        </LinkButton>
-        <PrimaryButton
+        </Button>
+        <Button
+          variant="primary"
           onClick={onSave}
           disabled={loading || feedsToAdd.length === 0}
           isLoading={loading}
         >
           {loading ? "Saving..." : `Save (${feedsToAdd.length} Feeds)`}
-        </PrimaryButton>
+        </Button>
       </div>
     </div>
   );
@@ -461,22 +465,28 @@ function ManageFeedsStep({
         <Muted>
           {feeds.length} {feeds.length === 1 ? "feed" : "feeds"} connected
         </Muted>
-        <SecondaryButton onClick={onAddNew} disabled={loading} size="sm">
+        <Button
+          variant="secondary"
+          onClick={onAddNew}
+          disabled={loading}
+          size="sm"
+        >
           Add Feed
-        </SecondaryButton>
+        </Button>
       </div>
 
       <div className="max-h-52 overflow-y-auto border border-primary-200 dark:border-primary-800 rounded-xl">
         {feeds.length === 0 ? (
           <div className="p-8 text-center">
             <Muted>No RSS feeds connected yet.</Muted>
-            <PrimaryButton
+            <Button
+              variant="primary"
               onClick={onAddNew}
               disabled={loading}
               className="mt-3"
             >
               Add feeds
-            </PrimaryButton>
+            </Button>
           </div>
         ) : (
           feeds.map((feed) => (
@@ -492,13 +502,14 @@ function ManageFeedsStep({
                   </Caption>
                 )}
               </div>
-              <WarningButton
+              <Button
+                variant="warning"
                 onClick={() => onRemove(feed.id)}
                 disabled={loading}
                 size="xs"
               >
                 Remove
-              </WarningButton>
+              </Button>
             </div>
           ))
         )}
@@ -507,9 +518,9 @@ function ManageFeedsStep({
       {error && <ErrorText>{error}</ErrorText>}
 
       <div className="flex justify-end">
-        <DangerButton onClick={onRevoke} disabled={loading}>
+        <Button variant="danger" onClick={onRevoke} disabled={loading}>
           Disconnect RSS
-        </DangerButton>
+        </Button>
       </div>
     </div>
   );

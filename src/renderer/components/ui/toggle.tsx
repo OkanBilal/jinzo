@@ -1,3 +1,5 @@
+import { Button } from "./button";
+
 interface ToggleProps {
     enabled: boolean;
     onChange: (enabled: boolean) => void;
@@ -15,7 +17,7 @@ export function Toggle({ enabled, onChange, label, className = "" }: ToggleProps
                     </span>
                 </div>
             )}
-            <button
+            <Button
                 onClick={() => onChange(!enabled)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all shadow-[inset_0_0.5px_2px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_0.5px_2px_rgba(0,0,0,0.3)] ${enabled
                         ? "bg-blue-500 dark:bg-blue-600"
@@ -26,7 +28,7 @@ export function Toggle({ enabled, onChange, label, className = "" }: ToggleProps
                     className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${enabled ? "translate-x-5.5" : "translate-x-0.5"
                         }`}
                 />
-            </button>
+            </Button>
         </div>
     );
 }

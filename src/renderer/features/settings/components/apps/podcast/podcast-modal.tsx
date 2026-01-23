@@ -22,11 +22,7 @@ import {
   useRevokeConnectionMutation,
   type SelectedPodcast,
 } from "../../../../../lib/redux/api";
-import {
-  PrimaryButton,
-  LinkButton,
-  DangerButton,
-} from "../../../../../components/ui/button";
+import { Button } from "../../../../../components/ui/button";
 
 interface PodcastModalProps {
   open: boolean;
@@ -368,12 +364,13 @@ function PodcastsStep({
             if (e.key === "Enter") onAddPodcast();
           }}
         />
-        <PrimaryButton
+        <Button
+          variant="primary"
           onClick={onAddPodcast}
           disabled={loading || !podcastName.trim()}
         >
           Add
-        </PrimaryButton>
+        </Button>
       </div>
 
       {podcastsToAdd.length > 0 && (
@@ -384,13 +381,14 @@ function PodcastsStep({
               className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-900 last:border-b-0"
             >
               <Body>{name}</Body>
-              <DangerButton
+              <Button
+                variant="danger"
                 onClick={() => onRemovePodcast(name)}
                 disabled={loading}
                 className=""
               >
                 Remove
-              </DangerButton>
+              </Button>
             </div>
           ))}
         </div>
@@ -399,17 +397,24 @@ function PodcastsStep({
       {error && <ErrorText>{error}</ErrorText>}
 
       <div className="flex justify-between gap-3 pt-2 ">
-        <LinkButton size="xxs" onClick={onBack} disabled={loading} className="px-1">
+        <Button
+          variant="link"
+          size="xxs"
+          onClick={onBack}
+          disabled={loading}
+          className="px-1"
+        >
           Back
-        </LinkButton>
-        <PrimaryButton
+        </Button>
+        <Button
+          variant="primary"
           onClick={onSave}
           disabled={loading || podcastsToAdd.length === 0}
           isLoading={loading}
           className="ml-auto"
         >
           {loading ? "Saving..." : `Finish (${podcastsToAdd.length} Podcasts)`}
-        </PrimaryButton>
+        </Button>
       </div>
     </div>
   );

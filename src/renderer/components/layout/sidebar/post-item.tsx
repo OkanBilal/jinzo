@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { Body, Muted } from "@/components/ui/text";
 import { Trash, Option, Edit } from "@/components/ui/icons";
+import { Button } from "@/components/ui/button";
 
 interface PostItemProps {
   title: string;
@@ -166,14 +167,15 @@ export default function PostItem({
         </div>
       </div>
       {(onDelete || onRename) && (
-        <button
+        <Button
+          tooltip="More options"
           ref={buttonRef}
           onClick={handleOptionClick}
           className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer rounded-md z-10"
           aria-label="Post options"
         >
           <Option className="w-5 h-5 text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200" />
-        </button>
+        </Button>
       )}
 
       {/* Dropdown Menu */}
@@ -189,24 +191,24 @@ export default function PostItem({
             }}
           >
             {onRename && (
-              <button
+              <Button
                 onClick={handleRenameClick}
                 className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-primary-700 dark:text-primary-200
                   hover:bg-primary-100/50 dark:hover:bg-primary/10 transition-colors cursor-pointer"
               >
                 <Edit className="size-4" />
                 <span>Rename</span>
-              </button>
+              </Button>
             )}
             {onDelete && (
-              <button
+              <Button
                 onClick={handleDeleteClick}
                 className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-red-600 dark:text-red-400
                   hover:bg-red-100/50 dark:hover:bg-red-900/20 transition-colors cursor-pointer"
               >
                 <Trash className="size-4" />
                 <span>Delete</span>
-              </button>
+              </Button>
             )}
           </div>,
           document.body,

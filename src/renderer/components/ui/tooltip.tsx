@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
 
 export type TooltipPosition = "top" | "bottom" | "left" | "right";
@@ -10,40 +11,63 @@ export interface TooltipProps {
   delay?: number;
   className?: string;
   disabled?: boolean;
+  /** Keyboard shortcut to display (e.g., "⌘," or "Ctrl+S") */
+  shortcut?: string;
 }
-
-const positionStyles: Record<TooltipPosition, string> = {
-  top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
-  bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
-  left: "right-full top-1/2 -translate-y-1/2 mr-2",
-  right: "left-full top-1/2 -translate-y-1/2 ml-2",
-};
-
-const arrowStyles: Record<TooltipPosition, string> = {
-  top: "top-full left-1/2 -translate-x-1/2 border-t-primary-800 dark:border-t-primary-950 border-x-transparent border-b-transparent",
-  bottom:
-    "bottom-full left-1/2 -translate-x-1/2 border-b-primary-800 dark:border-b-primary-950 border-x-transparent border-t-transparent",
-  left: "left-full top-1/2 -translate-y-1/2 border-l-primary-800 dark:border-l-primary-950 border-y-transparent border-r-transparent",
-  right:
-    "right-full top-1/2 -translate-y-1/2 border-r-primary-800 dark:border-r-primary-950 border-y-transparent border-l-transparent",
-};
 
 export default function Tooltip({
   content,
   children,
   position = "top",
-  delay = 100,
+  delay = 50,
   className,
   disabled = false,
+  shortcut,
 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLSpanElement>(null);
+
+  const updatePosition = () => {
+    if (!triggerRef.current) return;
+    // Get the first child element for positioning
+    const element = triggerRef.current.firstElementChild as HTMLElement;
+    if (!element) return;
+
+    const rect = element.getBoundingClientRect();
+    const gap = 8;
+
+    let top = 0;
+    let left = 0;
+
+    switch (position) {
+      case "top":
+        top = rect.top - gap;
+        left = rect.left + rect.width / 2;
+        break;
+      case "bottom":
+        top = rect.bottom + gap;
+        left = rect.left + rect.width / 2;
+        break;
+      case "left":
+        top = rect.top + rect.height / 2;
+        left = rect.left - gap;
+        break;
+      case "right":
+        top = rect.top + rect.height / 2;
+        left = rect.right + gap;
+        break;
+    }
+
+    setCoords({ top, left });
+  };
 
   const showTooltip = () => {
     if (disabled) return;
     timeoutRef.current = setTimeout(() => {
+      updatePosition();
       setShouldRender(true);
       requestAnimationFrame(() => {
         setIsVisible(true);
@@ -57,7 +81,6 @@ export default function Tooltip({
       timeoutRef.current = null;
     }
     setIsVisible(false);
-
     setTimeout(() => {
       setShouldRender(false);
     }, 100);
@@ -75,38 +98,65 @@ export default function Tooltip({
     return <>{children}</>;
   }
 
-  return (
-    <div
-      ref={containerRef}
-      className="relative inline-flex"
-      onMouseEnter={showTooltip}
-      onMouseLeave={hideTooltip}
-      onFocus={showTooltip}
-      onBlur={hideTooltip}
-    >
-      {children}
-      {shouldRender && (
+  const getTransformOrigin = () => {
+    switch (position) {
+      case "top":
+        return "translate(-50%, -100%)";
+      case "bottom":
+        return "translate(-50%, 0)";
+      case "left":
+        return "translate(-100%, -50%)";
+      case "right":
+        return "translate(0, -50%)";
+    }
+  };
+
+  const tooltipElement = shouldRender
+    ? createPortal(
         <div
           role="tooltip"
+          style={{
+            position: "fixed",
+            top: coords.top,
+            left: coords.left,
+            transform: getTransformOrigin(),
+            zIndex: 9999,
+          }}
           className={cn(
-            "absolute z-50 px-2.5 py-1.5 text-xs font-medium whitespace-nowrap rounded-lg pointer-events-none",
-            "bg-primary-800 dark:bg-primary-900 text-primary-100 dark:text-primary-200 border border-primary-700 dark:border-primary-800",
-            "shadow-lg transition-all duration-100 ease-out",
-            isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95",
-            positionStyles[position],
-            className
+            "px-2.5 py-1.5 text-xs font-medium whitespace-nowrap rounded-lg pointer-events-none",
+            "bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200",
+            "border border-primary-200 dark:border-primary-800",
+            "shadow-lg shadow-black/10 dark:shadow-black/30",
+            "transition-all duration-50 ease-out",
+            "flex items-center gap-2",
+            isVisible ? "opacity-100 scale-100" : "opacity-0 scale-90",
+            className,
           )}
         >
-          {content}
-          <span
-            className={cn(
-              "absolute w-0 h-0 border-4 transition-opacity duration-100",
-              isVisible ? "opacity-100" : "opacity-0",
-              arrowStyles[position]
-            )}
-          />
-        </div>
-      )}
-    </div>
+          <span>{content}</span>
+          {shortcut && (
+            <span className="text-primary-400 dark:text-primary-500 font-normal">
+              {shortcut}
+            </span>
+          )}
+        </div>,
+        document.body,
+      )
+    : null;
+
+  return (
+    <>
+      <span
+        ref={triggerRef}
+        style={{ display: "contents" }}
+        onMouseEnter={showTooltip}
+        onMouseLeave={hideTooltip}
+        onFocus={showTooltip}
+        onBlur={hideTooltip}
+      >
+        {children}
+      </span>
+      {tooltipElement}
+    </>
   );
 }

@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { Search, Close } from "@/components/ui/icons";
 
 interface SearchBarProps {
@@ -36,20 +37,23 @@ export default function SearchBar({
                         placeholder:text-primary-950/30 dark:placeholder:text-primary/35 
                         transition-all duration-200 focus:outline-none focus:bg-primary-950/4 dark:focus:bg-primary/8 "
           />
-          <button
+          <Button
+            tooltip="Clear search"
             onClick={onClear}
             className="absolute cursor-pointer hover:scale-[1.02] active:scale-[0.98] right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-primary-100 dark:hover:bg-primary-400/20 rounded-md transition-all duration-200"
           >
             <Close className="w-3 h-3 text-primary-600 dark:text-primary-400" />
-          </button>
+          </Button>
         </div>
       ) : (
-        <button
+        <Button
           onClick={onToggle}
+          tooltip="Search item"
+          tooltipPosition="top"
           className="h-9 w-9 cursor-pointer hover:scale-[1.02] active:scale-[0.98] duration-200 flex items-center justify-center hover:bg-primary-950/5 dark:hover:bg-primary/10 rounded-xl transition-all"
         >
           <Search className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-        </button>
+        </Button>
       )}
     </div>
   );

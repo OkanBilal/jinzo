@@ -12,8 +12,7 @@ import {
   RevokeConfirmModal,
 } from "../shared";
 import {
-  PrimaryButton,
-  DangerButton,
+  Button
 } from "../../../../../components/ui/button";
 import {
   useLazyGetHackerNewsStatusQuery,
@@ -241,13 +240,14 @@ function EnableStep({
       {error && <ErrorText>{error}</ErrorText>}
 
       <div className="flex justify-end gap-3 pt-2">
-        <PrimaryButton
+        <Button
+          variant="primary"
           onClick={onContinue}
           disabled={loading}
           isLoading={loading}
         >
           {enabled ? "Configure" : "Save"}
-        </PrimaryButton>
+        </Button>
       </div>
     </div>
   );
@@ -354,12 +354,12 @@ function ConfigureStep({
       {error && <ErrorText>{error}</ErrorText>}
 
       <div className="flex justify-between gap-3 pt-2">
-        <DangerButton onClick={onDisconnect} disabled={loading}>
+        <Button variant="danger" onClick={onDisconnect} disabled={loading}>
           Disconnect
-        </DangerButton>
-        <PrimaryButton onClick={onSave} disabled={loading} isLoading={loading}>
+        </Button>
+        <Button variant="primary" onClick={onSave} disabled={loading} isLoading={loading}>
           {loading ? "Saving..." : "Save"}
-        </PrimaryButton>
+        </Button>
       </div>
     </div>
   );

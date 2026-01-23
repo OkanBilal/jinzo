@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useActiveMood } from "@/hooks/useActiveMood";
 import { useDarkMode } from "@/hooks/useDarkMode";
 import { getDefaultDropdownBackground } from "@/lib/theme";
+import { Button } from "./button";
 
 interface SelectOption<T extends string = string> {
   value: T;
@@ -113,7 +114,7 @@ export default function Select<T extends string = string>({
   return (
     <div ref={containerRef} className="relative">
       {/* Trigger Button */}
-      <button
+      <Button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`
@@ -157,7 +158,7 @@ export default function Select<T extends string = string>({
             d="M19 9l-7 7-7-7"
           />
         </svg>
-      </button>
+      </Button>
 
       {/* Options List - Portal rendered to body */}
       {isOpen && createPortal(
@@ -176,7 +177,7 @@ export default function Select<T extends string = string>({
         >
           <div className="max-h-60 overflow-auto noscrollbar">
             {options.map((option, index) => (
-              <button
+              <Button
                 type="button"
                 key={option.value}
                 onClick={() => {
@@ -199,7 +200,7 @@ export default function Select<T extends string = string>({
               >
                 {option.icon}
                 <span className="truncate">{option.label}</span>
-              </button>
+              </Button>
             ))}
           </div>
         </div>,

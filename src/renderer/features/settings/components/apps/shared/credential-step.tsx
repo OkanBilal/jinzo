@@ -1,5 +1,5 @@
 import Text, { Muted, ErrorText, Caption } from "../../../../../components/ui/text";
-import { PrimaryButton } from "../../../../../components/ui/button";
+import { Button } from "../../../../../components/ui/button";
 
 interface CredentialField {
   id: string;
@@ -69,13 +69,14 @@ export function CredentialStep({
       {error && <ErrorText>{error}</ErrorText>}
 
       <div className="flex justify-end gap-3 pt-2">
-        <PrimaryButton
+        <Button
+          variant="primary"
           onClick={onSubmit}
           disabled={loading || !allFieldsFilled}
           isLoading={loading}
         >
           {loading ? loadingLabel : submitLabel}
-        </PrimaryButton>
+        </Button>
       </div>
     </div>
   );

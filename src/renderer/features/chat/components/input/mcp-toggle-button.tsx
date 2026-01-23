@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import McpIcon from "../../../../components/ui/icons/mcp";
 
 interface McpToggleButtonProps {
@@ -10,7 +11,7 @@ export default function McpToggleButton({
   onToggle,
 }: McpToggleButtonProps) {
   return (
-    <button
+    <Button
       onClick={onToggle}
       className={`p-1.5 cursor-pointer duration-200 group relative hover:bg-primary-200 dark:hover:bg-primary-800 rounded-full transition-colors ${
         enabled
@@ -26,6 +27,6 @@ export default function McpToggleButton({
       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-primary-900 dark:bg-primary-100 text-primary-50 dark:text-primary-900 text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
         {enabled ? "MCP Mode (Tools)" : "RAG Mode (Semantic)"}
       </div>
-    </button>
+    </Button>
   );
 }

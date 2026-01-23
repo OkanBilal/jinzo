@@ -266,6 +266,7 @@ export default function PersonalizationSettings() {
                 type="submit"
                 disabled={!isDirty || saving}
                 isLoading={saving}
+                variant="primary"
               >
                 Save
               </Button>

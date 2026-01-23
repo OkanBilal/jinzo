@@ -17,7 +17,7 @@ import {
 } from "@/lib/redux/api";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { useJournalAutosave } from "@/hooks/useJournalAutosave";
-import { SecondaryButton, SuccessButton } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Textitalic } from "@/components/ui/icons/mood";
 
 // Utility to convert BlockNote content to markdown-ish text
@@ -135,10 +135,8 @@ function JournalEditor({ entityId }: JournalEditorProps) {
   const dispatch = useAppDispatch();
   const { data: journal, isLoading } = useGetJournalByIdQuery(entityId);
   console.log("Loaded journal:", journal);
-  const [saveJournal] =
-    useSaveJournalMutation();
-  const [publishJournal] =
-    usePublishJournalMutation();
+  const [saveJournal] = useSaveJournalMutation();
+  const [publishJournal] = usePublishJournalMutation();
 
   const { queueSave, flush, isDirty, isSaving, lastSavedAt } =
     useJournalAutosave(entityId);
@@ -168,12 +166,14 @@ function JournalEditor({ entityId }: JournalEditorProps) {
       setIsEditorInitialized(true);
 
       // Dispatch to Redux for chat context
-      dispatch(setEditingJournal({
-        entityId,
-        title: journal.title || "Untitled",
-        body: journal.body || "",
-        status: journal.metadata?.status || "draft",
-      }));
+      dispatch(
+        setEditingJournal({
+          entityId,
+          title: journal.title || "Untitled",
+          body: journal.body || "",
+          status: journal.metadata?.status || "draft",
+        }),
+      );
     }
   }, [journal, isEditorInitialized, editor, dispatch, entityId]);
 
@@ -211,13 +211,16 @@ function JournalEditor({ entityId }: JournalEditorProps) {
   }, [entityId, editor, dispatch]);
 
   // Handle title change
-  const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTitle = e.target.value;
-    setLocalTitle(newTitle);
-    queueSave({ title: newTitle });
-    // Update Redux for chat context
-    dispatch(updateEditingTitle(newTitle));
-  }, [queueSave, dispatch]);
+  const handleTitleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newTitle = e.target.value;
+      setLocalTitle(newTitle);
+      queueSave({ title: newTitle });
+      // Update Redux for chat context
+      dispatch(updateEditingTitle(newTitle));
+    },
+    [queueSave, dispatch],
+  );
 
   // Handle title blur - flush immediately when user leaves the title field
   const handleTitleBlur = useCallback(() => {
@@ -240,7 +243,7 @@ function JournalEditor({ entityId }: JournalEditorProps) {
   const handleSave = useCallback(async () => {
     setIsShowingSaveLoading(true);
     const startTime = Date.now();
-    
+
     try {
       await flush();
       await saveJournal(entityId);
@@ -248,7 +251,7 @@ function JournalEditor({ entityId }: JournalEditorProps) {
       // Ensure loading state shows for at least 500ms to avoid glitch
       const elapsed = Date.now() - startTime;
       const remainingTime = Math.max(0, 500 - elapsed);
-      
+
       setTimeout(() => {
         setIsShowingSaveLoading(false);
       }, remainingTime);
@@ -259,7 +262,7 @@ function JournalEditor({ entityId }: JournalEditorProps) {
   const handlePublish = useCallback(async () => {
     setIsShowingPublishLoading(true);
     const startTime = Date.now();
-    
+
     try {
       await flush();
       await publishJournal(entityId);
@@ -267,7 +270,7 @@ function JournalEditor({ entityId }: JournalEditorProps) {
       // Ensure loading state shows for at least 500ms to avoid glitch
       const elapsed = Date.now() - startTime;
       const remainingTime = Math.max(0, 500 - elapsed);
-      
+
       setTimeout(() => {
         setIsShowingPublishLoading(false);
       }, remainingTime);
@@ -310,21 +313,25 @@ function JournalEditor({ entityId }: JournalEditorProps) {
                   ? `last saved ${lastSavedAt.toLocaleTimeString()}`
                   : ""}
           </span>
-          <SecondaryButton
-            className="px-5"
+          <Button
+            variant="secondary"
+            tooltip="Save post"
+            className="px-3"
             onClick={handleSave}
             disabled={isShowingSaveLoading || isSaving}
           >
             {isShowingSaveLoading ? "Saving..." : "Save"}
-          </SecondaryButton>
+          </Button>
           {isDraft && (
-            <SuccessButton
+            <Button
+              tooltip="Publish post"
+              variant="primary"
               onClick={handlePublish}
               disabled={isShowingPublishLoading || isSaving}
               className="px-3 py-1.5 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
               {isShowingPublishLoading ? "Publishing..." : "Publish"}
-            </SuccessButton>
+            </Button>
           )}
         </div>
       </div>
@@ -345,7 +352,7 @@ function JournalEditor({ entityId }: JournalEditorProps) {
 function EmptyJournalState() {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center text-center px-6">
-        <Textitalic className="w-12 h-12 text-primary-700 dark:text-primary-300 mb-4" />
+      <Textitalic className="w-12 h-12 text-primary-700 dark:text-primary-300 mb-4" />
       <h2 className="text-xl font-semibold text-primary-800 dark:text-primary-200 mb-2">
         Welcome to Journal
       </h2>

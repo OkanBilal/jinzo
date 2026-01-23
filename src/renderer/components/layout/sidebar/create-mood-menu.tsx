@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { Preset } from "@/components/ui/icons";
 import { Bolt } from "@/components/ui/icons/mood";
 import { useRef, useEffect } from "react";
@@ -62,28 +63,28 @@ export default function CreateMoodMenu({
         animation: "scaleIn 100ms ease-out",
       }}
     >
-      <button
+      <Button
         onClick={() => {
           onCreateMood();
           onClose();
         }}
-        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-primary-700 dark:text-primary-100
+        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-primary-700 dark:text-primary-100
           hover:bg-primary-100/50 dark:hover:bg-primary/10 transition-colors cursor-pointer"
       >
         <Bolt className="size-4" />
         <span>Create Mood</span>
-      </button>
-      <button
+      </Button>
+      <Button
         onClick={() => {
           onPresetMoods();
           onClose();
         }}
-        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-primary-700 dark:text-primary-100
+        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-primary-700 dark:text-primary-100
           hover:bg-primary-100/50 dark:hover:bg-primary/10 transition-colors cursor-pointer"
       >
         <Preset className="size-4" />
         <span>Preset Moods</span>
-      </button>
+      </Button>
     </div>,
     document.body,
   );

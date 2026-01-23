@@ -5,12 +5,7 @@ import {
   BodyMedium,
   Caption,
 } from "../../../../../components/ui/text";
-import {
-  SecondaryButton,
-  WarningButton,
-  DangerButton,
-  LinkButton,
-} from "../../../../../components/ui/button";
+import { Button } from "../../../../../components/ui/button";
 
 interface Resource {
   id: string;
@@ -54,18 +49,28 @@ export function ManageResourcesStep({
         <Muted>
           {count} {label} connected
         </Muted>
-        <SecondaryButton onClick={onAddNew} disabled={loading} size="sm" >
+        <Button
+          variant="secondary"
+          onClick={onAddNew}
+          disabled={loading}
+          size="sm"
+        >
           {addButtonLabel}
-        </SecondaryButton>
+        </Button>
       </div>
 
       <div className="min-h-12 max-h-52  overflow-y-auto border border-primary-200 dark:border-primary-800 rounded-xl">
         {count === 0 ? (
           <div className="p-8 text-center text-primary-500 dark:text-primary-400">
             <Body>No {resourceLabelPlural} connected yet.</Body>
-            <LinkButton onClick={onAddNew} disabled={loading} className="mt-3">
+            <Button
+              variant="link"
+              onClick={onAddNew}
+              disabled={loading}
+              className="mt-3"
+            >
               Add {resourceLabelPlural}
-            </LinkButton>
+            </Button>
           </div>
         ) : (
           resources.map((resource) => (
@@ -83,13 +88,14 @@ export function ManageResourcesStep({
                   )}
                 </div>
               )}
-              <WarningButton
+              <Button
+                variant="danger"
                 onClick={() => onRemove(resource.id)}
                 disabled={loading}
                 size="xs"
               >
                 Remove
-              </WarningButton>
+              </Button>
             </div>
           ))
         )}
@@ -98,9 +104,9 @@ export function ManageResourcesStep({
       {error && <ErrorText>{error}</ErrorText>}
 
       <div className="flex justify-end">
-        <DangerButton onClick={onRevoke} disabled={loading}>
+        <Button variant="danger" onClick={onRevoke} disabled={loading}>
           {revokeButtonLabel}
-        </DangerButton>
+        </Button>
       </div>
     </div>
   );

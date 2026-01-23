@@ -2,6 +2,7 @@ import { useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Edit, Trash } from "@/components/ui/icons";
 import type { Mood } from "@/lib/redux/api";
+import { Button } from "@/components/ui/button";
 
 interface MoodContextMenuProps {
   isOpen: boolean;
@@ -64,7 +65,7 @@ export default function MoodContextMenu({
         animation: "scaleIn 100ms ease-out",
       }}
     >
-      <button
+      <Button
         onClick={() => {
           onEdit();
           onClose();
@@ -74,8 +75,8 @@ export default function MoodContextMenu({
       >
         <Edit className="size-4" />
         <span>Edit</span>
-      </button>
-      <button
+      </Button>
+      <Button
         onClick={() => {
           onDelete();
           onClose();
@@ -85,7 +86,7 @@ export default function MoodContextMenu({
       >
         <Trash className="size-4" />
         <span>Delete</span>
-      </button>
+      </Button>
     </div>,
     document.body
   );

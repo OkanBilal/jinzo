@@ -2,6 +2,7 @@ import DropdownWrapper from "../../../../components/ui/dropdown-wrapper";
 
 import { ModelSelectDropdownProps } from "./types";
 import { DeepSeek, Gpt, Meta } from "../../../../components/ui/icons";
+import { Button } from "@/components/ui/button";
 
 function getModelIcon(modelName: string) {
   if (modelName.includes("deepseek")) {
@@ -40,7 +41,9 @@ export default function ModelSelectDropdown({
   return (
     <div className=" relative" ref={dropdownRef}>
       <div className="flex cursor-pointer items-center  hover:bg-primary-200/30 dark:hover:bg-primary-700/40 transition-colors rounded-3xl">
-        <button
+        <Button
+          tooltip="Select model"
+          tooltipPosition="top"
           type="button"
           onClick={onToggle}
           className="text-sm cursor-pointer text-primary-700 dark:text-primary-400 font-medium px-2 py-1.5 flex items-center gap-1.5"
@@ -49,7 +52,7 @@ export default function ModelSelectDropdown({
         >
           {getModelIcon(model)}
           {model}
-        </button>
+        </Button>
       </div>
 
       <DropdownWrapper
@@ -60,7 +63,7 @@ export default function ModelSelectDropdown({
       >
         <div className="max-h-80 overflow-auto">
           {modelList.map((m) => (
-            <button
+            <Button
               key={m}
               type="button"
               onClick={() => {
@@ -75,7 +78,7 @@ export default function ModelSelectDropdown({
             >
               {getModelIcon(m)}
               {m}
-            </button>
+            </Button>
           ))}
         </div>
       </DropdownWrapper>

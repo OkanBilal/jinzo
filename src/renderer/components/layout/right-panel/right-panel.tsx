@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { RightPanelClose, RightPanelOpen } from "@/components/ui/icons";
-import { FrostedButton } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { useLayoutConfig } from "@/hooks/useLayoutConfig";
 import { ConfigContent } from "./config-content";
 import { JournalContent } from "./journal-content";
@@ -55,9 +55,12 @@ interface ToggleButtonProps {
 
 function ToggleButton({ isOpen, width, onClick }: ToggleButtonProps) {
   return (
-    <FrostedButton
+    <Button
+      variant="frosted"
+      tooltip={isOpen ? "Close right panel" : "Open right panel"}
+      tooltipPosition="left"
       onClick={onClick}
-      className={`fixed z-40 p-2.5 rounded-full! transition-all duration-300 ease-out ${
+      className={`fixed z-40 rounded-full! p-2.5! transition-all duration-300 ease-out ${
         isOpen ? "right-[calc(var(--config-width)+1.25rem)]" : "top-7 right-5"
       }`}
       style={
@@ -75,7 +78,7 @@ function ToggleButton({ isOpen, width, onClick }: ToggleButtonProps) {
       ) : (
         <RightPanelOpen className="w-4.5 h-4.5" />
       )}
-    </FrostedButton>
+    </Button>
   );
 }
 

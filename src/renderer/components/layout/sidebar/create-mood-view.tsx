@@ -12,6 +12,7 @@ import {
   getThemeVariant,
 } from "@/lib/mood-themes";
 import { availableIcons } from "@/lib/icon-registry";
+import { Button } from "@/components/ui/button";
 
 type IconPickerMode = "emoji" | "icon";
 
@@ -183,7 +184,7 @@ export default function CreateMoodView({
 
         <div ref={emojiPickerRef} className="relative">
           {/* Trigger Button - Select component style */}
-          <button
+          <Button
             type="button"
             onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
             className={`
@@ -226,7 +227,7 @@ export default function CreateMoodView({
                 d="M19 9l-7 7-7-7"
               />
             </svg>
-          </button>
+          </Button>
 
           {/* Icon/Emoji Picker Dropdown */}
           {isEmojiPickerOpen && (
@@ -241,7 +242,7 @@ export default function CreateMoodView({
             >
               {/* Mode Toggle */}
               <div className="flex border-b border-primary-950/10 dark:border-primary/10">
-                <button
+                <Button
                   type="button"
                   onClick={() => {
                     setIconMode("emoji");
@@ -254,8 +255,8 @@ export default function CreateMoodView({
                   }`}
                 >
                   Emoji
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => {
                     setIconMode("icon");
@@ -268,7 +269,7 @@ export default function CreateMoodView({
                   }`}
                 >
                   Icon
-                </button>
+                </Button>
               </div>
 
               <div className="p-3">
@@ -312,12 +313,12 @@ export default function CreateMoodView({
                             </div>
                           ),
                           Emoji: ({ emoji, ...props }) => (
-                            <button
+                            <Button
                               className="flex size-8 items-center justify-center rounded-md text-lg hover:bg-primary-950/5 dark:hover:bg-primary/10 data-active:bg-primary-950/8 dark:data-active:bg-primary/15"
                               {...props}
                             >
                               {emoji.emoji}
-                            </button>
+                            </Button>
                           ),
                         }}
                       />
@@ -327,7 +328,7 @@ export default function CreateMoodView({
                   /* Icon Grid */
                   <div className="grid grid-cols-5 gap-2">
                     {availableIcons.map(({ name, component: IconComp }) => (
-                      <button
+                      <Button
                         key={name}
                         type="button"
                         onClick={() => {
@@ -342,7 +343,7 @@ export default function CreateMoodView({
                         title={name}
                       >
                         <IconComp className="size-5.5" />
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 )}
@@ -386,7 +387,7 @@ export default function CreateMoodView({
               {solidColors.map((colorPair, index) => {
                 const variant = getThemeVariant(colorPair, darkMode);
                 return (
-                  <button
+                  <Button
                     key={`solid-${index}`}
                     type="button"
                     onClick={() => {
@@ -407,7 +408,7 @@ export default function CreateMoodView({
                   />
                 );
               })}
-              <button
+              <Button
                 type="button"
                 onClick={() => {
                   setShowGradients(true);
@@ -429,12 +430,12 @@ export default function CreateMoodView({
                     d="M9 5l7 7-7 7"
                   />
                 </svg>
-              </button>
+              </Button>
             </div>
 
             {/* Gradient Colors Row */}
             <div className="flex items-center gap-2 px-4 mr-2 py-3 min-w-full">
-              <button
+              <Button
                 type="button"
                 onClick={() => {
                   setShowGradients(false);
@@ -456,11 +457,11 @@ export default function CreateMoodView({
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-              </button>
+              </Button>
               {gradientColors.map((colorPair, index) => {
                 const variant = getThemeVariant(colorPair, darkMode);
                 return (
-                  <button
+                  <Button
                     key={`gradient-${index}`}
                     type="button"
                     onClick={() => {
@@ -488,7 +489,7 @@ export default function CreateMoodView({
 
       {/* Footer Actions */}
       <div className="p-4 space-y-2">
-        <button
+        <Button
           onClick={handleCreate}
           disabled={isLoading}
           className="w-full py-2.5 px-4 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer disabled:opacity-50 
@@ -498,13 +499,13 @@ export default function CreateMoodView({
           }}
         >
           {isLoading ? "Creating..." : "Create Mood"}
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={onClose}
           className="w-full py-2 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 transition-colors cursor-pointer"
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );

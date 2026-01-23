@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toastStore, toast as toastApi } from "./toast";
 import type { Toast, ToastType } from "./types";
+import { Button } from "../ui/button";
 
 interface ToastItemProps {
   toast: Toast;
@@ -165,7 +166,7 @@ function ToastItem({ toast, index, onDismiss }: ToastItemProps) {
       {icon && <span className="flex items-center">{icon}</span>}
       <span className="text-sm font-medium whitespace-nowrap">{toast.message}</span>
       {toast.action && (
-        <button
+        <Button
           onClick={(e) => {
             e.stopPropagation();
             toast.action?.onClick();
@@ -174,10 +175,10 @@ function ToastItem({ toast, index, onDismiss }: ToastItemProps) {
           className="text-sm font-semibold text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
         >
           {toast.action.label}
-        </button>
+        </Button>
       )}
       {toast.dismissible && toast.type !== "loading" && (
-        <button
+        <Button
           onClick={handleDismiss}
           className="ml-1 -mr-1 p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
           aria-label="Dismiss toast"
@@ -185,7 +186,7 @@ function ToastItem({ toast, index, onDismiss }: ToastItemProps) {
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
             <path d="M9 3L3 9M3 3L9 9" stroke="currentColor" strokeOpacity="0.5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-        </button>
+        </Button>
       )}
     </div>
   );

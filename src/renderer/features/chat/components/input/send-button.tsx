@@ -1,11 +1,13 @@
+import { Button } from "@/components/ui/button";
 import { ChevronUp } from "../../../../components/ui/icons";
 
 import { SendButtonProps } from "./types";
 
 export default function SendButton({ loading, onSubmit }: SendButtonProps) {
   return (
-    <button
+    <Button
       type="button"
+      tooltip="Send a message"
       onClick={() => {
         if (!loading) onSubmit();
       }}
@@ -25,6 +27,6 @@ export default function SendButton({ loading, onSubmit }: SendButtonProps) {
           loading ? "opacity-0" : "opacity-100"
         }`}
       />
-    </button>
+    </Button>
   );
 }

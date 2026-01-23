@@ -15,6 +15,7 @@ import {
   type ThemeColor,
 } from "@/lib/mood-themes";
 import { availableIcons, parseIcon } from "@/lib/icon-registry";
+import { Button } from "@/components/ui/button";
 
 type IconPickerMode = "emoji" | "icon";
 
@@ -256,7 +257,7 @@ export default function EditMoodModal({
 
           {/* Icon Picker */}
           <div ref={emojiPickerRef} className="relative">
-            <button
+            <Button
               type="button"
               onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
               className={`
@@ -306,7 +307,7 @@ export default function EditMoodModal({
                   d="M19 9l-7 7-7-7"
                 />
               </svg>
-            </button>
+            </Button>
 
             {isEmojiPickerOpen && (
               <div
@@ -318,7 +319,7 @@ export default function EditMoodModal({
               >
                 {/* Mode Toggle */}
                 <div className="flex border-b border-primary-950/10 dark:border-primary/10">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => {
                       setIconMode("emoji");
@@ -331,8 +332,8 @@ export default function EditMoodModal({
                     }`}
                   >
                     Emoji
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     onClick={() => {
                       setIconMode("icon");
@@ -345,7 +346,7 @@ export default function EditMoodModal({
                     }`}
                   >
                     Icon
-                  </button>
+                  </Button>
                 </div>
 
                 <div className="p-3">
@@ -387,12 +388,12 @@ export default function EditMoodModal({
                               </div>
                             ),
                             Emoji: ({ emoji, ...props }) => (
-                              <button
+                              <Button
                                 className="flex size-8 items-center justify-center rounded-md text-lg hover:bg-primary-950/5 dark:hover:bg-primary/10 data-active:bg-primary-950/8 dark:data-active:bg-primary/15"
                                 {...props}
                               >
                                 {emoji.emoji}
-                              </button>
+                              </Button>
                             ),
                           }}
                         />
@@ -401,7 +402,7 @@ export default function EditMoodModal({
                   ) : (
                     <div className="grid grid-cols-5 gap-2 max-h-48 overflow-y-auto">
                       {availableIcons.map(({ name, component: IconComp }) => (
-                        <button
+                        <Button
                           key={name}
                           type="button"
                           onClick={() => {
@@ -416,7 +417,7 @@ export default function EditMoodModal({
                           title={name}
                         >
                           <IconComp className="size-5.5" />
-                        </button>
+                        </Button>
                       ))}
                     </div>
                   )}
@@ -460,7 +461,7 @@ export default function EditMoodModal({
                 {solidColors.map((colorPair, index) => {
                   const variant = getThemeVariant(colorPair, darkMode);
                   return (
-                    <button
+                    <Button
                       key={`solid-${index}`}
                       type="button"
                       onClick={() => {
@@ -481,7 +482,7 @@ export default function EditMoodModal({
                     />
                   );
                 })}
-                <button
+                <Button
                   type="button"
                   onClick={() => {
                     setShowGradients(true);
@@ -503,12 +504,12 @@ export default function EditMoodModal({
                       d="M9 5l7 7-7 7"
                     />
                   </svg>
-                </button>
+                </Button>
               </div>
 
               {/* Gradient Colors Row */}
               <div className="flex items-center gap-2 p-3 min-w-full">
-                <button
+                <Button
                   type="button"
                   onClick={() => {
                     setShowGradients(false);
@@ -530,11 +531,11 @@ export default function EditMoodModal({
                       d="M15 19l-7-7 7-7"
                     />
                   </svg>
-                </button>
+                </Button>
                 {gradientColors.map((colorPair, index) => {
                   const variant = getThemeVariant(colorPair, darkMode);
                   return (
-                    <button
+                    <Button
                       key={`gradient-${index}`}
                       type="button"
                       onClick={() => {
@@ -562,7 +563,7 @@ export default function EditMoodModal({
 
         {/* Footer Actions */}
         <div className="p-4 space-y-2">
-          <button
+          <Button
             onClick={handleSave}
             disabled={isLoading}
             className="w-full py-2.5 px-4 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer disabled:opacity-50
@@ -570,13 +571,13 @@ export default function EditMoodModal({
             style={{ background: currentVariant.preview }}
           >
             {isLoading ? "Saving..." : "Save Changes"}
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleAnimatedClose}
             className="w-full py-2 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 transition-colors cursor-pointer"
           >
             Cancel
-          </button>
+          </Button>
         </div>
       </div>
     </div>,

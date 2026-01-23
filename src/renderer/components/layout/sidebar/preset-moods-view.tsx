@@ -10,6 +10,7 @@ import {
 } from "@/lib/mood-themes";
 import { parseIcon } from "@/lib/icon-registry";
 import { predefinedMoods, type PredefinedMood } from "@/lib/predefined-moods";
+import { Button } from "@/components/ui/button";
 
 interface PresetMoodsViewProps {
   onClose: () => void;
@@ -84,7 +85,7 @@ export default function PresetMoodsView({
             const isSelected = selectedTemplate?.id === template.id;
 
             return (
-              <button
+              <Button
                 key={template.id}
                 type="button"
                 onClick={() => setSelectedTemplate(template)}
@@ -111,14 +112,14 @@ export default function PresetMoodsView({
                 <span className="text-sm font-medium text-primary-700 dark:text-primary-200">
                   {template.name}
                 </span>
-              </button>
+              </Button>
             );
           })}
         </div>
       </div>
 
       <div className="p-4 space-y-2">
-        <button
+        <Button
           onClick={handleCreate}
           disabled={isLoading || !selectedTemplate}
           className="w-full py-2.5 px-4 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer
@@ -129,13 +130,13 @@ export default function PresetMoodsView({
             hover:scale-[1.02] active:scale-[0.98]"
         >
           {isLoading ? "Creating..." : "Create"}
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={onClose}
           className="w-full py-2 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 transition-colors cursor-pointer"
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );

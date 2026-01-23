@@ -2,7 +2,7 @@ import { useState } from "react";
 import { HashRouter as Router } from "react-router-dom";
 import { ReduxProvider } from "./components/providers/redux-provider";
 import { Toaster } from "./components/toast";
-import FrostedSidebar from "./components/layout/sidebar";
+import Sidebar from "./components/layout/sidebar";
 import ConfigPanel from "./components/layout/right-panel";
 import {
   MoodChangeHandler,
@@ -21,7 +21,7 @@ function AppContent() {
       <MoodChangeHandler />
       <Toaster />
       <MainLayout>
-        <FrostedSidebar />
+        <Sidebar />
         <MainContent
           marginLeft={mainMarginLeft}
           marginRight={isConfigOpen ? rightPanelWidth : "0.5rem"}

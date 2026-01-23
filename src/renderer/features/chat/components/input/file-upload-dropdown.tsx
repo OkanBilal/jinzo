@@ -8,6 +8,7 @@ import {
 import DropdownWrapper from "../../../../components/ui/dropdown-wrapper";
 
 import { FileUploadDropdownProps } from "./types";
+import { Button } from "@/components/ui/button";
 
 const FILE_TYPES = {
   IMAGE: "image/*",
@@ -28,15 +29,17 @@ export default function FileUploadDropdown({
 
   return (
     <div className="relative flex items-center gap-2" ref={dropdownRef}>
-      <button
+      <Button
         type="button"
+        tooltip="Upload file or photo"
+        tooltipPosition="left"
         onClick={onToggle}
         className="p-1.5 hover:bg-primary-200/30 dark:hover:bg-primary-800 rounded-full transition-colors cursor-pointer"
         aria-label="Upload file"
         aria-expanded={isOpen}
       >
         <Attach className="dark:text-primary-400 rotate-135  text-primary-500" />
-      </button>
+      </Button>
       {uploadedFiles.map((uploadedFile, index) => (
         <div
           key={index}
@@ -54,14 +57,14 @@ export default function FileUploadDropdown({
                 />
 
                 {hoveredFileIndex === index && (
-                  <button
+                  <Button
                     type="button"
                     onClick={() => onRemoveFile(index)}
                     className="absolute cursor-pointer inset-0 bg-black/50 flex items-center justify-center transition-opacity"
                     aria-label="Remove image"
                   >
                     <Close className="w-4 h-4 text-primary-600 dark:text-primary-300" />
-                  </button>
+                  </Button>
                 )}
               </div>
               <span className="text-primary-700 dark:text-primary-200 text-xs max-w-25 truncate">
@@ -71,7 +74,7 @@ export default function FileUploadDropdown({
           ) : (
             <div className="flex items-center gap-2 px-2 py-1.5 bg-primary-100 dark:bg-primary-800 rounded-2xl mr-1">
               {hoveredFileIndex === index ? (
-                <button
+                <Button
                   type="button"
                   onClick={() => onRemoveFile(index)}
                   className="flex items-center gap-2 cursor-pointer"
@@ -81,7 +84,7 @@ export default function FileUploadDropdown({
                   <span className="text-xs text-primary-700 dark:text-primary-200 max-w-25 truncate">
                     {uploadedFile.file.name}
                   </span>
-                </button>
+                </Button>
               ) : (
                 <>
                   <Document className="w-4 h-4 text-primary-700 dark:text-primary-200" />
@@ -104,7 +107,7 @@ export default function FileUploadDropdown({
           { label: "Images", Icon: Picture, onClick: onImageUpload },
           { label: "Documents", Icon: Document, onClick: onDocumentUpload },
         ].map(({ label, Icon, onClick }) => (
-          <button
+          <Button
             key={label}
             type="button"
             onClick={onClick}
@@ -113,7 +116,7 @@ export default function FileUploadDropdown({
           >
             <Icon className="mr-2 w-4 h-4" />
             {label}
-          </button>
+          </Button>
         ))}
       </DropdownWrapper>
     </div>

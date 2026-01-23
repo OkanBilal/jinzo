@@ -28,6 +28,7 @@ import {
   SettingsModalProps,
   SettingsSection,
 } from "@/features/chat/components/input/types";
+import { Button } from "@/components/ui/button";
 
 export default function SettingsModal({
   open,
@@ -93,13 +94,13 @@ export default function SettingsModal({
             onSectionChange={setActiveSection}
           />
           <div className="flex-1 p-6 overflow-y-auto">
-            <button
+            <Button
               onClick={onClose}
               aria-label="Close modal"
               className="absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full cursor-pointer text-primary-600 dark:text-primary-200 hover:bg-primary-200 dark:hover:bg-primary-950/60 transition-colors"
             >
               <Close className="w-4 h-4" />
-            </button>
+            </Button>
             {renderContent()}
           </div>
         </div>
@@ -171,7 +172,7 @@ function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
           const IconComponent = item.icon;
           const isActive = activeSection === item.id;
           return (
-            <button
+            <Button
               key={item.id}
               onClick={() => onSectionChange(item.id)}
               className={`w-full cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-colors flex items-center gap-3 ${
@@ -186,7 +187,7 @@ function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                 <div className="w-5 h-5 rounded bg-primary-300 dark:bg-primary-700" />
               )}
               <span>{item.label}</span>
-            </button>
+            </Button>
           );
         })}
       </nav>

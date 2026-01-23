@@ -74,9 +74,8 @@ function ThemePreviewCard({
   const lightBgStyle = getBackgroundStyle(lightBackground);
   const darkBgStyle = getBackgroundStyle(darkBackground);
 
-
   return (
-    <button
+    <Button
       type="button"
       onClick={onClick}
       className={cn(
@@ -161,7 +160,6 @@ function ThemePreviewCard({
                     isLight ? "bg-black/10" : "bg-white/15",
                   )}
                 />
-
               </div>
             </div>
             {/* Main Content */}
@@ -194,7 +192,7 @@ function ThemePreviewCard({
       >
         {label}
       </span>
-    </button>
+    </Button>
   );
 }
 
@@ -445,6 +443,7 @@ export default function GeneralSettings() {
             </div>
             <div className="flex items-center gap-3">
               <Button
+                tooltip="Refresh account details"
                 type="button"
                 variant="ghost"
                 onClick={fetchAccount}

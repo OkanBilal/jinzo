@@ -1,5 +1,5 @@
 import { Muted, ErrorText, BodyMedium } from "../../../../../components/ui/text";
-import { PrimaryButton, LinkButton } from "../../../../../components/ui/button";
+import { Button } from "../../../../../components/ui/button";
 import { Checkbox } from "../../../../../components/ui/checkbox";
 
 interface SelectableResource {
@@ -93,17 +93,18 @@ export function SelectResourcesStep<T extends SelectableResource>({
       {error && <ErrorText>{error}</ErrorText>}
 
       <div className="flex justify-between gap-3 pt-2">
-        <LinkButton onClick={onBack} disabled={loading} className="px-1">
+        <Button variant="link" onClick={onBack} disabled={loading} className="px-1">
           Back
-        </LinkButton>
-        <PrimaryButton
+        </Button>
+        <Button
+          variant="primary"
           onClick={onSave}
           disabled={loading || selectedCount === 0}
           isLoading={loading}
           className="ml-auto"
         >
           {loading ? "Saving..." : finalSaveLabel}
-        </PrimaryButton>
+        </Button>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { Body } from "@/components/ui/text";
 
 interface StructuredOutputToggleProps {
@@ -20,14 +21,14 @@ export function StructuredOutputToggle({
       </div>
       <div className="flex items-center gap-2">
         {enabled && (
-          <button
+          <Button
             onClick={onEditClick}
             className="px-2.5 py-1 text-xs font-medium text-primary-700 dark:text-primary-300 bg-black/4 dark:bg-white/6 rounded-lg hover:bg-black/6 dark:hover:bg-white/8 transition-colors"
           >
             Edit
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           onClick={() => onChange(!enabled)}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all shadow-[inset_0_0.5px_2px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_0.5px_2px_rgba(0,0,0,0.3)] ${
             enabled
@@ -40,7 +41,7 @@ export function StructuredOutputToggle({
               enabled ? "translate-x-5.5" : "translate-x-0.5"
             }`}
           />
-        </button>
+        </Button>
       </div>
     </div>
   );

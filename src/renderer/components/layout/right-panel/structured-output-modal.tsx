@@ -113,13 +113,13 @@ export function StructuredOutputModal({
       >
         <div className="flex items-center justify-between p-4">
           <Heading3>Structured outputs</Heading3>
-          <button
+          <Button
             onClick={onClose}
             aria-label="Close modal"
             className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full cursor-pointer text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
           >
             <Close className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
         <div className="p-4">
           <div className="min-h-75 max-h-75 overflow-y-auto overflow-x-visible">
@@ -133,9 +133,15 @@ export function StructuredOutputModal({
                   onRemove={() => handleRemoveProperty(index)}
                 />
               ))}
-              <Button onClick={handleAddProperty} variant="secondary">
-                + Add property
-              </Button>
+              <div className="px-2 -ml-2">
+                <Button
+                  className=""
+                  onClick={handleAddProperty}
+                  variant="secondary"
+                >
+                  + Add property
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -166,7 +172,6 @@ interface PropertyRowProps {
 }
 
 function PropertyRow({ property, onUpdate, onRemove }: PropertyRowProps) {
-
   const typeOptions = [
     { value: "string", label: "string" },
     { value: "number", label: "number" },
@@ -201,7 +206,7 @@ function PropertyRow({ property, onUpdate, onRemove }: PropertyRowProps) {
           placeholder="Type"
         />
       </div>
-      <button
+      <Button
         onClick={() => onUpdate({ isArray: !property.isArray })}
         className={`shrink-0 px-2.5 py-2 border-none rounded-xl text-sm transition-all ${
           property.isArray
@@ -211,8 +216,8 @@ function PropertyRow({ property, onUpdate, onRemove }: PropertyRowProps) {
         title="Is Array"
       >
         [ ]
-      </button>
-      <button
+      </Button>
+      <Button
         onClick={() => onUpdate({ isRequired: !property.isRequired })}
         className={`shrink-0 py-2.5 px-2 border-none rounded-xl text-sm transition-all ${
           property.isRequired
@@ -222,14 +227,14 @@ function PropertyRow({ property, onUpdate, onRemove }: PropertyRowProps) {
         title="Required"
       >
         <Asterisk className="w-4 h-4" />
-      </button>
-      <button
+      </Button>
+      <Button
         onClick={onRemove}
         className="shrink-0 p-2 text-primary-500 cursor-pointer hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
         title="Remove"
       >
         <Trash className="w-4 h-4" />
-      </button>
+      </Button>
     </div>
   );
 }

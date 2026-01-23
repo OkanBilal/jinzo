@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import DropdownWrapper from "../../../../components/ui/dropdown-wrapper";
 import { AppState } from "./types";
 
@@ -49,7 +50,7 @@ export default function AppMentionDropdown({
                   className="flex items-center px-2.5 py-2 first:rounded-t-xl last:rounded-b-xl hover:bg-primary-100 dark:hover:bg-primary-600/20 text-sm"
                   role="menuitem"
                 >
-                  <button
+                  <Button
                     type="button"
                     onClick={() => onSelectApp(app)}
                     className="w-full flex items-center gap-2.5 text-left cursor-pointer"
@@ -66,7 +67,7 @@ export default function AppMentionDropdown({
                     <span className="text-primary-800 dark:text-primary-200">
                       {app.displayName}
                     </span>
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>

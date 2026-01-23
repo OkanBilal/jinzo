@@ -21,6 +21,7 @@ import SendButton from "./send-button";
 import { ChatInputProps, AppState, UploadedFile } from "./types";
 import { Apps } from "@/components/ui/icons";
 import Text from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
 
 const DEFAULT_PLACEHOLDER = "Ask jinzo anything...";
 
@@ -220,8 +221,9 @@ export default function ChatInput({
               onChange={handleFileChange}
               className="hidden"
             />
-            <button
+            <Button
               type="button"
+              tooltip="Open apps"
               onClick={openAppsModal}
               className="flex cursor-pointer items-center hover:bg-primary-200/30 dark:hover:bg-primary-700/40 transition-colors rounded-2xl pl-2 pr-2 py-1.5"
               aria-haspopup="true"
@@ -233,7 +235,7 @@ export default function ChatInput({
               >
                 Apps
               </Text>
-            </button>
+            </Button>
             {/* <McpToggleButton
               enabled={toolMode === 'mcp'}
               onToggle={() => {

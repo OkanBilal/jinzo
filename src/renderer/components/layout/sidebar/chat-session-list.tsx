@@ -3,6 +3,7 @@ import { Caption } from "@/components/ui/text";
 import { ArrowUp } from "@/components/ui/icons";
 import { ChatSession } from "@/lib/redux/api";
 import ChatSessionItem from "./chat-session-item";
+import { Button } from "@/components/ui/button";
 
 interface ChatSessionListProps {
   sessions: ChatSession[];
@@ -41,9 +42,9 @@ export default function ChatSessionList({
 
   return (
     <div className="pb-3">
-      <button
+      <Button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between active:scale-99 transition-all duration-200 bg-transparent hover:bg-primary-950/3 dark:hover:bg-primary/5 cursor-pointer px-2 py-2 mb-2 rounded-lg "
+        className="w-full flex items-center justify-between active:scale-99 transition-all duration-200 bg-transparent hover:bg-primary-950/3 dark:hover:bg-primary/5 cursor-pointer px-2 py-2 mb-1 rounded-lg "
       >
         <Caption className="text-primary-700 dark:text-primary-400 font-medium ">
           Chat
@@ -53,7 +54,7 @@ export default function ChatSessionList({
             isExpanded ? "rotate-180" : "rotate-90"
           }`}
         />
-      </button>
+      </Button>
 
       {isExpanded && (
         <div className="space-y-1">

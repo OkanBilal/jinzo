@@ -1,5 +1,5 @@
 import Text, { Muted } from "../../../../../components/ui/text";
-import { SecondaryButton, DangerButton } from "../../../../../components/ui/button";
+import { Button } from "../../../../../components/ui/button";
 
 interface RevokeConfirmModalProps {
   onConfirm: () => void;
@@ -32,16 +32,17 @@ export function RevokeConfirmModal({
           <Muted className="mb-6">{description || defaultDescription}</Muted>
 
           <div className="flex gap-3 justify-end">
-            <SecondaryButton onClick={onCancel} disabled={loading}>
+            <Button variant="secondary" onClick={onCancel} disabled={loading}>
               Cancel
-            </SecondaryButton>
-            <DangerButton
+            </Button>
+            <Button
+              variant="danger"
               onClick={onConfirm}
               disabled={loading}
               isLoading={loading}
             >
               {loading ? "Revoking..." : "Revoke Access"}
-            </DangerButton>
+            </Button>
           </div>
         </div>
       </div>

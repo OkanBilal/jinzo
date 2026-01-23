@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+
 export default function PromptMarquee({
   prompts,
   onSelect,
@@ -23,7 +25,7 @@ export default function PromptMarquee({
 
 function PromptButton({ item, onSelect }: PromptButtonProps) {
   return (
-    <button
+    <Button
       type="button"
       onClick={() => onSelect(item.label)}
       className="rounded-2xl active:scale-[0.97] bg-primary-50/70 dark:bg-primary-900/40 border-primary-200/50  
@@ -33,7 +35,7 @@ function PromptButton({ item, onSelect }: PromptButtonProps) {
     >
       <PromptIcon item={item} />
       <span>{item.label}</span>
-    </button>
+    </Button>
   );
 }
 
