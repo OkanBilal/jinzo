@@ -1,29 +1,35 @@
 import { app } from "electron";
-import { initializeDatabase, closeDatabase } from "./db/client";
-import {
-  registerDatabaseHandlers,
-  unregisterDatabaseHandlers,
-} from "./ipc/database";
-import { registerAccountHandlers } from "./ipc/account";
-import { registerAppsHandlers } from "./ipc/apps";
-import { registerChatHandlers, unregisterChatHandlers } from "./ipc/chat";
-import { registerSyncHandlers } from "./ipc/sync";
-import { registerFeedHandlers, unregisterFeedHandlers } from "./ipc/feed";
+import { initializeDatabase, closeDatabase, getDb } from "./db/client";
+import { registerAccountIpc, unregisterAccountIpc } from "./modules/account";
+import { registerAppsIpc, unregisterAppsIpc } from "./modules/apps";
+import { registerChatHandlers, unregisterChatHandlers } from "./modules/chat";
+import { registerSyncIpc, unregisterSyncIpc } from "./modules/sync";
+import { registerFeedIpc, unregisterFeedIpc } from "./modules/feed";
 import {
   registerEntitiesHandlers,
   unregisterEntitiesHandlers,
-} from "./ipc/entities";
-import { registerMcpHandlers } from "./ipc/mcp";
-import { registerOllamaHandlers } from "./ipc/ollama";
-import { registerConnectionCredentialsHandlers } from "./ipc/connectionCredentials";
-import { registerConnectionsHandlers } from "./ipc/connections";
-import { registerSeedHandlers } from "./ipc/seed";
-import { registerMoodHandlers } from "./ipc/mood";
-import { registerAppSettingsHandlers } from "./ipc/appSettings";
+} from "./modules/entities";
+import { registerMcpHandlers, unregisterMcpHandlers } from "./modules/mcp";
+import { registerOllamaIpc, unregisterOllamaIpc } from "./modules/ollama";
 import {
-  registerJournalHandlers,
-  unregisterJournalHandlers,
-} from "./ipc/journal";
+  registerConnectionCredentialsIpc,
+  unregisterConnectionCredentialsIpc,
+} from "./modules/connectionCredentials";
+import {
+  registerConnectionsHandlers,
+  unregisterConnectionsHandlers,
+} from "./modules/connections";
+import { registerSeedIpc, unregisterSeedIpc } from "./modules/seed";
+import { registerMoodIpc, unregisterMoodIpc } from "./modules/mood";
+import { registerAppSettingsIpc, unregisterAppSettingsIpc } from "./modules/appSettings";
+import {
+  registerJournalIpc,
+  unregisterJournalIpc,
+} from "./modules/journal";
+import {
+  registerCopilotHandlers,
+  unregisterCopilotHandlers,
+} from "./modules/copilot";
 import { createMainWindow } from "./windows/mainWindow";
 
 /**
@@ -41,21 +47,21 @@ async function initializeApp() {
     });
 
     // Register IPC handlers
-    registerDatabaseHandlers();
-    registerAccountHandlers();
-    registerAppsHandlers();
+    registerAccountIpc();
+    registerAppsIpc();
     registerChatHandlers();
-    registerSyncHandlers();
-    registerFeedHandlers();
+    registerSyncIpc();
+    registerFeedIpc();
     registerEntitiesHandlers();
     registerMcpHandlers();
-    registerOllamaHandlers();
-    registerConnectionCredentialsHandlers();
+    registerOllamaIpc();
+    registerConnectionCredentialsIpc();
     registerConnectionsHandlers();
-    registerSeedHandlers();
-    registerMoodHandlers();
-    registerAppSettingsHandlers();
-    registerJournalHandlers();
+    registerSeedIpc();
+    registerMoodIpc();
+    registerAppSettingsIpc();
+    registerJournalIpc();
+    registerCopilotHandlers();
 
     // Create main window
     createMainWindow();
@@ -75,10 +81,20 @@ async function cleanupApp() {
     console.log("Cleaning up application...");
 
     // Unregister IPC handlers
-    unregisterDatabaseHandlers();
-    unregisterFeedHandlers();
+    unregisterAccountIpc();
+    unregisterAppsIpc();
+    unregisterAppSettingsIpc();
+    unregisterSyncIpc();
+    unregisterSeedIpc();
+    unregisterOllamaIpc();
+    unregisterMcpHandlers();
+    unregisterMoodIpc();
+    unregisterFeedIpc();
+    unregisterConnectionCredentialsIpc();
+    unregisterConnectionsHandlers();
     unregisterEntitiesHandlers();
-    unregisterJournalHandlers();
+    unregisterJournalIpc();
+    unregisterCopilotHandlers();
     unregisterChatHandlers();
 
     // Close database

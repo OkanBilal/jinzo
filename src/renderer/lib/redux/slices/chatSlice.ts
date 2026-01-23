@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { DEFAULT_MODEL } from "../../../../main/ipc/chat/config";
+
+export const DEFAULT_MODEL = "gpt-oss:120b-cloud";
 
 export interface ModelCapabilities {
   completion?: boolean;
@@ -52,7 +53,7 @@ const chatSlice = createSlice({
     },
     setThinkingLevel: (
       state,
-      action: PayloadAction<"low" | "medium" | "high">
+      action: PayloadAction<"low" | "medium" | "high">,
     ) => {
       state.thinkingLevel = action.payload;
     },
@@ -67,7 +68,7 @@ const chatSlice = createSlice({
       action: PayloadAction<{
         capabilities: ModelCapabilities | null;
         supportsThinking: boolean;
-      }>
+      }>,
     ) => {
       state.modelCapabilities = action.payload.capabilities;
       state.supportsThinking = action.payload.supportsThinking;
@@ -77,7 +78,7 @@ const chatSlice = createSlice({
     },
     setStructuredOutputSchema: (
       state,
-      action: PayloadAction<StructuredOutputSchema>
+      action: PayloadAction<StructuredOutputSchema>,
     ) => {
       state.structuredOutputSchema = action.payload;
     },

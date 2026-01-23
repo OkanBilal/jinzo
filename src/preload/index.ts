@@ -2,19 +2,18 @@ import { contextBridge, ipcRenderer } from "electron";
 
 // Expose IPC methods to renderer process
 const api = {
-  // Database operations (general stats and utilities)
-  database: {
-    getStats: () => ipcRenderer.invoke("db:getStats"),
-    getChatSessions: (limit?: number) => ipcRenderer.invoke("db:getChatSessions", limit),
-    getConnections: () => ipcRenderer.invoke("db:getConnections"),
-  },
   // Entity operations (canonical content)
   entities: {
-    getAll: (options?: { kind?: string; connectionId?: string; limit?: number }) =>
-      ipcRenderer.invoke("entities:getAll", options),
+    getAll: (options?: {
+      kind?: string;
+      connectionId?: string;
+      limit?: number;
+    }) => ipcRenderer.invoke("entities:getAll", options),
     getById: (id: string) => ipcRenderer.invoke("entities:getById", id),
-    create: (payload: unknown) => ipcRenderer.invoke("entities:create", payload),
-    update: (id: string, payload: unknown) => ipcRenderer.invoke("entities:update", id, payload),
+    create: (payload: unknown) =>
+      ipcRenderer.invoke("entities:create", payload),
+    update: (id: string, payload: unknown) =>
+      ipcRenderer.invoke("entities:update", id, payload),
     delete: (id: string) => ipcRenderer.invoke("entities:delete", id),
     search: (query: string, options?: { kind?: string; limit?: number }) =>
       ipcRenderer.invoke("entities:search", query, options),
@@ -23,7 +22,8 @@ const api = {
   tasks: {
     getAll: (options?: { status?: string; limit?: number }) =>
       ipcRenderer.invoke("tasks:getAll", options),
-    getById: (entityId: string) => ipcRenderer.invoke("tasks:getById", entityId),
+    getById: (entityId: string) =>
+      ipcRenderer.invoke("tasks:getById", entityId),
     create: (payload: unknown) => ipcRenderer.invoke("tasks:create", payload),
     update: (entityId: string, payload: unknown) =>
       ipcRenderer.invoke("tasks:update", entityId, payload),
@@ -33,7 +33,8 @@ const api = {
   issues: {
     getAll: (options?: { provider?: string; state?: string; limit?: number }) =>
       ipcRenderer.invoke("issues:getAll", options),
-    getById: (entityId: string) => ipcRenderer.invoke("issues:getById", entityId),
+    getById: (entityId: string) =>
+      ipcRenderer.invoke("issues:getById", entityId),
     create: (payload: unknown) => ipcRenderer.invoke("issues:create", payload),
     update: (entityId: string, payload: unknown) =>
       ipcRenderer.invoke("issues:update", entityId, payload),
@@ -43,12 +44,34 @@ const api = {
   playlists: {
     getItems: (playlistEntityId: string) =>
       ipcRenderer.invoke("playlists:getItems", playlistEntityId),
-    addItem: (playlistEntityId: string, itemEntityId: string, position?: number) =>
-      ipcRenderer.invoke("playlists:addItem", playlistEntityId, itemEntityId, position),
+    addItem: (
+      playlistEntityId: string,
+      itemEntityId: string,
+      position?: number,
+    ) =>
+      ipcRenderer.invoke(
+        "playlists:addItem",
+        playlistEntityId,
+        itemEntityId,
+        position,
+      ),
     removeItem: (playlistEntityId: string, itemEntityId: string) =>
-      ipcRenderer.invoke("playlists:removeItem", playlistEntityId, itemEntityId),
-    reorderItem: (playlistEntityId: string, itemEntityId: string, newPosition: number) =>
-      ipcRenderer.invoke("playlists:reorderItem", playlistEntityId, itemEntityId, newPosition),
+      ipcRenderer.invoke(
+        "playlists:removeItem",
+        playlistEntityId,
+        itemEntityId,
+      ),
+    reorderItem: (
+      playlistEntityId: string,
+      itemEntityId: string,
+      newPosition: number,
+    ) =>
+      ipcRenderer.invoke(
+        "playlists:reorderItem",
+        playlistEntityId,
+        itemEntityId,
+        newPosition,
+      ),
   },
   // Account operations
   account: {
@@ -60,18 +83,21 @@ const api = {
     getAll: () => ipcRenderer.invoke("apps:getAll"),
     updateById: (
       id: string,
-      payload: { isConnected: boolean; connectionId?: string | null }
+      payload: { isConnected: boolean; connectionId?: string | null },
     ) => ipcRenderer.invoke("apps:updateById", id, payload),
   },
   // Chat operations
   chat: {
     getConfig: () => ipcRenderer.invoke("chat:getConfig"),
-    updateConfig: (payload: unknown) => ipcRenderer.invoke("chat:updateConfig", payload),
+    updateConfig: (payload: unknown) =>
+      ipcRenderer.invoke("chat:updateConfig", payload),
     getSessions: () => ipcRenderer.invoke("chat:getSessions"),
     getSessionById: (sessionId: number) =>
       ipcRenderer.invoke("chat:getSessionById", sessionId),
-    getMessages: (sessionId: number) => ipcRenderer.invoke("chat:getMessages", sessionId),
-    createSession: (payload: unknown) => ipcRenderer.invoke("chat:createSession", payload),
+    getMessages: (sessionId: number) =>
+      ipcRenderer.invoke("chat:getMessages", sessionId),
+    createSession: (payload: unknown) =>
+      ipcRenderer.invoke("chat:createSession", payload),
     deleteSession: (sessionId: number) =>
       ipcRenderer.invoke("chat:deleteSession", sessionId),
     updateTitle: (sessionId: number, title: string) =>
@@ -80,12 +106,10 @@ const api = {
       ipcRenderer.invoke("chat:generateTitle", sessionId, model),
     send: (payload: unknown) => ipcRenderer.invoke("chat:send", payload),
     onStreamChunk: (
-      callback: (data: { sessionId: number; content: string }) => void
+      callback: (data: { sessionId: number; content: string }) => void,
     ) => {
-      const listener = (
-        _: any,
-        data: { sessionId: number; content: string }
-      ) => callback(data);
+      const listener = (_: any, data: { sessionId: number; content: string }) =>
+        callback(data);
       ipcRenderer.on("chat:stream-chunk", listener);
       return () => ipcRenderer.removeListener("chat:stream-chunk", listener);
     },
@@ -95,7 +119,7 @@ const api = {
       return () => ipcRenderer.removeListener("chat:stream-final", listener);
     },
     onStreamError: (
-      callback: (data: { sessionId: number; error: string }) => void
+      callback: (data: { sessionId: number; error: string }) => void,
     ) => {
       const listener = (_: any, data: { sessionId: number; error: string }) =>
         callback(data);
@@ -123,37 +147,63 @@ const api = {
   // MCP (Model Context Protocol) operations
   mcp: {
     listTools: () => ipcRenderer.invoke("mcp:listTools"),
-    callTool: (payload: { name: string; arguments?: any }) => 
+    callTool: (payload: { name: string; arguments?: any }) =>
       ipcRenderer.invoke("mcp:callTool", payload),
   },
   // Ollama operations
   ollama: {
     getModels: () => ipcRenderer.invoke("ollama:getModels"),
-    showModel: (modelName: string) => ipcRenderer.invoke("ollama:showModel", modelName),
-    getWeatherInsight: (payload: { temperature: number; weatherCode: number; windspeed?: number; location: { lat: number; lon: number } }) => 
-      ipcRenderer.invoke("ollama:getWeatherInsight", payload),
+    showModel: (modelName: string) =>
+      ipcRenderer.invoke("ollama:showModel", modelName),
+    getWeatherInsight: (payload: {
+      temperature: number;
+      weatherCode: number;
+      windspeed?: number;
+      location: { lat: number; lon: number };
+    }) => ipcRenderer.invoke("ollama:getWeatherInsight", payload),
   },
   // Connection credentials operations
   connectionCredentials: {
-    save: (payload: { provider: string; connectionId: string; [key: string]: any }) => 
-      ipcRenderer.invoke("connections:saveCredentials", payload),
-    check: (provider: string) => ipcRenderer.invoke("connections:checkCredentials", provider),
+    save: (payload: {
+      provider: string;
+      connectionId: string;
+      [key: string]: any;
+    }) => ipcRenderer.invoke("connections:saveCredentials", payload),
+    check: (provider: string) =>
+      ipcRenderer.invoke("connections:checkCredentials", provider),
   },
   // Connections operations
   connections: {
-    getGithubRepos: (connectionId: string) => ipcRenderer.invoke("connections:getGithubRepos", connectionId),
-    getRaindropCollections: (connectionId: string) => ipcRenderer.invoke("connections:getRaindropCollections", connectionId),
-    getHackerNewsStatus: () => ipcRenderer.invoke("connections:getHackerNewsStatus"),
-    toggleHackerNews: (payload: { enabled: boolean; username?: string; topStories?: boolean; userSubmissions?: boolean; userComments?: boolean }) => 
-      ipcRenderer.invoke("connections:toggleHackerNews", payload),
-    saveResources: (payload: { provider: string; connectionId: string; resources?: any[]; sources?: string[] }) => 
-      ipcRenderer.invoke("connections:saveResources", payload),
-    deleteResource: (resourceId: string) => ipcRenderer.invoke("connections:deleteResource", resourceId),
-    revoke: (provider: string) => ipcRenderer.invoke("connections:revoke", provider),
-    getByProvider: (provider: string) => ipcRenderer.invoke("connections:getByProvider", provider),
-    getSelectedResources: (provider: string) => ipcRenderer.invoke("connections:getSelectedResources", provider),
+    getGithubRepos: (connectionId: string) =>
+      ipcRenderer.invoke("connections:getGithubRepos", connectionId),
+    getRaindropCollections: (connectionId: string) =>
+      ipcRenderer.invoke("connections:getRaindropCollections", connectionId),
+    getHackerNewsStatus: () =>
+      ipcRenderer.invoke("connections:getHackerNewsStatus"),
+    toggleHackerNews: (payload: {
+      enabled: boolean;
+      username?: string;
+      topStories?: boolean;
+      userSubmissions?: boolean;
+      userComments?: boolean;
+    }) => ipcRenderer.invoke("connections:toggleHackerNews", payload),
+    saveResources: (payload: {
+      provider: string;
+      connectionId: string;
+      resources?: any[];
+      sources?: string[];
+    }) => ipcRenderer.invoke("connections:saveResources", payload),
+    deleteResource: (resourceId: string) =>
+      ipcRenderer.invoke("connections:deleteResource", resourceId),
+    revoke: (provider: string) =>
+      ipcRenderer.invoke("connections:revoke", provider),
+    getByProvider: (provider: string) =>
+      ipcRenderer.invoke("connections:getByProvider", provider),
+    getSelectedResources: (provider: string) =>
+      ipcRenderer.invoke("connections:getSelectedResources", provider),
     getRssStatus: () => ipcRenderer.invoke("connections:getRssStatus"),
-    toggleRss: (enabled: boolean) => ipcRenderer.invoke("connections:toggleRss", enabled),
+    toggleRss: (enabled: boolean) =>
+      ipcRenderer.invoke("connections:toggleRss", enabled),
   },
   // Seed operations
   seed: {
@@ -166,42 +216,75 @@ const api = {
     getAll: () => ipcRenderer.invoke("mood:getAll"),
     getById: (moodId: string) => ipcRenderer.invoke("mood:getById", moodId),
     create: (payload: unknown) => ipcRenderer.invoke("mood:create", payload),
-    update: (moodId: string, payload: unknown) => ipcRenderer.invoke("mood:update", moodId, payload),
+    update: (moodId: string, payload: unknown) =>
+      ipcRenderer.invoke("mood:update", moodId, payload),
     delete: (moodId: string) => ipcRenderer.invoke("mood:delete", moodId),
     archive: (moodId: string) => ipcRenderer.invoke("mood:archive", moodId),
   },
   // App settings operations
   appSettings: {
     get: () => ipcRenderer.invoke("appSettings:get"),
-    setActiveMood: (moodId: string | null) => ipcRenderer.invoke("appSettings:setActiveMood", moodId),
-    onMoodChanged: (callback: (data: { activeMoodId: string | null }) => void) => {
-      const listener = (_: any, data: { activeMoodId: string | null }) => callback(data);
-      ipcRenderer.on('mood:changed', listener);
-      return () => ipcRenderer.removeListener('mood:changed', listener);
+    setActiveMood: (moodId: string | null) =>
+      ipcRenderer.invoke("appSettings:setActiveMood", moodId),
+    onMoodChanged: (
+      callback: (data: { activeMoodId: string | null }) => void,
+    ) => {
+      const listener = (_: any, data: { activeMoodId: string | null }) =>
+        callback(data);
+      ipcRenderer.on("mood:changed", listener);
+      return () => ipcRenderer.removeListener("mood:changed", listener);
     },
   },
   // Journal operations
   journal: {
-    getAll: (options?: { limit?: number }) => ipcRenderer.invoke("journal:getAll", options),
+    getAll: (options?: { limit?: number }) =>
+      ipcRenderer.invoke("journal:getAll", options),
     getById: (id: string) => ipcRenderer.invoke("journal:getById", id),
-    createDraft: (payload: { accountId: string; title?: string; body?: string; occurredAt?: Date }) =>
-      ipcRenderer.invoke("journal:createDraft", payload),
-    updateDraft: (id: string, payload: { title?: string; body?: string; summary?: string; metadata?: { status?: "draft" | "published"; wordCount?: number } }) =>
-      ipcRenderer.invoke("journal:updateDraft", id, payload),
+    createDraft: (payload: {
+      accountId: string;
+      title?: string;
+      body?: string;
+      occurredAt?: Date;
+    }) => ipcRenderer.invoke("journal:createDraft", payload),
+    updateDraft: (
+      id: string,
+      payload: {
+        title?: string;
+        body?: string;
+        summary?: string;
+        metadata?: { status?: "draft" | "published"; wordCount?: number };
+      },
+    ) => ipcRenderer.invoke("journal:updateDraft", id, payload),
     save: (id: string) => ipcRenderer.invoke("journal:save", id),
     publish: (id: string) => ipcRenderer.invoke("journal:publish", id),
     delete: (id: string) => ipcRenderer.invoke("journal:delete", id),
     getRevisions: (entityId: string, options?: { limit?: number }) =>
       ipcRenderer.invoke("journal:getRevisions", entityId, options),
-    markForIndexing: (entityId: string) => ipcRenderer.invoke("journal:markForIndexing", entityId),
-    setEditing: (entityId: string | null) => ipcRenderer.invoke("journal:setEditing", entityId),
+    markForIndexing: (entityId: string) =>
+      ipcRenderer.invoke("journal:markForIndexing", entityId),
+    setEditing: (entityId: string | null) =>
+      ipcRenderer.invoke("journal:setEditing", entityId),
     getEditing: () => ipcRenderer.invoke("journal:getEditing"),
-    appendText: (entityId: string, text: string) => ipcRenderer.invoke("journal:appendText", entityId, text),
-    onContentUpdated: (callback: (data: { entityId: string; body: string; wordCount: number }) => void) => {
-      const listener = (_: any, data: { entityId: string; body: string; wordCount: number }) => callback(data);
+    appendText: (entityId: string, text: string) =>
+      ipcRenderer.invoke("journal:appendText", entityId, text),
+    onContentUpdated: (
+      callback: (data: {
+        entityId: string;
+        body: string;
+        wordCount: number;
+      }) => void,
+    ) => {
+      const listener = (
+        _: any,
+        data: { entityId: string; body: string; wordCount: number },
+      ) => callback(data);
       ipcRenderer.on("journal:contentUpdated", listener);
-      return () => ipcRenderer.removeListener("journal:contentUpdated", listener);
+      return () =>
+        ipcRenderer.removeListener("journal:contentUpdated", listener);
     },
+  },
+  copilot: {
+    chat: (prompt: string) => ipcRenderer.invoke("copilot:chat", prompt),
   },
 };
 

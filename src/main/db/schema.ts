@@ -9,7 +9,6 @@ import {
   check,
 } from "drizzle-orm/sqlite-core";
 
-
 /* -----------------------------
    ACCOUNTS / SETTINGS
 ------------------------------ */
@@ -37,7 +36,7 @@ export const accounts = sqliteTable(
   (t) => [
     index("idx_accounts_email").on(t.email),
     index("idx_accounts_display_name").on(t.displayName),
-  ]
+  ],
 );
 
 export const appSettings = sqliteTable("app_settings", {
@@ -58,6 +57,495 @@ export const appSettings = sqliteTable("app_settings", {
     .default(sql`(unixepoch())`),
 });
 
+/* -----------------------------
+   PROVIDERS (LLM / agent runtimes)
+   - shared by chat_sessions (normal chat UI)
+   - shared by runs (terminal/code-writing flow)
+------------------------------ */
+
+export const providers = sqliteTable(
+  "providers",
+  {
+    id: text("id").primaryKey(), // "ollama" | "copilot_cli" | "claude_code" | ...
+    kind: text("kind", { enum: ["llm_runtime", "agent_runtime"] }).notNull(),
+    displayName: text("display_name").notNull(),
+    isEnabled: integer("is_enabled", { mode: "boolean" })
+      .notNull()
+      .default(true),
+
+    // e.g. { baseUrl, binaryPath, envVarHints, ... }
+    config: text("config"), // JSON
+
+    // e.g. { toolCalling: true, streaming: true, jsonSchema: true, ... }
+    capabilities: text("capabilities"), // JSON
+
+    defaultModel: text("default_model"),
+
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_providers_kind").on(t.kind),
+    index("idx_providers_enabled").on(t.isEnabled),
+    index("idx_providers_updated").on(t.updatedAt),
+    check(
+      "check_providers_config_json",
+      sql`json_valid(${t.config}) OR ${t.config} IS NULL`,
+    ),
+    check(
+      "check_providers_capabilities_json",
+      sql`json_valid(${t.capabilities}) OR ${t.capabilities} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
+   WORKSPACES (local projects / repos)
+------------------------------ */
+
+export const workspaces = sqliteTable(
+  "workspaces",
+  {
+    id: text("id").primaryKey(), // uuid
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+
+    name: text("name").notNull(),
+    rootPath: text("root_path").notNull(), // local absolute path
+    repoUrl: text("repo_url"),
+    defaultBranch: text("default_branch"),
+    metadata: text("metadata"), // JSON (optional)
+
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_workspaces_account").on(t.accountId),
+    uniqueIndex("uniq_workspaces_account_root").on(t.accountId, t.rootPath),
+    index("idx_workspaces_updated").on(t.updatedAt),
+    check(
+      "check_workspaces_metadata_json",
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
+   RUNS (terminal/code-writing flow)
+   - NOT linked to chat_sessions by design
+------------------------------ */
+
+export const runs = sqliteTable(
+  "runs",
+  {
+    id: text("id").primaryKey(), // uuid
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+
+    workspaceId: text("workspace_id").references(() => workspaces.id, {
+      onDelete: "set null",
+    }),
+
+    // optional: which mood/profile initiated this run (tool policies etc.)
+    moodId: text("mood_id").references(() => moods.id, {
+      onDelete: "set null",
+    }),
+
+    providerId: text("provider_id")
+      .notNull()
+      .references(() => providers.id, { onDelete: "restrict" }),
+
+    model: text("model"), // snapshot
+    title: text("title"),
+    goal: text("goal"), // user intent
+
+    status: text("status", {
+      enum: ["queued", "running", "succeeded", "failed", "canceled"],
+    })
+      .notNull()
+      .default("queued"),
+
+    // snapshots for reproducibility
+    systemPrompt: text("system_prompt"),
+    configSnapshot: text("config_snapshot"), // JSON (temp/top_p/max_tokens/etc)
+    toolPolicySnapshot: text("tool_policy_snapshot"), // JSON (allow/deny, etc)
+
+    startedAt: integer("started_at", { mode: "timestamp" }),
+    endedAt: integer("ended_at", { mode: "timestamp" }),
+    lastError: text("last_error"),
+
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_runs_account_created").on(t.accountId, t.createdAt),
+    index("idx_runs_account_status").on(t.accountId, t.status),
+    index("idx_runs_provider").on(t.providerId),
+    index("idx_runs_workspace").on(t.workspaceId),
+    index("idx_runs_mood").on(t.moodId),
+    index("idx_runs_updated").on(t.updatedAt),
+    check(
+      "check_runs_config_snapshot_json",
+      sql`json_valid(${t.configSnapshot}) OR ${t.configSnapshot} IS NULL`,
+    ),
+    check(
+      "check_runs_tool_policy_snapshot_json",
+      sql`json_valid(${t.toolPolicySnapshot}) OR ${t.toolPolicySnapshot} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
+   RUN CONTEXT (what the run looked at / was given)
+------------------------------ */
+
+export const runContext = sqliteTable(
+  "run_context",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    runId: text("run_id")
+      .notNull()
+      .references(() => runs.id, { onDelete: "cascade" }),
+
+    kind: text("kind", {
+      enum: ["file", "selection", "diff", "git", "terminal", "env", "note"],
+    }).notNull(),
+
+    // path / commit / command / etc.
+    ref: text("ref"),
+
+    // small context inline; if large, store as entity + chunks and link via entityId
+    content: text("content"),
+    entityId: text("entity_id").references(() => entities.id, {
+      onDelete: "set null",
+    }),
+
+    contentHash: text("content_hash"), // sha256/xxhash as string
+    metadata: text("metadata"), // JSON (line ranges, mime, size, etc.)
+
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_run_context_run").on(t.runId),
+    index("idx_run_context_kind").on(t.kind),
+    index("idx_run_context_entity").on(t.entityId),
+    index("idx_run_context_hash").on(t.contentHash),
+    check(
+      "check_run_context_metadata_json",
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
+   RUN ARTIFACTS (patches, logs, files, reports)
+------------------------------ */
+
+export const runArtifacts = sqliteTable(
+  "run_artifacts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    runId: text("run_id")
+      .notNull()
+      .references(() => runs.id, { onDelete: "cascade" }),
+
+    kind: text("kind", {
+      enum: ["patch", "file", "log", "report", "command_result"],
+    }).notNull(),
+
+    // for files/patches
+    path: text("path"),
+    content: text("content"),
+    blobData: blob("blob_data"),
+
+    // or store big content as entity
+    entityId: text("entity_id").references(() => entities.id, {
+      onDelete: "set null",
+    }),
+
+    contentHash: text("content_hash"),
+    metadata: text("metadata"), // JSON (exitCode, bytes, language, etc.)
+
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_run_artifacts_run").on(t.runId),
+    index("idx_run_artifacts_kind").on(t.kind),
+    index("idx_run_artifacts_path").on(t.path),
+    index("idx_run_artifacts_entity").on(t.entityId),
+    index("idx_run_artifacts_hash").on(t.contentHash),
+    check(
+      "check_run_artifacts_metadata_json",
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
+   RUN COMMANDS (terminal commands + exit codes)
+------------------------------ */
+
+export const runCommands = sqliteTable(
+  "run_commands",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    runId: text("run_id")
+      .notNull()
+      .references(() => runs.id, { onDelete: "cascade" }),
+
+    cwd: text("cwd"),
+    command: text("command").notNull(), // raw command string
+    envKeys: text("env_keys"), // JSON array of keys (no secrets)
+
+    status: text("status", {
+      enum: ["queued", "running", "done", "error", "canceled"],
+    })
+      .notNull()
+      .default("queued"),
+
+    startedAt: integer("started_at", { mode: "timestamp" }),
+    endedAt: integer("ended_at", { mode: "timestamp" }),
+    exitCode: integer("exit_code"),
+
+    // keep short outputs here; big outputs -> runArtifacts(kind=log/command_result)
+    stdout: text("stdout"),
+    stderr: text("stderr"),
+
+    metadata: text("metadata"), // JSON
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_run_commands_run").on(t.runId),
+    index("idx_run_commands_status").on(t.status),
+    index("idx_run_commands_created").on(t.createdAt),
+    check(
+      "check_run_commands_env_keys_json",
+      sql`json_valid(${t.envKeys}) OR ${t.envKeys} IS NULL`,
+    ),
+    check(
+      "check_run_commands_metadata_json",
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
+   MCP SERVERS (optional, but useful if you discover tools dynamically)
+------------------------------ */
+
+export const mcpServers = sqliteTable(
+  "mcp_servers",
+  {
+    id: text("id").primaryKey(), // uuid or "local"
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+
+    name: text("name").notNull(),
+    transport: text("transport", { enum: ["stdio", "http", "ws"] }).notNull(),
+    endpoint: text("endpoint"), // url or command (depends on transport)
+    status: text("status", { enum: ["active", "disabled", "error"] })
+      .notNull()
+      .default("active"),
+
+    metadata: text("metadata"), // JSON (auth hints, headers, etc.)
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_mcp_servers_account").on(t.accountId),
+    index("idx_mcp_servers_status").on(t.status),
+    check(
+      "check_mcp_servers_metadata_json",
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
+   TOOLS REGISTRY (local + mcp + provider builtins)
+------------------------------ */
+
+export const tools = sqliteTable(
+  "tools",
+  {
+    id: text("id").primaryKey(), // stable id you control
+    source: text("source", {
+      enum: ["local", "mcp", "provider_builtin"],
+    }).notNull(),
+
+    // display + invocation
+    name: text("name").notNull(),
+    description: text("description"),
+    version: text("version"),
+    isEnabled: integer("is_enabled", { mode: "boolean" })
+      .notNull()
+      .default(true),
+
+    // JSON Schema
+    schema: text("schema"), // JSON
+
+    // if MCP-sourced
+    mcpServerId: text("mcp_server_id").references(() => mcpServers.id, {
+      onDelete: "set null",
+    }),
+
+    metadata: text("metadata"), // JSON
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    uniqueIndex("uniq_tools_source_name").on(t.source, t.name),
+    index("idx_tools_source").on(t.source),
+    index("idx_tools_enabled").on(t.isEnabled),
+    index("idx_tools_mcp_server").on(t.mcpServerId),
+    check(
+      "check_tools_schema_json",
+      sql`json_valid(${t.schema}) OR ${t.schema} IS NULL`,
+    ),
+    check(
+      "check_tools_metadata_json",
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
+   MOOD TOOL PERMISSIONS (simple + powerful)
+------------------------------ */
+
+export const moodToolPermissions = sqliteTable(
+  "mood_tool_permissions",
+  {
+    moodId: text("mood_id")
+      .notNull()
+      .references(() => moods.id, { onDelete: "cascade" }),
+    toolId: text("tool_id")
+      .notNull()
+      .references(() => tools.id, { onDelete: "cascade" }),
+
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+
+    // e.g. { fs: { allowWrite: false, allowedPaths: [...] }, network: {...}, limits: {...} }
+    policy: text("policy"), // JSON
+
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    uniqueIndex("uniq_mood_tool").on(t.moodId, t.toolId),
+    index("idx_mood_tool_tool").on(t.toolId),
+    check(
+      "check_mood_tool_policy_json",
+      sql`json_valid(${t.policy}) OR ${t.policy} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
+   TOOL CALLS (invocation log)
+   - can be used by BOTH chat + runs
+   - link to runId when terminal/code-writing
+   - link to chatMessages via messageId if you want later (optional)
+------------------------------ */
+
+export const toolCalls = sqliteTable(
+  "tool_calls",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+
+    runId: text("run_id").references(() => runs.id, { onDelete: "cascade" }),
+
+    // optional future linkage:
+    // chatMessageId: integer("chat_message_id").references(() => chatMessages.id, { onDelete: "cascade" }),
+
+    providerId: text("provider_id").references(() => providers.id, {
+      onDelete: "set null",
+    }),
+
+    toolId: text("tool_id").references(() => tools.id, {
+      onDelete: "set null",
+    }),
+
+    // keep name even if registry entry deleted/renamed
+    toolName: text("tool_name").notNull(),
+
+    status: text("status", {
+      enum: ["queued", "running", "done", "error", "canceled"],
+    })
+      .notNull()
+      .default("queued"),
+
+    input: text("input"), // JSON or text
+    output: text("output"), // JSON or text
+    error: text("error"),
+
+    startedAt: integer("started_at", { mode: "timestamp" }),
+    endedAt: integer("ended_at", { mode: "timestamp" }),
+
+    // optional metrics
+    latencyMs: integer("latency_ms"),
+    costMicros: integer("cost_micros"),
+
+    metadata: text("metadata"), // JSON
+
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_tool_calls_account_created").on(t.accountId, t.createdAt),
+    index("idx_tool_calls_run").on(t.runId),
+    index("idx_tool_calls_provider").on(t.providerId),
+    index("idx_tool_calls_tool").on(t.toolId),
+    index("idx_tool_calls_status").on(t.status),
+    check(
+      "check_tool_calls_input_json",
+      sql`json_valid(${t.input}) OR ${t.input} IS NULL`,
+    ),
+    check(
+      "check_tool_calls_output_json",
+      sql`json_valid(${t.output}) OR ${t.output} IS NULL`,
+    ),
+    check(
+      "check_tool_calls_metadata_json",
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
+    ),
+  ],
+);
 
 /* -----------------------------
    CONNECTIONS / TOKENS / SYNC
@@ -91,13 +579,13 @@ export const connections = sqliteTable(
     index("idx_connections_updated_at").on(t.updatedAt),
     check(
       "check_connections_metadata_json",
-      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
     ),
     check(
       "check_connections_scopes_json",
-      sql`json_valid(${t.scopes}) OR ${t.scopes} IS NULL`
+      sql`json_valid(${t.scopes}) OR ${t.scopes} IS NULL`,
     ),
-  ]
+  ],
 );
 
 export const connectionTokens = sqliteTable(
@@ -129,7 +617,7 @@ export const connectionTokens = sqliteTable(
     uniqueIndex("uniq_ct_conn_current")
       .on(t.connectionId)
       .where(sql`${t.isCurrent} = 1`),
-  ]
+  ],
 );
 
 export const connectionSyncState = sqliteTable(
@@ -152,9 +640,9 @@ export const connectionSyncState = sqliteTable(
     index("idx_sync_state_backoff_until").on(t.backoffUntil),
     check(
       "check_sync_cursor_json",
-      sql`json_valid(${t.cursor}) OR ${t.cursor} IS NULL`
+      sql`json_valid(${t.cursor}) OR ${t.cursor} IS NULL`,
     ),
-  ]
+  ],
 );
 
 export const connectionResources = sqliteTable(
@@ -182,9 +670,9 @@ export const connectionResources = sqliteTable(
     index("idx_resources_last_seen").on(t.lastSeenAt),
     check(
       "check_resources_metadata_json",
-      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
     ),
-  ]
+  ],
 );
 
 /* -----------------------------
@@ -224,15 +712,14 @@ export const appStates = sqliteTable(
     index("idx_app_states_created_at").on(t.createdAt),
     check(
       "check_enabled_features_json",
-      sql`json_valid(${t.enabledFeatures}) OR ${t.enabledFeatures} IS NULL`
+      sql`json_valid(${t.enabledFeatures}) OR ${t.enabledFeatures} IS NULL`,
     ),
     check(
       "check_config_json",
-      sql`json_valid(${t.config}) OR ${t.config} IS NULL`
+      sql`json_valid(${t.config}) OR ${t.config} IS NULL`,
     ),
-  ]
+  ],
 );
-
 
 export const moods = sqliteTable(
   "moods",
@@ -268,13 +755,13 @@ export const moods = sqliteTable(
     index("idx_moods_updated").on(t.updatedAt),
     check(
       "check_moods_theme_json",
-      sql`json_valid(${t.themeConfig}) OR ${t.themeConfig} IS NULL`
+      sql`json_valid(${t.themeConfig}) OR ${t.themeConfig} IS NULL`,
     ),
     check(
       "check_moods_ui_json",
-      sql`json_valid(${t.uiConfig}) OR ${t.uiConfig} IS NULL`
+      sql`json_valid(${t.uiConfig}) OR ${t.uiConfig} IS NULL`,
     ),
-  ]
+  ],
 );
 
 export const moodConnections = sqliteTable(
@@ -294,7 +781,7 @@ export const moodConnections = sqliteTable(
   (t) => [
     uniqueIndex("uniq_mood_conn").on(t.moodId, t.connectionId),
     index("idx_mood_conn_conn").on(t.connectionId),
-  ]
+  ],
 );
 
 export const moodResources = sqliteTable(
@@ -319,9 +806,9 @@ export const moodResources = sqliteTable(
     index("idx_mood_resource_sort").on(t.moodId, t.sortOrder),
     check(
       "check_mood_resources_metadata_json",
-      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
     ),
-  ]
+  ],
 );
 
 export const moodAppOverrides = sqliteTable(
@@ -347,13 +834,13 @@ export const moodAppOverrides = sqliteTable(
     uniqueIndex("uniq_mood_app").on(t.moodId, t.appId),
     check(
       "check_enabled_features_json",
-      sql`json_valid(${t.enabledFeatures}) OR ${t.enabledFeatures} IS NULL`
+      sql`json_valid(${t.enabledFeatures}) OR ${t.enabledFeatures} IS NULL`,
     ),
     check(
       "check_config_json",
-      sql`json_valid(${t.config}) OR ${t.config} IS NULL`
+      sql`json_valid(${t.config}) OR ${t.config} IS NULL`,
     ),
-  ]
+  ],
 );
 
 /* -----------------------------
@@ -392,7 +879,9 @@ export const entities = sqliteTable(
     occurredAt: integer("occurred_at", { mode: "timestamp" }), // publishedAt / happenedAt
     sourceUpdatedAt: integer("source_updated_at", { mode: "timestamp" }),
     etag: text("etag"),
-    isDeleted: integer("is_deleted", { mode: "boolean" }).notNull().default(false),
+    isDeleted: integer("is_deleted", { mode: "boolean" })
+      .notNull()
+      .default(false),
 
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
@@ -402,8 +891,11 @@ export const entities = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (t) => [
-    uniqueIndex("uniq_entities_source")
-      .on(t.connectionId, t.kind, t.externalId),
+    uniqueIndex("uniq_entities_source").on(
+      t.connectionId,
+      t.kind,
+      t.externalId,
+    ),
     index("idx_entities_account_kind").on(t.accountId, t.kind),
     index("idx_entities_conn").on(t.connectionId),
     index("idx_entities_resource").on(t.resourceId),
@@ -411,9 +903,9 @@ export const entities = sqliteTable(
     index("idx_entities_updated").on(t.updatedAt),
     check(
       "check_entities_metadata_json",
-      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
     ),
-  ]
+  ],
 );
 
 export const entityChunks = sqliteTable(
@@ -433,7 +925,7 @@ export const entityChunks = sqliteTable(
   (t) => [
     uniqueIndex("uniq_entity_chunk").on(t.entityId, t.chunkIndex),
     index("idx_entity_chunks_entity").on(t.entityId),
-  ]
+  ],
 );
 
 export const vecEntityChunks = sqliteTable("vec_entity_chunks", {
@@ -452,7 +944,7 @@ export const vecEntityChunkMap = sqliteTable(
       .unique()
       .references(() => entityChunks.id, { onDelete: "cascade" }),
   },
-  (t) => [index("idx_vec_entity_chunk_map_chunk").on(t.chunkId)]
+  (t) => [index("idx_vec_entity_chunk_map_chunk").on(t.chunkId)],
 );
 
 /* -----------------------------
@@ -480,9 +972,9 @@ export const tasks = sqliteTable(
     index("idx_tasks_due").on(t.dueAt),
     check(
       "check_tasks_labels_json",
-      sql`json_valid(${t.labels}) OR ${t.labels} IS NULL`
+      sql`json_valid(${t.labels}) OR ${t.labels} IS NULL`,
     ),
-  ]
+  ],
 );
 
 export const issues = sqliteTable(
@@ -506,9 +998,9 @@ export const issues = sqliteTable(
     index("idx_issues_repo").on(t.repo),
     check(
       "check_issues_labels_json",
-      sql`json_valid(${t.labels}) OR ${t.labels} IS NULL`
+      sql`json_valid(${t.labels}) OR ${t.labels} IS NULL`,
     ),
-  ]
+  ],
 );
 
 /* Optional: playlist membership if you need local ordering/queue */
@@ -532,9 +1024,9 @@ export const playlistItems = sqliteTable(
     index("idx_playlist_items_order").on(t.playlistEntityId, t.position),
     check(
       "check_playlist_items_metadata_json",
-      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
     ),
-  ]
+  ],
 );
 
 /* -----------------------------
@@ -573,13 +1065,12 @@ export const outbox = sqliteTable(
     index("idx_outbox_status_next").on(t.status, t.nextRunAt),
     index("idx_outbox_account").on(t.accountId),
     check("check_outbox_payload_json", sql`json_valid(${t.payload})`),
-  ]
+  ],
 );
 
 /* -----------------------------
    FEED = EVENT LOG (timeline + retrieval trigger)
 ------------------------------ */
-
 
 export const feedItems = sqliteTable(
   "feed_items",
@@ -632,16 +1123,14 @@ export const feedItems = sqliteTable(
     index("idx_feed_item_type_time").on(t.itemType, t.occurredAt),
     check(
       "check_feed_snapshot_json",
-      sql`json_valid(${t.snapshot}) OR ${t.snapshot} IS NULL`
+      sql`json_valid(${t.snapshot}) OR ${t.snapshot} IS NULL`,
     ),
     check(
       "check_feed_metadata_json",
-      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
     ),
-  ]
+  ],
 );
-
-
 
 /* -----------------------------
    DOCUMENT REVISIONS (for journal history)
@@ -664,11 +1153,11 @@ export const documentRevisions = sqliteTable(
   (t) => [
     index("idx_doc_revisions_entity").on(t.entityId),
     index("idx_doc_revisions_created").on(t.createdAt),
-  ]
+  ],
 );
 
 /* -----------------------------
-   CHAT (as you had)
+   CHAT 
 ------------------------------ */
 
 export const chatSessions = sqliteTable(
@@ -677,11 +1166,23 @@ export const chatSessions = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     title: text("title"),
     initialQuery: text("initial_query"),
+
+    // NEW: default runtime for this session
+    providerId: text("provider_id").references(() => providers.id, {
+      onDelete: "set null",
+    }),
+
+    // keep model as session default (optional)
     model: text("model"),
+
     moodId: text("mood_id").references(() => moods.id, {
       onDelete: "set null",
     }),
     systemPromptSnapshot: text("system_prompt_snapshot"),
+
+    // NEW: optional provider config snapshot (for reproducibility)
+    providerConfigSnapshot: text("provider_config_snapshot"), // JSON
+
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -693,7 +1194,16 @@ export const chatSessions = sqliteTable(
     index("idx_chat_sessions_updated_at").on(t.updatedAt),
     index("idx_chat_sessions_created_at").on(t.createdAt),
     index("idx_chat_sessions_mood").on(t.moodId),
-  ]
+
+    // NEW indexes
+    index("idx_chat_sessions_provider").on(t.providerId),
+    index("idx_chat_sessions_model").on(t.model),
+
+    check(
+      "check_chat_sessions_provider_config_json",
+      sql`json_valid(${t.providerConfigSnapshot}) OR ${t.providerConfigSnapshot} IS NULL`,
+    ),
+  ],
 );
 
 export const chatMessages = sqliteTable(
@@ -703,13 +1213,38 @@ export const chatMessages = sqliteTable(
     sessionId: integer("session_id")
       .notNull()
       .references(() => chatSessions.id, { onDelete: "cascade" }),
-    role: text("role", { enum: ["system", "user", "assistant", "tool"] })
-      .notNull(),
+
+    role: text("role", {
+      enum: ["system", "user", "assistant", "tool"],
+    }).notNull(),
     content: text("content").notNull(),
+
+    // NEW: per-message runtime overrides (optional)
+    providerId: text("provider_id").references(() => providers.id, {
+      onDelete: "set null",
+    }),
     model: text("model"),
+
+    // NEW: observability (optional but super useful)
+    traceId: text("trace_id"),
+    latencyMs: integer("latency_ms"),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+
+    // NEW: if this assistant message produced tool calls, you can link later
+    // (optional; you can also do it via tool_calls.chat_message_id)
+    toolCallGroupId: text("tool_call_group_id"),
+
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
   },
-  (t) => [index("idx_chat_messages_session").on(t.sessionId)]
+  (t) => [
+    index("idx_chat_messages_session").on(t.sessionId),
+
+    // NEW indexes
+    index("idx_chat_messages_provider").on(t.providerId),
+    index("idx_chat_messages_model").on(t.model),
+    index("idx_chat_messages_trace").on(t.traceId),
+  ],
 );

@@ -15,6 +15,13 @@
       "when": 1768916374535,
       "tag": "0001_fat_rick_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1769191665966,
+      "tag": "0002_cute_pixie",
+      "breakpoints": true
     }
   ]
 }
