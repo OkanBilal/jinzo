@@ -17,7 +17,7 @@ export default function DeleteMoodModal({
   return (
     <Alert
       isOpen={!!mood}
-      title="Delete Mood?"
+      title="Delete Mood"
       description={`Are you sure you want to delete "${mood?.name}"? This action cannot be undone.`}
       primaryButtonText="Delete"
       secondaryButtonText="Cancel"

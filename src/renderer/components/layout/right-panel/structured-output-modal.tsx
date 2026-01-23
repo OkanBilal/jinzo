@@ -194,7 +194,7 @@ function PropertyRow({ property, onUpdate, onRemove }: PropertyRowProps) {
           className="w-full rounded-xl!"
         />
       </div>
-      <div className="w-32 shrink-0">
+      <div className="w-52 shrink-0">
         <Select
           value={property.type}
           options={typeOptions}

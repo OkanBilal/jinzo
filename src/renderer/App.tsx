@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { HashRouter as Router } from "react-router-dom";
+import { HashRouter as Router, useLocation } from "react-router-dom";
 import { ReduxProvider } from "./components/providers/redux-provider";
 import { Toaster } from "./components/toast";
 import Sidebar from "./components/layout/sidebar";
-import ConfigPanel from "./components/layout/right-panel";
+import RightPanel from "./components/layout/right-panel";
 import {
   MoodChangeHandler,
   MainRoutes,
@@ -15,33 +15,40 @@ import { useLayoutConfig } from "./hooks/useLayoutConfig";
 function AppContent() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const { mainMarginLeft, rightPanelWidth } = useLayoutConfig();
+  const location = useLocation();
+  
+  const isSettingsPage = location.pathname === "/settings";
 
   return (
-    <Router>
+    <>
       <MoodChangeHandler />
       <Toaster />
       <MainLayout>
         <Sidebar />
         <MainContent
           marginLeft={mainMarginLeft}
-          marginRight={isConfigOpen ? rightPanelWidth : "0.5rem"}
+          marginRight={!isSettingsPage && isConfigOpen ? rightPanelWidth : "0.5rem"}
         >
           <MainRoutes />
         </MainContent>
-        <ConfigPanel
-          isOpen={isConfigOpen}
-          onToggle={setIsConfigOpen}
-          width={rightPanelWidth}
-        />
+        {!isSettingsPage && (
+          <RightPanel
+            isOpen={isConfigOpen}
+            onToggle={setIsConfigOpen}
+            width={rightPanelWidth}
+          />
+        )}
       </MainLayout>
-    </Router>
+    </>
   );
 }
 
 export default function App() {
   return (
     <ReduxProvider>
-      <AppContent />
+      <Router>
+        <AppContent />
+      </Router>
     </ReduxProvider>
   );
 }

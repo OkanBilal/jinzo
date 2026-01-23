@@ -34,7 +34,7 @@ export default function Alert({
         style={{
           animation: "scaleIn 150ms ease-out",
         }}
-        className="rounded-3xl px-7 py-6 glass-morphism max-w-80 w-full"
+        className="rounded-4xl px-6 py-6 glass-morphism max-w-80 w-full"
         onClick={(e) => e.stopPropagation()}
       >
         <Body className="text-primary-900 dark:text-primary-100 font-semibold mb-3 ">
@@ -47,7 +47,7 @@ export default function Alert({
           <Button
             className="flex-1 rounded-full!"
             variant="danger"
-            size="sm"
+            size="md"
             onClick={onPrimary}
             disabled={isPrimaryLoading}
           >
@@ -56,7 +56,7 @@ export default function Alert({
           <Button
             className="flex-1 rounded-full!"
             variant="secondary"
-            size="sm"
+            size="md"
             onClick={onSecondary}
             disabled={isPrimaryLoading}
           >

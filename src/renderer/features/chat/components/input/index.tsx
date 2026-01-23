@@ -19,9 +19,9 @@ import InputForm from "../../../../features/chat/components/input/input-form";
 import ModelSelectDropdown from "../../../../features/chat/components/input/model-select-dropdown";
 import SendButton from "./send-button";
 import { ChatInputProps, AppState, UploadedFile } from "./types";
-import { Apps } from "@/components/ui/icons";
-import Text from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
+// import { Apps } from "@/components/ui/icons";
+// import Text from "@/components/ui/text";
+// import { Button } from "@/components/ui/button";
 
 const DEFAULT_PLACEHOLDER = "Ask jinzo anything...";
 
@@ -133,10 +133,10 @@ export default function ChatInput({
     }
   };
 
-  const openAppsModal = () => {
-    setIsAppsDropdownOpen(false);
-    setIsAppsModalOpen(true);
-  };
+  // const openAppsModal = () => {
+  //   setIsAppsDropdownOpen(false);
+  //   setIsAppsModalOpen(true);
+  // };
   const closeAppsModal = () => setIsAppsModalOpen(false);
 
   const handleImageUpload = () => {
@@ -221,7 +221,7 @@ export default function ChatInput({
               onChange={handleFileChange}
               className="hidden"
             />
-            <Button
+            {/* <Button
               type="button"
               tooltip="Open apps"
               onClick={openAppsModal}
@@ -235,17 +235,7 @@ export default function ChatInput({
               >
                 Apps
               </Text>
-            </Button>
-            {/* <McpToggleButton
-              enabled={toolMode === 'mcp'}
-              onToggle={() => {
-                const newMode = toolMode === 'mcp' ? 'rag' : 'mcp';
-                dispatch(setToolMode(newMode));
-                if (onMcpModeChange) {
-                  onMcpModeChange(newMode === 'mcp');
-                }
-              }}
-            /> */}
+            </Button> */}
             <ModelSelectDropdown
               model={model}
               models={models}
