@@ -21,12 +21,14 @@ export function useActiveMood() {
 
   const moodSlug = activeMood?.slug;
   const isJournalMood = moodSlug === "journal";
+  const isClaudeMood = moodSlug === "claude";
 
   return {
     activeMoodId,
     activeMood,
     moodSlug,
     isJournalMood,
+    isClaudeMood,
     moods,
   };
 }

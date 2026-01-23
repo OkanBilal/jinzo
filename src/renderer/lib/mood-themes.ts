@@ -21,18 +21,18 @@ export interface ThemeColor {
 export const solidColors: ThemeColor[] = [
   {
     name: "Plum",
-    light: { value: "#E8D5F299", preview: "#E8D5F2" },
+    light: { value: "#E6C7E699", preview: "#E6C7E6" },
     dark: { value: "#2D1F3395", preview: "#2D1F33" },
   },
   {
     name: "Crimson",
-    light: { value: "#F5D0CD99", preview: "#F5D0CD" },
-    dark: { value: "#3D1A1895", preview: "#3D1A18" },
+    light: { value: "#FBE4E399", preview: "#FBE4E3" },
+    dark: { value: "#3F0D1295", preview: "#3F0D12" },
   },
   {
-    name: "Terracotta",
-    light: { value: "#F5DCC899", preview: "#F5DCC8" },
-    dark: { value: "#3D291A95", preview: "#3D291A" },
+    name: "Mahogany",
+    light: { value: "#FADADD99", preview: "#FADADD" },
+    dark: { value: "#3B1F1B95", preview: "#3B1F1B" },
   },
   {
     name: "Sunset",
@@ -40,19 +40,19 @@ export const solidColors: ThemeColor[] = [
     dark: { value: "#3D351A95", preview: "#3D351A" },
   },
   {
-    name: "Sage",
-    light: { value: "#F0F4E499", preview: "#F0F4E4" },
-    dark: { value: "#2A2D2095", preview: "#2A2D20" },
+    name: "Peach",
+    light: { value: "#fcc7b699", preview: "#fcc7b6" },
+    dark: { value: "#87553399", preview: "#875533" },
   },
   {
-    name: "Forest",
-    light: { value: "#C8E6D999", preview: "#C8E6D9" },
-    dark: { value: "#142D2295", preview: "#142D22" },
+    name: "Evergreen",
+    light: { value: "#D1F2EB99", preview: "#D1F2EB" },
+    dark: { value: "#01322095", preview: "#013220" },
   },
   {
     name: "Ocean",
-    light: { value: "#C5D9EB99", preview: "#C5D9EB" },
-    dark: { value: "#1A233395", preview: "#1A2333" },
+    light: { value: "#D6E6F399", preview: "#D6E6F3" },
+    dark: { value: "#00092695", preview: "#000926" },
   },
 ];
 
@@ -62,8 +62,7 @@ export const gradientColors: ThemeColor[] = [
     name: "Ocean Waves",
     light: {
       value: "linear-gradient(0deg, #4BE1F4 0%, #A5C3C3 50%, #DBD7CA 100%)",
-      preview:
-        "linear-gradient(135deg, #4BE1F4 0%, #A5C3C3 50%, #DBD7CA 100%)",
+      preview: "linear-gradient(135deg, #4BE1F4 0%, #A5C3C3 50%, #DBD7CA 100%)",
     },
     dark: {
       value:
@@ -152,7 +151,7 @@ export function getThemeColors(showGradients: boolean): ThemeColor[] {
  */
 export function getThemeVariant(
   colorPair: ThemeColor,
-  isDarkMode: boolean
+  isDarkMode: boolean,
 ): ThemeVariant {
   return isDarkMode ? colorPair.dark : colorPair.light;
 }
