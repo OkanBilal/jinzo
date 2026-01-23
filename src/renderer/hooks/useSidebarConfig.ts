@@ -20,7 +20,7 @@ export function useSidebarConfig(): SidebarConfig {
   const sidebarConfig = useMemo(() => {
     // Default config
     const defaultConfig: SidebarConfig = {
-      width: "18rem",
+      width: "20rem",
       title: "Chat",
       itemType: "chat",
       defaultRoute: "/",

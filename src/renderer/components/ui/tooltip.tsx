@@ -123,7 +123,7 @@ export default function Tooltip({
             zIndex: 9999,
           }}
           className={cn(
-            "px-2.5 py-1.5 text-xs font-medium whitespace-nowrap rounded-lg pointer-events-none",
+            "px-2 py-1 text-xs font-light whitespace-nowrap rounded-lg pointer-events-none",
             "bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200",
             "border border-primary-200 dark:border-primary-800",
             "shadow-lg shadow-black/10 dark:shadow-black/30",

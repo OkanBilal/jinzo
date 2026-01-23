@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { useEffect } from "react";
 import { Settings, Plus } from "@/components/ui/icons";
 import MoodSelector from "./mood-selector";
 import type { Mood } from "@/lib/redux/api";
@@ -21,6 +22,20 @@ export function SidebarFooter({
   onSettingsClick,
   onPlusClick,
 }: SidebarFooterProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        onSettingsClick();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [onSettingsClick]);
+
   return (
     <div
       className="px-4 py-4 space-y-3"
@@ -33,6 +48,7 @@ export function SidebarFooter({
             className="shrink-0 flex items-center justify-center transition-transform duration-300 cursor-pointer hover:rotate-90"
             aria-label="Settings"
             title="Settings"
+            tooltipShortcut="⌘S"
             tooltip="Open Settings"
             tooltipPosition="right"
           >

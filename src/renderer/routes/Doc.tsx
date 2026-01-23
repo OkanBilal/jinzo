@@ -357,8 +357,8 @@ function EmptyJournalState() {
         Welcome to Journal
       </h2>
       <p className="text-primary-500 dark:text-primary-400 max-w-md">
-        Select an existing post from the left or create a new one to start
-        writing.
+        Select an existing post from the sidebar or <br /> create a new one{" "}
+        <span className="font-sans">(⌘ N)</span> to start writing.
       </p>
     </div>
   );

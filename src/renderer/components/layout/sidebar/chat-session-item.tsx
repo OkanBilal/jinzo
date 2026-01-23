@@ -172,7 +172,7 @@ export default function ChatSessionItem({
         tooltip="More options"
         ref={buttonRef}
         onClick={handleOptionClick}
-        className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100  transition-opacity p-1 cursor-pointer rounded-md z-10"
+        className="absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100  transition-opacity p-1 cursor-pointer rounded-md z-10"
         aria-label="Chat options"
       >
         <Option className="w-5 h-5 text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200" />

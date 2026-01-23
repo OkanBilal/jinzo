@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Plus } from "@/components/ui/icons";
 import { Body, Caption } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
@@ -8,10 +9,23 @@ interface NewButtonProps {
 }
 
 export default function NewButton({ onClick, title }: NewButtonProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey && e.key === "n") {
+        e.preventDefault();
+        onClick();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClick]);
+
   return (
     <Button
       tooltip={"Create New " + title}
       variant="subtle"
+      tooltipShortcut="⌘N"
       size="lg"
       onClick={onClick}
       fullWidth

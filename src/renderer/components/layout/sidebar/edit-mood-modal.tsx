@@ -64,7 +64,7 @@ export default function EditMoodModal({
   mood,
   onClose,
   onSuccess,
-  sidebarWidth = "18rem",
+  sidebarWidth = "20rem",
 }: EditMoodModalProps) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("");
