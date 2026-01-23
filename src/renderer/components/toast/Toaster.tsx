@@ -154,9 +154,8 @@ function ToastItem({ toast, index, onDismiss }: ToastItemProps) {
       className={`
         pointer-events-auto inline-flex items-center gap-3 px-5 py-3
         rounded-full max-w-[calc(100vw-24px)]
-        bg-white/90 dark:bg-neutral-800/90
-        border border-black/10 dark:border-white/10
-        shadow-lg backdrop-blur-xl
+        bg-white/90 dark:bg-primary-950
+        border border-primary-200/10 dark:border-primary-900
         text-slate-900 dark:text-white
         transition-all duration-200 ease-out
         ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-3"}
