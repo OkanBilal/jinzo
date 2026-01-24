@@ -26,10 +26,11 @@ import {
   registerJournalIpc,
   unregisterJournalIpc,
 } from "./modules/journal";
-import {
-  registerCopilotHandlers,
-  unregisterCopilotHandlers,
-} from "./modules/copilot";
+
+import { registerProvidersIpc, unregisterProvidersIpc, shutdownAllWorkAdapters } from "./modules/providers";
+import { registerToolsIpc, unregisterToolsIpc } from "./modules/tools";
+import { registerWorkspacesIpc, unregisterWorkspacesIpc } from "./modules/workspaces";
+import { registerRunsIpc, unregisterRunsIpc } from "./modules/runs";
 import { createMainWindow } from "./windows/mainWindow";
 
 /**
@@ -61,7 +62,10 @@ async function initializeApp() {
     registerMoodIpc();
     registerAppSettingsIpc();
     registerJournalIpc();
-    registerCopilotHandlers();
+    registerProvidersIpc();
+    registerToolsIpc();
+    registerWorkspacesIpc();
+    registerRunsIpc();
 
     // Create main window
     createMainWindow();
@@ -80,6 +84,9 @@ async function cleanupApp() {
   try {
     console.log("Cleaning up application...");
 
+    // Shutdown work adapters (Copilot, Claude Code, etc.)
+    await shutdownAllWorkAdapters();
+
     // Unregister IPC handlers
     unregisterAccountIpc();
     unregisterAppsIpc();
@@ -94,8 +101,11 @@ async function cleanupApp() {
     unregisterConnectionsHandlers();
     unregisterEntitiesHandlers();
     unregisterJournalIpc();
-    unregisterCopilotHandlers();
     unregisterChatHandlers();
+    unregisterProvidersIpc();
+    unregisterToolsIpc();
+    unregisterWorkspacesIpc();
+    unregisterRunsIpc();
 
     // Close database
     await closeDatabase();

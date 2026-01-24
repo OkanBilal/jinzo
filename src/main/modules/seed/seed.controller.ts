@@ -13,6 +13,10 @@ export const seedController = {
     return seedService.seedConnections();
   },
 
+  async seedProviders(): Promise<ServiceResponse> {
+    return seedService.seedProviders();
+  },
+
   async seedAll(): Promise<ServiceResponse> {
     return seedService.seedAll();
   },

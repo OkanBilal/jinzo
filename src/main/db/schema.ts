@@ -141,7 +141,6 @@ export const workspaces = sqliteTable(
 
 /* -----------------------------
    RUNS (terminal/code-writing flow)
-   - NOT linked to chat_sessions by design
 ------------------------------ */
 
 export const runs = sqliteTable(
@@ -478,6 +477,7 @@ export const moodToolPermissions = sqliteTable(
    - link to chatMessages via messageId if you want later (optional)
 ------------------------------ */
 
+// tool_calls
 export const toolCalls = sqliteTable(
   "tool_calls",
   {
@@ -489,9 +489,6 @@ export const toolCalls = sqliteTable(
 
     runId: text("run_id").references(() => runs.id, { onDelete: "cascade" }),
 
-    // optional future linkage:
-    // chatMessageId: integer("chat_message_id").references(() => chatMessages.id, { onDelete: "cascade" }),
-
     providerId: text("provider_id").references(() => providers.id, {
       onDelete: "set null",
     }),
@@ -500,7 +497,12 @@ export const toolCalls = sqliteTable(
       onDelete: "set null",
     }),
 
-    // keep name even if registry entry deleted/renamed
+    // ✅ NEW: provider tool call correlation id (toolu_..., call_id, etc.)
+    toolCallId: text("tool_call_id"),
+
+    // ✅ NEW (optional): nested/child tool call linkage
+    parentToolCallId: text("parent_tool_call_id"),
+
     toolName: text("tool_name").notNull(),
 
     status: text("status", {
@@ -509,18 +511,17 @@ export const toolCalls = sqliteTable(
       .notNull()
       .default("queued"),
 
-    input: text("input"), // JSON or text
-    output: text("output"), // JSON or text
+    input: text("input"),
+    output: text("output"),
     error: text("error"),
 
     startedAt: integer("started_at", { mode: "timestamp" }),
     endedAt: integer("ended_at", { mode: "timestamp" }),
 
-    // optional metrics
     latencyMs: integer("latency_ms"),
     costMicros: integer("cost_micros"),
 
-    metadata: text("metadata"), // JSON
+    metadata: text("metadata"),
 
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
@@ -532,6 +533,10 @@ export const toolCalls = sqliteTable(
     index("idx_tool_calls_provider").on(t.providerId),
     index("idx_tool_calls_tool").on(t.toolId),
     index("idx_tool_calls_status").on(t.status),
+
+    // ✅ NEW: fast lookup for end event updates
+    index("idx_tool_calls_run_toolcallid").on(t.runId, t.toolCallId),
+
     check(
       "check_tool_calls_input_json",
       sql`json_valid(${t.input}) OR ${t.input} IS NULL`,
@@ -546,7 +551,6 @@ export const toolCalls = sqliteTable(
     ),
   ],
 );
-
 /* -----------------------------
    CONNECTIONS / TOKENS / SYNC
 ------------------------------ */

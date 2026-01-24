@@ -1,0 +1,136 @@
+// ─────────────────────────────────────────────────────────────
+// Work Run Adapter Factory
+// Creates appropriate adapter based on provider configuration
+// ─────────────────────────────────────────────────────────────
+
+import type { ProviderResponse } from "../providers.dto";
+import type { WorkRunAdapter, CopilotAdapterConfig } from "./adapter.types";
+import { createCopilotAdapter } from "./copilot.adapter";
+
+/**
+ * Known provider IDs that support work runs
+ */
+export const SUPPORTED_WORK_PROVIDERS = ["copilot_cli", "claude_code"] as const;
+export type SupportedWorkProvider = (typeof SUPPORTED_WORK_PROVIDERS)[number];
+
+/**
+ * Check if a provider ID is supported for work runs
+ */
+export function isSupportedWorkProvider(providerId: string): providerId is SupportedWorkProvider {
+  return SUPPORTED_WORK_PROVIDERS.includes(providerId as SupportedWorkProvider);
+}
+
+/**
+ * Cache of adapter instances by provider ID
+ * We reuse adapters to maintain connection state
+ */
+const adapterCache = new Map<string, WorkRunAdapter>();
+
+/**
+ * Create or retrieve a work run adapter for the given provider
+ *
+ * @param provider - The provider configuration from the database
+ * @returns WorkRunAdapter instance
+ * @throws Error if provider is not supported or not enabled
+ */
+export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
+  if (!provider.isEnabled) {
+    throw new Error(
+      `Provider "${provider.displayName}" (${provider.id}) is not enabled. ` +
+        "Please enable it in settings before starting a work run."
+    );
+  }
+
+  if (provider.kind !== "agent_runtime") {
+    throw new Error(
+      `Provider "${provider.displayName}" (${provider.id}) is of kind "${provider.kind}". ` +
+        "Work runs require an agent_runtime provider."
+    );
+  }
+
+  // Check cache first
+  const cached = adapterCache.get(provider.id);
+  if (cached) {
+    return cached;
+  }
+
+  let adapter: WorkRunAdapter;
+
+  switch (provider.id) {
+    case "copilot_cli": {
+      const config: CopilotAdapterConfig = {
+        ...(provider.config as CopilotAdapterConfig | null),
+        defaultModel: provider.defaultModel ?? undefined,
+      };
+      adapter = createCopilotAdapter(config);
+      break;
+    }
+
+    case "claude_code": {
+      // TODO: Implement Claude Code adapter
+      throw new Error(
+        "Claude Code adapter is not yet implemented. " +
+          "Please use Copilot CLI for now, or contribute an implementation!"
+      );
+    }
+
+    default:
+      throw new Error(
+        `Provider "${provider.id}" is not supported for work runs. ` +
+          `Supported providers: ${SUPPORTED_WORK_PROVIDERS.join(", ")}`
+      );
+  }
+
+  // Cache the adapter
+  adapterCache.set(provider.id, adapter);
+
+  return adapter;
+}
+
+/**
+ * Get an existing adapter from cache without creating a new one
+ */
+export function getWorkAdapter(providerId: string): WorkRunAdapter | undefined {
+  return adapterCache.get(providerId);
+}
+
+/**
+ * Shutdown and remove an adapter from cache
+ */
+export async function shutdownWorkAdapter(providerId: string): Promise<void> {
+  const adapter = adapterCache.get(providerId);
+  if (adapter) {
+    adapterCache.delete(providerId);
+    if (adapter.shutdown) {
+      await adapter.shutdown();
+    }
+  }
+}
+
+/**
+ * Shutdown all cached adapters
+ * Should be called on app quit
+ */
+export async function shutdownAllWorkAdapters(): Promise<void> {
+  const shutdownPromises: Promise<void>[] = [];
+
+  for (const [providerId, adapter] of adapterCache) {
+    if (adapter.shutdown) {
+      shutdownPromises.push(
+        adapter.shutdown().catch((err) => {
+          console.error(`[AdapterFactory] Error shutting down ${providerId}:`, err);
+        })
+      );
+    }
+  }
+
+  await Promise.all(shutdownPromises);
+  adapterCache.clear();
+}
+
+/**
+ * Clear adapter cache (for testing or reinitialization)
+ */
+export function clearAdapterCache(): void {
+  adapterCache.clear();
+}

@@ -283,8 +283,143 @@ const api = {
         ipcRenderer.removeListener("journal:contentUpdated", listener);
     },
   },
-  copilot: {
-    chat: (prompt: string) => ipcRenderer.invoke("copilot:chat", prompt),
+  // Provider operations
+  providers: {
+    getAll: () => ipcRenderer.invoke("providers:getAll"),
+    getById: (id: string) => ipcRenderer.invoke("providers:getById", id),
+    getByKind: (kind: "llm_runtime" | "agent_runtime") =>
+      ipcRenderer.invoke("providers:getByKind", kind),
+    getEnabled: () => ipcRenderer.invoke("providers:getEnabled"),
+    create: (payload: unknown) =>
+      ipcRenderer.invoke("providers:create", payload),
+    update: (id: string, payload: unknown) =>
+      ipcRenderer.invoke("providers:update", id, payload),
+    delete: (id: string) => ipcRenderer.invoke("providers:delete", id),
+    enable: (id: string) => ipcRenderer.invoke("providers:enable", id),
+    disable: (id: string) => ipcRenderer.invoke("providers:disable", id),
+  },
+  // Tools operations
+  tools: {
+    getAll: () => ipcRenderer.invoke("tools:getAll"),
+    getById: (id: string) => ipcRenderer.invoke("tools:getById", id),
+    getBySource: (source: "local" | "mcp" | "provider_builtin") =>
+      ipcRenderer.invoke("tools:getBySource", source),
+    getByMcpServer: (mcpServerId: string) =>
+      ipcRenderer.invoke("tools:getByMcpServer", mcpServerId),
+    getEnabled: () => ipcRenderer.invoke("tools:getEnabled"),
+    create: (payload: unknown) => ipcRenderer.invoke("tools:create", payload),
+    update: (id: string, payload: unknown) =>
+      ipcRenderer.invoke("tools:update", id, payload),
+    delete: (id: string) => ipcRenderer.invoke("tools:delete", id),
+  },
+  // Tool calls operations
+  toolCalls: {
+    getByRun: (runId: string) =>
+      ipcRenderer.invoke("toolCalls:getByRun", runId),
+    getByAccount: (accountId: string, limit?: number) =>
+      ipcRenderer.invoke("toolCalls:getByAccount", accountId, limit),
+    create: (payload: unknown) =>
+      ipcRenderer.invoke("toolCalls:create", payload),
+    update: (id: number, payload: unknown) =>
+      ipcRenderer.invoke("toolCalls:update", id, payload),
+    start: (id: number) => ipcRenderer.invoke("toolCalls:start", id),
+    complete: (id: number, output: unknown, latencyMs?: number) =>
+      ipcRenderer.invoke("toolCalls:complete", id, output, latencyMs),
+    fail: (id: number, error: string) =>
+      ipcRenderer.invoke("toolCalls:fail", id, error),
+  },
+  // Tool permissions operations
+  toolPermissions: {
+    getByMood: (moodId: string) =>
+      ipcRenderer.invoke("toolPermissions:getByMood", moodId),
+    set: (payload: { moodId: string; toolId: string; enabled?: boolean; policy?: unknown }) =>
+      ipcRenderer.invoke("toolPermissions:set", payload),
+    remove: (moodId: string, toolId: string) =>
+      ipcRenderer.invoke("toolPermissions:remove", moodId, toolId),
+  },
+  // Workspaces operations
+  workspaces: {
+    getAll: () => ipcRenderer.invoke("workspaces:getAll"),
+    getById: (id: string) => ipcRenderer.invoke("workspaces:getById", id),
+    getByAccount: (accountId: string) =>
+      ipcRenderer.invoke("workspaces:getByAccount", accountId),
+    getByRootPath: (accountId: string, rootPath: string) =>
+      ipcRenderer.invoke("workspaces:getByRootPath", accountId, rootPath),
+    create: (payload: unknown) =>
+      ipcRenderer.invoke("workspaces:create", payload),
+    update: (id: string, payload: unknown) =>
+      ipcRenderer.invoke("workspaces:update", id, payload),
+    delete: (id: string) => ipcRenderer.invoke("workspaces:delete", id),
+  },
+  // Runs operations
+  runs: {
+    getAll: (limit?: number) => ipcRenderer.invoke("runs:getAll", limit),
+    getById: (id: string) => ipcRenderer.invoke("runs:getById", id),
+    getByAccount: (accountId: string, limit?: number) =>
+      ipcRenderer.invoke("runs:getByAccount", accountId, limit),
+    getByWorkspace: (workspaceId: string, limit?: number) =>
+      ipcRenderer.invoke("runs:getByWorkspace", workspaceId, limit),
+    getByStatus: (
+      accountId: string,
+      status: "queued" | "running" | "succeeded" | "failed" | "canceled",
+    ) => ipcRenderer.invoke("runs:getByStatus", accountId, status),
+    create: (payload: unknown) => ipcRenderer.invoke("runs:create", payload),
+    update: (id: string, payload: unknown) =>
+      ipcRenderer.invoke("runs:update", id, payload),
+    start: (id: string) => ipcRenderer.invoke("runs:start", id),
+    complete: (id: string) => ipcRenderer.invoke("runs:complete", id),
+    fail: (id: string, error: string) =>
+      ipcRenderer.invoke("runs:fail", id, error),
+    cancel: (id: string) => ipcRenderer.invoke("runs:cancel", id),
+    delete: (id: string) => ipcRenderer.invoke("runs:delete", id),
+    // New methods for executing work runs
+    getDetails: (runId: string) => ipcRenderer.invoke("runs:getDetails", runId),
+    execute: (payload: {
+      accountId: string;
+      workspaceId: string;
+      moodId?: string;
+      providerId: string;
+      goal: string;
+      model?: string;
+      systemPrompt?: string;
+      initialContext?: Array<{
+        kind: "file" | "diff" | "selection" | "note";
+        ref?: string;
+        content?: string;
+        metadata?: Record<string, unknown>;
+      }>;
+      configSnapshot?: Record<string, unknown>;
+      toolPolicySnapshot?: Record<string, unknown>;
+    }) => ipcRenderer.invoke("runs:execute", payload),
+    abort: (runId: string) => ipcRenderer.invoke("runs:abort", runId),
+    getToolCalls: (runId: string) =>
+      ipcRenderer.invoke("runToolCalls:getByRun", runId),
+  },
+  // Run context operations
+  runContext: {
+    getByRun: (runId: string) =>
+      ipcRenderer.invoke("runContext:getByRun", runId),
+    add: (payload: unknown) => ipcRenderer.invoke("runContext:add", payload),
+    remove: (id: number) => ipcRenderer.invoke("runContext:remove", id),
+  },
+  // Run artifacts operations
+  runArtifacts: {
+    getByRun: (runId: string) =>
+      ipcRenderer.invoke("runArtifacts:getByRun", runId),
+    add: (payload: unknown) => ipcRenderer.invoke("runArtifacts:add", payload),
+    remove: (id: number) => ipcRenderer.invoke("runArtifacts:remove", id),
+  },
+  // Run commands operations
+  runCommands: {
+    getByRun: (runId: string) =>
+      ipcRenderer.invoke("runCommands:getByRun", runId),
+    add: (payload: unknown) => ipcRenderer.invoke("runCommands:add", payload),
+    update: (id: number, payload: unknown) =>
+      ipcRenderer.invoke("runCommands:update", id, payload),
+    start: (id: number) => ipcRenderer.invoke("runCommands:start", id),
+    complete: (id: number, exitCode: number, stdout?: string, stderr?: string) =>
+      ipcRenderer.invoke("runCommands:complete", id, exitCode, stdout, stderr),
+    remove: (id: number) => ipcRenderer.invoke("runCommands:remove", id),
   },
 };
 
