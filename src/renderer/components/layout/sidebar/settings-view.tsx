@@ -46,13 +46,11 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex flex-col items-start pt-12 pb-2 px-4">
-        <Body className="text-left text-base! text-primary-800 dark:text-primary font-medium ">
+      <div className="flex flex-col items-start pt-16 pb-2 px-4">
+        <Body className="text-left text-base! text-primary-900 dark:text-primary font-medium ">
           Settings
         </Body>
-        <p className="text-[13px] text-primary-500 dark:text-primary-400  text-left">
-          Manage your preferences
-        </p>
+
       </div>
 
       <div className="flex-1 px-4 py-2 overflow-y-auto noscrollbar">
@@ -70,14 +68,14 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                 className={`w-full cursor-pointer text-left px-3 py-3 rounded-xl text-sm transition-all flex items-center gap-3
                   ${
                     isActive
-                      ? "bg-primary-950/5 dark:bg-primary/5 text-primary-900 dark:text-primary-100"
-                      : "text-primary-700 dark:text-primary-200 g-transparent hover:bg-primary-950/3 dark:hover:bg-primary/5"
+                      ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
+                      : "text-primary-900 dark:text-primary-200 bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
                   }
                   hover:scale-[1.01] active:scale-[0.99]`}
               >
                 {IconComponent ? (
                   <IconComponent
-                    className={`w-4.5 h-4.5 ${isActive ? "text-primary-800 dark:text-primary-100" : "text-primary-600 dark:text-primary-200"}`}
+                    className={`w-4.5 h-4.5 `}
                   />
                 ) : (
                   <div className="w-4.5 h-4.5 rounded bg-primary-300 dark:bg-primary-700" />
@@ -118,11 +116,11 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
           className="justify-start cursor-pointer pt-1!  hover:scale-100! bg-transparent! transition-transform duration-200"
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
-          <ChevronUp className="w-4.5 h-4.5 rotate-270 text-primary-800 dark:text-primary-400" />
+          <ChevronUp className="w-4.5 h-4.5 rotate-270 text-primary-900 dark:text-primary-400" />
           <Body className="text-primary-900 dark:text-primary-100 ml-0.5 font-medium">
             Back to app
           </Body>
-          <Caption className="ml-auto text-primary-800 dark:text-primary-400">
+          <Caption className="ml-auto text-primary-900 dark:text-primary-400">
             Esc
           </Caption>
         </Button>

@@ -127,6 +127,22 @@ export interface WorkRunResult {
 export type WorkRunEventHandler = (event: WorkRunEvent) => void | Promise<void>;
 
 /**
+ * Request to continue an existing run (resume session)
+ */
+export interface WorkRunContinueRequest {
+  runId: string;
+  accountId: string;
+  workspace: {
+    id: string;
+    rootPath: string;
+  };
+  /** The follow-up message/goal */
+  message: string;
+  /** Additional context to add */
+  context?: WorkRunContextItem[];
+}
+
+/**
  * Interface that all work run adapters must implement
  */
 export interface WorkRunAdapter {
@@ -140,10 +156,31 @@ export interface WorkRunAdapter {
   startRun(request: WorkRunRequest, onEvent: WorkRunEventHandler): Promise<WorkRunResult>;
 
   /**
+   * Continue an existing run by resuming its session and sending a follow-up message.
+   * @param request - The continue request with runId and new message
+   * @param onEvent - Callback invoked for each event during the run
+   * @returns Promise resolving to the final result when the continuation completes
+   */
+  continueRun?(request: WorkRunContinueRequest, onEvent: WorkRunEventHandler): Promise<WorkRunResult>;
+
+  /**
    * Abort a currently running work run.
    * @param runId - The ID of the run to abort
    */
   abortRun?(runId: string): Promise<void>;
+
+  /**
+   * Check if a session exists and can be resumed.
+   * @param runId - The session/run ID to check
+   * @returns Promise resolving to true if session can be resumed
+   */
+  canResumeSession?(runId: string): Promise<boolean>;
+
+  /**
+   * Delete a persisted session permanently.
+   * @param runId - The session/run ID to delete
+   */
+  deleteSession?(runId: string): Promise<void>;
 
   /**
    * Gracefully shutdown the adapter, cleaning up resources.

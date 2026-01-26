@@ -35,8 +35,8 @@ export interface UpdateRunPayload {
   configSnapshot?: Record<string, unknown>;
   toolPolicySnapshot?: Record<string, unknown>;
   startedAt?: Date;
-  endedAt?: Date;
-  lastError?: string;
+  endedAt?: Date | null;
+  lastError?: string | null;
 }
 
 export interface RunResponse {
@@ -221,6 +221,22 @@ export interface StartRunPayload {
 /** Response when a run is started */
 export interface StartRunResponse {
   runId: string;
+}
+
+/** Payload for continuing an existing run (resume session) */
+export interface ContinueRunPayload {
+  runId: string;
+  accountId: string;
+  /** The follow-up message to send */
+  message: string;
+  /** Additional context to add */
+  additionalContext?: StartRunContextItem[];
+}
+
+/** Response when a run is continued */
+export interface ContinueRunResponse {
+  runId: string;
+  resumed: boolean;
 }
 
 /** Full run details with related data */

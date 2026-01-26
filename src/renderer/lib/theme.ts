@@ -22,7 +22,7 @@ export interface DefaultThemeConfig {
  */
 export const defaultTheme: DefaultThemeConfig = {
   // Main background colors (with alpha for transparency)
-  lightBackground: "#ffffff60",
+  lightBackground: "#0000001f",
   darkBackground: "#00000060",
 
   // Dropdown backgrounds (solid colors, opacity added dynamically)

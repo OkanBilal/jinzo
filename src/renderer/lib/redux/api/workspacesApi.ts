@@ -18,8 +18,8 @@ export interface Workspace {
   repoUrl: string | null;
   defaultBranch: string | null;
   metadata: WorkspaceMetadata | null;
-  createdAt: number;
-  updatedAt: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface CreateWorkspacePayload {

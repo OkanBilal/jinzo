@@ -9,6 +9,8 @@ import {
   useGetJournalEntriesQuery,
   useCreateJournalDraftMutation,
   useDeleteJournalMutation,
+  useGetWorkspacesQuery,
+  useDeleteWorkspaceMutation,
   type Mood,
 } from "@/lib/redux/api";
 import { toast } from "@/components/toast";
@@ -91,6 +93,20 @@ export function useSidebar() {
   const [createJournalDraft] = useCreateJournalDraftMutation();
   const [deleteJournal] = useDeleteJournalMutation();
 
+  // Workspaces for workspace mode
+  const { data: workspaces = [], isLoading: isLoadingWorkspaces } =
+    useGetWorkspacesQuery(undefined, {
+      skip: sidebarConfig.itemType !== "workspace",
+    });
+
+  const [deleteWorkspace] = useDeleteWorkspaceMutation();
+
+  // Delete workspace state
+  const [deleteWorkspaceState, setDeleteWorkspaceState] = useState<{
+    workspaceId: string | null;
+    isDeleting: boolean;
+  }>({ workspaceId: null, isDeleting: false });
+
   // Convert journal entries to a format compatible with existing entity type
   const entities = useMemo(() => {
     return journalEntries.map((entry) => ({
@@ -134,6 +150,19 @@ export function useSidebar() {
     () => filterItems(entities, searchQuery),
     [entities, searchQuery]
   );
+
+  // Filtered workspaces
+  const filteredWorkspaces = useMemo(() => {
+    if (!workspaces || !searchQuery.trim()) return workspaces || [];
+    const lowerQuery = searchQuery.toLowerCase().trim();
+    return workspaces.filter((ws) => {
+      return (
+        ws.name.toLowerCase().includes(lowerQuery) ||
+        ws.rootPath.toLowerCase().includes(lowerQuery) ||
+        (ws.defaultBranch && ws.defaultBranch.toLowerCase().includes(lowerQuery))
+      );
+    });
+  }, [workspaces, searchQuery]);
 
   // Handlers
   const handleRefreshApps = async () => {
@@ -285,11 +314,15 @@ export function useSidebar() {
     setDeleteMoodState((prev) => ({ ...prev, isDeleting: true }));
 
     try {
+      const wasActive = activeMoodId === deleteMoodState.mood.id;
+      
       await deleteMood(deleteMoodState.mood.id).unwrap();
 
-      // If the deleted mood was active, clear it
-      if (activeMoodId === deleteMoodState.mood.id) {
+      // If the deleted mood was active, clear it and navigate to default route
+      if (wasActive) {
         await setActiveMood(null).unwrap();
+        // Navigate to home route since we're back to default mood
+        navigate("/");
       }
 
       toast.success("Mood deleted");
@@ -337,6 +370,38 @@ export function useSidebar() {
     setDeleteJournalState({ journalId: null, isDeleting: false });
   };
 
+  // Delete workspace handlers
+  const handleDeleteWorkspaceClick = (workspaceId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setDeleteWorkspaceState({ workspaceId, isDeleting: false });
+  };
+
+  const handleConfirmDeleteWorkspace = async () => {
+    const workspaceId = deleteWorkspaceState.workspaceId;
+    if (!workspaceId) return;
+
+    setDeleteWorkspaceState((prev) => ({ ...prev, isDeleting: true }));
+
+    try {
+      await deleteWorkspace(workspaceId).unwrap();
+      toast.success("Workspace deleted");
+
+      // Navigate away if we were viewing the deleted workspace
+      if (location.pathname === `/workspace/${workspaceId}`) {
+        navigate("/");
+      }
+    } catch (error) {
+      console.error("Error deleting workspace:", error);
+      toast.error("Failed to delete workspace");
+    } finally {
+      setDeleteWorkspaceState({ workspaceId: null, isDeleting: false });
+    }
+  };
+
+  const handleCancelDeleteWorkspace = () => {
+    setDeleteWorkspaceState({ workspaceId: null, isDeleting: false });
+  };
+
   return {
     // Location
     currentPath: location.pathname,
@@ -358,6 +423,7 @@ export function useSidebar() {
     account,
     sessions: filteredSessions,
     entities: filteredEntities,
+    workspaces: filteredWorkspaces,
     apps,
     connectedApps,
     moods,
@@ -367,6 +433,7 @@ export function useSidebar() {
     // Loading states
     isLoadingSessions,
     isLoadingEntities,
+    isLoadingWorkspaces,
 
     // Delete session
     deleteSession,
@@ -400,5 +467,11 @@ export function useSidebar() {
     handleDeleteJournalClick,
     handleConfirmDeleteJournal,
     handleCancelDeleteJournal,
+
+    // Workspace handlers
+    deleteWorkspaceState,
+    handleDeleteWorkspaceClick,
+    handleConfirmDeleteWorkspace,
+    handleCancelDeleteWorkspace,
   };
 }

@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { eq } from "drizzle-orm";
 
 import { connections, connectionSyncState } from "../schema";
-import { getDb, initializeDatabase } from "../client";
+import { getDb } from "../client";
 
 
 function createId(): string {
@@ -60,8 +60,6 @@ async function ensureConnectionExists(
 export async function seedConnections(): Promise<void> {
   console.log("🌱 Seeding connections...");
 
-  // Ensure DB is initialized (uses Electron userData path by default)
-  await initializeDatabase();
   const db = getDb();
 
   try {

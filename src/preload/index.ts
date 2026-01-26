@@ -394,6 +394,21 @@ const api = {
     abort: (runId: string) => ipcRenderer.invoke("runs:abort", runId),
     getToolCalls: (runId: string) =>
       ipcRenderer.invoke("runToolCalls:getByRun", runId),
+    // Session resume methods
+    continue: (payload: {
+      runId: string;
+      accountId: string;
+      message: string;
+      additionalContext?: Array<{
+        kind: "file" | "diff" | "selection" | "note";
+        ref?: string;
+        content?: string;
+        metadata?: Record<string, unknown>;
+      }>;
+    }) => ipcRenderer.invoke("runs:continue", payload),
+    canResume: (runId: string) => ipcRenderer.invoke("runs:canResume", runId),
+    deleteSession: (runId: string) =>
+      ipcRenderer.invoke("runs:deleteSession", runId),
   },
   // Run context operations
   runContext: {

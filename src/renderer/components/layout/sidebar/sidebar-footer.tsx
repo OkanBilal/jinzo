@@ -52,7 +52,7 @@ export function SidebarFooter({
             tooltip="Open Settings"
             tooltipPosition="top-right"
           >
-            <Settings className="size-5 text-primary-700 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-100 transition-colors duration-300" />
+            <Settings className="size-5 text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
           </Button>
         </div>
         <div className="">
@@ -72,7 +72,7 @@ export function SidebarFooter({
             aria-label="Create new mood"
             title="Create new mood"
           >
-            <Plus className="size-5 text-primary-700 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-100 transition-colors duration-300" />
+            <Plus className="size-5 text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
           </Button>
         </div>
       </div>

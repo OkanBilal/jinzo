@@ -338,7 +338,7 @@ export default function CreateMoodView({
                         className={`flex items-center justify-center size-8 rounded-lg transition-all cursor-pointer ${
                           icon === name
                             ? "bg-primary-950/15 dark:bg-primary/20 text-primary-700 dark:text-primary"
-                            : "hover:bg-primary-950/8 dark:hover:bg-primary/10 text-primary-800 dark:text-primary-200"
+                            : "hover:bg-primary-950/8 dark:hover:bg-primary/10 text-primary-700 dark:text-primary-200"
                         }`}
                         title={name}
                       >
@@ -418,7 +418,7 @@ export default function CreateMoodView({
                 title="Show Gradients"
               >
                 <svg
-                  className="w-4 h-4 text-primary-500 dark:text-primary-400"
+                  className="w-4 h-4 text-primary-700 dark:text-primary-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -445,7 +445,7 @@ export default function CreateMoodView({
                 title="Show Solid Colors"
               >
                 <svg
-                  className="w-4 h-4 text-primary-500 dark:text-primary-400"
+                  className="w-4 h-4 text-primary-700 dark:text-primary-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -502,7 +502,7 @@ export default function CreateMoodView({
         </Button>
         <Button
           onClick={onClose}
-          className="w-full py-2 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 transition-colors cursor-pointer"
+          className="w-full py-2 text-sm font-medium text-primary-900 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 transition-colors cursor-pointer"
         >
           Cancel
         </Button>

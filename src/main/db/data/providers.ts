@@ -42,22 +42,12 @@ export const seedProviders: CreateProviderPayload[] = [
     isEnabled: true,
     defaultModel: "gpt-4o-mini", // placeholder; SDK may pick its own default
     config: {
-      // how to locate the binary / environment
-      binary: "copilot", // or absolute path if needed
-      // workspace execution defaults
-      timeoutMs: 300000,
-      // optional: any SDK/CLI server settings you expose
-      server: {
-        // port: 0, // let it pick
-        // transport: "stdio" | "tcp" (depending on SDK)
-      },
-      // policy defaults (can be overridden per-run in runs.toolPolicySnapshot)
-      toolPolicy: {
-        // conservative default: require explicit allow-list
-        mode: "allow_list",
-        allow: ["shell", "read_file", "write_file", "git"],
-        deny: ["rm", "sudo"],
-      },
+      // CopilotAdapterConfig interface fields
+      binary: "copilot", // Path to copilot CLI binary
+      transport: "stdio" as const, // Transport mode: "stdio" or "tcp"
+      timeout: 300000, // Timeout in milliseconds
+      logLevel: "info" as const, // Log level for the SDK
+      autoRestart: true, // Auto-restart on crash
     },
     capabilities: {
       mode: ["run"], // work runs
@@ -79,12 +69,10 @@ export const seedProviders: CreateProviderPayload[] = [
     isEnabled: false, // enable when integration lands
     defaultModel: "claude-3-5-sonnet", // placeholder
     config: {
-      binary: "claude", // or whatever you use
-      timeoutMs: 300000,
-      toolPolicy: {
-        mode: "allow_list",
-        allow: ["shell", "read_file", "write_file", "git"],
-      },
+      // ClaudeCodeAdapterConfig interface fields
+      binary: "claude", // Path to claude CLI binary
+      timeout: 300000, // Timeout in milliseconds
+      // apiKey: undefined, // Optional: API key if not using CLI auth
     },
     capabilities: {
       mode: ["run"],

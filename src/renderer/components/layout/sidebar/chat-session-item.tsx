@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { Trash, Option, Edit } from "@/components/ui/icons";
-import { Timestamp } from "@/components/ui/text";
+import { Muted, Timestamp } from "@/components/ui/text";
 import { AnimatedTitle } from "@/components/ui/animated-title";
 import {
   ChatSession,
@@ -124,7 +124,7 @@ export default function ChatSessionItem({
     return (
       <div className="relative">
         <div
-          className={`block pl-3 pr-3 py-2 rounded-xl ${
+          className={`block pl-3 pr-3 py-1.5 rounded-xl ${
             isActive ? "bg-primary-950/5 dark:bg-primary/5" : "bg-transparent"
           }`}
         >
@@ -146,10 +146,10 @@ export default function ChatSessionItem({
     <div className="relative group">
       <Link
         to={`/chat/${session.id}`}
-        className={`block pl-3 pr-3 py-1.5 group-hover:scale-[1.01] rounded-xl transition-all duration-200 ease-out  active:scale-[0.99] ${
+        className={`block pl-3 pr-3 py-1.5 active:scale-[0.99] group-hover:scale-[1.01] rounded-xl transition-all duration-200 ease-out  ${
           isActive
-            ? "bg-primary-950/5 dark:bg-primary/5"
-            : "bg-transparent hover:bg-primary-950/3 dark:hover:bg-primary/5"
+            ? "bg-primary/80 dark:bg-primary/5"
+            : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
         }`}
       >
         <div className="flex-1 min-w-0">
@@ -158,14 +158,14 @@ export default function ChatSessionItem({
               title={title}
               className={`text-sm font-medium ${
                 isActive
-                  ? "text-primary-900 dark:text-primary"
-                  : "text-primary-800 dark:text-primary-100"
+                  ? "text-primary-950 dark:text-primary"
+                  : "text-primary-900 dark:text-primary-100"
               }`}
             />
           </div>
-          <Timestamp className="">
+          <Muted className="text-[13px] mt-0.5 text-primary-800 dark:text-primary-300 ">
             {formatDate(new Date(session.createdAt).toISOString())}
-          </Timestamp>
+          </Muted>
         </div>
       </Link>
       <Button
@@ -175,7 +175,7 @@ export default function ChatSessionItem({
         className="absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100  transition-opacity p-1 cursor-pointer rounded-md z-10"
         aria-label="Chat options"
       >
-        <Option className="w-5 h-5 text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200" />
+        <Option className="w-5 h-5 text-primary-700 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200" />
       </Button>
 
       {/* Dropdown Menu */}

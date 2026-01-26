@@ -36,7 +36,7 @@ export default function UserProfile({
         />
       ) : (
         <div className="w-10 h-10 rounded-full bg-primary-200 dark:bg-primary-700 flex items-center justify-center">
-          <Caption className="text-primary-700 dark:text-primary-300 font-semibold">
+          <Caption className="text-primary-900 dark:text-primary-300 font-semibold">
             {getInitials(displayName || "")}
           </Caption>
         </div>

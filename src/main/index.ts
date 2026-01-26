@@ -135,16 +135,56 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", async (event) => {
+  if (isShuttingDown) {
+    return; // Already cleaning up, let it proceed
+  }
   event.preventDefault();
+  isShuttingDown = true;
   await cleanupApp();
   app.exit(0);
 });
 
+// Track if we're currently shutting down to prevent duplicate cleanup
+let isShuttingDown = false;
+
+// Handle graceful shutdown signals
+async function handleShutdownSignal(signal: string) {
+  if (isShuttingDown) {
+    console.log(`Already shutting down, ignoring ${signal}`);
+    return;
+  }
+  isShuttingDown = true;
+  
+  console.log(`Received ${signal}, shutting down gracefully...`);
+
+  try {
+    await cleanupApp();
+  } catch (error) {
+    // Ignore stream-destroyed errors during shutdown
+    if (!(error instanceof Error && error.message.includes("ERR_STREAM_DESTROYED"))) {
+      console.error("Error during graceful shutdown:", error);
+    }
+  }
+
+  process.exit(0);
+}
+
+process.on("SIGINT", () => handleShutdownSignal("SIGINT"));
+process.on("SIGTERM", () => handleShutdownSignal("SIGTERM"));
+
 // Handle uncaught errors
 process.on("uncaughtException", (error) => {
+  // Suppress stream-destroyed errors during shutdown
+  if (isShuttingDown && error.message?.includes("ERR_STREAM_DESTROYED")) {
+    return;
+  }
   console.error("Uncaught exception:", error);
 });
 
 process.on("unhandledRejection", (reason, promise) => {
+  // Suppress stream-destroyed errors during shutdown
+  if (isShuttingDown && reason instanceof Error && reason.message?.includes("ERR_STREAM_DESTROYED")) {
+    return;
+  }
   console.error("Unhandled rejection at:", promise, "reason:", reason);
 });

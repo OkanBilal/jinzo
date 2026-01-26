@@ -31,3 +31,4 @@ export { default as Treadmill } from "./treadmill";
 export { default as User } from "./user";
 export { default as Vinyl } from "./vinyl";
 export { default as Claude } from "./claude";
+export { default as Copilot } from "./copilot";

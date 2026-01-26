@@ -1,8 +1,10 @@
+//import { useNavigate } from "react-router-dom";
 import { SidebarHeader } from "./sidebar-header";
 import { SidebarFooter } from "./sidebar-footer";
 import { SidebarContent } from "./sidebar-content";
 import DeleteConfirmationModal from "./delete-confirmation-modal";
 import NewButton from "./new-button";
+//import CopilotButton from "./copilot-button";
 import CreateMoodView from "./create-mood-view";
 import PresetMoodsView from "./preset-moods-view";
 import SettingsView from "./settings-view";
@@ -13,6 +15,7 @@ import DeleteMoodModal from "./delete-mood-modal";
 import { useSidebar } from "./use-sidebar";
 
 export default function Sidebar() {
+  //const navigate = useNavigate();
   const {
     currentPath,
     searchQuery,
@@ -27,6 +30,7 @@ export default function Sidebar() {
     account,
     sessions,
     entities,
+    workspaces,
     apps,
     connectedApps,
     moods,
@@ -34,6 +38,7 @@ export default function Sidebar() {
     sidebarConfig,
     isLoadingSessions,
     isLoadingEntities,
+    isLoadingWorkspaces,
     deleteSession,
     setSearchQuery,
     handleSearchExpand,
@@ -59,6 +64,10 @@ export default function Sidebar() {
     handleDeleteJournalClick,
     handleConfirmDeleteJournal,
     handleCancelDeleteJournal,
+    deleteWorkspaceState,
+    handleDeleteWorkspaceClick,
+    handleConfirmDeleteWorkspace,
+    handleCancelDeleteWorkspace,
   } = useSidebar();
 
   return (
@@ -88,18 +97,25 @@ export default function Sidebar() {
             />
 
             <div className="px-4 py-3">
-              <NewButton onClick={handleNewClick} title={sidebarConfig.title} />
+              <NewButton
+                onClick={handleNewClick}
+                title={sidebarConfig.title}
+                actionPrefix={sidebarConfig.itemType === "workspace" ||  "claude" ? "Add" : "New"}
+              />
             </div>
 
             <SidebarContent
               itemType={sidebarConfig.itemType}
               sessions={sessions}
               entities={entities}
+              workspaces={workspaces}
               isLoadingSessions={isLoadingSessions}
               isLoadingEntities={isLoadingEntities}
+              isLoadingWorkspaces={isLoadingWorkspaces}
               currentPath={currentPath}
               onDeleteSession={deleteSession.handleDeleteClick}
               onDeletePost={handleDeleteJournalClick}
+              onDeleteWorkspace={handleDeleteWorkspaceClick}
             />
 
             <SidebarFooter
@@ -128,6 +144,15 @@ export default function Sidebar() {
         onCancel={handleCancelDeleteJournal}
         title="Delete Post?"
         description="This action cannot be undone. The post will be permanently deleted."
+      />
+
+      <DeleteConfirmationModal
+        isOpen={!!deleteWorkspaceState.workspaceId}
+        isDeleting={deleteWorkspaceState.isDeleting}
+        onConfirm={handleConfirmDeleteWorkspace}
+        onCancel={handleCancelDeleteWorkspace}
+        title="Delete Workspace?"
+        description="This action cannot be undone. The workspace will be permanently deleted."
       />
 
       <MoodContextMenu

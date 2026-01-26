@@ -84,6 +84,9 @@ class DatabaseClient {
       // Load extensions (if needed)
       const extensions = this.loadExtensions();
 
+      // Seed initial data
+      await this.seedInitialData();
+
       this.isInitialized = true;
 
       console.log("Database initialized successfully");
@@ -148,6 +151,46 @@ class DatabaseClient {
       console.log("Migrations completed");
     } else {
       console.log("No migrations folder found, skipping migrations");
+    }
+  }
+
+  /**
+   * Seed initial data if tables are empty
+   */
+  private async seedInitialData(): Promise<void> {
+    if (!this.db || !this.sqlite) {
+      return;
+    }
+
+    try {
+      // Import seed functions dynamically to avoid circular dependencies
+      const { seedAccountsData } = await import("./queries/seed-accounts");
+      const { seedProvidersData } = await import("./queries/seed-providers");
+      const { seedApps } = await import("./queries/seed-apps");
+      const { seedConnections } = await import("./queries/seed-connections");
+      const { seedWorkspacesData } = await import("./queries/seed-workspaces");
+      
+      // Check if any data exists
+      const accountsCount = this.sqlite.prepare("SELECT COUNT(*) as count FROM accounts").get() as { count: number };
+      const providersCount = this.sqlite.prepare("SELECT COUNT(*) as count FROM providers").get() as { count: number };
+      const appsCount = this.sqlite.prepare("SELECT COUNT(*) as count FROM app_states").get() as { count: number };
+      const connectionsCount = this.sqlite.prepare("SELECT COUNT(*) as count FROM connections").get() as { count: number };
+      const workspacesCount = this.sqlite.prepare("SELECT COUNT(*) as count FROM workspaces").get() as { count: number };
+      
+      if (accountsCount.count === 0 && providersCount.count === 0 && appsCount.count === 0 && connectionsCount.count === 0 && workspacesCount.count === 0) {
+        console.log("Seeding initial data...");
+        await seedAccountsData(); // MUST be first - referenced by workspaces
+        await seedApps();
+        await seedConnections();
+        await seedProvidersData();
+        await seedWorkspacesData();
+        console.log("Initial data seeded successfully");
+      } else {
+        console.log("Data already exists, skipping seed");
+      }
+    } catch (error) {
+      console.error("Failed to seed initial data:", error);
+      // Don't throw - seeding is optional
     }
   }
 

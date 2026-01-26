@@ -8,6 +8,7 @@ import type {
   UpdateRunCommandPayload,
   RunStatus,
   StartRunPayload,
+  ContinueRunPayload,
 } from "./runs.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -62,4 +63,13 @@ export const runsController = {
 
   // Abort Run
   abortRun: (runId: string) => runsService.abortRun(runId),
+
+  // Continue Run (resume session)
+  continueRun: (payload: ContinueRunPayload) => runsService.continueRun(payload),
+
+  // Check if run can be resumed
+  canResumeRun: (runId: string) => runsService.canResumeRun(runId),
+
+  // Delete run session
+  deleteRunSession: (runId: string) => runsService.deleteRunSession(runId),
 };

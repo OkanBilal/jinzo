@@ -9,6 +9,7 @@ import type {
   UpdateRunCommandPayload,
   RunStatus,
   StartRunPayload,
+  ContinueRunPayload,
 } from "./runs.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -31,6 +32,9 @@ const CHANNELS = {
   RUNS_GET_DETAILS: "runs:getDetails",
   RUNS_EXECUTE: "runs:execute",
   RUNS_ABORT: "runs:abort",
+  RUNS_CONTINUE: "runs:continue",
+  RUNS_CAN_RESUME: "runs:canResume",
+  RUNS_DELETE_SESSION: "runs:deleteSession",
 
   // Run Context
   CONTEXT_GET_BY_RUN: "runContext:getByRun",
@@ -117,6 +121,18 @@ export function registerRunsIpc(): void {
 
   ipcMain.handle(CHANNELS.RUNS_ABORT, async (_, runId: string) => {
     return runsController.abortRun(runId);
+  });
+
+  ipcMain.handle(CHANNELS.RUNS_CONTINUE, async (_, payload: ContinueRunPayload) => {
+    return runsController.continueRun(payload);
+  });
+
+  ipcMain.handle(CHANNELS.RUNS_CAN_RESUME, async (_, runId: string) => {
+    return runsController.canResumeRun(runId);
+  });
+
+  ipcMain.handle(CHANNELS.RUNS_DELETE_SESSION, async (_, runId: string) => {
+    return runsController.deleteRunSession(runId);
   });
 
   // Run Context

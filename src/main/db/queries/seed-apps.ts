@@ -1,12 +1,9 @@
 import { apps } from "../data/apps";
 
 import { appStates } from "../schema";
-import { getDb, initializeDatabase } from "../client";
+import { getDb } from "../client";
 
 export async function seedApps(): Promise<void> {
-  // Ensure DB is initialized (uses Electron userData path by default)
-  await initializeDatabase();
-
   const db = getDb();
 
   for (const app of apps) {

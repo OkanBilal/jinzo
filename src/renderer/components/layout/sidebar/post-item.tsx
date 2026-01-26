@@ -144,13 +144,13 @@ export default function PostItem({
         onClick={onClick}
         className={`block px-3 py-2 rounded-xl cursor-pointer group-hover:scale-[1.01] transition-all duration-200 ease-out active:scale-[0.99] ${
           isActive
-            ? "bg-primary-950/5 dark:bg-primary/5"
-            : "bg-transparent hover:bg-primary-950/3 dark:hover:bg-primary/5"
+            ? "bg-primary/80 dark:bg-primary/5"
+            : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
         }`}
       >
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 pr-4">
           <div className="flex items-center gap-2">
-            <Body className="text-primary-900 dark:text-primary-100 line-clamp-1 leading-snug">
+            <Body className="text-primary-950 font-medium dark:text-primary-100! line-clamp-1 leading-snug">
               {title}
             </Body>
             {status === "draft" && (
@@ -160,7 +160,7 @@ export default function PostItem({
             )}
           </div>
           {description && (
-            <Muted className="mt-1 line-clamp-2 text-xs leading-relaxed">
+                <Muted className="text-[13px] mt-0.5 text-primary-800 dark:text-primary-300! line-clamp-2">
               {description}
             </Muted>
           )}
@@ -171,10 +171,10 @@ export default function PostItem({
           tooltip="More options"
           ref={buttonRef}
           onClick={handleOptionClick}
-          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer rounded-md z-10"
+          className="absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer rounded-md z-10"
           aria-label="Post options"
         >
-          <Option className="w-5 h-5 text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200" />
+          <Option className="w-5 h-5 text-primary-700 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200" />
         </Button>
       )}
 

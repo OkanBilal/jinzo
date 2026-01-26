@@ -158,7 +158,7 @@ export default function Tooltip({
             "px-2 py-1 text-xs font-light whitespace-nowrap rounded-lg pointer-events-none",
             "bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200",
             "border border-primary-200 dark:border-primary-800",
-            "shadow-lg shadow-black/10 dark:shadow-black/30",
+            "shadow-lg shadow-black/10 ",
             "transition-all duration-50 ease-out",
             "flex items-center gap-2",
             isVisible ? "opacity-100 scale-100" : "opacity-0 scale-90",

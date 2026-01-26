@@ -3,6 +3,7 @@ import DropdownWrapper from "../../../../components/ui/dropdown-wrapper";
 import { ModelSelectDropdownProps } from "./types";
 import { DeepSeek, Gpt, Meta } from "../../../../components/ui/icons";
 import { Button } from "@/components/ui/button";
+import { Claude } from "@/components/ui/icons/mood";
 
 function getModelIcon(modelName: string) {
   if (modelName.includes("deepseek")) {
@@ -23,6 +24,12 @@ function getModelIcon(modelName: string) {
   if (modelName.includes("qwen")) {
     return <span className="text-base">🌐</span>;
   }
+    if (modelName.includes("claude" )) {
+    return <Claude className="w-4 h-4 " />;
+  }
+  if (modelName.includes("Opus")) {
+    return <Claude className="w-4 h-4 " />;
+  }
   // Default icon
   return <span className="text-base">⚡</span>;
 }
@@ -40,7 +47,7 @@ export default function ModelSelectDropdown({
   
   return (
     <div className=" relative" ref={dropdownRef}>
-      <div className="flex cursor-pointer items-center  hover:bg-primary-200/30 dark:hover:bg-primary-700/40 transition-colors rounded-3xl">
+      <div className="flex cursor-pointer items-center hover:bg-primary-200/30 dark:hover:bg-primary-700/40 transition-colors rounded-3xl">
         <Button
           tooltip="Select model"
           tooltipPosition="top"

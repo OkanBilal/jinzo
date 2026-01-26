@@ -17,7 +17,7 @@ function AppContent() {
   const { mainMarginLeft, rightPanelWidth } = useLayoutConfig();
   const location = useLocation();
   
-  const isSettingsPage = location.pathname === "/settings";
+  const isSettingsPage = location.pathname === "/settings" || location.pathname.startsWith("/workspace") || location.pathname.startsWith("/claude"); // TODO refine this condition
 
   return (
     <>

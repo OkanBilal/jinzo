@@ -3,6 +3,10 @@
    ========================================================================== */
 
 @import url("https://fonts.googleapis.com/css2?family=Nabla&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap');
+
 @import "tailwindcss";
 
 /* ==========================================================================
@@ -18,7 +22,13 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  --font-sans: var(--font-inter);
+  --font-space-mono: 'Space Mono', monospace;
+  --font-inter: 'Inter', sans-serif;
+  --font-sans: 'Geist', system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-mono: 'Geist Mono', 'Space Mono', monospace;
+
 
   --color-primary: #ffffff;
   --color-primary-50: #f8f4ee;
@@ -40,6 +50,50 @@
    ANIMATIONS
    ========================================================================== */
 
+/* Copilot Icon Animation - 54 frames sprite sheet
+   Container clips to show one frame at a time
+   SVG translates upward to reveal each frame sequentially */
+.copilot-icon-container {
+  display: block;
+  overflow: hidden;
+  position: relative;
+}
+
+.copilot-icon-sprite {
+  display: block;
+  will-change: transform;
+}
+
+.copilot-icon-sprite[data-animation-state="running"] {
+  animation: copilotIdleAnimation 3s steps(53) infinite;
+}
+
+@keyframes copilotIdleAnimation {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(-100% + var(--frame-height, 32px)));
+  }
+}
+
+// TODO: Refactor
+
+#symbol {
+  color: #da9779; /* Light orange color for text */
+  font-size: 24px;
+  line-height: 1.5em; /* Set a fixed line height */
+  height: 1.5em; /* Set a fixed height for the symbol line */
+  text-align: center;
+}
+
+#word {
+  color: #da9779; /* Light orange color for text */
+  font-size: 24px;
+  line-height: 1.5em; /* Set a fixed line height */
+  height: 1.5em; /* Set a fixed height for the word line */
+}
+   
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -394,3 +448,47 @@ input[type="range"].slider::-moz-range-thumb:hover {
     0 1px 1px #00000026,
     inset 0 1px 0 #ffffff29;
 }
+
+.glass-morphism-copilot {
+  background: linear-gradient(to bottom, var(--color-primary), var(--color-primary-100));
+  filter: saturate(110%);
+  border: 0.5px solid #ffffff2e;
+  box-shadow: 
+    0 1px 1px #00000014,
+    0 1px 1px #0000000a,
+    inset 0 1px 1px  #00000014;
+}
+
+.dark .glass-morphism-copilot {
+  background: linear-gradient(to bottom, #070a0f, #0c1117);
+  filter: saturate(110%);
+  border: 0.5px solid #ffffff2e;
+  box-shadow: 
+    0 1px 1px #070a0f12,
+    0 1px 1px #070a0f0a,
+    inset 0 1px 1px  #070a0f12;
+}
+
+//TODO Refactor
+
+.glass-morphism-claude {
+  background: linear-gradient(to bottom, var(--color-primary), var(--color-primary-100));
+  filter: saturate(110%);
+  border: 0.5px solid #ffffff2e;
+  box-shadow: 
+    0 1px 1px #00000014,
+    0 1px 1px #0000000a,
+    inset 0 1px 1px  #00000014;
+}
+
+.dark .glass-morphism-claude {
+  background: linear-gradient(to bottom, #0d0907, #16100d);
+  filter: saturate(110%);
+  border: 0.5px solid #ffffff2e;
+  box-shadow: 
+    0 1px 1px #0d090712,
+    0 1px 1px #0d09070a,
+    inset 0 1px 1px  #0d090712;
+}
+
+

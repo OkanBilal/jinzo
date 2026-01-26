@@ -19,7 +19,7 @@ export function formatDate(date: string): string {
 
   const diffInDays = Math.floor(diffInHours / 24);
   if (diffInDays < 30) {
-    return `${diffInDays} d${diffInDays !== 1 ? '' : ''} ago`;
+    return `${diffInDays}d${diffInDays !== 1 ? '' : ''} ago`;
   }
 
   const diffInMonths = Math.floor(diffInDays / 30);

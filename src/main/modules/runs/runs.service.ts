@@ -24,6 +24,8 @@ import type {
   RunStatus,
   StartRunPayload,
   StartRunResponse,
+  ContinueRunPayload,
+  ContinueRunResponse,
   RunDetailsResponse,
 } from "./runs.dto";
 import { createHash } from "crypto";
@@ -410,7 +412,7 @@ export const runsService = {
           accountId: payload.accountId,
           workspace: {
             id: workspace.id,
-            rootPath: workspace.rootPath,
+            rootPath: workspace.rootPath, // TODO: check path
           },
           goal: payload.goal,
           model: payload.model,
@@ -514,16 +516,32 @@ export const runsService = {
             startedAt: event.startedAt ? new Date(event.startedAt) : new Date(),
           });
 
-          // Track for later update
-          const callKey = `${event.toolName}-${event.startedAt || Date.now()}`;
+          // Track for later update using toolCallId from metadata if available
+          const metadataToolCallId = (event.metadata as Record<string, unknown> | undefined)?.toolCallId;
+          const callKey = metadataToolCallId 
+            ? String(metadataToolCallId)
+            : `${event.toolName}-${event.startedAt || Date.now()}`;
           pendingToolCalls.set(callKey, toolCallId);
-        } else if (phase === "end") {
-          // Find the pending tool call
-          const callKey = Array.from(pendingToolCalls.keys()).find((k) =>
-            k.startsWith(`${event.toolName}-`)
-          );
+        } else if (phase === "end" || phase === "complete") {
+          // Find the pending tool call using toolCallId from metadata first
+          const metadataToolCallId = (event.metadata as Record<string, unknown> | undefined)?.toolCallId;
+          let callKey: string | undefined;
+          
+          if (metadataToolCallId) {
+            callKey = String(metadataToolCallId);
+            if (!pendingToolCalls.has(callKey)) {
+              // Try fallback to toolName-based key
+              callKey = Array.from(pendingToolCalls.keys()).find((k) =>
+                k.startsWith(`${event.toolName}-`)
+              );
+            }
+          } else {
+            callKey = Array.from(pendingToolCalls.keys()).find((k) =>
+              k.startsWith(`${event.toolName}-`)
+            );
+          }
 
-          if (callKey) {
+          if (callKey && pendingToolCalls.has(callKey)) {
             const toolCallId = pendingToolCalls.get(callKey)!;
             pendingToolCalls.delete(callKey);
 
@@ -540,31 +558,9 @@ export const runsService = {
               latencyMs,
               metadata: event.metadata,
             });
-          } else {
-            // No pending call found, create a new complete record
-            await runsRepo.insertToolCall({
-              accountId,
-              runId,
-              providerId,
-              toolName: event.toolName,
-              status: event.error ? "error" : "done",
-              input: event.input,
-              startedAt: event.startedAt ? new Date(event.startedAt) : undefined,
-            });
-
-            // Update with output
-            // Note: This is a workaround since insertToolCall doesn't support output
-            const toolCalls = await runsRepo.findToolCallsByRun(runId);
-            const lastCall = toolCalls[toolCalls.length - 1];
-            if (lastCall) {
-              await runsRepo.updateToolCall(lastCall.id, {
-                output: event.output,
-                error: event.error,
-                endedAt: event.endedAt ? new Date(event.endedAt) : new Date(),
-                metadata: event.metadata,
-              });
-            }
           }
+          // If no pending call found, skip - don't create duplicate records
+          // The start event should always come first
         }
         break;
       }
@@ -651,6 +647,203 @@ export const runsService = {
     } catch (error) {
       console.error(`[RunsService] Failed to abort run ${runId}:`, error);
       return { success: false, error: "Failed to abort run" };
+    }
+  },
+
+  /**
+   * Check if a run's session can be resumed
+   */
+  async canResumeRun(runId: string): Promise<ServiceResponse<boolean>> {
+    try {
+      const run = await runsRepo.findRunById(runId);
+      if (!run) {
+        return { success: false, error: "Run not found" };
+      }
+
+      // Can only resume runs that completed (succeeded, failed, or canceled)
+      if (run.status === "running" || run.status === "queued") {
+        return { success: true, data: false };
+      }
+
+      const provider = await providersRepo.findById(run.providerId);
+      if (!provider) {
+        return { success: true, data: false };
+      }
+
+      const adapter = createWorkAdapter(provider);
+      if (!adapter.canResumeSession) {
+        return { success: true, data: false };
+      }
+
+      const canResume = await adapter.canResumeSession(runId);
+      return { success: true, data: canResume };
+    } catch (error) {
+      console.error(`[RunsService] Failed to check resume for run ${runId}:`, error);
+      return { success: false, error: "Failed to check resume capability" };
+    }
+  },
+
+  /**
+   * Continue an existing run by resuming its session
+   */
+  async continueRun(payload: ContinueRunPayload): Promise<ServiceResponse<ContinueRunResponse>> {
+    const { runId, accountId, message, additionalContext } = payload;
+
+    try {
+      // 1. Load existing run
+      const run = await runsRepo.findRunById(runId);
+      if (!run) {
+        return { success: false, error: "Run not found" };
+      }
+
+      // 2. Verify ownership
+      if (run.accountId !== accountId) {
+        return { success: false, error: "Run does not belong to this account" };
+      }
+
+      // 3. Load provider
+      const provider = await providersRepo.findById(run.providerId);
+      if (!provider) {
+        return { success: false, error: `Provider "${run.providerId}" not found` };
+      }
+      if (!provider.isEnabled) {
+        return { success: false, error: `Provider "${provider.displayName}" is not enabled` };
+      }
+
+      // 4. Load workspace
+      const workspace = run.workspaceId
+        ? await workspacesRepo.findById(run.workspaceId)
+        : null;
+
+      // 5. Create adapter and check if it supports resume
+      const adapter = createWorkAdapter(provider);
+      if (!adapter.continueRun) {
+        return { success: false, error: "Provider does not support session resumption" };
+      }
+
+      // 6. Check if session can be resumed
+      if (adapter.canResumeSession) {
+        const canResume = await adapter.canResumeSession(runId);
+        if (!canResume) {
+          return { success: false, error: "Session cannot be resumed (not found or expired)" };
+        }
+      }
+
+      // 7. Update run status to running
+      await runsRepo.updateRun(runId, {
+        status: "running",
+        startedAt: new Date(),
+        endedAt: null,
+        lastError: null,
+      });
+
+      // 8. Add any additional context
+      if (additionalContext && additionalContext.length > 0) {
+        for (const ctx of additionalContext) {
+          await runsRepo.insertContext({
+            runId,
+            kind: ctx.kind as "file" | "selection" | "diff" | "note",
+            ref: ctx.ref,
+            content: ctx.content,
+            contentHash: ctx.content ? hashContent(ctx.content) : undefined,
+            metadata: ctx.metadata,
+          });
+        }
+      }
+
+      // Track tool calls for updating when completed
+      const pendingToolCalls = new Map<string, number>();
+
+      // 9. Continue the run
+      const runPromise = adapter.continueRun(
+        {
+          runId,
+          accountId,
+          workspace: workspace
+            ? { id: workspace.id, rootPath: workspace.rootPath }
+            : { id: "", rootPath: process.cwd() },
+          message,
+          context: additionalContext as any,
+        },
+        async (event) => {
+          try {
+            await this.handleRunEvent(runId, accountId, run.providerId, event, pendingToolCalls);
+          } catch (err) {
+            console.error(`[RunsService] Error handling event for run ${runId}:`, err);
+          }
+        }
+      );
+
+      // 10. Handle completion in background
+      runPromise
+        .then(async (result) => {
+          const finalStatus: RunStatus =
+            result.status === "succeeded" ? "succeeded" :
+            result.status === "canceled" ? "canceled" : "failed";
+
+          await runsRepo.updateRun(runId, {
+            status: finalStatus,
+            endedAt: new Date(),
+            lastError: result.status === "failed" ? result.summary : undefined,
+          });
+
+          console.log(`[RunsService] Continued run ${runId} completed with status: ${finalStatus}`);
+        })
+        .catch(async (error) => {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error(`[RunsService] Continued run ${runId} failed:`, errorMessage);
+
+          await runsRepo.updateRun(runId, {
+            status: "failed",
+            endedAt: new Date(),
+            lastError: errorMessage,
+          });
+        });
+
+      return { success: true, data: { runId, resumed: true } };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`[RunsService] Failed to continue run:`, errorMessage);
+
+      // Try to reset run status if it was updated
+      try {
+        await runsRepo.updateRun(runId, {
+          status: "failed",
+          endedAt: new Date(),
+          lastError: errorMessage,
+        });
+      } catch {
+        // Ignore cleanup errors
+      }
+
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  /**
+   * Delete a run's persisted session
+   */
+  async deleteRunSession(runId: string): Promise<ServiceResponse<void>> {
+    try {
+      const run = await runsRepo.findRunById(runId);
+      if (!run) {
+        return { success: false, error: "Run not found" };
+      }
+
+      const provider = await providersRepo.findById(run.providerId);
+      if (!provider) {
+        return { success: true }; // No provider, nothing to delete
+      }
+
+      const adapter = createWorkAdapter(provider);
+      if (adapter.deleteSession) {
+        await adapter.deleteSession(runId);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error(`[RunsService] Failed to delete session for run ${runId}:`, error);
+      return { success: false, error: "Failed to delete session" };
     }
   },
 };

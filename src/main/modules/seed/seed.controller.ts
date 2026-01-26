@@ -5,6 +5,10 @@ import type { ServiceResponse } from "./seed.dto";
 // Controller - Maps IPC requests to service calls
 // ─────────────────────────────────────────────────────────────
 export const seedController = {
+  async seedAccounts(): Promise<ServiceResponse> {
+    return seedService.seedAccounts();
+  },
+
   async seedApps(): Promise<ServiceResponse> {
     return seedService.seedApps();
   },
@@ -15,6 +19,10 @@ export const seedController = {
 
   async seedProviders(): Promise<ServiceResponse> {
     return seedService.seedProviders();
+  },
+
+  async seedWorkspaces(): Promise<ServiceResponse> {
+    return seedService.seedWorkspaces();
   },
 
   async seedAll(): Promise<ServiceResponse> {

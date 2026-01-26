@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 interface NewButtonProps {
   onClick: () => void;
   title: string;
+  actionPrefix?: string;
 }
 
-export default function NewButton({ onClick, title }: NewButtonProps) {
+export default function NewButton({ onClick, title, actionPrefix = "New" }: NewButtonProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey && e.key === "n") {
@@ -23,7 +24,7 @@ export default function NewButton({ onClick, title }: NewButtonProps) {
 
   return (
     <Button
-      tooltip={"Create New " + title}
+      tooltip={`${actionPrefix} ${title}`}
       variant="subtle"
       tooltipShortcut="⌘N"
       size="lg"
@@ -32,11 +33,11 @@ export default function NewButton({ onClick, title }: NewButtonProps) {
       className="justify-start cursor-pointer p-4 hover:scale-[1.02] transition-transform duration-200"
       style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
     >
-      <Plus className="w-4 h-4 text-primary-800 dark:text-primary-400" />
+      <Plus className="w-4 h-4 text-primary-900 dark:text-primary-400" />
       <Body className="text-primary-900 dark:text-primary-100 font-medium">
-        New {title}
+        {actionPrefix} {title}
       </Body>
-      <Caption className="ml-auto text-primary-800 dark:text-primary-400">
+      <Caption className="ml-auto text-primary-900 dark:text-primary-400">
         ⌘ N
       </Caption>
     </Button>

@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { Heading3 } from "@/components/ui/text";
-import { useCreateMoodMutation, useSetActiveMoodMutation } from "@/lib/redux/api";
+import {
+  useCreateMoodMutation,
+  useSetActiveMoodMutation,
+} from "@/lib/redux/api";
 import { toast } from "@/components/toast";
 import { useDarkMode } from "@/hooks/useDarkMode";
-import {
-  solidColors,
-  gradientColors,
-  getThemeVariant,
-} from "@/lib/mood-themes";
 import { parseIcon } from "@/lib/icon-registry";
 import { predefinedMoods, type PredefinedMood } from "@/lib/predefined-moods";
 import { Button } from "@/components/ui/button";
@@ -21,7 +19,8 @@ export default function PresetMoodsView({
   onClose,
   onSuccess,
 }: PresetMoodsViewProps) {
-  const [selectedTemplate, setSelectedTemplate] = useState<PredefinedMood | null>(null);
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<PredefinedMood | null>(null);
   const [createMood, { isLoading }] = useCreateMoodMutation();
   const [setActiveMood] = useSetActiveMoodMutation();
   const { darkMode } = useDarkMode();
@@ -33,19 +32,21 @@ export default function PresetMoodsView({
     }
 
     try {
-      const templateColors = selectedTemplate.showGradients ? gradientColors : solidColors;
-      const templateColorPair = templateColors[selectedTemplate.themeColorIndex] || solidColors[0];
-
       const themeConfig = JSON.stringify({
-        lightBackground: templateColorPair.light.value,
-        darkBackground: templateColorPair.dark.value,
+        lightBackground: selectedTemplate.theme.light.value,
+        darkBackground: selectedTemplate.theme.dark.value,
       });
+
+      const uiConfig = selectedTemplate.uiConfig
+        ? JSON.stringify(selectedTemplate.uiConfig)
+        : undefined;
 
       const result = await createMood({
         name: selectedTemplate.name,
         icon: selectedTemplate.icon,
         themeConfig,
         systemPrompt: selectedTemplate.systemPrompt,
+        uiConfig,
       }).unwrap();
 
       if (result?.id) {
@@ -66,11 +67,11 @@ export default function PresetMoodsView({
       className="flex flex-col h-full"
       style={{ animation: "fadeIn 300ms ease-in-out" }}
     >
-      <div className="flex flex-col items-center pt-8 pb-6 px-4">
+      <div className="flex flex-col items-center pt-12 pb-6 px-4">
         <Heading3 className="text-center text-primary-800 dark:text-primary">
           Preset Moods
         </Heading3>
-        <p className="text-sm text-primary-500 dark:text-primary-400 mt-1 text-center">
+        <p className="text-sm text-primary-900 dark:text-primary-400 mt-1 text-center">
           Choose a preset to get started quickly
         </p>
       </div>
@@ -79,9 +80,9 @@ export default function PresetMoodsView({
         <div className="grid grid-cols-2 gap-3">
           {predefinedMoods.map((template) => {
             const templateIcon = parseIcon(template.icon);
-            const templateColors = template.showGradients ? gradientColors : solidColors;
-            const templateColorPair = templateColors[template.themeColorIndex] || solidColors[0];
-            const templateVariant = getThemeVariant(templateColorPair, darkMode);
+            const templateVariant = darkMode
+              ? template.theme.dark
+              : template.theme.light;
             const isSelected = selectedTemplate?.id === template.id;
 
             return (
@@ -90,24 +91,25 @@ export default function PresetMoodsView({
                 type="button"
                 onClick={() => setSelectedTemplate(template)}
                 className={`flex flex-col items-center gap-2 p-2 rounded-2xl transition-all cursor-pointer
-                  ${isSelected
-                    ? ""
-                    : "hover:scale-[1.02]"
-                  }`}
+                  ${isSelected ? "" : "hover:scale-[1.02]"}`}
                 style={{ background: templateVariant.preview }}
               >
                 <span className="text-2xl">
-                  {templateIcon.type === "emoji" ? (
-                    templateIcon.value as string
-                  ) : (
-                    (() => {
-                      const IconComp = templateIcon.value as React.ComponentType<{ className?: string }>;
-                      const iconColorClass = template.name === "Claude" 
-                        ? "text-[#D97757] dark:text-primary"
-                        : "text-primary-800 dark:text-primary";
-                      return <IconComp className={`size-6 ${iconColorClass}`} />;
-                    })()
-                  )}
+                  {templateIcon.type === "emoji"
+                    ? (templateIcon.value as string)
+                    : (() => {
+                        const IconComp =
+                          templateIcon.value as React.ComponentType<{
+                            className?: string;
+                          }>;
+                        const iconColorClass =
+                          template.name === "Claude"
+                            ? "text-[#D97757] dark:text-primary"
+                            : "text-primary-800 dark:text-primary";
+                        return (
+                          <IconComp className={`size-6 ${iconColorClass}`} />
+                        );
+                      })()}
                 </span>
                 <span className="text-sm font-medium text-primary-700 dark:text-primary-200">
                   {template.name}
@@ -121,19 +123,20 @@ export default function PresetMoodsView({
       <div className="p-4 space-y-2">
         <Button
           onClick={handleCreate}
-          disabled={isLoading || !selectedTemplate}
-          className="w-full py-2.5 px-4 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer
-            disabled:opacity-50 disabled:cursor-not-allowed
-            bg-primary-900/10 dark:bg-primary/10
-            hover:bg-primary-900/15 dark:hover:bg-primary/15
-            text-primary-800 dark:text-primary
-            hover:scale-[1.02] active:scale-[0.98]"
+          disabled={isLoading}
+          className="w-full py-2.5 px-4 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer disabled:opacity-50 
+          disabled:cursor-not-allowed brightness-120 hover:scale-[1.02] active:scale-[0.98] text-primary-800 dark:text-primary"
+          style={{
+            background: darkMode
+              ? selectedTemplate?.theme.dark.preview
+              : selectedTemplate?.theme.light.preview,
+          }}
         >
           {isLoading ? "Creating..." : "Create"}
         </Button>
         <Button
           onClick={onClose}
-          className="w-full py-2 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 transition-colors cursor-pointer"
+          className="w-full py-2 text-sm text-primary-900 font-medium dark:text-primary-300 hover:text-primary-950 dark:hover:text-primary-200 transition-colors cursor-pointer"
         >
           Cancel
         </Button>

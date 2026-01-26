@@ -22,37 +22,42 @@ export const solidColors: ThemeColor[] = [
   {
     name: "Plum",
     light: { value: "#E6C7E699", preview: "#E6C7E6" },
-    dark: { value: "#2D1F3395", preview: "#2D1F33" },
+    dark: { value: "#C5683F", preview: "#C5683F" },
   },
   {
     name: "Crimson",
     light: { value: "#FBE4E399", preview: "#FBE4E3" },
-    dark: { value: "#3F0D1295", preview: "#3F0D12" },
+    dark: { value: "#f4433690", preview: "#3F0D12" },
   },
   {
     name: "Mahogany",
     light: { value: "#FADADD99", preview: "#FADADD" },
-    dark: { value: "#3B1F1B95", preview: "#3B1F1B" },
+    dark: { value: "#66678990", preview: "#3B1F1B" },
   },
   {
     name: "Sunset",
     light: { value: "#FFF3C499", preview: "#FFF3C4" },
-    dark: { value: "#3D351A95", preview: "#3D351A" },
+    dark: { value: "#3D351A90", preview: "#3D351A" },
   },
   {
     name: "Peach",
     light: { value: "#fcc7b699", preview: "#fcc7b6" },
-    dark: { value: "#87553399", preview: "#875533" },
+    dark: { value: "#87553390", preview: "#875533" },
   },
   {
     name: "Evergreen",
     light: { value: "#D1F2EB99", preview: "#D1F2EB" },
-    dark: { value: "#01322095", preview: "#013220" },
+    dark: { value: "#00A24E90", preview: "#013220" },
   },
   {
     name: "Ocean",
     light: { value: "#D6E6F399", preview: "#D6E6F3" },
-    dark: { value: "#00092695", preview: "#000926" },
+    dark: { value: "#00092690", preview: "#000926" },
+  },
+  {
+    name: "Lavender",
+    light: { value: "#E8D5F799", preview: "#E8D5F7" },
+    dark: { value: "#4B367C90", preview: "#4B367C" },
   },
 ];
 
@@ -135,6 +140,17 @@ export const gradientColors: ThemeColor[] = [
     dark: {
       value: "linear-gradient(180deg, #14142D 0%, #0A0A1A 100%)",
       preview: "linear-gradient(180deg, #1E1E3D 0%, #14142A 100%)",
+    },
+  },
+  {
+    name: "Mystic Forest",
+    light: {
+      value: "linear-gradient(180deg, #DCFCE7 0%, #BBF7D0 100%)",
+      preview: "linear-gradient(180deg, #DCFCE7 0%, #BBF7D0 100%)",
+    },
+    dark: {
+      value: "linear-gradient(180deg, #1A2A1A 0%, #0A1A0A 100%)",
+      preview: "linear-gradient(180deg, #2A3A2A 0%, #1A2A1A 100%)",
     },
   },
 ];
