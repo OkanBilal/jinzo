@@ -11,6 +11,7 @@ import type {
   WorkRunEventHandler,
   WorkRunEvent,
   CopilotAdapterConfig,
+  ModelInfo,
 } from "./adapter.types";
 
 /**
@@ -74,6 +75,21 @@ interface CopilotSession {
   destroy(): Promise<void>;
 }
 
+interface CopilotModelInfo {
+  id: string;
+  name?: string;
+  version?: string;
+  isDefault?: boolean;
+  capabilities?: {
+    streaming?: boolean;
+    vision?: boolean;
+    functionCalling?: boolean;
+    reasoning?: boolean;
+  };
+  contextWindow?: number;
+  metadata?: Record<string, unknown>;
+}
+
 interface CopilotClientInterface {
   start(): Promise<void>;
   stop(): Promise<Error[]>;
@@ -83,6 +99,9 @@ interface CopilotClientInterface {
   listSessions(): Promise<Array<{ sessionId: string }>>;
   deleteSession(sessionId: string): Promise<void>;
   ping(message?: string): Promise<{ message: string; timestamp: number }>;
+  connection?: {
+    sendRequest(method: string, params: Record<string, unknown>): Promise<unknown>;
+  };
 }
 
 // Active run tracking for abort support
@@ -1007,6 +1026,41 @@ export function createCopilotAdapter(
       initError = null;
       console.log("[CopilotAdapter] Shutdown complete");
     },
+
+    async listModels(): Promise<ModelInfo[]> {
+      try {
+        const copilotClient = await ensureClient();
+
+        // Check if client has connection with sendRequest capability
+        if (!copilotClient.connection) {
+          console.warn("[CopilotAdapter] Client connection not available for listing models");
+          // Return default models as fallback
+          return getDefaultModels(config.defaultModel);
+        }
+
+        const result = await copilotClient.connection.sendRequest("models.list", {});
+        const response = result as { models?: CopilotModelInfo[] };
+
+        if (!response.models || !Array.isArray(response.models)) {
+          console.warn("[CopilotAdapter] Invalid models response, using defaults");
+          return getDefaultModels(config.defaultModel);
+        }
+
+        return response.models.map((model): ModelInfo => ({
+          id: model.id,
+          displayName: model.name || model.id,
+          version: model.version,
+          isDefault: model.isDefault || model.id === config.defaultModel,
+          capabilities: model.capabilities,
+          contextWindow: model.contextWindow,
+          metadata: model.metadata,
+        }));
+      } catch (error) {
+        console.error("[CopilotAdapter] Failed to list models:", error);
+        // Return default models on error
+        return getDefaultModels(config.defaultModel);
+      }
+    },
   };
 }
 
@@ -1028,4 +1082,67 @@ function parseExitCode(text?: string): number | undefined {
   if (!m) return undefined;
   const n = Number(m[1]);
   return Number.isFinite(n) ? n : undefined;
+}
+
+/**
+ * Get default models for Copilot when API is unavailable
+ */
+function getDefaultModels(defaultModel?: string): ModelInfo[] {
+  const models: ModelInfo[] = [
+    {
+      id: "gpt-4o",
+      displayName: "GPT-4o",
+      isDefault: defaultModel === "gpt-4o" || !defaultModel,
+      capabilities: {
+        streaming: true,
+        vision: true,
+        functionCalling: true,
+      },
+      contextWindow: 128000,
+    },
+    {
+      id: "gpt-4o-mini",
+      displayName: "GPT-4o Mini",
+      isDefault: defaultModel === "gpt-4o-mini",
+      capabilities: {
+        streaming: true,
+        vision: true,
+        functionCalling: true,
+      },
+      contextWindow: 128000,
+    },
+    {
+      id: "o1",
+      displayName: "o1",
+      isDefault: defaultModel === "o1",
+      capabilities: {
+        streaming: true,
+        reasoning: true,
+      },
+      contextWindow: 200000,
+    },
+    {
+      id: "o1-mini",
+      displayName: "o1 Mini",
+      isDefault: defaultModel === "o1-mini",
+      capabilities: {
+        streaming: true,
+        reasoning: true,
+      },
+      contextWindow: 128000,
+    },
+    {
+      id: "claude-3.5-sonnet",
+      displayName: "Claude 3.5 Sonnet",
+      isDefault: defaultModel === "claude-3.5-sonnet",
+      capabilities: {
+        streaming: true,
+        vision: true,
+        functionCalling: true,
+      },
+      contextWindow: 200000,
+    },
+  ];
+
+  return models;
 }

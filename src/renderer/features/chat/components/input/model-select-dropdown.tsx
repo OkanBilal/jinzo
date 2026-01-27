@@ -1,7 +1,7 @@
 import DropdownWrapper from "../../../../components/ui/dropdown-wrapper";
 
 import { ModelSelectDropdownProps } from "./types";
-import { DeepSeek, Gpt, Meta } from "../../../../components/ui/icons";
+import { DeepSeek, Gemini, Gpt, Meta } from "../../../../components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Claude } from "@/components/ui/icons/mood";
 
@@ -9,7 +9,7 @@ function getModelIcon(modelName: string) {
   if (modelName.includes("deepseek")) {
     return <DeepSeek className="w-4 h-4 " />;
   }
-  if (modelName.includes("gpt")) {
+  if (modelName.includes("gpt") || modelName.includes("GPT")) {
     return <Gpt className="w-4 h-4 " />;
   }
   if (modelName.includes("llama")) {
@@ -24,11 +24,14 @@ function getModelIcon(modelName: string) {
   if (modelName.includes("qwen")) {
     return <span className="text-base">🌐</span>;
   }
-    if (modelName.includes("claude" )) {
+    if (modelName.includes("Claude") || modelName.includes("claude")) {
     return <Claude className="w-4 h-4 " />;
   }
   if (modelName.includes("Opus")) {
     return <Claude className="w-4 h-4 " />;
+  }
+  if (modelName.includes("Gemini")) {
+    return <Gemini className="w-4 h-4 " />;
   }
   // Default icon
   return <span className="text-base">⚡</span>;
@@ -65,7 +68,7 @@ export default function ModelSelectDropdown({
       <DropdownWrapper
         isOpen={isOpen}
         openUpward={openUpward}
-        minWidth="min-w-48"
+        minWidth="min-w-52"
         useFixedBackground={true}
       >
         <div className="max-h-80 overflow-auto">

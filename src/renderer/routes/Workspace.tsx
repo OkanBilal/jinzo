@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import {
   WorkspaceEmptyState,
   WorkspaceEvents,
@@ -6,10 +7,18 @@ import {
   WorkspaceQuickActions,
 } from "@/features/workspace/components";
 import { useWorkspaceData, useWorkspaceRuns } from "@/features/workspace/hooks";
+import { setWorkspaceModel } from "@/lib/redux/slices/workspaceSlice";
+import type { RootState } from "@/lib/redux";
 
 export default function WorkspacePage() {
+  const dispatch = useDispatch();
+  const selectedModel = useSelector((state: RootState) => state.workspace.selectedModel);
   const [goal, setGoal] = useState("");
   const [canResume, setCanResume] = useState(false);
+
+  const handleModelChange = useCallback((model: string) => {
+    dispatch(setWorkspaceModel(model));
+  }, [dispatch]);
 
   const {
     workspaceId,
@@ -55,13 +64,13 @@ export default function WorkspacePage() {
       success = (await continueRun(activeRunId, goal)) ?? false;
     } else {
       // Otherwise start a new run
-      success = (await executeRun(goal, selectedWorkspace, selectedProvider)) ?? false;
+      success = (await executeRun(goal, selectedWorkspace, selectedProvider, selectedModel)) ?? false;
     }
 
     if (success) {
       setGoal("");
     }
-  }, [goal, selectedWorkspace, selectedProvider, executeRun, continueRun, activeRunId, activeRun, canResume]);
+  }, [goal, selectedWorkspace, selectedProvider, selectedModel, executeRun, continueRun, activeRunId, activeRun, canResume]);
 
   const handleCloseTab = useCallback(
     (runId: string, e: React.MouseEvent) => {
@@ -103,7 +112,7 @@ export default function WorkspacePage() {
       )}
 
       {/* Quick Actions */}
-      {/* <WorkspaceQuickActions onSetGoal={setGoal} /> */}
+      <WorkspaceQuickActions onSetGoal={setGoal} />
 
       {/* Input Form */}
       <WorkspaceInput
@@ -113,6 +122,9 @@ export default function WorkspacePage() {
         isLoading={isLoading}
         activeRun={activeRun}
         canResume={canResume ?? false}
+        providerId={selectedProvider}
+        selectedModel={selectedModel}
+        onModelChange={handleModelChange}
       />
     </div>
   );

@@ -7,7 +7,7 @@ import type { Mood } from "@/lib/redux/api";
 import { toast } from "@/components/toast";
 import { EmojiPicker } from "frimousse";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { useDarkMode } from "@/hooks/useDarkMode";
+import { useDarkMode } from "@/hooks/use-dark-mode";
 import {
   solidColors,
   gradientColors,
@@ -64,7 +64,7 @@ export default function EditMoodModal({
   mood,
   onClose,
   onSuccess,
-  sidebarWidth = "20rem",
+  sidebarWidth = "18rem",
 }: EditMoodModalProps) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("");

@@ -90,7 +90,9 @@ const words = [
 
 export function useClaudeAnimation(enabled: boolean) {
   const [symbol, setSymbol] = useState(symbols[0]);
-  const [word, setWord] = useState(() => words[Math.floor(Math.random() * words.length)]);
+  const [word, setWord] = useState(
+    () => words[Math.floor(Math.random() * words.length)],
+  );
 
   useEffect(() => {
     if (!enabled) return;

@@ -32,7 +32,7 @@ function MoodSelector({
         title="No mood"
         aria-label="No mood"
       >
-        <Chat className="size-4.5 stroke-primary-950 dark:stroke-primary" />
+        <Chat className="size-4 stroke-primary-950 dark:stroke-primary" />
       </Button>
 
       {moods.map((mood) => {
@@ -67,7 +67,7 @@ function MoodSelector({
             ) : icon.type === "claude-animate" ? (
               <Claude animate={isHovered} />
             ) : (
-              <icon.value className="size-4.5" />
+              <icon.value className="size-4" />
             )}
           </Button>
         );

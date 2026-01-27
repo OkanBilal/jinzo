@@ -14,9 +14,9 @@ import {
   type Mood,
 } from "@/lib/redux/api";
 import { toast } from "@/components/toast";
-import { useActiveMood } from "@/hooks/useActiveMood";
-import { useSidebarConfig } from "@/hooks/useSidebarConfig";
-import { useDeleteChatSession } from "@/hooks/useDeleteChatSession";
+import { useActiveMood } from "@/hooks/use-active-mood";
+import { useSidebarConfig } from "@/hooks/use-sidebar-config";
+import { useDeleteChatSession } from "@/hooks/use-delete-chat-session";
 
 function filterItems<T extends { title?: string | null; initialQuery?: string | null; description?: string | null }>(
   items: T[] | undefined,
@@ -114,7 +114,7 @@ export function useSidebar() {
       accountId: entry.accountId,
       kind: "journal_entry",
       title: entry.title || "Untitled",
-      url: `/doc/${entry.id}`,
+      url: `/journal/${entry.id}`,
       body: entry.body,
       summary: entry.summary,
       occurredAt: entry.occurredAt || entry.createdAt,
@@ -208,7 +208,7 @@ export function useSidebar() {
           accountId: account?.id || "default",
         }).unwrap();
         if (result?.id) {
-          navigate(`/doc/${result.id}`);
+          navigate(`/journal/${result.id}`);
         }
       } catch (error) {
         console.error("Failed to create journal draft:", error);
@@ -355,8 +355,8 @@ export function useSidebar() {
       toast.success("Post deleted");
 
       // Navigate away if we were viewing the deleted post
-      if (location.pathname === `/doc/${journalId}`) {
-        navigate("/doc");
+      if (location.pathname === `/journal/${journalId}`) {
+        navigate("/journal");
       }
     } catch (error) {
       console.error("Error deleting journal:", error);

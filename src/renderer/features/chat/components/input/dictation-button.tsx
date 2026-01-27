@@ -10,7 +10,7 @@ export default function DictationButton({
   const buttonClass = `p-1.5 mr-2 rounded-full transition-all duration-200 ${
     isRecording
       ? "bg-primary-300 dark:bg-primary-700/50 animate-pulse"
-      : "hover:bg-primary-200/30 dark:hover:bg-primary-800"
+      : "hover:bg-primary-200/30 dark:hover:bg-primary/20"
   }`;
 
   return (

@@ -1,10 +1,10 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import Home from "@/routes/Home";
 import Chat from "@/routes/Chat";
-import Doc from "@/routes/Doc";
+import Journal from "@/routes/Journal";
 import Settings from "@/routes/Settings";
 import Workspace from "@/routes/Workspace";
-import { useSidebarConfig } from "@/hooks/useSidebarConfig";
+import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import ClaudePage from "@/routes/Claude";
 
 function DefaultRoute() {
@@ -23,8 +23,8 @@ export function MainRoutes() {
     <Routes>
       <Route path="/" element={<DefaultRoute />} />
       <Route path="/chat/:id" element={<Chat />} />
-      <Route path="/doc" element={<Doc />} />
-      <Route path="/doc/:id" element={<Doc />} />
+      <Route path="/journal" element={<Journal />} />
+      <Route path="/journal/:id" element={<Journal />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/workspace" element={<Workspace />} />
       <Route path="/workspace/:workspaceId" element={<Workspace />} />

@@ -2,6 +2,12 @@ import { ReactNode } from "react";
 
 export type ToastType = "default" | "success" | "error" | "loading";
 
+export interface ToastItemProps {
+  toast: Toast;
+  index: number;
+  onDismiss: (id: string) => void;
+}
+
 export interface ToastOptions {
   id?: string;
   duration?: number;

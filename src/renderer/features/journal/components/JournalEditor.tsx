@@ -1,8 +1,6 @@
 import { useEffect, useCallback, useState } from "react";
-import { useParams } from "react-router-dom";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
-import type { Block } from "@blocknote/core";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 
@@ -16,122 +14,15 @@ import {
   clearEditingJournal,
 } from "@/lib/redux/api";
 import { useAppDispatch } from "@/lib/redux/hooks";
-import { useJournalAutosave } from "@/hooks/useJournalAutosave";
+import { useJournalAutosave } from "@/hooks/use-journal-auto-save";
 import { Button } from "@/components/ui/button";
-import { Textitalic } from "@/components/ui/icons/mood";
-
-// Utility to convert BlockNote content to markdown-ish text
-function blocksToMarkdown(blocks: Block[]): string {
-  const lines: string[] = [];
-
-  for (const block of blocks) {
-    let line = "";
-    const content = block.content;
-
-    // Handle different block types
-    if (block.type === "heading") {
-      const level = (block.props as any)?.level || 1;
-      line = "#".repeat(level) + " ";
-    }
-
-    // Extract text from content array
-    if (Array.isArray(content)) {
-      for (const item of content) {
-        if (typeof item === "string") {
-          line += item;
-        } else if (item && typeof item === "object" && "text" in item) {
-          line += (item as any).text || "";
-        }
-      }
-    } else if (typeof content === "string") {
-      line += content;
-    }
-
-    if (line.trim() || block.type === "paragraph") {
-      lines.push(line);
-    }
-
-    // Recursively handle children
-    if (block.children && block.children.length > 0) {
-      lines.push(blocksToMarkdown(block.children));
-    }
-  }
-
-  return lines.join("\n");
-}
-
-// Default props for block types
-const defaultParagraphProps = {
-  backgroundColor: "default" as const,
-  textColor: "default" as const,
-  textAlignment: "left" as const,
-};
-
-const defaultHeadingProps = {
-  backgroundColor: "default" as const,
-  textColor: "default" as const,
-  textAlignment: "left" as const,
-  level: 1 as 1 | 2 | 3,
-};
-
-// Parse markdown back to BlockNote blocks (simple version)
-function markdownToBlocks(markdown: string): Block[] {
-  if (!markdown) {
-    return [
-      {
-        id: crypto.randomUUID(),
-        type: "paragraph",
-        props: { ...defaultParagraphProps },
-        content: [],
-        children: [],
-      } as Block,
-    ];
-  }
-
-  const lines = markdown.split("\n");
-  const blocks: Block[] = [];
-
-  for (const line of lines) {
-    const headingMatch = line.match(/^(#{1,3})\s+(.*)$/);
-    if (headingMatch) {
-      const level = headingMatch[1].length as 1 | 2 | 3;
-      const text = headingMatch[2];
-      blocks.push({
-        id: crypto.randomUUID(),
-        type: "heading",
-        props: { ...defaultHeadingProps, level },
-        content: [{ type: "text", text, styles: {} }],
-        children: [],
-      } as Block);
-    } else {
-      blocks.push({
-        id: crypto.randomUUID(),
-        type: "paragraph",
-        props: { ...defaultParagraphProps },
-        content: line ? [{ type: "text", text: line, styles: {} }] : [],
-        children: [],
-      } as Block);
-    }
-  }
-
-  return blocks.length > 0
-    ? blocks
-    : [
-        {
-          id: crypto.randomUUID(),
-          type: "paragraph",
-          props: { ...defaultParagraphProps },
-          content: [],
-          children: [],
-        } as Block,
-      ];
-}
+import { blocksToMarkdown, markdownToBlocks } from "../utils";
 
 interface JournalEditorProps {
   entityId: string;
 }
 
-function JournalEditor({ entityId }: JournalEditorProps) {
+export function JournalEditor({ entityId }: JournalEditorProps) {
   const dispatch = useAppDispatch();
   const { data: journal, isLoading } = useGetJournalByIdQuery(entityId);
   console.log("Loaded journal:", journal);
@@ -346,31 +237,4 @@ function JournalEditor({ entityId }: JournalEditorProps) {
       </div>
     </div>
   );
-}
-
-// Empty state when no journal is selected
-function EmptyJournalState() {
-  return (
-    <div className="w-full h-full flex flex-col items-center justify-center text-center px-6">
-      <Textitalic className="w-12 h-12 text-primary-700 dark:text-primary-300 mb-4" />
-      <h2 className="text-xl font-semibold text-primary-800 dark:text-primary-200 mb-2">
-        Welcome to Journal
-      </h2>
-      <p className="text-primary-500 dark:text-primary-400 max-w-md">
-        Select an existing post from the sidebar or <br /> create a new one{" "}
-        <span className="font-sans">(⌘ N)</span> to start writing.
-      </p>
-    </div>
-  );
-}
-
-export default function DocPage() {
-  const { id } = useParams<{ id?: string }>();
-
-  if (!id) {
-    return <EmptyJournalState />;
-  }
-
-  // Use key to force remount when switching journals, ensuring fresh editor state
-  return <JournalEditor key={id} entityId={id} />;
 }

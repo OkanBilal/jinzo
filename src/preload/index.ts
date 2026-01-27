@@ -297,6 +297,7 @@ const api = {
     delete: (id: string) => ipcRenderer.invoke("providers:delete", id),
     enable: (id: string) => ipcRenderer.invoke("providers:enable", id),
     disable: (id: string) => ipcRenderer.invoke("providers:disable", id),
+    getModels: (id: string) => ipcRenderer.invoke("providers:getModels", id),
   },
   // Tools operations
   tools: {
@@ -435,6 +436,42 @@ const api = {
     complete: (id: number, exitCode: number, stdout?: string, stderr?: string) =>
       ipcRenderer.invoke("runCommands:complete", id, exitCode, stdout, stderr),
     remove: (id: number) => ipcRenderer.invoke("runCommands:remove", id),
+  },
+  // File explorer operations
+  fileExplorer: {
+    readDirectory: (options: {
+      rootPath: string;
+      depth?: number;
+      includeHidden?: boolean;
+      excludePatterns?: string[];
+    }) => ipcRenderer.invoke("fileExplorer:readDirectory", options),
+    readDirectoryShallow: (
+      dirPath: string,
+      options?: { includeHidden?: boolean; excludePatterns?: string[] }
+    ) => ipcRenderer.invoke("fileExplorer:readDirectoryShallow", dirPath, options),
+    getPathInfo: (targetPath: string) =>
+      ipcRenderer.invoke("fileExplorer:getPathInfo", targetPath),
+    readFile: (filePath: string) =>
+      ipcRenderer.invoke("fileExplorer:readFile", filePath),
+    /**
+     * Securely read file text within a workspace boundary.
+     * Enforces path traversal protection, symlink escape prevention,
+     * file size limits (2MB), and binary file detection.
+     */
+    readFileText: (options: {
+      filePath: string;
+      workspaceRoot: string;
+      maxSizeBytes?: number;
+    }) => ipcRenderer.invoke("fileExplorer:readFileText", options),
+    /**
+     * List directory contents for lazy loading.
+     * Returns immediate children with hasChildren flag for directories.
+     */
+    listDir: (options: {
+      dirPath: string;
+      includeHidden?: boolean;
+      excludePatterns?: string[];
+    }) => ipcRenderer.invoke("fileExplorer:listDir", options),
   },
 };
 

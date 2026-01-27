@@ -51,6 +51,21 @@ export interface UpdateProviderPayload {
   defaultModel?: string;
 }
 
+export interface ModelInfo {
+  id: string;
+  displayName: string;
+  version?: string;
+  isDefault?: boolean;
+  capabilities?: {
+    streaming?: boolean;
+    vision?: boolean;
+    functionCalling?: boolean;
+    reasoning?: boolean;
+  };
+  contextWindow?: number;
+  metadata?: Record<string, unknown>;
+}
+
 // ─────────────────────────────────────────────────────────────
 // API
 // ─────────────────────────────────────────────────────────────
@@ -149,6 +164,20 @@ export const providersApi = baseApi.injectEndpoints({
         { type: "Providers", id },
       ],
     }),
+
+    getProviderModels: builder.query<ModelInfo[], string>({
+      query: (id) => ({
+        handler: "providers:getModels",
+        args: [id],
+      }),
+      transformResponse: (response: { success: boolean; data: ModelInfo[]; error?: string }) => {
+        if (!response.success) {
+          throw new Error(response.error || "Failed to get models");
+        }
+        return response.data;
+      },
+      providesTags: (_result, _error, id) => [{ type: "ProviderModels", id }],
+    }),
   }),
 });
 
@@ -166,4 +195,6 @@ export const {
   useDeleteProviderMutation,
   useEnableProviderMutation,
   useDisableProviderMutation,
+  useGetProviderModelsQuery,
+  useLazyGetProviderModelsQuery,
 } = providersApi;

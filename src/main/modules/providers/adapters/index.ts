@@ -19,6 +19,7 @@ export type {
   WorkRunAdapter,
   CopilotAdapterConfig,
   ClaudeCodeAdapterConfig,
+  ModelInfo,
 } from "./adapter.types";
 
 // Factory
@@ -29,6 +30,7 @@ export {
   shutdownAllWorkAdapters,
   clearAdapterCache,
   isSupportedWorkProvider,
+  listModelsForProvider,
   SUPPORTED_WORK_PROVIDERS,
   type SupportedWorkProvider,
 } from "./adapter.factory";

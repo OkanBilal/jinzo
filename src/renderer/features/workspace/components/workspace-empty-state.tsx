@@ -4,7 +4,7 @@ import {
   Claude as ClaudeIcon,
 } from "@/components/ui/icons/mood";
 import type { Workspace } from "../types";
-import { useClaudeAnimation } from "../hooks/useClaudeAnimation";
+import { useClaudeAnimation } from "../hooks/use-claude-animation";
 
 interface WorkspaceEmptyStateProps {
   workspace: Workspace | null;
@@ -28,10 +28,16 @@ export function WorkspaceEmptyState({ workspace }: WorkspaceEmptyStateProps) {
             Hi! How can I help you today?
           </p> */}
           <div className="flex items-center gap-2 font-medium font-mono tracking-tight">
-            <span id="symbol">{symbol}</span>
-            <span id="word">{word}…</span>
+            <span
+              id="symbol"
+              className="text-[#da9779] text-2xl leading-6 h-6 text-center"
+            >
+              {symbol}
+            </span>
+            <span id="word" className="text-[#da9779] text-2xl leading-6 h-6 ">
+              {word}…
+            </span>
           </div>
-
         </>
       ) : (
         <>

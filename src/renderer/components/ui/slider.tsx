@@ -50,12 +50,12 @@ export function Slider({
       {(label || showValue) && (
         <div className="flex items-center justify-between">
           {label && (
-            <Caption className="text-primary-600 dark:text-primary-300">
+            <Caption className="text-primary-900 dark:text-primary">
               {label}
             </Caption>
           )}
           {showValue && (
-            <Caption className="text-primary-700 dark:text-primary-200 font-mono">
+            <Caption className="text-primary-900! dark:text-primary! font-mono">
               {typeof displayValue === "number" ? (
                 <NumberFlow
                   value={displayValue}
@@ -88,12 +88,12 @@ export function Slider({
       {(minLabel || maxLabel) && (
         <div className="flex justify-between">
           {minLabel && (
-            <Caption className="text-primary-500 dark:text-primary-400 text-xs">
+            <Caption className="text-primary-900 dark:text-primary text-xs">
               {minLabel}
             </Caption>
           )}
           {maxLabel && (
-            <Caption className="text-primary-500 dark:text-primary-400 text-xs">
+            <Caption className="text-primary-900 dark:text-primary text-xs">
               {maxLabel}
             </Caption>
           )}

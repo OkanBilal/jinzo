@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { useSidebarConfig } from "@/hooks/useSidebarConfig";
+import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { baseApi } from "@/lib/redux/api/baseApi";
 
 export function MoodChangeHandler() {

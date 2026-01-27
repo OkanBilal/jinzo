@@ -7,7 +7,7 @@ interface WorkspaceHeaderProps {
 
 export function WorkspaceHeader({ workspace }: WorkspaceHeaderProps) {
   return (
-    <div className="bg-[rgb(20,23,26)] border-b border-[#21262d] px-4 py-3 flex items-center gap-2">
+    <div className="bg-[#0C0F11] border rounded-t-2xl border-[#21262d] px-4 py-3 flex items-center gap-2">
       <span className="text-primary-500 text-xs ml-2">
         <Layers className="inline w-3.5 h-3.5 mr-2 text-primary-500 dark:text-primary-400" />
         {workspace ? `OkanBilal/${workspace.name}` : "Workspace"}

@@ -15,7 +15,7 @@ export function StructuredOutputToggle({
   return (
     <div className="flex items-center justify-between p-1 mt-2">
       <div className="flex flex-col">
-        <Body className="text-sm text-primary-800 dark:text-primary-200">
+        <Body className="text-sm text-primary-900 dark:text-primary">
           Structured Outputs
         </Body>
       </div>
@@ -23,7 +23,7 @@ export function StructuredOutputToggle({
         {enabled && (
           <Button
             onClick={onEditClick}
-            className="px-2.5 py-1 text-xs font-medium text-primary-700 dark:text-primary-300 bg-black/4 dark:bg-white/6 rounded-lg hover:bg-black/6 dark:hover:bg-white/8 transition-colors"
+            className="px-2.5 py-1 text-xs font-medium text-primary-900 dark:text-primary bg-primary-950/4 dark:bg-primary/6 rounded-lg hover:bg-primary-950/6 dark:hover:bg-primary/8 transition-colors"
           >
             Edit
           </Button>
@@ -37,7 +37,7 @@ export function StructuredOutputToggle({
           }`}
         >
           <span
-            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${
+            className={`inline-block h-5 w-5 transform rounded-full bg-primary shadow-sm transition-transform ${
               enabled ? "translate-x-5.5" : "translate-x-0.5"
             }`}
           />

@@ -94,9 +94,8 @@ export default function PostsList({
             return (
               <div
                 key={post.id}
-                style={{
-                  animation: `slideIn 0.15s ease-out ${index * 0.05}s both`,
-                }}
+                className="animate-slide-in"
+                style={{ animationDelay: `${index * 0.05}s` }}
               >
                 <PostItem
                   title={post.title}
@@ -112,18 +111,6 @@ export default function PostsList({
           })}
         </div>
       )}
-      <style>{`
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }

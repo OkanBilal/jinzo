@@ -7,6 +7,7 @@ import chatReducer from './slices/chatSlice';
 import moodReducer from './slices/moodSlice';
 import appSettingsReducer from './slices/appSettingsSlice';
 import journalEditingReducer from './slices/journalEditingSlice';
+import workspaceReducer from './slices/workspaceSlice';
 
 const chatPersistConfig = {
   key: 'chat',
@@ -26,9 +27,16 @@ const appSettingsPersistConfig = {
   whitelist: ['isDarkMode', 'sidebarCollapsed', 'fontSize'],
 };
 
+const workspacePersistConfig = {
+  key: 'workspace',
+  storage,
+  whitelist: ['selectedModel', 'selectedProviderId', 'thinkingEnabled'],
+};
+
 const persistedChatReducer = persistReducer(chatPersistConfig, chatReducer);
 const persistedMoodReducer = persistReducer(moodPersistConfig, moodReducer);
 const persistedAppSettingsReducer = persistReducer(appSettingsPersistConfig, appSettingsReducer);
+const persistedWorkspaceReducer = persistReducer(workspacePersistConfig, workspaceReducer);
 
 export const store = configureStore({
   reducer: {
@@ -37,6 +45,7 @@ export const store = configureStore({
     mood: persistedMoodReducer,
     appSettings: persistedAppSettingsReducer,
     journalEditing: journalEditingReducer,
+    workspace: persistedWorkspaceReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -1,12 +1,15 @@
-import { useState, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Brain } from "@/components/ui/icons";
-import InputForm from "@/features/chat/components/input/input-form";
-import ModelSelectDropdown from "@/features/chat/components/input/model-select-dropdown";
-import DictationButton from "@/features/chat/components/input/dictation-button";
-import SendButton from "@/features/chat/components/input/send-button";
-import { useSpeechRecognition } from "@/features/chat/hooks";
+import ModelSelectDropdown from "@/features/workspace/components/input/model-select-dropdown";
+import { useGetProviderModelsQuery } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
+import InputForm from "./input/input-form";
+import DictationButton from "./input/dictation-button";
+import SendButton from "./input/send-button";
+import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import FileUploadDropdown, { FILE_TYPES } from "./input/file-upload-dropdown";
+import { UploadedFile } from "@/features/chat/components/input/types";
+import { useClickOutside } from "@/hooks/use-click-outside";
 
 interface WorkspaceInputProps {
   goal: string;
@@ -15,9 +18,19 @@ interface WorkspaceInputProps {
   isLoading: boolean;
   activeRun: Run | undefined;
   canResume?: boolean;
+  providerId?: string;
+  selectedModel?: string;
+  onModelChange?: (model: string) => void;
 }
 
-const MODELS = ["Sonnet 4.5", "Opus 4.5"];
+// Fallback models when API is unavailable
+const DEFAULT_MODELS = [
+  "gpt-4o",
+  "gpt-4o-mini",
+  "o1",
+  "o1-mini",
+  "claude-3.5-sonnet",
+];
 
 export function WorkspaceInput({
   goal,
@@ -26,21 +39,123 @@ export function WorkspaceInput({
   isLoading,
   activeRun,
   canResume = false,
+  providerId = "copilot_cli",
+  selectedModel: externalSelectedModel,
+  onModelChange: externalOnModelChange,
 }: WorkspaceInputProps) {
-  const location = useLocation();
-  const isClaudeRoute = location.pathname.includes("claude");
   const modelDropdownRef = useRef<HTMLDivElement>(null);
-  const [selectedModel, setSelectedModel] = useState("Claude Opus 4.5");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [internalSelectedModel, setInternalSelectedModel] = useState("");
   const [thinkingEnabled, setThinkingEnabled] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+
+  useClickOutside(dropdownRef, () => setIsDropdownOpen(false));
+
+  // Fetch models from provider
+  const { data: providerModels, isLoading: isLoadingModels } =
+    useGetProviderModelsQuery(providerId, { skip: !providerId });
+
+  // Compute model list and display names
+  const { modelDisplayNames, modelIds } = useMemo(() => {
+    if (providerModels && providerModels.length > 0) {
+      return {
+        modelDisplayNames: providerModels.map((m) => m.displayName),
+        modelIds: providerModels.map((m) => m.id),
+      };
+    }
+    return {
+      modelDisplayNames: DEFAULT_MODELS,
+      modelIds: DEFAULT_MODELS,
+    };
+  }, [providerModels]);
+
+  // Use external or internal selected model
+  const selectedModel = externalSelectedModel ?? internalSelectedModel;
+  const setSelectedModel = externalOnModelChange ?? setInternalSelectedModel;
+
+  // Get display name for current model
+  const selectedModelDisplayName = useMemo(() => {
+    if (providerModels) {
+      const model = providerModels.find((m) => m.id === selectedModel);
+      return model?.displayName ?? selectedModel;
+    }
+    return selectedModel;
+  }, [providerModels, selectedModel]);
+
+  // Set default model when models are loaded
+  useEffect(() => {
+    if (providerModels && providerModels.length > 0 && !selectedModel) {
+      const defaultModel =
+        providerModels.find((m) => m.isDefault) ?? providerModels[0];
+      setSelectedModel(defaultModel.id);
+    }
+  }, [providerModels, selectedModel, setSelectedModel]);
+
+  // Handle model change from dropdown (which uses display names)
+  const handleModelChange = (displayName: string) => {
+    if (providerModels) {
+      const model = providerModels.find((m) => m.displayName === displayName);
+      if (model) {
+        setSelectedModel(model.id);
+        return;
+      }
+    }
+    // Fallback: use as-is if not found
+    setSelectedModel(displayName);
+  };
 
   const { isRecording, toggle: toggleDictation } = useSpeechRecognition(
     (value) => onGoalChange(value),
   );
 
+  const handleImageUpload = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = FILE_TYPES.IMAGE;
+      fileInputRef.current.click();
+    }
+    setIsDropdownOpen(false);
+  };
+
+  const handleDocumentUpload = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = FILE_TYPES.DOCUMENT;
+      fileInputRef.current.click();
+    }
+    setIsDropdownOpen(false);
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const isImage = file.type.startsWith("image/");
+      const uploadedFile: UploadedFile = {
+        file,
+        type: isImage ? "image" : "document",
+      };
+      if (isImage) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          uploadedFile.preview = reader.result as string;
+          setUploadedFiles((prev) => [...prev, uploadedFile]);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setUploadedFiles((prev) => [...prev, uploadedFile]);
+      }
+    }
+    event.target.value = "";
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   return (
     <div
-      className={`w-200 mb-8 mx-auto flex flex-col pb-2 rounded-3xl ${isClaudeRoute ? "glass-morphism-claude" : "glass-morphism-copilot"}
+      className={`w-200 mb-8 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism-copilot
         cursor-pointer transition-all`}
     >
       <div className="relative">
@@ -58,16 +173,33 @@ export function WorkspaceInput({
       <div className="flex items-start space-x-2 px-4">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center relative">
+            <FileUploadDropdown
+              isOpen={isDropdownOpen}
+              onToggle={() => setIsDropdownOpen(!isDropdownOpen)}
+              onImageUpload={handleImageUpload}
+              onDocumentUpload={handleDocumentUpload}
+              dropdownRef={dropdownRef}
+              openUpward={true}
+              uploadedFiles={uploadedFiles}
+              onRemoveFile={handleRemoveFile}
+            />
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+            />
             <ModelSelectDropdown
-              model={selectedModel}
-              models={MODELS}
-              onModelChange={setSelectedModel}
+              model={selectedModelDisplayName}
+              models={modelDisplayNames}
+              onModelChange={handleModelChange}
               isOpen={showModelDropdown}
               onToggle={() => setShowModelDropdown(!showModelDropdown)}
+              onClose={() => setShowModelDropdown(false)}
               dropdownRef={modelDropdownRef}
               openUpward={true}
             />
-            <button
+            {/* <button
               onClick={() => setThinkingEnabled(!thinkingEnabled)}
               className={`p-1.5 rounded-lg transition-colors ${
                 thinkingEnabled
@@ -82,11 +214,14 @@ export function WorkspaceInput({
               disabled={isLoading || activeRun?.status === "running"}
             >
               <Brain className="w-4 h-4" />
-            </button>
+            </button> */}
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <DictationButton isRecording={isRecording} onToggle={toggleDictation} />
+          <DictationButton
+            isRecording={isRecording}
+            onToggle={toggleDictation}
+          />
           <SendButton loading={isLoading} onSubmit={onSubmit} />
         </div>
       </div>

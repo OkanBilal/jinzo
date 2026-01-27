@@ -186,6 +186,13 @@ export interface WorkRunAdapter {
    * Gracefully shutdown the adapter, cleaning up resources.
    */
   shutdown?(): Promise<void>;
+
+  /**
+   * List available models with their metadata.
+   * @returns Promise resolving to array of ModelInfo
+   * @throws Error if not authenticated or client not connected
+   */
+  listModels?(): Promise<ModelInfo[]>;
 }
 
 /**
@@ -222,4 +229,29 @@ export interface ClaudeCodeAdapterConfig {
   defaultModel?: string;
   /** Timeout in milliseconds */
   timeout?: number;
+}
+
+/**
+ * Model information returned by adapters
+ */
+export interface ModelInfo {
+  /** Model identifier (e.g., "gpt-4o", "claude-3-5-sonnet") */
+  id: string;
+  /** Human-readable display name */
+  displayName: string;
+  /** Model version or variant */
+  version?: string;
+  /** Whether this is the default model for the provider */
+  isDefault?: boolean;
+  /** Model capabilities */
+  capabilities?: {
+    streaming?: boolean;
+    vision?: boolean;
+    functionCalling?: boolean;
+    reasoning?: boolean;
+  };
+  /** Context window size in tokens */
+  contextWindow?: number;
+  /** Additional metadata */
+  metadata?: Record<string, unknown>;
 }

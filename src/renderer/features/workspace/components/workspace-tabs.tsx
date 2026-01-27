@@ -20,9 +20,9 @@ export function WorkspaceTabs({
   if (runs.length === 0) return null;
 
   return (
-    <div className="flex items-center border-b border-[#21262d] bg-[rgb(12,15,18)]">
+    <div className="flex items-center border-b border-r border-[#21262d] bg-[#0C0F11] h-10">
       <div className="flex-1 flex items-center overflow-x-auto noscrollbar">
-        {runs.slice(0, 10).map((run) => (
+        {runs.slice(0, 5).map((run) => (
           <RunTab
             key={run.id}
             run={run}

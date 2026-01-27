@@ -47,7 +47,7 @@ export const predefinedMoods: PredefinedMood[] = [
       sidebar: {
         title: "Post",
         itemType: "post",
-        defaultRoute: "/doc",
+        defaultRoute: "/journal",
       },
       rightPanel: {
         width: "30rem",
@@ -66,13 +66,13 @@ export const predefinedMoods: PredefinedMood[] = [
     systemPrompt: "",
     uiConfig: {
       sidebar: {
-        width: "20rem",
+        width: "18rem",
         title: "Workspace",
         itemType: "claude",
         defaultRoute: "/claude",
       },
       main: {
-        margin: "20rem",
+        margin: "18rem",
       },
     },
   },
@@ -83,18 +83,22 @@ export const predefinedMoods: PredefinedMood[] = [
     icon: "icon:copilot",
     theme: {
       light: { value: "#FFFFFF99", preview: "#FFFFFF" },
-      dark: { value: "#090c10", preview: "#090c10" },
+      dark: { value: "#0C0F11", preview: "#0C0F11" },
     },
     systemPrompt: "",
     uiConfig: {
       sidebar: {
-        width: "20rem",
+        width: "18rem",
         title: "Workspace",
         itemType: "workspace",
         defaultRoute: "/workspace",
       },
       main: {
-        margin: "20rem",
+        margin: "18rem",
+      },
+      rightPanel: {
+        width: "24rem",
+        component: "workspace",
       },
     },
   },

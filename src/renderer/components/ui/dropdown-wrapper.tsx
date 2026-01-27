@@ -1,7 +1,8 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useActiveMood } from "@/hooks/useActiveMood";
-import { useDarkMode } from "@/hooks/useDarkMode";
+import { useLocation } from "react-router-dom";
+import { useActiveMood } from "@/hooks/use-active-mood";
+import { useDarkMode } from "@/hooks/use-dark-mode";
 import { getDefaultDropdownBackground } from "@/lib/theme";
 
 interface DropdownWrapperProps {
@@ -34,6 +35,10 @@ export default function DropdownWrapper({
   // Call hooks before any conditional returns
   const { activeMood } = useActiveMood();
   const { darkMode } = useDarkMode();
+  const location = useLocation();
+
+  const isWorkspaceRoute = location.pathname.startsWith("/workspace");
+  const glassMorphismClass = isWorkspaceRoute ? "glass-morphism-copilot" : "glass-morphism";
 
   useEffect(() => {
     if (isOpen && usePortal && triggerRef?.current) {
@@ -116,7 +121,7 @@ export default function DropdownWrapper({
   const dropdown = (
     <div
       ref={dropdownRef}
-      className={`${usePortal ? "fixed" : "absolute"} ${!usePortal ? positionClass : ""} ${!usePortal ? verticalClass : ""} ${minWidth} ${originClass} ${fixedBackgroundClass} z-100 glass-morphism rounded-xl transition-all`}
+      className={`${usePortal ? "fixed" : "absolute"} ${!usePortal ? positionClass : ""} ${!usePortal ? verticalClass : ""} ${minWidth} ${originClass} ${fixedBackgroundClass} z-100 ${glassMorphismClass} rounded-xl transition-all`}
       style={{
         background: getDropdownBackground(),
         ...(usePortal && coords ? {

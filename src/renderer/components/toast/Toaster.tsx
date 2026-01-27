@@ -1,92 +1,21 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { toastStore, toast as toastApi } from "./toast";
-import type { Toast, ToastType } from "./types";
+import type { ToastItemProps, ToastType } from "./types";
 import { Button } from "../ui/button";
-
-interface ToastItemProps {
-  toast: Toast;
-  index: number;
-  onDismiss: (id: string) => void;
-}
-
-function SuccessIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="shrink-0"
-    >
-      <path
-        d="M13.5 4.5L6.5 11.5L3 8"
-        stroke="#22c55e"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function ErrorIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="shrink-0"
-    >
-      <path
-        d="M12 4L4 12M4 4L12 12"
-        stroke="#ef4444"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function LoadingIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="shrink-0 animate-spin"
-    >
-      <circle
-        cx="8"
-        cy="8"
-        r="6"
-        stroke="currentColor"
-        strokeOpacity="0.25"
-        strokeWidth="2"
-      />
-      <path
-        d="M14 8a6 6 0 00-6-6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
+import { Error, Success } from "../ui/icons";
 
 function getDefaultIcon(type: ToastType) {
   switch (type) {
     case "success":
-      return <SuccessIcon />;
+      return <Success />;
     case "error":
-      return <ErrorIcon />;
-    case "loading":
-      return <LoadingIcon />;
+      return <Error />;
     default:
       return null;
   }
@@ -163,7 +92,9 @@ function ToastItem({ toast, index, onDismiss }: ToastItemProps) {
       style={{ zIndex: 99999 - index }}
     >
       {icon && <span className="flex items-center">{icon}</span>}
-      <span className="text-sm font-medium whitespace-nowrap">{toast.message}</span>
+      <span className="text-sm font-medium whitespace-nowrap">
+        {toast.message}
+      </span>
       {toast.action && (
         <Button
           onClick={(e) => {
@@ -176,17 +107,6 @@ function ToastItem({ toast, index, onDismiss }: ToastItemProps) {
           {toast.action.label}
         </Button>
       )}
-      {toast.dismissible && toast.type !== "loading" && (
-        <Button
-          onClick={handleDismiss}
-          className="ml-1 -mr-1 p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-          aria-label="Dismiss toast"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M9 3L3 9M3 3L9 9" stroke="currentColor" strokeOpacity="0.5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </Button>
-      )}
     </div>
   );
 }
@@ -195,7 +115,7 @@ export function Toaster() {
   const toasts = useSyncExternalStore(
     toastStore.subscribe,
     toastStore.getSnapshot,
-    toastStore.getSnapshot
+    toastStore.getSnapshot,
   );
 
   // Keyboard dismiss (Escape dismisses top toast)

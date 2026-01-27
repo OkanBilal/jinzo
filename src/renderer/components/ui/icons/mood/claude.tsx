@@ -11,26 +11,14 @@ const SvgComponent = ({ size, animate = false, ...props }: ClaudeIconProps) => (
     xmlns="http://www.w3.org/2000/svg"
     width={size ?? "1em"}
     height={size ?? "1em"}
+    className={animate ? "animate-claude-pulse" : ""}
     style={{
       flex: "none",
       lineHeight: 1,
-      animation: animate ? "claudePulse 2s ease-in-out infinite" : "none",
     }}
     viewBox="0 0 24 24"
     {...props}
   >
-    <style>
-      {`
-        @keyframes claudePulse {
-          0%, 100% {
-            transform: scale(1.1);
-          }
-          50% {
-            transform: scale(0.8);
-          }
-        }
-      `}
-    </style>
     <title>{"Claude"}</title>
     <svg
       xmlns="http://www.w3.org/2000/svg"

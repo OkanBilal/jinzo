@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { ProviderResponse } from "../providers.dto";
-import type { WorkRunAdapter, CopilotAdapterConfig } from "./adapter.types";
+import type { WorkRunAdapter, CopilotAdapterConfig, ModelInfo } from "./adapter.types";
 import { createCopilotAdapter } from "./copilot.adapter";
 
 /**
@@ -133,4 +133,23 @@ export async function shutdownAllWorkAdapters(): Promise<void> {
  */
 export function clearAdapterCache(): void {
   adapterCache.clear();
+}
+
+/**
+ * List available models for a provider
+ *
+ * @param provider - The provider configuration from the database
+ * @returns Promise resolving to array of ModelInfo
+ * @throws Error if provider doesn't support model listing
+ */
+export async function listModelsForProvider(provider: ProviderResponse): Promise<ModelInfo[]> {
+  const adapter = createWorkAdapter(provider);
+
+  if (!adapter.listModels) {
+    throw new Error(
+      `Provider "${provider.displayName}" (${provider.id}) does not support listing models.`
+    );
+  }
+
+  return adapter.listModels();
 }

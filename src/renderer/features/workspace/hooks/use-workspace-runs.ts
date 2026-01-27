@@ -250,7 +250,7 @@ export function useWorkspaceRuns(workspaceId: string | undefined) {
 
   // Execute new run
   const executeRun = useCallback(
-    async (goal: string, selectedWorkspace: string, selectedProvider: string) => {
+    async (goal: string, selectedWorkspace: string, selectedProvider: string, model?: string) => {
       if (!goal.trim() || !selectedWorkspace || !selectedProvider) {
         setError("Please fill in all required fields");
         return;
@@ -270,6 +270,7 @@ export function useWorkspaceRuns(workspaceId: string | undefined) {
           workspaceId: selectedWorkspace, // TODO: handle workspace change
           providerId: selectedProvider,
           goal: goal.trim(),
+          model: model || undefined,
           initialContext: [
             {
               kind: "note", // TODO: define kinds properly

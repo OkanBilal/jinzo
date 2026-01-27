@@ -1,16 +1,16 @@
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef } from "react";
 
-import SettingsModal from "../../../../features/settings/components/settings-modal";
-import { useSpeechRecognition } from "../../../../features/chat/hooks/use-speech-recognition";
+import { useSpeechRecognition } from "../../../../hooks/use-speech-recognition";
 import { useClickOutside } from "../../../../hooks/use-click-outside";
 import { useEscapeKey } from "../../../../hooks/use-escape-key";
-import { useGetOllamaModelsQuery, useUpdateChatConfigMutation } from "../../../../lib/redux/api";
+import {
+  useGetOllamaModelsQuery,
+  useUpdateChatConfigMutation,
+} from "../../../../lib/redux/api";
 import { useAppDispatch, useAppSelector } from "../../../../lib/redux/hooks";
 import {
   setSelectedModel,
-  //setToolMode
 } from "../../../../lib/redux/slices/chatSlice";
-import AppMentionDropdown from "../../../../features/chat/components/input/app-mention-dropdown";
 import DictationButton from "../../../../features/chat/components/input/dictation-button";
 import FileUploadDropdown, {
   FILE_TYPES,
@@ -18,44 +18,28 @@ import FileUploadDropdown, {
 import InputForm from "../../../../features/chat/components/input/input-form";
 import ModelSelectDropdown from "../../../../features/chat/components/input/model-select-dropdown";
 import SendButton from "./send-button";
-import { ChatInputProps, AppState, UploadedFile } from "./types";
-// import { Apps } from "@/components/ui/icons";
-// import Text from "@/components/ui/text";
-// import { Button } from "@/components/ui/button";
+import { ChatInputProps, UploadedFile } from "./types";
 
 const DEFAULT_PLACEHOLDER = "Ask jinzo anything...";
 
 export default function ChatInput({
   query,
   onQueryChange,
-  apps,
   onSubmit,
   placeholder = DEFAULT_PLACEHOLDER,
   loading = false,
-  selectedApp,
-  onSelectedAppChange,
   className,
-  //onMcpModeChange,
 }: ChatInputProps) {
   const dispatch = useAppDispatch();
   const model = useAppSelector((state) => state.chat.selectedModel);
-  // const toolMode = useAppSelector((state) => state.chat.toolMode);
   const { data: modelsData } = useGetOllamaModelsQuery();
   const [updateConfig] = useUpdateChatConfigMutation();
   const models = modelsData?.models || [];
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
-  const [, setIsAppsDropdownOpen] = useState(false);
-  const [isAppsModalOpen, setIsAppsModalOpen] = useState(false);
-  const [isAppMentionOpen, setIsAppMentionOpen] = useState(false);
-  const [appSearchTerm, setAppSearchTerm] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
-  const connectedApps = useMemo(() => {
-    return apps.filter((app) => app.isConnected).map((app) => app.id);
-  }, [apps]);
 
-  const appsDropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
@@ -71,73 +55,17 @@ export default function ChatInput({
 
   useClickOutside(dropdownRef, () => setIsDropdownOpen(false));
   useClickOutside(modelDropdownRef, () => setIsModelDropdownOpen(false));
-  useClickOutside(appsDropdownRef, () => setIsAppsDropdownOpen(false));
-  useClickOutside(appMentionDropdownRef, () => setIsAppMentionOpen(false));
 
   useEscapeKey(() => {
     setIsDropdownOpen(false);
     setIsModelDropdownOpen(false);
-    setIsAppsDropdownOpen(false);
-    setIsAppsModalOpen(false);
-    setIsAppMentionOpen(false);
   });
 
-  useEffect(() => {
-    queueMicrotask(() => {
-      const lastChar = query.slice(-1);
-      const queryBeforeAt = query.slice(0, -1);
-
-      if (
-        lastChar === "@" &&
-        (queryBeforeAt === "" || queryBeforeAt.endsWith(" "))
-      ) {
-        setIsAppMentionOpen(true);
-        setAppSearchTerm("");
-        return;
-      }
-      if (!query.includes("@")) {
-        setIsAppMentionOpen(false);
-        setAppSearchTerm("");
-        return;
-      }
-      const lastAtIndex = query.lastIndexOf("@");
-      const afterAt = query.slice(lastAtIndex + 1);
-
-      if (afterAt.includes(" ")) {
-        setIsAppMentionOpen(false);
-        setAppSearchTerm("");
-      } else {
-        setAppSearchTerm(afterAt);
-      }
-    });
-  }, [query]);
-
-  const handleAppSelect = (app: AppState) => {
-    const lastAtIndex = query.lastIndexOf("@");
-    const queryBeforeAt = query.slice(0, lastAtIndex);
-    const newQuery = `${queryBeforeAt}@${app.displayName} `;
-    onQueryChange(newQuery);
-    setIsAppMentionOpen(false);
-
-    if (onSelectedAppChange) {
-      onSelectedAppChange(app);
-    }
-  };
 
   const handleQueryChange = (value: string) => {
     onQueryChange(value);
-    if (selectedApp && !value.includes(`@${selectedApp.displayName}`)) {
-      if (onSelectedAppChange) {
-        onSelectedAppChange(null);
-      }
-    }
   };
 
-  // const openAppsModal = () => {
-  //   setIsAppsDropdownOpen(false);
-  //   setIsAppsModalOpen(true);
-  // };
-  const closeAppsModal = () => setIsAppsModalOpen(false);
 
   const handleImageUpload = () => {
     if (fileInputRef.current) {
@@ -193,14 +121,6 @@ export default function ChatInput({
           onSubmit={onSubmit}
           placeholder={placeholder}
         />
-        <AppMentionDropdown
-          isOpen={isAppMentionOpen}
-          apps={apps}
-          onSelectApp={handleAppSelect}
-          dropdownRef={appMentionDropdownRef}
-          openUpward={true}
-          searchTerm={appSearchTerm}
-        />
       </div>
       <div className="flex items-start space-x-2 px-4">
         <div className="flex items-center justify-between w-full">
@@ -221,21 +141,6 @@ export default function ChatInput({
               onChange={handleFileChange}
               className="hidden"
             />
-            {/* <Button
-              type="button"
-              tooltip="Open apps"
-              onClick={openAppsModal}
-              className="flex cursor-pointer items-center hover:bg-primary-200/30 dark:hover:bg-primary-700/40 transition-colors rounded-2xl pl-2 pr-2 py-1.5"
-              aria-haspopup="true"
-            >
-              <Apps className="w-4.5 h-4.5 mr-1 text-primary-500 dark:text-primary-400" />
-              <Text
-                variant="body"
-                className="text-primary-700 dark:text-primary-400"
-              >
-                Apps
-              </Text>
-            </Button> */}
             <ModelSelectDropdown
               model={model}
               models={models}
@@ -255,13 +160,6 @@ export default function ChatInput({
           </div>
         </div>
       </div>
-      <SettingsModal
-        open={isAppsModalOpen}
-        apps={apps}
-        connectedApps={connectedApps}
-        onClose={closeAppsModal}
-        section="apps"
-      />
     </div>
   );
 }

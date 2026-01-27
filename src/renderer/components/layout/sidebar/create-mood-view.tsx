@@ -5,7 +5,7 @@ import { useCreateMoodMutation, useSetActiveMoodMutation } from "@/lib/redux/api
 import { toast } from "@/components/toast";
 import { EmojiPicker } from "frimousse";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { useDarkMode } from "@/hooks/useDarkMode";
+import { useDarkMode } from "@/hooks/use-dark-mode";
 import {
   solidColors,
   gradientColors,

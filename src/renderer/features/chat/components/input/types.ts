@@ -21,12 +21,6 @@ export interface AppState {
 
 export type ChatInputProps = InputFormProps & {
   loading?: boolean;
-  isChatPage?: boolean;
-  apps: AppState[];
-  selectedApp?: AppState | null;
-  onSelectedAppChange?: (app: AppState | null) => void;
-  mcpMode?: boolean;
-  onMcpModeChange?: (enabled: boolean) => void;
   className?: string;
 };
 

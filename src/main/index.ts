@@ -31,6 +31,7 @@ import { registerProvidersIpc, unregisterProvidersIpc, shutdownAllWorkAdapters }
 import { registerToolsIpc, unregisterToolsIpc } from "./modules/tools";
 import { registerWorkspacesIpc, unregisterWorkspacesIpc } from "./modules/workspaces";
 import { registerRunsIpc, unregisterRunsIpc } from "./modules/runs";
+import { registerFileExplorerIpc, unregisterFileExplorerIpc } from "./modules/fileExplorer";
 import { createMainWindow } from "./windows/mainWindow";
 
 /**
@@ -66,6 +67,7 @@ async function initializeApp() {
     registerToolsIpc();
     registerWorkspacesIpc();
     registerRunsIpc();
+    registerFileExplorerIpc();
 
     // Create main window
     createMainWindow();
@@ -106,6 +108,7 @@ async function cleanupApp() {
     unregisterToolsIpc();
     unregisterWorkspacesIpc();
     unregisterRunsIpc();
+    unregisterFileExplorerIpc();
 
     // Close database
     await closeDatabase();

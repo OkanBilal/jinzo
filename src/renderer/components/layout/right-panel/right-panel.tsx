@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { RightPanelClose, RightPanelOpen } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
-import { useLayoutConfig } from "@/hooks/useLayoutConfig";
+import { useLayoutConfig } from "@/hooks/use-layout-config";
 import { ConfigContent } from "./config-content";
 import { JournalContent } from "./journal-content";
+import { WorkspaceContent } from "./workspace-content";
 
 const FADE_IN_DELAY = 60;
 
@@ -92,6 +93,7 @@ interface PanelProps {
 const PANEL_COMPONENTS: Record<string, React.ComponentType> = {
   config: ConfigContent,
   journal: JournalContent,
+  workspace: WorkspaceContent,
 };
 
 function Panel({ isVisible, width, component }: PanelProps) {

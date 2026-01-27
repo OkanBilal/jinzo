@@ -1,11 +1,6 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
-import {
-  ChatHeader,
-  ChatMessages,
-  LoadingIndicator,
-} from "@/features/chat/components";
+import { ChatHeader, ChatMessages } from "@/features/chat/components";
 import ChatInput from "@/features/chat/components/input";
-import { AppState } from "@/features/chat/components/input/types";
 import {
   useChat,
   useChatConfig,
@@ -13,14 +8,14 @@ import {
   useInitialStream,
   useTitleGeneration,
 } from "@/features/chat/hooks";
-import { useGetAppsQuery } from "@/lib/redux/api";
+import ChatLoadingFallback from "@/features/chat/components/chat-fallback";
 
 function ChatContent() {
-  const [selectedApp, setSelectedApp] = useState<AppState | null>(null);
-  const [triggeredSessionId, setTriggeredSessionId] = useState<number | null>(null);
+  const [triggeredSessionId, setTriggeredSessionId] = useState<number | null>(
+    null,
+  );
 
   const { selectedModel, getRequestOptions } = useChatConfig();
-  const { data: apps = [] } = useGetAppsQuery();
 
   const {
     messages,
@@ -75,7 +70,7 @@ function ChatContent() {
         },
       });
     },
-    [sessionId, selectedModel, sendTextStreaming, getRequestOptions]
+    [sessionId, selectedModel, sendTextStreaming, getRequestOptions],
   );
 
   useInitialStream({
@@ -95,12 +90,18 @@ function ChatContent() {
   const handleSend = useCallback((): void => {
     if (!input.trim() || !sessionId) return;
 
-    // Use sendTextStreaming with the sessionId from URL to ensure messages are persisted
     sendTextStreaming(input, selectedModel, sessionId, {
       requestOptions: getRequestOptions(),
     });
     setInput("");
-  }, [input, sessionId, selectedModel, sendTextStreaming, getRequestOptions, setInput]);
+  }, [
+    input,
+    sessionId,
+    selectedModel,
+    sendTextStreaming,
+    getRequestOptions,
+    setInput,
+  ]);
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -116,26 +117,12 @@ function ChatContent() {
       </div>
       <div className="shrink-0 pb-8 max-w-200 mx-auto w-full">
         <ChatInput
-          apps={apps}
           query={input}
           onQueryChange={setInput}
           onSubmit={handleSend}
           loading={isLoading || isLoadingMessages}
           placeholder="Message"
-          isChatPage={true}
-          selectedApp={selectedApp}
-          onSelectedAppChange={setSelectedApp}
         />
-      </div>
-    </div>
-  );
-}
-
-function ChatLoadingFallback() {
-  return (
-    <div className="min-h-screen w-full px-4 flex items-center justify-center">
-      <div className="text-center">
-        <LoadingIndicator />
       </div>
     </div>
   );

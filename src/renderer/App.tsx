@@ -10,14 +10,15 @@ import {
   MainLayout,
   MainContent,
 } from "./components/layout/main";
-import { useLayoutConfig } from "./hooks/useLayoutConfig";
+import { useLayoutConfig } from "./hooks/use-layout-config";
+import { shouldHideRightPanel } from "./lib/layout";
 
 function AppContent() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const { mainMarginLeft, rightPanelWidth } = useLayoutConfig();
   const location = useLocation();
-  
-  const isSettingsPage = location.pathname === "/settings" || location.pathname.startsWith("/workspace") || location.pathname.startsWith("/claude"); // TODO refine this condition
+
+  const hideRightPanel = shouldHideRightPanel(location.pathname);
 
   return (
     <>
@@ -27,11 +28,13 @@ function AppContent() {
         <Sidebar />
         <MainContent
           marginLeft={mainMarginLeft}
-          marginRight={!isSettingsPage && isConfigOpen ? rightPanelWidth : "0.5rem"}
+          marginRight={
+            !hideRightPanel && isConfigOpen ? rightPanelWidth : "0.5rem"
+          }
         >
           <MainRoutes />
         </MainContent>
-        {!isSettingsPage && (
+        {!hideRightPanel && (
           <RightPanel
             isOpen={isConfigOpen}
             onToggle={setIsConfigOpen}

@@ -61,6 +61,7 @@ export const baseApi = createApi({
     'McpTools',
     'Journal',
     'Providers',
+    'ProviderModels',
     'Tools',
     'ToolCalls',
     'ToolPermissions',

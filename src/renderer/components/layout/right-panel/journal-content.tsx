@@ -136,7 +136,6 @@ The user's question/request about their writing:]
       </div>
       <div className="shrink-0 p-3 pb-6">
         <ChatInput
-          apps={apps}
           query={input}
           onQueryChange={setInput}
           onSubmit={handleSend}
@@ -144,9 +143,6 @@ The user's question/request about their writing:]
           placeholder={
             hasJournalContext ? "Ask about your writing..." : "Message"
           }
-          isChatPage={true}
-          selectedApp={selectedApp}
-          onSelectedAppChange={setSelectedApp}
         />
       </div>
     </div>

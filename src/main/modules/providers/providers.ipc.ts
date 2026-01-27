@@ -15,6 +15,7 @@ const CHANNELS = {
   DELETE: "providers:delete",
   ENABLE: "providers:enable",
   DISABLE: "providers:disable",
+  GET_MODELS: "providers:getModels",
 } as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -55,6 +56,10 @@ export function registerProvidersIpc(): void {
 
   ipcMain.handle(CHANNELS.DISABLE, async (_, id: string) => {
     return providersController.disable(id);
+  });
+
+  ipcMain.handle(CHANNELS.GET_MODELS, async (_, id: string) => {
+    return providersController.getModels(id);
   });
 }
 

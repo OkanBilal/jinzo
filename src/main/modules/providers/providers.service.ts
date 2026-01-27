@@ -5,6 +5,7 @@ import type {
   ProviderResponse,
   ServiceResponse,
 } from "./providers.dto";
+import { listModelsForProvider, type ModelInfo } from "./adapters";
 
 // ─────────────────────────────────────────────────────────────
 // Providers Service
@@ -109,6 +110,28 @@ export const providersService = {
     } catch (error) {
       console.error(`[ProvidersService] Failed to disable provider ${id}:`, error);
       return { success: false, error: "Failed to disable provider" };
+    }
+  },
+
+  async getModels(id: string): Promise<ServiceResponse<ModelInfo[]>> {
+    try {
+      const provider = await providersRepo.findById(id);
+      if (!provider) {
+        return { success: false, error: "Provider not found" };
+      }
+
+      if (!provider.isEnabled) {
+        return { success: false, error: "Provider is not enabled" };
+      }
+
+      const models = await listModelsForProvider(provider);
+      return { success: true, data: models };
+    } catch (error) {
+      console.error(`[ProvidersService] Failed to get models for provider ${id}:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get models"
+      };
     }
   },
 };

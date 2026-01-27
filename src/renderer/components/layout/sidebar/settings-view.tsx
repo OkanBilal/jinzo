@@ -50,7 +50,6 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
         <Body className="text-left text-base! text-primary-900 dark:text-primary font-medium ">
           Settings
         </Body>
-
       </div>
 
       <div className="flex-1 px-4 py-2 overflow-y-auto noscrollbar">
@@ -61,11 +60,9 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
             return (
               <Button
                 key={item.id}
-                style={{
-                  animation: `slideIn 0.15s ease-out ${index * 0.05}s both`,
-                }}
+                style={{ animationDelay: `${index * 0.05}s` }}
                 onClick={() => handleSectionClick(item.id)}
-                className={`w-full cursor-pointer text-left px-3 py-3 rounded-xl text-sm transition-all flex items-center gap-3
+                className={`w-full animate-slide-in cursor-pointer text-left px-3 py-3 rounded-xl text-sm transition-all flex items-center gap-3
                   ${
                     isActive
                       ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
@@ -74,9 +71,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                   hover:scale-[1.01] active:scale-[0.99]`}
               >
                 {IconComponent ? (
-                  <IconComponent
-                    className={`w-4.5 h-4.5 `}
-                  />
+                  <IconComponent className={`w-4.5 h-4.5 `} />
                 ) : (
                   <div className="w-4.5 h-4.5 rounded bg-primary-300 dark:bg-primary-700" />
                 )}
@@ -85,22 +80,10 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
             );
           })}
         </nav>
-        <style>{`
-                @keyframes slideIn {
-                    from {
-                        opacity: 0;
-                        transform: translateY(-10px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-            `}</style>
       </div>
 
       <div
-        className="px-3 pb-3 group"
+        className="px-3 pb-3 group animate-slide-up"
         style={{
           animation: `slideUp 0.2s ease-out 0.1s both`,
         }}
@@ -125,18 +108,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
           </Caption>
         </Button>
       </div>
-      <style>{`
-                @keyframes slideUp {
-                    from {
-                        opacity: 0;
-                        transform: translateY(10px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-            `}</style>
+
     </div>
   );
 }

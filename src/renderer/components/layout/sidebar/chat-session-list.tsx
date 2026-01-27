@@ -63,9 +63,8 @@ export default function ChatSessionList({
             return (
               <div
                 key={session.id}
-                style={{
-                  animation: `slideIn 0.15s ease-out ${index * 0.05}s both`,
-                }}
+                className="animate-slide-in"
+                style={{ animationDelay: `${index * 0.05}s` }}
               >
                 <ChatSessionItem
                   session={session}
@@ -77,18 +76,6 @@ export default function ChatSessionList({
           })}
         </div>
       )}
-      <style>{`
-                @keyframes slideIn {
-                    from {
-                        opacity: 0;
-                        transform: translateY(-10px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-            `}</style>
     </div>
   );
 }

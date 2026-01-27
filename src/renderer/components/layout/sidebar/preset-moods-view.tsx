@@ -5,7 +5,7 @@ import {
   useSetActiveMoodMutation,
 } from "@/lib/redux/api";
 import { toast } from "@/components/toast";
-import { useDarkMode } from "@/hooks/useDarkMode";
+import { useDarkMode } from "@/hooks/use-dark-mode";
 import { parseIcon } from "@/lib/icon-registry";
 import { predefinedMoods, type PredefinedMood } from "@/lib/predefined-moods";
 import { Button } from "@/components/ui/button";

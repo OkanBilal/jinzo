@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useActiveMood } from "./useActiveMood";
+import { useActiveMood } from "./use-active-mood";
 
 export type SidebarItemType = "chat" | "post" | "workspace"; 
 
@@ -20,7 +20,7 @@ export function useSidebarConfig(): SidebarConfig {
   const sidebarConfig = useMemo(() => {
     // Default config
     const defaultConfig: SidebarConfig = {
-      width: "20rem",
+      width: "18rem",
       title: "Chat",
       itemType: "chat",
       defaultRoute: "/",

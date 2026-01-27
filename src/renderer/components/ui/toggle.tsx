@@ -12,7 +12,7 @@ export function Toggle({ enabled, onChange, label, className = "" }: ToggleProps
         <div className={`flex items-center justify-between py-2 ${className}`}>
             {label && (
                 <div className="flex flex-col">
-                    <span className="text-sm text-primary-800 dark:text-primary-200">
+                    <span className="text-sm text-primary-900 dark:text-primary">
                         {label}
                     </span>
                 </div>
@@ -25,7 +25,7 @@ export function Toggle({ enabled, onChange, label, className = "" }: ToggleProps
                     }`}
             >
                 <span
-                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${enabled ? "translate-x-5.5" : "translate-x-0.5"
+                    className={`inline-block h-5 w-5 transform rounded-full bg-primary shadow-sm transition-transform ${enabled ? "translate-x-5.5" : "translate-x-0.5"
                         }`}
                 />
             </Button>

@@ -44,4 +44,8 @@ export const providersController = {
   async disable(id: string) {
     return providersService.disable(id);
   },
+
+  async getModels(id: string) {
+    return providersService.getModels(id);
+  },
 };

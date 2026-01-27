@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useActiveMood } from "./useActiveMood";
+import { useActiveMood } from "./use-active-mood";
 
 interface LayoutConfig {
   mainMarginLeft: string;
@@ -12,8 +12,8 @@ export function useLayoutConfig(): LayoutConfig {
 
   return useMemo(() => {
     const defaults: LayoutConfig = {
-      mainMarginLeft: "20rem",
-      rightPanelWidth: "20rem",
+      mainMarginLeft: "18rem",
+      rightPanelWidth: "18rem",
       rightPanelComponent: "config",
     };
 

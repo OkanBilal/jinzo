@@ -32,7 +32,7 @@ export function ConfigContent() {
   return (
     <div className="flex-1 overflow-auto noscrollbar p-3">
       <div className="flex items-center justify-between pt-6 pb-4 ">
-        <Body className="text-left text-base! text-primary-800 dark:text-primary font-medium ">
+        <Body className="text-left text-base! text-primary-900 dark:text-primary font-medium ">
           Configuration
         </Body>
       </div>
@@ -100,7 +100,7 @@ export function ConfigContent() {
         </ConfigSection>
 
         <ConfigSection title="Advanced">
-          <Body className="text-primary-500 dark:text-primary-400 text-sm mb-12">
+          <Body className="text-primary-900 dark:text-primary! text-sm mb-12">
             Advanced configuration options will appear here.
           </Body>
         </ConfigSection>
@@ -124,7 +124,7 @@ interface ConfigSectionProps {
 export function ConfigSection({ title, children }: ConfigSectionProps) {
   return (
     <div className="p-1 ">
-      <Body className="font-semibold mb-2 text-primary-800 dark:text-primary-200">
+      <Body className="font-semibold mb-2 text-primary-900 dark:text-primary">
         {title}
       </Body>
       {children}
