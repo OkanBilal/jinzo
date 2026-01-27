@@ -1,6 +1,8 @@
 import { memo, useState, useCallback, useEffect } from "react";
 import type { FileNode, DirEntry, ServiceResponse } from "../types";
 import { FileTreeNode } from "./file-tree-node";
+import { Label } from "@/components/ui/text";
+import { Error } from "@/components/ui/icons";
 
 // ─────────────────────────────────────────────────────────────
 // File Explorer Component
@@ -94,10 +96,10 @@ export const FileExplorer = memo(function FileExplorer({
           console.error("[FileExplorer] listDir failed:", result.error);
           setError(result.error || "Failed to load directory");
         }
-      } catch (err) {
+      } catch (err: unknown) {
         if (cancelled) return;
         console.error("[FileExplorer] Exception loading tree:", err);
-        setError(err instanceof Error ? err.message : "Unknown error");
+        setError(err instanceof globalThis.Error ? err.message : "Unknown error");
       } finally {
         if (!cancelled) {
           setIsLoading(false);
@@ -158,9 +160,8 @@ export const FileExplorer = memo(function FileExplorer({
   if (isLoading) {
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
-        <div className="flex flex-col items-center gap-2 text-primary-500 dark:text-primary-400">
-          <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm">Loading...</span>
+        <div className="flex flex-col items-center gap-2 ">
+          <Label className="text-sm shine-text te ">Loading...</Label>
         </div>
       </div>
     );
@@ -171,19 +172,6 @@ export const FileExplorer = memo(function FileExplorer({
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
         <div className="flex flex-col items-center gap-2 text-red-500 dark:text-red-400 px-4 text-center">
-          <svg
-            className="w-8 h-8"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
           <span className="text-sm">{error}</span>
         </div>
       </div>
@@ -207,7 +195,7 @@ export const FileExplorer = memo(function FileExplorer({
       <div
         role="tree"
         aria-label="File explorer"
-        className="flex-1 overflow-auto py-1"
+        className="flex-1 overflow-auto py-1 space-y-1"
       >
         {/* Root node children (don't show root folder itself) */}
         {tree.children?.map((child) => (
@@ -224,12 +212,11 @@ export const FileExplorer = memo(function FileExplorer({
         ))}
       </div>
 
-      {/* Stats Footer */}
-      {stats && (
-        <div className="shrink-0 px-3 py-2 text-xs text-primary-500 dark:text-primary-400 border-t border-primary-200 dark:border-primary-700/50">
+      {/* {stats && (
+        <div className="shrink-0 py-2 text-xs text-primary-500 dark:text-primary-400  border-primary-200 dark:border-primary-700/50">
           {stats.files} files, {stats.directories} folders
         </div>
-      )}
+      )} */}
     </div>
   );
 });

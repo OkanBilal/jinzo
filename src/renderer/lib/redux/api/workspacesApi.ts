@@ -120,6 +120,14 @@ export const workspacesApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Workspaces"],
     }),
+
+    selectDirectory: builder.mutation<string | null, void>({
+      query: () => ({
+        handler: "workspaces:selectDirectory",
+      }),
+      transformResponse: (response: { success: boolean; data: string | null }) =>
+        response.data,
+    }),
   }),
 });
 
@@ -135,4 +143,5 @@ export const {
   useCreateWorkspaceMutation,
   useUpdateWorkspaceMutation,
   useDeleteWorkspaceMutation,
+  useSelectDirectoryMutation,
 } = workspacesApi;

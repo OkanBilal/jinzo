@@ -15,7 +15,7 @@ export default function HomePage() {
   );
 
   return (
-    <div className="h-full w-full flex items-end justify-center px-8 pb-8 relative">
+    <div className="h-full w-full flex items-end justify-center px-8 pb-4 relative">
       <div className="w-full max-w-200 mx-auto">
         <ChatInput
           query={query}

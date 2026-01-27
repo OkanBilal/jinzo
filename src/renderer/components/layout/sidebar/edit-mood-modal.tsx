@@ -16,6 +16,7 @@ import {
 } from "@/lib/mood-themes";
 import { availableIcons, parseIcon } from "@/lib/icon-registry";
 import { Button } from "@/components/ui/button";
+import { ArrowUp } from "@/components/ui/icons";
 
 type IconPickerMode = "emoji" | "icon";
 
@@ -202,7 +203,9 @@ export default function EditMoodModal({
         className="absolute left-0 bottom-0 z-40 min-h-[calc(60vh-2rem)] overflow-hidden rounded-t-3xl"
         style={{
           width: sidebarWidth,
-          animation: isClosing ? "slideDownOut 200ms ease-in forwards" : "slideUp 200ms ease-out",
+          animation: isClosing
+            ? "slideDownOut 200ms ease-in forwards"
+            : "slideUp 200ms ease-out",
           background: currentVariant.preview,
         }}
         onClick={(e) => e.stopPropagation()}
@@ -216,7 +219,7 @@ export default function EditMoodModal({
             {iconMode === "icon" && icon ? (
               (() => {
                 const IconComp = availableIcons.find(
-                  (i) => i.name === icon
+                  (i) => i.name === icon,
                 )?.component;
                 return IconComp ? (
                   <IconComp className="size-6 text-primary-800 dark:text-primary" />
@@ -279,7 +282,7 @@ export default function EditMoodModal({
                 {iconMode === "icon" && icon ? (
                   (() => {
                     const IconComp = availableIcons.find(
-                      (i) => i.name === icon
+                      (i) => i.name === icon,
                     )?.component;
                     return IconComp ? (
                       <IconComp className="size-5" />
@@ -454,10 +457,15 @@ export default function EditMoodModal({
           >
             <div
               className="flex transition-transform duration-300 ease-in-out"
-              style={{ transform: showGradients ? "translateX(-100%)" : "translateX(0)" }}
+              style={{
+                transform: showGradients
+                  ? "translateX(-100%)"
+                  : "translateX(0)",
+              }}
             >
               {/* Solid Colors Row */}
-              <div className="flex items-center gap-2 p-3 min-w-full">
+              {/* Solid Colors Row */}
+              <div className="flex items-center gap-2 px-4 py-2.5 ml-2 min-w-full">
                 {solidColors.map((colorPair, index) => {
                   const variant = getThemeVariant(colorPair, darkMode);
                   return (
@@ -470,13 +478,13 @@ export default function EditMoodModal({
                         }
                       }}
                       className={`
-                        w-5 h-5 rounded-full transition-all duration-200 cursor-pointer shrink-0
-                        ${
-                          !showGradients && selectedColorIndex === index
-                            ? "ring-2 ring-primary ring-offset-1 ring-offset-primary-900 scale-110"
-                            : "hover:scale-110"
-                        }
-                      `}
+                      w-5 h-5 rounded-full transition-all duration-200 cursor-pointer shrink-0
+                      ${
+                        !showGradients && selectedColorIndex === index
+                          ? "ring-2 ring-primary-200 scale-105"
+                          : "hover:scale-105"
+                      }
+                    `}
                       style={{ background: variant.preview }}
                       title={colorPair.name}
                     />
@@ -488,49 +496,24 @@ export default function EditMoodModal({
                     setShowGradients(true);
                     setSelectedColorIndex(0);
                   }}
-                  className="ml-auto shrink-0 p-1 rounded-lg hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
+                  className="ml-auto shrink-0 p-0.5 mr-1 rounded-lg hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
                   title="Show Gradients"
                 >
-                  <svg
-                    className="w-4 h-4 text-primary-500 dark:text-primary-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
+                  <ArrowUp className="w-5 h-5 text-primary-700 dark:text-primary-200 rotate-90" />
                 </Button>
               </div>
 
-              {/* Gradient Colors Row */}
-              <div className="flex items-center gap-2 p-3 min-w-full">
+              <div className="flex items-center gap-2 px-4 mr-2  min-w-full">
                 <Button
                   type="button"
                   onClick={() => {
                     setShowGradients(false);
                     setSelectedColorIndex(0);
                   }}
-                  className="shrink-0 p-1 rounded-lg hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
+                  className="shrink-0 -ml-4 mr-1 rounded-lg p-0.5 hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
                   title="Show Solid Colors"
                 >
-                  <svg
-                    className="w-4 h-4 text-primary-500 dark:text-primary-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 19l-7-7 7-7"
-                    />
-                  </svg>
+                  <ArrowUp className="w-5 h-5 text-primary-700 dark:text-primary-200 rotate-270" />
                 </Button>
                 {gradientColors.map((colorPair, index) => {
                   const variant = getThemeVariant(colorPair, darkMode);
@@ -544,13 +527,14 @@ export default function EditMoodModal({
                         }
                       }}
                       className={`
-                        w-5 h-5 rounded-full transition-all duration-200 cursor-pointer shrink-0
-                        ${
-                          showGradients && selectedColorIndex === index
-                            ? "ring-2 ring-primary ring-offset-1 ring-offset-primary-900 scale-110"
-                            : "hover:scale-110"
-                        }
-                      `}
+                                    w-5 h-5 rounded-full transition-all duration-200 cursor-pointer shrink-0
+                                    ${
+                                      showGradients &&
+                                      selectedColorIndex === index
+                                        ? "ring-2 ring-primary-200 scale-105"
+                                        : "hover:scale-105"
+                                    }
+                                  `}
                       style={{ background: variant.preview }}
                       title={colorPair.name}
                     />
@@ -581,6 +565,6 @@ export default function EditMoodModal({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

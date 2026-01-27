@@ -1,4 +1,7 @@
 export { RunTab, getTabTitle } from "./run-tab";
+export { EditorTab } from "./editor-tab";
+export { EditorContent } from "./editor-content";
+export { CodeMirrorEditor } from "./codemirror-editor";
 export { TerminalEventLine } from "./terminal-event-line";
 export { QuickActionButton } from "./quick-action-button";
 export { WorkspaceEmptyState } from "./workspace-empty-state";

@@ -155,7 +155,7 @@ export function WorkspaceInput({
 
   return (
     <div
-      className={`w-200 mb-8 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism-copilot
+      className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism-copilot
         cursor-pointer transition-all`}
     >
       <div className="relative">

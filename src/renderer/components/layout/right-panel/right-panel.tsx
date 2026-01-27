@@ -38,7 +38,12 @@ export default function RightPanel({
 
   return (
     <>
-      <ToggleButton isOpen={isOpen} width={width} onClick={handleToggle} />
+      <ToggleButton
+        isOpen={isOpen}
+        width={width}
+        onClick={handleToggle}
+        isWorkspace={rightPanelComponent === "workspace"}
+      />
       <Panel
         isVisible={isVisible}
         width={width}
@@ -52,32 +57,38 @@ interface ToggleButtonProps {
   isOpen: boolean;
   width: string;
   onClick: () => void;
+  isWorkspace?: boolean;
 }
 
-function ToggleButton({ isOpen, width, onClick }: ToggleButtonProps) {
+function ToggleButton({ isOpen, width, onClick, isWorkspace = false }: ToggleButtonProps) {
+  const iconSize = isWorkspace ? "size-4.5" : "size-4.5";
+  const topValue = isWorkspace ? "0.5rem" : "0.5rem";
+  const glassClass = isWorkspace ? "glass-morphism-copilot" : "";
+
   return (
     <Button
       variant="frosted"
       tooltip={isOpen ? "Close right panel" : "Open right panel"}
       tooltipPosition="left"
       onClick={onClick}
-      className={`fixed z-40 rounded-full! p-2.5! transition-all duration-300 ease-out ${
-        isOpen ? "right-[calc(var(--config-width)+1.25rem)]" : "top-7 right-5"
+      className={`fixed z-40 rounded-full! p-2! transition-all dark:text-primary-300! dark:hover:text-primary-300 duration-300 ease-out 
+          ${glassClass} ${
+        isOpen ? "right-[calc(var(--config-width)+1rem)]" : "top-7 right-4"
       }`}
       style={
         isOpen
           ? ({
               "--config-width": width,
-              top: "1.75rem",
+              top: topValue,
             } as React.CSSProperties)
-          : ({ top: "1.75rem", right: "1.25rem" } as React.CSSProperties)
+          : ({ top: topValue, right: "1rem" } as React.CSSProperties)
       }
       aria-label={isOpen ? "Close right panel" : "Open right panel"}
     >
       {isOpen ? (
-        <RightPanelClose className="w-4.5 h-4.5" />
+        <RightPanelClose className={iconSize} />
       ) : (
-        <RightPanelOpen className="w-4.5 h-4.5" />
+        <RightPanelOpen className={iconSize} />
       )}
     </Button>
   );

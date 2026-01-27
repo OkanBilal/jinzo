@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useActiveMood } from "./use-active-mood";
 
-export type SidebarItemType = "chat" | "post" | "workspace"; 
+export type SidebarItemType = "chat" | "post" | "workspace" | "claude"; 
 
 export interface SidebarConfig {
   width: string;

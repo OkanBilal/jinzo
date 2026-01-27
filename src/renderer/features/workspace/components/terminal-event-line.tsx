@@ -344,7 +344,7 @@ export function TerminalEventLine({ event, isLast }: TerminalEventLineProps) {
   const { label, colorClass } = getEventLabel();
 
   return (
-    <div className="group hover:bg-[#161b22] px-4 py-1.5 transition-colors">
+    <div className="group hover:bg-primary-100 dark:hover:bg-[#161b22] px-4 py-1.5 transition-colors">
       <div className="flex items-start gap-3">
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-primary-600 text-[13px] tabular-nums">{time}</span>

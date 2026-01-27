@@ -83,7 +83,7 @@ export const predefinedMoods: PredefinedMood[] = [
     icon: "icon:copilot",
     theme: {
       light: { value: "#FFFFFF99", preview: "#FFFFFF" },
-      dark: { value: "#0C0F11", preview: "#0C0F11" },
+      dark: { value: "#080a0fd9", preview: "#080a0f" },
     },
     systemPrompt: "",
     uiConfig: {
@@ -97,7 +97,32 @@ export const predefinedMoods: PredefinedMood[] = [
         margin: "18rem",
       },
       rightPanel: {
-        width: "24rem",
+        width: "22rem",
+        component: "workspace",
+      },
+    },
+  },
+    {
+    id: "health",
+    name: "Health",
+    icon: "icon:heart",
+    theme: {
+      light: { value: "#fde2e2", preview: "#fde2e2" },
+      dark: { value: "#3b1d21", preview: "#3b1d21" },
+    },
+    systemPrompt: "",
+    uiConfig: {
+      sidebar: {
+        width: "18rem",
+        title: "Workspace",
+        itemType: "workspace",
+        defaultRoute: "/workspace",
+      },
+      main: {
+        margin: "18rem",
+      },
+      rightPanel: {
+        width: "22rem",
         component: "workspace",
       },
     },

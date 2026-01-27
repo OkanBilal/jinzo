@@ -286,6 +286,7 @@ export {
   useCreateWorkspaceMutation,
   useUpdateWorkspaceMutation,
   useDeleteWorkspaceMutation,
+  useSelectDirectoryMutation,
 } from "./workspacesApi";
 export type {
   Workspace,

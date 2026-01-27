@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain, dialog, BrowserWindow } from "electron";
 import { workspacesController } from "./workspaces.controller";
 import type { CreateWorkspacePayload, UpdateWorkspacePayload } from "./workspaces.dto";
 
@@ -13,6 +13,7 @@ const CHANNELS = {
   CREATE: "workspaces:create",
   UPDATE: "workspaces:update",
   DELETE: "workspaces:delete",
+  SELECT_DIRECTORY: "workspaces:selectDirectory",
 } as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -45,6 +46,21 @@ export function registerWorkspacesIpc(): void {
 
   ipcMain.handle(CHANNELS.DELETE, async (_, id: string) => {
     return workspacesController.delete(id);
+  });
+
+  ipcMain.handle(CHANNELS.SELECT_DIRECTORY, async () => {
+    const focusedWindow = BrowserWindow.getFocusedWindow();
+    const result = await dialog.showOpenDialog(focusedWindow || undefined, {
+      properties: ["openDirectory"],
+      title: "Select Project Folder",
+      buttonLabel: "Select",
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: true, data: null };
+    }
+
+    return { success: true, data: result.filePaths[0] };
   });
 }
 

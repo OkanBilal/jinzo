@@ -2,54 +2,85 @@ import { RefObject } from "react";
 import { WorkspaceHeader } from "./workspace-header";
 import { WorkspaceTabs } from "./workspace-tabs";
 import { TerminalEventLine } from "./terminal-event-line";
+import { EditorContent } from "./editor-content";
 import type { Run, RunEvent, Workspace } from "../types";
 
 interface WorkspaceEventsProps {
   runs: Run[];
-  activeRunId: string | null;
+  activeTab: "editor" | string;
   currentEvents: RunEvent[];
   currentWorkspace: Workspace | null;
   eventsEndRef: RefObject<HTMLDivElement>;
-  onSelectTab: (runId: string) => void;
+  hasSelectedFile?: boolean;
+  fileName?: string;
+  onSelectEditorTab: () => void;
+  onSelectRunTab: (runId: string) => void;
   onCloseTab: (runId: string, e: React.MouseEvent) => void;
   onNewRun: () => void;
 }
 
 export function WorkspaceEvents({
   runs,
-  activeRunId,
+  activeTab,
   currentEvents,
   currentWorkspace,
   eventsEndRef,
-  onSelectTab,
+  hasSelectedFile,
+  fileName,
+  onSelectEditorTab,
+  onSelectRunTab,
   onCloseTab,
   onNewRun,
 }: WorkspaceEventsProps) {
-  if (!activeRunId || currentEvents.length === 0) return null;
+  const isEditorActive = activeTab === "editor";
+  const hasRunContent = activeTab !== "editor" && currentEvents.length > 0;
 
   return (
-    <div className="font-mono text-sm">
+    <div className="font-mono text-sm h-full flex flex-col">
       {/* Sticky header + tabs */}
-      <div className="sticky top-0 z-10">
+      <div className="sticky top-0 z-10 shrink-0">
         <WorkspaceHeader workspace={currentWorkspace} />
         <WorkspaceTabs
           runs={runs}
-          activeRunId={activeRunId}
-          onSelectTab={onSelectTab}
+          activeTab={activeTab}
+          hasSelectedFile={hasSelectedFile}
+          fileName={fileName}
+          onSelectEditorTab={onSelectEditorTab}
+          onSelectRunTab={onSelectRunTab}
           onCloseTab={onCloseTab}
           onNewRun={onNewRun}
         />
       </div>
 
-      <div className="min-h-75 max-w-210 mx-auto space-y-1 pt-12 pb-12">
-        {currentEvents.map((event, index) => (
-          <TerminalEventLine
-            key={event.id}
-            event={event}
-            isLast={index === currentEvents.length - 1}
-          />
-        ))}
-        <div ref={eventsEndRef} />
+      {/* Content area */}
+      <div className="flex-1 min-h-0 overflow-hidden relative">
+        {isEditorActive ? (
+          <EditorContent className="h-full" />
+        ) : hasRunContent ? (
+          <div className="h-full overflow-y-auto">
+            <div className="min-h-75 max-w-210 mx-auto space-y-1 pt-12 pb-24">
+              {currentEvents.map((event, index) => (
+                <TerminalEventLine
+                  key={event.id}
+                  event={event}
+                  isLast={index === currentEvents.length - 1}
+                />
+              ))}
+              <div ref={eventsEndRef} />
+            </div>
+          </div>
+        ) : (
+          <div className="h-full overflow-y-auto">
+            <div className="min-h-75 max-w-210 mx-auto space-y-1 pt-12 pb-24">
+              <div className="flex items-center justify-center py-8 text-primary-500 dark:text-primary-400">
+                <span className="text-sm">No events to display</span>
+              </div>
+              <div ref={eventsEndRef} />
+            </div>
+          </div>
+        )}
+        {/* Bottom fade overlay */}
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary dark:from-[#080a0f] to-transparent pointer-events-none" />
       </div>
     </div>
   );

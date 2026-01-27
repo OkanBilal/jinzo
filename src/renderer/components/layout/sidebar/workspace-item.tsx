@@ -98,7 +98,7 @@ export default function WorkspaceItem({
                   : "text-primary-800 dark:text-primary-100"
               }`}
             >
-              OkanBilal/{name}
+              {name}
             </span>
             <div className="flex items-center gap-1.5">
               {branch && (

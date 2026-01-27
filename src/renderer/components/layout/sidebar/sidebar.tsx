@@ -100,7 +100,7 @@ export default function Sidebar() {
               <NewButton
                 onClick={handleNewClick}
                 title={sidebarConfig.title}
-                actionPrefix={sidebarConfig.itemType === "workspace" ||  "claude" ? "Add" : "New"}
+                actionPrefix={sidebarConfig.itemType === "workspace" ? "Add" : sidebarConfig.itemType === "claude" ? "Add" : "New"}
               />
             </div>
 

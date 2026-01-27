@@ -351,6 +351,7 @@ const api = {
     update: (id: string, payload: unknown) =>
       ipcRenderer.invoke("workspaces:update", id, payload),
     delete: (id: string) => ipcRenderer.invoke("workspaces:delete", id),
+    selectDirectory: () => ipcRenderer.invoke("workspaces:selectDirectory"),
   },
   // Runs operations
   runs: {
@@ -472,6 +473,48 @@ const api = {
       includeHidden?: boolean;
       excludePatterns?: string[];
     }) => ipcRenderer.invoke("fileExplorer:listDir", options),
+  },
+  // Git operations
+  git: {
+    /**
+     * Check if a path is a git repository
+     */
+    isRepo: (rootPath: string) => ipcRenderer.invoke("git:isRepo", rootPath),
+    /**
+     * Get the current branch name
+     */
+    getCurrentBranch: (rootPath: string) =>
+      ipcRenderer.invoke("git:getCurrentBranch", rootPath),
+    /**
+     * Get all branches
+     */
+    getBranches: (rootPath: string) =>
+      ipcRenderer.invoke("git:getBranches", rootPath),
+    /**
+     * Get git status (modified, staged, untracked files, etc.)
+     */
+    getStatus: (rootPath: string) =>
+      ipcRenderer.invoke("git:getStatus", rootPath),
+    /**
+     * Get recent commits
+     */
+    getLog: (rootPath: string, limit?: number) =>
+      ipcRenderer.invoke("git:getLog", rootPath, limit),
+    /**
+     * Get remote URLs
+     */
+    getRemotes: (rootPath: string) =>
+      ipcRenderer.invoke("git:getRemotes", rootPath),
+    /**
+     * Get diff for a file or all files
+     */
+    getDiff: (rootPath: string, filePath?: string) =>
+      ipcRenderer.invoke("git:getDiff", rootPath, filePath),
+    /**
+     * Get the root directory of the git repository
+     */
+    getRepoRoot: (rootPath: string) =>
+      ipcRenderer.invoke("git:getRepoRoot", rootPath),
   },
 };
 

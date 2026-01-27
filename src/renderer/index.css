@@ -40,7 +40,7 @@
   /* Copilot specific colors */
   --color-copilot-blue: #0c1117;
   --color-copilot-dark: #070a0f ;
-  --color-copilot-lightblue: #f8f4ee;
+  --color-copilot-lightblue: #ffffff;
 
   /* Typography */
   --font-space-mono: 'Space Mono', monospace;
@@ -123,6 +123,11 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+
+.cm-editor, .cm-editor * {
+  font-family: 'Geist Mono', ui-monospace, monospace !important;
 }
 
 .animate-slide-in {

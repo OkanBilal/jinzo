@@ -11,6 +11,8 @@ import {
   PostcssFileIcon,
   ReactFileIcon,
   TsconfigFileIcon,
+  FolderIcon,
+  FolderOpenIcon,
 } from "@/components/ui/icons/file-icons";
 
 // ─────────────────────────────────────────────────────────────
@@ -165,50 +167,8 @@ interface IconProps {
   className?: string;
 }
 
-export const FolderIcon = memo(function FolderIcon({
-  className = "",
-}: IconProps) {
-  return (
-    <svg
-      className={className}
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M1.5 3.5A1.5 1.5 0 013 2h3.379a1.5 1.5 0 011.06.44l.622.62a.5.5 0 00.354.147H13a1.5 1.5 0 011.5 1.5v7.5a1.5 1.5 0 01-1.5 1.5H3a1.5 1.5 0 01-1.5-1.5v-9z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-});
 
-export const FolderOpenIcon = memo(function FolderOpenIcon({
-  className = "",
-}: IconProps) {
-  return (
-    <svg
-      className={className}
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M1 4.5A1.5 1.5 0 012.5 3h3.379a1.5 1.5 0 011.06.44l.622.62a.5.5 0 00.354.147H13.5A1.5 1.5 0 0115 5.707v.043H2V4.5z"
-        fill="currentColor"
-      />
-      <path
-        d="M1.5 6.5h13l-1.5 7H3l-1.5-7z"
-        fill="currentColor"
-        fillOpacity="0.8"
-      />
-    </svg>
-  );
-});
+
 
 export const FileIcon = memo(function FileIcon({ className = "" }: IconProps) {
   return (

@@ -11,6 +11,8 @@ import {
   useDeleteJournalMutation,
   useGetWorkspacesQuery,
   useDeleteWorkspaceMutation,
+  useCreateWorkspaceMutation,
+  useSelectDirectoryMutation,
   type Mood,
 } from "@/lib/redux/api";
 import { toast } from "@/components/toast";
@@ -100,6 +102,8 @@ export function useSidebar() {
     });
 
   const [deleteWorkspace] = useDeleteWorkspaceMutation();
+  const [createWorkspace] = useCreateWorkspaceMutation();
+  const [selectDirectory] = useSelectDirectoryMutation();
 
   // Delete workspace state
   const [deleteWorkspaceState, setDeleteWorkspaceState] = useState<{
@@ -213,6 +217,65 @@ export function useSidebar() {
       } catch (error) {
         console.error("Failed to create journal draft:", error);
         toast.error("Failed to create new post");
+      }
+    } else if (sidebarConfig.itemType === "workspace") {
+      // Open folder picker and create workspace
+      try {
+        const selectedPath = await selectDirectory().unwrap();
+        if (selectedPath) {
+          // Extract folder name from path
+          const folderName = selectedPath.split("/").pop() || "Untitled";
+          const workspaceId = crypto.randomUUID();
+          
+          // Check if it's a git repository and get git info
+          let repoUrl: string | undefined;
+          let defaultBranch: string | undefined;
+          let metadata: Record<string, unknown> | undefined;
+
+          const isRepoResult = await window.api.git.isRepo(selectedPath);
+          if (isRepoResult.success && isRepoResult.data) {
+            // Get current branch
+            const branchResult = await window.api.git.getCurrentBranch(selectedPath);
+            if (branchResult.success && branchResult.data) {
+              defaultBranch = branchResult.data;
+            }
+
+            // Get remote URL (prefer origin)
+            const remotesResult = await window.api.git.getRemotes(selectedPath);
+            if (remotesResult.success && remotesResult.data && remotesResult.data.length > 0) {
+              const origin = remotesResult.data.find((r: { name: string }) => r.name === "origin");
+              const remote = origin || remotesResult.data[0];
+              repoUrl = remote.fetchUrl || remote.pushUrl;
+            }
+
+            // Get additional git metadata
+            const statusResult = await window.api.git.getStatus(selectedPath);
+            if (statusResult.success && statusResult.data) {
+              metadata = {
+                isGitRepo: true,
+                tracking: statusResult.data.tracking,
+                ahead: statusResult.data.ahead,
+                behind: statusResult.data.behind,
+              };
+            }
+          }
+          
+          await createWorkspace({
+            id: workspaceId,
+            accountId: account?.id || "default",
+            name: folderName,
+            rootPath: selectedPath,
+            repoUrl,
+            defaultBranch,
+            metadata,
+          }).unwrap();
+          
+          toast.success("Workspace added");
+          navigate(`/workspace/${workspaceId}`);
+        }
+      } catch (error) {
+        console.error("Failed to create workspace:", error);
+        toast.error("Failed to add workspace");
       }
     } else {
       navigate(sidebarConfig.defaultRoute);

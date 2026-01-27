@@ -17,142 +17,123 @@ export interface ThemeColor {
   dark: ThemeVariant;
 }
 
-// 8 Solid Colors - light variants are pastel, dark variants are deep/muted
 export const solidColors: ThemeColor[] = [
   {
-    name: "Plum",
-    light: { value: "#E6C7E699", preview: "#E6C7E6" },
-    dark: { value: "#C5683F", preview: "#C5683F" },
+    name: "Rose Quartz",
+    light: { value: "#F3E4E7", preview: "#F3E4E7" },
+    dark: { value: "#433d30e6", preview: "#433d30" },
   },
   {
-    name: "Crimson",
-    light: { value: "#FBE4E399", preview: "#FBE4E3" },
-    dark: { value: "#f4433690", preview: "#3F0D12" },
+    name: "Cider Brown",
+    light: { value: "#F6EAE7", preview: "#F6EAE7" },
+    dark: { value: "#54241ce6", preview: "#54241c" },
   },
   {
-    name: "Mahogany",
-    light: { value: "#FADADD99", preview: "#FADADD" },
-    dark: { value: "#66678990", preview: "#3B1F1B" },
+    name: "Rust Plum",
+    light: { value: "#F3E4E7", preview: "#F3E4E7" },
+    dark: { value: "#281d36e6", preview: "#281d36" },
   },
   {
-    name: "Sunset",
-    light: { value: "#FFF3C499", preview: "#FFF3C4" },
-    dark: { value: "#3D351A90", preview: "#3D351A" },
+    name: "Deep Forest",
+    light: { value: "#DCEDE3", preview: "#DCEDE3" },
+    dark: { value: "#0b2d1ae6", preview: "#0b2d1a" },
+  },
+      {
+    name: "Warm Clay",
+    light: { value: "#F4E9DD", preview: "#F4E9DD" },
+    dark: { value: "#1d2423e6", preview: "#1d2423" },
   },
   {
-    name: "Peach",
-    light: { value: "#fcc7b699", preview: "#fcc7b6" },
-    dark: { value: "#87553390", preview: "#875533" },
+    name: "Indigo Steel",
+    light: { value: "#DEE6F3", preview: "#DEE6F3" },
+    dark: { value: "#19263ce6", preview: "#19263c" },
   },
   {
-    name: "Evergreen",
-    light: { value: "#D1F2EB99", preview: "#D1F2EB" },
-    dark: { value: "#00A24E90", preview: "#013220" },
-  },
-  {
-    name: "Ocean",
-    light: { value: "#D6E6F399", preview: "#D6E6F3" },
-    dark: { value: "#00092690", preview: "#000926" },
-  },
-  {
-    name: "Lavender",
-    light: { value: "#E8D5F799", preview: "#E8D5F7" },
-    dark: { value: "#4B367C90", preview: "#4B367C" },
+    name: "Deep Grape",
+    light: { value: "#E9E4F1", preview: "#E9E4F1" },
+    dark: { value: "#1c1e27e6", preview: "#1c1e27" },
   },
 ];
 
 // 8 Gradient Colors - light variants are soft pastels, dark variants are deep/rich
 export const gradientColors: ThemeColor[] = [
-  {
-    name: "Ocean Waves",
-    light: {
-      value: "linear-gradient(0deg, #4BE1F4 0%, #A5C3C3 50%, #DBD7CA 100%)",
-      preview: "linear-gradient(135deg, #4BE1F4 0%, #A5C3C3 50%, #DBD7CA 100%)",
-    },
-    dark: {
-      value:
-        "linear-gradient(180deg, #22336B 0%, #196AB4 33%, #CE8A63 66%, #C5683F 100%)",
-      preview:
-        "linear-gradient(135deg, #22336B 0%, #196AB4 33%, #CE8A63 66%, #C5683F 100%)",
-    },
+{
+  name: "Deep Grape",
+  light: {
+    value: "linear-gradient(180deg, #F2EEFA 0%, #E3DDF1 100%)",
+    preview: "linear-gradient(135deg, #F2EEFA 0%, #E3DDF1 100%)",
   },
-  {
-    name: "Ocean Wave",
-    light: {
-      value: "linear-gradient(180deg, #BFDBFE 0%, #93C5FD 100%)",
-      preview: "linear-gradient(180deg, #BFDBFE 0%, #93C5FD 100%)",
-    },
-    dark: {
-      value: "linear-gradient(180deg, #1A2744 0%, #0F172A 100%)",
-      preview: "linear-gradient(180deg, #1E3A5F 0%, #0F172A 100%)",
-    },
+  dark: {
+    value: "linear-gradient(180deg, #3A3241 0%, #2A2430 100%)",
+    preview: "linear-gradient(135deg, #3A3241 0%, #2A2430 100%)",
   },
-  {
-    name: "Dawn",
-    light: {
-      value: "linear-gradient(180deg, #FEF9E7 0%, #DBEAFE 100%)",
-      preview: "linear-gradient(180deg, #FEF9E7 0%, #DBEAFE 100%)",
-    },
-    dark: {
-      value: "linear-gradient(180deg, #2D2A1A 0%, #1A2333 100%)",
-      preview: "linear-gradient(180deg, #3D3A2A 0%, #1E2A40 100%)",
-    },
+},
+{
+  name: "Rust Plum",
+  light: {
+    value: "linear-gradient(180deg, #FBEAEC 0%, #EEDDE0 100%)",
+    preview: "linear-gradient(135deg, #FBEAEC 0%, #EEDDE0 100%)",
   },
-  {
-    name: "Sunset Glow",
-    light: {
-      value: "linear-gradient(180deg, #FFEDD5 0%, #FED7AA 100%)",
-      preview: "linear-gradient(180deg, #FFEDD5 0%, #FED7AA 100%)",
-    },
-    dark: {
-      value: "linear-gradient(180deg, #3D2A1A 0%, #2D1F14 100%)",
-      preview: "linear-gradient(180deg, #4D3A2A 0%, #3D2F24 100%)",
-    },
+  dark: {
+    value: "linear-gradient(180deg, #473138 0%, #312127 100%)",
+    preview: "linear-gradient(135deg, #473138 0%, #312127 100%)",
   },
-  {
-    name: "Golden Hour",
-    light: {
-      value: "linear-gradient(180deg, #FEF9C3 0%, #FDE68A 100%)",
-      preview: "linear-gradient(180deg, #FEF9C3 0%, #FDE68A 100%)",
-    },
-    dark: {
-      value: "linear-gradient(180deg, #2D2A14 0%, #3D350A 100%)",
-      preview: "linear-gradient(180deg, #3D3A24 0%, #4D451A 100%)",
-    },
+},
+{
+  name: "Cider Brown",
+  light: {
+    value: "linear-gradient(180deg, #FFF1EE 0%, #F0E1DE 100%)",
+    preview: "linear-gradient(135deg, #FFF1EE 0%, #F0E1DE 100%)",
   },
-  {
-    name: "Cotton Candy",
-    light: {
-      value: "linear-gradient(180deg, #FDF2F8 0%, #F5D0FE 100%)",
-      preview: "linear-gradient(180deg, #FDF2F8 0%, #F5D0FE 100%)",
-    },
-    dark: {
-      value: "linear-gradient(180deg, #2D1A26 0%, #2A1A33 100%)",
-      preview: "linear-gradient(180deg, #3D2A36 0%, #3A2A43 100%)",
-    },
+  dark: {
+    value: "linear-gradient(180deg, #503835 0%, #362422 100%)",
+    preview: "linear-gradient(135deg, #503835 0%, #362422 100%)",
   },
-  {
-    name: "Deep Space",
-    light: {
-      value: "linear-gradient(180deg, #C7D2FE 0%, #A5B4FC 100%)",
-      preview: "linear-gradient(180deg, #C7D2FE 0%, #A5B4FC 100%)",
-    },
-    dark: {
-      value: "linear-gradient(180deg, #14142D 0%, #0A0A1A 100%)",
-      preview: "linear-gradient(180deg, #1E1E3D 0%, #14142A 100%)",
-    },
+},
+{
+  name: "Warm Clay",
+  light: {
+    value: "linear-gradient(180deg, #FCEFE1 0%, #EEDFCC 100%)",
+    preview: "linear-gradient(135deg, #FCEFE1 0%, #EEDFCC 100%)",
   },
-  {
-    name: "Mystic Forest",
-    light: {
-      value: "linear-gradient(180deg, #DCFCE7 0%, #BBF7D0 100%)",
-      preview: "linear-gradient(180deg, #DCFCE7 0%, #BBF7D0 100%)",
-    },
-    dark: {
-      value: "linear-gradient(180deg, #1A2A1A 0%, #0A1A0A 100%)",
-      preview: "linear-gradient(180deg, #2A3A2A 0%, #1A2A1A 100%)",
-    },
+  dark: {
+    value: "linear-gradient(180deg, #5E4837 0%, #3E2F24 100%)",
+    preview: "linear-gradient(135deg, #5E4837 0%, #3E2F24 100%)",
   },
+},
+{
+  name: "Sage Mist",
+  light: {
+    value: "linear-gradient(180deg, #FAF9F0 0%, #ECEBDE 100%)",
+    preview: "linear-gradient(135deg, #FAF9F0 0%, #ECEBDE 100%)",
+  },
+  dark: {
+    value: "linear-gradient(180deg, #8E8D78 0%, #6A6A59 100%)",
+    preview: "linear-gradient(135deg, #8E8D78 0%, #6A6A59 100%)",
+  },
+},
+{
+  name: "Deep Forest",
+  light: {
+    value: "linear-gradient(180deg, #E7F6ED 0%, #D4E7DC 100%)",
+    preview: "linear-gradient(135deg, #E7F6ED 0%, #D4E7DC 100%)",
+  },
+  dark: {
+    value: "linear-gradient(180deg, #395D4C 0%, #22382E 100%)",
+    preview: "linear-gradient(135deg, #395D4C 0%, #22382E 100%)",
+  },
+},
+{
+  name: "Indigo Steel",
+  light: {
+    value: "linear-gradient(180deg, #ECF1FB 0%, #D6E1F5 100%)",
+    preview: "linear-gradient(135deg, #ECF1FB 0%, #D6E1F5 100%)",
+  },
+  dark: {
+    value: "linear-gradient(180deg, #33486A 0%, #1E2B41 100%)",
+    preview: "linear-gradient(135deg, #33486A 0%, #1E2B41 100%)",
+  },
+},
 ];
 
 /**

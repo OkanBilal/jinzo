@@ -32,6 +32,7 @@ import { registerToolsIpc, unregisterToolsIpc } from "./modules/tools";
 import { registerWorkspacesIpc, unregisterWorkspacesIpc } from "./modules/workspaces";
 import { registerRunsIpc, unregisterRunsIpc } from "./modules/runs";
 import { registerFileExplorerIpc, unregisterFileExplorerIpc } from "./modules/fileExplorer";
+import { registerGitIpc, unregisterGitIpc } from "./modules/git";
 import { createMainWindow } from "./windows/mainWindow";
 
 /**
@@ -68,6 +69,7 @@ async function initializeApp() {
     registerWorkspacesIpc();
     registerRunsIpc();
     registerFileExplorerIpc();
+    registerGitIpc();
 
     // Create main window
     createMainWindow();
@@ -109,6 +111,7 @@ async function cleanupApp() {
     unregisterWorkspacesIpc();
     unregisterRunsIpc();
     unregisterFileExplorerIpc();
+    unregisterGitIpc();
 
     // Close database
     await closeDatabase();

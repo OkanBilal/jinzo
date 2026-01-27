@@ -55,6 +55,7 @@ const words = [
   "Mustering",
   "Musing",
   "Noodling",
+  "Osmosing",
   "Percolating",
   "Perusing",
   "Philosophising",

@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import Text, { Heading3 } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
-import { useCreateMoodMutation, useSetActiveMoodMutation } from "@/lib/redux/api";
+import {
+  useCreateMoodMutation,
+  useSetActiveMoodMutation,
+} from "@/lib/redux/api";
 import { toast } from "@/components/toast";
 import { EmojiPicker } from "frimousse";
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -13,6 +16,7 @@ import {
 } from "@/lib/mood-themes";
 import { availableIcons } from "@/lib/icon-registry";
 import { Button } from "@/components/ui/button";
+import { ArrowUp } from "@/components/ui/icons";
 
 type IconPickerMode = "emoji" | "icon";
 
@@ -54,7 +58,7 @@ export default function CreateMoodView({
           appRoot.style.backgroundColor = originalBackgroundColor.current;
         }
         // Remove preview CSS custom property
-        appRoot.style.removeProperty('--mood-preview-bg');
+        appRoot.style.removeProperty("--mood-preview-bg");
       }
     };
   }, []);
@@ -79,12 +83,14 @@ export default function CreateMoodView({
         lightBackground: selectedColorPair.light.value,
         darkBackground: selectedColorPair.dark.value,
       });
-      
+
       // Add prefix based on icon mode
-      const iconValue = icon 
-        ? (iconMode === "icon" ? `icon:${icon}` : `emoji:${icon}`)
+      const iconValue = icon
+        ? iconMode === "icon"
+          ? `icon:${icon}`
+          : `emoji:${icon}`
         : "emoji:😊";
-      
+
       const result = await createMood({
         name: name.trim(),
         icon: iconValue,
@@ -116,7 +122,6 @@ export default function CreateMoodView({
   const currentVariant = getThemeVariant(selectedColorPair, darkMode);
   const backgroundColor = currentVariant.value;
 
-
   // Apply live preview when color changes
   useEffect(() => {
     const appRoot = document.querySelector(".app-root") as HTMLElement;
@@ -128,11 +133,11 @@ export default function CreateMoodView({
         appRoot.style.background = "none";
         appRoot.style.backgroundColor = backgroundColor;
       }
-      
+
       // Set CSS custom property for dropdown backgrounds
       // Remove opacity for solid colors
       const dropdownBg = currentVariant.preview;
-      appRoot.style.setProperty('--mood-preview-bg', dropdownBg);
+      appRoot.style.setProperty("--mood-preview-bg", dropdownBg);
     }
   }, [backgroundColor, currentVariant.preview]);
 
@@ -148,14 +153,18 @@ export default function CreateMoodView({
             background: currentVariant.preview,
           }}
         >
-          {iconMode === "icon" && icon ? (
-            (() => {
-              const IconComp = availableIcons.find(i => i.name === icon)?.component;
-              return IconComp ? <IconComp className="size-7 text-primary-800 dark:text-primary" /> : "";
-            })()
-          ) : (
-            icon || ""
-          )}
+          {iconMode === "icon" && icon
+            ? (() => {
+                const IconComp = availableIcons.find(
+                  (i) => i.name === icon,
+                )?.component;
+                return IconComp ? (
+                  <IconComp className="size-7 text-primary-800 dark:text-primary" />
+                ) : (
+                  ""
+                );
+              })()
+            : icon || ""}
         </div>
         <Heading3 className="text-center text-primary-800 dark:text-primary">
           {name || "Create Mood"}{" "}
@@ -204,8 +213,14 @@ export default function CreateMoodView({
             <div className="flex items-center gap-2">
               {iconMode === "icon" && icon ? (
                 (() => {
-                  const IconComp = availableIcons.find(i => i.name === icon)?.component;
-                  return IconComp ? <IconComp className="size-5" /> : <span>📦</span>;
+                  const IconComp = availableIcons.find(
+                    (i) => i.name === icon,
+                  )?.component;
+                  return IconComp ? (
+                    <IconComp className="size-5" />
+                  ) : (
+                    <span>📦</span>
+                  );
                 })()
               ) : (
                 <span>{icon || "😊"}</span>
@@ -301,7 +316,7 @@ export default function CreateMoodView({
                           CategoryHeader: ({ ...props }) => (
                             <div
                               className="px-2 pt-0 pb-1.5 font-medium text-primary-600 dark:text-primary-400 text-xs"
-                             style={{ background: currentVariant.preview }}
+                              style={{ background: currentVariant.preview }}
                               {...props}
                             >
                               {/* {category.label} */}
@@ -374,16 +389,18 @@ export default function CreateMoodView({
 
         {/* Theme Selector - Animated Slide */}
         <div
-          className="rounded-xl overflow-hidden
+          className="rounded-2xl overflow-hidden
             bg-primary-950/5 dark:bg-primary/4
             shadow-[inset_0_0.5px_0_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]"
         >
           <div
             className="flex transition-transform duration-300 ease-in-out"
-            style={{ transform: showGradients ? "translateX(-100%)" : "translateX(0)" }}
+            style={{
+              transform: showGradients ? "translateX(-100%)" : "translateX(0)",
+            }}
           >
             {/* Solid Colors Row */}
-            <div className="flex items-center gap-2 px-4 py-3 ml-2 min-w-full">
+            <div className="flex items-center gap-2 px-4 py-2.5 ml-2 min-w-full">
               {solidColors.map((colorPair, index) => {
                 const variant = getThemeVariant(colorPair, darkMode);
                 return (
@@ -399,8 +416,8 @@ export default function CreateMoodView({
                       w-5 h-5 rounded-full transition-all duration-200 cursor-pointer shrink-0
                       ${
                         !showGradients && selectedColorIndex === index
-                          ? "ring-2 ring-primary ring-offset-1 ring-offset-primary-900 scale-110"
-                          : "hover:scale-110"
+                          ? "ring-2 ring-primary-200 scale-105"
+                          : "hover:scale-105"
                       }
                     `}
                     style={{ background: variant.preview }}
@@ -414,49 +431,25 @@ export default function CreateMoodView({
                   setShowGradients(true);
                   setSelectedColorIndex(0);
                 }}
-                className="ml-auto shrink-0 p-1 mr-1 rounded-lg hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
+                className="ml-auto shrink-0 p-0.5 mr-1 rounded-lg hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
                 title="Show Gradients"
               >
-                <svg
-                  className="w-4 h-4 text-primary-700 dark:text-primary-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
+                <ArrowUp className="w-5 h-5 text-primary-700 dark:text-primary-200 rotate-90" />
               </Button>
             </div>
 
             {/* Gradient Colors Row */}
-            <div className="flex items-center gap-2 px-4 mr-2 py-3 min-w-full">
+            <div className="flex items-center gap-2 px-4 mr-2  min-w-full">
               <Button
                 type="button"
                 onClick={() => {
                   setShowGradients(false);
                   setSelectedColorIndex(0);
                 }}
-                className="shrink-0 p-1 -ml-2 mr-1 rounded-lg hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
+                className="shrink-0 -ml-4 mr-1 rounded-lg p-0.5 hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
                 title="Show Solid Colors"
               >
-                <svg
-                  className="w-4 h-4 text-primary-700 dark:text-primary-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
+                <ArrowUp className="w-5 h-5 text-primary-700 dark:text-primary-200 rotate-270" />
               </Button>
               {gradientColors.map((colorPair, index) => {
                 const variant = getThemeVariant(colorPair, darkMode);
@@ -473,8 +466,8 @@ export default function CreateMoodView({
                       w-5 h-5 rounded-full transition-all duration-200 cursor-pointer shrink-0
                       ${
                         showGradients && selectedColorIndex === index
-                          ? "ring-2 ring-primary ring-offset-1 ring-offset-primary-900 scale-110"
-                          : "hover:scale-110"
+                          ? "ring-2 ring-primary-200 scale-105"
+                          : "hover:scale-105"
                       }
                     `}
                     style={{ background: variant.preview }}

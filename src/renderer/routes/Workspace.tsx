@@ -7,12 +7,22 @@ import {
   WorkspaceQuickActions,
 } from "@/features/workspace/components";
 import { useWorkspaceData, useWorkspaceRuns } from "@/features/workspace/hooks";
-import { setWorkspaceModel } from "@/lib/redux/slices/workspaceSlice";
+import {
+  setWorkspaceModel,
+  setActiveTab,
+  setSelectedFileContent,
+  setFileContentLoading,
+  setFileContentError,
+  clearSelectedFile,
+} from "@/lib/redux/slices/workspaceSlice";
 import type { RootState } from "@/lib/redux";
+import type { FileContentResponse, ServiceResponse } from "@/features/file-explorer";
 
 export default function WorkspacePage() {
   const dispatch = useDispatch();
   const selectedModel = useSelector((state: RootState) => state.workspace.selectedModel);
+  const activeTab = useSelector((state: RootState) => state.workspace.activeTab);
+  const selectedFile = useSelector((state: RootState) => state.workspace.selectedFile);
   const [goal, setGoal] = useState("");
   const [canResume, setCanResume] = useState(false);
 
@@ -26,6 +36,12 @@ export default function WorkspacePage() {
     selectedProvider,
     currentWorkspace,
   } = useWorkspaceData();
+
+  // Clear selected file when workspace changes
+  useEffect(() => {
+    dispatch(clearSelectedFile());
+    dispatch(setActiveTab("editor"));
+  }, [workspaceId, dispatch]);
 
   const {
     runs,
@@ -43,25 +59,77 @@ export default function WorkspacePage() {
     selectTab,
   } = useWorkspaceRuns(workspaceId);
 
+  // Select first run tab if runs exist and no file is selected
+  useEffect(() => {
+    if (runs.length > 0 && !selectedFile && activeTab === "editor") {
+      const firstRun = runs[0];
+      dispatch(setActiveTab(firstRun.id));
+      selectTab(firstRun.id);
+    }
+  }, [runs, selectedFile, activeTab, dispatch, selectTab]);
+
+  // Load file content when selectedFile changes
+  useEffect(() => {
+    if (!selectedFile || selectedFile.type !== "file" || !currentWorkspace?.rootPath) {
+      return;
+    }
+
+    let cancelled = false;
+    const filePath = selectedFile.fullPath;
+
+    async function loadFileContent() {
+      dispatch(setFileContentLoading(true));
+      dispatch(setFileContentError(null));
+
+      try {
+        const result: ServiceResponse<FileContentResponse> =
+          await window.api.fileExplorer.readFileText({
+            filePath,
+            workspaceRoot: currentWorkspace!.rootPath,
+          });
+
+        if (cancelled) return;
+
+        if (result.success && result.data) {
+          dispatch(setSelectedFileContent(result.data));
+        } else {
+          dispatch(setFileContentError(result.error || "Failed to load file"));
+        }
+      } catch (err) {
+        if (cancelled) return;
+        dispatch(setFileContentError(err instanceof Error ? err.message : "Unknown error"));
+      }
+    }
+
+    loadFileContent();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedFile, currentWorkspace?.rootPath, dispatch]);
+
   // Check if active run can be resumed when it changes or completes
   useEffect(() => {
     const checkResume = async () => {
-      if (activeRunId && activeRun && activeRun.status !== "running" && activeRun.status !== "queued") {
-        const resumable = await checkCanResume(activeRunId);
+      // Only check resume for the actual run, not when on editor tab
+      const runId = activeTab !== "editor" ? activeTab : null;
+      if (runId && activeRun && activeRun.status !== "running" && activeRun.status !== "queued") {
+        const resumable = await checkCanResume(runId);
         setCanResume(resumable);
       } else {
         setCanResume(false);
       }
     };
     checkResume();
-  }, [activeRunId, activeRun?.status, checkCanResume]);
+  }, [activeTab, activeRun?.status, checkCanResume]);
 
   const handleExecute = useCallback(async () => {
     let success = false;
+    const currentRunId = activeTab !== "editor" ? activeTab : null;
 
     // If there's an active completed run that can be resumed, continue it
-    if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
-      success = (await continueRun(activeRunId, goal)) ?? false;
+    if (currentRunId && canResume && activeRun && activeRun.status !== "running") {
+      success = (await continueRun(currentRunId, goal)) ?? false;
     } else {
       // Otherwise start a new run
       success = (await executeRun(goal, selectedWorkspace, selectedProvider, selectedModel)) ?? false;
@@ -70,34 +138,55 @@ export default function WorkspacePage() {
     if (success) {
       setGoal("");
     }
-  }, [goal, selectedWorkspace, selectedProvider, selectedModel, executeRun, continueRun, activeRunId, activeRun, canResume]);
+  }, [goal, selectedWorkspace, selectedProvider, selectedModel, executeRun, continueRun, activeTab, activeRun, canResume]);
 
   const handleCloseTab = useCallback(
     (runId: string, e: React.MouseEvent) => {
       e.stopPropagation();
       closeTab(runId);
+      // If closing the active run tab, switch to editor
+      if (runId === activeTab) {
+        dispatch(setActiveTab("editor"));
+      }
     },
-    [closeTab],
+    [closeTab, activeTab, dispatch],
   );
 
   const handleNewRun = useCallback(() => {
     setActiveRunId(null);
-  }, [setActiveRunId]);
+    // Switch to editor tab when starting new run
+    dispatch(setActiveTab("editor"));
+  }, [setActiveRunId, dispatch]);
+
+  const handleSelectEditorTab = useCallback(() => {
+    dispatch(setActiveTab("editor"));
+  }, [dispatch]);
+
+  const handleSelectRunTab = useCallback((runId: string) => {
+    dispatch(setActiveTab(runId));
+    selectTab(runId);
+  }, [dispatch, selectTab]);
+
+  // Determine if we should show empty state (no runs and no file selected)
+  const showEmptyState = runs.length === 0 && !selectedFile;
 
   return (
-    <div className="flex flex-col h-full dark:bg-[#03060B] bg-primary">
+    <div className="flex flex-col h-full dark:bg-[#080a0f] ">
       {/* Events Panel */}
-      <div className="flex-1 overflow-y-auto">
-        {(!activeRunId || currentEvents.length === 0) ? (
+      <div className="flex-1 overflow-hidden">
+        {showEmptyState ? (
           <WorkspaceEmptyState workspace={currentWorkspace} />
         ) : (
           <WorkspaceEvents
             runs={runs}
-            activeRunId={activeRunId}
+            activeTab={activeTab}
             currentEvents={currentEvents}
             currentWorkspace={currentWorkspace}
             eventsEndRef={eventsEndRef as React.RefObject<HTMLDivElement>}
-            onSelectTab={selectTab}
+            hasSelectedFile={!!selectedFile}
+            fileName={selectedFile?.name}
+            onSelectEditorTab={handleSelectEditorTab}
+            onSelectRunTab={handleSelectRunTab}
             onCloseTab={handleCloseTab}
             onNewRun={handleNewRun}
           />
@@ -112,7 +201,7 @@ export default function WorkspacePage() {
       )}
 
       {/* Quick Actions */}
-      <WorkspaceQuickActions onSetGoal={setGoal} />
+      {/* <WorkspaceQuickActions onSetGoal={setGoal} /> */}
 
       {/* Input Form */}
       <WorkspaceInput

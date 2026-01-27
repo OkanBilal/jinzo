@@ -30,6 +30,7 @@ const appSettingsPersistConfig = {
 const workspacePersistConfig = {
   key: 'workspace',
   storage,
+  // Only persist model/provider settings, not file selection state
   whitelist: ['selectedModel', 'selectedProviderId', 'thinkingEnabled'],
 };
 

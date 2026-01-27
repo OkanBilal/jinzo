@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Heading3 } from "@/components/ui/text";
+import { useState, useEffect, useRef } from "react";
+import { Body, Heading3 } from "@/components/ui/text";
 import {
   useCreateMoodMutation,
   useSetActiveMoodMutation,
@@ -24,6 +24,50 @@ export default function PresetMoodsView({
   const [createMood, { isLoading }] = useCreateMoodMutation();
   const [setActiveMood] = useSetActiveMoodMutation();
   const { darkMode } = useDarkMode();
+  const originalBackgroundColor = useRef<string>("");
+
+  // Save original background color on mount
+  useEffect(() => {
+    const appRoot = document.querySelector(".app-root") as HTMLElement;
+    if (appRoot) {
+      originalBackgroundColor.current = appRoot.style.backgroundColor || "";
+    }
+
+    // Restore original color on unmount
+    return () => {
+      if (appRoot && originalBackgroundColor.current) {
+        if (originalBackgroundColor.current) {
+          appRoot.style.backgroundColor = originalBackgroundColor.current;
+        }
+        appRoot.style.removeProperty("--mood-preview-bg");
+      }
+    };
+  }, []);
+
+  // Apply live preview when selected template changes
+  useEffect(() => {
+    if (!selectedTemplate) return;
+
+    const appRoot = document.querySelector(".app-root") as HTMLElement;
+    if (appRoot) {
+      const templateVariant = darkMode
+        ? selectedTemplate.theme.dark
+        : selectedTemplate.theme.light;
+      const backgroundColor = templateVariant.value;
+
+      if (backgroundColor.startsWith("linear-gradient")) {
+        appRoot.style.backgroundColor = "transparent";
+        appRoot.style.background = backgroundColor;
+      } else {
+        appRoot.style.background = "none";
+        appRoot.style.backgroundColor = backgroundColor;
+      }
+
+      // Set CSS custom property for dropdown backgrounds
+      const dropdownBg = templateVariant.preview;
+      appRoot.style.setProperty("--mood-preview-bg", dropdownBg);
+    }
+  }, [selectedTemplate, darkMode]);
 
   const handleCreate = async () => {
     if (!selectedTemplate) {
@@ -53,6 +97,9 @@ export default function PresetMoodsView({
         await setActiveMood(result.id).unwrap();
       }
 
+      // Clear the original color ref so cleanup doesn't restore it
+      originalBackgroundColor.current = "";
+
       toast.success("Mood created!");
       onSuccess?.();
       onClose();
@@ -67,13 +114,10 @@ export default function PresetMoodsView({
       className="flex flex-col h-full"
       style={{ animation: "fadeIn 300ms ease-in-out" }}
     >
-      <div className="flex flex-col items-center pt-12 pb-6 px-4">
-        <Heading3 className="text-center text-primary-800 dark:text-primary">
+      <div className="flex flex-col items-center pt-12 px-4">
+        <Body className="text-center text-base! text-primary-800 dark:text-primary">
           Preset Moods
-        </Heading3>
-        <p className="text-sm text-primary-900 dark:text-primary-400 mt-1 text-center">
-          Choose a preset to get started quickly
-        </p>
+        </Body>
       </div>
 
       <div className="flex-1 px-4 py-2 noscrollbar">
@@ -90,8 +134,8 @@ export default function PresetMoodsView({
                 key={template.id}
                 type="button"
                 onClick={() => setSelectedTemplate(template)}
-                className={`flex flex-col items-center gap-2 p-2 rounded-2xl transition-all cursor-pointer
-                  ${isSelected ? "" : "hover:scale-[1.02]"}`}
+                className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all cursor-pointer
+                  ${isSelected ? "saturate-180" : "hover:scale-[1.02]"}`}
                 style={{ background: templateVariant.preview }}
               >
                 <span className="text-2xl">
@@ -103,9 +147,7 @@ export default function PresetMoodsView({
                             className?: string;
                           }>;
                         const iconColorClass =
-                          template.name === "Claude"
-                            ? "text-[#D97757] dark:text-primary"
-                            : "text-primary-800 dark:text-primary";
+                          "text-primary-800 dark:text-primary";
                         return (
                           <IconComp className={`size-6 ${iconColorClass}`} />
                         );
@@ -132,7 +174,7 @@ export default function PresetMoodsView({
               : selectedTemplate?.theme.light.preview,
           }}
         >
-          {isLoading ? "Creating..." : "Create"}
+          {isLoading ? "Loading..." : "Choose" + (selectedTemplate ? ` ${selectedTemplate.name}` : "")}
         </Button>
         <Button
           onClick={onClose}

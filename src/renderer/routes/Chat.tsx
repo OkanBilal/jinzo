@@ -115,7 +115,7 @@ function ChatContent() {
           isLoading={isLoading}
         />
       </div>
-      <div className="shrink-0 pb-8 max-w-200 mx-auto w-full">
+      <div className="shrink-0 max-w-200 mx-auto w-full">
         <ChatInput
           query={input}
           onQueryChange={setInput}

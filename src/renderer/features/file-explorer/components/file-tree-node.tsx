@@ -74,7 +74,7 @@ export const FileTreeNode = memo(function FileTreeNode({
     [handleClick]
   );
 
-  const paddingLeft = 12 + depth * 16;
+  const paddingLeft = 0 + depth * 12;
 
   return (
     <div className="select-none">
@@ -86,12 +86,12 @@ export const FileTreeNode = memo(function FileTreeNode({
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         className={`
-          flex items-center h-6.5 cursor-pointer text-[13px]
-          transition-colors duration-75
+          flex items-center h-7 cursor-pointer text-[14px]
+          transition-colors duration-75 rounded-lg
           ${
             isSelected
-              ? "bg-primary-200 dark:bg-primary-700/60 text-primary-900 dark:text-primary-100"
-              : "text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-800/50"
+              ? "bg-primary/80 dark:bg-primary/20 text-primary-950 dark:text-primary"
+              : "text-primary-900 dark:text-primary-100 hover:bg-primary/50 dark:hover:bg-primary/10"
           }
         `}
         style={{ paddingLeft }}
