@@ -16,26 +16,34 @@ import {
   clearSelectedFile,
 } from "@/lib/redux/slices/workspaceSlice";
 import type { RootState } from "@/lib/redux";
-import type { FileContentResponse, ServiceResponse } from "@/features/file-explorer";
+import type {
+  FileContentResponse,
+  ServiceResponse,
+} from "@/features/file-explorer";
 
 export default function WorkspacePage() {
   const dispatch = useDispatch();
-  const selectedModel = useSelector((state: RootState) => state.workspace.selectedModel);
-  const activeTab = useSelector((state: RootState) => state.workspace.activeTab);
-  const selectedFile = useSelector((state: RootState) => state.workspace.selectedFile);
+  const selectedModel = useSelector(
+    (state: RootState) => state.workspace.selectedModel,
+  );
+  const activeTab = useSelector(
+    (state: RootState) => state.workspace.activeTab,
+  );
+  const selectedFile = useSelector(
+    (state: RootState) => state.workspace.selectedFile,
+  );
   const [goal, setGoal] = useState("");
   const [canResume, setCanResume] = useState(false);
 
-  const handleModelChange = useCallback((model: string) => {
-    dispatch(setWorkspaceModel(model));
-  }, [dispatch]);
+  const handleModelChange = useCallback(
+    (model: string) => {
+      dispatch(setWorkspaceModel(model));
+    },
+    [dispatch],
+  );
 
-  const {
-    workspaceId,
-    selectedWorkspace,
-    selectedProvider,
-    currentWorkspace,
-  } = useWorkspaceData();
+  const { workspaceId, selectedWorkspace, selectedProvider, currentWorkspace } =
+    useWorkspaceData();
 
   // Clear selected file when workspace changes
   useEffect(() => {
@@ -45,7 +53,6 @@ export default function WorkspacePage() {
 
   const {
     runs,
-    activeRunId,
     activeRun,
     currentEvents,
     isLoading,
@@ -70,7 +77,11 @@ export default function WorkspacePage() {
 
   // Load file content when selectedFile changes
   useEffect(() => {
-    if (!selectedFile || selectedFile.type !== "file" || !currentWorkspace?.rootPath) {
+    if (
+      !selectedFile ||
+      selectedFile.type !== "file" ||
+      !currentWorkspace?.rootPath
+    ) {
       return;
     }
 
@@ -97,7 +108,11 @@ export default function WorkspacePage() {
         }
       } catch (err) {
         if (cancelled) return;
-        dispatch(setFileContentError(err instanceof Error ? err.message : "Unknown error"));
+        dispatch(
+          setFileContentError(
+            err instanceof Error ? err.message : "Unknown error",
+          ),
+        );
       }
     }
 
@@ -113,7 +128,12 @@ export default function WorkspacePage() {
     const checkResume = async () => {
       // Only check resume for the actual run, not when on editor tab
       const runId = activeTab !== "editor" ? activeTab : null;
-      if (runId && activeRun && activeRun.status !== "running" && activeRun.status !== "queued") {
+      if (
+        runId &&
+        activeRun &&
+        activeRun.status !== "running" &&
+        activeRun.status !== "queued"
+      ) {
         const resumable = await checkCanResume(runId);
         setCanResume(resumable);
       } else {
@@ -128,17 +148,38 @@ export default function WorkspacePage() {
     const currentRunId = activeTab !== "editor" ? activeTab : null;
 
     // If there's an active completed run that can be resumed, continue it
-    if (currentRunId && canResume && activeRun && activeRun.status !== "running") {
+    if (
+      currentRunId &&
+      canResume &&
+      activeRun &&
+      activeRun.status !== "running"
+    ) {
       success = (await continueRun(currentRunId, goal)) ?? false;
     } else {
       // Otherwise start a new run
-      success = (await executeRun(goal, selectedWorkspace, selectedProvider, selectedModel)) ?? false;
+      success =
+        (await executeRun(
+          goal,
+          selectedWorkspace,
+          selectedProvider,
+          selectedModel,
+        )) ?? false;
     }
 
     if (success) {
       setGoal("");
     }
-  }, [goal, selectedWorkspace, selectedProvider, selectedModel, executeRun, continueRun, activeTab, activeRun, canResume]);
+  }, [
+    goal,
+    selectedWorkspace,
+    selectedProvider,
+    selectedModel,
+    executeRun,
+    continueRun,
+    activeTab,
+    activeRun,
+    canResume,
+  ]);
 
   const handleCloseTab = useCallback(
     (runId: string, e: React.MouseEvent) => {
@@ -162,17 +203,18 @@ export default function WorkspacePage() {
     dispatch(setActiveTab("editor"));
   }, [dispatch]);
 
-  const handleSelectRunTab = useCallback((runId: string) => {
-    dispatch(setActiveTab(runId));
-    selectTab(runId);
-  }, [dispatch, selectTab]);
+  const handleSelectRunTab = useCallback(
+    (runId: string) => {
+      dispatch(setActiveTab(runId));
+      selectTab(runId);
+    },
+    [dispatch, selectTab],
+  );
 
-  // Determine if we should show empty state (no runs and no file selected)
   const showEmptyState = runs.length === 0 && !selectedFile;
 
   return (
     <div className="flex flex-col h-full dark:bg-[#080a0f] ">
-      {/* Events Panel */}
       <div className="flex-1 overflow-hidden">
         {showEmptyState ? (
           <WorkspaceEmptyState workspace={currentWorkspace} />
@@ -192,18 +234,12 @@ export default function WorkspacePage() {
           />
         )}
       </div>
-
-      {/* Error Display */}
       {error && (
         <div className="px-6 py-3 bg-red-100/80 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800/50">
           <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         </div>
       )}
-
-      {/* Quick Actions */}
       {/* <WorkspaceQuickActions onSetGoal={setGoal} /> */}
-
-      {/* Input Form */}
       <WorkspaceInput
         goal={goal}
         onGoalChange={setGoal}

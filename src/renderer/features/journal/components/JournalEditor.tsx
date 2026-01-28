@@ -14,7 +14,7 @@ import {
   clearEditingJournal,
 } from "@/lib/redux/api";
 import { useAppDispatch } from "@/lib/redux/hooks";
-import { useJournalAutosave } from "@/hooks/use-journal-auto-save";
+import { useJournalAutosave } from "@/features/journal/hooks/use-journal-auto-save";
 import { Button } from "@/components/ui/button";
 import { blocksToMarkdown, markdownToBlocks } from "../utils";
 

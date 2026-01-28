@@ -18,7 +18,7 @@ import {
 import { toast } from "@/components/toast";
 import { useActiveMood } from "@/hooks/use-active-mood";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
-import { useDeleteChatSession } from "@/hooks/use-delete-chat-session";
+import { useDeleteChatSession } from "@/features/chat/hooks/use-delete-chat-session";
 
 function filterItems<T extends { title?: string | null; initialQuery?: string | null; description?: string | null }>(
   items: T[] | undefined,

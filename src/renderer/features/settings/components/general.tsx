@@ -325,7 +325,7 @@ export default function GeneralSettings() {
   }, [lastSavedAt]);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 bg-primary dark:bg-primary-950 ">
       <div className="mb-8">
         <Heading2>General</Heading2>
       </div>
@@ -499,22 +499,4 @@ function SettingsRow({
 // Divider Component
 function SettingsDivider() {
   return <div className="border-b border-primary-200 dark:border-primary-800/50" />;
-}
-
-function Field({
-  label,
-  description,
-  htmlFor,
-  className = "",
-  children,
-}: FieldProps) {
-  return (
-    <label className={`space-y-1.5 ${className}`} htmlFor={htmlFor}>
-      <span className="text-xs font-medium uppercase tracking-wide text-primary-500 dark:text-primary-300">
-        {label}
-      </span>
-      {description && <Muted className="text-[11px]">{description}</Muted>}
-      {children}
-    </label>
-  );
 }

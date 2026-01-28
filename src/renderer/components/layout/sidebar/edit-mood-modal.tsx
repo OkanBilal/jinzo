@@ -204,8 +204,8 @@ export default function EditMoodModal({
         style={{
           width: sidebarWidth,
           animation: isClosing
-            ? "slideDownOut 200ms ease-in forwards"
-            : "slideUp 200ms ease-out",
+            ? "slide-to-bottom 200ms ease-in forwards"
+            : "slide-from-bottom 200ms ease-out",
           background: currentVariant.preview,
         }}
         onClick={(e) => e.stopPropagation()}
@@ -317,7 +317,7 @@ export default function EditMoodModal({
                 className="absolute top-full left-0 right-0 z-50
                   border border-t-0 border-primary-950/10 dark:border-primary/10
                   rounded-b-xl shadow-lg overflow-hidden
-                  animate-slideDown"
+                  animate-slide-fade-down"
                 style={{ background: currentVariant.preview }}
               >
                 {/* Mode Toggle */}

@@ -8,6 +8,5 @@ export default function JournalPage() {
     return <EmptyJournalState />;
   }
 
-  // Use key to force remount when switching journals, ensuring fresh editor state
   return <JournalEditor key={id} entityId={id} />;
 }

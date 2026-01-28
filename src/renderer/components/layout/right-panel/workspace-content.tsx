@@ -1,19 +1,22 @@
 import { useCallback, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  FileExplorer,
-  type FileNode,
-} from "@/features/file-explorer";
+import { FileExplorer, type FileNode } from "@/features/file-explorer";
 import { Body } from "@/components/ui/text";
 import { useGetWorkspaceByIdQuery } from "@/lib/redux/api";
-import { setSelectedFile, setActiveTab } from "@/lib/redux/slices/workspaceSlice";
+import {
+  setSelectedFile,
+  setActiveTab,
+} from "@/lib/redux/slices/workspaceSlice";
 import type { RootState } from "@/lib/redux";
+import { FolderIcon } from "@/components/ui/icons/file-icons";
 
 export function WorkspaceContent() {
   const location = useLocation();
   const dispatch = useDispatch();
-  const selectedFile = useSelector((state: RootState) => state.workspace.selectedFile);
+  const selectedFile = useSelector(
+    (state: RootState) => state.workspace.selectedFile,
+  );
 
   // Extract workspaceId from URL path (e.g., /workspace/abc-123)
   const workspaceId = useMemo(() => {
@@ -43,20 +46,8 @@ export function WorkspaceContent() {
     return (
       <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 -pb-4 rounded-2xl overflow-hidden">
         <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3 text-primary-500 dark:text-primary-400">
-            <svg
-              className="w-12 h-12 opacity-50"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-              />
-            </svg>
+          <div className="flex flex-col items-center gap-3 text-primary-500 dark:text-primary-200">
+            <FolderIcon className="w-12 h-12" />
             <span className="text-sm">No workspace selected</span>
           </div>
         </div>

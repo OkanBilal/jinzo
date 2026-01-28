@@ -85,7 +85,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
       <div
         className="px-3 pb-3 group animate-slide-up"
         style={{
-          animation: `slideUp 0.2s ease-out 0.1s both`,
+          animation: `slide-from-bottom 0.2s ease-out 0.1s both`,
         }}
       >
         <Button

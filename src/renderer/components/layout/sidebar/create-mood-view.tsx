@@ -144,7 +144,7 @@ export default function CreateMoodView({
   return (
     <div
       className="flex flex-col h-full"
-      style={{ animation: "fadeIn 300ms ease-in-out" }}
+      style={{ animation: "slide-fade-down 300ms ease-in-out" }}
     >
       <div className="flex flex-col items-center pt-8 pb-6 px-4">
         <div
@@ -250,7 +250,7 @@ export default function CreateMoodView({
               className="absolute top-full left-0 right-0 z-50 
                 border border-t-0 border-primary-950/10 dark:border-primary/10 
                 rounded-b-xl shadow-lg overflow-hidden
-                animate-slideDown"
+                animate-slide-fade-down"
               style={{
                 background: currentVariant.preview,
               }}

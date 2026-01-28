@@ -62,7 +62,7 @@ interface ToggleButtonProps {
 
 function ToggleButton({ isOpen, width, onClick, isWorkspace = false }: ToggleButtonProps) {
   const iconSize = isWorkspace ? "size-4.5" : "size-4.5";
-  const topValue = isWorkspace ? "0.5rem" : "0.5rem";
+  const topValue = isWorkspace ? "0.8rem" : "0.8rem";
   const glassClass = isWorkspace ? "glass-morphism-copilot" : "";
 
   return (
@@ -73,7 +73,7 @@ function ToggleButton({ isOpen, width, onClick, isWorkspace = false }: ToggleBut
       onClick={onClick}
       className={`fixed z-40 rounded-full! p-2! transition-all dark:text-primary-300! dark:hover:text-primary-300 duration-300 ease-out 
           ${glassClass} ${
-        isOpen ? "right-[calc(var(--config-width)+1rem)]" : "top-7 right-4"
+        isOpen ? "right-[calc(var(--config-width)+0.5rem)]" : "top-3 right-3"
       }`}
       style={
         isOpen
@@ -81,7 +81,7 @@ function ToggleButton({ isOpen, width, onClick, isWorkspace = false }: ToggleBut
               "--config-width": width,
               top: topValue,
             } as React.CSSProperties)
-          : ({ top: topValue, right: "1rem" } as React.CSSProperties)
+          : ({ top: topValue, right: "0.75rem" } as React.CSSProperties)
       }
       aria-label={isOpen ? "Close right panel" : "Open right panel"}
     >

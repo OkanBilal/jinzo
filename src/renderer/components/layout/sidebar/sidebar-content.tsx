@@ -49,9 +49,8 @@ export function SidebarContent({
     >
       <div
         key={itemType}
-        className="animate-fadeIn"
         style={{
-          animation: "fadeIn 300ms ease-in-out",
+          animation: "slide-fade-down 300ms ease-in-out",
         }}
       >
         {itemType === "chat" && (

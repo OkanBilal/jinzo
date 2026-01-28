@@ -26,7 +26,7 @@ const variantStyles = {
     item: "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100",
   },
   copilot: {
-    container: "hover:bg-copilot-blue/30 dark:hover:bg-copilot-lightblue/10",
+    container: "hover:bg-copilot-blue/10 dark:hover:bg-copilot-lightblue/10",
     button: "text-copilot-blue dark:text-copilot-lightblue/80",
     selected:
       "bg-copilot-lightblue/60 dark:bg-copilot-lightblue/8 text-copilot-blue dark:text-copilot-lightblue",

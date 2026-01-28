@@ -1,16 +1,11 @@
-/* ==========================================================================
-   1. IMPORTS & FONTS
-   ========================================================================== */
-
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap');
 
 @import "tailwindcss";
 
-/* ==========================================================================
-   2. CSS CUSTOM PROPERTIES & THEME
-   ========================================================================== */
+/* Enable class-based dark mode instead of media query */
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: #ffffff;
@@ -18,11 +13,9 @@
 }
 
 @theme inline {
-  /* Base colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  /* Primary color scale */
   --color-primary: #ffffff;
   --color-primary-50: #f8f4ee;
   --color-primary-100: #fcfbf2;
@@ -37,12 +30,10 @@
   --color-primary-900: #242424;
   --color-primary-950: #100f0f;
   
-  /* Copilot specific colors */
-  --color-copilot-blue: #0c1117;
-  --color-copilot-dark: #070a0f ;
+  --color-copilot-blue: #131420;
+  --color-copilot-dark: #080A0F ;
   --color-copilot-lightblue: #ffffff;
 
-  /* Typography */
   --font-space-mono: 'Space Mono', monospace;
   --font-inter: 'Inter', sans-serif;
   --font-sans: 'Geist', system-ui, -apple-system, BlinkMacSystemFont,
@@ -50,10 +41,6 @@
     'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --font-mono: 'Geist Mono', 'Space Mono', monospace;
 }
-
-/* ==========================================================================
-   3. KEYFRAME ANIMATIONS
-   ========================================================================== */
 
 @keyframes blink {
   0%, 49% { opacity: 1; }
@@ -65,29 +52,29 @@
   to { opacity: 1; }
 }
 
-@keyframes fadeIn {
+@keyframes slide-fade-down {
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-from-bottom {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-to-bottom {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(100%); }
 }
 
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.9); }
   to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(100%); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideDownOut {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(100%); }
 }
 
 @keyframes blur-reveal {
@@ -114,24 +101,12 @@
   from { transform: translateY(0); }
   to { transform: translateY(calc(-100% + var(--frame-height, 32px))); }
 }
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-
 .cm-editor, .cm-editor * {
   font-family: 'Geist Mono', ui-monospace, monospace !important;
 }
 
 .animate-slide-in {
-  animation: slideIn 0.15s ease-out both;
+  animation: slide-fade-down 0.15s ease-out both;
 }
 
 @keyframes claudePulse {
@@ -147,24 +122,7 @@
   animation: claudePulse 2s ease-in-out infinite;
 }
 
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
 
-
-
-/* ==========================================================================
-   4. THIRD-PARTY OVERRIDES
-   ========================================================================== */
-
-/* BlockNote Editor Theming */
 .bn-container[data-theming-css-demo][data-color-scheme="dark"] {
   --bn-colors-editor-text: var(--color-primary-200);
   --bn-colors-editor-background: var(--color-primary-950);
@@ -174,14 +132,6 @@
   --bn-colors-editor-text: var(--color-primary-800);
   --bn-colors-editor-background: var(--color-primary);
 }
-
-/* ==========================================================================
-   5. COMPONENTS
-   ========================================================================== */
-
-/* --------------------------------------------------------------------------
-   5.1 Buttons
-   -------------------------------------------------------------------------- */
 
 .metallic-button {
   padding: 4px;
@@ -210,10 +160,6 @@
     box-shadow: 0 1px 3px #100f0f4d;
   }
 }
-
-/* --------------------------------------------------------------------------
-   5.2 Text Effects
-   -------------------------------------------------------------------------- */
 
 .shine-text {
   color: transparent;
@@ -244,10 +190,6 @@
 
   .dark & { background-color: var(--color-primary-400); }
 }
-
-/* --------------------------------------------------------------------------
-   5.3 Inputs
-   -------------------------------------------------------------------------- */
 
 input[type="range"].slider {
   -webkit-appearance: none;
@@ -291,10 +233,6 @@ input[type="range"].slider {
   }
 }
 
-/* --------------------------------------------------------------------------
-   5.4 Marquee
-   -------------------------------------------------------------------------- */
-
 .marquee-container {
   overflow: hidden;
   position: relative;
@@ -313,12 +251,8 @@ input[type="range"].slider {
   mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
 }
 
-/* --------------------------------------------------------------------------
-   5.5 Glass Morphism
-   -------------------------------------------------------------------------- */
-
-/* Base glass effect - shared light mode styles */
 .glass-morphism,
+.glass-morphism-copilot,
 .glass-morphism-claude {
   background: linear-gradient(to bottom, var(--color-primary), var(--color-primary-100));
   filter: saturate(110%);
@@ -329,7 +263,6 @@ input[type="range"].slider {
     inset 0 1px 1px #00000014;
 }
 
-/* Dark mode variants */
 .dark .glass-morphism {
   background: linear-gradient(to bottom, #181818, var(--color-primary-950));
   border-color: #ffffff1f;
@@ -339,23 +272,13 @@ input[type="range"].slider {
     inset 0 1px 0 #ffffff29;
 }
 
-.glass-morphism-copilot {
-  background: linear-gradient(to bottom, var(--color-copilot-lightblue), var(--color-copilot-lightblue));
-  filter: saturate(110%);
-  border: 0.5px solid #e8effa2e;
-  box-shadow:
-    0 1px 1px #070a0f14,
-    0 1px 1px #070a0f0a,
-    inset 0 1px 1px #e8effa14;
-}
-
 .dark .glass-morphism-copilot {
-  background: linear-gradient(to bottom, #070a0f, #0c1117);
-  border-color: #e8effa1f;
+  background: linear-gradient(to bottom, #080A0F, #131420);
+  border-color: #ffffff1f;
   box-shadow:
-    0 1px 1px #070a0f12,
-    0 1px 1px #070a0f0a,
-    inset 0 1px 1px #e8effa29;
+    0 1px 1px #13142012,
+    0 1px 1px #1314200a,
+    inset 0 1px 1px #080A0F20;
 }
 
 .dark .glass-morphism-claude {
@@ -366,11 +289,6 @@ input[type="range"].slider {
     inset 0 1px 1px #0d090712;
 }
 
-/* --------------------------------------------------------------------------
-   5.6 Copilot Icon Animation
-   --------------------------------------------------------------------------
-   54 frames sprite sheet - container clips to show one frame at a time.
-   SVG translates upward to reveal each frame sequentially. */
 
 .copilot-icon-container {
   display: block;
@@ -387,18 +305,10 @@ input[type="range"].slider {
   }
 }
 
-/* --------------------------------------------------------------------------
-   5.7 Streaming Text
-   -------------------------------------------------------------------------- */
-
 .fresh-text-blur {
   display: inline;
   animation: fresh-blur-in 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
-
-/* ==========================================================================
-   6. UTILITY CLASSES
-   ========================================================================== */
 
 .animate-blink {
   animation: blink 1s step-end infinite;

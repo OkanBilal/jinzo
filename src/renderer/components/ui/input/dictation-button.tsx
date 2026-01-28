@@ -16,7 +16,7 @@ const variantStyles = {
   },
   copilot: {
     recording: "bg-copilot-blue/30 dark:bg-copilot-lightblue/50",
-    hover: "hover:bg-copilot-blue/30 dark:hover:bg-copilot-lightblue/20",
+    hover: "hover:bg-copilot-blue/10 dark:hover:bg-copilot-lightblue/20",
     icon: "dark:text-copilot-lightblue text-copilot-blue",
   },
 };

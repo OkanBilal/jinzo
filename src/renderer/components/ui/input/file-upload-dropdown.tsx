@@ -41,7 +41,7 @@ const variantStyles = {
   },
   copilot: {
     button: "hover:bg-primary-200/30 dark:hover:bg-copilot-lightblue/10",
-    icon: "dark:text-copilot-lightblue text-primary-500",
+    icon: "dark:text-copilot-lightblue text-primary-800",
     fileBg: "bg-primary-100 dark:bg-copilot-lightblue/10",
     menuItem: "hover:bg-copilot-lightblue dark:hover:bg-copilot-lightblue/10",
   },

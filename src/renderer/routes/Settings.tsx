@@ -25,7 +25,6 @@ export default function SettingsPage() {
     .filter((app) => app.isConnected)
     .map((app) => app.id);
 
-  // Sync section from URL params during render (not in effect)
   const [prevSectionParam, setPrevSectionParam] = useState(sectionParam);
   if (sectionParam !== prevSectionParam) {
     setPrevSectionParam(sectionParam);
@@ -72,7 +71,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="h-full max-w-200 mx-auto px-6 pt-16 overflow-y-auto">
+    <div className="h-full max-w-200 mx-auto px-6 pt-16 overflow-y-auto bg-primary dark:bg-primary-950">
       {renderContent()}
     </div>
   );

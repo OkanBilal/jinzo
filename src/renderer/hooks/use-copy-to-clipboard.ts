@@ -1,40 +1,93 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 
-const DEFAULT_COPY_FEEDBACK_DURATION = 1000;
+const DEFAULT_FEEDBACK_DURATION_MS = 1500;
+
+type CopyStatus = "idle" | "copied" | "error";
+
+interface UseCopyToClipboardOptions {
+  feedbackDuration?: number;
+  onSuccess?: (text: string) => void;
+  onError?: (error: Error) => void;
+}
+
+interface UseCopyToClipboardReturn {
+  status: CopyStatus;
+  isCopied: boolean;
+  isError: boolean;
+  copy: (text: string) => Promise<boolean>;
+  reset: () => void;
+}
 
 export function useCopyToClipboard(
-  feedbackDuration: number = DEFAULT_COPY_FEEDBACK_DURATION
-) {
-  const [isCopied, setIsCopied] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  options: UseCopyToClipboardOptions = {},
+): UseCopyToClipboardReturn {
+  const {
+    feedbackDuration = DEFAULT_FEEDBACK_DURATION_MS,
+    onSuccess,
+    onError,
+  } = options;
 
-  const copy = useCallback(
-    async (text: string) => {
-      try {
-        await navigator.clipboard.writeText(text);
-        setIsCopied(true);
+  const [status, setStatus] = useState<CopyStatus>("idle");
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-
-        timeoutRef.current = setTimeout(() => {
-          setIsCopied(false);
-        }, feedbackDuration);
-      } catch (error) {
-        console.error("Failed to copy text:", error);
-      }
-    },
-    [feedbackDuration]
-  );
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
+  const clearTimeoutRef = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
   }, []);
 
-  return { isCopied, copy };
+  const reset = useCallback(() => {
+    clearTimeoutRef();
+    setStatus("idle");
+  }, [clearTimeoutRef]);
+
+  const copy = useCallback(
+    async (text: string): Promise<boolean> => {
+      if (!text) {
+        console.warn("useCopyToClipboard: Empty text provided");
+        return false;
+      }
+
+      clearTimeoutRef();
+
+      try {
+        if (!navigator.clipboard?.writeText) {
+          throw new Error("Clipboard API not available");
+        }
+
+        await navigator.clipboard.writeText(text);
+        setStatus("copied");
+        onSuccess?.(text);
+
+        timeoutRef.current = setTimeout(() => {
+          setStatus("idle");
+        }, feedbackDuration);
+
+        return true;
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        console.error("Failed to copy:", error.message);
+        setStatus("error");
+        onError?.(error);
+
+        timeoutRef.current = setTimeout(() => {
+          setStatus("idle");
+        }, feedbackDuration);
+
+        return false;
+      }
+    },
+    [feedbackDuration, onSuccess, onError, clearTimeoutRef],
+  );
+
+  useEffect(() => clearTimeoutRef, [clearTimeoutRef]);
+
+  return {
+    status,
+    isCopied: status === "copied",
+    isError: status === "error",
+    copy,
+    reset,
+  };
 }

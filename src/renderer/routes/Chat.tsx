@@ -37,7 +37,6 @@ function ChatContent() {
     chatTitle,
   } = useChatSession();
 
-  // Sync messages from API to local state
   useEffect(() => {
     if (!isValidSession || !messagesData) return;
 
@@ -51,7 +50,6 @@ function ChatContent() {
     replaceMessages(uiMessages);
   }, [isValidSession, messagesData, replaceMessages]);
 
-  // Focus input on mount
   useEffect(() => {
     focusInput();
   }, [focusInput]);
@@ -65,7 +63,7 @@ function ChatContent() {
         skipUserMessage: true,
         requestOptions: {
           skipUserSave: true,
-          userMessageId: messageId, // Track which user message triggered this generation
+          userMessageId: messageId,
           ...getRequestOptions(),
         },
       });

@@ -112,7 +112,7 @@ export default function PresetMoodsView({
   return (
     <div
       className="flex flex-col h-full"
-      style={{ animation: "fadeIn 300ms ease-in-out" }}
+      style={{ animation: "slide-fade-down 300ms ease-in-out" }}
     >
       <div className="flex flex-col items-center pt-12 px-4">
         <Body className="text-center text-base! text-primary-800 dark:text-primary">

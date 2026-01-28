@@ -1,10 +1,10 @@
 const COLORS = {
   light: {
-    background: "#0000001f",
+    background: "#ffffff50",
     dropdown: "rgb(255 255 255)",
   },
   dark: {
-    background: "#00000060",
+    background: "#00000050",
     dropdown: "rgb(17 24 39)",
   },
 } as const;

@@ -1,130 +1,123 @@
 import { useCallback, useSyncExternalStore } from "react";
 
-const THEME_KEY = "theme"; // "light" | "dark" | "system"
+const THEME_KEY = "theme";
 
 type ThemePreference = "light" | "dark" | "system";
 
-// Get system preference
-function getSystemPreference(): boolean {
-  if (typeof window === "undefined") return true;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+interface ThemeState {
+  theme: ThemePreference;
+  darkMode: boolean;
 }
 
+// Get system preference
+const getSystemPreference = (): boolean => {
+  if (typeof window === "undefined") return true;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+};
+
 // Get saved theme preference
-function getSavedTheme(): ThemePreference {
+const getSavedTheme = (): ThemePreference => {
   if (typeof window === "undefined") return "system";
   const saved = localStorage.getItem(THEME_KEY);
   if (saved === "light" || saved === "dark" || saved === "system") {
     return saved;
   }
   return "system";
-}
+};
 
 // Calculate actual dark mode based on preference
-function calculateDarkMode(theme: ThemePreference): boolean {
+const calculateDarkMode = (theme: ThemePreference): boolean => {
   if (theme === "system") {
     return getSystemPreference();
   }
   return theme === "dark";
-}
+};
 
-// Shared state
-let themePreference: ThemePreference = getSavedTheme();
-let darkModeValue = calculateDarkMode(themePreference);
+// Update DOM classes
+const updateDOM = (isDark: boolean): void => {
+  const root = document.documentElement;
+  root.classList.toggle("dark", isDark);
+};
+
+// Unified state object for atomic updates
+let state: ThemeState = {
+  theme: getSavedTheme(),
+  darkMode: false, // Will be set in init
+};
+
+// Initialize darkMode based on theme
+state.darkMode = calculateDarkMode(state.theme);
+
 const listeners = new Set<() => void>();
 
-function subscribe(listener: () => void) {
+const emitChange = (): void => {
+  listeners.forEach((listener) => listener());
+};
+
+const subscribe = (listener: () => void): (() => void) => {
   listeners.add(listener);
   return () => listeners.delete(listener);
-}
+};
 
-function getSnapshot() {
-  return darkModeValue;
-}
+const getSnapshot = (): ThemeState => state;
 
-function getThemeSnapshot() {
-  return themePreference;
-}
+const getServerSnapshot = (): ThemeState => ({
+  theme: "system",
+  darkMode: true,
+});
 
-function getServerSnapshot() {
-  return true;
-}
-
-function getServerThemeSnapshot() {
-  return "system" as ThemePreference;
-}
-
-function updateDOM(isDark: boolean) {
-  const root = document.documentElement;
-  if (isDark) {
-    root.classList.add("dark");
-  } else {
-    root.classList.remove("dark");
-  }
-}
-
-function setThemePreference(theme: ThemePreference) {
-  themePreference = theme;
-  localStorage.setItem(THEME_KEY, theme);
-  
+const setThemePreference = (theme: ThemePreference): void => {
   const newDarkMode = calculateDarkMode(theme);
-  if (darkModeValue !== newDarkMode) {
-    darkModeValue = newDarkMode;
-    updateDOM(darkModeValue);
-  }
-  
-  // Notify all subscribers
-  listeners.forEach((listener) => listener());
-}
 
-// Initialize DOM and system preference listener
+  // Create new state object for React to detect change
+  state = {
+    theme,
+    darkMode: newDarkMode,
+  };
+
+  localStorage.setItem(THEME_KEY, theme);
+  updateDOM(newDarkMode);
+  emitChange();
+};
+
+// Initialize DOM and listeners
 if (typeof window !== "undefined") {
-  updateDOM(darkModeValue);
+  updateDOM(state.darkMode);
 
   // Listen for system theme changes
   const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
   mediaQuery.addEventListener("change", (e) => {
-    // Only update if theme is set to "system"
-    if (themePreference === "system") {
-      darkModeValue = e.matches;
-      updateDOM(darkModeValue);
-      listeners.forEach((listener) => listener());
+    if (state.theme === "system") {
+      state = { ...state, darkMode: e.matches };
+      updateDOM(e.matches);
+      emitChange();
     }
   });
 
   // Listen for storage changes from other tabs
   window.addEventListener("storage", (e) => {
-    if (e.key === THEME_KEY && e.newValue !== null) {
+    if (e.key === THEME_KEY && e.newValue) {
       const newTheme = e.newValue as ThemePreference;
-      if (newTheme !== themePreference) {
-        themePreference = newTheme;
-        const newDarkMode = calculateDarkMode(themePreference);
-        if (darkModeValue !== newDarkMode) {
-          darkModeValue = newDarkMode;
-          updateDOM(darkModeValue);
-        }
-        listeners.forEach((listener) => listener());
+      if (newTheme !== state.theme) {
+        const newDarkMode = calculateDarkMode(newTheme);
+        state = { theme: newTheme, darkMode: newDarkMode };
+        updateDOM(newDarkMode);
+        emitChange();
       }
     }
   });
 }
 
 export function useDarkMode() {
-  const darkMode = useSyncExternalStore(
+  const { theme, darkMode } = useSyncExternalStore(
     subscribe,
     getSnapshot,
-    getServerSnapshot
-  );
-
-  const theme = useSyncExternalStore(
-    subscribe,
-    getThemeSnapshot,
-    getServerThemeSnapshot
+    getServerSnapshot,
   );
 
   const toggleDarkMode = useCallback(() => {
-    setThemePreference(darkModeValue ? "light" : "dark");
-  }, []);
+    setThemePreference(darkMode ? "light" : "dark");
+  }, [darkMode]);
 
   const setDarkMode = useCallback((value: boolean) => {
     setThemePreference(value ? "dark" : "light");
