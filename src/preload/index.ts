@@ -31,7 +31,7 @@ const api = {
   },
   // Issue operations (actionable domain)
   issues: {
-    getAll: (options?: { provider?: string; state?: string; limit?: number }) =>
+    getAll: (options?: { provider?: string; state?: string; repo?: string; limit?: number }) =>
       ipcRenderer.invoke("issues:getAll", options),
     getById: (entityId: string) =>
       ipcRenderer.invoke("issues:getById", entityId),

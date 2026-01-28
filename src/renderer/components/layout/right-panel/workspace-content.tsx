@@ -4,13 +4,20 @@ import { useDispatch, useSelector } from "react-redux";
 import { FileExplorer, type FileNode } from "@/features/file-explorer";
 import { Body } from "@/components/ui/text";
 import { useGetWorkspaceByIdQuery } from "@/lib/redux/api";
+import type { IssueWithEntity } from "@/lib/redux/api";
 import {
   setSelectedFile,
   setActiveTab,
   addContextFile,
+  openIssueTab,
 } from "@/lib/redux/slices/workspaceSlice";
 import type { RootState } from "@/lib/redux";
 import { FolderIcon } from "@/components/ui/icons/file-icons";
+import { IssuesSection } from "@/features/workspace/components/issues-section";
+import {
+  isIssueTab,
+  getIssueEntityId,
+} from "@/features/workspace/utils/repo-utils";
 
 export function WorkspaceContent() {
   const location = useLocation();
@@ -50,6 +57,20 @@ export function WorkspaceContent() {
     [dispatch],
   );
 
+  const handleSelectIssue = useCallback(
+    (issue: IssueWithEntity) => {
+      dispatch(openIssueTab(issue));
+    },
+    [dispatch],
+  );
+
+  const activeTab = useSelector(
+    (state: RootState) => state.workspace.activeTab,
+  );
+  const activeIssueEntityId = isIssueTab(activeTab)
+    ? getIssueEntityId(activeTab)
+    : null;
+
   // If no rootPath provided, show empty state
   if (!rootPath) {
     return (
@@ -65,21 +86,16 @@ export function WorkspaceContent() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 mx-3 -pb-4 rounded-2xl overflow-hidden">
+    <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 -pb-4 rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="shrink-0 py-2 mt-4">
-        <Body className="text-left text-base! text-primary-900 dark:text-primary font-medium">
+        <Body className="text-left text-base! text-primary-900 dark:text-primary font-medium px-3">
           Explorer
         </Body>
-        {selectedFile && (
-          <p className="text-xs text-primary-500 dark:text-primary-400 truncate mt-1">
-            {selectedFile.name}
-          </p>
-        )}
       </div>
 
       {/* File Explorer - full width, no split view */}
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 px-3 flex flex-col min-h-0">
         <FileExplorer
           rootPath={rootPath}
           onFileSelect={handleFileSelect}
@@ -88,6 +104,12 @@ export function WorkspaceContent() {
           className="flex-1 min-h-0"
         />
       </div>
+
+      <IssuesSection
+        workspaceId={workspaceId}
+        activeIssueEntityId={activeIssueEntityId}
+        onSelectIssue={handleSelectIssue}
+      />
     </div>
   );
 }

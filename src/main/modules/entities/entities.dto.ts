@@ -83,6 +83,7 @@ export interface TaskQueryOptions {
 export interface IssueQueryOptions {
   provider?: string;
   state?: string;
+  repo?: string;
   limit?: number;
 }
 

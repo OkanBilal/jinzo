@@ -1,5 +1,9 @@
 export { RunTab, getTabTitle } from "./run-tab";
 export { EditorTab } from "./editor-tab";
+export { IssueTab } from "./issue-tab";
+export { IssueTabContent } from "./issue-tab-content";
+export { IssueListItem } from "./issue-list-item";
+export { IssuesSection } from "./issues-section";
 export { EditorContent } from "./editor-content";
 export { CodeMirrorEditor } from "./codemirror-editor";
 export { TerminalEventLine } from "./terminal-event-line";

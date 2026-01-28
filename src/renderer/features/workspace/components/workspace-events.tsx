@@ -3,7 +3,10 @@ import { WorkspaceHeader } from "./workspace-header";
 import { WorkspaceTabs } from "./workspace-tabs";
 import { TerminalEventLine } from "./terminal-event-line";
 import { EditorContent } from "./editor-content";
+import { IssueTabContent } from "./issue-tab-content";
 import type { Run, RunEvent, Workspace } from "../types";
+import type { IssueWithEntity } from "@/lib/redux/api";
+import { isIssueTab, getIssueEntityId } from "../utils/repo-utils";
 
 interface WorkspaceEventsProps {
   runs: Run[];
@@ -13,10 +16,13 @@ interface WorkspaceEventsProps {
   eventsEndRef: RefObject<HTMLDivElement>;
   hasSelectedFile?: boolean;
   fileName?: string;
+  issueTabs: IssueWithEntity[];
   onSelectEditorTab: () => void;
   onSelectRunTab: (runId: string) => void;
   onCloseTab: (runId: string, e: React.MouseEvent) => void;
   onNewRun: () => void;
+  onSelectIssueTab: (entityId: string) => void;
+  onCloseIssueTab: (entityId: string, e: React.MouseEvent) => void;
 }
 
 export function WorkspaceEvents({
@@ -27,13 +33,20 @@ export function WorkspaceEvents({
   eventsEndRef,
   hasSelectedFile,
   fileName,
+  issueTabs,
   onSelectEditorTab,
   onSelectRunTab,
   onCloseTab,
   onNewRun,
+  onSelectIssueTab,
+  onCloseIssueTab,
 }: WorkspaceEventsProps) {
   const isEditorActive = activeTab === "editor";
-  const hasRunContent = activeTab !== "editor" && currentEvents.length > 0;
+  const isIssueActive = isIssueTab(activeTab);
+  const activeIssue = isIssueActive
+    ? issueTabs.find((t) => t.issue.entityId === getIssueEntityId(activeTab))
+    : null;
+  const hasRunContent = !isEditorActive && !isIssueActive && currentEvents.length > 0;
 
   return (
     <div className="font-mono text-sm h-full flex flex-col">
@@ -45,10 +58,13 @@ export function WorkspaceEvents({
           activeTab={activeTab}
           hasSelectedFile={hasSelectedFile}
           fileName={fileName}
+          issueTabs={issueTabs}
           onSelectEditorTab={onSelectEditorTab}
           onSelectRunTab={onSelectRunTab}
           onCloseTab={onCloseTab}
           onNewRun={onNewRun}
+          onSelectIssueTab={onSelectIssueTab}
+          onCloseIssueTab={onCloseIssueTab}
         />
       </div>
 
@@ -56,6 +72,8 @@ export function WorkspaceEvents({
       <div className="flex-1 min-h-0 overflow-hidden relative">
         {isEditorActive ? (
           <EditorContent className="h-full" />
+        ) : isIssueActive && activeIssue ? (
+          <IssueTabContent issue={activeIssue} />
         ) : hasRunContent ? (
           <div className="h-full overflow-y-auto">
             <div className="min-h-75 max-w-210 mx-auto space-y-1 pt-12 pb-24">
@@ -80,7 +98,7 @@ export function WorkspaceEvents({
           </div>
         )}
         {/* Bottom fade overlay */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary dark:from-[#080a0f] to-transparent pointer-events-none" />
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary dark:from-workspace-soft-dark to-transparent pointer-events-none" />
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { getDb, getSqlite } from "../../db/client";
-import { entities, entityChunks } from "../../db/schema";
+import { entities, entityChunks, issues } from "../../db/schema";
 import type { ChunkData, ItemChunkInfo, EntityInput, SyncJobStats } from "./sync.dto";
 
 const DEFAULT_ACCOUNT_ID = "default";
@@ -60,6 +60,21 @@ export const syncRepo = {
         externalId: item.externalId || null,
         metadata: item.metadata ? JSON.stringify(item.metadata) : null,
       });
+
+      // If entity kind is "issue", also insert into issues table
+      if (item.kind === "issue" && item.metadata && typeof item.metadata === "object") {
+        const meta = item.metadata as Record<string, unknown>;
+        await db.insert(issues).values({
+          entityId,
+          provider: (meta.provider as string) || "unknown",
+          state: (meta.state as string) || "open",
+          number: typeof meta.number === "number" ? meta.number : null,
+          repo: (meta.repo as string) || null,
+          assignee: (meta.assignee as string) || null,
+          labels: Array.isArray(meta.labels) ? JSON.stringify(meta.labels) : null,
+          priority: 0,
+        });
+      }
 
       return { success: true, entityId };
     } catch (err) {

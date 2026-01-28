@@ -13,6 +13,8 @@ import {
   TsconfigFileIcon,
   FolderIcon,
   FolderOpenIcon,
+  HtmlFileIcon,
+  CssFileIcon
 } from "@/components/ui/icons/file-icons";
 
 // ─────────────────────────────────────────────────────────────
@@ -27,6 +29,8 @@ const EXTENSION_ICONS: Record<string, FileIconType> = {
   js: JsFileIcon,
   mjs: JsFileIcon,
   cjs: JsFileIcon,
+  html: HtmlFileIcon,
+  css: CssFileIcon,
 
   // TypeScript
   ts: TsFileIcon,
@@ -166,9 +170,6 @@ const EXTENSION_COLORS: Record<string, string> = {
 interface IconProps {
   className?: string;
 }
-
-
-
 
 export const FileIcon = memo(function FileIcon({ className = "" }: IconProps) {
   return (

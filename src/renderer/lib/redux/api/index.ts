@@ -86,6 +86,7 @@ export {
   useGetIssuesQuery,
   useGetIssueByEntityIdQuery,
   useUpdateIssueStateMutation,
+  useGetIssuesByRepoQuery,
   useGetPlaylistItemsQuery,
 } from "./entitiesApi";
 export type {
@@ -95,6 +96,8 @@ export type {
   UpdateEntityPayload,
   Task,
   Issue,
+  IssueRecord,
+  IssueWithEntity,
   PlaylistItem,
 } from "./entitiesApi";
 

@@ -226,11 +226,12 @@ export const entitiesRepo = {
   // ─────────────────────────────────────────────────────────────
   async findAllIssues(options: IssueQueryOptions = {}) {
     const db = getDb();
-    const { provider, state, limit = 50 } = options;
+    const { provider, state, repo, limit = 50 } = options;
 
     const conditions = [eq(entities.isDeleted, false)];
     if (provider) conditions.push(eq(issues.provider, provider));
     if (state) conditions.push(eq(issues.state, state));
+    if (repo) conditions.push(eq(issues.repo, repo));
 
     return db
       .select({
@@ -240,7 +241,10 @@ export const entitiesRepo = {
       .from(issues)
       .innerJoin(entities, eq(issues.entityId, entities.id))
       .where(and(...conditions))
-      .orderBy(desc(issues.priority))
+      .orderBy(
+        sql`CASE WHEN ${issues.state} = 'open' THEN 0 ELSE 1 END`,
+        desc(issues.number),
+      )
       .limit(limit);
   },
 

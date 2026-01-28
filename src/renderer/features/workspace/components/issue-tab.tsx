@@ -1,0 +1,42 @@
+import { Close } from "@/components/ui/icons";
+import type { IssueWithEntity } from "@/lib/redux/api";
+
+interface IssueTabProps {
+  issue: IssueWithEntity;
+  isActive: boolean;
+  onClick: () => void;
+  onClose: (e: React.MouseEvent) => void;
+}
+
+export function IssueTab({ issue, isActive, onClick, onClose }: IssueTabProps) {
+  const { issue: iss, entity } = issue;
+  const label =
+    iss.number != null
+      ? `#${iss.number} ${entity.title || ""}`
+      : entity.title || "Issue";
+
+  return (
+    <div
+      onClick={onClick}
+      className={`group flex items-center gap-2 pl-3 pr-1 py-3 cursor-pointer transition-colors min-w-40 max-w-48 ${
+        isActive
+          ? "text-primary-800 dark:text-primary-200"
+          : "text-primary-500 hover:text-primary-700 dark:hover:text-primary-300"
+      }`}
+    >
+      <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="currentColor">
+        <path
+          fillRule="evenodd"
+          d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM0 8a8 8 0 1116 0A8 8 0 010 8zm9 0a1 1 0 11-2 0 1 1 0 012 0z"
+        />
+      </svg>
+      <span className="text-xs truncate flex-1">{label}</span>
+      <button
+        onClick={onClose}
+        className="opacity-0 group-hover:opacity-100 p-0.5 mr-1 hover:bg-primary/10 cursor-pointer rounded transition-all"
+      >
+        <Close className="w-3 h-3" />
+      </button>
+    </div>
+  );
+}

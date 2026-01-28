@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { FileNode, FileContentResponse } from "@/features/file-explorer";
+import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 
 export interface WorkspaceState {
   selectedModel: string;
@@ -11,6 +12,7 @@ export interface WorkspaceState {
   fileContentError: string | null;
   activeTab: "editor" | string;
   contextFiles: FileNode[];
+  openIssueTabs: IssueWithEntity[];
 }
 
 const initialState: WorkspaceState = {
@@ -23,6 +25,7 @@ const initialState: WorkspaceState = {
   fileContentError: null,
   activeTab: "editor",
   contextFiles: [],
+  openIssueTabs: [],
 };
 
 const workspaceSlice = createSlice({
@@ -80,6 +83,26 @@ const workspaceSlice = createSlice({
     clearContextFiles: (state) => {
       state.contextFiles = [];
     },
+    // Issue tab actions
+    openIssueTab: (state, action: PayloadAction<IssueWithEntity>) => {
+      const entityId = action.payload.issue.entityId;
+      if (!state.openIssueTabs.some((t) => t.issue.entityId === entityId)) {
+        state.openIssueTabs.push(action.payload);
+      }
+      state.activeTab = `issue:${entityId}`;
+    },
+    closeIssueTab: (state, action: PayloadAction<string>) => {
+      const entityId = action.payload;
+      state.openIssueTabs = state.openIssueTabs.filter(
+        (t) => t.issue.entityId !== entityId,
+      );
+      if (state.activeTab === `issue:${entityId}`) {
+        state.activeTab = "editor";
+      }
+    },
+    clearIssueTabs: (state) => {
+      state.openIssueTabs = [];
+    },
   },
 });
 
@@ -96,6 +119,9 @@ export const {
   addContextFile,
   removeContextFile,
   clearContextFiles,
+  openIssueTab,
+  closeIssueTab,
+  clearIssueTabs,
 } = workspaceSlice.actions;
 
 export default workspaceSlice.reducer;

@@ -16,7 +16,10 @@ import {
   clearSelectedFile,
   removeContextFile,
   clearContextFiles,
+  closeIssueTab,
+  clearIssueTabs,
 } from "@/lib/redux/slices/workspaceSlice";
+import { isIssueTab } from "@/features/workspace/utils/repo-utils";
 import type { RootState } from "@/lib/redux";
 import type {
   FileContentResponse,
@@ -37,6 +40,9 @@ export default function WorkspacePage() {
   const contextFiles = useSelector(
     (state: RootState) => state.workspace.contextFiles,
   );
+  const openIssueTabs = useSelector(
+    (state: RootState) => state.workspace.openIssueTabs,
+  );
   const [goal, setGoal] = useState("");
   const [canResume, setCanResume] = useState(false);
 
@@ -50,10 +56,11 @@ export default function WorkspacePage() {
   const { workspaceId, selectedWorkspace, selectedProvider, currentWorkspace } =
     useWorkspaceData();
 
-  // Clear selected file and context files when workspace changes
+  // Clear selected file, context files, and issue tabs when workspace changes
   useEffect(() => {
     dispatch(clearSelectedFile());
     dispatch(clearContextFiles());
+    dispatch(clearIssueTabs());
     dispatch(setActiveTab("editor"));
   }, [workspaceId, dispatch]);
 
@@ -132,8 +139,9 @@ export default function WorkspacePage() {
   // Check if active run can be resumed when it changes or completes
   useEffect(() => {
     const checkResume = async () => {
-      // Only check resume for the actual run, not when on editor tab
-      const runId = activeTab !== "editor" ? activeTab : null;
+      // Only check resume for run tabs, not editor or issue tabs
+      const runId =
+        activeTab !== "editor" && !isIssueTab(activeTab) ? activeTab : null;
       if (
         runId &&
         activeRun &&
@@ -151,7 +159,8 @@ export default function WorkspacePage() {
 
   const handleExecute = useCallback(async () => {
     let success = false;
-    const currentRunId = activeTab !== "editor" ? activeTab : null;
+    const currentRunId =
+      activeTab !== "editor" && !isIssueTab(activeTab) ? activeTab : null;
 
     // Build the final goal with context files
     let finalGoal = goal;
@@ -235,10 +244,26 @@ export default function WorkspacePage() {
     [dispatch],
   );
 
-  const showEmptyState = runs.length === 0 && !selectedFile;
+  const handleSelectIssueTab = useCallback(
+    (entityId: string) => {
+      dispatch(setActiveTab(`issue:${entityId}`));
+    },
+    [dispatch],
+  );
+
+  const handleCloseIssueTab = useCallback(
+    (entityId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      dispatch(closeIssueTab(entityId));
+    },
+    [dispatch],
+  );
+
+  const showEmptyState =
+    runs.length === 0 && !selectedFile && openIssueTabs.length === 0;
 
   return (
-    <div className="flex flex-col h-full dark:bg-[#080a0f] ">
+    <div className="flex flex-col h-full dark:bg-workspace-soft-dark ">
       <div className="flex-1 overflow-hidden">
         {showEmptyState ? (
           <WorkspaceEmptyState workspace={currentWorkspace} />
@@ -251,10 +276,13 @@ export default function WorkspacePage() {
             eventsEndRef={eventsEndRef as React.RefObject<HTMLDivElement>}
             hasSelectedFile={!!selectedFile}
             fileName={selectedFile?.name}
+            issueTabs={openIssueTabs}
             onSelectEditorTab={handleSelectEditorTab}
             onSelectRunTab={handleSelectRunTab}
             onCloseTab={handleCloseTab}
             onNewRun={handleNewRun}
+            onSelectIssueTab={handleSelectIssueTab}
+            onCloseIssueTab={handleCloseIssueTab}
           />
         )}
       </div>

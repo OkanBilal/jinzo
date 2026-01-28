@@ -36,6 +36,12 @@
   --color-copilot-dark: #080A0F ;
   --color-copilot-lightblue: #ffffff;
 
+  --color-workspace-dark: #0e1413;
+  --color-workspace-soft-dark: #080c0b;
+  --color-workspace-light: #f8f4ee;
+  --color-workspace-soft-light: #fcfbf2;
+
+
   --font-space-mono: 'Space Mono', monospace;
   --font-inter: 'Inter', sans-serif;
   --font-sans: 'Geist', system-ui, -apple-system, BlinkMacSystemFont,
@@ -738,12 +744,12 @@ input[type="range"].slider {
 }
 
 .dark .glass-morphism-copilot {
-  background: linear-gradient(to bottom, #080A0F, #131420);
+  background: linear-gradient(to bottom, var(--color-workspace-dark), var(--color-workspace-soft-dark));
   border-color: #ffffff1f;
   box-shadow:
     0 1px 1px #13142012,
     0 1px 1px #1314200a,
-    inset 0 1px 1px #080A0F20;
+    inset 0 1px 1px #090D1120;
 }
 
 .dark .glass-morphism-claude {

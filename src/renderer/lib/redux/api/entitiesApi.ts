@@ -70,6 +70,23 @@ export interface Issue {
   updatedAt: string;
 }
 
+export interface IssueRecord {
+  entityId: string;
+  provider: string;
+  state: string;
+  number: number | null;
+  repo: string | null;
+  assignee: string | null;
+  labels: string | null;
+  closedAt: string | null;
+  priority: number;
+}
+
+export interface IssueWithEntity {
+  issue: IssueRecord;
+  entity: Entity;
+}
+
 export interface PlaylistItem {
   id: string;
   entityId: string;
@@ -225,6 +242,17 @@ export const entitiesApi = baseApi.injectEndpoints({
       invalidatesTags: ["Issue"],
     }),
 
+    // Issues by repo (for workspace issues section)
+    getIssuesByRepo: builder.query<IssueWithEntity[], { repo: string }>({
+      query: ({ repo }) => ({
+        handler: "issues:getAll",
+        args: [{ repo }],
+      }),
+      transformResponse: (response: any) =>
+        response.success ? response.data : [],
+      providesTags: ["Issue"],
+    }),
+
     // Playlists
     getPlaylistItems: builder.query<
       PlaylistItem[],
@@ -261,6 +289,7 @@ export const {
   useGetIssuesQuery,
   useGetIssueByEntityIdQuery,
   useUpdateIssueStateMutation,
+  useGetIssuesByRepoQuery,
   // Playlists
   useGetPlaylistItemsQuery,
 } = entitiesApi;
