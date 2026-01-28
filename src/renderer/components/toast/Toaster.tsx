@@ -27,10 +27,9 @@ function ToastItem({ toast, index, onDismiss }: ToastItemProps) {
   const [exiting, setExiting] = useState(false);
   const dismissedRef = useRef(false);
 
-  // Trigger enter animation after mount
   useEffect(() => {
-    const id = setTimeout(() => setMounted(true), 20);
-    return () => clearTimeout(id);
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   // Auto-dismiss timer
@@ -72,7 +71,11 @@ function ToastItem({ toast, index, onDismiss }: ToastItemProps) {
     }
   };
 
-  const isVisible = mounted && !exiting;
+  const animationClass = !mounted
+    ? "opacity-0 scale-55"
+    : exiting
+      ? "animate-toast-out"
+      : "animate-toast-in";
 
   return (
     <div
@@ -82,14 +85,10 @@ function ToastItem({ toast, index, onDismiss }: ToastItemProps) {
       onMouseLeave={() => setIsPaused(false)}
       className={`
         pointer-events-auto inline-flex items-center gap-3 px-5 py-3
-        rounded-full max-w-[calc(100vw-24px)]
-        bg-white/90 dark:bg-primary-950
-        border border-primary-200/10 dark:border-primary-900
-        text-slate-900 dark:text-white
-        transition-all duration-200 ease-out
-        ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-3"}
+        rounded-full max-w-[calc(100vw-24px)] glass-morphism
+        text-primary-950 dark:text-primary
+        ${animationClass}
       `}
-      style={{ zIndex: 99999 - index }}
     >
       {icon && <span className="flex items-center">{icon}</span>}
       <span className="text-sm font-medium whitespace-nowrap">

@@ -14,6 +14,8 @@ import {
   setFileContentLoading,
   setFileContentError,
   clearSelectedFile,
+  removeContextFile,
+  clearContextFiles,
 } from "@/lib/redux/slices/workspaceSlice";
 import type { RootState } from "@/lib/redux";
 import type {
@@ -32,6 +34,9 @@ export default function WorkspacePage() {
   const selectedFile = useSelector(
     (state: RootState) => state.workspace.selectedFile,
   );
+  const contextFiles = useSelector(
+    (state: RootState) => state.workspace.contextFiles,
+  );
   const [goal, setGoal] = useState("");
   const [canResume, setCanResume] = useState(false);
 
@@ -45,9 +50,10 @@ export default function WorkspacePage() {
   const { workspaceId, selectedWorkspace, selectedProvider, currentWorkspace } =
     useWorkspaceData();
 
-  // Clear selected file when workspace changes
+  // Clear selected file and context files when workspace changes
   useEffect(() => {
     dispatch(clearSelectedFile());
+    dispatch(clearContextFiles());
     dispatch(setActiveTab("editor"));
   }, [workspaceId, dispatch]);
 
@@ -147,6 +153,14 @@ export default function WorkspacePage() {
     let success = false;
     const currentRunId = activeTab !== "editor" ? activeTab : null;
 
+    // Build the final goal with context files
+    let finalGoal = goal;
+    if (contextFiles.length > 0) {
+      const filesList = contextFiles.map((f) => f.fullPath).join("\n");
+      finalGoal = `Use these files as context:\n${filesList}\n\n${goal}`;
+      console.log("Final goal with context files:", finalGoal);
+    }
+
     // If there's an active completed run that can be resumed, continue it
     if (
       currentRunId &&
@@ -154,12 +168,12 @@ export default function WorkspacePage() {
       activeRun &&
       activeRun.status !== "running"
     ) {
-      success = (await continueRun(currentRunId, goal)) ?? false;
+      success = (await continueRun(currentRunId, finalGoal)) ?? false;
     } else {
       // Otherwise start a new run
       success =
         (await executeRun(
-          goal,
+          finalGoal,
           selectedWorkspace,
           selectedProvider,
           selectedModel,
@@ -168,9 +182,11 @@ export default function WorkspacePage() {
 
     if (success) {
       setGoal("");
+      dispatch(clearContextFiles());
     }
   }, [
     goal,
+    contextFiles,
     selectedWorkspace,
     selectedProvider,
     selectedModel,
@@ -179,6 +195,7 @@ export default function WorkspacePage() {
     activeTab,
     activeRun,
     canResume,
+    dispatch,
   ]);
 
   const handleCloseTab = useCallback(
@@ -211,6 +228,13 @@ export default function WorkspacePage() {
     [dispatch, selectTab],
   );
 
+  const handleRemoveContextFile = useCallback(
+    (filePath: string) => {
+      dispatch(removeContextFile(filePath));
+    },
+    [dispatch],
+  );
+
   const showEmptyState = runs.length === 0 && !selectedFile;
 
   return (
@@ -239,7 +263,7 @@ export default function WorkspacePage() {
           <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         </div>
       )}
-      {/* <WorkspaceQuickActions onSetGoal={setGoal} /> */}
+      <WorkspaceQuickActions onSetGoal={setGoal} />
       <WorkspaceInput
         goal={goal}
         onGoalChange={setGoal}
@@ -250,6 +274,8 @@ export default function WorkspacePage() {
         providerId={selectedProvider}
         selectedModel={selectedModel}
         onModelChange={handleModelChange}
+        contextFiles={contextFiles}
+        onRemoveContextFile={handleRemoveContextFile}
       />
     </div>
   );

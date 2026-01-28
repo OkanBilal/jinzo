@@ -1,7 +1,7 @@
 import { memo, useState, useCallback } from "react";
 import type { FileNode } from "../types";
 import { FileIconComponent } from "./file-icon";
-import { ArrowUp } from "@/components/ui/icons";
+import { ArrowUp, Plus } from "@/components/ui/icons";
 
 // ─────────────────────────────────────────────────────────────
 // File Tree Node Component
@@ -13,6 +13,7 @@ interface FileTreeNodeProps {
   selectedPath: string | null;
   onSelect: (node: FileNode) => void;
   onExpand?: (node: FileNode) => Promise<FileNode[] | undefined>;
+  onAddToContext?: (node: FileNode) => void;
   defaultExpanded?: boolean;
 }
 
@@ -22,6 +23,7 @@ export const FileTreeNode = memo(function FileTreeNode({
   selectedPath,
   onSelect,
   onExpand,
+  onAddToContext,
   defaultExpanded = false,
 }: FileTreeNodeProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
@@ -74,6 +76,16 @@ export const FileTreeNode = memo(function FileTreeNode({
     [handleClick]
   );
 
+  const handleAddToContext = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onAddToContext && node.type === "file") {
+        onAddToContext(node);
+      }
+    },
+    [node, onAddToContext]
+  );
+
   const paddingLeft = 0 + depth * 12;
 
   return (
@@ -86,7 +98,7 @@ export const FileTreeNode = memo(function FileTreeNode({
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         className={`
-          flex items-center h-7 cursor-pointer text-[14px]
+          group flex items-center h-7 cursor-pointer text-[14px]
           transition-colors duration-75 rounded-lg
           ${
             isSelected
@@ -119,7 +131,18 @@ export const FileTreeNode = memo(function FileTreeNode({
         />
 
         {/* File/Folder Name */}
-        <span className="truncate">{node.name}</span>
+        <span className="truncate flex-1">{node.name}</span>
+
+        {/* Add to Context Button - only for files */}
+        {!isDirectory && onAddToContext && (
+          <button
+            onClick={handleAddToContext}
+            className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-primary/20 dark:hover:bg-primary/30 transition-opacity mr-1"
+            title="Add to context"
+          >
+            <Plus className="w-3.5 h-3.5 text-primary-500 dark:text-primary-400" />
+          </button>
+        )}
 
         {/* Loading Indicator */}
         {isLoading && (
@@ -138,6 +161,7 @@ export const FileTreeNode = memo(function FileTreeNode({
               selectedPath={selectedPath}
               onSelect={onSelect}
               onExpand={onExpand}
+              onAddToContext={onAddToContext}
             />
           ))}
         </div>

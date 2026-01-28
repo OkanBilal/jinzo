@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useGetProviderModelsQuery } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
+import type { FileNode } from "@/features/file-explorer";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { SendButton } from "@/components/ui/input/send-button";
@@ -8,6 +9,7 @@ import { DictationButton } from "@/components/ui/input/dictation-button";
 import { InputForm } from "@/components/ui/input/input-form";
 import { FileUploadDropdown, FILE_TYPES, type UploadedFile } from "@/components/ui/input/file-upload-dropdown";
 import { ModelSelectDropdown } from "@/components/ui/input/model-select-dropdown";
+import { Close } from "@/components/ui/icons";
 
 interface WorkspaceInputProps {
   goal: string;
@@ -19,6 +21,8 @@ interface WorkspaceInputProps {
   providerId?: string;
   selectedModel?: string;
   onModelChange?: (model: string) => void;
+  contextFiles?: FileNode[];
+  onRemoveContextFile?: (filePath: string) => void;
 }
 
 // Fallback models when API is unavailable
@@ -40,6 +44,8 @@ export function WorkspaceInput({
   providerId = "copilot_cli",
   selectedModel: externalSelectedModel,
   onModelChange: externalOnModelChange,
+  contextFiles = [],
+  onRemoveContextFile,
 }: WorkspaceInputProps) {
   const modelDropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -156,6 +162,28 @@ export function WorkspaceInput({
       className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism-copilot
         cursor-pointer transition-all`}
     >
+      {/* Context Files Preview */}
+      {contextFiles.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-4 pt-3 pb-1">
+          {contextFiles.map((file) => (
+            <div
+              key={file.fullPath}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 dark:bg-primary/8 text-xs text-primary-700 dark:text-primary-300"
+            >
+              <span className="truncate max-w-37.5">{file.name}</span>
+              {onRemoveContextFile && (
+                <button
+                  onClick={() => onRemoveContextFile(file.fullPath)}
+                  className="w-4 h-4 flex items-center justify-center rounded p-0.5 hover:bg-primary/20 dark:hover:bg-primary/10 transition-colors"
+                  title="Remove from context"
+                >
+                  <Close className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
       <div className="relative">
         <InputForm
           query={goal}

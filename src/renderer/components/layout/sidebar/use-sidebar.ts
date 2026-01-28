@@ -58,7 +58,7 @@ export function useSidebar() {
     isOpen: boolean;
     position: { x: number; y: number };
     targetMood: Mood | null;
-  }>({ isOpen: false, position: { x: 0, y: 0 }, targetMood: null });
+  }>({ isOpen: false, position: { x: 28, y: 0 }, targetMood: null });
 
   // Edit modal state
   const [editModalState, setEditModalState] = useState<{
@@ -306,7 +306,7 @@ export function useSidebar() {
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
     setCreateMoodMenuState({
       isOpen: true,
-      position: { x: rect.left + rect.width / 2, y: rect.top },
+      position: { x: rect.right + 40, y: rect.bottom - 12},
     });
   };
 
@@ -331,10 +331,12 @@ export function useSidebar() {
 
   // Context menu handlers
   const handleMoodContextMenu = (mood: Mood, event: React.MouseEvent) => {
+        const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+
     event.preventDefault();
     setContextMenuState({
       isOpen: true,
-      position: { x: event.clientX, y: event.clientY },
+      position: { x: rect.right, y: rect.top },
       targetMood: mood,
     });
   };

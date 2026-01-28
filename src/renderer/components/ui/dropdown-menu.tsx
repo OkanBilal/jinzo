@@ -8,6 +8,7 @@ interface DropdownMenuProps {
   children: ReactNode;
   minWidth?: number;
   className?: string;
+  origin?: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "auto";
 }
 
 export function DropdownMenu({
@@ -17,6 +18,7 @@ export function DropdownMenu({
   children,
   minWidth = 144,
   className = "",
+  origin = "auto",
 }: DropdownMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -52,15 +54,37 @@ export function DropdownMenu({
     y: Math.max(8, Math.min(position.y, window.innerHeight - 100)),
   };
 
+  // Calculate transform origin based on position or explicit origin
+  const getTransformOrigin = () => {
+    if (origin !== "auto") {
+      const originMap = {
+        "top-left": "top left",
+        "top-right": "top right",
+        "bottom-left": "bottom left",
+        "bottom-right": "bottom right",
+      };
+      return originMap[origin];
+    }
+
+    // Auto-detect based on position relative to viewport
+    const isRight = position.x > window.innerWidth / 2;
+    const isBottom = position.y > window.innerHeight / 2;
+
+    if (isBottom && isRight) return "bottom right";
+    if (isBottom && !isRight) return "bottom left";
+    if (!isBottom && isRight) return "top right";
+    return "top left";
+  };
+
   return createPortal(
     <div
       ref={menuRef}
-      className={`fixed z-100 rounded-xl overflow-hidden glass-morphism ${className}`}
+      className={`fixed z-100 rounded-xl overflow-hidden glass-morphism animate-dropdown-in ${className}`}
       style={{
         left: adjustedPosition.x,
         top: adjustedPosition.y,
         minWidth,
-        animation: "scaleIn 100ms ease-out",
+        transformOrigin: getTransformOrigin(),
       }}
     >
       {children}
@@ -83,8 +107,8 @@ export function DropdownMenuItem({
   className = "",
 }: DropdownMenuItemProps) {
   const variantClasses = {
-    default: "text-primary-700 dark:text-primary-200",
-    danger: "text-red-600 dark:text-red-400",
+    default: "text-primary-700 dark:text-primary",
+    danger: "text-red-600 dark:text-red-500",
   };
 
   return (

@@ -10,6 +10,7 @@ export interface WorkspaceState {
   isLoadingFileContent: boolean;
   fileContentError: string | null;
   activeTab: "editor" | string;
+  contextFiles: FileNode[];
 }
 
 const initialState: WorkspaceState = {
@@ -21,6 +22,7 @@ const initialState: WorkspaceState = {
   isLoadingFileContent: false,
   fileContentError: null,
   activeTab: "editor",
+  contextFiles: [],
 };
 
 const workspaceSlice = createSlice({
@@ -65,6 +67,19 @@ const workspaceSlice = createSlice({
     setActiveTab: (state, action: PayloadAction<"editor" | string>) => {
       state.activeTab = action.payload;
     },
+    // Context files actions
+    addContextFile: (state, action: PayloadAction<FileNode>) => {
+      // Don't add duplicates
+      if (!state.contextFiles.some(f => f.fullPath === action.payload.fullPath)) {
+        state.contextFiles.push(action.payload);
+      }
+    },
+    removeContextFile: (state, action: PayloadAction<string>) => {
+      state.contextFiles = state.contextFiles.filter(f => f.fullPath !== action.payload);
+    },
+    clearContextFiles: (state) => {
+      state.contextFiles = [];
+    },
   },
 });
 
@@ -78,6 +93,9 @@ export const {
   setFileContentError,
   clearSelectedFile,
   setActiveTab,
+  addContextFile,
+  removeContextFile,
+  clearContextFiles,
 } = workspaceSlice.actions;
 
 export default workspaceSlice.reducer;

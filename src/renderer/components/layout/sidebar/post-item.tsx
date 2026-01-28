@@ -156,7 +156,7 @@ export default function PostItem({
       >
         {onRename && (
           <DropdownMenuItem onClick={handleRenameClick}>
-            <Edit className="size-4" />
+            <Edit className="size-3.5" />
             <span>Rename</span>
           </DropdownMenuItem>
         )}

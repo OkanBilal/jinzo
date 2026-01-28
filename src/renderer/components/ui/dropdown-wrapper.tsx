@@ -108,32 +108,24 @@ export default function DropdownWrapper({
   if (usePortal && !coords) return null;
 
   const positionClass = position === "right" ? "right-0" : "left-0";
-  const verticalClass = openUpward ? "bottom-12" : "top-8";
-
-  const originClass = openUpward
-    ? position === "right"
-      ? "origin-bottom-right"
-      : "origin-bottom-left"
-    : position === "right"
-      ? "origin-top-right"
-      : "origin-top-left";
+  const verticalClass = openUpward ? "bottom-10" : "top-8";
 
   const dropdown = (
     <div
       ref={dropdownRef}
-      className={`${usePortal ? "fixed" : "absolute"} ${!usePortal ? positionClass : ""} ${!usePortal ? verticalClass : ""} ${minWidth} ${originClass} ${fixedBackgroundClass} z-100 ${glassMorphismClass} rounded-xl transition-all`}
+      className={`${usePortal ? "fixed" : "absolute"} ${!usePortal ? positionClass : ""} ${!usePortal ? verticalClass : ""} ${minWidth} ${fixedBackgroundClass} z-100 ${glassMorphismClass} rounded-xl transition-all animate-dropdown-in`}
       style={{
         background: getDropdownBackground(),
+        transformOrigin: openUpward 
+          ? (position === "right" ? "bottom right" : "bottom left")
+          : (position === "right" ? "top right" : "top left"),
         ...(usePortal && coords ? {
-          animation: "scaleIn 150ms ease-out",
           top: `${coords.top}px`,
           left: position === "right" ? "auto" : `${coords.left}px`,
           right: position === "right" ? `${window.innerWidth - coords.left - coords.width}px` : "auto",
           width: coords.width,
           transform: openUpward ? "translateY(-100%)" : "none",
-        } : {
-          animation: "scaleIn 150ms ease-out",
-        }),
+        } : {}),
       }}
       role="menu"
     >

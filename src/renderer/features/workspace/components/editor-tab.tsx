@@ -13,7 +13,7 @@ export function EditorTab({ isActive, onClick, hasFile, fileName }: EditorTabPro
       onClick={onClick}
       className={`group flex items-center gap-2 pl-3 pr-3 mx-1 py-3 cursor-pointer transition-colors min-w-28 max-w-32 ${
         isActive
-          ? "text-primary-800 dark:text-primary-200 border-b-2 border-primary-500 dark:border-primary/40 bg-copilot-blue/80"
+          ? "text-primary-800 dark:text-primary-200 border-b-2 border-primary-500 dark:border-primary/40 bg-primary-200/30 dark:bg-copilot-blue/80"
           : "text-primary-500 hover:text-primary-700 dark:hover:text-primary-300"
       }`}
     >

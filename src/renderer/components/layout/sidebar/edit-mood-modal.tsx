@@ -200,12 +200,9 @@ export default function EditMoodModal({
         onClick={handleAnimatedClose}
       />
       <div
-        className="absolute left-0 bottom-0 z-40 min-h-[calc(60vh-2rem)] overflow-hidden rounded-t-3xl"
+        className={`absolute left-0 bottom-0 z-40 min-h-[calc(60vh-2rem)] overflow-hidden rounded-t-3xl ${isClosing ? "animate-modal-out" : "animate-modal-in"}`}
         style={{
           width: sidebarWidth,
-          animation: isClosing
-            ? "slide-to-bottom 200ms ease-in forwards"
-            : "slide-from-bottom 200ms ease-out",
           background: currentVariant.preview,
         }}
         onClick={(e) => e.stopPropagation()}

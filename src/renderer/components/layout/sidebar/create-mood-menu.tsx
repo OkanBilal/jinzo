@@ -46,7 +46,7 @@ export default function CreateMoodMenu({
         }}
       >
         <Preset className="size-4" />
-        <span>Preset Moods</span>
+        <span>Choose Mood</span>
       </DropdownMenuItem>
     </DropdownMenu>
   );

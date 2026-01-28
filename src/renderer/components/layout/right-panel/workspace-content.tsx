@@ -7,6 +7,7 @@ import { useGetWorkspaceByIdQuery } from "@/lib/redux/api";
 import {
   setSelectedFile,
   setActiveTab,
+  addContextFile,
 } from "@/lib/redux/slices/workspaceSlice";
 import type { RootState } from "@/lib/redux";
 import { FolderIcon } from "@/components/ui/icons/file-icons";
@@ -37,6 +38,14 @@ export function WorkspaceContent() {
       dispatch(setSelectedFile(node));
       // Switch to Editor tab when a file is selected
       dispatch(setActiveTab("editor"));
+    },
+    [dispatch],
+  );
+
+  const handleAddToContext = useCallback(
+    (node: FileNode) => {
+      // Add file to context for the input
+      dispatch(addContextFile(node));
     },
     [dispatch],
   );
@@ -74,6 +83,7 @@ export function WorkspaceContent() {
         <FileExplorer
           rootPath={rootPath}
           onFileSelect={handleFileSelect}
+          onAddToContext={handleAddToContext}
           initialDepth={2}
           className="flex-1 min-h-0"
         />

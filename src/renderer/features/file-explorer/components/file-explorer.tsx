@@ -12,6 +12,7 @@ interface FileExplorerProps {
   rootPath: string;
   onFileSelect?: (node: FileNode) => void;
   onDirectorySelect?: (node: FileNode) => void;
+  onAddToContext?: (node: FileNode) => void;
   includeHidden?: boolean;
   excludePatterns?: string[];
   initialDepth?: number;
@@ -36,6 +37,7 @@ export const FileExplorer = memo(function FileExplorer({
   rootPath,
   onFileSelect,
   onDirectorySelect,
+  onAddToContext,
   includeHidden = false,
   excludePatterns,
   initialDepth = 1, // Start with just first level for faster initial load
@@ -206,6 +208,7 @@ export const FileExplorer = memo(function FileExplorer({
             selectedPath={selectedPath}
             onSelect={handleSelect}
             onExpand={handleExpand}
+            onAddToContext={onAddToContext}
             // Don't auto-expand - let user click to expand and lazy-load children
             defaultExpanded={false}
           />

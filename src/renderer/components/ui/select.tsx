@@ -178,7 +178,7 @@ export default function Select<T extends string = string>({
             className={`fixed z-9999 
             border border-t-0 border-primary-950/10 dark:border-primary/10 
             rounded-b-xl shadow-lg overflow-hidden
-            animate-slide-fade-down ${fixedBackgroundClass}`}
+            animate-dropdown-in origin-top ${fixedBackgroundClass}`}
             style={{
               background: getDropdownBackground(),
               top: dropdownPosition.top,
@@ -194,9 +194,6 @@ export default function Select<T extends string = string>({
                   onClick={() => {
                     onChange(option.value);
                     setIsOpen(false);
-                  }}
-                  style={{
-                    animation: `slide-fade-down 0.20s ease-out ${index * 0.025}s both`,
                   }}
                   className={`
                   w-full cursor-pointer text-left 
