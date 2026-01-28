@@ -1,11 +1,9 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface JournalEditingState {
-  // Current journal being edited
   entityId: string | null;
   title: string;
   body: string;
-  // Metadata for context
   wordCount: number;
   status: "draft" | "published" | null;
 }

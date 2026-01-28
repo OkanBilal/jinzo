@@ -1,8 +1,5 @@
 import { baseApi } from "./baseApi";
 
-// ─────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────
 export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "canceled";
 export type RunContextKind = "file" | "selection" | "diff" | "git" | "terminal" | "env" | "note";
 export type RunArtifactKind = "patch" | "file" | "log" | "report" | "command_result";
@@ -134,9 +131,6 @@ export interface UpdateRunCommandPayload {
   metadata?: Record<string, unknown>;
 }
 
-// ─────────────────────────────────────────────────────────────
-// API
-// ─────────────────────────────────────────────────────────────
 export const runsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // Runs
@@ -261,7 +255,6 @@ export const runsApi = baseApi.injectEndpoints({
       invalidatesTags: ["Runs"],
     }),
 
-    // Run Context
     getRunContext: builder.query<RunContext[], string>({
       query: (runId) => ({
         handler: "runContext:getByRun",
@@ -296,7 +289,6 @@ export const runsApi = baseApi.injectEndpoints({
       ],
     }),
 
-    // Run Artifacts
     getRunArtifacts: builder.query<RunArtifact[], string>({
       query: (runId) => ({
         handler: "runArtifacts:getByRun",
@@ -333,7 +325,6 @@ export const runsApi = baseApi.injectEndpoints({
       ],
     }),
 
-    // Run Commands
     getRunCommands: builder.query<RunCommand[], string>({
       query: (runId) => ({
         handler: "runCommands:getByRun",
@@ -418,7 +409,6 @@ export const runsApi = baseApi.injectEndpoints({
 });
 
 export const {
-  // Runs
   useGetRunsQuery,
   useLazyGetRunsQuery,
   useGetRunByIdQuery,
@@ -436,17 +426,14 @@ export const {
   useFailRunMutation,
   useCancelRunMutation,
   useDeleteRunMutation,
-  // Run Context
   useGetRunContextQuery,
   useLazyGetRunContextQuery,
   useAddRunContextMutation,
   useRemoveRunContextMutation,
-  // Run Artifacts
   useGetRunArtifactsQuery,
   useLazyGetRunArtifactsQuery,
   useAddRunArtifactMutation,
   useRemoveRunArtifactMutation,
-  // Run Commands
   useGetRunCommandsQuery,
   useLazyGetRunCommandsQuery,
   useAddRunCommandMutation,

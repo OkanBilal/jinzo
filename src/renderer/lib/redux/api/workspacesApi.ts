@@ -1,8 +1,5 @@
 import { baseApi } from "./baseApi";
 
-// ─────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────
 export interface WorkspaceMetadata {
   language?: string;
   framework?: string;
@@ -40,9 +37,6 @@ export interface UpdateWorkspacePayload {
   metadata?: WorkspaceMetadata;
 }
 
-// ─────────────────────────────────────────────────────────────
-// API
-// ─────────────────────────────────────────────────────────────
 export const workspacesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getWorkspaces: builder.query<Workspace[], void>({

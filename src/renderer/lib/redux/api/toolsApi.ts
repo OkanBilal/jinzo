@@ -1,8 +1,5 @@
 import { baseApi } from "./baseApi";
 
-// ─────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────
 export type ToolSource = "local" | "mcp" | "provider_builtin";
 export type ToolCallStatus = "queued" | "running" | "done" | "error" | "canceled";
 

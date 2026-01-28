@@ -1,7 +1,5 @@
 import { baseApi } from "./baseApi";
 
-// ==================== TYPES ====================
-
 export interface JournalMetadata {
   status: "draft" | "published";
   wordCount?: number;
@@ -47,11 +45,8 @@ export interface JournalQueryParams {
   limit?: number;
 }
 
-// ==================== API ====================
-
 export const journalApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    // Get all journal entries
     getJournalEntries: builder.query<JournalEntry[], JournalQueryParams>({
       query: (params) => ({
         handler: "journal:getAll",
@@ -68,7 +63,6 @@ export const journalApi = baseApi.injectEndpoints({
           : [{ type: "Journal", id: "LIST" }],
     }),
 
-    // Get journal entry by ID
     getJournalById: builder.query<JournalEntry | null, string>({
       query: (id) => ({
         handler: "journal:getById",
@@ -79,8 +73,10 @@ export const journalApi = baseApi.injectEndpoints({
       providesTags: (_result, _error, id) => [{ type: "Journal", id }],
     }),
 
-    // Create draft
-    createJournalDraft: builder.mutation<JournalEntry, CreateJournalDraftPayload>({
+    createJournalDraft: builder.mutation<
+      JournalEntry,
+      CreateJournalDraftPayload
+    >({
       query: (payload) => ({
         handler: "journal:createDraft",
         args: [payload],
@@ -90,7 +86,6 @@ export const journalApi = baseApi.injectEndpoints({
       invalidatesTags: [{ type: "Journal", id: "LIST" }],
     }),
 
-    // Update draft (autosave - optimistic update for performance)
     updateJournalDraft: builder.mutation<
       JournalEntry,
       { id: string; payload: UpdateJournalDraftPayload }
@@ -103,12 +98,9 @@ export const journalApi = baseApi.injectEndpoints({
         response.success ? response.data : null,
       // Don't invalidate on autosave to prevent re-fetches during typing
       // Only invalidate the specific entry
-      invalidatesTags: (_result, _error, { id }) => [
-        { type: "Journal", id },
-      ],
+      invalidatesTags: (_result, _error, { id }) => [{ type: "Journal", id }],
     }),
 
-    // Save (creates revision + feed event)
     saveJournal: builder.mutation<JournalEntry, string>({
       query: (id) => ({
         handler: "journal:save",
@@ -122,7 +114,6 @@ export const journalApi = baseApi.injectEndpoints({
       ],
     }),
 
-    // Publish
     publishJournal: builder.mutation<JournalEntry, string>({
       query: (id) => ({
         handler: "journal:publish",
@@ -137,7 +128,6 @@ export const journalApi = baseApi.injectEndpoints({
       ],
     }),
 
-    // Delete
     deleteJournal: builder.mutation<boolean, string>({
       query: (id) => ({
         handler: "journal:delete",
@@ -150,7 +140,6 @@ export const journalApi = baseApi.injectEndpoints({
       ],
     }),
 
-    // Get revisions
     getJournalRevisions: builder.query<
       JournalRevision[],
       { entityId: string; limit?: number }
@@ -163,7 +152,6 @@ export const journalApi = baseApi.injectEndpoints({
         response.success ? response.data : [],
     }),
 
-    // Mark for indexing
     markJournalForIndexing: builder.mutation<boolean, string>({
       query: (entityId) => ({
         handler: "journal:markForIndexing",

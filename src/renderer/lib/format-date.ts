@@ -9,24 +9,24 @@ export function formatDate(date: string): string {
 
   const diffInMinutes = Math.floor(diffInSeconds / 60);
   if (diffInMinutes < 60) {
-    return `${diffInMinutes}min${diffInMinutes !== 1 ? '' : ''} ago`;
+    return `${diffInMinutes}min${diffInMinutes !== 1 ? "" : ""} ago`;
   }
 
   const diffInHours = Math.floor(diffInMinutes / 60);
   if (diffInHours < 24) {
-    return `${diffInHours}h${diffInHours !== 1 ? '' : ''} ago`;
+    return `${diffInHours}h${diffInHours !== 1 ? "" : ""} ago`;
   }
 
   const diffInDays = Math.floor(diffInHours / 24);
   if (diffInDays < 30) {
-    return `${diffInDays}d${diffInDays !== 1 ? '' : ''} ago`;
+    return `${diffInDays}d${diffInDays !== 1 ? "" : ""} ago`;
   }
 
   const diffInMonths = Math.floor(diffInDays / 30);
   if (diffInMonths < 12) {
-    return `${diffInMonths}m${diffInMonths !== 1 ? '' : ''} ago`;
+    return `${diffInMonths}m${diffInMonths !== 1 ? "" : ""} ago`;
   }
 
   const diffInYears = Math.floor(diffInMonths / 12);
-  return `${diffInYears} y${diffInYears !== 1 ? '' : ''} ago`;
+  return `${diffInYears} y${diffInYears !== 1 ? "" : ""} ago`;
 }

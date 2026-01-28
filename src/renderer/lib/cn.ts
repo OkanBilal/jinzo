@@ -1,4 +1,6 @@
-export function cn(...inputs: (ClassValue | ClassDictionary | ClassArray)[]): string {
+export function cn(
+  ...inputs: (ClassValue | ClassDictionary | ClassArray)[]
+): string {
   const classes: string[] = [];
 
   for (const input of inputs) {
@@ -24,5 +26,3 @@ export function cn(...inputs: (ClassValue | ClassDictionary | ClassArray)[]): st
 type ClassValue = string | number | boolean | undefined | null;
 type ClassDictionary = Record<string, boolean | undefined | null>;
 type ClassArray = ClassValue[];
-
-

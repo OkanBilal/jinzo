@@ -1,8 +1,5 @@
 import { baseApi } from "./baseApi";
 
-// ─────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────
 export type ProviderKind = "llm_runtime" | "agent_runtime";
 
 export interface ProviderConfig {
@@ -66,9 +63,6 @@ export interface ModelInfo {
   metadata?: Record<string, unknown>;
 }
 
-// ─────────────────────────────────────────────────────────────
-// API
-// ─────────────────────────────────────────────────────────────
 export const providersApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getProviders: builder.query<Provider[], void>({

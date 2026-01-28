@@ -5,12 +5,10 @@ export interface WorkspaceState {
   selectedModel: string;
   selectedProviderId: string;
   thinkingEnabled: boolean;
-  // File editor state
   selectedFile: FileNode | null;
   selectedFileContent: FileContentResponse | null;
   isLoadingFileContent: boolean;
   fileContentError: string | null;
-  // Tab state: "editor" or a runId
   activeTab: "editor" | string;
 }
 
@@ -18,7 +16,6 @@ const initialState: WorkspaceState = {
   selectedModel: "",
   selectedProviderId: "copilot_cli",
   thinkingEnabled: false,
-  // File editor state
   selectedFile: null,
   selectedFileContent: null,
   isLoadingFileContent: false,
@@ -35,16 +32,13 @@ const workspaceSlice = createSlice({
     },
     setWorkspaceProvider: (state, action: PayloadAction<string>) => {
       state.selectedProviderId = action.payload;
-      // Reset model when provider changes
       state.selectedModel = "";
     },
     setWorkspaceThinkingEnabled: (state, action: PayloadAction<boolean>) => {
       state.thinkingEnabled = action.payload;
     },
-    // File selection actions
     setSelectedFile: (state, action: PayloadAction<FileNode | null>) => {
       state.selectedFile = action.payload;
-      // Clear content when selecting new file
       if (action.payload) {
         state.selectedFileContent = null;
         state.fileContentError = null;

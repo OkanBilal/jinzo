@@ -1,26 +1,29 @@
-/**
- * Predefined mood templates for quick creation
- */
-
+import type { ThemeVariant } from "./mood-themes";
 export interface PredefinedMoodTheme {
-  light: { value: string; preview: string };
-  dark: { value: string; preview: string };
+  light: ThemeVariant;
+  dark: ThemeVariant;
+}
+
+export interface SidebarConfig {
+  width?: string;
+  title?: string;
+  itemType?: string;
+  defaultRoute?: string;
+}
+
+export interface MainConfig {
+  margin?: string;
+}
+
+export interface RightPanelConfig {
+  width?: string;
+  component?: string;
 }
 
 export interface PredefinedMoodUIConfig {
-  sidebar?: {
-    width?: string;
-    title?: string;
-    itemType?: string;
-    defaultRoute?: string;
-  };
-  main?: {
-    margin?: string;
-  };
-  rightPanel?: {
-    width?: string;
-    component?: string;
-  };
+  sidebar?: SidebarConfig;
+  main?: MainConfig;
+  rightPanel?: RightPanelConfig;
 }
 
 export interface PredefinedMood {
@@ -32,99 +35,60 @@ export interface PredefinedMood {
   uiConfig?: PredefinedMoodUIConfig;
 }
 
+const theme = (light: string, dark: string): PredefinedMoodTheme => ({
+  light: { value: light, preview: light.replace(/[0-9a-f]{2}$/i, "") || light },
+  dark: { value: dark, preview: dark },
+});
+
+const WORKSPACE_UI: PredefinedMoodUIConfig = {
+  sidebar: { width: "18rem", title: "Workspace", itemType: "workspace", defaultRoute: "/workspace" },
+  main: { margin: "18rem" },
+  rightPanel: { width: "22rem", component: "workspace" },
+};
+
 export const predefinedMoods: PredefinedMood[] = [
   {
     id: "journal",
     name: "Journal",
     icon: "icon:textitalic",
-    theme: {
-      light: { value: "#E6C7E699", preview: "#E6C7E6" },
-      dark: { value: "#2D1F33", preview: "#2D1F33" },
-    },
+    theme: theme("#E6C7E699", "#2D1F33"),
     systemPrompt:
       "You are a creative writing assistant. Help the user with writing tasks including drafting, editing, brainstorming ideas, and improving prose. Focus on clarity, style, and engaging content.",
     uiConfig: {
-      sidebar: {
-        title: "Post",
-        itemType: "post",
-        defaultRoute: "/journal",
-      },
-      rightPanel: {
-        width: "30rem",
-        component: "journal",
-      },
+      sidebar: { title: "Post", itemType: "post", defaultRoute: "/journal" },
+      rightPanel: { width: "30rem", component: "journal" },
     },
   },
   {
     id: "claude",
     name: "Claude",
     icon: "icon:claude",
-    theme: {
-      light: { value: "#fcc7b699", preview: "#fcc7b6" },
-      dark: { value: "#63341f", preview: "#63341f" },
-    },
+    theme: theme("#fcc7b699", "#63341f"),
     systemPrompt: "",
     uiConfig: {
-      sidebar: {
-        width: "18rem",
-        title: "Workspace",
-        itemType: "claude",
-        defaultRoute: "/claude",
-      },
-      main: {
-        margin: "18rem",
-      },
+      sidebar: { width: "18rem", title: "Workspace", itemType: "claude", defaultRoute: "/claude" },
+      main: { margin: "18rem" },
     },
   },
-
   {
     id: "copilot",
     name: "Copilot",
     icon: "icon:copilot",
-    theme: {
-      light: { value: "#FFFFFF99", preview: "#FFFFFF" },
-      dark: { value: "#080a0fd9", preview: "#080a0f" },
-    },
+    theme: theme("#FFFFFF99", "#080a0fd9"),
     systemPrompt: "",
-    uiConfig: {
-      sidebar: {
-        width: "18rem",
-        title: "Workspace",
-        itemType: "workspace",
-        defaultRoute: "/workspace",
-      },
-      main: {
-        margin: "18rem",
-      },
-      rightPanel: {
-        width: "22rem",
-        component: "workspace",
-      },
-    },
+    uiConfig: WORKSPACE_UI,
   },
-    {
+  {
     id: "health",
     name: "Health",
     icon: "icon:heart",
-    theme: {
-      light: { value: "#fde2e2", preview: "#fde2e2" },
-      dark: { value: "#3b1d21", preview: "#3b1d21" },
-    },
+    theme: theme("#fde2e2", "#3b1d21"),
     systemPrompt: "",
-    uiConfig: {
-      sidebar: {
-        width: "18rem",
-        title: "Workspace",
-        itemType: "workspace",
-        defaultRoute: "/workspace",
-      },
-      main: {
-        margin: "18rem",
-      },
-      rightPanel: {
-        width: "22rem",
-        component: "workspace",
-      },
-    },
+    uiConfig: WORKSPACE_UI,
   },
 ];
+
+export const getMoodById = (id: string): PredefinedMood | undefined =>
+  predefinedMoods.find((mood) => mood.id === id);
+
+export const getMoodIds = (): string[] => predefinedMoods.map((m) => m.id);

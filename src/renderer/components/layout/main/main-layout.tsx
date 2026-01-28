@@ -17,7 +17,8 @@ export function MainLayout({ children }: MainLayoutProps) {
       className="app-root flex flex-col h-screen antialiased"
       style={{
         ...backgroundStyle,
-        transition: "background 300ms ease-in-out, background-color 300ms ease-in-out",
+        transition:
+          "background 300ms ease-in-out, background-color 300ms ease-in-out",
       }}
     >
       <DragRegion />

@@ -228,7 +228,6 @@ export type {
 
 export {
   toolsApi,
-  // Tools
   useGetToolsQuery,
   useLazyGetToolsQuery,
   useGetToolByIdQuery,
@@ -242,7 +241,6 @@ export {
   useCreateToolMutation,
   useUpdateToolMutation,
   useDeleteToolMutation,
-  // Tool Calls
   useGetToolCallsByRunQuery,
   useLazyGetToolCallsByRunQuery,
   useGetToolCallsByAccountQuery,
@@ -252,7 +250,6 @@ export {
   useStartToolCallMutation,
   useCompleteToolCallMutation,
   useFailToolCallMutation,
-  // Tool Permissions
   useGetToolPermissionsByMoodQuery,
   useLazyGetToolPermissionsByMoodQuery,
   useSetToolPermissionMutation,
@@ -297,7 +294,6 @@ export type {
 
 export {
   runsApi,
-  // Runs
   useGetRunsQuery,
   useLazyGetRunsQuery,
   useGetRunByIdQuery,
@@ -315,17 +311,14 @@ export {
   useFailRunMutation,
   useCancelRunMutation,
   useDeleteRunMutation,
-  // Run Context
   useGetRunContextQuery,
   useLazyGetRunContextQuery,
   useAddRunContextMutation,
   useRemoveRunContextMutation,
-  // Run Artifacts
   useGetRunArtifactsQuery,
   useLazyGetRunArtifactsQuery,
   useAddRunArtifactMutation,
   useRemoveRunArtifactMutation,
-  // Run Commands
   useGetRunCommandsQuery,
   useLazyGetRunCommandsQuery,
   useAddRunCommandMutation,

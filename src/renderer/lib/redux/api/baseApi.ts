@@ -23,12 +23,10 @@ const ipcBaseQuery = (): BaseQueryFn<
     // Call the IPC handler with provided arguments
     const result = await apiNamespace[method](...args);
     
-    // Check if the result has an error
     if (result && !result.success && result.error) {
       return { error: result.error };
     }
     
-    // Return the data
     return { data: result };
   } catch (error: any) {
     return {

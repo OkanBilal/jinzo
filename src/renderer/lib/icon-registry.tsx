@@ -39,7 +39,6 @@ export const iconRegistry: Record<string, IconComponent> = {
   copilot: Icons.Copilot,
 };
 
-// Icons available for mood selection - derived from iconRegistry
 export const availableIcons = Object.entries(iconRegistry).map(
   ([name, component]) => ({
     name,
@@ -47,12 +46,6 @@ export const availableIcons = Object.entries(iconRegistry).map(
   }),
 );
 
-/**
- * Parse icon string and return either an emoji or an icon component
- * Supports formats:
- * - "icon:agent" -> Agent icon component
- * - "emoji:🎯" or "🎯" -> Emoji
- */
 export function parseIcon(iconString: string | null | undefined): {
   type: "emoji" | "icon" | "copilot-animate" | "claude-animate";
   value: string | IconComponent;
@@ -61,22 +54,18 @@ export function parseIcon(iconString: string | null | undefined): {
     return { type: "emoji", value: "💬" };
   }
 
-  // Check for explicit prefix
   if (iconString.startsWith("icon:")) {
     const iconName = iconString.replace("icon:", "").toLowerCase();
     const IconComponent = iconRegistry[iconName];
     if (IconComponent) {
-      // Special case for copilot
       if (iconName === "copilot") {
         return { type: "copilot-animate", value: IconComponent };
       }
-      // Special case for claude
       if (iconName === "claude") {
         return { type: "claude-animate", value: IconComponent };
       }
       return { type: "icon", value: IconComponent };
     }
-    // Fallback to emoji if icon not found
     return { type: "emoji", value: "⌘" };
   }
 
@@ -84,21 +73,17 @@ export function parseIcon(iconString: string | null | undefined): {
     return { type: "emoji", value: iconString.replace("emoji:", "") };
   }
 
-  // Try to detect if it's an icon name (lowercase alphanumeric)
   const lowerIcon = iconString.toLowerCase();
   if (iconRegistry[lowerIcon]) {
-    // Special case for copilot
     if (lowerIcon === "copilot") {
       return { type: "copilot-animate", value: iconRegistry[lowerIcon] };
     }
-    // Special case for claude
     if (lowerIcon === "claude") {
       return { type: "claude-animate", value: iconRegistry[lowerIcon] };
     }
     return { type: "icon", value: iconRegistry[lowerIcon] };
   }
 
-  // Default: treat as emoji
   return { type: "emoji", value: iconString };
 }
 

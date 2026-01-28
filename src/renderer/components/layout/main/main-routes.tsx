@@ -9,12 +9,11 @@ import ClaudePage from "@/routes/Claude";
 
 function DefaultRoute() {
   const sidebarConfig = useSidebarConfig();
-  
-  // If the default route is not "/", redirect to it
+
   if (sidebarConfig.defaultRoute !== "/") {
     return <Navigate to={sidebarConfig.defaultRoute} replace />;
   }
-  
+
   return <Home />;
 }
 
