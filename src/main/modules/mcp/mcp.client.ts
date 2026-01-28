@@ -36,8 +36,8 @@ export class FeedMCPClient {
       }
       
       // Journal tools
-      if (toolName === "append_to_journal") {
-        return await executeJournalTool(toolName, params as { text?: string });
+      if (toolName === "append_to_journal" || toolName === "update_journal_title") {
+        return await executeJournalTool(toolName, params as { text?: string; title?: string });
       }
       
       // Entity tools (entity_list, entity_search, feed_list, feed_search)

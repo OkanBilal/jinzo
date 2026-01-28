@@ -282,6 +282,17 @@ const api = {
       return () =>
         ipcRenderer.removeListener("journal:contentUpdated", listener);
     },
+    onTitleUpdated: (
+      callback: (data: { entityId: string; title: string }) => void,
+    ) => {
+      const listener = (
+        _: any,
+        data: { entityId: string; title: string },
+      ) => callback(data);
+      ipcRenderer.on("journal:titleUpdated", listener);
+      return () =>
+        ipcRenderer.removeListener("journal:titleUpdated", listener);
+    },
   },
   // Provider operations
   providers: {

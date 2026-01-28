@@ -3,6 +3,7 @@ import { Body, Muted } from "@/components/ui/text";
 import { Trash, Option, Edit } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { AnimatedTitle } from "@/components/ui/animated-title";
 
 interface PostItemProps {
   title: string;
@@ -120,7 +121,7 @@ export default function PostItem({
         <div className="flex-1 min-w-0 pr-4">
           <div className="flex items-center gap-2">
             <Body className="text-primary-950 font-medium dark:text-primary-100! line-clamp-1 leading-snug">
-              {title}
+              <AnimatedTitle title={title} />
             </Body>
             {status === "draft" && (
               <span className="shrink-0 px-1.5 py-0.5 text-[10px] rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">

@@ -3,7 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { getDb } from "../../../db/client";
 import { entities } from "../../../db/schema";
 import { getCurrentEditingJournalId } from "../../journal";
-import type { OllamaToolDefinition, JournalAppendResult, JournalMetadata } from "../mcp.dto";
+import type { OllamaToolDefinition, JournalAppendResult, JournalTitleUpdateResult, JournalMetadata } from "../mcp.dto";
 
 const JOURNAL_KIND = "journal_entry";
 
@@ -79,8 +79,18 @@ function broadcastJournalUpdate(entityId: string, newBody: string, wordCount: nu
   }
 }
 
+function broadcastTitleUpdate(entityId: string, newTitle: string) {
+  const windows = BrowserWindow.getAllWindows();
+  for (const window of windows) {
+    window.webContents.send("journal:titleUpdated", {
+      entityId,
+      title: newTitle,
+    });
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
-// Journal Tool
+// Journal Tools
 // ─────────────────────────────────────────────────────────────
 export async function appendToJournal(textToAppend: string): Promise<JournalAppendResult> {
   try {
@@ -160,6 +170,76 @@ export async function appendToJournal(textToAppend: string): Promise<JournalAppe
 }
 
 // ─────────────────────────────────────────────────────────────
+// Update Title Tool
+// ─────────────────────────────────────────────────────────────
+export async function updateJournalTitle(newTitle: string): Promise<JournalTitleUpdateResult> {
+  try {
+    const entityId = getCurrentEditingJournalId();
+
+    if (!entityId) {
+      return {
+        success: false,
+        message: "No journal is currently being edited. Please open a journal entry first.",
+        error: "No active journal",
+      };
+    }
+
+    if (!newTitle || newTitle.trim() === "") {
+      return {
+        success: false,
+        message: "No title provided. Please provide a valid title.",
+        error: "Empty title",
+      };
+    }
+
+    const trimmedTitle = newTitle.trim();
+    const db = getDb();
+
+    const current = await db
+      .select()
+      .from(entities)
+      .where(and(eq(entities.id, entityId), eq(entities.kind, JOURNAL_KIND)))
+      .limit(1);
+
+    if (!current[0]) {
+      return {
+        success: false,
+        message: "Journal entry not found.",
+        error: "Entry not found",
+      };
+    }
+
+    const currentEntry = current[0];
+    const oldTitle = currentEntry.title || "Untitled";
+
+    await db
+      .update(entities)
+      .set({
+        title: trimmedTitle,
+        updatedAt: new Date(),
+      })
+      .where(eq(entities.id, entityId));
+
+    broadcastTitleUpdate(entityId, trimmedTitle);
+
+    return {
+      success: true,
+      message: `Successfully updated journal title from "${oldTitle}" to "${trimmedTitle}".`,
+      entityId,
+      oldTitle,
+      newTitle: trimmedTitle,
+    };
+  } catch (error) {
+    console.error("Failed to update journal title:", error);
+    return {
+      success: false,
+      message: "Failed to update journal title.",
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // Tool Definitions
 // ─────────────────────────────────────────────────────────────
 export const JOURNAL_TOOLS: OllamaToolDefinition[] = [
@@ -182,6 +262,25 @@ export const JOURNAL_TOOLS: OllamaToolDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "update_journal_title",
+      description:
+        "Update or change the title of the user's current journal entry based on its content. Use this when the user asks you to: suggest a title, change the title, update the title, give a title based on content, rename the journal, or when you analyze the content and want to propose an appropriate title. The title should reflect the main theme, topic, or mood of the journal content.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            description:
+              "The new title for the journal entry. This should be concise (typically 3-10 words), descriptive, and capture the essence of the journal content. It can reflect the mood, main topic, key events, or overall theme of the writing.",
+          },
+        },
+        required: ["title"],
+      },
+    },
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -189,8 +288,8 @@ export const JOURNAL_TOOLS: OllamaToolDefinition[] = [
 // ─────────────────────────────────────────────────────────────
 export async function executeJournalTool(
   toolName: string,
-  params: { text?: string }
-): Promise<JournalAppendResult> {
+  params: { text?: string; title?: string }
+): Promise<JournalAppendResult | JournalTitleUpdateResult> {
   switch (toolName) {
     case "append_to_journal":
       if (!params.text) {
@@ -201,6 +300,15 @@ export async function executeJournalTool(
         };
       }
       return appendToJournal(params.text);
+    case "update_journal_title":
+      if (!params.title) {
+        return {
+          success: false,
+          message: "Title parameter is required for update_journal_title tool.",
+          error: "Missing title parameter",
+        };
+      }
+      return updateJournalTitle(params.title);
     default:
       throw new Error(`Unknown journal tool: ${toolName}`);
   }

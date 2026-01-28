@@ -106,14 +106,16 @@ function ChatContent() {
       <div className="shrink-0 pt-6 max-w-200 mx-auto w-full">
         <ChatHeader title={chatTitle} />
       </div>
-      <div className="flex-1 overflow-hidden mx-auto w-full max-w-200">
+      <div className="flex-1 overflow-hidden mx-auto w-full max-w-200 relative">
         <ChatMessages
           ref={messagesRef}
           messages={messages}
           isLoading={isLoading}
         />
+        {/* Bottom fade overlay */}
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary dark:from-[#100F0F] to-transparent pointer-events-none" />
       </div>
-      <div className="shrink-0 max-w-200 mx-auto w-full">
+      <div className="shrink-0 max-w-200 mx-auto mb-4 w-full">
         <ChatInput
           query={input}
           onQueryChange={setInput}

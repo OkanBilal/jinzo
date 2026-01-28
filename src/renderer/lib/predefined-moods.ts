@@ -84,7 +84,6 @@ export const predefinedMoods: PredefinedMood[] = [
     icon: "icon:heart",
     theme: theme("#fde2e2", "#3b1d21"),
     systemPrompt: "",
-    uiConfig: WORKSPACE_UI,
   },
 ];
 

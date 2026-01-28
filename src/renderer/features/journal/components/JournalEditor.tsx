@@ -9,13 +9,14 @@ import {
   useSaveJournalMutation,
   usePublishJournalMutation,
   setEditingJournal,
-  updateEditingTitle,
   updateEditingBody,
+  handleTitleUpdate,
   clearEditingJournal,
 } from "@/lib/redux/api";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { useJournalAutosave } from "@/features/journal/hooks/use-journal-auto-save";
 import { Button } from "@/components/ui/button";
+import { AnimatedTitle } from "@/components/ui/animated-title";
 import { blocksToMarkdown, markdownToBlocks } from "../utils";
 
 interface JournalEditorProps {
@@ -35,7 +36,7 @@ export function JournalEditor({ entityId }: JournalEditorProps) {
   // Track if we've initialized the editor with content from the server
   const [isEditorInitialized, setIsEditorInitialized] = useState(false);
 
-  // Local title state for editing
+  // Local title state for display
   const [localTitle, setLocalTitle] = useState("");
 
   // Local loading states with minimum duration to prevent flicker
@@ -67,6 +68,17 @@ export function JournalEditor({ entityId }: JournalEditorProps) {
       );
     }
   }, [journal, isEditorInitialized, editor, dispatch, entityId]);
+
+  // Sync title when journal data changes (e.g., from sidebar rename)
+  useEffect(() => {
+    if (journal && isEditorInitialized) {
+      const newTitle = journal.title || "Untitled";
+      if (newTitle !== localTitle) {
+        setLocalTitle(newTitle);
+        dispatch(handleTitleUpdate({ entityId, title: newTitle }));
+      }
+    }
+  }, [journal?.title]);
 
   // Register this journal as currently editing (for MCP tools)
   useEffect(() => {
@@ -101,22 +113,25 @@ export function JournalEditor({ entityId }: JournalEditorProps) {
     };
   }, [entityId, editor, dispatch]);
 
-  // Handle title change
-  const handleTitleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newTitle = e.target.value;
-      setLocalTitle(newTitle);
-      queueSave({ title: newTitle });
-      // Update Redux for chat context
-      dispatch(updateEditingTitle(newTitle));
-    },
-    [queueSave, dispatch],
-  );
+  // Listen for title updates from MCP tools (when AI suggests/changes title)
+  useEffect(() => {
+    const unsubscribe = window.api.journal.onTitleUpdated((data) => {
+      if (data.entityId === entityId) {
+        // Update local title state
+        setLocalTitle(data.title);
 
-  // Handle title blur - flush immediately when user leaves the title field
-  const handleTitleBlur = useCallback(() => {
-    flush();
-  }, [flush]);
+        // Update Redux state
+        dispatch(handleTitleUpdate(data));
+
+        // Queue save to persist the title change
+        queueSave({ title: data.title });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [entityId, dispatch, queueSave]);
 
   // Handle editor changes
   const handleEditorChange = useCallback(() => {
@@ -185,13 +200,9 @@ export function JournalEditor({ entityId }: JournalEditorProps) {
       {/* Header with save status and actions */}
       <div className="flex items-center justify-between px-13.5 py-8  ">
         <div className="flex items-center gap-3 flex-1">
-          <input
-            type="text"
-            value={localTitle}
-            onChange={handleTitleChange}
-            onBlur={handleTitleBlur}
-            placeholder="Untitled"
-            className="text-3xl font-semibold bg-transparent border-none outline-none text-primary-900 dark:text-primary-100 placeholder-primary-400 dark:placeholder-primary-500 w-full"
+          <AnimatedTitle
+            title={localTitle || "Untitled"}
+            className="text-3xl font-semibold text-primary-900 dark:text-primary-100 w-full"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -228,7 +239,7 @@ export function JournalEditor({ entityId }: JournalEditorProps) {
       </div>
 
       {/* Editor */}
-      <div className="flex-1 overflow-y-auto py-8 ">
+      <div className="flex-1 overflow-y-auto py-8">
         <BlockNoteView
           editor={editor}
           onChange={handleEditorChange}

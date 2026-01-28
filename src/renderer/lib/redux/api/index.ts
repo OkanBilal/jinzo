@@ -197,6 +197,8 @@ export {
   setEditingJournal,
   updateEditingTitle,
   updateEditingBody,
+  handleTitleUpdate,
+  handleContentUpdate,
   clearEditingJournal,
 } from "../slices/journalEditingSlice";
 export type { JournalEditingState } from "../slices/journalEditingSlice";

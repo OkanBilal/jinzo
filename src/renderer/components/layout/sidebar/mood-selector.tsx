@@ -32,7 +32,7 @@ function MoodSelector({
         title="No mood"
         aria-label="No mood"
       >
-        <Chat className="size-4 stroke-primary-950 dark:stroke-primary" />
+        <Chat className="size-4.5" />
       </Button>
 
       {moods.map((mood) => {
