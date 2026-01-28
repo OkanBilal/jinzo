@@ -11,14 +11,12 @@ import { useAppDispatch, useAppSelector } from "../../../../lib/redux/hooks";
 import {
   setSelectedModel,
 } from "../../../../lib/redux/slices/chatSlice";
-import DictationButton from "../../../../features/chat/components/input/dictation-button";
-import FileUploadDropdown, {
-  FILE_TYPES,
-} from "../../../../features/chat/components/input/file-upload-dropdown";
-import InputForm from "../../../../features/chat/components/input/input-form";
-import ModelSelectDropdown from "../../../../features/chat/components/input/model-select-dropdown";
-import SendButton from "./send-button";
-import { ChatInputProps, UploadedFile } from "./types";
+import { SendButton } from "@/components/ui/input/send-button";
+import { DictationButton } from "@/components/ui/input/dictation-button";
+import { InputForm } from "@/components/ui/input/input-form";
+import { FileUploadDropdown, FILE_TYPES, type UploadedFile } from "@/components/ui/input/file-upload-dropdown";
+import { ModelSelectDropdown } from "@/components/ui/input/model-select-dropdown";
+import { ChatInputProps } from "./types";
 
 const DEFAULT_PLACEHOLDER = "Ask jinzo anything...";
 

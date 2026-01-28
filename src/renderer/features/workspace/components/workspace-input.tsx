@@ -1,15 +1,13 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Brain } from "@/components/ui/icons";
-import ModelSelectDropdown from "@/features/workspace/components/input/model-select-dropdown";
 import { useGetProviderModelsQuery } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
-import InputForm from "./input/input-form";
-import DictationButton from "./input/dictation-button";
-import SendButton from "./input/send-button";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
-import FileUploadDropdown, { FILE_TYPES } from "./input/file-upload-dropdown";
-import { UploadedFile } from "@/features/chat/components/input/types";
 import { useClickOutside } from "@/hooks/use-click-outside";
+import { SendButton } from "@/components/ui/input/send-button";
+import { DictationButton } from "@/components/ui/input/dictation-button";
+import { InputForm } from "@/components/ui/input/input-form";
+import { FileUploadDropdown, FILE_TYPES, type UploadedFile } from "@/components/ui/input/file-upload-dropdown";
+import { ModelSelectDropdown } from "@/components/ui/input/model-select-dropdown";
 
 interface WorkspaceInputProps {
   goal: string;
@@ -168,6 +166,7 @@ export function WorkspaceInput({
               ? "Ask to make changes, @mention files, run /commands"
               : "Ask to make changes, @mention files, run /commands"
           }
+          variant="copilot"
         />
       </div>
       <div className="flex items-start space-x-2 px-4">
@@ -182,6 +181,7 @@ export function WorkspaceInput({
               openUpward={true}
               uploadedFiles={uploadedFiles}
               onRemoveFile={handleRemoveFile}
+              variant="copilot"
             />
             <input
               type="file"
@@ -198,31 +198,17 @@ export function WorkspaceInput({
               onClose={() => setShowModelDropdown(false)}
               dropdownRef={modelDropdownRef}
               openUpward={true}
+              variant="copilot"
             />
-            {/* <button
-              onClick={() => setThinkingEnabled(!thinkingEnabled)}
-              className={`p-1.5 rounded-lg transition-colors ${
-                thinkingEnabled
-                  ? "text-orange-400 bg-orange-500/10 hover:bg-orange-500/20"
-                  : "text-primary-500 hover:text-primary-300 hover:bg-primary-800/50"
-              }`}
-              title={
-                thinkingEnabled
-                  ? "Extended thinking enabled"
-                  : "Enable extended thinking"
-              }
-              disabled={isLoading || activeRun?.status === "running"}
-            >
-              <Brain className="w-4 h-4" />
-            </button> */}
           </div>
         </div>
         <div className="flex items-center space-x-2">
           <DictationButton
             isRecording={isRecording}
             onToggle={toggleDictation}
+            variant="copilot"
           />
-          <SendButton loading={isLoading} onSubmit={onSubmit} />
+          <SendButton loading={isLoading} onSubmit={onSubmit} variant="copilot" />
         </div>
       </div>
     </div>

@@ -1,21 +1,53 @@
-import { useState } from "react";
+import { useState, RefObject } from "react";
 import {
   Attach,
   Picture,
   Document,
   Close,
-} from "../../../../components/ui/icons";
-import DropdownWrapper from "../../../../components/ui/dropdown-wrapper";
-
-import { FileUploadDropdownProps } from "./types";
+} from "@/components/ui/icons";
+import DropdownWrapper from "@/components/ui/dropdown-wrapper";
 import { Button } from "@/components/ui/button";
+import type { InputVariant } from "./send-button";
 
-const FILE_TYPES = {
+export interface UploadedFile {
+  file: File;
+  type: "image" | "document";
+  preview?: string;
+}
+
+export const FILE_TYPES = {
   IMAGE: "image/*",
   DOCUMENT: ".pdf,.doc,.docx,.txt",
 } as const;
 
-export default function FileUploadDropdown({
+interface FileUploadDropdownProps {
+  isOpen: boolean;
+  onToggle: () => void;
+  onImageUpload: () => void;
+  onDocumentUpload: () => void;
+  dropdownRef: RefObject<HTMLDivElement | null>;
+  openUpward?: boolean;
+  uploadedFiles: UploadedFile[];
+  onRemoveFile: (index: number) => void;
+  variant?: InputVariant;
+}
+
+const variantStyles = {
+  default: {
+    button: "hover:bg-primary-200/30 dark:hover:bg-primary-800",
+    icon: "dark:text-primary-400 text-primary-500",
+    fileBg: "bg-primary-100 dark:bg-primary-800",
+    menuItem: "hover:bg-primary-200/30 dark:hover:bg-primary-600/20",
+  },
+  copilot: {
+    button: "hover:bg-primary-200/30 dark:hover:bg-copilot-lightblue/10",
+    icon: "dark:text-copilot-lightblue text-primary-500",
+    fileBg: "bg-primary-100 dark:bg-copilot-lightblue/10",
+    menuItem: "hover:bg-copilot-lightblue dark:hover:bg-copilot-lightblue/10",
+  },
+};
+
+export function FileUploadDropdown({
   isOpen,
   onToggle,
   onImageUpload,
@@ -24,8 +56,10 @@ export default function FileUploadDropdown({
   openUpward = false,
   uploadedFiles,
   onRemoveFile,
+  variant = "default",
 }: FileUploadDropdownProps) {
   const [hoveredFileIndex, setHoveredFileIndex] = useState<number | null>(null);
+  const styles = variantStyles[variant];
 
   return (
     <div className="relative flex items-center gap-2" ref={dropdownRef}>
@@ -34,11 +68,11 @@ export default function FileUploadDropdown({
         tooltip="Upload file or photo"
         tooltipPosition="left"
         onClick={onToggle}
-        className="p-1.5 hover:bg-primary-200/30 dark:hover:bg-primary-800 rounded-full transition-colors cursor-pointer"
+        className={`p-1.5 ${styles.button} rounded-full transition-colors cursor-pointer`}
         aria-label="Upload file"
         aria-expanded={isOpen}
       >
-        <Attach className="dark:text-primary-400 rotate-135  text-primary-500" />
+        <Attach className={`${styles.icon} rotate-135`} />
       </Button>
       {uploadedFiles.map((uploadedFile, index) => (
         <div
@@ -48,7 +82,7 @@ export default function FileUploadDropdown({
           onMouseLeave={() => setHoveredFileIndex(null)}
         >
           {uploadedFile.type === "image" ? (
-            <div className="flex items-center gap-2 bg-primary-100 dark:bg-primary-800 rounded-2xl px-1.5 py-1 mr-1">
+            <div className={`flex items-center gap-2 ${styles.fileBg} rounded-2xl px-1.5 py-1 mr-1`}>
               <div className="relative w-5 h-5 rounded overflow-hidden group">
                 <img
                   src={uploadedFile.preview}
@@ -72,7 +106,7 @@ export default function FileUploadDropdown({
               </span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-2 py-1.5 bg-primary-100 dark:bg-primary-800 rounded-2xl mr-1">
+            <div className={`flex items-center gap-2 px-2 py-1.5 ${styles.fileBg} rounded-2xl mr-1`}>
               {hoveredFileIndex === index ? (
                 <Button
                   type="button"
@@ -112,7 +146,7 @@ export default function FileUploadDropdown({
             type="button"
             onClick={onClick}
             role="menuitem"
-            className="flex w-full text-left text-sm first:rounded-t-xl last:rounded-b-xl items-center px-2.5 py-2.5 hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100 cursor-pointer"
+            className={`flex w-full text-left text-sm first:rounded-t-xl last:rounded-b-xl items-center px-2.5 py-2.5 ${styles.menuItem} text-primary-700 dark:text-primary-100 cursor-pointer`}
           >
             <Icon className="mr-2 w-4 h-4" />
             {label}
@@ -122,5 +156,3 @@ export default function FileUploadDropdown({
     </div>
   );
 }
-
-export { FILE_TYPES };

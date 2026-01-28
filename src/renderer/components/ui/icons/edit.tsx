@@ -10,10 +10,18 @@ const SvgComponent = (props: SVGProps<SVGSVGElement>) => (
     {...props}
   >
     <path
-      fill="currentColor"
-      fillRule="evenodd"
-      d="M12 21a1 1 0 0 1 1-1h8a1 1 0 1 1 0 2h-8a1 1 0 0 1-1-1ZM20.774 8.1c1.61-1.616 1.541-3.738.339-5.038A3.31 3.31 0 0 0 18.748 2c-.949-.022-1.931.34-2.838 1.099a.988.988 0 0 0-.067.061L2.874 16.181A3 3 0 0 0 2 18.3v1.693C2 21.094 2.892 22 4.004 22h1.679a3 3 0 0 0 2.125-.883L20.774 8.1Zm-3.567-2.307a1 1 0 1 0-1.414 1.414l1 1a1 1 0 1 0 1.414-1.414l-1-1Z"
-      clipRule="evenodd"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="m21.28 6.4-9.54 9.54c-.95.95-3.77 1.39-4.4.76-.63-.63-.2-3.45.75-4.4l9.55-9.55a2.58 2.58 0 1 1 3.64 3.65v0Z"
+    />
+    <path
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="M11 4H6a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h11c2.21 0 3-1.8 3-4v-5"
     />
   </svg>
 )

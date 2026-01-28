@@ -125,6 +125,7 @@ async function cleanupApp() {
 // App lifecycle events
 app.whenReady().then(initializeApp);
 
+
 app.on("activate", () => {
   // On macOS it's common to re-create a window when dock icon is clicked
   const { BrowserWindow } = require("electron");

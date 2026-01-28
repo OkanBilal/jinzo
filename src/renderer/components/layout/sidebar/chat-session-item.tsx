@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { createPortal } from "react-dom";
 import { Trash, Option, Edit } from "@/components/ui/icons";
 import { Muted, Timestamp } from "@/components/ui/text";
 import { AnimatedTitle } from "@/components/ui/animated-title";
@@ -10,6 +9,7 @@ import {
 } from "@/lib/redux/api";
 import { formatDate } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 interface ChatSessionItemProps {
   session: ChatSession;
@@ -29,41 +29,10 @@ export default function ChatSessionItem({
   const [newTitle, setNewTitle] = useState(title);
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
 
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [updateTitle] = useUpdateChatSessionTitleMutation();
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    if (!isDropdownOpen) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
-        setIsDropdownOpen(false);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isDropdownOpen]);
 
   // Focus input when renaming starts
   useEffect(() => {
@@ -179,36 +148,20 @@ export default function ChatSessionItem({
       </Button>
 
       {/* Dropdown Menu */}
-      {isDropdownOpen &&
-        createPortal(
-          <div
-            ref={dropdownRef}
-            className="fixed z-100 min-w-36 rounded-xl overflow-hidden glass-morphism"
-            style={{
-              left: dropdownPosition.x,
-              top: dropdownPosition.y,
-              animation: "scaleIn 100ms ease-out",
-            }}
-          >
-            <Button
-              onClick={handleRenameClick}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-primary-700 dark:text-primary-200
-                hover:bg-primary-100/50 dark:hover:bg-primary/10 transition-colors cursor-pointer"
-            >
-              <Edit className="size-4" />
-              <span>Rename</span>
-            </Button>
-            <Button
-              onClick={handleDeleteClick}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-red-600 dark:text-red-400
-                hover:bg-red-100/50 dark:hover:bg-red-900/20 transition-colors cursor-pointer"
-            >
-              <Trash className="size-4" />
-              <span>Delete</span>
-            </Button>
-          </div>,
-          document.body,
-        )}
+      <DropdownMenu
+        isOpen={isDropdownOpen}
+        position={dropdownPosition}
+        onClose={() => setIsDropdownOpen(false)}
+      >
+        <DropdownMenuItem onClick={handleRenameClick}>
+          <Edit className="size-3.5" />
+          <span>Rename</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleDeleteClick} variant="danger">
+          <Trash className="size-4" />
+          <span>Delete</span>
+        </DropdownMenuItem>
+      </DropdownMenu>
     </div>
   );
 }

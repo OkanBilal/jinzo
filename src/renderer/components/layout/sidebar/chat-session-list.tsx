@@ -44,7 +44,8 @@ export default function ChatSessionList({
     <div className="pb-3">
       <Button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between active:scale-99 transition-all duration-200 bg-transparent hover:bg-primary/10 dark:hover:bg-primary/5 cursor-pointer px-2 py-2 mb-1 rounded-lg "
+        className="w-full flex items-center justify-between active:scale-99 transition-all duration-200 bg-transparent 
+        hover:bg-primary/10 dark:hover:bg-primary/5 cursor-pointer px-2 py-2 mb-1 rounded-lg "
       >
         <Caption className="text-primary-800 dark:text-primary-400 font-medium ">
           Chat

@@ -3,7 +3,10 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
 module.exports = {
   packagerConfig: {
+    name: 'Jinzo',
+    executableName: 'jinzo',
     asar: true,
+    icon: 'src/renderer/public/icon',
     extraResource: [
       'src/main/db/migrations'
     ],

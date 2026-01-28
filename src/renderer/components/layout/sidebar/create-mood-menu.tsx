@@ -1,8 +1,6 @@
-import { Button } from "@/components/ui/button";
 import { Preset } from "@/components/ui/icons";
 import { Bolt } from "@/components/ui/icons/mood";
-import { useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 interface CreateMoodMenuProps {
   isOpen: boolean;
@@ -19,73 +17,37 @@ export default function CreateMoodMenu({
   onPresetMoods,
   onClose,
 }: CreateMoodMenuProps) {
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
   // Position menu above the button
   const adjustedPosition = {
     x: Math.max(8, Math.min(position.x - 70, window.innerWidth - 160)),
     y: Math.max(8, position.y - 90),
   };
 
-  return createPortal(
-    <div
-      ref={menuRef}
-      className="fixed z-100 min-w-40 rounded-xl overflow-hidden glass-morphism"
-      style={{
-        left: adjustedPosition.x,
-        top: adjustedPosition.y,
-        animation: "scaleIn 100ms ease-out",
-      }}
+  return (
+    <DropdownMenu
+      isOpen={isOpen}
+      position={adjustedPosition}
+      onClose={onClose}
+      minWidth={160}
     >
-      <Button
+      <DropdownMenuItem
         onClick={() => {
           onCreateMood();
           onClose();
         }}
-        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-primary-700 dark:text-primary-100
-          hover:bg-primary-100/50 dark:hover:bg-primary/10 transition-colors cursor-pointer"
       >
         <Bolt className="size-4" />
         <span>Create Mood</span>
-      </Button>
-      <Button
+      </DropdownMenuItem>
+      <DropdownMenuItem
         onClick={() => {
           onPresetMoods();
           onClose();
         }}
-        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-primary-700 dark:text-primary-100
-          hover:bg-primary-100/50 dark:hover:bg-primary/10 transition-colors cursor-pointer"
       >
         <Preset className="size-4" />
         <span>Preset Moods</span>
-      </Button>
-    </div>,
-    document.body,
+      </DropdownMenuItem>
+    </DropdownMenu>
   );
 }

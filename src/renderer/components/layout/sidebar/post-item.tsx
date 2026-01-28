@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, type MouseEvent } from "react";
-import { createPortal } from "react-dom";
 import { Body, Muted } from "@/components/ui/text";
 import { Trash, Option, Edit } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 interface PostItemProps {
   title: string;
@@ -28,39 +28,8 @@ export default function PostItem({
   const [newTitle, setNewTitle] = useState(title);
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
 
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    if (!isDropdownOpen) return;
-
-    const handleClickOutside = (event: globalThis.MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
-        setIsDropdownOpen(false);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isDropdownOpen]);
 
   // Focus input when renaming starts
   useEffect(() => {
@@ -179,40 +148,24 @@ export default function PostItem({
       )}
 
       {/* Dropdown Menu */}
-      {isDropdownOpen &&
-        createPortal(
-          <div
-            ref={dropdownRef}
-            className="fixed z-100 min-w-36 rounded-xl overflow-hidden glass-morphism"
-            style={{
-              left: dropdownPosition.x,
-              top: dropdownPosition.y,
-              animation: "scaleIn 100ms ease-out",
-            }}
-          >
-            {onRename && (
-              <Button
-                onClick={handleRenameClick}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-primary-700 dark:text-primary-200
-                  hover:bg-primary-100/50 dark:hover:bg-primary/10 transition-colors cursor-pointer"
-              >
-                <Edit className="size-4" />
-                <span>Rename</span>
-              </Button>
-            )}
-            {onDelete && (
-              <Button
-                onClick={handleDeleteClick}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-red-600 dark:text-red-400
-                  hover:bg-red-100/50 dark:hover:bg-red-900/20 transition-colors cursor-pointer"
-              >
-                <Trash className="size-4" />
-                <span>Delete</span>
-              </Button>
-            )}
-          </div>,
-          document.body,
+      <DropdownMenu
+        isOpen={isDropdownOpen}
+        position={dropdownPosition}
+        onClose={() => setIsDropdownOpen(false)}
+      >
+        {onRename && (
+          <DropdownMenuItem onClick={handleRenameClick}>
+            <Edit className="size-4" />
+            <span>Rename</span>
+          </DropdownMenuItem>
         )}
+        {onDelete && (
+          <DropdownMenuItem onClick={handleDeleteClick} variant="danger">
+            <Trash className="size-4" />
+            <span>Delete</span>
+          </DropdownMenuItem>
+        )}
+      </DropdownMenu>
     </div>
   );
 }
