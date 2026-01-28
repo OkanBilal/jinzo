@@ -26,7 +26,6 @@ interface JournalEditorProps {
 export function JournalEditor({ entityId }: JournalEditorProps) {
   const dispatch = useAppDispatch();
   const { data: journal, isLoading } = useGetJournalByIdQuery(entityId);
-  console.log("Loaded journal:", journal);
   const [saveJournal] = useSaveJournalMutation();
   const [publishJournal] = usePublishJournalMutation();
 

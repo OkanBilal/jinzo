@@ -7,7 +7,7 @@ export default function LottieHero({
 }: LottieHeroProps) {
   return (
     <div
-      className="w-40 h-40 animate-[blur-reveal_1s_ease-out_forwards] blur-lg opacity-0"
+      className="w-60 h-60 animate-[blur-reveal_1s_ease-out_forwards] blur-lg opacity-0"
       aria-hidden="true"
     >
       <DotLottieReact
