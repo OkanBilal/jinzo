@@ -1,6 +1,6 @@
 import { useState, useRef, type MouseEvent } from "react";
 import { Muted, Timestamp } from "@/components/ui/text";
-import { Trash, Option, Layers, Check, Connect } from "@/components/ui/icons";
+import { Trash, Option, Layers, Check, Connect, Branch } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format-date";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -67,7 +67,7 @@ export default function WorkspaceItem({
         }`}
       >
         <div className="flex items-start gap-2 min-w-0 flex-1">
-          <Layers className="h-4 w-4 text-primary-800 dark:text-primary-400 mt-0.5 shrink-0" />
+          <Branch className="h-4 w-4 text-primary-800 dark:text-primary-400 mt-0.5 shrink-0" />
           <div className="flex flex-col min-w-0">
             <span
               className={`truncate text-sm font-medium ${
@@ -116,7 +116,7 @@ export default function WorkspaceItem({
       >
         <DropdownMenuItem onClick={handleLinkIssuesClick}>
           <Connect className="size-4" />
-          <span>Connect Issues</span>
+          <span>Connect issues</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleDeleteClick} variant="danger">
           <Trash className="size-4" />

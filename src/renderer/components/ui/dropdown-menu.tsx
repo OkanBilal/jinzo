@@ -108,14 +108,14 @@ export function DropdownMenuItem({
 }: DropdownMenuItemProps) {
   const variantClasses = {
     default: "text-primary-800 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-50",
-    danger: "text-primary-500 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-100",
+    danger: "text-[#f44336] dark:text-[#f44336] ",
   };
 
   return (
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-sm
-        hover:bg-primary-100/50 dark:hover:bg-primary/10 transition-colors cursor-pointer
+        hover:bg-primary-100/50 dark:hover:bg-primary/5 transition-colors cursor-pointer
         ${variantClasses[variant]} ${className}`}
     >
       {children}

@@ -53,7 +53,7 @@ export default function PostsList({
   if (posts.length === 0) {
     return (
       <div className="flex items-center justify-center h-32">
-        <Caption className="text-primary-800 dark:text-primary-500">
+        <Caption className="text-primary-800 dark:text-primary-100! font-semibold">
           No posts yet
         </Caption>
       </div>

@@ -47,8 +47,7 @@ type StepId = "loading" | "enable" | "configure";
 function LoadingStep() {
   return (
     <div className="flex flex-col items-center justify-center py-12">
-      <div className="w-8 h-8 border-2 border-primary-300 border-t-primary-600 rounded-full animate-spin" />
-      <Muted className="mt-4">Loading settings...</Muted>
+      <Muted className=" shine-text">Loading settings...</Muted>
     </div>
   );
 }

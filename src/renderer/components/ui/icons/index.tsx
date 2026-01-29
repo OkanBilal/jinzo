@@ -54,3 +54,4 @@ export { default as Connect } from "./connect";
 export { default as Github } from "./github";
 export { default as Linear } from "./linear";
 export { default as External } from "./external";
+export { default as Branch } from "./branch";
