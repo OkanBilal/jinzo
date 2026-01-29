@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Body, Heading3 } from "@/components/ui/text";
 import {
   useCreateMoodMutation,
@@ -6,6 +6,7 @@ import {
 } from "@/lib/redux/api";
 import { toast } from "@/components/toast";
 import { useDarkMode } from "@/hooks/use-dark-mode";
+import { useActiveMood } from "@/hooks/use-active-mood";
 import { parseIcon } from "@/lib/icon-registry";
 import { predefinedMoods, type PredefinedMood } from "@/lib/predefined-moods";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,14 @@ export default function PresetMoodsView({
   const [createMood, { isLoading }] = useCreateMoodMutation();
   const [setActiveMood] = useSetActiveMoodMutation();
   const { darkMode } = useDarkMode();
+  const { moods } = useActiveMood();
   const originalBackgroundColor = useRef<string>("");
+
+  // Filter out presets that already exist as moods
+  const availablePresets = useMemo(() => {
+    const existingMoodNames = moods.map((m) => m.name);
+    return predefinedMoods.filter((preset) => !existingMoodNames.includes(preset.name));
+  }, [moods]);
 
   // Save original background color on mount
   useEffect(() => {
@@ -122,7 +130,7 @@ export default function PresetMoodsView({
 
       <div className="flex-1 px-4 py-2 noscrollbar">
         <div className="grid grid-cols-2 gap-3">
-          {predefinedMoods.map((template) => {
+          {availablePresets.map((template) => {
             const templateIcon = parseIcon(template.icon);
             const templateVariant = darkMode
               ? template.theme.dark
