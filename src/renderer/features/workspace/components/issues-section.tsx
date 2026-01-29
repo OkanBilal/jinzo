@@ -65,7 +65,7 @@ export function IssuesSection({
           Issues
         </Caption>
         {issueCount > 0 ? (
-          <span className="text-[10px] text-primary-400 dark:text-primary-200! ml-auto mr-1 tabular-nums">
+          <span className="text-[10px] text-primary-800 dark:text-primary-200! ml-auto mr-1 tabular-nums">
             {issueCount}
           </span>
         ) : (
@@ -74,13 +74,12 @@ export function IssuesSection({
       </Button>
 
       <div
-        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+        className={`grid transition-[grid-template-rows] duration-300 ease-out  ${
           expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
         }`}
       >
-        <div className="overflow-hidden">
-          <div className="max-h-80 overflow-y-auto px-1 pb-2">
-            {" "}
+        <div className="overflow-hidden ">
+          <div className="max-h-80 overflow-y-auto px-1 pb-2 noscrollbar">
             {/* TODO Make resizable */}
             {isLoading ? (
               <div className="flex items-center justify-center py-4">
@@ -95,11 +94,11 @@ export function IssuesSection({
                 </span>
               </div>
             ) : (
-              <div className="space-y-0.5">
+              <div className="space-y-0.5 ">
                 {issues.map((issue, index) => (
                   <div
                     key={issue.issue.entityId}
-                    className="animate-slide-in first:mt-2"
+                    className="animate-slide-in first:mt-2 "
                     style={{ animationDelay: `${index * 0.03}s` }}
                   >
                     <IssueListItem

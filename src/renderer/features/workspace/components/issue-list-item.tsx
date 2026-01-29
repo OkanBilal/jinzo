@@ -169,7 +169,7 @@ export function IssueListItem({
   return (
     <div
       onClick={handleClick}
-      className={`w-full text-left px-1 py-1.5 rounded-lg cursor-pointer transition-all duration-200 ease-out flex items-center gap-2 group hover:scale-[1.01] active:scale-99 ${
+      className={`w-full text-left px-1 py-1.5  rounded-lg cursor-pointer transition-all duration-200 ease-out flex items-center gap-2 group hover:scale-[1.01] active:scale-99 ${
         isActive
           ? "bg-primary/80 dark:bg-primary/5"
           : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
