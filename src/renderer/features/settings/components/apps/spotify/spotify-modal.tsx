@@ -1,533 +1,515 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
-import { Close } from "../../../../../components/ui/icons";
-import Text, {
-  Body,
+import {
+  BodyMedium,
+  Caption,
   Muted,
   ErrorText,
-  Caption,
-  BodyMedium,
 } from "../../../../../components/ui/text";
 import {
-  WarningButton,
-  DangerButton,
-  LinkButton,
-  Button,
-} from "../../../../../components/ui/button";
+  WizardModal,
+  useWizard,
+  type WizardStep,
+} from "../../../../../components/ui/wizard-modal";
+import { Button } from "../../../../../components/ui/button";
+import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
+import { ManageResourcesStep } from "../shared/manage-resources-step";
+import { SelectResourcesStep } from "../shared/select-resources-step";
+import { CredentialStep } from "../shared/credential-step";
+import {
+  useLazyGetConnectionQuery,
+  useSaveCredentialsMutation,
+  useLazyGetSelectedReposQuery,
+  useSaveResourcesMutation,
+  useDeleteResourceMutation,
+  useRevokeConnectionMutation,
+} from "../../../../../lib/redux/api/connectionsApi";
 
-type SpotifyModalProps = {
+// ─────────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface SpotifyModalProps {
   open: boolean;
   onClose: () => void;
   isConnected: boolean;
-};
+  onSuccess?: () => void;
+}
 
-type Step = "setToken" | "add" | "manage";
+interface SpotifyWizardData {
+  accessToken: string;
+  connectionId: string;
+  selectedSources: string[];
+  currentSources: any[];
+  fromManage: boolean;
+}
 
-const SpotifyModal = ({ open, onClose, isConnected }: SpotifyModalProps) => {
-  const [step, setStep] = useState<Step>("setToken");
-  const [accessToken, setAccessToken] = useState("");
-  const [selectedSources, setSelectedSources] = useState<string[]>([]);
-  const [existingSources, setExistingSources] = useState<any[]>([]);
-  const [connectionId, setConnectionId] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [initializing, setInitializing] = useState(false);
+type StepId = "setToken" | "add" | "manage";
 
-  useEffect(() => {
-    if (open) {
-      setInitializing(true);
-      if (isConnected) {
-        const startTime = Date.now();
-        loadSelectedSources().finally(() => {
-          const elapsed = Date.now() - startTime;
-          const minLoadingTime = 600;
-          const remainingTime = Math.max(0, minLoadingTime - elapsed);
+const ALL_SOURCES = [
+  {
+    id: "playlists",
+    name: "Your Playlists",
+    description: "Your saved and created playlists",
+  },
+  {
+    id: "recently-played",
+    name: "Recently Played",
+    description: "Tracks you've recently listened to",
+  },
+  {
+    id: "top-tracks",
+    name: "Top Tracks",
+    description: "Your most played tracks",
+  },
+  {
+    id: "top-artists",
+    name: "Top Artists",
+    description: "Your most listened artists",
+  },
+  {
+    id: "saved-albums",
+    name: "Saved Albums",
+    description: "Albums in your library",
+  },
+];
 
-          setTimeout(() => {
-            setInitializing(false);
-          }, remainingTime);
-        });
-      } else {
-        setStep("setToken");
-        setInitializing(false);
-      }
-    } else {
-      setAccessToken("");
-      setSelectedSources([]);
-      setExistingSources([]);
-      setConnectionId("");
-      setError("");
-    }
-  }, [open, isConnected]);
+// ─────────────────────────────────────────────────────────────────────────────
+// Step: Loading
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const loadSelectedSources = async () => {
-    try {
-      const connRes = await fetch("/api/connections?provider=spotify");
-      if (connRes.ok) {
-        const connData = await connRes.json();
-        if (connData.success) {
-          setConnectionId(connData.connection.id);
-        }
-      }
+function LoadingStep() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="text-center space-y-3">
+        <Muted className="shine-text">Loading sources...</Muted>
+      </div>
+    </div>
+  );
+}
 
-      const res = await fetch("/api/connections/selected?provider=spotify");
-      if (res.ok) {
-        const data = await res.json();
-        setExistingSources(data.sources || []);
-        setStep("manage");
-      }
-    } catch (error) {
-      console.error("Error fetching sources:", error);
-    }
-  };
+// ─────────────────────────────────────────────────────────────────────────────
+// Step: Set Token
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const handleSaveCredentials = async () => {
-    if (!accessToken.trim()) {
-      setError("Access token is required");
+function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
+  const { data, setData, errors, setErrors, goTo } =
+    useWizard<SpotifyWizardData>();
+  const [loading, setLoading] = useState(false);
+
+  const [getConnection] = useLazyGetConnectionQuery();
+  const [saveCredentials] = useSaveCredentialsMutation();
+
+  const handleSubmit = async () => {
+    if (!data.accessToken?.trim()) {
+      setErrors({ token: "Access token is required" });
       return;
     }
 
-    setIsLoading(true);
-    setError("");
+    setLoading(true);
+    setErrors({ token: "" });
 
     try {
-      const connResponse = await fetch("/api/connections?provider=spotify");
-      const connData = await connResponse.json();
+      const startTime = Date.now();
 
-      if (!connData.success) {
+      const connectionResult = await getConnection("spotify").unwrap();
+
+      if (!connectionResult.success) {
         throw new Error("Failed to get connection");
       }
 
-      const connId = connData.connection.id;
-      setConnectionId(connId);
+      const connId = connectionResult.connection.id;
 
-      const res = await fetch("/api/connections/credentials", { //TODO: update to ipc
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider: "spotify",
-          connectionId: connId,
-          accessToken,
-        }),
+      await saveCredentials({
+        provider: "spotify",
+        connectionId: connId,
+        accessToken: data.accessToken,
+      }).unwrap();
+
+      onSuccess?.();
+
+      setData({
+        connectionId: connId,
+        fromManage: false,
       });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to save credentials");
-      }
+      const elapsed = Date.now() - startTime;
+      const minLoadingTime = 800;
+      const remainingTime = Math.max(0, minLoadingTime - elapsed);
+      await new Promise((resolve) => setTimeout(resolve, remainingTime));
 
-      setStep("add");
-    } catch (error: any) {
-      setError(error.message || "Failed to save credentials");
+      goTo("add");
+    } catch (err: any) {
+      setErrors({
+        token: err?.data?.error || err?.message || "Failed to save credentials",
+      });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleSaveSources = async () => {
+  return (
+    <CredentialStep
+      description="Enter your Spotify access token to connect your music library."
+      fields={[
+        {
+          id: "access-token",
+          label: "Access Token",
+          placeholder: "BQD4ZoGLWj8...",
+          value: data.accessToken || "",
+          onChange: (value) => {
+            setData({ accessToken: value });
+            if (errors.token) setErrors({ token: "" });
+          },
+        },
+      ]}
+      instructions={
+        <>
+          <strong>How to get your access token:</strong>
+          <br />
+          1. Go to{" "}
+          <a
+            href="https://developer.spotify.com/console/get-current-user/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            Spotify Developer Console
+          </a>
+          <br />
+          2. Click &quot;Get Token&quot; and authorize the required scopes
+          <br />
+          3. Copy the OAuth Token and paste it here
+          <br />
+          <br />
+          <strong>Required scopes:</strong>
+          user-library-read, user-read-recently-played, user-top-read,
+          playlist-read-private
+        </>
+      }
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={errors.token || ""}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step: Select Sources
+// ─────────────────────────────────────────────────────────────────────────────
+
+function SelectSourcesStep({ onComplete }: { onComplete: () => void }) {
+  const { data, setData, errors, setErrors, goTo } =
+    useWizard<SpotifyWizardData>();
+  const [loading, setLoading] = useState(false);
+
+  const [saveResources] = useSaveResourcesMutation();
+  const [getSelectedRepos] = useLazyGetSelectedReposQuery();
+
+  const selectedSources = data.selectedSources || [];
+
+  const availableSources = ALL_SOURCES.filter(
+    (s) => !data.currentSources?.some((r: any) => r.source === s.id),
+  );
+
+  const toggleSource = (sourceId: string | number) => {
+    const id = String(sourceId);
+    const next = selectedSources.includes(id)
+      ? selectedSources.filter((s) => s !== id)
+      : [...selectedSources, id];
+    setData({ selectedSources: next });
+  };
+
+  const handleSave = async () => {
     if (selectedSources.length === 0) {
-      setError("Please select at least one source");
+      setErrors({ sources: "Please select at least one source" });
       return;
     }
 
-    setIsLoading(true);
-    setError("");
+    setLoading(true);
+    setErrors({ sources: "" });
 
     try {
-      const res = await fetch("/api/connections/resources", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider: "spotify",
-          connectionId,
-          resources: selectedSources,
-        }),
-      });
+      const startTime = Date.now();
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to save sources");
+      await saveResources({
+        provider: "spotify",
+        connectionId: data.connectionId,
+        resources: selectedSources as any,
+      }).unwrap();
+
+      const elapsed = Date.now() - startTime;
+      const minLoadingTime = 1000;
+      const remainingTime = Math.max(0, minLoadingTime - elapsed);
+      await new Promise((resolve) => setTimeout(resolve, remainingTime));
+
+      if (data.fromManage) {
+        const result = await getSelectedRepos("spotify").unwrap();
+        if (result.success) {
+          setData({
+            currentSources: result.repos || [],
+            selectedSources: [],
+          });
+        }
+        goTo("manage");
+      } else {
+        onComplete();
       }
-
-      onClose();
-    } catch (error: any) {
-      setError(error.message || "Failed to save sources");
+    } catch (err: any) {
+      setErrors({
+        sources: err?.data?.error || err?.message || "Failed to save sources",
+      });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleRemoveSource = async (sourceId: string) => {
-    setIsLoading(true);
-    setError("");
+  const handleBack = () => {
+    if (data.fromManage) {
+      goTo("manage");
+    } else {
+      goTo("setToken");
+    }
+  };
+
+  return (
+    <SelectResourcesStep
+      resources={availableSources}
+      selectedResources={selectedSources}
+      onToggleResource={toggleSource}
+      loading={loading}
+      error={errors.sources || ""}
+      onSave={handleSave}
+      onBack={handleBack}
+      title="Select which Spotify content you want to include in your feed."
+      emptyMessage="All sources are already connected."
+      saveButtonLabel={`Save ${selectedSources.length} Sources`}
+      renderResourceItem={(source) => (
+        <>
+          <BodyMedium>{source.name}</BodyMedium>
+          <Caption className="mt-0.5">{source.description}</Caption>
+        </>
+      )}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step: Manage Sources
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ManageSourcesStep({ onRevoke }: { onRevoke: () => void }) {
+  const { data, setData, errors, setErrors, goTo } =
+    useWizard<SpotifyWizardData>();
+  const [loading, setLoading] = useState(false);
+
+  const [deleteResource] = useDeleteResourceMutation();
+  const [getSelectedRepos] = useLazyGetSelectedReposQuery();
+
+  const handleRemove = async (sourceId: string) => {
+    setErrors({ manage: "" });
 
     try {
-      const res = await fetch(`/api/connections/resources/${sourceId}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to remove source");
+      await deleteResource(sourceId).unwrap();
+      const result = await getSelectedRepos("spotify").unwrap();
+      if (result.success) {
+        setData({ currentSources: result.repos || [] });
       }
-
-      loadSelectedSources();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to remove source");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRevoke = async () => {
-    if (!confirm("Are you sure you want to disconnect Spotify?")) {
-      return;
-    }
-
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const res = await fetch("/api/connections/revoke", {
-        method: "DELETE",
-        body: JSON.stringify({ provider: "spotify" }),
+    } catch (err: any) {
+      setErrors({
+        manage: err?.data?.error || err?.message || "Failed to remove source",
       });
-
-      if (!res.ok) {
-        throw new Error("Failed to revoke connection");
-      }
-
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to disconnect");
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const toggleSource = (source: string) => {
-    setSelectedSources((prev) =>
-      prev.includes(source)
-        ? prev.filter((s) => s !== source)
-        : [...prev, source]
-    );
-  };
-
-  const handleAddMore = async () => {
-    setIsLoading(true);
-    setError("");
+  const handleAddNew = async () => {
+    setLoading(true);
+    setErrors({ manage: "" });
 
     try {
       const currentSourceIds = new Set(
-        existingSources.map((s: any) => s.source)
+        data.currentSources?.map((r: any) => r.source) || [],
       );
 
-      setSelectedSources(Array.from(currentSourceIds));
+      const availableSources = ALL_SOURCES.filter(
+        (s) => !currentSourceIds.has(s.id),
+      );
 
-      setStep("add");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load sources");
+      if (availableSources.length === 0) {
+        setErrors({ manage: "All sources are already connected" });
+        return;
+      }
+
+      setData({
+        selectedSources: [],
+        fromManage: true,
+      });
+      goTo("add");
+    } catch (err: any) {
+      setErrors({
+        manage: err?.data?.error || err?.message || "Failed to load sources",
+      });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative z-50 w-full max-w-2xl bg-primary-50 dark:bg-primary-950 border border-primary-200 dark:border-primary-900 rounded-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-primary-200 dark:border-primary-900">
-          <div className="flex items-center gap-2">
-            <img
-              src="/apps/spotify-skeuomorphic.png"
-              alt="Spotify"
-              className="w-10 h-10"
-              width={256}
-              height={256}
-            />
-            <Text variant="h3">Spotify Connection</Text>
-          </div>
-          <Button
-            onClick={onClose}
-            className="p-2 flex cursor-pointer items-center justify-center rounded-lg text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
-          >
-            <Close className="w-4 h-4" />
-          </Button>
+    <ManageResourcesStep
+      resources={data.currentSources || []}
+      onAddNew={handleAddNew}
+      onRemove={handleRemove}
+      onRevoke={onRevoke}
+      loading={loading}
+      error={errors.manage || ""}
+      resourceLabel="source"
+      resourceLabelPlural="sources"
+      addButtonLabel="Add Sources"
+      revokeButtonLabel="Revoke Spotify Access"
+      renderResourceItem={(source) => (
+        <div className="flex-1">
+          <BodyMedium>{source.name}</BodyMedium>
+          <Caption className="mt-0.5">{source.source}</Caption>
         </div>
-        <div className="p-6 min-h-75">
-          <div className="transition-opacity duration-200">
-            {initializing ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center space-y-3">
-                  <div className="w-8 h-8 border-2 border-primary-300 dark:border-primary-700 border-t-primary-900 dark:border-t-primary-100 rounded-full animate-spin mx-auto" />
-                  <Muted>Loading sources...</Muted>
-                </div>
-              </div>
-            ) : step === "setToken" ? (
-              <CredentialsStep
-                accessToken={accessToken}
-                setAccessToken={setAccessToken}
-                isLoading={isLoading}
-                error={error}
-                onNext={handleSaveCredentials}
-              />
-            ) : step === "add" ? (
-              <SourcesStep
-                selectedSources={selectedSources}
-                toggleSource={toggleSource}
-                isLoading={isLoading}
-                error={error}
-                onFinish={handleSaveSources}
-                existingSources={existingSources}
-              />
-            ) : (
-              <ManageStep
-                existingSources={existingSources}
-                onRemove={handleRemoveSource}
-                onRevoke={handleRevoke}
-                onAddMore={handleAddMore}
-                loading={isLoading}
-                error={error}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const CredentialsStep = ({
-  accessToken,
-  setAccessToken,
-  isLoading,
-  error,
-  onNext,
-}: any) => (
-  <div className="space-y-4">
-    <Muted>
-      Enter your Spotify access token to connect your music library.
-    </Muted>
-
-    <div>
-      <label htmlFor="access-token" className="block mb-2">
-        <Text variant="label">Access Token</Text>
-      </label>
-      <input
-        id="access-token"
-        type="password"
-        value={accessToken}
-        onChange={(e) => setAccessToken(e.target.value)}
-        placeholder="BQD4ZoGLWj8..."
-        className="w-full px-3 py-2.5 bg-white dark:bg-primary-100 rounded-xl text-primary-900 dark:text-primary-900 placeholder:text-primary-400 dark:placeholder:text-primary-600 focus:outline-none"
-        disabled={isLoading}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") onNext();
-        }}
-      />
-    </div>
-
-    {error && <ErrorText>{error}</ErrorText>}
-
-    <div className="flex justify-end gap-3 pt-2">
-      <Button
-        variant="primary"
-        onClick={onNext}
-        disabled={isLoading || !accessToken.trim()}
-        isLoading={isLoading}
-      >
-        {isLoading ? "Connecting..." : "Continue"}
-      </Button>
-    </div>
-
-    <div className="mt-4 p-4 bg-primary-100 dark:bg-primary-800 rounded-xl">
-      <Caption>
-        <strong>How to get your access token:</strong>
-        <br />
-        1. Go to{" "}
-        <a
-          href="https://developer.spotify.com/console/get-current-user/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-        >
-          Spotify Developer Console
-        </a>
-        <br />
-        2. Click &quot;Get Token&quot; and authorize the required scopes
-        <br />
-        3. Copy the OAuth Token and paste it here
-        <br />
-        <br />
-        <strong>Required scopes:</strong>
-        user-library-read, user-read-recently-played, user-top-read,
-        playlist-read-private
-      </Caption>
-    </div>
-  </div>
-);
-
-const SourcesStep = ({
-  selectedSources,
-  toggleSource,
-  isLoading,
-  error,
-  onFinish,
-  existingSources = [],
-}: any) => {
-  const allSources = [
-    {
-      id: "playlists",
-      name: "Your Playlists",
-      description: "Your saved and created playlists",
-    },
-    {
-      id: "recently-played",
-      name: "Recently Played",
-      description: "Tracks you've recently listened to",
-    },
-    {
-      id: "top-tracks",
-      name: "Top Tracks",
-      description: "Your most played tracks",
-    },
-    {
-      id: "top-artists",
-      name: "Top Artists",
-      description: "Your most listened artists",
-    },
-    {
-      id: "saved-albums",
-      name: "Saved Albums",
-      description: "Albums in your library",
-    },
-  ];
-
-  const existingSourceIds = new Set(existingSources.map((s: any) => s.source));
-  const availableSources = allSources.filter(
-    (source) => !existingSourceIds.has(source.id)
-  );
-
-  return (
-    <div className="space-y-4">
-      <Muted>
-        Select which Spotify content you want to include in your feed.{" "}
-        {selectedSources.length} selected.
-      </Muted>
-
-      <div className="max-h-64 overflow-y-auto border border-primary-200 dark:border-primary-900 rounded-xl">
-        {availableSources.length === 0 ? (
-          <div className="p-8 text-center text-primary-500 dark:text-primary-400">
-            <Body>All sources are already connected.</Body>
-          </div>
-        ) : (
-          availableSources.map((source) => {
-            const isSelected = selectedSources.includes(source.id);
-            return (
-              <div
-                key={source.id}
-                className="flex items-center justify-between px-4 py-4 border-b border-primary-200 dark:border-primary-900 last:border-b-0"
-              >
-                <div
-                  className="flex-1 cursor-pointer"
-                  onClick={() => toggleSource(source.id)}
-                >
-                  <BodyMedium>{source.name}</BodyMedium>
-                  <Caption className="mt-0.5">{source.description}</Caption>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    toggleSource(source.id);
-                  }}
-                  disabled={isLoading}
-                  className="w-4 h-4 text-primary-600 dark:text-primary-400 rounded cursor-pointer"
-                />
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {error && <ErrorText>{error}</ErrorText>}
-
-      <div className="flex justify-end gap-3 pt-2">
-        <Button
-          variant="primary"
-          onClick={onFinish}
-          disabled={isLoading || selectedSources.length === 0}
-          isLoading={isLoading}
-        >
-          {isLoading ? "Saving..." : `Save ${selectedSources.length} Sources`}
-        </Button>
-      </div>
-    </div>
-  );
-};
-
-const ManageStep = ({
-  existingSources,
-  onRemove,
-  onRevoke,
-  onAddMore,
-  loading,
-  error,
-}: any) => (
-  <div className="space-y-4">
-    <div className="flex items-center justify-between">
-      <Muted>
-        {existingSources.length}{" "}
-        {existingSources.length === 1 ? "source" : "sources"} connected
-      </Muted>
-      <Button variant="secondary" onClick={onAddMore} disabled={loading} size="sm">
-        Add Sources
-      </Button>
-    </div>
-
-    <div className="max-h-64 overflow-y-auto border border-primary-200 dark:border-primary-900 rounded-xl">
-      {existingSources.length === 0 ? (
-        <div className="p-8 text-center text-primary-500 dark:text-primary-400">
-          <Body>No sources connected yet.</Body>
-          <LinkButton onClick={onAddMore} disabled={loading} className="mt-3">
-            Add sources
-          </LinkButton>
-        </div>
-      ) : (
-        existingSources.map((source: any) => (
-          <div
-            key={source.id}
-            className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-900 last:border-b-0"
-          >
-            <div className="flex-1">
-              <BodyMedium>{source.name}</BodyMedium>
-              <Caption className="mt-0.5">{source.source}</Caption>
-            </div>
-            <WarningButton
-              onClick={() => onRemove(source.id)}
-              disabled={loading}
-              size="xs"
-            >
-              Remove
-            </WarningButton>
-          </div>
-        ))
       )}
-    </div>
+    />
+  );
+}
 
-    {error && <ErrorText>{error}</ErrorText>}
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Modal
+// ─────────────────────────────────────────────────────────────────────────────
 
-    <div className="flex justify-end">
-      <DangerButton onClick={onRevoke} disabled={loading}>
-        Revoke Spotify Access
-      </DangerButton>
-    </div>
-  </div>
-);
+const SpotifyModal = ({
+  open,
+  onClose,
+  isConnected,
+  onSuccess,
+}: SpotifyModalProps) => {
+  const [initializing, setInitializing] = useState(true);
+  const [initialStep, setInitialStep] = useState<StepId>("setToken");
+  const [initialData, setInitialData] = useState<Partial<SpotifyWizardData>>(
+    {},
+  );
+  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
+
+  const [getSelectedRepos] = useLazyGetSelectedReposQuery();
+  const [revokeConnection, { isLoading: isRevoking }] =
+    useRevokeConnectionMutation();
+
+  useEffect(() => {
+    if (!open) {
+      setInitializing(true);
+      return;
+    }
+
+    const loadInitialData = async () => {
+      setInitializing(true);
+
+      const baseData: Partial<SpotifyWizardData> = {
+        accessToken: "",
+        selectedSources: [],
+        currentSources: [],
+        fromManage: false,
+      };
+
+      if (!isConnected) {
+        setInitialStep("setToken");
+        setInitialData(baseData);
+        setInitializing(false);
+        return;
+      }
+
+      let finalStep: StepId = "setToken";
+      let finalData: Partial<SpotifyWizardData> = baseData;
+
+      try {
+        const startTime = Date.now();
+        const result = await getSelectedRepos("spotify").unwrap();
+
+        if (result.success) {
+          finalData = {
+            ...baseData,
+            connectionId: result.connectionId,
+            currentSources: result.repos || [],
+          };
+          finalStep = "manage";
+        }
+
+        const elapsed = Date.now() - startTime;
+        const minLoadingTime = 600;
+        const remainingTime = Math.max(0, minLoadingTime - elapsed);
+        await new Promise((resolve) => setTimeout(resolve, remainingTime));
+      } catch (err) {
+        console.error("[loadInitialData] Error:", err);
+      }
+
+      setInitialStep(finalStep);
+      setInitialData(finalData);
+      setInitializing(false);
+    };
+
+    loadInitialData();
+  }, [open, isConnected, getSelectedRepos]);
+
+  const handleClose = useCallback(() => {
+    setShowRevokeConfirm(false);
+    onClose();
+  }, [onClose]);
+
+  const handleRevoke = async () => {
+    setShowRevokeConfirm(false);
+    try {
+      await revokeConnection("spotify").unwrap();
+      handleClose();
+    } catch (err) {
+      console.error("[handleRevoke] Error:", err);
+    }
+  };
+
+  const steps: WizardStep<SpotifyWizardData>[] = initializing
+    ? [{ id: "loading", render: () => <LoadingStep /> }]
+    : [
+        {
+          id: "setToken",
+          render: () => <TokenStep onSuccess={onSuccess} />,
+        },
+        {
+          id: "add",
+          render: () => <SelectSourcesStep onComplete={handleClose} />,
+        },
+        {
+          id: "manage",
+          render: () => (
+            <ManageSourcesStep onRevoke={() => setShowRevokeConfirm(true)} />
+          ),
+        },
+      ];
+
+  return (
+    <>
+      <WizardModal
+        key={`wizard-${initialStep}`}
+        open={open}
+        onOpenChange={(isOpen) => !isOpen && handleClose()}
+        steps={steps}
+        initialStep={initializing ? "loading" : initialStep}
+        initialData={initialData}
+        title="Spotify"
+        icon="/apps/spotify-skeuomorphic.png"
+        onCancel={handleClose}
+      />
+
+      {showRevokeConfirm && (
+        <RevokeConfirmModal
+          onConfirm={handleRevoke}
+          onCancel={() => setShowRevokeConfirm(false)}
+          loading={isRevoking}
+          appName="Spotify"
+        />
+      )}
+    </>
+  );
+};
 
 export default SpotifyModal;

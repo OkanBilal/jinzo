@@ -1,4 +1,6 @@
 import { Close } from "@/components/ui/icons";
+import Github from "@/components/ui/icons/github";
+import Linear from "@/components/ui/icons/linear";
 import type { IssueWithEntity } from "@/lib/redux/api";
 
 interface IssueTabProps {
@@ -6,6 +8,26 @@ interface IssueTabProps {
   isActive: boolean;
   onClick: () => void;
   onClose: (e: React.MouseEvent) => void;
+}
+
+function ProviderIcon({ provider }: { provider: string }) {
+  const iconClass = "w-4 h-4 shrink-0";
+
+  switch (provider) {
+    case "github":
+      return <Github className={iconClass} />;
+    case "linear":
+      return <Linear className={iconClass} />;
+    default:
+      return (
+        <svg className={iconClass} viewBox="0 0 16 16" fill="currentColor">
+          <path
+            fillRule="evenodd"
+            d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM0 8a8 8 0 1116 0A8 8 0 010 8zm9 0a1 1 0 11-2 0 1 1 0 012 0z"
+          />
+        </svg>
+      );
+  }
 }
 
 export function IssueTab({ issue, isActive, onClick, onClose }: IssueTabProps) {
@@ -24,12 +46,7 @@ export function IssueTab({ issue, isActive, onClick, onClose }: IssueTabProps) {
           : "text-primary-500 hover:text-primary-700 dark:hover:text-primary-300"
       }`}
     >
-      <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="currentColor">
-        <path
-          fillRule="evenodd"
-          d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM0 8a8 8 0 1116 0A8 8 0 010 8zm9 0a1 1 0 11-2 0 1 1 0 012 0z"
-        />
-      </svg>
+      <ProviderIcon provider={iss.provider} />
       <span className="text-xs truncate flex-1">{label}</span>
       <button
         onClick={onClose}

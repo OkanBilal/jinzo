@@ -1,26 +1,30 @@
 import { useState, useRef, type MouseEvent } from "react";
 import { Muted, Timestamp } from "@/components/ui/text";
-import { Trash, Option, Layers } from "@/components/ui/icons";
+import { Trash, Option, Layers, Check, Connect } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format-date";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 interface WorkspaceItemProps {
+  id: string;
   name: string;
   branch?: string | null;
   updatedAt?: Date;
   isActive?: boolean;
   onClick?: () => void;
   onDelete?: (e: MouseEvent) => void;
+  onLinkIssues?: () => void;
 }
 
 export default function WorkspaceItem({
+  id,
   name,
   branch,
   updatedAt,
   isActive = false,
   onClick,
   onDelete,
+  onLinkIssues,
 }: WorkspaceItemProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
@@ -47,11 +51,16 @@ export default function WorkspaceItem({
     onDelete?.(undefined as unknown as MouseEvent);
   };
 
+  const handleLinkIssuesClick = () => {
+    setIsDropdownOpen(false);
+    onLinkIssues?.();
+  };
+
   return (
     <div className="relative group">
       <div
         onClick={onClick}
-        className={`block pl-3 pr-3 py-1.5 active:scale-[0.99] group-hover:scale-[1.01] rounded-xl transition-all duration-200 ease-out cursor-pointer ${
+        className={`block pl-3 pr-3 py-1.5 active:scale-99 group-hover:scale-[1.01] rounded-xl transition-all duration-200 ease-out cursor-pointer ${
           isActive
             ? "bg-primary/80 dark:bg-primary/5"
             : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
@@ -105,6 +114,10 @@ export default function WorkspaceItem({
         position={dropdownPosition}
         onClose={() => setIsDropdownOpen(false)}
       >
+        <DropdownMenuItem onClick={handleLinkIssuesClick}>
+          <Connect className="size-4" />
+          <span>Connect Issues</span>
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={handleDeleteClick} variant="danger">
           <Trash className="size-4" />
           <span>Delete</span>

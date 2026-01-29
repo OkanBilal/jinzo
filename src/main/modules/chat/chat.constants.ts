@@ -119,6 +119,12 @@ export const SOURCES = [
     itemTypes: ["issue", "pull-request"],
   },
   {
+    id: "linear",
+    displayName: "Linear",
+    patterns: ["linear", "linear\\s*app", "linear\\s*issue"],
+    itemTypes: ["issue"],
+  },
+  {
     id: "hackernews",
     displayName: "Hacker News",
     patterns: ["hacker\\s*news", "hackernews", "\\bhn\\b", "ycombinator"],
@@ -173,7 +179,7 @@ export const ITEM_TYPES = [
     id: "issue",
     displayName: "Issue",
     patterns: ["issue", "bug", "ticket", "problem"],
-    sources: ["github"],
+    sources: ["github", "linear"],
   },
   {
     id: "pull-request",
@@ -276,14 +282,15 @@ export const BM25_PARAMS = {
 // Sync Limits
 // ─────────────────────────────────────────────────────────────
 export const FETCH_LIMITS = {
-  GITHUB_ISSUES: 10,
-  GITHUB_PRS: 10,
-  RAINDROP: 10,
-  HACKERNEWS_TOP: 10,
-  HACKERNEWS_NEW: 10,
-  HACKERNEWS_USER: 10,
-  PODCASTS: 5,
-  RSS: 5,
+  GITHUB_ISSUES: 20,
+  GITHUB_PRS: 20,
+  LINEAR_ISSUES: 20,
+  RAINDROP: 20,
+  HACKERNEWS_TOP: 20,
+  HACKERNEWS_NEW: 20,
+  HACKERNEWS_USER: 20,
+  PODCASTS: 10,
+  RSS: 10,
 } as const;
 
 export const IMAGE_SRC_REGEX = /<img[^>]+src=["']([^"'>]+)["']/i;

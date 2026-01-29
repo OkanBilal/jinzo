@@ -8,6 +8,7 @@ import type { HackerNewsTogglePayload, SaveResourcesPayload } from "./connection
 const IPC_CHANNELS = {
   GET_GITHUB_REPOS: "connections:getGithubRepos",
   GET_RAINDROP_COLLECTIONS: "connections:getRaindropCollections",
+  GET_LINEAR_TEAMS: "connections:getLinearTeams",
   GET_HACKERNEWS_STATUS: "connections:getHackerNewsStatus",
   TOGGLE_HACKERNEWS: "connections:toggleHackerNews",
   SAVE_RESOURCES: "connections:saveResources",
@@ -35,6 +36,13 @@ export function registerConnectionsHandlers(): void {
     IPC_CHANNELS.GET_RAINDROP_COLLECTIONS,
     async (_event, connectionId: string) => {
       return connectionsController.getRaindropCollections(connectionId);
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GET_LINEAR_TEAMS,
+    async (_event, connectionId: string) => {
+      return connectionsController.getLinearTeams(connectionId);
     }
   );
 

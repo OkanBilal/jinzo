@@ -8,11 +8,13 @@ import Text, {
 import AppleMusicModal from "../../components/apps/apple-music/apple-music-modal";
 import GitHubModal from "../../components/apps/github/github-modal";
 import HackerNewsModal from "../../components/apps/hackernews/hackernews-modal";
+import LinearModal from "../../components/apps/linear/linear-modal";
 import PodcastModal from "../../components/apps/podcast/podcast-modal";
-import RaindropModal from "../../components/apps/raindrop/raindrop-modal";
 import RssModal from "../../components/apps/rss/rss-modal";
 import SpotifyModal from "../../components/apps/spotify/spotify-modal";
 import { Button } from "@/components/ui/button";
+import RaindropModal from "./raindrop/raindrop-modal";
+import { External } from "@/components/ui/icons";
 
 interface AppsSettingsProps {
   apps: AppItem[];
@@ -26,6 +28,7 @@ export default function AppsSettings({
   onRefresh,
 }: AppsSettingsProps) {
   const [showGitHubModal, setShowGitHubModal] = useState(false);
+  const [showLinearModal, setShowLinearModal] = useState(false);
   const [showRaindropModal, setShowRaindropModal] = useState(false);
   const [showHackerNewsModal, setShowHackerNewsModal] = useState(false);
   const [showPodcastModal, setShowPodcastModal] = useState(false);
@@ -44,6 +47,8 @@ export default function AppsSettings({
   const handleConnect = (appId: string) => {
     if (appId === "github") {
       setShowGitHubModal(true);
+    } else if (appId === "linear") {
+      setShowLinearModal(true);
     } else if (appId === "raindrop") {
       setShowRaindropModal(true);
     } else if (appId === "hackernews") {
@@ -90,29 +95,19 @@ export default function AppsSettings({
           </div>
         </div>
         <Button
-          variant="secondary"
+          variant={connected ? "primary" : "secondary"}
           onClick={() => handleConnect(app.id)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-colors hover:bg-primary-100 dark:hover:bg-primary-800"
+          className="flex gap-2"
         >
           <Text
             variant="button"
-            className="text-primary-900 dark:text-primary-100"
+            className=""
           >
             {connected ? "Manage" : "Connect"}
           </Text>
-          <svg
-            className="w-4 h-4 text-primary-600 dark:text-primary-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.5}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
-            />
-          </svg>
+          {connected ? null : (
+            <External className="w-4 h-4 " />
+          )}
         </Button>
       </div>
     );
@@ -158,6 +153,13 @@ export default function AppsSettings({
         open={showGitHubModal}
         onClose={() => setShowGitHubModal(false)}
         isConnected={isConnected("github")}
+        onSuccess={handleConnectionSuccess}
+      />
+
+      <LinearModal
+        open={showLinearModal}
+        onClose={() => setShowLinearModal(false)}
+        isConnected={isConnected("linear")}
         onSuccess={handleConnectionSuccess}
       />
 

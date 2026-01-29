@@ -1,4 +1,5 @@
 import { Octokit } from "@octokit/rest";
+import { LinearClient } from "@linear/sdk";
 import { connectionsRepo } from "./connections.repo";
 import {
   decryptToken,
@@ -9,6 +10,7 @@ import {
 import type {
   GithubRepo,
   RaindropCollection,
+  LinearTeam,
   HackerNewsTogglePayload,
   SaveResourcesPayload,
   ServiceResponse,
@@ -118,6 +120,51 @@ export const connectionsService = {
     } catch (error) {
       console.error("Error fetching Raindrop collections:", error);
       return { success: false, error: "Failed to fetch collections" };
+    }
+  },
+
+  // Linear
+  async getLinearTeams(connectionId: string): Promise<ServiceResponse<{ teams: LinearTeam[] }>> {
+    try {
+      if (!connectionId) {
+        return { success: false, error: "connectionId is required" };
+      }
+
+      const connection = await connectionsRepo.findById(connectionId);
+      if (!connection) {
+        return { success: false, error: "Connection not found" };
+      }
+
+      const token = await connectionsRepo.findCurrentToken(connectionId);
+      if (!token || !token.accessTokenEnc) {
+        return { success: false, error: "Token not found" };
+      }
+
+      const linearToken = decryptToken(token.accessTokenEnc as Buffer);
+      const linearClient = new LinearClient({ apiKey: linearToken });
+
+      const teamsConnection = await linearClient.teams();
+
+      const formattedTeams: LinearTeam[] = teamsConnection.nodes.map((team) => ({
+        id: team.id,
+        key: team.key,
+        name: team.name,
+        description: team.description || null,
+        icon: team.icon || null,
+        color: team.color || null,
+        issueCount: 0,
+      }));
+
+      return { success: true, data: { teams: formattedTeams } };
+    } catch (error: any) {
+      console.error("Error fetching Linear teams:", error);
+      console.error("Linear error details:", {
+        message: error?.message,
+        type: error?.type,
+        errors: error?.errors,
+      });
+      const errorMessage = error?.message || "Failed to fetch teams";
+      return { success: false, error: errorMessage };
     }
   },
 
@@ -310,6 +357,50 @@ export const connectionsService = {
                 kind: "github_repo",
                 name: repo.fullName,
                 url: repo.htmlUrl,
+                selected: true,
+                metadata,
+                lastSeenAt: new Date(),
+                lastIngestAt: null,
+              });
+            }
+            savedCount++;
+          }
+          break;
+        }
+
+        case "linear": {
+          const selectedTeams = (resources || []) as LinearTeam[];
+          for (const team of selectedTeams) {
+            const resourceId = `${connectionId}:${team.key}`;
+            const existing = await connectionsRepo.findResourceByExternalId(
+              connectionId,
+              team.key
+            );
+
+            const metadata = JSON.stringify({
+              id: team.id,
+
+              name: team.name,
+              key: team.key,
+              description: team.description,
+              icon: team.icon,
+              color: team.color,
+              issueCount: team.issueCount,
+            });
+
+            if (existing) {
+              await connectionsRepo.updateResource(existing.id, {
+                selected: true,
+                lastSeenAt: new Date(),
+                metadata,
+              });
+            } else {
+              await connectionsRepo.insertResource({
+                id: resourceId,
+                connectionId,
+                externalId: team.key,
+                kind: "linear_team",
+                name: team.name,
                 selected: true,
                 metadata,
                 lastSeenAt: new Date(),
@@ -595,6 +686,23 @@ export const connectionsService = {
             repos: resources.map((r) => ({
               id: r.id,
               fullName: r.externalId,
+              name: r.name || r.externalId,
+              metadata: parseResourceMetadata(r.metadata),
+            })),
+            connectionId: connection.id,
+          };
+          break;
+
+        case "linear":
+          resources = await connectionsRepo.findResourcesByConnectionAndKind(
+            connection.id,
+            "linear_team",
+            true
+          );
+          responseData = {
+            teams: resources.map((r) => ({
+              id: r.id,
+              key: r.externalId,
               name: r.name || r.externalId,
               metadata: parseResourceMetadata(r.metadata),
             })),

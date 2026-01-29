@@ -120,7 +120,7 @@ export const ChatMessageComponent = memo(
           >
             <Button
               onClick={handleCopy}
-              className="flex items-center gap-1 active:scale-[0.98] hover:bg-primary-200/60 dark:hover:bg-primary-900 p-1.5 rounded-md ease-out duration-150 hover:scale-105 cursor-pointer"
+              className="flex items-center gap-1 active:scale-99 hover:bg-primary-200/60 dark:hover:bg-primary-900 p-1.5 rounded-md ease-out duration-150 hover:scale-101 cursor-pointer"
               aria-label="Copy message to clipboard"
             >
               {isCopied ? (

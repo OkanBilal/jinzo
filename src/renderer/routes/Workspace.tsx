@@ -16,6 +16,8 @@ import {
   clearSelectedFile,
   removeContextFile,
   clearContextFiles,
+  removeContextIssue,
+  clearContextIssues,
   closeIssueTab,
   clearIssueTabs,
 } from "@/lib/redux/slices/workspaceSlice";
@@ -40,6 +42,9 @@ export default function WorkspacePage() {
   const contextFiles = useSelector(
     (state: RootState) => state.workspace.contextFiles,
   );
+  const contextIssues = useSelector(
+    (state: RootState) => state.workspace.contextIssues,
+  );
   const openIssueTabs = useSelector(
     (state: RootState) => state.workspace.openIssueTabs,
   );
@@ -60,6 +65,7 @@ export default function WorkspacePage() {
   useEffect(() => {
     dispatch(clearSelectedFile());
     dispatch(clearContextFiles());
+    dispatch(clearContextIssues());
     dispatch(clearIssueTabs());
     dispatch(setActiveTab("editor"));
   }, [workspaceId, dispatch]);
@@ -162,12 +168,22 @@ export default function WorkspacePage() {
     const currentRunId =
       activeTab !== "editor" && !isIssueTab(activeTab) ? activeTab : null;
 
-    // Build the final goal with context files
+        //TODO: Refactor
+    // Build the final goal with context files and issues
     let finalGoal = goal;
     if (contextFiles.length > 0) {
       const filesList = contextFiles.map((f) => f.fullPath).join("\n");
-      finalGoal = `Use these files as context:\n${filesList}\n\n${goal}`;
+      finalGoal = `Use these files as context:\n${filesList}\n\n${finalGoal}`;
       console.log("Final goal with context files:", finalGoal);
+    }
+    if (contextIssues.length > 0) {
+      const issuesList = contextIssues.map((i) => {
+        const issueLabel = `[${i.provider.toUpperCase()}${i.number ? ` #${i.number}` : ""}] ${i.title}`;
+        const issueBody = i.body ? `\n${i.body}` : "";
+        return `${issueLabel}${issueBody}`;
+      }).join("\n\n---\n\n");
+      finalGoal = `Use these issues as context:\n\n${issuesList}\n\n${finalGoal}`;
+      console.log("Final goal with context issues:", finalGoal);
     }
 
     // If there's an active completed run that can be resumed, continue it
@@ -192,10 +208,12 @@ export default function WorkspacePage() {
     if (success) {
       setGoal("");
       dispatch(clearContextFiles());
+      dispatch(clearContextIssues());
     }
   }, [
     goal,
     contextFiles,
+    contextIssues,
     selectedWorkspace,
     selectedProvider,
     selectedModel,
@@ -244,6 +262,13 @@ export default function WorkspacePage() {
     [dispatch],
   );
 
+  const handleRemoveContextIssue = useCallback(
+    (entityId: string) => {
+      dispatch(removeContextIssue(entityId));
+    },
+    [dispatch],
+  );
+
   const handleSelectIssueTab = useCallback(
     (entityId: string) => {
       dispatch(setActiveTab(`issue:${entityId}`));
@@ -286,12 +311,8 @@ export default function WorkspacePage() {
           />
         )}
       </div>
-      {error && (
-        <div className="px-6 py-3 bg-red-100/80 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800/50">
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-        </div>
-      )}
-      <WorkspaceQuickActions onSetGoal={setGoal} />
+
+      {/* <WorkspaceQuickActions onSetGoal={setGoal} /> */}
       <WorkspaceInput
         goal={goal}
         onGoalChange={setGoal}
@@ -304,6 +325,8 @@ export default function WorkspacePage() {
         onModelChange={handleModelChange}
         contextFiles={contextFiles}
         onRemoveContextFile={handleRemoveContextFile}
+        contextIssues={contextIssues}
+        onRemoveContextIssue={handleRemoveContextIssue}
       />
     </div>
   );

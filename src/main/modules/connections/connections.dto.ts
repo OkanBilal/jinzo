@@ -39,6 +39,16 @@ export interface RssFeed {
   url: string;
 }
 
+export interface LinearTeam {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  color: string | null;
+  issueCount: number;
+}
+
 export interface ConnectionResource {
   id: string;
   connectionId: string;

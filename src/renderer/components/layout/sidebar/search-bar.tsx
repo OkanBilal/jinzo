@@ -40,7 +40,7 @@ export default function SearchBar({
           <Button
             tooltip="Clear search"
             onClick={onClear}
-            className="absolute cursor-pointer hover:scale-[1.02] active:scale-[0.98] right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-primary/20 dark:hover:bg-primary/10 rounded-md transition-all duration-200"
+            className="absolute cursor-pointer hover:scale-101 active:scale-99 right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-primary/20 dark:hover:bg-primary/10 rounded-md transition-all duration-200"
           >
             <Close className="w-3 h-3 text-primary-900 dark:text-primary-400" />
           </Button>
@@ -50,7 +50,7 @@ export default function SearchBar({
           onClick={onToggle}
           tooltip="Search item"
           tooltipPosition="top"
-          className="h-9 w-9 cursor-pointer hover:scale-[1.02] active:scale-[0.98] duration-200 flex items-center justify-center hover:bg-primary/20 dark:hover:bg-primary/10 rounded-xl transition-all"
+          className="h-9 w-9 cursor-pointer hover:scale-101 active:scale-99 duration-200 flex items-center justify-center hover:bg-primary/20 dark:hover:bg-primary/10 rounded-xl transition-all"
         >
           <Search className="w-4 h-4 text-primary-900 dark:text-primary-400" />
         </Button>

@@ -50,7 +50,7 @@ export function ManageResourcesStep({
           {count} {label} connected
         </Muted>
         <Button
-          variant="secondary"
+          variant="primary"
           onClick={onAddNew}
           disabled={loading}
           size="sm"
@@ -61,16 +61,9 @@ export function ManageResourcesStep({
 
       <div className="min-h-12 max-h-52  overflow-y-auto border border-primary-200 dark:border-primary-800 rounded-xl">
         {count === 0 ? (
-          <div className="p-8 text-center text-primary-500 dark:text-primary-400">
+          <div className="p-8 text-center ">
             <Body>No {resourceLabelPlural} connected yet.</Body>
-            <Button
-              variant="link"
-              onClick={onAddNew}
-              disabled={loading}
-              className="mt-3"
-            >
-              Add {resourceLabelPlural}
-            </Button>
+
           </div>
         ) : (
           resources.map((resource) => (
@@ -89,10 +82,10 @@ export function ManageResourcesStep({
                 </div>
               )}
               <Button
-                variant="danger"
+                variant="warning"
                 onClick={() => onRemove(resource.id)}
                 disabled={loading}
-                size="xs"
+                size="sm"
               >
                 Remove
               </Button>

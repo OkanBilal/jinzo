@@ -7,6 +7,17 @@ export interface InputFormProps {
   placeholder?: string;
 }
 
+export interface AppState {
+  id: string;
+  displayName: string;
+  iconPath: string;
+  isConnected: boolean;
+  connectionId: string | null;
+  highlighted: boolean;
+  sortOrder: number;
+  enabledFeatures: string | null;
+  config: string | null;
+}
 
 export type ChatInputProps = InputFormProps & {
   loading?: boolean;
@@ -23,10 +34,44 @@ export interface SendButtonProps {
   onSubmit: () => void;
 }
 
+export type AppItem = {
+  id: string;
+  displayName: string | null;
+  iconPath: string | null;
+  isConnected: boolean;
+  connectionId: string | null;
+  highlighted: boolean;
+  sortOrder: number;
+  enabledFeatures: string | null;
+  config: string | null;
+};
 
+export interface ConnectAppsDropdownProps {
+  isOpen: boolean;
+  onToggle: () => void;
+  apps: AppItem[];
+  connectedApps: string[];
+  onOpenModal: () => void;
+  dropdownRef: React.RefObject<HTMLDivElement | null>;
+  openUpward?: boolean;
+  selectedApp?: AppState | null;
+  onClearSelectedApp?: () => void;
+}
 
+export interface AppListItemProps {
+  app: AppItem;
+  onConnect: (id: string) => void;
+  isConnected?: boolean;
+}
 
-
+export interface SettingsModalProps {
+  open: boolean;
+  apps: AppItem[];
+  connectedApps: string[];
+  onClose: () => void;
+  section: SettingsSection;
+  onRefresh?: () => void;
+}
 
 export type SettingsSection =
   | "general"
@@ -55,9 +100,26 @@ export interface ModalBackdropProps {
   onClick: () => void;
 }
 
+export interface AppsListProps {
+  apps: AppItem[];
+  connectedApps: string[];
+  onConnect: (id: string) => void;
+}
 
+export interface AppIconProps {
+  app: AppItem;
+}
 
+export interface AppInfoProps {
+  name: string;
+  isConnected: boolean;
+}
 
+export interface ConnectButtonProps {
+  appId: string;
+  isConnected: boolean;
+  onConnect: (id: string) => void;
+}
 
 export interface UploadedFile {
   file: File;

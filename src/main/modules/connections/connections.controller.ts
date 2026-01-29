@@ -13,6 +13,10 @@ export const connectionsController = {
     return connectionsService.getRaindropCollections(connectionId);
   },
 
+  async getLinearTeams(connectionId: string) {
+    return connectionsService.getLinearTeams(connectionId);
+  },
+
   async getHackerNewsStatus() {
     return connectionsService.getHackerNewsStatus();
   },

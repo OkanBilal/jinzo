@@ -178,6 +178,8 @@ const api = {
       ipcRenderer.invoke("connections:getGithubRepos", connectionId),
     getRaindropCollections: (connectionId: string) =>
       ipcRenderer.invoke("connections:getRaindropCollections", connectionId),
+    getLinearTeams: (connectionId: string) =>
+      ipcRenderer.invoke("connections:getLinearTeams", connectionId),
     getHackerNewsStatus: () =>
       ipcRenderer.invoke("connections:getHackerNewsStatus"),
     toggleHackerNews: (payload: {
@@ -204,6 +206,19 @@ const api = {
     getRssStatus: () => ipcRenderer.invoke("connections:getRssStatus"),
     toggleRss: (enabled: boolean) =>
       ipcRenderer.invoke("connections:toggleRss", enabled),
+  },
+  // Workspace Resources operations
+  workspaceResources: {
+    getByWorkspace: (workspaceId: string) =>
+      ipcRenderer.invoke("workspaceResources:getByWorkspace", workspaceId),
+    getAvailable: (workspaceId: string) =>
+      ipcRenderer.invoke("workspaceResources:getAvailable", workspaceId),
+    add: (payload: { workspaceId: string; resourceId: string }) =>
+      ipcRenderer.invoke("workspaceResources:add", payload),
+    remove: (payload: { workspaceId: string; resourceId: string }) =>
+      ipcRenderer.invoke("workspaceResources:remove", payload),
+    getIssues: (workspaceId: string) =>
+      ipcRenderer.invoke("workspaceResources:getIssues", workspaceId),
   },
   // Seed operations
   seed: {

@@ -30,7 +30,7 @@ export default function NewButton({ onClick, title, actionPrefix = "New" }: NewB
       size="lg"
       onClick={onClick}
       fullWidth
-      className="justify-start cursor-pointer p-4 hover:scale-[1.02] transition-transform duration-200"
+      className="justify-start cursor-pointer p-4 hover:scale-101 transition-transform duration-200"
       style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
     >
       <Plus className="w-4 h-4 text-primary-900 dark:text-primary-400" />

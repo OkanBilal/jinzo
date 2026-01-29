@@ -29,6 +29,23 @@ export interface SelectedRepo {
   metadata: any;
 }
 
+export interface LinearTeam {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  color: string | null;
+  issueCount: number;
+}
+
+export interface SelectedTeam {
+  id: string;
+  key: string;
+  name: string;
+  metadata: any;
+}
+
 export interface SelectedCollection {
   id: string;
   externalId: string;
@@ -143,6 +160,23 @@ export const connectionsApi = baseApi.injectEndpoints({
       transformResponse: (response: any) => response.success ? { success: true, collections: response.data.collections } : { success: false, collections: [] },
     }),
 
+    getLinearTeams: builder.query<{ success: boolean; teams: LinearTeam[] }, string>({
+      query: (connectionId) => ({
+        handler: 'connections:getLinearTeams',
+        args: [connectionId],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, teams: response.data.teams } : { success: false, teams: [] },
+    }),
+
+    getSelectedTeams: builder.query<{ success: boolean; teams: SelectedTeam[]; connectionId: string }, string>({
+      query: (provider) => ({
+        handler: 'connections:getSelectedResources',
+        args: [provider],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, teams: response.data.teams, connectionId: response.data.connectionId } : { success: false, teams: [], connectionId: '' },
+      providesTags: ['Apps'],
+    }),
+
     getSelectedRepos: builder.query<{ success: boolean; repos: SelectedRepo[]; connectionId: string }, string>({
       query: (provider) => ({
         handler: 'connections:getSelectedResources',
@@ -242,8 +276,11 @@ export const {
   useSaveCredentialsMutation,
   useLazyGetGitHubReposQuery,
   useLazyGetRaindropCollectionsQuery,
+  useLazyGetLinearTeamsQuery,
   useGetSelectedReposQuery,
   useLazyGetSelectedReposQuery,
+  useGetSelectedTeamsQuery,
+  useLazyGetSelectedTeamsQuery,
   useGetSelectedCollectionsQuery,
   useLazyGetSelectedCollectionsQuery,
   useGetSelectedPodcastsQuery,

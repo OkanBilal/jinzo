@@ -68,6 +68,8 @@ export const baseApi = createApi({
     'RunContext',
     'RunArtifacts',
     'RunCommands',
+    'WorkspaceResources',
+    'WorkspaceIssues',
   ],
   endpoints: () => ({}),
 });

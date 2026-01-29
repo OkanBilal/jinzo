@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { Run, RunEvent, RunArtifact, ToolCall } from "../types";
+import { toast } from "@/components/toast";
 
 const MAX_DISPLAY_LENGTH = 200;
 
@@ -252,7 +253,7 @@ export function useWorkspaceRuns(workspaceId: string | undefined) {
   const executeRun = useCallback(
     async (goal: string, selectedWorkspace: string, selectedProvider: string, model?: string) => {
       if (!goal.trim() || !selectedWorkspace || !selectedProvider) {
-        setError("Please fill in all required fields");
+        toast.error("Please fill in all required fields");
         return;
       }
 

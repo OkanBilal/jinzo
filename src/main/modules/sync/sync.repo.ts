@@ -64,15 +64,28 @@ export const syncRepo = {
       // If entity kind is "issue", also insert into issues table
       if (item.kind === "issue" && item.metadata && typeof item.metadata === "object") {
         const meta = item.metadata as Record<string, unknown>;
+
+        // Parse closedAt/completedAt if present (Linear uses completedAt)
+        let closedAtDate: Date | null = null;
+        const closedAtValue = meta.closedAt || meta.completedAt;
+        if (closedAtValue) {
+          closedAtDate = typeof closedAtValue === "string"
+            ? new Date(closedAtValue)
+            : closedAtValue instanceof Date
+              ? closedAtValue
+              : null;
+        }
+
         await db.insert(issues).values({
           entityId,
           provider: (meta.provider as string) || "unknown",
           state: (meta.state as string) || "open",
           number: typeof meta.number === "number" ? meta.number : null,
-          repo: (meta.repo as string) || null,
+          repo: (meta.repo as string) || null, // TODO : naming ?
           assignee: (meta.assignee as string) || null,
           labels: Array.isArray(meta.labels) ? JSON.stringify(meta.labels) : null,
-          priority: 0,
+          closedAt: closedAtDate,
+          priority: typeof meta.priority === "number" ? meta.priority : 0,
         });
       }
 

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useGetProviderModelsQuery } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
 import type { FileNode } from "@/features/file-explorer";
+import type { ContextIssue } from "@/lib/redux/slices/workspaceSlice";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { SendButton } from "@/components/ui/input/send-button";
@@ -10,6 +11,9 @@ import { InputForm } from "@/components/ui/input/input-form";
 import { FileUploadDropdown, FILE_TYPES, type UploadedFile } from "@/components/ui/input/file-upload-dropdown";
 import { ModelSelectDropdown } from "@/components/ui/input/model-select-dropdown";
 import { Close } from "@/components/ui/icons";
+import Github from "@/components/ui/icons/github";
+import Linear from "@/components/ui/icons/linear";
+import { Code } from "@/components/ui/icons/mood";
 
 interface WorkspaceInputProps {
   goal: string;
@@ -23,6 +27,8 @@ interface WorkspaceInputProps {
   onModelChange?: (model: string) => void;
   contextFiles?: FileNode[];
   onRemoveContextFile?: (filePath: string) => void;
+  contextIssues?: ContextIssue[];
+  onRemoveContextIssue?: (entityId: string) => void;
 }
 
 // Fallback models when API is unavailable
@@ -46,6 +52,8 @@ export function WorkspaceInput({
   onModelChange: externalOnModelChange,
   contextFiles = [],
   onRemoveContextFile,
+  contextIssues = [],
+  onRemoveContextIssue,
 }: WorkspaceInputProps) {
   const modelDropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -162,28 +170,61 @@ export function WorkspaceInput({
       className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism-copilot
         cursor-pointer transition-all`}
     >
-      {/* Context Files Preview */}
-      {contextFiles.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-4 pt-3 pb-1">
-          {contextFiles.map((file) => (
-            <div
-              key={file.fullPath}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 dark:bg-primary/8 text-xs text-primary-700 dark:text-primary-300"
-            >
-              <span className="truncate max-w-37.5">{file.name}</span>
-              {onRemoveContextFile && (
-                <button
-                  onClick={() => onRemoveContextFile(file.fullPath)}
-                  className="w-4 h-4 flex items-center justify-center rounded p-0.5 hover:bg-primary/20 dark:hover:bg-primary/10 transition-colors"
-                  title="Remove from context"
-                >
-                  <Close className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-          ))}
+      {/* Context Files and Issues Preview */}
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+          contextFiles.length > 0 || contextIssues.length > 0
+            ? "grid-rows-[1fr]"
+            : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="flex flex-wrap gap-2 px-4 pt-3 pb-1">
+            {contextFiles.map((file) => (
+              <div
+                key={file.fullPath}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 dark:bg-primary/8 text-xs text-primary-700 dark:text-primary-300"
+              >
+                <Code className="w-3 h-3" />
+                <span className="truncate max-w-37.5">{file.name}</span>
+                {onRemoveContextFile && (
+                  <button
+                    onClick={() => onRemoveContextFile(file.fullPath)}
+                    className="w-4 h-4 flex items-center justify-center rounded p-0.5 hover:bg-primary/20 dark:hover:bg-primary/10 transition-colors"
+                    title="Remove from context"
+                  >
+                    <Close className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+            {contextIssues.map((issue) => (
+              <div
+                key={issue.entityId}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 dark:bg-purple-500/15 text-xs text-purple-700 dark:text-purple-300"
+              >
+                {issue.provider === "github" ? (
+                  <Github className="w-3 h-3" />
+                ) : issue.provider === "linear" ? (
+                  <Linear className="w-3 h-3" />
+                ) : (
+                  <span className="text-[10px] font-medium uppercase">{issue.provider.slice(0, 2)}</span>
+                )}
+                <span className="truncate max-w-37.5">{issue.title}</span>
+                {onRemoveContextIssue && (
+                  <button
+                    onClick={() => onRemoveContextIssue(issue.entityId)}
+                    className="w-4 h-4 flex items-center justify-center rounded p-0.5 hover:bg-purple-500/20 dark:hover:bg-purple-500/10 transition-colors"
+                    title="Remove from context"
+                  >
+                    <Close className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      )}
+      </div>
       <div className="relative">
         <InputForm
           query={goal}

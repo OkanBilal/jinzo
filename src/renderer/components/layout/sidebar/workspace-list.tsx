@@ -5,6 +5,7 @@ import { ArrowUp } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
 import { Button } from "@/components/ui/button";
 import { WorkspaceResponse } from "src/main/modules/workspaces";
+import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
 
 interface WorkspacesListProps {
   workspaces: WorkspaceResponse[];
@@ -18,6 +19,11 @@ export default function WorkspacesList({
   onDeleteWorkspace,
 }: WorkspacesListProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [linkModalState, setLinkModalState] = useState<{
+    isOpen: boolean;
+    workspaceId: string;
+    workspaceName: string;
+  }>({ isOpen: false, workspaceId: "", workspaceName: "" });
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -43,6 +49,18 @@ export default function WorkspacesList({
 
   const handleWorkspaceClick = (workspace: WorkspaceResponse) => {
     navigate(`/workspace/${workspace.id}`);
+  };
+
+  const handleLinkIssues = (workspace: WorkspaceResponse) => {
+    setLinkModalState({
+      isOpen: true,
+      workspaceId: workspace.id,
+      workspaceName: formatWorkspaceName(workspace),
+    });
+  };
+
+  const handleCloseLinkModal = () => {
+    setLinkModalState({ isOpen: false, workspaceId: "", workspaceName: "" });
   };
 
   // Sort workspaces by updatedAt (newest first)
@@ -92,17 +110,26 @@ export default function WorkspacesList({
             return (
               <WorkspaceItem
                 key={workspace.id}
+                id={workspace.id}
                 name={formatWorkspaceName(workspace)}
                 branch={workspace.defaultBranch}
                 updatedAt={workspace.updatedAt}
                 isActive={isActive}
                 onClick={() => handleWorkspaceClick(workspace)}
                 onDelete={(e) => onDeleteWorkspace?.(workspace.id, e)}
+                onLinkIssues={() => handleLinkIssues(workspace)}
               />
             );
           })}
         </div>
       </div>
+
+      <LinkResourcesModal
+        workspaceId={linkModalState.workspaceId}
+        workspaceName={linkModalState.workspaceName}
+        isOpen={linkModalState.isOpen}
+        onClose={handleCloseLinkModal}
+      />
     </div>
   );
 }

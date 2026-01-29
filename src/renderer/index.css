@@ -233,11 +233,11 @@
 @keyframes modal-in {
   0% {
     opacity: 0;
-    transform: translateY(100%) scale(0.92);
+    transform: translateY(100%) scale(0.22);
   }
   70% {
     opacity: 1;
-    transform: translateY(0) scale(1.015);
+    transform: translateY(0) scale(1.005);
   }
   100% {
     opacity: 1;
@@ -636,17 +636,14 @@
   color: transparent;
   background-clip: text !important;
   animation: shine 1.5s linear infinite;
+  background:
+    radial-gradient(circle at center, #ffffff8c, transparent) -200% 50% / 200% 100% no-repeat,
+    var(--color-primary-700);
 
   .dark & {
     background:
       radial-gradient(circle at center, #18181bd9, transparent) -200% 50% / 200% 100% no-repeat,
       var(--color-primary-300);
-  }
-
-  .light & {
-    background:
-      radial-gradient(circle at center, #ffffff8c, transparent) -200% 50% / 200% 100% no-repeat,
-      #000;
   }
 }
 
@@ -725,13 +722,12 @@ input[type="range"].slider {
 .glass-morphism,
 .glass-morphism-copilot,
 .glass-morphism-claude {
-  background: linear-gradient(to bottom, var(--color-primary), var(--color-primary-100));
-  filter: saturate(110%);
+  background: linear-gradient(to bottom, var(--color-primary-100), var(--color-primary-50));
   border: 0.5px solid #ffffff2e;
   box-shadow:
-    0 1px 1px #00000014,
+    0 1px 1px #00000011,
     0 1px 1px #0000000a,
-    inset 0 1px 1px #00000014;
+    inset 0 1px 1px #00000011;
 }
 
 .dark .glass-morphism {

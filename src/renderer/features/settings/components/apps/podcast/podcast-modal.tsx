@@ -7,12 +7,10 @@ import {
   ErrorText,
 } from "../../../../../components/ui/text";
 import {
-  ConnectionModalWrapper,
-  LoadingState,
-  RevokeConfirmModal,
-  ManageResourcesStep,
-  CredentialStep,
-} from "../shared";
+  WizardModal,
+  useWizard,
+  type WizardStep,
+} from "../../../../../components/ui/wizard-modal";
 import {
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,
@@ -23,6 +21,14 @@ import {
   type SelectedPodcast,
 } from "../../../../../lib/redux/api";
 import { Button } from "../../../../../components/ui/button";
+import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
+import { ManageResourcesStep } from "../shared/manage-resources-step";
+import { CredentialStep } from "../shared/credential-step";
+import { Input } from "@/components/ui/input";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface PodcastModalProps {
   open: boolean;
@@ -30,100 +36,38 @@ interface PodcastModalProps {
   isConnected: boolean;
 }
 
-type Step = "tokenSet" | "add" | "manage";
+interface PodcastWizardData {
+  apiKey: string;
+  userId: string;
+  connectionId: string;
+  podcastName: string;
+  podcastsToAdd: string[];
+  currentPodcasts: SelectedPodcast[];
+  fromManage: boolean;
+}
 
-export default function PodcastModal({
-  open,
-  onClose,
-  isConnected,
-}: PodcastModalProps) {
-  const [step, setStep] = useState<Step>("tokenSet");
-  const [apiKey, setApiKey] = useState("");
-  const [userId, setUserId] = useState("");
-  const [connectionId, setConnectionId] = useState("");
-  const [podcastName, setPodcastName] = useState("");
-  const [podcastsToAdd, setPodcastsToAdd] = useState<string[]>([]);
-  const [currentPodcasts, setCurrentPodcasts] = useState<SelectedPodcast[]>([]);
-  const [error, setError] = useState("");
-  const [initializing, setInitializing] = useState(false);
-  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
+type StepId = "tokenSet" | "add" | "manage";
 
-  // RTK Query hooks
+// ─────────────────────────────────────────────────────────────────────────────
+// Step: Set Credentials
+// ─────────────────────────────────────────────────────────────────────────────
+
+function CredentialsStep() {
+  const { data, setData, errors, setErrors, goTo } =
+    useWizard<PodcastWizardData>();
+  const [loading, setLoading] = useState(false);
+
   const [getConnection] = useLazyGetConnectionQuery();
-  const [saveCredentials, { isLoading: isSavingCredentials }] =
-    useSaveCredentialsMutation();
-  const [getSelectedPodcasts] = useLazyGetSelectedPodcastsQuery();
-  const [saveResources, { isLoading: isSavingResources }] =
-    useSaveResourcesMutation();
-  const [deleteResource, { isLoading: isDeletingResource }] =
-    useDeleteResourceMutation();
-  const [revokeConnection, { isLoading: isRevokingConnection }] =
-    useRevokeConnectionMutation();
+  const [saveCredentials] = useSaveCredentialsMutation();
 
-  const loading =
-    isSavingCredentials ||
-    isSavingResources ||
-    isDeletingResource ||
-    isRevokingConnection;
-
-  const loadSelectedPodcasts = useCallback(async () => {
-    try {
-      const result = await getSelectedPodcasts("podcast").unwrap();
-
-      if (result.success) {
-        setCurrentPodcasts(result.podcasts || []);
-        setConnectionId(result.connectionId);
-        setStep("manage");
-      }
-    } catch (err: any) {
-      setError(err?.data?.error || "Failed to load podcasts");
-    }
-  }, [getSelectedPodcasts]);
-
-  useEffect(() => {
-    if (open) {
-      setInitializing(true);
-      if (isConnected) {
-        const startTime = Date.now();
-        loadSelectedPodcasts().finally(() => {
-          const elapsed = Date.now() - startTime;
-          const minLoadingTime = 600;
-          const remainingTime = Math.max(0, minLoadingTime - elapsed);
-
-          setTimeout(() => {
-            setInitializing(false);
-          }, remainingTime);
-        });
-      } else {
-        setStep("tokenSet");
-        setInitializing(false);
-      }
-    }
-  }, [open, isConnected, loadSelectedPodcasts]);
-
-  if (!open) return null;
-
-  const handleClose = () => {
-    setApiKey("");
-    setUserId("");
-    setConnectionId("");
-    setPodcastName("");
-    setPodcastsToAdd([]);
-    setCurrentPodcasts([]);
-    setError("");
-    setStep("tokenSet");
-    setInitializing(false);
-    setShowRevokeConfirm(false);
-    onClose();
-  };
-
-  const handleCredentialsSubmit = async () => {
-    if (!apiKey?.trim() || !userId?.trim()) {
-      setError("Please enter both API Key and User ID");
+  const handleSubmit = async () => {
+    if (!data.apiKey?.trim() || !data.userId?.trim()) {
+      setErrors({ credentials: "Please enter both API Key and User ID" });
       return;
     }
 
-    setError("");
+    setLoading(true);
+    setErrors({ credentials: "" });
 
     try {
       const connResult = await getConnection("podcast").unwrap();
@@ -133,219 +77,164 @@ export default function PodcastModal({
       }
 
       const connId = connResult.connection.id;
-      setConnectionId(connId);
 
       await saveCredentials({
         provider: "podcast",
         connectionId: connId,
-        apiKey,
-        userId,
+        apiKey: data.apiKey,
+        userId: data.userId,
       }).unwrap();
 
-      setStep("add");
+      setData({ connectionId: connId });
+      goTo("add");
     } catch (err: any) {
-      setError(err?.data?.error || err?.message || "An error occurred");
+      setErrors({
+        credentials: err?.data?.error || err?.message || "An error occurred",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
+  return (
+    <CredentialStep
+      description="Enter your Taddy.org API credentials to connect your podcasts."
+      fields={[
+        {
+          id: "podcast-api-key",
+          label: "API Key",
+          placeholder: "Your Taddy API Key",
+          value: data.apiKey || "",
+          onChange: (value) => {
+            setData({ apiKey: value });
+            if (errors.credentials) setErrors({ credentials: "" });
+          },
+        },
+        {
+          id: "podcast-user-id",
+          label: "User ID",
+          placeholder: "Your Taddy User ID",
+          value: data.userId || "",
+          onChange: (value) => {
+            setData({ userId: value });
+            if (errors.credentials) setErrors({ credentials: "" });
+          },
+        },
+      ]}
+      instructions={
+        <>
+          <strong>How to get your credentials:</strong>
+          <br />
+          1. Go to{" "}
+          <a
+            href="https://taddy.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-600 dark:text-primary-400 underline"
+          >
+            taddy.org
+          </a>
+          <br />
+          2. Sign in and go to API settings
+          <br />
+          3. Copy your API Key and User ID
+        </>
+      }
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={errors.credentials || ""}
+      submitLabel="Continue"
+      loadingLabel="Connecting..."
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step: Add Podcasts
+// ─────────────────────────────────────────────────────────────────────────────
+
+function AddPodcastsStep({ onComplete }: { onComplete: () => void }) {
+  const { data, setData, errors, setErrors, goTo } =
+    useWizard<PodcastWizardData>();
+  const [loading, setLoading] = useState(false);
+
+  const [saveResources] = useSaveResourcesMutation();
+  const [getSelectedPodcasts] = useLazyGetSelectedPodcastsQuery();
+
+  const podcastsToAdd = data.podcastsToAdd || [];
+  const podcastName = data.podcastName || "";
+
   const handleAddPodcast = () => {
     if (!podcastName.trim()) {
-      setError("Please enter a podcast name");
+      setErrors({ podcasts: "Please enter a podcast name" });
       return;
     }
 
     if (podcastsToAdd.includes(podcastName.trim())) {
-      setError("This podcast is already in the list");
+      setErrors({ podcasts: "This podcast is already in the list" });
       return;
     }
 
-    setPodcastsToAdd([...podcastsToAdd, podcastName.trim()]);
-    setPodcastName("");
-    setError("");
+    setData({
+      podcastsToAdd: [...podcastsToAdd, podcastName.trim()],
+      podcastName: "",
+    });
+    setErrors({ podcasts: "" });
   };
 
-  const handleRemovePodcastFromList = (name: string) => {
-    setPodcastsToAdd(podcastsToAdd.filter((p) => p !== name));
+  const handleRemovePodcast = (name: string) => {
+    setData({
+      podcastsToAdd: podcastsToAdd.filter((p) => p !== name),
+    });
   };
 
-  const handleSavePodcasts = async () => {
+  const handleSave = async () => {
     if (podcastsToAdd.length === 0) {
-      setError("Please add at least one podcast");
+      setErrors({ podcasts: "Please add at least one podcast" });
       return;
     }
 
-    setError("");
+    setLoading(true);
+    setErrors({ podcasts: "" });
 
     try {
       const podcasts = podcastsToAdd.map((name) => ({ name }));
 
       await saveResources({
         provider: "podcast",
-        connectionId,
+        connectionId: data.connectionId,
         resources: podcasts,
       }).unwrap();
 
-      if (isConnected) {
-        setPodcastsToAdd([]);
-        await loadSelectedPodcasts();
-        setStep("manage");
+      if (data.fromManage) {
+        const result = await getSelectedPodcasts("podcast").unwrap();
+        if (result.success) {
+          setData({
+            currentPodcasts: result.podcasts || [],
+            podcastsToAdd: [],
+          });
+        }
+        goTo("manage");
       } else {
-        handleClose();
+        onComplete();
       }
     } catch (err: any) {
-      setError(err?.data?.error || err?.message || "An error occurred");
+      setErrors({
+        podcasts: err?.data?.error || err?.message || "An error occurred",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRemovePodcast = async (podcastId: string) => {
-    setError("");
-
-    try {
-      await deleteResource(podcastId).unwrap();
-      await loadSelectedPodcasts();
-    } catch (err: any) {
-      setError(err?.data?.error || err?.message || "An error occurred");
+  const handleBack = () => {
+    if (data.fromManage) {
+      goTo("manage");
+    } else {
+      goTo("tokenSet");
     }
   };
 
-  const handleRevokeCredentials = async () => {
-    setShowRevokeConfirm(false);
-    setError("");
-
-    try {
-      await revokeConnection("podcast").unwrap();
-      handleClose();
-    } catch (err: any) {
-      setError(err?.data?.error || err?.message || "An error occurred");
-    }
-  };
-
-  const handleAddNewPodcasts = () => {
-    setStep("add");
-  };
-
-  return (
-    <>
-      <ConnectionModalWrapper
-        open={open}
-        onClose={handleClose}
-        appName="Podcast Connection"
-        appIcon="/apps/podcast-skeuomorphic.png"
-      >
-        {initializing ? (
-          <LoadingState message="Loading podcasts..." />
-        ) : step === "tokenSet" ? (
-          <CredentialStep
-            description="Enter your Taddy.org API credentials to connect your podcasts."
-            fields={[
-              {
-                id: "podcast-api-key",
-                label: "API Key",
-                placeholder: "Your Taddy API Key",
-                value: apiKey,
-                onChange: setApiKey,
-              },
-              {
-                id: "podcast-user-id",
-                label: "User ID",
-                placeholder: "Your Taddy User ID",
-                value: userId,
-                onChange: setUserId,
-              },
-            ]}
-            instructions={
-              <>
-                <strong>How to get your credentials:</strong>
-                <br />
-                1. Go to{" "}
-                <a
-                  href="https://taddy.org"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary-600 dark:text-primary-400 underline"
-                >
-                  taddy.org
-                </a>
-                <br />
-                2. Sign in and go to API settings
-                <br />
-                3. Copy your API Key and User ID
-              </>
-            }
-            onSubmit={handleCredentialsSubmit}
-            loading={loading}
-            error={error}
-            submitLabel="Continue"
-            loadingLabel="Connecting..."
-          />
-        ) : step === "manage" ? (
-          <ManageResourcesStep
-            resources={currentPodcasts}
-            onAddNew={handleAddNewPodcasts}
-            onRemove={handleRemovePodcast}
-            onRevoke={() => setShowRevokeConfirm(true)}
-            loading={loading}
-            error={error}
-            resourceLabel="podcast"
-            resourceLabelPlural="podcasts"
-            addButtonLabel="Add Podcast"
-            renderResourceItem={(resource) => (
-              <div className="flex-1">
-                <BodyMedium>{resource.name}</BodyMedium>
-              </div>
-            )}
-          />
-        ) : (
-          <PodcastsStep
-            podcastName={podcastName}
-            podcastsToAdd={podcastsToAdd}
-            onPodcastNameChange={setPodcastName}
-            onAddPodcast={handleAddPodcast}
-            onRemovePodcast={handleRemovePodcastFromList}
-            onSave={handleSavePodcasts}
-            onBack={() => setStep(isConnected ? "manage" : "tokenSet")}
-            loading={loading}
-            error={error}
-          />
-        )}
-      </ConnectionModalWrapper>
-
-      {showRevokeConfirm && (
-        <RevokeConfirmModal
-          onConfirm={handleRevokeCredentials}
-          onCancel={() => setShowRevokeConfirm(false)}
-          loading={loading}
-          appName="Podcast"
-          description="This will disconnect all podcasts."
-        />
-      )}
-    </>
-  );
-}
-
-interface PodcastsStepProps {
-  podcastName: string;
-  podcastsToAdd: string[];
-  onPodcastNameChange: (value: string) => void;
-  onAddPodcast: () => void;
-  onRemovePodcast: (name: string) => void;
-  onSave: () => void;
-  onBack: () => void;
-  loading: boolean;
-  error: string;
-}
-
-function PodcastsStep({
-  podcastName,
-  podcastsToAdd,
-  onPodcastNameChange,
-  onAddPodcast,
-  onRemovePodcast,
-  onSave,
-  onBack,
-  loading,
-  error,
-}: PodcastsStepProps) {
   return (
     <div className="space-y-4">
       <Muted>
@@ -353,20 +242,21 @@ function PodcastsStep({
       </Muted>
 
       <div className="flex gap-2">
-        <input
+        <Input
           type="text"
           value={podcastName}
-          onChange={(e) => onPodcastNameChange(e.target.value)}
+          onChange={(e) => setData({ podcastName: e.target.value })}
           placeholder="Enter podcast name"
-          className="flex-1 px-3 py-2.5 bg-white dark:bg-primary-100 rounded-xl text-primary-900 dark:text-primary-900 placeholder:text-primary-400 dark:placeholder:text-primary-600 focus:outline-none"
+          className="w-full px-3 py-2.5 dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
           disabled={loading}
           onKeyDown={(e) => {
-            if (e.key === "Enter") onAddPodcast();
+            if (e.key === "Enter") handleAddPodcast();
           }}
         />
         <Button
-          variant="primary"
-          onClick={onAddPodcast}
+          variant="submit"
+          size="sm"
+          onClick={handleAddPodcast}
           disabled={loading || !podcastName.trim()}
         >
           Add
@@ -383,9 +273,8 @@ function PodcastsStep({
               <Body>{name}</Body>
               <Button
                 variant="danger"
-                onClick={() => onRemovePodcast(name)}
+                onClick={() => handleRemovePodcast(name)}
                 disabled={loading}
-                className=""
               >
                 Remove
               </Button>
@@ -394,28 +283,234 @@ function PodcastsStep({
         </div>
       )}
 
-      {error && <ErrorText>{error}</ErrorText>}
+      {errors.podcasts && <ErrorText>{errors.podcasts}</ErrorText>}
 
-      <div className="flex justify-between gap-3 pt-2 ">
+      <div className="flex justify-between gap-3 pt-2">
         <Button
           variant="link"
-          size="xxs"
-          onClick={onBack}
+          onClick={handleBack}
           disabled={loading}
           className="px-1"
         >
           Back
         </Button>
         <Button
-          variant="primary"
-          onClick={onSave}
+          variant="submit"
+          onClick={handleSave}
           disabled={loading || podcastsToAdd.length === 0}
           isLoading={loading}
           className="ml-auto"
         >
-          {loading ? "Saving..." : `Finish (${podcastsToAdd.length} Podcasts)`}
+          {loading ? "Saving..." : `Finish (${podcastsToAdd.length} Podcast${podcastsToAdd.length > 1 ? "s" : ""})`}
         </Button>
       </div>
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step: Manage Podcasts
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ManagePodcastsStep({ onRevoke }: { onRevoke: () => void }) {
+  const { data, setData, errors, setErrors, goTo } =
+    useWizard<PodcastWizardData>();
+  const [loading, setLoading] = useState(false);
+
+  const [deleteResource] = useDeleteResourceMutation();
+  const [getSelectedPodcasts] = useLazyGetSelectedPodcastsQuery();
+
+  const handleRemove = async (podcastId: string) => {
+    setErrors({ manage: "" });
+
+    try {
+      await deleteResource(podcastId).unwrap();
+      const result = await getSelectedPodcasts("podcast").unwrap();
+      if (result.success) {
+        setData({ currentPodcasts: result.podcasts || [] });
+      }
+    } catch (err: any) {
+      setErrors({
+        manage: err?.data?.error || err?.message || "An error occurred",
+      });
+    }
+  };
+
+  const handleAddNew = () => {
+    setData({
+      podcastsToAdd: [],
+      podcastName: "",
+      fromManage: true,
+    });
+    goTo("add");
+  };
+
+  return (
+    <ManageResourcesStep
+      resources={data.currentPodcasts}
+      onAddNew={handleAddNew}
+      onRemove={handleRemove}
+      onRevoke={onRevoke}
+      loading={loading}
+      error={errors.manage || ""}
+      resourceLabel="podcast"
+      resourceLabelPlural="podcasts"
+      addButtonLabel="Add Podcast"
+      renderResourceItem={(resource) => (
+        <div className="flex-1">
+          <BodyMedium>{resource.name}</BodyMedium>
+        </div>
+      )}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Loading State
+// ─────────────────────────────────────────────────────────────────────────────
+
+function LoadingStep() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="text-center space-y-3">
+        <Muted className="shine-text">Loading podcasts...</Muted>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Modal
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function PodcastModal({
+  open,
+  onClose,
+  isConnected,
+}: PodcastModalProps) {
+  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+  const [initialData, setInitialData] = useState<Partial<PodcastWizardData>>({});
+  const [initialStep, setInitialStep] = useState<StepId>("tokenSet");
+
+  const [getSelectedPodcasts] = useLazyGetSelectedPodcastsQuery();
+  const [revokeConnection, { isLoading: isRevoking }] =
+    useRevokeConnectionMutation();
+
+  useEffect(() => {
+    if (!open) {
+      setInitializing(true);
+      return;
+    }
+
+    const loadInitialData = async () => {
+      setInitializing(true);
+
+      const baseData: Partial<PodcastWizardData> = {
+        apiKey: "",
+        userId: "",
+        podcastName: "",
+        podcastsToAdd: [],
+        currentPodcasts: [],
+        fromManage: false,
+      };
+
+      if (!isConnected) {
+        setInitialStep("tokenSet");
+        setInitialData(baseData);
+        setInitializing(false);
+        return;
+      }
+
+      let finalStep: StepId = "tokenSet";
+      let finalData: Partial<PodcastWizardData> = baseData;
+
+      try {
+        const startTime = Date.now();
+        const result = await getSelectedPodcasts("podcast").unwrap();
+
+        if (result.success) {
+          finalData = {
+            ...baseData,
+            connectionId: result.connectionId,
+            currentPodcasts: result.podcasts || [],
+          };
+          finalStep = "manage";
+        }
+
+        const elapsed = Date.now() - startTime;
+        const minLoadingTime = 600;
+        const remainingTime = Math.max(0, minLoadingTime - elapsed);
+        await new Promise((resolve) => setTimeout(resolve, remainingTime));
+      } catch (err) {
+        console.error("[loadInitialData] Error:", err);
+      }
+
+      setInitialStep(finalStep);
+      setInitialData(finalData);
+      setInitializing(false);
+    };
+
+    loadInitialData();
+  }, [open, isConnected, getSelectedPodcasts]);
+
+  const handleClose = useCallback(() => {
+    setShowRevokeConfirm(false);
+    onClose();
+  }, [onClose]);
+
+  const handleRevoke = async () => {
+    setShowRevokeConfirm(false);
+    try {
+      await revokeConnection("podcast").unwrap();
+      handleClose();
+    } catch (err) {
+      console.error("[handleRevoke] Error:", err);
+    }
+  };
+
+  const steps: WizardStep<PodcastWizardData>[] = initializing
+    ? [{ id: "loading", render: () => <LoadingStep /> }]
+    : [
+        {
+          id: "tokenSet",
+          render: () => <CredentialsStep />,
+        },
+        {
+          id: "add",
+          render: () => <AddPodcastsStep onComplete={handleClose} />,
+        },
+        {
+          id: "manage",
+          render: () => (
+            <ManagePodcastsStep onRevoke={() => setShowRevokeConfirm(true)} />
+          ),
+        },
+      ];
+
+  return (
+    <>
+      <WizardModal
+        key={initializing ? "loading" : `wizard-${initialStep}`}
+        open={open}
+        onOpenChange={(isOpen) => !isOpen && handleClose()}
+        steps={steps}
+        initialStep={initializing ? "loading" : initialStep}
+        initialData={initialData}
+        title="Podcast Connection"
+        icon="/apps/podcast-skeuomorphic.png"
+        onCancel={handleClose}
+      />
+
+      {showRevokeConfirm && (
+        <RevokeConfirmModal
+          onConfirm={handleRevoke}
+          onCancel={() => setShowRevokeConfirm(false)}
+          loading={isRevoking}
+          appName="Podcast"
+          description="This will disconnect all podcasts."
+        />
+      )}
+    </>
   );
 }

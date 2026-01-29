@@ -1,10 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
-  useGetWorkspaceByIdQuery,
-  useGetIssuesByRepoQuery,
+  useGetIssuesByWorkspaceQuery,
+  type WorkspaceIssue,
 } from "@/lib/redux/api";
-import type { IssueWithEntity } from "@/lib/redux/api";
-import { normalizeRepoUrl } from "../utils/repo-utils";
 import { IssueListItem } from "./issue-list-item";
 import { ArrowUp } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
@@ -13,7 +11,8 @@ import { Caption } from "@/components/ui/text";
 interface IssuesSectionProps {
   workspaceId: string | undefined;
   activeIssueEntityId: string | null;
-  onSelectIssue: (issue: IssueWithEntity) => void;
+  onSelectIssue: (issue: WorkspaceIssue) => void;
+  onAddToContext?: (issue: WorkspaceIssue) => void;
 }
 
 function getStorageKey(workspaceId: string | undefined): string {
@@ -24,22 +23,12 @@ export function IssuesSection({
   workspaceId,
   activeIssueEntityId,
   onSelectIssue,
+  onAddToContext,
 }: IssuesSectionProps) {
-  const { data: workspace } = useGetWorkspaceByIdQuery(workspaceId || "", {
-    skip: !workspaceId,
-  });
-
-  const repoSlug = useMemo(
-    () => normalizeRepoUrl(workspace?.repoUrl),
-    [workspace?.repoUrl],
+  const { data: issues = [], isLoading } = useGetIssuesByWorkspaceQuery(
+    workspaceId || "",
+    { skip: !workspaceId }
   );
-
-  const { data: issues, isLoading } = useGetIssuesByRepoQuery(
-    { repo: repoSlug! },
-    { skip: !repoSlug },
-  );
-
-  console.log("IssuesSection render:", { workspaceId, repoSlug, issues });
 
   const [expanded, setExpanded] = useState(() => {
     const stored = localStorage.getItem(getStorageKey(workspaceId));
@@ -56,9 +45,9 @@ export function IssuesSection({
     setExpanded(stored !== null ? stored === "true" : true);
   }, [workspaceId]);
 
-  if (!repoSlug) return null;
+  if (!workspaceId) return null;
 
-  const issueCount = issues?.length ?? 0;
+  const issueCount = issues.length;
 
   return (
     <div className="shrink-0 px-3 py-2">
@@ -95,7 +84,7 @@ export function IssuesSection({
             {/* TODO Make resizable */}
             {isLoading ? (
               <div className="flex items-center justify-center py-4">
-                <span className="text-xs text-primary-400 dark:text-primary-500 animate-pulse">
+                <span className="text-xs shine-text">
                   Loading issues...
                 </span>
               </div>
@@ -107,7 +96,7 @@ export function IssuesSection({
               </div>
             ) : (
               <div className="space-y-0.5">
-                {issues!.map((issue, index) => (
+                {issues.map((issue, index) => (
                   <div
                     key={issue.issue.entityId}
                     className="animate-slide-in first:mt-2"
@@ -117,6 +106,7 @@ export function IssuesSection({
                       issue={issue}
                       isActive={activeIssueEntityId === issue.issue.entityId}
                       onClick={() => onSelectIssue(issue)}
+                      onAddToContext={onAddToContext ? () => onAddToContext(issue) : undefined}
                     />
                   </div>
                 ))}

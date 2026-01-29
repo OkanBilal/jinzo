@@ -55,6 +55,14 @@ export function parseProviderCredentials(
       tokensForHash = [credentials.token as string];
       break;
 
+    case "linear":
+      if (!credentials.apiKey) {
+        return { success: false, error: "API Key is required" };
+      }
+      accessToken = credentials.apiKey as string;
+      tokensForHash = [credentials.apiKey as string];
+      break;
+
     case "podcast":
       if (!credentials.apiKey || !credentials.userId) {
         return {

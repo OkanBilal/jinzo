@@ -4,11 +4,12 @@ import { useDispatch, useSelector } from "react-redux";
 import { FileExplorer, type FileNode } from "@/features/file-explorer";
 import { Body } from "@/components/ui/text";
 import { useGetWorkspaceByIdQuery } from "@/lib/redux/api";
-import type { IssueWithEntity } from "@/lib/redux/api";
+import type { WorkspaceIssue } from "@/lib/redux/api";
 import {
   setSelectedFile,
   setActiveTab,
   addContextFile,
+  addContextIssue,
   openIssueTab,
 } from "@/lib/redux/slices/workspaceSlice";
 import type { RootState } from "@/lib/redux";
@@ -58,8 +59,21 @@ export function WorkspaceContent() {
   );
 
   const handleSelectIssue = useCallback(
-    (issue: IssueWithEntity) => {
+    (issue: WorkspaceIssue) => {
       dispatch(openIssueTab(issue));
+    },
+    [dispatch],
+  );
+    // TODO: CHECK THIS
+  const handleAddIssueToContext = useCallback(
+    (issue: WorkspaceIssue) => {
+      dispatch(addContextIssue({
+        entityId: issue.issue.entityId,
+        title: issue.entity.title || `Issue #${issue.issue.number ?? "?"}`,
+        body: issue.entity.body,
+        provider: issue.issue.provider,
+        number: issue.issue.number,
+      }));
     },
     [dispatch],
   );
@@ -109,6 +123,7 @@ export function WorkspaceContent() {
         workspaceId={workspaceId}
         activeIssueEntityId={activeIssueEntityId}
         onSelectIssue={handleSelectIssue}
+        onAddToContext={handleAddIssueToContext}
       />
     </div>
   );

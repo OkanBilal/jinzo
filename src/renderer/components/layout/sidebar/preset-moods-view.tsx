@@ -143,7 +143,7 @@ export default function PresetMoodsView({
                 type="button"
                 onClick={() => setSelectedTemplate(template)}
                 className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all cursor-pointer
-                  ${isSelected ? "saturate-180" : "hover:scale-[1.02]"}`}
+                  ${isSelected ? "saturate-180" : "hover:scale-101"}`}
                 style={{ background: templateVariant.preview }}
               >
                 <span className="text-2xl">
@@ -175,7 +175,7 @@ export default function PresetMoodsView({
           onClick={handleCreate}
           disabled={isLoading}
           className="w-full py-2.5 px-4 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer disabled:opacity-50 
-          disabled:cursor-not-allowed brightness-120 hover:scale-[1.02] active:scale-[0.98] text-primary-800 dark:text-primary"
+          disabled:cursor-not-allowed brightness-120 hover:scale-101 active:scale-99 text-primary-800 dark:text-primary"
           style={{
             background: darkMode
               ? selectedTemplate?.theme.dark.preview

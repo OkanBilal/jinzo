@@ -107,8 +107,8 @@ export function DropdownMenuItem({
   className = "",
 }: DropdownMenuItemProps) {
   const variantClasses = {
-    default: "text-primary-700 dark:text-primary",
-    danger: "text-red-600 dark:text-red-500",
+    default: "text-primary-800 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-50",
+    danger: "text-primary-500 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-100",
   };
 
   return (

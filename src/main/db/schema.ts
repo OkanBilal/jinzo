@@ -140,6 +140,32 @@ export const workspaces = sqliteTable(
 );
 
 /* -----------------------------
+   WORKSPACE RESOURCES (pivot table)
+   Links workspaces to connection_resources
+------------------------------ */
+
+export const workspaceResources = sqliteTable(
+  "workspace_resources",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    resourceId: text("resource_id")
+      .notNull()
+      .references(() => connectionResources.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    uniqueIndex("uniq_workspace_resources").on(t.workspaceId, t.resourceId),
+    index("idx_workspace_resources_workspace").on(t.workspaceId),
+    index("idx_workspace_resources_resource").on(t.resourceId),
+  ],
+);
+
+/* -----------------------------
    RUNS (terminal/code-writing flow)
 ------------------------------ */
 

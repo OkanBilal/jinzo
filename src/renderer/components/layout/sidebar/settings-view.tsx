@@ -68,7 +68,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                       ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
                       : "text-primary-900 dark:text-primary-200 bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
                   }
-                  hover:scale-[1.01] active:scale-[0.99]`}
+                  hover:scale-[1.01] active:scale-99`}
               >
                 {IconComponent ? (
                   <IconComponent className={`w-4.5 h-4.5 `} />

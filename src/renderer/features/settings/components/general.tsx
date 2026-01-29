@@ -79,7 +79,7 @@ function ThemePreviewCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center gap-2 cursor-pointer group active:scale-[0.98] hover:scale-[1.02] duration-200 transition-all",
+        "flex flex-col items-center gap-2 cursor-pointer group active:scale-99 hover:scale-101 duration-200 transition-all",
       )}
     >
       {/* Preview Card */}

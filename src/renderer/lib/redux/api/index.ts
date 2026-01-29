@@ -20,7 +20,9 @@ export {
   useSaveCredentialsMutation,
   useLazyGetGitHubReposQuery,
   useLazyGetRaindropCollectionsQuery,
+  useLazyGetLinearTeamsQuery,
   useLazyGetSelectedReposQuery,
+  useLazyGetSelectedTeamsQuery,
   useLazyGetSelectedCollectionsQuery,
   useLazyGetSelectedPodcastsQuery,
   useLazyGetHackerNewsStatusQuery,
@@ -35,7 +37,9 @@ export type {
   Connection,
   GitHubRepo,
   RaindropCollection,
+  LinearTeam,
   SelectedRepo,
+  SelectedTeam,
   SelectedCollection,
   SelectedPodcast,
   HackerNewsSettings,
@@ -348,3 +352,19 @@ export type {
   CreateRunCommandPayload,
   UpdateRunCommandPayload,
 } from "./runsApi";
+
+export {
+  workspaceResourcesApi,
+  useGetWorkspaceResourcesQuery,
+  useGetAvailableResourcesQuery,
+  useLazyGetAvailableResourcesQuery,
+  useAddWorkspaceResourceMutation,
+  useRemoveWorkspaceResourceMutation,
+  useGetIssuesByWorkspaceQuery,
+} from "./workspaceResourcesApi";
+export type {
+  WorkspaceResource,
+  WorkspaceResourceWithDetails,
+  AvailableResource,
+  WorkspaceIssue,
+} from "./workspaceResourcesApi";

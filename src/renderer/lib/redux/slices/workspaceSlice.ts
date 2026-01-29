@@ -2,6 +2,14 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { FileNode, FileContentResponse } from "@/features/file-explorer";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 
+export interface ContextIssue {
+  entityId: string;
+  title: string;
+  body: string | null;
+  provider: string;
+  number: number | null;
+}
+
 export interface WorkspaceState {
   selectedModel: string;
   selectedProviderId: string;
@@ -12,6 +20,7 @@ export interface WorkspaceState {
   fileContentError: string | null;
   activeTab: "editor" | string;
   contextFiles: FileNode[];
+  contextIssues: ContextIssue[];
   openIssueTabs: IssueWithEntity[];
 }
 
@@ -25,6 +34,7 @@ const initialState: WorkspaceState = {
   fileContentError: null,
   activeTab: "editor",
   contextFiles: [],
+  contextIssues: [],
   openIssueTabs: [],
 };
 
@@ -83,6 +93,17 @@ const workspaceSlice = createSlice({
     clearContextFiles: (state) => {
       state.contextFiles = [];
     },
+    // Context issues actions
+    addContextIssue: (state, action: PayloadAction<ContextIssue>) => {
+      // Replace existing issue - only 1 allowed
+      state.contextIssues = [action.payload];
+    },
+    removeContextIssue: (state, action: PayloadAction<string>) => {
+      state.contextIssues = state.contextIssues.filter(i => i.entityId !== action.payload);
+    },
+    clearContextIssues: (state) => {
+      state.contextIssues = [];
+    },
     // Issue tab actions
     openIssueTab: (state, action: PayloadAction<IssueWithEntity>) => {
       const entityId = action.payload.issue.entityId;
@@ -119,6 +140,9 @@ export const {
   addContextFile,
   removeContextFile,
   clearContextFiles,
+  addContextIssue,
+  removeContextIssue,
+  clearContextIssues,
   openIssueTab,
   closeIssueTab,
   clearIssueTabs,

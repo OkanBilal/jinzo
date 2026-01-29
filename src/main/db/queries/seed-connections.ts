@@ -73,6 +73,16 @@ export async function seedConnections(): Promise<void> {
       null
     );
 
+    // Linear Connection
+    const linearConnectionId = await ensureConnectionExists(
+      db,
+      "linear",
+      "Linear",
+      "api_key",
+      "revoked",
+      null
+    );
+
     // Raindrop Connection
     const raindropConnectionId = await ensureConnectionExists(
       db,
@@ -140,6 +150,7 @@ export async function seedConnections(): Promise<void> {
     console.log("\n✨ Successfully seeded connections!");
     console.log("\n📊 Summary:");
     console.log(`   GitHub: ${githubConnectionId}`);
+    console.log(`   Linear: ${linearConnectionId}`);
     console.log(`   Raindrop: ${raindropConnectionId}`);
     console.log(`   RSS: ${rssConnectionId}`);
     console.log(`   HackerNews: ${hackerNewsConnectionId}`);

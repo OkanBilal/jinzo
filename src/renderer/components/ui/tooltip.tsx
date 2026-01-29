@@ -21,6 +21,8 @@ export interface TooltipProps {
   disabled?: boolean;
   /** Keyboard shortcut to display (e.g., "⌘," or "Ctrl+S") */
   shortcut?: string;
+  /** Hide tooltip when clicking on the trigger element */
+  hideOnClick?: boolean;
 }
 
 export default function Tooltip({
@@ -31,6 +33,7 @@ export default function Tooltip({
   className,
   disabled = false,
   shortcut,
+  hideOnClick = false,
 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
@@ -185,6 +188,7 @@ export default function Tooltip({
         onMouseLeave={hideTooltip}
         onFocus={showTooltip}
         onBlur={hideTooltip}
+        onClick={hideOnClick ? hideTooltip : undefined}
       >
         {children}
       </span>

@@ -124,7 +124,11 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
                   rel="noopener noreferrer"
                   className="text-blue-500 dark:text-blue-400 hover:underline text-xs break-all"
                 >
-                  View on GitHub
+                  {iss.provider === "linear"
+                    ? "View on Linear"
+                    : iss.provider === "jira"
+                      ? "View on Jira"
+                      : "View on GitHub"}
                 </a>
               </p>
             </div>

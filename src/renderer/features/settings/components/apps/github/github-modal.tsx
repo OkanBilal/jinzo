@@ -1,7 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 import { Lock } from "../../../../../components/ui/icons";
-import { BodyMedium } from "../../../../../components/ui/text";
+import { BodyMedium, Muted } from "../../../../../components/ui/text";
+import {
+  WizardModal,
+  useWizard,
+  type WizardStep,
+} from "../../../../../components/ui/wizard-modal";
 import {
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,
@@ -13,14 +18,14 @@ import {
   type GitHubRepo,
   type SelectedRepo,
 } from "../../../../../lib/redux/api";
-import {
-  ConnectionModalWrapper,
-  LoadingState,
-} from "../shared/connection-modal-wrapper";
 import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
 import { CredentialStep } from "../shared/credential-step";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface GitHubModalProps {
   open: boolean;
@@ -29,126 +34,39 @@ interface GitHubModalProps {
   onSuccess?: () => void;
 }
 
-type Step = "setToken" | "add" | "manage";
+interface GitHubWizardData {
+  token: string;
+  connectionId: string;
+  repos: GitHubRepo[];
+  selectedRepos: Set<string>;
+  currentRepos: SelectedRepo[];
+  isFirstConnection: boolean;
+  fromManage: boolean;
+}
 
-export default function GitHubModal({
-  open,
-  onClose,
-  isConnected,
-  onSuccess,
-}: GitHubModalProps) {
-  const [step, setStep] = useState<Step>("setToken");
-  const [token, setToken] = useState("");
-  const [connectionId, setConnectionId] = useState("");
-  const [repos, setRepos] = useState<GitHubRepo[]>([]);
-  const [selectedRepos, setSelectedRepos] = useState<Set<string>>(new Set());
-  const [currentRepos, setCurrentRepos] = useState<SelectedRepo[]>([]);
-  const [error, setError] = useState("");
-  const [initializing, setInitializing] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  const [isFirstConnection, setIsFirstConnection] = useState(false);
+type StepId = "setToken" | "add" | "manage";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step: Set Token
+// ─────────────────────────────────────────────────────────────────────────────
+
+function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
+  const { data, setData, errors, setErrors, goTo } =
+    useWizard<GitHubWizardData>();
+  const [loading, setLoading] = useState(false);
 
   const [getConnection] = useLazyGetConnectionQuery();
-  const [saveCredentials, { isLoading: isSavingCredentials }] =
-    useSaveCredentialsMutation();
+  const [saveCredentials] = useSaveCredentialsMutation();
   const [getGitHubRepos] = useLazyGetGitHubReposQuery();
-  const [getSelectedRepos] = useLazyGetSelectedReposQuery();
-  const [saveResources, { isLoading: isSavingResources }] =
-    useSaveResourcesMutation();
-  const [deleteResource, { isLoading: isDeletingResource }] =
-    useDeleteResourceMutation();
-  const [revokeConnection, { isLoading: isRevokingConnection }] =
-    useRevokeConnectionMutation();
 
-  const loading =
-    isSavingCredentials ||
-    isSavingResources ||
-    isDeletingResource ||
-    isRevokingConnection ||
-    isProcessing;
-
-  const loadCurrentRepos = async () => {
-    try {
-      const result = await getSelectedRepos("github").unwrap();
-
-      if (result.success) {
-        setCurrentRepos(result.repos);
-        setConnectionId(result.connectionId);
-        setStep("manage");
-      } else {
-        // If no repos found but connection exists, go to manage step with empty list
-        setCurrentRepos([]);
-        const connResult = await getConnection("github").unwrap();
-        if (connResult.success) {
-          setConnectionId(connResult.connection.id);
-          setStep("manage");
-        } else {
-          setStep("setToken");
-        }
-      }
-    } catch (err) {
-      console.error("[loadCurrentRepos] Error:", err);
-      try {
-        const connResult = await getConnection("github").unwrap();
-        if (connResult.success) {
-          setCurrentRepos([]);
-          setConnectionId(connResult.connection.id);
-          setStep("manage");
-        } else {
-          setStep("setToken");
-        }
-      } catch (connErr) {
-        console.error("[loadCurrentRepos] Connection check error:", connErr);
-        setError(err instanceof Error ? err.message : "Failed to load repos");
-        setStep("setToken");
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (open) {
-      setInitializing(true);
-      if (isConnected && !isFirstConnection) {
-        const startTime = Date.now();
-        loadCurrentRepos().finally(() => {
-          const elapsed = Date.now() - startTime;
-          const minLoadingTime = 600;
-          const remainingTime = Math.max(0, minLoadingTime - elapsed);
-
-          setTimeout(() => {
-            setInitializing(false);
-          }, remainingTime);
-        });
-      } else {
-        setStep("setToken");
-        setInitializing(false);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, isConnected]);
-
-  const handleClose = () => {
-    setToken("");
-    setConnectionId("");
-    setRepos([]);
-    setSelectedRepos(new Set());
-    setCurrentRepos([]);
-    setError("");
-    setStep("setToken");
-    setInitializing(false);
-    setIsFirstConnection(false);
-    onClose();
-  };
-
-  const handleCredentialSubmit = async () => {
-    if (!token.trim()) {
-      setError("Please enter a valid token");
+  const handleSubmit = async () => {
+    if (!data.token?.trim()) {
+      setErrors({ token: "Please enter a valid token" });
       return;
     }
 
-    setError("");
-    setIsProcessing(true);
+    setLoading(true);
+    setErrors({ token: "" });
 
     try {
       const startTime = Date.now();
@@ -160,15 +78,12 @@ export default function GitHubModal({
       }
 
       const connId = connectionResult.connection.id;
-      setConnectionId(connId);
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const credResult = await saveCredentials({
+      await saveCredentials({
         provider: "github",
         connectionId: connId,
-        token,
+        token: data.token,
       }).unwrap();
-      setIsFirstConnection(true);
 
       onSuccess?.();
 
@@ -182,231 +97,439 @@ export default function GitHubModal({
       const elapsed = Date.now() - startTime;
       const minLoadingTime = 800;
       const remainingTime = Math.max(0, minLoadingTime - elapsed);
-
       await new Promise((resolve) => setTimeout(resolve, remainingTime));
 
-      setRepos(reposResult.repos);
-      setStep("add");
+      setData({
+        connectionId: connId,
+        repos: reposResult.repos,
+        isFirstConnection: true,
+        fromManage: false,
+      });
+
+      goTo("add");
     } catch (err: any) {
       console.error("[GitHub] Error in credential submit:", err);
       const errorMessage =
         err?.data?.error || err?.message || "An error occurred";
-      setError(errorMessage);
+      setErrors({ token: errorMessage });
     } finally {
-      setIsProcessing(false);
+      setLoading(false);
     }
   };
+
+  return (
+    <CredentialStep
+      description="Enter your GitHub Personal Access Token to connect your repositories."
+      fields={[
+        {
+          id: "github-token",
+          label: "Personal Access Token",
+          placeholder: "ghp_xxxxxxxxxxxxxxxxxxxx",
+          value: data.token || "",
+          onChange: (value) => {
+            setData({ token: value });
+            if (errors.token) setErrors({ token: "" });
+          },
+        },
+      ]}
+      instructions={
+        <>
+          <strong>How to create a token:</strong>
+          <br />
+          1. Go to GitHub Settings → Developer settings →{" "}
+          <a
+            href="https://github.com/settings/tokens"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-600 dark:text-primary-400 underline"
+          >
+            Personal access tokens
+          </a>
+          <br />
+          2. Generate new token (classic)
+          <br />
+          3. Select scopes: <code>repo</code> and <code>read:user</code>
+        </>
+      }
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={errors.token || ""}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step: Select Repositories
+// ─────────────────────────────────────────────────────────────────────────────
+
+function SelectReposStep({ onComplete }: { onComplete: () => void }) {
+  const { data, setData, errors, setErrors, goTo } =
+    useWizard<GitHubWizardData>();
+  const [loading, setLoading] = useState(false);
+
+  const [saveResources] = useSaveResourcesMutation();
+  const [getSelectedRepos] = useLazyGetSelectedReposQuery();
+
+  const selectedRepos = data.selectedRepos || new Set<string>();
 
   const toggleRepo = (fullName: string | number) => {
     const name = String(fullName);
-    setSelectedRepos((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) {
-        next.delete(name);
-      } else {
-        next.add(name);
-      }
-      return next;
-    });
+    const next = new Set(selectedRepos);
+    if (next.has(name)) {
+      next.delete(name);
+    } else {
+      next.add(name);
+    }
+    setData({ selectedRepos: next });
   };
 
-  const handleSaveRepos = async () => {
+  const handleSave = async () => {
     if (selectedRepos.size === 0) {
-      setError("Please select at least one repository");
+      setErrors({ repos: "Please select at least one repository" });
       return;
     }
 
-    setError("");
-    setIsProcessing(true);
+    setLoading(true);
+    setErrors({ repos: "" });
 
     try {
       const startTime = Date.now();
 
-      const selectedRepoObjects = repos.filter((repo) =>
+      const selectedRepoObjects = data.repos.filter((repo) =>
         selectedRepos.has(repo.fullName)
       );
 
       await saveResources({
         provider: "github",
-        connectionId,
+        connectionId: data.connectionId,
         resources: selectedRepoObjects,
       }).unwrap();
 
       const elapsed = Date.now() - startTime;
       const minLoadingTime = 1000;
       const remainingTime = Math.max(0, minLoadingTime - elapsed);
-
       await new Promise((resolve) => setTimeout(resolve, remainingTime));
 
-      if (isConnected) {
-        setSelectedRepos(new Set());
-        await loadCurrentRepos();
-        setStep("manage");
+      // If coming from manage step, reload and go back to manage
+      if (data.fromManage) {
+        const result = await getSelectedRepos("github").unwrap();
+        if (result.success) {
+          setData({
+            currentRepos: result.repos,
+            selectedRepos: new Set(),
+          });
+        }
+        goTo("manage");
       } else {
-        handleClose();
+        // First time setup - close modal
+        onComplete();
       }
     } catch (err: any) {
-      setError(err?.data?.error || err.message || "An error occurred");
+      setErrors({ repos: err?.data?.error || err.message || "An error occurred" });
     } finally {
-      setIsProcessing(false);
+      setLoading(false);
     }
   };
 
-  const handleRemoveRepo = async (repoId: string) => {
-    setError("");
+  const handleBack = () => {
+    if (data.fromManage) {
+      goTo("manage");
+    } else {
+      goTo("setToken");
+    }
+  };
+
+  return (
+    <SelectResourcesStep
+      resources={data.repos.map((repo) => ({ ...repo, id: repo.fullName }))}
+      selectedResources={selectedRepos}
+      onToggleResource={toggleRepo}
+      onSave={handleSave}
+      onBack={handleBack}
+      loading={loading}
+      error={errors.repos || ""}
+      title="Select the repositories you want to connect."
+      saveButtonLabel={`Save ${selectedRepos.size} Repositories`}
+      renderResourceItem={(repo) => (
+        <div className="flex items-center gap-2">
+          <BodyMedium>{repo.fullName}</BodyMedium>
+          {repo.private && (
+            <Lock className="w-4 h-4 text-primary-500 dark:text-primary-600" />
+          )}
+        </div>
+      )}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step: Manage Repositories
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ManageReposStep({ onRevoke }: { onRevoke: () => void }) {
+  const { data, setData, errors, setErrors, goTo } =
+    useWizard<GitHubWizardData>();
+  const [loading, setLoading] = useState(false);
+
+  const [deleteResource] = useDeleteResourceMutation();
+  const [getGitHubRepos] = useLazyGetGitHubReposQuery();
+  const [getSelectedRepos] = useLazyGetSelectedReposQuery();
+
+  const handleRemove = async (repoId: string) => {
+    setErrors({ manage: "" });
 
     try {
       await deleteResource(repoId).unwrap();
-      await loadCurrentRepos();
+      // Reload current repos
+      const result = await getSelectedRepos("github").unwrap();
+      if (result.success) {
+        setData({ currentRepos: result.repos });
+      }
     } catch (err: any) {
-      setError(err?.data?.error || err.message || "An error occurred");
+      setErrors({ manage: err?.data?.error || err.message || "An error occurred" });
     }
   };
 
-  const handleRevokeCredential = () => {
-    setShowRevokeConfirm(true);
-  };
-
-  const confirmRevoke = async () => {
-    setError("");
-    setShowRevokeConfirm(false);
+  const handleAddNew = async () => {
+    setLoading(true);
+    setErrors({ manage: "" });
 
     try {
-      await revokeConnection("github").unwrap();
-      handleClose();
-    } catch (err: any) {
-      setError(err?.data?.error || err.message || "An error occurred");
-    }
-  };
-
-  const handleAddNewRepos = async () => {
-    setError("");
-    setIsProcessing(true);
-
-    try {
-      const reposResult = await getGitHubRepos(connectionId).unwrap();
+      const reposResult = await getGitHubRepos(data.connectionId).unwrap();
 
       if (!reposResult.success) {
         throw new Error("Failed to fetch repositories");
       }
 
-      const currentRepoNames = new Set(currentRepos.map((r) => r.fullName));
+      const currentRepoNames = new Set(data.currentRepos.map((r) => r.fullName));
       const availableRepos = reposResult.repos.filter(
         (repo: GitHubRepo) => !currentRepoNames.has(repo.fullName)
       );
 
       if (availableRepos.length === 0) {
-        setError("All repositories are already connected");
+        setErrors({ manage: "All repositories are already connected" });
         return;
       }
 
-      setRepos(availableRepos);
-      setStep("add");
+      setData({
+        repos: availableRepos,
+        selectedRepos: new Set(),
+        fromManage: true,
+      });
+      goTo("add");
     } catch (err: any) {
-      setError(err?.data?.error || err.message || "An error occurred");
+      setErrors({ manage: err?.data?.error || err.message || "An error occurred" });
     } finally {
-      setIsProcessing(false);
+      setLoading(false);
     }
   };
 
   return (
-    <ConnectionModalWrapper
-      open={open}
-      onClose={handleClose}
-      appName="Github"
-      appIcon="/apps/github-skeuomorphic.png"
-    >
-      {initializing ? (
-        <LoadingState message="Loading repositories..." />
-      ) : step === "setToken" ? (
-        <CredentialStep
-          description="Enter your GitHub Personal Access Token to connect your repositories."
-          fields={[
-            {
-              id: "github-token",
-              label: "Personal Access Token",
-              placeholder: "ghp_xxxxxxxxxxxxxxxxxxxx",
-              value: token,
-              onChange: setToken,
-            },
-          ]}
-          instructions={
-            <>
-              <strong>How to create a token:</strong>
-              <br />
-              1. Go to GitHub Settings → Developer settings →{" "}
-              <a
-                href="https://github.com/settings/tokens"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary-600 dark:text-primary-400 underline"
-              >
-                Personal access tokens
-              </a>
-              <br />
-              2. Generate new token (classic)
-              <br />
-              3. Select scopes: <code>repo</code> and <code>read:user</code>
-            </>
-          }
-          onSubmit={handleCredentialSubmit}
-          loading={loading}
-          error={error}
-        />
-      ) : step === "manage" ? (
-        <ManageResourcesStep
-          resources={currentRepos}
-          onAddNew={handleAddNewRepos}
-          onRemove={handleRemoveRepo}
-          onRevoke={handleRevokeCredential}
-          loading={loading}
-          error={error}
-          resourceLabel="repository"
-          resourceLabelPlural="repositories"
-          addButtonLabel="Add Repository"
-          revokeButtonLabel="Revoke GitHub Access"
-          renderResourceItem={(resource) => (
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <BodyMedium>{resource.fullName}</BodyMedium>
-                {resource.metadata?.private && (
-                  <Lock className="w-4 h-4 text-primary-500 dark:text-primary-600" />
-                )}
-              </div>
-            </div>
-          )}
-        />
-      ) : (
-        <SelectResourcesStep
-          resources={repos.map((repo) => ({ ...repo, id: repo.fullName }))}
-          selectedResources={selectedRepos}
-          onToggleResource={toggleRepo}
-          onSave={handleSaveRepos}
-          onBack={() => setStep(isConnected ? "manage" : "setToken")}
-          loading={loading}
-          error={error}
-          title="Select the repositories you want to connect."
-          saveButtonLabel={`Save ${selectedRepos.size} Repositories`}
-          renderResourceItem={(repo) => (
-            <div className="flex items-center gap-2">
-              <BodyMedium>{repo.fullName}</BodyMedium>
-              {repo.private && (
-                <Lock className="w-4 h-4 text-primary-500 dark:text-primary-600" />
-              )}
-            </div>
-          )}
-        />
+    <ManageResourcesStep
+      resources={data.currentRepos}
+      onAddNew={handleAddNew}
+      onRemove={handleRemove}
+      onRevoke={onRevoke}
+      loading={loading}
+      error={errors.manage || ""}
+      resourceLabel="repository"
+      resourceLabelPlural="repositories"
+      addButtonLabel="Add Repository"
+      revokeButtonLabel="Revoke GitHub Access"
+      renderResourceItem={(resource) => (
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <BodyMedium>{resource.fullName}</BodyMedium>
+            {resource.metadata?.private && (
+              <Lock className="w-4 h-4 text-primary-500 dark:text-primary-600" />
+            )}
+          </div>
+        </div>
       )}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Loading State
+// ─────────────────────────────────────────────────────────────────────────────
+
+function LoadingStep() {
+  return (
+    <div className="flex items-center justify-center  py-20">
+      <div className="text-center space-y-3">
+        <Muted className="shine-text">Loading repositories...</Muted>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Modal
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function GitHubModal({
+  open,
+  onClose,
+  isConnected,
+  onSuccess,
+}: GitHubModalProps) {
+  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+  const [initialData, setInitialData] = useState<Partial<GitHubWizardData>>({});
+  const [initialStep, setInitialStep] = useState<StepId>("setToken");
+
+  const [getSelectedRepos] = useLazyGetSelectedReposQuery();
+  const [getConnection] = useLazyGetConnectionQuery();
+  const [revokeConnection, { isLoading: isRevoking }] =
+    useRevokeConnectionMutation();
+
+  // Load initial data when modal opens
+  useEffect(() => {
+    if (!open) {
+      // Reset state when modal closes
+      setInitializing(true);
+      return;
+    }
+
+    const loadInitialData = async () => {
+      setInitializing(true);
+
+      const baseData: Partial<GitHubWizardData> = {
+        token: "",
+        repos: [],
+        selectedRepos: new Set(),
+        currentRepos: [],
+        isFirstConnection: false,
+        fromManage: false,
+      };
+
+      if (!isConnected) {
+        // Batch all state updates together
+        setInitialStep("setToken");
+        setInitialData(baseData);
+        setInitializing(false);
+        return;
+      }
+
+      // Track what we'll set at the end
+      let finalStep: StepId = "setToken";
+      let finalData: Partial<GitHubWizardData> = baseData;
+
+      try {
+        const startTime = Date.now();
+        const result = await getSelectedRepos("github").unwrap();
+
+        if (result.success) {
+          finalData = {
+            ...baseData,
+            connectionId: result.connectionId,
+            currentRepos: result.repos,
+          };
+          finalStep = "manage";
+        } else {
+          const connResult = await getConnection("github").unwrap();
+          if (connResult.success) {
+            finalData = {
+              ...baseData,
+              connectionId: connResult.connection.id,
+              currentRepos: [],
+            };
+            finalStep = "manage";
+          }
+        }
+
+        // Ensure minimum loading time for smooth UX
+        const elapsed = Date.now() - startTime;
+        const minLoadingTime = 600;
+        const remainingTime = Math.max(0, minLoadingTime - elapsed);
+        await new Promise((resolve) => setTimeout(resolve, remainingTime));
+      } catch (err) {
+        console.error("[loadInitialData] Error:", err);
+        try {
+          const connResult = await getConnection("github").unwrap();
+          if (connResult.success) {
+            finalData = {
+              ...baseData,
+              connectionId: connResult.connection.id,
+              currentRepos: [],
+            };
+            finalStep = "manage";
+          }
+        } catch {
+          // Keep defaults
+        }
+      }
+
+      // Batch all state updates at the end
+      setInitialStep(finalStep);
+      setInitialData(finalData);
+      setInitializing(false);
+    };
+
+    loadInitialData();
+  }, [open, isConnected, getSelectedRepos, getConnection]);
+
+  const handleClose = useCallback(() => {
+    setShowRevokeConfirm(false);
+    onClose();
+  }, [onClose]);
+
+  const handleRevoke = async () => {
+    setShowRevokeConfirm(false);
+    try {
+      await revokeConnection("github").unwrap();
+      handleClose();
+    } catch (err) {
+      console.error("[handleRevoke] Error:", err);
+    }
+  };
+
+  // Define wizard steps
+  const steps: WizardStep<GitHubWizardData>[] = initializing
+    ? [{ id: "loading", render: () => <LoadingStep /> }]
+    : [
+        {
+          id: "setToken",
+          render: () => <TokenStep onSuccess={onSuccess} />,
+        },
+        {
+          id: "add",
+          render: () => <SelectReposStep onComplete={handleClose} />,
+        },
+        {
+          id: "manage",
+          render: () => (
+            <ManageReposStep
+              onRevoke={() => setShowRevokeConfirm(true)}
+            />
+          ),
+        },
+      ];
+
+  return (
+    <>
+      {/* Key forces remount so initialStep is respected after loading */}
+      <WizardModal
+        open={open}
+        onOpenChange={(isOpen) => !isOpen && handleClose()}
+        steps={steps}
+        initialStep={initializing ? "loading" : initialStep}
+        initialData={initialData}
+        title="Github"
+        icon="/apps/github-skeuomorphic.png"
+        onCancel={handleClose}
+      />
 
       {showRevokeConfirm && (
         <RevokeConfirmModal
-          onConfirm={confirmRevoke}
+          onConfirm={handleRevoke}
           onCancel={() => setShowRevokeConfirm(false)}
-          loading={loading}
+          loading={isRevoking}
           appName="GitHub"
           description="This will disconnect all repositories and remove all GitHub data. This action cannot be undone."
         />
       )}
-    </ConnectionModalWrapper>
+    </>
   );
 }

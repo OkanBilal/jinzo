@@ -40,7 +40,7 @@ export function ConnectionModalWrapper({
             onClick={onClose}
             className="p-2 flex cursor-pointer items-center justify-center rounded-full text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
           >
-            <Close className="w-4 h-4 " />
+            <Close className="w-4 h-4" />
           </Button>
         </div>
         <div className="p-6 min-h-75">{children}</div>

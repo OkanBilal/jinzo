@@ -97,7 +97,7 @@ export function SelectResourcesStep<T extends SelectableResource>({
           Back
         </Button>
         <Button
-          variant="primary"
+          variant="submit"
           onClick={onSave}
           disabled={loading || selectedCount === 0}
           isLoading={loading}

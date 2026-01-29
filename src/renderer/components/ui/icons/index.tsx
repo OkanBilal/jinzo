@@ -50,3 +50,7 @@ export { default as CopilotStatic } from "./copilot";
 export { default as Success } from "./success";
 export { default as Error } from "./error";
 export { default as Gemini } from "./gemini";
+export { default as Connect } from "./connect";
+export { default as Github } from "./github";
+export { default as Linear } from "./linear";
+export { default as External } from "./external";
