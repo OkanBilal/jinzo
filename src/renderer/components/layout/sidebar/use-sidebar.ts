@@ -20,10 +20,13 @@ import { useActiveMood } from "@/hooks/use-active-mood";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { useDeleteChatSession } from "@/features/chat/hooks/use-delete-chat-session";
 
-function filterItems<T extends { title?: string | null; initialQuery?: string | null; description?: string | null }>(
-  items: T[] | undefined,
-  query: string
-): T[] {
+function filterItems<
+  T extends {
+    title?: string | null;
+    initialQuery?: string | null;
+    description?: string | null;
+  },
+>(items: T[] | undefined, query: string): T[] {
   if (!items || !query.trim()) return items || [];
   const lowerQuery = query.toLowerCase().trim();
   return items.filter((item) => {
@@ -89,7 +92,7 @@ export function useSidebar() {
   const { data: journalEntries = [], isLoading: isLoadingJournal } =
     useGetJournalEntriesQuery(
       { limit: 50 },
-      { skip: sidebarConfig.itemType !== "post" }
+      { skip: sidebarConfig.itemType !== "post" },
     );
 
   const [createJournalDraft] = useCreateJournalDraftMutation();
@@ -147,12 +150,12 @@ export function useSidebar() {
   // Filtered data
   const filteredSessions = useMemo(
     () => filterItems(sessions, searchQuery),
-    [sessions, searchQuery]
+    [sessions, searchQuery],
   );
 
   const filteredEntities = useMemo(
     () => filterItems(entities, searchQuery),
-    [entities, searchQuery]
+    [entities, searchQuery],
   );
 
   // Filtered workspaces
@@ -163,7 +166,8 @@ export function useSidebar() {
       return (
         ws.name.toLowerCase().includes(lowerQuery) ||
         ws.rootPath.toLowerCase().includes(lowerQuery) ||
-        (ws.defaultBranch && ws.defaultBranch.toLowerCase().includes(lowerQuery))
+        (ws.defaultBranch &&
+          ws.defaultBranch.toLowerCase().includes(lowerQuery))
       );
     });
   }, [workspaces, searchQuery]);
@@ -203,7 +207,7 @@ export function useSidebar() {
       toast.error("Failed to change mood");
     }
   };
-
+  // TODO: Refactor
   const handleNewClick = async () => {
     if (sidebarConfig.itemType === "post") {
       // Create a new journal draft and navigate to it
@@ -219,63 +223,70 @@ export function useSidebar() {
         toast.error("Failed to create new post");
       }
     } else if (sidebarConfig.itemType === "workspace") {
-      // Open folder picker and create workspace
+      // Open folder picker and create workspace via worktree import
       try {
         const selectedPath = await selectDirectory().unwrap();
         if (selectedPath) {
           // Extract folder name from path
           const folderName = selectedPath.split("/").pop() || "Untitled";
           const workspaceId = crypto.randomUUID();
-          
-          // Check if it's a git repository and get git info
-          let repoUrl: string | undefined;
-          let defaultBranch: string | undefined;
-          let metadata: Record<string, unknown> | undefined;
 
-          const isRepoResult = await window.api.git.isRepo(selectedPath);
-          if (isRepoResult.success && isRepoResult.data) {
-            // Get current branch
-            const branchResult = await window.api.git.getCurrentBranch(selectedPath);
-            if (branchResult.success && branchResult.data) {
-              defaultBranch = branchResult.data;
-            }
+          // Try to import as git repo with worktree
+          const importResult =
+            await window.api.git.importLocalRepo(selectedPath);
 
-            // Get remote URL (prefer origin)
-            const remotesResult = await window.api.git.getRemotes(selectedPath);
-            if (remotesResult.success && remotesResult.data && remotesResult.data.length > 0) {
-              const origin = remotesResult.data.find((r: { name: string }) => r.name === "origin");
-              const remote = origin || remotesResult.data[0];
-              repoUrl = remote.fetchUrl || remote.pushUrl;
-            }
-
-            // Get additional git metadata
-            const statusResult = await window.api.git.getStatus(selectedPath);
-            if (statusResult.success && statusResult.data) {
-              metadata = {
-                isGitRepo: true,
-                tracking: statusResult.data.tracking,
-                ahead: statusResult.data.ahead,
-                behind: statusResult.data.behind,
-              };
-            }
+          if (!importResult.success || !importResult.data) {
+            throw new Error(importResult.error || "Not a git repository");
           }
-          
+
+          const {
+            branchName,
+            worktreePath,
+            worktreeName,
+            baseBranch,
+            tracking,
+            ahead,
+            behind,
+            originUrl,
+          } = importResult.data;
+
+          // Build metadata with existing top-level fields + new worktree info
+          const metadata = {
+            // Existing top-level fields (preserved for compatibility)
+            isGitRepo: true,
+            tracking: tracking,
+            ahead: ahead,
+            behind: behind,
+            // New optional fields for worktree imports
+            worktree: {
+              enabled: true as const,
+              name: worktreeName,
+              path: worktreePath,
+              sourcePath: selectedPath,
+              branch: branchName,
+            },
+            origin: {
+              url: originUrl,
+            },
+            baseBranch: baseBranch,
+          };
+
           await createWorkspace({
             id: workspaceId,
             accountId: account?.id || "default",
             name: folderName,
-            rootPath: selectedPath,
-            repoUrl,
-            defaultBranch,
+            rootPath: worktreePath, // workspace points to worktree
+            repoUrl: originUrl || undefined,
+            defaultBranch: branchName, // the import branch
             metadata,
           }).unwrap();
-          
+
           toast.success("Workspace added");
           navigate(`/workspace/${workspaceId}`);
         }
       } catch (error) {
         console.error("Failed to create workspace:", error);
-        toast.error("Failed to add workspace");
+        toast.error("Not a valid git repository");
       }
     } else {
       navigate(sidebarConfig.defaultRoute);
@@ -306,7 +317,7 @@ export function useSidebar() {
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
     setCreateMoodMenuState({
       isOpen: true,
-      position: { x: rect.right + 40, y: rect.bottom - 12},
+      position: { x: rect.right + 40, y: rect.bottom - 12 },
     });
   };
 
@@ -331,7 +342,7 @@ export function useSidebar() {
 
   // Context menu handlers
   const handleMoodContextMenu = (mood: Mood, event: React.MouseEvent) => {
-        const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
 
     event.preventDefault();
     setContextMenuState({
@@ -380,7 +391,7 @@ export function useSidebar() {
 
     try {
       const wasActive = activeMoodId === deleteMoodState.mood.id;
-      
+
       await deleteMood(deleteMoodState.mood.id).unwrap();
 
       // If the deleted mood was active, clear it and navigate to default route
@@ -404,7 +415,10 @@ export function useSidebar() {
   };
 
   // Delete journal handlers
-  const handleDeleteJournalClick = (journalId: string, e?: React.MouseEvent) => {
+  const handleDeleteJournalClick = (
+    journalId: string,
+    e?: React.MouseEvent,
+  ) => {
     e?.stopPropagation();
     setDeleteJournalState({ journalId, isDeleting: false });
   };
@@ -436,7 +450,10 @@ export function useSidebar() {
   };
 
   // Delete workspace handlers
-  const handleDeleteWorkspaceClick = (workspaceId: string, e?: React.MouseEvent) => {
+  const handleDeleteWorkspaceClick = (
+    workspaceId: string,
+    e?: React.MouseEvent,
+  ) => {
     e?.stopPropagation();
     setDeleteWorkspaceState({ workspaceId, isDeleting: false });
   };

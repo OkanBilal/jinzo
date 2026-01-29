@@ -526,6 +526,31 @@ const api = {
      */
     getRepoRoot: (rootPath: string) =>
       ipcRenderer.invoke("git:getRepoRoot", rootPath),
+    /**
+     * Create a new local branch
+     */
+    createBranch: (rootPath: string, branchName: string) =>
+      ipcRenderer.invoke("git:createBranch", rootPath, branchName),
+    /**
+     * Create a worktree for a branch
+     */
+    createWorktree: (rootPath: string, worktreePath: string, branchName: string) =>
+      ipcRenderer.invoke("git:createWorktree", rootPath, worktreePath, branchName),
+    /**
+     * Import a local git repo by creating a branch + worktree.
+     * Returns full metadata needed for workspace creation.
+     */
+    importLocalRepo: (sourcePath: string) =>
+      ipcRenderer.invoke("git:importLocalRepo", sourcePath),
+    /**
+     * Remove a worktree
+     */
+    removeWorktree: (sourcePath: string, worktreePath: string) =>
+      ipcRenderer.invoke("git:removeWorktree", sourcePath, worktreePath),
+    /**
+     * Get the worktrees directory path
+     */
+    getWorktreesDir: () => ipcRenderer.invoke("git:getWorktreesDir"),
   },
 };
 

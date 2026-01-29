@@ -13,6 +13,11 @@ const CHANNELS = {
   GET_REMOTES: "git:getRemotes",
   GET_DIFF: "git:getDiff",
   GET_REPO_ROOT: "git:getRepoRoot",
+  CREATE_BRANCH: "git:createBranch",
+  CREATE_WORKTREE: "git:createWorktree",
+  IMPORT_LOCAL_REPO: "git:importLocalRepo",
+  REMOVE_WORKTREE: "git:removeWorktree",
+  GET_WORKTREES_DIR: "git:getWorktreesDir",
 } as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -49,6 +54,32 @@ export function registerGitIpc(): void {
 
   ipcMain.handle(CHANNELS.GET_REPO_ROOT, async (_, rootPath: string) => {
     return gitService.getRepoRoot(rootPath);
+  });
+
+  ipcMain.handle(CHANNELS.CREATE_BRANCH, async (_, rootPath: string, branchName: string) => {
+    return gitService.createBranch(rootPath, branchName);
+  });
+
+  ipcMain.handle(
+    CHANNELS.CREATE_WORKTREE,
+    async (_, rootPath: string, worktreePath: string, branchName: string) => {
+      return gitService.createWorktree(rootPath, worktreePath, branchName);
+    }
+  );
+
+  ipcMain.handle(CHANNELS.IMPORT_LOCAL_REPO, async (_, sourcePath: string) => {
+    return gitService.importLocalRepo(sourcePath);
+  });
+
+  ipcMain.handle(
+    CHANNELS.REMOVE_WORKTREE,
+    async (_, sourcePath: string, worktreePath: string) => {
+      return gitService.removeWorktree(sourcePath, worktreePath);
+    }
+  );
+
+  ipcMain.handle(CHANNELS.GET_WORKTREES_DIR, async () => {
+    return { success: true, data: gitService.getWorktreesDir() };
   });
 }
 

@@ -1,4 +1,7 @@
 import simpleGit, { SimpleGit, StatusResult, LogResult, RemoteWithRefs } from "simple-git";
+import { app } from "electron";
+import path from "path";
+import fs from "fs";
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -15,6 +18,17 @@ export interface GitStatusResponse {
   deleted: string[];
   untracked: string[];
   conflicted: string[];
+}
+
+export interface WorktreeImportResult {
+  branchName: string;
+  worktreePath: string;
+  worktreeName: string;
+  baseBranch: string;
+  tracking: string | null;
+  ahead: number;
+  behind: number;
+  originUrl: string | null;
 }
 
 export interface GitBranchInfo {
@@ -223,6 +237,155 @@ class GitService {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to get repo root",
+      };
+    }
+  }
+
+  /**
+   * Get the worktrees directory path under app data
+   */
+  getWorktreesDir(): string {
+    const userDataPath = app?.getPath("userData") || path.join(process.cwd(), ".data");
+    return path.join(userDataPath, "worktrees");
+  }
+
+  /**
+   * Generate a unique name using fruit + random suffix for both branch and worktree
+   */
+  private generateFruitName(): string {
+    const fruits = [
+      "apple", "banana", "cherry", "mango", "peach",
+      "grape", "orange", "pineapple", "strawberry", "watermelon"
+    ];
+    const fruit = fruits[Math.floor(Math.random() * fruits.length)];
+    const suffix = Math.random().toString(36).substring(2, 6);
+    return `${fruit}-${suffix}`;
+  }
+
+  /**
+   * Create a new local branch
+   */
+  async createBranch(rootPath: string, branchName: string): Promise<ServiceResponse<string>> {
+    try {
+      const git = this.getGit(rootPath);
+      await git.checkoutLocalBranch(branchName);
+      return { success: true, data: branchName };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to create branch",
+      };
+    }
+  }
+
+  /**
+   * Create a worktree for a branch
+   */
+  async createWorktree(
+    rootPath: string,
+    worktreePath: string,
+    branchName: string
+  ): Promise<ServiceResponse<string>> {
+    try {
+      const git = this.getGit(rootPath);
+      await git.raw(["worktree", "add", worktreePath, branchName]);
+      return { success: true, data: worktreePath };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to create worktree",
+      };
+    }
+  }
+
+  /**
+   * Import a local git repo by creating a branch + worktree
+   * Returns full metadata needed for workspace creation
+   */
+  async importLocalRepo(sourcePath: string): Promise<ServiceResponse<WorktreeImportResult>> {
+    try {
+      const git = this.getGit(sourcePath);
+
+      // 1. Validate it's a git repo
+      const isRepo = await git.checkIsRepo();
+      if (!isRepo) {
+        return { success: false, error: "Not a git repository" };
+      }
+
+      // 2. Get current branch (baseBranch)
+      const baseBranch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+
+      // 3. Get origin URL if available
+      let originUrl: string | null = null;
+      try {
+        const remotes: RemoteWithRefs[] = await git.getRemotes(true);
+        const origin = remotes.find((r) => r.name === "origin");
+        if (origin) {
+          originUrl = origin.refs.fetch || origin.refs.push || null;
+        }
+      } catch {
+        // No remotes, that's fine
+      }
+
+      // 4. Generate a single name for both branch and worktree
+      const fruitName = this.generateFruitName();
+      const branchName = fruitName;
+      const worktreeName = fruitName;
+
+      // 5. Create the import branch (staying in source repo)
+      await git.raw(["branch", branchName]);
+
+      // 6. Create worktree directory
+      const worktreesDir = this.getWorktreesDir();
+      if (!fs.existsSync(worktreesDir)) {
+        fs.mkdirSync(worktreesDir, { recursive: true });
+      }
+
+      const worktreePath = path.join(worktreesDir, worktreeName);
+
+      // 7. Create the worktree
+      await git.raw(["worktree", "add", worktreePath, branchName]);
+
+      // 8. Now get tracking info from the worktree context
+      const wGit = this.getGit(worktreePath);
+      const status: StatusResult = await wGit.status();
+
+      return {
+        success: true,
+        data: {
+          branchName,
+          worktreePath,
+          worktreeName,
+          baseBranch,
+          tracking: status.tracking,
+          ahead: status.ahead,
+          behind: status.behind,
+          originUrl,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to import local repo",
+      };
+    }
+  }
+
+  /**
+   * Remove a worktree
+   */
+  async removeWorktree(
+    sourcePath: string,
+    worktreePath: string
+  ): Promise<ServiceResponse<void>> {
+    try {
+      const git = this.getGit(sourcePath);
+      await git.raw(["worktree", "remove", worktreePath, "--force"]);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to remove worktree",
       };
     }
   }

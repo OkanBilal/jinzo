@@ -5,4 +5,5 @@ export type {
   GitBranchInfo,
   GitLogEntry,
   GitRemote,
+  WorktreeImportResult,
 } from "./git.service";
