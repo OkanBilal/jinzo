@@ -19,6 +19,7 @@ function AppContent() {
   const location = useLocation();
 
   const hideRightPanel = shouldHideRightPanel(location.pathname);
+  const isWorkspaceRoute = location.pathname.startsWith("/workspace");
 
   return (
     <>
@@ -29,7 +30,11 @@ function AppContent() {
         <MainContent
           marginLeft={mainMarginLeft}
           marginRight={
-            !hideRightPanel && isConfigOpen ? rightPanelWidth : "0.5rem"
+            !hideRightPanel && isConfigOpen
+              ? rightPanelWidth
+              : isWorkspaceRoute
+                ? "0rem"
+                : "0.5rem"
           }
         >
           <MainRoutes />

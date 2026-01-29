@@ -63,7 +63,7 @@ export function WorkspaceTabs({
   };
 
   return (
-    <div className="flex items-center bg-primary-100 dark:bg-workspace-dark h-10">
+    <div className="flex items-center bg-primary-100 border-l border-r border-primary-200 dark:border-primary-900 dark:bg-workspace-dark h-10">
       <div ref={containerRef} className="relative flex-1 flex items-center overflow-x-auto noscrollbar">
         <div
           className="absolute bottom-0 h-0.5 bg-primary-600 dark:bg-primary-700 transition-all duration-300 ease-out"
