@@ -7,7 +7,7 @@ interface WorkspaceHeaderProps {
 
 export function WorkspaceHeader({ workspace }: WorkspaceHeaderProps) {
   return (
-    <div className="px-2 py-4 flex items-center gap-2 border-b border-l border-r border-primary-200 dark:bg-workspace-dark dark:border-primary-900">
+    <div className="px-2 py-4 flex items-center gap-2   border-primary-200 dark:bg-workspace-dark dark:border-primary-900">
       <span className="text-primary-600 dark:text-primary-500 text-xs ml-2">
         <Layers className="inline w-3.5 h-3.5 mr-2 text-primary-500 dark:text-primary-400" />
         {workspace ? `${workspace.name}` : "Workspace"}

@@ -52,7 +52,7 @@ export function WorkspaceEvents({
     <div className="font-mono text-sm h-full flex flex-col">
       {/* Sticky header + tabs */}
       <div className="sticky top-0 z-10 shrink-0">
-        <WorkspaceHeader workspace={currentWorkspace} />
+        {/* <WorkspaceHeader workspace={currentWorkspace} /> */}
         <WorkspaceTabs
           runs={runs}
           activeTab={activeTab}

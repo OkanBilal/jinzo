@@ -42,7 +42,7 @@ export default function Alert({
         </Text>
         <div className="flex gap-3 mt-4">
           <Button
-            className="flex-1 rounded-full!"
+            className="flex-1 rounded-full! font-semibold"
             variant="danger"
             size="md"
             onClick={onPrimary}
@@ -51,8 +51,8 @@ export default function Alert({
             {isPrimaryLoading ? "Loading..." : primaryButtonText}
           </Button>
           <Button
-            className="flex-1 rounded-full!"
-            variant="secondary"
+            className="flex-1 rounded-full! font-semibold"
+            variant="primary"
             size="md"
             onClick={onSecondary}
             disabled={isPrimaryLoading}

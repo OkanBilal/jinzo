@@ -101,7 +101,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
         >
           <ChevronUp className="w-4.5 h-4.5 rotate-270 text-primary-900 dark:text-primary-400" />
           <Body className="text-primary-900 dark:text-primary-100 ml-0.5 font-medium">
-            Back to app
+            Return
           </Body>
           <Caption className="ml-auto text-primary-900 dark:text-primary-400">
             Esc

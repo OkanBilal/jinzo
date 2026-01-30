@@ -137,7 +137,7 @@ export function StructuredOutputModal({
                 <Button
                   className=""
                   onClick={handleAddProperty}
-                  variant="secondary"
+                  variant="primary"
                 >
                   + Add property
                 </Button>
@@ -146,14 +146,14 @@ export function StructuredOutputModal({
           </div>
         </div>
         <div className="flex items-center justify-end gap-3 p-4 border-t border-black/5 dark:border-white/10">
-          <Button onClick={handleReset} variant="ghost" size="sm">
+          <Button onClick={handleReset} variant="ghost">
             Reset
           </Button>
           <Button
             onClick={handleSave}
             disabled={!canSave}
             isLoading={isSaving}
-            variant="primary"
+            variant="submit"
             size="sm"
           >
             Save
@@ -230,7 +230,7 @@ function PropertyRow({ property, onUpdate, onRemove }: PropertyRowProps) {
       </Button>
       <Button
         onClick={onRemove}
-        className="shrink-0 p-2 text-primary-500 cursor-pointer hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+        className="shrink-0 p-2 text-primary-500 cursor-pointer hover:text-red-500 dark:hover:text-red-400  rounded-lg transition-colors"
         title="Remove"
       >
         <Trash className="w-4 h-4" />

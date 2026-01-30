@@ -6,7 +6,8 @@ import { ChatMessages } from "@/features/chat/components";
 import ChatInput from "@/features/chat/components/input";
 import { AppState } from "@/features/chat/components/input/types";
 import { useChat } from "@/features/chat/hooks/use-chat";
-import { Caption } from "@/components/ui/text";
+import { Edit } from "@/components/ui/icons";
+import { Button } from "@/components/ui/button";
 
 export function JournalContent() {
   const selectedModel = useAppSelector((state) => state.chat.selectedModel);
@@ -36,6 +37,7 @@ export function JournalContent() {
     sendTextStreaming,
     focusInput,
     addMessage,
+    clearMessages,
     refs: { messagesRef },
   } = useChat({ initialMessages: [] });
 
@@ -53,13 +55,13 @@ export function JournalContent() {
       // Create a context-aware prompt that includes the journal content
       const contextPrefix = `[CONTEXT: The user is writing a journal entry titled "${journalEditing.title}". Here is the current content of their journal:
 
----
-${journalEditing.body}
----
+        ---
+        ${journalEditing.body}
+        ---
 
-The user's question/request about their writing:]
+        The user's question/request about their writing:]
 
-`;
+        `;
 
       return contextPrefix + userMessage;
     },
@@ -114,28 +116,33 @@ The user's question/request about their writing:]
     journalEditing.entityId && journalEditing.body,
   );
 
-  return (
-    <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 dark:bg-primary-950/50 bg-primary mx-3 -pb-4 rounded-2xl overflow-hidden">
-      {/* Context indicator */}
-      {hasJournalContext && (
-        <div className="shrink-0 px-4 py-2 border-b border-primary-200/50 dark:border-primary-800/50">
-          <Caption className="text-primary-500 dark:text-primary-400 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            Context: {journalEditing.title || "Untitled"} (
-            {journalEditing.wordCount} words)
-          </Caption>
-        </div>
-      )}
+  const handleNewChat = () => {
+    clearMessages();
+    setInput("");
+    focusInput();
+  };
 
-      <div className="flex-1 overflow-hidden p-3">
+  return (
+    <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 dark:bg-primary-950 bg-primary mx-2 -pb-4 rounded-2xl overflow-hidden">
+      <Button
+        onClick={handleNewChat}
+        className="absolute top-2.5 right-11 rounded-full! p-1.5! text-primary-900 dark:text-primary-300!  bg-primary/50 dark:bg-primary-800/50 "
+        title="New chat"
+      >
+        <Edit className="size-4  text-primary-900 dark:text-primary-200" />
+      </Button>
+      {hasJournalContext && <div className="shrink-0 px-4 py-2 "></div>}
+
+      <div className="flex-1 overflow-hidden mt-4 p-3">
         <ChatMessages
           ref={messagesRef}
           messages={messages}
           isLoading={isLoading}
         />
       </div>
-      <div className="shrink-0 p-3 pb-6">
+      <div className="shrink-0 px-2 pb-4">
         <ChatInput
+          context={journalEditing}
           query={input}
           onQueryChange={setInput}
           onSubmit={handleSend}

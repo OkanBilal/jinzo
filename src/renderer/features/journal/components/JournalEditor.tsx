@@ -205,7 +205,7 @@ export function JournalEditor({ entityId }: JournalEditorProps) {
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-primary-400 dark:text-primary-500 opacity-60">
+          <span className="text-sm text-primary-400 dark:text-primary-300 opacity-80">
             {isSaving
               ? "Saving..."
               : isDirty
@@ -215,7 +215,7 @@ export function JournalEditor({ entityId }: JournalEditorProps) {
                   : ""}
           </span>
           <Button
-            variant="secondary"
+            variant="primary"
             tooltip="Save post"
             className="px-3"
             onClick={handleSave}
@@ -226,10 +226,10 @@ export function JournalEditor({ entityId }: JournalEditorProps) {
           {isDraft && (
             <Button
               tooltip="Publish post"
-              variant="primary"
+              variant="submit"
               onClick={handlePublish}
               disabled={isShowingPublishLoading || isSaving}
-              className="px-3 py-1.5 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+              className=""
             >
               {isShowingPublishLoading ? "Publishing..." : "Publish"}
             </Button>

@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
-import { RightPanelClose, RightPanelOpen } from "@/components/ui/icons";
+import { Close, RightPanelClose, RightPanelOpen } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { useLayoutConfig } from "@/hooks/use-layout-config";
 import { ConfigContent } from "./config-content";
 import { JournalContent } from "./journal-content";
 import { WorkspaceContent } from "./workspace-content";
 
-const FADE_IN_DELAY = 60;
 
 interface RightPanelProps {
   isOpen: boolean;
@@ -21,6 +20,9 @@ export default function RightPanel({
 }: RightPanelProps) {
   const [isVisible, setIsVisible] = useState(false);
   const { rightPanelComponent } = useLayoutConfig();
+
+  const FADE_IN_DELAY = isOpen ? 20 : 60;
+
 
   const handleToggle = () => onToggle(!isOpen);
 
@@ -61,34 +63,19 @@ interface ToggleButtonProps {
 }
 
 function ToggleButton({ isOpen, width, onClick, isWorkspace = false }: ToggleButtonProps) {
-  const iconSize = isWorkspace ? "size-4.5" : "size-4.5";
-  const topValue = isWorkspace ? "0.8rem" : "0.8rem";
-  const glassClass = isWorkspace ? "glass-morphism-copilot" : "";
 
   return (
     <Button
-      variant="frosted"
       tooltip={isOpen ? "Close right panel" : "Open right panel"}
       tooltipPosition="left"
       onClick={onClick}
-      className={`fixed z-40 rounded-full! p-2! transition-all dark:text-primary-300! dark:hover:text-primary-300 duration-300 ease-out 
-          ${glassClass} ${
-        isOpen ? "right-[calc(var(--config-width)+0.5rem)]" : "top-3 right-3"
-      }`}
-      style={
-        isOpen
-          ? ({
-              "--config-width": width,
-              top: topValue,
-            } as React.CSSProperties)
-          : ({ top: topValue, right: "0.75rem" } as React.CSSProperties)
-      }
+      className={`fixed z-60 rounded-full! p-1.5! text-primary-900 dark:text-primary-300!  bg-primary-200/30 dark:bg-primary-800/50 transition-all duration-300 ease-out top-3 right-3 `}
       aria-label={isOpen ? "Close right panel" : "Open right panel"}
     >
       {isOpen ? (
-        <RightPanelClose className={iconSize} />
+        <Close  className="size-3.5 " />
       ) : (
-        <RightPanelOpen className={iconSize} />
+        <RightPanelOpen className="size-4" />
       )}
     </Button>
   );
@@ -112,7 +99,7 @@ function Panel({ isVisible, width, component }: PanelProps) {
 
   return (
     <div
-      className={`block fixed top-0 bottom-0 right-0 overflow-hidden transition-all duration-300 ease-out bg-transparent ${
+      className={`block fixed top-0 bottom-0 right-0 overflow-hidden transition-all duration-300 ease-in-out  bg-transparent ${
         isVisible ? "translate-x-0 z-50 " : "pointer-events-none"
       }`}
       style={{

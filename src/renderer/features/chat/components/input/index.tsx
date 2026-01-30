@@ -8,13 +8,15 @@ import {
   useUpdateChatConfigMutation,
 } from "../../../../lib/redux/api";
 import { useAppDispatch, useAppSelector } from "../../../../lib/redux/hooks";
-import {
-  setSelectedModel,
-} from "../../../../lib/redux/slices/chatSlice";
+import { setSelectedModel } from "../../../../lib/redux/slices/chatSlice";
 import { SendButton } from "@/components/ui/input/send-button";
 import { DictationButton } from "@/components/ui/input/dictation-button";
 import { InputForm } from "@/components/ui/input/input-form";
-import { FileUploadDropdown, FILE_TYPES, type UploadedFile } from "@/components/ui/input/file-upload-dropdown";
+import {
+  FileUploadDropdown,
+  FILE_TYPES,
+  type UploadedFile,
+} from "@/components/ui/input/file-upload-dropdown";
 import { ModelSelectDropdown } from "@/components/ui/input/model-select-dropdown";
 import { ChatInputProps } from "./types";
 
@@ -23,6 +25,7 @@ const DEFAULT_PLACEHOLDER = "Ask jinzo anything...";
 export default function ChatInput({
   query,
   onQueryChange,
+  context,
   onSubmit,
   placeholder = DEFAULT_PLACEHOLDER,
   loading = false,
@@ -36,7 +39,6 @@ export default function ChatInput({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -59,11 +61,9 @@ export default function ChatInput({
     setIsModelDropdownOpen(false);
   });
 
-
   const handleQueryChange = (value: string) => {
     onQueryChange(value);
   };
-
 
   const handleImageUpload = () => {
     if (fileInputRef.current) {
@@ -112,6 +112,24 @@ export default function ChatInput({
       className={`w-full flex flex-col pb-2 rounded-3xl glass-morphism
     cursor-pointer transition-all ${className || ""}`}
     >
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+          context?.entityId && context?.body
+            ? "grid-rows-[1fr]"
+            : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="px-2 pt-3 -mb-1">
+            <div className="flex items-center gap-2 text-xs text-primary-800 dark:text-primary-400 px-2 ">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              <span className="truncate">{context?.title || "Untitled"}</span>
+              <span className="text-primary-800 dark:text-primary-400">•</span>
+              <span>{context?.wordCount} words</span>
+            </div>
+          </div>
+        </div>
+      </div>
       <div className="relative">
         <InputForm
           query={query}

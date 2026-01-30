@@ -44,31 +44,31 @@ const gradient = (
 export const gradientColors: ThemeColor[] = [
   {
     name: "Deep Grape",
-    ...gradient("#F2EEFA", "#E3DDF1", "#3A3241", "#2A2430"),
+    ...gradient("#917db9cc", "#E3DDF1", "#3A3241", "#2A2430"),
   },
   {
     name: "Rust Plum",
-    ...gradient("#FBEAEC", "#EEDDE0", "#473138", "#312127"),
+    ...gradient("#bc8a90cc", "#EEDDE0", "#473138", "#312127"),
   },
   {
     name: "Cider Brown",
-    ...gradient("#FFF1EE", "#F0E1DE", "#503835", "#362422"),
+    ...gradient("#d5a59acc", "#F0E1DE", "#503835", "#362422"),
   },
   {
     name: "Warm Clay",
-    ...gradient("#FCEFE1", "#EEDFCC", "#5E4837", "#3E2F24"),
+    ...gradient("#e7ae70cc", "#EEDFCC", "#5E4837", "#3E2F24"),
   },
   {
     name: "Sage Mist",
-    ...gradient("#FAF9F0", "#ECEBDE", "#8E8D78", "#6A6A59"),
+    ...gradient("#b7af65cc", "#ECEBDE", "#8E8D78", "#6A6A59"),
   },
   {
     name: "Deep Forest",
-    ...gradient("#E7F6ED", "#D4E7DC", "#395D4C", "#22382E"),
+    ...gradient("#6e977ecc", "#D4E7DC", "#395D4C", "#22382E"),
   },
   {
     name: "Indigo Steel",
-    ...gradient("#ECF1FB", "#D6E1F5", "#33486A", "#1E2B41"),
+    ...gradient("#7090d0cc", "#D6E1F5", "#33486A", "#1E2B41"),
   },
 ];
 

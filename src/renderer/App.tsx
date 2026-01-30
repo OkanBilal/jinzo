@@ -33,7 +33,7 @@ function AppContent() {
             !hideRightPanel && isConfigOpen
               ? rightPanelWidth
               : isWorkspaceRoute
-                ? "0rem"
+                ? "0.5rem"
                 : "0.5rem"
           }
         >

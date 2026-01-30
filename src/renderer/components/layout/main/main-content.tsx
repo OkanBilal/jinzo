@@ -17,7 +17,7 @@ export function MainContent({
 
   return (
     <main
-      className={`flex-1 overflow-hidden transition-all duration-300 ease-out ${isWorkspaceRoute ? "" : "m-2"}`}
+      className={`flex-1 overflow-hidden transition-all duration-300 ease-out ${isWorkspaceRoute ? "m-2" : "m-2"}`}
       style={{
         marginLeft,
         marginRight,
@@ -25,7 +25,7 @@ export function MainContent({
       }}
     >
       <div
-        className={`h-full bg-primary dark:bg-primary-950 overflow-auto ${isWorkspaceRoute ? "" : "rounded-2xl"}`}
+        className={`h-full bg-primary dark:bg-primary-950 overflow-auto ${isWorkspaceRoute ? "rounded-2xl" : "rounded-2xl"}`}
       >
         {children}
       </div>
