@@ -32,6 +32,13 @@ const variantStyles = {
       "bg-copilot-lightblue/60 dark:bg-copilot-lightblue/8 text-copilot-blue dark:text-copilot-lightblue",
     item: "hover:bg-copilot-lightblue/50 dark:hover:bg-copilot-lightblue/6 text-copilot-blue dark:text-copilot-lightblue",
   },
+  claude: {
+    container: "hover:bg-claude-dark/10 dark:hover:bg-claude-light/10",
+    button: "text-claude-dark dark:text-claude-light/80",
+    selected:
+      "bg-claude-light/60 dark:bg-claude-light/8 text-claude-dark dark:text-claude-light",
+    item: "hover:bg-claude-light/50 dark:hover:bg-claude-light/6 text-claude-dark dark:text-claude-light",
+  },
 };
 
 export function ModelSelectDropdown({
@@ -57,7 +64,7 @@ export function ModelSelectDropdown({
   return (
     <div className="relative" ref={dropdownRef}>
       <div
-        className={`flex cursor-pointer items-center ${styles.container} transition-colors rounded-3xl`}
+        className={`flex cursor-pointer  items-center ${styles.container} transition-colors rounded-3xl`}
       >
         <Button
           tooltip="Select model"
@@ -79,7 +86,7 @@ export function ModelSelectDropdown({
         minWidth="min-w-52"
         useFixedBackground={true}
       >
-        <div className="max-h-80 overflow-auto">
+        <div className="max-h-80 overflow-auto noscrollbar">
           {modelList.map((m) => (
             <Button
               key={m}

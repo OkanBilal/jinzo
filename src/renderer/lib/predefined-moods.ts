@@ -41,7 +41,12 @@ const theme = (light: string, dark: string): PredefinedMoodTheme => ({
 });
 
 const WORKSPACE_UI: PredefinedMoodUIConfig = {
-  sidebar: { width: "18rem", title: "Workspace", itemType: "workspace", defaultRoute: "/workspace" },
+  sidebar: {
+    width: "18rem",
+    title: "Workspace",
+    itemType: "workspace",
+    defaultRoute: "/workspace",
+  },
   main: { margin: "18rem" },
   rightPanel: { width: "22rem", component: "workspace" },
 };
@@ -66,8 +71,14 @@ export const predefinedMoods: PredefinedMood[] = [
     theme: theme("#fcc7b699", "#63341f"),
     systemPrompt: "",
     uiConfig: {
-      sidebar: { width: "18rem", title: "Workspace", itemType: "claude", defaultRoute: "/claude" },
+      sidebar: {
+        width: "18rem",
+        title: "Workspace",
+        itemType: "workspace",
+        defaultRoute: "/claude",
+      },
       main: { margin: "18rem" },
+      rightPanel: { width: "22rem", component: "workspace" },
     },
   },
   {

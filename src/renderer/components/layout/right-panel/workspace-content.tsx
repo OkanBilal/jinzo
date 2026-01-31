@@ -27,10 +27,10 @@ export function WorkspaceContent() {
     (state: RootState) => state.workspace.selectedFile,
   );
 
-  // Extract workspaceId from URL path (e.g., /workspace/abc-123)
+  // TODO: Refactor workspaceId extraction to a custom hook if used elsewhere
   const workspaceId = useMemo(() => {
-    const match = location.pathname.match(/^\/workspace\/([^/]+)/);
-    return match ? match[1] : undefined;
+    const match = location.pathname.match(/^\/(workspace|claude)\/([^/]+)/);
+    return match ? match[2] : undefined;
   }, [location.pathname]);
 
   // Get workspace data from the selected workspace ID

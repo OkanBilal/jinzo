@@ -39,7 +39,7 @@ interface AppleMusicWizardData {
   fromManage: boolean;
 }
 
-type StepId = "setToken" | "add" | "manage";
+type StepId = "loading" | "setToken" | "add" | "manage";
 
 const ALL_SOURCES = [
   {
@@ -63,7 +63,15 @@ const ALL_SOURCES = [
 // Step: Loading
 // ─────────────────────────────────────────────────────────────────────────────
 
-function LoadingStep() {
+function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
+  const { goTo } = useWizard<AppleMusicWizardData>();
+
+  useEffect(() => {
+    if (targetStep && targetStep !== "loading") {
+      goTo(targetStep);
+    }
+  }, [targetStep, goTo]);
+
   return (
     <div className="flex items-center justify-center py-20">
       <div className="text-center space-y-3">
@@ -368,7 +376,7 @@ const AppleMusicModal = ({
   onSuccess,
 }: AppleMusicModalProps) => {
   const [initializing, setInitializing] = useState(true);
-  const [initialStep, setInitialStep] = useState<StepId>("setToken");
+  const [targetStep, setTargetStep] = useState<StepId | null>(null);
   const [initialData, setInitialData] = useState<Partial<AppleMusicWizardData>>({});
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
 
@@ -379,11 +387,13 @@ const AppleMusicModal = ({
   useEffect(() => {
     if (!open) {
       setInitializing(true);
+      setTargetStep(null);
       return;
     }
 
     const loadInitialData = async () => {
       setInitializing(true);
+      setTargetStep(null);
 
       const baseData: Partial<AppleMusicWizardData> = {
         developerToken: "",
@@ -394,8 +404,8 @@ const AppleMusicModal = ({
       };
 
       if (!isConnected) {
-        setInitialStep("setToken");
         setInitialData(baseData);
+        setTargetStep("setToken");
         setInitializing(false);
         return;
       }
@@ -424,8 +434,8 @@ const AppleMusicModal = ({
         console.error("[loadInitialData] Error:", err);
       }
 
-      setInitialStep(finalStep);
       setInitialData(finalData);
+      setTargetStep(finalStep);
       setInitializing(false);
     };
 
@@ -447,26 +457,28 @@ const AppleMusicModal = ({
     }
   };
 
-  const steps: WizardStep<AppleMusicWizardData>[] = initializing
-    ? [{ id: "loading", render: () => <LoadingStep /> }]
-    : [
-        {
-          id: "setToken",
-          render: () => <TokenStep onSuccess={onSuccess} />,
-        },
-        {
-          id: "add",
-          render: () => <SelectResourcesStepComponent onComplete={handleClose} />,
-        },
-        {
-          id: "manage",
-          render: () => (
-            <ManageResourcesStepComponent
-              onRevoke={() => setShowRevokeConfirm(true)}
-            />
-          ),
-        },
-      ];
+  const steps: WizardStep<AppleMusicWizardData>[] = [
+    {
+      id: "loading",
+      render: () => <LoadingStep targetStep={targetStep} />,
+    },
+    {
+      id: "setToken",
+      render: () => <TokenStep onSuccess={onSuccess} />,
+    },
+    {
+      id: "add",
+      render: () => <SelectResourcesStepComponent onComplete={handleClose} />,
+    },
+    {
+      id: "manage",
+      render: () => (
+        <ManageResourcesStepComponent
+          onRevoke={() => setShowRevokeConfirm(true)}
+        />
+      ),
+    },
+  ];
 
   return (
     <>
@@ -474,10 +486,10 @@ const AppleMusicModal = ({
         open={open}
         onOpenChange={(isOpen) => !isOpen && handleClose()}
         steps={steps}
-        initialStep={initializing ? "loading" : initialStep}
+        initialStep="loading"
         initialData={initialData}
         title="Apple Music"
-        icon="/apps/apple-music-skeuomorphic.png"
+        icon="/connections/apple-music.png"
         onCancel={handleClose}
       />
 

@@ -16,7 +16,6 @@ import { DEFAULT_EXCLUDE_PATTERNS, MAX_FILE_SIZE_BYTES } from "./fileExplorer.dt
 const DEBUG = true;
 function debugLog(message: string, ...args: unknown[]) {
   if (DEBUG) {
-    console.log(`[FileExplorer] ${message}`, ...args);
   }
 }
 

@@ -11,7 +11,7 @@ export interface ContextIssue {
 }
 
 export interface WorkspaceState {
-  selectedModel: string;
+  selectedModelByProvider: Record<string, string>;
   selectedProviderId: string;
   thinkingEnabled: boolean;
   selectedFile: FileNode | null;
@@ -25,7 +25,7 @@ export interface WorkspaceState {
 }
 
 const initialState: WorkspaceState = {
-  selectedModel: "",
+  selectedModelByProvider: {},
   selectedProviderId: "copilot_cli",
   thinkingEnabled: false,
   selectedFile: null,
@@ -42,12 +42,11 @@ const workspaceSlice = createSlice({
   name: "workspace",
   initialState,
   reducers: {
-    setWorkspaceModel: (state, action: PayloadAction<string>) => {
-      state.selectedModel = action.payload;
+    setWorkspaceModel: (state, action: PayloadAction<{ providerId: string; model: string }>) => {
+      state.selectedModelByProvider[action.payload.providerId] = action.payload.model;
     },
     setWorkspaceProvider: (state, action: PayloadAction<string>) => {
       state.selectedProviderId = action.payload;
-      state.selectedModel = "";
     },
     setWorkspaceThinkingEnabled: (state, action: PayloadAction<boolean>) => {
       state.thinkingEnabled = action.payload;

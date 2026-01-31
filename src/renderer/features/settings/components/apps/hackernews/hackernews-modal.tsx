@@ -44,7 +44,15 @@ type StepId = "loading" | "enable" | "configure";
 // Step: Loading
 // ─────────────────────────────────────────────────────────────────────────────
 
-function LoadingStep() {
+function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
+  const { goTo } = useWizard<HackerNewsWizardData>();
+
+  useEffect(() => {
+    if (targetStep && targetStep !== "loading") {
+      goTo(targetStep);
+    }
+  }, [targetStep, goTo]);
+
   return (
     <div className="flex flex-col items-center justify-center py-12">
       <Muted className=" shine-text">Loading settings...</Muted>
@@ -280,7 +288,7 @@ export default function HackerNewsModal({
   onClose,
 }: HackerNewsModalProps) {
   const [initializing, setInitializing] = useState(true);
-  const [initialStep, setInitialStep] = useState<StepId>("enable");
+  const [targetStep, setTargetStep] = useState<StepId | null>(null);
   const [initialData, setInitialData] = useState<HackerNewsWizardData>({
     enabled: false,
     username: "",
@@ -295,10 +303,15 @@ export default function HackerNewsModal({
     useRevokeConnectionMutation();
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setInitializing(true);
+      setTargetStep(null);
+      return;
+    }
 
     const loadInitialData = async () => {
       setInitializing(true);
+      setTargetStep(null);
       const startTime = Date.now();
 
       let finalStep: StepId = "enable";
@@ -332,8 +345,8 @@ export default function HackerNewsModal({
       const remainingTime = Math.max(0, minLoadingTime - elapsed);
       await new Promise((resolve) => setTimeout(resolve, remainingTime));
 
-      setInitialStep(finalStep);
       setInitialData(finalData);
+      setTargetStep(finalStep);
       setInitializing(false);
     };
 
@@ -355,23 +368,25 @@ export default function HackerNewsModal({
     }
   };
 
-  const steps: WizardStep<HackerNewsWizardData>[] = initializing
-    ? [{ id: "loading", render: () => <LoadingStep /> }]
-    : [
-        {
-          id: "enable",
-          render: () => <EnableStep onComplete={handleClose} />,
-        },
-        {
-          id: "configure",
-          render: () => (
-            <ConfigureStep
-              onComplete={handleClose}
-              onRevoke={() => setShowRevokeConfirm(true)}
-            />
-          ),
-        },
-      ];
+  const steps: WizardStep<HackerNewsWizardData>[] = [
+    {
+      id: "loading",
+      render: () => <LoadingStep targetStep={targetStep} />,
+    },
+    {
+      id: "enable",
+      render: () => <EnableStep onComplete={handleClose} />,
+    },
+    {
+      id: "configure",
+      render: () => (
+        <ConfigureStep
+          onComplete={handleClose}
+          onRevoke={() => setShowRevokeConfirm(true)}
+        />
+      ),
+    },
+  ];
 
   return (
     <>
@@ -379,10 +394,10 @@ export default function HackerNewsModal({
         open={open}
         onOpenChange={(isOpen) => !isOpen && handleClose()}
         steps={steps}
-        initialStep={initializing ? "loading" : initialStep}
+        initialStep="loading"
         initialData={initialData}
         title="HackerNews"
-        icon="/apps/hackernews-skeuomorphic.png"
+        icon="/connections/hackernews.png"
         onCancel={handleClose}
       />
 

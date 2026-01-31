@@ -1,8 +1,8 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useLocation } from "react-router-dom";
 import { useActiveMood } from "@/hooks/use-active-mood";
 import { useDarkMode } from "@/hooks/use-dark-mode";
+import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
 import { getDefaultDropdownBackground } from "@/lib/theme";
 
 interface DropdownWrapperProps {
@@ -28,17 +28,25 @@ export default function DropdownWrapper({
   dropdownRef: externalDropdownRef,
   useFixedBackground = false,
 }: DropdownWrapperProps) {
-  const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [coords, setCoords] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
   const internalDropdownRef = useRef<HTMLDivElement>(null);
   const dropdownRef = externalDropdownRef || internalDropdownRef;
 
   // Call hooks before any conditional returns
   const { activeMood } = useActiveMood();
   const { darkMode } = useDarkMode();
-  const location = useLocation();
+  const variant = useWorkspaceVariant();
 
-  const isWorkspaceRoute = location.pathname.startsWith("/workspace");
-  const glassMorphismClass = isWorkspaceRoute ? "glass-morphism-copilot" : "glass-morphism";
+  const glassMorphismClass =
+    variant === "claude"
+      ? "glass-morphism-claude"
+      : variant === "copilot"
+        ? "glass-morphism-copilot"
+        : "glass-morphism";
 
   useEffect(() => {
     if (isOpen && usePortal && triggerRef?.current) {
@@ -61,8 +69,10 @@ export default function DropdownWrapper({
     }
 
     // First check if we're in preview mode (create mood view)
-    const appRoot = document.querySelector('.app-root') as HTMLElement;
-    const previewBg = appRoot ? getComputedStyle(appRoot).getPropertyValue('--mood-preview-bg').trim() : '';
+    const appRoot = document.querySelector(".app-root") as HTMLElement;
+    const previewBg = appRoot
+      ? getComputedStyle(appRoot).getPropertyValue("--mood-preview-bg").trim()
+      : "";
     if (previewBg) {
       return previewBg;
     }
@@ -73,20 +83,22 @@ export default function DropdownWrapper({
 
     try {
       const themeConfig = JSON.parse(activeMood.themeConfig);
-      const bgColor = darkMode ? themeConfig.darkBackground : themeConfig.lightBackground;
+      const bgColor = darkMode
+        ? themeConfig.darkBackground
+        : themeConfig.lightBackground;
 
       if (!bgColor) {
         return getDefaultDropdownBackground(darkMode);
       }
 
       // For gradients, return as is; for solid colors, remove opacity to prevent transparency
-      if (bgColor.startsWith('linear-gradient')) {
+      if (bgColor.startsWith("linear-gradient")) {
         return bgColor;
       } else {
         // Remove opacity suffix if present (e.g., #RRGGBBAA -> #RRGGBB)
         return bgColor.length === 9 ? bgColor.slice(0, 7) : bgColor;
       }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       return getDefaultDropdownBackground(darkMode);
     }
@@ -98,12 +110,12 @@ export default function DropdownWrapper({
     : "";
 
   if (!isOpen) return null;
-  
+
   // Portal kullanıyorsa koordinatlar hesaplanana kadar render etme
   if (usePortal && !coords) return null;
 
   if (!isOpen) return null;
-  
+
   // Portal kullanıyorsa koordinatlar hesaplanana kadar render etme
   if (usePortal && !coords) return null;
 
@@ -113,19 +125,29 @@ export default function DropdownWrapper({
   const dropdown = (
     <div
       ref={dropdownRef}
-      className={`${usePortal ? "fixed" : "absolute"} ${!usePortal ? positionClass : ""} ${!usePortal ? verticalClass : ""} ${minWidth} ${fixedBackgroundClass} z-100 ${glassMorphismClass} rounded-xl transition-all animate-dropdown-in`}
+      className={`${usePortal ? "fixed" : "absolute"} ${!usePortal ? positionClass : ""} ${!usePortal ? verticalClass : ""} 
+        ${minWidth} ${fixedBackgroundClass} z-100 ${glassMorphismClass} rounded-xl transition-all animate-dropdown-in`}
       style={{
         background: getDropdownBackground(),
-        transformOrigin: openUpward 
-          ? (position === "right" ? "bottom right" : "bottom left")
-          : (position === "right" ? "top right" : "top left"),
-        ...(usePortal && coords ? {
-          top: `${coords.top}px`,
-          left: position === "right" ? "auto" : `${coords.left}px`,
-          right: position === "right" ? `${window.innerWidth - coords.left - coords.width}px` : "auto",
-          width: coords.width,
-          transform: openUpward ? "translateY(-100%)" : "none",
-        } : {}),
+        transformOrigin: openUpward
+          ? position === "right"
+            ? "bottom right"
+            : "bottom left"
+          : position === "right"
+            ? "top right"
+            : "top left",
+        ...(usePortal && coords
+          ? {
+              top: `${coords.top}px`,
+              left: position === "right" ? "auto" : `${coords.left}px`,
+              right:
+                position === "right"
+                  ? `${window.innerWidth - coords.left - coords.width}px`
+                  : "auto",
+              width: coords.width,
+              transform: openUpward ? "translateY(-100%)" : "none",
+            }
+          : {}),
       }}
       role="menu"
     >

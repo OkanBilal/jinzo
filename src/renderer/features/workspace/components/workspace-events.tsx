@@ -17,6 +17,7 @@ interface WorkspaceEventsProps {
   hasSelectedFile?: boolean;
   fileName?: string;
   issueTabs: IssueWithEntity[];
+  variant?: "workspace" | "claude";
   onSelectEditorTab: () => void;
   onSelectRunTab: (runId: string) => void;
   onCloseTab: (runId: string, e: React.MouseEvent) => void;
@@ -34,6 +35,7 @@ export function WorkspaceEvents({
   hasSelectedFile,
   fileName,
   issueTabs,
+  variant = "workspace",
   onSelectEditorTab,
   onSelectRunTab,
   onCloseTab,
@@ -59,6 +61,7 @@ export function WorkspaceEvents({
           hasSelectedFile={hasSelectedFile}
           fileName={fileName}
           issueTabs={issueTabs}
+          variant={variant}
           onSelectEditorTab={onSelectEditorTab}
           onSelectRunTab={onSelectRunTab}
           onCloseTab={onCloseTab}
@@ -98,7 +101,7 @@ export function WorkspaceEvents({
           </div>
         )}
         {/* Bottom fade overlay */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary dark:from-workspace-soft-dark to-transparent pointer-events-none" />
+        <div className={`absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary ${variant === "claude" ? "dark:from-claude-dark" : "dark:from-workspace-soft-dark"} to-transparent pointer-events-none`} />
       </div>
     </div>
   );

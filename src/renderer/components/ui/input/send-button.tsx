@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ChevronUp } from "@/components/ui/icons";
 
-export type InputVariant = "default" | "copilot";
+export type InputVariant = "default" | "copilot" | "claude";
 
 interface SendButtonProps {
   loading: boolean;
@@ -17,6 +17,10 @@ const variantStyles = {
   copilot: {
     spinner: "border-copilot-blue",
     icon: "text-copilot-blue",
+  },
+  claude: {
+    spinner: "border-claude-dark",
+    icon: "text-claude-dark",
   },
 };
 

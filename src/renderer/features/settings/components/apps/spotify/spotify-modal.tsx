@@ -496,7 +496,7 @@ const SpotifyModal = ({
         initialStep={initializing ? "loading" : initialStep}
         initialData={initialData}
         title="Spotify"
-        icon="/apps/spotify-skeuomorphic.png"
+        icon="/connections/spotify.png"
         onCancel={handleClose}
       />
 

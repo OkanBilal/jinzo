@@ -45,6 +45,12 @@ const variantStyles = {
     fileBg: "bg-primary-100 dark:bg-copilot-lightblue/10",
     menuItem: "hover:bg-copilot-lightblue dark:hover:bg-copilot-lightblue/10",
   },
+  claude: {
+    button: "hover:bg-primary-200/30 dark:hover:bg-claude-light/10",
+    icon: "dark:text-claude-light text-primary-800",
+    fileBg: "bg-primary-100 dark:bg-claude-light/10",
+    menuItem: "hover:bg-claude-light dark:hover:bg-claude-light/10",
+  },
 };
 
 export function FileUploadDropdown({

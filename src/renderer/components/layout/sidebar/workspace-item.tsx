@@ -80,15 +80,15 @@ export default function WorkspaceItem({
             </span>
             <div className="flex items-center gap-1.5">
               {branch && (
-                <Muted className="text-[13px] mt-0.5 text-primary-800 dark:text-primary-300 truncate">
+                <Muted className="text-[13px] mt-0.5 text-primary-800 dark:text-primary-200! truncate">
                   {branch}
                 </Muted>
               )}
               {branch && updatedAt && (
-                <span className="text-primary-400 text-lg leading-6 dark:text-primary-600">·</span>
+                <span className="text-primary-400 text-lg leading-6 dark:text-primary-200">·</span>
               )}
               {updatedAt && (
-                <Muted className="text-[13px] text-primary-700 dark:text-primary-300 truncate">
+                <Muted className="text-[13px] text-primary-700 dark:text-primary-200! truncate">
                   {formatDate(new Date(updatedAt).toISOString())}
                 </Muted>
               )}

@@ -42,7 +42,9 @@ class DatabaseClient {
   /**
    * Initialize database with configuration
    */
-  async initialize(config?: Partial<DatabaseConfig>): Promise<DatabaseInitResult> {
+  async initialize(
+    config?: Partial<DatabaseConfig>,
+  ): Promise<DatabaseInitResult> {
     if (this.isInitialized && this.db && this.sqlite) {
       console.log("Database already initialized");
       console.log("Runtime DB:", DatabaseClient.getInstance().getDbPath());
@@ -54,14 +56,19 @@ class DatabaseClient {
     }
 
     // Ensure Electron is ready before using app.getPath()
-    if (app && app.isReady && typeof app.isReady === 'function' && !app.isReady()) {
+    if (
+      app &&
+      app.isReady &&
+      typeof app.isReady === "function" &&
+      !app.isReady()
+    ) {
       await app.whenReady();
     }
 
     try {
       // Determine database path
       this.dbPath = config?.url || this.getDefaultDatabasePath();
-      
+
       // Ensure directory exists
       this.ensureDirectoryExists(this.dbPath);
 
@@ -168,22 +175,32 @@ class DatabaseClient {
       const { seedProvidersData } = await import("./queries/seed-providers");
       const { seedApps } = await import("./queries/seed-apps");
       const { seedConnections } = await import("./queries/seed-connections");
-      const { seedWorkspacesData } = await import("./queries/seed-workspaces");
-      
+
       // Check if any data exists
-      const accountsCount = this.sqlite.prepare("SELECT COUNT(*) as count FROM accounts").get() as { count: number };
-      const providersCount = this.sqlite.prepare("SELECT COUNT(*) as count FROM providers").get() as { count: number };
-      const appsCount = this.sqlite.prepare("SELECT COUNT(*) as count FROM app_states").get() as { count: number };
-      const connectionsCount = this.sqlite.prepare("SELECT COUNT(*) as count FROM connections").get() as { count: number };
-      const workspacesCount = this.sqlite.prepare("SELECT COUNT(*) as count FROM workspaces").get() as { count: number };
-      
-      if (accountsCount.count === 0 && providersCount.count === 0 && appsCount.count === 0 && connectionsCount.count === 0 && workspacesCount.count === 0) {
+      const accountsCount = this.sqlite
+        .prepare("SELECT COUNT(*) as count FROM accounts")
+        .get() as { count: number };
+      const providersCount = this.sqlite
+        .prepare("SELECT COUNT(*) as count FROM providers")
+        .get() as { count: number };
+      const appsCount = this.sqlite
+        .prepare("SELECT COUNT(*) as count FROM app_states")
+        .get() as { count: number };
+      const connectionsCount = this.sqlite
+        .prepare("SELECT COUNT(*) as count FROM connections")
+        .get() as { count: number };
+
+      if (
+        accountsCount.count === 0 &&
+        providersCount.count === 0 &&
+        appsCount.count === 0 &&
+        connectionsCount.count === 0
+      ) {
         console.log("Seeding initial data...");
         await seedAccountsData(); // MUST be first - referenced by workspaces
         await seedApps();
         await seedConnections();
         await seedProvidersData();
-        await seedWorkspacesData();
         console.log("Initial data seeded successfully");
       } else {
         console.log("Data already exists, skipping seed");
@@ -205,7 +222,9 @@ class DatabaseClient {
       // Vite build: .vite/build/db/migrations
       path.join(__dirname, "db", "migrations"),
       // Prod: resources/migrations
-      process.resourcesPath ? path.join(process.resourcesPath, "migrations") : null,
+      process.resourcesPath
+        ? path.join(process.resourcesPath, "migrations")
+        : null,
     ].filter(Boolean) as string[];
 
     for (const migrationPath of possiblePaths) {
@@ -261,10 +280,13 @@ class DatabaseClient {
   private getExtensionPath(extensionName: string): string | null {
     const platform = process.platform;
     const arch = process.arch;
-    
+
     // Adjust based on your extension location
-    const extensionsDir = path.join(app?.getAppPath() || process.cwd(), "extensions");
-    
+    const extensionsDir = path.join(
+      app?.getAppPath() || process.cwd(),
+      "extensions",
+    );
+
     let extensionFile: string;
     if (platform === "darwin") {
       extensionFile = `${extensionName}-darwin-${arch}.dylib`;
@@ -283,7 +305,8 @@ class DatabaseClient {
    * Get default database path in Electron userData directory
    */
   private getDefaultDatabasePath(): string {
-    const userDataPath = app?.getPath("userData") || path.join(process.cwd(), ".data");
+    const userDataPath =
+      app?.getPath("userData") || path.join(process.cwd(), ".data");
     return path.join(userDataPath, "jinzo.db");
   }
 
@@ -349,7 +372,7 @@ class DatabaseClient {
 
     try {
       this.ensureDirectoryExists(backupPath);
-      
+
       // Use SQLite backup API for safe backup
       await this.sqlite.backup(backupPath);
 
@@ -370,13 +393,13 @@ class DatabaseClient {
 
     try {
       console.log("Optimizing database...");
-      
+
       // Run VACUUM to reclaim space
       this.sqlite.exec("VACUUM");
-      
+
       // Run ANALYZE to update statistics
       this.sqlite.exec("ANALYZE");
-      
+
       console.log("Database optimization completed");
     } catch (error) {
       console.error("Optimization failed:", error);
@@ -398,9 +421,15 @@ class DatabaseClient {
       throw new Error("Database not initialized");
     }
 
-    const pageCount = this.sqlite.pragma("page_count", { simple: true }) as number;
-    const pageSize = this.sqlite.pragma("page_size", { simple: true }) as number;
-    const freelistCount = this.sqlite.pragma("freelist_count", { simple: true }) as number;
+    const pageCount = this.sqlite.pragma("page_count", {
+      simple: true,
+    }) as number;
+    const pageSize = this.sqlite.pragma("page_size", {
+      simple: true,
+    }) as number;
+    const freelistCount = this.sqlite.pragma("freelist_count", {
+      simple: true,
+    }) as number;
 
     const stats = {
       pageCount,

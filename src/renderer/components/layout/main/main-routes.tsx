@@ -28,7 +28,7 @@ export function MainRoutes() {
       <Route path="/workspace" element={<Workspace />} />
       <Route path="/workspace/:workspaceId" element={<Workspace />} />
       <Route path="/claude" element={<ClaudePage />} />
-      <Route path="/claude/:id" element={<ClaudePage />} />
+      <Route path="/claude/:workspaceId" element={<ClaudePage />} />
     </Routes>
   );
 }

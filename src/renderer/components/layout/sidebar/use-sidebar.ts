@@ -19,6 +19,8 @@ import { toast } from "@/components/toast";
 import { useActiveMood } from "@/hooks/use-active-mood";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { useDeleteChatSession } from "@/features/chat/hooks/use-delete-chat-session";
+import { useRouteType } from "@/hooks/use-route-type";
+import { getBaseRoutePath } from "@/lib/route-utils";
 
 function filterItems<
   T extends {
@@ -42,6 +44,7 @@ function filterItems<
 export function useSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const routeType = useRouteType();
 
   // UI State
   const [searchQuery, setSearchQuery] = useState("");
@@ -222,7 +225,10 @@ export function useSidebar() {
         console.error("Failed to create journal draft:", error);
         toast.error("Failed to create new post");
       }
-    } else if (sidebarConfig.itemType === "workspace") {
+    } else if (
+      sidebarConfig.itemType === "workspace" ||
+      sidebarConfig.itemType === "claude"
+    ) {
       // Open folder picker and create workspace via worktree import
       try {
         const selectedPath = await selectDirectory().unwrap();
@@ -282,7 +288,10 @@ export function useSidebar() {
           }).unwrap();
 
           toast.success("Workspace added");
-          navigate(`/workspace/${workspaceId}`);
+          const basePath = getBaseRoutePath(
+            routeType === "claude" ? "claude" : "workspace",
+          );
+          navigate(`${basePath}/${workspaceId}`);
         }
       } catch (error) {
         console.error("Failed to create workspace:", error);
@@ -469,7 +478,10 @@ export function useSidebar() {
       toast.success("Workspace deleted");
 
       // Navigate away if we were viewing the deleted workspace
-      if (location.pathname === `/workspace/${workspaceId}`) {
+      const basePath = getBaseRoutePath(
+        routeType === "claude" ? "claude" : "workspace",
+      );
+      if (location.pathname === `${basePath}/${workspaceId}`) {
         navigate("/");
       }
     } catch (error) {

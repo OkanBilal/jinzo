@@ -41,7 +41,7 @@ interface RaindropWizardData {
   fromManage: boolean;
 }
 
-type StepId = "tokenSet" | "add" | "manage";
+type StepId = "loading" | "tokenSet" | "add" | "manage";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step: Set Token
@@ -329,7 +329,15 @@ function ManageCollectionsStep({ onRevoke }: { onRevoke: () => void }) {
 // Loading State
 // ─────────────────────────────────────────────────────────────────────────────
 
-function LoadingStep() {
+function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
+  const { goTo } = useWizard<RaindropWizardData>();
+
+  useEffect(() => {
+    if (targetStep && targetStep !== "loading") {
+      goTo(targetStep);
+    }
+  }, [targetStep, goTo]);
+
   return (
     <div className="flex items-center justify-center py-20">
       <div className="text-center space-y-3">
@@ -351,21 +359,32 @@ export default function RaindropModal({
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [initialData, setInitialData] = useState<Partial<RaindropWizardData>>({});
-  const [initialStep, setInitialStep] = useState<StepId>("tokenSet");
+  const [targetStep, setTargetStep] = useState<StepId | null>(null);
 
   const [getSelectedCollections] = useLazyGetSelectedCollectionsQuery();
   const [getConnection] = useLazyGetConnectionQuery();
   const [revokeConnection, { isLoading: isRevoking }] =
     useRevokeConnectionMutation();
 
+  // Track if we've already initialized to prevent re-initialization when isConnected changes
+  const [hasInitialized, setHasInitialized] = useState(false);
+
   useEffect(() => {
     if (!open) {
       setInitializing(true);
+      setTargetStep(null);
+      setHasInitialized(false);
+      return;
+    }
+
+    // Don't re-initialize if already done (e.g., when isConnected changes after token save)
+    if (hasInitialized) {
       return;
     }
 
     const loadInitialData = async () => {
       setInitializing(true);
+      setTargetStep(null);
 
       const baseData: Partial<RaindropWizardData> = {
         token: "",
@@ -376,9 +395,10 @@ export default function RaindropModal({
       };
 
       if (!isConnected) {
-        setInitialStep("tokenSet");
         setInitialData(baseData);
+        setTargetStep("tokenSet");
         setInitializing(false);
+        setHasInitialized(true);
         return;
       }
 
@@ -406,13 +426,14 @@ export default function RaindropModal({
         console.error("[loadInitialData] Error:", err);
       }
 
-      setInitialStep(finalStep);
       setInitialData(finalData);
+      setTargetStep(finalStep);
       setInitializing(false);
+      setHasInitialized(true);
     };
 
     loadInitialData();
-  }, [open, isConnected, getSelectedCollections, getConnection]);
+  }, [open, isConnected, getSelectedCollections, getConnection, hasInitialized]);
 
   const handleClose = useCallback(() => {
     setShowRevokeConfirm(false);
@@ -429,24 +450,26 @@ export default function RaindropModal({
     }
   };
 
-  const steps: WizardStep<RaindropWizardData>[] = initializing
-    ? [{ id: "loading", render: () => <LoadingStep /> }]
-    : [
-        {
-          id: "tokenSet",
-          render: () => <TokenStep />,
-        },
-        {
-          id: "add",
-          render: () => <SelectCollectionsStep onComplete={handleClose} />,
-        },
-        {
-          id: "manage",
-          render: () => (
-            <ManageCollectionsStep onRevoke={() => setShowRevokeConfirm(true)} />
-          ),
-        },
-      ];
+  const steps: WizardStep<RaindropWizardData>[] = [
+    {
+      id: "loading",
+      render: () => <LoadingStep targetStep={targetStep} />,
+    },
+    {
+      id: "tokenSet",
+      render: () => <TokenStep />,
+    },
+    {
+      id: "add",
+      render: () => <SelectCollectionsStep onComplete={handleClose} />,
+    },
+    {
+      id: "manage",
+      render: () => (
+        <ManageCollectionsStep onRevoke={() => setShowRevokeConfirm(true)} />
+      ),
+    },
+  ];
 
   return (
     <>
@@ -454,10 +477,10 @@ export default function RaindropModal({
         open={open}
         onOpenChange={(isOpen) => !isOpen && handleClose()}
         steps={steps}
-        initialStep={initializing ? "loading" : initialStep}
+        initialStep="loading"
         initialData={initialData}
         title="Raindrop"
-        icon="/apps/raindrop-skeuomorphic.png"
+        icon="/connections/raindrop.png"
         onCancel={handleClose}
       />
 

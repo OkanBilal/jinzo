@@ -82,7 +82,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function useWorkspaceRuns(workspaceId: string | undefined) {
+export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: string) {
   const [runs, setRuns] = useState<Run[]>([]);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [runEvents, setRunEvents] = useState<Record<string, RunEvent[]>>({});
@@ -178,9 +178,14 @@ export function useWorkspaceRuns(workspaceId: string | undefined) {
         const result = await window.api.runs.getByWorkspace(wsId, 50);
 
         if (result.success && result.data) {
-          setRuns(result.data);
-          if (result.data.length > 0) {
-            const firstRunId = result.data[0].id;
+          // Filter runs by providerId if specified
+          const filteredRuns = providerId
+            ? result.data.filter((run: Run) => run.providerId === providerId)
+            : result.data;
+          
+          setRuns(filteredRuns);
+          if (filteredRuns.length > 0) {
+            const firstRunId = filteredRuns[0].id;
             setActiveRunId(firstRunId);
             loadRunDetails(firstRunId);
           }
@@ -189,7 +194,7 @@ export function useWorkspaceRuns(workspaceId: string | undefined) {
         console.error("Failed to load workspace runs:", err);
       }
     },
-    [loadRunDetails],
+    [loadRunDetails, providerId],
   );
 
   // When workspaceId changes from URL, load runs

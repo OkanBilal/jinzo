@@ -46,7 +46,7 @@ interface PodcastWizardData {
   fromManage: boolean;
 }
 
-type StepId = "tokenSet" | "add" | "manage";
+type StepId = "loading" | "tokenSet" | "add" | "manage";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step: Set Credentials
@@ -369,7 +369,15 @@ function ManagePodcastsStep({ onRevoke }: { onRevoke: () => void }) {
 // Loading State
 // ─────────────────────────────────────────────────────────────────────────────
 
-function LoadingStep() {
+function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
+  const { goTo } = useWizard<PodcastWizardData>();
+
+  useEffect(() => {
+    if (targetStep && targetStep !== "loading") {
+      goTo(targetStep);
+    }
+  }, [targetStep, goTo]);
+
   return (
     <div className="flex items-center justify-center py-20">
       <div className="text-center space-y-3">
@@ -391,7 +399,7 @@ export default function PodcastModal({
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [initialData, setInitialData] = useState<Partial<PodcastWizardData>>({});
-  const [initialStep, setInitialStep] = useState<StepId>("tokenSet");
+  const [targetStep, setTargetStep] = useState<StepId | null>(null);
 
   const [getSelectedPodcasts] = useLazyGetSelectedPodcastsQuery();
   const [revokeConnection, { isLoading: isRevoking }] =
@@ -400,11 +408,13 @@ export default function PodcastModal({
   useEffect(() => {
     if (!open) {
       setInitializing(true);
+      setTargetStep(null);
       return;
     }
 
     const loadInitialData = async () => {
       setInitializing(true);
+      setTargetStep(null);
 
       const baseData: Partial<PodcastWizardData> = {
         apiKey: "",
@@ -416,8 +426,8 @@ export default function PodcastModal({
       };
 
       if (!isConnected) {
-        setInitialStep("tokenSet");
         setInitialData(baseData);
+        setTargetStep("tokenSet");
         setInitializing(false);
         return;
       }
@@ -446,8 +456,8 @@ export default function PodcastModal({
         console.error("[loadInitialData] Error:", err);
       }
 
-      setInitialStep(finalStep);
       setInitialData(finalData);
+      setTargetStep(finalStep);
       setInitializing(false);
     };
 
@@ -469,36 +479,37 @@ export default function PodcastModal({
     }
   };
 
-  const steps: WizardStep<PodcastWizardData>[] = initializing
-    ? [{ id: "loading", render: () => <LoadingStep /> }]
-    : [
-        {
-          id: "tokenSet",
-          render: () => <CredentialsStep />,
-        },
-        {
-          id: "add",
-          render: () => <AddPodcastsStep onComplete={handleClose} />,
-        },
-        {
-          id: "manage",
-          render: () => (
-            <ManagePodcastsStep onRevoke={() => setShowRevokeConfirm(true)} />
-          ),
-        },
-      ];
+  const steps: WizardStep<PodcastWizardData>[] = [
+    {
+      id: "loading",
+      render: () => <LoadingStep targetStep={targetStep} />,
+    },
+    {
+      id: "tokenSet",
+      render: () => <CredentialsStep />,
+    },
+    {
+      id: "add",
+      render: () => <AddPodcastsStep onComplete={handleClose} />,
+    },
+    {
+      id: "manage",
+      render: () => (
+        <ManagePodcastsStep onRevoke={() => setShowRevokeConfirm(true)} />
+      ),
+    },
+  ];
 
   return (
     <>
       <WizardModal
-        key={initializing ? "loading" : `wizard-${initialStep}`}
         open={open}
         onOpenChange={(isOpen) => !isOpen && handleClose()}
         steps={steps}
-        initialStep={initializing ? "loading" : initialStep}
+        initialStep="loading"
         initialData={initialData}
         title="Podcast Connection"
-        icon="/apps/podcast-skeuomorphic.png"
+        icon="/connections/podcast.png"
         onCancel={handleClose}
       />
 

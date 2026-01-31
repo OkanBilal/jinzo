@@ -58,7 +58,6 @@ export const FileExplorer = memo(function FileExplorer({
       setError(null);
 
       try {
-        console.log("[FileExplorer] Loading tree for:", rootPath);
 
         const result: ServiceResponse<DirEntry[]> =
           await window.api.fileExplorer.listDir({
@@ -69,7 +68,6 @@ export const FileExplorer = memo(function FileExplorer({
 
         if (cancelled) return;
 
-        console.log("[FileExplorer] listDir result:", result);
 
         if (result.success && result.data) {
           const rootName = rootPath.split("/").pop() || rootPath;
@@ -134,7 +132,6 @@ export const FileExplorer = memo(function FileExplorer({
   const handleExpand = useCallback(
     async (node: FileNode): Promise<FileNode[] | undefined> => {
       try {
-        console.log("[FileExplorer] Expanding:", node.fullPath);
 
         const result: ServiceResponse<DirEntry[]> =
           await window.api.fileExplorer.listDir({
@@ -143,7 +140,6 @@ export const FileExplorer = memo(function FileExplorer({
             excludePatterns,
           });
 
-        console.log("[FileExplorer] Expand result:", result);
 
         if (result.success && result.data) {
           return result.data.map(dirEntryToFileNode);
@@ -197,7 +193,7 @@ export const FileExplorer = memo(function FileExplorer({
       <div
         role="tree"
         aria-label="File explorer"
-        className="flex-1 overflow-auto py-1 space-y-1"
+        className="flex-1 overflow-auto py-1 space-y-1 noscrollbar"
       >
         {/* Root node children (don't show root folder itself) */}
         {tree.children?.map((child) => (

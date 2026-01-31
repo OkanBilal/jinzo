@@ -12,14 +12,16 @@ import {
 } from "./components/layout/main";
 import { useLayoutConfig } from "./hooks/use-layout-config";
 import { shouldHideRightPanel } from "./lib/layout";
+import { useRouteType } from "./hooks/use-route-type";
 
 function AppContent() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const { mainMarginLeft, rightPanelWidth } = useLayoutConfig();
   const location = useLocation();
+  const routeType = useRouteType();
 
   const hideRightPanel = shouldHideRightPanel(location.pathname);
-  const isWorkspaceRoute = location.pathname.startsWith("/workspace");
+  const isWorkspaceRoute = routeType === "workspace";
 
   return (
     <>

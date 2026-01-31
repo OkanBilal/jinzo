@@ -15,6 +15,9 @@ const variantStyles = {
   copilot: {
     input: "dark:text-copilot-lightblue text-primary-700 placeholder:text-primary-500 dark:placeholder:text-copilot-lightblue/60",
   },
+  claude: {
+    input: "dark:text-claude-light text-primary-700 placeholder:text-primary-500 dark:placeholder:text-claude-light/60",
+  },
 };
 
 export function InputForm({

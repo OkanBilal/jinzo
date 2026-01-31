@@ -66,13 +66,13 @@ export const seedProviders: CreateProviderPayload[] = [
     id: "claude_code",
     kind: "agent_runtime",
     displayName: "Claude Code (Local Agent)",
-    isEnabled: false, // enable when integration lands
-    defaultModel: "claude-3-5-sonnet", // placeholder
+    isEnabled: true, // Enable Claude provider
+    defaultModel: "claude-3-5-sonnet-20241022", // Updated model name
     config: {
       // ClaudeCodeAdapterConfig interface fields
-      binary: "claude", // Path to claude CLI binary
+      binary: "claude", // Path to claude CLI binary (if using CLI)
       timeout: 300000, // Timeout in milliseconds
-      // apiKey: undefined, // Optional: API key if not using CLI auth
+      apiKey: process.env.ANTHROPIC_API_KEY, // API key from environment
     },
     capabilities: {
       mode: ["run"],
@@ -80,7 +80,7 @@ export const seedProviders: CreateProviderPayload[] = [
       streaming: true,
       workspaceAware: true,
       artifacts: ["patch", "file", "log", "command_result"],
-      notes: "Reserved for Claude Code adapter (same run model as Copilot)",
+      notes: "Claude Code adapter using Anthropic SDK",
     },
   },
 

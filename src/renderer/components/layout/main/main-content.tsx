@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useLocation } from "react-router-dom";
+import { useRouteType } from "@/hooks/use-route-type";
 
 interface MainContentProps {
   children: ReactNode;
@@ -12,8 +12,8 @@ export function MainContent({
   marginLeft,
   marginRight,
 }: MainContentProps) {
-  const location = useLocation();
-  const isWorkspaceRoute = location.pathname.startsWith("/workspace");
+  const routeType = useRouteType();
+  const isWorkspaceRoute = routeType === "workspace";
 
   return (
     <main

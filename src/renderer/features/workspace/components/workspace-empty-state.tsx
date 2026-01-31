@@ -1,18 +1,18 @@
-import { useLocation } from "react-router-dom";
 import {
   Copilot as CopilotIcon,
   Claude as ClaudeIcon,
 } from "@/components/ui/icons/mood";
 import type { Workspace } from "../types";
 import { useClaudeAnimation } from "../hooks/use-claude-animation";
+import { useRouteType } from "@/hooks/use-route-type";
 
 interface WorkspaceEmptyStateProps {
   workspace: Workspace | null;
 }
 // TODO: Refactor animation code into a separate component
 export function WorkspaceEmptyState({ workspace }: WorkspaceEmptyStateProps) {
-  const location = useLocation();
-  const isClaudeRoute = location.pathname.includes("claude");
+  const routeType = useRouteType();
+  const isClaudeRoute = routeType === "claude";
   const { symbol, word } = useClaudeAnimation(isClaudeRoute);
 
   return (

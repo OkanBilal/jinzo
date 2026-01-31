@@ -44,7 +44,7 @@ interface GitHubWizardData {
   fromManage: boolean;
 }
 
-type StepId = "setToken" | "add" | "manage";
+type StepId = "loading" | "setToken" | "add" | "manage";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step: Set Token
@@ -354,7 +354,15 @@ function ManageReposStep({ onRevoke }: { onRevoke: () => void }) {
 // Loading State
 // ─────────────────────────────────────────────────────────────────────────────
 
-function LoadingStep() {
+function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
+  const { goTo } = useWizard<GitHubWizardData>();
+
+  useEffect(() => {
+    if (targetStep && targetStep !== "loading") {
+      goTo(targetStep);
+    }
+  }, [targetStep, goTo]);
+
   return (
     <div className="flex items-center justify-center  py-20">
       <div className="text-center space-y-3">
@@ -377,7 +385,7 @@ export default function GitHubModal({
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [initialData, setInitialData] = useState<Partial<GitHubWizardData>>({});
-  const [initialStep, setInitialStep] = useState<StepId>("setToken");
+  const [targetStep, setTargetStep] = useState<StepId | null>(null);
 
   const [getSelectedRepos] = useLazyGetSelectedReposQuery();
   const [getConnection] = useLazyGetConnectionQuery();
@@ -389,11 +397,13 @@ export default function GitHubModal({
     if (!open) {
       // Reset state when modal closes
       setInitializing(true);
+      setTargetStep(null);
       return;
     }
 
     const loadInitialData = async () => {
       setInitializing(true);
+      setTargetStep(null);
 
       const baseData: Partial<GitHubWizardData> = {
         token: "",
@@ -406,8 +416,8 @@ export default function GitHubModal({
 
       if (!isConnected) {
         // Batch all state updates together
-        setInitialStep("setToken");
         setInitialData(baseData);
+        setTargetStep("setToken");
         setInitializing(false);
         return;
       }
@@ -462,8 +472,8 @@ export default function GitHubModal({
       }
 
       // Batch all state updates at the end
-      setInitialStep(finalStep);
       setInitialData(finalData);
+      setTargetStep(finalStep);
       setInitializing(false);
     };
 
@@ -486,38 +496,39 @@ export default function GitHubModal({
   };
 
   // Define wizard steps
-  const steps: WizardStep<GitHubWizardData>[] = initializing
-    ? [{ id: "loading", render: () => <LoadingStep /> }]
-    : [
-        {
-          id: "setToken",
-          render: () => <TokenStep onSuccess={onSuccess} />,
-        },
-        {
-          id: "add",
-          render: () => <SelectReposStep onComplete={handleClose} />,
-        },
-        {
-          id: "manage",
-          render: () => (
-            <ManageReposStep
-              onRevoke={() => setShowRevokeConfirm(true)}
-            />
-          ),
-        },
-      ];
+  const steps: WizardStep<GitHubWizardData>[] = [
+    {
+      id: "loading",
+      render: () => <LoadingStep targetStep={targetStep} />,
+    },
+    {
+      id: "setToken",
+      render: () => <TokenStep onSuccess={onSuccess} />,
+    },
+    {
+      id: "add",
+      render: () => <SelectReposStep onComplete={handleClose} />,
+    },
+    {
+      id: "manage",
+      render: () => (
+        <ManageReposStep
+          onRevoke={() => setShowRevokeConfirm(true)}
+        />
+      ),
+    },
+  ];
 
   return (
     <>
-      {/* Key forces remount so initialStep is respected after loading */}
       <WizardModal
         open={open}
         onOpenChange={(isOpen) => !isOpen && handleClose()}
         steps={steps}
-        initialStep={initializing ? "loading" : initialStep}
+        initialStep="loading"
         initialData={initialData}
         title="Github"
-        icon="/apps/github-skeuomorphic.png"
+        icon="/connections/github.png"
         onCancel={handleClose}
       />
 

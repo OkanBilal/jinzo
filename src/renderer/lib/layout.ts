@@ -1,4 +1,4 @@
-const ROUTES_WITHOUT_RIGHT_PANEL = ["/settings", "/claude"];
+const ROUTES_WITHOUT_RIGHT_PANEL = ["/settings"];
 
 export function shouldHideRightPanel(pathname: string): boolean {
   return ROUTES_WITHOUT_RIGHT_PANEL.some(

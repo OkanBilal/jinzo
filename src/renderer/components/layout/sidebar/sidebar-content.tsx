@@ -76,7 +76,7 @@ export function SidebarContent({
             onDeletePost={onDeletePost}
           />
         )}
-        {(itemType === "workspace" || itemType === "claude") && (
+        {(itemType === "workspace") && (
           <WorkspacesList
             workspaces={workspaces}
             isLoading={isLoadingWorkspaces}

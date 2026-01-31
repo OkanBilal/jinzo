@@ -12,6 +12,7 @@ interface WorkspaceTabsProps {
   hasSelectedFile?: boolean;
   fileName?: string;
   issueTabs: IssueWithEntity[];
+  variant?: "workspace" | "claude";
   onSelectEditorTab: () => void;
   onSelectRunTab: (runId: string) => void;
   onCloseTab: (runId: string, e: React.MouseEvent) => void;
@@ -26,6 +27,7 @@ export function WorkspaceTabs({
   hasSelectedFile,
   fileName,
   issueTabs,
+  variant = "workspace",
   onSelectEditorTab,
   onSelectRunTab,
   onCloseTab,
@@ -63,7 +65,7 @@ export function WorkspaceTabs({
   };
 
   return (
-    <div className="flex items-center bg-primary-100   dark:border-primary-900 dark:bg-workspace-dark h-10">
+    <div className={`flex items-center bg-primary-100 dark:border-primary-900 ${variant === "claude" ? "dark:bg-claude-dark" : "dark:bg-workspace-dark"} h-10`}>
       <div ref={containerRef} className="relative flex-1 flex items-center overflow-x-auto noscrollbar">
         <div
           className="absolute bottom-0 h-0.5 bg-primary-600 dark:bg-primary-700 transition-all duration-300 ease-out"

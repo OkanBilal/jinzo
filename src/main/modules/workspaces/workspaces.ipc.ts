@@ -48,20 +48,27 @@ export function registerWorkspacesIpc(): void {
     return workspacesController.delete(id);
   });
 
-  ipcMain.handle(CHANNELS.SELECT_DIRECTORY, async () => {
-    const focusedWindow = BrowserWindow.getFocusedWindow();
-    const result = await dialog.showOpenDialog(focusedWindow || undefined, {
-      properties: ["openDirectory"],
-      title: "Select Project Folder",
-      buttonLabel: "Select",
-    });
+ipcMain.handle(CHANNELS.SELECT_DIRECTORY, async () => {
+  const window = BrowserWindow.getFocusedWindow();
 
-    if (result.canceled || result.filePaths.length === 0) {
-      return { success: true, data: null };
-    }
+  const result = window
+    ? await dialog.showOpenDialog(window, {
+        properties: ["openDirectory"],
+        title: "Select Project Folder",
+        buttonLabel: "Select",
+      })
+    : await dialog.showOpenDialog({
+        properties: ["openDirectory"],
+        title: "Select Project Folder",
+        buttonLabel: "Select",
+      });
 
-    return { success: true, data: result.filePaths[0] };
-  });
+  if (result.canceled || result.filePaths.length === 0) {
+    return { success: true, data: null };
+  }
+
+  return { success: true, data: result.filePaths[0] };
+});
 }
 
 export function unregisterWorkspacesIpc(): void {

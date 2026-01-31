@@ -28,10 +28,12 @@ import type {
   ServiceResponse,
 } from "@/features/file-explorer";
 
+const COPILOT_CLI_PROVIDER_ID = "copilot_cli";
+
 export default function WorkspacePage() {
   const dispatch = useDispatch();
   const selectedModel = useSelector(
-    (state: RootState) => state.workspace.selectedModel,
+    (state: RootState) => state.workspace.selectedModelByProvider[COPILOT_CLI_PROVIDER_ID] || "",
   );
   const activeTab = useSelector(
     (state: RootState) => state.workspace.activeTab,
@@ -53,12 +55,12 @@ export default function WorkspacePage() {
 
   const handleModelChange = useCallback(
     (model: string) => {
-      dispatch(setWorkspaceModel(model));
+      dispatch(setWorkspaceModel({ providerId: COPILOT_CLI_PROVIDER_ID, model }));
     },
     [dispatch],
   );
 
-  const { workspaceId, selectedWorkspace, selectedProvider, currentWorkspace } =
+  const { workspaceId, selectedWorkspace, currentWorkspace } =
     useWorkspaceData();
 
   // Clear selected file, context files, and issue tabs when workspace changes
@@ -83,7 +85,7 @@ export default function WorkspacePage() {
     checkCanResume,
     closeTab,
     selectTab,
-  } = useWorkspaceRuns(workspaceId);
+  } = useWorkspaceRuns(workspaceId, COPILOT_CLI_PROVIDER_ID);
 
   // Select first run tab if runs exist and no file is selected
   useEffect(() => {
@@ -200,7 +202,7 @@ export default function WorkspacePage() {
         (await executeRun(
           finalGoal,
           selectedWorkspace,
-          selectedProvider,
+          COPILOT_CLI_PROVIDER_ID,
           selectedModel,
         )) ?? false;
     }
@@ -215,7 +217,6 @@ export default function WorkspacePage() {
     contextFiles,
     contextIssues,
     selectedWorkspace,
-    selectedProvider,
     selectedModel,
     executeRun,
     continueRun,
@@ -312,7 +313,7 @@ export default function WorkspacePage() {
         )}
       </div>
 
-      {/* <WorkspaceQuickActions onSetGoal={setGoal} /> */}
+      <WorkspaceQuickActions onSetGoal={setGoal} />
       <WorkspaceInput
         goal={goal}
         onGoalChange={setGoal}
@@ -320,7 +321,7 @@ export default function WorkspacePage() {
         isLoading={isLoading}
         activeRun={activeRun}
         canResume={canResume ?? false}
-        providerId={selectedProvider}
+        providerId={COPILOT_CLI_PROVIDER_ID}
         selectedModel={selectedModel}
         onModelChange={handleModelChange}
         contextFiles={contextFiles}

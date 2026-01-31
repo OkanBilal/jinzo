@@ -35,6 +35,9 @@
   --color-copilot-blue: #131420;
   --color-copilot-dark: #080A0F ;
   --color-copilot-lightblue: #ffffff;
+  --color-claude-orange: #FFBC15;
+  --color-claude-dark: #0d0907;
+  --color-claude-light: #f8f4ee;
 
   --color-workspace-dark: #0e1413;
   --color-workspace-soft-dark: #080c0b;
@@ -743,17 +746,18 @@ input[type="range"].slider {
   background: linear-gradient(to bottom, var(--color-workspace-dark), var(--color-workspace-soft-dark));
   border-color: #ffffff1f;
   box-shadow:
-    0 1px 1px #13142012,
-    0 1px 1px #1314200a,
-    inset 0 1px 1px #090D1120;
+    0 1px 1px #00000040,
+    0 1px 1px #00000026,
+    inset 0 1px 0 #ffffff29;
 }
 
 .dark .glass-morphism-claude {
-  background: linear-gradient(to bottom, #0d0907, #16100d);
+  background: linear-gradient(to bottom, #16100d, #0d0907);
+  border-color: #ffffff1f;
   box-shadow:
-    0 1px 1px #0d090712,
-    0 1px 1px #0d09070a,
-    inset 0 1px 1px #0d090712;
+    0 1px 1px #00000040,
+    0 1px 1px #00000026,
+    inset 0 1px 0 #ffffff29;
 }
 
 

@@ -5,10 +5,15 @@ import type { FileNode } from "@/features/file-explorer";
 import type { ContextIssue } from "@/lib/redux/slices/workspaceSlice";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useClickOutside } from "@/hooks/use-click-outside";
+import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
 import { SendButton } from "@/components/ui/input/send-button";
 import { DictationButton } from "@/components/ui/input/dictation-button";
 import { InputForm } from "@/components/ui/input/input-form";
-import { FileUploadDropdown, FILE_TYPES, type UploadedFile } from "@/components/ui/input/file-upload-dropdown";
+import {
+  FileUploadDropdown,
+  FILE_TYPES,
+  type UploadedFile,
+} from "@/components/ui/input/file-upload-dropdown";
 import { ModelSelectDropdown } from "@/components/ui/input/model-select-dropdown";
 import { Close } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
@@ -31,13 +36,10 @@ interface WorkspaceInputProps {
   onRemoveContextIssue?: (entityId: string) => void;
 }
 
-// Fallback models when API is unavailable
 const DEFAULT_MODELS = [
-  "gpt-4o",
-  "gpt-4o-mini",
-  "o1",
-  "o1-mini",
-  "claude-3.5-sonnet",
+  "claude-opus-4-5",
+  "claude-sonnet-4.5",
+  "claude-haiku-4.5",
 ];
 
 export function WorkspaceInput({
@@ -47,7 +49,7 @@ export function WorkspaceInput({
   isLoading,
   activeRun,
   canResume = false,
-  providerId = "copilot_cli",
+  providerId,
   selectedModel: externalSelectedModel,
   onModelChange: externalOnModelChange,
   contextFiles = [],
@@ -63,15 +65,20 @@ export function WorkspaceInput({
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const variant = useWorkspaceVariant();
+
+  const defaultProviderId =
+    variant === "claude" ? "claude_code" : "copilot_cli";
+  const activeProviderId = providerId ?? defaultProviderId;
 
   useClickOutside(dropdownRef, () => setIsDropdownOpen(false));
 
   // Fetch models from provider
   const { data: providerModels, isLoading: isLoadingModels } =
-    useGetProviderModelsQuery(providerId, { skip: !providerId });
+    useGetProviderModelsQuery(activeProviderId, { skip: !activeProviderId });
 
   // Compute model list and display names
-  const { modelDisplayNames, modelIds } = useMemo(() => {
+  const { modelDisplayNames } = useMemo(() => {
     if (providerModels && providerModels.length > 0) {
       return {
         modelDisplayNames: providerModels.map((m) => m.displayName),
@@ -80,7 +87,6 @@ export function WorkspaceInput({
     }
     return {
       modelDisplayNames: DEFAULT_MODELS,
-      modelIds: DEFAULT_MODELS,
     };
   }, [providerModels]);
 
@@ -165,9 +171,12 @@ export function WorkspaceInput({
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const glassMorphismClass =
+    variant === "claude" ? "glass-morphism-claude" : "glass-morphism-copilot";
+
   return (
     <div
-      className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism-copilot
+      className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-3xl ${glassMorphismClass}
         cursor-pointer transition-all`}
     >
       {/* Context Files and Issues Preview */}
@@ -208,7 +217,9 @@ export function WorkspaceInput({
                 ) : issue.provider === "linear" ? (
                   <Linear className="w-3 h-3" />
                 ) : (
-                  <span className="text-[10px] font-medium uppercase">{issue.provider.slice(0, 2)}</span>
+                  <span className="text-[10px] font-medium uppercase">
+                    {issue.provider.slice(0, 2)}
+                  </span>
                 )}
                 <span className="truncate max-w-37.5">{issue.title}</span>
                 {onRemoveContextIssue && (
@@ -235,7 +246,7 @@ export function WorkspaceInput({
               ? "Ask to make changes, @mention files, run /commands"
               : "Ask to make changes, @mention files, run /commands"
           }
-          variant="copilot"
+          variant={variant}
         />
       </div>
       <div className="flex items-start space-x-2 px-4">
@@ -250,7 +261,7 @@ export function WorkspaceInput({
               openUpward={true}
               uploadedFiles={uploadedFiles}
               onRemoveFile={handleRemoveFile}
-              variant="copilot"
+              variant={variant}
             />
             <input
               type="file"
@@ -267,7 +278,7 @@ export function WorkspaceInput({
               onClose={() => setShowModelDropdown(false)}
               dropdownRef={modelDropdownRef}
               openUpward={true}
-              variant="copilot"
+              variant={variant}
             />
           </div>
         </div>
@@ -275,9 +286,13 @@ export function WorkspaceInput({
           <DictationButton
             isRecording={isRecording}
             onToggle={toggleDictation}
-            variant="copilot"
+            variant={variant}
           />
-          <SendButton loading={isLoading} onSubmit={onSubmit} variant="copilot" />
+          <SendButton
+            loading={isLoading}
+            onSubmit={onSubmit}
+            variant={variant}
+          />
         </div>
       </div>
     </div>

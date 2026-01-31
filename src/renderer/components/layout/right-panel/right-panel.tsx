@@ -69,7 +69,7 @@ function ToggleButton({ isOpen, width, onClick, isWorkspace = false }: ToggleBut
       tooltip={isOpen ? "Close right panel" : "Open right panel"}
       tooltipPosition="left"
       onClick={onClick}
-      className={`fixed z-60 rounded-full! p-1.5! text-primary-900 dark:text-primary-300!  bg-primary-200/30 dark:bg-primary-800/50 transition-all duration-300 ease-out top-3 right-3 `}
+      className={`fixed z-60 rounded-full! p-1.5! text-primary-900 dark:text-primary-300!  bg-primary-200/30 dark:bg-primary-50/10 transition-all duration-300 ease-out top-3 right-3 `}
       aria-label={isOpen ? "Close right panel" : "Open right panel"}
     >
       {isOpen ? (
@@ -92,6 +92,7 @@ const PANEL_COMPONENTS: Record<string, React.ComponentType> = {
   config: ConfigContent,
   journal: JournalContent,
   workspace: WorkspaceContent,
+  claude: WorkspaceContent
 };
 
 function Panel({ isVisible, width, component }: PanelProps) {

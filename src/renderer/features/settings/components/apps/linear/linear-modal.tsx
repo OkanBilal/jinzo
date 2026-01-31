@@ -43,7 +43,7 @@ interface LinearWizardData {
   fromManage: boolean;
 }
 
-type StepId = "setToken" | "add" | "manage";
+type StepId = "loading" | "setToken" | "add" | "manage";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step: Set Token
@@ -372,7 +372,15 @@ function ManageTeamsStep({ onRevoke }: { onRevoke: () => void }) {
 // Loading State
 // ─────────────────────────────────────────────────────────────────────────────
 
-function LoadingStep() {
+function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
+  const { goTo } = useWizard<LinearWizardData>();
+
+  useEffect(() => {
+    if (targetStep && targetStep !== "loading") {
+      goTo(targetStep);
+    }
+  }, [targetStep, goTo]);
+
   return (
     <div className="flex items-center justify-center py-20">
       <div className="text-center space-y-3">
@@ -395,7 +403,7 @@ export default function LinearModal({
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [initialData, setInitialData] = useState<Partial<LinearWizardData>>({});
-  const [initialStep, setInitialStep] = useState<StepId>("setToken");
+  const [targetStep, setTargetStep] = useState<StepId | null>(null);
 
   const [getSelectedTeams] = useLazyGetSelectedTeamsQuery();
   const [getConnection] = useLazyGetConnectionQuery();
@@ -405,11 +413,13 @@ export default function LinearModal({
   useEffect(() => {
     if (!open) {
       setInitializing(true);
+      setTargetStep(null);
       return;
     }
 
     const loadInitialData = async () => {
       setInitializing(true);
+      setTargetStep(null);
 
       const baseData: Partial<LinearWizardData> = {
         apiKey: "",
@@ -421,8 +431,8 @@ export default function LinearModal({
       };
 
       if (!isConnected) {
-        setInitialStep("setToken");
         setInitialData(baseData);
+        setTargetStep("setToken");
         setInitializing(false);
         return;
       }
@@ -474,8 +484,8 @@ export default function LinearModal({
         }
       }
 
-      setInitialStep(finalStep);
       setInitialData(finalData);
+      setTargetStep(finalStep);
       setInitializing(false);
     };
 
@@ -497,24 +507,26 @@ export default function LinearModal({
     }
   };
 
-  const steps: WizardStep<LinearWizardData>[] = initializing
-    ? [{ id: "loading", render: () => <LoadingStep /> }]
-    : [
-        {
-          id: "setToken",
-          render: () => <TokenStep onSuccess={onSuccess} />,
-        },
-        {
-          id: "add",
-          render: () => <SelectTeamsStep onComplete={handleClose} />,
-        },
-        {
-          id: "manage",
-          render: () => (
-            <ManageTeamsStep onRevoke={() => setShowRevokeConfirm(true)} />
-          ),
-        },
-      ];
+  const steps: WizardStep<LinearWizardData>[] = [
+    {
+      id: "loading",
+      render: () => <LoadingStep targetStep={targetStep} />,
+    },
+    {
+      id: "setToken",
+      render: () => <TokenStep onSuccess={onSuccess} />,
+    },
+    {
+      id: "add",
+      render: () => <SelectTeamsStep onComplete={handleClose} />,
+    },
+    {
+      id: "manage",
+      render: () => (
+        <ManageTeamsStep onRevoke={() => setShowRevokeConfirm(true)} />
+      ),
+    },
+  ];
 
   return (
     <>
@@ -522,10 +534,10 @@ export default function LinearModal({
         open={open}
         onOpenChange={(isOpen) => !isOpen && handleClose()}
         steps={steps}
-        initialStep={initializing ? "loading" : initialStep}
+        initialStep="loading"
         initialData={initialData}
         title="Linear"
-        icon="/apps/linear-skeuomorphic.png"
+        icon="/connections/linear.png"
         onCancel={handleClose}
       />
 
