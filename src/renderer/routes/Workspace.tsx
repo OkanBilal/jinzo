@@ -170,13 +170,12 @@ export default function WorkspacePage() {
     const currentRunId =
       activeTab !== "editor" && !isIssueTab(activeTab) ? activeTab : null;
 
-        //TODO: Refactor
+        //TODO: Optimize context inclusion
     // Build the final goal with context files and issues
     let finalGoal = goal;
     if (contextFiles.length > 0) {
       const filesList = contextFiles.map((f) => f.fullPath).join("\n");
       finalGoal = `Use these files as context:\n${filesList}\n\n${finalGoal}`;
-      console.log("Final goal with context files:", finalGoal);
     }
     if (contextIssues.length > 0) {
       const issuesList = contextIssues.map((i) => {
@@ -185,7 +184,6 @@ export default function WorkspacePage() {
         return `${issueLabel}${issueBody}`;
       }).join("\n\n---\n\n");
       finalGoal = `Use these issues as context:\n\n${issuesList}\n\n${finalGoal}`;
-      console.log("Final goal with context issues:", finalGoal);
     }
 
     // If there's an active completed run that can be resumed, continue it

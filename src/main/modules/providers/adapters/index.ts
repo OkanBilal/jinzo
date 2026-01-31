@@ -37,3 +37,4 @@ export {
 
 // Adapters
 export { createCopilotAdapter } from "./copilot.adapter";
+export { createClaudeAdapter } from "./claude.adapter";

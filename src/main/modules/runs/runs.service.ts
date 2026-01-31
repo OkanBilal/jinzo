@@ -412,7 +412,7 @@ export const runsService = {
           accountId: payload.accountId,
           workspace: {
             id: workspace.id,
-            rootPath: workspace.rootPath, // TODO: check path
+            rootPath: workspace.rootPath,
           },
           goal: payload.goal,
           model: payload.model,

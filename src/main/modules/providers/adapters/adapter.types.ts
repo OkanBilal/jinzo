@@ -201,8 +201,8 @@ export interface WorkRunAdapter {
 export interface CopilotAdapterConfig {
   /** Path to copilot CLI binary (defaults to "copilot" from PATH) */
   binary?: string;
-  /** Transport mode: "stdio" (default) or TCP port */
-  transport?: "stdio" | "tcp";
+  /** Transport method: "stdio" (default) or "tcp" */
+  useStdio?: boolean;
   /** TCP port if transport is "tcp" */
   port?: number;
   /** URL of existing CLI server to connect to */
@@ -215,6 +215,8 @@ export interface CopilotAdapterConfig {
   defaultModel?: string;
   /** Timeout in milliseconds for operations */
   timeout?: number;
+  /** Whether to start the CLI process automatically */
+  autoStart?: boolean;
 }
 
 /**

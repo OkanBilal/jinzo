@@ -21,9 +21,6 @@ export const seedController = {
     return seedService.seedProviders();
   },
 
-  async seedWorkspaces(): Promise<ServiceResponse> {
-    return seedService.seedWorkspaces();
-  },
 
   async seedAll(): Promise<ServiceResponse> {
     return seedService.seedAll();

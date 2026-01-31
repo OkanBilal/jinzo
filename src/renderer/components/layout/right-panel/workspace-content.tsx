@@ -64,7 +64,6 @@ export function WorkspaceContent() {
     },
     [dispatch],
   );
-    // TODO: CHECK THIS
   const handleAddIssueToContext = useCallback(
     (issue: WorkspaceIssue) => {
       dispatch(addContextIssue({

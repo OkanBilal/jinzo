@@ -51,7 +51,7 @@ export function JournalContent() {
       if (!journalEditing.entityId || !journalEditing.body) {
         return userMessage;
       }
-      // TODO: Check prompt
+      // TODO: Optimize prompt construction
       // Create a context-aware prompt that includes the journal content
       const contextPrefix = `[CONTEXT: The user is writing a journal entry titled "${journalEditing.title}". Here is the current content of their journal:
 

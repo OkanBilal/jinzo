@@ -4,8 +4,9 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { ProviderResponse } from "../providers.dto";
-import type { WorkRunAdapter, CopilotAdapterConfig, ModelInfo } from "./adapter.types";
+import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, ModelInfo } from "./adapter.types";
 import { createCopilotAdapter } from "./copilot.adapter";
+import { createClaudeAdapter } from "./claude.adapter";
 
 /**
  * Known provider IDs that support work runs
@@ -67,11 +68,12 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
     }
 
     case "claude_code": {
-      // TODO: Implement Claude Code adapter
-      throw new Error(
-        "Claude Code adapter is not yet implemented. " +
-          "Please use Copilot CLI for now, or contribute an implementation!"
-      );
+      const config: ClaudeCodeAdapterConfig = {
+        ...(provider.config as ClaudeCodeAdapterConfig | null),
+        defaultModel: provider.defaultModel ?? undefined,
+      };
+      adapter = createClaudeAdapter(config);
+      break;
     }
 
     default:

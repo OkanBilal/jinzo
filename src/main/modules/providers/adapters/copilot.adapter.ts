@@ -178,7 +178,7 @@ export function createCopilotAdapter(
 
         if (config.cliUrl) {
           options.cliUrl = config.cliUrl;
-        } else if (config.transport === "tcp" && config.port) {
+        } else if (config.useStdio === false && config.port) {
           options.port = config.port;
           options.useStdio = false;
         } else {
@@ -1133,7 +1133,7 @@ function getDefaultModels(defaultModel?: string): ModelInfo[] {
     },
     {
       id: "claude-3.5-sonnet",
-      displayName: "Claude 3.5 Sonnet",
+      displayName: "Claude Sonnet 3.5",
       isDefault: defaultModel === "claude-3.5-sonnet",
       capabilities: {
         streaming: true,

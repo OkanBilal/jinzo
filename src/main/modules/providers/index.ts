@@ -23,6 +23,7 @@ export {
   isSupportedWorkProvider,
   SUPPORTED_WORK_PROVIDERS,
   createCopilotAdapter,
+  createClaudeAdapter,
 } from "./adapters";
 
 export type {
