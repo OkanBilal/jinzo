@@ -20,9 +20,9 @@ const variantStyles = {
     icon: "dark:text-copilot-lightblue text-copilot-blue",
   },
   claude: {
-    recording: "bg-claude-orange/30 dark:bg-claude-light/50",
-    hover: "hover:bg-claude-orange/10 dark:hover:bg-claude-light/20",
-    icon: "dark:text-claude-light text-claude-orange",
+    recording: "bg-claude-dark/30 dark:bg-claude-light/50",
+    hover: "hover:bg-claude-dark/10 dark:hover:bg-claude-light/20",
+    icon: "dark:text-claude-light text-claude-dark",
   },
 };
 
