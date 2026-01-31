@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { toast } from "@/components/toast";
-
 import { Button } from "../../../components/ui/button";
 import { Input, Textarea } from "../../../components/ui/input";
 import { Heading2 } from "../../../components/ui/text";
+import { useGetAccountQuery, useUpdateAccountMutation } from "@/lib/redux/api";
 
 interface PersonalizationFormValues {
   displayName: string;
@@ -34,48 +34,28 @@ const EMPTY_FORM: PersonalizationFormValues = {
 
 export default function PersonalizationSettings() {
   const [form, setForm] = useState<PersonalizationFormValues>(EMPTY_FORM);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
-
-  const fetchAccount = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await window.api.account.get();
-
-      if (!response.success) {
-        throw new Error(
-          response.error || "Unable to load personalization details",
-        );
-      }
-
-      const data = response.data as PersonalizationResponse;
-      setForm({
-        displayName: data.displayName ?? "",
-        email: data.email ?? "",
-        company: data.company ?? "",
-        jobTitle: data.jobTitle ?? "",
-        website: data.website ?? "",
-        avatarUrl: data.avatarUrl ?? "",
-        bio: data.bio ?? "",
-      });
-      setLastSavedAt(data.updatedAt ?? data.createdAt);
-      setIsDirty(false);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "An unexpected error occurred",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  
+  const { data: account, isLoading: loading, error: queryError, refetch } = useGetAccountQuery();
+  const [updateAccount, { isLoading: saving }] = useUpdateAccountMutation();
+  
+  const error = queryError ? 'Unable to load personalization details' : null;
+  const lastSavedAt = account?.updatedAt || account?.createdAt || null;
 
   useEffect(() => {
-    fetchAccount();
-  }, [fetchAccount]);
+    if (account) {
+      setForm({
+        displayName: account.displayName ?? "",
+        email: account.email ?? "",
+        company: account.company ?? "",
+        jobTitle: account.jobTitle ?? "",
+        website: account.website ?? "",
+        avatarUrl: account.avatarUrl ?? "",
+        bio: account.bio ?? "",
+      });
+      setIsDirty(false);
+    }
+  }, [account]);
 
   const handleChange =
     <T extends keyof PersonalizationFormValues>(field: T) =>
@@ -89,38 +69,16 @@ export default function PersonalizationSettings() {
     event.preventDefault();
     if (saving) return;
 
-    setSaving(true);
-    setError(null);
-
     try {
-      const response = await window.api.account.update(form);
-
-      if (!response.success) {
-        const message =
-          response.errors?.body || response.error || "Could not save";
-        throw new Error(message);
+      const result = await updateAccount(form).unwrap();
+      
+      if (result.success && result.data) {
+        setIsDirty(false);
+        toast.success("Personalization updated");
       }
-
-      const updated = response.data as PersonalizationResponse;
-      setForm({
-        displayName: updated.displayName ?? "",
-        email: updated.email ?? "",
-        company: updated.company ?? "",
-        jobTitle: updated.jobTitle ?? "",
-        website: updated.website ?? "",
-        avatarUrl: updated.avatarUrl ?? "",
-        bio: updated.bio ?? "",
-      });
-      setLastSavedAt(updated.updatedAt ?? updated.createdAt);
-      setIsDirty(false);
-      toast.success("Personalization updated");
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "A problem occurred while saving";
-      setError(message);
+    } catch (err: any) {
+      const message = err?.data?.error || err?.message || "A problem occurred while saving";
       toast.error(message);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -149,7 +107,6 @@ export default function PersonalizationSettings() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-0">
-          {/* Display Name */}
           <SettingsRow
             title="Display Name"
             description="Your name displayed across the app"
@@ -165,8 +122,6 @@ export default function PersonalizationSettings() {
           </SettingsRow>
 
           <SettingsDivider />
-
-          {/* Email */}
           <SettingsRow title="Email" description="Used for notifications">
             <Input
               id="email"
@@ -181,7 +136,6 @@ export default function PersonalizationSettings() {
 
           <SettingsDivider />
 
-          {/* Company */}
           <SettingsRow
             title="Company"
             description="Your organization or workplace"
@@ -198,7 +152,6 @@ export default function PersonalizationSettings() {
 
           <SettingsDivider />
 
-          {/* Job Title */}
           <SettingsRow title="Job Title" description="Your role or position">
             <Input
               id="jobTitle"
@@ -212,7 +165,6 @@ export default function PersonalizationSettings() {
 
           <SettingsDivider />
 
-          {/* Website */}
           <SettingsRow
             title="Website"
             description="Your personal or company website"
@@ -229,7 +181,6 @@ export default function PersonalizationSettings() {
 
           <SettingsDivider />
 
-          {/* Avatar URL */}
           <SettingsRow
             title="Avatar URL"
             description="Link to your profile picture"
@@ -246,7 +197,6 @@ export default function PersonalizationSettings() {
 
           <SettingsDivider />
 
-          {/* Bio */}
           <SettingsRow
             title="Bio"
             description="Tell us a little about yourself"
@@ -263,7 +213,6 @@ export default function PersonalizationSettings() {
 
           <SettingsDivider />
 
-          {/* Save Button Row */}
           <div className="flex items-center justify-between pt-6">
             <div className="text-xs text-primary-500 dark:text-primary-400">
               {lastSavedLabel
@@ -274,7 +223,7 @@ export default function PersonalizationSettings() {
               <Button
                 type="button"
                 variant="ghost"
-                onClick={fetchAccount}
+                onClick={() => refetch()}
                 disabled={loading || saving}
               >
                 Refresh
@@ -295,7 +244,6 @@ export default function PersonalizationSettings() {
   );
 }
 
-// Settings Row Component - Left: title/description, Right: component
 function SettingsRow({
   title,
   description,
@@ -322,7 +270,8 @@ function SettingsRow({
   );
 }
 
-// Divider Component
 function SettingsDivider() {
-  return <div className="border-b border-primary-200 dark:border-primary-800/50" />;
+  return (
+    <div className="border-b border-primary-200 dark:border-primary-800/50" />
+  );
 }

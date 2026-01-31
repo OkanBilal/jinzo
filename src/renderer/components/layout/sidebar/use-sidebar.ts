@@ -49,7 +49,9 @@ export function useSidebar() {
   // UI State
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(
+    location.pathname.startsWith("/settings")
+  );
   const [isCreatingMood, setIsCreatingMood] = useState(false);
   const [isViewingPresetMoods, setIsViewingPresetMoods] = useState(false);
 

@@ -95,7 +95,6 @@ export default function Sidebar() {
               onSearchChange={setSearchQuery}
               onSearchClear={handleSearchClear}
             />
-
             <div className="px-4 py-3">
               <NewButton
                 onClick={handleNewClick}
@@ -103,7 +102,6 @@ export default function Sidebar() {
                 actionPrefix={sidebarConfig.itemType === "workspace" ? "Add" : sidebarConfig.itemType === "claude" ? "Add" : "New"}
               />
             </div>
-
             <SidebarContent
               itemType={sidebarConfig.itemType}
               sessions={sessions}
@@ -117,7 +115,6 @@ export default function Sidebar() {
               onDeletePost={handleDeleteJournalClick}
               onDeleteWorkspace={handleDeleteWorkspaceClick}
             />
-
             <SidebarFooter
               moods={moods}
               activeMoodId={activeMoodId}

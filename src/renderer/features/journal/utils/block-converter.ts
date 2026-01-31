@@ -1,17 +1,11 @@
 import type { Block } from "@blocknote/core";
 
-/**
- * Default props for paragraph blocks
- */
 export const defaultParagraphProps = {
   backgroundColor: "default" as const,
   textColor: "default" as const,
   textAlignment: "left" as const,
 };
 
-/**
- * Default props for heading blocks
- */
 export const defaultHeadingProps = {
   backgroundColor: "default" as const,
   textColor: "default" as const,
@@ -19,9 +13,6 @@ export const defaultHeadingProps = {
   level: 1 as 1 | 2 | 3,
 };
 
-/**
- * Convert BlockNote blocks to markdown-ish text
- */
 export function blocksToMarkdown(blocks: Block[]): string {
   const lines: string[] = [];
 
@@ -29,13 +20,11 @@ export function blocksToMarkdown(blocks: Block[]): string {
     let line = "";
     const content = block.content;
 
-    // Handle different block types
     if (block.type === "heading") {
       const level = (block.props as any)?.level || 1;
       line = "#".repeat(level) + " ";
     }
 
-    // Extract text from content array
     if (Array.isArray(content)) {
       for (const item of content) {
         if (typeof item === "string") {
@@ -52,7 +41,6 @@ export function blocksToMarkdown(blocks: Block[]): string {
       lines.push(line);
     }
 
-    // Recursively handle children
     if (block.children && block.children.length > 0) {
       lines.push(blocksToMarkdown(block.children));
     }
@@ -61,9 +49,6 @@ export function blocksToMarkdown(blocks: Block[]): string {
   return lines.join("\n");
 }
 
-/**
- * Parse markdown back to BlockNote blocks (simple version)
- */
 export function markdownToBlocks(markdown: string): Block[] {
   if (!markdown) {
     return [

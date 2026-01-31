@@ -1090,9 +1090,9 @@ function parseExitCode(text?: string): number | undefined {
 function getDefaultModels(defaultModel?: string): ModelInfo[] {
   const models: ModelInfo[] = [
     {
-      id: "gpt-4o",
-      displayName: "GPT-4o",
-      isDefault: defaultModel === "gpt-4o" || !defaultModel,
+      id: "claude-opus-4-5",
+      displayName: "Claude Opus 4.5",
+      isDefault: defaultModel === "claude-opus-4-5" || !defaultModel,
       capabilities: {
         streaming: true,
         vision: true,
@@ -1100,10 +1100,10 @@ function getDefaultModels(defaultModel?: string): ModelInfo[] {
       },
       contextWindow: 128000,
     },
-    {
-      id: "gpt-4o-mini",
-      displayName: "GPT-4o Mini",
-      isDefault: defaultModel === "gpt-4o-mini",
+        {
+      id: "claude-sonnet-4-5",
+      displayName: "Claude Sonnet 4.5",
+      isDefault: defaultModel === "claude-sonnet-4-5" || !defaultModel,
       capabilities: {
         streaming: true,
         vision: true,
@@ -1111,37 +1111,20 @@ function getDefaultModels(defaultModel?: string): ModelInfo[] {
       },
       contextWindow: 128000,
     },
-    {
-      id: "o1",
-      displayName: "o1",
-      isDefault: defaultModel === "o1",
-      capabilities: {
-        streaming: true,
-        reasoning: true,
-      },
-      contextWindow: 200000,
-    },
-    {
-      id: "o1-mini",
-      displayName: "o1 Mini",
-      isDefault: defaultModel === "o1-mini",
-      capabilities: {
-        streaming: true,
-        reasoning: true,
-      },
-      contextWindow: 128000,
-    },
-    {
-      id: "claude-3.5-sonnet",
-      displayName: "Claude Sonnet 3.5",
-      isDefault: defaultModel === "claude-3.5-sonnet",
+            {
+      id: "claude-haiku-4-5",
+      displayName: "Claude Haiku 4.5",
+      isDefault: defaultModel === "claude-haiku-4-5" || !defaultModel,
       capabilities: {
         streaming: true,
         vision: true,
         functionCalling: true,
       },
-      contextWindow: 200000,
+      contextWindow: 128000,
     },
+    
+    
+
   ];
 
   return models;

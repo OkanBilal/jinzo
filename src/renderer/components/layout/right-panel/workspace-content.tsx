@@ -19,10 +19,12 @@ import {
   isIssueTab,
   getIssueEntityId,
 } from "@/features/workspace/utils/repo-utils";
+import { useActiveMood } from "@/hooks/use-active-mood";
 
 export function WorkspaceContent() {
   const location = useLocation();
   const dispatch = useDispatch();
+  const { activeMoodId } = useActiveMood();
   const selectedFile = useSelector(
     (state: RootState) => state.workspace.selectedFile,
   );
@@ -84,8 +86,8 @@ export function WorkspaceContent() {
     ? getIssueEntityId(activeTab)
     : null;
 
-  // If no rootPath provided, show empty state
-  if (!rootPath) {
+  // If no workspace ID or rootPath provided, show empty state
+  if (!workspaceId || !rootPath) {
     return (
       <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 -pb-4 rounded-2xl overflow-hidden">
         <div className="flex-1 flex items-center justify-center">
@@ -110,6 +112,7 @@ export function WorkspaceContent() {
       {/* File Explorer - full width, no split view */}
       <div className="flex-1 px-3 flex flex-col min-h-0">
         <FileExplorer
+          key={`${activeMoodId}-${workspaceId || rootPath}`}
           rootPath={rootPath}
           onFileSelect={handleFileSelect}
           onAddToContext={handleAddToContext}

@@ -35,7 +35,6 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Check if we're on the settings page and which section is active
   const isOnSettingsPage = location.pathname === "/settings";
   const searchParams = new URLSearchParams(location.search);
   const activeSection = searchParams.get("section") as SettingsSection | null;
@@ -53,7 +52,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
       </div>
 
       <div className="flex-1 px-4 py-2 overflow-y-auto noscrollbar">
-        <nav className="space-y-1">
+        <nav className="space-y-0.5">
           {menuItems.map((item, index) => {
             const IconComponent = item.icon;
             const isActive = isOnSettingsPage && activeSection === item.id;

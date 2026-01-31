@@ -43,7 +43,6 @@ export default function ChatInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
-  const appMentionDropdownRef = useRef<HTMLDivElement>(null);
 
   const { isRecording, toggle: toggleDictation } =
     useSpeechRecognition(onQueryChange);

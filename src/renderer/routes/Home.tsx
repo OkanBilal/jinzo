@@ -17,14 +17,7 @@ export default function HomePage() {
 
   return (
     <div className="h-full w-full flex flex-col px-8 relative">
-      {/* Centered title */}
-      <div className="flex-1 flex items-center justify-center">
-        {/* <p className="text-7xl text-center font-palette-altfour font-nabla streaming-fresh animate-[blur-reveal_1s_ease-out_forwards]">
-          JINZO
-        </p> */}
-        {/* <LottieHero /> */}
-      </div>
-      {/* Bottom input */}
+      <div className="flex-1 flex items-center justify-center"></div>
       <div className="w-full max-w-200 mx-auto mb-4">
         <ChatInput
           query={query}

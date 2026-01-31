@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Body, Heading3 } from "@/components/ui/text";
 import {
   useCreateMoodMutation,
@@ -20,6 +21,7 @@ export default function PresetMoodsView({
   onClose,
   onSuccess,
 }: PresetMoodsViewProps) {
+  const navigate = useNavigate();
   const [selectedTemplate, setSelectedTemplate] =
     useState<PredefinedMood | null>(null);
   const [createMood, { isLoading }] = useCreateMoodMutation();
@@ -107,6 +109,10 @@ export default function PresetMoodsView({
 
       // Clear the original color ref so cleanup doesn't restore it
       originalBackgroundColor.current = "";
+
+      // Navigate to default route if it exists, otherwise go to home
+      const defaultRoute = selectedTemplate.uiConfig?.sidebar?.defaultRoute || "/";
+      navigate(defaultRoute);
 
       toast.success("Mood created!");
       onSuccess?.();

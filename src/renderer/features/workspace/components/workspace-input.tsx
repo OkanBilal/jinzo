@@ -36,11 +36,6 @@ interface WorkspaceInputProps {
   onRemoveContextIssue?: (entityId: string) => void;
 }
 
-const DEFAULT_MODELS = [
-  "claude-opus-4-5",
-  "claude-sonnet-4.5",
-  "claude-haiku-4.5",
-];
 
 export function WorkspaceInput({
   goal,
@@ -85,9 +80,7 @@ export function WorkspaceInput({
         modelIds: providerModels.map((m) => m.id),
       };
     }
-    return {
-      modelDisplayNames: DEFAULT_MODELS,
-    };
+    return { modelDisplayNames: [], modelIds: [] };
   }, [providerModels]);
 
   // Use external or internal selected model
@@ -107,7 +100,10 @@ export function WorkspaceInput({
   useEffect(() => {
     if (providerModels && providerModels.length > 0 && !selectedModel) {
       const defaultModel =
-        providerModels.find((m) => m.isDefault) ?? providerModels[0];
+        providerModels.find((m) => m.isDefault) ?? providerModels[2];
+        console.log("Setting default model to:", defaultModel.id);
+        console.log("Default model display name:", defaultModel.displayName);
+        console.log("Provider Models:", providerModels);
       setSelectedModel(defaultModel.id);
     }
   }, [providerModels, selectedModel, setSelectedModel]);
@@ -179,7 +175,6 @@ export function WorkspaceInput({
       className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-3xl ${glassMorphismClass}
         cursor-pointer transition-all`}
     >
-      {/* Context Files and Issues Preview */}
       <div
         className={`grid transition-[grid-template-rows] duration-300 ease-out ${
           contextFiles.length > 0 || contextIssues.length > 0

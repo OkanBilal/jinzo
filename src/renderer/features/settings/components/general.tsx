@@ -1,18 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { toast } from "@/components/toast";
 import { useDarkMode } from "../../../hooks/use-dark-mode";
 import { useActiveMood } from "../../../hooks/use-active-mood";
 import { Button } from "../../../components/ui/button";
-import { Heading2, Muted } from "../../../components/ui/text";
-import {
-  AccountFormValues,
-  AccountResponse,
-  FieldProps,
-} from "../../../features/settings/types/account";
+import { Heading2 } from "../../../components/ui/text";
+import { AccountFormValues } from "../../../features/settings/types/account";
 import Select from "@/components/ui/select";
 import { cn } from "@/lib/cn";
 import { defaultTheme } from "@/lib/theme";
+import { useGetAccountQuery, useUpdateAccountMutation } from "@/lib/redux/api";
 
 export const EMPTY_FORM = {
   displayName: "",
@@ -44,7 +41,6 @@ const LOCALE_OPTIONS = [
 
 type ThemeValue = "light" | "dark" | "system";
 
-// Theme Card Preview Component
 function ThemePreviewCard({
   themeValue,
   label,
@@ -63,7 +59,6 @@ function ThemePreviewCard({
   const isLight = themeValue === "light";
   const isAuto = themeValue === "system";
 
-  // Parse background - handle gradients and solid colors
   const getBackgroundStyle = (bg: string) => {
     if (bg.startsWith("linear-gradient")) {
       return { background: bg };
@@ -82,7 +77,6 @@ function ThemePreviewCard({
         "flex flex-col items-center gap-2 cursor-pointer group active:scale-99 hover:scale-101 duration-200 transition-all",
       )}
     >
-      {/* Preview Card */}
       <div
         className={cn(
           "relative w-32 h-24 rounded-xl overflow-hidden border-2 transition-all duration-200",
@@ -92,11 +86,8 @@ function ThemePreviewCard({
         )}
       >
         {isAuto ? (
-          // Auto/System theme - split view (sidebar + content for each half)
           <div className="w-full h-full flex">
-            {/* Light half */}
             <div className="w-1/2 h-full flex">
-              {/* Light Sidebar */}
               <div
                 className={cn("w-5 h-full flex flex-col p-1 gap-1")}
                 style={lightBgStyle}
@@ -105,16 +96,12 @@ function ThemePreviewCard({
                 <div className="w-full h-1 bg-black/10 rounded-full mt-1" />
                 <div className="w-2/3 h-1 bg-black/10 rounded-full" />
               </div>
-              {/* Light Main Content */}
               <div className="flex-1 h-full bg-primary-100 flex flex-col p-1.5">
                 <div className="flex-1" />
-                {/* Chat input */}
                 <div className="w-full h-3 bg-primary-80  rounded-sm border border-black/10" />
               </div>
             </div>
-            {/* Dark half */}
             <div className="w-1/2 h-full flex">
-              {/* Dark Sidebar */}
               <div
                 className={cn("w-5 h-full flex flex-col p-1 gap-1")}
                 style={darkBgStyle}
@@ -123,30 +110,24 @@ function ThemePreviewCard({
                 <div className="w-full h-1 bg-white/15 rounded-full mt-1" />
                 <div className="w-2/3 h-1 bg-white/15 rounded-full" />
               </div>
-              {/* Dark Main Content */}
               <div className="flex-1 h-full flex bg-primary-950 flex-col p-1.5">
                 <div className="flex-1" />
-                {/* Chat input */}
                 <div className="w-full h-3 bg-white/10 rounded-sm flex items-center justify-end pr-0.5"></div>
               </div>
             </div>
           </div>
         ) : (
-          // Light or Dark theme - full view with sidebar layout
           <div className="w-full h-full flex">
-            {/* Sidebar */}
             <div
               className={cn("w-8 h-full flex flex-col p-1.5 gap-1")}
               style={isLight ? lightBgStyle : darkBgStyle}
             >
-              {/* Avatar */}
               <div
                 className={cn(
                   "w-2 h-2 rounded-full",
                   isLight ? "bg-black/15" : "bg-white/20",
                 )}
               />
-              {/* Menu items */}
               <div className="flex flex-col gap-0.5 mt-1">
                 <div
                   className={cn(
@@ -162,13 +143,10 @@ function ThemePreviewCard({
                 />
               </div>
             </div>
-            {/* Main Content */}
             <div
               className={`flex-1 h-full flex flex-col p-2 ${isLight ? "bg-primary-100" : "bg-primary-950"}`}
             >
-              {/* Content area */}
               <div className="flex-1" />
-              {/* Chat input bar */}
               <div
                 className={cn(
                   "w-full h-4 rounded-md flex items-center px-1",
@@ -181,7 +159,6 @@ function ThemePreviewCard({
           </div>
         )}
       </div>
-      {/* Label */}
       <span
         className={cn(
           "text-sm font-medium transition-colors",
@@ -201,20 +178,26 @@ export default function GeneralSettings() {
   const { activeMood } = useActiveMood();
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState<AccountFormValues>(EMPTY_FORM);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
-  // Parse active mood's theme config for preview backgrounds
+  const {
+    data: account,
+    isLoading: loading,
+    error: queryError,
+    refetch,
+  } = useGetAccountQuery();
+  const [updateAccount, { isLoading: saving }] = useUpdateAccountMutation();
+
+  const error = queryError ? "Unable to load account details" : null;
+  const lastSavedAt = account?.updatedAt || account?.createdAt || null;
+
   const { lightBackground, darkBackground } = useMemo(() => {
     if (!activeMood?.themeConfig) {
       return {
         lightBackground: defaultTheme.lightBackground.replace(
           /[0-9a-f]{2}$/i,
           "",
-        ), // Remove alpha
+        ),
         darkBackground: defaultTheme.darkBackground.replace(
           /[0-9a-f]{2}$/i,
           "",
@@ -239,81 +222,38 @@ export default function GeneralSettings() {
     setMounted(true);
   }, []);
 
-  const fetchAccount = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await window.api.account.get();
-
-      if (!response.success) {
-        throw new Error(response.error || "Unable to load account details");
-      }
-
-      const data = response.data as AccountResponse;
-      setForm({
-        displayName: data.displayName ?? "",
-        email: data.email ?? "",
-        company: data.company ?? "",
-        jobTitle: data.jobTitle ?? "",
-        timezone: data.timezone ?? "UTC",
-        locale: data.locale ?? "en-US",
-        website: data.website ?? "",
-        avatarUrl: data.avatarUrl ?? "",
-        bio: data.bio ?? "",
-      });
-      setLastSavedAt(data.updatedAt ?? data.createdAt);
-      setIsDirty(false);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "An unexpected error occurred",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchAccount();
-  }, [fetchAccount]);
+    if (account) {
+      setForm({
+        displayName: account.displayName ?? "",
+        email: account.email ?? "",
+        company: account.company ?? "",
+        jobTitle: account.jobTitle ?? "",
+        timezone: account.timezone ?? "UTC",
+        locale: account.locale ?? "en-US",
+        website: account.website ?? "",
+        avatarUrl: account.avatarUrl ?? "",
+        bio: account.bio ?? "",
+      });
+      setIsDirty(false);
+    }
+  }, [account]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (saving) return;
 
-    setSaving(true);
-    setError(null);
-
     try {
-      const response = await window.api.account.update(form);
+      const result = await updateAccount(form).unwrap();
 
-      if (!response.success) {
-        const message =
-          response.errors?.body || response.error || "Could not save";
-        throw new Error(message);
+      if (result.success && result.data) {
+        setIsDirty(false);
+        toast.success("Account details updated");
       }
-
-      const updated = response.data as AccountResponse;
-      setForm({
-        displayName: updated.displayName ?? "",
-        email: updated.email ?? "",
-        company: updated.company ?? "",
-        jobTitle: updated.jobTitle ?? "",
-        timezone: updated.timezone ?? "UTC",
-        locale: updated.locale ?? "en-US",
-        website: updated.website ?? "",
-        avatarUrl: updated.avatarUrl ?? "",
-        bio: updated.bio ?? "",
-      });
-      setLastSavedAt(updated.updatedAt ?? updated.createdAt);
-      setIsDirty(false);
-      toast.success("Account details updated");
-    } catch (err) {
+    } catch (err: any) {
       const message =
-        err instanceof Error ? err.message : "A problem occurred while saving";
-      setError(message);
+        err?.data?.error || err?.message || "A problem occurred while saving";
       toast.error(message);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -342,7 +282,6 @@ export default function GeneralSettings() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-0">
-          {/* Appearance Section */}
           <SettingsRow
             title="Appearance"
             description="Choose your preferred color mode"
@@ -398,8 +337,6 @@ export default function GeneralSettings() {
           </SettingsRow>
 
           <SettingsDivider />
-
-          {/* Timezone */}
           <SettingsRow
             title="Time Zone"
             description="Set your local timezone for accurate scheduling"
@@ -409,14 +346,13 @@ export default function GeneralSettings() {
               value={form.timezone}
               options={TIMEZONE_OPTIONS}
               onChange={(val) => {
-                setForm((prev) => ({ ...prev, timezone: val }));
+                setForm((prev: any) => ({ ...prev, timezone: val }));
                 setIsDirty(true);
               }}
               placeholder="Select timezone"
             />
           </SettingsRow>
           <SettingsDivider />
-          {/* Language */}
           <SettingsRow
             title="Language"
             description="Choose your preferred language"
@@ -426,7 +362,7 @@ export default function GeneralSettings() {
               value={form.locale}
               options={LOCALE_OPTIONS}
               onChange={(val) => {
-                setForm((prev) => ({ ...prev, locale: val }));
+                setForm((prev: any) => ({ ...prev, locale: val }));
                 setIsDirty(true);
               }}
               placeholder="Select language"
@@ -434,8 +370,6 @@ export default function GeneralSettings() {
           </SettingsRow>
 
           <SettingsDivider />
-
-          {/* Save Button Row */}
           <div className="flex items-center justify-between pt-6">
             <div className="text-xs text-primary-500 dark:text-primary-400">
               {lastSavedLabel
@@ -447,7 +381,7 @@ export default function GeneralSettings() {
                 tooltip="Refresh account details"
                 type="button"
                 variant="ghost"
-                onClick={fetchAccount}
+                onClick={() => refetch()}
                 disabled={loading || saving}
               >
                 Refresh
@@ -469,7 +403,6 @@ export default function GeneralSettings() {
   );
 }
 
-// Settings Row Component - Left: title/description, Right: component
 function SettingsRow({
   title,
   description,
@@ -496,7 +429,8 @@ function SettingsRow({
   );
 }
 
-// Divider Component
 function SettingsDivider() {
-  return <div className="border-b border-primary-200 dark:border-primary-800/50" />;
+  return (
+    <div className="border-b border-primary-200 dark:border-primary-800/50" />
+  );
 }

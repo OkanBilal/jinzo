@@ -22,14 +22,6 @@ interface AutosavePayload {
 const DEFAULT_DEBOUNCE_MS = 2000;
 const DEFAULT_MAX_WAIT_MS = 8000;
 
-/**
- * Hook for debounced autosave of journal entries.
- *
- * - Debounces writes to DB when user is idle for debounceMs (default 1200ms)
- * - Forces a save after maxWaitMs (default 8000ms) even if still typing
- * - Flushes on blur/unmount
- * - Returns flush function for explicit save button
- */
 export function useJournalAutosave(
   entityId: string | null,
   options: AutosaveOptions = {}
@@ -45,14 +37,12 @@ export function useJournalAutosave(
     error: null,
   });
 
-  // Refs for tracking
   const pendingPayloadRef = useRef<AutosavePayload | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const maxWaitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastChangeTimeRef = useRef<number>(0);
   const isSavingRef = useRef<boolean>(false);
 
-  // Clear all timers
   const clearTimers = useCallback(() => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -64,7 +54,6 @@ export function useJournalAutosave(
     }
   }, []);
 
-  // Actual save function
   const performSave = useCallback(async () => {
     if (!entityId || !pendingPayloadRef.current || isSavingRef.current) {
       return;
@@ -92,19 +81,15 @@ export function useJournalAutosave(
         isSaving: false,
         error: (error as Error).message,
       }));
-      // Put the payload back so we can retry
       pendingPayloadRef.current = payload;
     } finally {
       isSavingRef.current = false;
     }
   }, [entityId, updateDraft]);
 
-  // Queue a change for autosave
   const queueSave = useCallback(
     (payload: AutosavePayload) => {
       if (!entityId) return;
-
-      // Merge with any existing pending payload
       pendingPayloadRef.current = {
         ...pendingPayloadRef.current,
         ...payload,
@@ -114,18 +99,19 @@ export function useJournalAutosave(
 
       const now = Date.now();
 
-      // Clear existing debounce timer
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
 
-      // Set up debounce timer
+      debounceTimerRef.current = setTimeout(() => {
+        performSave();
+        clearTimers();
+      }, debounceMs);
       debounceTimerRef.current = setTimeout(() => {
         performSave();
         clearTimers();
       }, debounceMs);
 
-      // Set up max wait timer if not already set
       if (!maxWaitTimerRef.current) {
         lastChangeTimeRef.current = now;
         maxWaitTimerRef.current = setTimeout(() => {
@@ -137,7 +123,6 @@ export function useJournalAutosave(
     [entityId, debounceMs, maxWaitMs, performSave, clearTimers]
   );
 
-  // Force flush (for explicit save or blur)
   const flush = useCallback(async () => {
     clearTimers();
     if (pendingPayloadRef.current) {
@@ -145,7 +130,6 @@ export function useJournalAutosave(
     }
   }, [clearTimers, performSave]);
 
-  // Handle window blur
   useEffect(() => {
     const handleBlur = () => {
       flush();
@@ -157,13 +141,10 @@ export function useJournalAutosave(
     };
   }, [flush]);
 
-  // Handle beforeunload
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (pendingPayloadRef.current) {
-        // Try to save synchronously (best effort)
         flush();
-        // Show warning if still dirty
         if (state.isDirty) {
           e.preventDefault();
           e.returnValue = "You have unsaved changes. Are you sure you want to leave?";
@@ -178,12 +159,9 @@ export function useJournalAutosave(
     };
   }, [flush, state.isDirty]);
 
-  // Cleanup on unmount or entityId change
   useEffect(() => {
     return () => {
-      // Flush any pending changes
       if (pendingPayloadRef.current && entityId) {
-        // Perform a synchronous-ish save on unmount
         const payload = pendingPayloadRef.current;
         pendingPayloadRef.current = null;
         // Fire and forget - we're unmounting
@@ -193,7 +171,6 @@ export function useJournalAutosave(
     };
   }, [entityId, updateDraft, clearTimers]);
 
-  // Reset state when entityId changes
   useEffect(() => {
     setState({
       isDirty: false,

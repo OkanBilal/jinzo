@@ -6,7 +6,7 @@ export interface InputFormProps {
   onQueryChange: (value: string) => void;
   onSubmit: () => void;
   placeholder?: string;
-  context: JournalEditingState | null;
+  context?: JournalEditingState | null;
 }
 
 export interface AppState {

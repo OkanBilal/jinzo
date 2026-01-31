@@ -2,7 +2,7 @@ import { desc, eq, and, sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import { entities, feedItems, documentRevisions } from "../../db/schema";
 import { JOURNAL_KIND } from "./journal.constants";
-import type { JournalMetadata, DocumentRevision } from "./journal.dto";
+import type { DocumentRevision } from "./journal.dto";
 
 // Raw entity type from database
 type EntityRow = typeof entities.$inferSelect;
@@ -50,7 +50,7 @@ export const journalRepo = {
     data: {
       title?: string | null;
       body?: string | null;
-      summary?: string;
+      summary?: string | null;
       metadata?: string;
       updatedAt?: Date;
       isDeleted?: boolean;

@@ -1,11 +1,8 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import AccountSettings from "@/features/settings/components/account";
 import AppsSettings from "@/features/settings/components/apps/apps";
-import DataControlsSettings from "@/features/settings/components/data-controls";
 import GeneralSettings from "@/features/settings/components/general";
 import NotificationsSettings from "@/features/settings/components/notifications";
-import ParentalControlsSettings from "@/features/settings/components/parental-controls";
 import PersonalizationSettings from "@/features/settings/components/personalization";
 import SchedulesSettings from "@/features/settings/components/schedules";
 import SecuritySettings from "@/features/settings/components/security";
@@ -55,14 +52,8 @@ export default function SettingsPage() {
         );
       case "schedules":
         return <SchedulesSettings />;
-      case "data":
-        return <DataControlsSettings />;
       case "security":
         return <SecuritySettings />;
-      case "parental":
-        return <ParentalControlsSettings />;
-      case "account":
-        return <AccountSettings />;
       case "agent":
         return <AgentSettings />;
       default:

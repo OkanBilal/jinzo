@@ -99,15 +99,10 @@ export default function AppsSettings({
           onClick={() => handleConnect(app.id)}
           className="flex gap-2"
         >
-          <Text
-            variant="button"
-            className=""
-          >
+          <Text variant="button" className="">
             {connected ? "Manage" : "Connect"}
           </Text>
-          {connected ? null : (
-            <External className="w-4 h-4 " />
-          )}
+          {connected ? null : <External className="w-4 h-4 " />}
         </Button>
       </div>
     );

@@ -4,6 +4,8 @@ import { toast } from "@/components/toast";
 
 const MAX_DISPLAY_LENGTH = 200;
 
+
+// TODO: Move api calls to Redux RTK Query
 /**
  * Format tool input/output data for display
  * Truncates long content and shows file paths nicely
