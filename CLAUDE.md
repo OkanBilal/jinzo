@@ -44,7 +44,7 @@ Jinzo is an Electron desktop app built with React, using a local SQLite database
 
 **Renderer** (`src/renderer/`)
 - React app with Redux Toolkit, React Router (HashRouter)
-- Routes: `/` (Home), `/chat/:id` (Chat)
+- Routes: `/` (Home), `/chat/:id` (Chat), `/workspace/:workspaceId` (Workspace), `/claude/:workspaceId` (Claude Agent), `/journal` (Journal), `/settings` (Settings)
 
 ### Module Architecture (`src/main/modules/`)
 
@@ -110,6 +110,11 @@ Domain-specific views on entities:
 - Supports multiple modes: direct chat, RAG-augmented, MCP tool-enabled
 - Tracks provider/model per session and per message
 
+**Workspace/Runs System** (`src/main/modules/workspaces/`, `src/main/modules/runs/`)
+- Workspaces link to local git repositories via `rootPath`
+- Runs track terminal/agent sessions with commands and artifacts
+- WorkspaceResources link entities (issues, etc.) to workspaces
+
 ### Configuration
 
 - `drizzle.config.ts` - Drizzle Kit config (dev database: `.data/jinzo.db`)
@@ -131,4 +136,10 @@ Each connection type has:
 - Fetcher in `src/main/modules/sync/connections/`
 - IPC handlers for credentials and resource management
 
-Supported: GitHub, Raindrop, HackerNews, RSS, Spotify, Apple Music, Podcasts, YouTube, Notion
+Supported: GitHub, Linear, Raindrop, HackerNews, RSS, Spotify, Apple Music, Podcasts, YouTube, Notion
+
+### Troubleshooting
+
+- **Preload changes not taking effect**: Restart the dev server completely; changes to `src/preload/index.ts` require a full restart
+- **Database locked errors**: Close all app instances, then `npm run db:clean:dev && npm run db:push`
+- **Ollama connection issues**: Ensure Ollama is running with `ollama serve`
