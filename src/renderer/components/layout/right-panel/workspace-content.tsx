@@ -91,7 +91,7 @@ export function WorkspaceContent() {
     return (
       <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 -pb-4 rounded-2xl overflow-hidden">
         <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3 text-primary-500 dark:text-primary-200">
+          <div className="flex flex-col items-center gap-3 text-primary-700 dark:text-primary-200">
             <FolderIcon className="w-12 h-12" />
             <span className="text-sm">No workspace selected</span>
           </div>

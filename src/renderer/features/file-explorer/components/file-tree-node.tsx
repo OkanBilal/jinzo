@@ -102,8 +102,8 @@ export const FileTreeNode = memo(function FileTreeNode({
           transition-colors duration-75 rounded-lg
           ${
             isSelected
-              ? "bg-primary/80 dark:bg-primary/20 text-primary-950 dark:text-primary"
-              : "text-primary-900 dark:text-primary-100 hover:bg-primary/50 dark:hover:bg-primary/10"
+              ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary"
+              : "text-primary-900 dark:text-primary-100 hover:bg-primary/20 dark:hover:bg-primary/5"
           }
         `}
         style={{ paddingLeft }}
@@ -137,7 +137,7 @@ export const FileTreeNode = memo(function FileTreeNode({
         {!isDirectory && onAddToContext && (
           <button
             onClick={handleAddToContext}
-            className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-primary/20 dark:hover:bg-primary/30 transition-opacity mr-1"
+            className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-primary/20 dark:hover:bg-primary/10 transition-opacity mr-1"
             title="Add to context"
           >
             <Plus className="w-3.5 h-3.5 text-primary-500 dark:text-primary-400" />

@@ -33,7 +33,7 @@ function parseLabels(labels: string | null): string[] {
     return [];
   }
 }
- // TODO: move to
+// TODO: move to
 function getLabelColor(label: string): string {
   const labelLower = label.toLowerCase();
 
@@ -114,7 +114,7 @@ function getLabelColor(label: string): string {
 }
 
 function ProviderIcon({ provider }: { provider: string }) {
-  const iconClass = "w-5 h-5";
+  const iconClass = "w-5 h-5 text-primary-800 dark:text-primary-300";
 
   switch (provider) {
     case "github":
@@ -131,12 +131,6 @@ function ProviderIcon({ provider }: { provider: string }) {
 }
 
 function ProviderBadge({ provider }: { provider: string }) {
-  const bgConfig =
-    {
-      github: "bg-gray-600",
-      linear: "bg-purple-600",
-    }[provider] || "bg-gray-500";
-
   return (
     <span
       className={`shrink-0 inline-flex items-center justify-center px-1 text-white`}
