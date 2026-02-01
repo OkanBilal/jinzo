@@ -25,7 +25,7 @@ export async function handleRAGMode(
   const mergedOptions = mergeOptionsWithConfig(options, config);
 
   const qa = analyzeQuery(question);
-  console.log("Analyzed query:", qa);
+  //console.log("Analyzed query:", qa);
 
   const relevant = await findRelevantEntities(question, {
     topK: mergedOptions.topK,
@@ -42,7 +42,7 @@ export async function handleRAGMode(
         : mergedOptions.itemTypeFilter,
   });
 
-  console.log(`Found ${relevant.length} relevant items for question.`);
+  //console.log(`Found ${relevant.length} relevant items for question.`);
 
   let systemPrompt = "";
   let userPrompt = "";
@@ -116,7 +116,7 @@ export async function handleRAGMode(
 
   if (structuredSchema) {
     const enhancedPrompt = buildStructuredSystemPrompt(systemPrompt, structuredSchema);
-    console.log("Using structured output schema");
+    //console.log("Using structured output schema");
 
     const structuredMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       { role: "system", content: enhancedPrompt },

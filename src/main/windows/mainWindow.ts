@@ -58,7 +58,7 @@ export function createMainWindow(): BrowserWindow {
 
   if (process.env.NODE_ENV !== "production") {
     // Development mode - load from Vite dev server
-    console.log("Loading from dev server:", devServerUrl);
+    //console.log("Loading from dev server:", devServerUrl);
     mainWindow.loadURL(devServerUrl);
     //mainWindow.webContents.openDevTools();
   } else {

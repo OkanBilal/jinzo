@@ -47,7 +47,7 @@ class DatabaseClient {
   ): Promise<DatabaseInitResult> {
     if (this.isInitialized && this.db && this.sqlite) {
       console.log("Database already initialized");
-      console.log("Runtime DB:", DatabaseClient.getInstance().getDbPath());
+      //console.log("Runtime DB:", DatabaseClient.getInstance().getDbPath());
       return {
         db: this.db,
         sqlite: this.sqlite,
@@ -72,11 +72,11 @@ class DatabaseClient {
       // Ensure directory exists
       this.ensureDirectoryExists(this.dbPath);
 
-      console.log(`Initializing database at: ${this.dbPath}`);
+      //console.log(`Initializing database at: ${this.dbPath}`);
 
       // Create SQLite instance
       this.sqlite = new Database(this.dbPath, {
-        verbose: config?.verbose ? console.log : undefined,
+       //TODO: verbose: config?.verbose ? console.log : undefined,
       });
 
       // Configure database
@@ -229,7 +229,7 @@ class DatabaseClient {
 
     for (const migrationPath of possiblePaths) {
       if (fs.existsSync(migrationPath)) {
-        console.log(`Found migrations at: ${migrationPath}`);
+        //console.log(`Found migrations at: ${migrationPath}`);
         return migrationPath;
       }
     }
@@ -376,7 +376,7 @@ class DatabaseClient {
       // Use SQLite backup API for safe backup
       await this.sqlite.backup(backupPath);
 
-      console.log(`Database backed up to: ${backupPath}`);
+     // console.log(`Database backed up to: ${backupPath}`);
     } catch (error) {
       console.error("Backup failed:", error);
       throw error;

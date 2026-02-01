@@ -140,9 +140,9 @@ export function registerChatHandlers(): void {
       const userMessageId = options.userMessageId;
 
       if (isGenerationInFlight(userMessageId)) {
-        console.log(
-          `Generation already in flight for userMessageId: ${userMessageId}, skipping duplicate`
-        );
+        // console.log(
+        //   `Generation already in flight for userMessageId: ${userMessageId}, skipping duplicate`
+        // );
         return { success: true, skipped: true, reason: "generation_in_flight" };
       }
 

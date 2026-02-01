@@ -54,7 +54,7 @@ export async function handleMCPMode(
         const toolName = toolCall.function.name;
         const toolParams = toolCall.function.arguments;
 
-        console.log(`Executing tool: ${toolName}`, toolParams);
+        //console.log(`Executing tool: ${toolName}`, toolParams);
 
         try {
           const result = await mcpClient.executeTool(toolName, toolParams);
