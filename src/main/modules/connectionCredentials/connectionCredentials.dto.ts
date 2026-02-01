@@ -6,11 +6,15 @@ export interface SaveCredentialsPayload {
   connectionId: string;
   // Provider-specific fields
   token?: string; // github, raindrop
-  apiKey?: string; // podcast
+  apiKey?: string; // linear, podcast
   userId?: string; // podcast
   developerToken?: string; // apple-music
   userToken?: string; // apple-music
   accessToken?: string; // spotify
+  //TODO: Check this
+  apiToken?: string; // jira
+  domain?: string; // jira
+  email?: string; // jira
   [key: string]: unknown;
 }
 

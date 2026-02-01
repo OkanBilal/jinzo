@@ -180,6 +180,8 @@ const api = {
       ipcRenderer.invoke("connections:getRaindropCollections", connectionId),
     getLinearTeams: (connectionId: string) =>
       ipcRenderer.invoke("connections:getLinearTeams", connectionId),
+    getJiraProjects: (connectionId: string) =>
+      ipcRenderer.invoke("connections:getJiraProjects", connectionId),
     getHackerNewsStatus: () =>
       ipcRenderer.invoke("connections:getHackerNewsStatus"),
     toggleHackerNews: (payload: {

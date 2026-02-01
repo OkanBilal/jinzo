@@ -8,6 +8,7 @@ export interface ContextIssue {
   body: string | null;
   provider: string;
   number: number | null;
+  labels: string | null;
 }
 
 export interface WorkspaceState {

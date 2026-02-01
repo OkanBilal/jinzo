@@ -71,15 +71,28 @@ export const connectionCredentialsService = {
         isCurrent: true,
       });
 
-      // Update connection status
+      // Update connection status and metadata
+      // TODO: Refactor metadata handling
       const currentMetadata = parseConnectionMetadata(connection.metadata);
+      const updatedMetadata: Record<string, unknown> = {
+        ...currentMetadata,
+        lastCredentialUpdate: new Date().toISOString(),
+      };
+
+      // For Jira, store domain and email in metadata
+      if (provider === "jira") {
+        const { domain, email } = payload;
+        if (!domain || !email) {
+          return { success: false, error: "Jira requires domain and email" };
+        }
+        updatedMetadata.domain = domain;
+        updatedMetadata.email = email;
+      }
+
       await connectionCredentialsRepo.updateConnectionStatus(
         connectionId,
         "active",
-        JSON.stringify({
-          ...currentMetadata,
-          lastCredentialUpdate: new Date().toISOString(),
-        })
+        JSON.stringify(updatedMetadata)
       );
 
       // Update app state

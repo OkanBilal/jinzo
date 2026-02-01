@@ -46,6 +46,21 @@ export interface SelectedTeam {
   metadata: any;
 }
 
+export interface JiraProject {
+  id: string;
+  key: string;
+  name: string;
+  projectTypeKey: string;
+  avatarUrl: string | null;
+}
+
+export interface SelectedProject {
+  id: string;
+  key: string;
+  name: string;
+  metadata: any;
+}
+
 export interface SelectedCollection {
   id: string;
   externalId: string;
@@ -115,6 +130,9 @@ export interface SaveCredentialsPayload {
   developerToken?: string;
   userToken?: string;
   accessToken?: string;
+  apiToken?: string; // jira
+  domain?: string; // jira
+  email?: string; // jira
 }
 
 export interface SaveResourcesPayload {
@@ -166,6 +184,23 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [connectionId],
       }),
       transformResponse: (response: any) => response.success ? { success: true, teams: response.data.teams } : { success: false, teams: [] },
+    }),
+
+    getJiraProjects: builder.query<{ success: boolean; projects: JiraProject[] }, string>({
+      query: (connectionId) => ({
+        handler: 'connections:getJiraProjects',
+        args: [connectionId],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
+    }),
+
+    getSelectedProjects: builder.query<{ success: boolean; projects: SelectedProject[]; connectionId: string }, string>({
+      query: (provider) => ({
+        handler: 'connections:getSelectedResources',
+        args: [provider],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects, connectionId: response.data.connectionId } : { success: false, projects: [], connectionId: '' },
+      providesTags: ['Apps'],
     }),
 
     getSelectedTeams: builder.query<{ success: boolean; teams: SelectedTeam[]; connectionId: string }, string>({
@@ -277,10 +312,13 @@ export const {
   useLazyGetGitHubReposQuery,
   useLazyGetRaindropCollectionsQuery,
   useLazyGetLinearTeamsQuery,
+  useLazyGetJiraProjectsQuery,
   useGetSelectedReposQuery,
   useLazyGetSelectedReposQuery,
   useGetSelectedTeamsQuery,
   useLazyGetSelectedTeamsQuery,
+  useGetSelectedProjectsQuery,
+  useLazyGetSelectedProjectsQuery,
   useGetSelectedCollectionsQuery,
   useLazyGetSelectedCollectionsQuery,
   useGetSelectedPodcastsQuery,

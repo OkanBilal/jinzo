@@ -11,6 +11,7 @@ import type {
   GithubRepo,
   RaindropCollection,
   LinearTeam,
+  JiraProject,
   HackerNewsTogglePayload,
   SaveResourcesPayload,
   ServiceResponse,
@@ -164,6 +165,70 @@ export const connectionsService = {
         errors: error?.errors,
       });
       const errorMessage = error?.message || "Failed to fetch teams";
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  // Jira
+  async getJiraProjects(connectionId: string): Promise<ServiceResponse<{ projects: JiraProject[] }>> {
+    try {
+      if (!connectionId) {
+        return { success: false, error: "connectionId is required" };
+      }
+
+      const connection = await connectionsRepo.findById(connectionId);
+      if (!connection) {
+        return { success: false, error: "Connection not found" };
+      }
+
+      const token = await connectionsRepo.findCurrentToken(connectionId);
+      if (!token || !token.accessTokenEnc) {
+        return { success: false, error: "Token not found" };
+      }
+
+      const metadata = connection.metadata ? JSON.parse(connection.metadata) : {};
+      const domain = metadata.domain as string;
+      const email = metadata.email as string;
+
+      if (!domain || !email) {
+        return { success: false, error: "Jira domain and email are required in connection metadata" };
+      }
+
+      const jiraToken = decryptToken(token.accessTokenEnc as Buffer);
+
+      // Build auth header and fetch projects
+      const credentials = Buffer.from(`${email}:${jiraToken}`).toString("base64");
+      const baseUrl = `https://${domain.replace(/^https?:\/\//, "").replace(/\/$/, "")}/rest/api/3`;
+
+      const response = await fetch(`${baseUrl}/project/search?maxResults=100`, {
+        headers: {
+          Authorization: `Basic ${credentials}`,
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Jira API error (${response.status}):`, errorText);
+        return { success: false, error: `Jira API error: ${response.status}` };
+      }
+
+      const data = await response.json();
+
+      const formattedProjects: JiraProject[] = (data.values || []).map(
+        (project: Record<string, unknown>) => ({
+          id: project.id as string,
+          key: project.key as string,
+          name: project.name as string,
+          projectTypeKey: project.projectTypeKey as string,
+          avatarUrl: (project.avatarUrls as Record<string, string>)?.["48x48"] || null,
+        })
+      );
+
+      return { success: true, data: { projects: formattedProjects } };
+    } catch (error: any) {
+      console.error("Error fetching Jira projects:", error);
+      const errorMessage = error?.message || "Failed to fetch projects";
       return { success: false, error: errorMessage };
     }
   },
@@ -401,6 +466,47 @@ export const connectionsService = {
                 externalId: team.key,
                 kind: "linear_team",
                 name: team.name,
+                selected: true,
+                metadata,
+                lastSeenAt: new Date(),
+                lastIngestAt: null,
+              });
+            }
+            savedCount++;
+          }
+          break;
+        }
+
+        case "jira": {
+          const selectedProjects = (resources || []) as JiraProject[];
+          for (const project of selectedProjects) {
+            const resourceId = `${connectionId}:${project.key}`;
+            const existing = await connectionsRepo.findResourceByExternalId(
+              connectionId,
+              project.key
+            );
+
+            const metadata = JSON.stringify({
+              id: project.id,
+              name: project.name,
+              key: project.key,
+              projectTypeKey: project.projectTypeKey,
+              avatarUrl: project.avatarUrl,
+            });
+
+            if (existing) {
+              await connectionsRepo.updateResource(existing.id, {
+                selected: true,
+                lastSeenAt: new Date(),
+                metadata,
+              });
+            } else {
+              await connectionsRepo.insertResource({
+                id: resourceId,
+                connectionId,
+                externalId: project.key,
+                kind: "jira_project",
+                name: project.name,
                 selected: true,
                 metadata,
                 lastSeenAt: new Date(),
@@ -701,6 +807,23 @@ export const connectionsService = {
           );
           responseData = {
             teams: resources.map((r) => ({
+              id: r.id,
+              key: r.externalId,
+              name: r.name || r.externalId,
+              metadata: parseResourceMetadata(r.metadata),
+            })),
+            connectionId: connection.id,
+          };
+          break;
+
+        case "jira":
+          resources = await connectionsRepo.findResourcesByConnectionAndKind(
+            connection.id,
+            "jira_project",
+            true
+          );
+          responseData = {
+            projects: resources.map((r) => ({
               id: r.id,
               key: r.externalId,
               name: r.name || r.externalId,

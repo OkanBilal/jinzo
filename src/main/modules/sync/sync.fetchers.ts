@@ -7,6 +7,7 @@ import {
   fetchSpotifyFromConnectionResources,
   fetchGitHubFromConnectionResources,
   fetchLinearFromConnectionResources,
+  fetchJiraFromConnectionResources,
   fetchHackerNewsFromConnectionResources,
 } from "./connections";
 import type { EntityInput } from "./sync.dto";
@@ -19,6 +20,7 @@ export async function fetchAllEntities(): Promise<EntityInput[]> {
     const [
       githubEntities,
       linearEntities,
+      jiraEntities,
       raindropEntities,
       hackerNewsEntities,
       podcastEntities,
@@ -31,6 +33,7 @@ export async function fetchAllEntities(): Promise<EntityInput[]> {
         FETCH_LIMITS.GITHUB_PRS
       ),
       fetchLinearFromConnectionResources(FETCH_LIMITS.LINEAR_ISSUES),
+      fetchJiraFromConnectionResources(FETCH_LIMITS.JIRA_ISSUES),
       fetchRaindropFromConnectionResources(FETCH_LIMITS.RAINDROP),
       fetchHackerNewsFromConnectionResources(
         FETCH_LIMITS.HACKERNEWS_TOP,
@@ -46,6 +49,7 @@ export async function fetchAllEntities(): Promise<EntityInput[]> {
     const entities = [
       ...githubEntities,
       ...linearEntities,
+      ...jiraEntities,
       ...raindropEntities,
       ...hackerNewsEntities,
       ...podcastEntities,

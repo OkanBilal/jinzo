@@ -17,6 +17,7 @@ import {
 import { toast } from "@/components/toast";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
+import { Jira } from "@/components/ui/icons";
 
 interface LinkResourcesModalProps {
   workspaceId: string;
@@ -136,6 +137,8 @@ export function LinkResourcesModal({
         return "GitHub";
       case "linear_team":
         return "Linear";
+      case "jira_project":
+        return "Jira";
       default:
         return kind;
     }
@@ -146,6 +149,8 @@ export function LinkResourcesModal({
     const icon =
       resource.kind === "github_repo" ? (
         <Github className="w-4 h-4 shrink-0" />
+      ) : resource.kind === "jira_project" ? (
+        <Jira className="w-4 h-4 shrink-0" />
       ) : (
         <Linear className="w-4 h-4 shrink-0" />
       );

@@ -17,6 +17,10 @@ export const connectionsController = {
     return connectionsService.getLinearTeams(connectionId);
   },
 
+  async getJiraProjects(connectionId: string) {
+    return connectionsService.getJiraProjects(connectionId);
+  },
+
   async getHackerNewsStatus() {
     return connectionsService.getHackerNewsStatus();
   },

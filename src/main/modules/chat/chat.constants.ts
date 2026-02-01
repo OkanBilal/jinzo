@@ -281,10 +281,13 @@ export const BM25_PARAMS = {
 // ─────────────────────────────────────────────────────────────
 // Sync Limits
 // ─────────────────────────────────────────────────────────────
+
+// TODO: Make these configurable per source in the future
 export const FETCH_LIMITS = {
   GITHUB_ISSUES: 20,
   GITHUB_PRS: 20,
   LINEAR_ISSUES: 20,
+  JIRA_ISSUES: 20,
   RAINDROP: 20,
   HACKERNEWS_TOP: 20,
   HACKERNEWS_NEW: 20,

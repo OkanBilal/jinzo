@@ -101,6 +101,18 @@ export function parseProviderCredentials(
       tokensForHash = [credentials.accessToken as string];
       break;
 
+      // TODO: Check
+
+    case "jira":
+      // Jira requires apiToken, domain, and email
+      // apiToken is stored as accessToken, domain and email stored in connection metadata
+      if (!credentials.apiToken) {
+        return { success: false, error: "API Token is required" };
+      }
+      accessToken = credentials.apiToken as string;
+      tokensForHash = [credentials.apiToken as string];
+      break;
+
     default:
       return { success: false, error: `Unsupported provider: ${provider}` };
   }

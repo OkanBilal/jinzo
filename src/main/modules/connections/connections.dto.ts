@@ -49,6 +49,14 @@ export interface LinearTeam {
   issueCount: number;
 }
 
+export interface JiraProject {
+  id: string;
+  key: string;
+  name: string;
+  projectTypeKey: string;
+  avatarUrl: string | null;
+}
+
 export interface ConnectionResource {
   id: string;
   connectionId: string;

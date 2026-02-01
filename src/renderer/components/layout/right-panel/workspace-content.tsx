@@ -74,6 +74,7 @@ export function WorkspaceContent() {
         body: issue.entity.body,
         provider: issue.issue.provider,
         number: issue.issue.number,
+        labels: issue.issue.labels,
       }));
     },
     [dispatch],

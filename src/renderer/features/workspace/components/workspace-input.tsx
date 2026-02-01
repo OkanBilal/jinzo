@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useGetProviderModelsQuery } from "@/lib/redux/api/providersApi";
+import { getContextIssueColor } from "@/lib/label-colors";
 import type { Run } from "../types";
 import type { FileNode } from "@/features/file-explorer";
 import type { ContextIssue } from "@/lib/redux/slices/workspaceSlice";
@@ -18,6 +19,7 @@ import { ModelSelectDropdown } from "@/components/ui/input/model-select-dropdown
 import { Close } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
+import { Jira } from "@/components/ui/icons";
 import { Code } from "@/components/ui/icons/mood";
 
 interface WorkspaceInputProps {
@@ -205,12 +207,14 @@ export function WorkspaceInput({
             {contextIssues.map((issue) => (
               <div
                 key={issue.entityId}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 dark:bg-purple-500/15 text-xs text-purple-700 dark:text-purple-300"
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs ${getContextIssueColor(issue.labels, issue.provider)}`}
               >
                 {issue.provider === "github" ? (
                   <Github className="w-3 h-3" />
                 ) : issue.provider === "linear" ? (
                   <Linear className="w-3 h-3" />
+                ) : issue.provider === "jira" ? (
+                  <Jira className="w-3 h-3" />
                 ) : (
                   <span className="text-[10px] font-medium uppercase">
                     {issue.provider.slice(0, 2)}
