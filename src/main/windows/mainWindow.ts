@@ -3,6 +3,11 @@ import path from "path";
 
 let mainWindow: BrowserWindow | null = null;
 
+export interface MainWindowOptions {
+  show?: boolean;
+  onReadyToShow?: (window: BrowserWindow) => void;
+}
+
 // Get icon path based on app path
 function getIconPath(): string {
   if (process.env.NODE_ENV !== "production") {
@@ -14,7 +19,9 @@ function getIconPath(): string {
   }
 }
 
-export function createMainWindow(): BrowserWindow {
+export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow {
+  const { show = true, onReadyToShow } = options;
+
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.focus();
     return mainWindow;
@@ -35,6 +42,7 @@ export function createMainWindow(): BrowserWindow {
     title: "Jinzo",
     minHeight: 600,
     icon: iconPath,
+    show: false, // Always create hidden, control visibility via ready-to-show
     webPreferences: {
       preload: path.join(__dirname, "index.js"),
       contextIsolation: true,
@@ -48,6 +56,15 @@ export function createMainWindow(): BrowserWindow {
     visualEffectState: "active",
   });
 
+  // Handle ready-to-show event
+  mainWindow.once("ready-to-show", () => {
+    if (onReadyToShow && mainWindow) {
+      onReadyToShow(mainWindow);
+    } else if (show && mainWindow) {
+      mainWindow.show();
+    }
+  });
+
   // Load the app
   // In development, Electron Forge's Vite plugin makes the dev server URL available
   // through various environment variables
@@ -58,9 +75,7 @@ export function createMainWindow(): BrowserWindow {
 
   if (process.env.NODE_ENV !== "production") {
     // Development mode - load from Vite dev server
-    //console.log("Loading from dev server:", devServerUrl);
     mainWindow.loadURL(devServerUrl);
-    //mainWindow.webContents.openDevTools();
   } else {
     // Production mode - load from built files
     mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));

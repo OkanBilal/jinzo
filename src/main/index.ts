@@ -37,7 +37,7 @@ import {
   registerWorkspaceResourcesHandlers,
   unregisterWorkspaceResourcesHandlers,
 } from "./modules/workspaceResources";
-import { createMainWindow } from "./windows/mainWindow";
+import { createMainWindow, createSplashWindow, closeSplashWindow } from "./windows";
 
 /**
  * Initialize the application
@@ -45,6 +45,9 @@ import { createMainWindow } from "./windows/mainWindow";
 async function initializeApp() {
   try {
     console.log("Initializing application...");
+
+    // Show splash screen immediately
+    createSplashWindow();
 
     // Initialize database
     await initializeDatabase({
@@ -76,12 +79,20 @@ async function initializeApp() {
     registerGitIpc();
     registerWorkspaceResourcesHandlers();
 
-    // Create main window
-    createMainWindow();
+    // Create main window (hidden until ready)
+    createMainWindow({
+      show: false,
+      onReadyToShow: (window) => {
+        // Close splash and show main window
+        closeSplashWindow();
+        window.show();
+      },
+    });
 
     console.log("Application initialized successfully");
   } catch (error) {
     console.error("Failed to initialize application:", error);
+    closeSplashWindow();
     app.quit();
   }
 }
@@ -136,7 +147,7 @@ app.on("activate", () => {
   // On macOS it's common to re-create a window when dock icon is clicked
   const { BrowserWindow } = require("electron");
   if (BrowserWindow.getAllWindows().length === 0) {
-    createMainWindow();
+    createMainWindow({ show: true });
   }
 });
 

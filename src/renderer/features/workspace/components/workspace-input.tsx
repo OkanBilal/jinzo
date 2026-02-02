@@ -102,10 +102,7 @@ export function WorkspaceInput({
   useEffect(() => {
     if (providerModels && providerModels.length > 0 && !selectedModel) {
       const defaultModel =
-        providerModels.find((m) => m.isDefault) ?? providerModels[2];
-        console.log("Setting default model to:", defaultModel.id);
-        console.log("Default model display name:", defaultModel.displayName);
-        console.log("Provider Models:", providerModels);
+        providerModels.find((m) => m.isDefault) ?? providerModels[0];
       setSelectedModel(defaultModel.id);
     }
   }, [providerModels, selectedModel, setSelectedModel]);

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jinzo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      -webkit-app-region: drag;
+      user-select: none;
+    }
+
+    /* Dark mode (default) */
+    .splash-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      width: 100%;
+      background: rgba(26, 28, 36, 0.96);
+    }
+
+    .logo {
+      width: 96px;
+      height: 96px;
+      margin-bottom: 24px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .app-name {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 28px;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+      margin-bottom: 32px;
+    }
+
+    .loader {
+      width: 48px;
+      height: 48px;
+      position: relative;
+    }
+
+    .loader::before,
+    .loader::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      animation: pulsOut 1.8s ease-in-out infinite;
+      filter: drop-shadow(0 0 8px #4a9bf04d);
+    }
+
+    .loader::before {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #4a9bf0 0%, #a09d95 100%);
+      animation-delay: -0.9s;
+    }
+
+    .loader::after {
+      width: 75%;
+      height: 75%;
+      top: 12.5%;
+      left: 12.5%;
+      background: rgba(18, 18, 18, 0.98);
+    }
+
+    /* Light mode */
+    @media (prefers-color-scheme: light) {
+      .splash-container {
+        background: #fafafafa;
+      }
+
+      .app-name {
+        color: #1a1a1a;
+      }
+
+      .loader::before,
+      .loader::after {
+        filter: drop-shadow(0 0 8px #4a9bf04d);
+      }
+
+      .loader::after {
+        background: #fafafafa;
+      }
+    }
+
+    @keyframes pulsOut {
+      0%, 100% {
+        transform: scale(0.8);
+        opacity: 0.8;
+      }
+      50% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.05);
+        opacity: 0.9;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="splash-container">
+    <img class="logo" src="icon.png" alt="Jinzo" />
+  </div>
+</body>
+</html>

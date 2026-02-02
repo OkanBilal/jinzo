@@ -22,6 +22,7 @@ import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
 import { Button } from "@/components/ui/button";
 import Text from "@/components/ui/text";
+import { Input } from "@/components/ui/input";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -148,9 +149,9 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
 
   return (
     <div className="px-1 py-4 space-y-6">
-      <Muted>
+      {/* <Muted>
         Enter your Jira credentials to connect your projects and sync issues.
-      </Muted>
+      </Muted> */}
 
       <div className="space-y-4">
         {/* Domain field */}
@@ -161,7 +162,7 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
           >
             Jira Domain
           </label>
-          <input
+          <Input
             id="jira-domain"
             type="text"
             placeholder="your-company.atlassian.net"
@@ -170,7 +171,7 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
               setData({ domain: e.target.value });
               if (errors.domain) setErrors({ domain: "" });
             }}
-            className="w-full px-3 py-2 rounded-lg border border-primary-300 dark:border-primary-700 bg-white dark:bg-primary-900 text-primary-900 dark:text-primary-100 placeholder:text-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2.5 dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
           />
           {errors.domain && (
             <p className="text-sm text-red-500">{errors.domain}</p>
@@ -185,7 +186,7 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
           >
             Email
           </label>
-          <input
+          <Input
             id="jira-email"
             type="email"
             placeholder="you@example.com"
@@ -194,7 +195,7 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
               setData({ email: e.target.value });
               if (errors.email) setErrors({ email: "" });
             }}
-            className="w-full px-3 py-2 rounded-lg border border-primary-300 dark:border-primary-700 bg-white dark:bg-primary-900 text-primary-900 dark:text-primary-100 placeholder:text-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2.5 dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
           />
           {errors.email && (
             <p className="text-sm text-red-500">{errors.email}</p>
@@ -209,7 +210,7 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
           >
             API Token
           </label>
-          <input
+          <Input
             id="jira-api-token"
             type="password"
             placeholder="Your API token"
@@ -218,7 +219,7 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
               setData({ apiToken: e.target.value });
               if (errors.apiToken) setErrors({ apiToken: "" });
             }}
-            className="w-full px-3 py-2 rounded-lg border border-primary-300 dark:border-primary-700 bg-white dark:bg-primary-900 text-primary-900 dark:text-primary-100 placeholder:text-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2.5 dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
           />
           {errors.apiToken && (
             <p className="text-sm text-red-500">{errors.apiToken}</p>
@@ -246,12 +247,12 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
 
       <div className="flex justify-end pt-2">
         <Button
-          variant="primary"
+          variant="submit"
           onClick={handleSubmit}
-          disabled={loading}
+          disabled={loading || !data.domain || !data.email || !data.apiToken}
         >
           <Text variant="button">
-            {loading ? "Connecting..." : "Connect"}
+            {loading ? "Connecting..." : "Continue"}
           </Text>
         </Button>
       </div>

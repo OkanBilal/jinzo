@@ -85,7 +85,7 @@ export const predefinedMoods: PredefinedMood[] = [
     id: "copilot",
     name: "Copilot",
     icon: "icon:copilot",
-    theme: theme("#FFFFFF50", "#0e1413"),
+    theme: theme("#FFFFFF50", "#11131a"),
     systemPrompt: "",
     uiConfig: WORKSPACE_UI,
   },

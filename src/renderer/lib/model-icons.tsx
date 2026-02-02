@@ -22,7 +22,16 @@ export function getModelIcon(modelName: string) {
   if (name.includes("qwen")) {
     return <span className="text-base">🌐</span>;
   }
-  if (name.includes("claude") || name.includes("opus")) {
+  if (name.includes("opus")) {
+    return <Claude className="w-4 h-4" />;
+  }
+  if (name.includes("sonnet")) {
+    return <Claude className="w-4 h-4" />;
+  }
+  if (name.includes("haiku")) {
+    return <Claude className="w-4 h-4" />;
+  }
+  if (name.includes("claude")) {
     return <Claude className="w-4 h-4" />;
   }
   if (name.includes("gemini")) {
