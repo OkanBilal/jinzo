@@ -56,3 +56,4 @@ export { default as Linear } from "./linear";
 export { default as External } from "./external";
 export { default as Branch } from "./branch";
 export { default as Jira } from "./jira";
+export { default as Asana } from "./asana";

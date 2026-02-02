@@ -54,6 +54,24 @@ export interface JiraProject {
   avatarUrl: string | null;
 }
 
+export interface AsanaProject {
+  gid: string;
+  name: string;
+  archived: boolean;
+  color: string | null;
+  workspaceGid: string;
+  workspaceName: string;
+  teamGid?: string | null;
+  teamName?: string | null;
+}
+
+export interface SelectedAsanaProject {
+  id: string;
+  gid: string;
+  name: string;
+  metadata: any;
+}
+
 export interface SelectedProject {
   id: string;
   key: string;
@@ -194,6 +212,23 @@ export const connectionsApi = baseApi.injectEndpoints({
       transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
     }),
 
+    getAsanaProjects: builder.query<{ success: boolean; projects: AsanaProject[] }, string>({
+      query: (connectionId) => ({
+        handler: 'connections:getAsanaProjects',
+        args: [connectionId],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
+    }),
+
+    getSelectedAsanaProjects: builder.query<{ success: boolean; projects: SelectedAsanaProject[]; connectionId: string }, string>({
+      query: (provider) => ({
+        handler: 'connections:getSelectedResources',
+        args: [provider],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects, connectionId: response.data.connectionId } : { success: false, projects: [], connectionId: '' },
+      providesTags: ['Apps'],
+    }),
+
     getSelectedProjects: builder.query<{ success: boolean; projects: SelectedProject[]; connectionId: string }, string>({
       query: (provider) => ({
         handler: 'connections:getSelectedResources',
@@ -313,12 +348,15 @@ export const {
   useLazyGetRaindropCollectionsQuery,
   useLazyGetLinearTeamsQuery,
   useLazyGetJiraProjectsQuery,
+  useLazyGetAsanaProjectsQuery,
   useGetSelectedReposQuery,
   useLazyGetSelectedReposQuery,
   useGetSelectedTeamsQuery,
   useLazyGetSelectedTeamsQuery,
   useGetSelectedProjectsQuery,
   useLazyGetSelectedProjectsQuery,
+  useGetSelectedAsanaProjectsQuery,
+  useLazyGetSelectedAsanaProjectsQuery,
   useGetSelectedCollectionsQuery,
   useLazyGetSelectedCollectionsQuery,
   useGetSelectedPodcastsQuery,

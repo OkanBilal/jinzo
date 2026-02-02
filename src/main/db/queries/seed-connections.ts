@@ -156,6 +156,16 @@ export async function seedConnections(): Promise<void> {
       null
     );
 
+    // Asana Connection
+    const asanaConnectionId = await ensureConnectionExists(
+      db,
+      "asana",
+      "Asana",
+      "api_key",
+      "revoked",
+      null
+    );
+
     // Summary
     console.log("\n✨ Successfully seeded connections!");
     console.log("\n📊 Summary:");
@@ -168,6 +178,7 @@ export async function seedConnections(): Promise<void> {
     console.log(`   Apple Music: ${appleMusicConnectionId}`);
     console.log(`   Spotify: ${spotifyConnectionId}`);
     console.log(`   Jira: ${jiraConnectionId}`);
+    console.log(`   Asana: ${asanaConnectionId}`);
   } catch (error) {
     console.error("❌ Error seeding connections:", error);
     throw error;

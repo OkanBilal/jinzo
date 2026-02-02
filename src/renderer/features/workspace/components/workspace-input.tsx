@@ -16,7 +16,7 @@ import {
   type UploadedFile,
 } from "@/components/ui/input/file-upload-dropdown";
 import { ModelSelectDropdown } from "@/components/ui/input/model-select-dropdown";
-import { Close } from "@/components/ui/icons";
+import { Asana, Close } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
 import { Jira } from "@/components/ui/icons";
@@ -215,6 +215,8 @@ export function WorkspaceInput({
                   <Linear className="w-3 h-3" />
                 ) : issue.provider === "jira" ? (
                   <Jira className="w-3 h-3" />
+                ) : issue.provider === "asana" ? (
+                  <Asana className="w-3 h-3" />
                 ) : (
                   <span className="text-[10px] font-medium uppercase">
                     {issue.provider.slice(0, 2)}

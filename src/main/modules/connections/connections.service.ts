@@ -12,6 +12,7 @@ import type {
   RaindropCollection,
   LinearTeam,
   JiraProject,
+  AsanaProject,
   HackerNewsTogglePayload,
   SaveResourcesPayload,
   ServiceResponse,
@@ -228,6 +229,93 @@ export const connectionsService = {
       return { success: true, data: { projects: formattedProjects } };
     } catch (error: any) {
       console.error("Error fetching Jira projects:", error);
+      const errorMessage = error?.message || "Failed to fetch projects";
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  // Asana
+  async getAsanaProjects(connectionId: string): Promise<ServiceResponse<{ projects: AsanaProject[] }>> {
+    try {
+      if (!connectionId) {
+        return { success: false, error: "connectionId is required" };
+      }
+
+      const connection = await connectionsRepo.findById(connectionId);
+      if (!connection) {
+        return { success: false, error: "Connection not found" };
+      }
+
+      const token = await connectionsRepo.findCurrentToken(connectionId);
+      if (!token || !token.accessTokenEnc) {
+        return { success: false, error: "Token not found" };
+      }
+
+      const asanaToken = decryptToken(token.accessTokenEnc as Buffer);
+      const headers = {
+        Authorization: `Bearer ${asanaToken}`,
+        Accept: "application/json",
+      };
+
+      // First, fetch all workspaces
+      const workspacesResponse = await fetch("https://app.asana.com/api/1.0/workspaces", {
+        headers,
+      });
+
+      if (!workspacesResponse.ok) {
+        const errorText = await workspacesResponse.text();
+        console.error(`Asana API error fetching workspaces (${workspacesResponse.status}):`, errorText);
+        return { success: false, error: `Asana API error: ${workspacesResponse.status}` };
+      }
+
+      const workspacesData = await workspacesResponse.json();
+      const workspaces = workspacesData.data || [];
+
+      if (workspaces.length === 0) {
+        return { success: true, data: { projects: [] } };
+      }
+
+      // Fetch projects from each workspace
+      const allProjects: AsanaProject[] = [];
+
+      for (const workspace of workspaces) {
+        const workspaceGid = workspace.gid as string;
+        const workspaceName = workspace.name as string;
+
+        const url = `https://app.asana.com/api/1.0/workspaces/${workspaceGid}/projects?opt_fields=gid,name,archived,color,team.gid,team.name&limit=100`;
+
+        const response = await fetch(url, { headers });
+
+        if (!response.ok) {
+          console.error(`Asana API error fetching projects for workspace ${workspaceGid}:`, await response.text());
+          continue; // Skip this workspace but continue with others
+        }
+
+        const data = await response.json();
+
+        const projects = (data.data || [])
+          .filter((project: Record<string, unknown>) => !project.archived)
+          .map((project: Record<string, unknown>) => {
+            const team = project.team as Record<string, unknown> | null;
+
+            return {
+              gid: project.gid as string,
+              name: project.name as string,
+              archived: project.archived as boolean,
+              color: (project.color as string) || null,
+              workspaceGid,
+              workspaceName,
+              teamGid: team?.gid as string || null,
+              teamName: team?.name as string || null,
+            };
+          });
+
+        allProjects.push(...projects);
+      }
+
+      return { success: true, data: { projects: allProjects } };
+    } catch (error: any) {
+      console.error("Error fetching Asana projects:", error);
       const errorMessage = error?.message || "Failed to fetch projects";
       return { success: false, error: errorMessage };
     }
@@ -506,6 +594,49 @@ export const connectionsService = {
                 connectionId,
                 externalId: project.key,
                 kind: "jira_project",
+                name: project.name,
+                selected: true,
+                metadata,
+                lastSeenAt: new Date(),
+                lastIngestAt: null,
+              });
+            }
+            savedCount++;
+          }
+          break;
+        }
+
+        case "asana": {
+          const selectedAsanaProjects = (resources || []) as AsanaProject[];
+          for (const project of selectedAsanaProjects) {
+            const resourceId = `${connectionId}:${project.gid}`;
+            const existing = await connectionsRepo.findResourceByExternalId(
+              connectionId,
+              project.gid
+            );
+
+            const metadata = JSON.stringify({
+              gid: project.gid,
+              name: project.name,
+              color: project.color,
+              workspaceGid: project.workspaceGid,
+              workspaceName: project.workspaceName,
+              teamGid: project.teamGid,
+              teamName: project.teamName,
+            });
+
+            if (existing) {
+              await connectionsRepo.updateResource(existing.id, {
+                selected: true,
+                lastSeenAt: new Date(),
+                metadata,
+              });
+            } else {
+              await connectionsRepo.insertResource({
+                id: resourceId,
+                connectionId,
+                externalId: project.gid,
+                kind: "asana_project",
                 name: project.name,
                 selected: true,
                 metadata,
@@ -826,6 +957,23 @@ export const connectionsService = {
             projects: resources.map((r) => ({
               id: r.id,
               key: r.externalId,
+              name: r.name || r.externalId,
+              metadata: parseResourceMetadata(r.metadata),
+            })),
+            connectionId: connection.id,
+          };
+          break;
+
+        case "asana":
+          resources = await connectionsRepo.findResourcesByConnectionAndKind(
+            connection.id,
+            "asana_project",
+            true
+          );
+          responseData = {
+            projects: resources.map((r) => ({
+              id: r.id,
+              gid: r.externalId,
               name: r.name || r.externalId,
               metadata: parseResourceMetadata(r.metadata),
             })),

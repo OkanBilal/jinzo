@@ -113,6 +113,15 @@ export function parseProviderCredentials(
       tokensForHash = [credentials.apiToken as string];
       break;
 
+    case "asana":
+      // Asana uses a Personal Access Token (PAT)
+      if (!credentials.accessToken) {
+        return { success: false, error: "Access Token is required" };
+      }
+      accessToken = credentials.accessToken as string;
+      tokensForHash = [credentials.accessToken as string];
+      break;
+
     default:
       return { success: false, error: `Unsupported provider: ${provider}` };
   }

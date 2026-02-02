@@ -182,6 +182,8 @@ const api = {
       ipcRenderer.invoke("connections:getLinearTeams", connectionId),
     getJiraProjects: (connectionId: string) =>
       ipcRenderer.invoke("connections:getJiraProjects", connectionId),
+    getAsanaProjects: (connectionId: string) =>
+      ipcRenderer.invoke("connections:getAsanaProjects", connectionId),
     getHackerNewsStatus: () =>
       ipcRenderer.invoke("connections:getHackerNewsStatus"),
     toggleHackerNews: (payload: {

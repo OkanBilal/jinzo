@@ -1,6 +1,7 @@
 export * from "./github";
 export * from "./linear";
 export * from "./jira";
+export * from "./asana";
 export * from "./rss";
 export * from "./hackernews";
 export * from "./podcast";

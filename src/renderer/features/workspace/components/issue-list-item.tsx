@@ -1,4 +1,4 @@
-import { Plus } from "@/components/ui/icons";
+import { Asana, Plus } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
 import { Jira } from "@/components/ui/icons";
@@ -36,6 +36,8 @@ function ProviderIcon({ provider }: { provider: string }) {
       return <Linear className={iconClass} />;
     case "jira":
       return <Jira className={iconClass} />;
+    case "asana":
+      return <Asana className={iconClass} />;
     default:
       return (
         <span className="text-[9px] font-medium">

@@ -21,6 +21,10 @@ export const connectionsController = {
     return connectionsService.getJiraProjects(connectionId);
   },
 
+  async getAsanaProjects(connectionId: string) {
+    return connectionsService.getAsanaProjects(connectionId);
+  },
+
   async getHackerNewsStatus() {
     return connectionsService.getHackerNewsStatus();
   },

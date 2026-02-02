@@ -74,6 +74,12 @@ export const apps = [
     imageAlt: "Jira",
   },
     {
+    id: "asana",
+    name: "Asana",
+    imageSrc: "/connections/asana.png",
+    imageAlt: "Asana",
+  },
+    {
     id: "linear",
     name: "Linear",
     imageSrc: "/connections/linear.png",

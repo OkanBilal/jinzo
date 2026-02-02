@@ -6,6 +6,7 @@ import Text, {
   Body,
 } from "../../../../components/ui/text";
 import AppleMusicModal from "../../components/apps/apple-music/apple-music-modal";
+import AsanaModal from "../../components/apps/asana/asana-modal";
 import GitHubModal from "../../components/apps/github/github-modal";
 import HackerNewsModal from "../../components/apps/hackernews/hackernews-modal";
 import JiraModal from "../../components/apps/jira/jira-modal";
@@ -30,6 +31,7 @@ export default function AppsSettings({
 }: AppsSettingsProps) {
   const [showGitHubModal, setShowGitHubModal] = useState(false);
   const [showJiraModal, setShowJiraModal] = useState(false);
+  const [showAsanaModal, setShowAsanaModal] = useState(false);
   const [showLinearModal, setShowLinearModal] = useState(false);
   const [showRaindropModal, setShowRaindropModal] = useState(false);
   const [showHackerNewsModal, setShowHackerNewsModal] = useState(false);
@@ -51,6 +53,8 @@ export default function AppsSettings({
       setShowGitHubModal(true);
     } else if (appId === "jira") {
       setShowJiraModal(true);
+    } else if (appId === "asana") {
+      setShowAsanaModal(true);
     } else if (appId === "linear") {
       setShowLinearModal(true);
     } else if (appId === "raindrop") {
@@ -159,6 +163,13 @@ export default function AppsSettings({
         open={showJiraModal}
         onClose={() => setShowJiraModal(false)}
         isConnected={isConnected("jira")}
+        onSuccess={handleConnectionSuccess}
+      />
+
+      <AsanaModal
+        open={showAsanaModal}
+        onClose={() => setShowAsanaModal(false)}
+        isConnected={isConnected("asana")}
         onSuccess={handleConnectionSuccess}
       />
 

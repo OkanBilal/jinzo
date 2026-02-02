@@ -125,6 +125,12 @@ export const SOURCES = [
     itemTypes: ["issue"],
   },
   {
+    id: "asana",
+    displayName: "Asana",
+    patterns: ["asana", "asana\\s*task", "asana\\s*project"],
+    itemTypes: ["issue"],
+  },
+  {
     id: "hackernews",
     displayName: "Hacker News",
     patterns: ["hacker\\s*news", "hackernews", "\\bhn\\b", "ycombinator"],
@@ -178,8 +184,8 @@ export const ITEM_TYPES = [
   {
     id: "issue",
     displayName: "Issue",
-    patterns: ["issue", "bug", "ticket", "problem"],
-    sources: ["github", "linear"],
+    patterns: ["issue", "bug", "ticket", "problem", "task"],
+    sources: ["github", "linear", "asana"],
   },
   {
     id: "pull-request",
@@ -288,6 +294,7 @@ export const FETCH_LIMITS = {
   GITHUB_PRS: 20,
   LINEAR_ISSUES: 20,
   JIRA_ISSUES: 20,
+  ASANA_TASKS: 20,
   RAINDROP: 20,
   HACKERNEWS_TOP: 20,
   HACKERNEWS_NEW: 20,

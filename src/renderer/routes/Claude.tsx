@@ -170,7 +170,6 @@ export default function ClaudePage() {
   }, [activeTab, activeRun?.status, checkCanResume]);
 
   const handleExecute = useCallback(async () => {
-    let success = false;
     const currentRunId =
       activeTab !== "editor" && !isIssueTab(activeTab) ? activeTab : null;
 
@@ -198,22 +197,28 @@ export default function ClaudePage() {
       activeRun &&
       activeRun.status !== "running"
     ) {
-      success = (await continueRun(currentRunId, finalGoal)) ?? false;
+      const success = (await continueRun(currentRunId, finalGoal)) ?? false;
+      if (success) {
+        setGoal("");
+        dispatch(clearContextFiles());
+        dispatch(clearContextIssues());
+      }
     } else {
       // Otherwise start a new run - always use Claude provider
-      success =
-        (await executeRun(
-          finalGoal,
-          selectedWorkspace,
-          CLAUDE_PROVIDER_ID,
-          selectedModel,
-        )) ?? false;
-    }
+      const newRunId = await executeRun(
+        finalGoal,
+        selectedWorkspace,
+        CLAUDE_PROVIDER_ID,
+        selectedModel,
+      );
 
-    if (success) {
-      setGoal("");
-      dispatch(clearContextFiles());
-      dispatch(clearContextIssues());
+      if (newRunId) {
+        setGoal("");
+        dispatch(clearContextFiles());
+        dispatch(clearContextIssues());
+        // Switch to the new run tab
+        dispatch(setActiveTab(newRunId));
+      }
     }
   }, [
     goal,
@@ -243,9 +248,8 @@ export default function ClaudePage() {
 
   const handleNewRun = useCallback(() => {
     setActiveRunId(null);
-    // Switch to editor tab when starting new run
-    dispatch(setActiveTab("editor"));
-  }, [setActiveRunId, dispatch]);
+    setGoal("");
+  }, [setActiveRunId]);
 
   const handleSelectEditorTab = useCallback(() => {
     dispatch(setActiveTab("editor"));
@@ -288,6 +292,18 @@ export default function ClaudePage() {
     [dispatch],
   );
 
+  const handleCloseEditorTab = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      dispatch(clearSelectedFile());
+      // Switch to first run tab if available
+      if (runs.length > 0) {
+        dispatch(setActiveTab(runs[0].id));
+      }
+    },
+    [dispatch, runs],
+  );
+
   const showEmptyState =
     runs.length === 0 && !selectedFile && openIssueTabs.length === 0;
 
@@ -313,6 +329,7 @@ export default function ClaudePage() {
             onNewRun={handleNewRun}
             onSelectIssueTab={handleSelectIssueTab}
             onCloseIssueTab={handleCloseIssueTab}
+            onCloseEditorTab={handleCloseEditorTab}
           />
         )}
       </div>

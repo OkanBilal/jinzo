@@ -57,6 +57,17 @@ export interface JiraProject {
   avatarUrl: string | null;
 }
 
+export interface AsanaProject {
+  gid: string;
+  name: string;
+  archived: boolean;
+  color: string | null;
+  workspaceGid: string;
+  workspaceName: string;
+  teamGid?: string | null;
+  teamName?: string | null;
+}
+
 export interface ConnectionResource {
   id: string;
   connectionId: string;

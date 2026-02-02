@@ -8,6 +8,7 @@ import {
   fetchGitHubFromConnectionResources,
   fetchLinearFromConnectionResources,
   fetchJiraFromConnectionResources,
+  fetchAsanaFromConnectionResources,
   fetchHackerNewsFromConnectionResources,
 } from "./connections";
 import type { EntityInput } from "./sync.dto";
@@ -21,6 +22,7 @@ export async function fetchAllEntities(): Promise<EntityInput[]> {
       githubEntities,
       linearEntities,
       jiraEntities,
+      asanaEntities,
       raindropEntities,
       hackerNewsEntities,
       podcastEntities,
@@ -34,6 +36,7 @@ export async function fetchAllEntities(): Promise<EntityInput[]> {
       ),
       fetchLinearFromConnectionResources(FETCH_LIMITS.LINEAR_ISSUES),
       fetchJiraFromConnectionResources(FETCH_LIMITS.JIRA_ISSUES),
+      fetchAsanaFromConnectionResources(FETCH_LIMITS.ASANA_TASKS),
       fetchRaindropFromConnectionResources(FETCH_LIMITS.RAINDROP),
       fetchHackerNewsFromConnectionResources(
         FETCH_LIMITS.HACKERNEWS_TOP,
@@ -50,6 +53,7 @@ export async function fetchAllEntities(): Promise<EntityInput[]> {
       ...githubEntities,
       ...linearEntities,
       ...jiraEntities,
+      ...asanaEntities,
       ...raindropEntities,
       ...hackerNewsEntities,
       ...podcastEntities,
