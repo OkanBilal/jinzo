@@ -4,6 +4,8 @@ import { useActiveMood } from "@/hooks/use-active-mood";
 import { useDarkMode } from "@/hooks/use-dark-mode";
 import { getDefaultDropdownBackground } from "@/lib/theme";
 import { Button } from "./button";
+import { Caption } from "./text";
+import { SelectOption } from "./icons";
 
 interface SelectOption<T extends string = string> {
   value: T;
@@ -17,6 +19,7 @@ interface SelectProps<T extends string = string> {
   onChange: (value: T) => void;
   placeholder?: string;
   useFixedBackground?: boolean;
+  title?: string;
 }
 
 export default function Select<T extends string = string>({
@@ -25,6 +28,7 @@ export default function Select<T extends string = string>({
   onChange,
   placeholder = "Select an option",
   useFixedBackground = false,
+  title,
 }: SelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -127,7 +131,7 @@ export default function Select<T extends string = string>({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`
-          w-full px-3 py-2.5 
+          w-full pl-3 pr-2.5 py-2.5 
           min-w-50
           bg-primary-950/2 dark:bg-primary/4 
           border border-primary-950/10 dark:border-primary/10
@@ -153,21 +157,13 @@ export default function Select<T extends string = string>({
             {selectedOption?.label || placeholder}
           </span>
         </div>
-        <svg
-          className={`w-4 h-4 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
+        <Caption className="text-primary-900 dark:text-primary-200!  
+                absolute right-8 top-1/2 -translate-y-1/2 text-xs">
+          {title}
+        </Caption>
+        <SelectOption
+          className={`size-3 text-primary-900 dark:text-primary-400`}
+        />
       </Button>
 
       {/* Options List - Portal rendered to body */}

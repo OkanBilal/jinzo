@@ -139,7 +139,7 @@ export default function ChatInput({
       </div>
       <div className="flex items-start space-x-2 px-4">
         <div className="flex items-center justify-between w-full">
-          <div className="flex items-center relative">
+          <div className="flex items-center relative gap-1">
             <FileUploadDropdown
               isOpen={isDropdownOpen}
               onToggle={() => setIsDropdownOpen(!isDropdownOpen)}

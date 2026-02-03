@@ -65,7 +65,7 @@ export default function EditMoodModal({
   mood,
   onClose,
   onSuccess,
-  sidebarWidth = "18rem",
+  sidebarWidth = "19rem",
 }: EditMoodModalProps) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("");
@@ -89,15 +89,24 @@ export default function EditMoodModal({
     setName(mood.name);
     setSystemPrompt(mood.systemPrompt || "");
 
-    // Parse icon
-    const parsedIcon = parseIcon(mood.icon);
-    if (parsedIcon.type === "icon") {
+    // Parse icon - handle both icon: and emoji: prefixes
+    const iconStr = mood.icon || "";
+    if (iconStr.startsWith("icon:")) {
       setIconMode("icon");
-      const iconName = mood.icon?.replace("icon:", "") || "";
-      setIcon(iconName);
-    } else {
+      setIcon(iconStr.replace("icon:", ""));
+    } else if (iconStr.startsWith("emoji:")) {
       setIconMode("emoji");
-      setIcon(parsedIcon.value as string);
+      setIcon(iconStr.replace("emoji:", ""));
+    } else {
+      // Fallback: check if it's a known icon name
+      const parsedIcon = parseIcon(iconStr);
+      if (parsedIcon.type === "icon" || parsedIcon.type === "copilot-animate" || parsedIcon.type === "claude-animate") {
+        setIconMode("icon");
+        setIcon(iconStr.toLowerCase());
+      } else {
+        setIconMode("emoji");
+        setIcon(typeof parsedIcon.value === "string" ? parsedIcon.value : "😊");
+      }
     }
 
     // Parse theme config

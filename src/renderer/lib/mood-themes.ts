@@ -9,20 +9,20 @@ export interface ThemeColor {
   dark: ThemeVariant;
 }
 
-const solid = (light: string, dark: string, darkAlpha = "e6"): ThemeColor => ({
+const solid = (light: string, dark: string): ThemeColor => ({
   name: "",
   light: { value: light, preview: light },
-  dark: { value: `${dark}${darkAlpha}`, preview: dark },
+  dark: { value: `${dark}`, preview: dark },
 });
 
 export const solidColors: ThemeColor[] = [
-  { ...solid("#F3E4E7", "#433d30"), name: "Rose Quartz" },
-  { ...solid("#F6EAE7", "#54241c"), name: "Cider Brown" },
-  { ...solid("#F3E4E7", "#281d36"), name: "Rust Plum" },
-  { ...solid("#DCEDE3", "#0b2d1a"), name: "Deep Forest" },
-  { ...solid("#F4E9DD", "#1d2423"), name: "Warm Clay" },
-  { ...solid("#DEE6F3", "#19263c"), name: "Indigo Steel" },
-  { ...solid("#E9E4F1", "#1c1e27"), name: "Deep Grape" },
+  { ...solid("#ffffff40", "#00000070"), name: "Rose Quartz" },
+  { ...solid("#F6EAE7", "#54241ce6"), name: "Cider Brown" },
+  { ...solid("#F3E4E7", "#281d36e6"), name: "Rust Plum" },
+  { ...solid("#DCEDE3", "#0b2d1ae6"), name: "Deep Forest" },
+  { ...solid("#F4E9DD", "#1d2423e6"), name: "Warm Clay" },
+  { ...solid("#DEE6F3", "#19263ce6"), name: "Indigo Steel" },
+  { ...solid("#E9E4F1", "#1c1e27e6"), name: "Deep Grape" },
 ];
 
 const gradient = (

@@ -29,8 +29,8 @@
   --color-primary-600: #6f6e69;
   --color-primary-700: #575653;
   --color-primary-800: #403e3c;
-  --color-primary-900: #242424;
-  --color-primary-950: #100f0f;
+  --color-primary-900: #141414;
+  --color-primary-950: #0c0c0c;
   
   --color-copilot-blue: #131420;
   --color-copilot-dark: #080A0F ;
@@ -734,7 +734,7 @@ input[type="range"].slider {
 }
 
 .dark .glass-morphism {
-  background: linear-gradient(to bottom, #181818, var(--color-primary-950));
+  background: linear-gradient(to bottom, var(--color-primary-900), var(--color-primary-950));
   border-color: #ffffff1f;
   box-shadow:
     0 1px 1px #00000040,

@@ -78,7 +78,7 @@ export function FileUploadDropdown({
         aria-label="Upload file"
         aria-expanded={isOpen}
       >
-        <Attach className={`${styles.icon} rotate-135`} />
+        <Attach className={`${styles.icon} `} />
       </Button>
       {uploadedFiles.map((uploadedFile, index) => (
         <div

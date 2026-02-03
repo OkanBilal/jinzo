@@ -42,12 +42,12 @@ const theme = (light: string, dark: string): PredefinedMoodTheme => ({
 
 const WORKSPACE_UI: PredefinedMoodUIConfig = {
   sidebar: {
-    width: "18rem",
+    width: "19rem",
     title: "Workspace",
     itemType: "workspace",
     defaultRoute: "/workspace",
   },
-  main: { margin: "18rem" },
+  main: { margin: "19rem" },
   rightPanel: { width: "22rem", component: "workspace" },
 };
 
@@ -72,12 +72,12 @@ export const predefinedMoods: PredefinedMood[] = [
     systemPrompt: "",
     uiConfig: {
       sidebar: {
-        width: "18rem",
+        width: "19rem",
         title: "Workspace",
         itemType: "workspace",
         defaultRoute: "/claude",
       },
-      main: { margin: "18rem" },
+      main: { margin: "19rem" },
       rightPanel: { width: "22rem", component: "workspace" },
     },
   },
@@ -85,7 +85,7 @@ export const predefinedMoods: PredefinedMood[] = [
     id: "copilot",
     name: "Copilot",
     icon: "icon:copilot",
-    theme: theme("#FFFFFF50", "#11131a"),
+    theme: theme("#FFFFFF40", "#11131a"),
     systemPrompt: "",
     uiConfig: WORKSPACE_UI,
   },

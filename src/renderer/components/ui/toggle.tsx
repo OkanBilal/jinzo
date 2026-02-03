@@ -20,8 +20,8 @@ export function Toggle({ enabled, onChange, label, className = "" }: ToggleProps
             <Button
                 onClick={() => onChange(!enabled)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all shadow-[inset_0_0.5px_2px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_0.5px_2px_rgba(0,0,0,0.3)] ${enabled
-                        ? "bg-blue-500 dark:bg-blue-600"
-                        : "bg-black/8 dark:bg-white/15"
+                        ? "bg-primary-950/24 dark:bg-primary/30"
+                        : "bg-primary-950/12 dark:bg-primary/10"
                     }`}
             >
                 <span

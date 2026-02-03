@@ -126,7 +126,7 @@ export function JournalContent() {
     <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 dark:bg-primary-950 bg-primary mx-2 -pb-4 rounded-2xl overflow-hidden">
       <Button
         onClick={handleNewChat}
-        className="absolute top-2.5 right-11 rounded-full! p-1.5! text-primary-900 dark:text-primary-300!  bg-primary/50 dark:bg-primary-800/50 "
+        className="absolute top-2.5 right-12 rounded-full! p-2! text-primary-900 dark:text-primary-300!  bg-primary-100/30 dark:bg-primary/5 "
         title="New chat"
       >
         <Edit className="size-4  text-primary-900 dark:text-primary-200" />

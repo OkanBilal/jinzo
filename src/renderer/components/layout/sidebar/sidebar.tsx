@@ -13,6 +13,7 @@ import MoodContextMenu from "./mood-context-menu";
 import EditMoodModal from "./edit-mood-modal";
 import DeleteMoodModal from "./delete-mood-modal";
 import { useSidebar } from "./use-sidebar";
+import { Edit, Plus } from "@/components/ui/icons";
 
 export default function Sidebar() {
   //const navigate = useNavigate();
@@ -98,8 +99,23 @@ export default function Sidebar() {
             <div className="px-4 py-3">
               <NewButton
                 onClick={handleNewClick}
+                icon={
+                  sidebarConfig.itemType === "workspace" ? (
+                    <Plus className="w-4 h-4 text-primary-900 dark:text-primary-400" />
+                  ) : sidebarConfig.itemType === "claude" ? (
+                    <Plus className="w-4 h-4 text-primary-900 dark:text-primary-400" />
+                  ) : (
+                    <Edit className="w-4 h-4 text-primary-900 dark:text-primary-400" />
+                  )
+                }
                 title={sidebarConfig.title}
-                actionPrefix={sidebarConfig.itemType === "workspace" ? "Add" : sidebarConfig.itemType === "claude" ? "Add" : "New"}
+                actionPrefix={
+                  sidebarConfig.itemType === "workspace"
+                    ? "Add"
+                    : sidebarConfig.itemType === "claude"
+                      ? "Add"
+                      : "New"
+                }
               />
             </div>
             <SidebarContent

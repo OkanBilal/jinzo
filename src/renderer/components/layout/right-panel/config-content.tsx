@@ -36,7 +36,7 @@ export function ConfigContent() {
           Configuration
         </Body>
       </div>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         <ConfigSection title="Model">
           <Select
             value={selectedModel}
@@ -47,9 +47,11 @@ export function ConfigContent() {
         </ConfigSection>
 
         {thinkingConfig.supportsThinking && (
-          <ConfigSection title="Thinking">
+          <div className="-mt-3">
+          <ConfigSection>
             {thinkingConfig.shouldShowThinkingLevel && (
               <Select
+              title="Thinking"
                 value={thinkingLevel}
                 options={[
                   { value: "low", label: "Low" },
@@ -68,6 +70,7 @@ export function ConfigContent() {
               />
             )}
           </ConfigSection>
+          </div>
         )}
 
         <ConfigSection title="Temperature">
@@ -117,7 +120,7 @@ export function ConfigContent() {
 }
 
 interface ConfigSectionProps {
-  title: string;
+  title?: string;
   children: React.ReactNode;
 }
 

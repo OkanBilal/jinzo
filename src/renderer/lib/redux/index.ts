@@ -31,7 +31,7 @@ const workspacePersistConfig = {
   key: 'workspace',
   storage,
   // Only persist model/provider settings, not file selection state
-  whitelist: ['selectedModel', 'selectedProviderId', 'thinkingEnabled'],
+  whitelist: ['selectedModelByProvider', 'selectedProviderId', 'thinkingEnabled'],
 };
 
 const persistedChatReducer = persistReducer(chatPersistConfig, chatReducer);
