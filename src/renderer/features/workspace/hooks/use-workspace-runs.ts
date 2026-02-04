@@ -126,7 +126,7 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
               type: artifact.kind === "log" ? "log" : "artifact",
               content: artifact.content || artifact.path || JSON.stringify(artifact),
               timestamp: artifact.createdAt ? new Date(artifact.createdAt) : new Date(),
-              metadata: parsedMetadata,
+              metadata: { ...parsedMetadata, kind: artifact.kind },
             });
           } catch (parseErr) {
             console.error("Error parsing artifact:", artifact, parseErr);
@@ -135,7 +135,7 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
               type: artifact.kind === "log" ? "log" : "artifact",
               content: artifact.content || artifact.path || String(artifact),
               timestamp: new Date(),
-              metadata: undefined,
+              metadata: { kind: artifact.kind },
             });
           }
         });

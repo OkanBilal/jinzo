@@ -39,7 +39,7 @@ export interface WorkRunRequest {
 export interface WorkRunLogEvent {
   type: "log";
   message: string;
-  level?: "info" | "warn" | "error";
+  level?: "info" | "warn" | "error" | "resume" | "start" | "end" | "sdk-user";
   ts?: number;
   metadata?: Record<string, unknown>;
 }
@@ -78,7 +78,7 @@ export interface WorkRunCommandEvent {
  */
 export interface WorkRunArtifactEvent {
   type: "artifact";
-  kind: "patch" | "file" | "log" | "report" | "command_result";
+  kind: "patch" | "file" | "log" | "report" | "command_result" | "user-prompt" | string;
   path?: string;
   content?: string;
   metadata?: Record<string, unknown>;

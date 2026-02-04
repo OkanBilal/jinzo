@@ -1,13 +1,15 @@
-import { RefObject } from "react";
+import { RefObject, useMemo } from "react";
 import { WorkspaceHeader } from "./workspace-header";
 import { WorkspaceTabs } from "./workspace-tabs";
 import { TerminalEventLine } from "./terminal-event-line";
+import { ToolCallGroup, InfoGroup, groupEvents } from "./tool-call-group";
 import { EditorContent } from "./editor-content";
 import { IssueTabContent } from "./issue-tab-content";
 import { WorkspaceEmptyState } from "./workspace-empty-state";
 import type { Run, RunEvent, Workspace } from "../types";
 import type { IssueWithEntity } from "@/lib/redux/api";
 import { isIssueTab, getIssueEntityId } from "../utils/repo-utils";
+import { AsciiLoader } from "./ascii-loader";
 
 interface WorkspaceEventsProps {
   runs: Run[];
@@ -51,7 +53,19 @@ export function WorkspaceEvents({
   const activeIssue = isIssueActive
     ? issueTabs.find((t) => t.issue.entityId === getIssueEntityId(activeTab))
     : null;
-  const hasRunContent = !isEditorActive && !isIssueActive && currentEvents.length > 0;
+  const hasRunContent =
+    !isEditorActive && !isIssueActive && currentEvents.length > 0;
+
+  // Check if current run is still running
+  const activeRun = runs.find((r) => r.id === activeTab);
+  const isRunning =
+    activeRun?.status === "running" || activeRun?.status === "queued";
+
+  // Group events for CLI-style display
+  const eventGroups = useMemo(
+    () => groupEvents(currentEvents),
+    [currentEvents],
+  );
 
   return (
     <div className="font-mono text-sm h-full flex flex-col">
@@ -83,14 +97,21 @@ export function WorkspaceEvents({
           <IssueTabContent issue={activeIssue} />
         ) : hasRunContent ? (
           <div className="h-full overflow-y-auto">
-            <div className="min-h-75 max-w-210 mx-auto space-y-1 pt-12 pb-24">
-              {currentEvents.map((event, index) => (
-                <TerminalEventLine
-                  key={event.id}
-                  event={event}
-                  isLast={index === currentEvents.length - 1}
-                />
-              ))}
+            <div className="min-h-75 max-w-210 mx-auto space-y-4 pt-12 pb-24 px-4">
+              {eventGroups.map((group, index) => {
+                if (group.type === "tool_calls") {
+                  return (
+                    <ToolCallGroup
+                      key={group.id}
+                      group={group}
+                      defaultExpanded={index === eventGroups.length - 1}
+                      variant={variant}
+                    />
+                  );
+                }
+                return <InfoGroup key={group.id} group={group} />;
+              })}
+              {isRunning && <AsciiLoader />}
               <div ref={eventsEndRef} />
             </div>
           </div>
@@ -98,7 +119,9 @@ export function WorkspaceEvents({
           <WorkspaceEmptyState workspace={currentWorkspace} />
         )}
         {/* Bottom fade overlay */}
-        <div className={`absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary ${variant === "claude" ? "dark:from-claude-dark" : "dark:from-workspace-soft-dark"} to-transparent pointer-events-none`} />
+        <div
+          className={`absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary ${variant === "claude" ? "dark:from-claude-dark" : "dark:from-workspace-soft-dark"} to-transparent pointer-events-none`}
+        />
       </div>
     </div>
   );

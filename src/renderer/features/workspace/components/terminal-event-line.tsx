@@ -101,6 +101,7 @@ function getArtifactKind(event: RunEvent): string {
   if (event.content.startsWith("diff ") || event.content.includes("@@")) {
     return "patch";
   }
+  // TODO: Check this heuristic - if content has code block, classify as code artifact, otherwise report
   if (event.content.includes("```")) {
     return "code";
   }

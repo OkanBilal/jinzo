@@ -7,6 +7,7 @@ export { IssuesSection } from "./issues-section";
 export { EditorContent } from "./editor-content";
 export { CodeMirrorEditor } from "./codemirror-editor";
 export { TerminalEventLine } from "./terminal-event-line";
+export { ToolCallGroup, InfoGroup, groupEvents } from "./tool-call-group";
 export { QuickActionButton } from "./quick-action-button";
 export { WorkspaceEmptyState } from "./workspace-empty-state";
 export { WorkspaceHeader } from "./workspace-header";
