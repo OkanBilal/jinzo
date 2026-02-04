@@ -217,7 +217,7 @@ export function TerminalEventLine({ event, isLast }: TerminalEventLineProps) {
       const lineCount = lines.length;
       
       // For short content, show inline
-      if (lineCount <= 5 && content.length < 300) {
+      if (lineCount <= 5 && content.length < 1200) {
         return (
           <div className="text-green-300/90 text-[13px]">
             {content}
@@ -226,15 +226,15 @@ export function TerminalEventLine({ event, isLast }: TerminalEventLineProps) {
       }
       
       // For longer content, show preview
-      const preview = lines.slice(0, 3).join("\n");
+      const preview = lines.slice(0, 80).join("\n");
       return (
         <div className="space-y-1">
           <div className="text-green-300/90 text-[13px] whitespace-pre-wrap">
             {preview}
           </div>
-          {lineCount > 3 && (
+          {lineCount > 80 && (
             <div className="text-primary-500 text-[13px]">
-              ... +{lineCount - 3} more lines
+              ... +{lineCount - 80} more lines
             </div>
           )}
         </div>

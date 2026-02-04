@@ -4,6 +4,7 @@ import { WorkspaceTabs } from "./workspace-tabs";
 import { TerminalEventLine } from "./terminal-event-line";
 import { EditorContent } from "./editor-content";
 import { IssueTabContent } from "./issue-tab-content";
+import { WorkspaceEmptyState } from "./workspace-empty-state";
 import type { Run, RunEvent, Workspace } from "../types";
 import type { IssueWithEntity } from "@/lib/redux/api";
 import { isIssueTab, getIssueEntityId } from "../utils/repo-utils";
@@ -24,6 +25,7 @@ interface WorkspaceEventsProps {
   onNewRun: () => void;
   onSelectIssueTab: (entityId: string) => void;
   onCloseIssueTab: (entityId: string, e: React.MouseEvent) => void;
+  onCloseEditorTab?: (e: React.MouseEvent) => void;
 }
 
 export function WorkspaceEvents({
@@ -42,6 +44,7 @@ export function WorkspaceEvents({
   onNewRun,
   onSelectIssueTab,
   onCloseIssueTab,
+  onCloseEditorTab,
 }: WorkspaceEventsProps) {
   const isEditorActive = activeTab === "editor";
   const isIssueActive = isIssueTab(activeTab);
@@ -68,6 +71,7 @@ export function WorkspaceEvents({
           onNewRun={onNewRun}
           onSelectIssueTab={onSelectIssueTab}
           onCloseIssueTab={onCloseIssueTab}
+          onCloseEditorTab={onCloseEditorTab}
         />
       </div>
 
@@ -91,14 +95,7 @@ export function WorkspaceEvents({
             </div>
           </div>
         ) : (
-          <div className="h-full overflow-y-auto">
-            <div className="min-h-75 max-w-210 mx-auto space-y-1 pt-12 pb-24">
-              <div className="flex items-center justify-center py-8 text-primary-500 dark:text-primary-400">
-                <span className="text-sm">No events to display</span>
-              </div>
-              <div ref={eventsEndRef} />
-            </div>
-          </div>
+          <WorkspaceEmptyState workspace={currentWorkspace} />
         )}
         {/* Bottom fade overlay */}
         <div className={`absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary ${variant === "claude" ? "dark:from-claude-dark" : "dark:from-workspace-soft-dark"} to-transparent pointer-events-none`} />

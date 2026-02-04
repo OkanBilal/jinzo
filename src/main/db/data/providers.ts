@@ -67,7 +67,7 @@ export const seedProviders: CreateProviderPayload[] = [
     kind: "agent_runtime",
     displayName: "Claude Code (Local Agent)",
     isEnabled: true, // Enable Claude provider
-    defaultModel: "claude-3-5-sonnet-20241022", // Updated model name
+    defaultModel: "claude-opus-4-5-20251101", // Updated model name
     config: {
       // ClaudeCodeAdapterConfig interface fields
       binary: "claude", // Path to claude CLI binary (if using CLI)

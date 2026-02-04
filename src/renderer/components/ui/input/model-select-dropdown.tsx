@@ -15,6 +15,7 @@ interface ModelSelectDropdownProps {
   dropdownRef: RefObject<HTMLDivElement | null>;
   openUpward?: boolean;
   variant?: InputVariant;
+  isLoading?: boolean;
 }
 
 const variantStyles = {
@@ -41,6 +42,25 @@ const variantStyles = {
   },
 };
 
+// Format Claude model names for display
+function formatClaudeModelName(model: string): string {
+  const lowerModel = model.toLowerCase();
+  
+  // Check if it's a Claude model by ID
+  if (lowerModel === "default" || lowerModel === "opus") {
+    return "Claude Opus 4.5";
+  }
+  if (lowerModel === "sonnet") {
+    return "Claude Sonnet 4.5";
+  }
+  if (lowerModel === "haiku") {
+    return "Claude Haiku 4.5";
+  }
+  
+  // Return original if not a Claude short name
+  return model;
+}
+
 export function ModelSelectDropdown({
   model,
   models,
@@ -51,9 +71,11 @@ export function ModelSelectDropdown({
   dropdownRef,
   openUpward = false,
   variant = "default",
+  isLoading = false,
 }: ModelSelectDropdownProps) {
   const modelList = Array.isArray(models) ? models : [];
   const styles = variantStyles[variant];
+  const displayModel = formatClaudeModelName(model);
 
   useClickOutside(dropdownRef, () => {
     if (isOpen && onClose) {
@@ -74,9 +96,19 @@ export function ModelSelectDropdown({
           className={`text-sm cursor-pointer ${styles.button} font-medium px-2 py-1.5 flex items-center gap-1.5`}
           aria-haspopup="true"
           aria-expanded={isOpen}
+          disabled={isLoading && !displayModel}
         >
-          {getModelIcon(model)}
-          {model}
+          {isLoading && !displayModel ? (
+            <>
+              <div className="w-4 h-4 rounded-full bg-current opacity-20 animate-pulse" />
+              <div className="w-20 h-4 rounded bg-current opacity-20 animate-pulse" />
+            </>
+          ) : (
+            <>
+              {getModelIcon(displayModel)}
+              {displayModel}
+            </>
+          )}
         </Button>
       </div>
 
@@ -87,22 +119,25 @@ export function ModelSelectDropdown({
         useFixedBackground={true}
       >
         <div className="max-h-80 overflow-auto noscrollbar">
-          {modelList.map((m) => (
-            <Button
-              key={m}
-              type="button"
-              onClick={() => {
-                onModelChange(m);
-                onToggle();
-              }}
-              className={`w-full text-left px-4 py-3 cursor-pointer text-sm transition-colors flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl ${
-                model === m ? `${styles.selected} font-medium` : styles.item
-              }`}
-            >
-              {getModelIcon(m)}
-              {m}
-            </Button>
-          ))}
+          {modelList.map((m) => {
+            const displayName = formatClaudeModelName(m);
+            return (
+              <Button
+                key={m}
+                type="button"
+                onClick={() => {
+                  onModelChange(m);
+                  onToggle();
+                }}
+                className={`w-full text-left px-4 py-3 cursor-pointer text-sm transition-colors flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl ${
+                  model === m ? `${styles.selected} font-medium` : styles.item
+                }`}
+              >
+                {getModelIcon(displayName)}
+                {displayName}
+              </Button>
+            );
+          })}
         </div>
       </DropdownWrapper>
     </div>

@@ -48,7 +48,7 @@ const WORKSPACE_UI: PredefinedMoodUIConfig = {
     defaultRoute: "/workspace",
   },
   main: { margin: "19rem" },
-  rightPanel: { width: "22rem", component: "workspace" },
+  rightPanel: { width: "19rem", component: "workspace" },
 };
 
 export const predefinedMoods: PredefinedMood[] = [
@@ -78,7 +78,7 @@ export const predefinedMoods: PredefinedMood[] = [
         defaultRoute: "/claude",
       },
       main: { margin: "19rem" },
-      rightPanel: { width: "22rem", component: "workspace" },
+      rightPanel: { width: "19rem", component: "workspace" },
     },
   },
   {

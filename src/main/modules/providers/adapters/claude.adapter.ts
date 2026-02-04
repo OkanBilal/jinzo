@@ -4,6 +4,9 @@
 // ─────────────────────────────────────────────────────────────
 
 import path from "node:path";
+import fs from "node:fs";
+import os from "node:os";
+import { execFileSync } from "node:child_process";
 import type {
   WorkRunAdapter,
   WorkRunRequest,
@@ -14,7 +17,6 @@ import type {
   ClaudeCodeAdapterConfig,
   ModelInfo,
 } from "./adapter.types";
-import { B } from "node_modules/@linear/sdk/dist/index-BBxdiqQK.mjs";
 
 /**
  * NOTE: This adapter uses @anthropic-ai/claude-agent-sdk package.
@@ -108,16 +110,28 @@ type SDKMessage = SDKAssistantMessage | SDKUserMessage | SDKResultMessage | SDKS
   [key: string]: unknown;
 };
 
+interface SDKModelInfo {
+  value: string;
+  displayName: string;
+  description: string;
+}
+
 interface SDKQuery extends AsyncGenerator<SDKMessage, void> {
   interrupt(): Promise<void>;
-  supportedModels(): Promise<Array<{ value: string; displayName: string; description: string }>>;
+  rewindFiles(userMessageUuid: string): Promise<void>;
+  setPermissionMode(mode: string): Promise<void>;
+  setModel(model?: string): Promise<void>;
+  setMaxThinkingTokens(maxThinkingTokens: number | null): Promise<void>;
+  supportedCommands(): Promise<unknown[]>;
+  supportedModels(): Promise<SDKModelInfo[]>;
+  mcpServerStatus(): Promise<unknown[]>;
   accountInfo(): Promise<{ email?: string; organization?: string }>;
 }
 
 // Active run tracking for abort support
 const activeRuns = new Map<
   string,
-  { abortController: AbortController; aborted: boolean; sessionId?: string }
+  { abortController: AbortController; aborted: boolean; sessionId?: string; query?: SDKQuery }
 >();
 
 // Session ID tracking for resume capability
@@ -126,79 +140,315 @@ const sessionIdMap = new Map<string, string>();
 // Cached CLI path
 let cachedCliPath: string | null = null;
 
+// Cached models list (with TTL)
+let cachedModels: ModelInfo[] | null = null;
+let cachedModelsTimestamp = 0;
+const MODELS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+// ─────────────────────────────────────────────────────────────
+// Debug logging (configured per-adapter instance, but binary
+// discovery runs before adapter creation so we use module-level)
+// Can be enabled via CLAUDE_ADAPTER_DEBUG=1 environment variable
+// ─────────────────────────────────────────────────────────────
+let debugEnabled = process.env.CLAUDE_ADAPTER_DEBUG === "1";
+
+function logDebug(...args: unknown[]): void {
+  if (debugEnabled) console.log("[ClaudeAdapter]", ...args);
+}
+
+function logInfo(...args: unknown[]): void {
+  console.log("[ClaudeAdapter]", ...args);
+}
+
+function logWarn(...args: unknown[]): void {
+  console.warn("[ClaudeAdapter]", ...args);
+}
+
+function logError(...args: unknown[]): void {
+  console.error("[ClaudeAdapter]", ...args);
+}
+
+// ─────────────────────────────────────────────────────────────
+// CLI Binary Discovery Helpers
+// ─────────────────────────────────────────────────────────────
+
+const isWindows = process.platform === "win32";
+
 /**
- * Find the Claude CLI binary path
- * The SDK needs the path to the installed `claude` command
+ * Check if a path points to an executable file (NOT a directory)
  */
-function findClaudeBinary(): string | null {
-  if (cachedCliPath) {
-    return cachedCliPath;
-  }
-
-  const fs = require("fs");
-  const os = require("os");
-  const homeDir = os.homedir();
-
-  // Check the Anthropic installer's versioned directory first
-  // This contains the actual binaries (not symlinks)
-  const versionsDir = path.join(homeDir, ".local", "share", "claude", "versions");
+function isExecutableFile(p: string): boolean {
   try {
-    if (fs.existsSync(versionsDir)) {
-      const versions = fs.readdirSync(versionsDir);
-      if (versions.length > 0) {
-        // Sort versions and get the latest
-        const sortedVersions = versions.sort((a: string, b: string) => {
-          // Compare version strings numerically
-          const aParts = a.split(".").map(Number);
-          const bParts = b.split(".").map(Number);
-          for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-            const aVal = aParts[i] || 0;
-            const bVal = bParts[i] || 0;
-            if (aVal !== bVal) return bVal - aVal; // Descending order
-          }
-          return 0;
-        });
-        const latestVersion = sortedVersions[0];
-        const binPath = path.join(versionsDir, latestVersion);
-        if (fs.existsSync(binPath)) {
-          console.log("[ClaudeAdapter] Found Claude CLI version:", latestVersion, "at:", binPath);
-          cachedCliPath = binPath;
-          return binPath;
-        }
+    if (!fs.existsSync(p)) return false;
+    const stat = fs.statSync(p);
+
+    // Explicitly reject directories - this is critical
+    if (stat.isDirectory()) {
+      logDebug("Rejected directory (not a file):", p);
+      return false;
+    }
+
+    if (!stat.isFile()) {
+      logDebug("Rejected non-file:", p);
+      return false;
+    }
+
+    if (isWindows) {
+      // On Windows, check for common executable extensions or trust existence
+      const ext = path.extname(p).toLowerCase();
+      return ext === ".exe" || ext === ".cmd" || ext === ".bat" || ext === "";
+    } else {
+      // On Unix, check execute permission
+      try {
+        fs.accessSync(p, fs.constants.X_OK);
+        return true;
+      } catch {
+        logDebug("No execute permission:", p);
+        return false;
       }
     }
   } catch (e) {
-    console.log("[ClaudeAdapter] Error checking versions dir:", e);
+    logDebug("Error checking executable:", p, e);
+    return false;
   }
+}
 
-  // Common installation locations for Claude CLI
-  const possiblePaths = [
-    // User's local bin (common for npm global installs and Anthropic installer)
-    path.join(homeDir, ".local", "bin", "claude"),
-    // macOS Homebrew
-    "/opt/homebrew/bin/claude",
-    "/usr/local/bin/claude",
-    // Linux
-    "/usr/bin/claude",
-    // npm global (varies by system)
-    path.join(homeDir, ".npm-global", "bin", "claude"),
-  ];
+/**
+ * Resolve a candidate path and validate it's an executable.
+ * Important: Returns the ORIGINAL path (e.g., symlink) if valid, not the resolved path.
+ * This is because the Claude SDK may expect paths ending in "claude".
+ */
+function resolveCandidate(p: string): string | null {
+  try {
+    if (!fs.existsSync(p)) {
+      return null;
+    }
 
-  for (const binPath of possiblePaths) {
+    // Check if it's a symlink
+    const lstat = fs.lstatSync(p);
+    const isSymlink = lstat.isSymbolicLink();
+
+    // Resolve symlinks to get the real path for validation
+    const realPath = fs.realpathSync(p);
+
+    if (isSymlink) {
+      logDebug(`Symlink: ${p} -> ${realPath}`);
+    }
+
+    // Check the real path stat
+    const stat = fs.statSync(realPath);
+    logDebug(`Stat for ${realPath}: isFile=${stat.isFile()}, isDirectory=${stat.isDirectory()}`);
+
+    // If the target is an executable file, return the ORIGINAL path
+    // (preserves symlink paths like ~/.local/bin/claude which the SDK may expect)
+    if (stat.isFile() && isExecutableFile(realPath)) {
+      // Return the original path (symlink), not the resolved path
+      // The SDK may validate that the path ends in "claude"
+      logDebug(`Valid executable, returning original path: ${p}`);
+      return p;
+    }
+
+    // Special case: if the resolved path is a directory, look inside for executable
+    if (stat.isDirectory()) {
+      logDebug(`Path resolved to directory, looking for executable inside: ${realPath}`);
+
+      const executableCandidates = isWindows
+        ? [
+            path.join(realPath, "claude.exe"),
+            path.join(realPath, "bin", "claude.exe"),
+            path.join(realPath, "claude.cmd"),
+            path.join(realPath, "bin", "claude.cmd"),
+          ]
+        : [
+            path.join(realPath, "claude"),
+            path.join(realPath, "bin", "claude"),
+          ];
+
+      for (const execPath of executableCandidates) {
+        logDebug(`Checking for executable at: ${execPath}`);
+        if (isExecutableFile(execPath)) {
+          logDebug(`Found executable inside directory: ${execPath}`);
+          return execPath;
+        }
+      }
+
+      logDebug(`No executable found inside directory: ${realPath}`);
+    }
+
+    return null;
+  } catch (e) {
+    logDebug("Error in resolveCandidate:", p, e);
+    return null;
+  }
+}
+
+/**
+ * Compare version strings for sorting (descending order)
+ */
+function compareVersionsDesc(a: string, b: string): number {
+  const aParts = a.split(".").map(Number);
+  const bParts = b.split(".").map(Number);
+  for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+    const aVal = aParts[i] || 0;
+    const bVal = bParts[i] || 0;
+    if (aVal !== bVal) return bVal - aVal; // Descending order
+  }
+  return 0;
+}
+
+/**
+ * Clear the cached CLI path (useful for testing or after installation)
+ */
+export function clearClaudeCliCache(): void {
+  cachedCliPath = null;
+}
+
+/**
+ * Find the Claude CLI binary path
+ * The SDK needs the path to the installed `claude` command
+ * ALWAYS returns the full path to the executable file, never a directory
+ */
+function findClaudeBinary(): string | null {
+  // Validate cached path is still valid and is an actual file (not directory)
+  if (cachedCliPath) {
     try {
-      if (fs.existsSync(binPath)) {
-        // Resolve symlinks to get the actual binary path
-        const realPath = fs.realpathSync(binPath);
-        console.log("[ClaudeAdapter] Found Claude CLI at:", binPath, "->", realPath);
-        cachedCliPath = realPath;
-        return realPath;
+      const stat = fs.statSync(cachedCliPath);
+      if (stat.isFile()) {
+        logDebug("Using cached CLI path:", cachedCliPath);
+        return cachedCliPath;
+      } else {
+        logWarn("Cached CLI path is not a file, clearing cache:", cachedCliPath);
+        cachedCliPath = null;
       }
     } catch {
-      // Continue checking other paths
+      logDebug("Cached CLI path no longer exists, clearing cache:", cachedCliPath);
+      cachedCliPath = null;
     }
   }
 
-  console.log("[ClaudeAdapter] Claude CLI not found in common locations");
+  logDebug("Starting Claude CLI discovery...");
+  const homeDir = os.homedir();
+
+  // ─────────────────────────────────────────────────────────────
+  // 1. Check Anthropic installer's versioned directory first
+  // ─────────────────────────────────────────────────────────────
+  const versionsDir = path.join(homeDir, ".local", "share", "claude", "versions");
+  logDebug("Checking versions directory:", versionsDir);
+  try {
+    if (fs.existsSync(versionsDir)) {
+      const versions = fs.readdirSync(versionsDir).filter((v) => {
+        // Filter to only version-like directories
+        return /^\d+/.test(v);
+      });
+      logDebug("Found versions:", versions);
+
+      if (versions.length > 0) {
+        const sortedVersions = versions.sort(compareVersionsDesc);
+
+        for (const version of sortedVersions) {
+          const versionDir = path.join(versionsDir, version);
+
+          // Check candidate executable paths within the version directory
+          const candidates = isWindows
+            ? [
+                path.join(versionDir, "claude.exe"),
+                path.join(versionDir, "bin", "claude.exe"),
+                path.join(versionDir, "claude.cmd"),
+                path.join(versionDir, "bin", "claude.cmd"),
+              ]
+            : [
+                path.join(versionDir, "claude"),
+                path.join(versionDir, "bin", "claude"),
+              ];
+
+          for (const candidate of candidates) {
+            logDebug("Checking candidate:", candidate);
+            const resolved = resolveCandidate(candidate);
+            if (resolved) {
+              logInfo("Found Claude CLI version:", version, "at:", resolved);
+              cachedCliPath = resolved;
+              return resolved;
+            }
+          }
+        }
+      }
+    } else {
+      logDebug("Versions directory does not exist");
+    }
+  } catch (e) {
+    logDebug("Error checking versions dir:", e);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 2. Check common fixed installation paths
+  // ─────────────────────────────────────────────────────────────
+  const commonPaths: string[] = [];
+
+  if (isWindows) {
+    const localAppData = process.env.LOCALAPPDATA || path.join(homeDir, "AppData", "Local");
+    const programFiles = process.env.PROGRAMFILES || "C:\\Program Files";
+
+    commonPaths.push(
+      path.join(localAppData, "Programs", "Claude", "claude.exe"),
+      path.join(localAppData, "Programs", "Claude", "bin", "claude.exe"),
+      path.join(programFiles, "Claude", "claude.exe"),
+      path.join(programFiles, "Claude", "bin", "claude.exe"),
+      path.join(homeDir, ".local", "bin", "claude.exe"),
+      path.join(homeDir, ".npm-global", "bin", "claude.cmd"),
+    );
+  } else {
+    commonPaths.push(
+      // User's local bin (common for npm global installs and Anthropic installer)
+      path.join(homeDir, ".local", "bin", "claude"),
+      // macOS Homebrew
+      "/opt/homebrew/bin/claude",
+      "/usr/local/bin/claude",
+      // Linux
+      "/usr/bin/claude",
+      // npm global (varies by system)
+      path.join(homeDir, ".npm-global", "bin", "claude"),
+    );
+  }
+
+  for (const binPath of commonPaths) {
+    logDebug("Checking common path:", binPath);
+    const resolved = resolveCandidate(binPath);
+    if (resolved) {
+      logInfo("Found Claude CLI at:", binPath, "->", resolved);
+      cachedCliPath = resolved;
+      return resolved;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 3. PATH fallback: use which/where command
+  // ─────────────────────────────────────────────────────────────
+  logDebug("Checking PATH using", isWindows ? "where" : "which");
+  try {
+    const cmd = isWindows ? "where" : "which";
+    const result = execFileSync(cmd, ["claude"], {
+      encoding: "utf-8",
+      timeout: 5000,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    // Take the first non-empty line
+    const lines = result.split(/\r?\n/).filter((line) => line.trim().length > 0);
+    logDebug("PATH lookup returned:", lines);
+    if (lines.length > 0) {
+      const resolved = resolveCandidate(lines[0].trim());
+      if (resolved) {
+        logInfo("Found Claude CLI in PATH:", resolved);
+        cachedCliPath = resolved;
+        return resolved;
+      }
+    }
+  } catch (e) {
+    // which/where failed or not found in PATH
+    logDebug("Claude CLI not found in PATH:", e);
+  }
+
+  logWarn("Claude CLI not found in any known location");
   return null;
 }
 
@@ -208,6 +458,9 @@ function findClaudeBinary(): string | null {
 export function createClaudeAdapter(
   config: ClaudeCodeAdapterConfig,
 ): WorkRunAdapter {
+  // Enable debug logging if configured
+  debugEnabled = !!(config as any).debug;
+
   let sdkLoaded = false;
   let loadError: Error | null = null;
 
@@ -239,7 +492,7 @@ export function createClaudeAdapter(
       );
 
       if (!ClaudeSDK) {
-        console.log("[ClaudeAdapter] SDK not found");
+        logDebug("SDK not found");
         throw new Error(
           "Claude Agent SDK (@anthropic-ai/claude-agent-sdk) is not installed. " +
             "Please install it to use the Claude provider: npm install @anthropic-ai/claude-agent-sdk",
@@ -259,10 +512,10 @@ export function createClaudeAdapter(
       queryFn = query;
 
       sdkLoaded = true;
-      console.log("[ClaudeAdapter] SDK loaded successfully (stable API)");
+      logInfo("SDK loaded successfully (stable API)");
     } catch (error) {
       loadError = error instanceof Error ? error : new Error(String(error));
-      console.error("[ClaudeAdapter] Failed to load SDK:", loadError.message);
+      logError("Failed to load SDK:", loadError.message);
       throw loadError;
     }
   }
@@ -276,6 +529,8 @@ export function createClaudeAdapter(
 
   /**
    * Build SDK options with proper executable path
+   * When using CLI (subscription mode), we strip ANTHROPIC_API_KEY from env
+   * to avoid unexpected API billing when user has CLI login session.
    */
   function buildOptions(
     model: string,
@@ -283,22 +538,74 @@ export function createClaudeAdapter(
     abortController?: AbortController,
     resumeSessionId?: string,
   ): SDKOptions {
-    const options: SDKOptions = {
-      model,
-      permissionMode: "acceptEdits", // Auto-accept edits for agent workflows
-      abortController,
-    };
-
     // Find the Claude CLI binary
-    const binaryPath = config.binary || findClaudeBinary();
-    if (binaryPath) {
-      options.pathToClaudeCodeExecutable = binaryPath;
-      console.log("[ClaudeAdapter] Using Claude CLI at:", binaryPath);
-    } else {
-      console.warn(
-        "[ClaudeAdapter] Claude CLI not found. The SDK will try to find it in PATH.",
+    let binaryPath: string | null = null;
+
+    // If config.binary is set, validate it's an actual executable file
+    if (config.binary) {
+      const resolved = resolveCandidate(config.binary);
+      if (resolved) {
+        binaryPath = resolved;
+        logInfo("Using configured Claude CLI at:", binaryPath);
+      } else {
+        logWarn(
+          `Configured binary path "${config.binary}" is not a valid executable, falling back to discovery`,
+        );
+      }
+    }
+
+    // Fall back to auto-discovery if no valid config.binary
+    if (!binaryPath) {
+      binaryPath = findClaudeBinary();
+    }
+
+    if (!binaryPath) {
+      throw new Error(
+        "Claude CLI not found. Please install Claude Code and run `claude login` to authenticate, " +
+          "or ensure the CLI is in your PATH. You can also set config.binary to the full path of the claude executable.",
       );
     }
+
+    // Final validation: ensure the path (or its symlink target) is not a directory
+    try {
+      // Use stat (not lstat) to follow symlinks
+      const realPath = fs.realpathSync(binaryPath);
+      const stat = fs.statSync(realPath);
+      if (stat.isDirectory()) {
+        throw new Error(
+          `Claude CLI path "${binaryPath}" resolves to a directory (${realPath}), not an executable file. ` +
+            "The Claude Code installation may be corrupted. Please reinstall Claude Code.",
+        );
+      }
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") {
+        throw new Error(`Claude CLI not found at path: ${binaryPath}`);
+      }
+      // Re-throw validation errors
+      if (e instanceof Error && e.message.includes("directory")) {
+        throw e;
+      }
+      logDebug("Error validating binary path:", e);
+    }
+
+    logInfo("Using Claude CLI at:", binaryPath);
+
+    // Build environment: strip API key/auth token when using CLI (subscription mode)
+    // This ensures the subprocess uses CLI login session rather than API billing
+    const cleanEnv: Record<string, string | undefined> = { ...process.env };
+    delete cleanEnv.ANTHROPIC_API_KEY;
+    delete cleanEnv.ANTHROPIC_AUTH_TOKEN;
+
+    // Determine permission mode: use config override if provided, else default to acceptEdits
+    const permissionMode = (config as any).permissionMode || "acceptEdits";
+
+    const options: SDKOptions = {
+      model,
+      permissionMode,
+      abortController,
+      pathToClaudeCodeExecutable: binaryPath,
+      env: cleanEnv,
+    };
 
     if (workspacePath) {
       options.cwd = workspacePath;
@@ -328,11 +635,12 @@ export function createClaudeAdapter(
         if (assistantMsg.message?.content) {
           for (const block of assistantMsg.message.content) {
             if (block.type === "text" && block.text) {
-              // Emit text as artifact/report
+              // Emit text as log (not artifact to avoid duplicates)
               events.push({
-                type: "artifact",
-                kind: "report",
-                content: block.text,
+                type: "log",
+                message: block.text,
+                level: "info",
+                ts,
                 metadata: { source: "assistant.text", session_id: assistantMsg.session_id },
               });
             } else if (block.type === "tool_use" && block.name) {
@@ -386,9 +694,10 @@ export function createClaudeAdapter(
       }
 
       case "result": {
-        // Final result - emit as artifact
+        // Final result - only emit if there's an actual result message or error
         const resultMsg = msg as SDKResultMessage;
-        if (resultMsg.result) {
+        if (resultMsg.result && resultMsg.result.trim().length > 0) {
+          // Only emit non-empty results
           events.push({
             type: "artifact",
             kind: "report",
@@ -622,8 +931,6 @@ export function createClaudeAdapter(
           ts: Date.now(),
         });
 
-        activeRuns.set(runId, { abortController, aborted: false });
-
         const prompt = buildPrompt(request);
 
         await onEvent({
@@ -635,6 +942,9 @@ export function createClaudeAdapter(
 
         // Create the query
         const query = queryFn({ prompt, options });
+
+        // Store query in activeRuns for abort/interrupt support
+        activeRuns.set(runId, { abortController, aborted: false, query });
 
         // Stream the response
         let sessionId: string | undefined;
@@ -664,7 +974,7 @@ export function createClaudeAdapter(
                 sessionIdMap.set(runId, sessionId);
                 const state = activeRuns.get(runId);
                 if (state) {
-                  activeRuns.set(runId, { ...state, sessionId });
+                  activeRuns.set(runId, { ...state, sessionId, query });
                 }
               }
 
@@ -835,8 +1145,6 @@ export function createClaudeAdapter(
           sessionId, // Resume with session ID
         );
 
-        activeRuns.set(runId, { abortController, aborted: false, sessionId });
-
         // Build prompt with any additional context
         let prompt = message;
         if (request.context && request.context.length > 0) {
@@ -861,6 +1169,9 @@ export function createClaudeAdapter(
 
         // Create the query with resume
         const query = queryFn({ prompt, options });
+
+        // Store query in activeRuns for abort/interrupt support
+        activeRuns.set(runId, { abortController, aborted: false, sessionId, query });
 
         // Stream the response
         let timeoutId: NodeJS.Timeout | undefined;
@@ -1031,12 +1342,20 @@ export function createClaudeAdapter(
         try {
           runState.abortController.abort();
         } catch (err) {
-          console.error("[ClaudeAdapter] Error aborting run:", err);
+          logError("Error aborting run:", err);
+        }
+        // Call query.interrupt() if available
+        if (runState.query?.interrupt) {
+          try {
+            await runState.query.interrupt();
+          } catch (err) {
+            logDebug("Error calling query.interrupt():", err);
+          }
         }
         activeRuns.delete(runId);
       }
 
-      console.log(`[ClaudeAdapter] Deleted session tracking for run: ${runId}`);
+      logDebug(`Deleted session tracking for run: ${runId}`);
     },
 
     async abortRun(runId: string): Promise<void> {
@@ -1046,20 +1365,46 @@ export function createClaudeAdapter(
         try {
           runState.abortController.abort();
         } catch (err) {
-          console.error("[ClaudeAdapter] Error aborting run:", err);
+          logError("Error aborting controller:", err);
+        }
+        // Call query.interrupt() if available
+        if (runState.query?.interrupt) {
+          try {
+            await runState.query.interrupt();
+          } catch (err) {
+            logDebug("Error calling query.interrupt():", err);
+          }
         }
       }
     },
 
     async shutdown(): Promise<void> {
-      // Mark all runs as aborted first
-      for (const [runId, state] of activeRuns) {
+      // Mark all runs as aborted and interrupt queries
+      const interruptPromises: Promise<void>[] = [];
+
+      for (const [, state] of activeRuns) {
         state.aborted = true;
         try {
           state.abortController.abort();
         } catch {
           // Ignore abort errors
         }
+        // Collect interrupt promises
+        if (state.query?.interrupt) {
+          interruptPromises.push(
+            state.query.interrupt().catch((err) => {
+              logDebug("Error during shutdown interrupt:", err);
+            }),
+          );
+        }
+      }
+
+      // Wait for all interrupts with a timeout
+      if (interruptPromises.length > 0) {
+        await Promise.race([
+          Promise.all(interruptPromises),
+          new Promise((resolve) => setTimeout(resolve, 2000)), // 2s timeout
+        ]);
       }
 
       // Small delay to let pending operations complete
@@ -1074,13 +1419,91 @@ export function createClaudeAdapter(
       loadError = null;
       queryFn = null;
 
-      console.log("[ClaudeAdapter] Shutdown complete");
+      // Clear models cache
+      cachedModels = null;
+      cachedModelsTimestamp = 0;
+
+      logInfo("Shutdown complete");
     },
 
     async listModels(): Promise<ModelInfo[]> {
-      // Claude models are not dynamically listed from the SDK
-      // Return the known models with their capabilities
-      return getDefaultModels(config.defaultModel);
+      // Check cache first
+      const now = Date.now();
+      if (cachedModels && now - cachedModelsTimestamp < MODELS_CACHE_TTL_MS) {
+        logDebug("Returning cached models");
+        return cachedModels;
+      }
+
+      try {
+        await ensureSDK();
+
+        if (!queryFn) {
+          logWarn("SDK not available, returning fallback models");
+          return getDefaultModels(config.defaultModel);
+        }
+
+        // Find CLI binary using same logic as buildOptions
+        let binaryPath: string | null = null;
+        if (config.binary) {
+          const resolved = resolveCandidate(config.binary);
+          if (resolved) {
+            binaryPath = resolved;
+          }
+        }
+        if (!binaryPath) {
+          binaryPath = findClaudeBinary();
+        }
+
+        if (!binaryPath) {
+          logWarn("CLI not found, returning fallback models");
+          return getDefaultModels(config.defaultModel);
+        }
+
+        // Create a temporary query to fetch supported models
+        const tempQuery = queryFn({
+          prompt: "", // Empty prompt - we just need the query object
+          options: {
+            pathToClaudeCodeExecutable: binaryPath,
+          },
+        });
+
+        // Fetch supported models from SDK
+        const sdkModels = await tempQuery.supportedModels();
+        logDebug("SDK returned models:", sdkModels);
+
+        if (!sdkModels || sdkModels.length === 0) {
+          logWarn("SDK returned no models, using fallback");
+          return getDefaultModels(config.defaultModel);
+        }
+
+        // Map SDK models to our ModelInfo format
+        const models: ModelInfo[] = sdkModels.map((sdkModel, index) => ({
+          id: sdkModel.value,
+          displayName: sdkModel.displayName,
+          description: sdkModel.description,
+          isDefault:
+            sdkModel.value === config.defaultModel ||
+            (!config.defaultModel && index === 0),
+          capabilities: {
+            streaming: true,
+            vision: true,
+            functionCalling: true,
+            // Mark opus models as having reasoning capability
+            reasoning: sdkModel.value.includes("opus"),
+          },
+          // Estimate context window based on model name
+          contextWindow: sdkModel.value.includes("haiku") ? 128000 : 200000,
+        }));
+
+        // Cache the result
+        cachedModels = models;
+        cachedModelsTimestamp = now;
+
+        return models;
+      } catch (error) {
+        logError("Failed to fetch models from SDK:", error);
+        return getDefaultModels(config.defaultModel);
+      }
     },
   };
 }
@@ -1125,39 +1548,18 @@ function getDefaultModels(defaultModel?: string): ModelInfo[] {
       },
       contextWindow: 200000,
     },
-    {
-      id: "claude-3-5-sonnet-20241022",
-      displayName: "Claude Sonnet 3.5",
-      isDefault: defaultModel === "claude-3-5-sonnet-20241022",
+                {
+      id: "claude-haiku-4-5",
+      displayName: "Claude Haiku 4.5",
+      isDefault: defaultModel === "claude-haiku-4-5" || !defaultModel,
       capabilities: {
         streaming: true,
         vision: true,
         functionCalling: true,
       },
-      contextWindow: 200000,
+      contextWindow: 128000,
     },
-    {
-      id: "claude-3-5-haiku-20241022",
-      displayName: "Claude Haiku 3.5",
-      isDefault: defaultModel === "claude-3-5-haiku-20241022",
-      capabilities: {
-        streaming: true,
-        vision: true,
-        functionCalling: true,
-      },
-      contextWindow: 200000,
-    },
-    {
-      id: "claude-3-opus-20240229",
-      displayName: "Claude Opus 3.5",
-      isDefault: defaultModel === "claude-3-opus-20240229",
-      capabilities: {
-        streaming: true,
-        vision: true,
-        functionCalling: true,
-      },
-      contextWindow: 200000,
-    },
+
   ];
 
   return models;

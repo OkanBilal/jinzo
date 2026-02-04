@@ -41,6 +41,7 @@ export interface WorkRunLogEvent {
   message: string;
   level?: "info" | "warn" | "error";
   ts?: number;
+  metadata?: Record<string, unknown>;
 }
 
 /**

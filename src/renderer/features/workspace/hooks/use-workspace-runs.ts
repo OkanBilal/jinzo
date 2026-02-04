@@ -308,13 +308,15 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
               },
             ],
           }));
+          
+          return newRun.id; // Return new run ID for tab switching
         }
 
-        return true; // Success - caller can clear input
+        return null;
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to execute run";
         setError(message);
-        return false;
+        return null;
       } finally {
         setIsLoading(false);
       }

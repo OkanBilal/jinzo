@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useGetProviderModelsQuery } from "@/lib/redux/api/providersApi";
+import { setWorkspaceModel } from "@/lib/redux/slices/workspaceSlice";
+import type { RootState } from "@/lib/redux";
 import { getContextIssueColor } from "@/lib/label-colors";
 import type { Run } from "../types";
 import type { FileNode } from "@/features/file-explorer";
@@ -38,7 +41,6 @@ interface WorkspaceInputProps {
   onRemoveContextIssue?: (entityId: string) => void;
 }
 
-
 export function WorkspaceInput({
   goal,
   onGoalChange,
@@ -54,10 +56,10 @@ export function WorkspaceInput({
   contextIssues = [],
   onRemoveContextIssue,
 }: WorkspaceInputProps) {
+  const dispatch = useDispatch();
   const modelDropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [internalSelectedModel, setInternalSelectedModel] = useState("");
   const [thinkingEnabled, setThinkingEnabled] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -67,6 +69,11 @@ export function WorkspaceInput({
   const defaultProviderId =
     variant === "claude" ? "claude_code" : "copilot_cli";
   const activeProviderId = providerId ?? defaultProviderId;
+
+  // Get persisted model for this provider from Redux
+  const persistedModel = useSelector(
+    (state: RootState) => state.workspace.selectedModelByProvider[activeProviderId]
+  );
 
   useClickOutside(dropdownRef, () => setIsDropdownOpen(false));
 
@@ -85,9 +92,15 @@ export function WorkspaceInput({
     return { modelDisplayNames: [], modelIds: [] };
   }, [providerModels]);
 
-  // Use external or internal selected model
-  const selectedModel = externalSelectedModel ?? internalSelectedModel;
-  const setSelectedModel = externalOnModelChange ?? setInternalSelectedModel;
+  // Use external, persisted (Redux), or derive from provider models
+  const selectedModel = externalSelectedModel ?? persistedModel ?? "";
+  const setSelectedModel = (model: string) => {
+    if (externalOnModelChange) {
+      externalOnModelChange(model);
+    }
+    // Always persist to Redux for this provider
+    dispatch(setWorkspaceModel({ providerId: activeProviderId, model }));
+  };
 
   // Get display name for current model
   const selectedModelDisplayName = useMemo(() => {
@@ -98,14 +111,14 @@ export function WorkspaceInput({
     return selectedModel;
   }, [providerModels, selectedModel]);
 
-  // Set default model when models are loaded
+  // Set default model when models are loaded (only if no persisted model)
   useEffect(() => {
     if (providerModels && providerModels.length > 0 && !selectedModel) {
       const defaultModel =
         providerModels.find((m) => m.isDefault) ?? providerModels[0];
       setSelectedModel(defaultModel.id);
     }
-  }, [providerModels, selectedModel, setSelectedModel]);
+  }, [providerModels, selectedModel, activeProviderId]);
 
   // Handle model change from dropdown (which uses display names)
   const handleModelChange = (displayName: string) => {
@@ -249,7 +262,7 @@ export function WorkspaceInput({
       </div>
       <div className="flex items-start space-x-2 px-4">
         <div className="flex items-center justify-between w-full">
-          <div className="flex items-center relative">
+          <div className="flex items-center relative gap-1">
             <FileUploadDropdown
               isOpen={isDropdownOpen}
               onToggle={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -277,20 +290,21 @@ export function WorkspaceInput({
               dropdownRef={modelDropdownRef}
               openUpward={true}
               variant={variant}
+              isLoading={isLoadingModels}
             />
           </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <DictationButton
-            isRecording={isRecording}
-            onToggle={toggleDictation}
-            variant={variant}
-          />
-          <SendButton
-            loading={isLoading}
-            onSubmit={onSubmit}
-            variant={variant}
-          />
+          <div className="flex items-center space-x-2">
+            <DictationButton
+              isRecording={isRecording}
+              onToggle={toggleDictation}
+              variant={variant}
+            />
+            <SendButton
+              loading={isLoading}
+              onSubmit={onSubmit}
+              variant={variant}
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -19,6 +19,7 @@ interface WorkspaceTabsProps {
   onNewRun: () => void;
   onSelectIssueTab: (entityId: string) => void;
   onCloseIssueTab: (entityId: string, e: React.MouseEvent) => void;
+  onCloseEditorTab?: (e: React.MouseEvent) => void;
 }
 
 export function WorkspaceTabs({
@@ -34,6 +35,7 @@ export function WorkspaceTabs({
   onNewRun,
   onSelectIssueTab,
   onCloseIssueTab,
+  onCloseEditorTab,
 }: WorkspaceTabsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -83,6 +85,7 @@ export function WorkspaceTabs({
               onClick={onSelectEditorTab}
               hasFile={hasSelectedFile}
               fileName={fileName}
+              onClose={onCloseEditorTab}
             />
           </div>
         )}
@@ -115,7 +118,7 @@ export function WorkspaceTabs({
         })}
         <button
           onClick={onNewRun}
-          className="p-2 mx-2 text-primary-500 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-200 dark:hover:bg-[#101316] rounded-xl cursor-pointer transition-colors"
+          className="p-2 mx-2 text-primary-500 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-800/30 rounded-xl cursor-pointer transition-colors"
           title="New run"
         >
           <Plus className="w-4 h-4" />
