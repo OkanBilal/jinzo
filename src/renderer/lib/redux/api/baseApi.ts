@@ -60,6 +60,7 @@ export const baseApi = createApi({
     'Journal',
     'Providers',
     'ProviderModels',
+    'ProviderCommands',
     'Tools',
     'ToolCalls',
     'ToolPermissions',

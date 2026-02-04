@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { ProviderResponse } from "../providers.dto";
-import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, ModelInfo } from "./adapter.types";
+import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, ModelInfo, CommandInfo } from "./adapter.types";
 import { createCopilotAdapter } from "./copilot.adapter";
 import { createClaudeAdapter } from "./claude.adapter";
 
@@ -154,4 +154,21 @@ export async function listModelsForProvider(provider: ProviderResponse): Promise
   }
 
   return adapter.listModels();
+}
+
+/**
+ * List available commands for a provider
+ *
+ * @param provider - The provider configuration from the database
+ * @returns Promise resolving to array of CommandInfo
+ */
+export async function listCommandsForProvider(provider: ProviderResponse): Promise<CommandInfo[]> {
+  const adapter = createWorkAdapter(provider);
+
+  if (!adapter.listCommands) {
+    // Return empty array if provider doesn't support commands
+    return [];
+  }
+
+  return adapter.listCommands();
 }

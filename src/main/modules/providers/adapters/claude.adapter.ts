@@ -8,6 +8,7 @@ import type {
   WorkRunEvent,
   ClaudeCodeAdapterConfig,
   ModelInfo,
+  CommandInfo,
 } from "./adapter.types";
 import {
   findClaudeBinary,
@@ -77,7 +78,7 @@ interface SDKUserMessage {
   session_id: string;
   message: {
     role: "user";
-    content: Array<{ type: string; text?: string }>;
+    content: string | Array<{ type: string; text?: string }>;
   };
   parent_tool_use_id: string | null;
 }
@@ -127,13 +128,19 @@ interface SDKModelInfo {
   description: string;
 }
 
+interface SDKSlashCommand {
+  name: string;
+  description: string;
+  argumentHint: string;
+}
+
 interface SDKQuery extends AsyncGenerator<SDKMessage, void> {
   interrupt(): Promise<void>;
   rewindFiles(userMessageUuid: string): Promise<void>;
   setPermissionMode(mode: string): Promise<void>;
   setModel(model?: string): Promise<void>;
   setMaxThinkingTokens(maxThinkingTokens: number | null): Promise<void>;
-  supportedCommands(): Promise<unknown[]>;
+  supportedCommands(): Promise<SDKSlashCommand[]>;
   supportedModels(): Promise<SDKModelInfo[]>;
   mcpServerStatus(): Promise<unknown[]>;
   accountInfo(): Promise<{ email?: string; organization?: string }>;
@@ -157,6 +164,11 @@ const sessionIdMap = new Map<string, string>();
 let cachedModels: ModelInfo[] | null = null;
 let cachedModelsTimestamp = 0;
 const MODELS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+// Cached commands list (with TTL)
+let cachedCommands: CommandInfo[] | null = null;
+let cachedCommandsTimestamp = 0;
+const COMMANDS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 // ─────────────────────────────────────────────────────────────
 // Logging
@@ -370,10 +382,18 @@ export function createClaudeAdapter(
       case "user": {
         // User messages from SDK are the processed/echoed versions
         const userMsg = msg as SDKUserMessage;
-        const userContent = userMsg.message?.content
-          ?.map((c) => c.text || "")
-          .filter(Boolean)
-          .join("\n");
+        const content = userMsg.message?.content;
+
+        // Handle both string and array content formats
+        let userContent: string | undefined;
+        if (typeof content === "string") {
+          userContent = content;
+        } else if (Array.isArray(content)) {
+          userContent = content
+            .map((c) => c.text || "")
+            .filter(Boolean)
+            .join("\n");
+        }
 
         if (userContent && userContent.trim().length > 0) {
           events.push({
@@ -1153,6 +1173,10 @@ export function createClaudeAdapter(
       cachedModels = null;
       cachedModelsTimestamp = 0;
 
+      // Clear commands cache
+      cachedCommands = null;
+      cachedCommandsTimestamp = 0;
+
       logInfo("Shutdown complete");
     },
 
@@ -1231,6 +1255,73 @@ export function createClaudeAdapter(
       } catch (error) {
         logError("Failed to fetch models from SDK:", error);
         return getDefaultModels(config.defaultModel);
+      }
+    },
+
+    async listCommands(): Promise<CommandInfo[]> {
+      // Check cache first
+      const now = Date.now();
+      if (cachedCommands && now - cachedCommandsTimestamp < COMMANDS_CACHE_TTL_MS) {
+        return cachedCommands;
+      }
+
+      try {
+        await ensureSDK();
+
+        if (!queryFn) {
+          logWarn("SDK not available, returning empty commands list");
+          return [];
+        }
+
+        // Find CLI binary using same logic as buildOptions
+        let binaryPath: string | null = null;
+        if (config.binary) {
+          const resolved = resolveCandidate(config.binary);
+          if (resolved) {
+            binaryPath = resolved;
+          }
+        }
+        if (!binaryPath) {
+          binaryPath = findClaudeBinary();
+        }
+
+        if (!binaryPath) {
+          logWarn("CLI not found, returning empty commands list");
+          return [];
+        }
+
+        // Create a temporary query to fetch supported commands
+        const tempQuery = queryFn({
+          prompt: "", // Empty prompt - we just need the query object
+          options: {
+            pathToClaudeCodeExecutable: binaryPath,
+          },
+        });
+
+        // Fetch supported commands from SDK
+        const sdkCommands = await tempQuery.supportedCommands();
+
+        if (!sdkCommands || sdkCommands.length === 0) {
+          logWarn("SDK returned no commands");
+          return [];
+        }
+
+        // Map SDK commands to our CommandInfo format
+        const commands: CommandInfo[] = sdkCommands.map((cmd) => ({
+          name: cmd.name,
+          description: cmd.description,
+          argumentHint: cmd.argumentHint,
+          userFacing: true,
+        }));
+
+        // Cache the result
+        cachedCommands = commands;
+        cachedCommandsTimestamp = now;
+
+        return commands;
+      } catch (error) {
+        logError("Failed to fetch commands from SDK:", error);
+        return [];
       }
     },
   };

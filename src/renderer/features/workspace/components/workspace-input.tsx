@@ -1,6 +1,10 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useGetProviderModelsQuery } from "@/lib/redux/api/providersApi";
+import {
+  useGetProviderModelsQuery,
+  useGetProviderCommandsQuery,
+  type CommandInfo,
+} from "@/lib/redux/api/providersApi";
 import { setWorkspaceModel } from "@/lib/redux/slices/workspaceSlice";
 import type { RootState } from "@/lib/redux";
 import { getContextIssueColor } from "@/lib/label-colors";
@@ -19,6 +23,7 @@ import {
   type UploadedFile,
 } from "@/components/ui/input/file-upload-dropdown";
 import { ModelSelectDropdown } from "@/components/ui/input/model-select-dropdown";
+import { SlashCommandDropdown } from "@/components/ui/input/slash-command-dropdown";
 import { Asana, Close } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
@@ -60,9 +65,12 @@ export function WorkspaceInput({
   const modelDropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const slashCommandDropdownRef = useRef<HTMLDivElement>(null);
   const [thinkingEnabled, setThinkingEnabled] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showSlashCommands, setShowSlashCommands] = useState(false);
+  const [slashFilterText, setSlashFilterText] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const variant = useWorkspaceVariant();
 
@@ -76,10 +84,15 @@ export function WorkspaceInput({
   );
 
   useClickOutside(dropdownRef, () => setIsDropdownOpen(false));
+  useClickOutside(slashCommandDropdownRef, () => setShowSlashCommands(false));
 
   // Fetch models from provider
   const { data: providerModels, isLoading: isLoadingModels } =
     useGetProviderModelsQuery(activeProviderId, { skip: !activeProviderId });
+
+  // Fetch commands from provider (for slash command dropdown)
+  const { data: providerCommands = [], isLoading: isLoadingCommands } =
+    useGetProviderCommandsQuery(activeProviderId, { skip: !activeProviderId });
 
   // Compute model list and display names
   const { modelDisplayNames } = useMemo(() => {
@@ -132,6 +145,40 @@ export function WorkspaceInput({
     // Fallback: use as-is if not found
     setSelectedModel(displayName);
   };
+
+  // Handle goal change with slash command detection
+  const handleGoalChange = useCallback(
+    (value: string) => {
+      onGoalChange(value);
+
+      // Detect slash command pattern: "/" at start or after whitespace
+      const slashMatch = value.match(/(?:^|\s)\/(\S*)$/);
+      if (slashMatch) {
+        const filterText = slashMatch[1]; // Text after the slash
+        setSlashFilterText(filterText);
+        setShowSlashCommands(true);
+      } else {
+        setShowSlashCommands(false);
+        setSlashFilterText("");
+      }
+    },
+    [onGoalChange]
+  );
+
+  // Handle slash command selection
+  const handleSlashCommandSelect = useCallback(
+    (command: CommandInfo) => {
+      // Replace the slash and any partial text with the selected command
+      const newGoal = goal.replace(/(?:^|\s)\/\S*$/, (match) => {
+        const prefix = match.startsWith(" ") ? " " : "";
+        return `${prefix}/${command.name} `;
+      });
+      onGoalChange(newGoal);
+      setShowSlashCommands(false);
+      setSlashFilterText("");
+    },
+    [goal, onGoalChange]
+  );
 
   const { isRecording, toggle: toggleDictation } = useSpeechRecognition(
     (value) => onGoalChange(value),
@@ -250,7 +297,7 @@ export function WorkspaceInput({
       <div className="relative">
         <InputForm
           query={goal}
-          onQueryChange={onGoalChange}
+          onQueryChange={handleGoalChange}
           onSubmit={onSubmit}
           placeholder={
             canResume
@@ -258,6 +305,16 @@ export function WorkspaceInput({
               : "Ask to make changes, @mention files, run /commands"
           }
           variant={variant}
+        />
+        <SlashCommandDropdown
+          commands={providerCommands}
+          isOpen={showSlashCommands}
+          onSelect={handleSlashCommandSelect}
+          onClose={() => setShowSlashCommands(false)}
+          dropdownRef={slashCommandDropdownRef}
+          filterText={slashFilterText}
+          variant={variant}
+          isLoading={isLoadingCommands}
         />
       </div>
       <div className="flex items-start space-x-2 px-4">

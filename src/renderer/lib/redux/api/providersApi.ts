@@ -63,6 +63,13 @@ export interface ModelInfo {
   metadata?: Record<string, unknown>;
 }
 
+export interface CommandInfo {
+  name: string;
+  description?: string;
+  argumentHint?: string;
+  userFacing?: boolean;
+}
+
 export const providersApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getProviders: builder.query<Provider[], void>({
@@ -172,6 +179,20 @@ export const providersApi = baseApi.injectEndpoints({
       },
       providesTags: (_result, _error, id) => [{ type: "ProviderModels", id }],
     }),
+
+    getProviderCommands: builder.query<CommandInfo[], string>({
+      query: (id) => ({
+        handler: "providers:getCommands",
+        args: [id],
+      }),
+      transformResponse: (response: { success: boolean; data: CommandInfo[]; error?: string }) => {
+        if (!response.success) {
+          throw new Error(response.error || "Failed to get commands");
+        }
+        return response.data;
+      },
+      providesTags: (_result, _error, id) => [{ type: "ProviderCommands", id }],
+    }),
   }),
 });
 
@@ -191,4 +212,6 @@ export const {
   useDisableProviderMutation,
   useGetProviderModelsQuery,
   useLazyGetProviderModelsQuery,
+  useGetProviderCommandsQuery,
+  useLazyGetProviderCommandsQuery,
 } = providersApi;

@@ -194,6 +194,12 @@ export interface WorkRunAdapter {
    * @throws Error if not authenticated or client not connected
    */
   listModels?(): Promise<ModelInfo[]>;
+
+  /**
+   * List available slash commands.
+   * @returns Promise resolving to array of CommandInfo
+   */
+  listCommands?(): Promise<CommandInfo[]>;
 }
 
 /**
@@ -257,4 +263,18 @@ export interface ModelInfo {
   contextWindow?: number;
   /** Additional metadata */
   metadata?: Record<string, unknown>;
+}
+
+/**
+ * Command/slash command information returned by adapters
+ */
+export interface CommandInfo {
+  /** Command name (e.g., "help", "clear", "compact") */
+  name: string;
+  /** Human-readable description */
+  description?: string;
+  /** Hint for command arguments */
+  argumentHint?: string;
+  /** Whether the command is user-invocable */
+  userFacing?: boolean;
 }

@@ -48,4 +48,8 @@ export const providersController = {
   async getModels(id: string) {
     return providersService.getModels(id);
   },
+
+  async getCommands(id: string) {
+    return providersService.getCommands(id);
+  },
 };

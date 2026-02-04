@@ -5,7 +5,7 @@ import type {
   ProviderResponse,
   ServiceResponse,
 } from "./providers.dto";
-import { listModelsForProvider, type ModelInfo } from "./adapters";
+import { listModelsForProvider, listCommandsForProvider, type ModelInfo, type CommandInfo } from "./adapters";
 
 // ─────────────────────────────────────────────────────────────
 // Providers Service
@@ -131,6 +131,28 @@ export const providersService = {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to get models"
+      };
+    }
+  },
+
+  async getCommands(id: string): Promise<ServiceResponse<CommandInfo[]>> {
+    try {
+      const provider = await providersRepo.findById(id);
+      if (!provider) {
+        return { success: false, error: "Provider not found" };
+      }
+
+      if (!provider.isEnabled) {
+        return { success: false, error: "Provider is not enabled" };
+      }
+
+      const commands = await listCommandsForProvider(provider);
+      return { success: true, data: commands };
+    } catch (error) {
+      console.error(`[ProvidersService] Failed to get commands for provider ${id}:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get commands"
       };
     }
   },
