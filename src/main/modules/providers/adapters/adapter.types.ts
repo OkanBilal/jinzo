@@ -31,6 +31,11 @@ export interface WorkRunRequest {
   systemPrompt?: string | null;
   context?: WorkRunContextItem[];
   toolPolicy?: Record<string, unknown> | null;
+  /**
+   * Per-run hooks configuration that overrides or extends adapter-level hooks.
+   * Useful for dynamic hook configuration based on the specific run context.
+   */
+  hooks?: HooksConfig;
 }
 
 /**
@@ -141,6 +146,11 @@ export interface WorkRunContinueRequest {
   message: string;
   /** Additional context to add */
   context?: WorkRunContextItem[];
+  /**
+   * Per-run hooks configuration for this continuation.
+   * Useful for dynamic hook configuration based on the continuation context.
+   */
+  hooks?: HooksConfig;
 }
 
 /**
@@ -254,6 +264,38 @@ export interface ClaudeCodeAdapterConfig {
    * - "project": Load from .claude/skills/ in the working directory
    */
   settingSources?: Array<"user" | "project">;
+  /**
+   * Hooks configuration for intercepting agent behavior.
+   * Hooks let you validate, log, block, or transform agent actions at key execution points.
+   *
+   * @example
+   * ```ts
+   * hooks: {
+   *   PreToolUse: [{
+   *     matcher: 'Write|Edit',
+   *     hooks: [async (input, toolUseId, { signal }) => {
+   *       if (input.tool_input?.file_path?.endsWith('.env')) {
+   *         return {
+   *           hookSpecificOutput: {
+   *             hookEventName: 'PreToolUse',
+   *             permissionDecision: 'deny',
+   *             permissionDecisionReason: 'Cannot modify .env files'
+   *           }
+   *         };
+   *       }
+   *       return {};
+   *     }]
+   *   }],
+   *   PostToolUse: [{
+   *     hooks: [async (input) => {
+   *       console.log(`Tool ${input.tool_name} completed`);
+   *       return {};
+   *     }]
+   *   }]
+   * }
+   * ```
+   */
+  hooks?: HooksConfig;
 }
 
 /**
@@ -321,3 +363,333 @@ export interface SkillInfo {
   /** Full path to the SKILL.md file */
   path?: string;
 }
+
+// ─────────────────────────────────────────────────────────────
+// Claude Agent SDK Hooks Types
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Hook event names supported by the Claude Agent SDK
+ */
+export type HookEventName =
+  | "PreToolUse"
+  | "PostToolUse"
+  | "PostToolUseFailure"
+  | "UserPromptSubmit"
+  | "Stop"
+  | "SubagentStart"
+  | "SubagentStop"
+  | "PreCompact"
+  | "PermissionRequest"
+  | "SessionStart"
+  | "SessionEnd"
+  | "Notification";
+
+/**
+ * Base input fields common to all hook callbacks
+ */
+export interface HookInputBase {
+  /** The hook event type that triggered this callback */
+  hook_event_name: HookEventName;
+  /** Current session identifier */
+  session_id: string;
+  /** Path to the conversation transcript */
+  transcript_path: string;
+  /** Current working directory */
+  cwd: string;
+}
+
+/**
+ * Input data for PreToolUse hook
+ */
+export interface PreToolUseHookInput extends HookInputBase {
+  hook_event_name: "PreToolUse";
+  /** Name of the tool being called */
+  tool_name: string;
+  /** Arguments passed to the tool */
+  tool_input: Record<string, unknown>;
+}
+
+/**
+ * Input data for PostToolUse hook
+ */
+export interface PostToolUseHookInput extends HookInputBase {
+  hook_event_name: "PostToolUse";
+  /** Name of the tool that was called */
+  tool_name: string;
+  /** Arguments that were passed to the tool */
+  tool_input: Record<string, unknown>;
+  /** Result returned from tool execution */
+  tool_response: unknown;
+}
+
+/**
+ * Input data for PostToolUseFailure hook
+ */
+export interface PostToolUseFailureHookInput extends HookInputBase {
+  hook_event_name: "PostToolUseFailure";
+  /** Name of the tool that failed */
+  tool_name: string;
+  /** Arguments that were passed to the tool */
+  tool_input: Record<string, unknown>;
+  /** Error message from tool execution failure */
+  error: string;
+  /** Whether the failure was caused by an interrupt */
+  is_interrupt: boolean;
+}
+
+/**
+ * Input data for UserPromptSubmit hook
+ */
+export interface UserPromptSubmitHookInput extends HookInputBase {
+  hook_event_name: "UserPromptSubmit";
+  /** The user's prompt text */
+  prompt: string;
+}
+
+/**
+ * Input data for Stop hook
+ */
+export interface StopHookInput extends HookInputBase {
+  hook_event_name: "Stop";
+  /** Whether a stop hook is currently processing */
+  stop_hook_active: boolean;
+}
+
+/**
+ * Input data for SubagentStart hook
+ */
+export interface SubagentStartHookInput extends HookInputBase {
+  hook_event_name: "SubagentStart";
+  /** Unique identifier for the subagent */
+  agent_id: string;
+  /** Type/role of the subagent */
+  agent_type: string;
+}
+
+/**
+ * Input data for SubagentStop hook
+ */
+export interface SubagentStopHookInput extends HookInputBase {
+  hook_event_name: "SubagentStop";
+  /** Unique identifier for the subagent */
+  agent_id: string;
+  /** Path to the subagent's conversation transcript */
+  agent_transcript_path: string;
+  /** Whether a stop hook is currently processing */
+  stop_hook_active: boolean;
+}
+
+/**
+ * Input data for PreCompact hook
+ */
+export interface PreCompactHookInput extends HookInputBase {
+  hook_event_name: "PreCompact";
+  /** What triggered compaction: "manual" or "auto" */
+  trigger: "manual" | "auto";
+  /** Custom instructions provided for compaction */
+  custom_instructions?: string;
+}
+
+/**
+ * Input data for PermissionRequest hook
+ */
+export interface PermissionRequestHookInput extends HookInputBase {
+  hook_event_name: "PermissionRequest";
+  /** Name of the tool requesting permission */
+  tool_name: string;
+  /** Arguments passed to the tool */
+  tool_input: Record<string, unknown>;
+  /** Suggested permission updates for the tool */
+  permission_suggestions?: unknown[];
+}
+
+/**
+ * Input data for SessionStart hook
+ */
+export interface SessionStartHookInput extends HookInputBase {
+  hook_event_name: "SessionStart";
+  /** How the session started: "startup", "resume", "clear", or "compact" */
+  source: "startup" | "resume" | "clear" | "compact";
+}
+
+/**
+ * Input data for SessionEnd hook
+ */
+export interface SessionEndHookInput extends HookInputBase {
+  hook_event_name: "SessionEnd";
+  /** Why the session ended */
+  reason:
+    | "clear"
+    | "logout"
+    | "prompt_input_exit"
+    | "bypass_permissions_disabled"
+    | "other";
+}
+
+/**
+ * Input data for Notification hook
+ */
+export interface NotificationHookInput extends HookInputBase {
+  hook_event_name: "Notification";
+  /** Status message from the agent */
+  message: string;
+  /** Type of notification */
+  notification_type:
+    | "permission_prompt"
+    | "idle_prompt"
+    | "auth_success"
+    | "elicitation_dialog";
+  /** Optional title set by the agent */
+  title?: string;
+}
+
+/**
+ * Union of all possible hook input types
+ */
+export type HookInput =
+  | PreToolUseHookInput
+  | PostToolUseHookInput
+  | PostToolUseFailureHookInput
+  | UserPromptSubmitHookInput
+  | StopHookInput
+  | SubagentStartHookInput
+  | SubagentStopHookInput
+  | PreCompactHookInput
+  | PermissionRequestHookInput
+  | SessionStartHookInput
+  | SessionEndHookInput
+  | NotificationHookInput;
+
+/**
+ * Context passed to hook callbacks
+ */
+export interface HookContext {
+  /** AbortSignal for cancellation - pass to async operations like fetch() */
+  signal: AbortSignal;
+}
+
+/**
+ * Hook-specific output for PreToolUse hooks
+ */
+export interface PreToolUseHookSpecificOutput {
+  hookEventName: "PreToolUse";
+  /** Permission decision: "allow" (auto-approve), "deny" (block), or "ask" (prompt) */
+  permissionDecision?: "allow" | "deny" | "ask";
+  /** Explanation for the permission decision */
+  permissionDecisionReason?: string;
+  /** Modified tool input (requires permissionDecision: "allow") */
+  updatedInput?: Record<string, unknown>;
+  /** Additional context to add to the conversation */
+  additionalContext?: string;
+}
+
+/**
+ * Hook-specific output for PostToolUse hooks
+ */
+export interface PostToolUseHookSpecificOutput {
+  hookEventName: "PostToolUse";
+  /** Additional context to add to the conversation */
+  additionalContext?: string;
+}
+
+/**
+ * Hook-specific output for UserPromptSubmit hooks
+ */
+export interface UserPromptSubmitHookSpecificOutput {
+  hookEventName: "UserPromptSubmit";
+  /** Additional context to add to the conversation */
+  additionalContext?: string;
+}
+
+/**
+ * Hook-specific output for SessionStart hooks
+ */
+export interface SessionStartHookSpecificOutput {
+  hookEventName: "SessionStart";
+  /** Additional context to add to the conversation */
+  additionalContext?: string;
+}
+
+/**
+ * Hook-specific output for SubagentStart hooks
+ */
+export interface SubagentStartHookSpecificOutput {
+  hookEventName: "SubagentStart";
+  /** Additional context to add to the conversation */
+  additionalContext?: string;
+}
+
+/**
+ * Generic hook-specific output for other hook types
+ */
+export interface GenericHookSpecificOutput {
+  hookEventName: HookEventName;
+  [key: string]: unknown;
+}
+
+/**
+ * Union of all hook-specific output types
+ */
+export type HookSpecificOutput =
+  | PreToolUseHookSpecificOutput
+  | PostToolUseHookSpecificOutput
+  | UserPromptSubmitHookSpecificOutput
+  | SessionStartHookSpecificOutput
+  | SubagentStartHookSpecificOutput
+  | GenericHookSpecificOutput;
+
+/**
+ * Output returned from hook callbacks
+ */
+export interface HookOutput {
+  /** Whether the agent should continue after this hook (default: true) */
+  continue?: boolean;
+  /** Message shown when continue is false */
+  stopReason?: string;
+  /** Hide stdout from the transcript (default: false) */
+  suppressOutput?: boolean;
+  /** Message injected into the conversation for Claude to see */
+  systemMessage?: string;
+  /** Hook-specific output for controlling tool execution */
+  hookSpecificOutput?: HookSpecificOutput;
+}
+
+/**
+ * Hook callback function signature
+ * @param input - Event-specific input data
+ * @param toolUseId - Correlates PreToolUse and PostToolUse events
+ * @param context - Contains AbortSignal for cancellation
+ * @returns Promise resolving to hook output, or empty object to allow operation
+ */
+export type HookCallback = (
+  input: HookInput,
+  toolUseId: string | null,
+  context: HookContext,
+) => Promise<HookOutput>;
+
+/**
+ * Hook matcher configuration
+ * Defines which tools trigger the callbacks and how they're processed
+ */
+export interface HookMatcher {
+  /**
+   * Regex pattern to match tool names.
+   * Built-in tools: Bash, Read, Write, Edit, Glob, Grep, WebFetch, Task, etc.
+   * MCP tools: mcp__<server>__<action>
+   * Omit to match all tools.
+   */
+  matcher?: string;
+  /** Array of callback functions to execute when the pattern matches */
+  hooks: HookCallback[];
+  /** Timeout in seconds (default: 60). Increase for hooks that make external API calls */
+  timeout?: number;
+}
+
+/**
+ * Hooks configuration object
+ * Keys are hook event names, values are arrays of matchers
+ */
+export type HooksConfig = {
+  [K in HookEventName]?: HookMatcher[];
+};

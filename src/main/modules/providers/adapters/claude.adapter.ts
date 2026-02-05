@@ -12,6 +12,8 @@ import type {
   ModelInfo,
   CommandInfo,
   SkillInfo,
+  HooksConfig,
+  HookMatcher,
 } from "./adapter.types";
 import {
   findClaudeBinary,
@@ -22,6 +24,28 @@ import {
  * NOTE: This adapter uses @anthropic-ai/claude-agent-sdk package.
  * The SDK spawns the Claude Code CLI as a subprocess.
  */
+
+/**
+ * SDK hook matcher format (matches SDK's expected structure)
+ */
+interface SDKHookMatcher {
+  matcher?: string;
+  hooks: Array<
+    (
+      input: Record<string, unknown>,
+      toolUseId: string | null,
+      context: { signal: AbortSignal },
+    ) => Promise<Record<string, unknown>>
+  >;
+  timeout?: number;
+}
+
+/**
+ * SDK hooks configuration format
+ */
+type SDKHooksConfig = {
+  [key: string]: SDKHookMatcher[];
+};
 
 interface SDKOptions {
   // TODO: ADD more options as needed
@@ -53,6 +77,11 @@ interface SDKOptions {
    * - "project": Load from .claude/skills/ in cwd
    */
   settingSources?: Array<"user" | "project">;
+  /**
+   * Hooks configuration for intercepting agent behavior.
+   * Run custom code at key points in the agent lifecycle.
+   */
+  hooks?: SDKHooksConfig;
 }
 
 type AgentDefinition = {
@@ -276,6 +305,7 @@ export function createClaudeAdapter(
     workspacePath?: string,
     abortController?: AbortController,
     resumeSessionId?: string,
+    runHooks?: HooksConfig,
   ): SDKOptions {
     // Find the Claude CLI binary
     let binaryPath: string | null = null;
@@ -361,7 +391,85 @@ export function createClaudeAdapter(
       options.resume = resumeSessionId;
     }
 
+    // Add hooks if configured (merge config-level and run-level hooks)
+    const mergedHooks = mergeHooksConfig(config.hooks, runHooks);
+    if (mergedHooks && Object.keys(mergedHooks).length > 0) {
+      options.hooks = convertHooksConfig(mergedHooks);
+    }
+
     return options;
+  }
+
+  /**
+   * Merge config-level hooks with run-level hooks
+   * Run-level hooks are appended to config-level hooks for each event
+   */
+  function mergeHooksConfig(
+    configHooks?: HooksConfig,
+    runHooks?: HooksConfig,
+  ): HooksConfig | undefined {
+    if (!configHooks && !runHooks) {
+      return undefined;
+    }
+
+    if (!configHooks) {
+      return runHooks;
+    }
+
+    if (!runHooks) {
+      return configHooks;
+    }
+
+    // Merge both configs
+    const merged: HooksConfig = { ...configHooks };
+
+    for (const [eventName, matchers] of Object.entries(runHooks)) {
+      const key = eventName as keyof HooksConfig;
+      if (merged[key]) {
+        // Append run-level matchers to config-level matchers
+        merged[key] = [...merged[key]!, ...(matchers || [])];
+      } else {
+        merged[key] = matchers;
+      }
+    }
+
+    return merged;
+  }
+
+  /**
+   * Convert our HooksConfig to the SDK's expected format
+   */
+  function convertHooksConfig(hooks: HooksConfig): SDKHooksConfig {
+    const sdkHooks: SDKHooksConfig = {};
+
+    for (const [eventName, matchers] of Object.entries(hooks)) {
+      if (!matchers || matchers.length === 0) continue;
+
+      sdkHooks[eventName] = matchers.map((matcher: HookMatcher) => ({
+        matcher: matcher.matcher,
+        hooks: matcher.hooks.map(
+          (hookFn) =>
+            async (
+              input: Record<string, unknown>,
+              toolUseId: string | null,
+              context: { signal: AbortSignal },
+            ) => {
+              try {
+                // Call the hook function with the input cast to HookInput
+                const result = await hookFn(input as any, toolUseId, context);
+                return result as Record<string, unknown>;
+              } catch (error) {
+                logError(`Hook error in ${eventName}:`, error);
+                // Return empty object on error to not block the operation
+                return {};
+              }
+            },
+        ),
+        timeout: matcher.timeout,
+      }));
+    }
+
+    return sdkHooks;
   }
 
   function mapSDKMessage(msg: SDKMessage, runId: string): WorkRunEvent[] {
@@ -661,6 +769,8 @@ export function createClaudeAdapter(
           getModel(model),
           request.workspace.rootPath,
           abortController,
+          undefined, // resumeSessionId
+          request.hooks, // run-level hooks
         );
 
         await onEvent({
@@ -895,6 +1005,7 @@ export function createClaudeAdapter(
           request.workspace.rootPath,
           abortController,
           sessionId, // Resume with session ID
+          request.hooks, // run-level hooks
         );
 
         // Build prompt with any additional context
