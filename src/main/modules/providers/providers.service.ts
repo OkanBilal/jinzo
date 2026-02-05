@@ -5,7 +5,7 @@ import type {
   ProviderResponse,
   ServiceResponse,
 } from "./providers.dto";
-import { listModelsForProvider, listCommandsForProvider, type ModelInfo, type CommandInfo } from "./adapters";
+import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, type ModelInfo, type CommandInfo, type SkillInfo } from "./adapters";
 
 // ─────────────────────────────────────────────────────────────
 // Providers Service
@@ -153,6 +153,28 @@ export const providersService = {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to get commands"
+      };
+    }
+  },
+
+  async getSkills(id: string, workspacePath?: string): Promise<ServiceResponse<SkillInfo[]>> {
+    try {
+      const provider = await providersRepo.findById(id);
+      if (!provider) {
+        return { success: false, error: "Provider not found" };
+      }
+
+      if (!provider.isEnabled) {
+        return { success: false, error: "Provider is not enabled" };
+      }
+
+      const skills = await listSkillsForProvider(provider, workspacePath);
+      return { success: true, data: skills };
+    } catch (error) {
+      console.error(`[ProvidersService] Failed to get skills for provider ${id}:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get skills"
       };
     }
   },

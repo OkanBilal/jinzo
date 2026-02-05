@@ -52,4 +52,8 @@ export const providersController = {
   async getCommands(id: string) {
     return providersService.getCommands(id);
   },
+
+  async getSkills(id: string, workspacePath?: string) {
+    return providersService.getSkills(id, workspacePath);
+  },
 };

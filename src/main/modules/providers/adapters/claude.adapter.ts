@@ -1,4 +1,6 @@
 import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
 import type {
   WorkRunAdapter,
   WorkRunRequest,
@@ -9,6 +11,7 @@ import type {
   ClaudeCodeAdapterConfig,
   ModelInfo,
   CommandInfo,
+  SkillInfo,
 } from "./adapter.types";
 import {
   findClaudeBinary,
@@ -44,6 +47,12 @@ interface SDKOptions {
   systemPrompt?:
     | string
     | { type: "preset"; preset: "claude_code"; append?: string };
+  /**
+   * Setting sources for loading skills from filesystem.
+   * - "user": Load from ~/.claude/skills/
+   * - "project": Load from .claude/skills/ in cwd
+   */
+  settingSources?: Array<"user" | "project">;
 }
 
 type AgentDefinition = {
@@ -169,6 +178,11 @@ const MODELS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 let cachedCommands: CommandInfo[] | null = null;
 let cachedCommandsTimestamp = 0;
 const COMMANDS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+// Cached skills list (with TTL)
+let cachedSkills: SkillInfo[] | null = null;
+let cachedSkillsTimestamp = 0;
+const SKILLS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes (skills may change more often during development)
 
 // ─────────────────────────────────────────────────────────────
 // Logging
@@ -327,12 +341,16 @@ export function createClaudeAdapter(
 
     //TODO: implement AskUserQuestion tool support
 
+    // Setting sources for skills: default to both user and project if not specified
+    const settingSources = config.settingSources ?? ["user", "project"];
+
     const options: SDKOptions = {
       model,
       permissionMode,
       abortController,
       pathToClaudeCodeExecutable: binaryPath,
       env: cleanEnv,
+      settingSources,
     };
 
     if (workspacePath) {
@@ -1177,6 +1195,10 @@ export function createClaudeAdapter(
       cachedCommands = null;
       cachedCommandsTimestamp = 0;
 
+      // Clear skills cache
+      cachedSkills = null;
+      cachedSkillsTimestamp = 0;
+
       logInfo("Shutdown complete");
     },
 
@@ -1324,12 +1346,204 @@ export function createClaudeAdapter(
         return [];
       }
     },
+
+    async listSkills(workspacePath?: string): Promise<SkillInfo[]> {
+      // Check cache first
+      const now = Date.now();
+      if (cachedSkills && now - cachedSkillsTimestamp < SKILLS_CACHE_TTL_MS) {
+        return cachedSkills;
+      }
+
+      try {
+        const settingSources = config.settingSources ?? ["user", "project"];
+        const skills: SkillInfo[] = [];
+
+        // Discover skills from user directory (~/.claude/skills/)
+        if (settingSources.includes("user")) {
+          const userSkillsDir = path.join(os.homedir(), ".claude", "skills");
+          const userSkills = await discoverSkillsFromDirectory(userSkillsDir, "user");
+          skills.push(...userSkills);
+        }
+
+        // Discover skills from project directory (.claude/skills/)
+        if (settingSources.includes("project") && workspacePath) {
+          const projectSkillsDir = path.join(workspacePath, ".claude", "skills");
+          const projectSkills = await discoverSkillsFromDirectory(projectSkillsDir, "project");
+          skills.push(...projectSkills);
+        }
+
+        // Cache the result
+        cachedSkills = skills;
+        cachedSkillsTimestamp = now;
+
+        if (skills.length > 0) {
+          logInfo(`Discovered ${skills.length} skill(s)`);
+        }
+        return skills;
+      } catch (error) {
+        logError("Failed to discover skills:", error);
+        return [];
+      }
+    },
   };
 }
 
 // ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
+
+/**
+ * Discover skills from a directory containing skill subdirectories
+ */
+async function discoverSkillsFromDirectory(
+  skillsDir: string,
+  source: "user" | "project",
+): Promise<SkillInfo[]> {
+  const skills: SkillInfo[] = [];
+
+  try {
+    // Check if directory exists
+    if (!fs.existsSync(skillsDir)) {
+      return skills;
+    }
+
+    const stat = fs.statSync(skillsDir);
+    if (!stat.isDirectory()) {
+      return skills;
+    }
+
+    // Read all subdirectories
+    const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+
+      const skillDir = path.join(skillsDir, entry.name);
+      const skillMdPath = path.join(skillDir, "SKILL.md");
+
+      // Check if SKILL.md exists
+      if (!fs.existsSync(skillMdPath)) {
+        continue;
+      }
+
+      try {
+        const skill = parseSkillFile(skillMdPath, entry.name, source);
+        if (skill) {
+          skills.push(skill);
+        }
+      } catch (err) {
+        console.warn(`[ClaudeAdapter] Failed to parse skill ${entry.name}:`, err);
+      }
+    }
+  } catch (err) {
+    console.warn(`[ClaudeAdapter] Failed to read skills directory ${skillsDir}:`, err);
+  }
+
+  return skills;
+}
+
+/**
+ * Parse a SKILL.md file and extract skill information
+ */
+function parseSkillFile(
+  filePath: string,
+  dirName: string,
+  source: "user" | "project",
+): SkillInfo | null {
+  const content = fs.readFileSync(filePath, "utf-8");
+
+  // Parse YAML frontmatter
+  const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
+  if (!frontmatterMatch) {
+    // No frontmatter, use directory name as skill name
+    // and first paragraph as description
+    const firstParagraph = content.trim().split("\n\n")[0]?.trim();
+    return {
+      name: dirName,
+      description: firstParagraph?.substring(0, 200),
+      source,
+      path: filePath,
+      userInvocable: true,
+      modelInvocable: true,
+    };
+  }
+
+  const frontmatter = frontmatterMatch[1];
+  const parsed = parseSimpleYaml(frontmatter);
+
+  // Extract skill info from frontmatter
+  const skill: SkillInfo = {
+    name: (parsed.name as string) || dirName,
+    description: parsed.description as string | undefined,
+    argumentHint: parsed["argument-hint"] as string | undefined,
+    userInvocable: parsed["user-invocable"] !== false,
+    modelInvocable: parsed["disable-model-invocation"] !== true,
+    source,
+    model: parsed.model as string | undefined,
+    forked: parsed.context === "fork",
+    agent: parsed.agent as string | undefined,
+    path: filePath,
+  };
+
+  // If no description in frontmatter, use first paragraph of content
+  if (!skill.description) {
+    const bodyContent = content.slice(frontmatterMatch[0].length).trim();
+    const firstParagraph = bodyContent.split("\n\n")[0]?.trim();
+    if (firstParagraph && !firstParagraph.startsWith("#")) {
+      skill.description = firstParagraph.substring(0, 200);
+    }
+  }
+
+  return skill;
+}
+
+/**
+ * Simple YAML parser for skill frontmatter
+ * Handles basic key: value pairs and booleans
+ */
+function parseSimpleYaml(yaml: string): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  const lines = yaml.split("\n");
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+
+    const colonIndex = trimmed.indexOf(":");
+    if (colonIndex === -1) {
+      continue;
+    }
+
+    const key = trimmed.slice(0, colonIndex).trim();
+    let value: unknown = trimmed.slice(colonIndex + 1).trim();
+
+    // Handle quoted strings
+    if (
+      (value as string).startsWith('"') && (value as string).endsWith('"') ||
+      (value as string).startsWith("'") && (value as string).endsWith("'")
+    ) {
+      value = (value as string).slice(1, -1);
+    }
+    // Handle booleans
+    else if (value === "true") {
+      value = true;
+    } else if (value === "false") {
+      value = false;
+    }
+    // Handle empty values
+    else if (value === "") {
+      value = undefined;
+    }
+
+    result[key] = value;
+  }
+
+  return result;
+}
 
 function safeJson(value: unknown): string {
   try {

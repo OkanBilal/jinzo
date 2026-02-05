@@ -329,6 +329,7 @@ const api = {
     disable: (id: string) => ipcRenderer.invoke("providers:disable", id),
     getModels: (id: string) => ipcRenderer.invoke("providers:getModels", id),
     getCommands: (id: string) => ipcRenderer.invoke("providers:getCommands", id),
+    getSkills: (id: string, workspacePath?: string) => ipcRenderer.invoke("providers:getSkills", id, workspacePath),
   },
   // Tools operations
   tools: {

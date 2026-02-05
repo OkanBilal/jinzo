@@ -343,6 +343,7 @@ export default function WorkspacePage() {
         onRemoveContextFile={handleRemoveContextFile}
         contextIssues={contextIssues}
         onRemoveContextIssue={handleRemoveContextIssue}
+        workspacePath={currentWorkspace?.rootPath}
       />
     </div>
   );

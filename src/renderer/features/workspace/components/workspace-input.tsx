@@ -3,7 +3,9 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   useGetProviderModelsQuery,
   useGetProviderCommandsQuery,
+  useGetProviderSkillsQuery,
   type CommandInfo,
+  type SkillInfo,
 } from "@/lib/redux/api/providersApi";
 import { setWorkspaceModel } from "@/lib/redux/slices/workspaceSlice";
 import type { RootState } from "@/lib/redux";
@@ -23,7 +25,7 @@ import {
   type UploadedFile,
 } from "@/components/ui/input/file-upload-dropdown";
 import { ModelSelectDropdown } from "@/components/ui/input/model-select-dropdown";
-import { SlashCommandDropdown } from "@/components/ui/input/slash-command-dropdown";
+import { SlashMenuDropdown } from "@/components/ui/input/slash-menu-dropdown";
 import { Asana, Close } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
@@ -44,6 +46,8 @@ interface WorkspaceInputProps {
   onRemoveContextFile?: (filePath: string) => void;
   contextIssues?: ContextIssue[];
   onRemoveContextIssue?: (entityId: string) => void;
+  /** Workspace root path for discovering project-level skills */
+  workspacePath?: string;
 }
 
 export function WorkspaceInput({
@@ -60,6 +64,7 @@ export function WorkspaceInput({
   onRemoveContextFile,
   contextIssues = [],
   onRemoveContextIssue,
+  workspacePath,
 }: WorkspaceInputProps) {
   const dispatch = useDispatch();
   const modelDropdownRef = useRef<HTMLDivElement>(null);
@@ -90,9 +95,17 @@ export function WorkspaceInput({
   const { data: providerModels, isLoading: isLoadingModels } =
     useGetProviderModelsQuery(activeProviderId, { skip: !activeProviderId });
 
-  // Fetch commands from provider (for slash command dropdown)
+  // Fetch commands from provider (for slash menu dropdown)
   const { data: providerCommands = [], isLoading: isLoadingCommands } =
     useGetProviderCommandsQuery(activeProviderId, { skip: !activeProviderId });
+
+  // Fetch skills from provider (for slash menu dropdown)
+  //TODO: works with Claude so make available for claude for now
+  const { data: providerSkills = [], isLoading: isLoadingSkills } =
+    useGetProviderSkillsQuery(
+      { id: activeProviderId, workspacePath },
+      { skip: !activeProviderId }
+    );
 
   // Compute model list and display names
   const { modelDisplayNames } = useMemo(() => {
@@ -172,6 +185,21 @@ export function WorkspaceInput({
       const newGoal = goal.replace(/(?:^|\s)\/\S*$/, (match) => {
         const prefix = match.startsWith(" ") ? " " : "";
         return `${prefix}/${command.name} `;
+      });
+      onGoalChange(newGoal);
+      setShowSlashCommands(false);
+      setSlashFilterText("");
+    },
+    [goal, onGoalChange]
+  );
+
+  // Handle skill selection
+  const handleSkillSelect = useCallback(
+    (skill: SkillInfo) => {
+      // Replace the slash and any partial text with the selected skill
+      const newGoal = goal.replace(/(?:^|\s)\/\S*$/, (match) => {
+        const prefix = match.startsWith(" ") ? " " : "";
+        return `${prefix}/${skill.name} `;
       });
       onGoalChange(newGoal);
       setShowSlashCommands(false);
@@ -306,15 +334,18 @@ export function WorkspaceInput({
           }
           variant={variant}
         />
-        <SlashCommandDropdown
+        <SlashMenuDropdown
           commands={providerCommands}
+          skills={providerSkills}
           isOpen={showSlashCommands}
-          onSelect={handleSlashCommandSelect}
+          onSelectCommand={handleSlashCommandSelect}
+          onSelectSkill={handleSkillSelect}
           onClose={() => setShowSlashCommands(false)}
           dropdownRef={slashCommandDropdownRef}
           filterText={slashFilterText}
           variant={variant}
-          isLoading={isLoadingCommands}
+          isLoadingCommands={isLoadingCommands}
+          isLoadingSkills={isLoadingSkills}
         />
       </div>
       <div className="flex items-start space-x-2 px-4">

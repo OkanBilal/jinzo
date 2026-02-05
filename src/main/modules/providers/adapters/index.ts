@@ -21,6 +21,7 @@ export type {
   ClaudeCodeAdapterConfig,
   ModelInfo,
   CommandInfo,
+  SkillInfo,
 } from "./adapter.types";
 
 // Factory
@@ -33,6 +34,7 @@ export {
   isSupportedWorkProvider,
   listModelsForProvider,
   listCommandsForProvider,
+  listSkillsForProvider,
   SUPPORTED_WORK_PROVIDERS,
   type SupportedWorkProvider,
 } from "./adapter.factory";

@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { ProviderResponse } from "../providers.dto";
-import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, ModelInfo, CommandInfo } from "./adapter.types";
+import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, ModelInfo, CommandInfo, SkillInfo } from "./adapter.types";
 import { createCopilotAdapter } from "./copilot.adapter";
 import { createClaudeAdapter } from "./claude.adapter";
 
@@ -171,4 +171,26 @@ export async function listCommandsForProvider(provider: ProviderResponse): Promi
   }
 
   return adapter.listCommands();
+}
+
+/**
+ * List available skills for a provider
+ * Skills are SKILL.md files that extend Claude's capabilities.
+ *
+ * @param provider - The provider configuration from the database
+ * @param workspacePath - Optional workspace path for discovering project skills
+ * @returns Promise resolving to array of SkillInfo
+ */
+export async function listSkillsForProvider(
+  provider: ProviderResponse,
+  workspacePath?: string,
+): Promise<SkillInfo[]> {
+  const adapter = createWorkAdapter(provider);
+
+  if (!adapter.listSkills) {
+    // Return empty array if provider doesn't support skills
+    return [];
+  }
+
+  return adapter.listSkills(workspacePath);
 }

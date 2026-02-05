@@ -200,6 +200,14 @@ export interface WorkRunAdapter {
    * @returns Promise resolving to array of CommandInfo
    */
   listCommands?(): Promise<CommandInfo[]>;
+
+  /**
+   * List available skills.
+   * Skills are SKILL.md files that extend Claude's capabilities.
+   * @param workspacePath - Optional workspace path for discovering project skills
+   * @returns Promise resolving to array of SkillInfo
+   */
+  listSkills?(workspacePath?: string): Promise<SkillInfo[]>;
 }
 
 /**
@@ -227,7 +235,7 @@ export interface CopilotAdapterConfig {
 }
 
 /**
- * Configuration for Claude Code adapter (future)
+ * Configuration for Claude Code adapter
  */
 export interface ClaudeCodeAdapterConfig {
   /** Path to claude CLI binary */
@@ -238,6 +246,14 @@ export interface ClaudeCodeAdapterConfig {
   defaultModel?: string;
   /** Timeout in milliseconds */
   timeout?: number;
+  /** Permission mode for tool access */
+  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan";
+  /**
+   * Setting sources for loading skills and other filesystem settings.
+   * - "user": Load from ~/.claude/skills/
+   * - "project": Load from .claude/skills/ in the working directory
+   */
+  settingSources?: Array<"user" | "project">;
 }
 
 /**
@@ -277,4 +293,31 @@ export interface CommandInfo {
   argumentHint?: string;
   /** Whether the command is user-invocable */
   userFacing?: boolean;
+}
+
+/**
+ * Skill information returned by adapters
+ * Skills are Claude Agent SDK capabilities defined as SKILL.md files
+ */
+export interface SkillInfo {
+  /** Skill name (e.g., "explain-code", "deploy") */
+  name: string;
+  /** Human-readable description of what the skill does */
+  description?: string;
+  /** Hint for skill arguments (from argument-hint frontmatter) */
+  argumentHint?: string;
+  /** Whether the skill is user-invocable (can be triggered with /name). Default: true */
+  userInvocable?: boolean;
+  /** Whether Claude can automatically invoke this skill. Default: true (false if disable-model-invocation is set) */
+  modelInvocable?: boolean;
+  /** Source location: "user" (~/.claude/skills/) or "project" (.claude/skills/) */
+  source?: "user" | "project";
+  /** Model to use when skill is active */
+  model?: string;
+  /** Whether skill runs in forked subagent context (context: fork) */
+  forked?: boolean;
+  /** Agent type for forked context */
+  agent?: string;
+  /** Full path to the SKILL.md file */
+  path?: string;
 }
