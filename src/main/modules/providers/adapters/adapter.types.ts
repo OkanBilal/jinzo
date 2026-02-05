@@ -36,6 +36,13 @@ export interface WorkRunRequest {
    * Useful for dynamic hook configuration based on the specific run context.
    */
   hooks?: HooksConfig;
+  /**
+   * Per-run subagents configuration that extends adapter-level agents.
+   * Useful for defining task-specific subagents or overriding existing ones.
+   *
+   * Note: Include 'Task' in allowedTools to enable subagent invocation.
+   */
+  agents?: AgentsConfig;
 }
 
 /**
@@ -100,6 +107,31 @@ export interface WorkRunStatusEvent {
 }
 
 /**
+ * Subagent lifecycle event emitted when a subagent is invoked or completes
+ */
+export interface WorkRunSubagentEvent {
+  type: "subagent";
+  /** The lifecycle phase of the subagent */
+  phase: "invoked" | "running" | "completed" | "failed";
+  /** The name/type of the subagent (e.g., "code-reviewer", "general-purpose") */
+  agentType: string;
+  /** Unique identifier for this subagent invocation */
+  agentId?: string;
+  /** The tool_use_id that spawned this subagent (correlates with parent agent) */
+  parentToolUseId?: string;
+  /** The prompt/task given to the subagent */
+  prompt?: string;
+  /** Result from the subagent (when phase is "completed") */
+  result?: string;
+  /** Error message (when phase is "failed") */
+  error?: string;
+  /** Timestamp */
+  ts?: number;
+  /** Additional metadata */
+  metadata?: Record<string, unknown>;
+}
+
+/**
  * Union of all possible events emitted during a work run
  */
 export type WorkRunEvent =
@@ -107,7 +139,8 @@ export type WorkRunEvent =
   | WorkRunToolCallEvent
   | WorkRunCommandEvent
   | WorkRunArtifactEvent
-  | WorkRunStatusEvent;
+  | WorkRunStatusEvent
+  | WorkRunSubagentEvent;
 
 /**
  * Artifact summary in the result
@@ -151,6 +184,11 @@ export interface WorkRunContinueRequest {
    * Useful for dynamic hook configuration based on the continuation context.
    */
   hooks?: HooksConfig;
+  /**
+   * Per-run subagents configuration for this continuation.
+   * Allows adding or overriding subagents for specific continuation tasks.
+   */
+  agents?: AgentsConfig;
 }
 
 /**
@@ -296,6 +334,28 @@ export interface ClaudeCodeAdapterConfig {
    * ```
    */
   hooks?: HooksConfig;
+  /**
+   * Subagents configuration for delegating specialized tasks.
+   * Subagents maintain separate context and can have restricted tool access.
+   *
+   * @example
+   * ```ts
+   * agents: {
+   *   'code-reviewer': {
+   *     description: 'Expert code reviewer for quality and security reviews.',
+   *     prompt: 'You are a code review specialist...',
+   *     tools: ['Read', 'Grep', 'Glob'],
+   *     model: 'sonnet'
+   *   },
+   *   'test-runner': {
+   *     description: 'Runs and analyzes test suites.',
+   *     prompt: 'You are a test execution specialist...',
+   *     tools: ['Bash', 'Read', 'Grep']
+   *   }
+   * }
+   * ```
+   */
+  agents?: AgentsConfig;
 }
 
 /**
@@ -363,6 +423,115 @@ export interface SkillInfo {
   /** Full path to the SKILL.md file */
   path?: string;
 }
+
+// ─────────────────────────────────────────────────────────────
+// Claude Agent SDK Subagents Types
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Model options for subagents
+ * - "sonnet": Use Claude Sonnet model
+ * - "opus": Use Claude Opus model (most capable)
+ * - "haiku": Use Claude Haiku model (fastest)
+ * - "inherit": Use the same model as the parent agent
+ */
+export type AgentModelOption = "sonnet" | "opus" | "haiku" | "inherit";
+
+/**
+ * Definition for a subagent that can be spawned by the main agent.
+ * Subagents maintain separate context and can have specialized instructions and tool restrictions.
+ *
+ * @example
+ * ```ts
+ * const codeReviewer: AgentDefinition = {
+ *   description: 'Expert code reviewer for quality and security reviews.',
+ *   prompt: `You are a code review specialist with expertise in security and best practices.
+ *
+ * When reviewing code:
+ * - Identify security vulnerabilities
+ * - Check for performance issues
+ * - Suggest specific improvements`,
+ *   tools: ['Read', 'Grep', 'Glob'],
+ *   model: 'sonnet'
+ * };
+ * ```
+ */
+export interface AgentDefinition {
+  /**
+   * Natural language description of when to use this agent.
+   * Claude uses this to decide whether to delegate tasks to this subagent.
+   * Write clear descriptions that explain the agent's specialty.
+   *
+   * @example "Expert code reviewer for quality and security reviews"
+   * @example "Test execution specialist for running and analyzing test suites"
+   */
+  description: string;
+
+  /**
+   * The agent's system prompt defining its role, behavior, and expertise.
+   * This is the instruction set the subagent follows when executing tasks.
+   *
+   * @example
+   * ```
+   * You are a code review specialist with expertise in security, performance, and best practices.
+   *
+   * When reviewing code:
+   * - Identify security vulnerabilities
+   * - Check for performance issues
+   * - Verify adherence to coding standards
+   * - Suggest specific improvements
+   *
+   * Be thorough but concise in your feedback.
+   * ```
+   */
+  prompt: string;
+
+  /**
+   * Array of tool names the subagent is allowed to use.
+   * If omitted, the agent inherits all tools from the parent.
+   *
+   * Common tool combinations:
+   * - Read-only analysis: ['Read', 'Grep', 'Glob']
+   * - Test execution: ['Bash', 'Read', 'Grep']
+   * - Code modification: ['Read', 'Edit', 'Write', 'Grep', 'Glob']
+   *
+   * Note: Do NOT include 'Task' in a subagent's tools - subagents cannot spawn their own subagents.
+   */
+  tools?: string[];
+
+  /**
+   * Model to use for this subagent.
+   * If omitted, uses the same model as the parent agent.
+   *
+   * - "sonnet": Good balance of capability and speed
+   * - "opus": Most capable, use for complex analysis
+   * - "haiku": Fastest, use for simple tasks
+   * - "inherit": Use parent's model (same as omitting)
+   */
+  model?: AgentModelOption;
+}
+
+/**
+ * Configuration object mapping agent names to their definitions.
+ * Agent names should be kebab-case identifiers.
+ *
+ * @example
+ * ```ts
+ * const agents: AgentsConfig = {
+ *   'code-reviewer': {
+ *     description: 'Expert code reviewer',
+ *     prompt: 'You are a code review specialist...',
+ *     tools: ['Read', 'Grep', 'Glob']
+ *   },
+ *   'test-runner': {
+ *     description: 'Test execution specialist',
+ *     prompt: 'You are a test execution specialist...',
+ *     tools: ['Bash', 'Read', 'Grep']
+ *   }
+ * };
+ * ```
+ */
+export type AgentsConfig = Record<string, AgentDefinition>;
 
 // ─────────────────────────────────────────────────────────────
 // Claude Agent SDK Hooks Types

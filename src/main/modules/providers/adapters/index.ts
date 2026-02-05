@@ -12,6 +12,7 @@ export type {
   WorkRunCommandEvent,
   WorkRunArtifactEvent,
   WorkRunStatusEvent,
+  WorkRunSubagentEvent,
   WorkRunEvent,
   WorkRunArtifactSummary,
   WorkRunResult,
@@ -22,6 +23,10 @@ export type {
   ModelInfo,
   CommandInfo,
   SkillInfo,
+  // Subagent types
+  AgentModelOption,
+  AgentDefinition,
+  AgentsConfig,
   // Hook types
   HookEventName,
   HookInputBase,

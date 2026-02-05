@@ -14,11 +14,10 @@ import type {
   SkillInfo,
   HooksConfig,
   HookMatcher,
+  AgentsConfig,
+  AgentDefinition,
 } from "./adapter.types";
-import {
-  findClaudeBinary,
-  resolveCandidate,
-} from "../providers.utils";
+import { findClaudeBinary, resolveCandidate } from "../providers.utils";
 
 /**
  * NOTE: This adapter uses @anthropic-ai/claude-agent-sdk package.
@@ -47,10 +46,28 @@ type SDKHooksConfig = {
   [key: string]: SDKHookMatcher[];
 };
 
+/**
+ * SDK agent definition format (matches SDK's expected structure)
+ */
+interface SDKAgentDefinition {
+  description: string;
+  prompt: string;
+  tools?: string[];
+  model?: "sonnet" | "opus" | "haiku" | "inherit";
+}
+
+/**
+ * SDK agents configuration format
+ */
+type SDKAgentsConfig = Record<string, SDKAgentDefinition>;
+
 interface SDKOptions {
   // TODO: ADD more options as needed
-  model?: string;
   //TODO: Check continue session expiration
+  // TODO: implement tool permission checks
+  //canUseTool?: (toolName: string) => boolean;
+
+  model?: string;
   continue?: boolean;
   pathToClaudeCodeExecutable?: string;
   executable?: "node" | "bun" | "deno";
@@ -58,15 +75,16 @@ interface SDKOptions {
   env?: Record<string, string | undefined>;
   allowedTools?: string[];
   disallowedTools?: string[];
-  // TODO: implement tool permission checks
-  //canUseTool?: (toolName: string) => boolean;
   permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan";
   cwd?: string;
   resume?: string;
   abortController?: AbortController;
   additionalDirectories?: string[];
-  //TODO: implement agents properly
-  agents?: Record<string, AgentDefinition>[];
+  /**
+   * Subagents configuration for delegating specialized tasks.
+   * Keys are agent names, values are agent definitions.
+   */
+  agents?: SDKAgentsConfig;
   maxTurns?: number;
   systemPrompt?:
     | string
@@ -83,13 +101,6 @@ interface SDKOptions {
    */
   hooks?: SDKHooksConfig;
 }
-
-type AgentDefinition = {
-  description: string;
-  tools?: string[];
-  prompt: string;
-  model?: "sonnet" | "opus" | "haiku" | "inherit";
-};
 
 interface SDKMessageContent {
   type: string;
@@ -306,6 +317,7 @@ export function createClaudeAdapter(
     abortController?: AbortController,
     resumeSessionId?: string,
     runHooks?: HooksConfig,
+    runAgents?: AgentsConfig,
   ): SDKOptions {
     // Find the Claude CLI binary
     let binaryPath: string | null = null;
@@ -364,10 +376,11 @@ export function createClaudeAdapter(
     delete cleanEnv.ANTHROPIC_API_KEY;
     delete cleanEnv.ANTHROPIC_AUTH_TOKEN;
 
-      // TODO implement permissionMode config properly
+    // TODO implement permissionMode config properly
     // Determine permission mode: use config override if provided, else default to bypassPermissions
     // Options: "default" | "acceptEdits" | "bypassPermissions" | "plan"
-    const permissionMode = (config as any).permissionMode || "bypassPermissions";
+    const permissionMode =
+      (config as any).permissionMode || "bypassPermissions";
 
     //TODO: implement AskUserQuestion tool support
 
@@ -391,6 +404,12 @@ export function createClaudeAdapter(
       options.resume = resumeSessionId;
     }
 
+    // Add agents if configured (merge config-level and run-level agents)
+    const mergedAgents = mergeAgentsConfig(config.agents, runAgents);
+    if (mergedAgents && Object.keys(mergedAgents).length > 0) {
+      options.agents = convertAgentsConfig(mergedAgents);
+    }
+
     // Add hooks if configured (merge config-level and run-level hooks)
     const mergedHooks = mergeHooksConfig(config.hooks, runHooks);
     if (mergedHooks && Object.keys(mergedHooks).length > 0) {
@@ -398,6 +417,51 @@ export function createClaudeAdapter(
     }
 
     return options;
+  }
+
+  /**
+   * Merge config-level agents with run-level agents
+   * Run-level agents override config-level agents with the same name
+   */
+  function mergeAgentsConfig(
+    configAgents?: AgentsConfig,
+    runAgents?: AgentsConfig,
+  ): AgentsConfig | undefined {
+    if (!configAgents && !runAgents) {
+      return undefined;
+    }
+
+    if (!configAgents) {
+      return runAgents;
+    }
+
+    if (!runAgents) {
+      return configAgents;
+    }
+
+    // Merge both configs (run-level overrides config-level for same agent name)
+    return {
+      ...configAgents,
+      ...runAgents,
+    };
+  }
+
+  /**
+   * Convert our AgentsConfig to the SDK's expected format
+   */
+  function convertAgentsConfig(agents: AgentsConfig): SDKAgentsConfig {
+    const sdkAgents: SDKAgentsConfig = {};
+
+    for (const [agentName, agentDef] of Object.entries(agents)) {
+      sdkAgents[agentName] = {
+        description: agentDef.description,
+        prompt: agentDef.prompt,
+        tools: agentDef.tools,
+        model: agentDef.model,
+      };
+    }
+
+    return sdkAgents;
   }
 
   /**
@@ -479,6 +543,10 @@ export function createClaudeAdapter(
     switch (msg.type) {
       case "assistant": {
         const assistantMsg = msg as SDKAssistantMessage;
+
+        // Check if this message is from within a subagent context
+        const isFromSubagent = !!assistantMsg.parent_tool_use_id;
+
         if (assistantMsg.message?.content) {
           for (const block of assistantMsg.message.content) {
             if (block.type === "tool_use" && block.name) {
@@ -497,8 +565,38 @@ export function createClaudeAdapter(
                   phase: "start",
                   toolCallId,
                   rawType: msg.type,
+                  // Track if this tool call is from within a subagent
+                  parentToolUseId: assistantMsg.parent_tool_use_id || undefined,
+                  isFromSubagent,
                 },
               });
+
+              // Detect subagent invocation (Task tool calls)
+              if (block.name === "Task") {
+                const taskInput = block.input as
+                  | Record<string, unknown>
+                  | undefined;
+                const subagentType =
+                  (taskInput?.subagent_type as string) || "general-purpose";
+                const subagentPrompt = taskInput?.prompt as string | undefined;
+
+                events.push({
+                  type: "subagent",
+                  phase: "invoked",
+                  agentType: subagentType,
+                  parentToolUseId: toolCallId,
+                  prompt: subagentPrompt,
+                  ts,
+                  metadata: {
+                    toolCallId,
+                    description: taskInput?.description as string | undefined,
+                    model: taskInput?.model as string | undefined,
+                    runInBackground: taskInput?.run_in_background as
+                      | boolean
+                      | undefined,
+                  },
+                });
+              }
             }
           }
         }
@@ -601,6 +699,35 @@ export function createClaudeAdapter(
               rawType: msg.type,
             },
           });
+
+          // Detect subagent completion (Task tool result)
+          if (toolName === "Task") {
+            const taskInput = input as Record<string, unknown> | undefined;
+            const subagentType =
+              (taskInput?.subagent_type as string) || "general-purpose";
+
+            // Extract agent ID from the result if available
+            let agentId: string | undefined;
+            if (typeof output === "string") {
+              const agentIdMatch = output.match(/agentId:\s*([a-f0-9-]+)/i);
+              if (agentIdMatch) {
+                agentId = agentIdMatch[1];
+              }
+            }
+            events.push({
+              type: "subagent",
+              phase: error ? "failed" : "completed",
+              agentType: subagentType,
+              agentId,
+              parentToolUseId: toolUseId || undefined,
+              result: typeof output === "string" ? output : safeJson(output),
+              error,
+              ts,
+              metadata: {
+                toolCallId: toolUseId || undefined,
+              },
+            });
+          }
         } else {
           // Log other event types for debugging
           events.push({
@@ -771,6 +898,7 @@ export function createClaudeAdapter(
           abortController,
           undefined, // resumeSessionId
           request.hooks, // run-level hooks
+          request.agents, // run-level agents
         );
 
         await onEvent({
@@ -1006,6 +1134,7 @@ export function createClaudeAdapter(
           abortController,
           sessionId, // Resume with session ID
           request.hooks, // run-level hooks
+          request.agents, // run-level agents
         );
 
         // Build prompt with any additional context
@@ -1394,7 +1523,10 @@ export function createClaudeAdapter(
     async listCommands(): Promise<CommandInfo[]> {
       // Check cache first
       const now = Date.now();
-      if (cachedCommands && now - cachedCommandsTimestamp < COMMANDS_CACHE_TTL_MS) {
+      if (
+        cachedCommands &&
+        now - cachedCommandsTimestamp < COMMANDS_CACHE_TTL_MS
+      ) {
         return cachedCommands;
       }
 
@@ -1472,14 +1604,24 @@ export function createClaudeAdapter(
         // Discover skills from user directory (~/.claude/skills/)
         if (settingSources.includes("user")) {
           const userSkillsDir = path.join(os.homedir(), ".claude", "skills");
-          const userSkills = await discoverSkillsFromDirectory(userSkillsDir, "user");
+          const userSkills = await discoverSkillsFromDirectory(
+            userSkillsDir,
+            "user",
+          );
           skills.push(...userSkills);
         }
 
         // Discover skills from project directory (.claude/skills/)
         if (settingSources.includes("project") && workspacePath) {
-          const projectSkillsDir = path.join(workspacePath, ".claude", "skills");
-          const projectSkills = await discoverSkillsFromDirectory(projectSkillsDir, "project");
+          const projectSkillsDir = path.join(
+            workspacePath,
+            ".claude",
+            "skills",
+          );
+          const projectSkills = await discoverSkillsFromDirectory(
+            projectSkillsDir,
+            "project",
+          );
           skills.push(...projectSkills);
         }
 
@@ -1545,11 +1687,17 @@ async function discoverSkillsFromDirectory(
           skills.push(skill);
         }
       } catch (err) {
-        console.warn(`[ClaudeAdapter] Failed to parse skill ${entry.name}:`, err);
+        console.warn(
+          `[ClaudeAdapter] Failed to parse skill ${entry.name}:`,
+          err,
+        );
       }
     }
   } catch (err) {
-    console.warn(`[ClaudeAdapter] Failed to read skills directory ${skillsDir}:`, err);
+    console.warn(
+      `[ClaudeAdapter] Failed to read skills directory ${skillsDir}:`,
+      err,
+    );
   }
 
   return skills;
@@ -1634,8 +1782,8 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
 
     // Handle quoted strings
     if (
-      (value as string).startsWith('"') && (value as string).endsWith('"') ||
-      (value as string).startsWith("'") && (value as string).endsWith("'")
+      ((value as string).startsWith('"') && (value as string).endsWith('"')) ||
+      ((value as string).startsWith("'") && (value as string).endsWith("'"))
     ) {
       value = (value as string).slice(1, -1);
     }
