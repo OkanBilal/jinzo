@@ -249,6 +249,27 @@ export interface RunDetailsResponse {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Tool Approval DTOs (interactive tool approval + AskUserQuestion)
+// ─────────────────────────────────────────────────────────────
+export interface ToolApprovalRequest {
+  requestId: string;
+  runId: string;
+  toolName: string;
+  toolInput?: Record<string, unknown>;
+  kind: "tool_approval" | "ask_user";
+  question?: string;
+  options?: Array<{ label: string; description?: string }>;
+  multiSelect?: boolean;
+  timestamp: number;
+}
+
+export interface ToolApprovalResponse {
+  requestId: string;
+  approved: boolean;
+  answer?: string;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Service Response
 // ─────────────────────────────────────────────────────────────
 export interface ServiceResponse<T> {

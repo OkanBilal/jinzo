@@ -1,67 +1,55 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import type { Workspace, Provider } from "../types";
+import {
+  useGetWorkspacesQuery,
+  useGetWorkspaceByIdQuery,
+} from "@/lib/redux/api/workspacesApi";
+import { useGetProvidersByKindQuery } from "@/lib/redux/api/providersApi";
 
 export function useWorkspaceData() {
   const { workspaceId } = useParams<{ workspaceId?: string }>();
 
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [providers, setProviders] = useState<Provider[]>([]);
   const [selectedWorkspace, setSelectedWorkspace] = useState<string>("");
   const [selectedProvider, setSelectedProvider] = useState<string>("copilot_cli");
-  const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
 
-  // Load workspaces and providers on mount
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [workspacesRes, providersRes] = await Promise.all([
-          window.api.workspaces.getAll(),
-          window.api.providers.getByKind("agent_runtime"),
-        ]);
+  // Fetch workspaces via RTK Query
+  const { data: workspaces = [] } = useGetWorkspacesQuery();
 
-        if (workspacesRes.success && workspacesRes.data) {
-          setWorkspaces(workspacesRes.data);
-        }
+  // Fetch agent runtime providers via RTK Query
+  const { data: allProviders = [] } = useGetProvidersByKindQuery("agent_runtime");
 
-        if (providersRes.success && providersRes.data) {
-          const enabled = providersRes.data.filter(
-            (p: Provider) => p.isEnabled,
-          );
-          setProviders(enabled);
-          if (enabled.length > 0) {
-            setSelectedProvider(enabled[0].id);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load data:", err);
-      }
+  // Filter to only enabled providers
+  const providers = useMemo(
+    () => allProviders.filter((p) => p.isEnabled),
+    [allProviders],
+  );
+
+  // Fetch specific workspace by ID if provided in URL
+  const { data: fetchedWorkspace } = useGetWorkspaceByIdQuery(workspaceId!, {
+    skip: !workspaceId,
+  });
+
+  // Derive current workspace from fetched data or workspaces list
+  const currentWorkspace = useMemo(() => {
+    if (workspaceId) {
+      return workspaces.find((w) => w.id === workspaceId) ?? fetchedWorkspace ?? null;
     }
+    return workspaces.length > 0 ? workspaces[0] : null;
+  }, [workspaceId, workspaces, fetchedWorkspace]);
 
-    loadData();
-  }, []);
+  // Set default provider when providers load
+  useEffect(() => {
+    if (providers.length > 0 && selectedProvider === "copilot_cli") {
+      setSelectedProvider(providers[0].id);
+    }
+  }, [providers, selectedProvider]);
 
-  // When workspaceId changes from URL, update selected workspace details
+  // Update selected workspace when URL or workspaces change
   useEffect(() => {
     if (workspaceId) {
       setSelectedWorkspace(workspaceId);
-
-      // Find and set the current workspace details
-      const ws = workspaces.find((w) => w.id === workspaceId);
-      if (ws) {
-        setCurrentWorkspace(ws);
-      } else {
-        // Fetch the workspace if not in list yet
-        window.api.workspaces.getById(workspaceId).then((res) => {
-          if (res.success && res.data) {
-            setCurrentWorkspace(res.data);
-          }
-        });
-      }
     } else if (workspaces.length > 0) {
-      // Default to first workspace if none selected
       setSelectedWorkspace(workspaces[0].id);
-      setCurrentWorkspace(workspaces[0]);
     }
   }, [workspaceId, workspaces]);
 

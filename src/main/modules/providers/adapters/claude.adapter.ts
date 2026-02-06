@@ -18,6 +18,12 @@ import type {
   AgentDefinition,
 } from "./adapter.types";
 import { findClaudeBinary, resolveCandidate } from "../providers.utils";
+import {
+  requestToolApproval,
+  cancelPendingRequests,
+  clearAllPendingRequests,
+} from "../../runs/user-input-broker";
+import type { ToolApprovalRequest } from "../../runs/runs.dto";
 
 /**
  * NOTE: This adapter uses @anthropic-ai/claude-agent-sdk package.
@@ -62,8 +68,6 @@ interface SDKAgentDefinition {
 type SDKAgentsConfig = Record<string, SDKAgentDefinition>;
 
 interface SDKOptions {
-  // TODO: ADD more options as needed
-  //TODO: Check continue session expiration
   // TODO: implement tool permission checks
   //canUseTool?: (toolName: string) => boolean;
 
@@ -303,7 +307,7 @@ export function createClaudeAdapter(
   }
 
   function getModel(requestModel?: string | null): string {
-    return requestModel || config.defaultModel || "claude-sonnet-4-5-20250929";
+    return requestModel || config.defaultModel || "claude-opus-4-5-20251101";
   }
 
   /**
@@ -318,6 +322,7 @@ export function createClaudeAdapter(
     resumeSessionId?: string,
     runHooks?: HooksConfig,
     runAgents?: AgentsConfig,
+    runId?: string,
   ): SDKOptions {
     // Find the Claude CLI binary
     let binaryPath: string | null = null;
@@ -376,13 +381,10 @@ export function createClaudeAdapter(
     delete cleanEnv.ANTHROPIC_API_KEY;
     delete cleanEnv.ANTHROPIC_AUTH_TOKEN;
 
-    // TODO implement permissionMode config properly
-    // Determine permission mode: use config override if provided, else default to bypassPermissions
+    // Determine permission mode: use config override if provided, else default to "default" (ask for every tool)
     // Options: "default" | "acceptEdits" | "bypassPermissions" | "plan"
     const permissionMode =
       (config as any).permissionMode || "bypassPermissions";
-
-    //TODO: implement AskUserQuestion tool support
 
     // Setting sources for skills: default to both user and project if not specified
     const settingSources = config.settingSources ?? ["user", "project"];
@@ -414,6 +416,19 @@ export function createClaudeAdapter(
     const mergedHooks = mergeHooksConfig(config.hooks, runHooks);
     if (mergedHooks && Object.keys(mergedHooks).length > 0) {
       options.hooks = convertHooksConfig(mergedHooks);
+    }
+
+    // Inject interactive tool approval via PreToolUse hook
+    // Only inject when NOT in bypassPermissions mode and we have a runId
+    if (permissionMode !== "bypassPermissions" && runId) {
+      const approvalHook = buildToolApprovalHook(runId);
+      if (!options.hooks) {
+        options.hooks = {};
+      }
+      if (!options.hooks.PreToolUse) {
+        options.hooks.PreToolUse = [];
+      }
+      options.hooks.PreToolUse.push(approvalHook);
     }
 
     return options;
@@ -536,6 +551,108 @@ export function createClaudeAdapter(
     return sdkHooks;
   }
 
+  /**
+   * Build a PreToolUse SDK hook matcher that requests interactive approval
+   * from the renderer before allowing a tool call to proceed.
+   */
+  function buildToolApprovalHook(runId: string): SDKHookMatcher {
+    return {
+      // No matcher → fires for every tool
+      hooks: [
+        async (
+          input: Record<string, unknown>,
+          _toolUseId: string | null,
+          context: { signal: AbortSignal },
+        ): Promise<Record<string, unknown>> => {
+          const toolName = (input.tool_name as string) || "unknown";
+          const toolInput = (input.tool_input as Record<string, unknown>) || {};
+
+          // Detect AskUserQuestion tool
+          const isAskUser = toolName === "AskUserQuestion";
+
+          const requestId = `${runId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+          const req: ToolApprovalRequest = {
+            requestId,
+            runId,
+            toolName,
+            toolInput,
+            kind: isAskUser ? "ask_user" : "tool_approval",
+            timestamp: Date.now(),
+          };
+
+          // For AskUserQuestion, extract structured question data
+          if (isAskUser) {
+            const questions = toolInput.questions as Array<{
+              question?: string;
+              options?: Array<{ label: string; description?: string }>;
+              multiSelect?: boolean;
+            }> | undefined;
+
+            if (questions && questions.length > 0) {
+              const first = questions[0];
+              req.question = first.question;
+              req.options = first.options;
+              req.multiSelect = first.multiSelect;
+            }
+          }
+
+          // If already aborted, deny immediately
+          if (context.signal.aborted) {
+            return {
+              hookSpecificOutput: {
+                hookEventName: "PreToolUse",
+                permissionDecision: "deny",
+                permissionDecisionReason: "Request aborted",
+              },
+            };
+          }
+
+          // Race the approval against the abort signal
+          const response = await Promise.race([
+            requestToolApproval(req),
+            new Promise<null>((resolve) => {
+              context.signal.addEventListener("abort", () => resolve(null), {
+                once: true,
+              });
+            }),
+          ]);
+
+          if (!response || !response.approved) {
+            return {
+              hookSpecificOutput: {
+                hookEventName: "PreToolUse",
+                permissionDecision: "deny",
+                permissionDecisionReason: "User denied permission",
+              },
+            };
+          }
+
+          // For AskUserQuestion, inject the user's answer into the tool input
+          if (isAskUser && response.answer !== undefined) {
+            return {
+              hookSpecificOutput: {
+                hookEventName: "PreToolUse",
+                permissionDecision: "allow",
+                updatedInput: {
+                  ...toolInput,
+                  answers: { "0": response.answer },
+                },
+              },
+            };
+          }
+
+          return {
+            hookSpecificOutput: {
+              hookEventName: "PreToolUse",
+              permissionDecision: "allow",
+            },
+          };
+        },
+      ],
+    };
+  }
+
   function mapSDKMessage(msg: SDKMessage, runId: string): WorkRunEvent[] {
     const events: WorkRunEvent[] = [];
     const ts = Date.now();
@@ -549,6 +666,20 @@ export function createClaudeAdapter(
 
         if (assistantMsg.message?.content) {
           for (const block of assistantMsg.message.content) {
+            // Handle text blocks (assistant thinking/commentary)
+            if (block.type === "text" && block.text) {
+              events.push({
+                type: "artifact",
+                kind: "report",
+                content: block.text,
+                metadata: {
+                  source: "assistant.message",
+                  isFromSubagent,
+                  parentToolUseId: assistantMsg.parent_tool_use_id || undefined,
+                },
+              });
+            }
+
             if (block.type === "tool_use" && block.name) {
               const toolCallId = block.id || `${block.name}-${ts}`;
               toolCallIndex.set(toolCallId, {
@@ -644,21 +775,9 @@ export function createClaudeAdapter(
       }
 
       case "result": {
-        // Final result - emit as artifact for proper rendering
+        // Final result message - content is already streamed via assistant.message
+        // Only emit errors here, not the content (to avoid duplication)
         const resultMsg = msg as SDKResultMessage;
-        if (resultMsg.result && resultMsg.result.trim().length > 0) {
-          events.push({
-            type: "artifact",
-            kind: "report",
-            content: String(resultMsg.result),
-            metadata: {
-              source: "result",
-              session_id: resultMsg.session_id,
-              duration_ms: resultMsg.duration_ms,
-              total_cost_usd: resultMsg.total_cost_usd,
-            },
-          });
-        }
         if (resultMsg.is_error && resultMsg.errors) {
           events.push({
             type: "log",
@@ -899,6 +1018,7 @@ export function createClaudeAdapter(
           undefined, // resumeSessionId
           request.hooks, // run-level hooks
           request.agents, // run-level agents
+          runId, // for interactive tool approval
         );
 
         await onEvent({
@@ -1034,6 +1154,24 @@ export function createClaudeAdapter(
         const errorMessage =
           error instanceof Error ? error.message : String(error);
 
+        // Emit interrupted events for any pending tool calls
+        const ts = Date.now();
+        for (const [toolCallId, toolInfo] of toolCallIndex) {
+          await onEvent({
+            type: "tool_call",
+            toolName: toolInfo.toolName,
+            input: toolInfo.input as Record<string, unknown> | undefined,
+            error: "Interrupted",
+            endedAt: ts,
+            metadata: {
+              phase: "complete",
+              toolCallId,
+              interrupted: true,
+            },
+          });
+        }
+        toolCallIndex.clear();
+
         // Check for timeout
         if (errorMessage.includes("timed out")) {
           await onEvent({
@@ -1135,6 +1273,7 @@ export function createClaudeAdapter(
           sessionId, // Resume with session ID
           request.hooks, // run-level hooks
           request.agents, // run-level agents
+          runId, // for interactive tool approval
         );
 
         // Build prompt with any additional context
@@ -1266,6 +1405,24 @@ export function createClaudeAdapter(
         const errorMessage =
           error instanceof Error ? error.message : String(error);
 
+        // Emit interrupted events for any pending tool calls
+        const ts = Date.now();
+        for (const [toolCallId, toolInfo] of toolCallIndex) {
+          await onEvent({
+            type: "tool_call",
+            toolName: toolInfo.toolName,
+            input: toolInfo.input as Record<string, unknown> | undefined,
+            error: "Interrupted",
+            endedAt: ts,
+            metadata: {
+              phase: "complete",
+              toolCallId,
+              interrupted: true,
+            },
+          });
+        }
+        toolCallIndex.clear();
+
         if (errorMessage.includes("timed out")) {
           await onEvent({
             type: "log",
@@ -1367,6 +1524,9 @@ export function createClaudeAdapter(
     },
 
     async abortRun(runId: string): Promise<void> {
+      // Cancel any pending tool-approval dialogs for this run
+      cancelPendingRequests(runId);
+
       const runState = activeRuns.get(runId);
       if (runState) {
         runState.aborted = true;
@@ -1387,6 +1547,9 @@ export function createClaudeAdapter(
     },
 
     async shutdown(): Promise<void> {
+      // Cancel all pending tool-approval dialogs
+      clearAllPendingRequests();
+
       // Mark all runs as aborted and interrupt queries
       const interruptPromises: Promise<void>[] = [];
 

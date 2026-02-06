@@ -39,24 +39,7 @@ export function WorkspaceTabs({
 }: WorkspaceTabsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
 
-  const updateIndicator = useCallback(() => {
-    const activeElement = tabRefs.current.get(activeTab);
-    const container = containerRef.current;
-    if (activeElement && container) {
-      const containerRect = container.getBoundingClientRect();
-      const tabRect = activeElement.getBoundingClientRect();
-      setIndicatorStyle({
-        left: tabRect.left - containerRect.left + container.scrollLeft,
-        width: tabRect.width,
-      });
-    }
-  }, [activeTab]);
-
-  useLayoutEffect(() => {
-    updateIndicator();
-  }, [activeTab, runs, hasSelectedFile, issueTabs, updateIndicator]);
 
   const setTabRef = (id: string) => (el: HTMLDivElement | null) => {
     if (el) {

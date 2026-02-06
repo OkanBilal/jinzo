@@ -148,12 +148,22 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
             const inputDisplay = formatToolData(tc.input);
             const outputDisplay = formatToolData(tc.output);
 
+            // Parse raw input for metadata
+            let rawInput: Record<string, unknown> | undefined;
+            if (tc.input) {
+              try {
+                rawInput = typeof tc.input === "string" ? JSON.parse(tc.input) : tc.input as Record<string, unknown>;
+              } catch {
+                // Input is not valid JSON
+              }
+            }
+
             events.push({
               id: `tool-${tc.id}`,
               type: "tool_call",
               content: `${tc.toolName}: ${inputDisplay}${outputDisplay ? `\n→ ${outputDisplay}` : ""}`,
               timestamp: tc.createdAt ? new Date(tc.createdAt) : new Date(),
-              metadata: { status: tc.status },
+              metadata: { status: tc.status, toolName: tc.toolName, input: rawInput },
             });
           } catch (parseErr) {
             console.error("Error parsing tool call:", tc, parseErr);
@@ -202,7 +212,16 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
   // When workspaceId changes from URL, load runs
   useEffect(() => {
     if (workspaceId) {
+      // Clear previous workspace data before loading new
+      setRuns([]);
+      setActiveRunId(null);
+      setRunEvents({});
       loadWorkspaceRuns(workspaceId);
+    } else {
+      // No workspace selected, clear everything
+      setRuns([]);
+      setActiveRunId(null);
+      setRunEvents({});
     }
   }, [workspaceId, loadWorkspaceRuns]);
 

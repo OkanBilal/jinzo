@@ -2,6 +2,10 @@
 // Workspace Types
 // ─────────────────────────────────────────────────────────────
 
+// Re-export Workspace and Provider from API modules as single source of truth
+export type { Workspace } from "@/lib/redux/api/workspacesApi";
+export type { Provider } from "@/lib/redux/api/providersApi";
+
 export interface RunEvent {
   id: string;
   type: "log" | "tool_call" | "artifact" | "status";
@@ -44,18 +48,4 @@ export interface RunArtifact {
   content?: string;
   metadata?: string;
   createdAt: Date;
-}
-
-export interface Workspace {
-  id: string;
-  name: string;
-  rootPath: string;
-  defaultBranch: string;
-}
-
-export interface Provider {
-  id: string;
-  displayName: string;
-  kind: string;
-  isEnabled: boolean;
 }

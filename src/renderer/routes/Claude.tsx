@@ -6,7 +6,11 @@ import {
   WorkspaceInput,
   WorkspaceQuickActions,
 } from "@/features/workspace/components";
-import { useWorkspaceData, useWorkspaceRuns } from "@/features/workspace/hooks";
+import {
+  useWorkspaceData,
+  useWorkspaceRuns,
+  useToolApproval,
+} from "@/features/workspace/hooks";
 import {
   setWorkspaceModel,
   setActiveTab,
@@ -90,6 +94,9 @@ export default function ClaudePage() {
     closeTab,
     selectTab,
   } = useWorkspaceRuns(workspaceId, CLAUDE_PROVIDER_ID);
+
+  const { pendingApprovals, respond: respondToolApproval, dismissForRun } =
+    useToolApproval();
 
   // Select first run tab if runs exist and no file is selected
   useEffect(() => {
@@ -304,6 +311,20 @@ export default function ClaudePage() {
     [dispatch, runs],
   );
 
+  // Get the first pending approval for the active run tab
+  const activeRunId =
+    activeTab !== "editor" && !isIssueTab(activeTab) ? activeTab : null;
+  const currentApproval = activeRunId
+    ? pendingApprovals.find((a) => a.runId === activeRunId)
+    : undefined;
+
+  const handleApprovalRespond = useCallback(
+    (requestId: string, approved: boolean, answer?: string) => {
+      respondToolApproval(requestId, approved, answer);
+    },
+    [respondToolApproval],
+  );
+
   const showEmptyState =
     runs.length === 0 && !selectedFile && openIssueTabs.length === 0;
 
@@ -330,6 +351,8 @@ export default function ClaudePage() {
             onSelectIssueTab={handleSelectIssueTab}
             onCloseIssueTab={handleCloseIssueTab}
             onCloseEditorTab={handleCloseEditorTab}
+            pendingApproval={currentApproval}
+            onApprovalRespond={handleApprovalRespond}
           />
         )}
       </div>

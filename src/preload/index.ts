@@ -443,6 +443,18 @@ const api = {
     canResume: (runId: string) => ipcRenderer.invoke("runs:canResume", runId),
     deleteSession: (runId: string) =>
       ipcRenderer.invoke("runs:deleteSession", runId),
+    // Interactive tool approval
+    onToolApprovalRequest: (callback: (request: any) => void) => {
+      const listener = (_: any, request: any) => callback(request);
+      ipcRenderer.on("runs:toolApprovalRequest", listener);
+      return () =>
+        ipcRenderer.removeListener("runs:toolApprovalRequest", listener);
+    },
+    respondToolApproval: (response: {
+      requestId: string;
+      approved: boolean;
+      answer?: string;
+    }) => ipcRenderer.invoke("runs:toolApprovalResponse", response),
   },
   // Run context operations
   runContext: {

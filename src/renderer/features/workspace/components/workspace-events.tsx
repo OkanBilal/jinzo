@@ -1,7 +1,5 @@
 import { RefObject, useMemo } from "react";
-import { WorkspaceHeader } from "./workspace-header";
 import { WorkspaceTabs } from "./workspace-tabs";
-import { TerminalEventLine } from "./terminal-event-line";
 import { ToolCallGroup, InfoGroup, groupEvents } from "./tool-call-group";
 import { EditorContent } from "./editor-content";
 import { IssueTabContent } from "./issue-tab-content";
@@ -10,6 +8,8 @@ import type { Run, RunEvent, Workspace } from "../types";
 import type { IssueWithEntity } from "@/lib/redux/api";
 import { isIssueTab, getIssueEntityId } from "../utils/repo-utils";
 import { AsciiLoader } from "./ascii-loader";
+import { ToolApprovalDialog } from "./tool-approval-dialog";
+import type { ToolApprovalRequest } from "../hooks/use-tool-approval";
 
 interface WorkspaceEventsProps {
   runs: Run[];
@@ -28,6 +28,8 @@ interface WorkspaceEventsProps {
   onSelectIssueTab: (entityId: string) => void;
   onCloseIssueTab: (entityId: string, e: React.MouseEvent) => void;
   onCloseEditorTab?: (e: React.MouseEvent) => void;
+  pendingApproval?: ToolApprovalRequest;
+  onApprovalRespond?: (requestId: string, approved: boolean, answer?: string) => void;
 }
 
 export function WorkspaceEvents({
@@ -47,6 +49,8 @@ export function WorkspaceEvents({
   onSelectIssueTab,
   onCloseIssueTab,
   onCloseEditorTab,
+  pendingApproval,
+  onApprovalRespond,
 }: WorkspaceEventsProps) {
   const isEditorActive = activeTab === "editor";
   const isIssueActive = isIssueTab(activeTab);
@@ -112,8 +116,15 @@ export function WorkspaceEvents({
                 return <InfoGroup key={group.id} group={group} />;
               })}
               {isRunning && <AsciiLoader />}
+              {pendingApproval && onApprovalRespond && (
+                <ToolApprovalDialog
+                  request={pendingApproval}
+                  onRespond={onApprovalRespond}
+                />
+              )}
               <div ref={eventsEndRef} />
             </div>
+            
           </div>
         ) : (
           <WorkspaceEmptyState workspace={currentWorkspace} />

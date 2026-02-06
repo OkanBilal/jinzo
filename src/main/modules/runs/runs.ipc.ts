@@ -10,7 +10,9 @@ import type {
   RunStatus,
   StartRunPayload,
   ContinueRunPayload,
+  ToolApprovalResponse,
 } from "./runs.dto";
+import { handleToolApprovalResponse } from "./user-input-broker";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Channel Names
@@ -56,6 +58,9 @@ const CHANNELS = {
 
   // Tool Calls
   TOOL_CALLS_GET_BY_RUN: "runToolCalls:getByRun",
+
+  // Tool Approval (interactive)
+  RUNS_TOOL_APPROVAL_RESPONSE: "runs:toolApprovalResponse",
 } as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -196,6 +201,15 @@ export function registerRunsIpc(): void {
   ipcMain.handle(CHANNELS.TOOL_CALLS_GET_BY_RUN, async (_, runId: string) => {
     return runsController.getToolCallsByRun(runId);
   });
+
+  // Tool Approval (interactive)
+  ipcMain.handle(
+    CHANNELS.RUNS_TOOL_APPROVAL_RESPONSE,
+    async (_, response: ToolApprovalResponse) => {
+      handleToolApprovalResponse(response);
+      return { success: true };
+    },
+  );
 }
 
 export function unregisterRunsIpc(): void {

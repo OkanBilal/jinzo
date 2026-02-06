@@ -24,13 +24,7 @@ export function EditorContent({ className = "" }: EditorContentProps) {
   if (!selectedFile) {
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
-        <div className="flex flex-col items-center gap-3 text-primary-500 dark:text-primary-400">
-          <Code className="w-12 h-12 opacity-40" />
-          <span className="text-sm">Select a file to preview</span>
-          <span className="text-xs opacity-60">
-            Use the file explorer in the right panel
-          </span>
-        </div>
+
       </div>
     );
   }
