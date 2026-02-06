@@ -81,7 +81,7 @@ export const syncRepo = {
           provider: (meta.provider as string) || "unknown",
           state: (meta.state as string) || "open",
           number: typeof meta.number === "number" ? meta.number : null,
-          repo: (meta.repo as string) || null, // TODO : naming ?
+          repo: (meta.repo as string) || null, // TODO: naming ?
           assignee: (meta.assignee as string) || null,
           labels: Array.isArray(meta.labels) ? JSON.stringify(meta.labels) : null,
           closedAt: closedAtDate,

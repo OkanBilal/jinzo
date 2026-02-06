@@ -89,7 +89,7 @@ interface PanelProps {
   component: string;
 }
 
-// TODO move to separate file
+// TODO: move to separate file
 const PANEL_COMPONENTS: Record<string, React.ComponentType> = {
   config: ConfigContent,
   journal: JournalContent,

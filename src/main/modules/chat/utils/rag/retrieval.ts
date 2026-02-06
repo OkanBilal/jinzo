@@ -4,11 +4,11 @@ import { MIN_TOKEN_LENGTH, DEFAULT_DECAY_LAMBDA, TIME_CONSTANTS, DISTANCE_BOUNDS
 import { RetrievalOptions, RetrievedEntity } from "./types";
 import { getSqlite } from "../../../../db/client";
 
-// TODO query expansion, synonym handling
+// TODO: query expansion, synonym handling
 
 let cachedAvgDocLength: number | null = null;
 
-// TODO move db query to api
+// TODO: move db query to api
 function getAverageDocLength(): number {
   if (cachedAvgDocLength !== null) {
     return cachedAvgDocLength;

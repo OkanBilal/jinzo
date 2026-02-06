@@ -41,6 +41,7 @@ function filterItems<
   });
 }
 
+//TODO: This hook is getting quite large - consider splitting into multiple hooks or using a state management solution if it continues to grow  
 export function useSidebar() {
   const location = useLocation();
   const navigate = useNavigate();

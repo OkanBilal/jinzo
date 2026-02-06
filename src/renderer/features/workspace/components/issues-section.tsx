@@ -80,7 +80,7 @@ export function IssuesSection({
       >
         <div className="overflow-hidden ">
           <div className="max-h-80 overflow-y-auto px-1 pb-2 noscrollbar">
-            {/* TODO Make resizable */}
+            {/* TODO: Make resizable */}
             {isLoading ? (
               <div className="flex items-center justify-center py-4">
                 <span className="text-xs shine-text">
