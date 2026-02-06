@@ -31,7 +31,7 @@ export function WorkspaceSidebar() {
 
   // TODO: Refactor workspaceId extraction to a custom hook if used elsewhere
   const workspaceId = useMemo(() => {
-    const match = location.pathname.match(/^\/(workspace|claude)\/([^/]+)/);
+    const match = location.pathname.match(/^\/(copilot|claude)\/([^/]+)/);
     return match ? match[2] : undefined;
   }, [location.pathname]);
 

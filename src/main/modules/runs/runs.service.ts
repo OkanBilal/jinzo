@@ -60,32 +60,41 @@ export const runsService = {
     }
   },
 
-  async getRunsByAccount(accountId: string, limit?: number): Promise<ServiceResponse<RunResponse[]>> {
+  async getRunsByAccount(
+    accountId: string,
+    limit?: number,
+  ): Promise<ServiceResponse<RunResponse[]>> {
     try {
       const runs = await runsRepo.findRunsByAccount(accountId, limit);
       return { success: true, data: runs };
     } catch (error) {
-      console.error(`[RunsService] Failed to get runs for account ${accountId}:`, error);
+      console.error(
+        `[RunsService] Failed to get runs for account ${accountId}:`,
+        error,
+      );
       return { success: false, error: "Failed to get runs" };
     }
   },
 
   async getRunsByWorkspace(
     workspaceId: string,
-    limit?: number
+    limit?: number,
   ): Promise<ServiceResponse<RunResponse[]>> {
     try {
       const runs = await runsRepo.findRunsByWorkspace(workspaceId, limit);
       return { success: true, data: runs };
     } catch (error) {
-      console.error(`[RunsService] Failed to get runs for workspace ${workspaceId}:`, error);
+      console.error(
+        `[RunsService] Failed to get runs for workspace ${workspaceId}:`,
+        error,
+      );
       return { success: false, error: "Failed to get runs" };
     }
   },
 
   async getRunsByStatus(
     accountId: string,
-    status: RunStatus
+    status: RunStatus,
   ): Promise<ServiceResponse<RunResponse[]>> {
     try {
       const runs = await runsRepo.findRunsByStatus(accountId, status);
@@ -106,7 +115,10 @@ export const runsService = {
     }
   },
 
-  async updateRun(id: string, payload: UpdateRunPayload): Promise<ServiceResponse<RunResponse>> {
+  async updateRun(
+    id: string,
+    payload: UpdateRunPayload,
+  ): Promise<ServiceResponse<RunResponse>> {
     try {
       const updated = await runsRepo.updateRun(id, payload);
       if (!updated) {
@@ -127,8 +139,15 @@ export const runsService = {
     return this.updateRun(id, { status: "succeeded", endedAt: new Date() });
   },
 
-  async failRun(id: string, error: string): Promise<ServiceResponse<RunResponse>> {
-    return this.updateRun(id, { status: "failed", endedAt: new Date(), lastError: error });
+  async failRun(
+    id: string,
+    error: string,
+  ): Promise<ServiceResponse<RunResponse>> {
+    return this.updateRun(id, {
+      status: "failed",
+      endedAt: new Date(),
+      lastError: error,
+    });
   },
 
   async cancelRun(id: string): Promise<ServiceResponse<RunResponse>> {
@@ -148,17 +167,24 @@ export const runsService = {
   // ─────────────────────────────────────────────────────────────
   // Run Context Operations
   // ─────────────────────────────────────────────────────────────
-  async getContextByRun(runId: string): Promise<ServiceResponse<RunContextResponse[]>> {
+  async getContextByRun(
+    runId: string,
+  ): Promise<ServiceResponse<RunContextResponse[]>> {
     try {
       const contexts = await runsRepo.findContextByRun(runId);
       return { success: true, data: contexts };
     } catch (error) {
-      console.error(`[RunsService] Failed to get context for run ${runId}:`, error);
+      console.error(
+        `[RunsService] Failed to get context for run ${runId}:`,
+        error,
+      );
       return { success: false, error: "Failed to get context" };
     }
   },
 
-  async addContext(payload: CreateRunContextPayload): Promise<ServiceResponse<number>> {
+  async addContext(
+    payload: CreateRunContextPayload,
+  ): Promise<ServiceResponse<number>> {
     try {
       const id = await runsRepo.insertContext(payload);
       return { success: true, data: id };
@@ -181,17 +207,24 @@ export const runsService = {
   // ─────────────────────────────────────────────────────────────
   // Run Artifact Operations
   // ─────────────────────────────────────────────────────────────
-  async getArtifactsByRun(runId: string): Promise<ServiceResponse<RunArtifactResponse[]>> {
+  async getArtifactsByRun(
+    runId: string,
+  ): Promise<ServiceResponse<RunArtifactResponse[]>> {
     try {
       const artifacts = await runsRepo.findArtifactsByRun(runId);
       return { success: true, data: artifacts };
     } catch (error) {
-      console.error(`[RunsService] Failed to get artifacts for run ${runId}:`, error);
+      console.error(
+        `[RunsService] Failed to get artifacts for run ${runId}:`,
+        error,
+      );
       return { success: false, error: "Failed to get artifacts" };
     }
   },
 
-  async addArtifact(payload: CreateRunArtifactPayload): Promise<ServiceResponse<number>> {
+  async addArtifact(
+    payload: CreateRunArtifactPayload,
+  ): Promise<ServiceResponse<number>> {
     try {
       const id = await runsRepo.insertArtifact(payload);
       return { success: true, data: id };
@@ -214,17 +247,24 @@ export const runsService = {
   // ─────────────────────────────────────────────────────────────
   // Run Command Operations
   // ─────────────────────────────────────────────────────────────
-  async getCommandsByRun(runId: string): Promise<ServiceResponse<RunCommandResponse[]>> {
+  async getCommandsByRun(
+    runId: string,
+  ): Promise<ServiceResponse<RunCommandResponse[]>> {
     try {
       const commands = await runsRepo.findCommandsByRun(runId);
       return { success: true, data: commands };
     } catch (error) {
-      console.error(`[RunsService] Failed to get commands for run ${runId}:`, error);
+      console.error(
+        `[RunsService] Failed to get commands for run ${runId}:`,
+        error,
+      );
       return { success: false, error: "Failed to get commands" };
     }
   },
 
-  async addCommand(payload: CreateRunCommandPayload): Promise<ServiceResponse<number>> {
+  async addCommand(
+    payload: CreateRunCommandPayload,
+  ): Promise<ServiceResponse<number>> {
     try {
       const id = await runsRepo.insertCommand(payload);
       return { success: true, data: id };
@@ -234,7 +274,10 @@ export const runsService = {
     }
   },
 
-  async updateCommand(id: number, payload: UpdateRunCommandPayload): Promise<ServiceResponse<void>> {
+  async updateCommand(
+    id: number,
+    payload: UpdateRunCommandPayload,
+  ): Promise<ServiceResponse<void>> {
     try {
       await runsRepo.updateCommand(id, payload);
       return { success: true };
@@ -252,7 +295,7 @@ export const runsService = {
     id: number,
     exitCode: number,
     stdout?: string,
-    stderr?: string
+    stderr?: string,
   ): Promise<ServiceResponse<void>> {
     return this.updateCommand(id, {
       status: exitCode === 0 ? "done" : "error",
@@ -276,17 +319,24 @@ export const runsService = {
   // ─────────────────────────────────────────────────────────────
   // Tool Call Operations
   // ─────────────────────────────────────────────────────────────
-  async getToolCallsByRun(runId: string): Promise<ServiceResponse<ToolCallResponse[]>> {
+  async getToolCallsByRun(
+    runId: string,
+  ): Promise<ServiceResponse<ToolCallResponse[]>> {
     try {
       const toolCalls = await runsRepo.findToolCallsByRun(runId);
       return { success: true, data: toolCalls };
     } catch (error) {
-      console.error(`[RunsService] Failed to get tool calls for run ${runId}:`, error);
+      console.error(
+        `[RunsService] Failed to get tool calls for run ${runId}:`,
+        error,
+      );
       return { success: false, error: "Failed to get tool calls" };
     }
   },
 
-  async addToolCall(payload: CreateToolCallPayload): Promise<ServiceResponse<number>> {
+  async addToolCall(
+    payload: CreateToolCallPayload,
+  ): Promise<ServiceResponse<number>> {
     try {
       const id = await runsRepo.insertToolCall(payload);
       return { success: true, data: id };
@@ -296,7 +346,10 @@ export const runsService = {
     }
   },
 
-  async updateToolCall(id: number, payload: UpdateToolCallPayload): Promise<ServiceResponse<void>> {
+  async updateToolCall(
+    id: number,
+    payload: UpdateToolCallPayload,
+  ): Promise<ServiceResponse<void>> {
     try {
       await runsRepo.updateToolCall(id, payload);
       return { success: true };
@@ -309,7 +362,9 @@ export const runsService = {
   // ─────────────────────────────────────────────────────────────
   // Get Run Details (with all related data)
   // ─────────────────────────────────────────────────────────────
-  async getRunDetails(runId: string): Promise<ServiceResponse<RunDetailsResponse>> {
+  async getRunDetails(
+    runId: string,
+  ): Promise<ServiceResponse<RunDetailsResponse>> {
     try {
       const run = await runsRepo.findRunById(runId);
       if (!run) {
@@ -342,17 +397,25 @@ export const runsService = {
   // ─────────────────────────────────────────────────────────────
   // Execute Run (main orchestration)
   // ─────────────────────────────────────────────────────────────
-  async executeRun(payload: StartRunPayload): Promise<ServiceResponse<StartRunResponse>> {
+  async executeRun(
+    payload: StartRunPayload,
+  ): Promise<ServiceResponse<StartRunResponse>> {
     const runId = generateRunId();
 
     try {
       // 1. Load provider and verify it's enabled
       const provider = await providersRepo.findById(payload.providerId);
       if (!provider) {
-        return { success: false, error: `Provider "${payload.providerId}" not found` };
+        return {
+          success: false,
+          error: `Provider "${payload.providerId}" not found`,
+        };
       }
       if (!provider.isEnabled) {
-        return { success: false, error: `Provider "${provider.displayName}" is not enabled` };
+        return {
+          success: false,
+          error: `Provider "${provider.displayName}" is not enabled`,
+        };
       }
       if (provider.kind !== "agent_runtime") {
         return {
@@ -364,7 +427,10 @@ export const runsService = {
       // 2. Load workspace
       const workspace = await workspacesRepo.findById(payload.workspaceId);
       if (!workspace) {
-        return { success: false, error: `Workspace "${payload.workspaceId}" not found` };
+        return {
+          success: false,
+          error: `Workspace "${payload.workspaceId}" not found`,
+        };
       }
 
       // 3. Create run record with status=running
@@ -422,19 +488,31 @@ export const runsService = {
         },
         async (event: WorkRunEvent) => {
           try {
-            await this.handleRunEvent(runId, payload.accountId, payload.providerId, event, pendingToolCalls);
+            await this.handleRunEvent(
+              runId,
+              payload.accountId,
+              payload.providerId,
+              event,
+              pendingToolCalls,
+            );
           } catch (err) {
-            console.error(`[RunsService] Error handling event for run ${runId}:`, err);
+            console.error(
+              `[RunsService] Error handling event for run ${runId}:`,
+              err,
+            );
           }
-        }
+        },
       );
 
       // 7. Handle completion in background
       runPromise
         .then(async (result) => {
           const finalStatus: RunStatus =
-            result.status === "succeeded" ? "succeeded" :
-            result.status === "canceled" ? "canceled" : "failed";
+            result.status === "succeeded"
+              ? "succeeded"
+              : result.status === "canceled"
+                ? "canceled"
+                : "failed";
 
           await runsRepo.updateRun(runId, {
             status: finalStatus,
@@ -442,10 +520,13 @@ export const runsService = {
             lastError: result.status === "failed" ? result.summary : undefined,
           });
 
-          console.log(`[RunsService] Run ${runId} completed with status: ${finalStatus}`);
+          console.log(
+            `[RunsService] Run ${runId} completed with status: ${finalStatus}`,
+          );
         })
         .catch(async (error) => {
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
           console.error(`[RunsService] Run ${runId} failed:`, errorMessage);
 
           await runsRepo.updateRun(runId, {
@@ -458,7 +539,8 @@ export const runsService = {
       // Return immediately with runId
       return { success: true, data: { runId } };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(`[RunsService] Failed to execute run:`, errorMessage);
 
       // Try to mark run as failed if it was created
@@ -484,7 +566,7 @@ export const runsService = {
     accountId: string,
     providerId: string,
     event: WorkRunEvent,
-    pendingToolCalls: Map<string, number>
+    pendingToolCalls: Map<string, number>,
   ): Promise<void> {
     switch (event.type) {
       case "log": {
@@ -502,7 +584,8 @@ export const runsService = {
       }
 
       case "tool_call": {
-        const phase = (event.metadata as Record<string, unknown> | undefined)?.phase;
+        const phase = (event.metadata as Record<string, unknown> | undefined)
+          ?.phase;
 
         if (phase === "start") {
           // Create tool call record
@@ -517,27 +600,31 @@ export const runsService = {
           });
 
           // Track for later update using toolCallId from metadata if available
-          const metadataToolCallId = (event.metadata as Record<string, unknown> | undefined)?.toolCallId;
-          const callKey = metadataToolCallId 
+          const metadataToolCallId = (
+            event.metadata as Record<string, unknown> | undefined
+          )?.toolCallId;
+          const callKey = metadataToolCallId
             ? String(metadataToolCallId)
             : `${event.toolName}-${event.startedAt || Date.now()}`;
           pendingToolCalls.set(callKey, toolCallId);
         } else if (phase === "end" || phase === "complete") {
           // Find the pending tool call using toolCallId from metadata first
-          const metadataToolCallId = (event.metadata as Record<string, unknown> | undefined)?.toolCallId;
+          const metadataToolCallId = (
+            event.metadata as Record<string, unknown> | undefined
+          )?.toolCallId;
           let callKey: string | undefined;
-          
+
           if (metadataToolCallId) {
             callKey = String(metadataToolCallId);
             if (!pendingToolCalls.has(callKey)) {
               // Try fallback to toolName-based key
               callKey = Array.from(pendingToolCalls.keys()).find((k) =>
-                k.startsWith(`${event.toolName}-`)
+                k.startsWith(`${event.toolName}-`),
               );
             }
           } else {
             callKey = Array.from(pendingToolCalls.keys()).find((k) =>
-              k.startsWith(`${event.toolName}-`)
+              k.startsWith(`${event.toolName}-`),
             );
           }
 
@@ -571,9 +658,12 @@ export const runsService = {
           runId,
           cwd: event.cwd,
           command: event.command,
-          status: event.exitCode !== undefined
-            ? (event.exitCode === 0 ? "done" : "error")
-            : "done",
+          status:
+            event.exitCode !== undefined
+              ? event.exitCode === 0
+                ? "done"
+                : "error"
+              : "done",
         });
 
         // Update with results
@@ -591,7 +681,12 @@ export const runsService = {
       case "artifact": {
         await runsRepo.insertArtifact({
           runId,
-          kind: event.kind,
+          kind: event.kind as
+            | "patch"
+            | "file"
+            | "log"
+            | "report"
+            | "command_result",
           path: event.path,
           content: event.content,
           contentHash: event.content ? hashContent(event.content) : undefined,
@@ -620,7 +715,10 @@ export const runsService = {
       }
 
       if (run.status !== "running") {
-        return { success: false, error: `Run is not running (status: ${run.status})` };
+        return {
+          success: false,
+          error: `Run is not running (status: ${run.status})`,
+        };
       }
 
       // Get provider and abort via adapter
@@ -678,7 +776,10 @@ export const runsService = {
       const canResume = await adapter.canResumeSession(runId);
       return { success: true, data: canResume };
     } catch (error) {
-      console.error(`[RunsService] Failed to check resume for run ${runId}:`, error);
+      console.error(
+        `[RunsService] Failed to check resume for run ${runId}:`,
+        error,
+      );
       return { success: false, error: "Failed to check resume capability" };
     }
   },
@@ -686,7 +787,9 @@ export const runsService = {
   /**
    * Continue an existing run by resuming its session
    */
-  async continueRun(payload: ContinueRunPayload): Promise<ServiceResponse<ContinueRunResponse>> {
+  async continueRun(
+    payload: ContinueRunPayload,
+  ): Promise<ServiceResponse<ContinueRunResponse>> {
     const { runId, accountId, message, additionalContext } = payload;
 
     try {
@@ -704,10 +807,16 @@ export const runsService = {
       // 3. Load provider
       const provider = await providersRepo.findById(run.providerId);
       if (!provider) {
-        return { success: false, error: `Provider "${run.providerId}" not found` };
+        return {
+          success: false,
+          error: `Provider "${run.providerId}" not found`,
+        };
       }
       if (!provider.isEnabled) {
-        return { success: false, error: `Provider "${provider.displayName}" is not enabled` };
+        return {
+          success: false,
+          error: `Provider "${provider.displayName}" is not enabled`,
+        };
       }
 
       // 4. Load workspace
@@ -718,14 +827,20 @@ export const runsService = {
       // 5. Create adapter and check if it supports resume
       const adapter = createWorkAdapter(provider);
       if (!adapter.continueRun) {
-        return { success: false, error: "Provider does not support session resumption" };
+        return {
+          success: false,
+          error: "Provider does not support session resumption",
+        };
       }
 
       // 6. Check if session can be resumed
       if (adapter.canResumeSession) {
         const canResume = await adapter.canResumeSession(runId);
         if (!canResume) {
-          return { success: false, error: "Session cannot be resumed (not found or expired)" };
+          return {
+            success: false,
+            error: "Session cannot be resumed (not found or expired)",
+          };
         }
       }
 
@@ -767,19 +882,31 @@ export const runsService = {
         },
         async (event) => {
           try {
-            await this.handleRunEvent(runId, accountId, run.providerId, event, pendingToolCalls);
+            await this.handleRunEvent(
+              runId,
+              accountId,
+              run.providerId,
+              event,
+              pendingToolCalls,
+            );
           } catch (err) {
-            console.error(`[RunsService] Error handling event for run ${runId}:`, err);
+            console.error(
+              `[RunsService] Error handling event for run ${runId}:`,
+              err,
+            );
           }
-        }
+        },
       );
 
       // 10. Handle completion in background
       runPromise
         .then(async (result) => {
           const finalStatus: RunStatus =
-            result.status === "succeeded" ? "succeeded" :
-            result.status === "canceled" ? "canceled" : "failed";
+            result.status === "succeeded"
+              ? "succeeded"
+              : result.status === "canceled"
+                ? "canceled"
+                : "failed";
 
           await runsRepo.updateRun(runId, {
             status: finalStatus,
@@ -787,11 +914,17 @@ export const runsService = {
             lastError: result.status === "failed" ? result.summary : undefined,
           });
 
-          console.log(`[RunsService] Continued run ${runId} completed with status: ${finalStatus}`);
+          console.log(
+            `[RunsService] Continued run ${runId} completed with status: ${finalStatus}`,
+          );
         })
         .catch(async (error) => {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          console.error(`[RunsService] Continued run ${runId} failed:`, errorMessage);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          console.error(
+            `[RunsService] Continued run ${runId} failed:`,
+            errorMessage,
+          );
 
           await runsRepo.updateRun(runId, {
             status: "failed",
@@ -802,7 +935,8 @@ export const runsService = {
 
       return { success: true, data: { runId, resumed: true } };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(`[RunsService] Failed to continue run:`, errorMessage);
 
       // Try to reset run status if it was updated
@@ -842,7 +976,10 @@ export const runsService = {
 
       return { success: true };
     } catch (error) {
-      console.error(`[RunsService] Failed to delete session for run ${runId}:`, error);
+      console.error(
+        `[RunsService] Failed to delete session for run ${runId}:`,
+        error,
+      );
       return { success: false, error: "Failed to delete session" };
     }
   },

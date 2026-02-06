@@ -81,7 +81,7 @@ export const predefinedMoods: PredefinedMood[] = [
         width: "19rem",
         title: "Workspace",
         itemType: "workspace",
-        defaultRoute: "/workspace",
+        defaultRoute: "/copilot",
       },
       main: { margin: "19rem" },
       rightPanel: { width: "19rem", component: "workspace" },

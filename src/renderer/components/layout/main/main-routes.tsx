@@ -3,7 +3,7 @@ import Home from "@/routes/Home";
 import Chat from "@/routes/Chat";
 import Journal from "@/routes/Journal";
 import Settings from "@/routes/Settings";
-import Workspace from "@/routes/Workspace";
+import Copilot from "@/routes/Copilot";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import ClaudePage from "@/routes/Claude";
 
@@ -25,8 +25,8 @@ export function MainRoutes() {
       <Route path="/journal" element={<Journal />} />
       <Route path="/journal/:id" element={<Journal />} />
       <Route path="/settings" element={<Settings />} />
-      <Route path="/workspace" element={<Workspace />} />
-      <Route path="/workspace/:workspaceId" element={<Workspace />} />
+      <Route path="/copilot" element={<Copilot />} />
+      <Route path="/copilot/:workspaceId" element={<Copilot />} />
       <Route path="/claude" element={<ClaudePage />} />
       <Route path="/claude/:workspaceId" element={<ClaudePage />} />
     </Routes>

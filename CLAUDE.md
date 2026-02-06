@@ -44,7 +44,7 @@ Jinzo is an Electron desktop app built with React, using a local SQLite database
 
 **Renderer** (`src/renderer/`)
 - React app with Redux Toolkit, React Router (HashRouter)
-- Routes: `/` (Home), `/chat/:id` (Chat), `/workspace/:workspaceId` (Workspace), `/claude/:workspaceId` (Claude Agent), `/journal` (Journal), `/settings` (Settings)
+- Routes: `/` (Home), `/chat/:id` (Chat), `/copilot/:workspaceId` (Copilot), `/claude/:workspaceId` (Claude Agent), `/journal` (Journal), `/settings` (Settings)
 
 ### Module Architecture (`src/main/modules/`)
 

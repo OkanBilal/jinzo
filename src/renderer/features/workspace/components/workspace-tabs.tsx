@@ -4,7 +4,7 @@ import { EditorTab } from "./editor-tab";
 import { IssueTab } from "./issue-tab";
 import type { Run } from "../types";
 import type { IssueWithEntity } from "@/lib/redux/api";
-import { useRef, useState, useLayoutEffect, useCallback } from "react";
+import { useRef } from "react";
 
 interface WorkspaceTabsProps {
   runs: Run[];
@@ -57,7 +57,6 @@ export function WorkspaceTabs({
         ref={containerRef}
         className="relative flex-1 flex items-center overflow-x-auto noscrollbar"
       >
-        {/* Editor tab - only show when a file is selected */}
         {hasSelectedFile && (
           <div ref={setTabRef("editor")}>
             <EditorTab

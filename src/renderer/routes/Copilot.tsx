@@ -30,7 +30,7 @@ import type {
 
 const COPILOT_CLI_PROVIDER_ID = "copilot_cli";
 
-export default function WorkspacePage() {
+export default function CopilotPage() {
   const dispatch = useDispatch();
   const selectedModel = useSelector(
     (state: RootState) =>

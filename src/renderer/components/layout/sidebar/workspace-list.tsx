@@ -51,7 +51,7 @@ export default function WorkspacesList({
   }
 
   const basePath = getBaseRoutePath(
-    routeType === "claude" ? "claude" : "workspace",
+    routeType === "claude" ? "claude" : "copilot",
   );
 
   const handleWorkspaceClick = (workspace: WorkspaceResponse) => {

@@ -6,7 +6,7 @@ import { matchPath } from "react-router-dom";
 export type RouteType =
   | "chat"
   | "claude"
-  | "workspace"
+  | "copilot"
   | "journal"
   | "settings"
   | "home"
@@ -18,7 +18,7 @@ export type RouteType =
 const ROUTE_PATTERNS = {
   chat: "/chat/:id?",
   claude: "/claude/:id?",
-  workspace: "/workspace/:id?",
+  copilot: "/copilot/:id?",
   journal: "/journal/:id?",
   settings: "/settings",
   home: "/",
@@ -37,7 +37,7 @@ export function getRouteType(pathname: string): RouteType {
   // Check pattern matches
   if (matchPath(ROUTE_PATTERNS.chat, pathname)) return "chat";
   if (matchPath(ROUTE_PATTERNS.claude, pathname)) return "claude";
-  if (matchPath(ROUTE_PATTERNS.workspace, pathname)) return "workspace";
+  if (matchPath(ROUTE_PATTERNS.copilot, pathname)) return "copilot";
   if (matchPath(ROUTE_PATTERNS.journal, pathname)) return "journal";
 
   return "unknown";
@@ -52,8 +52,8 @@ export function getBaseRoutePath(routeType: RouteType): string {
       return "/chat";
     case "claude":
       return "/claude";
-    case "workspace":
-      return "/workspace";
+    case "copilot":
+      return "/copilot";
     case "journal":
       return "/journal";
     case "settings":
