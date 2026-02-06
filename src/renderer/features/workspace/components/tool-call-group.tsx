@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { RunEvent } from "../types";
 import {
   Document,
@@ -14,10 +15,12 @@ import {
   Task,
   Glob,
   Web,
+  Skill,
+  Question,
 } from "@/components/ui/icons";
 import { markdownComponents } from "@/features/chat/components/markdown-components";
 
-const TOOL_CATEGORIES: Record<
+const TOOL_CATEGORIES: Record<  
   string,
   { category: string; icon: React.ReactNode; color: string }
 > = {
@@ -84,6 +87,16 @@ const TOOL_CATEGORIES: Record<
   exitplanmode: {
     category: "Todo",
     icon: <ExitPlan className="size-4" />,
+    color: "text-primary-300",
+  },
+  skill: {
+    category: "Skill",
+    icon: <Skill className="size-4" />,
+    color: "text-primary-300",
+  },
+  askuserquestion: {
+    category: "Interaction",
+    icon: <Question className="size-4" />,
     color: "text-primary-300",
   },
   write_file: {
@@ -274,7 +287,7 @@ function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
 
   if (isCompact) {
     return (
-      <div className="flex items-center gap-2 py-0.5 px-2 hover:bg-primary-100/50 dark:hover:bg-primary-800/20 rounded text-[13px] font-mono">
+      <div className="flex items-center gap-2 py-0.5 px-2 hover:bg-primary-100/50 dark:hover:bg-primary-800/20 rounded text-[13px] font-sans">
         {/* <span className="text-primary-500 text-xs w-16 shrink-0">{time}</span> */}
         <span className={`${color} shrink-0`}>{icon}</span>
         <span className={`${color} font-medium shrink-0`}>{toolName}</span>
@@ -285,7 +298,7 @@ function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
 
   return (
     <div className="py-1 px-2 hover:bg-primary-100/50 dark:hover:bg-primary-800/20 rounded">
-      <div className="flex items-center gap-2 text-[13px] font-mono">
+      <div className="flex items-center gap-2 text-[13px] font-sans">
         {/* <span className="text-primary-500 text-xs">{time}</span> */}
         <span className={`${color}`}>{icon}</span>
         <span className={`${color} font-medium`}>{toolName}</span>
@@ -350,7 +363,7 @@ export function ToolCallGroup({
           className={`size-3.5 dark:text-primary-200 text-primary-800 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
 
-        {/* <span className="text-primary-500 text-xs font-mono">{startTime}</span> */}
+        {/* <span className="text-primary-500 text-xs font-sans">{startTime}</span> */}
 
         <div className="flex items-center gap-2">
           <Bash className="size-4 dark:text-primary-200 text-primary-700" />
@@ -420,11 +433,11 @@ export function InfoGroup({ group }: InfoGroupProps) {
         <div className=" py-2">
           <div className="flex items-start gap-2">
             <div className="flex-1">
-              <div className="text-xs text-[#D97757] mb-1 font-medium">
+              <div className="text-sm text-[#D97757] mb-1 font-medium">
                 Sent to Claude
               </div>
-              <div className="prose prose-sm dark:prose-invert max-w-none text-primary-600 dark:text-primary-300">
-                <ReactMarkdown components={markdownComponents}>
+              <div className="prose prose-sm dark:prose-invert max-w-none text-primary-600 dark:text-primary-100">
+                <ReactMarkdown components={markdownComponents} remarkPlugins={[remarkGfm]}>
                   {event.content}
                 </ReactMarkdown>
               </div>
@@ -442,12 +455,12 @@ export function InfoGroup({ group }: InfoGroupProps) {
       <div className=" overflow-hidden ">
         <div className="px-4 py-2">
           <div className="flex items-center gap-2 mb-2">
-            {/* <span className="text-primary-500 text-xs font-mono">{time}</span> */}
+            {/* <span className="text-primary-500 text-xs font-sans">{time}</span> */}
           </div>
           <div className="prose prose-sm dark:prose-invert max-w-none relative ">
             <div className=" size-1.5 dark:bg-primary bg-primary-950 rounded-full absolute top-2 -left-4" />
 
-            <ReactMarkdown components={markdownComponents}>
+            <ReactMarkdown components={markdownComponents} remarkPlugins={[remarkGfm]}>
               {content}
             </ReactMarkdown>
           </div>
@@ -458,7 +471,7 @@ export function InfoGroup({ group }: InfoGroupProps) {
 
   return (
     <div className="px-3 py-1.5 flex items-start gap-2 text-sm">
-      {/* <span className="text-primary-500 text-xs font-mono shrink-0">{time}</span> */}
+      {/* <span className="text-primary-500 text-xs font-sans shrink-0">{time}</span> */}
       <span className="text-primary-600 dark:text-primary-300">
         {event.content}
       </span>

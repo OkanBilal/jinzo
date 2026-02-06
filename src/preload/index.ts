@@ -573,6 +573,9 @@ const api = {
      */
     getWorktreesDir: () => ipcRenderer.invoke("git:getWorktreesDir"),
   },
+  shell: {
+    openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
+  },
 };
 
 // Expose protected methods that allow the renderer process

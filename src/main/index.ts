@@ -1,4 +1,4 @@
-import { app } from "electron";
+import { app, ipcMain, shell } from "electron";
 import { initializeDatabase, closeDatabase, getDb } from "./db/client";
 import { registerAccountIpc, unregisterAccountIpc } from "./modules/account";
 import { registerAppsIpc, unregisterAppsIpc } from "./modules/apps";
@@ -79,6 +79,11 @@ async function initializeApp() {
     registerGitIpc();
     registerWorkspaceResourcesHandlers();
 
+    // Shell utilities
+    ipcMain.handle("shell:openExternal", async (_, url: string) => {
+      await shell.openExternal(url);
+    });
+
     // Create main window (hidden until ready)
     createMainWindow({
       show: false,
@@ -129,6 +134,7 @@ async function cleanupApp() {
     unregisterFileExplorerIpc();
     unregisterGitIpc();
     unregisterWorkspaceResourcesHandlers();
+    ipcMain.removeHandler("shell:openExternal");
 
     // Close database
     await closeDatabase();

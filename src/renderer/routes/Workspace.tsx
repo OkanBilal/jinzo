@@ -303,7 +303,7 @@ export default function WorkspacePage() {
     runs.length === 0 && !selectedFile && openIssueTabs.length === 0;
 
   return (
-    <div className="flex flex-col h-full dark:bg-workspace-soft-dark ">
+    <div className="flex flex-col h-full dark:bg-copilot-dark ">
       <div className="flex-1 overflow-hidden">
         {showEmptyState ? (
           <WorkspaceEmptyState workspace={currentWorkspace} />

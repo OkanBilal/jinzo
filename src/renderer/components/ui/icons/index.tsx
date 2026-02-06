@@ -64,3 +64,5 @@ export { default as Bash } from "./bash";
 export { default as ExitPlan } from "./exit-plan";
 export { default as Task } from "./task";
 export { default as Web } from "./web";
+export { default as Skill } from "./skill";
+export { default as Question } from "./question";

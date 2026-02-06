@@ -67,16 +67,13 @@ export function WorkspaceTabs({
   };
 
   return (
-    <div className={`flex items-center bg-primary-100 dark:border-primary-900 ${variant === "claude" ? "dark:bg-claude-dark" : "dark:bg-workspace-dark"} h-10`}>
-      <div ref={containerRef} className="relative flex-1 flex items-center overflow-x-auto noscrollbar">
-        <div
-          className="absolute bottom-0 h-0.5 bg-primary-600 dark:bg-primary-700 transition-all duration-300 ease-out"
-          style={{
-            left: indicatorStyle.left,
-            width: indicatorStyle.width,
-          }}
-        />
-
+    <div
+      className={`flex items-center  dark:border-primary-900 ${variant === "claude" ? "dark:bg-claude-soft-dark bg-primary-200/40" : "dark:bg-copilot-blue bg-primary-200/40"} h-10`}
+    >
+      <div
+        ref={containerRef}
+        className="relative flex-1 flex items-center overflow-x-auto noscrollbar"
+      >
         {/* Editor tab - only show when a file is selected */}
         {hasSelectedFile && (
           <div ref={setTabRef("editor")}>
@@ -86,6 +83,7 @@ export function WorkspaceTabs({
               hasFile={hasSelectedFile}
               fileName={fileName}
               onClose={onCloseEditorTab}
+              variant={variant}
             />
           </div>
         )}
@@ -99,6 +97,7 @@ export function WorkspaceTabs({
               onClick={() => onSelectRunTab(run.id)}
               onClose={(e) => onCloseTab(run.id, e)}
               title={getTabTitle(run)}
+              variant={variant}
             />
           </div>
         ))}
@@ -112,13 +111,14 @@ export function WorkspaceTabs({
                 isActive={activeTab === tabId}
                 onClick={() => onSelectIssueTab(issue.issue.entityId)}
                 onClose={(e) => onCloseIssueTab(issue.issue.entityId, e)}
+                variant={variant}
               />
             </div>
           );
         })}
         <button
           onClick={onNewRun}
-          className="p-2 mx-2 text-primary-500 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-800/30 rounded-xl cursor-pointer transition-colors"
+          className="p-2 mx-2 text-primary-800 dark:text-primary-200 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-900/10 dark:hover:bg-primary-200/5 rounded-xl cursor-pointer transition-colors"
           title="New run"
         >
           <Plus className="w-4 h-4" />

@@ -208,7 +208,7 @@ export function LinkResourcesModal({
         }}
       >
         {/* Header */}
-        <div className="px-4 pt-6 pb-4">
+        <div className="px-6 pt-6 pb-4">
           <Heading3 className="text-primary-900 dark:text-primary-50">
             Link Resources
           </Heading3>
@@ -234,7 +234,7 @@ export function LinkResourcesModal({
                   No resources available
                 </BodyMedium>
                 <Caption className="text-primary-400 dark:text-primary-500 mt-1 block">
-                  Connect GitHub or Linear in Settings first
+                  Connect apps in settings first
                 </Caption>
               </div>
             ) : (

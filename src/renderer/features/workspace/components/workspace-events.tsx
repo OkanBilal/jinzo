@@ -68,7 +68,7 @@ export function WorkspaceEvents({
   );
 
   return (
-    <div className="font-mono text-sm h-full flex flex-col">
+    <div className=" text-sm h-full flex flex-col">
       {/* Sticky header + tabs */}
       <div className="sticky top-0 z-10 shrink-0">
         {/* <WorkspaceHeader workspace={currentWorkspace} /> */}
@@ -120,7 +120,7 @@ export function WorkspaceEvents({
         )}
         {/* Bottom fade overlay */}
         <div
-          className={`absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary ${variant === "claude" ? "dark:from-claude-dark" : "dark:from-workspace-soft-dark"} to-transparent pointer-events-none`}
+          className={`absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary ${variant === "claude" ? "dark:from-claude-dark" : "dark:from-copilot-dark"} to-transparent pointer-events-none`}
         />
       </div>
     </div>

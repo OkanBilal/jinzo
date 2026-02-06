@@ -32,17 +32,13 @@
   --color-primary-900: #141414;
   --color-primary-950: #0c0c0c;
   
-  --color-copilot-blue: #131420;
+  --color-copilot-blue: #11131a;
   --color-copilot-dark: #080A0F ;
   --color-copilot-lightblue: #ffffff;
   --color-claude-orange: #FFBC15;
   --color-claude-dark: #0d0907;
+  --color-claude-soft-dark: #161210;
   --color-claude-light: #f8f4ee;
-
-  --color-workspace-dark: #11131a;
-  --color-workspace-soft-dark: #0a0b0e;
-  --color-workspace-light: #f8f4ee;
-  --color-workspace-soft-light: #fcfbf2;
 
 
   --font-space-mono: 'Space Mono', monospace;
@@ -722,6 +718,26 @@ input[type="range"].slider {
   mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
 }
 
+
+.glass-morphism-button{
+  background: transparent;
+  border: 0.5px solid #ffffff2e;
+  box-shadow:
+    0 1px 1px #00000021,
+    0 1px 1px #00000012,
+    inset 0 1px 1px #00000031;
+}
+
+.dark .glass-morphism-button {
+  background: transparent;
+  border-color: #ffffff1f;
+  box-shadow:
+    0 1px 1px #00000040,
+    0 1px 1px #00000026,
+    inset 0 1px 0 #ffffff29;
+}
+
+
 .glass-morphism,
 .glass-morphism-copilot,
 .glass-morphism-claude {
@@ -743,7 +759,7 @@ input[type="range"].slider {
 }
 
 .dark .glass-morphism-copilot {
-  background: linear-gradient(to bottom, var(--color-workspace-dark), var(--color-workspace-soft-dark));
+  background: linear-gradient(to bottom, var(--color-copilot-blue), var(--color-copilot-dark));
   border-color: #ffffff1f;
   box-shadow:
     0 1px 1px #00000040,

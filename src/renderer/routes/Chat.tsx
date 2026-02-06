@@ -113,7 +113,7 @@ function ChatContent() {
           isLoading={isLoading}
         />
         {/* Bottom fade overlay */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary dark:from-[#100F0F] to-transparent pointer-events-none" />
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary dark:from-primary-950 to-transparent pointer-events-none" />
       </div>
       <div className="shrink-0 max-w-200 mx-auto mb-4 w-full">
         <ChatInput

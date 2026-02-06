@@ -7,6 +7,7 @@ interface EditorTabProps {
   hasFile?: boolean;
   fileName?: string;
   onClose?: (e: React.MouseEvent) => void;
+  variant?: "workspace" | "claude";
 }
 
 export function EditorTab({
@@ -15,27 +16,28 @@ export function EditorTab({
   hasFile,
   fileName,
   onClose,
+  variant,
 }: EditorTabProps) {
   return (
     <div
       onClick={onClick}
-      className={`group flex items-center gap-2 pl-3 pr-1 py-3 cursor-pointer transition-colors min-w-28 max-w-32 ${
+      className={`group flex items-center gap-2 pl-3 pr-1 py-3 cursor-pointer transition-colors min-w-40 max-w-48 ${
         isActive
-          ? "text-primary-800 dark:text-primary-200 "
-          : "text-primary-500 hover:text-primary-700 dark:hover:text-primary-300"
+          ? `text-primary-950 dark:text-primary-200  ${variant=== "claude" ? "dark:bg-claude-dark bg-primary" : variant === "workspace" ? " dark:bg-copilot-dark bg-primary" : ""} `  
+          : "text-primary-500 hover:text-primary-700 dark:hover:text-primary-300 "
       }`}
     >
-      <Code className="w-4 h-4 shrink-0" />
-      <span className="text-xs truncate flex-1">
+      <Code className="size-4.5 shrink-0" />
+      <span className="text-[13px] truncate flex-1">
         {fileName || "Editor"}
         {hasFile && <span className="ml-1 opacity-60">*</span>}
       </span>
       {onClose && (
         <button
           onClick={onClose}
-          className="opacity-0 group-hover:opacity-100 p-0.5 mr-1 hover:bg-primary/10 cursor-pointer rounded transition-all"
+          className="opacity-0 group-hover:opacity-100 p-0.5 mr-0.5  cursor-pointer rounded transition-all"
         >
-          <Close className="w-3 h-3" />
+          <Close className="size-3" />
         </button>
       )}
     </div>

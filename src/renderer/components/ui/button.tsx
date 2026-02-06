@@ -53,7 +53,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   subtle:
     "cursor-pointer flex items-center gap-2 bg-primary/5 dark:bg-primary/4 hover:bg-primary/20 dark:hover:bg-primary/8 ",
   frosted:
-    "cursor-pointer glass-morphism text-primary-800 dark:text-primary-200 ",
+    "cursor-pointer glass-morphism-button text-primary-800 dark:text-primary-200 ",
   bare: "cursor-pointer",
 };
 

@@ -47,7 +47,7 @@ function formatClaudeModelName(model: string): string {
   const lowerModel = model.toLowerCase();
   
   // Check if it's a Claude model by ID
-  if (lowerModel === "default" || lowerModel === "opus") {
+  if (lowerModel === "default (recommended)" || lowerModel === "default" || lowerModel === "opus") {
     return "Claude Opus 4.5";
   }
   if (lowerModel === "sonnet") {

@@ -94,11 +94,11 @@ export default function WorkspacesList({
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center justify-between active:scale-99 transition-all duration-200 bg-transparent hover:bg-primary/10 dark:hover:bg-primary/5 cursor-pointer px-2 py-2 mb-1 rounded-lg "
       >
-        <Caption className="text-primary-800 dark:text-primary-400 font-medium">
+        <Caption className="text-primary-800 dark:text-primary-300! font-medium">
           Workspaces
         </Caption>
         <ArrowUp
-          className={`w-4 h-4 text-primary-400 transition-transform duration-200 ${
+          className={`w-4 h-4 text-primary-800 dark:text-primary-300 transition-transform duration-200 ${
             isExpanded ? "rotate-180" : "rotate-90"
           }`}
         />
