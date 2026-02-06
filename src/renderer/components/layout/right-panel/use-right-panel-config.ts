@@ -25,10 +25,10 @@ export function useRightPanelConfig() {
   const thinkingEnabled = useAppSelector((state) => state.chat.thinkingEnabled);
   const toolMode = useAppSelector((state) => state.chat.toolMode);
   const structuredOutputEnabled = useAppSelector(
-    (state) => state.chat.structuredOutputEnabled
+    (state) => state.chat.structuredOutputEnabled,
   );
   const structuredOutputSchema = useAppSelector(
-    (state) => state.chat.structuredOutputSchema
+    (state) => state.chat.structuredOutputSchema,
   );
 
   const thinkingConfig = useThinkingConfig();
@@ -88,7 +88,7 @@ export function useRightPanelConfig() {
   };
 
   const handleStructuredOutputSchemaChange = (
-    schema: StructuredOutputSchema
+    schema: StructuredOutputSchema,
   ) => {
     dispatch(setStructuredOutputSchema(schema));
     updateConfig({ structuredOutputSchema: schema });
@@ -112,7 +112,6 @@ export function useRightPanelConfig() {
   ];
 
   return {
-    // State
     selectedModel,
     thinkingLevel,
     thinkingEnabled,
@@ -122,12 +121,8 @@ export function useRightPanelConfig() {
     config,
     thinkingConfig,
     isStructuredOutputModalOpen,
-
-    // Options
     modelOptions,
     toolModeOptions,
-
-    // Handlers
     handleTemperatureChange,
     handleModelChange,
     handleThinkingLevelChange,

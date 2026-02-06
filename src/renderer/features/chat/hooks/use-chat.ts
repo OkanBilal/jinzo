@@ -29,15 +29,19 @@ export interface UseChatReturn {
   input: string;
   setInput: (value: string) => void;
   isLoading: boolean;
-  sendMessageStreaming: (model?: string, options?: StreamSendOptions) => Promise<void>; // sends current input
-  sendTextStreaming: ( // sends provided text
+  sendMessageStreaming: (
+    model?: string,
+    options?: StreamSendOptions,
+  ) => Promise<void>; // sends current input
+  sendTextStreaming: (
+    // sends provided text
     text: string,
     model?: string,
     sessionId?: number | null,
-    options?: StreamSendOptions
+    options?: StreamSendOptions,
   ) => Promise<void>;
   addMessage: (
-    message: Omit<UIChatMessage, "id" | "timestamp">
+    message: Omit<UIChatMessage, "id" | "timestamp">,
   ) => UIChatMessage;
   replaceMessages: (messages: UIChatMessage[]) => void;
   clearMessages: () => void;
@@ -61,7 +65,7 @@ const DEFAULT_OPTIONS: Required<Omit<UseChatOptions, "sessionId">> = {
 };
 
 function createMessage(
-  message: Omit<UIChatMessage, "id" | "timestamp">
+  message: Omit<UIChatMessage, "id" | "timestamp">,
 ): UIChatMessage {
   return {
     ...message,
@@ -81,7 +85,7 @@ function validateInput(text: string): string | null {
 
 function trimMessages(
   messages: UIChatMessage[],
-  maxMessages: number
+  maxMessages: number,
 ): UIChatMessage[] {
   if (messages.length <= maxMessages) {
     return messages;
@@ -91,7 +95,7 @@ function trimMessages(
 
 function scrollToBottom(
   ref: React.RefObject<HTMLUListElement | null>,
-  smooth = true
+  smooth = true,
 ) {
   if (ref.current) {
     ref.current.scrollTo({
@@ -136,7 +140,7 @@ export const useChat = (options: UseChatOptions = {}): UseChatReturn => {
 
       return newMessage;
     },
-    [maxMessages]
+    [maxMessages],
   );
 
   const updateMessageText = useCallback((id: string, text: string) => {
@@ -148,7 +152,7 @@ export const useChat = (options: UseChatOptions = {}): UseChatReturn => {
       text: string,
       model?: string,
       sid?: number | null,
-      streamOptions?: StreamSendOptions
+      streamOptions?: StreamSendOptions,
     ): Promise<void> => {
       const cleaned = validateInput(text);
       if (!cleaned || isLoading) return;
@@ -213,11 +217,11 @@ export const useChat = (options: UseChatOptions = {}): UseChatReturn => {
                         streaming: false,
                       },
                     }
-                  : m
-              )
+                  : m,
+              ),
             );
             setIsLoading(false);
-            
+
             // Clean up listeners
             unsubscribeChunk?.();
             unsubscribeFinal?.();
@@ -234,14 +238,17 @@ export const useChat = (options: UseChatOptions = {}): UseChatReturn => {
             }
             updateMessageText(
               assistantMsg.id,
-              "Sorry, I encountered an error streaming the response. Please try again."
+              "Sorry, I encountered an error streaming the response. Please try again.",
             );
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantMsg.id
-                  ? { ...m, metadata: { ...(m.metadata || {}), streaming: false } }
-                  : m
-              )
+                  ? {
+                      ...m,
+                      metadata: { ...(m.metadata || {}), streaming: false },
+                    }
+                  : m,
+              ),
             );
             setIsLoading(false);
             // Clean up listeners
@@ -263,7 +270,7 @@ export const useChat = (options: UseChatOptions = {}): UseChatReturn => {
 
         // Send the chat request via IPC
         const result = await window.api.chat.send(payload);
-        
+
         if (!result.success) {
           throw new Error(result.error || "Failed to send chat message");
         }
@@ -275,14 +282,14 @@ export const useChat = (options: UseChatOptions = {}): UseChatReturn => {
         }
         updateMessageText(
           assistantMsg.id,
-          "Sorry, I encountered an error streaming the response. Please try again."
+          "Sorry, I encountered an error streaming the response. Please try again.",
         );
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantMsg.id
               ? { ...m, metadata: { ...(m.metadata || {}), streaming: false } }
-              : m
-          )
+              : m,
+          ),
         );
         setIsLoading(false);
         // Clean up listeners
@@ -291,7 +298,7 @@ export const useChat = (options: UseChatOptions = {}): UseChatReturn => {
         unsubscribeError?.();
       }
     },
-    [isLoading, addMessage, sessionId, updateMessageText]
+    [isLoading, addMessage, sessionId, updateMessageText],
   );
 
   const sendMessageStreaming = useCallback(
@@ -301,14 +308,14 @@ export const useChat = (options: UseChatOptions = {}): UseChatReturn => {
       setInput("");
       await sendTextStreaming(text, model, sessionId ?? null, options);
     },
-    [input, isLoading, sendTextStreaming, sessionId]
+    [input, isLoading, sendTextStreaming, sessionId],
   );
 
   const replaceMessages = useCallback(
     (newMessages: UIChatMessage[]) => {
       setMessages(trimMessages(newMessages, maxMessages));
     },
-    [maxMessages]
+    [maxMessages],
   );
 
   const clearMessages = useCallback(() => {

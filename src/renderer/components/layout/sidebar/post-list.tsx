@@ -64,7 +64,6 @@ export default function PostsList({
     navigate(post.url);
   };
 
-  // Sort posts by createdAt (newest first)
   const sortedPosts = [...posts].sort((a, b) => {
     const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
     const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;

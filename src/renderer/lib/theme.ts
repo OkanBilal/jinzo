@@ -36,4 +36,4 @@ export const getDefaultDropdownBackground = (
 ): string => {
   const { dropdown } = isDarkMode ? COLORS.dark : COLORS.light;
   return dropdown.replace(")", ` / ${opacity})`);
-}
+};

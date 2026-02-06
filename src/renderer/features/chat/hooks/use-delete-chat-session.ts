@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useDeleteChatSessionMutation, ChatSession } from "@/lib/redux/api";
-import { toast } from "@/components/toast";
+import { toast } from "@/components/ui/toast";
 
 export function useDeleteChatSession() {
   const [sessionToDelete, setSessionToDelete] = useState<ChatSession | null>(null);

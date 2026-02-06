@@ -40,17 +40,6 @@ const theme = (light: string, dark: string): PredefinedMoodTheme => ({
   dark: { value: dark, preview: dark },
 });
 
-const WORKSPACE_UI: PredefinedMoodUIConfig = {
-  sidebar: {
-    width: "19rem",
-    title: "Workspace",
-    itemType: "workspace",
-    defaultRoute: "/workspace",
-  },
-  main: { margin: "19rem" },
-  rightPanel: { width: "19rem", component: "workspace" },
-};
-
 export const predefinedMoods: PredefinedMood[] = [
   {
     id: "journal",
@@ -87,7 +76,16 @@ export const predefinedMoods: PredefinedMood[] = [
     icon: "icon:copilot",
     theme: theme("#FFFFFF40", "#11131a"),
     systemPrompt: "",
-    uiConfig: WORKSPACE_UI,
+    uiConfig: {
+      sidebar: {
+        width: "19rem",
+        title: "Workspace",
+        itemType: "workspace",
+        defaultRoute: "/workspace",
+      },
+      main: { margin: "19rem" },
+      rightPanel: { width: "19rem", component: "workspace" },
+    },
   },
   {
     id: "health",
@@ -97,8 +95,3 @@ export const predefinedMoods: PredefinedMood[] = [
     systemPrompt: "",
   },
 ];
-
-export const getMoodById = (id: string): PredefinedMood | undefined =>
-  predefinedMoods.find((mood) => mood.id === id);
-
-export const getMoodIds = (): string[] => predefinedMoods.map((m) => m.id);

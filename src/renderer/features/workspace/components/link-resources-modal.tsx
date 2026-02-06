@@ -14,7 +14,7 @@ import {
   useRemoveWorkspaceResourceMutation,
   type AvailableResource,
 } from "@/lib/redux/api";
-import { toast } from "@/components/toast";
+import { toast } from "@/components/ui/toast";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
 import { Asana, Jira } from "@/components/ui/icons";

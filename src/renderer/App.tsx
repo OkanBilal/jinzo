@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { HashRouter as Router, useLocation } from "react-router-dom";
 import { ReduxProvider } from "./components/providers/redux-provider";
-import { Toaster } from "./components/toast";
+import { Toaster } from "./components/ui/toast";
 import Sidebar from "./components/layout/sidebar";
 import RightPanel from "./components/layout/right-panel";
 import {
@@ -28,9 +28,7 @@ function AppContent() {
         <MainContent
           marginLeft={mainMarginLeft}
           marginRight={
-            !hideRightPanel && isConfigOpen
-              ? rightPanelWidth
-              : "0.5rem"
+            !hideRightPanel && isConfigOpen ? rightPanelWidth : "0.5rem"
           }
         >
           <MainRoutes />

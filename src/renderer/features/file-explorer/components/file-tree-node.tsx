@@ -3,10 +3,6 @@ import type { FileNode } from "../types";
 import { FileIconComponent } from "./file-icon";
 import { ArrowUp, Plus } from "@/components/ui/icons";
 
-// ─────────────────────────────────────────────────────────────
-// File Tree Node Component
-// ─────────────────────────────────────────────────────────────
-
 interface FileTreeNodeProps {
   node: FileNode;
   depth: number;
@@ -27,31 +23,27 @@ export const FileTreeNode = memo(function FileTreeNode({
   defaultExpanded = false,
 }: FileTreeNodeProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const [children, setChildren] = useState<FileNode[] | undefined>(node.children);
+  const [children, setChildren] = useState<FileNode[] | undefined>(
+    node.children,
+  );
   const [isLoading, setIsLoading] = useState(false);
-  // Track if we've attempted to load children
   const [childrenLoaded, setChildrenLoaded] = useState(
-    node.children !== undefined && node.children.length > 0
+    node.children !== undefined && node.children.length > 0,
   );
 
   const isDirectory = node.type === "directory";
   const isSelected = selectedPath === node.fullPath;
 
-  // Show chevron if:
-  // 1. node.hasChildren is explicitly true, OR
-  // 2. node.hasChildren is undefined (not checked) and it's a directory, OR
-  // 3. We have loaded children and there are some
-  const showChevron = isDirectory && (
-    node.hasChildren === true ||
-    (node.hasChildren === undefined && !childrenLoaded) ||
-    (children !== undefined && children.length > 0)
-  );
+  const showChevron =
+    isDirectory &&
+    (node.hasChildren === true ||
+      (node.hasChildren === undefined && !childrenLoaded) ||
+      (children !== undefined && children.length > 0));
 
   const handleClick = useCallback(async () => {
     onSelect(node);
 
     if (isDirectory) {
-      // If expanding and children not loaded yet, lazy load them
       if (!isExpanded && onExpand && !childrenLoaded) {
         setIsLoading(true);
         try {
@@ -73,7 +65,7 @@ export const FileTreeNode = memo(function FileTreeNode({
         handleClick();
       }
     },
-    [handleClick]
+    [handleClick],
   );
 
   const handleAddToContext = useCallback(
@@ -83,7 +75,7 @@ export const FileTreeNode = memo(function FileTreeNode({
         onAddToContext(node);
       }
     },
-    [node, onAddToContext]
+    [node, onAddToContext],
   );
 
   const paddingLeft = 0 + depth * 12;
@@ -108,7 +100,6 @@ export const FileTreeNode = memo(function FileTreeNode({
         `}
         style={{ paddingLeft }}
       >
-        {/* Expand/Collapse Chevron */}
         <span className="w-4 h-4 flex items-center justify-center shrink-0">
           {isDirectory && showChevron && (
             <ArrowUp
@@ -121,7 +112,6 @@ export const FileTreeNode = memo(function FileTreeNode({
           )}
         </span>
 
-        {/* File/Folder Icon */}
         <FileIconComponent
           extension={node.extension}
           fileName={node.name}
@@ -130,10 +120,8 @@ export const FileTreeNode = memo(function FileTreeNode({
           className="w-4 h-4 shrink-0 mr-1.5"
         />
 
-        {/* File/Folder Name */}
         <span className="truncate flex-1">{node.name}</span>
 
-        {/* Add to Context Button - only for files */}
         {!isDirectory && onAddToContext && (
           <button
             onClick={handleAddToContext}
@@ -144,13 +132,11 @@ export const FileTreeNode = memo(function FileTreeNode({
           </button>
         )}
 
-        {/* Loading Indicator */}
         {isLoading && (
           <span className="ml-2 w-3 h-3 border border-primary-400 border-t-transparent rounded-full animate-spin" />
         )}
       </div>
 
-      {/* Children */}
       {isDirectory && isExpanded && children && children.length > 0 && (
         <div role="group">
           {children.map((child) => (

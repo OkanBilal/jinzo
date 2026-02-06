@@ -66,51 +66,6 @@ export const ChatMessageComponent = memo(
             )}
           </div>
 
-          {/* Sources and metadata (assistant only) */}
-          {/* {!isUser && message.metadata && (
-            <div className="mt-2 space-y-2">
-              {Array.isArray(message.metadata.sources) && message.metadata.sources.length > 0 && (
-                <div className="rounded-lg border border-primary-200 dark:border-primary-800 bg-white/60 dark:bg-primary-950/60">
-                  <div className="px-3 py-2 border-b border-primary-200 dark:border-primary-800 text-xs font-semibold text-primary-700 dark:text-primary-300">
-                    Sources
-                  </div>
-                  <ul className="px-3 py-2 text-sm space-y-1">
-                    {message.metadata.sources.map((src, idx) => (
-                      <li key={`${src.url}-${idx}`} className="flex items-start gap-2">
-                        <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary-400 flex-shrink-0" />
-                        <div>
-                          <a
-                            href={src.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary-700 dark:text-primary-300 hover:underline"
-                          >
-                            {src.title || src.url}
-                          </a>
-                          {src.source && (
-                            <span className="ml-2 text-xs text-primary-500 dark:text-primary-400">({src.source})</span>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )} */}
-
-          {/* Minimal metadata summary if available */}
-          {/* {typeof (message.metadata as any).queryType === "string" && (
-                <div className="text-[11px] text-primary-500 dark:text-primary-400">
-                  <span className="uppercase tracking-wide">{String((message.metadata as any).queryType)}</span>
-                  {typeof (message.metadata as any).usedInContext === "number" && typeof (message.metadata as any).totalRetrieved === "number" && (
-                    <span className="ml-2">
-                      used {(message.metadata as any).usedInContext}/{(message.metadata as any).totalRetrieved}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          )} */}
-
           <div
             className={`absolute top-full ${isUser ? "right-0" : "left-0"} ease-out duration-300 ${
               isHovered

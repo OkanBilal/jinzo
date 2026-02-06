@@ -31,9 +31,8 @@ import type {
   FileContentResponse,
   ServiceResponse,
 } from "@/features/file-explorer";
-import { toast } from "@/components/toast";
+import { toast } from "@/components/ui/toast";
 
-// Claude provider ID
 const CLAUDE_PROVIDER_ID = "claude_code";
 
 export default function ClaudePage() {
@@ -71,7 +70,6 @@ export default function ClaudePage() {
   const { workspaceId, selectedWorkspace, currentWorkspace } =
     useWorkspaceData();
 
-  // Clear selected file, context files, and issue tabs when workspace changes
   useEffect(() => {
     dispatch(clearSelectedFile());
     dispatch(clearContextFiles());
@@ -98,7 +96,6 @@ export default function ClaudePage() {
   const { pendingApprovals, respond: respondToolApproval, dismissForRun } =
     useToolApproval();
 
-  // Select first run tab if runs exist and no file is selected
   useEffect(() => {
     if (runs.length > 0 && !selectedFile && activeTab === "editor") {
       const firstRun = runs[0];
@@ -107,7 +104,6 @@ export default function ClaudePage() {
     }
   }, [runs, selectedFile, activeTab, dispatch, selectTab]);
 
-  // Load file content when selectedFile changes
   useEffect(() => {
     if (
       !selectedFile ||
@@ -155,10 +151,8 @@ export default function ClaudePage() {
     };
   }, [selectedFile, currentWorkspace?.rootPath, dispatch]);
 
-  // Check if active run can be resumed when it changes or completes
   useEffect(() => {
     const checkResume = async () => {
-      // Only check resume for run tabs, not editor or issue tabs
       const runId =
         activeTab !== "editor" && !isIssueTab(activeTab) ? activeTab : null;
       if (
@@ -180,7 +174,6 @@ export default function ClaudePage() {
     const currentRunId =
       activeTab !== "editor" && !isIssueTab(activeTab) ? activeTab : null;
 
-    // Build the final goal with context files and issues
     let finalGoal = goal;
     if (contextFiles.length > 0) {
       const filesList = contextFiles.map((f) => f.fullPath).join("\n");
@@ -197,7 +190,6 @@ export default function ClaudePage() {
       finalGoal = `Use these issues as context:\n\n${issuesList}\n\n${finalGoal}`;
     }
 
-    // If there's an active completed run that can be resumed, continue it
     if (
       currentRunId &&
       canResume &&
@@ -211,7 +203,6 @@ export default function ClaudePage() {
         dispatch(clearContextIssues());
       }
     } else {
-      // Otherwise start a new run - always use Claude provider
       const newRunId = await executeRun(
         finalGoal,
         selectedWorkspace,
@@ -223,7 +214,6 @@ export default function ClaudePage() {
         setGoal("");
         dispatch(clearContextFiles());
         dispatch(clearContextIssues());
-        // Switch to the new run tab
         dispatch(setActiveTab(newRunId));
       }
     }
@@ -245,7 +235,6 @@ export default function ClaudePage() {
     (runId: string, e: React.MouseEvent) => {
       e.stopPropagation();
       closeTab(runId);
-      // If closing the active run tab, switch to editor
       if (runId === activeTab) {
         dispatch(setActiveTab("editor"));
       }
@@ -303,7 +292,6 @@ export default function ClaudePage() {
     (e: React.MouseEvent) => {
       e.stopPropagation();
       dispatch(clearSelectedFile());
-      // Switch to first run tab if available
       if (runs.length > 0) {
         dispatch(setActiveTab(runs[0].id));
       }

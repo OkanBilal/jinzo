@@ -63,13 +63,11 @@ export function Slider({
   const displayValue = formatValue ? formatValue(localValue) : localValue;
   const percentage = ((localValue - min) / (max - min)) * 100;
 
-  // Fade out the line as it approaches the value display (starts fading at 75%, fully hidden at 90%)
   const lineOpacity =
     percentage > 90 ? 0 : percentage > 75 ? (90 - percentage) / 15 : 1;
 
   return (
     <div className="space-y-3">
-      {/* Slider track */}
       <div
         ref={containerRef}
         className="relative

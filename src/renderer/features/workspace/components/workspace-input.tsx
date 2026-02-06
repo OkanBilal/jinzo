@@ -25,7 +25,7 @@ import {
   type UploadedFile,
 } from "@/components/ui/input/file-upload-dropdown";
 import { ModelSelectDropdown } from "@/components/ui/input/model-select-dropdown";
-import { SlashMenuDropdown } from "@/components/ui/input/slash-menu-dropdown";
+import { SlashMenuDropdown } from "@/features/workspace/components/slash-menu-dropdown";
 import { Asana, Close } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";

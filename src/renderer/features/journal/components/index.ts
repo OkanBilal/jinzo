@@ -1,2 +1,2 @@
-export { JournalEditor } from "./JournalEditor";
-export { EmptyJournalState } from "./EmptyJournalState";
+export { JournalEditor } from "./journal-editor";
+export { EmptyJournalState } from "./empty-journal-state";

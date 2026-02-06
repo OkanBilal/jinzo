@@ -1,8 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Nabla&display=swap');
-
 
 @import "tailwindcss";
 
@@ -47,127 +45,8 @@
     'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
     'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --font-mono: 'Geist Mono', 'Space Mono', monospace;
-  --font-nabla: 'Nabla', cursive;
 }
 
-  .font-palette-main {
-    font-palette: --nabla-main;
-  }
-  
-  .font-palette-altone {
-    font-palette: --altone;
-  }
-  
-  .font-palette-alttwo {
-    font-palette: --alttwo;
-  }
-
-  .font-palette-altthree {
-    font-palette: --altthree;
-  }
-
-  .font-palette-altfour {
-    font-palette: --altfour;
-  }
-
-  .font-palette-primary {
-    font-palette: --primary-palette;
-  }
-
-@font-palette-values --nabla-main {
-  font-family: Nabla;
-  base-palette: 0;
-  override-colors: 
-    0 #0D00FF,
-    1 #AA00AF,
-    2 #FF00F1,
-    3 #FF00F1,
-    4 #1800FF,
-    5 #0803D8,
-    6 #0000C9,
-    7 #0031FF,
-    8 #C600C6,
-    9 #FF9CFF;
-}
-
-@font-palette-values --altone {
-  font-family: Nabla;
-  base-palette: 0;
-  override-colors: 
-    0 #AA00AF,
-    1 #FF00F1,
-    2 #FF00F1,
-    3 #1800FF,
-    4 #0803D8,
-    5 #0000C9,
-    6 #0031FF,
-    7 #C600C6,
-    8 #FF9CFF;
-}
-
-@font-palette-values --alttwo {
-  font-family: Nabla;
-  base-palette: 0;
-  override-colors: 
-    0 #0D00FF,
-    1 #FF0000,
-    2 #FF3000,
-    3 #FF3000,
-    4 #FFAB3E,
-    5 #FFD6A0,
-    6 #FF8500,
-    7 #FFDA00,
-    8 #F9DC5F,
-    9 #FFFFFF;
-}
-
-@font-palette-values --altthree {
-  font-family: Nabla;
-  base-palette: 0;
-  override-colors: 
-    0 #FFBC15,
-    1 #2307AD,
-    2 #3200E6,
-    3 #3200E6,
-    4 #C63682,
-    5 #C63682,
-    6 #FFBC15,
-    7 #FFE614,
-    8 #E55CBE,
-    9 #FFFFFF;
-}
-
-@font-palette-values --altfour {
-  font-family: Nabla;
-  base-palette: 0;
-  override-colors: 
-    0 #FFFCF0,
-    1 #E6E4D9,
-    2 #cecdc3,
-    3 #b7b5ac,
-    4 #a09d95,
-    5 #878580,
-    6 #6F6E69,
-    7 #575653,
-    8 #403E3C,
-    9 #100F0F;
-}
-
-@font-palette-values --primary {
-  font-family: Nabla;
-  base-palette: 0;
-  override-colors: 
-    0 #FFFCF0,
-    1 #E6E4D9,
-    2 #cecdc3,
-    3 #b7b5ac,
-    4 #a09d95,
-    5 #878580,
-    6 #6F6E69,
-    7 #575653,
-    8 #403E3C,
-    9 #100F0F;
-}
 
 @keyframes blink {
   0%, 49% { opacity: 1; }

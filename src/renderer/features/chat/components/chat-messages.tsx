@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useRef } from "react";
 import { ChatMessage, ChatMessageComponent } from "./chat-message";
 
 const ChatMessages = forwardRef<HTMLUListElement, ChatMessagesProps>(
-  ({ messages}, ref) => {
+  ({ messages }, ref) => {
     const prevCountRef = useRef<number>(messages.length);
     useEffect(() => {
       const countChanged = messages.length !== prevCountRef.current;
@@ -27,7 +27,7 @@ const ChatMessages = forwardRef<HTMLUListElement, ChatMessagesProps>(
         ))}
       </ul>
     );
-  }
+  },
 );
 
 ChatMessages.displayName = "ChatMessages";

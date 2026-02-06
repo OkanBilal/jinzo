@@ -9,26 +9,30 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { WizardProvider, type WizardContextValue } from "./WizardContext";
-import { usePrefersReducedMotion } from "../../../hooks/usePrefersReducedMotion";
+import { usePrefersReducedMotion } from "../../../hooks/use-prefers-reduced-motion";
 import { Button } from "../button";
 import { Close } from "../icons";
 import Text from "../text";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
-
-export interface WizardStep<TData extends Record<string, any> = Record<string, any>> {
+export interface WizardStep<
+  TData extends Record<string, any> = Record<string, any>,
+> {
   id: string;
   title?: string;
   render: (ctx: WizardContextValue<TData>) => React.ReactNode;
   canNext?: (ctx: WizardContextValue<TData>) => boolean;
   canBack?: (ctx: WizardContextValue<TData>) => boolean;
-  onNext?: (ctx: WizardContextValue<TData>) => boolean | void | Promise<boolean | void>;
-  onBack?: (ctx: WizardContextValue<TData>) => boolean | void | Promise<boolean | void>;
+  onNext?: (
+    ctx: WizardContextValue<TData>,
+  ) => boolean | void | Promise<boolean | void>;
+  onBack?: (
+    ctx: WizardContextValue<TData>,
+  ) => boolean | void | Promise<boolean | void>;
 }
 
-export interface WizardModalProps<TData extends Record<string, any> = Record<string, any>> {
+export interface WizardModalProps<
+  TData extends Record<string, any> = Record<string, any>,
+> {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   steps: WizardStep<TData>[];
@@ -42,15 +46,11 @@ export interface WizardModalProps<TData extends Record<string, any> = Record<str
   animationDuration?: number;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
 const emptySubscribe = () => () => {};
 
 function resolveInitialStep(
   steps: { id: string }[],
-  initial?: string | number
+  initial?: string | number,
 ): number {
   if (initial === undefined) return 0;
   if (typeof initial === "number") {
@@ -60,11 +60,9 @@ function resolveInitialStep(
   return idx >= 0 ? idx : 0;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Component
-// ─────────────────────────────────────────────────────────────────────────────
-
-export function WizardModal<TData extends Record<string, any> = Record<string, any>>({
+export function WizardModal<
+  TData extends Record<string, any> = Record<string, any>,
+>({
   open,
   onOpenChange,
   steps,
@@ -80,7 +78,7 @@ export function WizardModal<TData extends Record<string, any> = Record<string, a
   const isBrowser = useSyncExternalStore(
     emptySubscribe,
     () => true,
-    () => false
+    () => false,
   );
 
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -88,7 +86,7 @@ export function WizardModal<TData extends Record<string, any> = Record<string, a
   const innerRef = useRef<HTMLDivElement>(null);
 
   const [stepIndex, setStepIndex] = useState(() =>
-    resolveInitialStep(steps, initialStep)
+    resolveInitialStep(steps, initialStep),
   );
   const [data, setDataState] = useState<TData>((initialData ?? {}) as TData);
   const [errors, setErrorsState] = useState<Record<string, string>>({});
@@ -119,7 +117,7 @@ export function WizardModal<TData extends Record<string, any> = Record<string, a
     if (initialData !== prevInitialDataRef.current) {
       prevInitialDataRef.current = initialData;
       if (initialData) {
-        setDataState((prev) => ({ ...prev, ...initialData } as TData));
+        setDataState((prev) => ({ ...prev, ...initialData }) as TData);
       }
     }
   }, [initialData]);
@@ -136,7 +134,6 @@ export function WizardModal<TData extends Record<string, any> = Record<string, a
   const currentStep = steps[stepIndex];
   const displayTitle = currentStep?.title ?? title;
 
-  // ─── Data Setters ────────────────────────────────────────────────────────
   const setData = useCallback((partial: Partial<TData>) => {
     setDataState((prev) => ({ ...prev, ...partial }));
   }, []);
@@ -154,7 +151,6 @@ export function WizardModal<TData extends Record<string, any> = Record<string, a
     onCancel?.();
   }, [onOpenChange, onCancel]);
 
-  // ─── Height Animation on Step Change ──────────────────────────────────────
   useLayoutEffect(() => {
     if (!shouldAnimate || !innerRef.current) return;
 
@@ -194,7 +190,6 @@ export function WizardModal<TData extends Record<string, any> = Record<string, a
     };
   }, [stepIndex, shouldAnimate, animationDuration]);
 
-  // ─── Navigation ──────────────────────────────────────────────────────────
   const goTo = useCallback(
     (indexOrId: number | string) => {
       const targetIndex =
@@ -207,7 +202,7 @@ export function WizardModal<TData extends Record<string, any> = Record<string, a
 
       setStepIndex(targetIndex);
     },
-    [steps, stepIndex]
+    [steps, stepIndex],
   );
 
   const goNext = useCallback(async () => {
@@ -296,7 +291,6 @@ export function WizardModal<TData extends Record<string, any> = Record<string, a
     close,
   ]);
 
-  // ─── Context Value ───────────────────────────────────────────────────────
   const contextValue = useMemo<WizardContextValue<TData>>(
     () => ({
       stepIndex,
@@ -327,10 +321,8 @@ export function WizardModal<TData extends Record<string, any> = Record<string, a
       isSubmitting,
       setIsSubmitting,
       close,
-    ]
+    ],
   );
-
-  // ─── Effects ─────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (open) {
@@ -376,9 +368,10 @@ export function WizardModal<TData extends Record<string, any> = Record<string, a
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
     const focusFirst = () => {
-      const focusable = modalEl.querySelectorAll<HTMLElement>(focusableSelector);
+      const focusable =
+        modalEl.querySelectorAll<HTMLElement>(focusableSelector);
       const firstFocusable = Array.from(focusable).find(
-        (el) => !el.hasAttribute("disabled")
+        (el) => !el.hasAttribute("disabled"),
       );
       firstFocusable?.focus();
     };
@@ -389,7 +382,7 @@ export function WizardModal<TData extends Record<string, any> = Record<string, a
       if (e.key !== "Tab") return;
 
       const focusable = Array.from(
-        modalEl.querySelectorAll<HTMLElement>(focusableSelector)
+        modalEl.querySelectorAll<HTMLElement>(focusableSelector),
       ).filter((el) => !el.hasAttribute("disabled"));
 
       if (focusable.length === 0) return;
@@ -410,16 +403,15 @@ export function WizardModal<TData extends Record<string, any> = Record<string, a
     return () => document.removeEventListener("keydown", handleTab);
   }, [open, stepIndex]);
 
-  // ─── Render ──────────────────────────────────────────────────────────────
-
   if (!isBrowser || !open) return null;
 
   const contentStyle: React.CSSProperties = {
     height: contentHeight,
     overflow: isAnimating ? "hidden" : undefined,
-    transition: shouldAnimate && isAnimating
-      ? `height ${animationDuration}ms ease-out`
-      : undefined,
+    transition:
+      shouldAnimate && isAnimating
+        ? `height ${animationDuration}ms ease-out`
+        : undefined,
   };
 
   return createPortal(
@@ -437,7 +429,9 @@ export function WizardModal<TData extends Record<string, any> = Record<string, a
         aria-labelledby="wizard-title"
         className={`relative z-50 w-full max-w-2xl rounded-3xl overflow-hidden glass-morphism ${className}`}
         style={{
-          animation: shouldAnimate ? "wizardModalIn 250ms cubic-bezier(0.22, 1, 0.36, 1) both" : undefined,
+          animation: shouldAnimate
+            ? "wizardModalIn 250ms cubic-bezier(0.22, 1, 0.36, 1) both"
+            : undefined,
         }}
       >
         <div className="flex items-center justify-between px-6 py-4">
@@ -507,6 +501,6 @@ export function WizardModal<TData extends Record<string, any> = Record<string, a
         }
       `}</style>
     </div>,
-    document.body
+    document.body,
   );
 }

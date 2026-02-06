@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { toast } from "@/components/toast";
+import { toast } from "@/components/ui/toast";
 import { useDarkMode } from "../../../hooks/use-dark-mode";
 import { useActiveMood } from "../../../hooks/use-active-mood";
 import { Button } from "../../../components/ui/button";

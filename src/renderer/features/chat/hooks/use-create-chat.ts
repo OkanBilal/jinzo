@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "@/components/toast";
+import { toast } from "@/components/ui/toast";
 import { useCreateChatSessionMutation } from "@/lib/redux/api";
 import { useAppSelector } from "@/lib/redux/hooks";
 

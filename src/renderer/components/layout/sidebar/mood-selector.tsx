@@ -21,7 +21,6 @@ function MoodSelector({
 
   return (
     <div className="flex items-center gap-1.5 overflow-x-auto noscrollbar px-1 ">
-      {/* No mood option */}
       <Button
         onClick={() => onMoodChange("")}
         className={`shrink-0 flex items-center justify-center size-8 hover:bg-primary-100/30 hover:scale-101 rounded-xl transition-all duration-200 ease-out active:scale-99 font-medium cursor-pointer ${

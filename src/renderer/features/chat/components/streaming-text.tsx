@@ -80,7 +80,13 @@ export const StreamingText = memo(
           cancelAnimationFrame(animationRef.current);
         }
       };
-    }, [isStreaming, text.length, displayedLength, revealSpeed, revealInterval]);
+    }, [
+      isStreaming,
+      text.length,
+      displayedLength,
+      revealSpeed,
+      revealInterval,
+    ]);
 
     // Move fresh text to stable after animation completes
     useEffect(() => {
@@ -116,9 +122,12 @@ export const StreamingText = memo(
       // Reset when text is empty
       const effectiveDisplayedLength = text.length === 0 ? 0 : displayedLength;
       const effectiveFreshStart = text.length === 0 ? 0 : freshStart;
-      
+
       const displayedText = text.slice(0, effectiveDisplayedLength);
-      const safeStableEnd = Math.min(effectiveFreshStart, effectiveDisplayedLength);
+      const safeStableEnd = Math.min(
+        effectiveFreshStart,
+        effectiveDisplayedLength,
+      );
       return {
         stableText: displayedText.slice(0, safeStableEnd),
         freshText: displayedText.slice(safeStableEnd),
@@ -152,12 +161,13 @@ export const StreamingText = memo(
           </span>
         )}
         {/* Typing cursor */}
+        {/* //TODO: Change cursor */}
         {(isStreaming || isRevealing) && (
           <span className="inline-block w-0.5 h-[1.1em] ml-0.5 bg-primary-600 dark:bg-primary-400 animate-blink align-middle" />
         )}
       </div>
     );
-  }
+  },
 );
 
 StreamingText.displayName = "StreamingText";

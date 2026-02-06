@@ -15,7 +15,7 @@ import {
   useSelectDirectoryMutation,
   type Mood,
 } from "@/lib/redux/api";
-import { toast } from "@/components/toast";
+import { toast } from "@/components/ui/toast";
 import { useActiveMood } from "@/hooks/use-active-mood";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { useDeleteChatSession } from "@/features/chat/hooks/use-delete-chat-session";
@@ -50,7 +50,7 @@ export function useSidebar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(
-    location.pathname.startsWith("/settings")
+    location.pathname.startsWith("/settings"),
   );
   const [isCreatingMood, setIsCreatingMood] = useState(false);
   const [isViewingPresetMoods, setIsViewingPresetMoods] = useState(false);
@@ -227,10 +227,7 @@ export function useSidebar() {
         console.error("Failed to create journal draft:", error);
         toast.error("Failed to create new post");
       }
-    } else if (
-      sidebarConfig.itemType === "workspace" ||
-      sidebarConfig.itemType === "claude"
-    ) {
+    } else if (sidebarConfig.itemType === "workspace") {
       // Open folder picker and create workspace via worktree import
       try {
         const selectedPath = await selectDirectory().unwrap();

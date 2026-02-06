@@ -32,7 +32,7 @@ const variantStyles: Record<TextVariant, string> = {
   h2: "text-2xl font-semibold text-primary-900 dark:text-primary-100",
   h3: "text-lg font-semibold text-primary-900 dark:text-primary-100",
 
-  body: "text-sm text-primary-700 dark:text-primary-200",
+  body: "text-sm text-primary-900 dark:text-primary-200",
   bodyMedium: "text-sm font-medium text-primary-500 dark:text-primary-100",
   bodySmall: "text-xs text-primary-700 dark:text-primary-200",
 

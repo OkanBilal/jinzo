@@ -17,7 +17,6 @@ export default function CreateMoodMenu({
   onPresetMoods,
   onClose,
 }: CreateMoodMenuProps) {
-  // Position menu above the button
   const adjustedPosition = {
     x: Math.max(8, Math.min(position.x - 70, window.innerWidth - 160)),
     y: Math.max(8, position.y - 90),

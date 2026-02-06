@@ -17,39 +17,23 @@ import {
   CssFileIcon
 } from "@/components/ui/icons/file-icons";
 
-// ─────────────────────────────────────────────────────────────
-// File Extension to Icon Mapping
-// ─────────────────────────────────────────────────────────────
-
 type FileIconType = ComponentType<SVGProps<SVGSVGElement>>;
 
-// Map extensions to their specific icon components
 const EXTENSION_ICONS: Record<string, FileIconType> = {
-  // JavaScript
   js: JsFileIcon,
   mjs: JsFileIcon,
   cjs: JsFileIcon,
   html: HtmlFileIcon,
   css: CssFileIcon,
-
-  // TypeScript
   ts: TsFileIcon,
-
-  // React (JSX/TSX)
   jsx: ReactFileIcon,
   tsx: ReactFileIcon,
-
-  // Markdown
   md: MarkdownFileIcon,
   mdx: MarkdownFileIcon,
-
-  // Config files
   postcss: PostcssFileIcon,
 };
 
-// Map specific file names to their icon components
 const FILENAME_ICONS: Record<string, FileIconType> = {
-  // ESLint
   ".eslintrc": EslintFileIcon,
   ".eslintrc.js": EslintFileIcon,
   ".eslintrc.cjs": EslintFileIcon,
@@ -57,34 +41,22 @@ const FILENAME_ICONS: Record<string, FileIconType> = {
   "eslint.config.js": EslintFileIcon,
   "eslint.config.mjs": EslintFileIcon,
   "eslint.config.cjs": EslintFileIcon,
-
-  // Git
   ".gitignore": GitFileIcon,
   ".gitattributes": GitFileIcon,
   ".gitmodules": GitFileIcon,
-
-  // Claude
   "CLAUDE.md": ClaudeFileIcon,
   ".claude": ClaudeFileIcon,
-
-  // Electron / Forge
   "forge.config.js": ElectronFileIcon,
   "forge.config.ts": ElectronFileIcon,
   "electron.vite.config.js": ElectronFileIcon,
   "electron.vite.config.ts": ElectronFileIcon,
-
-  // Node
   "package.json": NodeFileIcon,
   "package-lock.json": NodeFileIcon,
   ".nvmrc": NodeFileIcon,
   ".node-version": NodeFileIcon,
-
-  // PostCSS
   "postcss.config.js": PostcssFileIcon,
   "postcss.config.cjs": PostcssFileIcon,
   "postcss.config.mjs": PostcssFileIcon,
-
-  // TypeScript config
   "tsconfig.json": TsconfigFileIcon,
   "tsconfig.node.json": TsconfigFileIcon,
   "tsconfig.app.json": TsconfigFileIcon,
@@ -94,36 +66,27 @@ const FILENAME_ICONS: Record<string, FileIconType> = {
 };
 
 const EXTENSION_COLORS: Record<string, string> = {
-  // JavaScript/TypeScript
   js: "text-yellow-400",
   jsx: "text-yellow-400",
   ts: "text-blue-400",
   tsx: "text-blue-400",
   mjs: "text-yellow-400",
   cjs: "text-yellow-400",
-
-  // Web
   html: "text-orange-500",
   htm: "text-orange-500",
   css: "text-blue-500",
   scss: "text-pink-400",
   sass: "text-pink-400",
   less: "text-blue-600",
-
-  // Data/Config
   json: "text-yellow-500",
   yaml: "text-red-400",
   yml: "text-red-400",
   xml: "text-orange-400",
   toml: "text-gray-400",
-
-  // Markdown/Docs
   md: "text-blue-300",
   mdx: "text-blue-300",
   txt: "text-gray-400",
   rst: "text-gray-400",
-
-  // Programming
   py: "text-green-400",
   rb: "text-red-500",
   go: "text-cyan-400",
@@ -137,14 +100,10 @@ const EXTENSION_COLORS: Record<string, string> = {
   hpp: "text-purple-400",
   cs: "text-green-500",
   php: "text-indigo-400",
-
-  // Shell
   sh: "text-green-400",
   bash: "text-green-400",
   zsh: "text-green-400",
   fish: "text-green-400",
-
-  // Images
   png: "text-purple-400",
   jpg: "text-purple-400",
   jpeg: "text-purple-400",
@@ -152,8 +111,6 @@ const EXTENSION_COLORS: Record<string, string> = {
   svg: "text-yellow-400",
   ico: "text-purple-400",
   webp: "text-purple-400",
-
-  // Other
   pdf: "text-red-500",
   zip: "text-yellow-600",
   tar: "text-yellow-600",
@@ -162,10 +119,6 @@ const EXTENSION_COLORS: Record<string, string> = {
   lock: "text-gray-500",
   gitignore: "text-gray-500",
 };
-
-// ─────────────────────────────────────────────────────────────
-// Icons
-// ─────────────────────────────────────────────────────────────
 
 interface IconProps {
   className?: string;
@@ -188,10 +141,6 @@ export const FileIcon = memo(function FileIcon({ className = "" }: IconProps) {
     </svg>
   );
 });
-
-// ─────────────────────────────────────────────────────────────
-// Main File Icon Component
-// ─────────────────────────────────────────────────────────────
 
 interface FileIconComponentProps {
   extension?: string;
@@ -216,7 +165,6 @@ export const FileIconComponent = memo(function FileIconComponent({
     return <FolderIcon className={`${colorClass} ${className}`} />;
   }
 
-  // Check for specific filename match first
   if (fileName) {
     const FileNameIcon = FILENAME_ICONS[fileName];
     if (FileNameIcon) {
@@ -224,7 +172,6 @@ export const FileIconComponent = memo(function FileIconComponent({
     }
   }
 
-  // Check for extension-based icon
   if (extension) {
     const ExtensionIcon = EXTENSION_ICONS[extension.toLowerCase()];
     if (ExtensionIcon) {
@@ -232,8 +179,7 @@ export const FileIconComponent = memo(function FileIconComponent({
     }
   }
 
-  // Fallback to colored generic file icon
-  const colorClass = extension
+    const colorClass = extension
     ? EXTENSION_COLORS[extension.toLowerCase()] || "text-gray-400"
     : "text-gray-400";
 

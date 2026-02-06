@@ -1,7 +1,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { Close, Asterisk, Trash } from "@/components/ui/icons";
-import Text, { Heading3 } from "@/components/ui/text";
+import { Body, Heading3 } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type {
@@ -101,7 +101,7 @@ export function StructuredOutputModal({
 
   return createPortal(
     <div className="fixed inset-0 z-100 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/70 " onClick={onClose} />
+      <div className="absolute inset-0 bg-primary-950/70 " onClick={onClose} />
       <div
         className="relative z-40 w-full max-w-200 glass-morphism rounded-2xl "
         role="dialog"
@@ -124,7 +124,7 @@ export function StructuredOutputModal({
         <div className="p-4">
           <div className="min-h-75 max-h-75 overflow-y-auto overflow-x-visible">
             <div className="space-y-3 flex-col">
-              <Text className="uppercase tracking-wide">Property</Text>
+              <Body className="">Property</Body>
               {localProperties.map((prop, index) => (
                 <PropertyRow
                   key={index}
@@ -137,7 +137,7 @@ export function StructuredOutputModal({
                 <Button
                   className=""
                   onClick={handleAddProperty}
-                  variant="primary"
+                  variant="secondary"
                 >
                   + Add property
                 </Button>
@@ -145,7 +145,7 @@ export function StructuredOutputModal({
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-end gap-3 p-4 border-t border-black/5 dark:border-white/10">
+        <div className="flex items-center justify-end gap-3 p-4 border-t border-primary-950/5 dark:border-primary/10">
           <Button onClick={handleReset} variant="ghost">
             Reset
           </Button>
@@ -210,8 +210,8 @@ function PropertyRow({ property, onUpdate, onRemove }: PropertyRowProps) {
         onClick={() => onUpdate({ isArray: !property.isArray })}
         className={`shrink-0 px-2.5 py-2 border-none rounded-xl text-sm transition-all ${
           property.isArray
-            ? "bg-black/8 dark:bg-white/12 text-primary-800 dark:text-primary-200"
-            : "bg-black/3 dark:bg-white/5 text-primary-500 dark:text-primary-400"
+            ? "bg-primary-950/8 dark:bg-primary/12 text-primary-800 dark:text-primary-200"
+            : "bg-primary-950/3 dark:bg-primary/5 text-primary-500 dark:text-primary-400"
         }`}
         title="Is Array"
       >
@@ -221,8 +221,8 @@ function PropertyRow({ property, onUpdate, onRemove }: PropertyRowProps) {
         onClick={() => onUpdate({ isRequired: !property.isRequired })}
         className={`shrink-0 py-2.5 px-2 border-none rounded-xl text-sm transition-all ${
           property.isRequired
-            ? "bg-black/8 dark:bg-white/12 text-primary-800 dark:text-primary-200"
-            : "bg-black/3 dark:bg-white/5 text-primary-500 dark:text-primary-400"
+            ? "bg-primary-950/8 dark:bg-primary/12 text-primary-800 dark:text-primary-200"
+            : "bg-primary-950/3 dark:bg-primary/5 text-primary-500 dark:text-primary-400"
         }`}
         title="Required"
       >

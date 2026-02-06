@@ -5,7 +5,7 @@ import {
   useCreateMoodMutation,
   useSetActiveMoodMutation,
 } from "@/lib/redux/api";
-import { toast } from "@/components/toast";
+import { toast } from "@/components/ui/toast";
 import { EmojiPicker } from "frimousse";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useDarkMode } from "@/hooks/use-dark-mode";
@@ -44,14 +44,11 @@ export default function CreateMoodView({
   const [setActiveMood] = useSetActiveMoodMutation();
   const { darkMode } = useDarkMode();
 
-  // Save original background color on mount
   useEffect(() => {
     const appRoot = document.querySelector(".app-root") as HTMLElement;
     if (appRoot) {
       originalBackgroundColor.current = appRoot.style.backgroundColor || "";
     }
-
-    // Restore original color on unmount (if user cancels)
     return () => {
       if (appRoot) {
         if (originalBackgroundColor.current) {
@@ -78,13 +75,11 @@ export default function CreateMoodView({
     }
 
     try {
-      // Store both light and dark variants
       const themeConfig = JSON.stringify({
         lightBackground: selectedColorPair.light.value,
         darkBackground: selectedColorPair.dark.value,
       });
 
-      // Add prefix based on icon mode
       const iconValue = icon
         ? iconMode === "icon"
           ? `icon:${icon}`
@@ -98,12 +93,10 @@ export default function CreateMoodView({
         systemPrompt: systemPrompt.trim() || undefined,
       }).unwrap();
 
-      // Switch to the newly created mood
       if (result?.id) {
         await setActiveMood(result.id).unwrap();
       }
 
-      // Clear the original color ref so cleanup doesn't restore it
       originalBackgroundColor.current = "";
 
       toast.success("Mood created!");
@@ -117,12 +110,10 @@ export default function CreateMoodView({
 
   const currentColors = showGradients ? gradientColors : solidColors;
 
-  // Get current color based on app theme
   const selectedColorPair = currentColors[selectedColorIndex] || solidColors[0];
   const currentVariant = getThemeVariant(selectedColorPair, darkMode);
   const backgroundColor = currentVariant.value;
 
-  // Apply live preview when color changes
   useEffect(() => {
     const appRoot = document.querySelector(".app-root") as HTMLElement;
     if (appRoot) {
@@ -134,8 +125,6 @@ export default function CreateMoodView({
         appRoot.style.backgroundColor = backgroundColor;
       }
 
-      // Set CSS custom property for dropdown backgrounds
-      // Remove opacity for solid colors
       const dropdownBg = currentVariant.preview;
       appRoot.style.setProperty("--mood-preview-bg", dropdownBg);
     }
@@ -244,7 +233,6 @@ export default function CreateMoodView({
             </svg>
           </Button>
 
-          {/* Icon/Emoji Picker Dropdown */}
           {isEmojiPickerOpen && (
             <div
               className="absolute top-full left-0 right-0 z-50 
@@ -367,7 +355,6 @@ export default function CreateMoodView({
           )}
         </div>
 
-        {/* System Prompt */}
         <div className="space-y-2">
           <Text className="text-xs text-primary-500 dark:text-primary-400">
             System Prompt
@@ -438,7 +425,6 @@ export default function CreateMoodView({
               </Button>
             </div>
 
-            {/* Gradient Colors Row */}
             <div className="flex items-center gap-2 px-4 mr-2  min-w-full">
               <Button
                 type="button"
@@ -480,7 +466,6 @@ export default function CreateMoodView({
         </div>
       </div>
 
-      {/* Footer Actions */}
       <div className="p-4 space-y-2">
         <Button
           onClick={handleCreate}

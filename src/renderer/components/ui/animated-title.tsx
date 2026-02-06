@@ -10,7 +10,6 @@ export function AnimatedTitle({ title, className = "" }: AnimatedTitleProps) {
   const [initialTitle] = useState(title);
   const hasChanged = title !== initialTitle;
 
-  // No animation until title has been regenerated
   if (!hasChanged) {
     return <span className={className}>{title}</span>;
   }

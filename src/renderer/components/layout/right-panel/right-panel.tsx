@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-import { Close, RightPanelClose, RightPanelOpen } from "@/components/ui/icons";
+import { Close, RightPanelOpen } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { useLayoutConfig } from "@/hooks/use-layout-config";
 import { ConfigContent } from "./config-content";
 import { JournalContent } from "./journal-content";
-import { WorkspaceContent } from "./workspace-content";
-
+import { WorkspaceSidebar } from "@/features/workspace/components/workspace-sidebar";
 
 interface RightPanelProps {
   isOpen: boolean;
@@ -20,9 +19,8 @@ export default function RightPanel({
 }: RightPanelProps) {
   const [isVisible, setIsVisible] = useState(false);
   const { rightPanelComponent } = useLayoutConfig();
-
+  //TODO: Fix animation delays and transitions
   const FADE_IN_DELAY = isOpen ? 20 : 60;
-
 
   const handleToggle = () => onToggle(!isOpen);
 
@@ -62,8 +60,12 @@ interface ToggleButtonProps {
   isWorkspace?: boolean;
 }
 
-function ToggleButton({ isOpen, width, onClick, isWorkspace = false }: ToggleButtonProps) {
-
+function ToggleButton({
+  isOpen,
+  width,
+  onClick,
+  isWorkspace = false,
+}: ToggleButtonProps) {
   return (
     <Button
       tooltip={isOpen ? "Close right panel" : "Open right panel"}
@@ -73,7 +75,7 @@ function ToggleButton({ isOpen, width, onClick, isWorkspace = false }: ToggleBut
       aria-label={isOpen ? "Close right panel" : "Open right panel"}
     >
       {isOpen ? (
-        <Close  className="size-3.5 " />
+        <Close className="size-3.5 " />
       ) : (
         <RightPanelOpen className="size-4" />
       )}
@@ -91,8 +93,8 @@ interface PanelProps {
 const PANEL_COMPONENTS: Record<string, React.ComponentType> = {
   config: ConfigContent,
   journal: JournalContent,
-  workspace: WorkspaceContent,
-  claude: WorkspaceContent
+  workspace: WorkspaceSidebar,
+  claude: WorkspaceSidebar,
 };
 
 function Panel({ isVisible, width, component }: PanelProps) {

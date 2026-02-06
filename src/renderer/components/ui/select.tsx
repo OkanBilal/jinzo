@@ -51,7 +51,6 @@ export default function Select<T extends string = string>({
     }
   }, [isOpen]);
 
-  // Close dropdown when clicking outside (using portal, need to check both refs)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -119,7 +118,6 @@ export default function Select<T extends string = string>({
     }
   };
 
-  // Fixed background class matching dropdown wrapper style
   const fixedBackgroundClass = useFixedBackground
     ? "bg-linear-to-b from-primary to-primary-50 dark:from-primary-900 dark:to-primary-950"
     : "";
@@ -157,8 +155,10 @@ export default function Select<T extends string = string>({
             {selectedOption?.label || placeholder}
           </span>
         </div>
-        <Caption className="text-primary-900 dark:text-primary-200!  
-                absolute right-8 top-1/2 -translate-y-1/2 text-xs">
+        <Caption
+          className="text-primary-900 dark:text-primary-200!  
+                absolute right-8 top-1/2 -translate-y-1/2 text-xs"
+        >
           {title}
         </Caption>
         <SelectOption
@@ -166,7 +166,6 @@ export default function Select<T extends string = string>({
         />
       </Button>
 
-      {/* Options List - Portal rendered to body */}
       {isOpen &&
         createPortal(
           <div

@@ -1,7 +1,3 @@
-// ─────────────────────────────────────────────────────────────
-// File Explorer Types (shared with backend)
-// ─────────────────────────────────────────────────────────────
-
 export type FileNodeType = "file" | "directory";
 
 export interface FileNode {

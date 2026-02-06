@@ -50,7 +50,9 @@ export default function WorkspacesList({
     );
   }
 
-  const basePath = getBaseRoutePath(routeType === "claude" ? "claude" : "workspace");
+  const basePath = getBaseRoutePath(
+    routeType === "claude" ? "claude" : "workspace",
+  );
 
   const handleWorkspaceClick = (workspace: WorkspaceResponse) => {
     navigate(`${basePath}/${workspace.id}`);
@@ -111,7 +113,8 @@ export default function WorkspacesList({
       >
         <div className="flex flex-col space-y-1">
           {sortedWorkspaces.map((workspace) => {
-            const isActive = location.pathname === `${basePath}/${workspace.id}`;
+            const isActive =
+              location.pathname === `${basePath}/${workspace.id}`;
             return (
               <WorkspaceItem
                 key={workspace.id}

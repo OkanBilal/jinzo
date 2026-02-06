@@ -10,13 +10,16 @@ interface InputFormProps {
 
 const variantStyles = {
   default: {
-    input: "dark:text-primary-200 text-primary-700 placeholder:text-primary-500 dark:placeholder:text-primary-600",
+    input:
+      "dark:text-primary-200 text-primary-700 placeholder:text-primary-500 dark:placeholder:text-primary-600",
   },
   copilot: {
-    input: "dark:text-copilot-lightblue text-primary-700 placeholder:text-primary-500 dark:placeholder:text-copilot-lightblue/60",
+    input:
+      "dark:text-copilot-lightblue text-primary-700 placeholder:text-primary-500 dark:placeholder:text-copilot-lightblue/60",
   },
   claude: {
-    input: "dark:text-claude-light text-primary-700 placeholder:text-primary-500 dark:placeholder:text-claude-light/60",
+    input:
+      "dark:text-claude-light text-primary-700 placeholder:text-primary-500 dark:placeholder:text-claude-light/60",
   },
 };
 

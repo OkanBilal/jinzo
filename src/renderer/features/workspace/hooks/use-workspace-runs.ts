@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { Run, RunEvent, RunArtifact, ToolCall } from "../types";
-import { toast } from "@/components/toast";
+import { toast } from "@/components/ui/toast";
 
 const MAX_DISPLAY_LENGTH = 200;
 

@@ -6,7 +6,7 @@ export function useActiveMood() {
   const { data: moods = [] } = useGetMoodsQuery();
 
   const activeMoodId = appSettings?.activeMoodId || "";
-  
+
   const activeMood = useMemo(() => {
     return moods.find((m) => m.id === activeMoodId);
   }, [moods, activeMoodId]);

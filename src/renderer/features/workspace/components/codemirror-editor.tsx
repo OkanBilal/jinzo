@@ -1,6 +1,11 @@
 import { useRef, useEffect } from "react";
 import { EditorState, Extension } from "@codemirror/state";
-import { EditorView, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from "@codemirror/view";
+import {
+  EditorView,
+  lineNumbers,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+} from "@codemirror/view";
 import { javascript } from "@codemirror/lang-javascript";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
@@ -49,79 +54,82 @@ function getLanguageExtension(filename: string | undefined): Extension | null {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Custom Light Theme
-// ─────────────────────────────────────────────────────────────
-const lightTheme = EditorView.theme({
-  "&": {
-    backgroundColor: "transparent",
-    fontSize: "13px",
-    height: "100%",
-    fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+const lightTheme = EditorView.theme(
+  {
+    "&": {
+      backgroundColor: "transparent",
+      fontSize: "13px",
+      height: "100%",
+      fontFamily:
+        "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    },
+    "&.cm-focused": {
+      outline: "none",
+    },
+    ".cm-scroller": {
+      fontFamily:
+        "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      lineHeight: "1.6",
+    },
+    ".cm-content": {
+      padding: "12px 0",
+      caretColor: "var(--color-primary-600)",
+      fontFamily:
+        "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    },
+    ".cm-cursor": {
+      borderLeftColor: "var(--color-primary-600)",
+      borderLeftWidth: "2px",
+    },
+    ".cm-gutters": {
+      backgroundColor: "transparent",
+      color: "var(--color-primary-400)",
+      border: "none",
+      paddingRight: "8px",
+    },
+    ".cm-lineNumbers .cm-gutterElement": {
+      padding: "0 8px 0 16px",
+      minWidth: "40px",
+      fontSize: "12px",
+    },
+    ".cm-activeLineGutter": {
+      backgroundColor: "transparent",
+      color: "var(--color-primary-600)",
+    },
+    ".cm-activeLine": {
+      backgroundColor: "var(--color-primary-100)",
+    },
+    ".cm-line": {
+      padding: "0 16px",
+    },
+    ".cm-selectionBackground": {
+      backgroundColor: "var(--color-primary-200) !important",
+    },
+    "&.cm-focused .cm-selectionBackground": {
+      backgroundColor: "var(--color-primary-200) !important",
+    },
+    ".cm-matchingBracket": {
+      backgroundColor: "var(--color-primary-200)",
+      outline: "1px solid var(--color-primary-400)",
+    },
+    ".cm-searchMatch": {
+      backgroundColor: "var(--color-amber-200)",
+      borderRadius: "2px",
+    },
+    ".cm-searchMatch.cm-searchMatch-selected": {
+      backgroundColor: "var(--color-amber-300)",
+    },
+    ".cm-foldPlaceholder": {
+      backgroundColor: "var(--color-primary-100)",
+      border: "1px solid var(--color-primary-300)",
+      color: "var(--color-primary-500)",
+      borderRadius: "4px",
+      padding: "0 4px",
+      margin: "0 2px",
+    },
   },
-  "&.cm-focused": {
-    outline: "none",
-  },
-  ".cm-scroller": {
-    fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-    lineHeight: "1.6",
-  },
-  ".cm-content": {
-    padding: "12px 0",
-    caretColor: "var(--color-primary-600)",
-    fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-  },
-  ".cm-cursor": {
-    borderLeftColor: "var(--color-primary-600)",
-    borderLeftWidth: "2px",
-  },
-  ".cm-gutters": {
-    backgroundColor: "transparent",
-    color: "var(--color-primary-400)",
-    border: "none",
-    paddingRight: "8px",
-  },
-  ".cm-lineNumbers .cm-gutterElement": {
-    padding: "0 8px 0 16px",
-    minWidth: "40px",
-    fontSize: "12px",
-  },
-  ".cm-activeLineGutter": {
-    backgroundColor: "transparent",
-    color: "var(--color-primary-600)",
-  },
-  ".cm-activeLine": {
-    backgroundColor: "var(--color-primary-100)",
-  },
-  ".cm-line": {
-    padding: "0 16px",
-  },
-  ".cm-selectionBackground": {
-    backgroundColor: "var(--color-primary-200) !important",
-  },
-  "&.cm-focused .cm-selectionBackground": {
-    backgroundColor: "var(--color-primary-200) !important",
-  },
-  ".cm-matchingBracket": {
-    backgroundColor: "var(--color-primary-200)",
-    outline: "1px solid var(--color-primary-400)",
-  },
-  ".cm-searchMatch": {
-    backgroundColor: "var(--color-amber-200)",
-    borderRadius: "2px",
-  },
-  ".cm-searchMatch.cm-searchMatch-selected": {
-    backgroundColor: "var(--color-amber-300)",
-  },
-  ".cm-foldPlaceholder": {
-    backgroundColor: "var(--color-primary-100)",
-    border: "1px solid var(--color-primary-300)",
-    color: "var(--color-primary-500)",
-    borderRadius: "4px",
-    padding: "0 4px",
-    margin: "0 2px",
-  },
-}, { dark: false });
+  { dark: false },
+);
 
 // Light mode syntax highlighting
 const lightHighlightStyle = HighlightStyle.define([
@@ -164,8 +172,18 @@ const lightHighlightStyle = HighlightStyle.define([
   { tag: tags.attributeValue, color: "#059669" },
   { tag: tags.meta, color: "#94a3b8" },
   { tag: tags.heading, color: "#1e293b", fontWeight: "bold" }, // slate-800
-  { tag: tags.heading1, color: "#1e293b", fontWeight: "bold", fontSize: "1.25em" },
-  { tag: tags.heading2, color: "#1e293b", fontWeight: "bold", fontSize: "1.15em" },
+  {
+    tag: tags.heading1,
+    color: "#1e293b",
+    fontWeight: "bold",
+    fontSize: "1.25em",
+  },
+  {
+    tag: tags.heading2,
+    color: "#1e293b",
+    fontWeight: "bold",
+    fontSize: "1.15em",
+  },
   { tag: tags.heading3, color: "#1e293b", fontWeight: "bold" },
   { tag: tags.link, color: "#2563eb", textDecoration: "underline" },
   { tag: tags.url, color: "#2563eb" },
@@ -178,76 +196,82 @@ const lightHighlightStyle = HighlightStyle.define([
 // ─────────────────────────────────────────────────────────────
 // Custom Dark Theme
 // ─────────────────────────────────────────────────────────────
-const darkTheme = EditorView.theme({
-  "&": {
-    backgroundColor: "transparent",
-    fontSize: "13px",
-    height: "100%",
-    fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+const darkTheme = EditorView.theme(
+  {
+    "&": {
+      backgroundColor: "transparent",
+      fontSize: "13px",
+      height: "100%",
+      fontFamily:
+        "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    },
+    "&.cm-focused": {
+      outline: "none",
+    },
+    ".cm-scroller": {
+      fontFamily:
+        "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      lineHeight: "1.6",
+    },
+    ".cm-content": {
+      padding: "12px 0",
+      caretColor: "var(--color-primary-400)",
+      fontFamily:
+        "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    },
+    ".cm-cursor": {
+      borderLeftColor: "var(--color-primary-400)",
+      borderLeftWidth: "2px",
+    },
+    ".cm-gutters": {
+      backgroundColor: "transparent",
+      color: "var(--color-primary-500)",
+      border: "none",
+      paddingRight: "8px",
+    },
+    ".cm-lineNumbers .cm-gutterElement": {
+      padding: "0 8px 0 16px",
+      minWidth: "40px",
+      fontSize: "12px",
+    },
+    ".cm-activeLineGutter": {
+      backgroundColor: "transparent",
+      color: "var(--color-primary-300)",
+    },
+    ".cm-activeLine": {
+      backgroundColor: "#ffff0a0", // primary-100 with 20%
+    },
+    ".cm-line": {
+      padding: "0 16px",
+    },
+    ".cm-selectionBackground": {
+      backgroundColor: "var(--color-primary-800) !important",
+    },
+    "&.cm-focused .cm-selectionBackground": {
+      backgroundColor: "var(--color-primary-700) !important",
+    },
+    ".cm-matchingBracket": {
+      backgroundColor: "var(--color-primary-800)",
+      outline: "1px solid var(--color-primary-500)",
+    },
+    ".cm-searchMatch": {
+      backgroundColor: "rgba(251, 191, 36, 0.3)", // amber with opacity
+      borderRadius: "2px",
+    },
+    ".cm-searchMatch.cm-searchMatch-selected": {
+      backgroundColor: "rgba(251, 191, 36, 0.5)",
+    },
+    ".cm-foldPlaceholder": {
+      backgroundColor: "var(--color-primary-800)",
+      border: "1px solid var(--color-primary-600)",
+      color: "var(--color-primary-400)",
+      borderRadius: "4px",
+      padding: "0 4px",
+      margin: "0 2px",
+    },
   },
-  "&.cm-focused": {
-    outline: "none",
-  },
-  ".cm-scroller": {
-    fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-    lineHeight: "1.6",
-  },
-  ".cm-content": {
-    padding: "12px 0",
-    caretColor: "var(--color-primary-400)",
-    fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-  },
-  ".cm-cursor": {
-    borderLeftColor: "var(--color-primary-400)",
-    borderLeftWidth: "2px",
-  },
-  ".cm-gutters": {
-    backgroundColor: "transparent",
-    color: "var(--color-primary-500)",
-    border: "none",
-    paddingRight: "8px",
-  },
-  ".cm-lineNumbers .cm-gutterElement": {
-    padding: "0 8px 0 16px",
-    minWidth: "40px",
-    fontSize: "12px",
-  },
-  ".cm-activeLineGutter": {
-    backgroundColor: "transparent",
-    color: "var(--color-primary-300)",
-  },
-  ".cm-activeLine": {
-    backgroundColor: "#ffff0a0", // primary-100 with 20%
-  },
-  ".cm-line": {
-    padding: "0 16px",
-  },
-  ".cm-selectionBackground": {
-    backgroundColor: "var(--color-primary-800) !important",
-  },
-  "&.cm-focused .cm-selectionBackground": {
-    backgroundColor: "var(--color-primary-700) !important",
-  },
-  ".cm-matchingBracket": {
-    backgroundColor: "var(--color-primary-800)",
-    outline: "1px solid var(--color-primary-500)",
-  },
-  ".cm-searchMatch": {
-    backgroundColor: "rgba(251, 191, 36, 0.3)", // amber with opacity
-    borderRadius: "2px",
-  },
-  ".cm-searchMatch.cm-searchMatch-selected": {
-    backgroundColor: "rgba(251, 191, 36, 0.5)",
-  },
-  ".cm-foldPlaceholder": {
-    backgroundColor: "var(--color-primary-800)",
-    border: "1px solid var(--color-primary-600)",
-    color: "var(--color-primary-400)",
-    borderRadius: "4px",
-    padding: "0 4px",
-    margin: "0 2px",
-  },
-}, { dark: true });
+  { dark: true },
+);
 
 // Dark mode syntax highlighting
 const darkHighlightStyle = HighlightStyle.define([
@@ -290,8 +314,18 @@ const darkHighlightStyle = HighlightStyle.define([
   { tag: tags.attributeValue, color: "#6ee7b7" },
   { tag: tags.meta, color: "#64748b" },
   { tag: tags.heading, color: "#f1f5f9", fontWeight: "bold" }, // slate-100
-  { tag: tags.heading1, color: "#f1f5f9", fontWeight: "bold", fontSize: "1.25em" },
-  { tag: tags.heading2, color: "#f1f5f9", fontWeight: "bold", fontSize: "1.15em" },
+  {
+    tag: tags.heading1,
+    color: "#f1f5f9",
+    fontWeight: "bold",
+    fontSize: "1.25em",
+  },
+  {
+    tag: tags.heading2,
+    color: "#f1f5f9",
+    fontWeight: "bold",
+    fontSize: "1.15em",
+  },
   { tag: tags.heading3, color: "#f1f5f9", fontWeight: "bold" },
   { tag: tags.link, color: "#93c5fd", textDecoration: "underline" },
   { tag: tags.url, color: "#93c5fd" },
@@ -361,9 +395,6 @@ export function CodeMirrorEditor({
   }, [content, filename, isDarkMode]);
 
   return (
-    <div
-      ref={containerRef}
-      className={`h-full overflow-auto ${className}`}
-    />
+    <div ref={containerRef} className={`h-full overflow-auto ${className}`} />
   );
 }

@@ -34,9 +34,7 @@ export function DictationButton({
   const styles = variantStyles[variant];
 
   const buttonClass = `p-1.5 mr-2 rounded-full transition-all duration-200 ${
-    isRecording
-      ? `${styles.recording} animate-pulse`
-      : styles.hover
+    isRecording ? `${styles.recording} animate-pulse` : styles.hover
   }`;
 
   return (
@@ -48,10 +46,7 @@ export function DictationButton({
       aria-label={isRecording ? "Stop recording" : "Start voice input"}
       title={isRecording ? "Stop recording" : "Voice input"}
     >
-      <Microphone
-        className={styles.icon}
-        isRecording={isRecording}
-      />
+      <Microphone className={styles.icon} isRecording={isRecording} />
     </Button>
   );
 }

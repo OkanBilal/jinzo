@@ -1,10 +1,5 @@
 import { useState, RefObject } from "react";
-import {
-  Attach,
-  Picture,
-  Document,
-  Close,
-} from "@/components/ui/icons";
+import { Attach, Picture, Document, Close } from "@/components/ui/icons";
 import DropdownWrapper from "@/components/ui/dropdown-wrapper";
 import { Button } from "@/components/ui/button";
 import type { InputVariant } from "./send-button";
@@ -88,7 +83,9 @@ export function FileUploadDropdown({
           onMouseLeave={() => setHoveredFileIndex(null)}
         >
           {uploadedFile.type === "image" ? (
-            <div className={`flex items-center gap-2 ${styles.fileBg} rounded-2xl px-1.5 py-1 mr-1`}>
+            <div
+              className={`flex items-center gap-2 ${styles.fileBg} rounded-2xl px-1.5 py-1 mr-1`}
+            >
               <div className="relative w-5 h-5 rounded overflow-hidden group">
                 <img
                   src={uploadedFile.preview}
@@ -112,7 +109,9 @@ export function FileUploadDropdown({
               </span>
             </div>
           ) : (
-            <div className={`flex items-center gap-2 px-2 py-1.5 ${styles.fileBg} rounded-2xl mr-1`}>
+            <div
+              className={`flex items-center gap-2 px-2 py-1.5 ${styles.fileBg} rounded-2xl mr-1`}
+            >
               {hoveredFileIndex === index ? (
                 <Button
                   type="button"

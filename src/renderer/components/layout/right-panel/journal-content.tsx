@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { useAppSelector } from "@/lib/redux/hooks";
-import { useGetAppsQuery } from "@/lib/redux/api";
 import { useThinkingConfig } from "@/features/chat/hooks/use-thinking-config";
 import { ChatMessages } from "@/features/chat/components";
 import ChatInput from "@/features/chat/components/input";
-import { AppState } from "@/features/chat/components/input/types";
 import { useChat } from "@/features/chat/hooks/use-chat";
 import { Edit } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
@@ -20,14 +18,8 @@ export function JournalContent() {
   const structuredOutputSchema = useAppSelector(
     (state) => state.chat.structuredOutputSchema,
   );
-
-  // Get current journal editing context from Redux
   const journalEditing = useAppSelector((state) => state.journalEditing);
-
   const thinkingConfig = useThinkingConfig();
-
-  const [selectedApp, setSelectedApp] = useState<AppState | null>(null);
-  const { data: apps = [] } = useGetAppsQuery();
 
   const {
     messages,
@@ -45,7 +37,6 @@ export function JournalContent() {
     focusInput();
   }, [focusInput]);
 
-  // Build context-aware prompt
   const buildContextPrompt = useCallback(
     (userMessage: string): string => {
       if (!journalEditing.entityId || !journalEditing.body) {
@@ -73,13 +64,10 @@ export function JournalContent() {
 
     const userInput = input.trim();
 
-    // Add the user's original message to the UI
     addMessage({ role: "user", text: userInput });
 
-    // Build the context-aware prompt for the LLM
     const contextPrompt = buildContextPrompt(userInput);
 
-    // Send with context but skip adding user message (we already added it)
     sendTextStreaming(contextPrompt, selectedModel, null, {
       skipUserMessage: true,
       requestOptions: {
@@ -111,7 +99,6 @@ export function JournalContent() {
     setInput,
   ]);
 
-  // Show context indicator when journal is being edited
   const hasJournalContext = Boolean(
     journalEditing.entityId && journalEditing.body,
   );
@@ -132,7 +119,6 @@ export function JournalContent() {
         <Edit className="size-4  text-primary-900 dark:text-primary-200" />
       </Button>
       {hasJournalContext && <div className="shrink-0 px-4 py-2 "></div>}
-
       <div className="flex-1 overflow-hidden mt-4 p-3">
         <ChatMessages
           ref={messagesRef}
@@ -148,7 +134,7 @@ export function JournalContent() {
           onSubmit={handleSend}
           loading={isLoading}
           placeholder={
-            hasJournalContext ? "Ask about your writing..." : "Message"
+            hasJournalContext ? "Ask about your writing..." : "Send a message"
           }
         />
       </div>

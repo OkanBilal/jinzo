@@ -33,7 +33,8 @@ const COPILOT_CLI_PROVIDER_ID = "copilot_cli";
 export default function WorkspacePage() {
   const dispatch = useDispatch();
   const selectedModel = useSelector(
-    (state: RootState) => state.workspace.selectedModelByProvider[COPILOT_CLI_PROVIDER_ID] || "",
+    (state: RootState) =>
+      state.workspace.selectedModelByProvider[COPILOT_CLI_PROVIDER_ID] || "",
   );
   const activeTab = useSelector(
     (state: RootState) => state.workspace.activeTab,
@@ -55,7 +56,9 @@ export default function WorkspacePage() {
 
   const handleModelChange = useCallback(
     (model: string) => {
-      dispatch(setWorkspaceModel({ providerId: COPILOT_CLI_PROVIDER_ID, model }));
+      dispatch(
+        setWorkspaceModel({ providerId: COPILOT_CLI_PROVIDER_ID, model }),
+      );
     },
     [dispatch],
   );
@@ -63,7 +66,6 @@ export default function WorkspacePage() {
   const { workspaceId, selectedWorkspace, currentWorkspace } =
     useWorkspaceData();
 
-  // Clear selected file, context files, and issue tabs when workspace changes
   useEffect(() => {
     dispatch(clearSelectedFile());
     dispatch(clearContextFiles());
@@ -87,7 +89,6 @@ export default function WorkspacePage() {
     selectTab,
   } = useWorkspaceRuns(workspaceId, COPILOT_CLI_PROVIDER_ID);
 
-  // Select first run tab if runs exist and no file is selected
   useEffect(() => {
     if (runs.length > 0 && !selectedFile && activeTab === "editor") {
       const firstRun = runs[0];
@@ -96,7 +97,6 @@ export default function WorkspacePage() {
     }
   }, [runs, selectedFile, activeTab, dispatch, selectTab]);
 
-  // Load file content when selectedFile changes
   useEffect(() => {
     if (
       !selectedFile ||
@@ -143,11 +143,8 @@ export default function WorkspacePage() {
       cancelled = true;
     };
   }, [selectedFile, currentWorkspace?.rootPath, dispatch]);
-
-  // Check if active run can be resumed when it changes or completes
   useEffect(() => {
     const checkResume = async () => {
-      // Only check resume for run tabs, not editor or issue tabs
       const runId =
         activeTab !== "editor" && !isIssueTab(activeTab) ? activeTab : null;
       if (
@@ -169,23 +166,22 @@ export default function WorkspacePage() {
     const currentRunId =
       activeTab !== "editor" && !isIssueTab(activeTab) ? activeTab : null;
 
-        //TODO: Optimize context inclusion
-    // Build the final goal with context files and issues
     let finalGoal = goal;
     if (contextFiles.length > 0) {
       const filesList = contextFiles.map((f) => f.fullPath).join("\n");
       finalGoal = `Use these files as context:\n${filesList}\n\n${finalGoal}`;
     }
     if (contextIssues.length > 0) {
-      const issuesList = contextIssues.map((i) => {
-        const issueLabel = `[${i.provider.toUpperCase()}${i.number ? ` #${i.number}` : ""}] ${i.title}`;
-        const issueBody = i.body ? `\n${i.body}` : "";
-        return `${issueLabel}${issueBody}`;
-      }).join("\n\n---\n\n");
+      const issuesList = contextIssues
+        .map((i) => {
+          const issueLabel = `[${i.provider.toUpperCase()}${i.number ? ` #${i.number}` : ""}] ${i.title}`;
+          const issueBody = i.body ? `\n${i.body}` : "";
+          return `${issueLabel}${issueBody}`;
+        })
+        .join("\n\n---\n\n");
       finalGoal = `Use these issues as context:\n\n${issuesList}\n\n${finalGoal}`;
     }
 
-    // If there's an active completed run that can be resumed, continue it
     if (
       currentRunId &&
       canResume &&
@@ -199,7 +195,6 @@ export default function WorkspacePage() {
         dispatch(clearContextIssues());
       }
     } else {
-      // Otherwise start a new run
       const newRunId = await executeRun(
         finalGoal,
         selectedWorkspace,
@@ -211,7 +206,6 @@ export default function WorkspacePage() {
         setGoal("");
         dispatch(clearContextFiles());
         dispatch(clearContextIssues());
-        // Switch to the new run tab
         dispatch(setActiveTab(newRunId));
       }
     }
@@ -233,7 +227,6 @@ export default function WorkspacePage() {
     (runId: string, e: React.MouseEvent) => {
       e.stopPropagation();
       closeTab(runId);
-      // If closing the active run tab, switch to editor
       if (runId === activeTab) {
         dispatch(setActiveTab("editor"));
       }
@@ -291,12 +284,11 @@ export default function WorkspacePage() {
     (e: React.MouseEvent) => {
       e.stopPropagation();
       dispatch(clearSelectedFile());
-      // Switch to first run tab if available
       if (runs.length > 0) {
         dispatch(setActiveTab(runs[0].id));
       }
     },
-    [dispatch, runs],
+    [dispatch],
   );
 
   const showEmptyState =

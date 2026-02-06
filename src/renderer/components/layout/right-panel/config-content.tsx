@@ -32,9 +32,7 @@ export function ConfigContent() {
   return (
     <div className="flex-1 overflow-auto noscrollbar p-3">
       <div className="flex items-center justify-between pt-6 pb-4 ">
-        <Body className="text-left text-base! text-primary-900 dark:text-primary font-medium ">
-          Configuration
-        </Body>
+        <Body className="text-left text-base! font-medium ">Configuration</Body>
       </div>
       <div className="flex flex-col gap-3">
         <ConfigSection title="Model">
@@ -45,34 +43,32 @@ export function ConfigContent() {
             placeholder="Select model"
           />
         </ConfigSection>
-
         {thinkingConfig.supportsThinking && (
           <div className="-mt-3">
-          <ConfigSection>
-            {thinkingConfig.shouldShowThinkingLevel && (
-              <Select
-              title="Thinking"
-                value={thinkingLevel}
-                options={[
-                  { value: "low", label: "Low" },
-                  { value: "medium", label: "Medium" },
-                  { value: "high", label: "High" },
-                ]}
-                onChange={handleThinkingLevelChange}
-                placeholder="Select thinking level"
-              />
-            )}
-            {thinkingConfig.shouldShowThinkingToggle && (
-              <Toggle
-                enabled={thinkingEnabled}
-                onChange={handleThinkingEnabledChange}
-                label="Enable Thinking"
-              />
-            )}
-          </ConfigSection>
+            <ConfigSection>
+              {thinkingConfig.shouldShowThinkingLevel && (
+                <Select
+                  title="Thinking"
+                  value={thinkingLevel}
+                  options={[
+                    { value: "low", label: "Low" },
+                    { value: "medium", label: "Medium" },
+                    { value: "high", label: "High" },
+                  ]}
+                  onChange={handleThinkingLevelChange}
+                  placeholder="Select thinking level"
+                />
+              )}
+              {thinkingConfig.shouldShowThinkingToggle && (
+                <Toggle
+                  enabled={thinkingEnabled}
+                  onChange={handleThinkingEnabledChange}
+                  label="Enable Thinking"
+                />
+              )}
+            </ConfigSection>
           </div>
         )}
-
         <ConfigSection title="Temperature">
           <Slider
             value={config?.temperature ?? 0.7}
@@ -85,7 +81,6 @@ export function ConfigContent() {
             maxLabel="More Creative"
           />
         </ConfigSection>
-
         <ConfigSection title="Mode">
           <Select
             value={toolMode}
@@ -101,14 +96,10 @@ export function ConfigContent() {
             />
           )}
         </ConfigSection>
-
         <ConfigSection title="Advanced">
-          <Body className="text-primary-900 dark:text-primary! text-sm mb-12">
-            Advanced configuration options will appear here.
-          </Body>
+          <Body>Advanced configuration options will appear here.</Body>
         </ConfigSection>
       </div>
-
       <StructuredOutputModal
         isOpen={isStructuredOutputModalOpen}
         onClose={() => setIsStructuredOutputModalOpen(false)}
@@ -127,9 +118,7 @@ interface ConfigSectionProps {
 export function ConfigSection({ title, children }: ConfigSectionProps) {
   return (
     <div className="p-1 ">
-      <Body className="font-semibold mb-2 text-primary-900 dark:text-primary">
-        {title}
-      </Body>
+      <Body className=" mb-2 ">{title}</Body>
       {children}
     </div>
   );

@@ -28,7 +28,6 @@ const labelColors: Record<string, string> = {
     "bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-300",
   low: "bg-gray-500/20 text-gray-700 dark:bg-gray-500/30 dark:text-gray-300",
 
-  // Status labels
   "in progress":
     "bg-blue-500/20 text-blue-700 dark:bg-blue-500/30 dark:text-blue-300",
   "in-progress":

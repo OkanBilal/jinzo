@@ -34,7 +34,6 @@ export default function ChatSessionItem({
 
   const [updateTitle] = useUpdateChatSessionTitleMutation();
 
-  // Focus input when renaming starts
   useEffect(() => {
     if (isRenaming && inputRef.current) {
       inputRef.current.focus();
@@ -147,7 +146,6 @@ export default function ChatSessionItem({
         <Option className="w-5 h-5 text-primary-700 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200" />
       </Button>
 
-      {/* Dropdown Menu */}
       <DropdownMenu
         isOpen={isDropdownOpen}
         position={dropdownPosition}

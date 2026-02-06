@@ -40,7 +40,6 @@ export default function PostItem({
     }
   }, [isRenaming]);
 
-  // Update newTitle when title prop changes
   useEffect(() => {
     setNewTitle(title);
   }, [title]);
@@ -87,7 +86,6 @@ export default function PostItem({
     onDelete?.(undefined as unknown as MouseEvent);
   };
 
-  // Rename mode UI
   if (isRenaming) {
     return (
       <div
@@ -148,7 +146,6 @@ export default function PostItem({
         </Button>
       )}
 
-      {/* Dropdown Menu */}
       <DropdownMenu
         isOpen={isDropdownOpen}
         position={dropdownPosition}

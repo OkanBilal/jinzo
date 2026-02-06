@@ -92,8 +92,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant !== "icon" && variant !== "bare" ? sizeStyles[size] : "";
     const widthClass = fullWidth ? "w-full" : "";
 
-    // For frosted variant, use baseStyles without transition-colors to allow transition-all from variant
-    // For bare variant, use no base styles at all
     const baseClass =
       variant === "bare"
         ? ""

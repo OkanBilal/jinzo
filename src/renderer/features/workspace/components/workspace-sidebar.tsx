@@ -21,7 +21,7 @@ import {
 } from "@/features/workspace/utils/repo-utils";
 import { useActiveMood } from "@/hooks/use-active-mood";
 
-export function WorkspaceContent() {
+export function WorkspaceSidebar() {
   const location = useLocation();
   const dispatch = useDispatch();
   const { activeMoodId } = useActiveMood();

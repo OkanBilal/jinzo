@@ -7,8 +7,8 @@ import {
 } from "react";
 import { toastStore, toast as toastApi } from "./toast";
 import type { ToastItemProps, ToastType } from "./types";
-import { Button } from "../ui/button";
-import { Error, Success } from "../ui/icons";
+import { Button } from "../button";
+import { Error, Success } from "../icons";
 
 function getDefaultIcon(type: ToastType) {
   switch (type) {

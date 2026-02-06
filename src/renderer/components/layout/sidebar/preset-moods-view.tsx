@@ -5,7 +5,7 @@ import {
   useCreateMoodMutation,
   useSetActiveMoodMutation,
 } from "@/lib/redux/api";
-import { toast } from "@/components/toast";
+import { toast } from "@/components/ui/toast";
 import { useDarkMode } from "@/hooks/use-dark-mode";
 import { useActiveMood } from "@/hooks/use-active-mood";
 import { parseIcon } from "@/lib/icon-registry";
@@ -36,14 +36,12 @@ export default function PresetMoodsView({
     return predefinedMoods.filter((preset) => !existingMoodNames.includes(preset.name));
   }, [moods]);
 
-  // Save original background color on mount
   useEffect(() => {
     const appRoot = document.querySelector(".app-root") as HTMLElement;
     if (appRoot) {
       originalBackgroundColor.current = appRoot.style.backgroundColor || "";
     }
 
-    // Restore original color on unmount
     return () => {
       if (appRoot && originalBackgroundColor.current) {
         if (originalBackgroundColor.current) {
@@ -54,7 +52,6 @@ export default function PresetMoodsView({
     };
   }, []);
 
-  // Apply live preview when selected template changes
   useEffect(() => {
     if (!selectedTemplate) return;
 

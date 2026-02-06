@@ -1,11 +1,10 @@
 import { RefObject, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import DropdownWrapper from "@/components/ui/dropdown-wrapper";
-import type { InputVariant } from "./send-button";
+import type { InputVariant } from "../../../components/ui/input/send-button";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
-import { Skill } from "../icons";
+import { Skill } from "../../../components/ui/icons";
 
-// Unified item type for the dropdown
 export type SlashMenuItem =
   | { type: "command"; item: CommandInfo }
   | { type: "skill"; item: SkillInfo };

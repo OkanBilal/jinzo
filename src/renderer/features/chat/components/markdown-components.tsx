@@ -4,6 +4,7 @@ import { Components } from "react-markdown";
  * Custom ReactMarkdown component overrides for consistent styling
  * across the chat interface.
  */
+//TODO: Improve for Workspace 
 export const markdownComponents: Components = {
   h1: ({ children }) => (
     <h1 className="text-xl font-bold mt-4 mb-2 font-sans text-primary-900 dark:text-primary-100 transition-all duration-150 ease-out">
