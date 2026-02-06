@@ -1,7 +1,7 @@
+import { persistor, store } from "@/lib/redux";
 import type { ReactNode } from "react";
 import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
-import { store, persistor } from "../../lib/redux";
 
 interface ReduxProviderProps {
   children: ReactNode;
