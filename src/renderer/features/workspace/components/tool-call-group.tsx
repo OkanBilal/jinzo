@@ -17,6 +17,8 @@ import {
   Web,
   Skill,
   Question,
+  EnterPlan,
+  Apps,
 } from "@/components/ui/icons";
 import { markdownComponents } from "@/features/chat/components/markdown-components";
 
@@ -81,7 +83,7 @@ const TOOL_CATEGORIES: Record<
   },
   enterplanmode: {
     category: "Todo",
-    icon: <ExitPlan className="size-4" />,
+    icon: <EnterPlan className="size-4" />,
     color: "text-primary-300",
   },
   exitplanmode: {
@@ -297,26 +299,22 @@ function TaskDisplay({ params }: { params: TaskParams }) {
         <ArrowUp
           className={`size-3 text-primary-500 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
-        <Task className="size-3.5 text-primary-300" />
+        <Task className="size-4 text-primary-300" />
         <span className="text-primary-300 font-medium">Task</span>
         <span className="text-primary-500 truncate">
           {params.description || "Subagent task"}
         </span>
-
       </button>
 
       {isExpanded && (
         <div className="mt-2 ml-5 space-y-2 border-l border-primary-200/50 dark:border-primary-700/30 pl-3">
-
           {params.prompt && (
             <div>
-
               <div className="noscrollbar text-sm text-primary-600 dark:text-primary-300 whitespace-pre-wrap bg-primary-100/50 dark:bg-primary-900/50 rounded p-2 max-h-48 overflow-y-auto">
                 {params.prompt}
               </div>
             </div>
           )}
-
         </div>
       )}
     </div>
@@ -421,17 +419,9 @@ function groupConsecutiveToolCalls(events: RunEvent[]): ToolSubGroup[] {
       lower.includes("write")
     )
       return "Edit";
-    if (
-      lower === "search" ||
-      lower === "find"
-    )
-      return "Search";
-    if (
-      lower === "glob"
-    )
-    return "Glob";
-    if (lower === "grep") 
-    return "Grep";
+    if (lower === "search" || lower === "find") return "Search";
+    if (lower === "glob") return "Glob";
+    if (lower === "grep") return "Grep";
     return toolName;
   };
 
@@ -571,7 +561,7 @@ export function ToolCallGroup({
         />
         {/* <span className="text-primary-500 text-xs font-sans">{startTime}</span> */}
         <div className="flex items-center gap-2 group  transition-all duration-200">
-          <Bash className="size-4 dark:text-primary-200 text-primary-700 group-hover:text-primary-950 group-hover:dark:text-primary " />
+          <Apps className="size-4 dark:text-primary-200 text-primary-700 group-hover:text-primary-950 group-hover:dark:text-primary " />
           <span className="text-sm font-medium text-primary-700 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary">
             {toolCount} tool call{toolCount !== 1 ? "s" : ""}
           </span>

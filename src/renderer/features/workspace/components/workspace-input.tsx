@@ -4,6 +4,8 @@ import {
   useGetProviderModelsQuery,
   useGetProviderCommandsQuery,
   useGetProviderSkillsQuery,
+  useGetProviderByIdQuery,
+  useUpdateProviderMutation,
   type CommandInfo,
   type SkillInfo,
 } from "@/lib/redux/api/providersApi";
@@ -26,11 +28,12 @@ import {
 } from "@/components/ui/input/file-upload-dropdown";
 import { ModelSelectDropdown } from "@/components/ui/input/model-select-dropdown";
 import { SlashMenuDropdown } from "@/features/workspace/components/slash-menu-dropdown";
-import { Asana, Close } from "@/components/ui/icons";
+import { Asana, Close, Plan } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
 import { Jira } from "@/components/ui/icons";
 import { Code } from "@/components/ui/icons/mood";
+import { Button } from "@/components/ui/button";
 
 interface WorkspaceInputProps {
   goal: string;
@@ -85,7 +88,8 @@ export function WorkspaceInput({
 
   // Get persisted model for this provider from Redux
   const persistedModel = useSelector(
-    (state: RootState) => state.workspace.selectedModelByProvider[activeProviderId]
+    (state: RootState) =>
+      state.workspace.selectedModelByProvider[activeProviderId],
   );
 
   useClickOutside(dropdownRef, () => setIsDropdownOpen(false));
@@ -104,8 +108,29 @@ export function WorkspaceInput({
   const { data: providerSkills = [], isLoading: isLoadingSkills } =
     useGetProviderSkillsQuery(
       { id: activeProviderId, workspacePath },
-      { skip: !activeProviderId }
+      { skip: !activeProviderId },
     );
+
+  // Fetch provider config for plan mode toggle (Claude only)
+  const { data: providerData } = useGetProviderByIdQuery(activeProviderId, {
+    skip: variant !== "claude",
+  });
+  const [updateProvider] = useUpdateProviderMutation();
+  const planMode = !!(providerData?.config as any)?.planMode;
+
+  const handlePlanModeToggle = useCallback(async () => {
+    if (!providerData) return;
+    const currentConfig = providerData.config ?? {};
+    await updateProvider({
+      id: activeProviderId,
+      payload: {
+        config: {
+          ...currentConfig,
+          planMode: !planMode,
+        },
+      },
+    });
+  }, [providerData, planMode, activeProviderId, updateProvider]);
 
   // Compute model list and display names
   const { modelDisplayNames } = useMemo(() => {
@@ -175,7 +200,7 @@ export function WorkspaceInput({
         setSlashFilterText("");
       }
     },
-    [onGoalChange]
+    [onGoalChange],
   );
 
   // Handle slash command selection
@@ -190,7 +215,7 @@ export function WorkspaceInput({
       setShowSlashCommands(false);
       setSlashFilterText("");
     },
-    [goal, onGoalChange]
+    [goal, onGoalChange],
   );
 
   // Handle skill selection
@@ -205,7 +230,7 @@ export function WorkspaceInput({
       setShowSlashCommands(false);
       setSlashFilterText("");
     },
-    [goal, onGoalChange]
+    [goal, onGoalChange],
   );
 
   const { isRecording, toggle: toggleDictation } = useSpeechRecognition(
@@ -380,6 +405,28 @@ export function WorkspaceInput({
               variant={variant}
               isLoading={isLoadingModels}
             />
+            {variant === "claude" && (
+              <Button
+                tooltip="Toggle Plan Mode"
+                type="button"
+                onClick={handlePlanModeToggle}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                  planMode
+                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-500"
+                    : " text-primary-500 dark:text-primary-400 hover:bg-primary/10"
+                }`}
+                title={
+                  planMode
+                    ? "Plan mode on — agent will plan before acting"
+                    : "Plan mode off — agent acts directly"
+                }
+              >
+                <Plan
+                  className={`size-4.5 ${planMode ? "text-amber-600 dark:text-amber-500" : "text-primary-500 dark:text-primary-400"}`}
+                />
+                Plan
+              </Button>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             <DictationButton

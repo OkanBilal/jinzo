@@ -78,7 +78,7 @@ export const providersService = {
       }
 
       // Invalidate cached adapter so the next run picks up new config
-      await shutdownWorkAdapter(id);
+      //await shutdownWorkAdapter(id);
 
       return { success: true, data: updated };
     } catch (error) {

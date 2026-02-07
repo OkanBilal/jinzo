@@ -62,6 +62,8 @@ export { default as Glob } from "./glob";
 export { default as Read } from "./read";
 export { default as Bash } from "./bash";
 export { default as ExitPlan } from "./exit-plan";
+export { default as EnterPlan } from "./enter-plan";
+export { default as Plan } from "./plan";
 export { default as Task } from "./task";
 export { default as Web } from "./web";
 export { default as Skill } from "./skill";

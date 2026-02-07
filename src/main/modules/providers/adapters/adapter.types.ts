@@ -296,6 +296,8 @@ export interface ClaudeCodeAdapterConfig {
   timeout?: number;
   /** Permission mode for tool access */
   permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan";
+  /** When true, overrides permissionMode to "plan" for the next run */
+  planMode?: boolean;
   /**
    * Setting sources for loading skills and other filesystem settings.
    * - "user": Load from ~/.claude/skills/

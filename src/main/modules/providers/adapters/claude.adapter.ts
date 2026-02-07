@@ -381,10 +381,11 @@ export function createClaudeAdapter(
     delete cleanEnv.ANTHROPIC_API_KEY;
     delete cleanEnv.ANTHROPIC_AUTH_TOKEN;
 
-    // Determine permission mode: use config override if provided, else default to "default" (ask for every tool)
+    // Determine permission mode: planMode overrides permissionMode when enabled
     // Options: "default" | "acceptEdits" | "bypassPermissions" | "plan"
-    const permissionMode =
-      config.permissionMode || "default";
+    const permissionMode = config.planMode
+      ? "plan"
+      : config.permissionMode || "default";
 
     // Setting sources for skills: default to both user and project if not specified
     const settingSources = config.settingSources ?? ["user", "project"];
