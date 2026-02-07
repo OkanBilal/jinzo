@@ -31,7 +31,6 @@ import type {
   FileContentResponse,
   ServiceResponse,
 } from "@/features/file-explorer";
-import { toast } from "@/components/ui/toast";
 
 const CLAUDE_PROVIDER_ID = "claude_code";
 

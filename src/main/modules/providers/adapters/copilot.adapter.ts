@@ -110,6 +110,21 @@ const activeRuns = new Map<
   { session: CopilotSession; aborted: boolean }
 >();
 
+// ─────────────────────────────────────────────────────────────
+// Logging
+// ─────────────────────────────────────────────────────────────
+function logInfo(...args: unknown[]): void {
+  console.log("[CopilotAdapter]", ...args);
+}
+
+function logWarn(...args: unknown[]): void {
+  console.warn("[CopilotAdapter]", ...args);
+}
+
+function logError(...args: unknown[]): void {
+  console.error("[CopilotAdapter]", ...args);
+}
+
 /**
  * Creates a Copilot SDK adapter instance
  */
@@ -119,6 +134,8 @@ export function createCopilotAdapter(
   let client: CopilotClientInterface | null = null;
   let clientInitPromise: Promise<void> | null = null;
   let initError: Error | null = null;
+  // Track the current workspace cwd to recreate client when it changes
+  let currentClientCwd: string | null = null;
 
   // Correlate tool events when toolName/input is missing in completion events
   const toolCallIndex = new Map<
@@ -127,9 +144,22 @@ export function createCopilotAdapter(
   >();
 
   /**
-   * Lazily initialize the Copilot client
+   * Lazily initialize the Copilot client for a specific workspace
    */
-  async function ensureClient(): Promise<CopilotClientInterface> {
+  async function ensureClient(workspaceCwd?: string): Promise<CopilotClientInterface> {
+    // If workspace changed, stop existing client and reinitialize
+    if (client && workspaceCwd && currentClientCwd !== workspaceCwd) {
+      logInfo(`Workspace changed from ${currentClientCwd} to ${workspaceCwd}, reinitializing client`);
+      try {
+        await client.forceStop();
+      } catch (err) {
+        logWarn("Error stopping client during workspace change:", err);
+      }
+      client = null;
+      clientInitPromise = null;
+      initError = null;
+    }
+
     if (initError) {
       throw initError;
     }
@@ -185,6 +215,13 @@ export function createCopilotAdapter(
           options.useStdio = true;
         }
 
+        // Set the working directory for the Copilot CLI process
+        if (workspaceCwd) {
+          options.cwd = workspaceCwd;
+          currentClientCwd = workspaceCwd;
+          logInfo(`Setting client cwd to: ${workspaceCwd}`);
+        }
+
         client = new CopilotClient(options) as CopilotClientInterface;
         
         try {
@@ -221,13 +258,10 @@ export function createCopilotAdapter(
         // Verify connectivity
         await client.ping("init");
 
-        console.log("[CopilotAdapter] Client initialized successfully");
+        logInfo("Client initialized successfully");
       } catch (error) {
         initError = error instanceof Error ? error : new Error(String(error));
-        console.error(
-          "[CopilotAdapter] Failed to initialize client:",
-          initError.message,
-        );
+        logError("Failed to initialize client:", initError.message);
         throw initError;
       }
     })();
@@ -284,14 +318,17 @@ export function createCopilotAdapter(
         };
 
       // ─────────────── Assistant content (best-effort)
-      case "assistant.message":
+      case "assistant.message": {
         // Treat as a report artifact to ensure we actually persist "final" output
+        const content = String((payload as any)?.content ?? event.content ?? "").trim();
+        if (!content) return null;
         return {
           type: "artifact",
           kind: "report",
-          content: String((payload as any)?.content ?? event.content ?? ""),
+          content,
           metadata: { source: "assistant.message" },
         };
+      }
 
       case "assistant.message_delta":
       case "assistant.reasoning_delta":
@@ -394,11 +431,11 @@ export function createCopilotAdapter(
         return null;
 
       default:
-        // Reduce spam: debug log only, keep payload for future mapping
+        // Log unknown event types for debugging
         return {
           type: "log",
           message: `[event] ${event.type}: ${safeJson(payload)}`,
-          level: "warn",
+          level: "info",
           ts,
         };
     }
@@ -415,9 +452,12 @@ export function createCopilotAdapter(
 
     // Handle common file-writing tools
     if (
+      toolName === "Write" ||
+      toolName === "Edit" ||
       toolName === "write_file" ||
       toolName === "edit_file" ||
-      toolName === "create_file"
+      toolName === "create_file" ||
+      toolName === "str_replace_editor"
     ) {
       const out = output as Record<string, unknown> | undefined;
       if (out?.path && typeof out.path === "string") {
@@ -425,6 +465,14 @@ export function createCopilotAdapter(
           type: "artifact",
           kind: "file",
           path: out.path,
+          content: typeof out.content === "string" ? out.content : undefined,
+          metadata: { toolName },
+        });
+      } else if (out?.file_path && typeof out.file_path === "string") {
+        artifacts.push({
+          type: "artifact",
+          kind: "file",
+          path: out.file_path,
           content: typeof out.content === "string" ? out.content : undefined,
           metadata: { toolName },
         });
@@ -455,27 +503,35 @@ export function createCopilotAdapter(
 
     // Handle shell/command tools (Copilot often returns {content, displayContent})
     if (
+      toolName === "Bash" ||
+      toolName === "bash" ||
       toolName === "shell" ||
       toolName === "terminal" ||
       toolName === "run_command" ||
       toolName === "execute_shell" ||
-      toolName === "bash" ||
       toolName === "command_result"
     ) {
       const out = output as any;
 
       const text =
-        typeof out?.displayContent === "string"
-          ? out.displayContent
-          : typeof out?.content === "string"
-            ? out.content
-            : typeof out === "string"
-              ? out
-              : undefined;
+        typeof out?.stdout === "string"
+          ? out.stdout
+          : typeof out?.displayContent === "string"
+            ? out.displayContent
+            : typeof out?.output === "string"
+              ? out.output
+              : typeof out?.content === "string"
+                ? out.content
+                : typeof out === "string"
+                  ? out
+                  : undefined;
 
-      // try to parse exit code from common suffix
       const exitCode =
-        typeof out?.exitCode === "number" ? out.exitCode : parseExitCode(text);
+        typeof out?.exit_code === "number"
+          ? out.exit_code
+          : typeof out?.exitCode === "number"
+            ? out.exitCode
+            : parseExitCode(text);
 
       artifacts.push({
         type: "command",
@@ -493,9 +549,10 @@ export function createCopilotAdapter(
   }
 
   /**
-   * Build the prompt with context
+   * Build the prompt with context, including workspace path
    */
   function buildPrompt(request: WorkRunRequest): string {
+    const workspaceInfo = `Working directory: ${request.workspace.rootPath}`;
     let prompt = request.goal;
 
     if (request.context && request.context.length > 0) {
@@ -508,7 +565,9 @@ export function createCopilotAdapter(
         })
         .join("\n\n---\n\n");
 
-      prompt = `Context:\n${contextParts}\n\n---\n\nGoal: ${request.goal}`;
+      prompt = `${workspaceInfo}\n\nContext:\n${contextParts}\n\n---\n\nGoal: ${request.goal}`;
+    } else {
+      prompt = `${workspaceInfo}\n\nGoal: ${request.goal}`;
     }
 
     return prompt;
@@ -529,12 +588,12 @@ export function createCopilotAdapter(
         await onEvent({ type: "status", status: "running", ts: Date.now() });
         await onEvent({
           type: "log",
-          message: `Starting Copilot run: in workspace: ${request.workspace.rootPath}`,
-          level: "info",
+          message: `Starting Copilot run in workspace: ${request.workspace.rootPath}`,
+          level: "start",
           ts: Date.now(),
         });
 
-        const copilotClient = await ensureClient();
+        const copilotClient = await ensureClient(request.workspace.rootPath);
 
         const sessionConfig: SessionConfig = {
           sessionId: runId,
@@ -546,12 +605,23 @@ export function createCopilotAdapter(
           sessionConfig.model = model || config.defaultModel;
         }
 
+        // Build system message with explicit workspace context
+        const workspaceContext = `You are working in the directory: ${request.workspace.rootPath}\nAll file operations should be relative to this workspace root.`;
         if (systemPrompt) {
-          sessionConfig.systemMessage = { content: systemPrompt };
+          sessionConfig.systemMessage = { content: `${workspaceContext}\n\n${systemPrompt}` };
+        } else {
+          sessionConfig.systemMessage = { content: workspaceContext };
         }
 
         session = await copilotClient.createSession(sessionConfig);
         activeRuns.set(runId, { session, aborted: false });
+
+        await onEvent({
+          type: "log",
+          message: `Creating Copilot session with model: ${sessionConfig.model || "default"}`,
+          level: "start",
+          ts: Date.now(),
+        });
 
         const unsubscribe = session.on((event: SessionEvent) => {
           const runState = activeRuns.get(runId);
@@ -562,7 +632,7 @@ export function createCopilotAdapter(
           const mappedEvent = mapSessionEvent(event, runId);
           if (mappedEvent) {
             Promise.resolve(onEvent(mappedEvent)).catch((err) => {
-              console.error("[CopilotAdapter] Error in event handler:", err);
+              logError("Error in event handler:", err);
             });
 
             // Track artifact list for the final result summary
@@ -601,10 +671,7 @@ export function createCopilotAdapter(
                 );
                 for (const artEvent of artifactEvents) {
                   Promise.resolve(onEvent(artEvent)).catch((err) => {
-                    console.error(
-                      "[CopilotAdapter] Error emitting artifact:",
-                      err,
-                    );
+                    logError("Error emitting artifact:", err);
                   });
 
                   if (artEvent.type === "artifact") {
@@ -624,10 +691,20 @@ export function createCopilotAdapter(
 
         const prompt = buildPrompt(request);
 
+        // Emit user's original goal as artifact for UI display
+        await onEvent({
+          type: "artifact",
+          kind: "user-prompt",
+          content: request.goal,
+          metadata: {
+            source: "user",
+          },
+        });
+
         await onEvent({
           type: "log",
-          message: `Sending prompt to Copilot (${prompt.length} chars, timeout: ${timeout}ms)`,
-          level: "info",
+          message: `Sending prompt to Copilot (${prompt.length} chars)`,
+          level: "start",
           ts: Date.now(),
         });
 
@@ -635,26 +712,8 @@ export function createCopilotAdapter(
         try {
           result = await session.sendAndWait({ prompt }, timeout);
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          
-          if (errorMessage.toLowerCase().includes("timeout") || errorMessage.includes("ETIMEDOUT")) {
-            await onEvent({
-              type: "log",
-              message: `Request timed out after ${timeout}ms`,
-              level: "error",
-              ts: Date.now(),
-            });
-            
-            await onEvent({ type: "status", status: "failed", error: "Request timed out", ts: Date.now() });
-            
-            return {
-              status: "failed",
-              summary: `Request timed out after ${timeout / 1000} seconds. Consider increasing the timeout or simplifying the request.`,
-              artifacts: collectedArtifacts,
-            };
-          }
-          
-          // Re-throw other errors to be handled by the outer catch block
+          // Re-throw to be handled by the outer catch block
+          // (timeout, abort, and general errors are all handled there)
           throw error;
         }
 
@@ -699,6 +758,58 @@ export function createCopilotAdapter(
         const errorMessage =
           error instanceof Error ? error.message : String(error);
 
+        // Emit interrupted events for any pending tool calls
+        const ts = Date.now();
+        for (const [toolCallId, toolInfo] of toolCallIndex) {
+          await onEvent({
+            type: "tool_call",
+            toolName: toolInfo.toolName,
+            input: toolInfo.input as Record<string, unknown> | undefined,
+            error: "Interrupted",
+            endedAt: ts,
+            metadata: {
+              phase: "complete",
+              toolCallId,
+              interrupted: true,
+            },
+          });
+        }
+        toolCallIndex.clear();
+
+        // Check for timeout
+        if (errorMessage.includes("timed out") || errorMessage.toLowerCase().includes("timeout")) {
+          await onEvent({
+            type: "log",
+            message: errorMessage,
+            level: "error",
+            ts: Date.now(),
+          });
+
+          await onEvent({
+            type: "status",
+            status: "failed",
+            error: "Request timed out",
+            ts: Date.now(),
+          });
+
+          return {
+            status: "failed",
+            summary: `Request timed out after ${timeout / 1000} seconds.`,
+            artifacts: collectedArtifacts,
+          };
+        }
+
+        // Check for abort
+        if (errorMessage.includes("aborted") || errorMessage.includes("abort")) {
+          await onEvent({ type: "status", status: "canceled", ts: Date.now() });
+
+          return {
+            status: "canceled",
+            summary: "Run was aborted",
+            artifacts: collectedArtifacts,
+          };
+        }
+
         await onEvent({
           type: "log",
           message: `Run failed: ${errorMessage}`,
@@ -725,7 +836,7 @@ export function createCopilotAdapter(
           try {
             await session.destroy();
           } catch (err) {
-            console.error("[CopilotAdapter] Error destroying session:", err);
+            logError("Error destroying session:", err);
           }
         }
       }
@@ -745,12 +856,12 @@ export function createCopilotAdapter(
         await onEvent({ type: "status", status: "running", ts: Date.now() });
         await onEvent({
           type: "log",
-          message: `Resuming session for run: ${runId}`,
-          level: "info",
+          message: `Resuming Copilot session for run: ${runId}`,
+          level: "resume",
           ts: Date.now(),
         });
 
-        const copilotClient = await ensureClient();
+        const copilotClient = await ensureClient(request.workspace.rootPath);
 
         // Resume the existing session
         session = await copilotClient.resumeSession(runId);
@@ -765,7 +876,7 @@ export function createCopilotAdapter(
           const mappedEvent = mapSessionEvent(event, runId);
           if (mappedEvent) {
             Promise.resolve(onEvent(mappedEvent)).catch((err) => {
-              console.error("[CopilotAdapter] Error in event handler:", err);
+              logError("Error in event handler:", err);
             });
 
             if (mappedEvent.type === "artifact") {
@@ -803,10 +914,7 @@ export function createCopilotAdapter(
                 );
                 for (const artEvent of artifactEvents) {
                   Promise.resolve(onEvent(artEvent)).catch((err) => {
-                    console.error(
-                      "[CopilotAdapter] Error emitting artifact:",
-                      err,
-                    );
+                    logError("Error emitting artifact:", err);
                   });
 
                   if (artEvent.type === "artifact") {
@@ -839,10 +947,20 @@ export function createCopilotAdapter(
           prompt = `Context:\n${contextParts}\n\n---\n\n${message}`;
         }
 
+        // Emit user's follow-up message as artifact for UI display
+        await onEvent({
+          type: "artifact",
+          kind: "user-prompt",
+          content: message,
+          metadata: {
+            source: "user",
+          },
+        });
+
         await onEvent({
           type: "log",
           message: `Sending follow-up message (${prompt.length} chars)`,
-          level: "info",
+          level: "resume",
           ts: Date.now(),
         });
 
@@ -850,25 +968,7 @@ export function createCopilotAdapter(
         try {
           result = await session.sendAndWait({ prompt }, timeout);
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-
-          if (errorMessage.toLowerCase().includes("timeout") || errorMessage.includes("ETIMEDOUT")) {
-            await onEvent({
-              type: "log",
-              message: `Request timed out after ${timeout}ms`,
-              level: "error",
-              ts: Date.now(),
-            });
-
-            await onEvent({ type: "status", status: "failed", error: "Request timed out", ts: Date.now() });
-
-            return {
-              status: "failed",
-              summary: `Request timed out after ${timeout / 1000} seconds.`,
-              artifacts: collectedArtifacts,
-            };
-          }
-
+          // Re-throw to be handled by the outer catch block
           throw error;
         }
 
@@ -912,6 +1012,58 @@ export function createCopilotAdapter(
         const errorMessage =
           error instanceof Error ? error.message : String(error);
 
+        // Emit interrupted events for any pending tool calls
+        const ts = Date.now();
+        for (const [toolCallId, toolInfo] of toolCallIndex) {
+          await onEvent({
+            type: "tool_call",
+            toolName: toolInfo.toolName,
+            input: toolInfo.input as Record<string, unknown> | undefined,
+            error: "Interrupted",
+            endedAt: ts,
+            metadata: {
+              phase: "complete",
+              toolCallId,
+              interrupted: true,
+            },
+          });
+        }
+        toolCallIndex.clear();
+
+        // Check for timeout
+        if (errorMessage.includes("timed out") || errorMessage.toLowerCase().includes("timeout")) {
+          await onEvent({
+            type: "log",
+            message: errorMessage,
+            level: "error",
+            ts: Date.now(),
+          });
+
+          await onEvent({
+            type: "status",
+            status: "failed",
+            error: "Request timed out",
+            ts: Date.now(),
+          });
+
+          return {
+            status: "failed",
+            summary: `Request timed out after ${timeout / 1000} seconds.`,
+            artifacts: collectedArtifacts,
+          };
+        }
+
+        // Check for abort
+        if (errorMessage.includes("aborted") || errorMessage.includes("abort")) {
+          await onEvent({ type: "status", status: "canceled", ts: Date.now() });
+
+          return {
+            status: "canceled",
+            summary: "Run was aborted",
+            artifacts: collectedArtifacts,
+          };
+        }
+
         await onEvent({
           type: "log",
           message: `Continue run failed: ${errorMessage}`,
@@ -939,7 +1091,7 @@ export function createCopilotAdapter(
             // Destroy keeps session state persisted on disk
             await session.destroy();
           } catch (err) {
-            console.error("[CopilotAdapter] Error destroying session:", err);
+            logError("Error destroying session:", err);
           }
         }
       }
@@ -951,7 +1103,7 @@ export function createCopilotAdapter(
         const sessions = await copilotClient.listSessions();
         return sessions.some((s) => s.sessionId === runId);
       } catch (err) {
-        console.error("[CopilotAdapter] Error checking session:", err);
+        logError("Error checking session:", err);
         return false;
       }
     },
@@ -960,9 +1112,9 @@ export function createCopilotAdapter(
       try {
         const copilotClient = await ensureClient();
         await copilotClient.deleteSession(runId);
-        console.log(`[CopilotAdapter] Deleted session: ${runId}`);
+        logInfo(`Deleted session: ${runId}`);
       } catch (err) {
-        console.error("[CopilotAdapter] Error deleting session:", err);
+        logError("Error deleting session:", err);
       }
     },
 
@@ -973,14 +1125,14 @@ export function createCopilotAdapter(
         try {
           await runState.session.abort();
         } catch (err) {
-          console.error("[CopilotAdapter] Error aborting session:", err);
+          logError("Error aborting session:", err);
         }
       }
     },
 
     async shutdown(): Promise<void> {
       // Mark all runs as aborted first to prevent new writes
-      for (const [runId, state] of activeRuns) {
+      for (const [, state] of activeRuns) {
         state.aborted = true;
       }
 
@@ -994,7 +1146,7 @@ export function createCopilotAdapter(
         } catch (err) {
           // Ignore abort errors during shutdown - stream may already be closed
           if (!(err instanceof Error && err.message.includes("ERR_STREAM_DESTROYED"))) {
-            console.error(`[CopilotAdapter] Error aborting run ${runId}:`, err);
+            logError(`Error aborting run ${runId}:`, err);
           }
         }
         try {
@@ -1002,7 +1154,7 @@ export function createCopilotAdapter(
         } catch (err) {
           // Ignore destroy errors during shutdown
           if (!(err instanceof Error && err.message.includes("ERR_STREAM_DESTROYED"))) {
-            console.error(`[CopilotAdapter] Error destroying session ${runId}:`, err);
+            logError(`Error destroying session ${runId}:`, err);
           }
         }
       }
@@ -1016,7 +1168,7 @@ export function createCopilotAdapter(
         } catch (err) {
           // Ignore stream-related errors during shutdown
           if (!(err instanceof Error && err.message.includes("ERR_STREAM_DESTROYED"))) {
-            console.error("[CopilotAdapter] Error force stopping client:", err);
+            logError("Error force stopping client:", err);
           }
         }
         client = null;
@@ -1024,7 +1176,8 @@ export function createCopilotAdapter(
 
       clientInitPromise = null;
       initError = null;
-      console.log("[CopilotAdapter] Shutdown complete");
+      currentClientCwd = null;
+      logInfo("Shutdown complete");
     },
 
     async listModels(): Promise<ModelInfo[]> {
@@ -1033,7 +1186,7 @@ export function createCopilotAdapter(
 
         // Check if client has connection with sendRequest capability
         if (!copilotClient.connection) {
-          console.warn("[CopilotAdapter] Client connection not available for listing models");
+          logWarn("Client connection not available for listing models");
           // Return default models as fallback
           return getDefaultModels(config.defaultModel);
         }
@@ -1042,7 +1195,7 @@ export function createCopilotAdapter(
         const response = result as { models?: CopilotModelInfo[] };
 
         if (!response.models || !Array.isArray(response.models)) {
-          console.warn("[CopilotAdapter] Invalid models response, using defaults");
+          logWarn("Invalid models response, using defaults");
           return getDefaultModels(config.defaultModel);
         }
 
@@ -1056,7 +1209,7 @@ export function createCopilotAdapter(
           metadata: model.metadata,
         }));
       } catch (error) {
-        console.error("[CopilotAdapter] Failed to list models:", error);
+        logError("Failed to list models:", error);
         // Return default models on error
         return getDefaultModels(config.defaultModel);
       }

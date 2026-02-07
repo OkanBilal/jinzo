@@ -40,7 +40,7 @@ export const seedProviders: CreateProviderPayload[] = [
     kind: "agent_runtime",
     displayName: "GitHub Copilot (CLI/SDK)",
     isEnabled: true,
-    defaultModel: "gpt-4o-mini", // placeholder; SDK may pick its own default
+    defaultModel: "claude-opus-4-5-20251101",
     config: {
       // CopilotAdapterConfig interface fields
       binary: "copilot", // Path to copilot CLI binary
@@ -84,25 +84,4 @@ export const seedProviders: CreateProviderPayload[] = [
     },
   },
 
-  // ─────────────────────────────────────────────
-  // LLM Runtime: OpenAI (future / remote)
-  // ─────────────────────────────────────────────
-  {
-    id: "openai",
-    kind: "llm_runtime",
-    displayName: "OpenAI",
-    isEnabled: false,
-    defaultModel: "gpt-4o-mini",
-    config: {
-      apiKeyRef: "OPENAI_API_KEY", // store key elsewhere; keep config clean
-      baseUrl: "https://api.openai.com/v1",
-    },
-    capabilities: {
-      mode: ["chat"],
-      streaming: true,
-      vision: true,
-      tools: true,
-      notes: "Remote LLM provider (optional)",
-    },
-  },
 ];

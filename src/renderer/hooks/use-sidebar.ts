@@ -289,7 +289,7 @@ export function useSidebar() {
 
           toast.success("Workspace added");
           const basePath = getBaseRoutePath(
-            routeType === "claude" ? "claude" : "workspace",
+            routeType === "claude" ? "claude" : "copilot",
           );
           navigate(`${basePath}/${workspaceId}`);
         }
@@ -479,7 +479,7 @@ export function useSidebar() {
 
       // Navigate away if we were viewing the deleted workspace
       const basePath = getBaseRoutePath(
-        routeType === "claude" ? "claude" : "workspace",
+        routeType === "claude" ? "claude" : "copilot",
       );
       if (location.pathname === `${basePath}/${workspaceId}`) {
         navigate("/");
