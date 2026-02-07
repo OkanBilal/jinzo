@@ -1,6 +1,4 @@
-// ─────────────────────────────────────────────────────────────
-// Model Types
-// ─────────────────────────────────────────────────────────────
+
 export interface OllamaModelDetails {
   family?: string;
   families?: string[];
@@ -41,22 +39,7 @@ export interface OllamaShowResponse {
   };
 }
 
-// ─────────────────────────────────────────────────────────────
-// Request DTOs
-// ─────────────────────────────────────────────────────────────
-export interface WeatherInsightRequest {
-  temperature: number;
-  weatherCode: number;
-  windspeed?: number;
-  location: {
-    lat: number;
-    lon: number;
-  };
-}
 
-// ─────────────────────────────────────────────────────────────
-// Response DTOs
-// ─────────────────────────────────────────────────────────────
 export interface ShowApiResponse {
   modelName: string;
   supportsThinking: boolean;
@@ -80,9 +63,6 @@ export interface ModelsResponse {
   models: string[];
 }
 
-export interface WeatherInsightResponse {
-  insight: string;
-}
 
 export interface SuccessResponse<T> {
   success: true;

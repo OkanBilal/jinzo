@@ -155,12 +155,6 @@ const api = {
     getModels: () => ipcRenderer.invoke("ollama:getModels"),
     showModel: (modelName: string) =>
       ipcRenderer.invoke("ollama:showModel", modelName),
-    getWeatherInsight: (payload: {
-      temperature: number;
-      weatherCode: number;
-      windspeed?: number;
-      location: { lat: number; lon: number };
-    }) => ipcRenderer.invoke("ollama:getWeatherInsight", payload),
   },
   // Connection credentials operations
   connectionCredentials: {

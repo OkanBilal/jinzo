@@ -1,25 +1,17 @@
 import {
   getTagsUrl,
   getShowUrl,
-  getOllamaHost,
   getEmbeddingRegex,
   processModels,
   determineThinkingSupport,
-  getWeatherCondition,
-  cleanThinkingTags,
 } from "./ollama.helpers";
 import type {
   OllamaShowResponse,
   ShowApiResponse,
   ModelsResponse,
-  WeatherInsightRequest,
-  WeatherInsightResponse,
   ServiceResponse,
 } from "./ollama.dto";
 
-// ─────────────────────────────────────────────────────────────
-// Service - Business Logic
-// ─────────────────────────────────────────────────────────────
 export const ollamaService = {
   async getModels(): Promise<ServiceResponse<ModelsResponse>> {
     try {
@@ -89,56 +81,5 @@ export const ollamaService = {
     }
   },
 
-  async getWeatherInsight(
-    payload: WeatherInsightRequest
-  ): Promise<ServiceResponse<WeatherInsightResponse>> {
-    try {
-      const { temperature, weatherCode, windspeed } = payload;
 
-      const condition = getWeatherCondition(weatherCode);
-
-      const prompt = `Write a single friendly sentence about this weather: ${temperature}°C, ${condition}, wind ${windspeed || 0} km/h. Give a helpful tip or observation. Be brief and conversational.`;
-
-      const ollamaHost = getOllamaHost();
-      const response = await fetch(`${ollamaHost}/api/generate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-oss:120b-cloud",
-          prompt: prompt,
-          stream: false,
-          options: {
-            temperature: 0.7,
-            num_predict: 200,
-            stop: ["\n\n", "Weather Data:", "---"],
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Ollama API error details:", errorText);
-        throw new Error(`Ollama API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      let insight = data.response || "Weather looks interesting today!";
-      insight = cleanThinkingTags(insight);
-
-      return {
-        success: true,
-        data: { insight: insight.trim() },
-      };
-    } catch (error) {
-      console.error("Weather insight error:", error);
-      return {
-        success: false,
-        error: "Failed to get weather insight",
-        data: { insight: "Enjoy your day! ☀️" },
-      };
-    }
-  },
 };

@@ -18,8 +18,6 @@ export {
   isEmbeddingModel,
   processModels,
   determineThinkingSupport,
-  getWeatherCondition,
-  cleanThinkingTags,
 } from "./ollama.helpers";
 
 // DTOs
@@ -29,8 +27,6 @@ export type {
   OllamaShowResponse,
   ShowApiResponse,
   ModelsResponse,
-  WeatherInsightRequest,
-  WeatherInsightResponse,
   ServiceResponse,
   SuccessResponse,
   ErrorResponse,
