@@ -83,6 +83,9 @@ async function initializeApp() {
     ipcMain.handle("shell:openExternal", async (_, url: string) => {
       await shell.openExternal(url);
     });
+    ipcMain.handle("shell:openPath", async (_, path: string) => {
+      await shell.openPath(path);
+    });
 
     // Create main window (hidden until ready)
     createMainWindow({
@@ -135,6 +138,7 @@ async function cleanupApp() {
     unregisterGitIpc();
     unregisterWorkspaceResourcesHandlers();
     ipcMain.removeHandler("shell:openExternal");
+    ipcMain.removeHandler("shell:openPath");
 
     // Close database
     await closeDatabase();

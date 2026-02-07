@@ -12,6 +12,7 @@ import {
   ChevronUp,
 } from "@/components/ui/icons";
 import type { SettingsSection } from "@/features/chat/components/input/types";
+import { Claude, Copilot } from "@/components/ui/icons/mood";
 
 interface SettingsViewProps {
   onClose: () => void;
@@ -23,10 +24,11 @@ const menuItems: Array<{
   icon: React.ElementType | null;
 }> = [
   { id: "general", label: "General", icon: General },
+  { id: "claude", label: "Claude Agent", icon: Claude },
+  { id: "copilot", label: "Copilot", icon: Copilot },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "personalization", label: "Personalization", icon: Personalize },
   { id: "apps", label: "Apps", icon: Apps },
-  { id: "agent", label: "Agent", icon: Agent },
   { id: "schedules", label: "Schedules", icon: Calendar },
   { id: "security", label: "Security", icon: Security },
 ];
@@ -107,7 +109,6 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
           </Caption>
         </Button>
       </div>
-
     </div>
   );
 }

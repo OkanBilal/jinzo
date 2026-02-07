@@ -384,7 +384,7 @@ export function createClaudeAdapter(
     // Determine permission mode: use config override if provided, else default to "default" (ask for every tool)
     // Options: "default" | "acceptEdits" | "bypassPermissions" | "plan"
     const permissionMode =
-      (config as any).permissionMode || "bypassPermissions";
+      config.permissionMode || "default";
 
     // Setting sources for skills: default to both user and project if not specified
     const settingSources = config.settingSources ?? ["user", "project"];

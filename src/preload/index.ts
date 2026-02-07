@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
+import os from "node:os";
 
 // Expose IPC methods to renderer process
 const api = {
@@ -587,8 +588,12 @@ const api = {
      */
     getWorktreesDir: () => ipcRenderer.invoke("git:getWorktreesDir"),
   },
+  platform: {
+    homedir: os.homedir(),
+  },
   shell: {
     openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
+    openPath: (path: string) => ipcRenderer.invoke("shell:openPath", path),
   },
 };
 

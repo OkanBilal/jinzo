@@ -5,7 +5,7 @@ import type {
   ProviderResponse,
   ServiceResponse,
 } from "./providers.dto";
-import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, type ModelInfo, type CommandInfo, type SkillInfo } from "./adapters";
+import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, shutdownWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo } from "./adapters";
 
 // ─────────────────────────────────────────────────────────────
 // Providers Service
@@ -76,6 +76,10 @@ export const providersService = {
       if (!updated) {
         return { success: false, error: "Provider not found" };
       }
+
+      // Invalidate cached adapter so the next run picks up new config
+      await shutdownWorkAdapter(id);
+
       return { success: true, data: updated };
     } catch (error) {
       console.error(`[ProvidersService] Failed to update provider ${id}:`, error);

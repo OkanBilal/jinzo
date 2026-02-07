@@ -6,9 +6,10 @@ import NotificationsSettings from "@/features/settings/components/notifications"
 import PersonalizationSettings from "@/features/settings/components/personalization";
 import SchedulesSettings from "@/features/settings/components/schedules";
 import SecuritySettings from "@/features/settings/components/security";
-import AgentSettings from "@/features/settings/components/agent";
 import { useGetAppsQuery } from "@/lib/redux/api";
 import type { SettingsSection } from "@/features/chat/components/input/types";
+import ClaudeSettings from "@/features/settings/components/claude";
+import CopilotSettings from "@/features/settings/components/copilot";
 
 export default function SettingsPage() {
   const [searchParams] = useSearchParams();
@@ -54,8 +55,10 @@ export default function SettingsPage() {
         return <SchedulesSettings />;
       case "security":
         return <SecuritySettings />;
-      case "agent":
-        return <AgentSettings />;
+      case "claude":
+        return <ClaudeSettings />;
+      case "copilot":
+        return <CopilotSettings />;
       default:
         return <GeneralSettings />;
     }

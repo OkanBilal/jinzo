@@ -85,7 +85,8 @@ export type SettingsSection =
   | "security"
   | "parental"
   | "account"
-  | "agent";
+  | "claude"
+  | "copilot";
 
 export interface ModalContentProps {
   children: React.ReactNode;
