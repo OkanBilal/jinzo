@@ -397,7 +397,7 @@ export default function HackerNewsModal({
         initialStep="loading"
         initialData={initialData}
         title="HackerNews"
-        icon="/connections/hackernews.png"
+        icon="connections/hackernews.png"
         onCancel={handleClose}
       />
 

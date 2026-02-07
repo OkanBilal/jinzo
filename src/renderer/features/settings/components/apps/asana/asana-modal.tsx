@@ -530,7 +530,7 @@ export default function AsanaModal({
         initialStep="loading"
         initialData={initialData}
         title="Asana"
-        icon="/connections/asana.png"
+        icon="connections/asana.png"
         onCancel={handleClose}
       />
 

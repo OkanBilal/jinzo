@@ -489,7 +489,7 @@ const AppleMusicModal = ({
         initialStep="loading"
         initialData={initialData}
         title="Apple Music"
-        icon="/connections/apple-music.png"
+        icon="connections/apple-music.png"
         onCancel={handleClose}
       />
 

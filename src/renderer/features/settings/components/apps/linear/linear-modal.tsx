@@ -537,7 +537,7 @@ export default function LinearModal({
         initialStep="loading"
         initialData={initialData}
         title="Linear"
-        icon="/connections/linear.png"
+        icon="connections/linear.png"
         onCancel={handleClose}
       />
 

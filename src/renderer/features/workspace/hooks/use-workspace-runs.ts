@@ -279,6 +279,7 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
   const executeRun = useCallback(
     async (goal: string, selectedWorkspace: string, selectedProvider: string, model?: string) => {
       if (!goal.trim() || !selectedWorkspace || !selectedProvider) {
+        {/* ADD custom error workspace */}
         toast.error("Please fill in all required fields");
         return;
       }

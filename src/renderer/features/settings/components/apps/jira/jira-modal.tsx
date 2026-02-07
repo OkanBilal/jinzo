@@ -632,7 +632,7 @@ export default function JiraModal({
         initialStep="loading"
         initialData={initialData}
         title="Jira"
-        icon="/connections/jira.png"
+        icon="connections/jira.png"
         onCancel={handleClose}
       />
 

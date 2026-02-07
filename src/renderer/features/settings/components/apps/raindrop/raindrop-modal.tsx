@@ -480,7 +480,7 @@ export default function RaindropModal({
         initialStep="loading"
         initialData={initialData}
         title="Raindrop"
-        icon="/connections/raindrop.png"
+        icon="connections/raindrop.png"
         onCancel={handleClose}
       />
 

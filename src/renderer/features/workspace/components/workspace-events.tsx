@@ -115,7 +115,7 @@ export function WorkspaceEvents({
                 }
                 return <InfoGroup key={group.id} group={group} />;
               })}
-              {isRunning && <AsciiLoader />}
+              {isRunning && <AsciiLoader variant={variant} />}
               {pendingApproval && onApprovalRespond && (
                 <ToolApprovalDialog
                   request={pendingApproval}

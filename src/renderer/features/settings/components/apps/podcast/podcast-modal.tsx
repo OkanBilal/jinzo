@@ -509,7 +509,7 @@ export default function PodcastModal({
         initialStep="loading"
         initialData={initialData}
         title="Podcast Connection"
-        icon="/connections/podcast.png"
+        icon="connections/podcast.png"
         onCancel={handleClose}
       />
 

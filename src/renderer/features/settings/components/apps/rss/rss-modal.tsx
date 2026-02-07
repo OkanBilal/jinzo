@@ -541,7 +541,7 @@ export default function RssModal({ open, onClose }: RssModalProps) {
         initialStep="loading"
         initialData={initialData}
         title="RSS"
-        icon="/connections/rss.png"
+        icon="connections/rss.png"
         onCancel={handleClose}
       />
 

@@ -528,7 +528,7 @@ export default function GitHubModal({
         initialStep="loading"
         initialData={initialData}
         title="Github"
-        icon="/connections/github.png"
+        icon="connections/github.png"
         onCancel={handleClose}
       />
 

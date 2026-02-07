@@ -12,7 +12,7 @@ const DEFAULT_OPTIONS: Required<SplashWindowOptions> = {
 };
 
 function getSplashPath(): string {
-  if (process.env.NODE_ENV !== "production") {
+  if (!app.isPackaged) {
     return path.join(app.getAppPath(), "src/renderer/public/splash.html");
   }
   // In production, Vite copies public folder contents to renderer root
