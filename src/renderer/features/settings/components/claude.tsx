@@ -114,9 +114,9 @@ export default function ClaudeSettings() {
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => openPath(`${homedir}/.claude/settings.json`)}
+          onClick={() => openPath(`${homedir}/.claude/agents`)}
         >
-          Open Settings File
+          Open Folder
         </Button>
       </SettingsRow>
 

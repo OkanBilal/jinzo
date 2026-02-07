@@ -389,7 +389,7 @@ export default function GeneralSettings() {
               <Button
                 type="submit"
                 size="md"
-                variant="primary"
+                variant="submit"
                 disabled={!isDirty || saving}
                 isLoading={saving}
               >

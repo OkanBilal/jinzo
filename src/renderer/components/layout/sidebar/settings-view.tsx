@@ -7,12 +7,12 @@ import {
   Bell,
   Personalize,
   Security,
-  Agent,
   General,
   ChevronUp,
+  CopilotStatic,
 } from "@/components/ui/icons";
 import type { SettingsSection } from "@/features/chat/components/input/types";
-import { Claude, Copilot } from "@/components/ui/icons/mood";
+import { Claude } from "@/components/ui/icons/mood";
 
 interface SettingsViewProps {
   onClose: () => void;
@@ -25,7 +25,7 @@ const menuItems: Array<{
 }> = [
   { id: "general", label: "General", icon: General },
   { id: "claude", label: "Claude Agent", icon: Claude },
-  { id: "copilot", label: "Copilot", icon: Copilot },
+  { id: "copilot", label: "Copilot", icon: CopilotStatic },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "personalization", label: "Personalization", icon: Personalize },
   { id: "apps", label: "Apps", icon: Apps },

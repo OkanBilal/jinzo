@@ -317,7 +317,7 @@ export default function ClaudePage() {
 
   return (
     <div className="flex flex-col h-full dark:bg-claude-dark">
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden noscrollbar">
         {showEmptyState ? (
           <WorkspaceEmptyState workspace={currentWorkspace} />
         ) : (

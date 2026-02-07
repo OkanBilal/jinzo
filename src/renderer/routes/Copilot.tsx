@@ -296,7 +296,7 @@ export default function CopilotPage() {
 
   return (
     <div className="flex flex-col h-full dark:bg-copilot-dark ">
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden noscrollbar">
         {showEmptyState ? (
           <WorkspaceEmptyState workspace={currentWorkspace} />
         ) : (
