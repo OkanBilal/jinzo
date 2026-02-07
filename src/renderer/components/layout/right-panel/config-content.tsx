@@ -95,6 +95,7 @@ export function ConfigContent() {
               onEditClick={() => setIsStructuredOutputModalOpen(true)}
             />
           )}
+          {/* TODO: Add web search toggle */}
         </ConfigSection>
         <ConfigSection title="Advanced">
           <Body>Advanced configuration options will appear here.</Body>

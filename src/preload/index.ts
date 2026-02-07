@@ -126,6 +126,14 @@ const api = {
       ipcRenderer.on("chat:stream-error", listener);
       return () => ipcRenderer.removeListener("chat:stream-error", listener);
     },
+    onToolStatus: (
+      callback: (data: { sessionId: number; tool: string; status: string }) => void,
+    ) => {
+      const listener = (_: any, data: { sessionId: number; tool: string; status: string }) =>
+        callback(data);
+      ipcRenderer.on("chat:tool-status", listener);
+      return () => ipcRenderer.removeListener("chat:tool-status", listener);
+    },
   },
   // Sync operations
   sync: {

@@ -173,6 +173,7 @@ export const useChat = (options: UseChatOptions = {}): UseChatReturn => {
       let unsubscribeChunk: (() => void) | null = null;
       let unsubscribeFinal: (() => void) | null = null;
       let unsubscribeError: (() => void) | null = null;
+      let unsubscribeToolStatus: (() => void) | null = null;
 
       try {
         const targetSessionId = sid ?? sessionId;
@@ -185,9 +186,32 @@ export const useChat = (options: UseChatOptions = {}): UseChatReturn => {
             if (rafRef.current == null) {
               rafRef.current = window.requestAnimationFrame(() => {
                 updateMessageText(assistantMsg.id, pendingTextRef.current);
+                // Clear tool status once text starts streaming
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsg.id && (m.metadata as any)?.toolStatus
+                      ? { ...m, metadata: { ...(m.metadata || {}), toolStatus: undefined } }
+                      : m,
+                  ),
+                );
                 rafRef.current = null;
               });
             }
+          }
+        });
+
+        unsubscribeToolStatus = window.api.chat.onToolStatus((data) => {
+          if (data.sessionId === targetSessionId) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsg.id
+                  ? {
+                      ...m,
+                      metadata: { ...(m.metadata || {}), streaming: true, toolStatus: data.status },
+                    }
+                  : m,
+              ),
+            );
           }
         });
 
@@ -226,6 +250,7 @@ export const useChat = (options: UseChatOptions = {}): UseChatReturn => {
             unsubscribeChunk?.();
             unsubscribeFinal?.();
             unsubscribeError?.();
+            unsubscribeToolStatus?.();
           }
         });
 
@@ -255,6 +280,7 @@ export const useChat = (options: UseChatOptions = {}): UseChatReturn => {
             unsubscribeChunk?.();
             unsubscribeFinal?.();
             unsubscribeError?.();
+            unsubscribeToolStatus?.();
           }
         });
 

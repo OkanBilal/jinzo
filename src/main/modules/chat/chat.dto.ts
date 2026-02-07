@@ -85,6 +85,8 @@ export interface ChatOptions {
   userMessageId?: number;
   /** Tool mode override */
   toolMode?: "chat" | "rag" | "mcp";
+  /** Enable Ollama web search tools */
+  webSearchEnabled?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -193,4 +195,5 @@ export interface ChatConfig {
   toolMode: "chat" | "rag" | "mcp";
   structuredOutputEnabled: boolean;
   structuredOutputSchema: StructuredOutputSchema;
+  webSearchEnabled: boolean;
 }

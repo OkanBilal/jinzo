@@ -31,3 +31,13 @@ export function sendStreamError(
   const window = BrowserWindow.fromId(senderId);
   window?.webContents.send("chat:stream-error", { sessionId, error });
 }
+
+export function sendToolStatus(
+  senderId: number,
+  sessionId: number,
+  tool: string,
+  status: string
+): void {
+  const window = BrowserWindow.fromId(senderId);
+  window?.webContents.send("chat:tool-status", { sessionId, tool, status });
+}

@@ -1,4 +1,4 @@
-import type { StructuredOutputSchema, ChatConfig } from "./chat.dto";
+import type { ChatConfig } from "./chat.dto";
 
 // ─────────────────────────────────────────────────────────────
 // Default Config
@@ -12,6 +12,7 @@ const DEFAULT_CONFIG: ChatConfig = {
   toolMode: "chat",
   structuredOutputEnabled: false,
   structuredOutputSchema: { properties: [] },
+  webSearchEnabled: false,
 };
 
 const chatConfig: ChatConfig = { ...DEFAULT_CONFIG };
@@ -61,6 +62,10 @@ export function updateChatConfig(payload: Partial<ChatConfig>): ChatConfig {
     Array.isArray(payload.structuredOutputSchema.properties)
   ) {
     chatConfig.structuredOutputSchema = payload.structuredOutputSchema;
+  }
+
+  if (typeof payload.webSearchEnabled === "boolean") {
+    chatConfig.webSearchEnabled = payload.webSearchEnabled;
   }
 
   return { ...chatConfig };

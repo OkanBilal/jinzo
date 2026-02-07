@@ -8,7 +8,10 @@ import {
   useUpdateChatConfigMutation,
 } from "../../../../lib/redux/api";
 import { useAppDispatch, useAppSelector } from "../../../../lib/redux/hooks";
-import { setSelectedModel } from "../../../../lib/redux/slices/chatSlice";
+import {
+  setSelectedModel,
+  setWebSearchEnabled,
+} from "../../../../lib/redux/slices/chatSlice";
 import { SendButton } from "@/components/ui/input/send-button";
 import { DictationButton } from "@/components/ui/input/dictation-button";
 import { InputForm } from "@/components/ui/input/input-form";
@@ -18,6 +21,7 @@ import {
   type UploadedFile,
 } from "@/components/ui/input/file-upload-dropdown";
 import { ModelSelectDropdown } from "@/components/ui/input/model-select-dropdown";
+import { WebSearchDropdown } from "@/components/ui/input/web-search-dropdown";
 import { ChatInputProps } from "./types";
 
 const DEFAULT_PLACEHOLDER = "Ask jinzo anything...";
@@ -33,16 +37,22 @@ export default function ChatInput({
 }: ChatInputProps) {
   const dispatch = useAppDispatch();
   const model = useAppSelector((state) => state.chat.selectedModel);
+  const webSearchEnabled = useAppSelector(
+    (state) => state.chat.webSearchEnabled,
+  );
+  const toolMode = useAppSelector((state) => state.chat.toolMode);
   const { data: modelsData } = useGetOllamaModelsQuery();
   const [updateConfig] = useUpdateChatConfigMutation();
   const models = modelsData?.models || [];
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [isWebSearchDropdownOpen, setIsWebSearchDropdownOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const webSearchDropdownRef = useRef<HTMLDivElement>(null);
 
   const { isRecording, toggle: toggleDictation } =
     useSpeechRecognition(onQueryChange);
@@ -54,11 +64,20 @@ export default function ChatInput({
 
   useClickOutside(dropdownRef, () => setIsDropdownOpen(false));
   useClickOutside(modelDropdownRef, () => setIsModelDropdownOpen(false));
+  useClickOutside(webSearchDropdownRef, () =>
+    setIsWebSearchDropdownOpen(false),
+  );
 
   useEscapeKey(() => {
     setIsDropdownOpen(false);
     setIsModelDropdownOpen(false);
+    setIsWebSearchDropdownOpen(false);
   });
+
+  const handleWebSearchToggle = (enabled: boolean) => {
+    dispatch(setWebSearchEnabled(enabled));
+    updateConfig({ webSearchEnabled: enabled });
+  };
 
   const handleQueryChange = (value: string) => {
     onQueryChange(value);
@@ -156,6 +175,18 @@ export default function ChatInput({
               onChange={handleFileChange}
               className="hidden"
             />
+            {toolMode === "chat" && (
+              <WebSearchDropdown
+                isOpen={isWebSearchDropdownOpen}
+                onToggle={() =>
+                  setIsWebSearchDropdownOpen(!isWebSearchDropdownOpen)
+                }
+                dropdownRef={webSearchDropdownRef}
+                openUpward={true}
+                webSearchEnabled={webSearchEnabled}
+                onWebSearchToggle={handleWebSearchToggle}
+              />
+            )}
             <ModelSelectDropdown
               model={model}
               models={models}

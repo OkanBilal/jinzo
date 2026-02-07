@@ -47,6 +47,7 @@ export interface ChatConfig {
   toolMode: 'chat' | 'rag' | 'mcp';
   structuredOutputEnabled: boolean;
   structuredOutputSchema: StructuredOutputSchema;
+  webSearchEnabled: boolean;
 }
 
 export const chatApi = baseApi.injectEndpoints({

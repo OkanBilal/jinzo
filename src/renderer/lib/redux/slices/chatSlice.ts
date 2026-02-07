@@ -31,6 +31,7 @@ export interface ChatState {
   supportsThinking: boolean;
   structuredOutputEnabled: boolean;
   structuredOutputSchema: StructuredOutputSchema;
+  webSearchEnabled: boolean;
 }
 
 const initialState: ChatState = {
@@ -42,6 +43,7 @@ const initialState: ChatState = {
   supportsThinking: false,
   structuredOutputEnabled: false,
   structuredOutputSchema: { properties: [] },
+  webSearchEnabled: false,
 };
 
 const chatSlice = createSlice({
@@ -82,6 +84,9 @@ const chatSlice = createSlice({
     ) => {
       state.structuredOutputSchema = action.payload;
     },
+    setWebSearchEnabled: (state, action: PayloadAction<boolean>) => {
+      state.webSearchEnabled = action.payload;
+    },
   },
 });
 
@@ -93,5 +98,6 @@ export const {
   setModelCapabilities,
   setStructuredOutputEnabled,
   setStructuredOutputSchema,
+  setWebSearchEnabled,
 } = chatSlice.actions;
 export default chatSlice.reducer;

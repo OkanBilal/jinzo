@@ -51,6 +51,7 @@ export const ChatMessageComponent = memo(
                     text={message.text}
                     isStreaming={true}
                     revealSpeed={4}
+                    toolStatus={(message.metadata as any)?.toolStatus}
                   />
                 ) : (
                   <div className="prose prose-sm dark:prose-invert max-w-none">

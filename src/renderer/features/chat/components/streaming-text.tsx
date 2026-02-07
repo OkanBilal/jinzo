@@ -16,6 +16,10 @@ interface StreamingTextProps {
    * @default 30
    */
   revealInterval?: number;
+  /**
+   * Current tool execution status (e.g. "Searching: okanbilal.com")
+   */
+  toolStatus?: string;
 }
 
 /**
@@ -30,6 +34,7 @@ export const StreamingText = memo(
     isStreaming,
     revealSpeed = 1,
     revealInterval = 30,
+    toolStatus,
   }: StreamingTextProps) => {
     const [displayedLength, setDisplayedLength] = useState(0);
     // Track which portions of text are "fresh" (recently revealed)
@@ -160,11 +165,15 @@ export const StreamingText = memo(
             </ReactMarkdown>
           </span>
         )}
-        {/* Typing cursor */}
-        {/* //TODO: Change cursor */}
-        {(isStreaming || isRevealing) && (
-          <span className="inline-block w-0.5 h-[1.1em] ml-0.5 bg-primary-600 dark:bg-primary-400 animate-blink align-middle" />
-        )}
+        {/* Tool status or typing cursor */}
+        {(isStreaming || isRevealing) &&
+          (toolStatus ? (
+            <div className="flex items-center gap-2 mt-1 text-sm text-primary-700 dark:text-primary-200 ">
+              <span className="truncate max-w-80 shine-text">{toolStatus}</span>
+            </div>
+          ) : (
+            <div className="h-3 w-3 rounded-full bg-primary-700 dark:bg-primary-50 animate-pulse" />
+          ))}
       </div>
     );
   },

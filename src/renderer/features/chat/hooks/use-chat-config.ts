@@ -12,6 +12,9 @@ export function useChatConfig() {
   const structuredOutputSchema = useAppSelector(
     (state) => state.chat.structuredOutputSchema
   );
+  const webSearchEnabled = useAppSelector(
+    (state) => state.chat.webSearchEnabled
+  );
 
   const thinkingConfig = useThinkingConfig();
 
@@ -25,6 +28,7 @@ export function useChatConfig() {
       : undefined,
     structuredOutputEnabled,
     structuredOutputSchema,
+    webSearchEnabled,
   });
 
   return {
