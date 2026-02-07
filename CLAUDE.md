@@ -28,7 +28,7 @@ npm run make            # Create distributable
 
 ## Architecture Overview
 
-Jinzo is an Electron desktop app built with React, using a local SQLite database with vector search capabilities for RAG-powered chat.
+Jinzo is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM, sqlite-vec for vector search). CommonJS package with ESM Vite configs (`.mjs`).
 
 ### Process Boundaries
 
@@ -43,34 +43,50 @@ Jinzo is an Electron desktop app built with React, using a local SQLite database
 - After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
-- React app with Redux Toolkit, React Router (HashRouter)
+- React app with Redux Toolkit, React Router (HashRouter), `@/` alias → `src/renderer/`
 - Routes: `/` (Home), `/chat/:id` (Chat), `/copilot/:workspaceId` (Copilot), `/claude/:workspaceId` (Claude Agent), `/journal` (Journal), `/settings` (Settings)
 
 ### Module Architecture (`src/main/modules/`)
 
-Each domain module follows a layered pattern:
-```
-module/
-├── index.ts           # Public exports
-├── {module}.ipc.ts    # IPC handler registration (registerXxxIpc/unregisterXxxIpc)
-├── {module}.controller.ts  # Request handling, validation dispatch
-├── {module}.service.ts     # Business logic
-├── {module}.repo.ts        # Database queries (Drizzle)
-├── {module}.dto.ts         # Type definitions, response formatters
-├── {module}.validation.ts  # Input validation
-└── {module}.constants.ts   # Module constants
-```
+Each domain module follows a layered pattern (see `src/main/modules/account/` as reference):
 
-Example: `src/main/modules/account/` handles user account CRUD with this exact structure.
+| File | Role |
+|------|------|
+| `{name}.ipc.ts` | `registerXxxIpc()` / `unregisterXxxIpc()` using `ipcMain.handle` |
+| `{name}.controller.ts` | Object literal, returns `Promise<ServiceResponse<T>>` |
+| `{name}.service.ts` | Object literal with business logic, uses `this` for sibling calls |
+| `{name}.repo.ts` | Object literal, calls `getDb()` per method, Drizzle queries |
+| `{name}.dto.ts` | Types via `typeof table.$inferSelect`, formatter functions |
+| `{name}.validation.ts` | Hand-rolled allowlist validation (no zod/yup) |
+| `index.ts` | Barrel exports |
+
+**Critical**: All layers are **plain object literals**, never classes. No DI — repos call `getDb()` inline.
+
+### IPC Convention
+
+Channel format: `"domain:action"` (e.g. `"chat:send"`, `"entities:getAll"`). Channels must stay in sync across three files — there is no shared registry:
+
+1. `src/preload/index.ts` — `ipcRenderer.invoke("domain:action")`
+2. `src/main/modules/{name}/{name}.ipc.ts` — `ipcMain.handle("domain:action")`
+3. `src/renderer/lib/redux/api/{name}Api.ts` — `{ handler: "domain:action" }`
+
+All IPC responses use `ServiceResponse<T>` envelope: `{ success: true, data }` or `{ success: false, error }`.
 
 ### Data Flow
 
 1. **IPC Communication**: Renderer calls `window.api.namespace.method()` → Preload invokes IPC → Main handles
 2. **Module Flow**: IPC handler → Controller → Service → Repository → Database
-3. **Redux Integration**: `src/renderer/lib/redux/api/baseApi.ts` wraps IPC in RTK Query
+3. **Redux Integration**: `src/renderer/lib/redux/api/baseApi.ts` wraps IPC in RTK Query with custom `ipcBaseQuery` (no HTTP)
 4. **State Management**: RTK Query for server state, Redux slices for UI state (`chatSlice`, `moodSlice`, `appSettingsSlice`)
 
 ### Database Schema (`src/main/db/schema.ts`)
+
+Conventions:
+- Text primary keys (UUIDs or string literals), timestamps as `integer("col", { mode: "timestamp" })` with `default(sql\`(unixepoch())\`)`
+- Snake_case SQL columns, camelCase TypeScript — Drizzle handles mapping
+- Booleans: `integer("col", { mode: "boolean" })`, enums: `text("col", { enum: [...] })`
+- Updates must manually set `updatedAt: sql\`(unixepoch())\``
+- Index naming: `idx_{table}_{col}`, unique: `uniq_{table}_{desc}`
 
 Core tables:
 - `providers` - LLM/agent runtimes (ollama, copilot_cli, claude_code)
@@ -120,14 +136,22 @@ Domain-specific views on entities:
 - `drizzle.config.ts` - Drizzle Kit config (dev database: `.data/jinzo.db`)
 - Runtime database: `~/Library/Application Support/jinzo/jinzo.db`
 - `src/renderer/lib/config/` - Chunking, embedding, retrieval, cache settings
+- Migration `.sql` files are copied into the build via Vite plugin and bundled as `extraResource`
 
-### UI Structure
+### Frontend Conventions
 
-- `src/renderer/components/` - Shared UI components and layout (sidebar, config panel)
-- `src/renderer/features/` - Feature modules (chat, home, settings)
-- `src/renderer/hooks/` - Global custom hooks (useActiveMood, useTheme, useClickOutside)
-- `src/renderer/routes/` - Route components (Chat.tsx, Home.tsx)
-- Styling: Tailwind CSS v4
+- **Redux**: RTK Query with custom `ipcBaseQuery`, `baseApi.injectEndpoints()` per domain
+- **Hooks**: `use-kebab-case.ts` filenames, `useCamelCase` export names
+- **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`
+- **Routing**: HashRouter — routes defined in `src/renderer/routes/`
+- **Styling**: Tailwind CSS v4 (PostCSS-based)
+
+### Code Style
+
+- Strict TypeScript, but `any` is allowed (`no-explicit-any: off`)
+- Unused vars prefixed with `_` (warn, not error)
+- No Prettier — formatting via editor settings + ESLint
+- No `import React` needed (`react-jsx` transform)
 
 ### Connections (External Services)
 
@@ -143,3 +167,4 @@ Supported: GitHub, Linear, Raindrop, HackerNews, RSS, Spotify, Apple Music, Podc
 - **Preload changes not taking effect**: Restart the dev server completely; changes to `src/preload/index.ts` require a full restart
 - **Database locked errors**: Close all app instances, then `npm run db:clean:dev && npm run db:push`
 - **Ollama connection issues**: Ensure Ollama is running with `ollama serve`
+- **Dual DB paths**: `.data/jinzo.db` (dev) vs `~/Library/Application Support/jinzo/jinzo.db` (packaged)
