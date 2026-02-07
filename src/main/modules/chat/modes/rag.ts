@@ -10,6 +10,8 @@ import {
   buildStructuredSystemPrompt,
   saveMessage,
   getConversationHistory,
+  estimateTokens,
+  calculateHistoryTokenBudget,
 } from "../utils";
 import type { ChatOptions, ChatResponse } from "../chat.dto";
 import { analyzeQuery, buildOptimizedPrompt, findRelevantEntities } from "../utils/rag";
@@ -104,8 +106,13 @@ export async function handleRAGMode(
   const structuredSchema = getStructuredSchema(options, config);
   let fullAnswer = "";
 
-  // Fetch conversation history to maintain context across messages
-  const history = await getConversationHistory(sessionId, { maxPairs: 10 });
+  // Calculate token budget for history based on system prompt and user prompt size
+  const systemPromptTokens = estimateTokens(systemPrompt);
+  const userPromptTokens = estimateTokens(userPrompt);
+  const historyTokenBudget = calculateHistoryTokenBudget(systemPromptTokens, userPromptTokens);
+
+  // Fetch conversation history with token-based limiting to avoid prompt too long errors
+  const history = await getConversationHistory(sessionId, { maxTokens: historyTokenBudget });
 
   // Build messages array with system prompt, history, and current question with RAG context
   const baseMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [

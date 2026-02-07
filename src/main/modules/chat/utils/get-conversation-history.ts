@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../db/client";
 import { chatMessages } from "../../../db/schema";
+import { trimMessagesToFitTokenBudget } from "./token-estimation";
 
 export interface ConversationMessage {
   role: "user" | "assistant" | "system";
@@ -17,6 +18,8 @@ export async function getConversationHistory(
   options?: {
     /** Maximum number of message pairs to include (default: 10) */
     maxPairs?: number;
+    /** Maximum tokens for the history (if set, takes precedence over maxPairs) */
+    maxTokens?: number;
     /** Exclude messages created after this timestamp */
     beforeTimestamp?: Date;
   }
@@ -49,7 +52,12 @@ export async function getConversationHistory(
         content: msg.content,
       }));
 
-    // Limit to last N pairs (user + assistant = 2 messages per pair)
+    // If maxTokens is specified, use token-based trimming (takes precedence)
+    if (options?.maxTokens !== undefined && options.maxTokens > 0) {
+      return trimMessagesToFitTokenBudget(conversationMessages, options.maxTokens);
+    }
+
+    // Otherwise, limit to last N pairs (user + assistant = 2 messages per pair)
     const maxMessages = maxPairs * 2;
     if (conversationMessages.length > maxMessages) {
       return conversationMessages.slice(-maxMessages);

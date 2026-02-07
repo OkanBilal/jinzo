@@ -13,13 +13,15 @@ import {
   getConversationHistory,
   WEB_SEARCH_TOOLS,
   executeWebTool,
+  estimateTokens,
+  calculateHistoryTokenBudget,
 } from "../utils";
 import type { ChatOptions } from "../chat.dto";
 import { providersRepo } from "../../providers/providers.repo";
 
 const CHAT_SYSTEM_PROMPT = "You are a helpful AI assistant.";
 
-const MAX_WEB_SEARCH_ITERATIONS = 8;
+const MAX_WEB_SEARCH_ITERATIONS = 5;
 
 async function getOllamaApiKey(): Promise<string | null> {
   const provider = await providersRepo.findById("ollama");
@@ -41,8 +43,13 @@ export async function handleChatMode(
 
   const webSearchEnabled = options.webSearchEnabled ?? config.webSearchEnabled;
 
-  // Fetch conversation history to maintain context across messages
-  const history = await getConversationHistory(sessionId, { maxPairs: 10 });
+  // Calculate token budget for history based on system prompt and question size
+  const systemPromptTokens = estimateTokens(CHAT_SYSTEM_PROMPT);
+  const questionTokens = estimateTokens(question);
+  const historyTokenBudget = calculateHistoryTokenBudget(systemPromptTokens, questionTokens);
+
+  // Fetch conversation history with token-based limiting to avoid prompt too long errors
+  const history = await getConversationHistory(sessionId, { maxTokens: historyTokenBudget });
 
   // Build messages array with system prompt, history, and current question
   const baseMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
