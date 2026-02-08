@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import path from 'path';
-import { copyFileSync, mkdirSync, readdirSync, existsSync } from 'fs';
+import { copyFileSync, mkdirSync, readdirSync, existsSync, cpSync } from 'fs';
 
 // https://vitejs.dev/config
 export default defineConfig({
@@ -21,10 +21,38 @@ export default defineConfig({
       external: [
         'electron',
         'better-sqlite3',
+        'sqlite-vec',
       ],
     },
   },
   plugins: [
+    {
+      name: 'copy-native-modules',
+      closeBundle() {
+        const destNodeModules = '.vite/build/node_modules';
+        mkdirSync(destNodeModules, { recursive: true });
+
+        // Native modules and their dependencies that must be available at runtime
+        const modulesToCopy = [
+          'better-sqlite3',
+          'bindings',
+          'file-uri-to-path',
+          'sqlite-vec',
+          'sqlite-vec-darwin-arm64',
+        ];
+
+        for (const mod of modulesToCopy) {
+          const src = path.join('node_modules', mod);
+          const dest = path.join(destNodeModules, mod);
+          if (existsSync(src)) {
+            cpSync(src, dest, { recursive: true });
+            console.log(`  ✓ Copied ${mod}`);
+          } else {
+            console.warn(`  ⚠ ${mod} not found, skipping`);
+          }
+        }
+      }
+    },
     {
       name: 'copy-migrations',
       closeBundle() {

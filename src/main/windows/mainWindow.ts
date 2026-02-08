@@ -1,5 +1,6 @@
-import { app, BrowserWindow, screen } from "electron";
+import { app, BrowserWindow, nativeImage, screen } from "electron";
 import path from "path";
+import { existsSync } from "fs";
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -10,13 +11,16 @@ export interface MainWindowOptions {
 
 // Get icon path based on app path
 function getIconPath(): string {
-  if (process.env.NODE_ENV !== "production") {
+  if (!app.isPackaged) {
     // Development: icon is in src/renderer/public
     return path.join(app.getAppPath(), "src/renderer/public/icon.png");
-  } else {
-    // Production: icon is bundled in resources
-    return path.join(app.getAppPath(), "renderer/public/icon.png");
   }
+  // Production: try extraResource first, then inside .vite/renderer
+  const resourcePath = path.join(process.resourcesPath, "icon.png");
+  if (existsSync(resourcePath)) {
+    return resourcePath;
+  }
+  return path.join(app.getAppPath(), ".vite/renderer/icon.png");
 }
 
 export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow {
@@ -32,7 +36,14 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
 
   // Set dock icon on macOS
   if (process.platform === "darwin" && app.dock) {
-    app.dock.setIcon(iconPath);
+    try {
+      const icon = nativeImage.createFromPath(iconPath);
+      if (!icon.isEmpty()) {
+        app.dock.setIcon(icon);
+      }
+    } catch (e) {
+      console.warn("Failed to set dock icon:", e);
+    }
   }
 
   mainWindow = new BrowserWindow({
@@ -73,7 +84,7 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
     process.env.RENDERER_VITE_DEV_SERVER_URL ||
     "http://localhost:5173";
 
-  if (process.env.NODE_ENV !== "production") {
+  if (!app.isPackaged) {
     // Development mode - load from Vite dev server
     mainWindow.loadURL(devServerUrl);
   } else {

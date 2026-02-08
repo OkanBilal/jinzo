@@ -1,14 +1,19 @@
 const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
+const { AutoUnpackNativesPlugin } = require('@electron-forge/plugin-auto-unpack-natives');
 
 module.exports = {
   packagerConfig: {
     name: 'Jinzo',
     executableName: 'jinzo',
-    asar: true,
+    asar: {
+      unpack: '**/*.node',
+      unpackDir: '.vite/build/node_modules/sqlite-vec-darwin-arm64',
+    },
     icon: 'src/renderer/public/icon',
     extraResource: [
-      'src/main/db/migrations'
+      'src/main/db/migrations',
+      'src/renderer/public/icon.png',
     ],
   },
   rebuildConfig: {
@@ -33,6 +38,7 @@ module.exports = {
     },
   ],
   plugins: [
+    new AutoUnpackNativesPlugin({}),
     {
       name: '@electron-forge/plugin-vite',
       config: {

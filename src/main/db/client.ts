@@ -76,7 +76,7 @@ class DatabaseClient {
 
       // Create SQLite instance
       this.sqlite = new Database(this.dbPath, {
-       //TODO: verbose: config?.verbose ? console.log : undefined,
+       //verbose: config?.verbose ? console.log : undefined,
       });
 
       // Configure database
@@ -251,9 +251,26 @@ class DatabaseClient {
 
     // Load sqlite-vec extension for vector operations
     try {
-      // Import sqlite-vec dynamically
-      const sqliteVec = require("sqlite-vec");
-      sqliteVec.load(this.sqlite);
+      // In production, the dylib is unpacked from asar into app.asar.unpacked
+      // We need to resolve the path manually since sqlite-vec's index.cjs
+      // resolves __dirname inside the asar which doesn't work for native extensions
+      let loadablePath: string;
+      if (app.isPackaged) {
+        const path = require("path");
+        loadablePath = path.join(
+          process.resourcesPath,
+          "app.asar.unpacked",
+          ".vite",
+          "build",
+          "node_modules",
+          "sqlite-vec-darwin-arm64",
+          "vec0"
+        );
+        this.sqlite.loadExtension(loadablePath);
+      } else {
+        const sqliteVec = require("sqlite-vec");
+        sqliteVec.load(this.sqlite);
+      }
       results.push({
         success: true,
         extensionName: "sqlite-vec",
