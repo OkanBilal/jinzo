@@ -1,6 +1,6 @@
 import { RefObject, useMemo } from "react";
 import { WorkspaceTabs } from "./workspace-tabs";
-import { ToolCallGroup, InfoGroup, groupEvents } from "./tool-call-group";
+import { ToolCallGroup, InfoGroup, groupEvents } from "./tools/tool-call-group";
 import { EditorContent } from "./editor-content";
 import { IssueTabContent } from "./issue-tab-content";
 import { WorkspaceEmptyState } from "./workspace-empty-state";
@@ -8,8 +8,8 @@ import type { Run, RunEvent, Workspace } from "../types";
 import type { IssueWithEntity } from "@/lib/redux/api";
 import { isIssueTab, getIssueEntityId } from "../utils/repo-utils";
 import { AsciiLoader } from "./ascii-loader";
-import { ToolApprovalDialog } from "./tool-approval-dialog";
 import type { ToolApprovalRequest } from "../hooks/use-tool-approval";
+import { ToolApprovalDialog } from "./tools/tool-approval-dialog";
 
 interface WorkspaceEventsProps {
   runs: Run[];

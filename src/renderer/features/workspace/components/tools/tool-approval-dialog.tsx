@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
-import type { ToolApprovalRequest } from "../hooks/use-tool-approval";
 import { Question } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
+import type { ToolApprovalRequest } from "../../hooks";
 
 interface ToolApprovalDialogProps {
   request: ToolApprovalRequest;

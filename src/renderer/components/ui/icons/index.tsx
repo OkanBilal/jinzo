@@ -68,3 +68,6 @@ export { default as Task } from "./task";
 export { default as Web } from "./web";
 export { default as Skill } from "./skill";
 export { default as Question } from "./question";
+export { default as AgentTeams } from "./agent-teams";
+export { default as SendMessage } from "./send-message";
+export { default as TeamDelete } from "./team-delete";

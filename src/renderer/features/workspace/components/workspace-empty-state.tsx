@@ -34,7 +34,10 @@ export function WorkspaceEmptyState({ workspace }: WorkspaceEmptyStateProps) {
             >
               {symbol}
             </span>
-            <span id="word" className="text-primary-700 dark:text-[#da9779] text-2xl leading-6 h-6 ">
+            <span
+              id="word"
+              className="text-primary-700 dark:text-[#da9779] text-2xl leading-6 h-6 "
+            >
               {word}…
             </span>
           </div>
