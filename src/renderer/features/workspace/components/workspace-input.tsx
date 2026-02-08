@@ -354,8 +354,8 @@ export function WorkspaceInput({
           onSubmit={onSubmit}
           placeholder={
             canResume
-              ? "Ask to make changes, @mention files, run /commands"
-              : "Ask to make changes, @mention files, run /commands"
+              ? "Ask a follow-up question, run /commands"
+              : "Ask to edit, run /commands, or add issues/files to context"
           }
           variant={variant}
         />

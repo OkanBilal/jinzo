@@ -1,10 +1,6 @@
 import { baseApi } from "./baseApi";
 import type { IssueWithEntity } from "./entitiesApi";
 
-// ─────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────
-
 export interface WorkspaceResource {
   id: string;
   workspaceId: string;
@@ -37,19 +33,20 @@ export interface AvailableResource {
 
 export type WorkspaceIssue = IssueWithEntity;
 
-// ─────────────────────────────────────────────────────────────
-// API
-// ─────────────────────────────────────────────────────────────
-
 export const workspaceResourcesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getWorkspaceResources: builder.query<WorkspaceResourceWithDetails[], string>({
+    getWorkspaceResources: builder.query<
+      WorkspaceResourceWithDetails[],
+      string
+    >({
       query: (workspaceId) => ({
         handler: "workspaceResources:getByWorkspace",
         args: [workspaceId],
       }),
-      transformResponse: (response: { success: boolean; data?: { resources: WorkspaceResourceWithDetails[] } }) =>
-        response.success ? response.data?.resources ?? [] : [],
+      transformResponse: (response: {
+        success: boolean;
+        data?: { resources: WorkspaceResourceWithDetails[] };
+      }) => (response.success ? (response.data?.resources ?? []) : []),
       providesTags: (_result, _error, workspaceId) => [
         { type: "WorkspaceResources", id: workspaceId },
       ],
@@ -60,8 +57,10 @@ export const workspaceResourcesApi = baseApi.injectEndpoints({
         handler: "workspaceResources:getAvailable",
         args: [workspaceId],
       }),
-      transformResponse: (response: { success: boolean; data?: { resources: AvailableResource[] } }) =>
-        response.success ? response.data?.resources ?? [] : [],
+      transformResponse: (response: {
+        success: boolean;
+        data?: { resources: AvailableResource[] };
+      }) => (response.success ? (response.data?.resources ?? []) : []),
       providesTags: ["WorkspaceResources"],
     }),
 
@@ -98,8 +97,10 @@ export const workspaceResourcesApi = baseApi.injectEndpoints({
         handler: "workspaceResources:getIssues",
         args: [workspaceId],
       }),
-      transformResponse: (response: { success: boolean; data?: { issues: WorkspaceIssue[] } }) =>
-        response.success ? response.data?.issues ?? [] : [],
+      transformResponse: (response: {
+        success: boolean;
+        data?: { issues: WorkspaceIssue[] };
+      }) => (response.success ? (response.data?.issues ?? []) : []),
       providesTags: (_result, _error, workspaceId) => [
         { type: "WorkspaceIssues", id: workspaceId },
       ],

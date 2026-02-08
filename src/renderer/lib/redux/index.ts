@@ -1,43 +1,52 @@
-import { configureStore } from '@reduxjs/toolkit';
-import { persistStore, persistReducer } from 'redux-persist';
-import storage from 'redux-persist/lib/storage';
+import { configureStore } from "@reduxjs/toolkit";
+import { persistStore, persistReducer } from "redux-persist";
+import storage from "redux-persist/lib/storage";
 
-import { baseApi } from './api/baseApi';
-import chatReducer from './slices/chatSlice';
-import moodReducer from './slices/moodSlice';
-import appSettingsReducer from './slices/appSettingsSlice';
-import journalEditingReducer from './slices/journalEditingSlice';
-import workspaceReducer from './slices/workspaceSlice';
+import { baseApi } from "./api/baseApi";
+import chatReducer from "./slices/chatSlice";
+import moodReducer from "./slices/moodSlice";
+import appSettingsReducer from "./slices/appSettingsSlice";
+import journalEditingReducer from "./slices/journalEditingSlice";
+import workspaceReducer from "./slices/workspaceSlice";
 
 const chatPersistConfig = {
-  key: 'chat',
+  key: "chat",
   storage,
-  whitelist: ['selectedModel', 'thinkingLevel', 'thinkingEnabled', 'toolMode'],
+  whitelist: ["selectedModel", "thinkingLevel", "thinkingEnabled", "toolMode"],
 };
 
 const moodPersistConfig = {
-  key: 'mood',
+  key: "mood",
   storage,
-  whitelist: ['activeMoodId'],
+  whitelist: ["activeMoodId"],
 };
 
 const appSettingsPersistConfig = {
-  key: 'appSettings',
+  key: "appSettings",
   storage,
-  whitelist: ['isDarkMode', 'sidebarCollapsed', 'fontSize'],
+  whitelist: ["isDarkMode", "sidebarCollapsed", "fontSize"],
 };
 
 const workspacePersistConfig = {
-  key: 'workspace',
+  key: "workspace",
   storage,
-  // Only persist model/provider settings, not file selection state
-  whitelist: ['selectedModelByProvider', 'selectedProviderId', 'thinkingEnabled'],
+  whitelist: [
+    "selectedModelByProvider",
+    "selectedProviderId",
+    "thinkingEnabled",
+  ],
 };
 
 const persistedChatReducer = persistReducer(chatPersistConfig, chatReducer);
 const persistedMoodReducer = persistReducer(moodPersistConfig, moodReducer);
-const persistedAppSettingsReducer = persistReducer(appSettingsPersistConfig, appSettingsReducer);
-const persistedWorkspaceReducer = persistReducer(workspacePersistConfig, workspaceReducer);
+const persistedAppSettingsReducer = persistReducer(
+  appSettingsPersistConfig,
+  appSettingsReducer,
+);
+const persistedWorkspaceReducer = persistReducer(
+  workspacePersistConfig,
+  workspaceReducer,
+);
 
 export const store = configureStore({
   reducer: {
@@ -52,17 +61,17 @@ export const store = configureStore({
     getDefaultMiddleware({
       serializableCheck: {
         ignoredActions: [
-          'api/executeQuery/pending',
-          'api/executeQuery/fulfilled',
-          'api/executeMutation/pending',
-          'api/executeMutation/fulfilled',
-          'persist/PERSIST',
-          'persist/REHYDRATE',
+          "api/executeQuery/pending",
+          "api/executeQuery/fulfilled",
+          "api/executeMutation/pending",
+          "api/executeMutation/fulfilled",
+          "persist/PERSIST",
+          "persist/REHYDRATE",
         ],
-        ignoredPaths: ['api.queries', 'api.mutations'],
+        ignoredPaths: ["api.queries", "api.mutations"],
       },
     }).concat(baseApi.middleware),
-  devTools: process.env.NODE_ENV !== 'production',
+  devTools: process.env.NODE_ENV !== "production",
 });
 
 export const persistor = persistStore(store);

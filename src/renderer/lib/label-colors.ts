@@ -1,7 +1,4 @@
-// Label color utilities for issues
-
 const labelColors: Record<string, string> = {
-  // Type labels
   bug: "bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-300",
   fix: "bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-300",
   feature:
@@ -19,7 +16,6 @@ const labelColors: Record<string, string> = {
   testing:
     "bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-300",
 
-  // Priority labels
   critical: "bg-red-600/20 text-red-800 dark:bg-red-600/30 dark:text-red-200",
   urgent:
     "bg-orange-500/20 text-orange-700 dark:bg-orange-500/30 dark:text-orange-300",
@@ -38,14 +34,12 @@ const labelColors: Record<string, string> = {
   ready:
     "bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-300",
 
-  // Other common labels
   security: "bg-red-600/20 text-red-800 dark:bg-red-600/30 dark:text-red-200",
   performance:
     "bg-orange-500/20 text-orange-700 dark:bg-orange-500/30 dark:text-orange-300",
   ui: "bg-pink-500/20 text-pink-700 dark:bg-pink-500/30 dark:text-pink-300",
   ux: "bg-pink-500/20 text-pink-700 dark:bg-pink-500/30 dark:text-pink-300",
-  design:
-    "bg-pink-500/20 text-pink-700 dark:bg-pink-500/30 dark:text-pink-300",
+  design: "bg-pink-500/20 text-pink-700 dark:bg-pink-500/30 dark:text-pink-300",
   backend:
     "bg-indigo-500/20 text-indigo-700 dark:bg-indigo-500/30 dark:text-indigo-300",
   frontend:
@@ -59,31 +53,22 @@ const labelColors: Record<string, string> = {
     "bg-slate-500/20 text-slate-700 dark:bg-slate-500/30 dark:text-slate-300",
 };
 
-/**
- * Get the color class for a label
- */
 export function getLabelColor(label: string): string {
   const labelLower = label.toLowerCase();
 
-  // Check for exact match
   if (labelColors[labelLower]) {
     return labelColors[labelLower];
   }
 
-  // Check for partial match (e.g., "bug: something" or "type: feature")
   for (const [key, color] of Object.entries(labelColors)) {
     if (labelLower.includes(key)) {
       return color;
     }
   }
 
-  // Default color
   return "bg-primary-200 dark:bg-primary-500/40 text-primary-600 dark:text-primary-100";
 }
 
-/**
- * Parse labels from JSON string
- */
 export function parseLabels(labels: string | null): string[] {
   if (!labels) return [];
   try {
@@ -94,19 +79,17 @@ export function parseLabels(labels: string | null): string[] {
   }
 }
 
-/**
- * Get context issue color based on the first label or provider
- */
-export function getContextIssueColor(labels: string | null, provider: string): string {
+export function getContextIssueColor(
+  labels: string | null,
+  provider: string,
+): string {
   const parsedLabels = parseLabels(labels);
-  
-  // If there are labels, use the first one for coloring
+
   if (parsedLabels.length > 0) {
     const firstLabel = parsedLabels[0];
     return getLabelColor(firstLabel);
   }
-  
-  // Fallback to provider-based coloring
+
   switch (provider) {
     case "github":
       return "bg-gray-500/15 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300";

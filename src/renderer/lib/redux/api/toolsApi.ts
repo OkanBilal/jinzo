@@ -107,9 +107,6 @@ export interface MoodToolPermissionPayload {
   policy?: Record<string, unknown>;
 }
 
-// ─────────────────────────────────────────────────────────────
-// API
-// ─────────────────────────────────────────────────────────────
 export const toolsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // Tools
@@ -192,7 +189,6 @@ export const toolsApi = baseApi.injectEndpoints({
       invalidatesTags: ["Tools"],
     }),
 
-    // Tool Calls
     getToolCallsByRun: builder.query<ToolCall[], string>({
       query: (runId) => ({
         handler: "toolCalls:getByRun",
@@ -266,7 +262,6 @@ export const toolsApi = baseApi.injectEndpoints({
       invalidatesTags: ["ToolCalls"],
     }),
 
-    // Tool Permissions
     getToolPermissionsByMood: builder.query<MoodToolPermission[], string>({
       query: (moodId) => ({
         handler: "toolPermissions:getByMood",
@@ -309,7 +304,6 @@ export const toolsApi = baseApi.injectEndpoints({
 });
 
 export const {
-  // Tools
   useGetToolsQuery,
   useLazyGetToolsQuery,
   useGetToolByIdQuery,
@@ -323,7 +317,6 @@ export const {
   useCreateToolMutation,
   useUpdateToolMutation,
   useDeleteToolMutation,
-  // Tool Calls
   useGetToolCallsByRunQuery,
   useLazyGetToolCallsByRunQuery,
   useGetToolCallsByAccountQuery,
@@ -333,7 +326,6 @@ export const {
   useStartToolCallMutation,
   useCompleteToolCallMutation,
   useFailToolCallMutation,
-  // Tool Permissions
   useGetToolPermissionsByMoodQuery,
   useLazyGetToolPermissionsByMoodQuery,
   useSetToolPermissionMutation,

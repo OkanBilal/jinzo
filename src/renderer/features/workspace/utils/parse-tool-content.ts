@@ -23,6 +23,8 @@ export function parseToolContent(content: string): {
           : params.command;
     } else if (params.description) {
       summary = params.description;
+    } else if (params.skill) {
+      summary = params.skill;
     } else {
       const paramCount = Object.keys(params).length;
       summary = paramCount > 0 ? `(${paramCount} params)` : "";

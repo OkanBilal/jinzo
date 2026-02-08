@@ -27,7 +27,7 @@ export const journalEditingSlice = createSlice({
         title: string;
         body: string;
         status: "draft" | "published";
-      }>
+      }>,
     ) => {
       state.entityId = action.payload.entityId;
       state.title = action.payload.title;
@@ -51,19 +51,20 @@ export const journalEditingSlice = createSlice({
     // Handle title updates from MCP tools (external source)
     handleTitleUpdate: (
       state,
-      action: PayloadAction<{ entityId: string; title: string }>
+      action: PayloadAction<{ entityId: string; title: string }>,
     ) => {
-      // Only update if it's for the currently editing journal
       if (state.entityId === action.payload.entityId) {
         state.title = action.payload.title;
       }
     },
-    // Handle body updates from MCP tools (external source)
     handleContentUpdate: (
       state,
-      action: PayloadAction<{ entityId: string; body: string; wordCount: number }>
+      action: PayloadAction<{
+        entityId: string;
+        body: string;
+        wordCount: number;
+      }>,
     ) => {
-      // Only update if it's for the currently editing journal
       if (state.entityId === action.payload.entityId) {
         state.body = action.payload.body;
         state.wordCount = action.payload.wordCount;

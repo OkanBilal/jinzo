@@ -99,7 +99,6 @@ export interface PlaylistItem {
 
 export const entitiesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    // Entity CRUD
     getEntities: builder.query<Entity[], EntityQueryParams>({
       query: (params) => ({
         handler: "entities:getAll",
@@ -170,7 +169,6 @@ export const entitiesApi = baseApi.injectEndpoints({
         response.success ? response.data : [],
     }),
 
-    // Tasks
     getTasks: builder.query<Task[], { status?: string; limit?: number }>({
       query: (params) => ({
         handler: "tasks:getAll",
@@ -206,7 +204,6 @@ export const entitiesApi = baseApi.injectEndpoints({
       invalidatesTags: ["Task"],
     }),
 
-    // Issues
     getIssues: builder.query<Issue[], { state?: string; limit?: number }>({
       query: (params) => ({
         handler: "issues:getAll",
@@ -242,7 +239,6 @@ export const entitiesApi = baseApi.injectEndpoints({
       invalidatesTags: ["Issue"],
     }),
 
-    // Issues by repo (for workspace issues section)
     getIssuesByRepo: builder.query<IssueWithEntity[], { repo: string }>({
       query: ({ repo }) => ({
         handler: "issues:getAll",
@@ -253,7 +249,6 @@ export const entitiesApi = baseApi.injectEndpoints({
       providesTags: ["Issue"],
     }),
 
-    // Playlists
     getPlaylistItems: builder.query<
       PlaylistItem[],
       { playlistId?: string; limit?: number }
@@ -271,7 +266,6 @@ export const entitiesApi = baseApi.injectEndpoints({
 });
 
 export const {
-  // Entities
   useGetEntitiesQuery,
   useLazyGetEntitiesQuery,
   useGetEntityByIdQuery,
@@ -281,15 +275,12 @@ export const {
   useDeleteEntityMutation,
   useSearchEntitiesQuery,
   useLazySearchEntitiesQuery,
-  // Tasks
   useGetTasksQuery,
   useGetTaskByEntityIdQuery,
   useUpdateTaskStatusMutation,
-  // Issues
   useGetIssuesQuery,
   useGetIssueByEntityIdQuery,
   useUpdateIssueStateMutation,
   useGetIssuesByRepoQuery,
-  // Playlists
   useGetPlaylistItemsQuery,
 } = entitiesApi;

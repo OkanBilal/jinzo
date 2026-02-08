@@ -76,11 +76,9 @@ const workspaceSlice = createSlice({
       state.fileContentError = null;
       state.isLoadingFileContent = false;
     },
-    // Tab actions
     setActiveTab: (state, action: PayloadAction<"editor" | string>) => {
       state.activeTab = action.payload;
     },
-    // Context files actions
     addContextFile: (state, action: PayloadAction<FileNode>) => {
       // Don't add duplicates
       if (!state.contextFiles.some(f => f.fullPath === action.payload.fullPath)) {
@@ -93,9 +91,7 @@ const workspaceSlice = createSlice({
     clearContextFiles: (state) => {
       state.contextFiles = [];
     },
-    // Context issues actions
     addContextIssue: (state, action: PayloadAction<ContextIssue>) => {
-      // Replace existing issue - only 1 allowed
       state.contextIssues = [action.payload];
     },
     removeContextIssue: (state, action: PayloadAction<string>) => {
@@ -104,7 +100,6 @@ const workspaceSlice = createSlice({
     clearContextIssues: (state) => {
       state.contextIssues = [];
     },
-    // Issue tab actions
     openIssueTab: (state, action: PayloadAction<IssueWithEntity>) => {
       const entityId = action.payload.issue.entityId;
       if (!state.openIssueTabs.some((t) => t.issue.entityId === entityId)) {

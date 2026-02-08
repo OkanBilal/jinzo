@@ -1,9 +1,31 @@
 import { baseApi } from "./baseApi";
 
-export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "canceled";
-export type RunContextKind = "file" | "selection" | "diff" | "git" | "terminal" | "env" | "note";
-export type RunArtifactKind = "patch" | "file" | "log" | "report" | "command_result";
-export type RunCommandStatus = "queued" | "running" | "done" | "error" | "canceled";
+export type RunStatus =
+  | "queued"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "canceled";
+export type RunContextKind =
+  | "file"
+  | "selection"
+  | "diff"
+  | "git"
+  | "terminal"
+  | "env"
+  | "note";
+export type RunArtifactKind =
+  | "patch"
+  | "file"
+  | "log"
+  | "report"
+  | "command_result";
+export type RunCommandStatus =
+  | "queued"
+  | "running"
+  | "done"
+  | "error"
+  | "canceled";
 
 export interface Run {
   id: string;
@@ -133,7 +155,6 @@ export interface UpdateRunCommandPayload {
 
 export const runsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    // Runs
     getRuns: builder.query<Run[], number | void>({
       query: (limit) => ({
         handler: "runs:getAll",
@@ -154,7 +175,10 @@ export const runsApi = baseApi.injectEndpoints({
       providesTags: (_result, _error, id) => [{ type: "Runs", id }],
     }),
 
-    getRunsByAccount: builder.query<Run[], { accountId: string; limit?: number }>({
+    getRunsByAccount: builder.query<
+      Run[],
+      { accountId: string; limit?: number }
+    >({
       query: ({ accountId, limit }) => ({
         handler: "runs:getByAccount",
         args: [accountId, limit],
@@ -177,7 +201,10 @@ export const runsApi = baseApi.injectEndpoints({
       providesTags: ["Runs"],
     }),
 
-    getRunsByStatus: builder.query<Run[], { accountId: string; status: RunStatus }>({
+    getRunsByStatus: builder.query<
+      Run[],
+      { accountId: string; status: RunStatus }
+    >({
       query: ({ accountId, status }) => ({
         handler: "runs:getByStatus",
         args: [accountId, status],
@@ -197,15 +224,20 @@ export const runsApi = baseApi.injectEndpoints({
       invalidatesTags: ["Runs"],
     }),
 
-    updateRun: builder.mutation<Run, { id: string; payload: UpdateRunPayload }>({
-      query: ({ id, payload }) => ({
-        handler: "runs:update",
-        args: [id, payload],
-      }),
-      transformResponse: (response: { success: boolean; data: Run }) =>
-        response.data,
-      invalidatesTags: (_result, _error, { id }) => ["Runs", { type: "Runs", id }],
-    }),
+    updateRun: builder.mutation<Run, { id: string; payload: UpdateRunPayload }>(
+      {
+        query: ({ id, payload }) => ({
+          handler: "runs:update",
+          args: [id, payload],
+        }),
+        transformResponse: (response: { success: boolean; data: Run }) =>
+          response.data,
+        invalidatesTags: (_result, _error, { id }) => [
+          "Runs",
+          { type: "Runs", id },
+        ],
+      },
+    ),
 
     startRun: builder.mutation<Run, string>({
       query: (id) => ({
@@ -234,7 +266,10 @@ export const runsApi = baseApi.injectEndpoints({
       }),
       transformResponse: (response: { success: boolean; data: Run }) =>
         response.data,
-      invalidatesTags: (_result, _error, { id }) => ["Runs", { type: "Runs", id }],
+      invalidatesTags: (_result, _error, { id }) => [
+        "Runs",
+        { type: "Runs", id },
+      ],
     }),
 
     cancelRun: builder.mutation<Run, string>({
@@ -262,7 +297,9 @@ export const runsApi = baseApi.injectEndpoints({
       }),
       transformResponse: (response: { success: boolean; data: RunContext[] }) =>
         response.data,
-      providesTags: (_result, _error, runId) => [{ type: "RunContext", id: runId }],
+      providesTags: (_result, _error, runId) => [
+        { type: "RunContext", id: runId },
+      ],
     }),
 
     addRunContext: builder.mutation<number, CreateRunContextPayload>({
@@ -294,8 +331,10 @@ export const runsApi = baseApi.injectEndpoints({
         handler: "runArtifacts:getByRun",
         args: [runId],
       }),
-      transformResponse: (response: { success: boolean; data: RunArtifact[] }) =>
-        response.data,
+      transformResponse: (response: {
+        success: boolean;
+        data: RunArtifact[];
+      }) => response.data,
       providesTags: (_result, _error, runId) => [
         { type: "RunArtifacts", id: runId },
       ],

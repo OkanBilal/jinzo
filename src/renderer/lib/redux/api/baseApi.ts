@@ -1,6 +1,5 @@
 import { createApi, BaseQueryFn } from '@reduxjs/toolkit/query/react';
 
-// Custom base query that uses Electron IPC instead of HTTP
 const ipcBaseQuery = (): BaseQueryFn<
   {
     handler: string;

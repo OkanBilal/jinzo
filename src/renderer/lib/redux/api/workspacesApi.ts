@@ -119,8 +119,10 @@ export const workspacesApi = baseApi.injectEndpoints({
       query: () => ({
         handler: "workspaces:selectDirectory",
       }),
-      transformResponse: (response: { success: boolean; data: string | null }) =>
-        response.data,
+      transformResponse: (response: {
+        success: boolean;
+        data: string | null;
+      }) => response.data,
     }),
   }),
 });
