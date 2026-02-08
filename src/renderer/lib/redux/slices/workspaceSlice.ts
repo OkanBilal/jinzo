@@ -12,6 +12,7 @@ export interface ContextIssue {
 }
 
 export interface WorkspaceState {
+  activeWorkspaceId: string | null;
   selectedModelByProvider: Record<string, string>;
   selectedProviderId: string;
   thinkingEnabled: boolean;
@@ -26,6 +27,7 @@ export interface WorkspaceState {
 }
 
 const initialState: WorkspaceState = {
+  activeWorkspaceId: null,
   selectedModelByProvider: {},
   selectedProviderId: "copilot_cli",
   thinkingEnabled: false,
@@ -43,6 +45,9 @@ const workspaceSlice = createSlice({
   name: "workspace",
   initialState,
   reducers: {
+    setActiveWorkspaceId: (state, action: PayloadAction<string | null>) => {
+      state.activeWorkspaceId = action.payload;
+    },
     setWorkspaceModel: (state, action: PayloadAction<{ providerId: string; model: string }>) => {
       state.selectedModelByProvider[action.payload.providerId] = action.payload.model;
     },
@@ -123,6 +128,7 @@ const workspaceSlice = createSlice({
 });
 
 export const {
+  setActiveWorkspaceId,
   setWorkspaceModel,
   setWorkspaceProvider,
   setWorkspaceThinkingEnabled,

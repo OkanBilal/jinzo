@@ -1,5 +1,4 @@
-import { useCallback, useMemo } from "react";
-import { useLocation } from "react-router-dom";
+import { useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { FileExplorer, type FileNode } from "@/features/file-explorer";
 import { Body } from "@/components/ui/text";
@@ -22,18 +21,14 @@ import {
 import { useActiveMood } from "@/hooks/use-active-mood";
 
 export function WorkspaceSidebar() {
-  const location = useLocation();
   const dispatch = useDispatch();
   const { activeMoodId } = useActiveMood();
+  const workspaceId = useSelector(
+    (state: RootState) => state.workspace.activeWorkspaceId,
+  );
   const selectedFile = useSelector(
     (state: RootState) => state.workspace.selectedFile,
   );
-
-  // TODO: Refactor workspaceId extraction to a custom hook if used elsewhere
-  const workspaceId = useMemo(() => {
-    const match = location.pathname.match(/^\/(copilot|claude)\/([^/]+)/);
-    return match ? match[2] : undefined;
-  }, [location.pathname]);
 
   // Get workspace data from the selected workspace ID
   const { data: workspace } = useGetWorkspaceByIdQuery(workspaceId || "", {

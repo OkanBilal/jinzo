@@ -45,7 +45,6 @@ const variantStyles = {
 function formatClaudeModelName(model: string): string {
   const lowerModel = model.toLowerCase();
 
-  // TODO: Check if it's a Claude model by ID
   if (
     lowerModel === "default (recommended)" ||
     lowerModel === "default" ||

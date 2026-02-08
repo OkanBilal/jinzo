@@ -72,7 +72,6 @@ export const connectionCredentialsService = {
       });
 
       // Update connection status and metadata
-      // TODO: Refactor metadata handling
       const currentMetadata = parseConnectionMetadata(connection.metadata);
       const updatedMetadata: Record<string, unknown> = {
         ...currentMetadata,

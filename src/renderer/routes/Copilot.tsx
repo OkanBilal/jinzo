@@ -20,6 +20,7 @@ import {
   clearContextIssues,
   closeIssueTab,
   clearIssueTabs,
+  setActiveWorkspaceId,
 } from "@/lib/redux/slices/workspaceSlice";
 import { isIssueTab } from "@/features/workspace/utils/repo-utils";
 import type { RootState } from "@/lib/redux";
@@ -65,6 +66,10 @@ export default function CopilotPage() {
 
   const { workspaceId, selectedWorkspace, currentWorkspace } =
     useWorkspaceData();
+
+  useEffect(() => {
+    dispatch(setActiveWorkspaceId(workspaceId ?? null));
+  }, [workspaceId, dispatch]);
 
   useEffect(() => {
     dispatch(clearSelectedFile());

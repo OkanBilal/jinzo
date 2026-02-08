@@ -5,7 +5,6 @@ import { toast } from "@/components/ui/toast";
 const MAX_DISPLAY_LENGTH = 200;
 
 
-// TODO: Move api calls to Redux RTK Query
 /**
  * Format tool input/output data for display
  * Truncates long content and shows file paths nicely
@@ -295,14 +294,14 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
 
         const result = await window.api.runs.execute({
           accountId: accountRes.data.id,
-          workspaceId: selectedWorkspace, // TODO: handle workspace change
+          workspaceId: selectedWorkspace, 
           providerId: selectedProvider,
           goal: goal.trim(),
           model: model || undefined,
           initialContext: [
             {
-              kind: "note", // TODO: define kinds properly
-              content: `User goal: ${goal.trim()}`, // TODO: enhance context
+              kind: "note", // 
+              content: `User goal: ${goal.trim()}`,
             },
           ],
         });

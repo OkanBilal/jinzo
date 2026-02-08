@@ -103,12 +103,11 @@ export function WorkspaceInput({
   const { data: providerCommands = [], isLoading: isLoadingCommands } =
     useGetProviderCommandsQuery(activeProviderId, { skip: !activeProviderId });
 
-  // Fetch skills from provider (for slash menu dropdown)
-  //TODO: works with Claude so make available for claude for now
+  // Fetch skills from provider (for slash menu dropdown) - currently Claude only
   const { data: providerSkills = [], isLoading: isLoadingSkills } =
     useGetProviderSkillsQuery(
       { id: activeProviderId, workspacePath },
-      { skip: !activeProviderId },
+      { skip: !activeProviderId || variant !== "claude" },
     );
 
   // Fetch provider config for plan mode toggle (Claude only)

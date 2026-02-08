@@ -11,7 +11,6 @@ export interface SaveCredentialsPayload {
   developerToken?: string; // apple-music
   userToken?: string; // apple-music
   accessToken?: string; // spotify
-  //TODO: Check this
   apiToken?: string; // jira
   domain?: string; // jira
   email?: string; // jira

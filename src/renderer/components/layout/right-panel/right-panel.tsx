@@ -17,24 +17,27 @@ export default function RightPanel({
   onToggle,
   width = "0rem",
 }: RightPanelProps) {
-  const [isVisible, setIsVisible] = useState(false);
+  const [animationState, setAnimationState] = useState<"closed" | "opening" | "open" | "closing">("closed");
   const { rightPanelComponent } = useLayoutConfig();
-  //TODO: Fix animation delays and transitions
-  const FADE_IN_DELAY = isOpen ? 20 : 60;
 
   const handleToggle = () => onToggle(!isOpen);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
     if (isOpen) {
-      timer = setTimeout(() => setIsVisible(true), FADE_IN_DELAY);
+      // Start opening: first mount (set to opening), then animate in
+      setAnimationState("opening");
+      const timer = setTimeout(() => setAnimationState("open"), 50);
+      return () => clearTimeout(timer);
     } else {
-      timer = setTimeout(() => setIsVisible(false), 0);
+      // Start closing: animate out, then unmount
+      setAnimationState("closing");
+      const timer = setTimeout(() => setAnimationState("closed"), 300);
+      return () => clearTimeout(timer);
     }
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
   }, [isOpen]);
+
+  const isVisible = animationState !== "closed";
+  const isAnimatedIn = animationState === "open";
 
   return (
     <>
@@ -46,6 +49,7 @@ export default function RightPanel({
       />
       <Panel
         isVisible={isVisible}
+        isAnimatedIn={isAnimatedIn}
         width={width}
         component={rightPanelComponent}
       />
@@ -85,11 +89,11 @@ function ToggleButton({
 
 interface PanelProps {
   isVisible: boolean;
+  isAnimatedIn: boolean;
   width: string;
   component: string;
 }
 
-// TODO: move to separate file
 const PANEL_COMPONENTS: Record<string, React.ComponentType> = {
   config: ConfigContent,
   journal: JournalContent,
@@ -97,18 +101,18 @@ const PANEL_COMPONENTS: Record<string, React.ComponentType> = {
   claude: WorkspaceSidebar,
 };
 
-function Panel({ isVisible, width, component }: PanelProps) {
+function Panel({ isVisible, isAnimatedIn, width, component }: PanelProps) {
   const PanelContent = PANEL_COMPONENTS[component] || ConfigContent;
+
+  if (!isVisible) return null;
 
   return (
     <div
-      className={`block fixed top-0 bottom-0 right-0 overflow-hidden transition-all duration-300 ease-in-out  bg-transparent ${
-        isVisible ? "translate-x-0 z-50 " : "pointer-events-none"
-      }`}
+      className={`block fixed top-0 bottom-0 right-0 overflow-hidden transition-all duration-300 ease-out bg-transparent z-50`}
       style={{
         width: width,
-        transform: isVisible ? "translateX(0)" : `translateX(${width})`,
-        zIndex: isVisible ? 50 : -10,
+        transform: isAnimatedIn ? "translateX(0)" : `translateX(100%)`,
+        opacity: isAnimatedIn ? 1 : 0,
       }}
       role="complementary"
       aria-label="Right panel"

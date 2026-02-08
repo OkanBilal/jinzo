@@ -68,8 +68,6 @@ interface SDKAgentDefinition {
 type SDKAgentsConfig = Record<string, SDKAgentDefinition>;
 
 interface SDKOptions {
-  // TODO: implement tool permission checks
-  //canUseTool?: (toolName: string) => boolean;
 
   model?: string;
   continue?: boolean;

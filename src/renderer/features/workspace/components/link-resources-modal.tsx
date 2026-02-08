@@ -17,7 +17,7 @@ import {
 import { toast } from "@/components/ui/toast";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
-import { Asana, Jira } from "@/components/ui/icons";
+import { Apps, Asana, Jira } from "@/components/ui/icons";
 
 interface LinkResourcesModalProps {
   workspaceId: string;
@@ -156,7 +156,7 @@ export function LinkResourcesModal({
       ) : resource.kind === "asana_project" ? (
         <Asana className="w-4 h-4 shrink-0" />
       ) : (
-        <Linear className="w-4 h-4 shrink-0" /> // {/* TODO: updateFallback icon */ }
+        <Apps className="w-4 h-4 shrink-0" /> 
       );
 
     return (

@@ -79,11 +79,6 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
             ))}
           </div>
         )}
-        {/* TODO: Priority will be aligned  */}
-        {/* <p className="text-primary-800 dark:text-primary-200 mt-0.5">
-              {iss.priority}
-            </p> */}
-
         {/* Body */}
         <div className="space-y-2">
           {entity.body ? (

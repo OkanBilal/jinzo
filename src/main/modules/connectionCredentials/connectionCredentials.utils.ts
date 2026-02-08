@@ -101,7 +101,6 @@ export function parseProviderCredentials(
       tokensForHash = [credentials.accessToken as string];
       break;
 
-      // TODO: Check
 
     case "jira":
       // Jira requires apiToken, domain, and email
