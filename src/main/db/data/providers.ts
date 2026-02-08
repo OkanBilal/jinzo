@@ -45,7 +45,7 @@ export const seedProviders: CreateProviderPayload[] = [
       // CopilotAdapterConfig interface fields
       // binary is auto-resolved from @github/copilot package; only set for custom paths
       transport: "stdio" as const, // Transport mode: "stdio" or "tcp"
-      timeout: 300000, // Timeout in milliseconds
+      timeout: 600000, // Timeout in milliseconds
       logLevel: "info" as const, // Log level for the SDK
       autoRestart: true, // Auto-restart on crash
     },
@@ -70,7 +70,7 @@ export const seedProviders: CreateProviderPayload[] = [
     defaultModel: "claude-opus-4-5-20251101", // Updated model name
     config: {
       // ClaudeCodeAdapterConfig interface fields
-      timeout: 300000, // Timeout in milliseconds
+      timeout: 600000, // Timeout in milliseconds
       apiKey: process.env.ANTHROPIC_API_KEY, // API key from environment
     },
     capabilities: {

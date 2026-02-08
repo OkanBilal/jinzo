@@ -51,7 +51,7 @@ function formatClaudeModelName(model: string): string {
     lowerModel === "default" ||
     lowerModel === "opus"
   ) {
-    return "Claude Opus 4.5";
+    return "Claude Opus 4.6";
   }
   if (lowerModel === "sonnet") {
     return "Claude Sonnet 4.5";
