@@ -24,7 +24,8 @@ export function parseToolContent(content: string): {
     } else if (params.description) {
       summary = params.description;
     } else {
-      summary = `(${Object.keys(params).length} params)`;
+      const paramCount = Object.keys(params).length;
+      summary = paramCount > 0 ? `(${paramCount} params)` : "";
     }
     return { toolName, params, summary };
   } catch {
