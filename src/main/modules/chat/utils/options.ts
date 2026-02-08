@@ -1,5 +1,5 @@
 import type { ChatConfig, ChatOptions } from "../chat.dto";
-import { ItemTypeId, SourceId } from "./rag";
+import { SourceId } from "./rag";
 
 export interface MergedChatOptions {
   temperature: number;
@@ -10,8 +10,6 @@ export interface MergedChatOptions {
   noCache?: boolean;
   includeMetadata?: boolean;
   skipUserSave?: boolean;
-  sourceFilter?: SourceId[];
-  itemTypeFilter?: ItemTypeId[];
   prioritizeSources?: SourceId[];
 }
 
@@ -28,8 +26,6 @@ export function mergeOptionsWithConfig(
     noCache: options.noCache,
     includeMetadata: options.includeMetadata,
     skipUserSave: options.skipUserSave,
-    sourceFilter: options.sourceFilter,
-    itemTypeFilter: options.itemTypeFilter,
     prioritizeSources: options.prioritizeSources,
   };
 }

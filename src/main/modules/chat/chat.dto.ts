@@ -39,6 +39,8 @@ export interface ChatResponse {
     appliedFilters?: {
       sources: string[];
       itemTypes: string[];
+      kindFilter?: string[];
+      connectionIdFilter?: string[];
       topK: number;
     };
     detectedFromQuery?: {
@@ -74,8 +76,6 @@ export interface ChatOptions {
   top_p?: number;
   includeMetadata?: boolean;
   prioritizeSources?: SourceId[];
-  sourceFilter?: SourceId[];
-  itemTypeFilter?: ItemTypeId[];
   skipUserSave?: boolean;
   thinkingEnabled?: boolean;
   thinkingLevel?: "low" | "medium" | "high";

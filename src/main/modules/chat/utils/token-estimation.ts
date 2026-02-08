@@ -1,17 +1,45 @@
 /**
  * Utilities for estimating token counts.
- * Uses a conservative estimate of ~4 characters per token for English text.
- * This is a rough approximation - actual tokenization varies by model.
+ * Uses content-aware heuristics for better accuracy across different text types.
  */
 
-const CHARS_PER_TOKEN = 4;
+const BASE_CHARS_PER_TOKEN = 4;
+
+// Patterns that indicate content with different token densities
+const CODE_PATTERN = /[{}\[\]();=<>|&!+\-*/\\^~`]/g;
+const URL_PATTERN = /https?:\/\/\S+/g;
+const WHITESPACE_HEAVY_PATTERN = /\s{2,}/g;
 
 /**
  * Estimate the number of tokens in a string.
+ * Uses content-aware heuristics: code-heavy text has more tokens per char
+ * due to special characters being individual tokens; URLs are token-dense.
  */
 export function estimateTokens(text: string): number {
   if (!text) return 0;
-  return Math.ceil(text.length / CHARS_PER_TOKEN);
+
+  const length = text.length;
+
+  // Count URL characters (URLs tokenize at ~1 token per 3 chars)
+  const urls = text.match(URL_PATTERN);
+  const urlChars = urls ? urls.reduce((sum, u) => sum + u.length, 0) : 0;
+
+  // Count code-like special characters (each roughly 1 token)
+  const codeChars = (text.match(CODE_PATTERN) || []).length;
+
+  // Excess whitespace collapses into fewer tokens
+  const excessWhitespace = (text.match(WHITESPACE_HEAVY_PATTERN) || [])
+    .reduce((sum, m) => sum + m.length - 1, 0);
+
+  const regularChars = length - urlChars - codeChars - excessWhitespace;
+
+  const tokens =
+    Math.ceil(regularChars / BASE_CHARS_PER_TOKEN) +
+    Math.ceil(urlChars / 3) +
+    codeChars +
+    Math.ceil(excessWhitespace / 8);
+
+  return tokens;
 }
 
 /**

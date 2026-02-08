@@ -2,6 +2,7 @@ import ollama from "ollama";
 
 import { cachedEmbedding, embeddingCache } from "../rag";
 import { DEFAULT_EMBEDDING_CONFIG } from "../../chat.constants";
+import { estimateTokens as sharedEstimateTokens } from "../token-estimation";
 
 const PREPROCESSING_PATTERNS = {
   MULTIPLE_SPACES: /\s+/g,
@@ -128,10 +129,6 @@ function isNonRetryableError(error: any): boolean {
   );
 }
 
-function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
-}
-
 function preprocessTextForEmbedding(
   text: string,
   maxTokens = DEFAULT_EMBEDDING_CONFIG.maxTokens
@@ -143,12 +140,13 @@ function preprocessTextForEmbedding(
     .replace(PREPROCESSING_PATTERNS.MULTIPLE_SPACES, " ")
     .replace(PREPROCESSING_PATTERNS.MULTIPLE_NEWLINES, "\n");
 
-  const estimatedTokens = estimateTokens(cleaned);
+  const estimatedTokens = sharedEstimateTokens(cleaned);
   if (estimatedTokens <= maxTokens) {
     return cleaned;
   }
 
-  const maxChars = maxTokens * 4;
+  // Conservative truncation: use ~3.5 chars/token to avoid over-truncating
+  const maxChars = Math.floor(maxTokens * 3.5);
   return cleaned.slice(0, maxChars);
 }
 

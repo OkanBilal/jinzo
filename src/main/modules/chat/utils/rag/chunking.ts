@@ -68,23 +68,37 @@ function chunkText(text: string, config: ChunkConfig = {}): TextChunk[] {
       segments = splitIntoWords(normalizedText);
       break;
   }
-  let currentChunk = "";
+  let currentSegments: string[] = [];
+  let currentLength = 0;
   let chunkIndex = 0;
   const separator = " ";
+
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
-    const potentialChunk = currentChunk
-      ? currentChunk + separator + segment
-      : segment;
-    if (potentialChunk.length > cfg.maxChunkSize && currentChunk.length > 0) {
-      chunks.push(createChunk(currentChunk, chunkIndex++));
-      const overlapText = currentChunk.slice(-cfg.overlap);
-      currentChunk = overlapText + separator + segment;
+    const addedLength = currentLength > 0 ? separator.length + segment.length : segment.length;
+
+    if (currentLength + addedLength > cfg.maxChunkSize && currentSegments.length > 0) {
+      chunks.push(createChunk(currentSegments.join(separator), chunkIndex++));
+
+      // Build overlap from trailing segments instead of slicing characters
+      const overlapSegments: string[] = [];
+      let overlapLength = 0;
+      for (let j = currentSegments.length - 1; j >= 0; j--) {
+        const segLen = overlapLength > 0 ? separator.length + currentSegments[j].length : currentSegments[j].length;
+        if (overlapLength + segLen > cfg.overlap) break;
+        overlapSegments.unshift(currentSegments[j]);
+        overlapLength += segLen;
+      }
+
+      currentSegments = [...overlapSegments, segment];
+      currentLength = currentSegments.join(separator).length;
     } else {
-      currentChunk = potentialChunk;
+      currentSegments.push(segment);
+      currentLength += addedLength;
     }
-    if (i === segments.length - 1 && currentChunk.length > 0) {
-      chunks.push(createChunk(currentChunk, chunkIndex++));
+
+    if (i === segments.length - 1 && currentSegments.length > 0) {
+      chunks.push(createChunk(currentSegments.join(separator), chunkIndex++));
     }
   }
   return filterChunksBySize(chunks, cfg.minChunkSize);

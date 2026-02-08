@@ -109,6 +109,7 @@ interface ItemTypeMetadata {
   displayName: string;
   patterns: readonly string[];
   sources: readonly string[];
+  entityKinds: readonly string[];
 }
 
 export const SOURCES = [
@@ -131,6 +132,12 @@ export const SOURCES = [
     itemTypes: ["issue"],
   },
   {
+    id: "jira",
+    displayName: "Jira",
+    patterns: ["jira", "jira\\s*issue", "jira\\s*ticket"],
+    itemTypes: ["issue"],
+  },
+  {
     id: "hackernews",
     displayName: "Hacker News",
     patterns: ["hacker\\s*news", "hackernews", "\\bhn\\b", "ycombinator"],
@@ -139,15 +146,20 @@ export const SOURCES = [
   {
     id: "raindrop",
     displayName: "Raindrop",
-    patterns: ["raindrop", "bookmark", "saved\\s*link"],
+    patterns: ["raindrop", "saved\\s*link"],
     itemTypes: ["bookmark"],
+  },
+  {
+    id: "rss",
+    displayName: "RSS",
+    patterns: ["rss", "rss\\s*feed", "\\bfeed\\b", "blog\\s*post"],
+    itemTypes: ["article"],
   },
   {
     id: "podcast",
     displayName: "Podcast",
     patterns: [
       "podcast",
-      "episode",
       "audio\\s*show",
       "hard\\s*fork",
       "science\\s*vs",
@@ -185,7 +197,8 @@ export const ITEM_TYPES = [
     id: "issue",
     displayName: "Issue",
     patterns: ["issue", "bug", "ticket", "problem", "task"],
-    sources: ["github", "linear", "asana"],
+    sources: ["github", "linear", "asana", "jira"],
+    entityKinds: ["issue"],
   },
   {
     id: "pull-request",
@@ -197,48 +210,63 @@ export const ITEM_TYPES = [
       "code\\s*review",
     ],
     sources: ["github"],
+    entityKinds: ["pull_request"],
   },
   {
     id: "news",
     displayName: "News",
-    patterns: ["news", "story", "article"],
+    patterns: ["news", "\\bstory\\b", "hn\\s*post"],
     sources: ["hackernews"],
+    entityKinds: ["hn_story", "hn_comment"],
   },
   {
     id: "bookmark",
     displayName: "Bookmark",
     patterns: ["bookmark", "saved\\s*link", "reading\\s*list"],
     sources: ["raindrop", "notion"],
+    entityKinds: ["bookmark", "notion_bookmark"],
   },
   {
     id: "episode",
     displayName: "Episode",
-    patterns: ["episode", "podcast\\s*episode", "show"],
+    patterns: ["podcast\\s*episode", "\\bepisode\\b"],
     sources: ["podcast"],
+    entityKinds: ["podcast_episode"],
   },
   {
     id: "article",
     displayName: "Article",
-    patterns: ["article", "post", "blog", "essay"],
-    sources: ["new-yorker", "a-working-library"],
+    patterns: ["\\barticle\\b", "blog\\s*post", "essay", "rss"],
+    sources: ["rss"],
+    entityKinds: ["rss_article"],
+  },
+  {
+    id: "note",
+    displayName: "Note",
+    patterns: ["\\bnote\\b", "\\bpage\\b", "notion\\s*page", "document"],
+    sources: ["notion"],
+    entityKinds: ["notion_page"],
   },
   {
     id: "track",
     displayName: "Track",
     patterns: ["track", "song", "music"],
     sources: ["spotify", "applemusic"],
+    entityKinds: ["spotify_track", "apple_music_track"],
   },
   {
     id: "playlist",
     displayName: "Playlist",
     patterns: ["playlist"],
     sources: ["spotify", "applemusic", "youtube"],
+    entityKinds: ["spotify_playlist", "apple_music_playlist", "youtube_playlist"],
   },
   {
     id: "video",
     displayName: "Video",
-    patterns: ["video"],
+    patterns: ["video", "youtube\\s*video", "channel"],
     sources: ["youtube"],
+    entityKinds: ["youtube_channel"],
   },
 ] as const satisfies readonly ItemTypeMetadata[];
 
@@ -246,7 +274,21 @@ export const ITEM_TYPES = [
 // System Prompts
 // ─────────────────────────────────────────────────────────────
 export const SYSTEM_PROMPT =
-  "You are a helpful assistant with access to the user's personal knowledge base of entities from various sources. Use the provided context to answer questions accurately. Pay close attention to the KIND and SOURCE of each entity - they indicate what type of content it is (issue, bookmark, podcast_episode, track, video, etc.) and where it comes from (GitHub, Hacker News, Raindrop, Apple Music, Spotify, etc.). For bookmarks and other saved content, metadata fields often contain valuable information like tags, artists, albums, or categories. IMPORTANT: When listing entities, ALWAYS include their URLs as clickable markdown links using [Title](URL) format. Do NOT use citation markers like [1] or footnote references - keep responses clean and readable. If you need to make reasonable inferences based on the context, do so. Explain if the context is completely unrelated to the question.";
+  "You are a helpful assistant with access to the user's personal knowledge base of entities from various sources. " +
+  "Use the provided context to answer questions accurately.\n\n" +
+  "ENTITY FIELDS:\n" +
+  "- Source: where it comes from (GitHub, Hacker News, Raindrop, Spotify, Apple Music, YouTube, Notion, RSS, Jira, etc.)\n" +
+  "- Type: what kind of content it is (Issue, Pull Request, Bookmark, Track, Episode, Article, Note, Video, etc.)\n" +
+  "- Metadata: tags, artists, albums, categories, labels, and other structured data\n\n" +
+  "FORMATTING RULES:\n" +
+  "- ALWAYS format entity references as markdown links: [Title](URL)\n" +
+  "- Do NOT use citation markers like [1] or footnote references\n" +
+  "- Include relevant metadata (tags, artists, status, labels) when useful\n\n" +
+  "QUERY HANDLING:\n" +
+  "- For comparisons (\"which is newer\", \"compare these\"), present entities side by side with key differences\n" +
+  "- For counting/aggregation (\"how many\", \"list all\"), provide a clear count and organized list\n" +
+  "- For exploratory queries (\"what do I have about X\"), group results by type or source\n" +
+  "- If the context is unrelated to the question, say so and answer from general knowledge if possible";
 
 export const NO_RELEVANT_CONTENT_SYSTEM_PROMPT =
   "You are a helpful AI assistant with access to a personal knowledge base. " +
@@ -256,7 +298,7 @@ export const NO_RELEVANT_CONTENT_SYSTEM_PROMPT =
   "sync their connections or add more data sources. Be friendly and helpful.";
 
 export const USER_PROMPT_PREFIX =
-  "Answer the QUESTION using the information from the CONTEXT below. Pay attention to KIND (entity type), metadata (contains tags, artists, categories, etc.), and URL fields. When listing entities, format them as markdown links: [Title](URL). Include relevant metadata like kind and key details from the metadata field. Do not add citation markers or footnotes.\n\nCONTEXT:\n";
+  "Answer the QUESTION using the CONTEXT below.\n\nCONTEXT:\n";
 
 export const USER_PROMPT_SUFFIX = "\n\nQUESTION:\n";
 

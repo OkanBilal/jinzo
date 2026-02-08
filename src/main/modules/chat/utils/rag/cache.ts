@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { CacheEntry, CacheStats } from "../rag";
 import { CACHE_DEFAULTS } from "../../chat.constants";
+import { getSqlite } from "../../../../db/client";
 
 function minutesToMilliseconds(minutes: number): number {
   return minutes * 60 * 1000;
@@ -183,18 +184,90 @@ const responseCache = new SimpleCache<string>(
   CACHE_DEFAULTS.RESPONSE_TTL_MINUTES
 );
 
+// ─────────────────────────────────────────────────────────────
+// Persistent Embedding Cache (SQLite-backed write-through)
+// ─────────────────────────────────────────────────────────────
+
+let persistentCacheInitialized = false;
+
+function ensurePersistentCacheTable(): void {
+  if (persistentCacheInitialized) return;
+  try {
+    const sqlite = getSqlite();
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS query_embedding_cache (
+        hash TEXT PRIMARY KEY,
+        embedding BLOB NOT NULL,
+        dimension INTEGER NOT NULL,
+        created_at INTEGER NOT NULL DEFAULT (unixepoch())
+      )
+    `);
+    persistentCacheInitialized = true;
+  } catch {
+    // DB not ready yet — skip persistence silently
+  }
+}
+
+function getPersistentEmbedding(hashKey: string): number[] | null {
+  try {
+    ensurePersistentCacheTable();
+    if (!persistentCacheInitialized) return null;
+
+    const sqlite = getSqlite();
+    const row = sqlite
+      .prepare("SELECT embedding, dimension FROM query_embedding_cache WHERE hash = ?")
+      .get(hashKey) as { embedding: Buffer; dimension: number } | undefined;
+
+    if (!row) return null;
+
+    const float32 = new Float32Array(row.embedding.buffer, row.embedding.byteOffset, row.dimension);
+    return Array.from(float32);
+  } catch {
+    return null;
+  }
+}
+
+function setPersistentEmbedding(hashKey: string, embedding: number[]): void {
+  try {
+    ensurePersistentCacheTable();
+    if (!persistentCacheInitialized) return;
+
+    const sqlite = getSqlite();
+    const float32 = new Float32Array(embedding);
+    const buffer = Buffer.from(float32.buffer);
+
+    sqlite
+      .prepare(
+        "INSERT OR REPLACE INTO query_embedding_cache (hash, embedding, dimension) VALUES (?, ?, ?)"
+      )
+      .run(hashKey, buffer, embedding.length);
+  } catch {
+    // Write-through failure is non-critical
+  }
+}
+
 async function cachedEmbedding(
   text: string,
   generateFn: (text: string) => Promise<number[]>
 ): Promise<number[]> {
+  // L1: in-memory cache
   const cached = embeddingCache.get(text);
   if (cached) {
-    console.log("✓ Embedding cache hit");
     return cached;
   }
 
+  // L2: SQLite persistent cache
+  const hashKey = generateHashKey(text);
+  const persistent = getPersistentEmbedding(hashKey);
+  if (persistent) {
+    embeddingCache.set(text, persistent);
+    return persistent;
+  }
+
+  // L3: generate and write-through to both caches
   const embedding = await generateFn(text);
   embeddingCache.set(text, embedding);
+  setPersistentEmbedding(hashKey, embedding);
   return embedding;
 }
 

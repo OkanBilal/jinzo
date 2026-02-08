@@ -14,7 +14,7 @@ import {
   calculateHistoryTokenBudget,
 } from "../utils";
 import type { ChatOptions, ChatResponse } from "../chat.dto";
-import { analyzeQuery, buildOptimizedPrompt, findRelevantEntities } from "../utils/rag";
+import { analyzeQuery, buildOptimizedPrompt, findRelevantEntities, itemTypesToKinds, sourcesToConnectionIds } from "../utils/rag";
 
 export async function handleRAGMode(
   question: string,
@@ -29,6 +29,12 @@ export async function handleRAGMode(
   const qa = analyzeQuery(question);
   //console.log("Analyzed query:", qa);
 
+  // Convert detected item types and sources to kindFilter and connectionIdFilter
+  const detectedItemTypes = qa.detectedItemTypes;
+  const detectedSources = qa.detectedSources;
+  const kindFilter = detectedItemTypes.length > 0 ? itemTypesToKinds(detectedItemTypes) : undefined;
+  const connectionIdFilter = detectedSources.length > 0 ? sourcesToConnectionIds(detectedSources) : undefined;
+
   const relevant = await findRelevantEntities(question, {
     topK: mergedOptions.topK,
     minScore: mergedOptions.minScore,
@@ -36,12 +42,8 @@ export async function handleRAGMode(
     keywordWeight: 0.3,
     recencyWeight: 0.1,
     rerank: true,
-    sourceFilter:
-      qa.detectedSources.length > 0 ? qa.detectedSources : mergedOptions.sourceFilter,
-    itemTypeFilter:
-      qa.detectedItemTypes.length > 0
-        ? qa.detectedItemTypes
-        : mergedOptions.itemTypeFilter,
+    kindFilter,
+    connectionIdFilter: connectionIdFilter?.length ? connectionIdFilter : undefined,
   });
 
   //console.log(`Found ${relevant.length} relevant items for question.`);
@@ -86,14 +88,10 @@ export async function handleRAGMode(
       usedInContext: optimized.usedItems.length,
       cached: false,
       appliedFilters: {
-        sources:
-          (qa.detectedSources.length > 0
-            ? qa.detectedSources
-            : mergedOptions.sourceFilter) || [],
-        itemTypes:
-          (qa.detectedItemTypes.length > 0
-            ? qa.detectedItemTypes
-            : mergedOptions.itemTypeFilter) || [],
+        sources: detectedSources,
+        itemTypes: detectedItemTypes,
+        kindFilter,
+        connectionIdFilter,
         topK: mergedOptions.topK,
       },
       detectedFromQuery: {

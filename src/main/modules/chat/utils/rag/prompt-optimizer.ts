@@ -13,6 +13,24 @@ import {
   ITEM_TYPES,
 } from "../../chat.constants";
 
+const SOURCE_DISPLAY_NAMES = new Map<string, string>(SOURCES.map((s) => [s.id, s.displayName]));
+const ITEM_TYPE_DISPLAY_NAMES = new Map<string, string>(ITEM_TYPES.map((t) => [t.id, t.displayName]));
+
+// Map entity kind → source display names and type display name
+// Keyed by actual DB kinds (e.g., "spotify_track", "hn_story") not item type IDs
+const KIND_TO_SOURCES = new Map<string, string[]>();
+const KIND_TO_TYPE_NAME = new Map<string, string>();
+for (const itemType of ITEM_TYPES) {
+  const sourceNames = itemType.sources.map((s: string) => SOURCE_DISPLAY_NAMES.get(s) || s);
+  // Map both the item type ID and each entityKind to the same source/type info
+  KIND_TO_SOURCES.set(itemType.id, sourceNames);
+  KIND_TO_TYPE_NAME.set(itemType.id, itemType.displayName);
+  for (const kind of itemType.entityKinds) {
+    KIND_TO_SOURCES.set(kind as string, sourceNames);
+    KIND_TO_TYPE_NAME.set(kind as string, itemType.displayName);
+  }
+}
+
 function createRegex(pattern: string): RegExp {
   return new RegExp(pattern, "i");
 }
@@ -114,9 +132,13 @@ export function formatItemForContext(
   item: RetrievedEntity,
   includeMetadata = false
 ): string {
+  const possibleSources = KIND_TO_SOURCES.get(item.kind);
+  const sourceName = possibleSources?.length === 1 ? possibleSources[0] : (possibleSources?.join("/") || item.kind);
+  const typeName = KIND_TO_TYPE_NAME.get(item.kind) || item.kind;
+
   const parts = [
-    `Source: ${item.kind}`,
-    `Type: ${item.kind}`,
+    `Source: ${sourceName}`,
+    `Type: ${typeName}`,
     `Title: ${item.title}`,
     `URL: ${item.url}`,
   ];

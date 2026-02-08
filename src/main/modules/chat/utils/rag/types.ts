@@ -104,9 +104,5 @@ export type RetrievalOptions = {
   keywordWeight?: number;
   kindFilter?: string[];
   connectionIdFilter?: string[];
-  /** @deprecated Use kindFilter instead */
-  sourceFilter?: string[];
-  /** @deprecated Use kindFilter instead */
-  itemTypeFilter?: string[];
   rerank?: boolean;
 };
