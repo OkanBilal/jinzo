@@ -39,6 +39,8 @@ export function createSplashWindow(
     show: false,
     backgroundColor: opts.backgroundColor,
     hasShadow: false,
+    vibrancy: "under-window",
+    visualEffectState: "active",
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

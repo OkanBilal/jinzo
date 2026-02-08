@@ -27,7 +27,7 @@
       justify-content: center;
       height: 100%;
       width: 100%;
-      background: rgba(26, 28, 36, 0.96);
+      background: rgba(4, 4, 4, 0.7);
     }
 
     .logo {
@@ -46,63 +46,52 @@
       margin-bottom: 32px;
     }
 
-    .loader {
-      width: 48px;
-      height: 48px;
-      position: relative;
+    .ascii-loader {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+      margin-top: 24px;
     }
 
-    .loader::before,
-    .loader::after {
-      content: '';
-      position: absolute;
-      border-radius: 50%;
-      animation: pulsOut 1.8s ease-in-out infinite;
-      filter: drop-shadow(0 0 8px #4a9bf04d);
+    .spinner {
+      font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 16px;
+      color: #4a9bf0;
     }
 
-    .loader::before {
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, #4a9bf0 0%, #a09d95 100%);
-      animation-delay: -0.9s;
+    .loader-word {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      background: linear-gradient(90deg, #a09d95 0%, #ffffff 50%, #a09d95 100%);
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shine 2s ease-in-out infinite;
     }
 
-    .loader::after {
-      width: 75%;
-      height: 75%;
-      top: 12.5%;
-      left: 12.5%;
-      background: rgba(18, 18, 18, 0.98);
+    @keyframes shine {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
     }
 
     @media (prefers-color-scheme: light) {
       .splash-container {
-        background: #fafafafa;
+        background: rgba(250, 250, 250, 0.7);
       }
 
       .app-name {
         color: #1a1a1a;
       }
 
-      .loader::before,
-      .loader::after {
-        filter: drop-shadow(0 0 8px #4a9bf04d);
-      }
-
-      .loader::after {
-        background: #fafafafa;
-      }
-    }
-
-    @keyframes pulsOut {
-      0%, 100% {
-        transform: scale(0.8);
-        opacity: 0.8;
-      }
-      50% {
-        transform: scale(1);
-        opacity: 1;
+      .loader-word {
+        background: linear-gradient(90deg, #666 0%, #1a1a1a 50%, #666 100%);
+        background-size: 200% 100%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: shine 2s ease-in-out infinite;
       }
     }
 
@@ -121,6 +110,33 @@
 <body>
   <div class="splash-container">
     <img class="logo" src="icon.png" alt="Jinzo" />
+    <div class="ascii-loader">
+      <span class="spinner">⠋</span>
+      <span class="loader-word">Brewing...</span>
+    </div>
   </div>
+
+  <script>
+    const ASCII_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+    const LOADER_WORDS = [
+      'Brewing', 'Steeping', 'Blooming', 'Infusing', 'Settling',
+      'Pouring', 'Warming', 'Stirring', 'Slow-thinking', 'Daydreaming',
+      'Wandering', 'Drift-sorting', 'Quieting'
+    ];
+
+    const spinner = document.querySelector('.spinner');
+    const loaderWord = document.querySelector('.loader-word');
+    let frameIndex = 0;
+
+    setInterval(() => {
+      frameIndex = (frameIndex + 1) % ASCII_FRAMES.length;
+      spinner.textContent = ASCII_FRAMES[frameIndex];
+    }, 80);
+
+    setInterval(() => {
+      const randomWord = LOADER_WORDS[Math.floor(Math.random() * LOADER_WORDS.length)];
+      loaderWord.textContent = randomWord + '...';
+    }, 3000);
+  </script>
 </body>
 </html>
