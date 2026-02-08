@@ -9,13 +9,11 @@ interface ThemeState {
   darkMode: boolean;
 }
 
-// Get system preference
 const getSystemPreference = (): boolean => {
   if (typeof window === "undefined") return true;
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
 };
 
-// Get saved theme preference
 const getSavedTheme = (): ThemePreference => {
   if (typeof window === "undefined") return "system";
   const saved = localStorage.getItem(THEME_KEY);
@@ -25,7 +23,6 @@ const getSavedTheme = (): ThemePreference => {
   return "system";
 };
 
-// Calculate actual dark mode based on preference
 const calculateDarkMode = (theme: ThemePreference): boolean => {
   if (theme === "system") {
     return getSystemPreference();
@@ -33,19 +30,16 @@ const calculateDarkMode = (theme: ThemePreference): boolean => {
   return theme === "dark";
 };
 
-// Update DOM classes
 const updateDOM = (isDark: boolean): void => {
   const root = document.documentElement;
   root.classList.toggle("dark", isDark);
 };
 
-// Unified state object for atomic updates
 let state: ThemeState = {
   theme: getSavedTheme(),
-  darkMode: false, // Will be set in init
+  darkMode: false,
 };
 
-// Initialize darkMode based on theme
 state.darkMode = calculateDarkMode(state.theme);
 
 const listeners = new Set<() => void>();
@@ -69,7 +63,6 @@ const getServerSnapshot = (): ThemeState => ({
 const setThemePreference = (theme: ThemePreference): void => {
   const newDarkMode = calculateDarkMode(theme);
 
-  // Create new state object for React to detect change
   state = {
     theme,
     darkMode: newDarkMode,
@@ -80,11 +73,9 @@ const setThemePreference = (theme: ThemePreference): void => {
   emitChange();
 };
 
-// Initialize DOM and listeners
 if (typeof window !== "undefined") {
   updateDOM(state.darkMode);
 
-  // Listen for system theme changes
   const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
   mediaQuery.addEventListener("change", (e) => {
     if (state.theme === "system") {
@@ -94,7 +85,6 @@ if (typeof window !== "undefined") {
     }
   });
 
-  // Listen for storage changes from other tabs
   window.addEventListener("storage", (e) => {
     if (e.key === THEME_KEY && e.newValue) {
       const newTheme = e.newValue as ThemePreference;

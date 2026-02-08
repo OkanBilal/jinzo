@@ -1,4 +1,5 @@
 //import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { SidebarHeader } from "./sidebar-header";
 import { SidebarFooter } from "./sidebar-footer";
 import { SidebarContent } from "./sidebar-content";
@@ -12,45 +13,62 @@ import CreateMoodMenu from "./create-mood-menu";
 import MoodContextMenu from "./mood-context-menu";
 import EditMoodModal from "./edit-mood-modal";
 import DeleteMoodModal from "./delete-mood-modal";
-import { useSidebar } from "../../../hooks/use-sidebar";
 import { Edit, Plus } from "@/components/ui/icons";
 
+// Hooks
+import { useDeleteChatSession } from "@/features/chat/hooks/use-delete-chat-session";
+import { useDeleteJournal } from "@/features/journal/hooks";
+import { useDeleteWorkspace } from "@/features/workspace/hooks";
+import { useMoodContextMenu } from "@/hooks/use-mood-context-menu";
+import { useMoodMenu } from "@/hooks/use-mood-menu";
+import { useSidebarSearch } from "@/hooks/use-sidebar-search";
+import { useSettingsNavigation } from "@/hooks/use-settings-navigation";
+import { useSidebarData } from "@/hooks/use-sidebar-data";
+import { useSidebarActions } from "@/hooks/use-sidebar-actions";
+import { useSidebarConfig } from "@/hooks/use-sidebar-config";
+import { useActiveMood } from "@/hooks/use-active-mood";
+
 export default function Sidebar() {
+  const location = useLocation();
+  const currentPath = location.pathname;
+
+  // Config & mood data
+  const sidebarConfig = useSidebarConfig();
+  const { moods, activeMoodId } = useActiveMood();
+
+  // Search
   const {
-    currentPath,
     searchQuery,
     isSearchExpanded,
-    isSettingsOpen,
-    isCreatingMood,
-    isViewingPresetMoods,
-    createMoodMenuState,
-    contextMenuState,
-    editModalState,
-    deleteMoodState,
-    account,
-    sessions,
-    entities,
-    workspaces,
-    moods,
-    activeMoodId,
-    sidebarConfig,
-    isLoadingSessions,
-    isLoadingEntities,
-    isLoadingWorkspaces,
-    deleteSession,
     setSearchQuery,
     handleSearchExpand,
     handleSearchClear,
-    handleMoodChange,
-    handleNewClick,
+  } = useSidebarSearch();
+
+  // Settings navigation
+  const {
+    isSettingsOpen,
     handleOpenSettings,
     handleCloseSettings,
+  } = useSettingsNavigation();
+
+  // Mood menu (create/presets)
+  const {
+    isCreatingMood,
+    isViewingPresetMoods,
+    createMoodMenuState,
     handleOpenCreateMoodMenu,
     handleCloseCreateMoodMenu,
     handleStartCreatingMood,
     handleStartViewingPresetMoods,
     handleStopCreatingMood,
-    handleRefreshApps,
+  } = useMoodMenu();
+
+  // Mood context menu (edit/delete)
+  const {
+    contextMenuState,
+    editModalState,
+    deleteMoodState,
     handleMoodContextMenu,
     handleCloseContextMenu,
     handleEditMood,
@@ -58,15 +76,33 @@ export default function Sidebar() {
     handleDeleteMood,
     handleConfirmDeleteMood,
     handleCancelDeleteMood,
-    deleteJournalState,
-    handleDeleteJournalClick,
-    handleConfirmDeleteJournal,
-    handleCancelDeleteJournal,
-    deleteWorkspaceState,
-    handleDeleteWorkspaceClick,
-    handleConfirmDeleteWorkspace,
-    handleCancelDeleteWorkspace,
-  } = useSidebar();
+  } = useMoodContextMenu();
+
+  // Data fetching
+  const {
+    account,
+    sessions,
+    entities,
+    workspaces,
+    isLoadingSessions,
+    isLoadingEntities,
+    isLoadingWorkspaces,
+    handleRefreshApps,
+  } = useSidebarData({ searchQuery, sidebarConfig });
+
+  // Sidebar actions (new item, mood change)
+  const {
+    handleMoodChange,
+    handleNewClick,
+  } = useSidebarActions();
+
+  // Delete handlers
+  const deleteSession = useDeleteChatSession();
+  const deleteJournal = useDeleteJournal();
+  const deleteWorkspace = useDeleteWorkspace();
+
+  // Suppress unused variable warning for handleRefreshApps
+  void handleRefreshApps;
 
   return (
     <>
@@ -121,8 +157,8 @@ export default function Sidebar() {
               isLoadingWorkspaces={isLoadingWorkspaces}
               currentPath={currentPath}
               onDeleteSession={deleteSession.handleDeleteClick}
-              onDeletePost={handleDeleteJournalClick}
-              onDeleteWorkspace={handleDeleteWorkspaceClick}
+              onDeletePost={deleteJournal.handleDeleteClick}
+              onDeleteWorkspace={deleteWorkspace.handleDeleteClick}
             />
             <SidebarFooter
               moods={moods}
@@ -144,19 +180,19 @@ export default function Sidebar() {
       />
 
       <DeleteConfirmationModal
-        isOpen={!!deleteJournalState.journalId}
-        isDeleting={deleteJournalState.isDeleting}
-        onConfirm={handleConfirmDeleteJournal}
-        onCancel={handleCancelDeleteJournal}
+        isOpen={!!deleteJournal.journalToDelete}
+        isDeleting={deleteJournal.isDeleting}
+        onConfirm={deleteJournal.handleConfirmDelete}
+        onCancel={deleteJournal.handleCancelDelete}
         title="Delete Post?"
         description="This action cannot be undone. The post will be permanently deleted."
       />
 
       <DeleteConfirmationModal
-        isOpen={!!deleteWorkspaceState.workspaceId}
-        isDeleting={deleteWorkspaceState.isDeleting}
-        onConfirm={handleConfirmDeleteWorkspace}
-        onCancel={handleCancelDeleteWorkspace}
+        isOpen={!!deleteWorkspace.workspaceToDelete}
+        isDeleting={deleteWorkspace.isDeleting}
+        onConfirm={deleteWorkspace.handleConfirmDelete}
+        onCancel={deleteWorkspace.handleCancelDelete}
         title="Delete Workspace?"
         description="This action cannot be undone. The workspace will be permanently deleted."
       />

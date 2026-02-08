@@ -7,10 +7,6 @@ function getInitialState(): boolean {
   return window.matchMedia(QUERY).matches;
 }
 
-/**
- * Returns true if the user prefers reduced motion.
- * Listens for changes to the media query.
- */
 export function usePrefersReducedMotion(): boolean {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(getInitialState);
 
