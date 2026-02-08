@@ -1,4 +1,3 @@
-import { FETCH_LIMITS } from "../chat/chat.constants";
 import {
   fetchPodcastsFromConnectionResources,
   fetchRaindropFromConnectionResources,
@@ -13,9 +12,20 @@ import {
 } from "./connections";
 import type { EntityInput } from "./sync.dto";
 
-// ─────────────────────────────────────────────────────────────
-// Fetchers - Fetch entities from all sources
-// ─────────────────────────────────────────────────────────────
+export const FETCH_LIMITS = {
+  GITHUB_ISSUES: 50,
+  GITHUB_PRS: 50,
+  LINEAR_ISSUES: 50,
+  JIRA_ISSUES: 50,
+  ASANA_TASKS: 50,
+  RAINDROP: 20,
+  HACKERNEWS_TOP: 20,
+  HACKERNEWS_NEW: 20,
+  HACKERNEWS_USER: 10,
+  PODCASTS: 10,
+  RSS: 10,
+} as const;
+
 export async function fetchAllEntities(): Promise<EntityInput[]> {
   try {
     const [
@@ -32,7 +42,7 @@ export async function fetchAllEntities(): Promise<EntityInput[]> {
     ] = await Promise.all([
       fetchGitHubFromConnectionResources(
         FETCH_LIMITS.GITHUB_ISSUES,
-        FETCH_LIMITS.GITHUB_PRS
+        FETCH_LIMITS.GITHUB_PRS,
       ),
       fetchLinearFromConnectionResources(FETCH_LIMITS.LINEAR_ISSUES),
       fetchJiraFromConnectionResources(FETCH_LIMITS.JIRA_ISSUES),
@@ -41,7 +51,7 @@ export async function fetchAllEntities(): Promise<EntityInput[]> {
       fetchHackerNewsFromConnectionResources(
         FETCH_LIMITS.HACKERNEWS_TOP,
         FETCH_LIMITS.HACKERNEWS_NEW,
-        FETCH_LIMITS.HACKERNEWS_USER
+        FETCH_LIMITS.HACKERNEWS_USER,
       ),
       fetchPodcastsFromConnectionResources(FETCH_LIMITS.PODCASTS),
       fetchAppleMusicFromConnectionResources(),

@@ -122,7 +122,6 @@ export async function handleChatMode(
           for (const toolCall of response.message.tool_calls!) {
             const toolName = toolCall.function.name;
             const toolArgs = toolCall.function.arguments;
-            //TODO: improve status label for web_fetch calls to show the URL being fetched
             const statusLabel = toolName === "web_search"
               ? `Searching: ${toolArgs.query}`
               : `Reading: ${toolArgs.url}`;
