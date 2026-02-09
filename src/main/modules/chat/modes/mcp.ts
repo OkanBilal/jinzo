@@ -23,12 +23,10 @@ export async function handleMCPMode(
   const mcpClient = getMCPClient();
   const tools = mcpClient.getTools();
 
-  // Calculate token budget for history based on system prompt and question size
   const systemPromptTokens = estimateTokens(MCP_SYSTEM_PROMPT);
   const questionTokens = estimateTokens(question);
   const historyTokenBudget = calculateHistoryTokenBudget(systemPromptTokens, questionTokens);
 
-  // Fetch conversation history with token-based limiting to avoid prompt too long errors
   const history = await getConversationHistory(sessionId, { maxTokens: historyTokenBudget });
 
   const messages: Message[] = [

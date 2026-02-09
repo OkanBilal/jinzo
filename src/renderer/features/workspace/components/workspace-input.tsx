@@ -70,10 +70,23 @@ export function WorkspaceInput({
   workspacePath,
 }: WorkspaceInputProps) {
   const dispatch = useDispatch();
+  const inputRef = useRef<HTMLInputElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const slashCommandDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Cmd+P to focus input
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "p") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
   const [thinkingEnabled, setThinkingEnabled] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -348,6 +361,7 @@ export function WorkspaceInput({
       </div>
       <div className="relative">
         <InputForm
+          ref={inputRef}
           query={goal}
           onQueryChange={handleGoalChange}
           onSubmit={onSubmit}

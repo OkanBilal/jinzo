@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import ChatInput from "@/features/chat/components/input";
 import { useCreateChat } from "@/features/chat/hooks";
-import LottieHero from "@/features/home/components/lottie-hero";
 
 export default function HomePage() {
   const { createChat, isSubmitting } = useCreateChat();

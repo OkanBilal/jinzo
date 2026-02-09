@@ -10,9 +10,6 @@ import type {
   OllamaToolDefinition,
 } from "../mcp.dto";
 
-// ─────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────
 function toEntityResult(row: typeof entities.$inferSelect): EntityResult {
   return {
     id: row.id,
@@ -27,9 +24,6 @@ function toEntityResult(row: typeof entities.$inferSelect): EntityResult {
   };
 }
 
-// ─────────────────────────────────────────────────────────────
-// Entity Tools
-// ─────────────────────────────────────────────────────────────
 export async function entityList(
   params: EntityListParams
 ): Promise<EntityListResult> {
@@ -134,9 +128,6 @@ export async function entitySearch(
   };
 }
 
-// ─────────────────────────────────────────────────────────────
-// Tool Definitions
-// ─────────────────────────────────────────────────────────────
 export const ENTITY_TOOLS: OllamaToolDefinition[] = [
   {
     type: "function",
@@ -221,9 +212,6 @@ export const ENTITY_TOOLS: OllamaToolDefinition[] = [
   },
 ];
 
-// ─────────────────────────────────────────────────────────────
-// Tool Executor
-// ─────────────────────────────────────────────────────────────
 export async function executeEntityTool(
   toolName: string,
   params: Record<string, unknown>

@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import type { InputVariant } from "./send-button";
 
 interface InputFormProps {
@@ -23,30 +24,34 @@ const variantStyles = {
   },
 };
 
-export function InputForm({
-  query,
-  onQueryChange,
-  onSubmit,
-  placeholder,
-  variant = "default",
-}: InputFormProps) {
-  const styles = variantStyles[variant];
+export const InputForm = forwardRef<HTMLInputElement, InputFormProps>(
+  function InputForm(
+    { query, onQueryChange, onSubmit, placeholder, variant = "default" },
+    ref,
+  ) {
+    const styles = variantStyles[variant];
 
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit();
-      }}
-      aria-label="Feed input form"
-    >
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => onQueryChange(e.target.value)}
-        placeholder={placeholder}
-        className={`rounded-3xl w-full px-6 py-5 placeholder:text-md outline-none ${styles.input}`}
-      />
-    </form>
-  );
-}
+    return (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit();
+        }}
+        aria-label="Feed input form"
+        className="relative"
+      >
+        <input
+          ref={ref}
+          type="text"
+          value={query}
+          onChange={(e) => onQueryChange(e.target.value)}
+          placeholder={placeholder}
+          className={`rounded-3xl w-full px-6 py-5 placeholder:text-md outline-none ${styles.input}`}
+        />
+        <kbd className="absolute cursor-default right-4 top-1/3 -translate-y-1/2 px-1.5 py-0.5 text-[11px] font-sans text-primary-400 dark:text-primary-500 ">
+          ⌘ P to focus
+        </kbd>
+      </form>
+    );
+  },
+);

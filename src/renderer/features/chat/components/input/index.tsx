@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 import { useSpeechRecognition } from "../../../../hooks/use-speech-recognition";
 import { useClickOutside } from "../../../../hooks/use-click-outside";
@@ -49,10 +49,23 @@ export default function ChatInput({
   const [isWebSearchDropdownOpen, setIsWebSearchDropdownOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
+  const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
   const webSearchDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Cmd+P to focus input
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "p") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const { isRecording, toggle: toggleDictation } =
     useSpeechRecognition(onQueryChange);
@@ -150,6 +163,7 @@ export default function ChatInput({
       </div>
       <div className="relative">
         <InputForm
+          ref={inputRef}
           query={query}
           onQueryChange={handleQueryChange}
           onSubmit={onSubmit}
