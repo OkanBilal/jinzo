@@ -46,7 +46,6 @@ export function groupEvents(events: RunEvent[]): EventGroup[] {
       if (level === "start" || level === "resume") {
         continue;
       }
-      //TODO: We might want to show error logs in a special way instead of skipping them - for now we just skip to reduce noise
       if (level === "error") {
         continue;
       }

@@ -4,6 +4,7 @@ import { Document } from "@/components/ui/icons";
 import { markdownComponents } from "@/features/chat/components/markdown-components";
 import { parseUserPromptWithFiles } from "../../utils/parse-user-prompt";
 import type { EventGroup } from "../../utils/group-events";
+import { Code } from "@/components/ui/icons/mood";
 
 interface InfoGroupProps {
   group: EventGroup;
@@ -21,7 +22,7 @@ export function InfoGroup({ group }: InfoGroupProps) {
       <div className="w-full overflow-hidden">
         <div className="w-full py-2 flex justify-end">
           <div className="flex flex-col items-end gap-2 max-w-[80%]">
-            <div className="px-4 py-2.5 rounded-2xl bg-primary-200 dark:bg-primary-300/15">
+            <div className="px-4 py-2.5 rounded-2xl bg-primary-50 dark:bg-primary-300/15">
               <div className="text-primary-950 dark:text-primary-50">
                 <p className="text-sm whitespace-pre-wrap">{message}</p>
               </div>
@@ -31,11 +32,11 @@ export function InfoGroup({ group }: InfoGroupProps) {
                 {files.map((file, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-100 dark:bg-primary-800/40 text-xs"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-50 dark:bg-primary-300/15 text-xs"
                     title={file.fullPath}
                   >
-                    <Document className="size-3 text-primary-400" />
-                    <span className="text-primary-600 dark:text-primary-300">
+                    <Code className="size-3 dark:text-primary-200 text-primary-700" />
+                    <span className="text-primary-700 dark:text-primary-200">
                       {file.displayName}
                     </span>
                   </div>

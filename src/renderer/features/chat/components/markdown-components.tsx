@@ -4,7 +4,6 @@ import { Components } from "react-markdown";
  * Custom ReactMarkdown component overrides for consistent styling
  * across the chat interface.
  */
-//TODO: Improve for Workspace 
 export const markdownComponents: Components = {
   h1: ({ children }) => (
     <h1 className="text-xl font-bold mt-4 mb-2 font-sans text-primary-900 dark:text-primary-100 transition-all duration-150 ease-out">
@@ -45,13 +44,13 @@ export const markdownComponents: Components = {
     </div>
   ),
   thead: ({ children }) => (
-    <thead className="bg-primary-100 dark:bg-primary-800 transition-all duration-150 ease-out">{children}</thead>
+    <thead className="bg-primary-50 dark:bg-primary/10 transition-all duration-150 ease-out">{children}</thead>
   ),
   tbody: ({ children }) => (
-    <tbody className="bg-white dark:bg-primary-950 transition-all duration-150 ease-out">{children}</tbody>
+    <tbody className="bg-primary dark:bg-primary/2 transition-all duration-150 ease-out">{children}</tbody>
   ),
   tr: ({ children }) => (
-    <tr className="border-b border-primary-200  dark:border-primary-700 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-all duration-150 ease-out">
+    <tr className="border-b border-primary-200  dark:border-primary-700 hover:bg-primary-200/20 dark:hover:bg-primary-900/30 transition-all duration-150 ease-out">
       {children}
     </tr>
   ),
@@ -69,13 +68,13 @@ export const markdownComponents: Components = {
     const isInline = !className;
     if (isInline) {
       return (
-        <code className="px-1.5 py-0.5 rounded bg-primary-200 dark:bg-primary-800 text-primary-900 dark:text-primary-100 text-sm font-sans transition-all duration-150 ease-out">
+        <code className="px-1.5 py-0.5 rounded bg-primary-50 dark:bg-primary/10 text-primary-900 dark:text-primary-100 text-sm font-sans transition-all duration-150 ease-out">
           {children}
         </code>
       );
     }
     return (
-      <code className="block p-3 rounded-lg bg-primary-100 dark:bg-primary-900 text-primary-900 dark:text-primary-100 text-sm font-mono overflow-x-auto transition-all duration-150 ease-out">
+      <code className="block p-3 rounded-lg bg-primary-50 dark:bg-primary/10 text-primary-900 dark:text-primary-100 text-sm font-mono overflow-x-auto transition-all duration-150 ease-out">
         {children}
       </code>
     );
