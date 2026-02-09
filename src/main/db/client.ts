@@ -417,6 +417,13 @@ class DatabaseClient {
       // Run ANALYZE to update statistics
       this.sqlite.exec("ANALYZE");
 
+      // Optimize FTS5 index (merge segments)
+      try {
+        this.sqlite.exec("INSERT INTO entities_fts(entities_fts) VALUES ('optimize')");
+      } catch (e) {
+        console.warn("FTS5 optimize skipped:", e);
+      }
+
       console.log("Database optimization completed");
     } catch (error) {
       console.error("Optimization failed:", error);

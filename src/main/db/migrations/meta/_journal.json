@@ -36,6 +36,13 @@
       "when": 1769686965698,
       "tag": "0004_natural_wendigo",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1739116800000,
+      "tag": "0005_fts5_entities",
+      "breakpoints": true
     }
   ]
 }

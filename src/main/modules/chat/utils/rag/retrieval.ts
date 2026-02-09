@@ -1,6 +1,6 @@
 import { generateEmbeddingCached } from "./embed";
 import { float32ToBuffer } from "./float-to-buffer";
-import { MIN_TOKEN_LENGTH, DEFAULT_DECAY_LAMBDA, TIME_CONSTANTS, DISTANCE_BOUNDS, BM25_PARAMS, MAX_PER_SOURCE_RATIO, ITEM_TYPES } from "../../chat.constants";
+import { MIN_TOKEN_LENGTH, DEFAULT_DECAY_LAMBDA, TIME_CONSTANTS, DISTANCE_BOUNDS, MAX_PER_SOURCE_RATIO, ITEM_TYPES } from "../../chat.constants";
 import { RetrievalOptions, RetrievedEntity, ItemTypeId, SourceId } from "./types";
 import { getSqlite } from "../../../../db/client";
 
@@ -76,95 +76,70 @@ function expandQuery(query: string): string {
   return Array.from(expanded).join(" ");
 }
 
-let cachedAvgDocLength: number | null = null;
-let cachedTotalDocs: number | null = null;
-let corpusStatsTimestamp = 0;
-const CORPUS_STATS_TTL = 5 * 60 * 1000; // 5 minutes
-
-function invalidateCorpusStatsIfStale(): void {
-  if (Date.now() - corpusStatsTimestamp > CORPUS_STATS_TTL) {
-    cachedAvgDocLength = null;
-    cachedTotalDocs = null;
-  }
+interface FtsResult {
+  id: string;
+  title: string;
+  url: string;
+  body: string | null;
+  summary: string | null;
+  kind: string;
+  occurredAt: number;
+  connectionId: string | null;
+  metadata: string | null;
+  bm25Score: number;
 }
 
-function getCorpusStats(): { avgDocLength: number; totalDocs: number } {
-  invalidateCorpusStatsIfStale();
-
-  if (cachedAvgDocLength !== null && cachedTotalDocs !== null) {
-    return { avgDocLength: cachedAvgDocLength, totalDocs: cachedTotalDocs };
-  }
-
-  const sqlite = getSqlite();
-  const result = sqlite
-    .prepare(
-      `
-    SELECT
-      AVG(LENGTH(title) + COALESCE(LENGTH(body), 0)) as avg_length,
-      COUNT(*) as total_docs
-    FROM entities
-  `
-    )
-    .get() as { avg_length: number; total_docs: number };
-
-  cachedAvgDocLength = result.avg_length || 500;
-  cachedTotalDocs = result.total_docs || 1;
-  corpusStatsTimestamp = Date.now();
-
-  return { avgDocLength: cachedAvgDocLength, totalDocs: cachedTotalDocs };
-}
-
-function getDocumentFrequency(term: string): number {
-  const sqlite = getSqlite();
-  const result = sqlite
-    .prepare(
-      `
-    SELECT COUNT(*) as df
-    FROM entities
-    WHERE LOWER(title || ' ' || COALESCE(body, '') || ' ' || COALESCE(summary, '')) LIKE ?
-  `
-    )
-    .get(`%${term.toLowerCase()}%`) as { df: number };
-
-  return result.df || 0;
-}
-
-function keywordScore(query: string, text: string): number {
-  const expandedQuery = expandQuery(query);
-  const queryTokens = expandedQuery
+function buildFtsQuery(query: string): string {
+  const expanded = expandQuery(query);
+  const tokens = expanded
     .split(/\s+/)
-    .filter((t) => t.length >= MIN_TOKEN_LENGTH);
+    .filter((t) => t.length >= MIN_TOKEN_LENGTH)
+    .map((t) => t.replace(/['"*(){}[\]:^~!@#$%&\\]/g, ""))
+    .filter((t) => t.length > 0);
+  if (tokens.length === 0) return "";
+  return tokens.map((t) => `"${t}"`).join(" OR ");
+}
 
-  if (queryTokens.length === 0) return 0;
+function fts5Search(query: string, options: {
+  kindFilter?: string[];
+  connectionIdFilter?: string[];
+  limit: number;
+}): FtsResult[] {
+  const sqlite = getSqlite();
+  const ftsQuery = buildFtsQuery(query);
+  if (!ftsQuery) return [];
 
-  const textLower = text.toLowerCase();
-  const docLength = text.length;
-  const { avgDocLength, totalDocs } = getCorpusStats();
+  const conditions: string[] = [];
+  const params: any[] = [ftsQuery];
 
-  let bm25Score = 0;
-
-  for (const token of queryTokens) {
-    const regex = new RegExp(`\\b${token}\\b`, "gi");
-    const matches = textLower.match(regex);
-
-    if (!matches) continue;
-
-    const termFreq = matches.length;
-    const df = getDocumentFrequency(token);
-
-    // IDF: log((N - df + 0.5) / (df + 0.5) + 1)
-    const idf = Math.log((totalDocs - df + 0.5) / (df + 0.5) + 1);
-
-    const numerator = termFreq * (BM25_PARAMS.K1 + 1);
-    const denominator =
-      termFreq +
-      BM25_PARAMS.K1 *
-        (1 - BM25_PARAMS.B + BM25_PARAMS.B * (docLength / avgDocLength));
-
-    bm25Score += idf * (numerator / denominator);
+  if (options.kindFilter?.length) {
+    conditions.push(`e.kind IN (${options.kindFilter.map(() => "?").join(",")})`);
+    params.push(...options.kindFilter);
+  }
+  if (options.connectionIdFilter?.length) {
+    conditions.push(`e.connection_id IN (${options.connectionIdFilter.map(() => "?").join(",")})`);
+    params.push(...options.connectionIdFilter);
   }
 
-  return bm25Score;
+  const whereExtra = conditions.length > 0 ? `AND ${conditions.join(" AND ")}` : "";
+  params.push(options.limit);
+
+  // bm25() returns negative values (lower = better); negate for positive scores
+  // Column weights: title=10.0, body=1.0, summary=5.0
+  return sqlite.prepare(`
+    SELECT
+      e.id, e.title, e.url, e.body, e.summary, e.kind,
+      e.occurred_at as occurredAt,
+      e.connection_id as connectionId,
+      e.metadata,
+      -bm25(entities_fts, 10.0, 1.0, 5.0) as bm25Score
+    FROM entities_fts fts
+    JOIN entities e ON e.rowid = fts.rowid
+    WHERE entities_fts MATCH ?
+    ${whereExtra}
+    ORDER BY bm25Score DESC
+    LIMIT ?
+  `).all(...params) as FtsResult[];
 }
 
 function timestampDecayBoost(
@@ -304,14 +279,19 @@ export async function findRelevantEntities(
         relevantChunks: chunks.slice(0, 3),
       })
     );
+    // FTS5 keyword scoring — single indexed query instead of per-entity LIKE scans
+    const ftsResults = fts5Search(question, { kindFilter, connectionIdFilter, limit: chunkLimit });
+    const ftsScoreMap = new Map<string, number>();
+    if (ftsResults.length > 0) {
+      const maxBm25 = Math.max(...ftsResults.map((r) => r.bm25Score));
+      for (const r of ftsResults) {
+        ftsScoreMap.set(r.id, maxBm25 > 0 ? r.bm25Score / maxBm25 : 0);
+      }
+    }
+
     let scored: RetrievedEntity[] = rows.map((r) => {
       const semanticSimilarity = distanceToSimilarity(r.distance);
-      const chunkTexts =
-        r.relevantChunks?.map((c: any) => c.content).join(" ") || "";
-      const textContent = [r.title, r.body || r.summary, chunkTexts]
-        .filter(Boolean)
-        .join(" ");
-      const kwScore = keywordScore(question, textContent);
+      const kwScore = ftsScoreMap.get(r.id) || 0;
       const chunkBonus = calculateChunkBonus(r.chunkCount);
       const recency = timestampDecayBoost(
         new Date(r.occurredAt),
@@ -342,6 +322,33 @@ export async function findRelevantEntities(
             },
       };
     });
+
+    // Add FTS-only results (found by keyword but not by vector search)
+    const vectorEntityIds = new Set(rows.map((r: any) => r.id));
+    for (const ftsResult of ftsResults) {
+      if (!vectorEntityIds.has(ftsResult.id)) {
+        const kwScore = ftsScoreMap.get(ftsResult.id) || 0;
+        const recency = timestampDecayBoost(
+          new Date(ftsResult.occurredAt),
+          DEFAULT_DECAY_LAMBDA
+        );
+        const hybridScore = kwScore * keywordWeight + recency * recencyWeight;
+        scored.push({
+          id: ftsResult.id,
+          title: ftsResult.title,
+          url: ftsResult.url,
+          body: ftsResult.body,
+          summary: ftsResult.summary,
+          kind: ftsResult.kind,
+          occurredAt: new Date(ftsResult.occurredAt),
+          connectionId: ftsResult.connectionId,
+          score: hybridScore,
+          semanticScore: 0,
+          keywordScore: kwScore,
+          metadata: ftsResult.metadata ? JSON.parse(ftsResult.metadata) : undefined,
+        });
+      }
+    }
     if (rerank) {
       const candidates = scored
         .filter((s) => s.score >= minScore)
@@ -387,59 +394,37 @@ function keywordOnlyFallback(
   const { topK, minScore, recencyWeight, keywordWeight, kindFilter, connectionIdFilter, rerank } = opts;
 
   try {
-    const sqlite = getSqlite();
-    const conditions: string[] = [];
-    const params: any[] = [];
-
-    if (kindFilter && kindFilter.length > 0) {
-      conditions.push(`kind IN (${kindFilter.map(() => "?").join(",")})`);
-      params.push(...kindFilter);
-    }
-    if (connectionIdFilter && connectionIdFilter.length > 0) {
-      conditions.push(`connection_id IN (${connectionIdFilter.map(() => "?").join(",")})`);
-      params.push(...connectionIdFilter);
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
     const limit = topK * 10;
-    params.push(limit);
+    const ftsResults = fts5Search(question, { kindFilter, connectionIdFilter, limit });
 
-    const rows = sqlite
-      .prepare(
-        `
-      SELECT id, title, url, body, summary, kind, occurred_at as occurredAt,
-             connection_id as connectionId, metadata
-      FROM entities
-      ${whereClause}
-      ORDER BY occurred_at DESC
-      LIMIT ?
-    `
-      )
-      .all(...params) as any[];
+    if (ftsResults.length === 0) {
+      console.log("🔍 Keyword fallback: No FTS5 results found");
+      return [];
+    }
 
-    let scored: RetrievedEntity[] = rows
-      .map((r) => {
-        const textContent = [r.title, r.body || r.summary].filter(Boolean).join(" ");
-        const kwScore = keywordScore(question, textContent);
-        const recency = timestampDecayBoost(new Date(r.occurredAt), DEFAULT_DECAY_LAMBDA);
-        const score = kwScore * keywordWeight + recency * recencyWeight;
+    // Normalize BM25 scores to [0,1]
+    const maxBm25 = Math.max(...ftsResults.map((r) => r.bm25Score));
 
-        return {
-          id: r.id,
-          title: r.title,
-          url: r.url,
-          body: r.body,
-          summary: r.summary,
-          kind: r.kind,
-          occurredAt: new Date(r.occurredAt),
-          connectionId: r.connectionId,
-          score,
-          semanticScore: 0,
-          keywordScore: kwScore,
-          metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
-        };
-      })
-      .filter((r) => r.keywordScore > 0);
+    let scored: RetrievedEntity[] = ftsResults.map((r) => {
+      const kwScore = maxBm25 > 0 ? r.bm25Score / maxBm25 : 0;
+      const recency = timestampDecayBoost(new Date(r.occurredAt), DEFAULT_DECAY_LAMBDA);
+      const score = kwScore * keywordWeight + recency * recencyWeight;
+
+      return {
+        id: r.id,
+        title: r.title,
+        url: r.url,
+        body: r.body,
+        summary: r.summary,
+        kind: r.kind,
+        occurredAt: new Date(r.occurredAt),
+        connectionId: r.connectionId,
+        score,
+        semanticScore: 0,
+        keywordScore: kwScore,
+        metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
+      };
+    });
 
     if (rerank) {
       const candidates = scored
@@ -454,7 +439,7 @@ function keywordOnlyFallback(
         .slice(0, topK);
     }
 
-    console.log(`🔍 Keyword fallback: Returning ${scored.length} entities from ${rows.length} candidates`);
+    console.log(`🔍 Keyword fallback: Returning ${scored.length} entities from ${ftsResults.length} FTS5 results`);
     return scored;
   } catch (fallbackError) {
     console.error("Keyword fallback also failed:", fallbackError);
