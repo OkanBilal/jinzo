@@ -4,7 +4,7 @@ import { Toggle } from "@/components/ui/toggle";
 import Select from "@/components/ui/select";
 import { StructuredOutputToggle } from "./structured-output-toggle";
 import { StructuredOutputModal } from "./structured-output-modal";
-import { useRightPanelConfig } from "./use-right-panel-config";
+import { useChatPanelConfig } from "@/features/chat/components/use-chat-panel-config";
 
 export function ConfigContent() {
   const {
@@ -27,7 +27,7 @@ export function ConfigContent() {
     handleStructuredOutputEnabledChange,
     handleStructuredOutputSchemaChange,
     setIsStructuredOutputModalOpen,
-  } = useRightPanelConfig();
+  } = useChatPanelConfig();
 
   return (
     <div className="flex-1 overflow-auto noscrollbar p-3">

@@ -31,7 +31,7 @@ import type { RootState } from "@/lib/redux";
 import type {
   FileContentResponse,
   ServiceResponse,
-} from "@/features/file-explorer";
+} from "@/features/workspace/components/file-explorer";
 
 const CLAUDE_PROVIDER_ID = "claude_code";
 
@@ -348,7 +348,7 @@ export default function ClaudePage() {
           />
         )}
       </div>
-      {/* <WorkspaceQuickActions onSetGoal={setGoal} /> */}
+      {/* <WorkspaceQuickActions  onSetGoal={setGoal} /> */}
       <WorkspaceInput
         goal={goal}
         onGoalChange={setGoal}

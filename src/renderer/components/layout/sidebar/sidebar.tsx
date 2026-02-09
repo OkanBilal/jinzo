@@ -1,11 +1,9 @@
-//import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import { SidebarHeader } from "./sidebar-header";
 import { SidebarFooter } from "./sidebar-footer";
 import { SidebarContent } from "./sidebar-content";
 import DeleteConfirmationModal from "./delete-confirmation-modal";
 import NewButton from "./new-button";
-//import CopilotButton from "./copilot-button";
 import CreateMoodView from "./create-mood-view";
 import PresetMoodsView from "./preset-moods-view";
 import SettingsView from "./settings-view";
@@ -14,8 +12,6 @@ import MoodContextMenu from "./mood-context-menu";
 import EditMoodModal from "./edit-mood-modal";
 import DeleteMoodModal from "./delete-mood-modal";
 import { Edit, Plus } from "@/components/ui/icons";
-
-// Hooks
 import { useDeleteChatSession } from "@/features/chat/hooks/use-delete-chat-session";
 import { useDeleteJournal } from "@/features/journal/hooks";
 import { useDeleteWorkspace } from "@/features/workspace/hooks";
@@ -32,11 +28,9 @@ export default function Sidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
 
-  // Config & mood data
   const sidebarConfig = useSidebarConfig();
   const { moods, activeMoodId } = useActiveMood();
 
-  // Search
   const {
     searchQuery,
     isSearchExpanded,
@@ -45,14 +39,9 @@ export default function Sidebar() {
     handleSearchClear,
   } = useSidebarSearch();
 
-  // Settings navigation
-  const {
-    isSettingsOpen,
-    handleOpenSettings,
-    handleCloseSettings,
-  } = useSettingsNavigation();
+  const { isSettingsOpen, handleOpenSettings, handleCloseSettings } =
+    useSettingsNavigation();
 
-  // Mood menu (create/presets)
   const {
     isCreatingMood,
     isViewingPresetMoods,
@@ -64,7 +53,6 @@ export default function Sidebar() {
     handleStopCreatingMood,
   } = useMoodMenu();
 
-  // Mood context menu (edit/delete)
   const {
     contextMenuState,
     editModalState,
@@ -78,7 +66,6 @@ export default function Sidebar() {
     handleCancelDeleteMood,
   } = useMoodContextMenu();
 
-  // Data fetching
   const {
     account,
     sessions,
@@ -90,13 +77,8 @@ export default function Sidebar() {
     handleRefreshApps,
   } = useSidebarData({ searchQuery, sidebarConfig });
 
-  // Sidebar actions (new item, mood change)
-  const {
-    handleMoodChange,
-    handleNewClick,
-  } = useSidebarActions();
+  const { handleMoodChange, handleNewClick } = useSidebarActions();
 
-  // Delete handlers
   const deleteSession = useDeleteChatSession();
   const deleteJournal = useDeleteJournal();
   const deleteWorkspace = useDeleteWorkspace();
@@ -135,15 +117,13 @@ export default function Sidebar() {
                 icon={
                   sidebarConfig.itemType === "workspace" ? (
                     <Plus className="w-4 h-4 text-primary-900 dark:text-primary-400" />
-                  ) :  (
+                  ) : (
                     <Edit className="w-4 h-4 text-primary-900 dark:text-primary-400" />
                   )
                 }
                 title={sidebarConfig.title}
                 actionPrefix={
-                  sidebarConfig.itemType === "workspace"
-                    ? "Add"
-                      : "New"
+                  sidebarConfig.itemType === "workspace" ? "Add" : "New"
                 }
               />
             </div>

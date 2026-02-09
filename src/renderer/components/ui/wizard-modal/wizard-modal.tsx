@@ -8,7 +8,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
-import { WizardProvider, type WizardContextValue } from "./WizardContext";
+import { WizardProvider, type WizardContextValue } from "./wizard-context";
 import { usePrefersReducedMotion } from "../../../hooks/use-prefers-reduced-motion";
 import { Button } from "../button";
 import { Close } from "../icons";

@@ -97,7 +97,7 @@ export default function ClaudeSettings() {
         description="SKILL.md files that extend Claude's capabilities. Located in ~/.claude/skills/ (user) and .claude/skills/ (project)."
       >
         <Button
-          variant="secondary"
+          variant="primary"
           size="sm"
           onClick={() => openPath(`${homedir}/.claude/skills`)}
         >
@@ -112,7 +112,7 @@ export default function ClaudeSettings() {
         description="Define agents as markdown files in ~/.claude/agents/."
       >
         <Button
-          variant="secondary"
+          variant="primary"
           size="sm"
           onClick={() => openPath(`${homedir}/.claude/agents`)}
         >
@@ -128,7 +128,7 @@ export default function ClaudeSettings() {
         description="Custom slash commands available during agent sessions. Discovered from the Claude CLI."
       >
         <Button
-          variant="secondary"
+          variant="primary"
           size="sm"
           onClick={() => openPath(`${homedir}/.claude/commands`)}
         >

@@ -117,7 +117,7 @@ export default function PersonalizationSettings() {
               onChange={handleChange("displayName")}
               disabled={saving}
               placeholder="e.g. Alex Smith"
-              className="dark:bg-primary-900/50! focus:dark:bg-primary-900/70! "
+              className="dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
             />
           </SettingsRow>
 
@@ -130,7 +130,7 @@ export default function PersonalizationSettings() {
               onChange={handleChange("email")}
               disabled={saving}
               placeholder="you@example.com"
-              className="dark:bg-primary-900/50! focus:dark:bg-primary-900/70! "
+              className="dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900"
             />
           </SettingsRow>
 
@@ -146,7 +146,7 @@ export default function PersonalizationSettings() {
               onChange={handleChange("company")}
               disabled={saving}
               placeholder="e.g. Laurel"
-              className="dark:bg-primary-900/50! focus:dark:bg-primary-900/70! "
+              className="dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
             />
           </SettingsRow>
 
@@ -159,7 +159,7 @@ export default function PersonalizationSettings() {
               onChange={handleChange("jobTitle")}
               disabled={saving}
               placeholder="e.g. Product Lead"
-              className="dark:bg-primary-900/50! focus:dark:bg-primary-900/70! "
+              className="dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
             />
           </SettingsRow>
 
@@ -175,7 +175,7 @@ export default function PersonalizationSettings() {
               onChange={handleChange("website")}
               disabled={saving}
               placeholder="https://"
-              className="dark:bg-primary-900/50! focus:dark:bg-primary-900/70! "
+              className="dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
             />
           </SettingsRow>
 
@@ -191,7 +191,7 @@ export default function PersonalizationSettings() {
               onChange={handleChange("avatarUrl")}
               disabled={saving}
               placeholder="https://cdn.example.com/me.png"
-              className="dark:bg-primary-900/50! focus:dark:bg-primary-900/70! min-w-80!"
+              className="dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900! min-w-80!"
             />
           </SettingsRow>
 
@@ -203,7 +203,7 @@ export default function PersonalizationSettings() {
           >
             <Textarea
               id="bio"
-              className="resize-none w-80! h-16 dark:bg-primary-900/50! focus:dark:bg-primary-900/70!"
+              className="resize-none w-80! h-16 dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900!"
               value={form.bio}
               onChange={handleChange("bio")}
               disabled={saving}

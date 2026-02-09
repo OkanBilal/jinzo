@@ -1,4 +1,4 @@
-export { WizardModal } from "./WizardModal";
-export type { WizardModalProps, WizardStep } from "./WizardModal";
-export { WizardProvider, useWizard, useWizardField } from "./WizardContext";
-export type { WizardContextValue } from "./WizardContext";
+export { WizardModal } from "./wizard-modal";
+export type { WizardModalProps, WizardStep } from "./wizard-modal";
+export { WizardProvider, useWizard, useWizardField } from "./wizard-context";
+export type { WizardContextValue } from "./wizard-context";

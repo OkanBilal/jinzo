@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { HashRouter as Router, useLocation } from "react-router-dom";
-import { Toaster } from "./components/ui/toast";
 import Sidebar from "./components/layout/sidebar";
 import RightPanel from "./components/layout/right-panel";
 import {
@@ -11,6 +10,7 @@ import {
 import { useLayoutConfig } from "./hooks/use-layout-config";
 import { shouldHideRightPanel } from "./lib/layout";
 import { ReduxProvider } from "./providers/redux-provider";
+import { Toaster } from "./components/ui/toast/Toaster";
 
 function AppContent() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);

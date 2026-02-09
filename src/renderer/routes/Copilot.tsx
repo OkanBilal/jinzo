@@ -27,7 +27,7 @@ import type { RootState } from "@/lib/redux";
 import type {
   FileContentResponse,
   ServiceResponse,
-} from "@/features/file-explorer";
+} from "@/features/workspace/components/file-explorer";
 
 const COPILOT_CLI_PROVIDER_ID = "copilot_cli";
 

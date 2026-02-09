@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { FileExplorer, type FileNode } from "@/features/file-explorer";
+import { FileExplorer, type FileNode } from "@/features/workspace/components/file-explorer";
 import { Body } from "@/components/ui/text";
 import { useGetWorkspaceByIdQuery } from "@/lib/redux/api";
 import type { WorkspaceIssue } from "@/lib/redux/api";

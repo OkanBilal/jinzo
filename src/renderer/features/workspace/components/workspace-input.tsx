@@ -13,7 +13,7 @@ import { setWorkspaceModel } from "@/lib/redux/slices/workspaceSlice";
 import type { RootState } from "@/lib/redux";
 import { getContextIssueColor } from "@/lib/label-colors";
 import type { Run } from "../types";
-import type { FileNode } from "@/features/file-explorer";
+import type { FileNode } from "@/features/workspace/components/file-explorer";
 import type { ContextIssue } from "@/lib/redux/slices/workspaceSlice";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -421,7 +421,7 @@ export function WorkspaceInput({
                 }
               >
                 <Plan
-                  className={`size-4.5 ${planMode ? "text-amber-600 dark:text-amber-500" : "text-primary-500 dark:text-primary-400"}`}
+                  className={`size-3.75 font-medium ${planMode ? "text-amber-600 dark:text-amber-500" : "text-primary-500 dark:text-primary-400"}`}
                 />
                 Plan
               </Button>

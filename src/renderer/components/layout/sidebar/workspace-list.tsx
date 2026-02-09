@@ -70,23 +70,19 @@ export default function WorkspacesList({
     setLinkModalState({ isOpen: false, workspaceId: "", workspaceName: "" });
   };
 
-  // Sort workspaces by updatedAt (newest first)
   const sortedWorkspaces = [...workspaces].sort((a, b) => {
     const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
     const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
     return dateB - dateA;
   });
 
-  // Format workspace name from path or repoUrl
   const formatWorkspaceName = (workspace: WorkspaceResponse): string => {
-    // If has repoUrl, format as owner/repo
     if (workspace.repoUrl) {
       const match = workspace.repoUrl.match(/github\.com[/:]([^/]+\/[^/.]+)/);
       if (match) {
         return match[1];
       }
     }
-    // Otherwise use the name
     return workspace.name;
   };
 
