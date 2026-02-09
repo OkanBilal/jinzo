@@ -28,6 +28,7 @@ import {
 } from "./modules/journal";
 
 import { registerProvidersIpc, unregisterProvidersIpc, shutdownAllWorkAdapters } from "./modules/providers";
+import { augmentPathForPackagedApp } from "./modules/providers/providers.utils";
 import { registerToolsIpc, unregisterToolsIpc } from "./modules/tools";
 import { registerWorkspacesIpc, unregisterWorkspacesIpc } from "./modules/workspaces";
 import { registerRunsIpc, unregisterRunsIpc } from "./modules/runs";
@@ -45,6 +46,9 @@ import { createMainWindow, createSplashWindow, closeSplashWindow } from "./windo
 async function initializeApp() {
   try {
     console.log("Initializing application...");
+
+    // Augment PATH early so provider binaries are discoverable in packaged app
+    augmentPathForPackagedApp();
 
     // Show splash screen immediately
     createSplashWindow();
@@ -149,6 +153,25 @@ async function cleanupApp() {
   }
 }
 
+// Single instance lock — prevent multiple app instances
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  // Another instance is already running, quit this one
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    // Someone tried to open a second instance — focus the existing window
+    const { BrowserWindow } = require("electron");
+    const allWindows = BrowserWindow.getAllWindows();
+    if (allWindows.length > 0) {
+      const win = allWindows[0];
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+  });
+}
+
 // App lifecycle events
 app.whenReady().then(initializeApp);
 
@@ -156,8 +179,14 @@ app.whenReady().then(initializeApp);
 app.on("activate", () => {
   // On macOS it's common to re-create a window when dock icon is clicked
   const { BrowserWindow } = require("electron");
-  if (BrowserWindow.getAllWindows().length === 0) {
+  const allWindows = BrowserWindow.getAllWindows();
+  if (allWindows.length === 0) {
     createMainWindow({ show: true });
+  } else {
+    // Focus existing window instead of creating a new one
+    const win = allWindows[0];
+    if (win.isMinimized()) win.restore();
+    win.focus();
   }
 });
 

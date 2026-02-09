@@ -4,7 +4,6 @@ import { Toaster } from "./components/ui/toast";
 import Sidebar from "./components/layout/sidebar";
 import RightPanel from "./components/layout/right-panel";
 import {
-  MoodChangeHandler,
   MainRoutes,
   MainLayout,
   MainContent,
@@ -21,7 +20,6 @@ function AppContent() {
 
   return (
     <>
-      <MoodChangeHandler />
       <Toaster />
       <MainLayout>
         <Sidebar />

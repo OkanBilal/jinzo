@@ -3,12 +3,24 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 const { AutoUnpackNativesPlugin } = require('@electron-forge/plugin-auto-unpack-natives');
 
 module.exports = {
+  hooks: {
+    packageAfterPrune: async (_forgeConfig, buildPath) => {
+      const { rebuild } = require('@electron/rebuild');
+      console.log('Rebuilding native modules for Electron...');
+      await rebuild({
+        buildPath,
+        electronVersion: require('electron/package.json').version,
+        force: true,
+      });
+      console.log('Native modules rebuilt successfully');
+    },
+  },
   packagerConfig: {
     name: 'Jinzo',
     executableName: 'jinzo',
     asar: {
-      unpack: '**/*.node',
-      unpackDir: '.vite/build/node_modules/sqlite-vec-darwin-arm64',
+      unpack: '{**/*.node,**/copilot,**/spawn-helper,**/rg,**/*.wasm}',
+      unpackDir: '.vite/build/node_modules/{sqlite-vec-darwin-arm64,@github/copilot-darwin-arm64,@github/copilot/prebuilds,@github/copilot/ripgrep,@anthropic-ai/claude-agent-sdk/vendor}',
     },
     icon: 'src/renderer/public/icon',
     extraResource: [

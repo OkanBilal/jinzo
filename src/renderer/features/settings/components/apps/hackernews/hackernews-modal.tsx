@@ -215,8 +215,8 @@ function ConfigureStep({
 
       <div>
         <BodyMedium className="block mb-2">What to fetch:</BodyMedium>
-        <div className="max-h-40 overflow-y-auto noscrollbar border border-primary-200 dark:border-primary-900 rounded-xl">
-          <div className="flex items-center cursor-pointer border-b border-primary-200 dark:border-primary-900 last:border-b-0">
+        <div className="max-h-60 overflow-y-auto noscrollbar border border-primary-200 dark:border-primary-800 rounded-xl">
+          <div className="flex items-center cursor-pointer border-b border-primary-200 dark:border-primary-800 last:border-b-0">
             <div className="flex-1 px-3 py-3">
               <BodyMedium>Top Stories</BodyMedium>
               <Caption>Latest top stories from HackerNews</Caption>
@@ -230,7 +230,7 @@ function ConfigureStep({
             </div>
           </div>
 
-          <div className="flex items-center cursor-pointer border-b border-primary-200 dark:border-primary-900 last:border-b-0 ">
+          <div className="flex items-center cursor-pointer border-b border-primary-200 dark:border-primary-800 last:border-b-0 ">
             <div className="flex-1 px-3 py-3">
               <BodyMedium>My Submissions</BodyMedium>
               <Caption>Your submitted stories (requires username)</Caption>

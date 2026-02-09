@@ -47,7 +47,7 @@ export const seedProviders: CreateProviderPayload[] = [
       transport: "stdio" as const, // Transport mode: "stdio" or "tcp"
       timeout: 600000, // Timeout in milliseconds
       logLevel: "info" as const, // Log level for the SDK
-      autoRestart: true, // Auto-restart on crash
+      autoRestart: false, // Auto-restart on crash
     },
     capabilities: {
       mode: ["run"], // work runs

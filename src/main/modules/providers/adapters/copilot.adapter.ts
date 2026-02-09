@@ -161,7 +161,11 @@ export function createCopilotAdapter(
     }
 
     if (initError) {
-      throw initError;
+      // Clear cached error so the next call can retry
+      const err = initError;
+      initError = null;
+      clientInitPromise = null;
+      throw err;
     }
 
     if (client) {

@@ -7,6 +7,7 @@ import type { ProviderResponse } from "../providers.dto";
 import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, ModelInfo, CommandInfo, SkillInfo } from "./adapter.types";
 import { createCopilotAdapter } from "./copilot.adapter";
 import { createClaudeAdapter } from "./claude.adapter";
+import { findCopilotCliPath } from "../providers.utils";
 
 /**
  * Known provider IDs that support work runs
@@ -63,6 +64,15 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
         ...(provider.config as CopilotAdapterConfig | null),
         defaultModel: provider.defaultModel ?? undefined,
       };
+      // Resolve the Copilot CLI entry point if not explicitly configured.
+      // The SDK's internal resolution uses import.meta.resolve() which
+      // breaks in bundled CJS / packaged Electron contexts.
+      if (!config.binary) {
+        const resolvedPath = findCopilotCliPath();
+        if (resolvedPath) {
+          config.binary = resolvedPath;
+        }
+      }
       adapter = createCopilotAdapter(config);
       break;
     }

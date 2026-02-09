@@ -15,18 +15,18 @@ export function WorkspaceEmptyState({ workspace }: WorkspaceEmptyStateProps) {
     <div className="flex flex-col items-center justify-center h-full">
       {isClaudeRoute ? (
         <div className="flex items-center justify-center">
-          <span className="text-primary-700 dark:text-[#da9779] text-4xl font-mono">
+          <span className=" text-[#D97757] text-5xl">
             {spinner}
           </span>
         </div>
       ) : (
         <div className="mt-12 flex flex-col items-center">
           <CopilotIcon
-            className="mb-2 text-primary-700 dark:text-copilot-lightblue/20"
+            className="mb-2 text-primary-700 dark:text-copilot-lightblue/60"
             size={80}
             animate
           />
-          <p className=" font-medium text-primary-700 dark:text-copilot-lightblue/20  mb-2 font-mono tracking-tight">
+          <p className=" text-primary-700 dark:text-copilot-lightblue/60 font-mono mb-24">
             What can I help you build?
           </p>
         </div>

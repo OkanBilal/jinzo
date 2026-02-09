@@ -1792,7 +1792,7 @@ export function createClaudeAdapter(
         cachedSkillsTimestamp = now;
 
         if (skills.length > 0) {
-          logInfo(`Discovered ${skills.length} skill(s)`);
+          //logInfo(`Discovered ${skills.length} skill(s)`);
         }
         return skills;
       } catch (error) {

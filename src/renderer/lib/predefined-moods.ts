@@ -87,11 +87,4 @@ export const predefinedMoods: PredefinedMood[] = [
       rightPanel: { width: "19rem", component: "workspace" },
     },
   },
-  {
-    id: "health",
-    name: "Health",
-    icon: "icon:heart",
-    theme: theme("#fde2e2", "#3b1d21"),
-    systemPrompt: "",
-  },
 ];

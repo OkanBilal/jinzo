@@ -22,6 +22,13 @@ export default defineConfig({
         'electron',
         'better-sqlite3',
         'sqlite-vec',
+        '@anthropic-ai/claude-agent-sdk',
+        '@github/copilot-sdk',
+        '@github/copilot',
+        '@github/copilot-darwin-arm64',
+        'vscode-jsonrpc',
+        'zod',
+        '@img/sharp-darwin-arm64',
       ],
     },
   },
@@ -39,12 +46,36 @@ export default defineConfig({
           'file-uri-to-path',
           'sqlite-vec',
           'sqlite-vec-darwin-arm64',
+          'vscode-jsonrpc',
+          'zod',
+        ];
+
+        // Scoped packages need their parent @scope directory created
+        const scopedModulesToCopy = [
+          '@anthropic-ai/claude-agent-sdk',
+          '@github/copilot-sdk',
+          '@github/copilot',
+          '@github/copilot-darwin-arm64',
+          '@img/sharp-darwin-arm64',
         ];
 
         for (const mod of modulesToCopy) {
           const src = path.join('node_modules', mod);
           const dest = path.join(destNodeModules, mod);
           if (existsSync(src)) {
+            cpSync(src, dest, { recursive: true });
+            console.log(`  ✓ Copied ${mod}`);
+          } else {
+            console.warn(`  ⚠ ${mod} not found, skipping`);
+          }
+        }
+
+        for (const mod of scopedModulesToCopy) {
+          const src = path.join('node_modules', mod);
+          const scopeDir = path.join(destNodeModules, mod.split('/')[0]);
+          const dest = path.join(destNodeModules, mod);
+          if (existsSync(src)) {
+            mkdirSync(scopeDir, { recursive: true });
             cpSync(src, dest, { recursive: true });
             console.log(`  ✓ Copied ${mod}`);
           } else {

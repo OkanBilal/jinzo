@@ -26,20 +26,26 @@ export function useSidebarActions() {
 
   const handleMoodChange = async (moodId: string) => {
     try {
-      await setActiveMood(moodId || null).unwrap();
-
+      // Parse route BEFORE mutation to avoid stale closure issues
       const selectedMood = moods.find((m) => m.id === moodId);
+      let defaultRoute = "/";
+
       if (selectedMood?.uiConfig) {
         try {
           const config = JSON.parse(selectedMood.uiConfig);
-          const defaultRoute = config.sidebar?.defaultRoute || "/";
-          navigate(defaultRoute);
+          defaultRoute = config.sidebar?.defaultRoute || "/";
         } catch {
-          navigate("/");
+          // Keep default "/"
         }
-      } else {
-        navigate("/");
       }
+
+      await setActiveMood(moodId || null).unwrap();
+
+      // Use setTimeout to ensure navigation happens after React reconciliation
+      // This fixes packaged version timing issues with HashRouter
+      setTimeout(() => {
+        navigate(defaultRoute, { replace: true });
+      }, 0);
     } catch (error) {
       console.error("Error changing mood:", error);
       toast.error("Failed to change mood");
