@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Heading2, Muted } from "../../../components/ui/text";
 import { Toggle } from "../../../components/ui/toggle";
 import { Button } from "../../../components/ui/button";
@@ -6,6 +7,8 @@ import {
   useGetProviderByIdQuery,
   useUpdateProviderMutation,
 } from "@/lib/redux/api";
+import { StructuredOutputsModal } from "./structured-outputs-modal";
+import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
 
 export default function ClaudeSettings() {
   const {
@@ -16,9 +19,22 @@ export default function ClaudeSettings() {
   const [updateProvider, { isLoading: updating }] =
     useUpdateProviderMutation();
 
+  const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] =
+    useState(false);
+
   const config = provider?.config ?? {};
   const permissionMode = (config as any).permissionMode ?? "bypassPermissions";
   const isBypassing = permissionMode === "bypassPermissions";
+
+  const structuredOutputs = ((config as any).structuredOutputs ?? {}) as Record<
+    string,
+    StructuredOutputEntry
+  >;
+  const structuredOutputsSelectedId =
+    ((config as any).structuredOutputsSelectedId as string | null) ?? null;
+  const selectedSchemaName = structuredOutputsSelectedId
+    ? structuredOutputs[structuredOutputsSelectedId]?.name ?? "Off"
+    : "Off";
 
   const handlePermissionToggle = async (enabled: boolean) => {
     if (!provider || updating) return;
@@ -91,6 +107,27 @@ export default function ClaudeSettings() {
 
       <SettingsDivider />
 
+      {/* Structured Output */}
+      <SettingsRow
+        title="Structured output"
+        description="Define JSON Schemas to constrain the agent's output format. The selected schema is sent to the Claude SDK as outputFormat."
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-primary-500 dark:text-primary-400">
+            {selectedSchemaName}
+          </span>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setIsStructuredOutputsModalOpen(true)}
+          >
+            Edit
+          </Button>
+        </div>
+      </SettingsRow>
+
+      <SettingsDivider />
+
       {/* Skills */}
       <SettingsRow
         title="Skills"
@@ -135,6 +172,11 @@ export default function ClaudeSettings() {
           Open Folder
         </Button>
       </SettingsRow>
+
+      <StructuredOutputsModal
+        isOpen={isStructuredOutputsModalOpen}
+        onClose={() => setIsStructuredOutputsModalOpen(false)}
+      />
     </div>
   );
 }

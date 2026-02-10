@@ -19,12 +19,9 @@ export function RevokeConfirmModal({
   const defaultDescription = `This will disconnect your ${appName} account and remove all associated sources from your feed. This action cannot be undone.`;
 
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/60 "
-        onClick={onCancel}
-      />
-      <div className="relative z-70 w-full max-w-md bg-primary-50 dark:bg-primary-950 border border-primary-200 dark:border-primary-800 rounded-2xl overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-4  ">
+      <div className="absolute inset-0 bg-black/60 " onClick={onCancel} />
+      <div className="relative z-70 w-full max-w-md  glass-morphism rounded-2xl overflow-hidden ">
         <div className="p-6">
           <Text variant="h3" className="mb-3">
             Revoke {appName} Access?

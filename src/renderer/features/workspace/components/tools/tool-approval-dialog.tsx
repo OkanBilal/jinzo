@@ -50,6 +50,8 @@ export function ToolApprovalDialog({
     [request.multiSelect],
   );
 
+    //TODO: handle content details for different tool types, e.g. show command description, model info, etc. For now we just show a JSON preview of the input. We can enhance this later based on the tool type.
+
   if (request.kind === "ask_user") {
     return (
       <div className="mx-auto max-w-210 px-4 mb-4">
@@ -117,31 +119,31 @@ export function ToolApprovalDialog({
   const inputPreview = sanitizeToolInput(request.toolInput);
 
   return (
-    <div className="mx-auto max-w-240 mb-4">
-      <div className=" space-y-3 bg-primary-50/50 dark:bg-primary/5 rounded-xl p-4 ">
+    <div className="mr-auto max-w-160 mb-4">
+      <div className=" space-y-3 bg-primary-50/50 dark:bg-primary/3 rounded-xl p-5 ">
         <div className="flex items-start gap-2">
 
           <div className="space-y-2 flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-primary-200 dark:text-primary-300">
+              <span className="text-sm font-medium text-primary-200 dark:text-primary-300 mb-2">
                 Tool approval required
               </span>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-primary-200/10 dark:bg-primary-700/20 text-primary-300 dark:text-primary-400">
+              <span className="px-1.5 py-0.5 mb-2 rounded text-[11px] bg-primary-200/10 dark:bg-primary/10 text-primary-300 dark:text-primary-400">
                 {request.toolName}
               </span>
             </div>
 
             {inputPreview && (
-              <pre className="text-[12px] text-primary-400 dark:text-primary-500 bg-primary-100/30 dark:bg-primary-800/20 rounded px-2 py-1.5 overflow-x-auto max-h-32 whitespace-pre-wrap break-all">
+              <pre className="text-[12px] text-primary-400 dark:text-primary-500 bg-primary-100/30 dark:bg-primary/5 rounded-lg px-3 py-3 overflow-x-auto max-h-40 whitespace-pre-wrap break-all">
                 {inputPreview}
               </pre>
             )}
 
-            <div className="flex items-center gap-2">
-              <Button variant="submit" size="xs" onClick={handleAllow}>
+            <div className="flex items-center gap-3 pt-2">
+              <Button variant="submit" size="sm" onClick={handleAllow}>
                 Allow
               </Button>
-              <Button variant="danger" size="xs" onClick={handleDeny}>
+              <Button variant="danger" size="sm" onClick={handleDeny}>
                 Deny
               </Button>
             </div>

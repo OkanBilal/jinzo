@@ -365,6 +365,21 @@ export interface ClaudeCodeAdapterConfig {
    * ```
    */
   agents?: AgentsConfig;
+  /** Saved JSON Schema definitions for structured output */
+  structuredOutputs?: Record<string, StructuredOutputEntry>;
+  /** ID of the currently selected structured output schema (null = disabled) */
+  structuredOutputsSelectedId?: string | null;
+}
+
+/**
+ * A persisted JSON Schema entry for structured output
+ */
+export interface StructuredOutputEntry {
+  id: string;
+  name: string;
+  schema: Record<string, unknown>;
+  createdAt: number;
+  updatedAt: number;
 }
 
 /**

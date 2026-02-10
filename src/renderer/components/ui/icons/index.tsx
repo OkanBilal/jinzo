@@ -71,3 +71,4 @@ export { default as Question } from "./question";
 export { default as AgentTeams } from "./agent-teams";
 export { default as SendMessage } from "./send-message";
 export { default as TeamDelete } from "./team-delete";
+export { default as Duplicate } from "./duplicate";

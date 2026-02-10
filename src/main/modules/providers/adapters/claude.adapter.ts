@@ -80,7 +80,10 @@ interface SDKAgentDefinition {
 type SDKAgentsConfig = Record<string, SDKAgentDefinition>;
 
 interface SDKOptions {
-
+  outputFormat?: {
+    type: "json_schema";
+    schema: Record<string, unknown>;
+  };
   model?: string;
   continue?: boolean;
   pathToClaudeCodeExecutable?: string;
@@ -327,6 +330,8 @@ export function createClaudeAdapter(
    * When using CLI (subscription mode), we strip ANTHROPIC_API_KEY from env
    * to avoid unexpected API billing when user has CLI login session.
    */
+  //TODO: Think about usecases of hooks https://platform.claude.com/docs/en/agent-sdk/hooks
+  //TODO: Implement fork session https://platform.claude.com/docs/en/agent-sdk/sessions#forking-sessions
   function buildOptions(
     model: string,
     workspacePath?: string,
@@ -430,6 +435,14 @@ export function createClaudeAdapter(
     const mergedHooks = mergeHooksConfig(config.hooks, runHooks);
     if (mergedHooks && Object.keys(mergedHooks).length > 0) {
       options.hooks = convertHooksConfig(mergedHooks);
+    }
+
+    // Wire structured output if a schema is selected
+    if (config.structuredOutputsSelectedId && config.structuredOutputs) {
+      const entry = config.structuredOutputs[config.structuredOutputsSelectedId];
+      if (entry?.schema) {
+        options.outputFormat = { type: "json_schema", schema: entry.schema };
+      }
     }
 
     // Inject interactive tool approval via PreToolUse hook
@@ -1569,7 +1582,7 @@ export function createClaudeAdapter(
         activeRuns.delete(runId);
       }
     },
-
+      //TODO improve canresume logic - https://platform.claude.com/docs/en/agent-sdk/sessions#resuming-sessions
     async canResumeSession(runId: string): Promise<boolean> {
       // Check if we have a session ID stored for this run
       const sessionId = sessionIdMap.get(runId);

@@ -29,7 +29,7 @@ export default function Tooltip({
   content,
   children,
   position = "top",
-  delay = 50,
+  delay = 20,
   className,
   disabled = false,
   shortcut,

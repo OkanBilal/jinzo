@@ -1,6 +1,5 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Document } from "@/components/ui/icons";
 import { markdownComponents } from "@/features/chat/components/markdown-components";
 import { parseUserPromptWithFiles } from "../../utils/parse-user-prompt";
 import type { EventGroup } from "../../utils/group-events";
