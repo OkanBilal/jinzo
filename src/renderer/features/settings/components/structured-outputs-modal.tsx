@@ -327,7 +327,7 @@ export function StructuredOutputsModal({
     <div className="fixed inset-0 z-100 flex items-center justify-center">
       <div className="absolute inset-0 bg-primary-950/70" onClick={onClose} />
       <div
-        className="relative z-40 w-full max-w-200 glass-morphism h-120 rounded-2xl animate-dropdown-in origin-center"
+        className="relative z-40 w-full max-w-200 glass-morphism h-120 rounded-3xl animate-dropdown-in origin-center"
         role="dialog"
         aria-modal="true"
       >

@@ -110,7 +110,19 @@ export default function ClaudeSettings() {
       {/* Structured Output */}
       <SettingsRow
         title="Structured output"
-        description="Define JSON Schemas to constrain the agent's output format. The selected schema is sent to the Claude SDK as outputFormat."
+        description={
+          <>
+            Define JSON Schemas to constrain the agent's output format. The selected schema is sent to the Claude SDK as outputFormat.{" "}
+            <a
+              href="https://platform.claude.com/docs/en/agent-sdk/structured-outputs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-1 text-primary-500 hover:text-primary-600 dark:text-primary-200 dark:hover:text-primary-300 underline"
+            >
+              Learn more about structured outputs
+            </a>
+          </>
+        }
       >
         <div className="flex items-center gap-3">
           <span className="text-sm text-primary-500 dark:text-primary-400">
@@ -131,7 +143,19 @@ export default function ClaudeSettings() {
       {/* Skills */}
       <SettingsRow
         title="Skills"
-        description="SKILL.md files that extend Claude's capabilities. Located in ~/.claude/skills/ (user) and .claude/skills/ (project)."
+        description={
+          <>
+            SKILL.md files that extend Claude's capabilities. Located in ~/.claude/skills/ (user) and .claude/skills/ (project).{" "}
+            <a
+              href="https://platform.claude.com/docs/en/agent-sdk/skills"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-1 text-primary-500 hover:text-primary-600 dark:text-primary-200 dark:hover:text-primary-300 underline"
+            >
+              Learn more about skills
+            </a>
+          </>
+        }
       >
         <Button
           variant="primary"
@@ -146,7 +170,19 @@ export default function ClaudeSettings() {
 
       <SettingsRow
         title="Agents"
-        description="Define agents as markdown files in ~/.claude/agents/."
+        description={
+          <>
+            Define agents as markdown files in ~/.claude/agents/.{" "}
+            <a
+              href="https://platform.claude.com/docs/en/agent-sdk/subagents"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-1 text-primary-500 hover:text-primary-600 dark:text-primary-200 dark:hover:text-primary-300 underline"
+            >
+              Learn more about subagents
+            </a>
+          </>
+        }
       >
         <Button
           variant="primary"
@@ -162,7 +198,19 @@ export default function ClaudeSettings() {
       {/* Slash Commands */}
       <SettingsRow
         title="Slash Commands"
-        description="Custom slash commands available during agent sessions. Discovered from the Claude CLI."
+        description={
+          <>
+            Custom slash commands available during agent sessions. Discovered from the Claude CLI.{" "}
+            <a
+              href="https://platform.claude.com/docs/en/agent-sdk/slash-commands"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-1 text-primary-500 hover:text-primary-600 dark:text-primary-200 dark:hover:text-primary-300 underline"
+            >
+              Learn more about slash commands
+            </a>
+          </>
+        }
       >
         <Button
           variant="primary"
@@ -187,7 +235,7 @@ function SettingsRow({
   children,
 }: {
   title: string;
-  description?: string;
+  description?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
