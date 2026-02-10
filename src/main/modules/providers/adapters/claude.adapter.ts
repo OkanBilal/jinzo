@@ -31,6 +31,18 @@ import type { ToolApprovalRequest } from "../../runs/runs.dto";
  */
 
 /**
+ * Tools that are pre-approved and skip the interactive approval dialog.
+ * Matches the standard permissions.allow list from Claude Code settings.
+ */
+//TODO: In the future, we may want to dynamically load this from the user's Claude Code config directory (~/.claude/permissions.json) to reflect their actual allowed tools, but for now we'll hardcode a default set of commonly used tools.
+const DEFAULT_ALLOWED_TOOLS = [
+  "Bash", "Read", "Glob", "Grep", "LSP",
+  "Task", "TaskCreate", "TaskList", "TaskGet", "TaskUpdate",
+  "WebFetch", "WebSearch", "NotebookEdit",
+];
+const ALLOWED_TOOLS_SET = new Set(DEFAULT_ALLOWED_TOOLS);
+
+/**
  * SDK hook matcher format (matches SDK's expected structure)
  */
 interface SDKHookMatcher {
@@ -140,7 +152,8 @@ interface SDKResultMessage {
     | "success"
     | "error_during_execution"
     | "error_max_turns"
-    | "error_max_budget_usd";
+    | "error_max_budget_usd"
+    | "error_max_structured_output_retries";
   uuid: string;
   session_id: string;
   duration_ms: number;
@@ -149,6 +162,7 @@ interface SDKResultMessage {
   result?: string;
   total_cost_usd: number;
   errors?: string[];
+  stop_reason?: "end_turn" | "max_tokens" | "stop_sequence" | "refusal" | "tool_use" | null;
 }
 
 interface SDKSystemMessage {
@@ -395,6 +409,7 @@ export function createClaudeAdapter(
       pathToClaudeCodeExecutable: binaryPath,
       env: cleanEnv,
       settingSources,
+      allowedTools: DEFAULT_ALLOWED_TOOLS,
     };
 
     if (workspacePath) {
@@ -420,7 +435,7 @@ export function createClaudeAdapter(
     // Inject interactive tool approval via PreToolUse hook
     // Only inject when NOT in bypassPermissions mode and we have a runId
     if (permissionMode !== "bypassPermissions" && runId) {
-      const approvalHook = buildToolApprovalHook(runId);
+      const approvalHook = buildToolApprovalHook(runId, ALLOWED_TOOLS_SET);
       if (!options.hooks) {
         options.hooks = {};
       }
@@ -554,7 +569,7 @@ export function createClaudeAdapter(
    * Build a PreToolUse SDK hook matcher that requests interactive approval
    * from the renderer before allowing a tool call to proceed.
    */
-  function buildToolApprovalHook(runId: string): SDKHookMatcher {
+  function buildToolApprovalHook(runId: string, allowedTools: Set<string>): SDKHookMatcher {
     return {
       // No matcher → fires for every tool
       hooks: [
@@ -565,6 +580,16 @@ export function createClaudeAdapter(
         ): Promise<Record<string, unknown>> => {
           const toolName = (input.tool_name as string) || "unknown";
           const toolInput = (input.tool_input as Record<string, unknown>) || {};
+
+          // Auto-approve tools that the user has pre-allowed in settings.json
+          if (allowedTools.has(toolName)) {
+            return {
+              hookSpecificOutput: {
+                hookEventName: "PreToolUse",
+                permissionDecision: "allow",
+              },
+            };
+          }
 
           // Detect AskUserQuestion tool
           const isAskUser = toolName === "AskUserQuestion";
@@ -775,8 +800,19 @@ export function createClaudeAdapter(
 
       case "result": {
         // Final result message - content is already streamed via assistant.message
-        // Only emit errors here, not the content (to avoid duplication)
         const resultMsg = msg as SDKResultMessage;
+
+        // Emit stop reason log when notable
+        if (resultMsg.stop_reason && resultMsg.stop_reason !== "end_turn") {
+          events.push({
+            type: "log",
+            message: `[stop_reason] ${resultMsg.stop_reason}`,
+            level: resultMsg.stop_reason === "refusal" ? "error" : "info",
+            ts,
+          });
+        }
+
+        // Only emit errors here, not the content (to avoid duplication)
         if (resultMsg.is_error && resultMsg.errors) {
           events.push({
             type: "log",
@@ -994,6 +1030,7 @@ export function createClaudeAdapter(
 
       const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
       const abortController = new AbortController();
+      let lastStopReason: "end_turn" | "max_tokens" | "stop_sequence" | "refusal" | "tool_use" | null | undefined;
 
       try {
         await onEvent({ type: "status", status: "running", ts: Date.now() });
@@ -1084,6 +1121,14 @@ export function createClaudeAdapter(
                 }
               }
 
+              // Capture stop reason from result messages
+              if (msg.type === "result") {
+                const resultMsg = msg as SDKResultMessage;
+                if (resultMsg.stop_reason !== undefined) {
+                  lastStopReason = resultMsg.stop_reason;
+                }
+              }
+
               // Map and emit events
               const events = mapSDKMessage(msg, runId);
               for (const event of events) {
@@ -1138,6 +1183,19 @@ export function createClaudeAdapter(
           return {
             status: "canceled",
             summary: "Run was aborted by user",
+            stopReason: lastStopReason ?? null,
+            artifacts: collectedArtifacts,
+          };
+        }
+
+        // Handle refusal stop reason
+        if (lastStopReason === "refusal") {
+          await onEvent({ type: "status", status: "failed", ts: Date.now() });
+
+          return {
+            status: "failed",
+            summary: "The model declined to fulfill this request.",
+            stopReason: lastStopReason,
             artifacts: collectedArtifacts,
           };
         }
@@ -1147,6 +1205,7 @@ export function createClaudeAdapter(
         return {
           status: "succeeded",
           summary: "Completed successfully",
+          stopReason: lastStopReason ?? null,
           artifacts: collectedArtifacts,
         };
       } catch (error) {
@@ -1190,6 +1249,7 @@ export function createClaudeAdapter(
           return {
             status: "failed",
             summary: `Request timed out after ${timeout / 1000} seconds.`,
+            stopReason: lastStopReason ?? null,
             artifacts: collectedArtifacts,
           };
         }
@@ -1204,6 +1264,7 @@ export function createClaudeAdapter(
           return {
             status: "canceled",
             summary: "Run was aborted",
+            stopReason: lastStopReason ?? null,
             artifacts: collectedArtifacts,
           };
         }
@@ -1225,6 +1286,7 @@ export function createClaudeAdapter(
         return {
           status: "failed",
           summary: errorMessage,
+          stopReason: lastStopReason ?? null,
           artifacts: collectedArtifacts,
         };
       } finally {
@@ -1241,6 +1303,7 @@ export function createClaudeAdapter(
 
       const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
       const abortController = new AbortController();
+      let lastStopReason: "end_turn" | "max_tokens" | "stop_sequence" | "refusal" | "tool_use" | null | undefined;
 
       try {
         await onEvent({ type: "status", status: "running", ts: Date.now() });
@@ -1338,6 +1401,14 @@ export function createClaudeAdapter(
                 break;
               }
 
+              // Capture stop reason from result messages
+              if (msg.type === "result") {
+                const resultMsg = msg as SDKResultMessage;
+                if (resultMsg.stop_reason !== undefined) {
+                  lastStopReason = resultMsg.stop_reason;
+                }
+              }
+
               const events = mapSDKMessage(msg, runId);
               for (const event of events) {
                 await onEvent(event);
@@ -1389,6 +1460,19 @@ export function createClaudeAdapter(
           return {
             status: "canceled",
             summary: "Run was aborted by user",
+            stopReason: lastStopReason ?? null,
+            artifacts: collectedArtifacts,
+          };
+        }
+
+        // Handle refusal stop reason
+        if (lastStopReason === "refusal") {
+          await onEvent({ type: "status", status: "failed", ts: Date.now() });
+
+          return {
+            status: "failed",
+            summary: "The model declined to fulfill this request.",
+            stopReason: lastStopReason,
             artifacts: collectedArtifacts,
           };
         }
@@ -1398,6 +1482,7 @@ export function createClaudeAdapter(
         return {
           status: "succeeded",
           summary: "Completed successfully",
+          stopReason: lastStopReason ?? null,
           artifacts: collectedArtifacts,
         };
       } catch (error) {
@@ -1440,6 +1525,7 @@ export function createClaudeAdapter(
           return {
             status: "failed",
             summary: `Request timed out after ${timeout / 1000} seconds.`,
+            stopReason: lastStopReason ?? null,
             artifacts: collectedArtifacts,
           };
         }
@@ -1454,6 +1540,7 @@ export function createClaudeAdapter(
           return {
             status: "canceled",
             summary: "Run was aborted",
+            stopReason: lastStopReason ?? null,
             artifacts: collectedArtifacts,
           };
         }
@@ -1475,6 +1562,7 @@ export function createClaudeAdapter(
         return {
           status: "failed",
           summary: errorMessage,
+          stopReason: lastStopReason ?? null,
           artifacts: collectedArtifacts,
         };
       } finally {

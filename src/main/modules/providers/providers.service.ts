@@ -5,7 +5,7 @@ import type {
   ProviderResponse,
   ServiceResponse,
 } from "./providers.dto";
-import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, shutdownWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo } from "./adapters";
+import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo } from "./adapters";
 
 // ─────────────────────────────────────────────────────────────
 // Providers Service
@@ -78,7 +78,7 @@ export const providersService = {
       }
 
       // Invalidate cached adapter so the next run picks up new config
-      //await shutdownWorkAdapter(id);
+      invalidateWorkAdapter(id);
 
       return { success: true, data: updated };
     } catch (error) {

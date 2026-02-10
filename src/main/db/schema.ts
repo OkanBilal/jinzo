@@ -208,6 +208,7 @@ export const runs = sqliteTable(
     startedAt: integer("started_at", { mode: "timestamp" }),
     endedAt: integer("ended_at", { mode: "timestamp" }),
     lastError: text("last_error"),
+    stopReason: text("stop_reason"),
 
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()

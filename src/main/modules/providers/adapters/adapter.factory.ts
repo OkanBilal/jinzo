@@ -148,6 +148,16 @@ export function clearAdapterCache(): void {
 }
 
 /**
+ * Invalidate a single adapter from cache without shutting it down.
+ * Active runs on the old adapter instance continue unaffected;
+ * the next call to createWorkAdapter() will build a fresh adapter
+ * with the latest provider config.
+ */
+export function invalidateWorkAdapter(providerId: string): void {
+  adapterCache.delete(providerId);
+}
+
+/**
  * List available models for a provider
  *
  * @param provider - The provider configuration from the database

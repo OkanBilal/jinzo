@@ -1,0 +1,1 @@
+ALTER TABLE `runs` ADD `stop_reason` text;

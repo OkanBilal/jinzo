@@ -518,6 +518,7 @@ export const runsService = {
             status: finalStatus,
             endedAt: new Date(),
             lastError: result.status === "failed" ? result.summary : undefined,
+            stopReason: result.stopReason ?? null,
           });
 
           console.log(
@@ -912,6 +913,7 @@ export const runsService = {
             status: finalStatus,
             endedAt: new Date(),
             lastError: result.status === "failed" ? result.summary : undefined,
+            stopReason: result.stopReason ?? null,
           });
 
           console.log(

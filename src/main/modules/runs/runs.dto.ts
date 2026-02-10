@@ -37,6 +37,7 @@ export interface UpdateRunPayload {
   startedAt?: Date;
   endedAt?: Date | null;
   lastError?: string | null;
+  stopReason?: string | null;
 }
 
 export interface RunResponse {
@@ -55,6 +56,7 @@ export interface RunResponse {
   startedAt: Date | null;
   endedAt: Date | null;
   lastError: string | null;
+  stopReason: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

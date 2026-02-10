@@ -152,11 +152,18 @@ export interface WorkRunArtifactSummary {
 }
 
 /**
+ * Stop reason indicating why the model stopped generating.
+ * Maps to Claude Agent SDK's ResultMessage.stop_reason field.
+ */
+export type StopReason = "end_turn" | "max_tokens" | "stop_sequence" | "refusal" | "tool_use" | null;
+
+/**
  * Result returned when a work run completes
  */
 export interface WorkRunResult {
   status: "succeeded" | "failed" | "canceled";
   summary?: string;
+  stopReason?: StopReason;
   artifacts?: WorkRunArtifactSummary[];
 }
 
