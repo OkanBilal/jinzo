@@ -13,7 +13,7 @@ export async function seedApps(): Promise<void> {
       connectionId: null,
       displayName: app.name,
       iconPath: app.imageSrc,
-      highlighted: app.highlighted || false,
+      category: app.category,
       sortOrder: apps.indexOf(app),
       enabledFeatures: JSON.stringify([]),
       config: JSON.stringify({}),

@@ -15,7 +15,7 @@ export interface AppState {
   iconPath: string;
   isConnected: boolean;
   connectionId: string | null;
-  highlighted: boolean;
+  category: string | null;
   sortOrder: number;
   enabledFeatures: string | null;
   config: string | null;
@@ -42,7 +42,7 @@ export type AppItem = {
   iconPath: string | null;
   isConnected: boolean;
   connectionId: string | null;
-  highlighted: boolean;
+  category: string | null;
   sortOrder: number;
   enabledFeatures: string | null;
   config: string | null;

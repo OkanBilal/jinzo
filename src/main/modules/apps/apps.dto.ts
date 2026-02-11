@@ -20,12 +20,12 @@ export interface AppResponse {
   id: string;
   displayName: string | null;
   iconPath: string | null;
-  isConnected: boolean | null;
+  isConnected: boolean;
   connectionId: string | null;
-  highlighted: boolean | null;
-  sortOrder: number | null;
-  enabledFeatures: unknown;
-  config: unknown;
+  category: string | null;
+  sortOrder: number;
+  enabledFeatures: string | null;
+  config: string | null;
 }
 
 export interface SuccessResponse<T> {

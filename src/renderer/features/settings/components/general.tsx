@@ -25,10 +25,16 @@ export const EMPTY_FORM = {
 
 const TIMEZONE_OPTIONS = [
   { value: "UTC", label: "UTC" },
+  { value: "Europe/London", label: "London (GMT+00:00)" },
+  { value: "Europe/Paris", label: "Paris (GMT+01:00)" },
+  { value: "Europe/Berlin", label: "Berlin (GMT+01:00)" },
   { value: "Europe/Istanbul", label: "Turkey (GMT+03:00)" },
-  { value: "America/New_York", label: "New York (GMT-04:00)" },
-  { value: "America/Los_Angeles", label: "Los Angeles (GMT-07:00)" },
+  { value: "Asia/Dubai", label: "Dubai (GMT+04:00)" },
+  { value: "Asia/Singapore", label: "Singapore (GMT+08:00)" },
   { value: "Asia/Tokyo", label: "Tokyo (GMT+09:00)" },
+  { value: "Australia/Sydney", label: "Sydney (GMT+10:00)" },
+  { value: "America/New_York", label: "New York (GMT-05:00)" },
+  { value: "America/Los_Angeles", label: "Los Angeles (GMT-08:00)" },
 ];
 
 const LOCALE_OPTIONS = [
@@ -37,6 +43,11 @@ const LOCALE_OPTIONS = [
   { value: "de-DE", label: "German" },
   { value: "es-ES", label: "Spanish" },
   { value: "fr-FR", label: "French" },
+  { value: "ru-RU", label: "Russian" },
+  { value: "pt-BR", label: "Portuguese (Brazil)" },
+  { value: "it-IT", label: "Italian" },
+  { value: "nl-NL", label: "Dutch" },
+  { value: "sv-SE", label: "Swedish" },
 ];
 
 type ThemeValue = "light" | "dark" | "system";

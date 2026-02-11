@@ -6,7 +6,7 @@ export interface AppState {
   iconPath: string;
   isConnected: boolean;
   connectionId: string | null;
-  highlighted: boolean;
+  category: string;
   sortOrder: number;
   enabledFeatures: string | null;
   config: string | null;

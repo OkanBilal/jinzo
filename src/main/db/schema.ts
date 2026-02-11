@@ -721,10 +721,8 @@ export const appStates = sqliteTable(
       onDelete: "set null",
     }),
     displayName: text("display_name"),
+    category: text("category"),
     iconPath: text("icon_path"),
-    highlighted: integer("highlighted", { mode: "boolean" })
-      .notNull()
-      .default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     enabledFeatures: text("enabled_features"), // JSON
     config: text("config"), // JSON

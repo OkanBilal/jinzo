@@ -16,13 +16,13 @@ export const appsRepo = {
         iconPath: appStates.iconPath,
         isConnected: appStates.isConnected,
         connectionId: appStates.connectionId,
-        highlighted: appStates.highlighted,
+        category: appStates.category,
         sortOrder: appStates.sortOrder,
         enabledFeatures: appStates.enabledFeatures,
         config: appStates.config,
       })
       .from(appStates)
-      .orderBy(desc(appStates.highlighted), appStates.sortOrder);
+      .orderBy(desc(appStates.sortOrder));
 
     return apps;
   },
