@@ -291,13 +291,11 @@ export async function fetchAsanaTasks(
           completedAt: task.completed_at,
           dueOn: task.due_on,
           dueAt: task.due_at,
-          assignee: task.assignee
-            ? { gid: task.assignee.gid, name: task.assignee.name }
-            : null,
+          assignee: task.assignee?.name || null,
           modifiedAt: task.modified_at
             ? new Date(task.modified_at).toISOString()
             : null,
-          tags: tagNames,
+          labels: tagNames,
           // For compatibility with existing issue table columns
           repo: projectGid,
           number: parseInt(task.gid, 10) || 0,

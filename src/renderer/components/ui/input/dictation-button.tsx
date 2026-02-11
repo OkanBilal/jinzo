@@ -17,12 +17,12 @@ const variantStyles = {
   copilot: {
     recording: "bg-copilot-blue/30 dark:bg-copilot-lightblue/50",
     hover: "hover:bg-copilot-blue/10 dark:hover:bg-copilot-lightblue/20",
-    icon: "dark:text-copilot-lightblue text-copilot-blue",
+    icon: "dark:text-copilot-lightblue/70 text-copilot-blue",
   },
   claude: {
     recording: "bg-claude-dark/30 dark:bg-claude-light/50",
     hover: "hover:bg-claude-dark/10 dark:hover:bg-claude-light/20",
-    icon: "dark:text-claude-light text-claude-dark",
+    icon: "dark:text-claude-light/70 text-claude-dark",
   },
 };
 

@@ -98,6 +98,7 @@ interface DropdownMenuItemProps {
   children: ReactNode;
   variant?: "default" | "danger";
   className?: string;
+  disabled?: boolean;
 }
 
 export function DropdownMenuItem({
@@ -105,6 +106,7 @@ export function DropdownMenuItem({
   children,
   variant = "default",
   className = "",
+  disabled = false,
 }: DropdownMenuItemProps) {
   const variantClasses = {
     default: "text-primary-800 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-50",
@@ -114,8 +116,10 @@ export function DropdownMenuItem({
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-sm
-        hover:bg-primary-100/50 dark:hover:bg-primary/5 transition-colors cursor-pointer
+        hover:bg-primary-100/50 dark:hover:bg-primary/5 transition-colors
+        ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
         ${variantClasses[variant]} ${className}`}
     >
       {children}

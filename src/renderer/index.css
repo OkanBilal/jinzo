@@ -45,8 +45,16 @@
     'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
     'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --font-mono: 'Geist Mono', 'Space Mono', monospace;
+  
 }
 
+*:focus {
+  outline: none !important;
+}
+
+* {
+  user-select: none;
+}
 
 @keyframes blink {
   0%, 49% { opacity: 1; }

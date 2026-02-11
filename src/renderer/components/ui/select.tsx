@@ -99,7 +99,6 @@ export default function Select<T extends string = string>({
       const bgColor = darkMode
         ? themeConfig.darkBackground
         : themeConfig.lightBackground;
-      console.log("Dropdown BG Color:", bgColor);
 
       if (!bgColor) {
         return getDefaultDropdownBackground(darkMode, 0.98);

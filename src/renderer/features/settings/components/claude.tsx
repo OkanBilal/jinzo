@@ -16,8 +16,7 @@ export default function ClaudeSettings() {
     isLoading,
     error,
   } = useGetProviderByIdQuery("claude_code");
-  const [updateProvider, { isLoading: updating }] =
-    useUpdateProviderMutation();
+  const [updateProvider, { isLoading: updating }] = useUpdateProviderMutation();
 
   const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] =
     useState(false);
@@ -33,7 +32,7 @@ export default function ClaudeSettings() {
   const structuredOutputsSelectedId =
     ((config as any).structuredOutputsSelectedId as string | null) ?? null;
   const selectedSchemaName = structuredOutputsSelectedId
-    ? structuredOutputs[structuredOutputsSelectedId]?.name ?? "Off"
+    ? (structuredOutputs[structuredOutputsSelectedId]?.name ?? "Off")
     : "Off";
 
   const handlePermissionToggle = async (enabled: boolean) => {
@@ -94,25 +93,30 @@ export default function ClaudeSettings() {
         <Heading2 className="font-medium!">Claude Agent</Heading2>
       </div>
 
-      {/* Permissions */}
       <SettingsRow
         title="Bypass Permissions"
-        description="When enabled, the Claude agent can use all tools without asking for approval. When disabled, each tool call requires your confirmation."
+        description={
+          <>
+            When enabled, the Claude agent can use all tools without asking for
+            approval. When disabled, each tool call requires your confirmation.{" "}
+            <br />
+            <span className="text-amber-700 dark:text-amber-600 font-medium ">
+              ⚠ Enabling this gives the agent full control over file operations
+              and terminal commands.
+            </span>
+          </>
+        }
       >
-        <Toggle
-          enabled={isBypassing}
-          onChange={handlePermissionToggle}
-        />
+        <Toggle enabled={isBypassing} onChange={handlePermissionToggle} />
       </SettingsRow>
 
       <SettingsDivider />
-
-      {/* Structured Output */}
       <SettingsRow
-        title="Structured output"
+        title="Structured Output"
         description={
           <>
-            Define JSON Schemas to constrain the agent's output format. The selected schema is sent to the Claude SDK as outputFormat.{" "}
+            Define JSON Schemas to constrain the agent's output format. The
+            selected schema is sent to the Claude SDK as outputFormat.{" "}
             <a
               href="https://platform.claude.com/docs/en/agent-sdk/structured-outputs"
               target="_blank"
@@ -140,12 +144,12 @@ export default function ClaudeSettings() {
 
       <SettingsDivider />
 
-      {/* Skills */}
       <SettingsRow
         title="Skills"
         description={
           <>
-            SKILL.md files that extend Claude's capabilities. Located in ~/.claude/skills/ (user) and .claude/skills/ (project).{" "}
+            SKILL.md files that extend Claude's capabilities. Located in
+            ~/.claude/skills/ (user) and .claude/skills/ (project).{" "}
             <a
               href="https://platform.claude.com/docs/en/agent-sdk/skills"
               target="_blank"
@@ -195,12 +199,12 @@ export default function ClaudeSettings() {
 
       <SettingsDivider />
 
-      {/* Slash Commands */}
       <SettingsRow
         title="Slash Commands"
         description={
           <>
-            Custom slash commands available during agent sessions. Discovered from the Claude CLI.{" "}
+            Custom slash commands available during agent sessions. Discovered
+            from the Claude CLI.{" "}
             <a
               href="https://platform.claude.com/docs/en/agent-sdk/slash-commands"
               target="_blank"

@@ -20,14 +20,18 @@ export default function MoodContextMenu({
   onClose,
 }: MoodContextMenuProps) {
   if (!mood) return null;
+  const isSystemMood = mood.slug === "claude" || mood.slug === "copilot";
 
   return (
     <DropdownMenu isOpen={isOpen} position={position} onClose={onClose}>
       <DropdownMenuItem
         onClick={() => {
-          onEdit();
-          onClose();
+          if (!isSystemMood) {
+            onEdit();
+            onClose();
+          }
         }}
+        disabled={isSystemMood}
       >
         <Edit className="size-3.5" />
         <span>Edit</span>

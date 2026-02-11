@@ -59,6 +59,7 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      devTools: !app.isPackaged,
     },
     titleBarStyle: "hiddenInset",
     trafficLightPosition: { x: 16, y: 16 },

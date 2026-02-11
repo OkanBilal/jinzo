@@ -19,16 +19,12 @@ import {
 } from "@/lib/redux/api";
 import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
 
-// ─── Property types (mirrors chat structured-output-modal) ───
-
 interface SchemaProperty {
   name: string;
   type: "string" | "number" | "boolean" | "array" | "object";
   isArray: boolean;
   isRequired: boolean;
 }
-
-// ─── Conversion helpers ───
 
 function schemaToProperties(schema: Record<string, unknown>): SchemaProperty[] {
   const props = (schema.properties ?? {}) as Record<string, any>;
@@ -64,8 +60,6 @@ function propertiesToSchema(
   if (required.length > 0) schema.required = required;
   return schema;
 }
-
-// ─── Component ───
 
 type Tab = "schemas" | "editor";
 
@@ -327,23 +321,23 @@ export function StructuredOutputsModal({
     <div className="fixed inset-0 z-100 flex items-center justify-center">
       <div className="absolute inset-0 bg-primary-950/70" onClick={onClose} />
       <div
-        className="relative z-40 w-full max-w-200 glass-morphism h-120 rounded-3xl animate-dropdown-in origin-center"
+        className="relative z-40 w-full max-w-180 glass-morphism h-120 rounded-3xl animate-dropdown-in origin-center"
         role="dialog"
         aria-modal="true"
       >
         {/* Header + Tabs */}
-        <div className="flex items-center justify-between p-4">
+        <div className="flex items-center justify-between p-6">
           <div className="flex items-center gap-4">
             <Heading3>Structured outputs</Heading3>
             <div className="relative flex items-center rounded-xl bg-primary-950/4 dark:bg-primary/6 p-0.5">
               {/* Sliding background indicator */}
               <div
-                className="absolute top-0.5 h-[calc(100%-4px)] w-[calc(50%-2px)] rounded-xl bg-white dark:bg-primary-800 shadow-sm transition-transform duration-200 ease-out"
+                className="absolute top-0.5 h-[calc(100%-4px)] w-[calc(50%-2px)] rounded-[11px] bg-white dark:bg-primary-800 shadow-sm transition-transform duration-200 ease-out"
                 style={{
                   transform:
                     activeTab === "schemas"
-                      ? "translateX(2px)"
-                      : "translateX(calc(100% + 2px))",
+                      ? "translateX(0px)"
+                      : "translateX(calc(100% + 0px))",
                 }}
               />
               <Button
@@ -381,7 +375,7 @@ export function StructuredOutputsModal({
         {activeTab === "schemas" && (
           <>
             <div className="p-4 pt-0">
-              <div className="h-80 overflow-y-auto space-y-1">
+              <div className="h-78 overflow-y-auto space-y-1">
                 {/* "Do not use" row */}
                 <button
                   onClick={() => handleSelectSchema(null)}
@@ -447,7 +441,7 @@ export function StructuredOutputsModal({
                       >
                         <Duplicate className="size-4" />
                       </Button>
-                      <Button
+                      {/* <Button
                         tooltip="Rename Schema"
                         onClick={() => {
                           setRenameValue(entry.name);
@@ -457,7 +451,7 @@ export function StructuredOutputsModal({
                         title="Rename"
                       >
                         Aa
-                      </Button>
+                      </Button> */}
                       <button
                         onClick={() => setDeleteTargetId(entry.id)}
                         className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-colors cursor-pointer"
@@ -490,7 +484,7 @@ export function StructuredOutputsModal({
         {activeTab === "editor" && (
           <>
             <div className="p-4 pt-0">
-              <div className="h-80 overflow-y-auto overflow-x-visible">
+              <div className="h-78 overflow-y-auto overflow-x-visible">
                 <Body className="mt-2 mb-2">Name</Body>
                 <Input
                   type="text"
@@ -548,14 +542,14 @@ export function StructuredOutputsModal({
 
         {/* Delete confirmation */}
         {deleteTargetId && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center rounded-2xl ">
-            <div className="glass-morphism min-w-md rounded-2xl p-6 space-y-3 animate-dropdown-in ">
+          <div className="absolute inset-0 z-50 flex items-center justify-center rounded-3xl ">
+            <div className="glass-morphism min-w-md rounded-3xl px-6 py-10 space-y-3 animate-dropdown-in ">
               <Body className="font-medium">Delete schema?</Body>
-              <Muted className="text-sm">
+              <Muted className="text-sm mb-6">
                 &ldquo;{entries[deleteTargetId]?.name}&rdquo; will be
                 permanently removed.
               </Muted>
-              <div className="flex justify-end gap-2 pt-1">
+              <div className="flex justify-end gap-3 pt-1">
                 <Button
                   variant="secondary"
                   size="sm"
@@ -626,6 +620,7 @@ function PropertyRow({ property, onUpdate, onRemove }: PropertyRowProps) {
       </div>
       <div className="w-52 shrink-0">
         <Select
+          useFixedBackground={true}
           value={property.type}
           options={typeOptions}
           onChange={(val) => onUpdate({ type: val as SchemaProperty["type"] })}
