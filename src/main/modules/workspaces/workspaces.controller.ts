@@ -13,4 +13,5 @@ export const workspacesController = {
   create: (payload: CreateWorkspacePayload) => workspacesService.create(payload),
   update: (id: string, payload: UpdateWorkspacePayload) => workspacesService.update(id, payload),
   delete: (id: string) => workspacesService.delete(id),
+  archive: (id: string) => workspacesService.archive(id),
 };

@@ -111,4 +111,17 @@ export const workspacesService = {
       return { success: false, error: "Failed to delete workspace" };
     }
   },
+
+  async archive(id: string): Promise<ServiceResponse<WorkspaceResponse>> {
+    try {
+      const archived = await workspacesRepo.archive(id);
+      if (!archived) {
+        return { success: false, error: "Workspace not found" };
+      }
+      return { success: true, data: archived };
+    } catch (error) {
+      console.error(`[WorkspacesService] Failed to archive workspace ${id}:`, error);
+      return { success: false, error: "Failed to archive workspace" };
+    }
+  },
 };

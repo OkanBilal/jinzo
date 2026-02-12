@@ -6,14 +6,18 @@ import type {
   UpdateWorkspacePayload,
   WorkspaceResponse,
 } from "./workspaces.dto";
+import { sql } from "drizzle-orm";
 
 // ─────────────────────────────────────────────────────────────
 // Workspaces Repository
 // ─────────────────────────────────────────────────────────────
 export const workspacesRepo = {
-  async findAll(): Promise<WorkspaceResponse[]> {
+  async findAll(includeArchived = false): Promise<WorkspaceResponse[]> {
     const db = getDb();
-    const rows = await db.select().from(workspaces).orderBy(desc(workspaces.updatedAt));
+    const query = db.select().from(workspaces);
+    const rows = includeArchived
+      ? await query.orderBy(desc(workspaces.updatedAt))
+      : await query.where(eq(workspaces.isArchived, false)).orderBy(desc(workspaces.updatedAt));
     return rows.map(mapRowToResponse);
   },
 
@@ -27,12 +31,15 @@ export const workspacesRepo = {
     return rows[0] ? mapRowToResponse(rows[0]) : null;
   },
 
-  async findByAccountId(accountId: string): Promise<WorkspaceResponse[]> {
+  async findByAccountId(accountId: string, includeArchived = false): Promise<WorkspaceResponse[]> {
     const db = getDb();
+    const condition = includeArchived
+      ? eq(workspaces.accountId, accountId)
+      : and(eq(workspaces.accountId, accountId), eq(workspaces.isArchived, false));
     const rows = await db
       .select()
       .from(workspaces)
-      .where(eq(workspaces.accountId, accountId))
+      .where(condition)
       .orderBy(desc(workspaces.updatedAt));
     return rows.map(mapRowToResponse);
   },
@@ -79,6 +86,15 @@ export const workspacesRepo = {
     const db = getDb();
     await db.delete(workspaces).where(eq(workspaces.id, id));
   },
+
+  async archive(id: string): Promise<WorkspaceResponse | null> {
+    const db = getDb();
+    await db
+      .update(workspaces)
+      .set({ isArchived: true, updatedAt: sql`(unixepoch())` })
+      .where(eq(workspaces.id, id));
+    return this.findById(id);
+  },
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -93,6 +109,7 @@ function mapRowToResponse(row: typeof workspaces.$inferSelect): WorkspaceRespons
     repoUrl: row.repoUrl,
     defaultBranch: row.defaultBranch,
     metadata: row.metadata ? JSON.parse(row.metadata) : null,
+    isArchived: row.isArchived,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

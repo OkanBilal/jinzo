@@ -87,6 +87,7 @@ export interface WorkspaceResponse {
   repoUrl: string | null;
   defaultBranch: string | null;
   metadata: WorkspaceMetadata | null;
+  isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

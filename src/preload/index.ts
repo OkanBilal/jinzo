@@ -386,6 +386,7 @@ const api = {
     update: (id: string, payload: unknown) =>
       ipcRenderer.invoke("workspaces:update", id, payload),
     delete: (id: string) => ipcRenderer.invoke("workspaces:delete", id),
+    archive: (id: string) => ipcRenderer.invoke("workspaces:archive", id),
     selectDirectory: () => ipcRenderer.invoke("workspaces:selectDirectory"),
   },
   // Runs operations

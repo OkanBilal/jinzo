@@ -15,6 +15,7 @@ export interface Workspace {
   repoUrl: string | null;
   defaultBranch: string | null;
   metadata: WorkspaceMetadata | null;
+  isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -115,6 +116,19 @@ export const workspacesApi = baseApi.injectEndpoints({
       invalidatesTags: ["Workspaces"],
     }),
 
+    archiveWorkspace: builder.mutation<Workspace, string>({
+      query: (id) => ({
+        handler: "workspaces:archive",
+        args: [id],
+      }),
+      transformResponse: (response: { success: boolean; data: Workspace }) =>
+        response.data,
+      invalidatesTags: (_result, _error, id) => [
+        "Workspaces",
+        { type: "Workspaces", id },
+      ],
+    }),
+
     selectDirectory: builder.mutation<string | null, void>({
       query: () => ({
         handler: "workspaces:selectDirectory",
@@ -139,5 +153,6 @@ export const {
   useCreateWorkspaceMutation,
   useUpdateWorkspaceMutation,
   useDeleteWorkspaceMutation,
+  useArchiveWorkspaceMutation,
   useSelectDirectoryMutation,
 } = workspacesApi;

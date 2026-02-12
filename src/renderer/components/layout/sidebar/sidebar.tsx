@@ -15,6 +15,7 @@ import { Edit, Plus } from "@/components/ui/icons";
 import { useDeleteChatSession } from "@/features/chat/hooks/use-delete-chat-session";
 import { useDeleteJournal } from "@/features/journal/hooks";
 import { useDeleteWorkspace } from "@/features/workspace/hooks";
+import { useArchiveWorkspace } from "@/features/workspace/hooks";
 import { useMoodContextMenu } from "@/hooks/use-mood-context-menu";
 import { useMoodMenu } from "@/hooks/use-mood-menu";
 import { useSidebarSearch } from "@/hooks/use-sidebar-search";
@@ -82,6 +83,7 @@ export default function Sidebar() {
   const deleteSession = useDeleteChatSession();
   const deleteJournal = useDeleteJournal();
   const deleteWorkspace = useDeleteWorkspace();
+  const archiveWorkspace = useArchiveWorkspace();
 
   // Suppress unused variable warning for handleRefreshApps
   void handleRefreshApps;
@@ -139,6 +141,7 @@ export default function Sidebar() {
               onDeleteSession={deleteSession.handleDeleteClick}
               onDeletePost={deleteJournal.handleDeleteClick}
               onDeleteWorkspace={deleteWorkspace.handleDeleteClick}
+              onArchiveWorkspace={archiveWorkspace.handleArchiveClick}
             />
             <SidebarFooter
               moods={moods}

@@ -120,6 +120,9 @@ export const workspaces = sqliteTable(
     repoUrl: text("repo_url"),
     defaultBranch: text("default_branch"),
     metadata: text("metadata"), // JSON (optional)
+    isArchived: integer("is_archived", { mode: "boolean" })
+      .notNull()
+      .default(false),
 
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()

@@ -13,12 +13,14 @@ interface WorkspacesListProps {
   workspaces: WorkspaceResponse[];
   isLoading: boolean;
   onDeleteWorkspace?: (workspaceId: string, e: MouseEvent) => void;
+  onArchiveWorkspace?: (workspaceId: string) => void;
 }
 
 export default function WorkspacesList({
   workspaces,
   isLoading,
   onDeleteWorkspace,
+  onArchiveWorkspace,
 }: WorkspacesListProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [linkModalState, setLinkModalState] = useState<{
@@ -122,6 +124,7 @@ export default function WorkspacesList({
                 onClick={() => handleWorkspaceClick(workspace)}
                 onDelete={(e) => onDeleteWorkspace?.(workspace.id, e)}
                 onLinkIssues={() => handleLinkIssues(workspace)}
+                onArchive={() => onArchiveWorkspace?.(workspace.id)}
               />
             );
           })}

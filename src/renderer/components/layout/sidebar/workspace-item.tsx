@@ -1,6 +1,6 @@
 import { useState, useRef, type MouseEvent } from "react";
 import { Muted, Timestamp } from "@/components/ui/text";
-import { Trash, Option, Layers, Check, Connect, Branch } from "@/components/ui/icons";
+import { Trash, Option, Layers, Check, Connect, Branch, Archive } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format-date";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -14,6 +14,7 @@ interface WorkspaceItemProps {
   onClick?: () => void;
   onDelete?: (e: MouseEvent) => void;
   onLinkIssues?: () => void;
+  onArchive?: () => void;
 }
 
 export default function WorkspaceItem({
@@ -25,6 +26,7 @@ export default function WorkspaceItem({
   onClick,
   onDelete,
   onLinkIssues,
+  onArchive,
 }: WorkspaceItemProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
@@ -38,8 +40,8 @@ export default function WorkspaceItem({
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setDropdownPosition({
-        x: Math.min(rect.left, window.innerWidth - 150),
-        y: rect.bottom + 4,
+        x: Math.min(rect.left + 12, window.innerWidth - 150),
+        y: rect.bottom - 2,
       });
     }
 
@@ -54,6 +56,11 @@ export default function WorkspaceItem({
   const handleLinkIssuesClick = () => {
     setIsDropdownOpen(false);
     onLinkIssues?.();
+  };
+
+  const handleArchiveClick = () => {
+    setIsDropdownOpen(false);
+    onArchive?.();
   };
 
   return (
@@ -117,6 +124,10 @@ export default function WorkspaceItem({
         <DropdownMenuItem onClick={handleLinkIssuesClick}>
           <Connect className="size-4" />
           <span>Connect issues</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleArchiveClick}>
+          <Archive className="size-4" />
+          <span>Archive</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleDeleteClick} variant="danger">
           <Trash className="size-4" />

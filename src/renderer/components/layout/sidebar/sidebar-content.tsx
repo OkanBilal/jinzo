@@ -27,6 +27,7 @@ interface SidebarContentProps {
   onDeleteSession: (session: ChatSession, e: MouseEvent) => void;
   onDeletePost?: (postId: string, e: MouseEvent) => void;
   onDeleteWorkspace?: (workspaceId: string, e: MouseEvent) => void;
+  onArchiveWorkspace?: (workspaceId: string) => void;
 }
 
 export function SidebarContent({
@@ -41,6 +42,7 @@ export function SidebarContent({
   onDeleteSession,
   onDeletePost,
   onDeleteWorkspace,
+  onArchiveWorkspace,
 }: SidebarContentProps) {
   return (
     <div
@@ -81,6 +83,7 @@ export function SidebarContent({
             workspaces={workspaces}
             isLoading={isLoadingWorkspaces}
             onDeleteWorkspace={onDeleteWorkspace}
+            onArchiveWorkspace={onArchiveWorkspace}
           />
         )}
       </div>

@@ -13,6 +13,7 @@ const CHANNELS = {
   CREATE: "workspaces:create",
   UPDATE: "workspaces:update",
   DELETE: "workspaces:delete",
+  ARCHIVE: "workspaces:archive",
   SELECT_DIRECTORY: "workspaces:selectDirectory",
 } as const;
 
@@ -46,6 +47,10 @@ export function registerWorkspacesIpc(): void {
 
   ipcMain.handle(CHANNELS.DELETE, async (_, id: string) => {
     return workspacesController.delete(id);
+  });
+
+  ipcMain.handle(CHANNELS.ARCHIVE, async (_, id: string) => {
+    return workspacesController.archive(id);
   });
 
 ipcMain.handle(CHANNELS.SELECT_DIRECTORY, async () => {
