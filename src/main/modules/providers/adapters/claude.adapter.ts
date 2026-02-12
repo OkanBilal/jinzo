@@ -1155,28 +1155,28 @@ export function createClaudeAdapter(
         // Store query in activeRuns for abort/interrupt support
         activeRuns.set(runId, { abortController, aborted: false, query });
 
-        // Log MCP server status for debugging
-        try {
-          const mcpStatus = await query.mcpServerStatus();
-          if (mcpStatus && mcpStatus.length > 0) {
-            await onEvent({
-              type: "log",
-              message: `MCP servers available: ${mcpStatus.map((s: any) => s.name || s).join(", ")}`,
-              level: "info",
-              ts: Date.now(),
-            });
-          } else if (options.mcpServers && Object.keys(options.mcpServers).length > 0) {
-            // We passed servers but none are reported - might be connecting
-            await onEvent({
-              type: "log",
-              message: `MCP servers configured: ${Object.keys(options.mcpServers).join(", ")} (connecting...)`,
-              level: "info",
-              ts: Date.now(),
-            });
-          }
-        } catch (mcpErr) {
-          logWarn("Could not fetch MCP server status:", mcpErr);
-        }
+        // // Log MCP server status for debugging
+        // try {
+        //   const mcpStatus = await query.mcpServerStatus();
+        //   if (mcpStatus && mcpStatus.length > 0) {
+        //     await onEvent({
+        //       type: "log",
+        //       message: `MCP servers available: ${mcpStatus.map((s: any) => s.name || s).join(", ")}`,
+        //       level: "info",
+        //       ts: Date.now(),
+        //     });
+        //   } else if (options.mcpServers && Object.keys(options.mcpServers).length > 0) {
+        //     // We passed servers but none are reported - might be connecting
+        //     await onEvent({
+        //       type: "log",
+        //       message: `MCP servers configured: ${Object.keys(options.mcpServers).join(", ")} (connecting...)`,
+        //       level: "info",
+        //       ts: Date.now(),
+        //     });
+        //   }
+        // } catch (mcpErr) {
+        //   logWarn("Could not fetch MCP server status:", mcpErr);
+        // }
 
         // Stream the response
         let sessionId: string | undefined;

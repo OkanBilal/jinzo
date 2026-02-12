@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { Run, RunEvent, RunArtifact, ToolCall } from "../types";
 import { toast } from "@/components/ui/toast";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import { runsApi } from "@/lib/redux/api";
 
 const MAX_DISPLAY_LENGTH = 200;
-
 
 /**
  * Format tool input/output data for display
@@ -11,9 +12,9 @@ const MAX_DISPLAY_LENGTH = 200;
  */
 function formatToolData(data: unknown): string {
   if (!data) return "";
-  
+
   let parsed: unknown = data;
-  
+
   // Parse JSON string if needed
   if (typeof data === "string") {
     try {
@@ -21,49 +22,55 @@ function formatToolData(data: unknown): string {
     } catch {
       // Not JSON, use as-is but truncate
       if (data.length > MAX_DISPLAY_LENGTH) {
-        return data.substring(0, MAX_DISPLAY_LENGTH) + `... (${data.length} chars)`;
+        return (
+          data.substring(0, MAX_DISPLAY_LENGTH) + `... (${data.length} chars)`
+        );
       }
       return data;
     }
   }
-  
+
   // Handle object data
   if (typeof parsed === "object" && parsed !== null) {
     const obj = parsed as Record<string, unknown>;
-    
+
     // Special handling for file content
     if (obj.content && typeof obj.content === "string") {
       const content = obj.content;
       const lines = content.split("\n").length;
       const bytes = content.length;
-      
+
       // If there's a path, show it prominently
       if (obj.path && typeof obj.path === "string") {
         return `${obj.path} (${lines} lines, ${formatBytes(bytes)})`;
       }
-      
+
       // For diff/patch content
       if (obj.detailedContent && typeof obj.detailedContent === "string") {
         const diffLines = obj.detailedContent.split("\n").length;
         return `File content (${lines} lines) with diff (${diffLines} lines)`;
       }
-      
+
       // Truncate long content
       if (content.length > MAX_DISPLAY_LENGTH) {
-        const preview = content.substring(0, MAX_DISPLAY_LENGTH).replace(/\n/g, " ");
+        const preview = content
+          .substring(0, MAX_DISPLAY_LENGTH)
+          .replace(/\n/g, " ");
         return `${preview}... (${lines} lines)`;
       }
     }
-    
+
     // Special handling for file paths
     if (obj.path && typeof obj.path === "string") {
-      const otherKeys = Object.keys(obj).filter(k => k !== "path" && k !== "content");
+      const otherKeys = Object.keys(obj).filter(
+        (k) => k !== "path" && k !== "content",
+      );
       if (otherKeys.length === 0) {
         return obj.path;
       }
-      return `${obj.path} ${JSON.stringify(Object.fromEntries(otherKeys.map(k => [k, obj[k]])))}`;
+      return `${obj.path} ${JSON.stringify(Object.fromEntries(otherKeys.map((k) => [k, obj[k]])))}`;
     }
-    
+
     // For other objects, show compact JSON
     const json = JSON.stringify(parsed);
     if (json.length > MAX_DISPLAY_LENGTH) {
@@ -73,7 +80,7 @@ function formatToolData(data: unknown): string {
     }
     return json;
   }
-  
+
   return String(parsed);
 }
 
@@ -83,12 +90,16 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: string) {
+export function useWorkspaceRuns(
+  workspaceId: string | undefined,
+  providerId?: string,
+) {
   const [runs, setRuns] = useState<Run[]>([]);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [runEvents, setRunEvents] = useState<Record<string, RunEvent[]>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
 
   const eventsEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -116,15 +127,21 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
                   parsedMetadata = undefined;
                 }
               } else {
-                parsedMetadata = artifact.metadata as unknown as Record<string, unknown>;
+                parsedMetadata = artifact.metadata as unknown as Record<
+                  string,
+                  unknown
+                >;
               }
             }
 
             events.push({
               id: `artifact-${artifact.id}`,
               type: artifact.kind === "log" ? "log" : "artifact",
-              content: artifact.content || artifact.path || JSON.stringify(artifact),
-              timestamp: artifact.createdAt ? new Date(artifact.createdAt) : new Date(),
+              content:
+                artifact.content || artifact.path || JSON.stringify(artifact),
+              timestamp: artifact.createdAt
+                ? new Date(artifact.createdAt)
+                : new Date(),
               metadata: { ...parsedMetadata, kind: artifact.kind },
             });
           } catch (parseErr) {
@@ -151,7 +168,10 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
             let rawInput: Record<string, unknown> | undefined;
             if (tc.input) {
               try {
-                rawInput = typeof tc.input === "string" ? JSON.parse(tc.input) : tc.input as Record<string, unknown>;
+                rawInput =
+                  typeof tc.input === "string"
+                    ? JSON.parse(tc.input)
+                    : (tc.input as Record<string, unknown>);
               } catch {
                 // Input is not valid JSON
               }
@@ -162,7 +182,11 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
               type: "tool_call",
               content: `${tc.toolName}: ${inputDisplay}${outputDisplay ? `\n→ ${outputDisplay}` : ""}`,
               timestamp: tc.createdAt ? new Date(tc.createdAt) : new Date(),
-              metadata: { status: tc.status, toolName: tc.toolName, input: rawInput },
+              metadata: {
+                status: tc.status,
+                toolName: tc.toolName,
+                input: rawInput,
+              },
             });
           } catch (parseErr) {
             console.error("Error parsing tool call:", tc, parseErr);
@@ -193,7 +217,7 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
           const filteredRuns = providerId
             ? result.data.filter((run: Run) => run.providerId === providerId)
             : result.data;
-          
+
           setRuns(filteredRuns);
           if (filteredRuns.length > 0) {
             const firstRunId = filteredRuns[0].id;
@@ -251,6 +275,9 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
                 clearInterval(pollingRef.current);
                 pollingRef.current = null;
               }
+              // Invalidate RTK Query cache so DiffSection and other
+              // query-based consumers pick up the finished run & its diff
+              dispatch(runsApi.util.invalidateTags(["Runs", "RunDiffs"]));
             }
           }
         }
@@ -273,12 +300,18 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
     eventsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [currentEvents]);
 
-
   // Execute new run
   const executeRun = useCallback(
-    async (goal: string, selectedWorkspace: string, selectedProvider: string, model?: string) => {
+    async (
+      goal: string,
+      selectedWorkspace: string,
+      selectedProvider: string,
+      model?: string,
+    ) => {
       if (!goal.trim() || !selectedWorkspace || !selectedProvider) {
-        {/* ADD custom error workspace */}
+        {
+          /* ADD custom error workspace */
+        }
         toast.error("Please fill in all required fields");
         return;
       }
@@ -294,13 +327,13 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
 
         const result = await window.api.runs.execute({
           accountId: accountRes.data.id,
-          workspaceId: selectedWorkspace, 
+          workspaceId: selectedWorkspace,
           providerId: selectedProvider,
           goal: goal.trim(),
           model: model || undefined,
           initialContext: [
             {
-              kind: "note", // 
+              kind: "note", //
               content: `User goal: ${goal.trim()}`,
             },
           ],
@@ -327,13 +360,14 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
               },
             ],
           }));
-          
+
           return newRun.id; // Return new run ID for tab switching
         }
 
         return null;
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to execute run";
+        const message =
+          err instanceof Error ? err.message : "Failed to execute run";
         setError(message);
         return null;
       } finally {
@@ -344,75 +378,76 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
   );
 
   // Continue an existing run (resume session)
-  const continueRun = useCallback(
-    async (runId: string, message: string) => {
-      if (!message.trim()) {
-        setError("Please enter a message");
-        return false;
+  const continueRun = useCallback(async (runId: string, message: string) => {
+    if (!message.trim()) {
+      setError("Please enter a message");
+      return false;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const accountRes = await window.api.account.get();
+      if (!accountRes.success || !accountRes.data) {
+        throw new Error("No account found");
       }
 
-      setIsLoading(true);
-      setError(null);
+      const result = await window.api.runs.continue({
+        runId,
+        accountId: accountRes.data.id,
+        message: message.trim(),
+      });
 
+      if (!result.success) {
+        throw new Error(result.error || "Failed to continue run");
+      }
+
+      // Update the run in the list
+      const runResult = await window.api.runs.getById(runId);
+      if (runResult.success && runResult.data) {
+        setRuns((prev) =>
+          prev.map((r) => (r.id === runId ? runResult.data : r)),
+        );
+      }
+
+      // Add a status event for the continuation
+      setRunEvents((prev) => ({
+        ...prev,
+        [runId]: [
+          ...(prev[runId] || []),
+          {
+            id: `event-${Date.now()}`,
+            type: "status",
+            content: `Session resumed with message: ${message.trim().substring(0, 50)}...`,
+            timestamp: new Date(),
+          },
+        ],
+      }));
+
+      return true;
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to continue run";
+      setError(message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Check if a run's session can be resumed
+  const checkCanResume = useCallback(
+    async (runId: string): Promise<boolean> => {
       try {
-        const accountRes = await window.api.account.get();
-        if (!accountRes.success || !accountRes.data) {
-          throw new Error("No account found");
-        }
-
-        const result = await window.api.runs.continue({
-          runId,
-          accountId: accountRes.data.id,
-          message: message.trim(),
-        });
-
-        if (!result.success) {
-          throw new Error(result.error || "Failed to continue run");
-        }
-
-        // Update the run in the list
-        const runResult = await window.api.runs.getById(runId);
-        if (runResult.success && runResult.data) {
-          setRuns((prev) =>
-            prev.map((r) => (r.id === runId ? runResult.data : r))
-          );
-        }
-
-        // Add a status event for the continuation
-        setRunEvents((prev) => ({
-          ...prev,
-          [runId]: [
-            ...(prev[runId] || []),
-            {
-              id: `event-${Date.now()}`,
-              type: "status",
-              content: `Session resumed with message: ${message.trim().substring(0, 50)}...`,
-              timestamp: new Date(),
-            },
-          ],
-        }));
-
-        return true;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to continue run";
-        setError(message);
+        const result = await window.api.runs.canResume(runId);
+        return result.success && result.data === true;
+      } catch {
         return false;
-      } finally {
-        setIsLoading(false);
       }
     },
     [],
   );
-
-  // Check if a run's session can be resumed
-  const checkCanResume = useCallback(async (runId: string): Promise<boolean> => {
-    try {
-      const result = await window.api.runs.canResume(runId);
-      return result.success && result.data === true;
-    } catch {
-      return false;
-    }
-  }, []);
 
   // Close a run tab (archives it)
   const closeTab = useCallback(
@@ -423,7 +458,7 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
       } catch (error) {
         console.error("[useWorkspaceRuns] Failed to archive run:", error);
       }
-      
+
       // Remove from local state
       setRuns((prev) => {
         const newRuns = prev.filter((r) => r.id !== runId);
