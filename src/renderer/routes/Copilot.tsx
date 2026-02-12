@@ -106,7 +106,8 @@ export default function CopilotPage() {
     if (
       !selectedFile ||
       selectedFile.type !== "file" ||
-      !currentWorkspace?.rootPath
+      !currentWorkspace?.rootPath ||
+      selectedFile.extension === "diff"
     ) {
       return;
     }

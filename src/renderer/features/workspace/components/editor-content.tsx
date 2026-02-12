@@ -1,7 +1,7 @@
 import { useSelector } from "react-redux";
 import type { RootState } from "@/lib/redux";
 import { CodeMirrorEditor } from "./codemirror-editor";
-import Code from "@/components/ui/icons/mood/code";
+import { DiffViewer } from "./diff-viewer";
 
 interface EditorContentProps {
   className?: string;
@@ -103,26 +103,23 @@ export function EditorContent({ className = "" }: EditorContentProps) {
     );
   }
 
+  if (selectedFile.extension === "diff") {
+    return (
+      <div className={`flex flex-col h-full ${className}`}>
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <DiffViewer
+            diffText={selectedFileContent.content}
+            filename={selectedFile.name}
+            className="h-full"
+          />
+        </div>
+      </div>
+    );
+  }
+
   // Render CodeMirror editor
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      {/* File header */}
-      {/* <div className="shrink-0 px-4 py-2 border-b border-primary-200/50 dark:border-primary-700/30 bg-primary-50/50 dark:bg-primary-900/20">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <Code className="w-4 h-4 shrink-0 text-primary-500 dark:text-primary-400" />
-            <span className="text-sm font-medium text-primary-700 dark:text-primary-300 truncate">
-              {selectedFile.name}
-            </span>
-          </div>
-          <span className="text-xs text-primary-500 dark:text-primary-400 shrink-0">
-            {formatFileSize(selectedFileContent.size)}
-          </span>
-        </div>
-        <p className="text-[10px] text-primary-400 dark:text-primary-500 truncate mt-0.5">
-          {selectedFile.fullPath}
-        </p>
-      </div> */}
 
       {/* Editor content */}
       <div className="flex-1 min-h-0 overflow-hidden">

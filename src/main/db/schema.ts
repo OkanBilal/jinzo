@@ -330,6 +330,41 @@ export const runArtifacts = sqliteTable(
     ),
   ],
 );
+/* -----------------------------
+   RUN DIFFS (git diff captured after a run)
+------------------------------ */
+
+// TODO: add provider info to diff table
+export const runDiffs = sqliteTable(
+  "run_diffs",
+  {
+    id: text("id").primaryKey(), // uuid
+    runId: text("run_id")
+      .notNull()
+      .references(() => runs.id, { onDelete: "cascade" }),
+
+    baseRef: text("base_ref"), // HEAD sha captured at run start
+    diffText: text("diff_text").notNull(), // unified diff patch
+    filesJson: text("files_json"), // JSON array of changed file paths
+    statsJson: text("stats_json"), // JSON object { shortstat, files }
+
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    uniqueIndex("uniq_run_diffs_run").on(t.runId),
+    index("idx_run_diffs_created").on(t.createdAt),
+    check(
+      "check_run_diffs_files_json",
+      sql`json_valid(${t.filesJson}) OR ${t.filesJson} IS NULL`,
+    ),
+    check(
+      "check_run_diffs_stats_json",
+      sql`json_valid(${t.statsJson}) OR ${t.statsJson} IS NULL`,
+    ),
+  ],
+);
 
 /* -----------------------------
    RUN COMMANDS (terminal commands + exit codes)

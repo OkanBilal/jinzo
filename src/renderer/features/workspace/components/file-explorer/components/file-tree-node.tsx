@@ -2,6 +2,7 @@ import { memo, useState, useCallback } from "react";
 import type { FileNode } from "../types";
 import { FileIconComponent } from "./file-icon";
 import { ArrowUp, Plus } from "@/components/ui/icons";
+import { Button } from "@/components/ui/button";
 
 interface FileTreeNodeProps {
   node: FileNode;
@@ -81,7 +82,7 @@ export const FileTreeNode = memo(function FileTreeNode({
   const paddingLeft = 0 + depth * 12;
 
   return (
-    <div className="select-none">
+    <div className="select-none space-y-0.5">
       <div
         role="treeitem"
         tabIndex={0}
@@ -90,7 +91,7 @@ export const FileTreeNode = memo(function FileTreeNode({
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         className={`
-          group flex items-center h-7 cursor-pointer text-[14px]
+          group flex items-center h-7 cursor-pointer text-[13px]
           transition-colors duration-75 rounded-lg
           ${
             isSelected
@@ -123,13 +124,13 @@ export const FileTreeNode = memo(function FileTreeNode({
         <span className="truncate flex-1">{node.name}</span>
 
         {!isDirectory && onAddToContext && (
-          <button
+          <Button
             onClick={handleAddToContext}
             className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-primary/20 dark:hover:bg-primary/10 transition-opacity mr-1"
             title="Add to context"
           >
             <Plus className="w-3.5 h-3.5 text-primary-500 dark:text-primary-400" />
-          </button>
+          </Button>
         )}
 
         {isLoading && (

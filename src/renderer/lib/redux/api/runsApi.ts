@@ -120,6 +120,16 @@ export interface CreateRunArtifactPayload {
   metadata?: Record<string, unknown>;
 }
 
+export interface RunDiff {
+  id: string;
+  runId: string;
+  baseRef: string | null;
+  diffText: string;
+  files: string[] | null;
+  stats: { shortstat: string; files: number } | null;
+  createdAt: number;
+}
+
 export interface RunCommand {
   id: number;
   runId: string;
@@ -455,6 +465,18 @@ export const runsApi = baseApi.injectEndpoints({
         { type: "RunCommands", id: runId },
       ],
     }),
+
+    getRunDiff: builder.query<RunDiff | null, string>({
+      query: (runId) => ({
+        handler: "runDiff:get",
+        args: [runId],
+      }),
+      transformResponse: (response: { success: boolean; data?: RunDiff; error?: string }) =>
+        response.success ? (response.data ?? null) : null,
+      providesTags: (_result, _error, runId) => [
+        { type: "RunDiffs", id: runId },
+      ],
+    }),
   }),
 });
 
@@ -492,4 +514,6 @@ export const {
   useStartRunCommandMutation,
   useCompleteRunCommandMutation,
   useRemoveRunCommandMutation,
+  useGetRunDiffQuery,
+  useLazyGetRunDiffQuery,
 } = runsApi;

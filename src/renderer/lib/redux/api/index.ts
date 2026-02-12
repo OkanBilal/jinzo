@@ -343,6 +343,8 @@ export {
   useStartRunCommandMutation,
   useCompleteRunCommandMutation,
   useRemoveRunCommandMutation,
+  useGetRunDiffQuery,
+  useLazyGetRunDiffQuery,
 } from "./runsApi";
 export type {
   Run,
@@ -355,6 +357,7 @@ export type {
   RunArtifact,
   RunArtifactKind,
   CreateRunArtifactPayload,
+  RunDiff,
   RunCommand,
   RunCommandStatus,
   CreateRunCommandPayload,

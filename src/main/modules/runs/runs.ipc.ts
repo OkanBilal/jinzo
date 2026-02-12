@@ -57,6 +57,9 @@ const CHANNELS = {
   COMMANDS_COMPLETE: "runCommands:complete",
   COMMANDS_REMOVE: "runCommands:remove",
 
+  // Run Diff
+  RUN_DIFF_GET: "runDiff:get",
+
   // Tool Calls
   TOOL_CALLS_GET_BY_RUN: "runToolCalls:getByRun",
 
@@ -200,6 +203,11 @@ export function registerRunsIpc(): void {
 
   ipcMain.handle(CHANNELS.COMMANDS_REMOVE, async (_, id: number) => {
     return runsController.removeCommand(id);
+  });
+
+  // Run Diff
+  ipcMain.handle(CHANNELS.RUN_DIFF_GET, async (_, runId: string) => {
+    return runsController.getRunDiff(runId);
   });
 
   // Tool Calls

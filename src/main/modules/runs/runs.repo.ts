@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { runs, runContext, runArtifacts, runCommands, toolCalls } from "../../db/schema";
+import { runs, runContext, runArtifacts, runDiffs, runCommands, toolCalls } from "../../db/schema";
 import type {
   CreateRunPayload,
   UpdateRunPayload,
@@ -9,6 +9,7 @@ import type {
   RunContextResponse,
   CreateRunArtifactPayload,
   RunArtifactResponse,
+  RunDiffResponse,
   CreateRunCommandPayload,
   UpdateRunCommandPayload,
   RunCommandResponse,
@@ -253,6 +254,40 @@ export const runsRepo = {
   },
 
   // ─────────────────────────────────────────────────────────────
+  // Run Diff Operations
+  // ─────────────────────────────────────────────────────────────
+  async insertRunDiff(payload: {
+    id: string;
+    runId: string;
+    baseRef?: string;
+    diffText: string;
+    filesJson?: string;
+    statsJson?: string;
+  }): Promise<string> {
+    const db = getDb();
+    await db.insert(runDiffs).values({
+      id: payload.id,
+      runId: payload.runId,
+      baseRef: payload.baseRef ?? null,
+      diffText: payload.diffText,
+      filesJson: payload.filesJson ?? null,
+      statsJson: payload.statsJson ?? null,
+    });
+    return payload.id;
+  },
+
+  async findRunDiffByRun(runId: string): Promise<RunDiffResponse | null> {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(runDiffs)
+      .where(eq(runDiffs.runId, runId))
+      .limit(1);
+    if (!rows[0]) return null;
+    return mapRunDiffRowToResponse(rows[0]);
+  },
+
+  // ─────────────────────────────────────────────────────────────
   // Tool Call Operations
   // ─────────────────────────────────────────────────────────────
   async findToolCallsByRun(runId: string): Promise<ToolCallResponse[]> {
@@ -370,6 +405,18 @@ function mapCommandRowToResponse(row: typeof runCommands.$inferSelect): RunComma
     stdout: row.stdout,
     stderr: row.stderr,
     metadata: row.metadata ? JSON.parse(row.metadata) : null,
+    createdAt: row.createdAt,
+  };
+}
+
+function mapRunDiffRowToResponse(row: typeof runDiffs.$inferSelect): RunDiffResponse {
+  return {
+    id: row.id,
+    runId: row.runId,
+    baseRef: row.baseRef,
+    diffText: row.diffText,
+    files: row.filesJson ? JSON.parse(row.filesJson) : null,
+    stats: row.statsJson ? JSON.parse(row.statsJson) : null,
     createdAt: row.createdAt,
   };
 }

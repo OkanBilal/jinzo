@@ -196,6 +196,19 @@ export interface ToolCallResponse {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Run Diff DTOs
+// ─────────────────────────────────────────────────────────────
+export interface RunDiffResponse {
+  id: string;
+  runId: string;
+  baseRef: string | null;
+  diffText: string;
+  files: string[] | null;
+  stats: { shortstat: string; files: number } | null;
+  createdAt: Date;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Execute Run DTOs (for starting work runs)
 // ─────────────────────────────────────────────────────────────
 

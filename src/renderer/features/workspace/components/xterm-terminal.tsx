@@ -94,6 +94,7 @@ export function XtermTerminal({ id, rootPath, variant }: XtermTerminalProps) {
       fontFamily: "'Geist Mono', 'SF Mono', Monaco, 'Cascadia Code', monospace",
       theme,
       allowProposedApi: true,
+      allowTransparency: true,
     });
 
     const fitAddon = new FitAddon();
@@ -160,7 +161,7 @@ export function XtermTerminal({ id, rootPath, variant }: XtermTerminalProps) {
     <div
       ref={containerRef}
       className="w-full h-full min-h-30"
-      style={{ padding: "6px" }}
+      style={{ padding: "6px 4px" }}
     />
   );
 }

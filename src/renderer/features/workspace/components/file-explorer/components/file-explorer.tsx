@@ -178,7 +178,7 @@ export const FileExplorer = memo(function FileExplorer({
       <div
         role="tree"
         aria-label="File explorer"
-        className="flex-1 overflow-auto py-1 space-y-1 noscrollbar"
+        className="flex-1 overflow-auto py-1 space-y-0.5 noscrollbar"
       >
         {tree.children?.map((child) => (
           <FileTreeNode

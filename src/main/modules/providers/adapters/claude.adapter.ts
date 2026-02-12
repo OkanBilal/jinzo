@@ -79,6 +79,30 @@ interface SDKAgentDefinition {
  */
 type SDKAgentsConfig = Record<string, SDKAgentDefinition>;
 
+/**
+ * MCP server configuration types matching SDK's expected format
+ */
+interface McpStdioServerConfig {
+  type?: "stdio";
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+}
+
+interface McpHttpServerConfig {
+  type: "http";
+  url: string;
+  headers?: Record<string, string>;
+}
+
+interface McpSSEServerConfig {
+  type: "sse";
+  url: string;
+  headers?: Record<string, string>;
+}
+
+type McpServerConfig = McpStdioServerConfig | McpHttpServerConfig | McpSSEServerConfig;
+
 interface SDKOptions {
   outputFormat?: {
     type: "json_schema";
@@ -107,16 +131,22 @@ interface SDKOptions {
     | string
     | { type: "preset"; preset: "claude_code"; append?: string };
   /**
-   * Setting sources for loading skills from filesystem.
-   * - "user": Load from ~/.claude/skills/
-   * - "project": Load from .claude/skills/ in cwd
+   * Setting sources for loading filesystem-based settings.
+   * - "user": Load from ~/.claude/settings.json
+   * - "project": Load from .claude/settings.json in cwd
+   * - "local": Load from .claude/settings.local.json in cwd
    */
-  settingSources?: Array<"user" | "project">;
+  settingSources?: Array<"user" | "project" | "local">;
   /**
    * Hooks configuration for intercepting agent behavior.
    * Run custom code at key points in the agent lifecycle.
    */
   hooks?: SDKHooksConfig;
+  /**
+   * MCP (Model Context Protocol) server configurations.
+   * Keys are server names, values are server configurations.
+   */
+  mcpServers?: Record<string, McpServerConfig>;
 }
 
 interface SDKMessageContent {
@@ -404,8 +434,12 @@ export function createClaudeAdapter(
       ? "plan"
       : config.permissionMode || "default";
 
-    // Setting sources for skills: default to both user and project if not specified
+    // Setting sources for settings: default to both user and project if not specified
     const settingSources = config.settingSources ?? ["user", "project"];
+
+    // Load MCP servers from settings files and pass them explicitly to the SDK
+    // This ensures MCP servers from ~/.claude/settings.json and project settings are used
+    const mcpServers = readMcpServersFromSettings(settingSources, workspacePath);
 
     const options: SDKOptions = {
       model,
@@ -414,8 +448,16 @@ export function createClaudeAdapter(
       pathToClaudeCodeExecutable: binaryPath,
       env: cleanEnv,
       settingSources,
-      allowedTools: DEFAULT_ALLOWED_TOOLS,
+      // NOTE: We don't pass allowedTools here because it restricts which tools are available.
+      // MCP tools (like mcp__linear__*) would be blocked if we passed a whitelist.
+      // Instead, we use the PreToolUse hook with ALLOWED_TOOLS_SET for auto-approval only.
     };
+
+    // Add MCP servers if any were found
+    if (Object.keys(mcpServers).length > 0) {
+      options.mcpServers = mcpServers;
+      logInfo(`Loaded ${Object.keys(mcpServers).length} MCP server(s):`, Object.keys(mcpServers).join(", "));
+    }
 
     if (workspacePath) {
       options.cwd = workspacePath;
@@ -596,6 +638,17 @@ export function createClaudeAdapter(
 
           // Auto-approve tools that the user has pre-allowed in settings.json
           if (allowedTools.has(toolName)) {
+            return {
+              hookSpecificOutput: {
+                hookEventName: "PreToolUse",
+                permissionDecision: "allow",
+              },
+            };
+          }
+
+          // Auto-approve MCP tools (user has explicitly configured MCP servers)
+          // MCP tools are named like: mcp__servername__toolname
+          if (toolName.startsWith("mcp__")) {
             return {
               hookSpecificOutput: {
                 hookEventName: "PreToolUse",
@@ -1101,6 +1154,29 @@ export function createClaudeAdapter(
 
         // Store query in activeRuns for abort/interrupt support
         activeRuns.set(runId, { abortController, aborted: false, query });
+
+        // Log MCP server status for debugging
+        try {
+          const mcpStatus = await query.mcpServerStatus();
+          if (mcpStatus && mcpStatus.length > 0) {
+            await onEvent({
+              type: "log",
+              message: `MCP servers available: ${mcpStatus.map((s: any) => s.name || s).join(", ")}`,
+              level: "info",
+              ts: Date.now(),
+            });
+          } else if (options.mcpServers && Object.keys(options.mcpServers).length > 0) {
+            // We passed servers but none are reported - might be connecting
+            await onEvent({
+              type: "log",
+              message: `MCP servers configured: ${Object.keys(options.mcpServers).join(", ")} (connecting...)`,
+              level: "info",
+              ts: Date.now(),
+            });
+          }
+        } catch (mcpErr) {
+          logWarn("Could not fetch MCP server status:", mcpErr);
+        }
 
         // Stream the response
         let sessionId: string | undefined;
@@ -2073,6 +2149,129 @@ function safeJson(value: unknown): string {
   } catch {
     return String(value);
   }
+}
+
+/**
+ * Read MCP servers from Claude settings files.
+ * Merges servers from user (~/.claude/settings.json) and project (.claude/settings.json) configs.
+ * Project-level servers override user-level servers with the same name.
+ */
+function readMcpServersFromSettings(
+  settingSources: Array<"user" | "project" | "local">,
+  workspacePath?: string,
+): Record<string, McpServerConfig> {
+  const mergedServers: Record<string, McpServerConfig> = {};
+
+  // Read user settings from multiple locations Claude CLI uses
+  if (settingSources.includes("user")) {
+    // Primary: ~/.claude/settings.json (newer format)
+    const userSettingsPath = path.join(os.homedir(), ".claude", "settings.json");
+    const userServers = readMcpServersFromFile(userSettingsPath);
+    if (userServers) {
+      Object.assign(mergedServers, userServers);
+    }
+
+    // Also check ~/.claude.json (Claude CLI stores config here too)
+    const claudeJsonPath = path.join(os.homedir(), ".claude.json");
+    const claudeJsonServers = readMcpServersFromFile(claudeJsonPath);
+    if (claudeJsonServers) {
+      Object.assign(mergedServers, claudeJsonServers);
+    }
+  }
+
+  // Read project settings (if workspace path is provided)
+  if (settingSources.includes("project") && workspacePath) {
+    const projectSettingsPath = path.join(workspacePath, ".claude", "settings.json");
+    const projectServers = readMcpServersFromFile(projectSettingsPath);
+    if (projectServers) {
+      Object.assign(mergedServers, projectServers);
+    }
+
+    // Also check for .mcp.json in project root (common convention)
+    const mcpJsonPath = path.join(workspacePath, ".mcp.json");
+    const mcpJsonServers = readMcpServersFromFile(mcpJsonPath);
+    if (mcpJsonServers) {
+      Object.assign(mergedServers, mcpJsonServers);
+    }
+  }
+
+  // Read local settings (if workspace path is provided)
+  if (settingSources.includes("local") && workspacePath) {
+    const localSettingsPath = path.join(workspacePath, ".claude", "settings.local.json");
+    const localServers = readMcpServersFromFile(localSettingsPath);
+    if (localServers) {
+      Object.assign(mergedServers, localServers);
+    }
+  }
+
+  return mergedServers;
+}
+
+/**
+ * Read MCP servers from a single settings file.
+ * Returns null if file doesn't exist or is invalid.
+ */
+function readMcpServersFromFile(filePath: string): Record<string, McpServerConfig> | null {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+
+    const content = fs.readFileSync(filePath, "utf-8");
+    const settings = JSON.parse(content);
+
+    // Handle both settings.json format (mcpServers) and .mcp.json format (root level servers)
+    const servers = settings.mcpServers || settings;
+
+    if (!servers || typeof servers !== "object") {
+      return null;
+    }
+
+    // Validate and filter valid MCP server configs
+    const validServers: Record<string, McpServerConfig> = {};
+    for (const [name, config] of Object.entries(servers)) {
+      if (isValidMcpServerConfig(config)) {
+        validServers[name] = config as McpServerConfig;
+      }
+    }
+
+    if (Object.keys(validServers).length > 0) {
+      logInfo(`Loaded ${Object.keys(validServers).length} MCP server(s) from ${filePath}`);
+    }
+
+    return Object.keys(validServers).length > 0 ? validServers : null;
+  } catch (err) {
+    logWarn(`Failed to read MCP servers from ${filePath}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Validate that a config object is a valid MCP server config.
+ */
+function isValidMcpServerConfig(config: unknown): boolean {
+  if (!config || typeof config !== "object") {
+    return false;
+  }
+
+  const c = config as Record<string, unknown>;
+
+  // stdio transport: requires command
+  if (c.type === undefined || c.type === "stdio") {
+    return typeof c.command === "string" && c.command.length > 0;
+  }
+
+  // http transport: requires url
+  if (c.type === "http") {
+    return typeof c.url === "string" && c.url.length > 0;
+  }
+
+  // sse transport: requires url
+  if (c.type === "sse") {
+    return typeof c.url === "string" && c.url.length > 0;
+  }
+
+  return false;
 }
 
 /**

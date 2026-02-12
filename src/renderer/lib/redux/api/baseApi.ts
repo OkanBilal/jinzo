@@ -71,6 +71,7 @@ export const baseApi = createApi({
     'RunCommands',
     'WorkspaceResources',
     'WorkspaceIssues',
+    'RunDiffs',
   ],
   endpoints: () => ({}),
 });

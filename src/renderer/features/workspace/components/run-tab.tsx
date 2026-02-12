@@ -1,6 +1,7 @@
 import { Archive, Close, CopilotStatic } from "@/components/ui/icons";
 import type { Run } from "../types";
 import { Claude, Copilot } from "@/components/ui/icons/mood";
+import { Button } from "@/components/ui/button";
 
 interface RunTabProps {
   run: Run;
@@ -27,12 +28,14 @@ export function RunTab({ run, isActive, onClick, onClose, title, variant = "work
         <Copilot className={`w-4 h-4 ${isActive ? "text-white" : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"}`} />
       ) : null}
       <span className="text-xs font-medium truncate flex-1">{title}</span>
-      <button
+      <Button
+        tooltip="Archive"
+        tooltipPosition="bottom"
         onClick={onClose}
         className="opacity-0 group-hover:opacity-100 p-1 mr-1 hover:bg-primary/10 cursor-pointer rounded transition-all"
       >
         <Archive className="size-3.5" />
-      </button>
+      </Button>
     </div>
   );
 }

@@ -140,10 +140,10 @@ export function ToolApprovalDialog({
             )}
 
             <div className="flex items-center gap-3 pt-2">
-              <Button variant="submit" size="sm" onClick={handleAllow}>
+              <Button variant="primary" size="sm" className="min-w-16" onClick={handleAllow}>
                 Allow
               </Button>
-              <Button variant="danger" size="sm" onClick={handleDeny}>
+              <Button variant="secondary" size="sm" className="min-w-16" onClick={handleDeny}>
                 Deny
               </Button>
             </div>

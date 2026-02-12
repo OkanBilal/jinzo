@@ -461,6 +461,10 @@ const api = {
       answer?: string;
     }) => ipcRenderer.invoke("runs:toolApprovalResponse", response),
   },
+  // Run diff operations
+  runDiff: {
+    get: (runId: string) => ipcRenderer.invoke("runDiff:get", runId),
+  },
   // Run context operations
   runContext: {
     getByRun: (runId: string) =>

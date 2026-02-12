@@ -74,3 +74,4 @@ export { default as TeamDelete } from "./team-delete";
 export { default as Duplicate } from "./duplicate";
 export { default as Notion } from "./notion";
 export { default as Figma } from "./figma";
+export { default as Diff } from "./diff";

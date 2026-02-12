@@ -226,6 +226,83 @@ class GitService {
   }
 
   /**
+   * Get HEAD commit sha
+   */
+  async getHeadSha(rootPath: string): Promise<ServiceResponse<string>> {
+    try {
+      const git = this.getGit(rootPath);
+      const sha = await git.revparse(["HEAD"]);
+      return { success: true, data: sha.trim() };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get HEAD sha",
+      };
+    }
+  }
+
+  /**
+   * Get unified diff since a base commit (includes both staged and unstaged changes)
+   */
+  async getDiffSince(
+    rootPath: string,
+    baseSha: string
+  ): Promise<ServiceResponse<string>> {
+    try {
+      const git = this.getGit(rootPath);
+      const diff = await git.diff([baseSha]);
+      return { success: true, data: diff };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get diff since base",
+      };
+    }
+  }
+
+  /**
+   * Get list of changed files since a base commit
+   */
+  async getChangedFilesSince(
+    rootPath: string,
+    baseSha: string
+  ): Promise<ServiceResponse<string[]>> {
+    try {
+      const git = this.getGit(rootPath);
+      const raw = await git.diff(["--name-only", baseSha]);
+      const files = raw
+        .split("\n")
+        .map((f) => f.trim())
+        .filter(Boolean);
+      return { success: true, data: files };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get changed files",
+      };
+    }
+  }
+
+  /**
+   * Get shortstat summary since a base commit
+   */
+  async getShortStatSince(
+    rootPath: string,
+    baseSha: string
+  ): Promise<ServiceResponse<string>> {
+    try {
+      const git = this.getGit(rootPath);
+      const stat = await git.diff(["--shortstat", baseSha]);
+      return { success: true, data: stat.trim() };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get shortstat",
+      };
+    }
+  }
+
+  /**
    * Get the root directory of the git repository
    */
   async getRepoRoot(rootPath: string): Promise<ServiceResponse<string>> {

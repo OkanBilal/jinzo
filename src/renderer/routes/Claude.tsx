@@ -112,7 +112,8 @@ export default function ClaudePage() {
     if (
       !selectedFile ||
       selectedFile.type !== "file" ||
-      !currentWorkspace?.rootPath
+      !currentWorkspace?.rootPath ||
+      selectedFile.extension === "diff"
     ) {
       return;
     }

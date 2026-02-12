@@ -1,6 +1,7 @@
 import { runsRepo } from "./runs.repo";
 import { providersRepo } from "../providers/providers.repo";
 import { workspacesRepo } from "../workspaces/workspaces.repo";
+import { gitService } from "../git/git.service";
 import {
   createWorkAdapter,
   type WorkRunEvent,
@@ -29,6 +30,58 @@ import type {
   RunDetailsResponse,
 } from "./runs.dto";
 import { createHash } from "crypto";
+
+// In-memory map: runId -> git HEAD sha captured at run start
+const runBaseRefs = new Map<string, string>();
+
+/**
+ * Capture HEAD sha at run start for later diff computation.
+ * Silently no-ops if the workspace is not a git repo.
+ */
+async function captureBaseRef(runId: string, rootPath: string): Promise<void> {
+  try {
+    const result = await gitService.getHeadSha(rootPath);
+    if (result.success && result.data) {
+      runBaseRefs.set(runId, result.data);
+    }
+  } catch {
+    // Not a git repo or git error – ignore
+  }
+}
+
+/**
+ * Compute git diff since baseRef and persist into run_diffs.
+ * Called after a run succeeds.
+ */
+async function persistRunDiff(runId: string, rootPath: string): Promise<void> {
+  const baseRef = runBaseRefs.get(runId);
+  runBaseRefs.delete(runId);
+
+  if (!baseRef) return;
+
+  try {
+    const [diffResult, filesResult, statResult] = await Promise.all([
+      gitService.getDiffSince(rootPath, baseRef),
+      gitService.getChangedFilesSince(rootPath, baseRef),
+      gitService.getShortStatSince(rootPath, baseRef),
+    ]);
+
+    const diffText = diffResult.success ? (diffResult.data ?? "") : "";
+    const files = filesResult.success ? (filesResult.data ?? []) : [];
+    const shortstat = statResult.success ? (statResult.data ?? "") : "";
+
+    await runsRepo.insertRunDiff({
+      id: generateRunId(),
+      runId,
+      baseRef,
+      diffText,
+      filesJson: JSON.stringify(files),
+      statsJson: JSON.stringify({ shortstat, files: files.length }),
+    });
+  } catch (err) {
+    console.error(`[RunsService] Failed to persist run diff for ${runId}:`, err);
+  }
+}
 
 // ─────────────────────────────────────────────────────────────
 // Runs Service
@@ -408,6 +461,24 @@ export const runsService = {
   },
 
   // ─────────────────────────────────────────────────────────────
+  // Run Diff Operations
+  // ─────────────────────────────────────────────────────────────
+  async getRunDiff(
+    runId: string,
+  ): Promise<ServiceResponse<import("./runs.dto").RunDiffResponse>> {
+    try {
+      const diff = await runsRepo.findRunDiffByRun(runId);
+      if (!diff) {
+        return { success: false, error: "No diff found for this run" };
+      }
+      return { success: true, data: diff };
+    } catch (error) {
+      console.error(`[RunsService] Failed to get run diff ${runId}:`, error);
+      return { success: false, error: "Failed to get run diff" };
+    }
+  },
+
+  // ─────────────────────────────────────────────────────────────
   // Execute Run (main orchestration)
   // ─────────────────────────────────────────────────────────────
   async executeRun(
@@ -463,6 +534,9 @@ export const runsService = {
 
       await runsRepo.insertRun(createPayload);
       await runsRepo.updateRun(runId, { startedAt: new Date() });
+
+      // Capture git HEAD sha at run start for diff computation
+      await captureBaseRef(runId, workspace.rootPath);
 
       // 4. Persist initial context
       if (payload.initialContext && payload.initialContext.length > 0) {
@@ -534,6 +608,13 @@ export const runsService = {
             stopReason: result.stopReason ?? null,
           });
 
+          // Persist git diff on success
+          if (finalStatus === "succeeded") {
+            await persistRunDiff(runId, workspace.rootPath);
+          } else {
+            runBaseRefs.delete(runId);
+          }
+
           console.log(
             `[RunsService] Run ${runId} completed with status: ${finalStatus}`,
           );
@@ -542,6 +623,8 @@ export const runsService = {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
           console.error(`[RunsService] Run ${runId} failed:`, errorMessage);
+
+          runBaseRefs.delete(runId);
 
           await runsRepo.updateRun(runId, {
             status: "failed",
@@ -556,6 +639,8 @@ export const runsService = {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       console.error(`[RunsService] Failed to execute run:`, errorMessage);
+
+      runBaseRefs.delete(runId);
 
       // Try to mark run as failed if it was created
       try {
@@ -866,6 +951,11 @@ export const runsService = {
         lastError: null,
       });
 
+      // Capture git HEAD sha at continue start for diff computation
+      if (workspace) {
+        await captureBaseRef(runId, workspace.rootPath);
+      }
+
       // 8. Add any additional context
       if (additionalContext && additionalContext.length > 0) {
         for (const ctx of additionalContext) {
@@ -929,6 +1019,13 @@ export const runsService = {
             stopReason: result.stopReason ?? null,
           });
 
+          // Persist git diff on success
+          if (finalStatus === "succeeded" && workspace) {
+            await persistRunDiff(runId, workspace.rootPath);
+          } else {
+            runBaseRefs.delete(runId);
+          }
+
           console.log(
             `[RunsService] Continued run ${runId} completed with status: ${finalStatus}`,
           );
@@ -940,6 +1037,8 @@ export const runsService = {
             `[RunsService] Continued run ${runId} failed:`,
             errorMessage,
           );
+
+          runBaseRefs.delete(runId);
 
           await runsRepo.updateRun(runId, {
             status: "failed",
@@ -953,6 +1052,8 @@ export const runsService = {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       console.error(`[RunsService] Failed to continue run:`, errorMessage);
+
+      runBaseRefs.delete(runId);
 
       // Try to reset run status if it was updated
       try {
