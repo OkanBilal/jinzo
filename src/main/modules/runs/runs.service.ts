@@ -164,6 +164,19 @@ export const runsService = {
     }
   },
 
+  async archiveRun(id: string): Promise<ServiceResponse<RunResponse>> {
+    try {
+      const archived = await runsRepo.archiveRun(id);
+      if (!archived) {
+        return { success: false, error: "Run not found" };
+      }
+      return { success: true, data: archived };
+    } catch (error) {
+      console.error(`[RunsService] Failed to archive run ${id}:`, error);
+      return { success: false, error: "Failed to archive run" };
+    }
+  },
+
   // ─────────────────────────────────────────────────────────────
   // Run Context Operations
   // ─────────────────────────────────────────────────────────────

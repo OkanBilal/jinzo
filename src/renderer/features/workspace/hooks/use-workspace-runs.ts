@@ -414,9 +414,17 @@ export function useWorkspaceRuns(workspaceId: string | undefined, providerId?: s
     }
   }, []);
 
-  // Close a run tab
+  // Close a run tab (archives it)
   const closeTab = useCallback(
-    (runId: string) => {
+    async (runId: string) => {
+      // Archive the run in backend
+      try {
+        await window.api.runs.archive(runId);
+      } catch (error) {
+        console.error("[useWorkspaceRuns] Failed to archive run:", error);
+      }
+      
+      // Remove from local state
       setRuns((prev) => {
         const newRuns = prev.filter((r) => r.id !== runId);
         if (activeRunId === runId && newRuns.length > 0) {

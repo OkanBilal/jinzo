@@ -212,6 +212,9 @@ export const runs = sqliteTable(
     endedAt: integer("ended_at", { mode: "timestamp" }),
     lastError: text("last_error"),
     stopReason: text("stop_reason"),
+    isArchived: integer("is_archived", { mode: "boolean" })
+      .notNull()
+      .default(false),
 
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()

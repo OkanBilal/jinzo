@@ -43,6 +43,7 @@ export interface Run {
   startedAt: number | null;
   endedAt: number | null;
   lastError: string | null;
+  isArchived: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -290,6 +291,16 @@ export const runsApi = baseApi.injectEndpoints({
       invalidatesTags: ["Runs"],
     }),
 
+    archiveRun: builder.mutation<Run, string>({
+      query: (id) => ({
+        handler: "runs:archive",
+        args: [id],
+      }),
+      transformResponse: (response: { success: boolean; data: Run }) =>
+        response.data,
+      invalidatesTags: (_result, _error, id) => ["Runs", { type: "Runs", id }],
+    }),
+
     getRunContext: builder.query<RunContext[], string>({
       query: (runId) => ({
         handler: "runContext:getByRun",
@@ -465,6 +476,7 @@ export const {
   useFailRunMutation,
   useCancelRunMutation,
   useDeleteRunMutation,
+  useArchiveRunMutation,
   useGetRunContextQuery,
   useLazyGetRunContextQuery,
   useAddRunContextMutation,

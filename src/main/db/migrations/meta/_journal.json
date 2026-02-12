@@ -64,6 +64,13 @@
       "when": 1770905795928,
       "tag": "0008_mature_forge",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1770907848417,
+      "tag": "0009_daffy_reavers",
+      "breakpoints": true
     }
   ]
 }

@@ -31,6 +31,7 @@ const CHANNELS = {
   RUNS_FAIL: "runs:fail",
   RUNS_CANCEL: "runs:cancel",
   RUNS_DELETE: "runs:delete",
+  RUNS_ARCHIVE: "runs:archive",
   RUNS_GET_DETAILS: "runs:getDetails",
   RUNS_EXECUTE: "runs:execute",
   RUNS_ABORT: "runs:abort",
@@ -114,6 +115,10 @@ export function registerRunsIpc(): void {
 
   ipcMain.handle(CHANNELS.RUNS_DELETE, async (_, id: string) => {
     return runsController.deleteRun(id);
+  });
+
+  ipcMain.handle(CHANNELS.RUNS_ARCHIVE, async (_, id: string) => {
+    return runsController.archiveRun(id);
   });
 
   ipcMain.handle(CHANNELS.RUNS_GET_DETAILS, async (_, runId: string) => {

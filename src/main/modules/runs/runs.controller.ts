@@ -31,6 +31,7 @@ export const runsController = {
   failRun: (id: string, error: string) => runsService.failRun(id, error),
   cancelRun: (id: string) => runsService.cancelRun(id),
   deleteRun: (id: string) => runsService.deleteRun(id),
+  archiveRun: (id: string) => runsService.archiveRun(id),
 
   // Run Context Operations
   getContextByRun: (runId: string) => runsService.getContextByRun(runId),

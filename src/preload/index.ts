@@ -410,6 +410,7 @@ const api = {
       ipcRenderer.invoke("runs:fail", id, error),
     cancel: (id: string) => ipcRenderer.invoke("runs:cancel", id),
     delete: (id: string) => ipcRenderer.invoke("runs:delete", id),
+    archive: (id: string) => ipcRenderer.invoke("runs:archive", id),
     // New methods for executing work runs
     getDetails: (runId: string) => ipcRenderer.invoke("runs:getDetails", runId),
     execute: (payload: {

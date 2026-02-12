@@ -1,4 +1,4 @@
-import { Close, CopilotStatic } from "@/components/ui/icons";
+import { Archive, Close, CopilotStatic } from "@/components/ui/icons";
 import type { Run } from "../types";
 import { Claude, Copilot } from "@/components/ui/icons/mood";
 
@@ -29,9 +29,9 @@ export function RunTab({ run, isActive, onClick, onClose, title, variant = "work
       <span className="text-xs font-medium truncate flex-1">{title}</span>
       <button
         onClick={onClose}
-        className="opacity-0 group-hover:opacity-100 p-0.5 mr-1 hover:bg-primary/10 cursor-pointer rounded transition-all"
+        className="opacity-0 group-hover:opacity-100 p-1 mr-1 hover:bg-primary/10 cursor-pointer rounded transition-all"
       >
-        <Close className="w-3 h-3" />
+        <Archive className="size-3.5" />
       </button>
     </div>
   );

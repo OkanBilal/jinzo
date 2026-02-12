@@ -57,6 +57,7 @@ export interface RunResponse {
   endedAt: Date | null;
   lastError: string | null;
   stopReason: string | null;
+  isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

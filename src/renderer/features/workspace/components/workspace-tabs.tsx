@@ -71,7 +71,7 @@ export function WorkspaceTabs({
         )}
 
         {/* Run tabs */}
-        {runs.slice(0, 5).map((run) => (
+        {runs.slice(0, 8).map((run) => (
           <div key={run.id} ref={setTabRef(run.id)}>
             <RunTab
               run={run}

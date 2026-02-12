@@ -1,4 +1,4 @@
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import { runs, runContext, runArtifacts, runCommands, toolCalls } from "../../db/schema";
 import type {
@@ -24,9 +24,12 @@ export const runsRepo = {
   // ─────────────────────────────────────────────────────────────
   // Run Operations
   // ─────────────────────────────────────────────────────────────
-  async findAllRuns(limit = 100): Promise<RunResponse[]> {
+  async findAllRuns(limit = 100, includeArchived = false): Promise<RunResponse[]> {
     const db = getDb();
-    const rows = await db.select().from(runs).orderBy(desc(runs.createdAt)).limit(limit);
+    const query = db.select().from(runs);
+    const rows = includeArchived
+      ? await query.orderBy(desc(runs.createdAt)).limit(limit)
+      : await query.where(eq(runs.isArchived, false)).orderBy(desc(runs.createdAt)).limit(limit);
     return rows.map(mapRunRowToResponse);
   },
 
@@ -40,23 +43,29 @@ export const runsRepo = {
     return rows[0] ? mapRunRowToResponse(rows[0]) : null;
   },
 
-  async findRunsByAccount(accountId: string, limit = 100): Promise<RunResponse[]> {
+  async findRunsByAccount(accountId: string, limit = 100, includeArchived = false): Promise<RunResponse[]> {
     const db = getDb();
+    const condition = includeArchived
+      ? eq(runs.accountId, accountId)
+      : and(eq(runs.accountId, accountId), eq(runs.isArchived, false));
     const rows = await db
       .select()
       .from(runs)
-      .where(eq(runs.accountId, accountId))
+      .where(condition)
       .orderBy(desc(runs.createdAt))
       .limit(limit);
     return rows.map(mapRunRowToResponse);
   },
 
-  async findRunsByWorkspace(workspaceId: string, limit = 100): Promise<RunResponse[]> {
+  async findRunsByWorkspace(workspaceId: string, limit = 100, includeArchived = false): Promise<RunResponse[]> {
     const db = getDb();
+    const condition = includeArchived
+      ? eq(runs.workspaceId, workspaceId)
+      : and(eq(runs.workspaceId, workspaceId), eq(runs.isArchived, false));
     const rows = await db
       .select()
       .from(runs)
-      .where(eq(runs.workspaceId, workspaceId))
+      .where(condition)
       .orderBy(desc(runs.createdAt))
       .limit(limit);
     return rows.map(mapRunRowToResponse);
@@ -121,6 +130,15 @@ export const runsRepo = {
   async deleteRun(id: string): Promise<void> {
     const db = getDb();
     await db.delete(runs).where(eq(runs.id, id));
+  },
+
+  async archiveRun(id: string): Promise<RunResponse | null> {
+    const db = getDb();
+    await db
+      .update(runs)
+      .set({ isArchived: true, updatedAt: sql`(unixepoch())` })
+      .where(eq(runs.id, id));
+    return this.findRunById(id);
   },
 
   // ─────────────────────────────────────────────────────────────
@@ -303,6 +321,7 @@ function mapRunRowToResponse(row: typeof runs.$inferSelect): RunResponse {
     endedAt: row.endedAt,
     lastError: row.lastError,
     stopReason: row.stopReason,
+    isArchived: row.isArchived,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

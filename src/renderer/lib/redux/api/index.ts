@@ -327,6 +327,7 @@ export {
   useFailRunMutation,
   useCancelRunMutation,
   useDeleteRunMutation,
+  useArchiveRunMutation,
   useGetRunContextQuery,
   useLazyGetRunContextQuery,
   useAddRunContextMutation,
