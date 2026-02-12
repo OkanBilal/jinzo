@@ -73,14 +73,14 @@ export function WebSearchDropdown({
       <Button
         type="button"
         tooltip={webSearchEnabled ? "Web search enabled" : "Web search"}
-        tooltipPosition="left"
+        tooltipPosition="top"
         onClick={handleToggle}
-        className={` ${webSearchEnabled ? "bg-blue-100/50 dark:bg-blue-900/30" : ""} hover:bg-primary-200/30 dark:hover:bg-primary-800 rounded-full transition-colors cursor-pointer`}
+        className={` p-1.5 -mx-1.5 ${webSearchEnabled ? "bg-primary-100/50 dark:bg-primary-900/30" : ""} hover:bg-primary-200/30 dark:hover:bg-primary-800 rounded-full transition-colors cursor-pointer`}
         aria-label="Web search"
         aria-expanded={isOpen}
       >
         <Web
-          className={`size-4.5 ${
+          className={`size-5 ${
             webSearchEnabled
               ? "text-primary-950 dark:text-primary"
               : "dark:text-primary-400 text-primary-500"

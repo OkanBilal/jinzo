@@ -1,46 +1,43 @@
 import { Button } from "@/components/ui/button";
 import { Body } from "@/components/ui/text";
+import { useGetProviderByIdQuery } from "@/lib/redux/api";
+import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
 
-interface StructuredOutputToggleProps {
-  enabled: boolean;
-  onChange: (enabled: boolean) => void;
+interface StructuredOutputProps {
   onEditClick: () => void;
 }
 
-export function StructuredOutputToggle({
-  enabled,
-  onChange,
+export function StructuredOutput({
   onEditClick,
-}: StructuredOutputToggleProps) {
+}: StructuredOutputProps) {
+  const { data: provider } = useGetProviderByIdQuery("ollama");
+  const config = (provider?.config ?? {}) as Record<string, unknown>;
+
+  const entries = (config.structuredOutputs ?? {}) as Record<
+    string,
+    StructuredOutputEntry
+  >;
+  const selectedId =
+    (config.structuredOutputsSelectedId as string | null) ?? null;
+  const selectedSchema = selectedId ? entries[selectedId] : null;
+  const selectedSchemaName = selectedSchema?.name ?? "Off";
+
   return (
-    <div className="flex items-center justify-between p-1 mt-2">
+    <div className="flex items-center justify-between py-1 mt-2">
       <div className="flex flex-col">
-        <Body className="text-sm text-primary-900 dark:text-primary">
+        <Body className="text-sm text-primary-900 dark:text-primary!">
           Structured Outputs
         </Body>
       </div>
-      <div className="flex items-center gap-2">
-        {enabled && (
-          <Button
-            onClick={onEditClick}
-            className="px-2.5 py-1 text-xs font-medium text-primary-900 dark:text-primary bg-primary-950/4 dark:bg-primary/6 rounded-lg hover:bg-primary-950/6 dark:hover:bg-primary/8 transition-colors"
-          >
-            Edit
-          </Button>
-        )}
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-primary-500 dark:text-primary-400">
+          {selectedSchemaName}
+        </span>
         <Button
-          onClick={() => onChange(!enabled)}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all shadow-[inset_0_0.5px_2px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_0.5px_2px_rgba(0,0,0,0.3)] ${
-            enabled
-              ? "bg-blue-500 dark:bg-blue-600"
-              : "bg-black/8 dark:bg-white/15"
-          }`}
+          onClick={onEditClick}
+          className="px-2.5 py-1 text-xs font-medium text-primary-900 dark:text-primary bg-primary-950/4 dark:bg-primary/6 rounded-lg hover:bg-primary-950/6 dark:hover:bg-primary/8 transition-colors"
         >
-          <span
-            className={`inline-block h-5 w-5 transform rounded-full bg-primary shadow-sm transition-transform ${
-              enabled ? "translate-x-5.5" : "translate-x-0.5"
-            }`}
-          />
+          Edit
         </Button>
       </div>
     </div>

@@ -55,10 +55,10 @@ export function validateChatRequest(body: ChatRequestBody): ValidationResult {
     };
   }
 
-  if (body.options?.mode && !["chat", "rag", "mcp"].includes(body.options.mode)) {
+  if (body.options?.mode && !["chat", "rag", "tool"].includes(body.options.mode)) {
     return {
       valid: false,
-      error: "'mode' must be 'chat', 'rag', or 'mcp'",
+      error: "'mode' must be 'chat', 'rag', or 'tool'",
       statusCode: 400,
     };
   }

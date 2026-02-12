@@ -57,7 +57,7 @@ export const predefinedMoods: PredefinedMood[] = [
     id: "claude",
     name: "Claude",
     icon: "icon:claude",
-    theme: theme("#fcc7b699", "#161210"),
+    theme: theme("#fcc7b6", "#161210"),
     systemPrompt: "",
     uiConfig: {
       sidebar: {
@@ -67,14 +67,14 @@ export const predefinedMoods: PredefinedMood[] = [
         defaultRoute: "/claude",
       },
       main: { margin: "19rem" },
-      rightPanel: { width: "19rem", component: "workspace" },
+      rightPanel: { width: "22rem", component: "workspace" },
     },
   },
   {
     id: "copilot",
     name: "Copilot",
     icon: "icon:copilot",
-    theme: theme("#FFFFFF40", "#11131a"),
+    theme: theme("#c8ddf1", "#11131a"),
     systemPrompt: "",
     uiConfig: {
       sidebar: {
@@ -84,7 +84,7 @@ export const predefinedMoods: PredefinedMood[] = [
         defaultRoute: "/copilot",
       },
       main: { margin: "19rem" },
-      rightPanel: { width: "19rem", component: "workspace" },
+      rightPanel: { width: "22rem", component: "workspace" },
     },
   },
 ];

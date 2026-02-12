@@ -7,6 +7,7 @@ import { useIsUserMessage } from "../../../features/chat/hooks/use-is-user-messa
 import { StreamingText } from "./streaming-text";
 import { markdownComponents } from "./markdown-components";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast/toast";
 
 export const ChatMessageComponent = memo(
   ({ message, showTimestamp = false }: ChatMessageProps) => {
@@ -16,6 +17,7 @@ export const ChatMessageComponent = memo(
 
     const handleCopy = () => {
       copy(message.text);
+      toast.success("Copied to clipboard");
     };
 
     const formatMessageTime = (timestamp?: Date): string => {
@@ -68,7 +70,7 @@ export const ChatMessageComponent = memo(
           </div>
 
           <div
-            className={`absolute top-full ${isUser ? "right-0" : "left-0"} ease-out duration-300 ${
+            className={`absolute  ${isUser ? "right-0 top-full" : "left-0"} ease-out duration-300 ${
               isHovered
                 ? " opacity-100 translate-y-0"
                 : "opacity-0 translate-y-1 pointer-events-none"
@@ -76,13 +78,17 @@ export const ChatMessageComponent = memo(
           >
             <Button
               onClick={handleCopy}
-              className="flex items-center gap-1 active:scale-99 hover:bg-primary-200/60 dark:hover:bg-primary-900 p-1.5 rounded-md ease-out duration-150 hover:scale-101 cursor-pointer"
+              className="flex items-center gap-1 dark:text-primary-300 text-primary-700 p-1 hover:text-primary-900 dark:hover:text-primary-100 rounded-md ease-out duration-150 active:scale-99 hover:scale-101 cursor-pointer"
               aria-label="Copy message to clipboard"
             >
               {isCopied ? (
-                <Check className="text-primary-300 w-5 h-5 animate-[scaleIn_0.15s_ease-out]" />
+                <Check
+                  className={` w-5 h-5 animate-[scaleIn_0.15s_ease-out] ${isUser ? "mt-0" : "-mt-6"} `}
+                />
               ) : (
-                <Clipboard className="text-primary-300 w-5 h-5" />
+                <Clipboard
+                  className={` w-5 h-5 ${isUser ? "mt-0" : "-mt-6"} `}
+                />
               )}
             </Button>
           </div>
@@ -97,7 +103,7 @@ export const ChatMessageComponent = memo(
         </div>
       </div>
     );
-  }
+  },
 );
 
 ChatMessageComponent.displayName = "ChatMessage";

@@ -38,6 +38,11 @@ import {
   registerWorkspaceResourcesHandlers,
   unregisterWorkspaceResourcesHandlers,
 } from "./modules/workspaceResources";
+import {
+  registerTerminalIpc,
+  unregisterTerminalIpc,
+  destroyAllTerminals,
+} from "./modules/terminal";
 import { createMainWindow, createSplashWindow, closeSplashWindow } from "./windows";
 
 /**
@@ -82,6 +87,7 @@ async function initializeApp() {
     registerFileExplorerIpc();
     registerGitIpc();
     registerWorkspaceResourcesHandlers();
+    registerTerminalIpc();
 
     // Shell utilities
     ipcMain.handle("shell:openExternal", async (_, url: string) => {
@@ -116,6 +122,9 @@ async function cleanupApp() {
   try {
     console.log("Cleaning up application...");
 
+    // Destroy all terminal PTY instances
+    destroyAllTerminals();
+
     // Shutdown work adapters (Copilot, Claude Code, etc.)
     await shutdownAllWorkAdapters();
 
@@ -141,6 +150,7 @@ async function cleanupApp() {
     unregisterFileExplorerIpc();
     unregisterGitIpc();
     unregisterWorkspaceResourcesHandlers();
+    unregisterTerminalIpc();
     ipcMain.removeHandler("shell:openExternal");
     ipcMain.removeHandler("shell:openPath");
 

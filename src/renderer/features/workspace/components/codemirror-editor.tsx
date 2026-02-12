@@ -58,6 +58,7 @@ const lightTheme = EditorView.theme(
   {
     "&": {
       backgroundColor: "transparent",
+      color: "#1c1917",
       fontSize: "13px",
       height: "100%",
       fontFamily:
@@ -171,20 +172,21 @@ const lightHighlightStyle = HighlightStyle.define([
   { tag: tags.attributeName, color: "#ea580c" }, // orange-600
   { tag: tags.attributeValue, color: "#059669" },
   { tag: tags.meta, color: "#94a3b8" },
-  { tag: tags.heading, color: "#1e293b", fontWeight: "bold" }, // slate-800
+  { tag: tags.heading, color: "#0f172a", fontWeight: "bold" }, // slate-900
   {
     tag: tags.heading1,
-    color: "#1e293b",
+    color: "#0f172a",
     fontWeight: "bold",
     fontSize: "1.25em",
   },
   {
     tag: tags.heading2,
-    color: "#1e293b",
+    color: "#0f172a",
     fontWeight: "bold",
     fontSize: "1.15em",
   },
-  { tag: tags.heading3, color: "#1e293b", fontWeight: "bold" },
+  { tag: tags.heading3, color: "#0f172a", fontWeight: "bold" },
+  { tag: tags.content, color: "#121212" }, // stone-900 - default text
   { tag: tags.link, color: "#2563eb", textDecoration: "underline" },
   { tag: tags.url, color: "#2563eb" },
   { tag: tags.emphasis, fontStyle: "italic" },
@@ -200,6 +202,7 @@ const darkTheme = EditorView.theme(
   {
     "&": {
       backgroundColor: "transparent",
+      color: "#e7e5e4",
       fontSize: "13px",
       height: "100%",
       fontFamily:
@@ -313,20 +316,21 @@ const darkHighlightStyle = HighlightStyle.define([
   { tag: tags.attributeName, color: "#fdba74" }, // orange-300
   { tag: tags.attributeValue, color: "#6ee7b7" },
   { tag: tags.meta, color: "#64748b" },
-  { tag: tags.heading, color: "#f1f5f9", fontWeight: "bold" }, // slate-100
+  { tag: tags.heading, color: "#fafaf9", fontWeight: "bold" }, // stone-50
   {
     tag: tags.heading1,
-    color: "#f1f5f9",
+    color: "#fafaf9",
     fontWeight: "bold",
     fontSize: "1.25em",
   },
   {
     tag: tags.heading2,
-    color: "#f1f5f9",
+    color: "#fafaf9",
     fontWeight: "bold",
     fontSize: "1.15em",
   },
-  { tag: tags.heading3, color: "#f1f5f9", fontWeight: "bold" },
+  { tag: tags.heading3, color: "#fafaf9", fontWeight: "bold" },
+  { tag: tags.content, color: "#e7e5e4" }, // stone-200 - default text
   { tag: tags.link, color: "#93c5fd", textDecoration: "underline" },
   { tag: tags.url, color: "#93c5fd" },
   { tag: tags.emphasis, fontStyle: "italic" },

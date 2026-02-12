@@ -11,26 +11,13 @@ export interface ModelCapabilities {
   reasoning?: boolean;
 }
 
-export interface StructuredOutputProperty {
-  name: string;
-  type: "string" | "number" | "boolean" | "array" | "object";
-  isArray: boolean;
-  isRequired: boolean;
-}
-
-export interface StructuredOutputSchema {
-  properties: StructuredOutputProperty[];
-}
-
 export interface ChatState {
   selectedModel: string;
   thinkingLevel: "low" | "medium" | "high";
   thinkingEnabled: boolean;
-  toolMode: "chat" | "rag" | "mcp";
+  toolMode: "chat" | "rag" | "tool";
   modelCapabilities: ModelCapabilities | null;
   supportsThinking: boolean;
-  structuredOutputEnabled: boolean;
-  structuredOutputSchema: StructuredOutputSchema;
   webSearchEnabled: boolean;
 }
 
@@ -41,8 +28,6 @@ const initialState: ChatState = {
   toolMode: "chat",
   modelCapabilities: null,
   supportsThinking: false,
-  structuredOutputEnabled: false,
-  structuredOutputSchema: { properties: [] },
   webSearchEnabled: false,
 };
 
@@ -62,7 +47,7 @@ const chatSlice = createSlice({
     setThinkingEnabled: (state, action: PayloadAction<boolean>) => {
       state.thinkingEnabled = action.payload;
     },
-    setToolMode: (state, action: PayloadAction<"chat" | "rag" | "mcp">) => {
+    setToolMode: (state, action: PayloadAction<"chat" | "rag" | "tool">) => {
       state.toolMode = action.payload;
     },
     setModelCapabilities: (
@@ -74,15 +59,6 @@ const chatSlice = createSlice({
     ) => {
       state.modelCapabilities = action.payload.capabilities;
       state.supportsThinking = action.payload.supportsThinking;
-    },
-    setStructuredOutputEnabled: (state, action: PayloadAction<boolean>) => {
-      state.structuredOutputEnabled = action.payload;
-    },
-    setStructuredOutputSchema: (
-      state,
-      action: PayloadAction<StructuredOutputSchema>,
-    ) => {
-      state.structuredOutputSchema = action.payload;
     },
     setWebSearchEnabled: (state, action: PayloadAction<boolean>) => {
       state.webSearchEnabled = action.payload;
@@ -96,8 +72,6 @@ export const {
   setThinkingEnabled,
   setToolMode,
   setModelCapabilities,
-  setStructuredOutputEnabled,
-  setStructuredOutputSchema,
   setWebSearchEnabled,
 } = chatSlice.actions;
 export default chatSlice.reducer;

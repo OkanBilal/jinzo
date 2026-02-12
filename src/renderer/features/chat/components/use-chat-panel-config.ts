@@ -10,9 +10,6 @@ import {
   setThinkingLevel,
   setThinkingEnabled,
   setToolMode,
-  setStructuredOutputEnabled,
-  setStructuredOutputSchema,
-  type StructuredOutputSchema,
 } from "@/lib/redux/slices/chatSlice";
 import { useThinkingConfig } from "@/features/chat/hooks/use-thinking-config";
 import { useModelCapabilities } from "@/features/chat/hooks/use-model-capabilities";
@@ -24,12 +21,6 @@ export function useChatPanelConfig() {
   const thinkingLevel = useAppSelector((state) => state.chat.thinkingLevel);
   const thinkingEnabled = useAppSelector((state) => state.chat.thinkingEnabled);
   const toolMode = useAppSelector((state) => state.chat.toolMode);
-  const structuredOutputEnabled = useAppSelector(
-    (state) => state.chat.structuredOutputEnabled,
-  );
-  const structuredOutputSchema = useAppSelector(
-    (state) => state.chat.structuredOutputSchema,
-  );
 
   const thinkingConfig = useThinkingConfig();
   useModelCapabilities();
@@ -43,12 +34,6 @@ export function useChatPanelConfig() {
 
   useEffect(() => {
     if (config) {
-      if (config.structuredOutputEnabled !== undefined) {
-        dispatch(setStructuredOutputEnabled(config.structuredOutputEnabled));
-      }
-      if (config.structuredOutputSchema) {
-        dispatch(setStructuredOutputSchema(config.structuredOutputSchema));
-      }
       if (config.toolMode) {
         dispatch(setToolMode(config.toolMode));
       }
@@ -77,26 +62,27 @@ export function useChatPanelConfig() {
     dispatch(setThinkingEnabled(enabled));
   };
 
-  const handleToolModeChange = (mode: "chat" | "rag" | "mcp") => {
+  const handleToolModeChange = (mode: "chat" | "rag" | "tool") => {
     dispatch(setToolMode(mode));
     updateConfig({ toolMode: mode });
   };
 
-  const handleStructuredOutputEnabledChange = (enabled: boolean) => {
-    dispatch(setStructuredOutputEnabled(enabled));
-    updateConfig({ structuredOutputEnabled: enabled });
+  // Derived state: useTools is true when toolMode is "tool"
+  const useTools = toolMode === "tool";
+
+  // For display in select: show "chat" when toolMode is "chat" or "tool"
+  const displayMode = toolMode === "tool" ? "chat" : toolMode;
+
+  const handleDisplayModeChange = (mode: "chat" | "rag") => {
+    // When changing display mode, reset to base mode (not "tool")
+    dispatch(setToolMode(mode));
+    updateConfig({ toolMode: mode });
   };
 
-  const handleStructuredOutputSchemaChange = (
-    schema: StructuredOutputSchema,
-  ) => {
-    dispatch(setStructuredOutputSchema(schema));
-    updateConfig({ structuredOutputSchema: schema });
-
-    if (schema.properties.length === 0) {
-      dispatch(setStructuredOutputEnabled(false));
-      updateConfig({ structuredOutputEnabled: false });
-    }
+  const handleUseToolsChange = (enabled: boolean) => {
+    const newMode = enabled ? "tool" : "chat";
+    dispatch(setToolMode(newMode));
+    updateConfig({ toolMode: newMode });
   };
 
   const modelOptions = models.map((model) => ({
@@ -108,7 +94,6 @@ export function useChatPanelConfig() {
   const toolModeOptions = [
     { value: "chat" as const, label: "Chat" },
     { value: "rag" as const, label: "RAG" },
-    { value: "mcp" as const, label: "MCP" },
   ];
 
   return {
@@ -116,8 +101,8 @@ export function useChatPanelConfig() {
     thinkingLevel,
     thinkingEnabled,
     toolMode,
-    structuredOutputEnabled,
-    structuredOutputSchema,
+    useTools,
+    displayMode,
     config,
     thinkingConfig,
     isStructuredOutputModalOpen,
@@ -128,8 +113,8 @@ export function useChatPanelConfig() {
     handleThinkingLevelChange,
     handleThinkingEnabledChange,
     handleToolModeChange,
-    handleStructuredOutputEnabledChange,
-    handleStructuredOutputSchemaChange,
+    handleDisplayModeChange,
+    handleUseToolsChange,
     setIsStructuredOutputModalOpen,
   };
 }

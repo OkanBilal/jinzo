@@ -2,7 +2,7 @@ import { Body } from "@/components/ui/text";
 import { Slider } from "@/components/ui/slider";
 import { Toggle } from "@/components/ui/toggle";
 import Select from "@/components/ui/select";
-import { StructuredOutputToggle } from "./structured-output-toggle";
+import { StructuredOutput } from "./structured-output-toggle";
 import { StructuredOutputModal } from "./structured-output-modal";
 import { useChatPanelConfig } from "@/features/chat/components/use-chat-panel-config";
 
@@ -11,9 +11,8 @@ export function ConfigContent() {
     selectedModel,
     thinkingLevel,
     thinkingEnabled,
-    toolMode,
-    structuredOutputEnabled,
-    structuredOutputSchema,
+    useTools,
+    displayMode,
     config,
     thinkingConfig,
     isStructuredOutputModalOpen,
@@ -23,9 +22,8 @@ export function ConfigContent() {
     handleModelChange,
     handleThinkingLevelChange,
     handleThinkingEnabledChange,
-    handleToolModeChange,
-    handleStructuredOutputEnabledChange,
-    handleStructuredOutputSchemaChange,
+    handleDisplayModeChange,
+    handleUseToolsChange,
     setIsStructuredOutputModalOpen,
   } = useChatPanelConfig();
 
@@ -83,28 +81,31 @@ export function ConfigContent() {
         </ConfigSection>
         <ConfigSection title="Mode">
           <Select
-            value={toolMode}
+            value={displayMode}
             options={toolModeOptions}
-            onChange={handleToolModeChange}
+            onChange={handleDisplayModeChange}
             placeholder="Select tool mode"
           />
-          {toolMode !== "mcp" && (
-            <StructuredOutputToggle
-              enabled={structuredOutputEnabled}
-              onChange={handleStructuredOutputEnabledChange}
-              onEditClick={() => setIsStructuredOutputModalOpen(true)}
-            />
+          {displayMode === "chat" && (
+            <div className="mt-4 px-1">
+              <Toggle
+                enabled={useTools}
+                onChange={handleUseToolsChange}
+                label="Use Tools"
+              />
+              <StructuredOutput
+                onEditClick={() => setIsStructuredOutputModalOpen(true)}
+              />
+            </div>
           )}
         </ConfigSection>
-        <ConfigSection title="Advanced">
+        {/* <ConfigSection title="Advanced">
           <Body>Advanced configuration options will appear here.</Body>
-        </ConfigSection>
+        </ConfigSection> */}
       </div>
       <StructuredOutputModal
         isOpen={isStructuredOutputModalOpen}
         onClose={() => setIsStructuredOutputModalOpen(false)}
-        schema={structuredOutputSchema}
-        onSave={handleStructuredOutputSchemaChange}
       />
     </div>
   );

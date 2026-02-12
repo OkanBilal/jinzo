@@ -145,6 +145,38 @@ export default function ClaudeSettings() {
       <SettingsDivider />
 
       <SettingsRow
+        title="MCP Servers"
+        description={
+          <>
+            Connect external tools via the Model Context Protocol. Servers
+            configured here are passed to the SDK programmatically. The CLI also
+            auto-loads .mcp.json from the project root.{" "}
+            <a
+              href="https://platform.claude.com/docs/en/agent-sdk/mcp"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-1 text-primary-500 hover:text-primary-600 dark:text-primary-200 dark:hover:text-primary-300 underline"
+            >
+              Learn more about MCP
+            </a>
+          </>
+        }
+      >
+        <div className="flex items-center gap-3">
+
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => openPath(`${homedir}/.claude.json`)}
+          >
+            Open Config
+          </Button>
+        </div>
+      </SettingsRow>
+
+      <SettingsDivider />
+
+      <SettingsRow
         title="Skills"
         description={
           <>

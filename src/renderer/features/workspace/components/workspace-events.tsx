@@ -100,7 +100,7 @@ export function WorkspaceEvents({
         ) : isIssueActive && activeIssue ? (
           <IssueTabContent issue={activeIssue} />
         ) : hasRunContent ? (
-          <div className="h-full overflow-y-auto">
+          <div className="h-full overflow-y-auto noscrollbar">
             <div className="min-h-75 max-w-210 mx-auto space-y-4 pt-12 pb-24 px-4">
               {eventGroups.map((group, index) => {
                 if (group.type === "tool_calls") {

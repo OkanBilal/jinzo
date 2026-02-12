@@ -103,7 +103,7 @@ export default function ChatSessionItem({
             onChange={(e) => setNewTitle(e.target.value)}
             onBlur={handleRenameSubmit}
             onKeyDown={handleRenameKeyDown}
-            className="w-full text-sm font-normal  rounded-lg px-2 py-1 text-primary-900 dark:text-primary-100 focus:outline-none "
+            className="w-full text-sm  rounded-lg px-2 py-1 text-primary-900 dark:text-primary-100 focus:outline-none "
           />
         </div>
       </div>

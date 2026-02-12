@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowUp, Apps } from "@/components/ui/icons";
-import { groupConsecutiveToolCalls } from "../../utils/group-tool-calls";
+import { groupConsecutiveToolCalls, getToolType } from "../../utils/group-tool-calls";
 import { ToolSubGroupAccordion } from "./tool-sub-group-accordion";
 import type { EventGroup } from "../../utils/group-events";
 
@@ -19,10 +19,7 @@ export function ToolCallGroup({
   const toolCount = group.events.length;
 
   const toolTypes = new Set(
-    group.events.map((e) => {
-      const colonIdx = e.content.indexOf(":");
-      return colonIdx > 0 ? e.content.substring(0, colonIdx).trim() : "Tool";
-    }),
+    group.events.map((e) => getToolType(e.content)),
   );
   const toolSummary = Array.from(toolTypes).slice(0, 3).join(", ");
   const moreCount = toolTypes.size > 3 ? ` +${toolTypes.size - 3}` : "";

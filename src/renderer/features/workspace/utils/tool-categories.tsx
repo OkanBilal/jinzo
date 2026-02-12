@@ -16,12 +16,32 @@ import {
   AgentTeams,
   SendMessage,
   TeamDelete,
+  Linear,
+  Notion,
+  Figma,
+  Mcp,
 } from "@/components/ui/icons";
 
 export const TOOL_CATEGORIES: Record<
   string,
   { category: string; icon: React.ReactNode }
 > = {
+  figma: {
+    category: "Design",
+    icon: <Figma className="size-4" />,
+  },
+  linear: {
+    category: "Project Management",
+    icon: <Linear className="size-4" />,
+  },
+  notion: {
+    category: "Knowledge Base",
+    icon: <Notion className="size-4" />,
+  },
+  listmcpresourcestool: {
+    category: "MCP",
+    icon: <Mcp className="size-4 " />,
+  },
   read: {
     category: "File",
     icon: <Read className="size-4" />,

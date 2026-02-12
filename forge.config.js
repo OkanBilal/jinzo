@@ -20,7 +20,7 @@ module.exports = {
     executableName: 'jinzo',
     asar: {
       unpack: '{**/*.node,**/copilot,**/spawn-helper,**/rg,**/*.wasm}',
-      unpackDir: '.vite/build/node_modules/{sqlite-vec-darwin-arm64,@github/copilot-darwin-arm64,@github/copilot/prebuilds,@github/copilot/ripgrep,@anthropic-ai/claude-agent-sdk/vendor}',
+      unpackDir: '.vite/build/node_modules/{sqlite-vec-darwin-arm64,node-pty,@github/copilot-darwin-arm64,@github/copilot/prebuilds,@github/copilot/ripgrep,@anthropic-ai/claude-agent-sdk/vendor}',
     },
     icon: 'src/renderer/public/icon',
     extraResource: [

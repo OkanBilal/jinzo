@@ -588,6 +588,22 @@ const api = {
      */
     getWorktreesDir: () => ipcRenderer.invoke("git:getWorktreesDir"),
   },
+  // Terminal operations
+  terminal: {
+    create: (payload: { id: string; cwd: string }) =>
+      ipcRenderer.invoke("terminal:create", payload),
+    write: (id: string, data: string) =>
+      ipcRenderer.invoke("terminal:write", id, data),
+    resize: (id: string, cols: number, rows: number) =>
+      ipcRenderer.invoke("terminal:resize", id, cols, rows),
+    destroy: (id: string) => ipcRenderer.invoke("terminal:destroy", id),
+    onData: (callback: (data: { id: string; data: string }) => void) => {
+      const listener = (_: any, data: { id: string; data: string }) =>
+        callback(data);
+      ipcRenderer.on("terminal:data", listener);
+      return () => ipcRenderer.removeListener("terminal:data", listener);
+    },
+  },
   platform: {
     homedir: os.homedir(),
   },

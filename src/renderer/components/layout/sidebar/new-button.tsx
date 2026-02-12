@@ -31,14 +31,14 @@ export default function NewButton({ onClick, title, icon, actionPrefix = "New" }
       size="lg"
       onClick={onClick}
       fullWidth
-      className="justify-start cursor-pointer p-4 hover:scale-101 transition-transform duration-200"
+      className="justify-start cursor-pointer p-4 hover:scale-101 transition-transform duration-200 "
       style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
     >
       {icon}
       <Body className="text-primary-900 dark:text-primary-100 font-medium">
         {actionPrefix} {title}
       </Body>
-      <Caption className="ml-auto text-primary-900 dark:text-primary-400">
+      <Caption className="ml-auto text-primary-900 dark:text-primary-100!">
         ⌘ N
       </Caption>
     </Button>

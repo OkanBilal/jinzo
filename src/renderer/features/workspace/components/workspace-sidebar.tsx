@@ -14,6 +14,7 @@ import {
 import type { RootState } from "@/lib/redux";
 import { FolderIcon } from "@/components/ui/icons/file-icons";
 import { IssuesSection } from "@/features/workspace/components/issues-section";
+import { TerminalSection } from "@/features/workspace/components/terminal-section";
 import {
   isIssueTab,
   getIssueEntityId,
@@ -22,7 +23,7 @@ import { useActiveMood } from "@/hooks/use-active-mood";
 
 export function WorkspaceSidebar() {
   const dispatch = useDispatch();
-  const { activeMoodId } = useActiveMood();
+  const { activeMoodId, moodSlug } = useActiveMood();
   const workspaceId = useSelector(
     (state: RootState) => state.workspace.activeWorkspaceId,
   );
@@ -123,6 +124,8 @@ export function WorkspaceSidebar() {
         onSelectIssue={handleSelectIssue}
         onAddToContext={handleAddIssueToContext}
       />
+
+      <TerminalSection variant={moodSlug} workspaceId={workspaceId} rootPath={rootPath} />
     </div>
   );
 }

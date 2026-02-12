@@ -6,29 +6,38 @@ export interface ToolSubGroup {
   events: RunEvent[];
 }
 
+export function getToolType(content: string): string {
+  const colonIdx = content.indexOf(":");
+  const toolName =
+    colonIdx > 0 ? content.substring(0, colonIdx).trim() : content;
+  const lower = toolName.toLowerCase();
+
+  // MCP tools: check for mcp__provider__ pattern first
+  if (lower.startsWith("mcp__linear__") || lower.includes("__linear__"))
+    return "Linear";
+  if (lower.startsWith("mcp__notion__") || lower.includes("__notion__"))
+    return "Notion";
+  if (lower.startsWith("mcp__figma-remote-mcp__") || lower.includes("__figma-remote-mcp__"))
+    return "Figma";
+
+  if (lower === "todowrite") return "TodoWrite";
+  if (lower === "task") return "Task";
+  if (lower === "read" || lower === "view" || lower.includes("read"))
+    return "Read";
+  if (lower === "bash" || lower === "shell" || lower === "terminal")
+    return "Bash";
+  if (lower === "edit" || lower.includes("edit")) return "Edit";
+  if (lower === "write" || lower.includes("write")) return "Write";
+  if (lower === "search" || lower === "find") return "Search";
+  if (lower === "glob") return "Glob";
+  if (lower === "grep") return "Grep";
+  return toolName;
+}
+
 export function groupConsecutiveToolCalls(events: RunEvent[]): ToolSubGroup[] {
   const subGroups: ToolSubGroup[] = [];
   let currentGroup: RunEvent[] = [];
   let currentToolType: string | null = null;
-
-  const getToolType = (content: string): string => {
-    const colonIdx = content.indexOf(":");
-    const toolName =
-      colonIdx > 0 ? content.substring(0, colonIdx).trim() : content;
-    const lower = toolName.toLowerCase();
-    if (lower === "todowrite") return "TodoWrite";
-    if (lower === "task") return "Task";
-    if (lower === "read" || lower === "view" || lower.includes("read"))
-      return "Read";
-    if (lower === "bash" || lower === "shell" || lower === "terminal")
-      return "Bash";
-    if (lower === "edit" || lower.includes("edit")) return "Edit";
-    if (lower === "write" || lower.includes("write")) return "Write";
-    if (lower === "search" || lower === "find") return "Search";
-    if (lower === "glob") return "Glob";
-    if (lower === "grep") return "Grep";
-    return toolName;
-  };
 
   const flushGroup = () => {
     if (currentGroup.length > 0 && currentToolType) {

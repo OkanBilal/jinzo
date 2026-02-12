@@ -1,5 +1,7 @@
 import type { ChatConfig } from "./chat.dto";
 
+
+//TODO: MOVE DB
 // ─────────────────────────────────────────────────────────────
 // Default Config
 // ─────────────────────────────────────────────────────────────
@@ -48,7 +50,7 @@ export function updateChatConfig(payload: Partial<ChatConfig>): ChatConfig {
   if (
     payload.toolMode === "chat" ||
     payload.toolMode === "rag" ||
-    payload.toolMode === "mcp"
+    payload.toolMode === "tool"
   ) {
     chatConfig.toolMode = payload.toolMode;
   }

@@ -1,6 +1,7 @@
 import type { RunEvent } from "../../types";
 import { getToolInfo } from "../../utils/tool-categories";
 import { parseToolContent } from "../../utils/parse-tool-content";
+import { getToolType } from "../../utils/group-tool-calls";
 import { TodoListDisplay, type TodoItem } from "./todo-list-display";
 import { TaskDisplay, type TaskParams } from "./task-display";
 
@@ -11,7 +12,8 @@ interface ToolCallItemProps {
 
 export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   const { toolName, params, summary } = parseToolContent(event.content);
-  const { icon } = getToolInfo(toolName);
+  const displayName = getToolType(event.content);
+  const { icon } = getToolInfo(displayName);
 
   if (toolName.toLowerCase() === "todowrite") {
     // First try to get todos from metadata (raw input from hook)
@@ -50,7 +52,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     <div className="py-0.5 px-2 hover:bg-primary-100/50 dark:hover:bg-primary-800/20 rounded">
       <div className="flex items-center gap-2 text-[13px] font-sans">
         <span className="dark:text-primary-300">{icon}</span>
-        <span className="dark:text-primary-300 font-medium">{toolName}</span>
+        <span className="dark:text-primary-300 font-medium">{displayName}</span>
         <span className="text-primary-500 truncate">{summary}</span>
       </div>
     </div>

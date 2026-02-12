@@ -84,7 +84,7 @@ export async function handleChatMode(
     fullAnswer = response.message.content || "";
     sendStreamChunk(senderId, sessionId, fullAnswer);
   } else if (webSearchEnabled) {
-    // Web search mode: use tool call loop similar to MCP mode
+    // Web search mode: use tool call loop similar to tool mode
     const apiKey = await getOllamaApiKey();
     if (!apiKey) {
       fullAnswer = "Web search is enabled but no Ollama API key is configured. Please set your API key in the web search dropdown.";

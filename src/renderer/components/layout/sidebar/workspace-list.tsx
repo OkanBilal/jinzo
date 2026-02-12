@@ -32,8 +32,8 @@ export default function WorkspacesList({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-32">
-        <Caption className="text-primary-800 dark:text-primary-500">
+      <div className="flex items-center justify-center h-16">
+        <Caption className="text-primary-800 dark:text-primary-100! font-semibold">
           Loading...
         </Caption>
       </div>
@@ -42,7 +42,7 @@ export default function WorkspacesList({
 
   if (workspaces.length === 0) {
     return (
-      <div className="flex items-center justify-center h-32">
+      <div className="flex items-center justify-center h-16">
         <Caption className="text-primary-800 dark:text-primary-100! font-semibold">
           No workspaces yet
         </Caption>

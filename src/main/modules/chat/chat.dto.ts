@@ -68,7 +68,7 @@ export interface StructuredOutputSchema {
 // Chat Options
 // ─────────────────────────────────────────────────────────────
 export interface ChatOptions {
-  mode?: "chat" | "rag" | "mcp";
+  mode?: "chat" | "rag" | "tool";
   topK?: number;
   minScore?: number;
   noCache?: boolean;
@@ -84,7 +84,7 @@ export interface ChatOptions {
   /** User message ID for idempotency tracking - prevents duplicate generations */
   userMessageId?: number;
   /** Tool mode override */
-  toolMode?: "chat" | "rag" | "mcp";
+  toolMode?: "chat" | "rag" | "tool";
   /** Enable Ollama web search tools */
   webSearchEnabled?: boolean;
 }
@@ -192,7 +192,7 @@ export interface ChatConfig {
   topK: number;
   minScore: number;
   selectedModel: string;
-  toolMode: "chat" | "rag" | "mcp";
+  toolMode: "chat" | "rag" | "tool";
   structuredOutputEnabled: boolean;
   structuredOutputSchema: StructuredOutputSchema;
   webSearchEnabled: boolean;

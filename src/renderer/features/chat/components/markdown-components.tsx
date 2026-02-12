@@ -68,7 +68,7 @@ export const markdownComponents: Components = {
     const isInline = !className;
     if (isInline) {
       return (
-        <code className="px-1.5 py-0.5 rounded bg-primary-50 dark:bg-primary/8 text-primary-900 dark:text-primary-100 text-sm font-sans transition-all duration-150 ease-out">
+        <code className="px-1.5 py-0.5 rounded text-primary-900 dark:text-primary-100 text-sm font-sans transition-all duration-150 ease-out">
           {children}
         </code>
       );
@@ -80,7 +80,7 @@ export const markdownComponents: Components = {
     );
   },
   pre: ({ children }) => (
-    <pre className="my-2 rounded-xl overflow-hidden transition-all duration-150 ease-out">{children}</pre>
+    <pre className="my-2 rounded-xl overflow-hidden bg-primary-50 dark:bg-primary/8 transition-all duration-150 ease-out">{children}</pre>
   ),
   a: ({ href, children }) => (
     <a

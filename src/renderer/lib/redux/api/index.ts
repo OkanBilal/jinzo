@@ -190,8 +190,6 @@ export {
   setThinkingEnabled,
   setToolMode,
   setModelCapabilities,
-  setStructuredOutputEnabled,
-  setStructuredOutputSchema,
 } from "../slices/chatSlice";
 export type { ChatState, ModelCapabilities } from "../slices/chatSlice";
 

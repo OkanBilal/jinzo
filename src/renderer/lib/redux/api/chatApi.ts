@@ -44,7 +44,7 @@ export interface ChatConfig {
   topK: number;
   minScore: number;
   selectedModel: string;
-  toolMode: 'chat' | 'rag' | 'mcp';
+  toolMode: 'chat' | 'rag' | 'tool';
   structuredOutputEnabled: boolean;
   structuredOutputSchema: StructuredOutputSchema;
   webSearchEnabled: boolean;

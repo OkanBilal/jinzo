@@ -116,9 +116,9 @@ export default function Sidebar() {
                 onClick={handleNewClick}
                 icon={
                   sidebarConfig.itemType === "workspace" ? (
-                    <Plus className="w-4 h-4 text-primary-900 dark:text-primary-400" />
+                    <Plus className="w-4 h-4 text-primary-900 dark:text-primary-100" />
                   ) : (
-                    <Edit className="w-4 h-4 text-primary-900 dark:text-primary-400" />
+                    <Edit className="w-4 h-4 text-primary-900 dark:text-primary-100" />
                   )
                 }
                 title={sidebarConfig.title}

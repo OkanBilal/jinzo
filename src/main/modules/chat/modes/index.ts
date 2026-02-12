@@ -1,3 +1,3 @@
 export { handleChatMode } from "./chat";
 export { handleRAGMode } from "./rag";
-export { handleMCPMode } from "./mcp";
+export { handleToolMode } from "./tool";

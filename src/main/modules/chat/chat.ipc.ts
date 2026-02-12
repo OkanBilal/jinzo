@@ -1,7 +1,7 @@
 import { ipcMain } from "electron";
 import { chatController } from "./chat.controller";
 import { getChatConfig, updateChatConfig } from "./chat.config";
-import { handleChatMode, handleRAGMode, handleMCPMode } from "./modes";
+import { handleChatMode, handleRAGMode, handleToolMode } from "./modes";
 import {
   getCachedResponse,
   sendStreamError,
@@ -173,8 +173,8 @@ export function registerChatHandlers(): void {
 
       (async () => {
         try {
-          if (toolMode === "mcp") {
-            await handleMCPMode(
+          if (toolMode === "tool") {
+            await handleToolMode(
               question,
               model,
               sessionId,

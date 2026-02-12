@@ -28,7 +28,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
   const title = entity.title || `Issue #${iss.number ?? "?"}`;
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto noscrollbar">
       <div className="max-w-210 mx-auto pt-12 pb-24 px-6 space-y-6">
         <div className="space-y-3">
           {/* Title */}

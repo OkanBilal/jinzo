@@ -1,17 +1,16 @@
 import ollama from "ollama";
 import type { Message, Tool } from "ollama";
-
 import { getChatConfig } from "../chat.config";
 import { sendStreamChunk, sendStreamFinal, mergeOptionsWithConfig, saveMessage, getConversationHistory, estimateTokens, calculateHistoryTokenBudget } from "../utils";
 import type { ChatOptions } from "../chat.dto";
-import { getMCPClient } from "../../../modules/mcp/mcp.client";
+import { getMCPClient } from "../../mcp/mcp.client";
 
-const MCP_SYSTEM_PROMPT =
+const TOOL_SYSTEM_PROMPT =
   "You are a helpful assistant with access to management tools. Use the available tools to answer user questions about their management items.";
 
 const MAX_TOOL_ITERATIONS = 5;
 
-export async function handleMCPMode(
+export async function handleToolMode(
   question: string,
   model: string,
   sessionId: number,
@@ -23,14 +22,14 @@ export async function handleMCPMode(
   const mcpClient = getMCPClient();
   const tools = mcpClient.getTools();
 
-  const systemPromptTokens = estimateTokens(MCP_SYSTEM_PROMPT);
+  const systemPromptTokens = estimateTokens(TOOL_SYSTEM_PROMPT);
   const questionTokens = estimateTokens(question);
   const historyTokenBudget = calculateHistoryTokenBudget(systemPromptTokens, questionTokens);
 
   const history = await getConversationHistory(sessionId, { maxTokens: historyTokenBudget });
 
   const messages: Message[] = [
-    { role: "system", content: MCP_SYSTEM_PROMPT },
+    { role: "system", content: TOOL_SYSTEM_PROMPT },
     ...history,
     { role: "user", content: question },
   ];
@@ -103,7 +102,7 @@ export async function handleMCPMode(
     sources: [],
     sessionId,
     metadata: {
-      queryType: "mcp",
+      queryType: "tool",
       totalRetrieved: 0,
       usedInContext: toolCalls.length,
       cached: false,
