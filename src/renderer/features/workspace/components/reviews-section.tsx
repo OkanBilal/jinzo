@@ -82,13 +82,13 @@ export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
               )
             }
             className=" flex items-center px-1 gap-3 py-2.5 
-               transition-colors cursor-pointer
+               transition-colors cursor-pointer min-w-0 flex-1
              "
           >
-            <Document className="size-4.5 text-primary-200 " />
+            <Document className="size-4.5 text-primary-200 shrink-0" />
 
-            <div className="flex flex-col items-start gap-0.5 ">
-              <span className="text-[13px] font-semibold text-primary-800 dark:text-primary-200 truncate ">
+            <div className="flex flex-col items-start gap-0.5 min-w-0">
+              <span className="text-[13px] font-semibold text-primary-800 dark:text-primary-200 truncate max-w-full">
                 {review.title}
               </span>
               <span className="text-[10px] text-primary-400 dark:text-primary-300 ">

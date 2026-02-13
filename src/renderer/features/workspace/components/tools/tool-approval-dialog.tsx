@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { Question } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import type { ToolApprovalRequest } from "../../hooks";
+import { ToolInputPreview } from "./tool-input-preview";
 
 interface ToolApprovalDialogProps {
   request: ToolApprovalRequest;
@@ -50,12 +51,10 @@ export function ToolApprovalDialog({
     [request.multiSelect],
   );
 
-    //TODO: handle content details for different tool types, e.g. show command description, model info, etc. For now we just show a JSON preview of the input. We can enhance this later based on the tool type.
-
   if (request.kind === "ask_user") {
     return (
       <div className="mx-auto max-w-210 px-4 mb-4">
-        <div className="rounded-lg border border-primary-200/20 dark:border-primary-700/30 bg-primary-50/50 dark:bg-primary-900/20 p-4 space-y-3">
+        <div className="rounded-xl  border border-primary-200/20 dark:border-primary-700/30 bg-primary-50/50 dark:bg-primary/3 p-4 space-y-3">
           <div className="flex items-start gap-2">
             <Question className="size-4 text-primary-400 mt-0.5 shrink-0" />
             <div className="space-y-3 flex-1 min-w-0">
@@ -98,13 +97,20 @@ export function ToolApprovalDialog({
                   className="flex-1 bg-primary-100/50 dark:bg-primary-800/30 border border-primary-200/20 dark:border-primary-700/30 rounded-md px-3 py-1.5 text-xs text-primary-200 dark:text-primary-300 placeholder:text-primary-400 dark:placeholder:text-primary-500 focus:outline-none focus:border-primary-400/50"
                 />
                 <Button
-                  variant="submit"
+                  variant="primary"
+                  size="sm"
+                  className="min-w-16"
                   onClick={handleSubmitAnswer}
                   disabled={selectedOptions.length === 0 && !freeText.trim()}
                 >
                   Submit
                 </Button>
-                <Button variant="danger" onClick={handleDeny}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="min-w-16"
+                  onClick={handleDeny}
+                >
                   Dismiss
                 </Button>
               </div>
@@ -116,13 +122,10 @@ export function ToolApprovalDialog({
   }
 
   // tool_approval mode
-  const inputPreview = sanitizeToolInput(request.toolInput);
-
   return (
     <div className="mr-auto max-w-160 mb-4">
       <div className=" space-y-3 bg-primary-50/50 dark:bg-primary/3 rounded-xl p-5 ">
         <div className="flex items-start gap-2">
-
           <div className="space-y-2 flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-primary-200 dark:text-primary-300 mb-2">
@@ -133,17 +136,26 @@ export function ToolApprovalDialog({
               </span>
             </div>
 
-            {inputPreview && (
-              <pre className="text-[12px] text-primary-400 dark:text-primary-500 bg-primary-100/30 dark:bg-primary/5 rounded-lg px-3 py-3 overflow-x-auto max-h-40 whitespace-pre-wrap break-all">
-                {inputPreview}
-              </pre>
-            )}
+            <ToolInputPreview
+              toolName={request.toolName}
+              toolInput={request.toolInput}
+            />
 
-            <div className="flex items-center gap-3 pt-2">
-              <Button variant="primary" size="sm" className="min-w-16" onClick={handleAllow}>
+            <div className="flex items-center gap-2 pt-2">
+              <Button
+                variant="primary"
+                size="sm"
+                className="min-w-16"
+                onClick={handleAllow}
+              >
                 Allow
               </Button>
-              <Button variant="secondary" size="sm" className="min-w-16" onClick={handleDeny}>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="min-w-16"
+                onClick={handleDeny}
+              >
                 Deny
               </Button>
             </div>
@@ -152,21 +164,4 @@ export function ToolApprovalDialog({
       </div>
     </div>
   );
-}
-
-/**
- * Create a safe, truncated preview of tool input for display.
- */
-function sanitizeToolInput(input?: Record<string, unknown>): string | null {
-  if (!input || Object.keys(input).length === 0) return null;
-
-  try {
-    const str = JSON.stringify(input, null, 2);
-    if (str.length > 500) {
-      return str.slice(0, 500) + "\n...";
-    }
-    return str;
-  } catch {
-    return null;
-  }
 }

@@ -53,7 +53,7 @@ export function ToolCallGroup({
       </button>
 
       {isExpanded && (
-        <div className="space-y-1 max-h-160 overflow-y-auto bg-primary-100/30 dark:bg-primary-950/30">
+        <div className="space-y-1 max-h-160 overflow-y-auto  ">
           {groupConsecutiveToolCalls(group.events).map((subGroup) => (
             <ToolSubGroupAccordion key={subGroup.id} subGroup={subGroup} />
           ))}

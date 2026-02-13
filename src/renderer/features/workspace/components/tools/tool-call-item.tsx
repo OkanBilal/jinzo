@@ -4,6 +4,7 @@ import { parseToolContent } from "../../utils/parse-tool-content";
 import { getToolType } from "../../utils/group-tool-calls";
 import { TodoListDisplay, type TodoItem } from "./todo-list-display";
 import { TaskDisplay, type TaskParams } from "./task-display";
+import { ExitPlanDisplay, type ExitPlanParams } from "./exit-plan-display";
 
 interface ToolCallItemProps {
   event: RunEvent;
@@ -24,6 +25,19 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     if (todos && Array.isArray(todos)) {
       return <TodoListDisplay todos={todos as TodoItem[]} />;
     }
+  }
+
+  // Show ExitPlanDisplay for ExitPlanMode tool calls
+  if (toolName.toLowerCase() === "exitplanmode") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const planParams: ExitPlanParams = metadataInput
+      ? (metadataInput as ExitPlanParams)
+      : params
+        ? (params as ExitPlanParams)
+        : { plan: summary };
+    return <ExitPlanDisplay params={planParams} />;
   }
 
   // Show TaskDisplay for task tool calls - prefer metadata.input over parsed content
