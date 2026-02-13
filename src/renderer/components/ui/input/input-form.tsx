@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, useCallback, useEffect, useRef } from "react";
 import type { InputVariant } from "./send-button";
 
 interface InputFormProps {
@@ -24,12 +24,36 @@ const variantStyles = {
   },
 };
 
-export const InputForm = forwardRef<HTMLInputElement, InputFormProps>(
+export const InputForm = forwardRef<HTMLTextAreaElement, InputFormProps>(
   function InputForm(
     { query, onQueryChange, onSubmit, placeholder, variant = "default" },
     ref,
   ) {
     const styles = variantStyles[variant];
+    const internalRef = useRef<HTMLTextAreaElement | null>(null);
+
+    const setRefs = useCallback(
+      (node: HTMLTextAreaElement | null) => {
+        internalRef.current = node;
+        if (typeof ref === "function") {
+          ref(node);
+        } else if (ref) {
+          (ref as React.RefObject<HTMLTextAreaElement | null>).current = node;
+        }
+      },
+      [ref],
+    );
+
+    const autoResize = useCallback(() => {
+      const el = internalRef.current;
+      if (!el) return;
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    }, []);
+
+    useEffect(() => {
+      autoResize();
+    }, [query, autoResize]);
 
     return (
       <form
@@ -40,15 +64,21 @@ export const InputForm = forwardRef<HTMLInputElement, InputFormProps>(
         aria-label="Feed input form"
         className="relative"
       >
-        <input
-          ref={ref}
-          type="text"
+        <textarea
+          ref={setRefs}
           value={query}
+          rows={1}
           onChange={(e) => onQueryChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              onSubmit();
+            }
+          }}
           placeholder={placeholder}
-          className={`rounded-3xl w-full px-6 py-5 placeholder:text-md outline-none ${styles.input}`}
+          className={`rounded-3xl w-full pl-6 pr-16 py-5 placeholder:text-md outline-none resize-none overflow-hidden ${styles.input}`}
         />
-        <kbd className="absolute cursor-default right-4 top-1/3 -translate-y-1/2 px-1.5 py-0.5 text-[11px] font-sans text-primary-400 dark:text-primary-500 ">
+        <kbd className="absolute cursor-default right-4 top-5 px-1.5 py-0.5 text-[11px] font-sans text-primary-400 dark:text-primary-500 ">
           ⌘ P to focus
         </kbd>
       </form>

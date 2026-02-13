@@ -328,7 +328,7 @@ export function StructuredOutputModal({
         {/* Header + Tabs */}
         <div className="flex items-center justify-between p-6">
           <div className="flex items-center gap-4">
-            <Heading3>Structured outputs</Heading3>
+            <Heading3>Structured Outputs</Heading3>
             <div className="relative flex items-center rounded-xl bg-primary-950/4 dark:bg-primary/6 p-0.5">
               {/* Sliding background indicator */}
               <div

@@ -30,7 +30,7 @@ export function StructuredOutput({
         </Body>
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-sm text-primary-500 dark:text-primary-400">
+        <span className="text-xs text-primary-500 dark:text-primary-200">
           {selectedSchemaName}
         </span>
         <Button

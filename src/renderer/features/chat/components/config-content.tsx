@@ -33,7 +33,7 @@ export function ConfigContent() {
   return (
     <div className="flex-1 overflow-auto noscrollbar p-3">
       <div className="flex items-center justify-between pt-6 pb-4 ">
-        <Body className="text-left text-base! font-medium ">Configuration</Body>
+        <Body className="text-left text-base! font-medium ">Chat Settings</Body>
       </div>
       <div className="flex flex-col gap-3">
         <ConfigSection title="Model">
@@ -70,19 +70,7 @@ export function ConfigContent() {
             </ConfigSection>
           </div>
         )}
-        <ConfigSection title="Temperature">
-          <Slider
-            value={config?.temperature ?? 0.7}
-            onChange={handleTemperatureChange}
-            min={0}
-            max={2}
-            step={0.01}
-            label="Temperature"
-            minLabel="More Focused"
-            maxLabel="More Creative"
-          />
-        </ConfigSection>
-        <ConfigSection title="Mode">
+        <ConfigSection title="Interaction Mode">
           <Select
             value={displayMode}
             options={toolModeOptions}
@@ -94,7 +82,7 @@ export function ConfigContent() {
               <Toggle
                 enabled={useTools}
                 onChange={handleUseToolsChange}
-                label="Use Tools"
+                label="Enable Tools"
               />
               <StructuredOutput
                 onEditClick={() => setIsStructuredOutputModalOpen(true)}
@@ -102,8 +90,20 @@ export function ConfigContent() {
             </div>
           )}
         </ConfigSection>
-        <Body className="px-1">Advanced</Body>
-        <ConfigSection title="Probability Threshold (Top P)">
+        <Body className="px-1">Generation</Body>
+        <ConfigSection title="Temperature">
+          <Slider
+            value={config?.temperature ?? 0.7}
+            onChange={handleTemperatureChange}
+            min={0}
+            max={2}
+            step={0.01}
+            label="Temperature"
+            minLabel="Deterministic"
+            maxLabel=" Creative"
+          />
+        </ConfigSection>
+        <ConfigSection title="Top P">
           <Slider
             value={config?.top_p ?? 1}
             onChange={handleTopPChange}
@@ -111,8 +111,8 @@ export function ConfigContent() {
             max={1}
             step={0.01}
             label="Top P"
-            minLabel="More Focused"
-            maxLabel="More Diverse"
+            minLabel="Narrow"
+            maxLabel="Expansive"
           />
         </ConfigSection>
         <ConfigSection title="Stop Sequences">
@@ -121,7 +121,6 @@ export function ConfigContent() {
             onChange={handleStopSequenceChange}
           />
         </ConfigSection>
-
       </div>
       <StructuredOutputModal
         isOpen={isStructuredOutputModalOpen}

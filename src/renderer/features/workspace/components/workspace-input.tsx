@@ -70,7 +70,7 @@ export function WorkspaceInput({
   workspacePath,
 }: WorkspaceInputProps) {
   const dispatch = useDispatch();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);

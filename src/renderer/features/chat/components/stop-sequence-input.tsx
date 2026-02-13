@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Caption } from "@/components/ui/text";
+import { Close } from "@/components/ui/icons";
 
 interface StopSequenceInputProps {
   sequences: string[];
@@ -65,7 +66,7 @@ export function StopSequenceInput({
               text-primary-800 dark:text-primary-200
             "
           >
-            <span className="max-w-32 truncate font-mono">{seq}</span>
+            <span className="max-w-32 truncate ">{seq}</span>
             <button
               type="button"
               onClick={(e) => {
@@ -74,22 +75,12 @@ export function StopSequenceInput({
               }}
               className="
                 ml-0.5 rounded-full
-                text-primary-500 hover:text-primary-900
+                text-primary-700 hover:text-primary-900
                 dark:text-primary-400 dark:hover:text-primary-100
                 transition-colors
               "
             >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 12 12"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              >
-                <path d="M3 3l6 6M9 3l-6 6" />
-              </svg>
+              <Close className="size-2.5" />
             </button>
           </span>
         ))}
@@ -108,14 +99,14 @@ export function StopSequenceInput({
           className="
             flex-1 min-w-20 bg-transparent
             text-sm text-primary-900 dark:text-primary-200
-            placeholder:text-primary-600 dark:placeholder:text-primary-300
+            placeholder:text-primary-700 dark:placeholder:text-primary-300
             outline-none border-none p-0
           "
         />
       </div>
-      <Caption className="text-primary-700! dark:text-primary-200! text-xs">
+      {/* <Caption className="text-primary-800! dark:text-primary-200! text-xs">
         Sequences where the model will stop generating.
-      </Caption>
+      </Caption> */}
     </div>
   );
 }
