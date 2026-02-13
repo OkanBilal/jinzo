@@ -137,6 +137,7 @@ export async function handleRAGMode(
       options: {
         temperature: mergedOptions.temperature,
         top_p: mergedOptions.top_p,
+        ...(mergedOptions.stop.length > 0 && { stop: mergedOptions.stop }),
       },
     });
 
@@ -150,6 +151,7 @@ export async function handleRAGMode(
       options: {
         temperature: mergedOptions.temperature,
         top_p: mergedOptions.top_p,
+        ...(mergedOptions.stop.length > 0 && { stop: mergedOptions.stop }),
       },
     });
 

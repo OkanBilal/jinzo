@@ -6,6 +6,7 @@ export interface MergedChatOptions {
   top_p: number;
   topK: number;
   minScore: number;
+  stop: string[];
   toolMode: "chat" | "rag" | "tool";
   noCache?: boolean;
   includeMetadata?: boolean;
@@ -22,6 +23,7 @@ export function mergeOptionsWithConfig(
     top_p: options.top_p ?? config.top_p,
     topK: options.topK ?? config.topK,
     minScore: options.minScore ?? config.minScore,
+    stop: config.stop ?? [],
     toolMode: ((options as any).toolMode ?? config.toolMode) as "chat" | "rag" | "tool",
     noCache: options.noCache,
     includeMetadata: options.includeMetadata,

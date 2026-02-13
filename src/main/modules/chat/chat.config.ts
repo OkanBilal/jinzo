@@ -10,6 +10,7 @@ const DEFAULT_CONFIG: ChatConfig = {
   top_p: 0.9,
   topK: 10,
   minScore: 0.1,
+  stop: [],
   selectedModel: "gpt-oss:120b-cloud",
   toolMode: "chat",
   structuredOutputEnabled: false,
@@ -41,6 +42,10 @@ export function updateChatConfig(payload: Partial<ChatConfig>): ChatConfig {
 
   if (typeof payload.minScore === "number") {
     chatConfig.minScore = Math.max(0, Math.min(1, payload.minScore));
+  }
+
+  if (Array.isArray(payload.stop)) {
+    chatConfig.stop = payload.stop.filter((s) => typeof s === "string");
   }
 
   if (typeof payload.selectedModel === "string") {

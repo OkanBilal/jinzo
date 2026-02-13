@@ -49,6 +49,14 @@ export function useChatPanelConfig() {
     await updateConfig({ temperature: value });
   };
 
+  const handleTopPChange = async (value: number) => {
+    await updateConfig({ top_p: value });
+  };
+
+  const handleStopSequenceChange = async (sequences: string[]) => {
+    await updateConfig({ stop: sequences });
+  };
+
   const handleModelChange = (model: string) => {
     dispatch(setSelectedModel(model));
     updateConfig({ selectedModel: model });
@@ -109,6 +117,8 @@ export function useChatPanelConfig() {
     modelOptions,
     toolModeOptions,
     handleTemperatureChange,
+    handleTopPChange,
+    handleStopSequenceChange,
     handleModelChange,
     handleThinkingLevelChange,
     handleThinkingEnabledChange,

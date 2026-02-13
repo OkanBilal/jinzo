@@ -2,6 +2,7 @@ import { Body } from "@/components/ui/text";
 import { Slider } from "@/components/ui/slider";
 import { Toggle } from "@/components/ui/toggle";
 import Select from "@/components/ui/select";
+import { StopSequenceInput } from "./stop-sequence-input";
 import { StructuredOutput } from "./structured-output-toggle";
 import { StructuredOutputModal } from "./structured-output-modal";
 import { useChatPanelConfig } from "@/features/chat/components/use-chat-panel-config";
@@ -19,6 +20,8 @@ export function ConfigContent() {
     modelOptions,
     toolModeOptions,
     handleTemperatureChange,
+    handleTopPChange,
+    handleStopSequenceChange,
     handleModelChange,
     handleThinkingLevelChange,
     handleThinkingEnabledChange,
@@ -87,7 +90,7 @@ export function ConfigContent() {
             placeholder="Select tool mode"
           />
           {displayMode === "chat" && (
-            <div className="mt-4 px-1">
+            <div className="mt-4 ">
               <Toggle
                 enabled={useTools}
                 onChange={handleUseToolsChange}
@@ -99,9 +102,26 @@ export function ConfigContent() {
             </div>
           )}
         </ConfigSection>
-        {/* <ConfigSection title="Advanced">
-          <Body>Advanced configuration options will appear here.</Body>
-        </ConfigSection> */}
+        <Body className="px-1">Advanced</Body>
+        <ConfigSection title="Probability Threshold (Top P)">
+          <Slider
+            value={config?.top_p ?? 1}
+            onChange={handleTopPChange}
+            min={0}
+            max={1}
+            step={0.01}
+            label="Top P"
+            minLabel="More Focused"
+            maxLabel="More Diverse"
+          />
+        </ConfigSection>
+        <ConfigSection title="Stop Sequences">
+          <StopSequenceInput
+            sequences={config?.stop ?? []}
+            onChange={handleStopSequenceChange}
+          />
+        </ConfigSection>
+
       </div>
       <StructuredOutputModal
         isOpen={isStructuredOutputModalOpen}

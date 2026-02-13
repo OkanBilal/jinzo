@@ -191,6 +191,7 @@ export interface ChatConfig {
   top_p: number;
   topK: number;
   minScore: number;
+  stop: string[];
   selectedModel: string;
   toolMode: "chat" | "rag" | "tool";
   structuredOutputEnabled: boolean;
