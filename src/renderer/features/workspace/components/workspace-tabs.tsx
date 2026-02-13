@@ -2,8 +2,10 @@ import { Plus } from "@/components/ui/icons";
 import { RunTab, getTabTitle } from "./run-tab";
 import { EditorTab } from "./editor-tab";
 import { IssueTab } from "./issue-tab";
+import { NoteTab } from "./note-tab";
 import type { Run } from "../types";
 import type { IssueWithEntity } from "@/lib/redux/api";
+import type { ReviewTab as ReviewTabType } from "@/lib/redux/slices/workspaceSlice";
 import { useRef } from "react";
 
 interface WorkspaceTabsProps {
@@ -12,6 +14,7 @@ interface WorkspaceTabsProps {
   hasSelectedFile?: boolean;
   fileName?: string;
   issueTabs: IssueWithEntity[];
+  noteTabs?: ReviewTabType[];
   variant?: "workspace" | "claude";
   onSelectEditorTab: () => void;
   onSelectRunTab: (runId: string) => void;
@@ -19,6 +22,8 @@ interface WorkspaceTabsProps {
   onNewRun: () => void;
   onSelectIssueTab: (entityId: string) => void;
   onCloseIssueTab: (entityId: string, e: React.MouseEvent) => void;
+  onSelectNoteTab?: (noteId: string) => void;
+  onCloseNoteTab?: (noteId: string, e: React.MouseEvent) => void;
   onCloseEditorTab?: (e: React.MouseEvent) => void;
 }
 
@@ -28,6 +33,7 @@ export function WorkspaceTabs({
   hasSelectedFile,
   fileName,
   issueTabs,
+  noteTabs = [],
   variant = "workspace",
   onSelectEditorTab,
   onSelectRunTab,
@@ -35,6 +41,8 @@ export function WorkspaceTabs({
   onNewRun,
   onSelectIssueTab,
   onCloseIssueTab,
+  onSelectNoteTab,
+  onCloseNoteTab,
   onCloseEditorTab,
 }: WorkspaceTabsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -93,6 +101,21 @@ export function WorkspaceTabs({
                 isActive={activeTab === tabId}
                 onClick={() => onSelectIssueTab(issue.issue.entityId)}
                 onClose={(e) => onCloseIssueTab(issue.issue.entityId, e)}
+                variant={variant}
+              />
+            </div>
+          );
+        })}
+
+        {noteTabs.map((note) => {
+          const tabId = `note:${note.id}`;
+          return (
+            <div key={tabId} ref={setTabRef(tabId)}>
+              <NoteTab
+                review={note}
+                isActive={activeTab === tabId}
+                onClick={() => onSelectNoteTab?.(note.id)}
+                onClose={(e) => onCloseNoteTab?.(note.id, e)}
                 variant={variant}
               />
             </div>

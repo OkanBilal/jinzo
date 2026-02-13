@@ -180,11 +180,12 @@ export const FileExplorer = memo(function FileExplorer({
         aria-label="File explorer"
         className="flex-1 overflow-auto py-1 space-y-0.5 noscrollbar"
       >
-        {tree.children?.map((child) => (
+        {tree.children?.map((child,index) => (
           <FileTreeNode
             key={child.fullPath}
             node={child}
             depth={0}
+            index={index}
             selectedPath={selectedPath}
             onSelect={handleSelect}
             onExpand={handleExpand}

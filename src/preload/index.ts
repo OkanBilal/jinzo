@@ -461,6 +461,19 @@ const api = {
       answer?: string;
     }) => ipcRenderer.invoke("runs:toolApprovalResponse", response),
   },
+  // Reviews operations
+  reviews: {
+    getByWorkspace: (workspaceId: string, limit?: number) =>
+      ipcRenderer.invoke("reviews:getByWorkspace", workspaceId, limit),
+    getById: (id: string) =>
+      ipcRenderer.invoke("reviews:getById", id),
+    create: (payload: unknown) =>
+      ipcRenderer.invoke("reviews:create", payload),
+    update: (id: string, payload: unknown) =>
+      ipcRenderer.invoke("reviews:update", id, payload),
+    delete: (id: string) =>
+      ipcRenderer.invoke("reviews:delete", id),
+  },
   // Run diff operations
   runDiff: {
     get: (runId: string) => ipcRenderer.invoke("runDiff:get", runId),

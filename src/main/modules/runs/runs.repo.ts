@@ -256,6 +256,9 @@ export const runsRepo = {
   // ─────────────────────────────────────────────────────────────
   // Run Diff Operations
   // ─────────────────────────────────────────────────────────────
+
+  //TODO: think about try insert each session
+
   async insertRunDiff(payload: {
     id: string;
     runId: string;
@@ -265,14 +268,25 @@ export const runsRepo = {
     statsJson?: string;
   }): Promise<string> {
     const db = getDb();
-    await db.insert(runDiffs).values({
-      id: payload.id,
-      runId: payload.runId,
-      baseRef: payload.baseRef ?? null,
-      diffText: payload.diffText,
-      filesJson: payload.filesJson ?? null,
-      statsJson: payload.statsJson ?? null,
-    });
+    await db
+      .insert(runDiffs)
+      .values({
+        id: payload.id,
+        runId: payload.runId,
+        baseRef: payload.baseRef ?? null,
+        diffText: payload.diffText,
+        filesJson: payload.filesJson ?? null,
+        statsJson: payload.statsJson ?? null,
+      })
+      .onConflictDoUpdate({
+        target: runDiffs.runId,
+        set: {
+          baseRef: payload.baseRef ?? null,
+          diffText: payload.diffText,
+          filesJson: payload.filesJson ?? null,
+          statsJson: payload.statsJson ?? null,
+        },
+      });
     return payload.id;
   },
 

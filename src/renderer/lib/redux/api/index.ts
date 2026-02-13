@@ -365,6 +365,21 @@ export type {
 } from "./runsApi";
 
 export {
+  reviewsApi,
+  useGetReviewsByWorkspaceQuery,
+  useGetReviewByIdQuery,
+  useCreateReviewMutation,
+  useUpdateReviewMutation,
+  useDeleteReviewMutation,
+} from "./reviewsApi";
+export type {
+  Review,
+  ReviewStatus,
+  CreateReviewPayload,
+  UpdateReviewPayload,
+} from "./reviewsApi";
+
+export {
   workspaceResourcesApi,
   useGetWorkspaceResourcesQuery,
   useGetAvailableResourcesQuery,

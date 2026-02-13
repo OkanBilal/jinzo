@@ -32,6 +32,7 @@ import { augmentPathForPackagedApp } from "./modules/providers/providers.utils";
 import { registerToolsIpc, unregisterToolsIpc } from "./modules/tools";
 import { registerWorkspacesIpc, unregisterWorkspacesIpc } from "./modules/workspaces";
 import { registerRunsIpc, unregisterRunsIpc } from "./modules/runs";
+import { registerReviewsIpc, unregisterReviewsIpc } from "./modules/reviews";
 import { registerFileExplorerIpc, unregisterFileExplorerIpc } from "./modules/fileExplorer";
 import { registerGitIpc, unregisterGitIpc } from "./modules/git";
 import {
@@ -88,6 +89,7 @@ async function initializeApp() {
     registerGitIpc();
     registerWorkspaceResourcesHandlers();
     registerTerminalIpc();
+    registerReviewsIpc();
 
     // Shell utilities
     ipcMain.handle("shell:openExternal", async (_, url: string) => {
@@ -151,6 +153,7 @@ async function cleanupApp() {
     unregisterGitIpc();
     unregisterWorkspaceResourcesHandlers();
     unregisterTerminalIpc();
+    unregisterReviewsIpc();
     ipcMain.removeHandler("shell:openExternal");
     ipcMain.removeHandler("shell:openPath");
 

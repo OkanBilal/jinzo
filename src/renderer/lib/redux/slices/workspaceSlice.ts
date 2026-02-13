@@ -2,6 +2,12 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { FileNode, FileContentResponse } from "@/features/workspace/components/file-explorer";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 
+export interface ReviewTab {
+  id: string;
+  title: string;
+  status: string;
+}
+
 export interface ContextIssue {
   entityId: string;
   title: string;
@@ -24,6 +30,7 @@ export interface WorkspaceState {
   contextFiles: FileNode[];
   contextIssues: ContextIssue[];
   openIssueTabs: IssueWithEntity[];
+  openNoteTabs: ReviewTab[];
 }
 
 const initialState: WorkspaceState = {
@@ -39,6 +46,7 @@ const initialState: WorkspaceState = {
   contextFiles: [],
   contextIssues: [],
   openIssueTabs: [],
+  openNoteTabs: [],
 };
 
 const workspaceSlice = createSlice({
@@ -124,6 +132,22 @@ const workspaceSlice = createSlice({
     clearIssueTabs: (state) => {
       state.openIssueTabs = [];
     },
+    openNoteTab: (state, action: PayloadAction<ReviewTab>) => {
+      if (!state.openNoteTabs.some((t) => t.id === action.payload.id)) {
+        state.openNoteTabs.push(action.payload);
+      }
+      state.activeTab = `note:${action.payload.id}`;
+    },
+    closeNoteTab: (state, action: PayloadAction<string>) => {
+      const noteId = action.payload;
+      state.openNoteTabs = state.openNoteTabs.filter((t) => t.id !== noteId);
+      if (state.activeTab === `note:${noteId}`) {
+        state.activeTab = "editor";
+      }
+    },
+    clearNoteTabs: (state) => {
+      state.openNoteTabs = [];
+    },
   },
 });
 
@@ -147,6 +171,9 @@ export const {
   openIssueTab,
   closeIssueTab,
   clearIssueTabs,
+  openNoteTab,
+  closeNoteTab,
+  clearNoteTabs,
 } = workspaceSlice.actions;
 
 export default workspaceSlice.reducer;

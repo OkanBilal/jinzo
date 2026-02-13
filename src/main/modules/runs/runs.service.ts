@@ -2,6 +2,7 @@ import { runsRepo } from "./runs.repo";
 import { providersRepo } from "../providers/providers.repo";
 import { workspacesRepo } from "../workspaces/workspaces.repo";
 import { gitService } from "../git/git.service";
+import { reviewsService } from "../reviews/reviews.service";
 import {
   createWorkAdapter,
   type WorkRunEvent,
@@ -614,6 +615,56 @@ export const runsService = {
           } else {
             runBaseRefs.delete(runId);
           }
+            // TODO: consider only auto-creating review for succeeded runs, or at least include status in review title or metadata
+          // Auto-create review if the run used the review-code skill
+          try {
+            const toolCallRecords = await runsRepo.findToolCallsByRun(runId);
+            console.log(`[RunsService] Run ${runId} tool calls:`, toolCallRecords.map((tc) => ({
+              toolName: tc.toolName,
+              input: tc.input,
+              status: tc.status,
+            })));
+
+            const artifacts = await runsRepo.findArtifactsByRun(runId);
+            console.log(`[RunsService] Run ${runId} artifacts:`, artifacts.map((a) => ({
+              kind: a.kind,
+              contentLength: a.content?.length ?? 0,
+              contentPreview: a.content?.slice(0, 100) ?? null,
+            })));
+
+            const hasReviewSkill = toolCallRecords.some((tc) => {
+              if (tc.toolName !== "Skill") return false;
+              const input = tc.input as Record<string, unknown> | null;
+              return input?.skill === "review-code";
+            });
+
+            if (hasReviewSkill) {
+              const resultArtifact = [...artifacts]
+                .reverse()
+                .find((a) => a.kind === "report");
+
+              if (resultArtifact?.content) {
+                const firstLine = resultArtifact.content.split("\n")[0] || "";
+                const title = firstLine.replace(/^#+\s*/, "").slice(0, 120) || "Code Review";
+
+                await reviewsService.create({
+                  workspaceId: payload.workspaceId,
+                  runId,
+                  title,
+                  summary: resultArtifact.content,
+                  status: "open",
+                });
+
+                console.log(`[RunsService] Auto-created review for run ${runId}`);
+              } else {
+                console.log(`[RunsService] Review skill found but no "report" artifact for run ${runId}`);
+              }
+            } else {
+              console.log(`[RunsService] No review-code skill found in run ${runId}`);
+            }
+          } catch (err) {
+            console.error(`[RunsService] Failed to auto-create review for run ${runId}:`, err);
+          }
 
           console.log(
             `[RunsService] Run ${runId} completed with status: ${finalStatus}`,
@@ -785,7 +836,8 @@ export const runsService = {
             | "file"
             | "log"
             | "report"
-            | "command_result",
+            | "command_result"
+            | "result",
           path: event.path,
           content: event.content,
           contentHash: event.content ? hashContent(event.content) : undefined,

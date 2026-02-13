@@ -36,3 +36,18 @@ export function getIssueEntityId(tabId: string): string {
 export function makeIssueTabId(entityId: string): string {
   return `issue:${entityId}`;
 }
+
+/** Check if an activeTab ID represents a note tab. */
+export function isNoteTab(tabId: string): boolean {
+  return tabId.startsWith("note:");
+}
+
+/** Extract the noteId from a note tab ID. */
+export function getNoteId(tabId: string): string {
+  return tabId.slice(5);
+}
+
+/** Build a stable tab ID for a note. */
+export function makeNoteTabId(noteId: string): string {
+  return `note:${noteId}`;
+}

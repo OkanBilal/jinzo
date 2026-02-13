@@ -12,6 +12,7 @@ interface FileTreeNodeProps {
   onExpand?: (node: FileNode) => Promise<FileNode[] | undefined>;
   onAddToContext?: (node: FileNode) => void;
   defaultExpanded?: boolean;
+  index?: number;
 }
 
 export const FileTreeNode = memo(function FileTreeNode({
@@ -20,6 +21,7 @@ export const FileTreeNode = memo(function FileTreeNode({
   selectedPath,
   onSelect,
   onExpand,
+  index,
   onAddToContext,
   defaultExpanded = false,
 }: FileTreeNodeProps) {
@@ -92,14 +94,14 @@ export const FileTreeNode = memo(function FileTreeNode({
         onKeyDown={handleKeyDown}
         className={`
           group flex items-center h-7 cursor-pointer text-[13px]
-          transition-colors duration-75 rounded-lg
+          transition-colors duration-75 rounded-lg 
           ${
             isSelected
               ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary"
               : "text-primary-900 dark:text-primary-100 hover:bg-primary/20 dark:hover:bg-primary/5"
-          }
+          } ${index ? `animate-slide-in` : ""}
         `}
-        style={{ paddingLeft }}
+        style={{ paddingLeft, animationDelay: `${index ? index * 0.01 : 0}s` }}
       >
         <span className="w-4 h-4 flex items-center justify-center shrink-0">
           {isDirectory && showChevron && (

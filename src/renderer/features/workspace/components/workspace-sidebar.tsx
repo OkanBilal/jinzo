@@ -1,7 +1,9 @@
 import { useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { FileExplorer, type FileNode } from "@/features/workspace/components/file-explorer";
-import { Body } from "@/components/ui/text";
+import {
+  FileExplorer,
+  type FileNode,
+} from "@/features/workspace/components/file-explorer";
 import { useGetWorkspaceByIdQuery } from "@/lib/redux/api";
 import type { WorkspaceIssue } from "@/lib/redux/api";
 import {
@@ -17,6 +19,7 @@ import { FolderIcon } from "@/components/ui/icons/file-icons";
 import { IssuesSection } from "@/features/workspace/components/issues-section";
 import { TerminalSection } from "@/features/workspace/components/terminal-section";
 import { DiffSection } from "@/features/workspace/components/diff-section";
+import { ReviewsSection } from "@/features/workspace/components/reviews-section";
 import {
   isIssueTab,
   getIssueEntityId,
@@ -24,7 +27,7 @@ import {
 import { useActiveMood } from "@/hooks/use-active-mood";
 import { Button } from "@/components/ui/button";
 
-type SidebarTab = "files" | "changes";
+type SidebarTab = "files" | "changes" | "reviews";
 
 export function WorkspaceSidebar() {
   const dispatch = useDispatch();
@@ -73,14 +76,16 @@ export function WorkspaceSidebar() {
   );
   const handleAddIssueToContext = useCallback(
     (issue: WorkspaceIssue) => {
-      dispatch(addContextIssue({
-        entityId: issue.issue.entityId,
-        title: issue.entity.title || `Issue #${issue.issue.number ?? "?"}`,
-        body: issue.entity.body,
-        provider: issue.issue.provider,
-        number: issue.issue.number,
-        labels: issue.issue.labels,
-      }));
+      dispatch(
+        addContextIssue({
+          entityId: issue.issue.entityId,
+          title: issue.entity.title || `Issue #${issue.issue.number ?? "?"}`,
+          body: issue.entity.body,
+          provider: issue.issue.provider,
+          number: issue.issue.number,
+          labels: issue.issue.labels,
+        }),
+      );
     },
     [dispatch],
   );
@@ -90,18 +95,22 @@ export function WorkspaceSidebar() {
       setSelectedDiffFile(filePath);
       // Show the diff in the editor by setting file + content
       const fileName = filePath.split("/").pop() || filePath;
-      dispatch(setSelectedFile({
-        name: fileName + ".diff",
-        fullPath: filePath,
-        type: "file",
-        extension: "diff",
-      }));
-      dispatch(setSelectedFileContent({
-        content: diffContent,
-        size: diffContent.length,
-        isBinary: false,
-        encoding: "utf-8",
-      }));
+      dispatch(
+        setSelectedFile({
+          name: fileName + ".diff",
+          fullPath: filePath,
+          type: "file",
+          extension: "diff",
+        }),
+      );
+      dispatch(
+        setSelectedFileContent({
+          content: diffContent,
+          size: diffContent.length,
+          isBinary: false,
+          encoding: "utf-8",
+        }),
+      );
       dispatch(setActiveTab("editor"));
     },
     [dispatch],
@@ -117,7 +126,7 @@ export function WorkspaceSidebar() {
   // If no workspace ID or rootPath provided, show empty state
   if (!workspaceId || !rootPath) {
     return (
-      <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 -pb-4 rounded-2xl overflow-hidden">
+      <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 -pb-4 rounded-xl overflow-hidden">
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3 text-primary-700 dark:text-primary-200">
             <FolderIcon className="w-12 h-12" />
@@ -128,15 +137,26 @@ export function WorkspaceSidebar() {
     );
   }
 
+  const tabIndex =
+    sidebarTab === "files" ? 0 : sidebarTab === "changes" ? 1 : 2;
+
   return (
-    <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 -pb-4 rounded-2xl overflow-hidden">
+    <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 -pb-4 rounded-xl overflow-hidden">
       <div className="shrink-0 py-2 mt-8 px-3">
-        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-primary-100/60 dark:bg-primary/5">
+        <div className="relative flex items-center p-0.5 rounded-[10px] bg-primary-100/60 dark:bg-primary/4">
+          <div
+            className={`absolute top-0.5 bottom-0.5 rounded-lg ${moodSlug === "copilot" ? "glass-morphism-copilot" : "glass-morphism-claude"} transition-transform duration-200 ease-out`}
+            style={{
+              width: "calc((100% - 0.75rem) / 3)",
+              left: "0.125rem",
+              transform: `translateX(calc(${tabIndex} * (100% + 0.25rem)))`,
+            }}
+          />
           <Button
             onClick={() => setSidebarTab("files")}
-            className={`flex-1 text-xs font-medium py-1 px-2 rounded-md transition-colors ${
+            className={`relative z-10 flex-1 text-xs font-medium py-1 px-2 rounded-lg transition-colors ${
               sidebarTab === "files"
-                ? "bg-primary dark:bg-primary/10 text-primary-900 dark:text-primary-100 shadow-xs"
+                ? "text-primary-900 dark:text-primary-100"
                 : "text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200"
             }`}
           >
@@ -144,13 +164,23 @@ export function WorkspaceSidebar() {
           </Button>
           <Button
             onClick={() => setSidebarTab("changes")}
-            className={`flex-1 text-xs font-medium py-1 px-2 rounded-md transition-colors ${
+            className={`relative z-10 flex-1 text-xs font-medium py-1 px-2 rounded-lg transition-colors ${
               sidebarTab === "changes"
-                ? "bg-primary dark:bg-primary/10 text-primary-900 dark:text-primary-100 shadow-xs"
+                ? "text-primary-900 dark:text-primary-100"
                 : "text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200"
             }`}
           >
             Changes
+          </Button>
+          <Button
+            onClick={() => setSidebarTab("reviews")}
+            className={`relative z-10 flex-1 text-xs font-medium py-1 px-2 rounded-lg transition-colors ${
+              sidebarTab === "reviews"
+                ? "text-primary-900 dark:text-primary-100"
+                : "text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200"
+            }`}
+          >
+            Reviews
           </Button>
         </div>
       </div>
@@ -177,7 +207,7 @@ export function WorkspaceSidebar() {
             onAddToContext={handleAddIssueToContext}
           />
         </>
-      ) : (
+      ) : sidebarTab === "changes" ? (
         /* Changes (diff) view */
         <div className="flex-1 px-3 flex flex-col min-h-0">
           <DiffSection
@@ -186,9 +216,16 @@ export function WorkspaceSidebar() {
             selectedDiffFile={selectedDiffFile}
           />
         </div>
+      ) : (
+        /* Reviews view */
+        <ReviewsSection workspaceId={workspaceId} />
       )}
 
-      <TerminalSection variant={moodSlug} workspaceId={workspaceId} rootPath={rootPath} />
+      <TerminalSection
+        variant={moodSlug}
+        workspaceId={workspaceId}
+        rootPath={rootPath}
+      />
     </div>
   );
 }

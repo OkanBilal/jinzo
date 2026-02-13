@@ -75,3 +75,5 @@ export { default as Duplicate } from "./duplicate";
 export { default as Notion } from "./notion";
 export { default as Figma } from "./figma";
 export { default as Diff } from "./diff";
+export { default as Notes } from "./notes";
+export { default as PullRequest } from "./pr";

@@ -24,9 +24,12 @@ import {
   clearContextIssues,
   closeIssueTab,
   clearIssueTabs,
+  openNoteTab,
+  closeNoteTab,
+  clearNoteTabs,
   setActiveWorkspaceId,
 } from "@/lib/redux/slices/workspaceSlice";
-import { isIssueTab } from "@/features/workspace/utils/repo-utils";
+import { isIssueTab, isNoteTab } from "@/features/workspace/utils/repo-utils";
 import type { RootState } from "@/lib/redux";
 import type {
   FileContentResponse,
@@ -56,6 +59,9 @@ export default function ClaudePage() {
   const openIssueTabs = useSelector(
     (state: RootState) => state.workspace.openIssueTabs,
   );
+  const openNoteTabs = useSelector(
+    (state: RootState) => state.workspace.openNoteTabs,
+  );
 
   const [goal, setGoal] = useState("");
   const [canResume, setCanResume] = useState(false);
@@ -79,6 +85,7 @@ export default function ClaudePage() {
     dispatch(clearContextFiles());
     dispatch(clearContextIssues());
     dispatch(clearIssueTabs());
+    dispatch(clearNoteTabs());
     dispatch(setActiveTab("editor"));
   }, [workspaceId, dispatch]);
 
@@ -159,7 +166,7 @@ export default function ClaudePage() {
   useEffect(() => {
     const checkResume = async () => {
       const runId =
-        activeTab !== "editor" && !isIssueTab(activeTab) ? activeTab : null;
+        activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab) ? activeTab : null;
       if (
         runId &&
         activeRun &&
@@ -177,7 +184,7 @@ export default function ClaudePage() {
 
   const handleExecute = useCallback(async () => {
     const currentRunId =
-      activeTab !== "editor" && !isIssueTab(activeTab) ? activeTab : null;
+      activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab) ? activeTab : null;
 
     let finalGoal = goal;
     if (contextFiles.length > 0) {
@@ -293,6 +300,21 @@ export default function ClaudePage() {
     [dispatch],
   );
 
+  const handleSelectNoteTab = useCallback(
+    (noteId: string) => {
+      dispatch(setActiveTab(`note:${noteId}`));
+    },
+    [dispatch],
+  );
+
+  const handleCloseNoteTab = useCallback(
+    (noteId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      dispatch(closeNoteTab(noteId));
+    },
+    [dispatch],
+  );
+
   const handleCloseEditorTab = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -306,7 +328,7 @@ export default function ClaudePage() {
 
   // Get the first pending approval for the active run tab
   const activeRunId =
-    activeTab !== "editor" && !isIssueTab(activeTab) ? activeTab : null;
+    activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab) ? activeTab : null;
   const currentApproval = activeRunId
     ? pendingApprovals.find((a) => a.runId === activeRunId)
     : undefined;
@@ -319,7 +341,7 @@ export default function ClaudePage() {
   );
 
   const showEmptyState =
-    runs.length === 0 && !selectedFile && openIssueTabs.length === 0;
+    runs.length === 0 && !selectedFile && openIssueTabs.length === 0 && openNoteTabs.length === 0;
 
   return (
     <div className="flex flex-col h-full dark:bg-claude-dark">
@@ -336,6 +358,7 @@ export default function ClaudePage() {
             hasSelectedFile={!!selectedFile}
             fileName={selectedFile?.name}
             issueTabs={openIssueTabs}
+            noteTabs={openNoteTabs}
             variant="claude"
             onSelectEditorTab={handleSelectEditorTab}
             onSelectRunTab={handleSelectRunTab}
@@ -343,6 +366,8 @@ export default function ClaudePage() {
             onNewRun={handleNewRun}
             onSelectIssueTab={handleSelectIssueTab}
             onCloseIssueTab={handleCloseIssueTab}
+            onSelectNoteTab={handleSelectNoteTab}
+            onCloseNoteTab={handleCloseNoteTab}
             onCloseEditorTab={handleCloseEditorTab}
             pendingApproval={currentApproval}
             onApprovalRespond={handleApprovalRespond}

@@ -72,6 +72,7 @@ export const baseApi = createApi({
     'WorkspaceResources',
     'WorkspaceIssues',
     'RunDiffs',
+    'Reviews',
   ],
   endpoints: () => ({}),
 });

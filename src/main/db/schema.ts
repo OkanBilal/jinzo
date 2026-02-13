@@ -298,7 +298,7 @@ export const runArtifacts = sqliteTable(
       .references(() => runs.id, { onDelete: "cascade" }),
 
     kind: text("kind", {
-      enum: ["patch", "file", "log", "report", "command_result"],
+      enum: ["patch", "file", "log", "report", "command_result", "result"],
     }).notNull(),
 
     // for files/patches
@@ -362,6 +362,44 @@ export const runDiffs = sqliteTable(
     check(
       "check_run_diffs_stats_json",
       sql`json_valid(${t.statsJson}) OR ${t.statsJson} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
+   REVIEWS (workspace-level review records)
+------------------------------ */
+
+export const reviews = sqliteTable(
+  "reviews",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").references(() => workspaces.id, {
+      onDelete: "set null",
+    }),
+    title: text("title").notNull(),
+    summary: text("summary"),
+    status: text("status", {
+      enum: ["open", "in_review", "approved", "rejected"],
+    })
+      .notNull()
+      .default("open"),
+    runId: text("run_id").references(() => runs.id, { onDelete: "set null" }),
+    metadata: text("metadata"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_reviews_workspace").on(t.workspaceId),
+    index("idx_reviews_status").on(t.status),
+    index("idx_reviews_updated").on(t.updatedAt),
+    check(
+      "check_reviews_metadata_json",
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
     ),
   ],
 );

@@ -3,10 +3,12 @@ import { WorkspaceTabs } from "./workspace-tabs";
 import { ToolCallGroup, InfoGroup, groupEvents } from "./tools/tool-call-group";
 import { EditorContent } from "./editor-content";
 import { IssueTabContent } from "./issue-tab-content";
+import { NoteTabContent } from "./note-tab-content";
 import { WorkspaceEmptyState } from "./workspace-empty-state";
 import type { Run, RunEvent, Workspace } from "../types";
 import type { IssueWithEntity } from "@/lib/redux/api";
-import { isIssueTab, getIssueEntityId } from "../utils/repo-utils";
+import type { ReviewTab } from "@/lib/redux/slices/workspaceSlice";
+import { isIssueTab, getIssueEntityId, isNoteTab, getNoteId } from "../utils/repo-utils";
 import { AsciiLoader } from "./ascii-loader";
 import type { ToolApprovalRequest } from "../hooks/use-tool-approval";
 import { ToolApprovalDialog } from "./tools/tool-approval-dialog";
@@ -20,6 +22,7 @@ interface WorkspaceEventsProps {
   hasSelectedFile?: boolean;
   fileName?: string;
   issueTabs: IssueWithEntity[];
+  noteTabs?: ReviewTab[];
   variant?: "workspace" | "claude";
   onSelectEditorTab: () => void;
   onSelectRunTab: (runId: string) => void;
@@ -27,6 +30,8 @@ interface WorkspaceEventsProps {
   onNewRun: () => void;
   onSelectIssueTab: (entityId: string) => void;
   onCloseIssueTab: (entityId: string, e: React.MouseEvent) => void;
+  onSelectNoteTab?: (noteId: string) => void;
+  onCloseNoteTab?: (noteId: string, e: React.MouseEvent) => void;
   onCloseEditorTab?: (e: React.MouseEvent) => void;
   pendingApproval?: ToolApprovalRequest;
   onApprovalRespond?: (requestId: string, approved: boolean, answer?: string) => void;
@@ -41,6 +46,7 @@ export function WorkspaceEvents({
   hasSelectedFile,
   fileName,
   issueTabs,
+  noteTabs = [],
   variant = "workspace",
   onSelectEditorTab,
   onSelectRunTab,
@@ -48,17 +54,21 @@ export function WorkspaceEvents({
   onNewRun,
   onSelectIssueTab,
   onCloseIssueTab,
+  onSelectNoteTab,
+  onCloseNoteTab,
   onCloseEditorTab,
   pendingApproval,
   onApprovalRespond,
 }: WorkspaceEventsProps) {
   const isEditorActive = activeTab === "editor";
   const isIssueActive = isIssueTab(activeTab);
+  const isNoteActive = isNoteTab(activeTab);
   const activeIssue = isIssueActive
     ? issueTabs.find((t) => t.issue.entityId === getIssueEntityId(activeTab))
     : null;
+  const activeNoteId = isNoteActive ? getNoteId(activeTab) : null;
   const hasRunContent =
-    !isEditorActive && !isIssueActive && currentEvents.length > 0;
+    !isEditorActive && !isIssueActive && !isNoteActive && currentEvents.length > 0;
 
   // Check if current run is still running
   const activeRun = runs.find((r) => r.id === activeTab);
@@ -82,6 +92,7 @@ export function WorkspaceEvents({
           hasSelectedFile={hasSelectedFile}
           fileName={fileName}
           issueTabs={issueTabs}
+          noteTabs={noteTabs}
           variant={variant}
           onSelectEditorTab={onSelectEditorTab}
           onSelectRunTab={onSelectRunTab}
@@ -89,6 +100,8 @@ export function WorkspaceEvents({
           onNewRun={onNewRun}
           onSelectIssueTab={onSelectIssueTab}
           onCloseIssueTab={onCloseIssueTab}
+          onSelectNoteTab={onSelectNoteTab}
+          onCloseNoteTab={onCloseNoteTab}
           onCloseEditorTab={onCloseEditorTab}
         />
       </div>
@@ -99,6 +112,8 @@ export function WorkspaceEvents({
           <EditorContent className="h-full" />
         ) : isIssueActive && activeIssue ? (
           <IssueTabContent issue={activeIssue} />
+        ) : isNoteActive && activeNoteId ? (
+          <NoteTabContent reviewId={activeNoteId} />
         ) : hasRunContent ? (
           <div className="h-full overflow-y-auto noscrollbar">
             <div className="min-h-75 max-w-210 mx-auto space-y-4 pt-12 pb-24 px-4">
