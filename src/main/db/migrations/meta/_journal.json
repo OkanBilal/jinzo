@@ -85,6 +85,13 @@
       "when": 1770982259427,
       "tag": "0011_secret_veda",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1771027200000,
+      "tag": "0012_workspace_diffs",
+      "breakpoints": true
     }
   ]
 }

@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import {
-  useGetRunsByWorkspaceQuery,
-  useGetRunDiffQuery,
-  type RunDiff,
+  useGetLatestWorkspaceDiffQuery,
+  type WorkspaceDiff,
 } from "@/lib/redux/api";
 import { FileIconComponent } from "./file-explorer/components/file-icon";
 import { Diff } from "@/components/ui/icons";
@@ -16,7 +15,7 @@ interface DiffSectionProps {
 }
 
 /** Status badge for the diff (insertions/deletions) */
-function DiffStats({ stats }: { stats: RunDiff["stats"] }) {
+function DiffStats({ stats }: { stats: WorkspaceDiff["stats"] }) {
   if (!stats?.shortstat) return null;
 
   // Parse shortstat like "3 files changed, 120 insertions(+), 15 deletions(-)"
@@ -78,22 +77,10 @@ export function DiffSection({
   onSelectDiffFile,
   selectedDiffFile,
 }: DiffSectionProps) {
-  // Get the latest succeeded run for this workspace
-  const { data: runs = [] } = useGetRunsByWorkspaceQuery(
-    { workspaceId, limit: 20 },
+  // Fetch the latest workspace diff directly
+  const { data: diff, isLoading } = useGetLatestWorkspaceDiffQuery(
+    workspaceId,
     { skip: !workspaceId },
-  );
-
-  // Find the most recent succeeded run
-  const latestSucceededRun = useMemo(
-    () => runs.find((r) => r.status === "succeeded"),
-    [runs],
-  );
-
-  // Fetch diff for the latest succeeded run
-  const { data: diff, isLoading } = useGetRunDiffQuery(
-    latestSucceededRun?.id ?? "",
-    { skip: !latestSucceededRun?.id },
   );
 
   const fileStats = useMemo(

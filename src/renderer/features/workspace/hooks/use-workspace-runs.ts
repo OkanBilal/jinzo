@@ -277,7 +277,7 @@ export function useWorkspaceRuns(
               }
               // Invalidate RTK Query cache so DiffSection and other
               // query-based consumers pick up the finished run & its diff
-              dispatch(runsApi.util.invalidateTags(["Runs", "RunDiffs"]));
+              dispatch(runsApi.util.invalidateTags(["Runs", "WorkspaceDiffs"]));
             }
           }
         }

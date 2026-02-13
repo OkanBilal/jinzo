@@ -474,9 +474,14 @@ const api = {
     delete: (id: string) =>
       ipcRenderer.invoke("reviews:delete", id),
   },
-  // Run diff operations
-  runDiff: {
-    get: (runId: string) => ipcRenderer.invoke("runDiff:get", runId),
+  // Workspace diff operations
+  workspaceDiffs: {
+    getByWorkspace: (workspaceId: string, limit?: number) =>
+      ipcRenderer.invoke("workspaceDiffs:getByWorkspace", workspaceId, limit),
+    getLatest: (workspaceId: string) =>
+      ipcRenderer.invoke("workspaceDiffs:getLatest", workspaceId),
+    getByRun: (runId: string) =>
+      ipcRenderer.invoke("workspaceDiffs:getByRun", runId),
   },
   // Run context operations
   runContext: {

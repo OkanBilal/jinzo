@@ -3,6 +3,7 @@ import { providersRepo } from "../providers/providers.repo";
 import { workspacesRepo } from "../workspaces/workspaces.repo";
 import { gitService } from "../git/git.service";
 import { reviewsService } from "../reviews/reviews.service";
+import { workspaceDiffsService } from "../workspaceDiffs/workspaceDiffs.service";
 import {
   createWorkAdapter,
   type WorkRunEvent,
@@ -51,10 +52,10 @@ async function captureBaseRef(runId: string, rootPath: string): Promise<void> {
 }
 
 /**
- * Compute git diff since baseRef and persist into run_diffs.
+ * Compute git diff since baseRef and persist into workspace_diffs.
  * Called after a run succeeds.
  */
-async function persistRunDiff(runId: string, rootPath: string): Promise<void> {
+async function persistRunDiff(runId: string, workspaceId: string, rootPath: string): Promise<void> {
   const baseRef = runBaseRefs.get(runId);
   runBaseRefs.delete(runId);
 
@@ -71,8 +72,9 @@ async function persistRunDiff(runId: string, rootPath: string): Promise<void> {
     const files = filesResult.success ? (filesResult.data ?? []) : [];
     const shortstat = statResult.success ? (statResult.data ?? "") : "";
 
-    await runsRepo.insertRunDiff({
+    await workspaceDiffsService.createDiff({
       id: generateRunId(),
+      workspaceId,
       runId,
       baseRef,
       diffText,
@@ -462,24 +464,6 @@ export const runsService = {
   },
 
   // ─────────────────────────────────────────────────────────────
-  // Run Diff Operations
-  // ─────────────────────────────────────────────────────────────
-  async getRunDiff(
-    runId: string,
-  ): Promise<ServiceResponse<import("./runs.dto").RunDiffResponse>> {
-    try {
-      const diff = await runsRepo.findRunDiffByRun(runId);
-      if (!diff) {
-        return { success: false, error: "No diff found for this run" };
-      }
-      return { success: true, data: diff };
-    } catch (error) {
-      console.error(`[RunsService] Failed to get run diff ${runId}:`, error);
-      return { success: false, error: "Failed to get run diff" };
-    }
-  },
-
-  // ─────────────────────────────────────────────────────────────
   // Execute Run (main orchestration)
   // ─────────────────────────────────────────────────────────────
   async executeRun(
@@ -611,11 +595,11 @@ export const runsService = {
 
           // Persist git diff on success
           if (finalStatus === "succeeded") {
-            await persistRunDiff(runId, workspace.rootPath);
+            await persistRunDiff(runId, workspace.id, workspace.rootPath);
           } else {
             runBaseRefs.delete(runId);
           }
-         // TODO: hasReviewSkill too strict 
+         // TODO: hasReviewSkill too strict
           // Auto-create review if the run used the review-code skill
           try {
             const toolCallRecords = await runsRepo.findToolCallsByRun(runId);
@@ -1055,7 +1039,7 @@ export const runsService = {
 
           // Persist git diff on success
           if (finalStatus === "succeeded" && workspace) {
-            await persistRunDiff(runId, workspace.rootPath);
+            await persistRunDiff(runId, workspace.id, workspace.rootPath);
           } else {
             runBaseRefs.delete(runId);
           }

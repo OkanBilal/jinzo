@@ -343,8 +343,6 @@ export {
   useStartRunCommandMutation,
   useCompleteRunCommandMutation,
   useRemoveRunCommandMutation,
-  useGetRunDiffQuery,
-  useLazyGetRunDiffQuery,
 } from "./runsApi";
 export type {
   Run,
@@ -357,12 +355,20 @@ export type {
   RunArtifact,
   RunArtifactKind,
   CreateRunArtifactPayload,
-  RunDiff,
   RunCommand,
   RunCommandStatus,
   CreateRunCommandPayload,
   UpdateRunCommandPayload,
 } from "./runsApi";
+
+export {
+  workspaceDiffsApi,
+  useGetLatestWorkspaceDiffQuery,
+  useLazyGetLatestWorkspaceDiffQuery,
+  useGetWorkspaceDiffsQuery,
+  useLazyGetWorkspaceDiffsQuery,
+} from "./workspaceDiffsApi";
+export type { WorkspaceDiff } from "./workspaceDiffsApi";
 
 export {
   reviewsApi,

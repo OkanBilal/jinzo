@@ -331,17 +331,17 @@ export const runArtifacts = sqliteTable(
   ],
 );
 /* -----------------------------
-   RUN DIFFS (git diff captured after a run)
+   WORKSPACE DIFFS (git diff captured after a run, persisted per workspace)
 ------------------------------ */
 
-// TODO: add provider info to diff table
-export const runDiffs = sqliteTable(
-  "run_diffs",
+export const workspaceDiffs = sqliteTable(
+  "workspace_diffs",
   {
     id: text("id").primaryKey(), // uuid
-    runId: text("run_id")
+    workspaceId: text("workspace_id")
       .notNull()
-      .references(() => runs.id, { onDelete: "cascade" }),
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    runId: text("run_id").references(() => runs.id, { onDelete: "set null" }),
 
     baseRef: text("base_ref"), // HEAD sha captured at run start
     diffText: text("diff_text").notNull(), // unified diff patch
@@ -353,14 +353,14 @@ export const runDiffs = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (t) => [
-    uniqueIndex("uniq_run_diffs_run").on(t.runId),
-    index("idx_run_diffs_created").on(t.createdAt),
+    index("idx_workspace_diffs_workspace").on(t.workspaceId),
+    index("idx_workspace_diffs_created").on(t.createdAt),
     check(
-      "check_run_diffs_files_json",
+      "check_workspace_diffs_files_json",
       sql`json_valid(${t.filesJson}) OR ${t.filesJson} IS NULL`,
     ),
     check(
-      "check_run_diffs_stats_json",
+      "check_workspace_diffs_stats_json",
       sql`json_valid(${t.statsJson}) OR ${t.statsJson} IS NULL`,
     ),
   ],

@@ -56,9 +56,6 @@ export const runsController = {
   // Tool Call Operations
   getToolCallsByRun: (runId: string) => runsService.getToolCallsByRun(runId),
 
-  // Run Diff
-  getRunDiff: (runId: string) => runsService.getRunDiff(runId),
-
   // Run Details (all related data)
   getRunDetails: (runId: string) => runsService.getRunDetails(runId),
 

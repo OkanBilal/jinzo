@@ -33,6 +33,7 @@ import { registerToolsIpc, unregisterToolsIpc } from "./modules/tools";
 import { registerWorkspacesIpc, unregisterWorkspacesIpc } from "./modules/workspaces";
 import { registerRunsIpc, unregisterRunsIpc } from "./modules/runs";
 import { registerReviewsIpc, unregisterReviewsIpc } from "./modules/reviews";
+import { registerWorkspaceDiffsIpc, unregisterWorkspaceDiffsIpc } from "./modules/workspaceDiffs";
 import { registerFileExplorerIpc, unregisterFileExplorerIpc } from "./modules/fileExplorer";
 import { registerGitIpc, unregisterGitIpc } from "./modules/git";
 import {
@@ -90,6 +91,7 @@ async function initializeApp() {
     registerWorkspaceResourcesHandlers();
     registerTerminalIpc();
     registerReviewsIpc();
+    registerWorkspaceDiffsIpc();
 
     // Shell utilities
     ipcMain.handle("shell:openExternal", async (_, url: string) => {
@@ -154,6 +156,7 @@ async function cleanupApp() {
     unregisterWorkspaceResourcesHandlers();
     unregisterTerminalIpc();
     unregisterReviewsIpc();
+    unregisterWorkspaceDiffsIpc();
     ipcMain.removeHandler("shell:openExternal");
     ipcMain.removeHandler("shell:openPath");
 
