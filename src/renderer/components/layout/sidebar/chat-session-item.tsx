@@ -48,8 +48,8 @@ export default function ChatSessionItem({
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setDropdownPosition({
-        x: Math.min(rect.left, window.innerWidth - 150),
-        y: rect.bottom + 4,
+        x: Math.min(rect.left + 12, window.innerWidth - 150),
+        y: rect.bottom - 2,
       });
     }
 

@@ -1,7 +1,7 @@
 import { useDispatch } from "react-redux";
 import { useGetReviewsByWorkspaceQuery } from "@/lib/redux/api";
 import { openNoteTab } from "@/lib/redux/slices/workspaceSlice";
-import { Document, Notes, PullRequest } from "@/components/ui/icons";
+import { Document, Notes, PullRequest, Sparkles } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 
 interface ReviewsSectionProps {
@@ -64,14 +64,23 @@ export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto noscrollbar px-3 py-2 space-y-1">
-      {reviews.map((review, index) => (
-        <div
-          key={index}
-          className="flex justify-between group dark:hover:bg-primary/5 px-1 hover:bg-primary-100/60 rounded-xl animate-slide-in"
-          style={{ animationDelay: `${index * 0.02}s` }}
-        >
+    <div className="flex-1 flex flex-col min-h-0 px-3 ">
+      {/* Create PR button */}
+      <Button
+        onClick={() => {
+          // TODO: Add PR creation functionality
+        }}
+        className="shrink-0 flex items-center justify-center gap-1.5 mb-2 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100 dark:bg-primary/5 hover:bg-primary-200 dark:hover:bg-primary/10 text-primary-800 dark:text-primary-200 transition-colors"
+      >
+        <PullRequest className="w-3.5 h-3.5" />
+        Create PR
+      </Button>
+
+      {/* Reviews list */}
+      <div className="flex-1 overflow-y-auto noscrollbar space-y-1">
+        {reviews.map((review, index) => (
           <button
+            key={index}
             onClick={() =>
               dispatch(
                 openNoteTab({
@@ -81,9 +90,8 @@ export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
                 }),
               )
             }
-            className=" flex items-center px-1 gap-3 py-2.5 
-               transition-colors cursor-pointer min-w-0 flex-1
-             "
+            className="w-full flex items-center px-2 gap-3 py-2.5 dark:hover:bg-primary/5 hover:bg-primary-100/60 rounded-xl transition-colors cursor-pointer animate-slide-in"
+            style={{ animationDelay: `${index * 0.02}s` }}
           >
             <Document className="size-4.5 text-primary-200 shrink-0" />
 
@@ -91,23 +99,13 @@ export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
               <span className="text-[13px] font-semibold text-primary-800 dark:text-primary-200 truncate max-w-full">
                 {review.title}
               </span>
-              <span className="text-[10px] text-primary-400 dark:text-primary-300 ">
+              <span className="text-[10px] text-primary-400 dark:text-primary-300">
                 {relativeTime(review.updatedAt)}
               </span>
             </div>
           </button>
-          <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              // TODO: Add PR function
-            }}
-          >
-            <span className="text-xs dark:text-primary-200 text-primary-700 pr-1 hover:dark:text-primary hover:text-primary-950">
-              Create PR
-            </span>
-          </Button>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

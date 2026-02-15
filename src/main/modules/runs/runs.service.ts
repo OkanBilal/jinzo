@@ -4,6 +4,7 @@ import { workspacesRepo } from "../workspaces/workspaces.repo";
 import { gitService } from "../git/git.service";
 import { reviewsService } from "../reviews/reviews.service";
 import { workspaceDiffsService } from "../workspaceDiffs/workspaceDiffs.service";
+import { workspaceDiffsRepo } from "../workspaceDiffs/workspaceDiffs.repo";
 import {
   createWorkAdapter,
   type WorkRunEvent,
@@ -71,6 +72,21 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
     const diffText = diffResult.success ? (diffResult.data ?? "") : "";
     const files = filesResult.success ? (filesResult.data ?? []) : [];
     const shortstat = statResult.success ? (statResult.data ?? "") : "";
+    //TODO: check later
+    // Skip if no files changed
+    if (files.length === 0) {
+      console.log(`[RunsService] No changes since ${baseRef} for run ${runId}, skipping diff persist`);
+      return;
+    }
+
+    // Skip if identical diff content was already persisted for this workspace
+    const diffHash = hashContent(diffText);
+    const recentDiffs = await workspaceDiffsRepo.findByWorkspace(workspaceId, 10);
+    const duplicateDiff = recentDiffs.find((d) => hashContent(d.diffText) === diffHash);
+    if (duplicateDiff) {
+      console.log(`[RunsService] Identical diff already exists (id: ${duplicateDiff.id}), skipping`);
+      return;
+    }
 
     await workspaceDiffsService.createDiff({
       id: generateRunId(),

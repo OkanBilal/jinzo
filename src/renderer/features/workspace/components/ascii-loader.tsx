@@ -12,18 +12,18 @@ export function AsciiLoader({
   const ASCII_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
   const LOADER_WORDS = [
-    "decomposing",
-    "correlating",
-    "tracing",
-    "evaluating",
-    "reframing",
-    "projecting",
-    "reconciling",
-    "normalizing",
-    "harmonizing",
-    "distilling",
-    "aligning",
-    "converging",
+    "Decomposing",
+    "Correlating",
+    "Tracing",
+    "Evaluating",
+    "Reframing",
+    "Projecting",
+    "Reconciling",
+    "Normalizing",
+    "Harmonizing",
+    "Distilling",
+    "Aligning",
+    "Converging",
   ];
 
   const [word, setWord] = useState(

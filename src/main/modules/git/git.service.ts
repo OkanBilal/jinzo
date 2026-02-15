@@ -379,6 +379,7 @@ class GitService {
    * Import a local git repo by creating a branch + worktree
    * Returns full metadata needed for workspace creation
    */
+  //TOD: ADD CLONE FROM REMOTE URL LATER, FOR NOW ONLY LOCAL PATH IMPORT
   async importLocalRepo(sourcePath: string): Promise<ServiceResponse<WorktreeImportResult>> {
     try {
       const git = this.getGit(sourcePath);

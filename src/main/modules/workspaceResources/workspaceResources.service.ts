@@ -114,7 +114,25 @@ export const workspaceResourcesService = {
       }
 
       const issues = await workspaceResourcesRepo.findIssuesByWorkspace(workspaceId);
-      return { success: true, data: { issues } };
+        //TODO: CHECK SERİALİZE İSSUE LATER
+      // Serialize Date objects to ISO strings for Redux compatibility
+      const serializedIssues = issues.map((item) => ({
+        issue: item.issue,
+        entity: {
+          ...item.entity,
+          occurredAt: item.entity.occurredAt instanceof Date 
+            ? item.entity.occurredAt.toISOString() 
+            : item.entity.occurredAt,
+          createdAt: item.entity.createdAt instanceof Date 
+            ? item.entity.createdAt.toISOString() 
+            : item.entity.createdAt,
+          updatedAt: item.entity.updatedAt instanceof Date 
+            ? item.entity.updatedAt.toISOString() 
+            : item.entity.updatedAt,
+        },
+      }));
+      
+      return { success: true, data: { issues: serializedIssues } };
     } catch (error) {
       console.error("Error getting issues by workspace:", error);
       return { success: false, error: "Failed to get issues" };

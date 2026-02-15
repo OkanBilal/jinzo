@@ -609,6 +609,7 @@ input[type="range"].slider {
 
 .glass-morphism-button{
   background: transparent;
+  backdrop-filter: blur(30px);
   border: 0.5px solid #ffffff2e;
   box-shadow:
     0 1px 1px #00000021,
@@ -618,6 +619,7 @@ input[type="range"].slider {
 
 .dark .glass-morphism-button {
   background: transparent;
+  backdrop-filter: blur(30px);
   border-color: #ffffff1f;
   box-shadow:
     0 1px 1px #00000040,

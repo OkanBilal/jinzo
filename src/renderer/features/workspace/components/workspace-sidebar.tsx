@@ -4,7 +4,7 @@ import {
   FileExplorer,
   type FileNode,
 } from "@/features/workspace/components/file-explorer";
-import { useGetWorkspaceByIdQuery } from "@/lib/redux/api";
+import { useGetWorkspaceByIdQuery, useGetLatestWorkspaceDiffQuery } from "@/lib/redux/api";
 import type { WorkspaceIssue } from "@/lib/redux/api";
 import {
   setSelectedFile,
@@ -47,6 +47,12 @@ export function WorkspaceSidebar() {
     skip: !workspaceId,
   });
 
+  // Get diff data to show changed files count
+  const { data: diff } = useGetLatestWorkspaceDiffQuery(workspaceId || "", {
+    skip: !workspaceId,
+  });
+
+  const changedFilesCount = diff?.files?.length ?? 0;
   const rootPath = workspace?.rootPath;
 
   const handleFileSelect = useCallback(
@@ -170,7 +176,7 @@ export function WorkspaceSidebar() {
                 : "text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200"
             }`}
           >
-            Changes
+            Changes{changedFilesCount > 0 && ` (${changedFilesCount})`}
           </Button>
           <Button
             onClick={() => setSidebarTab("reviews")}

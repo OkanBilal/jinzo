@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import { workspaceDiffs } from "../../db/schema";
 import type { WorkspaceDiffResponse } from "./workspaceDiffs.dto";
@@ -62,6 +62,24 @@ export const workspaceDiffsRepo = {
       .select()
       .from(workspaceDiffs)
       .where(eq(workspaceDiffs.runId, runId))
+      .limit(1);
+    return rows[0] ? mapRowToResponse(rows[0]) : null;
+  },
+
+  async findByWorkspaceAndBaseRef(
+    workspaceId: string,
+    baseRef: string,
+  ): Promise<WorkspaceDiffResponse | null> {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(workspaceDiffs)
+      .where(
+        and(
+          eq(workspaceDiffs.workspaceId, workspaceId),
+          eq(workspaceDiffs.baseRef, baseRef),
+        ),
+      )
       .limit(1);
     return rows[0] ? mapRowToResponse(rows[0]) : null;
   },

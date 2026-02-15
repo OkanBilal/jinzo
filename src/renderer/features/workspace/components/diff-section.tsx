@@ -1,10 +1,12 @@
 import { useMemo } from "react";
+import { useDispatch } from "react-redux";
 import {
   useGetLatestWorkspaceDiffQuery,
   type WorkspaceDiff,
 } from "@/lib/redux/api";
+import { setPendingGoal } from "@/lib/redux/slices/workspaceSlice";
 import { FileIconComponent } from "./file-explorer/components/file-icon";
-import { Diff } from "@/components/ui/icons";
+import { Diff, Sparkles } from "@/components/ui/icons";
 import { Body } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 
@@ -77,6 +79,8 @@ export function DiffSection({
   onSelectDiffFile,
   selectedDiffFile,
 }: DiffSectionProps) {
+  const dispatch = useDispatch();
+
   // Fetch the latest workspace diff directly
   const { data: diff, isLoading } = useGetLatestWorkspaceDiffQuery(
     workspaceId,
@@ -110,9 +114,22 @@ export function DiffSection({
       </div>
     );
   }
+  // TODO: check
+  const handleReviewChanges = () => {
+    dispatch(setPendingGoal("/review-code changes"));
+  };
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
+      {/* Review Changes button */}
+      <Button
+        onClick={handleReviewChanges}
+        className="shrink-0 flex items-center justify-center gap-1.5 mb-2 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100 dark:bg-primary/5 hover:bg-primary-200 dark:hover:bg-primary/10 text-primary-800 dark:text-primary-200 transition-colors"
+      >
+        <Sparkles className="w-3.5 h-3.5" />
+        Review Changes
+      </Button>
+
       {/* Stats header */}
       <div className="shrink-0 flex items-center justify-between px-1 py-1.5 mb-1">
         <span className="text-[11px] text-primary-500 dark:text-primary-400">

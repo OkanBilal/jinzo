@@ -50,8 +50,8 @@ export function DropdownMenu({
 
   // Adjust position to keep menu on screen
   const adjustedPosition = {
-    x: Math.max(8, Math.min(position.x, window.innerWidth - minWidth - 8)),
-    y: Math.max(8, Math.min(position.y, window.innerHeight - 100)),
+    x: Math.max(8, Math.min(position.x, window.innerWidth - minWidth - 1300 )),
+    y: Math.max(8, Math.min(position.y, window.innerHeight - 125)),
   };
 
   // Calculate transform origin based on position or explicit origin
@@ -79,7 +79,7 @@ export function DropdownMenu({
   return createPortal(
     <div
       ref={menuRef}
-      className={`fixed z-100 rounded-xl overflow-hidden glass-morphism animate-dropdown-in ${className}`}
+      className={`fixed z-100 rounded-2xl overflow-hidden glass-morphism-button animate-dropdown-in ${className}`}
       style={{
         left: adjustedPosition.x,
         top: adjustedPosition.y,
@@ -117,7 +117,7 @@ export function DropdownMenuItem({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-sm
+      className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm
         hover:bg-primary-100/50 dark:hover:bg-primary/5 transition-colors
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
         ${variantClasses[variant]} ${className}`}

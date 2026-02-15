@@ -24,6 +24,7 @@ import {
   closeNoteTab,
   clearNoteTabs,
   setActiveWorkspaceId,
+  clearPendingGoal,
 } from "@/lib/redux/slices/workspaceSlice";
 import { isIssueTab, isNoteTab } from "@/features/workspace/utils/repo-utils";
 import type { RootState } from "@/lib/redux";
@@ -58,6 +59,9 @@ export default function CopilotPage() {
   const openNoteTabs = useSelector(
     (state: RootState) => state.workspace.openNoteTabs,
   );
+  const pendingGoal = useSelector(
+    (state: RootState) => state.workspace.pendingGoal,
+  );
   const [goal, setGoal] = useState("");
   const [canResume, setCanResume] = useState(false);
 
@@ -85,6 +89,14 @@ export default function CopilotPage() {
     dispatch(clearNoteTabs());
     dispatch(setActiveTab("editor"));
   }, [workspaceId, dispatch]);
+
+  // Sync pendingGoal from Redux to local state
+  useEffect(() => {
+    if (pendingGoal) {
+      setGoal(pendingGoal);
+      dispatch(clearPendingGoal());
+    }
+  }, [pendingGoal, dispatch]);
 
   const {
     runs,

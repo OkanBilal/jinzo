@@ -31,6 +31,7 @@ export interface WorkspaceState {
   contextIssues: ContextIssue[];
   openIssueTabs: IssueWithEntity[];
   openNoteTabs: ReviewTab[];
+  pendingGoal: string | null;
 }
 
 const initialState: WorkspaceState = {
@@ -47,6 +48,7 @@ const initialState: WorkspaceState = {
   contextIssues: [],
   openIssueTabs: [],
   openNoteTabs: [],
+  pendingGoal: null,
 };
 
 const workspaceSlice = createSlice({
@@ -148,6 +150,12 @@ const workspaceSlice = createSlice({
     clearNoteTabs: (state) => {
       state.openNoteTabs = [];
     },
+    setPendingGoal: (state, action: PayloadAction<string>) => {
+      state.pendingGoal = action.payload;
+    },
+    clearPendingGoal: (state) => {
+      state.pendingGoal = null;
+    },
   },
 });
 
@@ -174,6 +182,8 @@ export const {
   openNoteTab,
   closeNoteTab,
   clearNoteTabs,
+  setPendingGoal,
+  clearPendingGoal,
 } = workspaceSlice.actions;
 
 export default workspaceSlice.reducer;

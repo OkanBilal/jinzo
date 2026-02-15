@@ -6,7 +6,7 @@ import { NoteTab } from "./note-tab";
 import type { Run } from "../types";
 import type { IssueWithEntity } from "@/lib/redux/api";
 import type { ReviewTab as ReviewTabType } from "@/lib/redux/slices/workspaceSlice";
-import { useRef } from "react";
+import { useRef, useState, useLayoutEffect } from "react";
 
 interface WorkspaceTabsProps {
   runs: Run[];
@@ -47,7 +47,8 @@ export function WorkspaceTabs({
 }: WorkspaceTabsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const setTabRef = (id: string) => (el: HTMLDivElement | null) => {
     if (el) {
@@ -57,14 +58,52 @@ export function WorkspaceTabs({
     }
   };
 
+  // Calculate indicator position
+  useLayoutEffect(() => {
+    const updateIndicator = () => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const activeTabEl = tabRefs.current.get(activeTab);
+      if (activeTabEl) {
+        const containerRect = container.getBoundingClientRect();
+        const tabRect = activeTabEl.getBoundingClientRect();
+
+        setIndicatorStyle({
+          left: tabRect.left - containerRect.left + container.scrollLeft,
+          width: tabRect.width,
+        });
+        setIsInitialized(true);
+      }
+    };
+
+    // Small delay to ensure refs are set
+    requestAnimationFrame(updateIndicator);
+  }, [activeTab, runs.length, issueTabs.length, noteTabs.length]);
+
   return (
     <div
-      className={`flex items-center  dark:border-primary-900 ${variant === "claude" ? "dark:bg-claude-soft-dark bg-primary-200/40" : "dark:bg-copilot-blue bg-primary-200/40"} h-10`}
+      className={`flex items-center  dark:border-primary-900 ${variant === "claude" ? "dark:bg-claude-soft-dark bg-primary-200/40" : "dark:bg-copilot-blue bg-primary-200/40"}`}
     >
       <div
         ref={containerRef}
         className="relative flex-1 flex items-center overflow-x-auto noscrollbar"
       >
+        {/* Sliding indicator */}
+        {isInitialized && indicatorStyle.width > 0 && (
+          <div
+            className={`absolute bottom-0 h-0.5 transition-all duration-200 ease-out ${
+              variant === "claude"
+                ? "dark:bg-primary-400 bg-primary-700"
+                : "bg-copilot-lightblue dark:bg-copilot-lightblue"
+            }`}
+            style={{
+              left: indicatorStyle.left,
+              width: indicatorStyle.width,
+            }}
+          />
+        )}
+
         {hasSelectedFile && (
           <div ref={setTabRef("editor")}>
             <EditorTab
@@ -123,7 +162,7 @@ export function WorkspaceTabs({
         })}
         <button
           onClick={onNewRun}
-          className="p-2 mx-2 text-primary-800 dark:text-primary-200 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-900/10 dark:hover:bg-primary-200/5 rounded-xl cursor-pointer transition-colors"
+          className="p-2 mx-2 text-primary-800 dark:text-primary-200 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-900/10 dark:hover:bg-primary/5 rounded-xl cursor-pointer transition-colors"
           title="New run"
         >
           <Plus className="w-4 h-4" />

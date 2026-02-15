@@ -456,7 +456,7 @@ export function createClaudeAdapter(
     // Add MCP servers if any were found
     if (Object.keys(mcpServers).length > 0) {
       options.mcpServers = mcpServers;
-      logInfo(`Loaded ${Object.keys(mcpServers).length} MCP server(s):`, Object.keys(mcpServers).join(", "));
+      //logInfo(`Loaded ${Object.keys(mcpServers).length} MCP server(s):`, Object.keys(mcpServers).join(", "));
     }
 
     if (workspacePath) {
@@ -2236,7 +2236,7 @@ function readMcpServersFromFile(filePath: string): Record<string, McpServerConfi
     }
 
     if (Object.keys(validServers).length > 0) {
-      logInfo(`Loaded ${Object.keys(validServers).length} MCP server(s) from ${filePath}`);
+      //logInfo(`Loaded ${Object.keys(validServers).length} MCP server(s) from ${filePath}`);
     }
 
     return Object.keys(validServers).length > 0 ? validServers : null;
