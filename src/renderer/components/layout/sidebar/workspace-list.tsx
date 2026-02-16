@@ -118,6 +118,7 @@ export default function WorkspacesList({
                 key={workspace.id}
                 id={workspace.id}
                 name={formatWorkspaceName(workspace)}
+                status={workspace.status}
                 branch={workspace.defaultBranch}
                 updatedAt={workspace.updatedAt}
                 isActive={isActive}

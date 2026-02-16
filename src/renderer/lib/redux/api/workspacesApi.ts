@@ -7,6 +7,8 @@ export interface WorkspaceMetadata {
   [key: string]: unknown;
 }
 
+export type WorkspaceStatus = "backlog" | "todo" | "in_progress" | "in_review" | "done" | "canceled" | "duplicate";
+
 export interface Workspace {
   id: string;
   accountId: string;
@@ -15,6 +17,7 @@ export interface Workspace {
   repoUrl: string | null;
   defaultBranch: string | null;
   metadata: WorkspaceMetadata | null;
+  status: WorkspaceStatus;
   isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -36,6 +39,7 @@ export interface UpdateWorkspacePayload {
   repoUrl?: string;
   defaultBranch?: string;
   metadata?: WorkspaceMetadata;
+  status?: WorkspaceStatus;
 }
 
 export const workspacesApi = baseApi.injectEndpoints({

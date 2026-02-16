@@ -77,3 +77,4 @@ export { default as Figma } from "./figma";
 export { default as Diff } from "./diff";
 export { default as Notes } from "./notes";
 export { default as PullRequest } from "./pr";
+export { default as WorkspaceStatusIcon } from "./workspace-status-icon";

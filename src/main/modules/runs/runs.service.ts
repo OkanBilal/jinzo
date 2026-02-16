@@ -518,6 +518,9 @@ export const runsService = {
         };
       }
 
+      // Transition workspace to in_progress when run starts
+      await workspacesRepo.update(payload.workspaceId, { status: "in_progress" });
+
       // 3. Create run record with status=running
       const createPayload: CreateRunPayload = {
         id: runId,
@@ -975,6 +978,11 @@ export const runsService = {
             error: "Session cannot be resumed (not found or expired)",
           };
         }
+      }
+
+      // Transition workspace to in_progress when run continues
+      if (workspace) {
+        await workspacesRepo.update(workspace.id, { status: "in_progress" });
       }
 
       // 7. Update run status to running

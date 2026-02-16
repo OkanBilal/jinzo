@@ -56,6 +56,11 @@ export interface WorkspaceMetadata {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Status Type
+// ─────────────────────────────────────────────────────────────
+export type WorkspaceStatus = "backlog" | "todo" | "in_progress" | "in_review" | "done" | "canceled" | "duplicate";
+
+// ─────────────────────────────────────────────────────────────
 // Create / Update Payloads
 // ─────────────────────────────────────────────────────────────
 export interface CreateWorkspacePayload {
@@ -74,6 +79,7 @@ export interface UpdateWorkspacePayload {
   repoUrl?: string;
   defaultBranch?: string;
   metadata?: WorkspaceMetadata;
+  status?: WorkspaceStatus;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -87,6 +93,7 @@ export interface WorkspaceResponse {
   repoUrl: string | null;
   defaultBranch: string | null;
   metadata: WorkspaceMetadata | null;
+  status: WorkspaceStatus;
   isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;

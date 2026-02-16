@@ -5,6 +5,7 @@ import type {
   CreateWorkspacePayload,
   UpdateWorkspacePayload,
   WorkspaceResponse,
+  WorkspaceStatus,
 } from "./workspaces.dto";
 import { sql } from "drizzle-orm";
 
@@ -64,6 +65,7 @@ export const workspacesRepo = {
       repoUrl: payload.repoUrl,
       defaultBranch: payload.defaultBranch,
       metadata: payload.metadata ? JSON.stringify(payload.metadata) : null,
+      status: (payload as CreateWorkspacePayload & { status?: WorkspaceStatus }).status ?? "todo",
     });
     return payload.id;
   },
@@ -77,6 +79,7 @@ export const workspacesRepo = {
     if (payload.repoUrl !== undefined) updateData.repoUrl = payload.repoUrl;
     if (payload.defaultBranch !== undefined) updateData.defaultBranch = payload.defaultBranch;
     if (payload.metadata !== undefined) updateData.metadata = JSON.stringify(payload.metadata);
+    if (payload.status !== undefined) updateData.status = payload.status;
 
     await db.update(workspaces).set(updateData).where(eq(workspaces.id, id));
     return this.findById(id);
@@ -109,6 +112,7 @@ function mapRowToResponse(row: typeof workspaces.$inferSelect): WorkspaceRespons
     repoUrl: row.repoUrl,
     defaultBranch: row.defaultBranch,
     metadata: row.metadata ? JSON.parse(row.metadata) : null,
+    status: row.status as WorkspaceStatus,
     isArchived: row.isArchived,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

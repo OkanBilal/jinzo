@@ -120,6 +120,11 @@ export const workspaces = sqliteTable(
     repoUrl: text("repo_url"),
     defaultBranch: text("default_branch"),
     metadata: text("metadata"), // JSON (optional)
+    status: text("status", {
+      enum: ["backlog", "todo", "in_progress", "in_review", "done", "canceled", "duplicate"],
+    })
+      .notNull()
+      .default("todo"),
     isArchived: integer("is_archived", { mode: "boolean" })
       .notNull()
       .default(false),
@@ -134,6 +139,7 @@ export const workspaces = sqliteTable(
   (t) => [
     index("idx_workspaces_account").on(t.accountId),
     uniqueIndex("uniq_workspaces_account_root").on(t.accountId, t.rootPath),
+    index("idx_workspaces_status").on(t.status),
     index("idx_workspaces_updated").on(t.updatedAt),
     check(
       "check_workspaces_metadata_json",

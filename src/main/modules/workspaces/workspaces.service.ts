@@ -5,6 +5,7 @@ import type {
   UpdateWorkspacePayload,
   WorkspaceResponse,
   ServiceResponse,
+  WorkspaceStatus,
 } from "./workspaces.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -110,6 +111,13 @@ export const workspacesService = {
       console.error(`[WorkspacesService] Failed to delete workspace ${id}:`, error);
       return { success: false, error: "Failed to delete workspace" };
     }
+  },
+
+  async updateStatus(
+    id: string,
+    status: WorkspaceStatus,
+  ): Promise<ServiceResponse<WorkspaceResponse>> {
+    return this.update(id, { status });
   },
 
   async archive(id: string): Promise<ServiceResponse<WorkspaceResponse>> {

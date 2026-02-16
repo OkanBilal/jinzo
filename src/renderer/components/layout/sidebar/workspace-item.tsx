@@ -1,13 +1,26 @@
 import { useState, useRef, type MouseEvent } from "react";
 import { Muted, Timestamp } from "@/components/ui/text";
-import { Trash, Option, Layers, Check, Connect, Branch, Archive } from "@/components/ui/icons";
+import {
+  Trash,
+  Option,
+  Layers,
+  Check,
+  Connect,
+  Branch,
+  Archive,
+} from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format-date";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
+import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
+import type { WorkspaceStatus } from "@/lib/redux/api/workspacesApi";
+import Tooltip from "@/components/ui/tooltip";
 
 interface WorkspaceItemProps {
   id: string;
   name: string;
+  status?: WorkspaceStatus;
   branch?: string | null;
   updatedAt?: Date;
   isActive?: boolean;
@@ -20,6 +33,7 @@ interface WorkspaceItemProps {
 export default function WorkspaceItem({
   id,
   name,
+  status = "todo",
   branch,
   updatedAt,
   isActive = false,
@@ -28,6 +42,7 @@ export default function WorkspaceItem({
   onLinkIssues,
   onArchive,
 }: WorkspaceItemProps) {
+  const statusConfig = getWorkspaceStatusConfig(status);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
 
@@ -67,15 +82,15 @@ export default function WorkspaceItem({
     <div className="relative group">
       <div
         onClick={onClick}
-        className={`block pl-3 pr-3 py-1.5 active:scale-99 group-hover:scale-[1.01] rounded-xl transition-all duration-200 ease-out cursor-pointer ${
+        className={`block pl-3.5 pr-3 py-1.5 active:scale-99 group-hover:scale-[1.01] rounded-xl transition-all duration-200 ease-out cursor-pointer ${
           isActive
             ? "bg-primary/80 dark:bg-primary/5"
             : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
         }`}
       >
-        <div className="flex items-start gap-2 min-w-0 flex-1">
-          <Branch className="h-4 w-4 text-primary-800 dark:text-primary-400 mt-0.5 shrink-0" />
-          <div className="flex flex-col min-w-0">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Branch className="size-3.5 text-primary-800 dark:text-primary-400 mt-0.5 shrink-0" />
             <span
               className={`truncate text-sm font-medium ${
                 isActive
@@ -85,14 +100,26 @@ export default function WorkspaceItem({
             >
               {name}
             </span>
+          </div>
+          <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5">
+              <Tooltip content={statusConfig.label} position="top">
+              <span title={statusConfig.label} className="shrink-0 flex items-center">
+                <WorkspaceStatusIcon
+                  status={status}
+                  className={`size-2.75 ${statusConfig.iconColor}`}
+                />
+              </span>
+              </Tooltip>
               {branch && (
-                <Muted className="text-[13px] mt-0.5 text-primary-800 dark:text-primary-200! truncate">
+                <Muted className="text-[13px]  text-primary-800 dark:text-primary-200! truncate">
                   {branch}
                 </Muted>
               )}
               {branch && updatedAt && (
-                <span className="text-primary-400 text-lg leading-6 dark:text-primary-200">·</span>
+                <span className="text-primary-400 text-lg leading-6 dark:text-primary-200">
+                  ·
+                </span>
               )}
               {updatedAt && (
                 <Muted className="text-[13px] text-primary-700 dark:text-primary-200! truncate">

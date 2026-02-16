@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import type { Run, RunEvent, RunArtifact, ToolCall } from "../types";
 import { toast } from "@/components/ui/toast";
 import { useAppDispatch } from "@/lib/redux/hooks";
-import { runsApi } from "@/lib/redux/api";
+import { runsApi, workspacesApi } from "@/lib/redux/api";
 
 const MAX_DISPLAY_LENGTH = 200;
 
@@ -278,6 +278,7 @@ export function useWorkspaceRuns(
               // Invalidate RTK Query cache so DiffSection and other
               // query-based consumers pick up the finished run & its diff
               dispatch(runsApi.util.invalidateTags(["Runs", "WorkspaceDiffs"]));
+              dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
             }
           }
         }
@@ -349,6 +350,9 @@ export function useWorkspaceRuns(
           setRuns((prev) => [newRun, ...prev]);
           setActiveRunId(newRun.id);
 
+          // Workspace status changed to in_progress on the backend
+          dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
+
           setRunEvents((prev) => ({
             ...prev,
             [newRun.id]: [
@@ -410,6 +414,9 @@ export function useWorkspaceRuns(
           prev.map((r) => (r.id === runId ? runResult.data : r)),
         );
       }
+
+      // Workspace status changed to in_progress on the backend
+      dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
 
       // Add a status event for the continuation
       setRunEvents((prev) => ({
