@@ -1,4 +1,5 @@
 import { baseApi } from './baseApi';
+import { syncApi } from './syncApi';
 
 export interface Connection {
   id: string;
@@ -317,6 +318,14 @@ export const connectionsApi = baseApi.injectEndpoints({
       }),
       transformResponse: (response: any) => ({ success: response.success }),
       invalidatesTags: ['Apps'],
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          dispatch(syncApi.endpoints.runEntitySync.initiate());
+        } catch {
+          // Save failed, don't trigger sync
+        }
+      },
     }),
 
     deleteResource: builder.mutation<{ success: boolean }, string>({

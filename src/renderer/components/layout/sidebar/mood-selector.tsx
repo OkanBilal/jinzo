@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Mood } from "@/lib/redux/api";
 import { parseIcon } from "@/lib/icon-registry";
-import { Chat, Copilot, Claude } from "@/components/ui/icons/mood";
+import { Copilot, Claude } from "@/components/ui/icons/mood";
 import { Button } from "@/components/ui/button";
 
 interface MoodSelectorProps {
@@ -21,19 +21,6 @@ function MoodSelector({
 
   return (
     <div className="flex items-center gap-1.5 overflow-x-auto noscrollbar px-1 ">
-      <Button
-        onClick={() => onMoodChange("")}
-        className={`shrink-0 flex items-center justify-center size-8 hover:bg-primary-100/30 hover:scale-101 rounded-xl transition-all duration-200 ease-out active:scale-99 font-medium cursor-pointer ${
-          !activeMoodId
-            ? "text-primary-950 dark:text-primary"
-            : "text-primary-900 dark:text-primary opacity-60"
-        }`}
-        title="No mood"
-        aria-label="No mood"
-      >
-        <Chat className="size-4.5" />
-      </Button>
-
       {moods.map((mood) => {
         const icon = parseIcon(mood.icon);
         const isActive = activeMoodId === mood.id;
@@ -43,10 +30,10 @@ function MoodSelector({
           <Button
             key={mood.id}
             onClick={() => onMoodChange(mood.id)}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              onContextMenu?.(mood, e);
-            }}
+            // onContextMenu={(e) => {
+            //   e.preventDefault();
+            //   onContextMenu?.(mood, e);
+            // }}
             onMouseEnter={() => setHoveredMoodId(mood.id)}
             onMouseLeave={() => setHoveredMoodId(null)}
             className={`shrink-0 flex items-center justify-center size-8 hover:bg-primary-100/30 hover:scale-101 rounded-xl transition-all duration-200 ease-out active:scale-99 p-1 font-medium cursor-pointer ${

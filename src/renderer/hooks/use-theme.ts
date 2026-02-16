@@ -13,6 +13,9 @@ export interface StoredThemeConfig {
   darkBackground?: string; // Dark mode background
   lightUserMessageBackground?: string; // Light mode user message background
   darkUserMessageBackground?: string; // Dark mode user message background
+  // Nested format from predefined moods
+  light?: { value: string; preview?: string };
+  dark?: { value: string; preview?: string };
 }
 
 /**
@@ -39,6 +42,11 @@ export function useTheme(): ThemeConfig {
           backgroundColor = darkMode
             ? config.darkBackground
             : config.lightBackground;
+        } else if (config.light?.value && config.dark?.value) {
+          // Handle nested format: { light: { value }, dark: { value } }
+          backgroundColor = darkMode
+            ? config.dark.value
+            : config.light.value;
         } else if (config.backgroundColor) {
           backgroundColor = config.backgroundColor;
         }
@@ -54,6 +62,7 @@ export function useTheme(): ThemeConfig {
 
     return defaultConfig;
   }, [activeMood, darkMode]);
+  console.log("useTheme - activeMood:", activeMood?.id, "darkMode:", darkMode, "themeConfig:", themeConfig);
 
   return themeConfig;
 }

@@ -21,9 +21,10 @@ export function MainRoutes() {
   return (
     <Routes>
       <Route path="/" element={<DefaultRoute />} />
-      <Route path="/chat/:id" element={<Chat />} />
+
+      {/* <Route path="/chat/:id" element={<Chat />} />
       <Route path="/journal" element={<Journal />} />
-      <Route path="/journal/:id" element={<Journal />} />
+      <Route path="/journal/:id" element={<Journal />} /> */}
       <Route path="/settings" element={<Settings />} />
       <Route path="/copilot" element={<Copilot />} />
       <Route path="/copilot/:workspaceId" element={<Copilot />} />

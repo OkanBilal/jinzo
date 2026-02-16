@@ -2,6 +2,7 @@ import { seedAccountsData } from "../../db/queries/seed-accounts";
 import { seedApps } from "../../db/queries/seed-apps";
 import { seedConnections } from "../../db/queries/seed-connections";
 import { seedProvidersData } from "../../db/queries/seed-providers";
+import { seedMoodsData } from "../../db/queries/seed-moods";
 import type { ServiceResponse } from "./seed.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -61,12 +62,26 @@ export const seedService = {
   },
 
 
+  async seedMoods(): Promise<ServiceResponse> {
+    try {
+      await seedMoodsData();
+      return { success: true, message: "Moods seeded successfully" };
+    } catch (error) {
+      console.error("Error seeding moods:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  },
+
   async seedAll(): Promise<ServiceResponse> {
     try {
       await seedAccountsData(); // MUST be first
       await seedApps();
       await seedConnections();
       await seedProvidersData();
+      await seedMoodsData();
       return { success: true, message: "All data seeded successfully" };
     } catch (error) {
       console.error("Error seeding data:", error);

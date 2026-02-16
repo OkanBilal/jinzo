@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { SidebarHeader } from "./sidebar-header";
 import { SidebarFooter } from "./sidebar-footer";
@@ -8,6 +9,7 @@ import CreateMoodView from "./create-mood-view";
 import PresetMoodsView from "./preset-moods-view";
 import SettingsView from "./settings-view";
 import CreateMoodMenu from "./create-mood-menu";
+import HelpMenu from "./help-menu";
 import MoodContextMenu from "./mood-context-menu";
 import EditMoodModal from "./edit-mood-modal";
 import DeleteMoodModal from "./delete-mood-modal";
@@ -66,6 +68,24 @@ export default function Sidebar() {
     handleConfirmDeleteMood,
     handleCancelDeleteMood,
   } = useMoodContextMenu();
+
+  // Help menu state
+  const [helpMenuState, setHelpMenuState] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+  }>({ isOpen: false, position: { x: 0, y: 0 } });
+
+  const handleOpenHelpMenu = (event: React.MouseEvent) => {
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    setHelpMenuState({
+      isOpen: true,
+      position: { x: rect.right + 40, y: rect.bottom - 12 },
+    });
+  };
+
+  const handleCloseHelpMenu = () => {
+    setHelpMenuState({ isOpen: false, position: { x: 0, y: 0 } });
+  };
 
   const {
     account,
@@ -150,6 +170,7 @@ export default function Sidebar() {
               onMoodContextMenu={handleMoodContextMenu}
               onSettingsClick={handleOpenSettings}
               onPlusClick={handleOpenCreateMoodMenu}
+              onHelpClick={handleOpenHelpMenu}
             />
           </div>
         )}
@@ -209,6 +230,12 @@ export default function Sidebar() {
         onCreateMood={handleStartCreatingMood}
         onPresetMoods={handleStartViewingPresetMoods}
         onClose={handleCloseCreateMoodMenu}
+      />
+
+      <HelpMenu
+        isOpen={helpMenuState.isOpen}
+        position={helpMenuState.position}
+        onClose={handleCloseHelpMenu}
       />
     </>
   );

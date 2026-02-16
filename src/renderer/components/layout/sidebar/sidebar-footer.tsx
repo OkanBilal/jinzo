@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { useEffect } from "react";
-import { Settings, Plus } from "@/components/ui/icons";
+import { Settings, Plus, Question } from "@/components/ui/icons";
 import MoodSelector from "./mood-selector";
 import type { Mood } from "@/lib/redux/api";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ interface SidebarFooterProps {
   onMoodContextMenu?: (mood: Mood, event: React.MouseEvent) => void;
   onSettingsClick: () => void;
   onPlusClick: (event: React.MouseEvent) => void;
+  onHelpClick: (event: React.MouseEvent) => void;
 }
 
 export function SidebarFooter({
@@ -21,6 +22,7 @@ export function SidebarFooter({
   onMoodContextMenu,
   onSettingsClick,
   onPlusClick,
+  onHelpClick,
 }: SidebarFooterProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -65,14 +67,14 @@ export function SidebarFooter({
         </div>
         <div>
           <Button
-            tooltip="Create new mood"
+            tooltip="Help & Resources"
             tooltipPosition="right"
-            onClick={onPlusClick}
-            className=" cursor-pointer transition-transform duration-300  hover:rotate-45"
-            aria-label="Create new mood"
-            title="Create new mood"
+            onClick={onHelpClick}
+            className=" cursor-pointer transition-transform duration-300"
+            aria-label="Help & Resources"
+            title="Help & Resources"
           >
-            <Plus className="size-5 text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
+            <Question className="size-5 text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
           </Button>
         </div>
       </div>
