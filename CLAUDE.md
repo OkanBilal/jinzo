@@ -39,12 +39,13 @@ Jinzo is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM, sq
 
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
-- Namespaced by domain: `api.chat`, `api.entities`, `api.feed`, `api.sync`, etc.
+- Namespaced by domain: `api.chat`, `api.entities`, `api.feed`, `api.sync`, `api.runs`, `api.workspaceDiffs`, `api.reviews`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, etc.
 - After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
 - React app with Redux Toolkit, React Router (HashRouter), `@/` alias → `src/renderer/`
-- Routes: `/` (Home), `/chat/:id` (Chat), `/copilot/:workspaceId` (Copilot), `/claude/:workspaceId` (Claude Agent), `/journal` (Journal), `/settings` (Settings)
+- Routes: `/` (Home), `/chat/:id` (Chat), `/copilot/:workspaceId` (Copilot — GitHub Copilot agent), `/claude/:workspaceId` (Claude Code agent), `/journal` (Journal), `/settings` (Settings)
+- Copilot and Claude routes share the same workspace UI but use different provider IDs (`copilot_cli` vs `claude_code`)
 
 ### Module Architecture (`src/main/modules/`)
 
@@ -77,7 +78,7 @@ All IPC responses use `ServiceResponse<T>` envelope: `{ success: true, data }` o
 1. **IPC Communication**: Renderer calls `window.api.namespace.method()` → Preload invokes IPC → Main handles
 2. **Module Flow**: IPC handler → Controller → Service → Repository → Database
 3. **Redux Integration**: `src/renderer/lib/redux/api/baseApi.ts` wraps IPC in RTK Query with custom `ipcBaseQuery` (no HTTP)
-4. **State Management**: RTK Query for server state, Redux slices for UI state (`chatSlice`, `moodSlice`, `appSettingsSlice`)
+4. **State Management**: RTK Query for server state, Redux slices for UI state (`chatSlice`, `moodSlice`, `appSettingsSlice`, `workspaceSlice`)
 
 ### Database Schema (`src/main/db/schema.ts`)
 
@@ -92,16 +93,19 @@ Core tables:
 - `providers` - LLM/agent runtimes (ollama, copilot_cli, claude_code)
 - `entities` - Unified canonical content (tasks, issues, bookmarks, articles, podcasts, videos, etc.)
 - `entityChunks` / `vecEntityChunks` - Chunked content with embeddings for vector search
-- `connections` / `connectionResources` - External service connections (GitHub, Raindrop, RSS, etc.)
+- `connections` / `connectionResources` / `connectionTokens` / `connectionSyncState` - External service connections, encrypted tokens, sync cursors
 - `feedItems` - Event log/timeline entries
 - `chatSessions` / `chatMessages` - Chat history with provider/model tracking
 - `moods` - User-defined UI/prompt configurations
 - `runs` / `runContext` / `runArtifacts` / `runCommands` - Terminal/code-writing flow (agent runs)
 - `tools` / `toolCalls` / `moodToolPermissions` - Tool registry and invocation tracking
+- `workspaceDiffs` - Git diffs captured per workspace/run (base ref, diff text, files, stats)
+- `reviews` - Workspace-level review notes (status: open, in_review, approved, rejected)
+- `mcpServers` - MCP server registry (transport: stdio, http, ws)
 
 Domain-specific views on entities:
 - `tasks` - Actionable tasks (status, priority, due date)
-- `issues` - GitHub/Linear issues
+- `issues` - GitHub/Linear/Jira/Asana issues
 - `playlistItems` - Ordered collections
 
 ### Key Subsystems
@@ -130,6 +134,39 @@ Domain-specific views on entities:
 - Workspaces link to local git repositories via `rootPath`
 - Runs track terminal/agent sessions with commands and artifacts
 - WorkspaceResources link entities (issues, etc.) to workspaces
+- Run execution uses provider adapters (see below) with event streaming
+- Tool approval broker (`user-input-broker.ts`) bridges main↔renderer for interactive tool approvals
+- Runs support session resumption and continuation
+
+**Provider Adapters** (`src/main/modules/providers/adapters/`)
+- Unified `WorkRunAdapter` interface for different agent runtimes
+- `adapter.factory.ts` — Factory creates the correct adapter by provider type
+- `claude.adapter.ts` — Claude Code CLI via `@anthropic-ai/claude-agent-sdk`
+- `copilot.adapter.ts` — GitHub Copilot CLI via `@github/copilot-sdk`
+- Event-driven architecture with typed events (log, tool_call, command, artifact, status)
+- Hook system for pre/post tool execution, subagent/teammate coordination
+- Pre-approved tool list (Bash, Read, Glob, Grep, etc.) with interactive approval for others
+
+**Git Module** (`src/main/modules/git/`)
+- Git operations via `simple-git`: status, log, diff, branches, remotes
+- Worktree management: create/remove worktrees for isolated branch work
+- Local repo import with worktree creation
+
+**Terminal Module** (`src/main/modules/terminal/`)
+- Pseudoterminal emulation via `node-pty`
+- IPC channels: `terminal:create`, `terminal:write`, `terminal:resize`, `terminal:destroy`
+- Streams output to renderer via `terminal:data` event
+
+**File Explorer Module** (`src/main/modules/fileExplorer/`)
+- Secure filesystem operations within workspace boundaries
+- Path traversal prevention, symlink escape detection, file size limits (2MB), binary detection
+
+**Workspace Diffs** (`src/main/modules/workspaceDiffs/`)
+- Captures git HEAD sha at run start, computes diffs after run completion
+- Stores diff text, file lists, and stats linked to runs and workspaces
+
+**Reviews** (`src/main/modules/reviews/`)
+- Workspace-level review/notes system with status tracking (open → in_review → approved/rejected)
 
 ### Configuration
 
@@ -160,7 +197,7 @@ Each connection type has:
 - Fetcher in `src/main/modules/sync/connections/`
 - IPC handlers for credentials and resource management
 
-Supported: GitHub, Linear, Raindrop, HackerNews, RSS, Spotify, Apple Music, Podcasts, YouTube, Notion
+Supported: GitHub, Linear, Jira, Asana, Raindrop, HackerNews, RSS, Spotify, Apple Music, Podcasts, YouTube, Notion
 
 ### Troubleshooting
 
