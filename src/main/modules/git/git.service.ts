@@ -303,6 +303,26 @@ class GitService {
   }
 
   /**
+   * Get untracked files (new files not yet staged)
+   */
+  async getUntrackedFiles(rootPath: string): Promise<ServiceResponse<string[]>> {
+    try {
+      const git = this.getGit(rootPath);
+      const raw = await git.raw(["ls-files", "--others", "--exclude-standard"]);
+      const files = raw
+        .split("\n")
+        .map((f) => f.trim())
+        .filter(Boolean);
+      return { success: true, data: files };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get untracked files",
+      };
+    }
+  }
+
+  /**
    * Get the root directory of the git repository
    */
   async getRepoRoot(rootPath: string): Promise<ServiceResponse<string>> {

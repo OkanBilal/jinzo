@@ -38,6 +38,7 @@ export interface UpdateRunPayload {
   endedAt?: Date | null;
   lastError?: string | null;
   stopReason?: string | null;
+  sessionId?: string | null;
 }
 
 export interface RunResponse {
@@ -57,6 +58,7 @@ export interface RunResponse {
   endedAt: Date | null;
   lastError: string | null;
   stopReason: string | null;
+  sessionId: string | null;
   isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;

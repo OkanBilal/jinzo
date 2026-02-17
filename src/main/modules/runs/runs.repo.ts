@@ -122,6 +122,7 @@ export const runsRepo = {
     if (payload.endedAt !== undefined) updateData.endedAt = payload.endedAt;
     if (payload.lastError !== undefined) updateData.lastError = payload.lastError;
     if (payload.stopReason !== undefined) updateData.stopReason = payload.stopReason;
+    if (payload.sessionId !== undefined) updateData.sessionId = payload.sessionId;
 
     await db.update(runs).set(updateData).where(eq(runs.id, id));
     return this.findRunById(id);
@@ -321,6 +322,7 @@ function mapRunRowToResponse(row: typeof runs.$inferSelect): RunResponse {
     endedAt: row.endedAt,
     lastError: row.lastError,
     stopReason: row.stopReason,
+    sessionId: row.sessionId,
     isArchived: row.isArchived,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

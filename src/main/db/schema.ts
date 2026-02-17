@@ -218,6 +218,7 @@ export const runs = sqliteTable(
     endedAt: integer("ended_at", { mode: "timestamp" }),
     lastError: text("last_error"),
     stopReason: text("stop_reason"),
+    sessionId: text("session_id"),
     isArchived: integer("is_archived", { mode: "boolean" })
       .notNull()
       .default(false),

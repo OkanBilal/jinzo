@@ -43,6 +43,7 @@ export interface Run {
   startedAt: number | null;
   endedAt: number | null;
   lastError: string | null;
+  sessionId: string | null;
   isArchived: boolean;
   createdAt: number;
   updatedAt: number;

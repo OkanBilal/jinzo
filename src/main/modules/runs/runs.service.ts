@@ -33,6 +33,8 @@ import type {
   RunDetailsResponse,
 } from "./runs.dto";
 import { createHash } from "crypto";
+import fs from "fs";
+import path from "path";
 
 // In-memory map: runId -> git HEAD sha captured at run start
 const runBaseRefs = new Map<string, string>();
@@ -63,16 +65,60 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
   if (!baseRef) return;
 
   try {
-    const [diffResult, filesResult, statResult] = await Promise.all([
+    const [diffResult, filesResult, statResult, untrackedResult] = await Promise.all([
       gitService.getDiffSince(rootPath, baseRef),
       gitService.getChangedFilesSince(rootPath, baseRef),
       gitService.getShortStatSince(rootPath, baseRef),
+      gitService.getUntrackedFiles(rootPath),
     ]);
 
-    const diffText = diffResult.success ? (diffResult.data ?? "") : "";
-    const files = filesResult.success ? (filesResult.data ?? []) : [];
+    let diffText = diffResult.success ? (diffResult.data ?? "") : "";
+    const trackedFiles = filesResult.success ? (filesResult.data ?? []) : [];
+    const untrackedFiles = untrackedResult.success ? (untrackedResult.data ?? []) : [];
     const shortstat = statResult.success ? (statResult.data ?? "") : "";
-    //TODO: check later
+
+    // Merge tracked and untracked file lists (deduplicated)
+    const files = [...new Set([...trackedFiles, ...untrackedFiles])];
+
+    // Generate diff entries for untracked (new) files
+    if (untrackedFiles.length > 0) {
+      const untrackedDiffs: string[] = [];
+      for (const filePath of untrackedFiles) {
+        const fullPath = path.join(rootPath, filePath);
+        try {
+          const stat = fs.statSync(fullPath);
+          // Skip binary / large files (>256KB)
+          if (stat.size > 256 * 1024) {
+            untrackedDiffs.push(
+              `diff --git a/${filePath} b/${filePath}\nnew file\nBinary or large file (${stat.size} bytes)`
+            );
+            continue;
+          }
+          const content = fs.readFileSync(fullPath, "utf-8");
+          const lines = content.split("\n");
+          const diffHeader = [
+            `diff --git a/${filePath} b/${filePath}`,
+            `new file mode 100644`,
+            `--- /dev/null`,
+            `+++ b/${filePath}`,
+            `@@ -0,0 +1,${lines.length} @@`,
+          ].join("\n");
+          const diffBody = lines.map((l) => `+${l}`).join("\n");
+          untrackedDiffs.push(`${diffHeader}\n${diffBody}`);
+        } catch {
+          // File may have been deleted between ls-files and read, skip
+          untrackedDiffs.push(
+            `diff --git a/${filePath} b/${filePath}\nnew file\n(could not read file)`
+          );
+        }
+      }
+      if (untrackedDiffs.length > 0) {
+        diffText = diffText
+          ? `${diffText}\n${untrackedDiffs.join("\n")}`
+          : untrackedDiffs.join("\n");
+      }
+    }
+
     // Skip if no files changed
     if (files.length === 0) {
       console.log(`[RunsService] No changes since ${baseRef} for run ${runId}, skipping diff persist`);
@@ -95,7 +141,7 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
       baseRef,
       diffText,
       filesJson: JSON.stringify(files),
-      statsJson: JSON.stringify({ shortstat, files: files.length }),
+      statsJson: JSON.stringify({ shortstat, files: files.length, newFiles: untrackedFiles.length }),
     });
   } catch (err) {
     console.error(`[RunsService] Failed to persist run diff for ${runId}:`, err);

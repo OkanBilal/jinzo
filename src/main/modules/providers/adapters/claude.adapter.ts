@@ -24,6 +24,7 @@ import {
   clearAllPendingRequests,
 } from "../../runs/user-input-broker";
 import type { ToolApprovalRequest } from "../../runs/runs.dto";
+import { runsRepo } from "../../runs/runs.repo";
 
 /**
  * NOTE: This adapter uses @anthropic-ai/claude-agent-sdk package.
@@ -1204,6 +1205,9 @@ export function createClaudeAdapter(
               if (msg.session_id && !sessionId) {
                 sessionId = msg.session_id;
                 sessionIdMap.set(runId, sessionId);
+                runsRepo.updateRun(runId, { sessionId }).catch((err) =>
+                  logError("Failed to persist session ID:", err),
+                );
                 const state = activeRuns.get(runId);
                 if (state) {
                   activeRuns.set(runId, { ...state, sessionId, query });
@@ -1409,8 +1413,15 @@ export function createClaudeAdapter(
           throw new Error("Claude SDK not properly initialized");
         }
 
-        // Get the session ID from our tracking
-        const sessionId = sessionIdMap.get(runId);
+        // Get the session ID from our tracking (in-memory cache, then DB fallback)
+        let sessionId = sessionIdMap.get(runId);
+        if (!sessionId) {
+          const run = await runsRepo.findRunById(runId);
+          if (run?.sessionId) {
+            sessionId = run.sessionId;
+            sessionIdMap.set(runId, sessionId);
+          }
+        }
         if (!sessionId) {
           throw new Error(
             `Session not found for run ${runId}. The session may have expired or was never created.`,
@@ -1660,8 +1671,19 @@ export function createClaudeAdapter(
     },
       //TODO improve canresume logic - https://platform.claude.com/docs/en/agent-sdk/sessions#resuming-sessions
     async canResumeSession(runId: string): Promise<boolean> {
-      // Check if we have a session ID stored for this run
-      const sessionId = sessionIdMap.get(runId);
+      // Check if we have a session ID stored for this run (in-memory, then DB)
+      let sessionId = sessionIdMap.get(runId);
+      if (!sessionId) {
+        try {
+          const run = await runsRepo.findRunById(runId);
+          if (run?.sessionId) {
+            sessionId = run.sessionId;
+            sessionIdMap.set(runId, sessionId);
+          }
+        } catch {
+          return false;
+        }
+      }
       if (!sessionId) {
         return false;
       }
@@ -1678,6 +1700,9 @@ export function createClaudeAdapter(
     async deleteSession(runId: string): Promise<void> {
       // Remove from our tracking
       sessionIdMap.delete(runId);
+      runsRepo.updateRun(runId, { sessionId: null }).catch((err) =>
+        logError("Failed to clear session ID in DB:", err),
+      );
 
       // If there's an active run, abort it
       const runState = activeRuns.get(runId);
