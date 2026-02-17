@@ -8,6 +8,7 @@ import Text, {
 import AppleMusicModal from "../../components/apps/apple-music/apple-music-modal";
 import AsanaModal from "../../components/apps/asana/asana-modal";
 import GitHubModal from "../../components/apps/github/github-modal";
+import GitLabModal from "../../components/apps/gitlab/gitlab-modal";
 import HackerNewsModal from "../../components/apps/hackernews/hackernews-modal";
 import JiraModal from "../../components/apps/jira/jira-modal";
 import LinearModal from "../../components/apps/linear/linear-modal";
@@ -30,6 +31,7 @@ export default function AppsSettings({
   onRefresh,
 }: AppsSettingsProps) {
   const [showGitHubModal, setShowGitHubModal] = useState(false);
+  const [showGitLabModal, setShowGitLabModal] = useState(false);
   const [showJiraModal, setShowJiraModal] = useState(false);
   const [showAsanaModal, setShowAsanaModal] = useState(false);
   const [showLinearModal, setShowLinearModal] = useState(false);
@@ -51,6 +53,8 @@ export default function AppsSettings({
   const handleConnect = (appId: string) => {
     if (appId === "github") {
       setShowGitHubModal(true);
+    } else if (appId === "gitlab") {
+      setShowGitLabModal(true);
     } else if (appId === "jira") {
       setShowJiraModal(true);
     } else if (appId === "asana") {
@@ -156,6 +160,13 @@ export default function AppsSettings({
         open={showGitHubModal}
         onClose={() => setShowGitHubModal(false)}
         isConnected={isConnected("github")}
+        onSuccess={handleConnectionSuccess}
+      />
+
+      <GitLabModal
+        open={showGitLabModal}
+        onClose={() => setShowGitLabModal(false)}
+        isConnected={isConnected("gitlab")}
         onSuccess={handleConnectionSuccess}
       />
 

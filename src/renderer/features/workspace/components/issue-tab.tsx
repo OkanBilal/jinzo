@@ -1,4 +1,4 @@
-import { Asana, Close, Jira } from "@/components/ui/icons";
+import { Asana, Close, Gitlab, Jira } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
 import type { IssueWithEntity } from "@/lib/redux/api";
@@ -23,6 +23,8 @@ function ProviderIcon({ provider }: { provider: string }) {
       return <Jira className={iconClass} />;
     case "asana":
       return <Asana className={iconClass} />;
+    case "gitlab":
+      return <Gitlab className={iconClass} />;
     default:
       return (
         <svg className={iconClass} viewBox="0 0 16 16" fill="currentColor">

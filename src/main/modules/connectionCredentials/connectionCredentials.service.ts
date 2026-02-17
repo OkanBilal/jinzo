@@ -88,6 +88,12 @@ export const connectionCredentialsService = {
         updatedMetadata.email = email;
       }
 
+      // For GitLab, store domain in metadata (defaults to gitlab.com)
+      if (provider === "gitlab") {
+        const { domain } = payload;
+        updatedMetadata.domain = domain || "gitlab.com";
+      }
+
       await connectionCredentialsRepo.updateConnectionStatus(
         connectionId,
         "active",

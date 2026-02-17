@@ -25,6 +25,10 @@ export const connectionsController = {
     return connectionsService.getAsanaProjects(connectionId);
   },
 
+  async getGitlabProjects(connectionId: string) {
+    return connectionsService.getGitlabProjects(connectionId);
+  },
+
   async getHackerNewsStatus() {
     return connectionsService.getHackerNewsStatus();
   },

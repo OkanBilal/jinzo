@@ -11,6 +11,7 @@ const IPC_CHANNELS = {
   GET_LINEAR_TEAMS: "connections:getLinearTeams",
   GET_JIRA_PROJECTS: "connections:getJiraProjects",
   GET_ASANA_PROJECTS: "connections:getAsanaProjects",
+  GET_GITLAB_PROJECTS: "connections:getGitlabProjects",
   GET_HACKERNEWS_STATUS: "connections:getHackerNewsStatus",
   TOGGLE_HACKERNEWS: "connections:toggleHackerNews",
   SAVE_RESOURCES: "connections:saveResources",
@@ -59,6 +60,13 @@ export function registerConnectionsHandlers(): void {
     IPC_CHANNELS.GET_ASANA_PROJECTS,
     async (_event, connectionId: string) => {
       return connectionsController.getAsanaProjects(connectionId);
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GET_GITLAB_PROJECTS,
+    async (_event, connectionId: string) => {
+      return connectionsController.getGitlabProjects(connectionId);
     }
   );
 

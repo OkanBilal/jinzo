@@ -1,8 +1,9 @@
-import { Asana, Plus } from "@/components/ui/icons";
+import { Asana, Gitlab, Plus } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
 import { Jira } from "@/components/ui/icons";
 import { getLabelColor, parseLabels } from "@/lib/label-colors";
+import { ca } from "node_modules/@linear/sdk/dist/index-BBxdiqQK.mjs";
 
 interface IssueData {
   issue: {
@@ -38,6 +39,8 @@ function ProviderIcon({ provider }: { provider: string }) {
       return <Jira className={iconClass} />;
     case "asana":
       return <Asana className={iconClass} />;
+    case "gitlab":
+      return <Gitlab className={iconClass} />;
     default:
       return (
         <span className="text-[9px] font-medium">

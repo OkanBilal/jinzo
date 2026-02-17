@@ -94,53 +94,63 @@ export async function seedConnections(): Promise<void> {
     );
 
     // RSS Connection
-    const rssConnectionId = await ensureConnectionExists(
-      db,
-      "rss",
-      "RSS Feeds",
-      "url",
-      "active",
-      null
-    );
+    // const rssConnectionId = await ensureConnectionExists(
+    //   db,
+    //   "rss",
+    //   "RSS Feeds",
+    //   "url",
+    //   "active",
+    //   null
+    // );
 
     // HackerNews Connection
-    const hackerNewsConnectionId = await ensureConnectionExists(
-      db,
-      "hackernews",
-      "Hacker News",
-      "url",
-      "disabled",
-      null
-    );
+    // const hackerNewsConnectionId = await ensureConnectionExists(
+    //   db,
+    //   "hackernews",
+    //   "Hacker News",
+    //   "url",
+    //   "disabled",
+    //   null
+    // );
 
     // Podcast Connection
-    const podcastConnectionId = await ensureConnectionExists(
-      db,
-      "podcast",
-      "Podcast",
-      "api_key",
-      "revoked",
-      null
-    );
+    // const podcastConnectionId = await ensureConnectionExists(
+    //   db,
+    //   "podcast",
+    //   "Podcast",
+    //   "api_key",
+    //   "revoked",
+    //   null
+    // );
 
     // Apple Music Connection
-    const appleMusicConnectionId = await ensureConnectionExists(
-      db,
-      "apple-music",
-      "Apple Music",
-      "api_key",
-      "revoked",
-      {
-        setupAt: new Date().toISOString(),
-        note: "Developer Token and User Token will be set via UI",
-      }
-    );
+    // const appleMusicConnectionId = await ensureConnectionExists(
+    //   db,
+    //   "apple-music",
+    //   "Apple Music",
+    //   "api_key",
+    //   "revoked",
+    //   {
+    //     setupAt: new Date().toISOString(),
+    //     note: "Developer Token and User Token will be set via UI",
+    //   }
+    // );
 
     // Spotify Connection
-    const spotifyConnectionId = await ensureConnectionExists(
+    // const spotifyConnectionId = await ensureConnectionExists(
+    //   db,
+    //   "spotify",
+    //   "Spotify",
+    //   "api_key",
+    //   "revoked",
+    //   null
+    // );
+
+    // GitLab Connection
+    const gitlabConnectionId = await ensureConnectionExists(
       db,
-      "spotify",
-      "Spotify",
+      "gitlab",
+      "GitLab",
       "api_key",
       "revoked",
       null
@@ -170,13 +180,14 @@ export async function seedConnections(): Promise<void> {
     console.log("\n✨ Successfully seeded connections!");
     console.log("\n📊 Summary:");
     console.log(`   GitHub: ${githubConnectionId}`);
+    console.log(`   GitLab: ${gitlabConnectionId}`);
     console.log(`   Linear: ${linearConnectionId}`);
     console.log(`   Raindrop: ${raindropConnectionId}`);
-    console.log(`   RSS: ${rssConnectionId}`);
-    console.log(`   HackerNews: ${hackerNewsConnectionId}`);
-    console.log(`   Podcast: ${podcastConnectionId}`);
-    console.log(`   Apple Music: ${appleMusicConnectionId}`);
-    console.log(`   Spotify: ${spotifyConnectionId}`);
+    // console.log(`   RSS: ${rssConnectionId}`);
+    // console.log(`   HackerNews: ${hackerNewsConnectionId}`);
+    // console.log(`   Podcast: ${podcastConnectionId}`);
+    // console.log(`   Apple Music: ${appleMusicConnectionId}`);
+    // console.log(`   Spotify: ${spotifyConnectionId}`);
     console.log(`   Jira: ${jiraConnectionId}`);
     console.log(`   Asana: ${asanaConnectionId}`);
   } catch (error) {

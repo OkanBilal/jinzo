@@ -80,6 +80,23 @@ export interface SelectedProject {
   metadata: any;
 }
 
+export interface GitLabProject {
+  id: number;
+  name: string;
+  pathWithNamespace: string;
+  webUrl: string;
+  description: string | null;
+  visibility: string;
+  lastActivityAt: string | null;
+}
+
+export interface SelectedGitLabProject {
+  id: string;
+  externalId: string;
+  name: string;
+  metadata: any;
+}
+
 export interface SelectedCollection {
   id: string;
   externalId: string;
@@ -221,6 +238,23 @@ export const connectionsApi = baseApi.injectEndpoints({
       transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
     }),
 
+    getGitLabProjects: builder.query<{ success: boolean; projects: GitLabProject[] }, string>({
+      query: (connectionId) => ({
+        handler: 'connections:getGitlabProjects',
+        args: [connectionId],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
+    }),
+
+    getSelectedGitLabProjects: builder.query<{ success: boolean; projects: SelectedGitLabProject[]; connectionId: string }, string>({
+      query: (provider) => ({
+        handler: 'connections:getSelectedResources',
+        args: [provider],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects, connectionId: response.data.connectionId } : { success: false, projects: [], connectionId: '' },
+      providesTags: ['Apps'],
+    }),
+
     getSelectedAsanaProjects: builder.query<{ success: boolean; projects: SelectedAsanaProject[]; connectionId: string }, string>({
       query: (provider) => ({
         handler: 'connections:getSelectedResources',
@@ -358,6 +392,7 @@ export const {
   useLazyGetLinearTeamsQuery,
   useLazyGetJiraProjectsQuery,
   useLazyGetAsanaProjectsQuery,
+  useLazyGetGitLabProjectsQuery,
   useGetSelectedReposQuery,
   useLazyGetSelectedReposQuery,
   useGetSelectedTeamsQuery,
@@ -366,6 +401,8 @@ export const {
   useLazyGetSelectedProjectsQuery,
   useGetSelectedAsanaProjectsQuery,
   useLazyGetSelectedAsanaProjectsQuery,
+  useGetSelectedGitLabProjectsQuery,
+  useLazyGetSelectedGitLabProjectsQuery,
   useGetSelectedCollectionsQuery,
   useLazyGetSelectedCollectionsQuery,
   useGetSelectedPodcastsQuery,

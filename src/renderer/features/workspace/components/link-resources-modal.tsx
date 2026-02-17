@@ -17,7 +17,7 @@ import {
 import { toast } from "@/components/ui/toast";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
-import { Apps, Asana, Jira } from "@/components/ui/icons";
+import { Apps, Asana, Gitlab, Jira } from "@/components/ui/icons";
 
 interface LinkResourcesModalProps {
   workspaceId: string;
@@ -155,8 +155,10 @@ export function LinkResourcesModal({
         <Linear className="w-4 h-4 shrink-0" />
       ) : resource.kind === "asana_project" ? (
         <Asana className="w-4 h-4 shrink-0" />
+      ) : resource.kind === "gitlab_project" ? (
+        <Gitlab className="w-4 h-4 shrink-0" />
       ) : (
-        <Apps className="w-4 h-4 shrink-0" /> 
+        <Apps className="w-4 h-4 shrink-0" />
       );
 
     return (
@@ -172,16 +174,16 @@ export function LinkResourcesModal({
         <span className="text-primary-500 dark:text-primary-400">{icon}</span>
         <div className="flex-1 min-w-0">
           <div className="flex gap-2 items-center">
-          <BodyMedium
-            className={`truncate font-medium ${selected ? "text-primary-900 dark:text-primary-100" : ""}`}
-          >
-            {resource.name || resource.externalId}
-          </BodyMedium>
-          {resource.externalId !== resource.name && (
-            <Caption className="text-primary-400 dark:text-primary-500 truncate block mt-0.5">
-              {resource.externalId}
-            </Caption>
-          )}
+            <BodyMedium
+              className={`truncate font-medium ${selected ? "text-primary-900 dark:text-primary-100" : ""}`}
+            >
+              {resource.name || resource.externalId}
+            </BodyMedium>
+            {resource.externalId !== resource.name && (
+              <Caption className="text-primary-400 dark:text-primary-500 truncate block mt-0.5">
+                {resource.externalId}
+              </Caption>
+            )}
           </div>
         </div>
         <Checkbox

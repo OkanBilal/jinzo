@@ -112,6 +112,16 @@ export function parseProviderCredentials(
       tokensForHash = [credentials.apiToken as string];
       break;
 
+    case "gitlab":
+      // GitLab uses a Personal Access Token (PAT)
+      // PAT is stored as accessToken, domain stored in connection metadata
+      if (!credentials.token) {
+        return { success: false, error: "Personal Access Token is required" };
+      }
+      accessToken = credentials.token as string;
+      tokensForHash = [credentials.token as string];
+      break;
+
     case "asana":
       // Asana uses a Personal Access Token (PAT)
       if (!credentials.accessToken) {

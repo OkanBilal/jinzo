@@ -68,6 +68,16 @@ export interface AsanaProject {
   teamName?: string | null;
 }
 
+export interface GitlabProject {
+  id: number;
+  name: string;
+  pathWithNamespace: string;
+  webUrl: string;
+  description: string | null;
+  visibility: string;
+  lastActivityAt: string | null;
+}
+
 export interface ConnectionResource {
   id: string;
   connectionId: string;

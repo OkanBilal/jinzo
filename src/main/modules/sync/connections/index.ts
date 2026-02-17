@@ -10,3 +10,4 @@ export * from "./apple-music";
 export * from "./spotify";
 export * from "./raindrop";
 export * from "./notion";
+export * from "./gitlab";

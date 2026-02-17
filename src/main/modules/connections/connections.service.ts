@@ -13,6 +13,7 @@ import type {
   LinearTeam,
   JiraProject,
   AsanaProject,
+  GitlabProject,
   HackerNewsTogglePayload,
   SaveResourcesPayload,
   ServiceResponse,
@@ -316,6 +317,68 @@ export const connectionsService = {
       return { success: true, data: { projects: allProjects } };
     } catch (error: any) {
       console.error("Error fetching Asana projects:", error);
+      const errorMessage = error?.message || "Failed to fetch projects";
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  // GitLab
+  async getGitlabProjects(connectionId: string): Promise<ServiceResponse<{ projects: GitlabProject[] }>> {
+    try {
+      if (!connectionId) {
+        return { success: false, error: "connectionId is required" };
+      }
+
+      const connection = await connectionsRepo.findById(connectionId);
+      if (!connection) {
+        return { success: false, error: "Connection not found" };
+      }
+
+      const token = await connectionsRepo.findCurrentToken(connectionId);
+      if (!token || !token.accessTokenEnc) {
+        return { success: false, error: "Token not found" };
+      }
+
+      const metadata = connection.metadata ? JSON.parse(connection.metadata) : {};
+      const domain = (metadata.domain as string) || "gitlab.com";
+      const cleanDomain = domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
+      const baseUrl = `https://${cleanDomain}/api/v4`;
+
+      const gitlabToken = decryptToken(token.accessTokenEnc as Buffer);
+
+      const response = await fetch(
+        `${baseUrl}/projects?membership=true&per_page=100&order_by=last_activity_at`,
+        {
+          headers: {
+            "PRIVATE-TOKEN": gitlabToken,
+            Accept: "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`GitLab API error (${response.status}):`, errorText);
+        return { success: false, error: `GitLab API error: ${response.status}` };
+      }
+
+      const data = await response.json();
+
+      const formattedProjects: GitlabProject[] = (data || []).map(
+        (project: Record<string, unknown>) => ({
+          id: project.id as number,
+          name: project.name as string,
+          pathWithNamespace: project.path_with_namespace as string,
+          webUrl: project.web_url as string,
+          description: (project.description as string) || null,
+          visibility: project.visibility as string,
+          lastActivityAt: (project.last_activity_at as string) || null,
+        })
+      );
+
+      return { success: true, data: { projects: formattedProjects } };
+    } catch (error: any) {
+      console.error("Error fetching GitLab projects:", error);
       const errorMessage = error?.message || "Failed to fetch projects";
       return { success: false, error: errorMessage };
     }
@@ -638,6 +701,50 @@ export const connectionsService = {
                 externalId: project.gid,
                 kind: "asana_project",
                 name: project.name,
+                selected: true,
+                metadata,
+                lastSeenAt: new Date(),
+                lastIngestAt: null,
+              });
+            }
+            savedCount++;
+          }
+          break;
+        }
+
+        case "gitlab": {
+          const selectedGitlabProjects = (resources || []) as GitlabProject[];
+          for (const project of selectedGitlabProjects) {
+            const resourceId = `${connectionId}:${project.id}`;
+            const existing = await connectionsRepo.findResourceByExternalId(
+              connectionId,
+              String(project.id)
+            );
+
+            const metadata = JSON.stringify({
+              id: project.id,
+              name: project.name,
+              pathWithNamespace: project.pathWithNamespace,
+              webUrl: project.webUrl,
+              description: project.description,
+              visibility: project.visibility,
+              lastActivityAt: project.lastActivityAt,
+            });
+
+            if (existing) {
+              await connectionsRepo.updateResource(existing.id, {
+                selected: true,
+                lastSeenAt: new Date(),
+                metadata,
+              });
+            } else {
+              await connectionsRepo.insertResource({
+                id: resourceId,
+                connectionId,
+                externalId: String(project.id),
+                kind: "gitlab_project",
+                name: project.pathWithNamespace,
+                url: project.webUrl,
                 selected: true,
                 metadata,
                 lastSeenAt: new Date(),
@@ -974,6 +1081,23 @@ export const connectionsService = {
             projects: resources.map((r) => ({
               id: r.id,
               gid: r.externalId,
+              name: r.name || r.externalId,
+              metadata: parseResourceMetadata(r.metadata),
+            })),
+            connectionId: connection.id,
+          };
+          break;
+
+        case "gitlab":
+          resources = await connectionsRepo.findResourcesByConnectionAndKind(
+            connection.id,
+            "gitlab_project",
+            true
+          );
+          responseData = {
+            projects: resources.map((r) => ({
+              id: r.id,
+              externalId: r.externalId,
               name: r.name || r.externalId,
               metadata: parseResourceMetadata(r.metadata),
             })),

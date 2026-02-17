@@ -78,3 +78,4 @@ export { default as Diff } from "./diff";
 export { default as Notes } from "./notes";
 export { default as PullRequest } from "./pr";
 export { default as WorkspaceStatusIcon } from "./workspace-status-icon";
+export { default as Gitlab } from "./gitlab";

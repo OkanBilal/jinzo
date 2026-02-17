@@ -9,12 +9,15 @@ import {
   fetchJiraFromConnectionResources,
   fetchAsanaFromConnectionResources,
   fetchHackerNewsFromConnectionResources,
+  fetchGitlabFromConnectionResources,
 } from "./connections";
 import type { EntityInput } from "./sync.dto";
 
 export const FETCH_LIMITS = {
   GITHUB_ISSUES: 50,
   GITHUB_PRS: 50,
+  GITLAB_ISSUES: 50,
+  GITLAB_MRS: 50,
   LINEAR_ISSUES: 50,
   JIRA_ISSUES: 50,
   ASANA_TASKS: 50,
@@ -30,6 +33,7 @@ export async function fetchAllEntities(): Promise<EntityInput[]> {
   try {
     const [
       githubEntities,
+      gitlabEntities,
       linearEntities,
       jiraEntities,
       asanaEntities,
@@ -43,6 +47,10 @@ export async function fetchAllEntities(): Promise<EntityInput[]> {
       fetchGitHubFromConnectionResources(
         FETCH_LIMITS.GITHUB_ISSUES,
         FETCH_LIMITS.GITHUB_PRS,
+      ),
+      fetchGitlabFromConnectionResources(
+        FETCH_LIMITS.GITLAB_ISSUES,
+        FETCH_LIMITS.GITLAB_MRS,
       ),
       fetchLinearFromConnectionResources(FETCH_LIMITS.LINEAR_ISSUES),
       fetchJiraFromConnectionResources(FETCH_LIMITS.JIRA_ISSUES),
@@ -61,6 +69,7 @@ export async function fetchAllEntities(): Promise<EntityInput[]> {
 
     const entities = [
       ...githubEntities,
+      ...gitlabEntities,
       ...linearEntities,
       ...jiraEntities,
       ...asanaEntities,
