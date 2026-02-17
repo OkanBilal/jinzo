@@ -15,7 +15,7 @@ interface WorkspacesListProps {
   onDeleteWorkspace?: (workspaceId: string, e: MouseEvent) => void;
   onArchiveWorkspace?: (workspaceId: string) => void;
 }
-
+//TODO: Group by repo and show repo name as header, also show repo icon if possible
 export default function WorkspacesList({
   workspaces,
   isLoading,
@@ -46,7 +46,7 @@ export default function WorkspacesList({
     return (
       <div className="flex items-center justify-center h-16">
         <Caption className="text-primary-800 dark:text-primary-100! font-semibold">
-          No workspaces yet
+          No repositories yet
         </Caption>
       </div>
     );

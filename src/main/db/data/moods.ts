@@ -49,7 +49,7 @@ export const seedMoods: SeedMood[] = [
     uiConfig: {
       sidebar: {
         width: "19rem",
-        title: "Workspace",
+        title: "Repository",
         itemType: "workspace",
         defaultRoute: "/claude",
       },
@@ -71,7 +71,7 @@ export const seedMoods: SeedMood[] = [
     uiConfig: {
       sidebar: {
         width: "19rem",
-        title: "Workspace",
+        title: "Repository",
         itemType: "workspace",
         defaultRoute: "/copilot",
       },

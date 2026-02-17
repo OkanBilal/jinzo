@@ -13,7 +13,8 @@ import HelpMenu from "./help-menu";
 import MoodContextMenu from "./mood-context-menu";
 import EditMoodModal from "./edit-mood-modal";
 import DeleteMoodModal from "./delete-mood-modal";
-import { Edit, Plus } from "@/components/ui/icons";
+import { Edit, Plus, Connect } from "@/components/ui/icons";
+import CloneRepoModal from "./clone-repo-modal";
 import { useDeleteChatSession } from "@/features/chat/hooks/use-delete-chat-session";
 import { useDeleteJournal } from "@/features/journal/hooks";
 import { useDeleteWorkspace } from "@/features/workspace/hooks";
@@ -98,7 +99,16 @@ export default function Sidebar() {
     handleRefreshApps,
   } = useSidebarData({ searchQuery, sidebarConfig });
 
-  const { handleMoodChange, handleNewClick } = useSidebarActions();
+  const {
+    handleMoodChange,
+    handleNewClick,
+    handleAddProject,
+    handleCloneRepo,
+    handleOpenCloneModal,
+    handleCloseCloneModal,
+    isCloneModalOpen,
+    isCloning,
+  } = useSidebarActions();
 
   const deleteSession = useDeleteChatSession();
   const deleteJournal = useDeleteJournal();
@@ -146,6 +156,26 @@ export default function Sidebar() {
                 title={sidebarConfig.title}
                 actionPrefix={
                   sidebarConfig.itemType === "workspace" ? "Add" : "New"
+                }
+                dropdownItems={
+                  sidebarConfig.itemType === "workspace"
+                    ? [
+                        {
+                          label: "Add Project",
+                          icon: (
+                            <Plus className="w-4 h-4 text-primary-800 dark:text-primary-200" />
+                          ),
+                          onClick: handleAddProject,
+                        },
+                        {
+                          label: "Clone from URL",
+                          icon: (
+                            <Connect className="w-4 h-4 text-primary-800 dark:text-primary-200" />
+                          ),
+                          onClick: handleOpenCloneModal,
+                        },
+                      ]
+                    : undefined
                 }
               />
             </div>
@@ -236,6 +266,13 @@ export default function Sidebar() {
         isOpen={helpMenuState.isOpen}
         position={helpMenuState.position}
         onClose={handleCloseHelpMenu}
+      />
+
+      <CloneRepoModal
+        isOpen={isCloneModalOpen}
+        isCloning={isCloning}
+        onClone={handleCloneRepo}
+        onClose={handleCloseCloneModal}
       />
     </>
   );

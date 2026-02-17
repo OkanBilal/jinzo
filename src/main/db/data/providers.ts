@@ -70,7 +70,7 @@ export const seedProviders: CreateProviderPayload[] = [
     defaultModel: "claude-opus-4-5-20251101", // Updated model name
     config: {
       // ClaudeCodeAdapterConfig interface fields
-      timeout: 600000, // Timeout in milliseconds TODO: no need timeout for claude code 
+      timeout: 600000, // Timeout in milliseconds (10 minutes)
       apiKey: process.env.ANTHROPIC_API_KEY, // API key from environment
     },
     capabilities: {

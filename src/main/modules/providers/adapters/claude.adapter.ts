@@ -37,9 +37,24 @@ import { runsRepo } from "../../runs/runs.repo";
  */
 //TODO: In the future, we may want to dynamically load this from the user's Claude Code config directory (~/.claude/permissions.json) to reflect their actual allowed tools, but for now we'll hardcode a default set of commonly used tools.
 const DEFAULT_ALLOWED_TOOLS = [
-  "Bash", "Read", "Glob", "Grep", "LSP",
-  "Task", "TaskCreate", "TaskList", "TaskGet", "TaskUpdate",
-  "WebFetch", "WebSearch", "NotebookEdit",
+  "Bash",
+  "Read",
+  "Glob",
+  "Grep",
+  "LSP",
+  "Task",
+  "TaskCreate",
+  "TaskList",
+  "TaskGet",
+  "TaskUpdate",
+  "TodoWrite",
+  "ExitPlanMode",
+  "EnterPlanMode",
+  "ListMcpResources",
+  "ReadMcpResource",
+  "WebFetch",
+  "WebSearch",
+  "NotebookEdit",
 ];
 const ALLOWED_TOOLS_SET = new Set(DEFAULT_ALLOWED_TOOLS);
 
@@ -102,7 +117,10 @@ interface McpSSEServerConfig {
   headers?: Record<string, string>;
 }
 
-type McpServerConfig = McpStdioServerConfig | McpHttpServerConfig | McpSSEServerConfig;
+type McpServerConfig =
+  | McpStdioServerConfig
+  | McpHttpServerConfig
+  | McpSSEServerConfig;
 
 interface SDKOptions {
   outputFormat?: {
@@ -196,7 +214,13 @@ interface SDKResultMessage {
   result?: string;
   total_cost_usd: number;
   errors?: string[];
-  stop_reason?: "end_turn" | "max_tokens" | "stop_sequence" | "refusal" | "tool_use" | null;
+  stop_reason?:
+    | "end_turn"
+    | "max_tokens"
+    | "stop_sequence"
+    | "refusal"
+    | "tool_use"
+    | null;
 }
 
 interface SDKSystemMessage {
@@ -440,7 +464,10 @@ export function createClaudeAdapter(
 
     // Load MCP servers from settings files and pass them explicitly to the SDK
     // This ensures MCP servers from ~/.claude/settings.json and project settings are used
-    const mcpServers = readMcpServersFromSettings(settingSources, workspacePath);
+    const mcpServers = readMcpServersFromSettings(
+      settingSources,
+      workspacePath,
+    );
 
     const options: SDKOptions = {
       model,
@@ -482,7 +509,8 @@ export function createClaudeAdapter(
 
     // Wire structured output if a schema is selected
     if (config.structuredOutputsSelectedId && config.structuredOutputs) {
-      const entry = config.structuredOutputs[config.structuredOutputsSelectedId];
+      const entry =
+        config.structuredOutputs[config.structuredOutputsSelectedId];
       if (entry?.schema) {
         options.outputFormat = { type: "json_schema", schema: entry.schema };
       }
@@ -625,7 +653,10 @@ export function createClaudeAdapter(
    * Build a PreToolUse SDK hook matcher that requests interactive approval
    * from the renderer before allowing a tool call to proceed.
    */
-  function buildToolApprovalHook(runId: string, allowedTools: Set<string>): SDKHookMatcher {
+  function buildToolApprovalHook(
+    runId: string,
+    allowedTools: Set<string>,
+  ): SDKHookMatcher {
     return {
       // No matcher → fires for every tool
       hooks: [
@@ -674,11 +705,13 @@ export function createClaudeAdapter(
 
           // For AskUserQuestion, extract structured question data
           if (isAskUser) {
-            const questions = toolInput.questions as Array<{
-              question?: string;
-              options?: Array<{ label: string; description?: string }>;
-              multiSelect?: boolean;
-            }> | undefined;
+            const questions = toolInput.questions as
+              | Array<{
+                  question?: string;
+                  options?: Array<{ label: string; description?: string }>;
+                  multiSelect?: boolean;
+                }>
+              | undefined;
 
             if (questions && questions.length > 0) {
               const first = questions[0];
@@ -1097,7 +1130,14 @@ export function createClaudeAdapter(
 
       const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
       const abortController = new AbortController();
-      let lastStopReason: "end_turn" | "max_tokens" | "stop_sequence" | "refusal" | "tool_use" | null | undefined;
+      let lastStopReason:
+        | "end_turn"
+        | "max_tokens"
+        | "stop_sequence"
+        | "refusal"
+        | "tool_use"
+        | null
+        | undefined;
 
       try {
         await onEvent({ type: "status", status: "running", ts: Date.now() });
@@ -1205,9 +1245,11 @@ export function createClaudeAdapter(
               if (msg.session_id && !sessionId) {
                 sessionId = msg.session_id;
                 sessionIdMap.set(runId, sessionId);
-                runsRepo.updateRun(runId, { sessionId }).catch((err) =>
-                  logError("Failed to persist session ID:", err),
-                );
+                runsRepo
+                  .updateRun(runId, { sessionId })
+                  .catch((err) =>
+                    logError("Failed to persist session ID:", err),
+                  );
                 const state = activeRuns.get(runId);
                 if (state) {
                   activeRuns.set(runId, { ...state, sessionId, query });
@@ -1396,7 +1438,14 @@ export function createClaudeAdapter(
 
       const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
       const abortController = new AbortController();
-      let lastStopReason: "end_turn" | "max_tokens" | "stop_sequence" | "refusal" | "tool_use" | null | undefined;
+      let lastStopReason:
+        | "end_turn"
+        | "max_tokens"
+        | "stop_sequence"
+        | "refusal"
+        | "tool_use"
+        | null
+        | undefined;
 
       try {
         await onEvent({ type: "status", status: "running", ts: Date.now() });
@@ -1669,7 +1718,7 @@ export function createClaudeAdapter(
         activeRuns.delete(runId);
       }
     },
-      //TODO improve canresume logic - https://platform.claude.com/docs/en/agent-sdk/sessions#resuming-sessions
+    //TODO improve canresume logic - https://platform.claude.com/docs/en/agent-sdk/sessions#resuming-sessions
     async canResumeSession(runId: string): Promise<boolean> {
       // Check if we have a session ID stored for this run (in-memory, then DB)
       let sessionId = sessionIdMap.get(runId);
@@ -1700,9 +1749,9 @@ export function createClaudeAdapter(
     async deleteSession(runId: string): Promise<void> {
       // Remove from our tracking
       sessionIdMap.delete(runId);
-      runsRepo.updateRun(runId, { sessionId: null }).catch((err) =>
-        logError("Failed to clear session ID in DB:", err),
-      );
+      runsRepo
+        .updateRun(runId, { sessionId: null })
+        .catch((err) => logError("Failed to clear session ID in DB:", err));
 
       // If there's an active run, abort it
       const runState = activeRuns.get(runId);
@@ -2190,7 +2239,11 @@ function readMcpServersFromSettings(
   // Read user settings from multiple locations Claude CLI uses
   if (settingSources.includes("user")) {
     // Primary: ~/.claude/settings.json (newer format)
-    const userSettingsPath = path.join(os.homedir(), ".claude", "settings.json");
+    const userSettingsPath = path.join(
+      os.homedir(),
+      ".claude",
+      "settings.json",
+    );
     const userServers = readMcpServersFromFile(userSettingsPath);
     if (userServers) {
       Object.assign(mergedServers, userServers);
@@ -2206,7 +2259,11 @@ function readMcpServersFromSettings(
 
   // Read project settings (if workspace path is provided)
   if (settingSources.includes("project") && workspacePath) {
-    const projectSettingsPath = path.join(workspacePath, ".claude", "settings.json");
+    const projectSettingsPath = path.join(
+      workspacePath,
+      ".claude",
+      "settings.json",
+    );
     const projectServers = readMcpServersFromFile(projectSettingsPath);
     if (projectServers) {
       Object.assign(mergedServers, projectServers);
@@ -2222,7 +2279,11 @@ function readMcpServersFromSettings(
 
   // Read local settings (if workspace path is provided)
   if (settingSources.includes("local") && workspacePath) {
-    const localSettingsPath = path.join(workspacePath, ".claude", "settings.local.json");
+    const localSettingsPath = path.join(
+      workspacePath,
+      ".claude",
+      "settings.local.json",
+    );
     const localServers = readMcpServersFromFile(localSettingsPath);
     if (localServers) {
       Object.assign(mergedServers, localServers);
@@ -2236,7 +2297,9 @@ function readMcpServersFromSettings(
  * Read MCP servers from a single settings file.
  * Returns null if file doesn't exist or is invalid.
  */
-function readMcpServersFromFile(filePath: string): Record<string, McpServerConfig> | null {
+function readMcpServersFromFile(
+  filePath: string,
+): Record<string, McpServerConfig> | null {
   try {
     if (!fs.existsSync(filePath)) {
       return null;

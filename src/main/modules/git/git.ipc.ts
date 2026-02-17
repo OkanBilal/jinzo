@@ -18,6 +18,7 @@ const CHANNELS = {
   IMPORT_LOCAL_REPO: "git:importLocalRepo",
   REMOVE_WORKTREE: "git:removeWorktree",
   GET_WORKTREES_DIR: "git:getWorktreesDir",
+  CLONE_REPO: "git:cloneRepo",
 } as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -80,6 +81,10 @@ export function registerGitIpc(): void {
 
   ipcMain.handle(CHANNELS.GET_WORKTREES_DIR, async () => {
     return { success: true, data: gitService.getWorktreesDir() };
+  });
+
+  ipcMain.handle(CHANNELS.CLONE_REPO, async (_, url: string, targetPath: string) => {
+    return gitService.cloneRepo(url, targetPath);
   });
 }
 

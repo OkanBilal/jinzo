@@ -613,6 +613,11 @@ const api = {
      * Get the worktrees directory path
      */
     getWorktreesDir: () => ipcRenderer.invoke("git:getWorktreesDir"),
+    /**
+     * Clone a remote git repository to a local path
+     */
+    cloneRepo: (url: string, targetPath: string) =>
+      ipcRenderer.invoke("git:cloneRepo", url, targetPath),
   },
   // Terminal operations
   terminal: {

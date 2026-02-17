@@ -682,7 +682,7 @@ export const runsService = {
 
               if (resultArtifact?.content) {
                 const firstLine = resultArtifact.content.split("\n")[0] || "";
-                const title = firstLine.replace(/^#+\s*/, "").slice(0, 120) || "Code Review";
+                const title = firstLine.replace(/^#+\s*/, "").slice(0, 80) || "Code Review";
 
                 await reviewsService.create({
                   workspaceId: payload.workspaceId,

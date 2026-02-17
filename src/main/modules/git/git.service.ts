@@ -470,6 +470,45 @@ class GitService {
   }
 
   /**
+   * Clone a remote git repository to a local path
+   */
+  async cloneRepo(
+    url: string,
+    targetPath: string
+  ): Promise<ServiceResponse<{ clonedPath: string; defaultBranch: string; originUrl: string }>> {
+    try {
+      // Extract repo name from URL for the folder name
+      const repoName = url
+        .replace(/\.git$/, "")
+        .split("/")
+        .pop() || "repo";
+      const clonePath = path.join(targetPath, repoName);
+
+      // Clone using simple-git (not bound to any repo yet)
+      const git = simpleGit();
+      await git.clone(url, clonePath);
+
+      // Get the default branch from the cloned repo
+      const clonedGit = this.getGit(clonePath);
+      const defaultBranch = (await clonedGit.revparse(["--abbrev-ref", "HEAD"])).trim();
+
+      return {
+        success: true,
+        data: {
+          clonedPath: clonePath,
+          defaultBranch,
+          originUrl: url,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to clone repository",
+      };
+    }
+  }
+
+  /**
    * Remove a worktree
    */
   async removeWorktree(
