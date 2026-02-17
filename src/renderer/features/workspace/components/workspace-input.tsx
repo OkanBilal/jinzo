@@ -389,6 +389,9 @@ export function WorkspaceInput({
       <div className="flex items-start space-x-2 px-4">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center relative gap-1">
+            
+            {/* 
+              TODO: Re-enable when streaming support is added
             <FileUploadDropdown
               isOpen={isDropdownOpen}
               onToggle={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -405,7 +408,7 @@ export function WorkspaceInput({
               ref={fileInputRef}
               onChange={handleFileChange}
               className="hidden"
-            />
+            /> */}
             <ModelSelectDropdown
               model={selectedModelDisplayName}
               models={modelDisplayNames}

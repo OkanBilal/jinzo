@@ -24,7 +24,7 @@ const moodPersistConfig = {
 const appSettingsPersistConfig = {
   key: "appSettings",
   storage,
-  whitelist: ["isDarkMode", "sidebarCollapsed", "fontSize"],
+  whitelist: ["isDarkMode", "sidebarCollapsed", "fontSize", "onboardingCompleted"],
 };
 
 const workspacePersistConfig = {

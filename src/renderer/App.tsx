@@ -11,16 +11,22 @@ import { useLayoutConfig } from "./hooks/use-layout-config";
 import { shouldHideRightPanel } from "./lib/layout";
 import { ReduxProvider } from "./providers/redux-provider";
 import { Toaster } from "./components/ui/toast/Toaster";
+import { useAppSelector } from "./lib/redux/hooks";
+import { OnboardingModal } from "./features/onboarding/components/onboarding-modal";
 
 function AppContent() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const { mainMarginLeft, rightPanelWidth } = useLayoutConfig();
   const location = useLocation();
   const hideRightPanel = shouldHideRightPanel(location.pathname);
+  const onboardingCompleted = useAppSelector(
+    (state) => state.appSettings.onboardingCompleted,
+  );
 
   return (
     <>
       <Toaster />
+      {!onboardingCompleted && <OnboardingModal open={true} />}
       <MainLayout>
         <Sidebar />
         <MainContent
