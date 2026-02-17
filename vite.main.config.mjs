@@ -45,6 +45,7 @@ export default defineConfig({
           'better-sqlite3',
           'bindings',
           'file-uri-to-path',
+          'node-addon-api',
           'node-pty',
           'sqlite-vec',
           'sqlite-vec-darwin-arm64',

@@ -324,6 +324,9 @@ class DatabaseClient {
    * Get default database path in Electron userData directory
    */
   private getDefaultDatabasePath(): string {
+    if (app && !app.isPackaged) {
+      return path.join(process.cwd(), ".data", "jinzo.db");
+    }
     const userDataPath =
       app?.getPath("userData") || path.join(process.cwd(), ".data");
     return path.join(userDataPath, "jinzo.db");

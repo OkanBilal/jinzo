@@ -6,12 +6,29 @@ module.exports = {
   hooks: {
     packageAfterPrune: async (_forgeConfig, buildPath) => {
       const { rebuild } = require('@electron/rebuild');
-      console.log('Rebuilding native modules for Electron...');
-      await rebuild({
-        buildPath,
-        electronVersion: require('electron/package.json').version,
-        force: true,
-      });
+      const path = require('path');
+      const electronVersion = require('electron/package.json').version;
+
+      // Rebuild standard node_modules
+      console.log('Rebuilding native modules in node_modules...');
+      await rebuild({ buildPath, electronVersion, force: true });
+
+      // Rebuild native modules inside .vite/build/node_modules
+      // (Vite copies pre-built modules from project node_modules which target
+      // the system Node.js, not Electron)
+      const fs = require('fs');
+      const viteBuildPath = path.join(buildPath, '.vite', 'build');
+      const vitePkgJson = path.join(viteBuildPath, 'package.json');
+      fs.writeFileSync(vitePkgJson, JSON.stringify({
+        dependencies: {
+          'better-sqlite3': '*',
+          'node-pty': '*',
+        }
+      }));
+      console.log('Rebuilding native modules in .vite/build/node_modules...');
+      await rebuild({ buildPath: viteBuildPath, electronVersion, force: true });
+      fs.unlinkSync(vitePkgJson);
+
       console.log('Native modules rebuilt successfully');
     },
   },

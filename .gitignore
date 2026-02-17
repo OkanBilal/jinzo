@@ -91,3 +91,11 @@ typings/
 
 # Electron-Forge
 out/
+
+
+# DB
+.data/jinzo.db
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
