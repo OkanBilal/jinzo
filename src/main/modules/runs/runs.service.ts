@@ -9,6 +9,7 @@ import {
   createWorkAdapter,
   type WorkRunEvent,
   type WorkRunContextItem,
+  type WorkRunAdapter,
 } from "../providers/adapters";
 import type {
   CreateRunPayload,
@@ -28,6 +29,7 @@ import type {
   RunStatus,
   StartRunPayload,
   StartRunResponse,
+  StartRunContextItem,
   ContinueRunPayload,
   ContinueRunResponse,
   RunDetailsResponse,
@@ -146,6 +148,37 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
   } catch (err) {
     console.error(`[RunsService] Failed to persist run diff for ${runId}:`, err);
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Title Generation Helpers
+// ─────────────────────────────────────────────────────────────
+
+function fallbackTitle(goal: string): string {
+  const firstLine = goal.split("\n")[0].trim();
+  if (firstLine.length <= 60) return firstLine;
+  const truncated = firstLine.substring(0, 60);
+  const lastSpace = truncated.lastIndexOf(" ");
+  return (lastSpace > 20 ? truncated.substring(0, lastSpace) : truncated) + "...";
+}
+
+async function generateRunTitle(
+  runId: string,
+  adapter: WorkRunAdapter,
+  goal: string,
+  context?: StartRunContextItem[],
+): Promise<void> {
+  let title: string;
+  try {
+    if (adapter.generateTitle) {
+      title = await adapter.generateTitle(goal, context as WorkRunContextItem[]);
+    } else {
+      title = fallbackTitle(goal);
+    }
+  } catch {
+    title = fallbackTitle(goal);
+  }
+  await runsRepo.updateRun(runId, { title });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -604,6 +637,11 @@ export const runsService = {
 
       // 5. Create adapter
       const adapter = createWorkAdapter(provider);
+
+      // Fire-and-forget: generate title in background
+      generateRunTitle(runId, adapter, payload.goal, payload.initialContext).catch((err) =>
+        console.error(`[RunsService] Title generation failed for ${runId}:`, err),
+      );
 
       // Track tool calls for updating when completed
       const pendingToolCalls = new Map<string, number>();

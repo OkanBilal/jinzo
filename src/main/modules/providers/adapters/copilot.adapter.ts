@@ -1184,6 +1184,54 @@ export function createCopilotAdapter(
       logInfo("Shutdown complete");
     },
 
+    async generateTitle(goal: string, context?: import("./adapter.types").WorkRunContextItem[]): Promise<string> {
+      const copilotClient = await ensureClient();
+
+      // Build a concise prompt with goal + optional context summary
+      let userPrompt = goal;
+      if (context && context.length > 0) {
+        const contextSummary = context
+          .map((ctx) => {
+            const header = ctx.ref ? `[${ctx.kind}: ${ctx.ref}]` : `[${ctx.kind}]`;
+            return `${header} ${(ctx.content || "").substring(0, 200)}`;
+          })
+          .join("\n")
+          .substring(0, 500);
+        userPrompt = `${goal}\n\nContext:\n${contextSummary}`;
+      }
+
+      const session = await copilotClient.createSession({
+        systemMessage: {
+          content: "Generate a concise 3-6 word title for the given coding task. Respond with ONLY the title, no quotes, no punctuation at the end, no explanation.",
+        },
+      });
+
+      try {
+        const result = await session.sendAndWait(
+          { prompt: userPrompt },
+          15000, // 15s timeout for title generation
+        );
+
+        const titleText = String(
+          (result as any)?.content ??
+          (result as any)?.data?.content ??
+          "",
+        ).trim().replace(/^["']|["']$/g, "").trim();
+
+        if (!titleText) {
+          throw new Error("Empty title generated");
+        }
+
+        return titleText.slice(0, 60);
+      } finally {
+        try {
+          await session.destroy();
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+    },
+
     async listModels(): Promise<ModelInfo[]> {
       try {
         const copilotClient = await ensureClient();

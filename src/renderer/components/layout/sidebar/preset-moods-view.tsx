@@ -125,13 +125,13 @@ export default function PresetMoodsView({
       className="flex flex-col h-full"
       style={{ animation: "slide-fade-down 300ms ease-in-out" }}
     >
-      <div className="flex flex-col items-center pt-12 px-4">
+      <div className="flex flex-col items-center pt-12 px-3">
         <Body className="text-center text-base! text-primary-800 dark:text-primary">
           Preset Moods
         </Body>
       </div>
 
-      <div className="flex-1 px-4 py-2 noscrollbar">
+      <div className="flex-1 px-3 py-2 noscrollbar">
         <div className="grid grid-cols-2 gap-3">
           {availablePresets.map((template) => {
             const templateIcon = parseIcon(template.icon);
@@ -173,11 +173,11 @@ export default function PresetMoodsView({
         </div>
       </div>
 
-      <div className="p-4 space-y-2">
+      <div className="p-3 space-y-2">
         <Button
           onClick={handleCreate}
           disabled={isLoading}
-          className="w-full py-2.5 px-4 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer disabled:opacity-50 
+          className="w-full py-2.5 px-3 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer disabled:opacity-50 
           disabled:cursor-not-allowed brightness-120 hover:scale-101 active:scale-99 text-primary-800 dark:text-primary dark:bg-primary/5 dark:hover:bg-primary/10 bg-primary/30 hover:bg-primary/50"
 
         >

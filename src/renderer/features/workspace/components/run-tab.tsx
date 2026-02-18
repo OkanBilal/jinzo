@@ -2,6 +2,7 @@ import { Archive, Close, CopilotStatic } from "@/components/ui/icons";
 import type { Run } from "../types";
 import { Claude, Copilot } from "@/components/ui/icons/mood";
 import { Button } from "@/components/ui/button";
+import { AnimatedTitle } from "@/components/ui/animated-title";
 
 interface RunTabProps {
   run: Run;
@@ -16,18 +17,18 @@ export function RunTab({ run, isActive, onClick, onClose, title, variant = "work
   return (
     <div
       onClick={onClick}
-      className={`group flex items-center gap-2 pl-3 pr-1 py-3 cursor-pointer  transition-colors min-w-40 max-w-48 ${
+      className={`group flex items-center gap-2 pl-3 pr-1 py-2.5 cursor-pointer  transition-colors min-w-40 max-w-48 ${
         isActive
           ? `text-primary-950 dark:text-primary-200  ${variant=== "claude" ? "dark:bg-claude-dark bg-primary" : variant === "workspace" ? " dark:bg-copilot-dark bg-primary" : ""} `  
           : "text-primary-500 hover:text-primary-700 dark:hover:text-primary-300 "
       }`}
     >
       {variant === "claude" ? (
-        <Claude className={`w-4 h-4 ${isActive ? "text-white" : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"}`} />
+        <Claude className={`size-3.5 ${isActive ? "text-white" : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"}`} />
       ) : variant === "workspace" ? (
-        <Copilot className={`w-4 h-4 ${isActive ? "text-white" : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"}`} />
+        <Copilot className={`size-3.5 ${isActive ? "text-white" : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"}`} />
       ) : null}
-      <span className="text-xs font-medium truncate flex-1">{title}</span>
+      <AnimatedTitle title={title} className="text-xs font-medium truncate flex-1" />
       <Button
         tooltip="Archive"
         tooltipPosition="bottom"

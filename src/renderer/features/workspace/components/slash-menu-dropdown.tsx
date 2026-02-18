@@ -96,19 +96,19 @@ export function SlashMenuDropdown({
         })
       : userFacingCommands;
 
-    // Filter skills (only user-invocable)
-    const userInvocableSkills = skills.filter(
-      (skill) => skill.userInvocable !== false,
+    // Filter skills (only user-invokable)
+    const userInvokableSkills = skills.filter(
+      (skill) => skill.userInvokable !== false,
     );
     const matchedSkills = filterText
-      ? userInvocableSkills.filter((skill) => {
+      ? userInvokableSkills.filter((skill) => {
           const nameMatch = skill.name.toLowerCase().includes(lowerFilter);
           const descMatch = skill.description
             ?.toLowerCase()
             .includes(lowerFilter);
           return nameMatch || descMatch;
         })
-      : userInvocableSkills;
+      : userInvokableSkills;
 
     return {
       filteredCommands: matchedCommands,

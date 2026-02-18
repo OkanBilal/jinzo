@@ -53,7 +53,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
         </Body>
       </div>
 
-      <div className="flex-1 px-4 py-2 overflow-y-auto noscrollbar">
+      <div className="flex-1 px-3 py-2 overflow-y-auto noscrollbar">
         <nav className="space-y-0.5">
           {menuItems.map((item, index) => {
             const IconComponent = item.icon;
@@ -84,7 +84,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
       </div>
 
       <div
-        className="px-3 pb-3 group animate-slide-up"
+        className="px-1 pb-2 group animate-slide-up"
         style={{
           animation: `slide-from-bottom 0.2s ease-out 0.1s both`,
         }}
@@ -100,13 +100,13 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
           className="justify-start cursor-pointer pt-1!  hover:scale-100! bg-transparent! transition-transform duration-200"
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
-          <ChevronUp className="w-4.5 h-4.5 rotate-270 text-primary-900 dark:text-primary-400" />
-          <Body className="text-primary-900 dark:text-primary-100 ml-0.5 font-medium">
+          <ChevronUp className="size-4 rotate-270 text-primary-900 dark:text-primary-400" />
+          <Body className="text-primary-900 text-[13px]! dark:text-primary-100  font-medium">
             Return
           </Body>
-          <Caption className="ml-auto text-primary-900 dark:text-primary-400">
+          {/* <Caption className="ml-auto text-[13px]! text-primary-900 dark:text-primary-400">
             Esc
-          </Caption>
+          </Caption> */}
         </Button>
       </div>
     </div>

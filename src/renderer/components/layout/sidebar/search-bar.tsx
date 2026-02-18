@@ -50,7 +50,7 @@ export default function SearchBar({
           onClick={onToggle}
           tooltip="Search item"
           tooltipPosition="top"
-          className="h-9 w-9 cursor-pointer hover:scale-101 active:scale-99 duration-200 flex items-center justify-center hover:bg-primary/20 dark:hover:bg-primary/10 rounded-xl transition-all"
+          className="p-2 cursor-pointer hover:scale-101 active:scale-99 duration-200 flex items-center justify-center hover:bg-primary/20 dark:hover:bg-primary/10 rounded-xl transition-all"
         >
           <Search className="w-4 h-4 text-primary-900 dark:text-primary-400" />
         </Button>

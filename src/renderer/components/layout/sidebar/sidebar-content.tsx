@@ -46,7 +46,7 @@ export function SidebarContent({
 }: SidebarContentProps) {
   return (
     <div
-      className="flex-1 overflow-y-auto noscrollbar px-4"
+      className="flex-1 overflow-y-auto noscrollbar px-3"
       style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
     >
       <div

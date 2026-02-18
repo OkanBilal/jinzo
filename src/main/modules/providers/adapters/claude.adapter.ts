@@ -55,6 +55,7 @@ const DEFAULT_ALLOWED_TOOLS = [
   "WebFetch",
   "WebSearch",
   "NotebookEdit",
+  "Skill",
 ];
 const ALLOWED_TOOLS_SET = new Set(DEFAULT_ALLOWED_TOOLS);
 
@@ -257,12 +258,21 @@ interface SDKSlashCommand {
   argumentHint: string;
 }
 
+interface SDKInitializationResult {
+  commands: SDKSlashCommand[];
+  output_style: string;
+  available_output_styles: string[];
+  models: SDKModelInfo[];
+  account: { email?: string; organization?: string };
+}
+
 interface SDKQuery extends AsyncGenerator<SDKMessage, void> {
   interrupt(): Promise<void>;
   rewindFiles(userMessageUuid: string): Promise<void>;
   setPermissionMode(mode: string): Promise<void>;
   setModel(model?: string): Promise<void>;
   setMaxThinkingTokens(maxThinkingTokens: number | null): Promise<void>;
+  initializationResult(): Promise<SDKInitializationResult>;
   supportedCommands(): Promise<SDKSlashCommand[]>;
   supportedModels(): Promise<SDKModelInfo[]>;
   mcpServerStatus(): Promise<unknown[]>;
@@ -1974,16 +1984,17 @@ export function createClaudeAdapter(
           },
         });
 
-        // Fetch supported commands from SDK
-        const sdkCommands = await tempQuery.supportedCommands();
+        // Use initializationResult() which returns the full command list
+        // including skills, unlike supportedCommands() which may differ
+        const initResult = await tempQuery.initializationResult();
 
-        if (!sdkCommands || sdkCommands.length === 0) {
+        if (!initResult?.commands || initResult.commands.length === 0) {
           logWarn("SDK returned no commands");
           return [];
         }
 
         // Map SDK commands to our CommandInfo format
-        const commands: CommandInfo[] = sdkCommands.map((cmd) => ({
+        const commands: CommandInfo[] = initResult.commands.map((cmd) => ({
           name: cmd.name,
           description: cmd.description,
           argumentHint: cmd.argumentHint,
@@ -1999,6 +2010,88 @@ export function createClaudeAdapter(
         logError("Failed to fetch commands from SDK:", error);
         return [];
       }
+    },
+
+    async generateTitle(goal: string, context?: import("./adapter.types").WorkRunContextItem[]): Promise<string> {
+      await ensureSDK();
+
+      if (!queryFn) {
+        throw new Error("Claude SDK not properly initialized");
+      }
+
+      // Build context snippet if available
+      let contextSnippet = "";
+      if (context && context.length > 0) {
+        contextSnippet = context
+          .map((ctx) => {
+            const header = ctx.ref ? `[${ctx.kind}: ${ctx.ref}]` : `[${ctx.kind}]`;
+            return `${header} ${(ctx.content || "").substring(0, 200)}`;
+          })
+          .join("\n")
+          .substring(0, 500);
+      }
+
+      // Embed the title instruction directly in the prompt so it can't be overridden
+      const titlePrompt = [
+        "TASK: Generate a short title (3-5 words) for the following coding task.",
+        "RULES: Reply with ONLY the title. No quotes, no explanation, no punctuation at the end, no prefixes like 'Title:'.",
+        "",
+        `User's request: ${goal}`,
+        contextSnippet ? `\nContext:\n${contextSnippet}` : "",
+        "",
+        "Title:",
+      ].filter(Boolean).join("\n");
+
+      const options = buildOptions(
+        "claude-haiku-4-5-20251001", // Use haiku for fast, cheap title generation
+        undefined, // no workspace path needed
+        undefined, // no abort controller
+        undefined, // no resume session
+        undefined, // no hooks
+        undefined, // no agents
+        undefined, // no runId (skip tool approval hook)
+      );
+
+      // Override for title generation: minimal config, no tools
+      options.maxTurns = 1;
+      options.allowedTools = [];
+      options.disallowedTools = ["*"];
+      options.systemPrompt = "You are a title generator. Output ONLY a short title (3-5 words). Never explain, never use tools, never write code.";
+
+      const query = queryFn({
+        prompt: titlePrompt,
+        options,
+      });
+
+      let titleText = "";
+      for await (const msg of query) {
+        if (msg.type === "assistant") {
+          const assistantMsg = msg as { message?: { content?: Array<{ type: string; text?: string }> } };
+          if (assistantMsg.message?.content) {
+            for (const block of assistantMsg.message.content) {
+              if (block.type === "text" && block.text) {
+                titleText += block.text;
+              }
+            }
+          }
+        }
+      }
+
+      // Clean up: remove quotes, "Title:" prefix, markdown, and take only first line
+      let title = titleText
+        .trim()
+        .split("\n")[0]
+        .trim()
+        .replace(/^(title:\s*)/i, "")
+        .replace(/^["'`]|["'`]$/g, "")
+        .replace(/[.!?]$/, "")
+        .trim();
+
+      if (!title) {
+        throw new Error("Empty title generated");
+      }
+
+      return title.slice(0, 50);
     },
 
     async listSkills(workspacePath?: string): Promise<SkillInfo[]> {
@@ -2136,7 +2229,7 @@ function parseSkillFile(
       description: firstParagraph?.substring(0, 200),
       source,
       path: filePath,
-      userInvocable: true,
+      userInvokable: true,
       modelInvocable: true,
     };
   }
@@ -2149,7 +2242,7 @@ function parseSkillFile(
     name: (parsed.name as string) || dirName,
     description: parsed.description as string | undefined,
     argumentHint: parsed["argument-hint"] as string | undefined,
-    userInvocable: parsed["user-invocable"] !== false,
+    userInvokable: parsed["user-invokable"] !== false,
     modelInvocable: parsed["disable-model-invocation"] !== true,
     source,
     model: parsed.model as string | undefined,

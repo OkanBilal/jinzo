@@ -143,7 +143,7 @@ export default function Sidebar() {
               onSearchChange={setSearchQuery}
               onSearchClear={handleSearchClear}
             />
-            <div className="px-4 py-3">
+            <div className="p-3">
               <NewButton
                 onClick={handleNewClick}
                 icon={

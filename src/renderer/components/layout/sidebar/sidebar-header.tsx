@@ -21,7 +21,7 @@ export function SidebarHeader({
   onSearchClear,
 }: SidebarHeaderProps) {
   return (
-    <div className="px-4 pt-12 shrink-0">
+    <div className="px-3 pt-12 shrink-0">
       <div
         className={`flex items-center transition-all duration-200 ease-in-out ${
           isSearchExpanded ? "gap-0" : "gap-3"

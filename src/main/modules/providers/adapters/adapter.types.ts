@@ -263,6 +263,15 @@ export interface WorkRunAdapter {
    * @returns Promise resolving to array of SkillInfo
    */
   listSkills?(workspacePath?: string): Promise<SkillInfo[]>;
+
+  /**
+   * Generate a short title for a run based on its goal and context.
+   * Used to produce a human-readable tab title instead of truncated goal text.
+   * @param goal - The user's goal/prompt for the run
+   * @param context - Optional context items provided to the run
+   * @returns Promise resolving to a short title string (3-6 words)
+   */
+  generateTitle?(goal: string, context?: WorkRunContextItem[]): Promise<string>;
 }
 
 /**
@@ -417,7 +426,7 @@ export interface CommandInfo {
   description?: string;
   /** Hint for command arguments */
   argumentHint?: string;
-  /** Whether the command is user-invocable */
+  /** Whether the command is user-invokable */
   userFacing?: boolean;
 }
 
@@ -432,8 +441,8 @@ export interface SkillInfo {
   description?: string;
   /** Hint for skill arguments (from argument-hint frontmatter) */
   argumentHint?: string;
-  /** Whether the skill is user-invocable (can be triggered with /name). Default: true */
-  userInvocable?: boolean;
+  /** Whether the skill is user-invokable (can be triggered with /name). Default: true */
+  userInvokable?: boolean;
   /** Whether Claude can automatically invoke this skill. Default: true (false if disable-model-invocation is set) */
   modelInvocable?: boolean;
   /** Source location: "user" (~/.claude/skills/) or "project" (.claude/skills/) */

@@ -40,7 +40,7 @@ export function SidebarFooter({
 
   return (
     <div
-      className="px-5 py-4 space-y-3"
+      className="px-4 py-3 space-y-3"
       style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
     >
       <div className="flex items-center justify-between gap-3">

@@ -135,7 +135,7 @@ export default function CreateMoodView({
       className="flex flex-col h-full"
       style={{ animation: "slide-fade-down 300ms ease-in-out" }}
     >
-      <div className="flex flex-col items-center pt-8 pb-6 px-4">
+      <div className="flex flex-col items-center pt-8 pb-6 px-3">
         <div
           className="w-14 h-14 rounded-full flex items-center justify-center text-3xl mb-2 "
           style={{
@@ -160,7 +160,7 @@ export default function CreateMoodView({
         </Heading3>
       </div>
 
-      <div className="flex-1 px-4 space-y-4 overflow-y-auto noscrollbar">
+      <div className="flex-1 px-3 space-y-4 overflow-y-auto noscrollbar">
         <div className="relative">
           <Input
             type="text"
@@ -387,7 +387,7 @@ export default function CreateMoodView({
             }}
           >
             {/* Solid Colors Row */}
-            <div className="flex items-center gap-2 px-4 py-2.5 ml-2 min-w-full">
+            <div className="flex items-center gap-2 px-3 py-2.5 ml-2 min-w-full">
               {solidColors.map((colorPair, index) => {
                 const variant = getThemeVariant(colorPair, darkMode);
                 return (
@@ -425,7 +425,7 @@ export default function CreateMoodView({
               </Button>
             </div>
 
-            <div className="flex items-center gap-2 px-4 mr-2  min-w-full">
+            <div className="flex items-center gap-2 px-3 mr-2  min-w-full">
               <Button
                 type="button"
                 onClick={() => {
@@ -470,7 +470,7 @@ export default function CreateMoodView({
         <Button
           onClick={handleCreate}
           disabled={isLoading}
-          className="w-full py-2.5 px-4 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer disabled:opacity-50 
+          className="w-full py-2.5 px-3 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer disabled:opacity-50 
           disabled:cursor-not-allowed brightness-120 hover:scale-101 active:scale-99 text-primary-800 dark:text-primary"
           style={{
             background: currentVariant.preview,

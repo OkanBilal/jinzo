@@ -82,7 +82,7 @@ export default function WorkspaceItem({
     <div className="relative group">
       <div
         onClick={onClick}
-        className={`block pl-3.5 pr-3 py-1.5 active:scale-99 group-hover:scale-[1.01] rounded-xl transition-all duration-200 ease-out cursor-pointer ${
+        className={`block px-3 py-1.5 active:scale-99 group-hover:scale-[1.01] rounded-xl transition-all duration-200 ease-out cursor-pointer ${
           isActive
             ? "bg-primary/80 dark:bg-primary/5"
             : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"

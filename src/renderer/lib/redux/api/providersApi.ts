@@ -74,7 +74,7 @@ export interface SkillInfo {
   name: string;
   description?: string;
   argumentHint?: string;
-  userInvocable?: boolean;
+  userInvokable?: boolean;
   modelInvocable?: boolean;
   source?: "user" | "project";
   model?: string;
