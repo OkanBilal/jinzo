@@ -1,6 +1,6 @@
-import { RefObject, useMemo } from "react";
+import { Fragment, RefObject, useMemo, useState, useCallback } from "react";
 import { WorkspaceTabs } from "./workspace-tabs";
-import { ToolCallGroup, InfoGroup, groupEvents } from "./tools/tool-call-group";
+import { ToolCallGroup, InfoGroup, groupEvents, type EventGroup } from "./tools/tool-call-group";
 import { EditorContent } from "./editor-content";
 import { IssueTabContent } from "./issue-tab-content";
 import { NoteTabContent } from "./note-tab-content";
@@ -12,6 +12,144 @@ import { isIssueTab, getIssueEntityId, isNoteTab, getNoteId } from "../utils/rep
 import { AsciiLoader } from "./ascii-loader";
 import type { ToolApprovalRequest } from "../hooks/use-tool-approval";
 import { ToolApprovalDialog } from "./tools/tool-approval-dialog";
+import { Clipboard, Check } from "@/components/ui/icons";
+
+function formatElapsed(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes < 60) return `${minutes}m ${seconds}s`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return `${hours}h ${remainingMinutes}m ${seconds}s`;
+}
+
+interface SessionInfo {
+  elapsed: number;
+  responseContent: string;
+}
+
+/** Session time bar with dot separator and copy button */
+function SessionTimeBar({ info }: { info: SessionInfo }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    if (!info.responseContent) return;
+    navigator.clipboard.writeText(info.responseContent).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [info.responseContent]);
+
+  if (info.elapsed <= 0) return null;
+
+  return (
+    <div className="flex items-center gap-2 text-[13px] text-primary-500 dark:text-primary-400 pl-4 -mt-1">
+      <span>{formatElapsed(info.elapsed)}</span>
+      {info.responseContent && (
+        <>
+          <span className="size-0.75 rounded-full bg-current opacity-50" />
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1 hover:text-primary-900 dark:hover:text-primary-100 transition-colors cursor-pointer"
+          >
+            {copied ? (
+              <Check className="size-4" />
+            ) : (
+              <Clipboard className="size-4" />
+            )}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Compute session times and collect response content for each turn.
+ *
+ * A "turn" starts at a user-prompt or status event (or run start for the first turn).
+ * A "turn" ends right before the next user-prompt, or at the last group if the run is done.
+ */
+function computeSessionTimes(
+  groups: EventGroup[],
+  runStartedAt?: Date,
+  isRunCompleted?: boolean,
+): Map<number, SessionInfo> {
+  const result = new Map<number, SessionInfo>();
+  let turnStartMs: number | null = runStartedAt
+    ? new Date(runStartedAt).getTime()
+    : null;
+  let turnStartIdx = 0;
+
+  const collectResponseContent = (fromIdx: number, toIdx: number): string => {
+    const parts: string[] = [];
+    for (let j = fromIdx; j <= toIdx; j++) {
+      if (groups[j].type === "response") {
+        for (const event of groups[j].events) {
+          if (event.content) parts.push(event.content);
+        }
+      }
+    }
+    return parts.join("\n\n");
+  };
+
+  for (let i = 0; i < groups.length; i++) {
+    const group = groups[i];
+    const isUserPrompt =
+      group.type === "info" &&
+      group.events[0]?.metadata?.kind === "user-prompt";
+    const isStatus =
+      group.type === "info" && group.events[0]?.type === "status";
+
+    // When we hit a new user-prompt, close the previous turn
+    if (isUserPrompt && turnStartMs !== null && i > 0) {
+      const prevGroup = groups[i - 1];
+      const prevIsPromptOrStatus =
+        prevGroup.type === "info" &&
+        (prevGroup.events[0]?.metadata?.kind === "user-prompt" ||
+          prevGroup.events[0]?.type === "status");
+      if (!prevIsPromptOrStatus) {
+        const elapsed =
+          new Date(prevGroup.endTime).getTime() - turnStartMs;
+        if (elapsed > 0) {
+          result.set(i - 1, {
+            elapsed,
+            responseContent: collectResponseContent(turnStartIdx, i - 1),
+          });
+        }
+      }
+    }
+
+    // Mark new turn start
+    if (isUserPrompt || isStatus) {
+      turnStartMs = new Date(group.startTime).getTime();
+      turnStartIdx = i;
+    }
+  }
+
+  // Close the last turn if the run is completed
+  if (isRunCompleted && turnStartMs !== null && groups.length > 0) {
+    const lastIdx = groups.length - 1;
+    const lastGroup = groups[lastIdx];
+    const lastIsPromptOrStatus =
+      lastGroup.type === "info" &&
+      (lastGroup.events[0]?.metadata?.kind === "user-prompt" ||
+        lastGroup.events[0]?.type === "status");
+    if (!lastIsPromptOrStatus) {
+      const elapsed = new Date(lastGroup.endTime).getTime() - turnStartMs;
+      if (elapsed > 0) {
+        result.set(lastIdx, {
+          elapsed,
+          responseContent: collectResponseContent(turnStartIdx, lastIdx),
+        });
+      }
+    }
+  }
+
+  return result;
+}
 
 interface WorkspaceEventsProps {
   runs: Run[];
@@ -74,11 +212,21 @@ export function WorkspaceEvents({
   const activeRun = runs.find((r) => r.id === activeTab);
   const isRunning =
     activeRun?.status === "running" || activeRun?.status === "queued";
+  const isRunCompleted =
+    activeRun?.status === "succeeded" ||
+    activeRun?.status === "failed" ||
+    activeRun?.status === "canceled";
 
   // Group events for CLI-style display
   const eventGroups = useMemo(
     () => groupEvents(currentEvents),
     [currentEvents],
+  );
+
+  // Session times: index-based map of "show session bar after this group index"
+  const sessionTimes = useMemo(
+    () => computeSessionTimes(eventGroups, activeRun?.startedAt, isRunCompleted),
+    [eventGroups, activeRun?.startedAt, isRunCompleted],
   );
 
   return (
@@ -117,21 +265,24 @@ export function WorkspaceEvents({
         ) : hasRunContent ? (
           <div className="h-full overflow-y-auto noscrollbar">
             <div className="min-h-75 max-w-210 mx-auto space-y-4 pt-12 pb-24 px-4">
-              {eventGroups.map((group, index) => {
-                if (group.type === "tool_calls") {
-                  return (
+              {eventGroups.map((group, index) => (
+                <Fragment key={group.id}>
+                  {group.type === "tool_calls" ? (
                     <ToolCallGroup
-                      key={group.id}
                       group={group}
                       defaultExpanded={index === eventGroups.length - 1}
                       variant={variant}
                     />
-                  );
-                }
-                return <InfoGroup key={group.id} group={group} />;
-              })}
+                  ) : (
+                    <InfoGroup group={group} />
+                  )}
+                  {sessionTimes.has(index) && (
+                    <SessionTimeBar info={sessionTimes.get(index)!} />
+                  )}
+                </Fragment>
+              ))}
               {isRunning && <AsciiLoader variant={variant} />}
-              {pendingApproval && onApprovalRespond && (
+              {isRunning && pendingApproval && onApprovalRespond && (
                 <ToolApprovalDialog
                   request={pendingApproval}
                   onRespond={onApprovalRespond}
@@ -139,7 +290,6 @@ export function WorkspaceEvents({
               )}
               <div ref={eventsEndRef} />
             </div>
-            
           </div>
         ) : (
           <WorkspaceEmptyState workspace={currentWorkspace} />

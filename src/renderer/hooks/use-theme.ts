@@ -62,7 +62,6 @@ export function useTheme(): ThemeConfig {
 
     return defaultConfig;
   }, [activeMood, darkMode]);
-  console.log("useTheme - activeMood:", activeMood?.id, "darkMode:", darkMode, "themeConfig:", themeConfig);
 
   return themeConfig;
 }

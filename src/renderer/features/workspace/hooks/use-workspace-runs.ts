@@ -285,7 +285,7 @@ export function useWorkspaceRuns(
       } catch (err) {
         console.error("Polling error:", err);
       }
-    }, 1000);
+    }, 500);
 
     return () => {
       if (pollingRef.current) {
@@ -355,14 +355,7 @@ export function useWorkspaceRuns(
 
           setRunEvents((prev) => ({
             ...prev,
-            [newRun.id]: [
-              {
-                id: `event-${Date.now()}`,
-                type: "status",
-                content: `Run started: ${newRun.id}`,
-                timestamp: new Date(),
-              },
-            ],
+            [newRun.id]: [],
           }));
 
           return newRun.id; // Return new run ID for tab switching
@@ -418,19 +411,6 @@ export function useWorkspaceRuns(
       // Workspace status changed to in_progress on the backend
       dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
 
-      // Add a status event for the continuation
-      setRunEvents((prev) => ({
-        ...prev,
-        [runId]: [
-          ...(prev[runId] || []),
-          {
-            id: `event-${Date.now()}`,
-            type: "status",
-            content: `Session resumed with message: ${message.trim().substring(0, 50)}...`,
-            timestamp: new Date(),
-          },
-        ],
-      }));
 
       return true;
     } catch (err) {

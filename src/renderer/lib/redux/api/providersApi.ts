@@ -233,8 +233,8 @@ export const providersApi = baseApi.injectEndpoints({
         }
         return response.data;
       },
-      providesTags: (_result, _error, { id }) => [
-        { type: "ProviderSkills", id },
+      providesTags: (_result, _error, { id, workspacePath }) => [
+        { type: "ProviderSkills", id: `${id}:${workspacePath ?? ""}` },
       ],
     }),
   }),

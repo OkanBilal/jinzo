@@ -4,7 +4,10 @@ import {
   FileExplorer,
   type FileNode,
 } from "@/features/workspace/components/file-explorer";
-import { useGetWorkspaceByIdQuery, useGetLatestWorkspaceDiffQuery } from "@/lib/redux/api";
+import {
+  useGetWorkspaceByIdQuery,
+  useGetLatestWorkspaceDiffQuery,
+} from "@/lib/redux/api";
 import type { WorkspaceIssue } from "@/lib/redux/api";
 import {
   setSelectedFile,
@@ -212,6 +215,11 @@ export function WorkspaceSidebar() {
             onSelectIssue={handleSelectIssue}
             onAddToContext={handleAddIssueToContext}
           />
+          <TerminalSection
+            variant={moodSlug}
+            workspaceId={workspaceId}
+            rootPath={rootPath}
+          />
         </>
       ) : sidebarTab === "changes" ? (
         /* Changes (diff) view */
@@ -226,12 +234,6 @@ export function WorkspaceSidebar() {
         /* Reviews view */
         <ReviewsSection workspaceId={workspaceId} />
       )}
-
-      <TerminalSection
-        variant={moodSlug}
-        workspaceId={workspaceId}
-        rootPath={rootPath}
-      />
     </div>
   );
 }

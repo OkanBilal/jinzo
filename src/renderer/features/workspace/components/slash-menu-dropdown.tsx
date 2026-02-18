@@ -162,20 +162,22 @@ export function SlashMenuDropdown({
                       <div className="flex flex-col gap-0.5">
                         <div className="font-medium flex items-center gap-1.5">
                           <span className="text-[13px]">/{skill.name}</span>
-                          {skill.source && (
-                            <span
-                              className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full ${styles.badge}`}
-                            >
-                              {getSourceLabel(skill.source)}
-                            </span>
-                          )}
-                          {skill.argumentHint && (
-                            <span
-                              className={`font-normal text-xs ${styles.description}`}
-                            >
-                              {skill.argumentHint}
-                            </span>
-                          )}
+                          <div className="ml-auto gap-2 flex items-center">
+                            {skill.argumentHint && (
+                              <span
+                                className={`font-normal  text-xs ${styles.description}`}
+                              >
+                                {skill.argumentHint}
+                              </span>
+                            )}
+                            {skill.source && (
+                              <span
+                                className={` text-[10px] px-1.5 py-0.5 rounded-full ${styles.badge}`}
+                              >
+                                {getSourceLabel(skill.source)}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         {skill.description && (
                           <div
@@ -216,7 +218,6 @@ export function SlashMenuDropdown({
                       <div className="flex flex-col gap-0.5">
                         <div className="font-medium flex items-center gap-1.5">
                           <span className="text-[13px]">/{cmd.name}</span>
-   
                         </div>
                         {cmd.description && (
                           <div

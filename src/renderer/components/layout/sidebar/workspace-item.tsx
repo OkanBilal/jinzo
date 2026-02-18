@@ -103,7 +103,7 @@ export default function WorkspaceItem({
           </div>
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5">
-              <Tooltip content={statusConfig.label} position="top">
+              <Tooltip content={statusConfig.label} position="top-right">
               <span title={statusConfig.label} className="shrink-0 flex items-center">
                 <WorkspaceStatusIcon
                   status={status}

@@ -293,9 +293,8 @@ let cachedCommands: CommandInfo[] | null = null;
 let cachedCommandsTimestamp = 0;
 const COMMANDS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-// Cached skills list (with TTL)
-let cachedSkills: SkillInfo[] | null = null;
-let cachedSkillsTimestamp = 0;
+// Cached skills list (keyed by workspacePath, with TTL)
+const skillsCache = new Map<string, { skills: SkillInfo[]; timestamp: number }>();
 const SKILLS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes (skills may change more often during development)
 
 // ─────────────────────────────────────────────────────────────
@@ -1849,8 +1848,7 @@ export function createClaudeAdapter(
       cachedCommandsTimestamp = 0;
 
       // Clear skills cache
-      cachedSkills = null;
-      cachedSkillsTimestamp = 0;
+      skillsCache.clear();
 
       logInfo("Shutdown complete");
     },
@@ -2004,10 +2002,12 @@ export function createClaudeAdapter(
     },
 
     async listSkills(workspacePath?: string): Promise<SkillInfo[]> {
-      // Check cache first
+      // Check cache first (keyed by workspacePath)
+      const cacheKey = workspacePath ?? "__global__";
       const now = Date.now();
-      if (cachedSkills && now - cachedSkillsTimestamp < SKILLS_CACHE_TTL_MS) {
-        return cachedSkills;
+      const cached = skillsCache.get(cacheKey);
+      if (cached && now - cached.timestamp < SKILLS_CACHE_TTL_MS) {
+        return cached.skills;
       }
 
       try {
@@ -2038,9 +2038,8 @@ export function createClaudeAdapter(
           skills.push(...projectSkills);
         }
 
-        // Cache the result
-        cachedSkills = skills;
-        cachedSkillsTimestamp = now;
+        // Cache the result keyed by workspace
+        skillsCache.set(cacheKey, { skills, timestamp: now });
 
         if (skills.length > 0) {
           //logInfo(`Discovered ${skills.length} skill(s)`);
