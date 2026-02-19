@@ -10,6 +10,7 @@ import {
   General,
   ChevronUp,
   CopilotStatic,
+  Branch,
 } from "@/components/ui/icons";
 import type { SettingsSection } from "@/features/chat/components/input/types";
 import { Claude } from "@/components/ui/icons/mood";
@@ -26,6 +27,7 @@ const menuItems: Array<{
   { id: "general", label: "General", icon: General },
   { id: "claude", label: "Claude Agent", icon: Claude },
   { id: "copilot", label: "Copilot", icon: CopilotStatic },
+  { id: "git", label: "Git", icon: Branch },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "personalization", label: "Personalization", icon: Personalize },
   { id: "apps", label: "Apps", icon: Apps },

@@ -10,6 +10,7 @@ import { useGetAppsQuery } from "@/lib/redux/api";
 import type { SettingsSection } from "@/features/chat/components/input/types";
 import ClaudeSettings from "@/features/settings/components/claude";
 import CopilotSettings from "@/features/settings/components/copilot";
+import GitSettings from "@/features/settings/components/git";
 
 export default function SettingsPage() {
   const [searchParams] = useSearchParams();
@@ -59,6 +60,8 @@ export default function SettingsPage() {
         return <ClaudeSettings />;
       case "copilot":
         return <CopilotSettings />;
+      case "git":
+        return <GitSettings />;
       default:
         return <GeneralSettings />;
     }

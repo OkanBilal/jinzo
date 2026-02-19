@@ -16,6 +16,7 @@ const CHANNELS = {
   CREATE_BRANCH: "git:createBranch",
   CREATE_WORKTREE: "git:createWorktree",
   IMPORT_LOCAL_REPO: "git:importLocalRepo",
+  IMPORT_LOCAL_REPO_DIRECT: "git:importLocalRepoDirect",
   REMOVE_WORKTREE: "git:removeWorktree",
   GET_WORKTREES_DIR: "git:getWorktreesDir",
   CLONE_REPO: "git:cloneRepo",
@@ -70,6 +71,10 @@ export function registerGitIpc(): void {
 
   ipcMain.handle(CHANNELS.IMPORT_LOCAL_REPO, async (_, sourcePath: string) => {
     return gitService.importLocalRepo(sourcePath);
+  });
+
+  ipcMain.handle(CHANNELS.IMPORT_LOCAL_REPO_DIRECT, async (_, sourcePath: string) => {
+    return gitService.importLocalRepoDirect(sourcePath);
   });
 
   ipcMain.handle(

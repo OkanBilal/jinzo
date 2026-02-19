@@ -12,4 +12,8 @@ export const appSettingsController = {
   async setActiveMood(moodId: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
     return appSettingsService.setActiveMood(moodId);
   },
+
+  async setEnableWorktrees(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+    return appSettingsService.setEnableWorktrees(enabled);
+  },
 };

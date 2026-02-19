@@ -13,7 +13,7 @@ export function NoteTab({ review, isActive, onClick, onClose, variant }: NoteTab
   return (
     <div
       onClick={onClick}
-      className={`group flex items-center gap-2 pl-3 pr-1 py-3 cursor-pointer transition-colors min-w-40 max-w-48 ${
+      className={`group flex items-center gap-2 pl-3 pr-1 py-2.5 cursor-pointer transition-colors min-w-40 max-w-48 ${
         isActive
           ? `text-primary-950 dark:text-primary-200 ${variant === "claude" ? "dark:bg-claude-dark bg-primary" : "dark:bg-copilot-dark bg-primary"}`
           : "text-primary-500 hover:text-primary-700 dark:hover:text-primary-300"

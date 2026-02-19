@@ -6,6 +6,7 @@ import {
   useCreateWorkspaceMutation,
   useSelectDirectoryMutation,
   useGetAccountQuery,
+  useGetAppSettingsQuery,
 } from "@/lib/redux/api";
 import { toast } from "@/components/ui/toast";
 import { useActiveMood } from "@/hooks/use-active-mood";
@@ -19,6 +20,7 @@ export function useSidebarActions() {
   const { moods } = useActiveMood();
   const sidebarConfig = useSidebarConfig();
   const { data: account } = useGetAccountQuery();
+  const { data: appSettings } = useGetAppSettingsQuery();
 
   const [setActiveMood] = useSetActiveMoodMutation();
   const [createJournalDraft] = useCreateJournalDraftMutation();
@@ -64,54 +66,91 @@ export function useSidebarActions() {
         // Extract folder name from path
         const folderName = selectedPath.split("/").pop() || "Untitled";
         const workspaceId = crypto.randomUUID();
+        const useWorktrees = appSettings?.enableWorktrees ?? true;
 
-        // Try to import as git repo with worktree
-        const importResult =
-          await window.api.git.importLocalRepo(selectedPath);
+        if (useWorktrees) {
+          // Worktree flow: create isolated branch + worktree
+          const importResult =
+            await window.api.git.importLocalRepo(selectedPath);
 
-        if (!importResult.success || !importResult.data) {
-          throw new Error(importResult.error || "Not a git repository");
+          if (!importResult.success || !importResult.data) {
+            throw new Error(importResult.error || "Not a git repository");
+          }
+
+          const {
+            branchName,
+            worktreePath,
+            worktreeName,
+            baseBranch,
+            tracking,
+            ahead,
+            behind,
+            originUrl,
+          } = importResult.data;
+
+          const metadata = {
+            isGitRepo: true,
+            tracking,
+            ahead,
+            behind,
+            worktree: {
+              enabled: true as const,
+              name: worktreeName,
+              path: worktreePath,
+              sourcePath: selectedPath,
+              branch: branchName,
+            },
+            origin: { url: originUrl },
+            baseBranch,
+          };
+
+          await createWorkspace({
+            id: workspaceId,
+            accountId: account?.id || "default",
+            name: folderName,
+            rootPath: worktreePath,
+            repoUrl: originUrl || undefined,
+            defaultBranch: branchName,
+            metadata,
+          }).unwrap();
+        } else {
+          // Direct flow: use source path and active branch directly
+          const importResult =
+            await window.api.git.importLocalRepoDirect(selectedPath);
+
+          if (!importResult.success || !importResult.data) {
+            throw new Error(importResult.error || "Not a git repository");
+          }
+
+          const {
+            branchName,
+            baseBranch,
+            tracking,
+            ahead,
+            behind,
+            originUrl,
+          } = importResult.data;
+
+          const metadata = {
+            isGitRepo: true,
+            tracking,
+            ahead,
+            behind,
+            worktree: { enabled: false as const },
+            origin: { url: originUrl },
+            baseBranch,
+          };
+
+          await createWorkspace({
+            id: workspaceId,
+            accountId: account?.id || "default",
+            name: folderName,
+            rootPath: selectedPath,
+            repoUrl: originUrl || undefined,
+            defaultBranch: branchName,
+            metadata,
+          }).unwrap();
         }
-
-        const {
-          branchName,
-          worktreePath,
-          worktreeName,
-          baseBranch,
-          tracking,
-          ahead,
-          behind,
-          originUrl,
-        } = importResult.data;
-
-        // Build metadata with existing top-level fields + new worktree info
-        const metadata = {
-          isGitRepo: true,
-          tracking: tracking,
-          ahead: ahead,
-          behind: behind,
-          worktree: {
-            enabled: true as const,
-            name: worktreeName,
-            path: worktreePath,
-            sourcePath: selectedPath,
-            branch: branchName,
-          },
-          origin: {
-            url: originUrl,
-          },
-          baseBranch: baseBranch,
-        };
-
-        await createWorkspace({
-          id: workspaceId,
-          accountId: account?.id || "default",
-          name: folderName,
-          rootPath: worktreePath,
-          repoUrl: originUrl || undefined,
-          defaultBranch: branchName,
-          metadata,
-        }).unwrap();
 
         toast.success("Workspace added");
         const basePath = getBaseRoutePath(
@@ -135,54 +174,89 @@ export function useSidebarActions() {
       }
 
       const { clonedPath, originUrl } = cloneResult.data;
-
-      // Now import the cloned repo the same way as Add Project
-      const importResult = await window.api.git.importLocalRepo(clonedPath);
-
-      if (!importResult.success || !importResult.data) {
-        throw new Error(importResult.error || "Failed to import cloned repository");
-      }
-
-      const {
-        branchName,
-        worktreePath,
-        worktreeName,
-        baseBranch,
-        tracking,
-        ahead,
-        behind,
-      } = importResult.data;
-
       const folderName = clonedPath.split("/").pop() || "Untitled";
       const workspaceId = crypto.randomUUID();
+      const useWorktrees = appSettings?.enableWorktrees ?? true;
 
-      const metadata = {
-        isGitRepo: true,
-        tracking: tracking,
-        ahead: ahead,
-        behind: behind,
-        worktree: {
-          enabled: true as const,
-          name: worktreeName,
-          path: worktreePath,
-          sourcePath: clonedPath,
-          branch: branchName,
-        },
-        origin: {
-          url: originUrl,
-        },
-        baseBranch: baseBranch,
-      };
+      if (useWorktrees) {
+        // Worktree flow
+        const importResult = await window.api.git.importLocalRepo(clonedPath);
 
-      await createWorkspace({
-        id: workspaceId,
-        accountId: account?.id || "default",
-        name: folderName,
-        rootPath: worktreePath,
-        repoUrl: originUrl || undefined,
-        defaultBranch: branchName,
-        metadata,
-      }).unwrap();
+        if (!importResult.success || !importResult.data) {
+          throw new Error(importResult.error || "Failed to import cloned repository");
+        }
+
+        const {
+          branchName,
+          worktreePath,
+          worktreeName,
+          baseBranch,
+          tracking,
+          ahead,
+          behind,
+        } = importResult.data;
+
+        const metadata = {
+          isGitRepo: true,
+          tracking,
+          ahead,
+          behind,
+          worktree: {
+            enabled: true as const,
+            name: worktreeName,
+            path: worktreePath,
+            sourcePath: clonedPath,
+            branch: branchName,
+          },
+          origin: { url: originUrl },
+          baseBranch,
+        };
+
+        await createWorkspace({
+          id: workspaceId,
+          accountId: account?.id || "default",
+          name: folderName,
+          rootPath: worktreePath,
+          repoUrl: originUrl || undefined,
+          defaultBranch: branchName,
+          metadata,
+        }).unwrap();
+      } else {
+        // Direct flow: use cloned path directly
+        const importResult = await window.api.git.importLocalRepoDirect(clonedPath);
+
+        if (!importResult.success || !importResult.data) {
+          throw new Error(importResult.error || "Failed to import cloned repository");
+        }
+
+        const {
+          branchName,
+          baseBranch,
+          tracking,
+          ahead,
+          behind,
+        } = importResult.data;
+
+        const metadata = {
+          isGitRepo: true,
+          tracking,
+          ahead,
+          behind,
+          worktree: { enabled: false as const },
+          origin: { url: originUrl },
+          baseBranch,
+        };
+
+        await createWorkspace({
+          id: workspaceId,
+          accountId: account?.id || "default",
+          name: folderName,
+          rootPath: clonedPath,
+          repoUrl: originUrl || undefined,
+          defaultBranch: branchName,
+          metadata,
+        }).unwrap();
+      }
 
       toast.success("Repository cloned and workspace created");
       setIsCloneModalOpen(false);

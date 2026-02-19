@@ -30,7 +30,7 @@ export default function HelpMenu({ isOpen, position, onClose }: HelpMenuProps) {
         <DropdownMenuItem
           onClick={() =>
             handleOpenExternal(
-              "https://github.com/nicholasgriffintn/jinzo/issues/new",
+              "https://github.com/okanbilal/jinzo/issues/new",
             )
           }
         >
@@ -51,7 +51,7 @@ export default function HelpMenu({ isOpen, position, onClose }: HelpMenuProps) {
         <DropdownMenuItem
           onClick={() =>
             handleOpenExternal(
-              "https://github.com/nicholasgriffintn/jinzo/releases",
+              "https://github.com/okanbilal/jinzo/releases",
             )
           }
         >

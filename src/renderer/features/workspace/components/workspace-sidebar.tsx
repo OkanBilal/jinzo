@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   FileExplorer,
@@ -45,13 +45,18 @@ export function WorkspaceSidebar() {
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
   const [selectedDiffFile, setSelectedDiffFile] = useState<string | null>(null);
 
+  // Reset selected diff file when workspace changes
+  useEffect(() => {
+    setSelectedDiffFile(null);
+  }, [workspaceId]);
+
   // Get workspace data from the selected workspace ID
   const { data: workspace } = useGetWorkspaceByIdQuery(workspaceId || "", {
     skip: !workspaceId,
   });
 
   // Get diff data to show changed files count
-  const { data: diff } = useGetLatestWorkspaceDiffQuery(workspaceId || "", {
+  const { currentData: diff } = useGetLatestWorkspaceDiffQuery(workspaceId || "", {
     skip: !workspaceId,
   });
 

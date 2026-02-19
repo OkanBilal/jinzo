@@ -250,6 +250,8 @@ const api = {
     get: () => ipcRenderer.invoke("appSettings:get"),
     setActiveMood: (moodId: string | null) =>
       ipcRenderer.invoke("appSettings:setActiveMood", moodId),
+    setEnableWorktrees: (enabled: boolean) =>
+      ipcRenderer.invoke("appSettings:setEnableWorktrees", enabled),
     onMoodChanged: (
       callback: (data: { activeMoodId: string | null }) => void,
     ) => {
@@ -604,6 +606,8 @@ const api = {
      */
     importLocalRepo: (sourcePath: string) =>
       ipcRenderer.invoke("git:importLocalRepo", sourcePath),
+    importLocalRepoDirect: (sourcePath: string) =>
+      ipcRenderer.invoke("git:importLocalRepoDirect", sourcePath),
     /**
      * Remove a worktree
      */

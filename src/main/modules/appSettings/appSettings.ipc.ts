@@ -7,6 +7,7 @@ import { appSettingsController } from "./appSettings.controller";
 export function registerAppSettingsIpc() {
   ipcMain.handle("appSettings:get", () => appSettingsController.get());
   ipcMain.handle("appSettings:setActiveMood", (_, moodId) => appSettingsController.setActiveMood(moodId));
+  ipcMain.handle("appSettings:setEnableWorktrees", (_, enabled) => appSettingsController.setEnableWorktrees(enabled));
 
   console.log("App settings IPC handlers registered");
 }
@@ -14,4 +15,5 @@ export function registerAppSettingsIpc() {
 export function unregisterAppSettingsIpc() {
   ipcMain.removeHandler("appSettings:get");
   ipcMain.removeHandler("appSettings:setActiveMood");
+  ipcMain.removeHandler("appSettings:setEnableWorktrees");
 }

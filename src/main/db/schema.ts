@@ -49,6 +49,10 @@ export const appSettings = sqliteTable("app_settings", {
     onDelete: "set null",
   }),
 
+  enableWorktrees: integer("enable_worktrees", { mode: "boolean" })
+    .notNull()
+    .default(true),
+
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),

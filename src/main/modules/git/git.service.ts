@@ -31,6 +31,16 @@ export interface WorktreeImportResult {
   originUrl: string | null;
 }
 
+export interface DirectImportResult {
+  branchName: string;
+  sourcePath: string;
+  baseBranch: string;
+  tracking: string | null;
+  ahead: number;
+  behind: number;
+  originUrl: string | null;
+}
+
 export interface GitBranchInfo {
   current: string;
   all: string[];
@@ -454,6 +464,58 @@ class GitService {
           branchName,
           worktreePath,
           worktreeName,
+          baseBranch,
+          tracking: status.tracking,
+          ahead: status.ahead,
+          behind: status.behind,
+          originUrl,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to import local repo",
+      };
+    }
+  }
+
+  /**
+   * Import a local git repo without creating a worktree.
+   * Uses the source path and active branch directly.
+   */
+  async importLocalRepoDirect(sourcePath: string): Promise<ServiceResponse<DirectImportResult>> {
+    try {
+      const git = this.getGit(sourcePath);
+
+      // 1. Validate it's a git repo
+      const isRepo = await git.checkIsRepo();
+      if (!isRepo) {
+        return { success: false, error: "Not a git repository" };
+      }
+
+      // 2. Get current branch
+      const baseBranch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+
+      // 3. Get origin URL if available
+      let originUrl: string | null = null;
+      try {
+        const remotes: RemoteWithRefs[] = await git.getRemotes(true);
+        const origin = remotes.find((r) => r.name === "origin");
+        if (origin) {
+          originUrl = origin.refs.fetch || origin.refs.push || null;
+        }
+      } catch {
+        // No remotes, that's fine
+      }
+
+      // 4. Get tracking info
+      const status: StatusResult = await git.status();
+
+      return {
+        success: true,
+        data: {
+          branchName: baseBranch,
+          sourcePath,
           baseBranch,
           tracking: status.tracking,
           ahead: status.ahead,

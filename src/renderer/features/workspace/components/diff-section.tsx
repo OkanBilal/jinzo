@@ -82,7 +82,7 @@ export function DiffSection({
   const dispatch = useDispatch();
 
   // Fetch the latest workspace diff directly
-  const { data: diff, isLoading } = useGetLatestWorkspaceDiffQuery(
+  const { currentData: diff, isFetching } = useGetLatestWorkspaceDiffQuery(
     workspaceId,
     { skip: !workspaceId },
   );
@@ -92,7 +92,7 @@ export function DiffSection({
     [diff?.diffText],
   );
 
-  if (isLoading) {
+  if (isFetching) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <span className="text-xs text-primary-500 dark:text-primary-400">
