@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useReducer, useEffect, useCallback } from "react";
 
 import { Caption, BodyMedium, Muted } from "../../../../../components/ui/text";
 import {
@@ -357,35 +357,29 @@ export default function RaindropModal({
   isConnected,
 }: RaindropModalProps) {
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  const [initializing, setInitializing] = useState(true);
-  const [initialData, setInitialData] = useState<Partial<RaindropWizardData>>({});
-  const [targetStep, setTargetStep] = useState<StepId | null>(null);
+  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<RaindropWizardData>; hasInitialized: boolean };
+  const [initState, setInitState] = useReducer(
+    (_: InitState, next: InitState) => next,
+    { initializing: true, targetStep: null, data: {}, hasInitialized: false },
+  );
 
   const [getSelectedCollections] = useLazyGetSelectedCollectionsQuery();
   const [getConnection] = useLazyGetConnectionQuery();
   const [revokeConnection, { isLoading: isRevoking }] =
     useRevokeConnectionMutation();
 
-  // Track if we've already initialized to prevent re-initialization when isConnected changes
-  const [hasInitialized, setHasInitialized] = useState(false);
-
   useEffect(() => {
     if (!open) {
-      setInitializing(true);
-      setTargetStep(null);
-      setHasInitialized(false);
+      setInitState({ initializing: true, targetStep: null, data: {}, hasInitialized: false });
       return;
     }
 
     // Don't re-initialize if already done (e.g., when isConnected changes after token save)
-    if (hasInitialized) {
+    if (initState.hasInitialized) {
       return;
     }
 
     const loadInitialData = async () => {
-      setInitializing(true);
-      setTargetStep(null);
-
       const baseData: Partial<RaindropWizardData> = {
         token: "",
         collections: [],
@@ -394,46 +388,37 @@ export default function RaindropModal({
         fromManage: false,
       };
 
-      if (!isConnected) {
-        setInitialData(baseData);
-        setTargetStep("tokenSet");
-        setInitializing(false);
-        setHasInitialized(true);
-        return;
-      }
-
       let finalStep: StepId = "tokenSet";
       let finalData: Partial<RaindropWizardData> = baseData;
 
-      try {
-        const startTime = Date.now();
-        const result = await getSelectedCollections("raindrop").unwrap();
+      if (isConnected) {
+        try {
+          const startTime = Date.now();
+          const result = await getSelectedCollections("raindrop").unwrap();
 
-        if (result.success) {
-          finalData = {
-            ...baseData,
-            connectionId: result.connectionId,
-            currentCollections: result.collections || [],
-          };
-          finalStep = "manage";
+          if (result.success) {
+            finalData = {
+              ...baseData,
+              connectionId: result.connectionId,
+              currentCollections: result.collections || [],
+            };
+            finalStep = "manage";
+          }
+
+          const elapsed = Date.now() - startTime;
+          const minLoadingTime = 600;
+          const remainingTime = Math.max(0, minLoadingTime - elapsed);
+          await new Promise((resolve) => setTimeout(resolve, remainingTime));
+        } catch (err) {
+          console.error("[loadInitialData] Error:", err);
         }
-
-        const elapsed = Date.now() - startTime;
-        const minLoadingTime = 600;
-        const remainingTime = Math.max(0, minLoadingTime - elapsed);
-        await new Promise((resolve) => setTimeout(resolve, remainingTime));
-      } catch (err) {
-        console.error("[loadInitialData] Error:", err);
       }
 
-      setInitialData(finalData);
-      setTargetStep(finalStep);
-      setInitializing(false);
-      setHasInitialized(true);
+      setInitState({ initializing: false, targetStep: finalStep, data: finalData, hasInitialized: true });
     };
 
     loadInitialData();
-  }, [open, isConnected, getSelectedCollections, getConnection, hasInitialized]);
+  }, [open, isConnected, getSelectedCollections, getConnection, initState.hasInitialized]);
 
   const handleClose = useCallback(() => {
     setShowRevokeConfirm(false);
@@ -453,7 +438,7 @@ export default function RaindropModal({
   const steps: WizardStep<RaindropWizardData>[] = [
     {
       id: "loading",
-      render: () => <LoadingStep targetStep={targetStep} />,
+      render: () => <LoadingStep targetStep={initState.targetStep} />,
     },
     {
       id: "tokenSet",
@@ -478,7 +463,7 @@ export default function RaindropModal({
         onOpenChange={(isOpen) => !isOpen && handleClose()}
         steps={steps}
         initialStep="loading"
-        initialData={initialData}
+        initialData={initState.data}
         title="Raindrop"
         icon="connections/raindrop.png"
         onCancel={handleClose}

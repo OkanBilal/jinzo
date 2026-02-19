@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import type { StructuredOutputSchema } from "../api/chatApi";
 
 export const DEFAULT_MODEL = "gpt-oss:120b-cloud";
 
@@ -18,6 +19,8 @@ export interface ChatState {
   toolMode: "chat" | "rag" | "tool";
   modelCapabilities: ModelCapabilities | null;
   supportsThinking: boolean;
+  structuredOutputEnabled: boolean;
+  structuredOutputSchema: StructuredOutputSchema;
   webSearchEnabled: boolean;
 }
 
@@ -28,6 +31,8 @@ const initialState: ChatState = {
   toolMode: "chat",
   modelCapabilities: null,
   supportsThinking: false,
+  structuredOutputEnabled: false,
+  structuredOutputSchema: { properties: [] },
   webSearchEnabled: false,
 };
 
@@ -60,6 +65,15 @@ const chatSlice = createSlice({
       state.modelCapabilities = action.payload.capabilities;
       state.supportsThinking = action.payload.supportsThinking;
     },
+    setStructuredOutputEnabled: (state, action: PayloadAction<boolean>) => {
+      state.structuredOutputEnabled = action.payload;
+    },
+    setStructuredOutputSchema: (
+      state,
+      action: PayloadAction<StructuredOutputSchema>,
+    ) => {
+      state.structuredOutputSchema = action.payload;
+    },
     setWebSearchEnabled: (state, action: PayloadAction<boolean>) => {
       state.webSearchEnabled = action.payload;
     },
@@ -72,6 +86,8 @@ export const {
   setThinkingEnabled,
   setToolMode,
   setModelCapabilities,
+  setStructuredOutputEnabled,
+  setStructuredOutputSchema,
   setWebSearchEnabled,
 } = chatSlice.actions;
 export default chatSlice.reducer;

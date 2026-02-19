@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore, useRef, useEffect } from "react";
+import { useReducer, useSyncExternalStore, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   Close,
@@ -20,6 +20,7 @@ import {
 import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
 
 interface SchemaProperty {
+  id: string;
   name: string;
   type: "string" | "number" | "boolean" | "array" | "object";
   isArray: boolean;
@@ -38,7 +39,7 @@ function schemaToProperties(schema: Record<string, unknown>): SchemaProperty[] {
     } else if (def?.type) {
       type = def.type as SchemaProperty["type"];
     }
-    return { name, type, isArray, isRequired: required.includes(name) };
+    return { id: crypto.randomUUID(), name, type, isArray, isRequired: required.includes(name) };
   });
 }
 
@@ -62,6 +63,23 @@ function propertiesToSchema(
 }
 
 type Tab = "schemas" | "editor";
+
+interface ModalState {
+  activeTab: Tab;
+  editingId: string | null;
+  editorName: string;
+  editorProperties: SchemaProperty[];
+  isSaving: boolean;
+  deleteTargetId: string | null;
+  renamingId: string | null;
+  renameValue: string;
+  prevOpen: boolean;
+}
+
+const mergeState = (prev: ModalState, next: Partial<ModalState>): ModalState => ({
+  ...prev,
+  ...next,
+});
 
 interface StructuredOutputsModalProps {
   isOpen: boolean;
@@ -91,23 +109,18 @@ export function StructuredOutputsModal({
   const selectedId =
     (config.structuredOutputsSelectedId as string | null) ?? null;
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState<Tab>("schemas");
-
-  // Editor state
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editorName, setEditorName] = useState("");
-  const [editorProperties, setEditorProperties] = useState<SchemaProperty[]>(
-    [],
-  );
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Delete confirmation
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-
-  // Inline rename
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
+  const [state, updateState] = useReducer(mergeState, {
+    activeTab: "schemas" as Tab,
+    editingId: null,
+    editorName: "",
+    editorProperties: [] as SchemaProperty[],
+    isSaving: false,
+    deleteTargetId: null,
+    renamingId: null,
+    renameValue: "",
+    prevOpen: false,
+  });
+  const { activeTab, editingId, editorName, editorProperties, isSaving, deleteTargetId, renamingId, renameValue } = state;
   const renameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -118,16 +131,17 @@ export function StructuredOutputsModal({
   }, [renamingId]);
 
   // Reset state when modal opens
-  const [prevOpen, setPrevOpen] = useState(false);
-  if (isOpen && !prevOpen) {
-    setActiveTab("schemas");
-    setEditingId(null);
-    setEditorName("");
-    setEditorProperties([]);
-    setDeleteTargetId(null);
-    setRenamingId(null);
+  if (isOpen && !state.prevOpen) {
+    updateState({
+      activeTab: "schemas",
+      editingId: null,
+      editorName: "",
+      editorProperties: [],
+      deleteTargetId: null,
+      renamingId: null,
+    });
   }
-  if (isOpen !== prevOpen) setPrevOpen(isOpen);
+  if (isOpen !== state.prevOpen) updateState({ prevOpen: isOpen });
 
   // ─── Persistence ───
 
@@ -154,28 +168,24 @@ export function StructuredOutputsModal({
   // ─── Editor helpers ───
 
   function openNewEditor() {
-    setEditingId(null);
-    setEditorName("");
-    setEditorProperties([]);
-    setActiveTab("editor");
+    updateState({ editingId: null, editorName: "", editorProperties: [], activeTab: "editor" });
   }
 
   function openEditEditor(id: string) {
     const entry = entries[id];
     if (!entry) return;
-    setEditingId(id);
-    setEditorName(entry.name);
-    setEditorProperties(schemaToProperties(entry.schema));
-    setActiveTab("editor");
+    updateState({ editingId: id, editorName: entry.name, editorProperties: schemaToProperties(entry.schema), activeTab: "editor" });
   }
 
   // ─── Property row handlers ───
 
   function handleAddProperty() {
-    setEditorProperties([
-      ...editorProperties,
-      { name: "", type: "string", isArray: false, isRequired: false },
-    ]);
+    updateState({
+      editorProperties: [
+        ...editorProperties,
+        { id: crypto.randomUUID(), name: "", type: "string", isArray: false, isRequired: false },
+      ],
+    });
   }
 
   function handleUpdateProperty(
@@ -184,11 +194,11 @@ export function StructuredOutputsModal({
   ) {
     const updated = [...editorProperties];
     updated[index] = { ...updated[index], ...updates };
-    setEditorProperties(updated);
+    updateState({ editorProperties: updated });
   }
 
   function handleRemoveProperty(index: number) {
-    setEditorProperties(editorProperties.filter((_, i) => i !== index));
+    updateState({ editorProperties: editorProperties.filter((_, i) => i !== index) });
   }
 
   // ─── Save ───
@@ -205,7 +215,7 @@ export function StructuredOutputsModal({
       return;
     }
 
-    setIsSaving(true);
+    updateState({ isSaving: true });
     try {
       const schema = propertiesToSchema(editorProperties);
       const now = Math.floor(Date.now() / 1000);
@@ -238,12 +248,9 @@ export function StructuredOutputsModal({
 
       await persistConfig(newEntries, selectedId);
       toast.success(editingId ? "Schema updated" : "Schema created");
-      setActiveTab("schemas");
-      setEditingId(null);
-      setEditorName("");
-      setEditorProperties([]);
+      updateState({ activeTab: "schemas", editingId: null, editorName: "", editorProperties: [] });
     } finally {
-      setIsSaving(false);
+      updateState({ isSaving: false });
     }
   }
 
@@ -278,19 +285,17 @@ export function StructuredOutputsModal({
     const newSelectedId = selectedId === deleteTargetId ? null : selectedId;
     await persistConfig(rest, newSelectedId);
     if (editingId === deleteTargetId) {
-      setEditingId(null);
-      setEditorName("");
-      setEditorProperties([]);
-      setActiveTab("schemas");
+      updateState({ editingId: null, editorName: "", editorProperties: [], activeTab: "schemas", deleteTargetId: null });
+    } else {
+      updateState({ deleteTargetId: null });
     }
-    setDeleteTargetId(null);
     toast.success("Schema deleted");
   }
 
   async function handleRenameConfirm(id: string) {
     const trimmed = renameValue.trim();
     if (!trimmed || !entries[id]) {
-      setRenamingId(null);
+      updateState({ renamingId: null });
       return;
     }
     const now = Math.floor(Date.now() / 1000);
@@ -299,7 +304,7 @@ export function StructuredOutputsModal({
       [id]: { ...entries[id], name: trimmed, updatedAt: now },
     };
     await persistConfig(newEntries, selectedId);
-    setRenamingId(null);
+    updateState({ renamingId: null });
   }
 
   // ─── Render ───
@@ -319,7 +324,7 @@ export function StructuredOutputsModal({
 
   return createPortal(
     <div className="fixed inset-0 z-100 flex items-center justify-center">
-      <div className="absolute inset-0 bg-primary-950/70" onClick={onClose} />
+      <div className="absolute inset-0 bg-primary-950/70" role="presentation" onClick={onClose} />
       <div
         className="relative z-40 w-full max-w-180 glass-morphism h-120 rounded-3xl animate-dropdown-in "
         role="dialog"
@@ -341,7 +346,7 @@ export function StructuredOutputsModal({
                 }}
               />
               <Button
-                onClick={() => setActiveTab("schemas")}
+                onClick={() => updateState({ activeTab: "schemas" })}
                 className={`relative z-10 px-3 py-1.5 rounded-xl text-sm transition-colors duration-200 cursor-pointer min-w-20 ${
                   activeTab === "schemas"
                     ? "text-primary-900 dark:text-primary-100"
@@ -351,7 +356,7 @@ export function StructuredOutputsModal({
                 Schemas
               </Button>
               <Button
-                onClick={() => setActiveTab("editor")}
+                onClick={() => updateState({ activeTab: "editor" })}
                 className={`relative z-10 px-3 py-1.5 rounded-xl text-sm transition-colors duration-200 cursor-pointer min-w-20 ${
                   activeTab === "editor"
                     ? "text-primary-900 dark:text-primary-100"
@@ -408,11 +413,11 @@ export function StructuredOutputsModal({
                         <input
                           ref={renameInputRef}
                           value={renameValue}
-                          onChange={(e) => setRenameValue(e.target.value)}
+                          onChange={(e) => updateState({ renameValue: e.target.value })}
                           onKeyDown={(e) => {
                             if (e.key === "Enter")
                               handleRenameConfirm(entry.id);
-                            if (e.key === "Escape") setRenamingId(null);
+                            if (e.key === "Escape") updateState({ renamingId: null });
                           }}
                           onBlur={() => handleRenameConfirm(entry.id)}
                           onClick={(e) => e.stopPropagation()}
@@ -453,7 +458,7 @@ export function StructuredOutputsModal({
                         Aa
                       </Button> */}
                       <button
-                        onClick={() => setDeleteTargetId(entry.id)}
+                        onClick={() => updateState({ deleteTargetId: entry.id })}
                         className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-colors cursor-pointer"
                         title="Delete"
                       >
@@ -489,7 +494,7 @@ export function StructuredOutputsModal({
                 <Input
                   type="text"
                   value={editorName}
-                  onChange={(e) => setEditorName(e.target.value)}
+                  onChange={(e) => updateState({ editorName: e.target.value })}
                   placeholder="Schema name"
                   className="w-full p-2 mb-2 dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
                 />
@@ -497,7 +502,7 @@ export function StructuredOutputsModal({
                   <Body className="mt-1 mb-2">Property</Body>
                   {editorProperties.map((prop, index) => (
                     <PropertyRow
-                      key={index}
+                      key={prop.id}
                       property={prop}
                       onUpdate={(updates) =>
                         handleUpdateProperty(index, updates)
@@ -521,7 +526,7 @@ export function StructuredOutputsModal({
             <div className="flex items-center justify-end gap-3 p-4 border-t border-primary-950/5 dark:border-primary/10">
               <Button
                 onClick={() => {
-                  setEditorProperties([]);
+                  updateState({ editorProperties: [] });
                 }}
                 variant="ghost"
               >
@@ -553,7 +558,7 @@ export function StructuredOutputsModal({
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => setDeleteTargetId(null)}
+                  onClick={() => updateState({ deleteTargetId: null })}
                 >
                   Cancel
                 </Button>

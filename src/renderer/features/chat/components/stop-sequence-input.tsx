@@ -53,11 +53,12 @@ export function StopSequenceInput({
           shadow-[inset_0_0.5px_0_rgba(0,0,0,0.03)] dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]
           focus-within:border-primary-950/20 dark:focus-within:border-primary/20
         "
+        role="presentation"
         onClick={() => inputRef.current?.focus()}
       >
         {sequences.map((seq, index) => (
           <span
-            key={index}
+            key={seq}
             className="
               inline-flex items-center gap-1
               px-2 py-0.5 rounded-lg

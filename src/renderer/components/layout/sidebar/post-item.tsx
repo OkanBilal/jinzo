@@ -26,7 +26,7 @@ export default function PostItem({
 }: PostItemProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
-  const [newTitle, setNewTitle] = useState(title);
+  const [newTitle, setNewTitle] = useState("");
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
 
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -39,10 +39,6 @@ export default function PostItem({
       inputRef.current.select();
     }
   }, [isRenaming]);
-
-  useEffect(() => {
-    setNewTitle(title);
-  }, [title]);
 
   const handleOptionClick = (e: MouseEvent) => {
     e.preventDefault();
@@ -111,7 +107,10 @@ export default function PostItem({
   return (
     <div className="relative group">
       <div
+        role="button"
+        tabIndex={0}
         onClick={onClick}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick?.(); } }}
         className={`block px-3 py-2 rounded-xl cursor-pointer group-hover:scale-[1.01] transition-all duration-200 ease-out active:scale-99 ${
           isActive
             ? "bg-primary/80 dark:bg-primary/5"

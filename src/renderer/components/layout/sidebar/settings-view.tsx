@@ -30,7 +30,7 @@ const menuItems: Array<{
   { id: "git", label: "Git", icon: Branch },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "personalization", label: "Personalization", icon: Personalize },
-  { id: "apps", label: "Apps", icon: Apps },
+  { id: "apps", label: "Connections", icon: Apps },
   { id: "schedules", label: "Schedules", icon: Calendar },
   { id: "security", label: "Security", icon: Security },
 ];

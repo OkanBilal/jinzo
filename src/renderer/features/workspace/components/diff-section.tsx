@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import {
   useGetLatestWorkspaceDiffQuery,
@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 interface DiffSectionProps {
   workspaceId: string;
   onSelectDiffFile: (filePath: string, diffText: string) => void;
-  selectedDiffFile?: string | null;
 }
 
 /** Status badge for the diff (insertions/deletions) */
@@ -77,9 +76,9 @@ function parsePerFileStats(
 export function DiffSection({
   workspaceId,
   onSelectDiffFile,
-  selectedDiffFile,
 }: DiffSectionProps) {
   const dispatch = useDispatch();
+  const [selectedDiffFile, setSelectedDiffFile] = useState<string | null>(null);
 
   // Fetch the latest workspace diff directly
   const { currentData: diff, isFetching } = useGetLatestWorkspaceDiffQuery(
@@ -152,6 +151,7 @@ export function DiffSection({
               key={filePath}
               onClick={() => {
                 const segment = parseFileDiffSegment(filePath, diff.diffText);
+                setSelectedDiffFile(filePath);
                 onSelectDiffFile(filePath, segment || diff.diffText);
               }}
               className={`w-full active:scale-99  flex items-center gap-2 px-2 py-1 rounded-xl duration-200 text-left transition-all animate-slide-in ${

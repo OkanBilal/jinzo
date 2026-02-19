@@ -85,7 +85,7 @@ export default function NewButton({
         >
           {dropdownItems.map((item, index) => (
             <DropdownMenuItem
-              key={index}
+              key={item.label}
               onClick={() => {
                 item.onClick();
                 handleCloseMenu();

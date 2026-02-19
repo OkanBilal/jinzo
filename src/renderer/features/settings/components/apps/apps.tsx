@@ -30,17 +30,7 @@ export default function AppsSettings({
   connectedApps,
   onRefresh,
 }: AppsSettingsProps) {
-  const [showGitHubModal, setShowGitHubModal] = useState(false);
-  const [showGitLabModal, setShowGitLabModal] = useState(false);
-  const [showJiraModal, setShowJiraModal] = useState(false);
-  const [showAsanaModal, setShowAsanaModal] = useState(false);
-  const [showLinearModal, setShowLinearModal] = useState(false);
-  const [showRaindropModal, setShowRaindropModal] = useState(false);
-  const [showHackerNewsModal, setShowHackerNewsModal] = useState(false);
-  const [showPodcastModal, setShowPodcastModal] = useState(false);
-  const [showAppleMusicModal, setShowAppleMusicModal] = useState(false);
-  const [showRssModal, setShowRssModal] = useState(false);
-  const [showSpotifyModal, setShowSpotifyModal] = useState(false);
+  const [activeModal, setActiveModal] = useState<string | null>(null);
 
   const isConnected = (appId: string) => {
     return connectedApps.includes(appId);
@@ -51,31 +41,7 @@ export default function AppsSettings({
   };
 
   const handleConnect = (appId: string) => {
-    if (appId === "github") {
-      setShowGitHubModal(true);
-    } else if (appId === "gitlab") {
-      setShowGitLabModal(true);
-    } else if (appId === "jira") {
-      setShowJiraModal(true);
-    } else if (appId === "asana") {
-      setShowAsanaModal(true);
-    } else if (appId === "linear") {
-      setShowLinearModal(true);
-    } else if (appId === "raindrop") {
-      setShowRaindropModal(true);
-    } else if (appId === "hackernews") {
-      setShowHackerNewsModal(true);
-    } else if (appId === "podcast") {
-      setShowPodcastModal(true);
-    } else if (appId === "apple-music") {
-      setShowAppleMusicModal(true);
-    } else if (appId === "spotify") {
-      setShowSpotifyModal(true);
-    } else if (appId === "rss") {
-      setShowRssModal(true);
-    } else {
-      /* empty */
-    }
+    setActiveModal(appId);
   };
 
   const connectedAppsList = apps.filter((app) => isConnected(app.id));
@@ -122,13 +88,13 @@ export default function AppsSettings({
 
   return (
     <div className="h-full overflow-y-auto noscrollbar">
-      <Heading2 className="mb-6">Apps</Heading2>
+      <Heading2 className="mb-6">Connections</Heading2>
       {apps.length > 0 && (
         <div className="">
-          <Text variant="muted" className="mb-4">
+          {/* <Text variant="muted" className="mb-4">
             Access information from your connected tools to give you more useful
             answers.
-          </Text>
+          </Text> */}
 
           {connectedAppsList.length > 0 && (
             <div className="mb-6 mt-2">
@@ -157,71 +123,71 @@ export default function AppsSettings({
       )}
 
       <GitHubModal
-        open={showGitHubModal}
-        onClose={() => setShowGitHubModal(false)}
+        open={activeModal === "github"}
+        onClose={() => setActiveModal(null)}
         isConnected={isConnected("github")}
         onSuccess={handleConnectionSuccess}
       />
 
       <GitLabModal
-        open={showGitLabModal}
-        onClose={() => setShowGitLabModal(false)}
+        open={activeModal === "gitlab"}
+        onClose={() => setActiveModal(null)}
         isConnected={isConnected("gitlab")}
         onSuccess={handleConnectionSuccess}
       />
 
       <JiraModal
-        open={showJiraModal}
-        onClose={() => setShowJiraModal(false)}
+        open={activeModal === "jira"}
+        onClose={() => setActiveModal(null)}
         isConnected={isConnected("jira")}
         onSuccess={handleConnectionSuccess}
       />
 
       <AsanaModal
-        open={showAsanaModal}
-        onClose={() => setShowAsanaModal(false)}
+        open={activeModal === "asana"}
+        onClose={() => setActiveModal(null)}
         isConnected={isConnected("asana")}
         onSuccess={handleConnectionSuccess}
       />
 
       <LinearModal
-        open={showLinearModal}
-        onClose={() => setShowLinearModal(false)}
+        open={activeModal === "linear"}
+        onClose={() => setActiveModal(null)}
         isConnected={isConnected("linear")}
         onSuccess={handleConnectionSuccess}
       />
 
       <RaindropModal
-        open={showRaindropModal}
-        onClose={() => setShowRaindropModal(false)}
+        open={activeModal === "raindrop"}
+        onClose={() => setActiveModal(null)}
         isConnected={isConnected("raindrop")}
       />
 
       <HackerNewsModal
-        open={showHackerNewsModal}
-        onClose={() => setShowHackerNewsModal(false)}
+        open={activeModal === "hackernews"}
+        onClose={() => setActiveModal(null)}
       />
 
       <PodcastModal
-        open={showPodcastModal}
-        onClose={() => setShowPodcastModal(false)}
+        open={activeModal === "podcast"}
+        onClose={() => setActiveModal(null)}
         isConnected={isConnected("podcast")}
       />
 
       <AppleMusicModal
-        open={showAppleMusicModal}
-        onClose={() => setShowAppleMusicModal(false)}
+        open={activeModal === "apple-music"}
+        onClose={() => setActiveModal(null)}
         isConnected={isConnected("apple-music")}
         onSuccess={handleConnectionSuccess}
       />
 
       <SpotifyModal
-        open={showSpotifyModal}
-        onClose={() => setShowSpotifyModal(false)}
+        open={activeModal === "spotify"}
+        onClose={() => setActiveModal(null)}
         isConnected={isConnected("spotify")}
       />
 
-      <RssModal open={showRssModal} onClose={() => setShowRssModal(false)} />
+      <RssModal open={activeModal === "rss"} onClose={() => setActiveModal(null)} />
     </div>
   );
 }

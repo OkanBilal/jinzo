@@ -5,6 +5,7 @@ export interface CheckboxProps {
   onChange?: (checked: boolean) => void;
   disabled?: boolean;
   className?: string;
+  "aria-label"?: string;
 }
 
 export function Checkbox({
@@ -12,6 +13,7 @@ export function Checkbox({
   onChange,
   disabled = false,
   className = "",
+  "aria-label": ariaLabel = "Toggle",
 }: CheckboxProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!disabled && onChange) {
@@ -21,6 +23,7 @@ export function Checkbox({
 
   return (
     <label
+      aria-label={ariaLabel}
       className={`inline-flex items-center justify-center ${
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
       } ${className}`}

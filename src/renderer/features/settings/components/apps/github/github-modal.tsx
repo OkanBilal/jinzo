@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useReducer, useEffect, useCallback } from "react";
 
 import { Lock } from "../../../../../components/ui/icons";
 import { BodyMedium, Muted } from "../../../../../components/ui/text";
@@ -383,9 +383,11 @@ export default function GitHubModal({
   onSuccess,
 }: GitHubModalProps) {
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  const [initializing, setInitializing] = useState(true);
-  const [initialData, setInitialData] = useState<Partial<GitHubWizardData>>({});
-  const [targetStep, setTargetStep] = useState<StepId | null>(null);
+  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<GitHubWizardData> };
+  const [initState, setInitState] = useReducer(
+    (_: InitState, next: InitState) => next,
+    { initializing: true, targetStep: null, data: {} },
+  );
 
   const [getSelectedRepos] = useLazyGetSelectedReposQuery();
   const [getConnection] = useLazyGetConnectionQuery();
@@ -395,16 +397,11 @@ export default function GitHubModal({
   // Load initial data when modal opens
   useEffect(() => {
     if (!open) {
-      // Reset state when modal closes
-      setInitializing(true);
-      setTargetStep(null);
+      setInitState({ initializing: true, targetStep: null, data: {} });
       return;
     }
 
     const loadInitialData = async () => {
-      setInitializing(true);
-      setTargetStep(null);
-
       const baseData: Partial<GitHubWizardData> = {
         token: "",
         repos: [],
@@ -414,67 +411,59 @@ export default function GitHubModal({
         fromManage: false,
       };
 
-      if (!isConnected) {
-        // Batch all state updates together
-        setInitialData(baseData);
-        setTargetStep("setToken");
-        setInitializing(false);
-        return;
-      }
-
       // Track what we'll set at the end
       let finalStep: StepId = "setToken";
       let finalData: Partial<GitHubWizardData> = baseData;
 
-      try {
-        const startTime = Date.now();
-        const result = await getSelectedRepos("github").unwrap();
-
-        if (result.success) {
-          finalData = {
-            ...baseData,
-            connectionId: result.connectionId,
-            currentRepos: result.repos,
-          };
-          finalStep = "manage";
-        } else {
-          const connResult = await getConnection("github").unwrap();
-          if (connResult.success) {
-            finalData = {
-              ...baseData,
-              connectionId: connResult.connection.id,
-              currentRepos: [],
-            };
-            finalStep = "manage";
-          }
-        }
-
-        // Ensure minimum loading time for smooth UX
-        const elapsed = Date.now() - startTime;
-        const minLoadingTime = 600;
-        const remainingTime = Math.max(0, minLoadingTime - elapsed);
-        await new Promise((resolve) => setTimeout(resolve, remainingTime));
-      } catch (err) {
-        console.error("[loadInitialData] Error:", err);
+      if (isConnected) {
         try {
-          const connResult = await getConnection("github").unwrap();
-          if (connResult.success) {
+          const startTime = Date.now();
+          const result = await getSelectedRepos("github").unwrap();
+
+          if (result.success) {
             finalData = {
               ...baseData,
-              connectionId: connResult.connection.id,
-              currentRepos: [],
+              connectionId: result.connectionId,
+              currentRepos: result.repos,
             };
             finalStep = "manage";
+          } else {
+            const connResult = await getConnection("github").unwrap();
+            if (connResult.success) {
+              finalData = {
+                ...baseData,
+                connectionId: connResult.connection.id,
+                currentRepos: [],
+              };
+              finalStep = "manage";
+            }
           }
-        } catch {
-          // Keep defaults
+
+          // Ensure minimum loading time for smooth UX
+          const elapsed = Date.now() - startTime;
+          const minLoadingTime = 600;
+          const remainingTime = Math.max(0, minLoadingTime - elapsed);
+          await new Promise((resolve) => setTimeout(resolve, remainingTime));
+        } catch (err) {
+          console.error("[loadInitialData] Error:", err);
+          try {
+            const connResult = await getConnection("github").unwrap();
+            if (connResult.success) {
+              finalData = {
+                ...baseData,
+                connectionId: connResult.connection.id,
+                currentRepos: [],
+              };
+              finalStep = "manage";
+            }
+          } catch {
+            // Keep defaults
+          }
         }
       }
 
-      // Batch all state updates at the end
-      setInitialData(finalData);
-      setTargetStep(finalStep);
-      setInitializing(false);
+      // Single final state update
+      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
     };
 
     loadInitialData();
@@ -499,7 +488,7 @@ export default function GitHubModal({
   const steps: WizardStep<GitHubWizardData>[] = [
     {
       id: "loading",
-      render: () => <LoadingStep targetStep={targetStep} />,
+      render: () => <LoadingStep targetStep={initState.targetStep} />,
     },
     {
       id: "setToken",
@@ -526,7 +515,7 @@ export default function GitHubModal({
         onOpenChange={(isOpen) => !isOpen && handleClose()}
         steps={steps}
         initialStep="loading"
-        initialData={initialData}
+        initialData={initState.data}
         title="Github"
         icon="connections/github.png"
         onCancel={handleClose}

@@ -31,8 +31,7 @@ export function JournalEditor({ entityId }: JournalEditorProps) {
   const { queueSave, flush, isDirty, isSaving, lastSavedAt } =
     useJournalAutosave(entityId);
 
-  const [isEditorInitialized, setIsEditorInitialized] = useState(false);
-  const [localTitle, setLocalTitle] = useState("");
+  const [editorInit, setEditorInit] = useState({ initialized: false, title: "" });
   const [isShowingSaveLoading, setIsShowingSaveLoading] = useState(false);
   const [isShowingPublishLoading, setIsShowingPublishLoading] = useState(false);
 
@@ -41,11 +40,10 @@ export function JournalEditor({ entityId }: JournalEditorProps) {
   });
 
   useEffect(() => {
-    if (journal && !isEditorInitialized && editor) {
+    if (journal && !editorInit.initialized && editor) {
       const blocks = markdownToBlocks(journal.body || "");
       editor.replaceBlocks(editor.document, blocks);
-      setLocalTitle(journal.title || "Untitled");
-      setIsEditorInitialized(true);
+      setEditorInit({ initialized: true, title: journal.title || "Untitled" });
 
       dispatch(
         setEditingJournal({
@@ -56,13 +54,13 @@ export function JournalEditor({ entityId }: JournalEditorProps) {
         }),
       );
     }
-  }, [journal, isEditorInitialized, editor, dispatch, entityId]);
+  }, [journal, editorInit.initialized, editor, dispatch, entityId]);
 
   useEffect(() => {
-    if (journal && isEditorInitialized) {
+    if (journal && editorInit.initialized) {
       const newTitle = journal.title || "Untitled";
-      if (newTitle !== localTitle) {
-        setLocalTitle(newTitle);
+      if (newTitle !== editorInit.title) {
+        setEditorInit(prev => ({ ...prev, title: newTitle }));
         dispatch(handleTitleUpdate({ entityId, title: newTitle }));
       }
     }
@@ -98,7 +96,7 @@ export function JournalEditor({ entityId }: JournalEditorProps) {
   useEffect(() => {
     const unsubscribe = window.api.journal.onTitleUpdated((data) => {
       if (data.entityId === entityId) {
-        setLocalTitle(data.title);
+        setEditorInit(prev => ({ ...prev, title: data.title }));
         dispatch(handleTitleUpdate(data));
         queueSave({ title: data.title });
       }
@@ -170,7 +168,7 @@ export function JournalEditor({ entityId }: JournalEditorProps) {
       <div className="flex items-center justify-between px-13.5 py-8  ">
         <div className="flex items-center gap-3 flex-1">
           <AnimatedTitle
-            title={localTitle || "Untitled"}
+            title={editorInit.title || "Untitled"}
             className="text-3xl font-semibold text-primary-900 dark:text-primary-100 w-full"
           />
         </div>

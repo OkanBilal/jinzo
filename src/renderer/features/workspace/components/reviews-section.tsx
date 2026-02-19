@@ -80,7 +80,7 @@ export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
       <div className="flex-1 overflow-y-auto noscrollbar space-y-1">
         {reviews.map((review, index) => (
           <button
-            key={index}
+            key={review.id}
             onClick={() =>
               dispatch(
                 openNoteTab({

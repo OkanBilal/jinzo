@@ -27,18 +27,11 @@ export function Slider({
   showValue = true,
   formatValue,
 }: SliderProps) {
-  const [localValue, setLocalValue] = useState(value);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = parseFloat(e.target.value);
-    setLocalValue(newValue);
-    onChange(newValue);
+    onChange(parseFloat(e.target.value));
   };
 
   const handleMouseDown = () => {
@@ -52,7 +45,7 @@ export function Slider({
   useEffect(() => {
     if (isDragging) {
       window.addEventListener("mouseup", handleMouseUp);
-      window.addEventListener("touchend", handleMouseUp);
+      window.addEventListener("touchend", handleMouseUp, { passive: true });
     }
     return () => {
       window.removeEventListener("mouseup", handleMouseUp);
@@ -60,8 +53,8 @@ export function Slider({
     };
   }, [isDragging]);
 
-  const displayValue = formatValue ? formatValue(localValue) : localValue;
-  const percentage = ((localValue - min) / (max - min)) * 100;
+  const displayValue = formatValue ? formatValue(value) : value;
+  const percentage = ((value - min) / (max - min)) * 100;
 
   const lineOpacity =
     percentage > 90 ? 0 : percentage > 75 ? (90 - percentage) / 15 : 1;
@@ -112,7 +105,7 @@ export function Slider({
           min={min}
           max={max}
           step={step}
-          value={localValue}
+          value={value}
           onChange={handleChange}
           onMouseDown={handleMouseDown}
           onTouchStart={handleMouseDown}

@@ -16,7 +16,10 @@ interface RunTabProps {
 export function RunTab({ run, isActive, onClick, onClose, title, variant = "workspace" }: RunTabProps) {
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
       className={`group flex items-center gap-2 pl-3 pr-1 py-2.5 cursor-pointer  transition-colors min-w-40 max-w-48 ${
         isActive
           ? `text-primary-950 dark:text-primary-200  ${variant=== "claude" ? "dark:bg-claude-dark bg-primary" : variant === "workspace" ? " dark:bg-copilot-dark bg-primary" : ""} `  

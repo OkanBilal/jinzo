@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useReducer, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Text, { Heading3 } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,23 @@ import { Button } from "@/components/ui/button";
 import { ArrowUp } from "@/components/ui/icons";
 
 type IconPickerMode = "emoji" | "icon";
+
+interface EditMoodFormState {
+  name: string;
+  icon: string;
+  iconMode: IconPickerMode;
+  selectedColorIndex: number;
+  isEmojiPickerOpen: boolean;
+  showGradients: boolean;
+  systemPrompt: string;
+  isClosing: boolean;
+  prevMoodId: string | null;
+}
+
+const mergeState = (prev: EditMoodFormState, next: Partial<EditMoodFormState>): EditMoodFormState => ({
+  ...prev,
+  ...next,
+});
 
 interface EditMoodModalProps {
   isOpen: boolean;
@@ -67,16 +84,19 @@ export default function EditMoodModal({
   onSuccess,
   sidebarWidth = "19rem",
 }: EditMoodModalProps) {
-  const [name, setName] = useState("");
-  const [icon, setIcon] = useState("");
-  const [iconMode, setIconMode] = useState<IconPickerMode>("emoji");
-  const [selectedColorIndex, setSelectedColorIndex] = useState(0);
-  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-  const [showGradients, setShowGradients] = useState(false);
-  const [systemPrompt, setSystemPrompt] = useState("");
-  const [isClosing, setIsClosing] = useState(false);
-  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
-  const [prevMoodId, setPrevMoodId] = useState<string | null>(mood?.id ?? null);
+  const [state, updateState] = useReducer(mergeState, {
+    name: "",
+    icon: "",
+    iconMode: "emoji" as IconPickerMode,
+    selectedColorIndex: 0,
+    isEmojiPickerOpen: false,
+    showGradients: false,
+    systemPrompt: "",
+    isClosing: false,
+    prevMoodId: mood?.id ?? null,
+  });
+  const { name, icon, iconMode, selectedColorIndex, isEmojiPickerOpen, showGradients, systemPrompt, isClosing } = state;
+  const prevIsOpenRef = useRef(isOpen);
 
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
@@ -84,55 +104,56 @@ export default function EditMoodModal({
   const { darkMode } = useDarkMode();
 
   // Initialize form when mood changes (adjust state during render)
-  if (mood && mood.id !== prevMoodId) {
-    setPrevMoodId(mood.id);
-    setName(mood.name);
-    setSystemPrompt(mood.systemPrompt || "");
-
-    // Parse icon - handle both icon: and emoji: prefixes
+  if (mood && mood.id !== state.prevMoodId) {
+    let newIconMode: IconPickerMode = "emoji";
+    let newIcon = "";
     const iconStr = mood.icon || "";
     if (iconStr.startsWith("icon:")) {
-      setIconMode("icon");
-      setIcon(iconStr.replace("icon:", ""));
+      newIconMode = "icon";
+      newIcon = iconStr.replace("icon:", "");
     } else if (iconStr.startsWith("emoji:")) {
-      setIconMode("emoji");
-      setIcon(iconStr.replace("emoji:", ""));
+      newIconMode = "emoji";
+      newIcon = iconStr.replace("emoji:", "");
     } else {
-      // Fallback: check if it's a known icon name
       const parsedIcon = parseIcon(iconStr);
       if (parsedIcon.type === "icon" || parsedIcon.type === "copilot-animate" || parsedIcon.type === "claude-animate") {
-        setIconMode("icon");
-        setIcon(iconStr.toLowerCase());
+        newIconMode = "icon";
+        newIcon = iconStr.toLowerCase();
       } else {
-        setIconMode("emoji");
-        setIcon(typeof parsedIcon.value === "string" ? parsedIcon.value : "😊");
+        newIconMode = "emoji";
+        newIcon = typeof parsedIcon.value === "string" ? parsedIcon.value : "😊";
       }
     }
-
-    // Parse theme config
     const { colorIndex, isGradient } = parseThemeConfig(mood.themeConfig);
-    setSelectedColorIndex(colorIndex);
-    setShowGradients(isGradient);
+    updateState({
+      prevMoodId: mood.id,
+      name: mood.name,
+      systemPrompt: mood.systemPrompt || "",
+      iconMode: newIconMode,
+      icon: newIcon,
+      selectedColorIndex: colorIndex,
+      showGradients: isGradient,
+    });
   }
 
   // Reset closing state when modal opens (adjust state during render)
-  if (isOpen && !prevIsOpen) {
-    setPrevIsOpen(isOpen);
-    setIsClosing(false);
-  } else if (!isOpen && prevIsOpen) {
-    setPrevIsOpen(isOpen);
+  if (isOpen && !prevIsOpenRef.current) {
+    prevIsOpenRef.current = isOpen;
+    updateState({ isClosing: false });
+  } else if (!isOpen && prevIsOpenRef.current) {
+    prevIsOpenRef.current = isOpen;
   }
 
   // Handle animated close
   const handleAnimatedClose = useCallback(() => {
-    setIsClosing(true);
+    updateState({ isClosing: true });
     setTimeout(() => {
       onClose();
     }, 200);
   }, [onClose]);
 
   useClickOutside(emojiPickerRef, () => {
-    if (isEmojiPickerOpen) setIsEmojiPickerOpen(false);
+    if (isEmojiPickerOpen) updateState({ isEmojiPickerOpen: false });
   });
 
   // Handle escape key
@@ -152,7 +173,7 @@ export default function EditMoodModal({
   }, [isOpen, isClosing, handleAnimatedClose]);
 
   const handlePresetColor = (index: number) => {
-    setSelectedColorIndex(index);
+    updateState({ selectedColorIndex: index });
   };
 
   const handleSave = async () => {
@@ -206,6 +227,7 @@ export default function EditMoodModal({
       <div
         className="absolute inset-0 bg-black/50 transition-opacity duration-200"
         style={{ opacity: isClosing ? 0 : 1 }}
+        role="presentation"
         onClick={handleAnimatedClose}
       />
       <div
@@ -214,7 +236,9 @@ export default function EditMoodModal({
           width: sidebarWidth,
           background: currentVariant.preview,
         }}
+        role="dialog"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex flex-col items-center pt-6 pb-4 px-4">
@@ -249,7 +273,7 @@ export default function EditMoodModal({
             <Input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => updateState({ name: e.target.value })}
               placeholder="Mood name..."
               className="w-full px-3 py-2 border-0! shadow-none!
                 bg-primary-950/10! dark:bg-primary/4
@@ -260,7 +284,6 @@ export default function EditMoodModal({
                 flex items-center justify-between
                 transition-all
                 dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]"
-              autoFocus
             />
           </div>
 
@@ -268,7 +291,7 @@ export default function EditMoodModal({
           <div ref={emojiPickerRef} className="relative">
             <Button
               type="button"
-              onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
+              onClick={() => updateState({ isEmojiPickerOpen: !isEmojiPickerOpen })}
               className={`
                 w-full px-3 py-2
                 bg-primary-950/5 dark:bg-primary/4 border-primary-950/10 dark:border-primary/10
@@ -330,10 +353,7 @@ export default function EditMoodModal({
                 <div className="flex border-b border-primary-950/10 dark:border-primary/10">
                   <Button
                     type="button"
-                    onClick={() => {
-                      setIconMode("emoji");
-                      setIcon("");
-                    }}
+                    onClick={() => updateState({ iconMode: "emoji", icon: "" })}
                     className={`flex-1 py-2 text-xs font-medium transition-colors cursor-pointer ${
                       iconMode === "emoji"
                         ? "text-primary-700 dark:text-primary bg-primary-950/5 dark:bg-primary/10"
@@ -344,10 +364,7 @@ export default function EditMoodModal({
                   </Button>
                   <Button
                     type="button"
-                    onClick={() => {
-                      setIconMode("icon");
-                      setIcon("");
-                    }}
+                    onClick={() => updateState({ iconMode: "icon", icon: "" })}
                     className={`flex-1 py-2 text-xs font-medium transition-colors cursor-pointer ${
                       iconMode === "icon"
                         ? "text-primary-700 dark:text-primary bg-primary-950/5 dark:bg-primary/10"
@@ -361,10 +378,7 @@ export default function EditMoodModal({
                 <div className="p-3">
                   {iconMode === "emoji" ? (
                     <EmojiPicker.Root
-                      onEmojiSelect={(emoji) => {
-                        setIcon(emoji.emoji);
-                        setIsEmojiPickerOpen(false);
-                      }}
+                      onEmojiSelect={(emoji) => updateState({ icon: emoji.emoji, isEmojiPickerOpen: false })}
                     >
                       <EmojiPicker.Search
                         placeholder="Search emoji..."
@@ -414,10 +428,7 @@ export default function EditMoodModal({
                         <Button
                           key={name}
                           type="button"
-                          onClick={() => {
-                            setIcon(name);
-                            setIsEmojiPickerOpen(false);
-                          }}
+                          onClick={() => updateState({ icon: name, isEmojiPickerOpen: false })}
                           className={`flex items-center justify-center size-8 rounded-lg transition-all cursor-pointer ${
                             icon === name
                               ? "bg-primary-950/15 dark:bg-primary/20 text-primary-700 dark:text-primary"
@@ -442,7 +453,7 @@ export default function EditMoodModal({
             </Text>
             <textarea
               value={systemPrompt}
-              onChange={(e) => setSystemPrompt(e.target.value)}
+              onChange={(e) => updateState({ systemPrompt: e.target.value })}
               placeholder="Enter a system prompt to customize AI behavior..."
               rows={3}
               className="w-full px-3 py-2 border-0 shadow-none resize-none
@@ -476,7 +487,7 @@ export default function EditMoodModal({
                   const variant = getThemeVariant(colorPair, darkMode);
                   return (
                     <Button
-                      key={`solid-${index}`}
+                      key={`solid-${colorPair.name}`}
                       type="button"
                       onClick={() => {
                         if (!showGradients) {
@@ -498,10 +509,7 @@ export default function EditMoodModal({
                 })}
                 <Button
                   type="button"
-                  onClick={() => {
-                    setShowGradients(true);
-                    setSelectedColorIndex(0);
-                  }}
+                  onClick={() => updateState({ showGradients: true, selectedColorIndex: 0 })}
                   className="ml-auto shrink-0 p-0.5 mr-1 rounded-lg hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
                   title="Show Gradients"
                 >
@@ -512,10 +520,7 @@ export default function EditMoodModal({
               <div className="flex items-center gap-2 px-4 mr-2  min-w-full">
                 <Button
                   type="button"
-                  onClick={() => {
-                    setShowGradients(false);
-                    setSelectedColorIndex(0);
-                  }}
+                  onClick={() => updateState({ showGradients: false, selectedColorIndex: 0 })}
                   className="shrink-0 -ml-4 mr-1 rounded-lg p-0.5 hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
                   title="Show Solid Colors"
                 >
@@ -525,7 +530,7 @@ export default function EditMoodModal({
                   const variant = getThemeVariant(colorPair, darkMode);
                   return (
                     <Button
-                      key={`gradient-${index}`}
+                      key={`gradient-${colorPair.name}`}
                       type="button"
                       onClick={() => {
                         if (showGradients) {

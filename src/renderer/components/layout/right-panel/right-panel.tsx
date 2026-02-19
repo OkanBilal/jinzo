@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useReducer, useEffect, useRef } from "react";
 import { useLayoutConfig } from "@/hooks/use-layout-config";
 import { ToggleButton } from "./toggle-button";
 import { Panel } from "./panel";
@@ -16,22 +16,31 @@ export default function RightPanel({
   onToggle,
   width = "0rem",
 }: RightPanelProps) {
-  const [animationState, setAnimationState] = useState<AnimationState>("closed");
+  const [animationState, dispatch] = useReducer(
+    (_: AnimationState, next: AnimationState) => next,
+    isOpen ? "open" : ("closed" as AnimationState),
+  );
   const { rightPanelComponent } = useLayoutConfig();
 
   const handleToggle = () => onToggle(!isOpen);
 
+  const prevIsOpen = useRef(isOpen);
+  if (isOpen !== prevIsOpen.current) {
+    prevIsOpen.current = isOpen;
+    dispatch(isOpen ? "opening" : "closing");
+  }
+
   useEffect(() => {
-    if (isOpen) {
-      setAnimationState("opening");
-      const timer = setTimeout(() => setAnimationState("open"), 50);
-      return () => clearTimeout(timer);
-    } else {
-      setAnimationState("closing");
-      const timer = setTimeout(() => setAnimationState("closed"), 300);
+    if (animationState === "opening") {
+      const timer = setTimeout(() => dispatch("open"), 50);
       return () => clearTimeout(timer);
     }
-  }, [isOpen]);
+    if (animationState === "closing") {
+      const timer = setTimeout(() => dispatch("closed"), 300);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [animationState]);
 
   const isVisible = animationState !== "closed";
   const isAnimatedIn = animationState === "open";

@@ -151,6 +151,8 @@ function computeSessionTimes(
   return result;
 }
 
+const EMPTY_NOTE_TABS: ReviewTab[] = [];
+
 interface WorkspaceEventsProps {
   runs: Run[];
   activeTab: "editor" | string;
@@ -184,7 +186,7 @@ export function WorkspaceEvents({
   hasSelectedFile,
   fileName,
   issueTabs,
-  noteTabs = [],
+  noteTabs = EMPTY_NOTE_TABS,
   variant = "workspace",
   onSelectEditorTab,
   onSelectRunTab,

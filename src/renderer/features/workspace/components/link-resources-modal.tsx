@@ -35,8 +35,10 @@ export function LinkResourcesModal({
   const {
     data: resources = [],
     isLoading,
-    refetch,
-  } = useGetAvailableResourcesQuery(workspaceId, { skip: !isOpen });
+  } = useGetAvailableResourcesQuery(workspaceId, {
+    skip: !isOpen,
+    refetchOnMountOrArgChange: true,
+  });
 
   const [addResource] = useAddWorkspaceResourceMutation();
   const [removeResource] = useRemoveWorkspaceResourceMutation();
@@ -54,13 +56,15 @@ export function LinkResourcesModal({
     }
   }, [isOpen, resources]);
 
-  // Refetch when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      refetch();
-      setError("");
-    }
-  }, [isOpen, refetch]);
+  // Reset error when modal opens
+  const [prevIsOpen, setPrevIsOpen] = useState(false);
+  if (isOpen && !prevIsOpen) {
+    setPrevIsOpen(true);
+    setError("");
+  }
+  if (!isOpen && prevIsOpen) {
+    setPrevIsOpen(false);
+  }
 
   // Calculate changes
   const { toAdd, toRemove, hasChanges } = useMemo(() => {
@@ -164,7 +168,10 @@ export function LinkResourcesModal({
     return (
       <div
         key={resource.id}
+        role="button"
+        tabIndex={0}
         onClick={() => !saving && toggleResource(resource.id)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); !saving && toggleResource(resource.id); } }}
         className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-all duration-150 ${
           selected
             ? "bg-primary-50/80 dark:bg-primary-800/40"
@@ -200,7 +207,7 @@ export function LinkResourcesModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" onClick={handleCancel} />
+      <div className="absolute inset-0 bg-black/40" role="presentation" onClick={handleCancel} />
 
       {/* Modal */}
       <div

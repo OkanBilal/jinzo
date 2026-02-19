@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useReducer, useEffect, useCallback } from "react";
 
 import { BodyMedium, Muted } from "../../../../../components/ui/text";
 import {
@@ -401,9 +401,11 @@ export default function LinearModal({
   onSuccess,
 }: LinearModalProps) {
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  const [initializing, setInitializing] = useState(true);
-  const [initialData, setInitialData] = useState<Partial<LinearWizardData>>({});
-  const [targetStep, setTargetStep] = useState<StepId | null>(null);
+  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<LinearWizardData> };
+  const [initState, setInitState] = useReducer(
+    (_: InitState, next: InitState) => next,
+    { initializing: true, targetStep: null, data: {} },
+  );
 
   const [getSelectedTeams] = useLazyGetSelectedTeamsQuery();
   const [getConnection] = useLazyGetConnectionQuery();
@@ -412,15 +414,11 @@ export default function LinearModal({
 
   useEffect(() => {
     if (!open) {
-      setInitializing(true);
-      setTargetStep(null);
+      setInitState({ initializing: true, targetStep: null, data: {} });
       return;
     }
 
     const loadInitialData = async () => {
-      setInitializing(true);
-      setTargetStep(null);
-
       const baseData: Partial<LinearWizardData> = {
         apiKey: "",
         teams: [],
@@ -430,63 +428,56 @@ export default function LinearModal({
         fromManage: false,
       };
 
-      if (!isConnected) {
-        setInitialData(baseData);
-        setTargetStep("setToken");
-        setInitializing(false);
-        return;
-      }
-
       let finalStep: StepId = "setToken";
       let finalData: Partial<LinearWizardData> = baseData;
 
-      try {
-        const startTime = Date.now();
-        const result = await getSelectedTeams("linear").unwrap();
-
-        if (result.success) {
-          finalData = {
-            ...baseData,
-            connectionId: result.connectionId,
-            currentTeams: result.teams,
-          };
-          finalStep = "manage";
-        } else {
-          const connResult = await getConnection("linear").unwrap();
-          if (connResult.success) {
-            finalData = {
-              ...baseData,
-              connectionId: connResult.connection.id,
-              currentTeams: [],
-            };
-            finalStep = "manage";
-          }
-        }
-
-        const elapsed = Date.now() - startTime;
-        const minLoadingTime = 600;
-        const remainingTime = Math.max(0, minLoadingTime - elapsed);
-        await new Promise((resolve) => setTimeout(resolve, remainingTime));
-      } catch (err) {
-        console.error("[loadInitialData] Error:", err);
+      if (isConnected) {
         try {
-          const connResult = await getConnection("linear").unwrap();
-          if (connResult.success) {
+          const startTime = Date.now();
+          const result = await getSelectedTeams("linear").unwrap();
+
+          if (result.success) {
             finalData = {
               ...baseData,
-              connectionId: connResult.connection.id,
-              currentTeams: [],
+              connectionId: result.connectionId,
+              currentTeams: result.teams,
             };
             finalStep = "manage";
+          } else {
+            const connResult = await getConnection("linear").unwrap();
+            if (connResult.success) {
+              finalData = {
+                ...baseData,
+                connectionId: connResult.connection.id,
+                currentTeams: [],
+              };
+              finalStep = "manage";
+            }
           }
-        } catch {
-          // Keep defaults
+
+          const elapsed = Date.now() - startTime;
+          const minLoadingTime = 600;
+          const remainingTime = Math.max(0, minLoadingTime - elapsed);
+          await new Promise((resolve) => setTimeout(resolve, remainingTime));
+        } catch (err) {
+          console.error("[loadInitialData] Error:", err);
+          try {
+            const connResult = await getConnection("linear").unwrap();
+            if (connResult.success) {
+              finalData = {
+                ...baseData,
+                connectionId: connResult.connection.id,
+                currentTeams: [],
+              };
+              finalStep = "manage";
+            }
+          } catch {
+            // Keep defaults
+          }
         }
       }
 
-      setInitialData(finalData);
-      setTargetStep(finalStep);
-      setInitializing(false);
+      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
     };
 
     loadInitialData();
@@ -510,7 +501,7 @@ export default function LinearModal({
   const steps: WizardStep<LinearWizardData>[] = [
     {
       id: "loading",
-      render: () => <LoadingStep targetStep={targetStep} />,
+      render: () => <LoadingStep targetStep={initState.targetStep} />,
     },
     {
       id: "setToken",
@@ -535,7 +526,7 @@ export default function LinearModal({
         onOpenChange={(isOpen) => !isOpen && handleClose()}
         steps={steps}
         initialStep="loading"
-        initialData={initialData}
+        initialData={initState.data}
         title="Linear"
         icon="connections/linear.png"
         onCancel={handleClose}

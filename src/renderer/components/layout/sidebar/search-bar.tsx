@@ -31,7 +31,6 @@ export default function SearchBar({
             placeholder="Search"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            autoFocus
             className="w-full h-9 bg-primary-950/2 dark:bg-primary/4 border-none  
                         rounded-xl pl-10 pr-10 text-sm text-primary-900 dark:text-primary-100 
                         placeholder:text-primary-900/90 dark:placeholder:text-primary/35 

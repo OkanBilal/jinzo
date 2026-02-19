@@ -82,7 +82,10 @@ export function IssueListItem({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={handleClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(e as any); } }}
       className={`w-full text-left px-1 py-1.5  rounded-lg cursor-pointer transition-all duration-200 ease-out flex items-center gap-2 group hover:scale-[1.01] active:scale-99 ${
         isActive
           ? "bg-primary/80 dark:bg-primary/5"

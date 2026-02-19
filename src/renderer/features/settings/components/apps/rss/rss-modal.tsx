@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useReducer, useEffect, useCallback } from "react";
 
 import {
   BodyMedium,
@@ -109,7 +109,7 @@ function EnableStep({ onComplete }: { onComplete: () => void }) {
 
       <div className="flex items-center justify-between py-4 px-4 dark:bg-primary-900 bg-primary-200/60 rounded-xl">
         <BodyMedium>Enable RSS</BodyMedium>
-        <label className="relative inline-flex items-center cursor-pointer">
+        <label aria-label="Enable RSS" className="relative inline-flex items-center cursor-pointer">
           <input
             type="checkbox"
             checked={data.enabled}
@@ -432,9 +432,11 @@ function ManageFeedsStep({ onRevoke }: { onRevoke: () => void }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function RssModal({ open, onClose }: RssModalProps) {
-  const [initializing, setInitializing] = useState(true);
-  const [targetStep, setTargetStep] = useState<StepId | null>(null);
-  const [initialData, setInitialData] = useState<Partial<RssWizardData>>({});
+  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<RssWizardData> };
+  const [initState, setInitState] = useReducer(
+    (_: InitState, next: InitState) => next,
+    { initializing: true, targetStep: null, data: {} },
+  );
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
 
   const [getRssStatus] = useLazyGetRssStatusQuery();
@@ -443,14 +445,11 @@ export default function RssModal({ open, onClose }: RssModalProps) {
 
   useEffect(() => {
     if (!open) {
-      setInitializing(true);
-      setTargetStep(null);
+      setInitState({ initializing: true, targetStep: null, data: {} });
       return;
     }
 
     const loadInitialData = async () => {
-      setInitializing(true);
-      setTargetStep(null);
       const startTime = Date.now();
 
       let finalStep: StepId = "enable";
@@ -486,9 +485,7 @@ export default function RssModal({ open, onClose }: RssModalProps) {
       const remainingTime = Math.max(0, minLoadingTime - elapsed);
       await new Promise((resolve) => setTimeout(resolve, remainingTime));
 
-      setInitialData(finalData);
-      setTargetStep(finalStep);
-      setInitializing(false);
+      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
     };
 
     loadInitialData();
@@ -516,7 +513,7 @@ export default function RssModal({ open, onClose }: RssModalProps) {
   const steps: WizardStep<RssWizardData>[] = [
     {
       id: "loading",
-      render: () => <LoadingStep targetStep={targetStep} />,
+      render: () => <LoadingStep targetStep={initState.targetStep} />,
     },
     {
       id: "enable",
@@ -539,7 +536,7 @@ export default function RssModal({ open, onClose }: RssModalProps) {
         onOpenChange={(isOpen) => !isOpen && handleClose()}
         steps={steps}
         initialStep="loading"
-        initialData={initialData}
+        initialData={initState.data}
         title="RSS"
         icon="connections/rss.png"
         onCancel={handleClose}

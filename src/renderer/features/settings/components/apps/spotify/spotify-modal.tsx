@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useReducer, useEffect, useCallback } from "react";
 
 import {
   BodyMedium,
@@ -386,10 +386,10 @@ const SpotifyModal = ({
   isConnected,
   onSuccess,
 }: SpotifyModalProps) => {
-  const [initializing, setInitializing] = useState(true);
-  const [initialStep, setInitialStep] = useState<StepId>("setToken");
-  const [initialData, setInitialData] = useState<Partial<SpotifyWizardData>>(
-    {},
+  type InitState = { initializing: boolean; step: StepId; data: Partial<SpotifyWizardData> };
+  const [initState, setInitState] = useReducer(
+    (_: InitState, next: InitState) => next,
+    { initializing: true, step: "setToken" as StepId, data: {} },
   );
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
 
@@ -399,13 +399,11 @@ const SpotifyModal = ({
 
   useEffect(() => {
     if (!open) {
-      setInitializing(true);
+      setInitState({ initializing: true, step: "setToken", data: {} });
       return;
     }
 
     const loadInitialData = async () => {
-      setInitializing(true);
-
       const baseData: Partial<SpotifyWizardData> = {
         accessToken: "",
         selectedSources: [],
@@ -413,40 +411,33 @@ const SpotifyModal = ({
         fromManage: false,
       };
 
-      if (!isConnected) {
-        setInitialStep("setToken");
-        setInitialData(baseData);
-        setInitializing(false);
-        return;
-      }
-
       let finalStep: StepId = "setToken";
       let finalData: Partial<SpotifyWizardData> = baseData;
 
-      try {
-        const startTime = Date.now();
-        const result = await getSelectedRepos("spotify").unwrap();
+      if (isConnected) {
+        try {
+          const startTime = Date.now();
+          const result = await getSelectedRepos("spotify").unwrap();
 
-        if (result.success) {
-          finalData = {
-            ...baseData,
-            connectionId: result.connectionId,
-            currentSources: result.repos || [],
-          };
-          finalStep = "manage";
+          if (result.success) {
+            finalData = {
+              ...baseData,
+              connectionId: result.connectionId,
+              currentSources: result.repos || [],
+            };
+            finalStep = "manage";
+          }
+
+          const elapsed = Date.now() - startTime;
+          const minLoadingTime = 600;
+          const remainingTime = Math.max(0, minLoadingTime - elapsed);
+          await new Promise((resolve) => setTimeout(resolve, remainingTime));
+        } catch (err) {
+          console.error("[loadInitialData] Error:", err);
         }
-
-        const elapsed = Date.now() - startTime;
-        const minLoadingTime = 600;
-        const remainingTime = Math.max(0, minLoadingTime - elapsed);
-        await new Promise((resolve) => setTimeout(resolve, remainingTime));
-      } catch (err) {
-        console.error("[loadInitialData] Error:", err);
       }
 
-      setInitialStep(finalStep);
-      setInitialData(finalData);
-      setInitializing(false);
+      setInitState({ initializing: false, step: finalStep, data: finalData });
     };
 
     loadInitialData();
@@ -467,7 +458,7 @@ const SpotifyModal = ({
     }
   };
 
-  const steps: WizardStep<SpotifyWizardData>[] = initializing
+  const steps: WizardStep<SpotifyWizardData>[] = initState.initializing
     ? [{ id: "loading", render: () => <LoadingStep /> }]
     : [
         {
@@ -489,12 +480,12 @@ const SpotifyModal = ({
   return (
     <>
       <WizardModal
-        key={`wizard-${initialStep}`}
+        key={`wizard-${initState.step}`}
         open={open}
         onOpenChange={(isOpen) => !isOpen && handleClose()}
         steps={steps}
-        initialStep={initializing ? "loading" : initialStep}
-        initialData={initialData}
+        initialStep={initState.initializing ? "loading" : initState.step}
+        initialData={initState.data}
         title="Spotify"
         icon="connections/spotify.png"
         onCancel={handleClose}

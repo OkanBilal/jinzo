@@ -1,7 +1,13 @@
+import { lazy, Suspense } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/lib/redux";
-import { CodeMirrorEditor } from "./codemirror-editor";
-import { DiffViewer } from "./diff-viewer";
+
+const CodeMirrorEditor = lazy(() =>
+  import("./codemirror-editor").then((m) => ({ default: m.CodeMirrorEditor })),
+);
+const DiffViewer = lazy(() =>
+  import("./diff-viewer").then((m) => ({ default: m.DiffViewer })),
+);
 
 interface EditorContentProps {
   className?: string;
@@ -107,11 +113,13 @@ export function EditorContent({ className = "" }: EditorContentProps) {
     return (
       <div className={`flex flex-col h-full ${className}`}>
         <div className="flex-1 min-h-0 overflow-hidden">
-          <DiffViewer
-            diffText={selectedFileContent.content}
-            filename={selectedFile.name}
-            className="h-full"
-          />
+          <Suspense fallback={null}>
+            <DiffViewer
+              diffText={selectedFileContent.content}
+              filename={selectedFile.name}
+              className="h-full"
+            />
+          </Suspense>
         </div>
       </div>
     );
@@ -123,11 +131,13 @@ export function EditorContent({ className = "" }: EditorContentProps) {
 
       {/* Editor content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <CodeMirrorEditor
-          content={selectedFileContent.content}
-          filename={selectedFile.name}
-          className="h-full"
-        />
+        <Suspense fallback={null}>
+          <CodeMirrorEditor
+            content={selectedFileContent.content}
+            filename={selectedFile.name}
+            className="h-full"
+          />
+        </Suspense>
       </div>
     </div>
   );

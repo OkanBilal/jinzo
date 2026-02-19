@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { toast } from "@/components/ui/toast";
 import { useDarkMode } from "../../../hooks/use-dark-mode";
@@ -187,7 +187,6 @@ function ThemePreviewCard({
 export default function GeneralSettings() {
   const { theme, setTheme } = useDarkMode();
   const { activeMood } = useActiveMood();
-  const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState<AccountFormValues>(EMPTY_FORM);
   const [isDirty, setIsDirty] = useState(false);
 
@@ -229,11 +228,9 @@ export default function GeneralSettings() {
     }
   }, [activeMood?.themeConfig]);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
+  const [prevAccount, setPrevAccount] = useState(account);
+  if (account !== prevAccount) {
+    setPrevAccount(account);
     if (account) {
       setForm({
         displayName: account.displayName ?? "",
@@ -248,7 +245,7 @@ export default function GeneralSettings() {
       });
       setIsDirty(false);
     }
-  }, [account]);
+  }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -298,8 +295,6 @@ export default function GeneralSettings() {
             description="Choose your preferred color mode"
           >
             <div className="flex gap-3">
-              {mounted ? (
-                <>
                   <ThemePreviewCard
                     themeValue="light"
                     label="Light"
@@ -333,17 +328,6 @@ export default function GeneralSettings() {
                       toast.success("Theme changed to Dark");
                     }}
                   />
-                </>
-              ) : (
-                <div className="flex gap-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex flex-col items-center gap-2">
-                      <div className="w-24 h-16 rounded-xl bg-primary-100 dark:bg-primary-800 animate-pulse" />
-                      <div className="w-10 h-3 rounded bg-primary-100 dark:bg-primary-800 animate-pulse" />
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </SettingsRow>
 

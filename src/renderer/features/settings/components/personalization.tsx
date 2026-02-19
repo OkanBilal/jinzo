@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { toast } from "@/components/ui/toast";
 import { Button } from "../../../components/ui/button";
@@ -42,7 +42,9 @@ export default function PersonalizationSettings() {
   const error = queryError ? 'Unable to load personalization details' : null;
   const lastSavedAt = account?.updatedAt || account?.createdAt || null;
 
-  useEffect(() => {
+  const [prevAccount, setPrevAccount] = useState(account);
+  if (account !== prevAccount) {
+    setPrevAccount(account);
     if (account) {
       setForm({
         displayName: account.displayName ?? "",
@@ -55,7 +57,7 @@ export default function PersonalizationSettings() {
       });
       setIsDirty(false);
     }
-  }, [account]);
+  }
 
   const handleChange =
     <T extends keyof PersonalizationFormValues>(field: T) =>

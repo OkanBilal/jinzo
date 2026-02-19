@@ -8,6 +8,8 @@ import type { IssueWithEntity } from "@/lib/redux/api";
 import type { ReviewTab as ReviewTabType } from "@/lib/redux/slices/workspaceSlice";
 import { useRef, useState, useLayoutEffect } from "react";
 
+const EMPTY_NOTE_TABS: ReviewTabType[] = [];
+
 interface WorkspaceTabsProps {
   runs: Run[];
   activeTab: "editor" | string;
@@ -33,7 +35,7 @@ export function WorkspaceTabs({
   hasSelectedFile,
   fileName,
   issueTabs,
-  noteTabs = [],
+  noteTabs = EMPTY_NOTE_TABS,
   variant = "workspace",
   onSelectEditorTab,
   onSelectRunTab,

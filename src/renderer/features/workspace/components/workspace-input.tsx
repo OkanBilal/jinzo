@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useReducer, useRef, useEffect, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   useGetProviderModelsQuery,
@@ -35,6 +35,9 @@ import { Jira } from "@/components/ui/icons";
 import { Code } from "@/components/ui/icons/mood";
 import { Button } from "@/components/ui/button";
 
+const EMPTY_CONTEXT_FILES: FileNode[] = [];
+const EMPTY_CONTEXT_ISSUES: ContextIssue[] = [];
+
 interface WorkspaceInputProps {
   goal: string;
   onGoalChange: (value: string) => void;
@@ -63,9 +66,9 @@ export function WorkspaceInput({
   providerId,
   selectedModel: externalSelectedModel,
   onModelChange: externalOnModelChange,
-  contextFiles = [],
+  contextFiles = EMPTY_CONTEXT_FILES,
   onRemoveContextFile,
-  contextIssues = [],
+  contextIssues = EMPTY_CONTEXT_ISSUES,
   onRemoveContextIssue,
   workspacePath,
 }: WorkspaceInputProps) {
@@ -87,11 +90,12 @@ export function WorkspaceInput({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
-  const [thinkingEnabled, setThinkingEnabled] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [showSlashCommands, setShowSlashCommands] = useState(false);
-  const [slashFilterText, setSlashFilterText] = useState("");
+  const [slashMenu, updateSlashMenu] = useReducer(
+    (prev: { visible: boolean; filter: string }, next: Partial<{ visible: boolean; filter: string }>) => ({ ...prev, ...next }),
+    { visible: false, filter: "" },
+  );
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const variant = useWorkspaceVariant();
 
@@ -106,7 +110,7 @@ export function WorkspaceInput({
   );
 
   useClickOutside(dropdownRef, () => setIsDropdownOpen(false));
-  useClickOutside(slashCommandDropdownRef, () => setShowSlashCommands(false));
+  useClickOutside(slashCommandDropdownRef, () => updateSlashMenu({ visible: false }));
 
   // Fetch models from provider
   const { data: providerModels, isLoading: isLoadingModels } =
@@ -204,12 +208,9 @@ export function WorkspaceInput({
       // Detect slash command pattern: "/" at start or after whitespace
       const slashMatch = value.match(/(?:^|\s)\/(\S*)$/);
       if (slashMatch) {
-        const filterText = slashMatch[1]; // Text after the slash
-        setSlashFilterText(filterText);
-        setShowSlashCommands(true);
+        updateSlashMenu({ filter: slashMatch[1], visible: true });
       } else {
-        setShowSlashCommands(false);
-        setSlashFilterText("");
+        updateSlashMenu({ visible: false, filter: "" });
       }
     },
     [onGoalChange],
@@ -224,8 +225,7 @@ export function WorkspaceInput({
         return `${prefix}/${command.name} `;
       });
       onGoalChange(newGoal);
-      setShowSlashCommands(false);
-      setSlashFilterText("");
+      updateSlashMenu({ visible: false, filter: "" });
     },
     [goal, onGoalChange],
   );
@@ -239,8 +239,7 @@ export function WorkspaceInput({
         return `${prefix}/${skill.name} `;
       });
       onGoalChange(newGoal);
-      setShowSlashCommands(false);
-      setSlashFilterText("");
+      updateSlashMenu({ visible: false, filter: "" });
     },
     [goal, onGoalChange],
   );
@@ -377,12 +376,12 @@ export function WorkspaceInput({
         <SlashMenuDropdown
           commands={providerCommands}
           skills={providerSkills}
-          isOpen={showSlashCommands}
+          isOpen={slashMenu.visible}
           onSelectCommand={handleSlashCommandSelect}
           onSelectSkill={handleSkillSelect}
-          onClose={() => setShowSlashCommands(false)}
+          onClose={() => updateSlashMenu({ visible: false })}
           dropdownRef={slashCommandDropdownRef}
-          filterText={slashFilterText}
+          filterText={slashMenu.filter}
           variant={variant}
           isLoadingCommands={isLoadingCommands}
           isLoadingSkills={isLoadingSkills}

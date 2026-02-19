@@ -30,7 +30,7 @@ export function InfoGroup({ group }: InfoGroupProps) {
               <div className="flex flex-wrap gap-1.5 justify-end">
                 {files.map((file, idx) => (
                   <div
-                    key={idx}
+                    key={file.fullPath}
                     className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-50 dark:bg-primary-300/15 text-xs"
                     title={file.fullPath}
                   >

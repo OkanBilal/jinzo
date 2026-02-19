@@ -5,3 +5,4 @@ export { useToolApproval } from "./use-tool-approval";
 export type { ToolApprovalRequest } from "./use-tool-approval";
 export { useDeleteWorkspace } from "./use-delete-workspace";
 export { useArchiveWorkspace } from "./use-archive-workspace";
+export { useFileContentLoader } from "./use-file-content-loader";

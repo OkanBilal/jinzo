@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useReducer, useEffect, useCallback } from "react";
 
 import { BodyMedium, Muted } from "../../../../../components/ui/text";
 import {
@@ -494,9 +494,11 @@ export default function JiraModal({
   onSuccess,
 }: JiraModalProps) {
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  const [initializing, setInitializing] = useState(true);
-  const [initialData, setInitialData] = useState<Partial<JiraWizardData>>({});
-  const [targetStep, setTargetStep] = useState<StepId | null>(null);
+  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<JiraWizardData> };
+  const [initState, setInitState] = useReducer(
+    (_: InitState, next: InitState) => next,
+    { initializing: true, targetStep: null, data: {} },
+  );
 
   const [getSelectedProjects] = useLazyGetSelectedProjectsQuery();
   const [getConnection] = useLazyGetConnectionQuery();
@@ -505,15 +507,11 @@ export default function JiraModal({
 
   useEffect(() => {
     if (!open) {
-      setInitializing(true);
-      setTargetStep(null);
+      setInitState({ initializing: true, targetStep: null, data: {} });
       return;
     }
 
     const loadInitialData = async () => {
-      setInitializing(true);
-      setTargetStep(null);
-
       const baseData: Partial<JiraWizardData> = {
         apiToken: "",
         domain: "",
@@ -525,63 +523,56 @@ export default function JiraModal({
         fromManage: false,
       };
 
-      if (!isConnected) {
-        setInitialData(baseData);
-        setTargetStep("setToken");
-        setInitializing(false);
-        return;
-      }
-
       let finalStep: StepId = "setToken";
       let finalData: Partial<JiraWizardData> = baseData;
 
-      try {
-        const startTime = Date.now();
-        const result = await getSelectedProjects("jira").unwrap();
-
-        if (result.success) {
-          finalData = {
-            ...baseData,
-            connectionId: result.connectionId,
-            currentProjects: result.projects,
-          };
-          finalStep = "manage";
-        } else {
-          const connResult = await getConnection("jira").unwrap();
-          if (connResult.success) {
-            finalData = {
-              ...baseData,
-              connectionId: connResult.connection.id,
-              currentProjects: [],
-            };
-            finalStep = "manage";
-          }
-        }
-
-        const elapsed = Date.now() - startTime;
-        const minLoadingTime = 600;
-        const remainingTime = Math.max(0, minLoadingTime - elapsed);
-        await new Promise((resolve) => setTimeout(resolve, remainingTime));
-      } catch (err) {
-        console.error("[loadInitialData] Error:", err);
+      if (isConnected) {
         try {
-          const connResult = await getConnection("jira").unwrap();
-          if (connResult.success) {
+          const startTime = Date.now();
+          const result = await getSelectedProjects("jira").unwrap();
+
+          if (result.success) {
             finalData = {
               ...baseData,
-              connectionId: connResult.connection.id,
-              currentProjects: [],
+              connectionId: result.connectionId,
+              currentProjects: result.projects,
             };
             finalStep = "manage";
+          } else {
+            const connResult = await getConnection("jira").unwrap();
+            if (connResult.success) {
+              finalData = {
+                ...baseData,
+                connectionId: connResult.connection.id,
+                currentProjects: [],
+              };
+              finalStep = "manage";
+            }
           }
-        } catch {
-          // Keep defaults
+
+          const elapsed = Date.now() - startTime;
+          const minLoadingTime = 600;
+          const remainingTime = Math.max(0, minLoadingTime - elapsed);
+          await new Promise((resolve) => setTimeout(resolve, remainingTime));
+        } catch (err) {
+          console.error("[loadInitialData] Error:", err);
+          try {
+            const connResult = await getConnection("jira").unwrap();
+            if (connResult.success) {
+              finalData = {
+                ...baseData,
+                connectionId: connResult.connection.id,
+                currentProjects: [],
+              };
+              finalStep = "manage";
+            }
+          } catch {
+            // Keep defaults
+          }
         }
       }
 
-      setInitialData(finalData);
-      setTargetStep(finalStep);
-      setInitializing(false);
+      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
     };
 
     loadInitialData();
@@ -605,7 +596,7 @@ export default function JiraModal({
   const steps: WizardStep<JiraWizardData>[] = [
     {
       id: "loading",
-      render: () => <LoadingStep targetStep={targetStep} />,
+      render: () => <LoadingStep targetStep={initState.targetStep} />,
     },
     {
       id: "setToken",
@@ -630,7 +621,7 @@ export default function JiraModal({
         onOpenChange={(isOpen) => !isOpen && handleClose()}
         steps={steps}
         initialStep="loading"
-        initialData={initialData}
+        initialData={initState.data}
         title="Jira"
         icon="connections/jira.png"
         onCancel={handleClose}

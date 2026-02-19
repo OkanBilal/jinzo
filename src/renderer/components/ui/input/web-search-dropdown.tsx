@@ -1,4 +1,4 @@
-import { useState, useEffect, RefObject } from "react";
+import { useState, RefObject } from "react";
 import { Web } from "@/components/ui/icons";
 import DropdownWrapper from "@/components/ui/dropdown-wrapper";
 import { Button } from "@/components/ui/button";
@@ -27,19 +27,14 @@ export function WebSearchDropdown({
 }: WebSearchDropdownProps) {
   const { data: ollamaProvider } = useGetProviderByIdQuery("ollama");
   const [updateProvider] = useUpdateProviderMutation();
-  const [apiKey, setApiKey] = useState("");
+  const [editedApiKey, setEditedApiKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const existingKey = ollamaProvider?.config?.ollamaApiKey as
     | string
     | undefined;
+  const apiKey = editedApiKey ?? existingKey ?? "";
   const hasApiKey = !!existingKey;
-
-  useEffect(() => {
-    if (existingKey) {
-      setApiKey(existingKey);
-    }
-  }, [existingKey]);
 
   const handleSaveKey = async () => {
     if (!apiKey.trim() || saving) return;
@@ -102,7 +97,7 @@ export function WebSearchDropdown({
             <Input
               type="password"
               value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
+              onChange={(e) => setEditedApiKey(e.target.value)}
               placeholder="Enter API key..."
               className="w-full px-3 py-1.5 dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
               onKeyDown={(e) => {

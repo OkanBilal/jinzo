@@ -36,40 +36,48 @@ export default function SettingsPage() {
     await refetchApps();
   };
 
-  const renderContent = () => {
-    switch (activeSection) {
-      case "general":
-        return <GeneralSettings />;
-      case "notifications":
-        return <NotificationsSettings />;
-      case "personalization":
-        return <PersonalizationSettings />;
-      case "apps":
-        return (
-          <AppsSettings
-            apps={apps}
-            connectedApps={connectedApps}
-            onRefresh={handleRefresh}
-          />
-        );
-      case "schedules":
-        return <SchedulesSettings />;
-      case "security":
-        return <SecuritySettings />;
-      case "claude":
-        return <ClaudeSettings />;
-      case "copilot":
-        return <CopilotSettings />;
-      case "git":
-        return <GitSettings />;
-      default:
-        return <GeneralSettings />;
-    }
-  };
+  let content: React.ReactNode;
+  switch (activeSection) {
+    case "general":
+      content = <GeneralSettings />;
+      break;
+    case "notifications":
+      content = <NotificationsSettings />;
+      break;
+    case "personalization":
+      content = <PersonalizationSettings />;
+      break;
+    case "apps":
+      content = (
+        <AppsSettings
+          apps={apps}
+          connectedApps={connectedApps}
+          onRefresh={handleRefresh}
+        />
+      );
+      break;
+    case "schedules":
+      content = <SchedulesSettings />;
+      break;
+    case "security":
+      content = <SecuritySettings />;
+      break;
+    case "claude":
+      content = <ClaudeSettings />;
+      break;
+    case "copilot":
+      content = <CopilotSettings />;
+      break;
+    case "git":
+      content = <GitSettings />;
+      break;
+    default:
+      content = <GeneralSettings />;
+  }
 
   return (
     <div className="h-full max-w-200 mx-auto px-6 pt-16 overflow-y-auto bg-primary dark:bg-primary-950">
-      {renderContent()}
+      {content}
     </div>
   );
 }

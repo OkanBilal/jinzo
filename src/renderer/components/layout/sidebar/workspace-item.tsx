@@ -81,7 +81,10 @@ export default function WorkspaceItem({
   return (
     <div className="relative group">
       <div
+        role="button"
+        tabIndex={0}
         onClick={onClick}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick?.(); } }}
         className={`block px-3 py-1.5 active:scale-99 group-hover:scale-[1.01] rounded-xl transition-all duration-200 ease-out cursor-pointer ${
           isActive
             ? "bg-primary/80 dark:bg-primary/5"

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useReducer, useEffect, useCallback } from "react";
 
 import {
   BodyMedium,
@@ -118,7 +118,7 @@ function EnableStep({ onComplete }: { onComplete: () => void }) {
 
       <div className="flex items-center justify-between py-4 px-4 dark:bg-primary-900 bg-primary-200/60 rounded-xl">
         <BodyMedium>Enable</BodyMedium>
-        <label className="relative inline-flex items-center cursor-pointer">
+        <label aria-label="Enable HackerNews" className="relative inline-flex items-center cursor-pointer">
           <input
             type="checkbox"
             checked={data.enabled}
@@ -287,15 +287,11 @@ export default function HackerNewsModal({
   open,
   onClose,
 }: HackerNewsModalProps) {
-  const [initializing, setInitializing] = useState(true);
-  const [targetStep, setTargetStep] = useState<StepId | null>(null);
-  const [initialData, setInitialData] = useState<HackerNewsWizardData>({
-    enabled: false,
-    username: "",
-    topStories: true,
-    userSubmissions: false,
-    userComments: false,
-  });
+  type InitState = { initializing: boolean; targetStep: StepId | null; data: HackerNewsWizardData };
+  const [initState, setInitState] = useReducer(
+    (_: InitState, next: InitState) => next,
+    { initializing: true, targetStep: null, data: { enabled: false, username: "", topStories: true, userSubmissions: false, userComments: false } },
+  );
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
 
   const [getHackerNewsStatus] = useLazyGetHackerNewsStatusQuery();
@@ -304,14 +300,11 @@ export default function HackerNewsModal({
 
   useEffect(() => {
     if (!open) {
-      setInitializing(true);
-      setTargetStep(null);
+      setInitState({ initializing: true, targetStep: null, data: { enabled: false, username: "", topStories: true, userSubmissions: false, userComments: false } });
       return;
     }
 
     const loadInitialData = async () => {
-      setInitializing(true);
-      setTargetStep(null);
       const startTime = Date.now();
 
       let finalStep: StepId = "enable";
@@ -345,9 +338,7 @@ export default function HackerNewsModal({
       const remainingTime = Math.max(0, minLoadingTime - elapsed);
       await new Promise((resolve) => setTimeout(resolve, remainingTime));
 
-      setInitialData(finalData);
-      setTargetStep(finalStep);
-      setInitializing(false);
+      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
     };
 
     loadInitialData();
@@ -371,7 +362,7 @@ export default function HackerNewsModal({
   const steps: WizardStep<HackerNewsWizardData>[] = [
     {
       id: "loading",
-      render: () => <LoadingStep targetStep={targetStep} />,
+      render: () => <LoadingStep targetStep={initState.targetStep} />,
     },
     {
       id: "enable",
@@ -395,7 +386,7 @@ export default function HackerNewsModal({
         onOpenChange={(isOpen) => !isOpen && handleClose()}
         steps={steps}
         initialStep="loading"
-        initialData={initialData}
+        initialData={initState.data}
         title="HackerNews"
         icon="connections/hackernews.png"
         onCancel={handleClose}

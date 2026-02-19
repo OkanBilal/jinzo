@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { useRef } from "react";
+import { LazyMotion, m, AnimatePresence, domAnimation } from "motion/react";
 
 interface AnimatedTitleProps {
   title: string;
@@ -7,41 +7,43 @@ interface AnimatedTitleProps {
 }
 
 export function AnimatedTitle({ title, className = "" }: AnimatedTitleProps) {
-  const [initialTitle] = useState(title);
-  const hasChanged = title !== initialTitle;
+  const initialTitleRef = useRef(title);
+  const hasChanged = title !== initialTitleRef.current;
 
   if (!hasChanged) {
     return <span className={className}>{title}</span>;
   }
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.span
-        key={title}
-        className={className}
-        style={{ display: "block" }}
-        initial={{
-          clipPath: "inset(0 100% 0 0)",
-          filter: "blur(6px)",
-          opacity: 0,
-        }}
-        animate={{
-          clipPath: "inset(0 0% 0 0)",
-          filter: "blur(0px)",
-          opacity: 1,
-        }}
-        exit={{
-          clipPath: "inset(0 0 0 100%)",
-          filter: "blur(6px)",
-          opacity: 0,
-        }}
-        transition={{
-          duration: 0.35,
-          ease: [0.4, 0, 0.2, 1],
-        }}
-      >
-        {title}
-      </motion.span>
-    </AnimatePresence>
+    <LazyMotion features={domAnimation}>
+      <AnimatePresence mode="wait">
+        <m.span
+          key={title}
+          className={className}
+          style={{ display: "block" }}
+          initial={{
+            clipPath: "inset(0 100% 0 0)",
+            filter: "blur(6px)",
+            opacity: 0,
+          }}
+          animate={{
+            clipPath: "inset(0 0% 0 0)",
+            filter: "blur(0px)",
+            opacity: 1,
+          }}
+          exit={{
+            clipPath: "inset(0 0 0 100%)",
+            filter: "blur(6px)",
+            opacity: 0,
+          }}
+          transition={{
+            duration: 0.35,
+            ease: [0.4, 0, 0.2, 1],
+          }}
+        >
+          {title}
+        </m.span>
+      </AnimatePresence>
+    </LazyMotion>
   );
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   FileExplorer,
@@ -43,12 +43,7 @@ export function WorkspaceSidebar() {
   );
 
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
-  const [selectedDiffFile, setSelectedDiffFile] = useState<string | null>(null);
 
-  // Reset selected diff file when workspace changes
-  useEffect(() => {
-    setSelectedDiffFile(null);
-  }, [workspaceId]);
 
   // Get workspace data from the selected workspace ID
   const { data: workspace } = useGetWorkspaceByIdQuery(workspaceId || "", {
@@ -69,7 +64,6 @@ export function WorkspaceSidebar() {
       dispatch(setSelectedFile(node));
       // Switch to Editor tab when a file is selected
       dispatch(setActiveTab("editor"));
-      setSelectedDiffFile(null);
     },
     [dispatch],
   );
@@ -106,7 +100,6 @@ export function WorkspaceSidebar() {
 
   const handleSelectDiffFile = useCallback(
     (filePath: string, diffContent: string) => {
-      setSelectedDiffFile(filePath);
       // Show the diff in the editor by setting file + content
       const fileName = filePath.split("/").pop() || filePath;
       dispatch(
@@ -230,9 +223,9 @@ export function WorkspaceSidebar() {
         /* Changes (diff) view */
         <div className="flex-1 px-3 flex flex-col min-h-0">
           <DiffSection
+            key={workspaceId}
             workspaceId={workspaceId}
             onSelectDiffFile={handleSelectDiffFile}
-            selectedDiffFile={selectedDiffFile}
           />
         </div>
       ) : (

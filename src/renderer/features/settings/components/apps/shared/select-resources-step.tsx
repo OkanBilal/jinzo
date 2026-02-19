@@ -7,6 +7,41 @@ interface SelectableResource {
   [key: string]: any;
 }
 
+function ResourceRow<T extends SelectableResource>({
+  resource,
+  selected,
+  onToggle,
+  renderItem,
+  loading,
+}: {
+  resource: T;
+  selected: boolean;
+  onToggle: (id: string | number) => void;
+  renderItem: (resource: T) => React.ReactNode;
+  loading: boolean;
+}) {
+  const content = renderItem(resource);
+
+  return (
+    <div className="flex items-center justify-between px-4 py-4 border-b border-primary-200 dark:border-primary-800 last:border-b-0">
+      <div
+        role="button"
+        tabIndex={0}
+        className="flex-1 cursor-pointer"
+        onClick={() => onToggle(resource.id)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(resource.id); } }}
+      >
+        {content}
+      </div>
+      <Checkbox
+        checked={selected}
+        onChange={() => onToggle(resource.id)}
+        disabled={loading}
+      />
+    </div>
+  );
+}
+
 interface SelectResourcesStepProps<T extends SelectableResource> {
   resources: T[];
   selectedResources: Set<string | number> | string[] | number[];
@@ -66,27 +101,16 @@ export function SelectResourcesStep<T extends SelectableResource>({
             <BodyMedium>{emptyMessage}</BodyMedium>
           </div>
         ) : (
-          resources.map((resource) => {
-            const selected = isSelected(resource.id);
-            return (
-              <div
-                key={resource.id}
-                className="flex items-center justify-between px-4 py-4 border-b border-primary-200 dark:border-primary-800 last:border-b-0"
-              >
-                <div
-                  className="flex-1 cursor-pointer"
-                  onClick={() => onToggleResource(resource.id)}
-                >
-                  {renderResourceItem(resource)}
-                </div>
-                <Checkbox
-                  checked={selected}
-                  onChange={() => onToggleResource(resource.id)}
-                  disabled={loading}
-                />
-              </div>
-            );
-          })
+          resources.map((resource) => (
+            <ResourceRow
+              key={resource.id}
+              resource={resource}
+              selected={isSelected(resource.id)}
+              onToggle={onToggleResource}
+              renderItem={renderResourceItem}
+              loading={loading}
+            />
+          ))
         )}
       </div>
 

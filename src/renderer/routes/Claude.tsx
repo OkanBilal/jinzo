@@ -10,13 +10,11 @@ import {
   useWorkspaceData,
   useWorkspaceRuns,
   useToolApproval,
+  useFileContentLoader,
 } from "@/features/workspace/hooks";
 import {
   setWorkspaceModel,
   setActiveTab,
-  setSelectedFileContent,
-  setFileContentLoading,
-  setFileContentError,
   clearSelectedFile,
   removeContextFile,
   clearContextFiles,
@@ -32,10 +30,6 @@ import {
 } from "@/lib/redux/slices/workspaceSlice";
 import { isIssueTab, isNoteTab } from "@/features/workspace/utils/repo-utils";
 import type { RootState } from "@/lib/redux";
-import type {
-  FileContentResponse,
-  ServiceResponse,
-} from "@/features/workspace/components/file-explorer";
 
 const CLAUDE_PROVIDER_ID = "claude_code";
 
@@ -94,12 +88,10 @@ export default function ClaudePage() {
   }, [workspaceId, dispatch]);
 
   // Sync pendingGoal from Redux to local state
-  useEffect(() => {
-    if (pendingGoal) {
-      setGoal(pendingGoal);
-      dispatch(clearPendingGoal());
-    }
-  }, [pendingGoal, dispatch]);
+  if (pendingGoal) {
+    setGoal(pendingGoal);
+    dispatch(clearPendingGoal());
+  }
 
   const {
     runs,
@@ -127,53 +119,7 @@ export default function ClaudePage() {
     }
   }, [runs, selectedFile, activeTab, dispatch, selectTab]);
 
-  useEffect(() => {
-    if (
-      !selectedFile ||
-      selectedFile.type !== "file" ||
-      !currentWorkspace?.rootPath ||
-      selectedFile.extension === "diff"
-    ) {
-      return;
-    }
-
-    let cancelled = false;
-    const filePath = selectedFile.fullPath;
-
-    async function loadFileContent() {
-      dispatch(setFileContentLoading(true));
-      dispatch(setFileContentError(null));
-
-      try {
-        const result: ServiceResponse<FileContentResponse> =
-          await window.api.fileExplorer.readFileText({
-            filePath,
-            workspaceRoot: currentWorkspace!.rootPath,
-          });
-
-        if (cancelled) return;
-
-        if (result.success && result.data) {
-          dispatch(setSelectedFileContent(result.data));
-        } else {
-          dispatch(setFileContentError(result.error || "Failed to load file"));
-        }
-      } catch (err) {
-        if (cancelled) return;
-        dispatch(
-          setFileContentError(
-            err instanceof Error ? err.message : "Unknown error",
-          ),
-        );
-      }
-    }
-
-    loadFileContent();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedFile, currentWorkspace?.rootPath, dispatch]);
+  useFileContentLoader(selectedFile, currentWorkspace?.rootPath);
 
   useEffect(() => {
     const checkResume = async () => {

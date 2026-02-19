@@ -183,6 +183,7 @@ export default function Tooltip({
     <>
       <span
         ref={triggerRef}
+        role="presentation"
         style={{ display: "contents" }}
         onMouseEnter={showTooltip}
         onMouseLeave={hideTooltip}

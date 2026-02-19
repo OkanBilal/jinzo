@@ -1,6 +1,8 @@
 import { useAppSelector } from "@/lib/redux/hooks";
 import { useThinkingConfig } from "./use-thinking-config";
 
+//TODO: FİX ERRORS
+
 export function useChatConfig() {
   const selectedModel = useAppSelector((state) => state.chat.selectedModel);
   const thinkingEnabled = useAppSelector((state) => state.chat.thinkingEnabled);

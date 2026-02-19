@@ -15,6 +15,8 @@ interface JournalEntity {
   createdAt: string;
 }
 
+const EMPTY_WORKSPACES: WorkspaceResponse[] = [];
+
 interface SidebarContentProps {
   itemType: "chat" | "post" | "workspace" | "claude";
   sessions: ChatSession[];
@@ -34,7 +36,7 @@ export function SidebarContent({
   itemType,
   sessions,
   entities,
-  workspaces = [],
+  workspaces = EMPTY_WORKSPACES,
   isLoadingSessions,
   isLoadingEntities,
   isLoadingWorkspaces = false,

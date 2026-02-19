@@ -78,7 +78,7 @@ export function FileUploadDropdown({
       </Button>
       {uploadedFiles.map((uploadedFile, index) => (
         <div
-          key={index}
+          key={`${uploadedFile.file.name}-${uploadedFile.file.size}`}
           className="relative"
           onMouseEnter={() => setHoveredFileIndex(index)}
           onMouseLeave={() => setHoveredFileIndex(null)}

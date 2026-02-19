@@ -1,11 +1,12 @@
 import {
-  useState,
   useRef,
   useEffect,
   useLayoutEffect,
   useCallback,
   useMemo,
   useSyncExternalStore,
+  useReducer,
+  useState,
 } from "react";
 import { createPortal } from "react-dom";
 import { WizardProvider, type WizardContextValue } from "./wizard-context";
@@ -60,6 +61,68 @@ function resolveInitialStep(
   return idx >= 0 ? idx : 0;
 }
 
+// ─── Reducer ──────────────────────────────────────────────────────────────────
+
+type AnimState = { height: number | "auto"; active: boolean };
+
+interface WizardState<TData> {
+  stepIndex: number;
+  data: TData;
+  errors: Record<string, string>;
+  isSubmitting: boolean;
+  animState: AnimState;
+}
+
+type WizardAction<TData> =
+  | { type: "RESET"; stepIndex: number; data: TData }
+  | { type: "SET_STEP"; index: number }
+  | { type: "INC_STEP" }
+  | { type: "DEC_STEP" }
+  | { type: "SET_DATA"; data: Partial<TData> }
+  | { type: "REPLACE_DATA"; data: TData }
+  | { type: "SET_ERRORS"; errors: Record<string, string> }
+  | { type: "CLEAR_ERRORS" }
+  | { type: "SET_SUBMITTING"; value: boolean }
+  | { type: "SET_ANIM"; animState: AnimState };
+
+function wizardReducer<TData extends Record<string, any>>(
+  state: WizardState<TData>,
+  action: WizardAction<TData>,
+): WizardState<TData> {
+  switch (action.type) {
+    case "RESET":
+      return {
+        stepIndex: action.stepIndex,
+        data: action.data,
+        errors: {},
+        isSubmitting: false,
+        animState: { height: "auto", active: false },
+      };
+    case "SET_STEP":
+      return { ...state, stepIndex: action.index };
+    case "INC_STEP":
+      return { ...state, stepIndex: state.stepIndex + 1 };
+    case "DEC_STEP":
+      return { ...state, stepIndex: state.stepIndex - 1 };
+    case "SET_DATA":
+      return { ...state, data: { ...state.data, ...action.data } };
+    case "REPLACE_DATA":
+      return { ...state, data: action.data };
+    case "SET_ERRORS":
+      return { ...state, errors: { ...state.errors, ...action.errors } };
+    case "CLEAR_ERRORS":
+      return { ...state, errors: {} };
+    case "SET_SUBMITTING":
+      return { ...state, isSubmitting: action.value };
+    case "SET_ANIM":
+      return { ...state, animState: action.animState };
+    default:
+      return state;
+  }
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export function WizardModal<
   TData extends Record<string, any> = Record<string, any>,
 >({
@@ -85,12 +148,19 @@ export function WizardModal<
   const contentRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
 
-  const [stepIndex, setStepIndex] = useState(() =>
-    resolveInitialStep(steps, initialStep),
+  const [state, dispatch] = useReducer(
+    wizardReducer<TData>,
+    undefined,
+    () => ({
+      stepIndex: resolveInitialStep(steps, initialStep),
+      data: (initialData ?? {}) as TData,
+      errors: {} as Record<string, string>,
+      isSubmitting: false,
+      animState: { height: "auto" as number | "auto", active: false },
+    }),
   );
-  const [data, setDataState] = useState<TData>((initialData ?? {}) as TData);
-  const [errors, setErrorsState] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { stepIndex, data, errors, isSubmitting, animState } = state;
 
   // Sync stepIndex when steps array changes (e.g., loading → real steps)
   const prevStepsLengthRef = useRef(steps.length);
@@ -107,7 +177,7 @@ export function WizardModal<
     // Only sync when steps array structure actually changed (loading → actual steps)
     if (prevLen !== newLen || prevIds !== newIds) {
       const newIndex = resolveInitialStep(steps, initialStep);
-      setStepIndex(newIndex);
+      dispatch({ type: "SET_STEP", index: newIndex });
     }
   }, [steps, initialStep]);
 
@@ -117,14 +187,12 @@ export function WizardModal<
     if (initialData !== prevInitialDataRef.current) {
       prevInitialDataRef.current = initialData;
       if (initialData) {
-        setDataState((prev) => ({ ...prev, ...initialData }) as TData);
+        dispatch({ type: "SET_DATA", data: initialData as Partial<TData> });
       }
     }
   }, [initialData]);
 
-  // Animation state
-  const [contentHeight, setContentHeight] = useState<number | "auto">("auto");
-  const [isAnimating, setIsAnimating] = useState(false);
+  // Animation refs
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const prevHeightRef = useRef<number>(0);
 
@@ -135,15 +203,19 @@ export function WizardModal<
   const displayTitle = currentStep?.title ?? title;
 
   const setData = useCallback((partial: Partial<TData>) => {
-    setDataState((prev) => ({ ...prev, ...partial }));
+    dispatch({ type: "SET_DATA", data: partial });
   }, []);
 
   const setErrors = useCallback((partial: Record<string, string>) => {
-    setErrorsState((prev) => ({ ...prev, ...partial }));
+    dispatch({ type: "SET_ERRORS", errors: partial });
   }, []);
 
   const clearErrors = useCallback(() => {
-    setErrorsState({});
+    dispatch({ type: "CLEAR_ERRORS" });
+  }, []);
+
+  const setIsSubmitting = useCallback((value: boolean) => {
+    dispatch({ type: "SET_SUBMITTING", value });
   }, []);
 
   const close = useCallback(() => {
@@ -169,17 +241,15 @@ export function WizardModal<
     }
 
     // Lock to previous height immediately (before paint)
-    setContentHeight(prevHeight);
-    setIsAnimating(true);
+    dispatch({ type: "SET_ANIM", animState: { height: prevHeight, active: true } });
 
     // After paint, animate to new height
     requestAnimationFrame(() => {
-      setContentHeight(newHeight);
+      dispatch({ type: "SET_ANIM", animState: { height: newHeight, active: true } });
       prevHeightRef.current = newHeight;
 
       animationTimeoutRef.current = setTimeout(() => {
-        setContentHeight("auto");
-        setIsAnimating(false);
+        dispatch({ type: "SET_ANIM", animState: { height: "auto", active: false } });
       }, animationDuration);
     });
 
@@ -200,7 +270,7 @@ export function WizardModal<
       if (targetIndex < 0 || targetIndex >= steps.length) return;
       if (targetIndex === stepIndex) return;
 
-      setStepIndex(targetIndex);
+      dispatch({ type: "SET_STEP", index: targetIndex });
     },
     [steps, stepIndex],
   );
@@ -235,7 +305,7 @@ export function WizardModal<
       if (result === false) return;
     }
 
-    setStepIndex((prev) => prev + 1);
+    dispatch({ type: "INC_STEP" });
   }, [
     stepIndex,
     steps,
@@ -277,7 +347,7 @@ export function WizardModal<
       if (result === false) return;
     }
 
-    setStepIndex((prev) => prev - 1);
+    dispatch({ type: "DEC_STEP" });
   }, [
     stepIndex,
     steps,
@@ -324,18 +394,20 @@ export function WizardModal<
     ],
   );
 
-  useEffect(() => {
-    if (open) {
-      triggerRef.current = document.activeElement as HTMLElement;
-      setStepIndex(resolveInitialStep(steps, initialStep));
-      setDataState((initialData ?? {}) as TData);
-      setErrorsState({});
-      setIsSubmitting(false);
-      setContentHeight("auto");
-      setIsAnimating(false);
-      prevHeightRef.current = 0;
-    }
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [prevOpen, setPrevOpen] = useState(false);
+  if (open && !prevOpen) {
+    setPrevOpen(true);
+    triggerRef.current = document.activeElement as HTMLElement;
+    dispatch({
+      type: "RESET",
+      stepIndex: resolveInitialStep(steps, initialStep),
+      data: (initialData ?? {}) as TData,
+    });
+    prevHeightRef.current = 0;
+  }
+  if (!open && prevOpen) {
+    setPrevOpen(false);
+  }
 
   useEffect(() => {
     if (!open && triggerRef.current) {
@@ -406,10 +478,10 @@ export function WizardModal<
   if (!isBrowser || !open) return null;
 
   const contentStyle: React.CSSProperties = {
-    height: contentHeight,
-    overflow: isAnimating ? "hidden" : undefined,
+    height: animState.height,
+    overflow: animState.active ? "hidden" : undefined,
     transition:
-      shouldAnimate && isAnimating
+      shouldAnimate && animState.active
         ? `height ${animationDuration}ms ease-out`
         : undefined,
   };

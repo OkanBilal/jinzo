@@ -8,7 +8,6 @@ export { NoteTab } from "./note-tab";
 export { NoteTabContent } from "./note-tab-content";
 export { ReviewsSection } from "./reviews-section";
 export { EditorContent } from "./editor-content";
-export { CodeMirrorEditor } from "./codemirror-editor";
 export { ToolCallGroup, InfoGroup, groupEvents } from "./tools/tool-call-group";
 export { QuickActionButton } from "./quick-action-button";
 export { WorkspaceEmptyState } from "./workspace-empty-state";

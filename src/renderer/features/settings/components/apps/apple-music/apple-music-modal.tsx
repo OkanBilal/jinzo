@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useReducer, useEffect, useCallback } from "react";
 
 import { Caption, BodyMedium, Muted } from "../../../../../components/ui/text";
 import {
@@ -375,9 +375,11 @@ const AppleMusicModal = ({
   isConnected,
   onSuccess,
 }: AppleMusicModalProps) => {
-  const [initializing, setInitializing] = useState(true);
-  const [targetStep, setTargetStep] = useState<StepId | null>(null);
-  const [initialData, setInitialData] = useState<Partial<AppleMusicWizardData>>({});
+  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<AppleMusicWizardData> };
+  const [initState, setInitState] = useReducer(
+    (_: InitState, next: InitState) => next,
+    { initializing: true, targetStep: null, data: {} },
+  );
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
 
   const [getSelectedRepos] = useLazyGetSelectedReposQuery();
@@ -386,15 +388,11 @@ const AppleMusicModal = ({
 
   useEffect(() => {
     if (!open) {
-      setInitializing(true);
-      setTargetStep(null);
+      setInitState({ initializing: true, targetStep: null, data: {} });
       return;
     }
 
     const loadInitialData = async () => {
-      setInitializing(true);
-      setTargetStep(null);
-
       const baseData: Partial<AppleMusicWizardData> = {
         developerToken: "",
         userToken: "",
@@ -403,40 +401,33 @@ const AppleMusicModal = ({
         fromManage: false,
       };
 
-      if (!isConnected) {
-        setInitialData(baseData);
-        setTargetStep("setToken");
-        setInitializing(false);
-        return;
-      }
-
       let finalStep: StepId = "setToken";
       let finalData: Partial<AppleMusicWizardData> = baseData;
 
-      try {
-        const startTime = Date.now();
-        const result = await getSelectedRepos("apple-music").unwrap();
+      if (isConnected) {
+        try {
+          const startTime = Date.now();
+          const result = await getSelectedRepos("apple-music").unwrap();
 
-        if (result.success) {
-          finalData = {
-            ...baseData,
-            connectionId: result.connectionId,
-            currentResources: result.repos || [],
-          };
-          finalStep = "manage";
+          if (result.success) {
+            finalData = {
+              ...baseData,
+              connectionId: result.connectionId,
+              currentResources: result.repos || [],
+            };
+            finalStep = "manage";
+          }
+
+          const elapsed = Date.now() - startTime;
+          const minLoadingTime = 600;
+          const remainingTime = Math.max(0, minLoadingTime - elapsed);
+          await new Promise((resolve) => setTimeout(resolve, remainingTime));
+        } catch (err) {
+          console.error("[loadInitialData] Error:", err);
         }
-
-        const elapsed = Date.now() - startTime;
-        const minLoadingTime = 600;
-        const remainingTime = Math.max(0, minLoadingTime - elapsed);
-        await new Promise((resolve) => setTimeout(resolve, remainingTime));
-      } catch (err) {
-        console.error("[loadInitialData] Error:", err);
       }
 
-      setInitialData(finalData);
-      setTargetStep(finalStep);
-      setInitializing(false);
+      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
     };
 
     loadInitialData();
@@ -460,7 +451,7 @@ const AppleMusicModal = ({
   const steps: WizardStep<AppleMusicWizardData>[] = [
     {
       id: "loading",
-      render: () => <LoadingStep targetStep={targetStep} />,
+      render: () => <LoadingStep targetStep={initState.targetStep} />,
     },
     {
       id: "setToken",
@@ -487,7 +478,7 @@ const AppleMusicModal = ({
         onOpenChange={(isOpen) => !isOpen && handleClose()}
         steps={steps}
         initialStep="loading"
-        initialData={initialData}
+        initialData={initState.data}
         title="Apple Music"
         icon="connections/apple-music.png"
         onCancel={handleClose}

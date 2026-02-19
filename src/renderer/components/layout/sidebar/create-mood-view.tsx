@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useReducer, useEffect, useRef } from "react";
 import Text, { Heading3 } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,6 +20,21 @@ import { ArrowUp } from "@/components/ui/icons";
 
 type IconPickerMode = "emoji" | "icon";
 
+interface CreateMoodFormState {
+  name: string;
+  icon: string;
+  iconMode: IconPickerMode;
+  selectedColorIndex: number;
+  isEmojiPickerOpen: boolean;
+  showGradients: boolean;
+  systemPrompt: string;
+}
+
+const mergeState = (prev: CreateMoodFormState, next: Partial<CreateMoodFormState>): CreateMoodFormState => ({
+  ...prev,
+  ...next,
+});
+
 interface CreateMoodViewProps {
   onClose: () => void;
   onSuccess?: () => void;
@@ -29,13 +44,16 @@ export default function CreateMoodView({
   onClose,
   onSuccess,
 }: CreateMoodViewProps) {
-  const [name, setName] = useState("");
-  const [icon, setIcon] = useState("");
-  const [iconMode, setIconMode] = useState<IconPickerMode>("emoji");
-  const [selectedColorIndex, setSelectedColorIndex] = useState(0);
-  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-  const [showGradients, setShowGradients] = useState(false);
-  const [systemPrompt, setSystemPrompt] = useState("");
+  const [state, updateState] = useReducer(mergeState, {
+    name: "",
+    icon: "",
+    iconMode: "emoji" as IconPickerMode,
+    selectedColorIndex: 0,
+    isEmojiPickerOpen: false,
+    showGradients: false,
+    systemPrompt: "",
+  });
+  const { name, icon, iconMode, selectedColorIndex, isEmojiPickerOpen, showGradients, systemPrompt } = state;
 
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const originalBackgroundColor = useRef<string>("");
@@ -61,11 +79,11 @@ export default function CreateMoodView({
   }, []);
 
   useClickOutside(emojiPickerRef, () => {
-    if (isEmojiPickerOpen) setIsEmojiPickerOpen(false);
+    if (isEmojiPickerOpen) updateState({ isEmojiPickerOpen: false });
   });
 
   const handlePresetColor = (index: number) => {
-    setSelectedColorIndex(index);
+    updateState({ selectedColorIndex: index });
   };
 
   const handleCreate = async () => {
@@ -165,7 +183,7 @@ export default function CreateMoodView({
           <Input
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => updateState({ name: e.target.value })}
             placeholder="Mood name..."
             className="w-full px-3 py-2 border-0! shadow-none!
               bg-primary-950/10! dark:bg-primary/4
@@ -176,7 +194,6 @@ export default function CreateMoodView({
               flex items-center justify-between
               transition-all
             "
-            autoFocus
           />
         </div>
 
@@ -184,7 +201,7 @@ export default function CreateMoodView({
           {/* Trigger Button - Select component style */}
           <Button
             type="button"
-            onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
+            onClick={() => updateState({ isEmojiPickerOpen: !isEmojiPickerOpen })}
             className={`
               w-full px-3 py-2 
               bg-primary-950/5 dark:bg-primary/4 border-primary-950/10 dark:border-primary/10
@@ -247,10 +264,7 @@ export default function CreateMoodView({
               <div className="flex border-b border-primary-950/10 dark:border-primary/10">
                 <Button
                   type="button"
-                  onClick={() => {
-                    setIconMode("emoji");
-                    setIcon("");
-                  }}
+                  onClick={() => updateState({ iconMode: "emoji", icon: "" })}
                   className={`flex-1 py-2 text-xs font-medium transition-colors cursor-pointer ${
                     iconMode === "emoji"
                       ? "text-primary-900 dark:text-primary bg-primary-950/5 dark:bg-primary/10"
@@ -261,10 +275,7 @@ export default function CreateMoodView({
                 </Button>
                 <Button
                   type="button"
-                  onClick={() => {
-                    setIconMode("icon");
-                    setIcon("");
-                  }}
+                  onClick={() => updateState({ iconMode: "icon", icon: "" })}
                   className={`flex-1 py-2 text-xs font-medium transition-colors cursor-pointer ${
                     iconMode === "icon"
                       ? "text-primary-900 dark:text-primary bg-primary-950/5 dark:bg-primary/10"
@@ -278,10 +289,7 @@ export default function CreateMoodView({
               <div className="p-3">
                 {iconMode === "emoji" ? (
                   <EmojiPicker.Root
-                    onEmojiSelect={(emoji) => {
-                      setIcon(emoji.emoji);
-                      setIsEmojiPickerOpen(false);
-                    }}
+                    onEmojiSelect={(emoji) => updateState({ icon: emoji.emoji, isEmojiPickerOpen: false })}
                   >
                     <EmojiPicker.Search
                       placeholder="Search emoji..."
@@ -334,10 +342,7 @@ export default function CreateMoodView({
                       <Button
                         key={name}
                         type="button"
-                        onClick={() => {
-                          setIcon(name);
-                          setIsEmojiPickerOpen(false);
-                        }}
+                        onClick={() => updateState({ icon: name, isEmojiPickerOpen: false })}
                         className={`flex items-center justify-center size-8 rounded-lg transition-all cursor-pointer ${
                           icon === name
                             ? "bg-primary-950/15 dark:bg-primary/20 text-primary-700 dark:text-primary"
@@ -361,7 +366,7 @@ export default function CreateMoodView({
           </Text>
           <textarea
             value={systemPrompt}
-            onChange={(e) => setSystemPrompt(e.target.value)}
+            onChange={(e) => updateState({ systemPrompt: e.target.value })}
             placeholder="Enter a system prompt to customize AI behavior..."
             rows={4}
             className="w-full px-3 py-2 border-0 shadow-none resize-none
@@ -392,7 +397,7 @@ export default function CreateMoodView({
                 const variant = getThemeVariant(colorPair, darkMode);
                 return (
                   <Button
-                    key={`solid-${index}`}
+                    key={`solid-${colorPair.name}`}
                     type="button"
                     onClick={() => {
                       if (!showGradients) {
@@ -414,10 +419,7 @@ export default function CreateMoodView({
               })}
               <Button
                 type="button"
-                onClick={() => {
-                  setShowGradients(true);
-                  setSelectedColorIndex(0);
-                }}
+                onClick={() => updateState({ showGradients: true, selectedColorIndex: 0 })}
                 className="ml-auto shrink-0 p-0.5 mr-1 rounded-lg hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
                 title="Show Gradients"
               >
@@ -428,10 +430,7 @@ export default function CreateMoodView({
             <div className="flex items-center gap-2 px-3 mr-2  min-w-full">
               <Button
                 type="button"
-                onClick={() => {
-                  setShowGradients(false);
-                  setSelectedColorIndex(0);
-                }}
+                onClick={() => updateState({ showGradients: false, selectedColorIndex: 0 })}
                 className="shrink-0 -ml-4 mr-1 rounded-lg p-0.5 hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
                 title="Show Solid Colors"
               >
@@ -441,7 +440,7 @@ export default function CreateMoodView({
                 const variant = getThemeVariant(colorPair, darkMode);
                 return (
                   <Button
-                    key={`gradient-${index}`}
+                    key={`gradient-${colorPair.name}`}
                     type="button"
                     onClick={() => {
                       if (showGradients) {

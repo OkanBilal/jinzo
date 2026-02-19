@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useReducer, useEffect, useCallback } from "react";
 
 import {
   BodyMedium,
@@ -397,9 +397,11 @@ export default function PodcastModal({
   isConnected,
 }: PodcastModalProps) {
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  const [initializing, setInitializing] = useState(true);
-  const [initialData, setInitialData] = useState<Partial<PodcastWizardData>>({});
-  const [targetStep, setTargetStep] = useState<StepId | null>(null);
+  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<PodcastWizardData> };
+  const [initState, setInitState] = useReducer(
+    (_: InitState, next: InitState) => next,
+    { initializing: true, targetStep: null, data: {} },
+  );
 
   const [getSelectedPodcasts] = useLazyGetSelectedPodcastsQuery();
   const [revokeConnection, { isLoading: isRevoking }] =
@@ -407,15 +409,11 @@ export default function PodcastModal({
 
   useEffect(() => {
     if (!open) {
-      setInitializing(true);
-      setTargetStep(null);
+      setInitState({ initializing: true, targetStep: null, data: {} });
       return;
     }
 
     const loadInitialData = async () => {
-      setInitializing(true);
-      setTargetStep(null);
-
       const baseData: Partial<PodcastWizardData> = {
         apiKey: "",
         userId: "",
@@ -425,40 +423,33 @@ export default function PodcastModal({
         fromManage: false,
       };
 
-      if (!isConnected) {
-        setInitialData(baseData);
-        setTargetStep("tokenSet");
-        setInitializing(false);
-        return;
-      }
-
       let finalStep: StepId = "tokenSet";
       let finalData: Partial<PodcastWizardData> = baseData;
 
-      try {
-        const startTime = Date.now();
-        const result = await getSelectedPodcasts("podcast").unwrap();
+      if (isConnected) {
+        try {
+          const startTime = Date.now();
+          const result = await getSelectedPodcasts("podcast").unwrap();
 
-        if (result.success) {
-          finalData = {
-            ...baseData,
-            connectionId: result.connectionId,
-            currentPodcasts: result.podcasts || [],
-          };
-          finalStep = "manage";
+          if (result.success) {
+            finalData = {
+              ...baseData,
+              connectionId: result.connectionId,
+              currentPodcasts: result.podcasts || [],
+            };
+            finalStep = "manage";
+          }
+
+          const elapsed = Date.now() - startTime;
+          const minLoadingTime = 600;
+          const remainingTime = Math.max(0, minLoadingTime - elapsed);
+          await new Promise((resolve) => setTimeout(resolve, remainingTime));
+        } catch (err) {
+          console.error("[loadInitialData] Error:", err);
         }
-
-        const elapsed = Date.now() - startTime;
-        const minLoadingTime = 600;
-        const remainingTime = Math.max(0, minLoadingTime - elapsed);
-        await new Promise((resolve) => setTimeout(resolve, remainingTime));
-      } catch (err) {
-        console.error("[loadInitialData] Error:", err);
       }
 
-      setInitialData(finalData);
-      setTargetStep(finalStep);
-      setInitializing(false);
+      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
     };
 
     loadInitialData();
@@ -482,7 +473,7 @@ export default function PodcastModal({
   const steps: WizardStep<PodcastWizardData>[] = [
     {
       id: "loading",
-      render: () => <LoadingStep targetStep={targetStep} />,
+      render: () => <LoadingStep targetStep={initState.targetStep} />,
     },
     {
       id: "tokenSet",
@@ -507,7 +498,7 @@ export default function PodcastModal({
         onOpenChange={(isOpen) => !isOpen && handleClose()}
         steps={steps}
         initialStep="loading"
-        initialData={initialData}
+        initialData={initState.data}
         title="Podcast Connection"
         icon="connections/podcast.png"
         onCancel={handleClose}

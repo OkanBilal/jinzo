@@ -14,7 +14,8 @@ export function ToolCallGroup({
   group,
   defaultExpanded = false,
 }: ToolCallGroupProps) {
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [expandedOverride, setExpandedOverride] = useState<boolean | null>(null);
+  const isExpanded = expandedOverride ?? defaultExpanded;
 
   const toolCount = group.events.length;
 
@@ -27,7 +28,7 @@ export function ToolCallGroup({
   return (
     <div>
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => setExpandedOverride(!isExpanded)}
         className="w-full flex items-center gap-1 py-1 cursor-pointer"
       >
         <ArrowUp

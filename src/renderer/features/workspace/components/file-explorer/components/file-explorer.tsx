@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, useEffect } from "react";
+import { memo, useState, useCallback, useEffect, useReducer } from "react";
 import type { FileNode, DirEntry, ServiceResponse } from "../types";
 import { FileTreeNode } from "./file-tree-node";
 import { Label } from "@/components/ui/text";
@@ -26,6 +26,29 @@ function dirEntryToFileNode(entry: DirEntry): FileNode {
   };
 }
 
+type TreeState = {
+  tree: FileNode | null;
+  isLoading: boolean;
+  error: string | null;
+  stats: { files: number; directories: number } | null;
+};
+
+type TreeAction =
+  | { type: "loading" }
+  | { type: "loaded"; tree: FileNode; stats: { files: number; directories: number } }
+  | { type: "error"; error: string };
+
+function treeReducer(_: TreeState, action: TreeAction): TreeState {
+  switch (action.type) {
+    case "loading":
+      return { tree: null, isLoading: true, error: null, stats: null };
+    case "loaded":
+      return { tree: action.tree, isLoading: false, error: null, stats: action.stats };
+    case "error":
+      return { tree: null, isLoading: false, error: action.error, stats: null };
+  }
+}
+
 export const FileExplorer = memo(function FileExplorer({
   rootPath,
   onFileSelect,
@@ -35,21 +58,19 @@ export const FileExplorer = memo(function FileExplorer({
   excludePatterns,
   className = "",
 }: FileExplorerProps) {
-  const [tree, setTree] = useState<FileNode | null>(null);
+  const [{ tree, isLoading, error }, dispatch] = useReducer(treeReducer, {
+    tree: null,
+    isLoading: true,
+    error: null,
+    stats: null,
+  });
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [stats, setStats] = useState<{
-    files: number;
-    directories: number;
-  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadTree() {
-      setIsLoading(true);
-      setError(null);
+      dispatch({ type: "loading" });
 
       try {
         const result: ServiceResponse<DirEntry[]> =
@@ -72,31 +93,28 @@ export const FileExplorer = memo(function FileExplorer({
             else dirCount++;
           }
 
-          setTree({
-            name: rootName,
-            fullPath: rootPath,
-            type: "directory",
-            hasChildren: children.length > 0,
-            children,
-          });
-          setStats({
-            files: fileCount,
-            directories: dirCount,
+          dispatch({
+            type: "loaded",
+            tree: {
+              name: rootName,
+              fullPath: rootPath,
+              type: "directory",
+              hasChildren: children.length > 0,
+              children,
+            },
+            stats: { files: fileCount, directories: dirCount },
           });
         } else {
           console.error("[FileExplorer] listDir failed:", result.error);
-          setError(result.error || "Failed to load directory");
+          dispatch({ type: "error", error: result.error || "Failed to load directory" });
         }
       } catch (err: unknown) {
         if (cancelled) return;
         console.error("[FileExplorer] Exception loading tree:", err);
-        setError(
-          err instanceof globalThis.Error ? err.message : "Unknown error",
-        );
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        dispatch({
+          type: "error",
+          error: err instanceof globalThis.Error ? err.message : "Unknown error",
+        });
       }
     }
 

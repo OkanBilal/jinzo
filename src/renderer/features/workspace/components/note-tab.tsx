@@ -12,7 +12,10 @@ interface NoteTabProps {
 export function NoteTab({ review, isActive, onClick, onClose, variant }: NoteTabProps) {
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
       className={`group flex items-center gap-2 pl-3 pr-1 py-2.5 cursor-pointer transition-colors min-w-40 max-w-48 ${
         isActive
           ? `text-primary-950 dark:text-primary-200 ${variant === "claude" ? "dark:bg-claude-dark bg-primary" : "dark:bg-copilot-dark bg-primary"}`
