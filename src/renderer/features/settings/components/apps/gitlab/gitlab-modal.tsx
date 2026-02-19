@@ -23,6 +23,7 @@ import { SelectResourcesStep } from "../shared/select-resources-step";
 import { Button } from "@/components/ui/button";
 import Text from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
+import LockIcon from "@/components/ui/icons/lock";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -315,7 +316,11 @@ function SelectProjectsStep({ onComplete }: { onComplete: () => void }) {
         <div className="flex items-center gap-2">
           <BodyMedium>{project.pathWithNamespace || project.name}</BodyMedium>
           {project.visibility && (
-            <span className="text-xs text-primary-500">{project.visibility}</span>
+            project.visibility === "private" ? (
+              <LockIcon className="w-3.5 h-3.5 text-primary-500" />
+            ) : (
+              <span className="text-xs text-primary-500">{project.visibility}</span>
+            )
           )}
         </div>
       )}
@@ -405,13 +410,23 @@ function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
       resourceLabelPlural="projects"
       addButtonLabel="Add Project"
       revokeButtonLabel="Revoke GitLab Access"
-      renderResourceItem={(resource) => (
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <BodyMedium>{resource.name}</BodyMedium>
+      renderResourceItem={(resource) => {
+        const visibility = resource.metadata ? (typeof resource.metadata === 'string' ? JSON.parse(resource.metadata) : resource.metadata)?.visibility : null;
+        return (
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <BodyMedium>{resource.name}</BodyMedium>
+              {visibility && (
+                visibility === "private" ? (
+                  <LockIcon className="w-3.5 h-3.5 text-primary-500" />
+                ) : (
+                  <span className="text-xs text-primary-500">{visibility}</span>
+                )
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      }}
     />
   );
 }
