@@ -71,6 +71,7 @@ export interface CreateWorkspacePayload {
   repoUrl?: string;
   defaultBranch?: string;
   metadata?: WorkspaceMetadata;
+  projectId?: string;
 }
 
 export interface UpdateWorkspacePayload {
@@ -80,6 +81,7 @@ export interface UpdateWorkspacePayload {
   defaultBranch?: string;
   metadata?: WorkspaceMetadata;
   status?: WorkspaceStatus;
+  projectId?: string;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -88,6 +90,7 @@ export interface UpdateWorkspacePayload {
 export interface WorkspaceResponse {
   id: string;
   accountId: string;
+  projectId: string | null;
   name: string;
   rootPath: string;
   repoUrl: string | null;

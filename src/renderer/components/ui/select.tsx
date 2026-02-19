@@ -39,16 +39,29 @@ export default function Select<T extends string = string>({
     width: 0,
   });
 
-  // Update dropdown position when opened
+  // Keep dropdown position in sync with trigger button via rAF loop
   useEffect(() => {
-    if (isOpen && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom,
-        left: rect.left,
-        width: rect.width,
-      });
-    }
+    if (!isOpen) return;
+
+    let rafId: number;
+    const updatePosition = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setDropdownPosition((prev) => {
+          if (
+            prev.top === rect.bottom &&
+            prev.left === rect.left &&
+            prev.width === rect.width
+          )
+            return prev;
+          return { top: rect.bottom, left: rect.left, width: rect.width };
+        });
+      }
+      rafId = requestAnimationFrame(updatePosition);
+    };
+    rafId = requestAnimationFrame(updatePosition);
+
+    return () => cancelAnimationFrame(rafId);
   }, [isOpen]);
 
   useEffect(() => {

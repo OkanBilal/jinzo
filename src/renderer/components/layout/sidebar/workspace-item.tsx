@@ -8,6 +8,7 @@ import {
   Connect,
   Branch,
   Archive,
+  Settings,
 } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format-date";
@@ -24,10 +25,12 @@ interface WorkspaceItemProps {
   branch?: string | null;
   updatedAt?: Date;
   isActive?: boolean;
+  projectId?: string | null;
   onClick?: () => void;
   onDelete?: (e: MouseEvent) => void;
   onLinkIssues?: () => void;
   onArchive?: () => void;
+  onSettings?: () => void;
 }
 
 export default function WorkspaceItem({
@@ -37,10 +40,12 @@ export default function WorkspaceItem({
   branch,
   updatedAt,
   isActive = false,
+  projectId,
   onClick,
   onDelete,
   onLinkIssues,
   onArchive,
+  onSettings,
 }: WorkspaceItemProps) {
   const statusConfig = getWorkspaceStatusConfig(status);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -76,6 +81,11 @@ export default function WorkspaceItem({
   const handleArchiveClick = () => {
     setIsDropdownOpen(false);
     onArchive?.();
+  };
+
+  const handleSettingsClick = () => {
+    setIsDropdownOpen(false);
+    onSettings?.();
   };
 
   return (
@@ -151,6 +161,12 @@ export default function WorkspaceItem({
         position={dropdownPosition}
         onClose={() => setIsDropdownOpen(false)}
       >
+        {projectId && (
+          <DropdownMenuItem onClick={handleSettingsClick}>
+            <Settings className="size-4" />
+            <span>Project settings</span>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={handleLinkIssuesClick}>
           <Connect className="size-4" />
           <span>Connect issues</span>

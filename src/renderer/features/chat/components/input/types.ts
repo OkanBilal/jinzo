@@ -87,7 +87,8 @@ export type SettingsSection =
   | "account"
   | "claude"
   | "copilot"
-  | "git";
+  | "git"
+  | "projects";
 
 export interface ModalContentProps {
   children: React.ReactNode;

@@ -216,6 +216,23 @@ const api = {
     toggleRss: (enabled: boolean) =>
       ipcRenderer.invoke("connections:toggleRss", enabled),
   },
+  // Projects operations
+  projects: {
+    getAll: () => ipcRenderer.invoke("projects:getAll"),
+    getById: (id: string) => ipcRenderer.invoke("projects:getById", id),
+    getByAccount: (accountId: string) =>
+      ipcRenderer.invoke("projects:getByAccount", accountId),
+    findByRemoteOrigin: (accountId: string, remoteOrigin: string) =>
+      ipcRenderer.invoke("projects:findByRemoteOrigin", accountId, remoteOrigin),
+    findOrCreate: (payload: unknown) =>
+      ipcRenderer.invoke("projects:findOrCreate", payload),
+    create: (payload: unknown) =>
+      ipcRenderer.invoke("projects:create", payload),
+    update: (id: string, payload: unknown) =>
+      ipcRenderer.invoke("projects:update", id, payload),
+    delete: (id: string) => ipcRenderer.invoke("projects:delete", id),
+    archive: (id: string) => ipcRenderer.invoke("projects:archive", id),
+  },
   // Workspace Resources operations
   workspaceResources: {
     getByWorkspace: (workspaceId: string) =>
@@ -604,8 +621,8 @@ const api = {
      * Import a local git repo by creating a branch + worktree.
      * Returns full metadata needed for workspace creation.
      */
-    importLocalRepo: (sourcePath: string) =>
-      ipcRenderer.invoke("git:importLocalRepo", sourcePath),
+    importLocalRepo: (sourcePath: string, projectName?: string) =>
+      ipcRenderer.invoke("git:importLocalRepo", sourcePath, projectName),
     importLocalRepoDirect: (sourcePath: string) =>
       ipcRenderer.invoke("git:importLocalRepoDirect", sourcePath),
     /**

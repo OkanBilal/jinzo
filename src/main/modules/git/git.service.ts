@@ -410,7 +410,7 @@ class GitService {
    * Returns full metadata needed for workspace creation
    */
   //TOD: ADD CLONE FROM REMOTE URL LATER, FOR NOW ONLY LOCAL PATH IMPORT
-  async importLocalRepo(sourcePath: string): Promise<ServiceResponse<WorktreeImportResult>> {
+  async importLocalRepo(sourcePath: string, projectName?: string): Promise<ServiceResponse<WorktreeImportResult>> {
     try {
       const git = this.getGit(sourcePath);
 
@@ -443,8 +443,10 @@ class GitService {
       // 5. Create the import branch (staying in source repo)
       await git.raw(["branch", branchName]);
 
-      // 6. Create worktree directory
-      const worktreesDir = this.getWorktreesDir();
+      // 6. Create worktree directory under project subfolder if projectName provided
+      const worktreesDir = projectName
+        ? path.join(this.getWorktreesDir(), projectName)
+        : this.getWorktreesDir();
       if (!fs.existsSync(worktreesDir)) {
         fs.mkdirSync(worktreesDir, { recursive: true });
       }

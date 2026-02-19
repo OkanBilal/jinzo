@@ -60,6 +60,7 @@ export const workspacesRepo = {
     await db.insert(workspaces).values({
       id: payload.id,
       accountId: payload.accountId,
+      projectId: payload.projectId,
       name: payload.name,
       rootPath: payload.rootPath,
       repoUrl: payload.repoUrl,
@@ -80,6 +81,7 @@ export const workspacesRepo = {
     if (payload.defaultBranch !== undefined) updateData.defaultBranch = payload.defaultBranch;
     if (payload.metadata !== undefined) updateData.metadata = JSON.stringify(payload.metadata);
     if (payload.status !== undefined) updateData.status = payload.status;
+    if (payload.projectId !== undefined) updateData.projectId = payload.projectId;
 
     await db.update(workspaces).set(updateData).where(eq(workspaces.id, id));
     return this.findById(id);
@@ -107,6 +109,7 @@ function mapRowToResponse(row: typeof workspaces.$inferSelect): WorkspaceRespons
   return {
     id: row.id,
     accountId: row.accountId,
+    projectId: row.projectId,
     name: row.name,
     rootPath: row.rootPath,
     repoUrl: row.repoUrl,

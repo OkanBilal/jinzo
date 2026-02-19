@@ -69,8 +69,8 @@ export function registerGitIpc(): void {
     }
   );
 
-  ipcMain.handle(CHANNELS.IMPORT_LOCAL_REPO, async (_, sourcePath: string) => {
-    return gitService.importLocalRepo(sourcePath);
+  ipcMain.handle(CHANNELS.IMPORT_LOCAL_REPO, async (_, sourcePath: string, projectName?: string) => {
+    return gitService.importLocalRepo(sourcePath, projectName);
   });
 
   ipcMain.handle(CHANNELS.IMPORT_LOCAL_REPO_DIRECT, async (_, sourcePath: string) => {

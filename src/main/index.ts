@@ -34,6 +34,7 @@ import { registerWorkspacesIpc, unregisterWorkspacesIpc } from "./modules/worksp
 import { registerRunsIpc, unregisterRunsIpc } from "./modules/runs";
 import { registerReviewsIpc, unregisterReviewsIpc } from "./modules/reviews";
 import { registerWorkspaceDiffsIpc, unregisterWorkspaceDiffsIpc } from "./modules/workspaceDiffs";
+import { registerProjectsIpc, unregisterProjectsIpc } from "./modules/projects";
 import { registerFileExplorerIpc, unregisterFileExplorerIpc } from "./modules/fileExplorer";
 import { registerGitIpc, unregisterGitIpc } from "./modules/git";
 import {
@@ -86,6 +87,7 @@ async function initializeApp() {
     registerProvidersIpc();
     registerToolsIpc();
     registerWorkspacesIpc();
+    registerProjectsIpc();
     registerRunsIpc();
     registerFileExplorerIpc();
     registerGitIpc();
@@ -152,6 +154,7 @@ async function cleanupApp() {
     unregisterProvidersIpc();
     unregisterToolsIpc();
     unregisterWorkspacesIpc();
+    unregisterProjectsIpc();
     unregisterRunsIpc();
     unregisterFileExplorerIpc();
     unregisterGitIpc();

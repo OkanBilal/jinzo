@@ -108,6 +108,48 @@ export const providers = sqliteTable(
 );
 
 /* -----------------------------
+   PROJECTS (group workspaces by shared remote origin)
+------------------------------ */
+
+export const projects = sqliteTable(
+  "projects",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    rootPath: text("root_path").notNull(), // original clone/source repo path
+    workspacesPath: text("workspaces_path"), // worktree directory for this project
+    branches: text("branches"), // JSON array of branch names
+    remoteOrigin: text("remote_origin").notNull(), // normalized origin URL
+    defaultBranch: text("default_branch"),
+    setupScript: text("setup_script"),
+    runScript: text("run_script"),
+    archiveScript: text("archive_script"),
+    isArchived: integer("is_archived", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    uniqueIndex("uniq_projects_account_origin").on(t.accountId, t.remoteOrigin),
+    index("idx_projects_account").on(t.accountId),
+    index("idx_projects_remote_origin").on(t.remoteOrigin),
+    index("idx_projects_updated").on(t.updatedAt),
+    check(
+      "check_projects_branches_json",
+      sql`json_valid(${t.branches}) OR ${t.branches} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
    WORKSPACES (local projects / repos)
 ------------------------------ */
 
@@ -118,6 +160,9 @@ export const workspaces = sqliteTable(
     accountId: text("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
+    projectId: text("project_id").references(() => projects.id, {
+      onDelete: "set null",
+    }),
 
     name: text("name").notNull(),
     rootPath: text("root_path").notNull(), // local absolute path
@@ -142,6 +187,7 @@ export const workspaces = sqliteTable(
   },
   (t) => [
     index("idx_workspaces_account").on(t.accountId),
+    index("idx_workspaces_project").on(t.projectId),
     uniqueIndex("uniq_workspaces_account_root").on(t.accountId, t.rootPath),
     index("idx_workspaces_status").on(t.status),
     index("idx_workspaces_updated").on(t.updatedAt),

@@ -56,7 +56,7 @@ export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
   if (reviews.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center px-4">
-        <span className="text-xs text-primary-400 dark:text-primary-500 text-center">
+        <span className="text-xs text-primary-400 dark:text-primary-300 text-center">
           No reviews yet
         </span>
       </div>

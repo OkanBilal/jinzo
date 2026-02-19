@@ -2,7 +2,7 @@
 // Run Writeback - Persists WorkRunEvents into the database
 // ─────────────────────────────────────────────────────────────
 
-import { runsService } from "../../modules/runs";
+import { RunArtifactKind, runsService } from "../../modules/runs";
 import { toolsService, toolsRepo } from "../../modules/tools";
 import type { WorkRunEvent } from "../../modules/providers/adapters";
 import { createHash } from "crypto";
@@ -105,7 +105,7 @@ export function createRunWriteback(config: RunWritebackConfig): RunWriteback {
             : undefined;
           await runsService.addArtifact({
             runId,
-            kind: event.kind,
+            kind: event.kind as RunArtifactKind,
             path: event.path,
             content: event.content,
             contentHash,

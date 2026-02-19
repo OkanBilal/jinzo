@@ -291,6 +291,28 @@ export type {
 } from "./toolsApi";
 
 export {
+  projectsApi,
+  useGetProjectsQuery,
+  useLazyGetProjectsQuery,
+  useGetProjectByIdQuery,
+  useLazyGetProjectByIdQuery,
+  useGetProjectsByAccountQuery,
+  useLazyGetProjectsByAccountQuery,
+  useFindProjectByRemoteOriginQuery,
+  useLazyFindProjectByRemoteOriginQuery,
+  useFindOrCreateProjectMutation,
+  useCreateProjectMutation,
+  useUpdateProjectMutation,
+  useDeleteProjectMutation,
+  useArchiveProjectMutation,
+} from "./projectsApi";
+export type {
+  Project,
+  CreateProjectPayload,
+  UpdateProjectPayload,
+} from "./projectsApi";
+
+export {
   workspacesApi,
   useGetWorkspacesQuery,
   useLazyGetWorkspacesQuery,

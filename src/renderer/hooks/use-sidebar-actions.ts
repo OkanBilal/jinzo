@@ -7,6 +7,8 @@ import {
   useSelectDirectoryMutation,
   useGetAccountQuery,
   useGetAppSettingsQuery,
+  useFindOrCreateProjectMutation,
+  useUpdateProjectMutation,
 } from "@/lib/redux/api";
 import { toast } from "@/components/ui/toast";
 import { useActiveMood } from "@/hooks/use-active-mood";
@@ -26,6 +28,8 @@ export function useSidebarActions() {
   const [createJournalDraft] = useCreateJournalDraftMutation();
   const [createWorkspace] = useCreateWorkspaceMutation();
   const [selectDirectory] = useSelectDirectoryMutation();
+  const [findOrCreateProject] = useFindOrCreateProjectMutation();
+  const [updateProject] = useUpdateProjectMutation();
 
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
   const [isCloning, setIsCloning] = useState(false);
@@ -69,9 +73,45 @@ export function useSidebarActions() {
         const useWorktrees = appSettings?.enableWorktrees ?? true;
 
         if (useWorktrees) {
-          // Worktree flow: create isolated branch + worktree
-          const importResult =
-            await window.api.git.importLocalRepo(selectedPath);
+          // Worktree flow: first get origin, create project, then import with project name
+
+          // 1. Get origin URL before import
+          const remotesResult = await window.api.git.getRemotes(selectedPath);
+          const originUrl =
+            remotesResult?.success && Array.isArray(remotesResult.data)
+              ? (remotesResult.data.find((r: any) => r.name === "origin")
+                  ?.fetchUrl ?? null)
+              : null;
+
+          if (!originUrl) {
+            toast.error("Repository must have a remote origin");
+            return;
+          }
+
+          // 2. Get base branch
+          const branchResult =
+            await window.api.git.getCurrentBranch(selectedPath);
+          const baseBranch =
+            branchResult?.success && branchResult.data
+              ? branchResult.data
+              : "main";
+
+          // 3. Find or create project first so we have the project name
+          const projectResult = await findOrCreateProject({
+            accountId: account?.id || "default",
+            name: folderName,
+            rootPath: selectedPath,
+            remoteOrigin: originUrl,
+            defaultBranch: baseBranch,
+          }).unwrap();
+
+          const projectName = projectResult?.name || folderName;
+
+          // 4. Import with project name so worktree lands under worktrees/{projectName}/
+          const importResult = await window.api.git.importLocalRepo(
+            selectedPath,
+            projectName,
+          );
 
           if (!importResult.success || !importResult.data) {
             throw new Error(importResult.error || "Not a git repository");
@@ -81,12 +121,24 @@ export function useSidebarActions() {
             branchName,
             worktreePath,
             worktreeName,
-            baseBranch,
             tracking,
             ahead,
             behind,
-            originUrl,
           } = importResult.data;
+
+          // 5. Set project workspacesPath if not already set
+          if (projectResult && !projectResult.workspacesPath) {
+            // worktreePath is like .../worktrees/{projectName}/{fruitName}
+            // workspacesPath should be .../worktrees/{projectName}
+            const workspacesPath = worktreePath.substring(
+              0,
+              worktreePath.lastIndexOf("/"),
+            );
+            await updateProject({
+              id: projectResult.id,
+              payload: { workspacesPath },
+            });
+          }
 
           const metadata = {
             isGitRepo: true,
@@ -109,9 +161,10 @@ export function useSidebarActions() {
             accountId: account?.id || "default",
             name: folderName,
             rootPath: worktreePath,
-            repoUrl: originUrl || undefined,
+            repoUrl: originUrl,
             defaultBranch: branchName,
             metadata,
+            projectId: projectResult?.id,
           }).unwrap();
         } else {
           // Direct flow: use source path and active branch directly
@@ -131,6 +184,22 @@ export function useSidebarActions() {
             originUrl,
           } = importResult.data;
 
+          // Reject if no remote origin
+          if (!originUrl) {
+            toast.error("Repository must have a remote origin");
+            return;
+          }
+
+          // Find or create project for this remote origin
+          const projectResult = await findOrCreateProject({
+            accountId: account?.id || "default",
+            name: folderName,
+            rootPath: selectedPath,
+            remoteOrigin: originUrl,
+            branches: [branchName],
+            defaultBranch: baseBranch,
+          }).unwrap();
+
           const metadata = {
             isGitRepo: true,
             tracking,
@@ -146,9 +215,10 @@ export function useSidebarActions() {
             accountId: account?.id || "default",
             name: folderName,
             rootPath: selectedPath,
-            repoUrl: originUrl || undefined,
+            repoUrl: originUrl,
             defaultBranch: branchName,
             metadata,
+            projectId: projectResult?.id,
           }).unwrap();
         }
 
@@ -178,9 +248,24 @@ export function useSidebarActions() {
       const workspaceId = crypto.randomUUID();
       const useWorktrees = appSettings?.enableWorktrees ?? true;
 
+      // Find or create project (originUrl is always available from clone)
+      const projectResult = originUrl
+        ? await findOrCreateProject({
+            accountId: account?.id || "default",
+            name: folderName,
+            rootPath: clonedPath,
+            remoteOrigin: originUrl,
+          }).unwrap()
+        : null;
+
+      const projectName = projectResult?.name || folderName;
+
       if (useWorktrees) {
-        // Worktree flow
-        const importResult = await window.api.git.importLocalRepo(clonedPath);
+        // Worktree flow — pass projectName so worktree lands under worktrees/{projectName}/
+        const importResult = await window.api.git.importLocalRepo(
+          clonedPath,
+          projectName,
+        );
 
         if (!importResult.success || !importResult.data) {
           throw new Error(importResult.error || "Failed to import cloned repository");
@@ -195,6 +280,18 @@ export function useSidebarActions() {
           ahead,
           behind,
         } = importResult.data;
+
+        // Set project workspacesPath if not already set
+        if (projectResult && !projectResult.workspacesPath) {
+          const workspacesPath = worktreePath.substring(
+            0,
+            worktreePath.lastIndexOf("/"),
+          );
+          await updateProject({
+            id: projectResult.id,
+            payload: { workspacesPath },
+          });
+        }
 
         const metadata = {
           isGitRepo: true,
@@ -220,6 +317,7 @@ export function useSidebarActions() {
           repoUrl: originUrl || undefined,
           defaultBranch: branchName,
           metadata,
+          projectId: projectResult?.id,
         }).unwrap();
       } else {
         // Direct flow: use cloned path directly
@@ -255,6 +353,7 @@ export function useSidebarActions() {
           repoUrl: originUrl || undefined,
           defaultBranch: branchName,
           metadata,
+          projectId: projectResult?.id,
         }).unwrap();
       }
 

@@ -12,6 +12,7 @@ export type WorkspaceStatus = "backlog" | "todo" | "in_progress" | "in_review" |
 export interface Workspace {
   id: string;
   accountId: string;
+  projectId: string | null;
   name: string;
   rootPath: string;
   repoUrl: string | null;
@@ -31,6 +32,7 @@ export interface CreateWorkspacePayload {
   repoUrl?: string;
   defaultBranch?: string;
   metadata?: WorkspaceMetadata;
+  projectId?: string;
 }
 
 export interface UpdateWorkspacePayload {

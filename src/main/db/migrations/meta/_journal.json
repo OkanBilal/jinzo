@@ -8,6 +8,13 @@
       "when": 1771456097602,
       "tag": "0000_fearless_northstar",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1771539663595,
+      "tag": "0001_plain_oracle",
+      "breakpoints": true
     }
   ]
 }

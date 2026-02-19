@@ -88,7 +88,7 @@ export function IssuesSection({
               </div>
             ) : issueCount === 0 ? (
               <div className="flex items-center justify-center py-4">
-                <span className="text-xs text-primary-800 dark:text-primary-500">
+                <span className="text-xs text-primary-800 dark:text-primary-300">
                   No issues for this workspace.
                 </span>
               </div>

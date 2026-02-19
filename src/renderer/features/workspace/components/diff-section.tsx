@@ -106,7 +106,7 @@ export function DiffSection({
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-2 px-4 text-center">
           <Diff className="w-6 h-6 dark:text-primary-500 text-primary-700" />
-          <Body className="text-xs font-medium text-primary-700 dark:text-primary-500">
+          <Body className="text-xs font-medium text-primary-700 dark:text-primary-300">
             No changes detected.
           </Body>
         </div>

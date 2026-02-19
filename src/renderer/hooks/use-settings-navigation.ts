@@ -5,10 +5,17 @@ export function useSettingsNavigation() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [isSettingsOpen, setIsSettingsOpen] = useState(
-    location.pathname.startsWith("/settings"),
-  );
+  const isOnSettings = location.pathname.startsWith("/settings");
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(isOnSettings);
   const [previousPath, setPreviousPath] = useState<string | null>(null);
+
+  // Sync state when route changes externally (e.g. navigate from workspace dropdown)
+  if (isOnSettings && !isSettingsOpen) {
+    setIsSettingsOpen(true);
+  } else if (!isOnSettings && isSettingsOpen) {
+    setIsSettingsOpen(false);
+  }
 
   const handleOpenSettings = () => {
     setPreviousPath(location.pathname + location.search);

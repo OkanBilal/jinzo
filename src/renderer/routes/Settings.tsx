@@ -11,6 +11,7 @@ import type { SettingsSection } from "@/features/chat/components/input/types";
 import ClaudeSettings from "@/features/settings/components/claude";
 import CopilotSettings from "@/features/settings/components/copilot";
 import GitSettings from "@/features/settings/components/git";
+import ProjectsSettings from "@/features/settings/components/projects";
 
 export default function SettingsPage() {
   const [searchParams] = useSearchParams();
@@ -71,12 +72,15 @@ export default function SettingsPage() {
     case "git":
       content = <GitSettings />;
       break;
+    case "projects":
+      content = <ProjectsSettings />;
+      break;
     default:
       content = <GeneralSettings />;
   }
 
   return (
-    <div className="h-full max-w-200 mx-auto px-6 pt-16 overflow-y-auto bg-primary dark:bg-primary-950">
+    <div className="h-full max-w-200 mx-auto px-6 pt-16 overflow-y-auto noscrollbar bg-primary dark:bg-primary-950">
       {content}
     </div>
   );

@@ -122,10 +122,19 @@ export default function WorkspacesList({
                 branch={workspace.defaultBranch}
                 updatedAt={workspace.updatedAt}
                 isActive={isActive}
+                projectId={workspace.projectId}
                 onClick={() => handleWorkspaceClick(workspace)}
                 onDelete={(e) => onDeleteWorkspace?.(workspace.id, e)}
                 onLinkIssues={() => handleLinkIssues(workspace)}
                 onArchive={() => onArchiveWorkspace?.(workspace.id)}
+                onSettings={
+                  workspace.projectId
+                    ? () =>
+                        navigate(
+                          `/settings?section=projects&id=${workspace.projectId}`,
+                        )
+                    : undefined
+                }
               />
             );
           })}
