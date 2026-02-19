@@ -29,6 +29,7 @@ import {
 } from "@/lib/redux/slices/workspaceSlice";
 import { isIssueTab, isNoteTab } from "@/features/workspace/utils/repo-utils";
 import type { RootState } from "@/lib/redux";
+import { toast } from "@/components/ui/toast/toast";
 
 const COPILOT_CLI_PROVIDER_ID = "copilot_cli";
 
@@ -138,6 +139,11 @@ export default function CopilotPage() {
   }, [activeTab, activeRun?.status, checkCanResume]);
 
   const handleExecute = useCallback(async () => {
+    if (!workspaceId) {
+      toast.error("Select a workspace before sending a prompt.");
+      return;
+    }
+
     const currentRunId =
       activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab) ? activeTab : null;
 
@@ -188,6 +194,7 @@ export default function CopilotPage() {
     goal,
     contextFiles,
     contextIssues,
+    workspaceId,
     selectedWorkspace,
     selectedModel,
     executeRun,
@@ -313,7 +320,7 @@ export default function CopilotPage() {
         )}
       </div>
 
-      {/* <WorkspaceQuickActions onSetGoal={setGoal} /> */}
+      <WorkspaceQuickActions onSetGoal={setGoal} />
       <WorkspaceInput
         goal={goal}
         onGoalChange={setGoal}

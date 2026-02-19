@@ -28,11 +28,11 @@ const menuItems: Array<{
   { id: "claude", label: "Claude Agent", icon: Claude },
   { id: "copilot", label: "Copilot", icon: CopilotStatic },
   { id: "git", label: "Git", icon: Branch },
-  { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "personalization", label: "Personalization", icon: Personalize },
   { id: "apps", label: "Connections", icon: Apps },
-  { id: "schedules", label: "Schedules", icon: Calendar },
-  { id: "security", label: "Security", icon: Security },
+  { id: "personalization", label: "Personalization", icon: Personalize },
+  // { id: "notifications", label: "Notifications", icon: Bell },
+  // { id: "schedules", label: "Schedules", icon: Calendar },
+  // { id: "security", label: "Security", icon: Security },
 ];
 
 export default function SettingsView({ onClose }: SettingsViewProps) {

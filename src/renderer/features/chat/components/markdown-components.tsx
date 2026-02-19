@@ -108,11 +108,23 @@ export const markdownComponents: Components = {
     </em>
   ),
   hr: () => <hr className="my-4 border-primary-300 dark:border-primary-700 transition-all duration-150 ease-out" />,
-  img: ({ src, alt }) => (
-    <img
-      src={src}
-      alt={alt}
-      className="max-w-full h-auto rounded-lg my-2 border border-primary-200 dark:border-primary-700 transition-all duration-150 ease-out"
-    />
-  ),
+  img: ({ src, alt }) => {
+    const proxiedSrc =
+      src && src.startsWith("https://")
+        ? `jinzo-img://proxy?url=${encodeURIComponent(src)}`
+        : src;
+    return (
+      <img
+        src={proxiedSrc}
+        alt={alt || ""}
+        className="max-w-full h-auto rounded-lg my-2 border border-primary-200 dark:border-primary-700 transition-all duration-150 ease-out"
+        onError={(e) => {
+          const target = e.currentTarget;
+          if (src && target.src !== src) target.src = src;
+        }}
+      />
+    );
+  },
 };
+
+//TODO img handling noted

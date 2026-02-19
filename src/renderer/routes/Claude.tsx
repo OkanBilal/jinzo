@@ -30,6 +30,7 @@ import {
 } from "@/lib/redux/slices/workspaceSlice";
 import { isIssueTab, isNoteTab } from "@/features/workspace/utils/repo-utils";
 import type { RootState } from "@/lib/redux";
+import { toast } from "@/components/ui/toast/toast";
 
 const CLAUDE_PROVIDER_ID = "claude_code";
 
@@ -108,8 +109,11 @@ export default function ClaudePage() {
     selectTab,
   } = useWorkspaceRuns(workspaceId, CLAUDE_PROVIDER_ID);
 
-  const { pendingApprovals, respond: respondToolApproval, dismissForRun } =
-    useToolApproval();
+  const {
+    pendingApprovals,
+    respond: respondToolApproval,
+    dismissForRun,
+  } = useToolApproval();
 
   useEffect(() => {
     if (runs.length > 0 && !selectedFile && activeTab === "editor") {
@@ -124,7 +128,11 @@ export default function ClaudePage() {
   useEffect(() => {
     const checkResume = async () => {
       const runId =
-        activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab) ? activeTab : null;
+        activeTab !== "editor" &&
+        !isIssueTab(activeTab) &&
+        !isNoteTab(activeTab)
+          ? activeTab
+          : null;
       if (
         runId &&
         activeRun &&
@@ -141,8 +149,15 @@ export default function ClaudePage() {
   }, [activeTab, activeRun?.status, checkCanResume]);
 
   const handleExecute = useCallback(async () => {
+    if (!workspaceId) {
+      toast.error("Select a workspace before sending a prompt.");
+      return;
+    }
+
     const currentRunId =
-      activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab) ? activeTab : null;
+      activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab)
+        ? activeTab
+        : null;
 
     let finalGoal = goal;
     if (contextFiles.length > 0) {
@@ -191,6 +206,7 @@ export default function ClaudePage() {
     goal,
     contextFiles,
     contextIssues,
+    workspaceId,
     selectedWorkspace,
     selectedModel,
     executeRun,
@@ -286,7 +302,9 @@ export default function ClaudePage() {
 
   // Get the first pending approval for the active run tab
   const activeRunId =
-    activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab) ? activeTab : null;
+    activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab)
+      ? activeTab
+      : null;
   const currentApproval = activeRunId
     ? pendingApprovals.find((a) => a.runId === activeRunId)
     : undefined;
@@ -299,7 +317,10 @@ export default function ClaudePage() {
   );
 
   const showEmptyState =
-    runs.length === 0 && !selectedFile && openIssueTabs.length === 0 && openNoteTabs.length === 0;
+    runs.length === 0 &&
+    !selectedFile &&
+    openIssueTabs.length === 0 &&
+    openNoteTabs.length === 0;
 
   return (
     <div className="flex flex-col h-full dark:bg-claude-dark">

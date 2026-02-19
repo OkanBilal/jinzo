@@ -46,6 +46,7 @@ import {
   destroyAllTerminals,
 } from "./modules/terminal";
 import { createMainWindow, createSplashWindow, closeSplashWindow } from "./windows";
+import { registerImageProxyScheme, registerImageProxyHandler } from "./modules/imageProxy";
 
 /**
  * Initialize the application
@@ -92,6 +93,7 @@ async function initializeApp() {
     registerTerminalIpc();
     registerReviewsIpc();
     registerWorkspaceDiffsIpc();
+    registerImageProxyHandler();
 
     // Shell utilities
     ipcMain.handle("shell:openExternal", async (_, url: string) => {
@@ -187,6 +189,9 @@ if (!gotTheLock) {
     }
   });
 }
+
+// Register custom protocol scheme (must be before app.ready)
+registerImageProxyScheme();
 
 // App lifecycle events
 app.whenReady().then(initializeApp);

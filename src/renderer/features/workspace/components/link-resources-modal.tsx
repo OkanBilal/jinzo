@@ -174,8 +174,8 @@ export function LinkResourcesModal({
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); !saving && toggleResource(resource.id); } }}
         className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-all duration-150 ${
           selected
-            ? "bg-primary-50/80 dark:bg-primary-800/40"
-            : "hover:bg-primary-50/50 dark:hover:bg-primary-800/30"
+            ? ""
+            : ""
         }`}
       >
         <span className="text-primary-500 dark:text-primary-400">{icon}</span>

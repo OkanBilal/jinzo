@@ -61,6 +61,27 @@ function extractLabels(labels: any[]): string[] {
   return labels.filter((s): s is string => typeof s === "string");
 }
 
+/**
+ * Resolve relative GitLab image/file URLs to absolute and strip
+ * GitLab-flavored `{width=... height=...}` size annotations.
+ *
+ * `![alt](/uploads/hash/file.png){width=900 height=569}`
+ * → `![alt](https://domain/-/project/projectId/uploads/hash/file.png)`
+ */
+function resolveGitlabBody(
+  body: string | null,
+  domain: string,
+  projectId: string
+): string | null {
+  if (!body) return null;
+  const cleanDomain = domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  return body.replace(
+    /!\[([^\]]*)\]\((\/uploads\/[^)]+)\)(\{[^}]*\})?/g,
+    (_match, alt, path) =>
+      `![${alt}](https://${cleanDomain}/-/project/${projectId}${path})`
+  );
+}
+
 export async function fetchGitlabIssues(
   projectId: string,
   limit = DEFAULT_LIMIT,
@@ -98,12 +119,13 @@ export async function fetchGitlabIssues(
 
     return issues.map((issue: any): EntityInput => {
       const labels = extractLabels(issue.labels);
+      const resolvedBody = resolveGitlabBody(issue.description, domain, projectId);
 
       return {
         kind: "issue",
         title: issue.title,
         url: issue.web_url,
-        body: issue.description || null,
+        body: resolvedBody,
         summary: issue.description?.substring(0, 500) || null,
         occurredAt: normalizeDateToIso(issue.created_at),
         externalId: `gitlab:${projectId}#${issue.iid}`,
@@ -162,12 +184,13 @@ export async function fetchGitlabMergeRequests(
 
     return mergeRequests.map((mr: any): EntityInput => {
       const labels = extractLabels(mr.labels);
+      const resolvedBody = resolveGitlabBody(mr.description, domain, projectId);
 
       return {
         kind: "merge_request",
         title: mr.title,
         url: mr.web_url,
-        body: mr.description || null,
+        body: resolvedBody,
         summary: mr.description?.substring(0, 500) || null,
         occurredAt: normalizeDateToIso(mr.created_at),
         externalId: `gitlab:${projectId}!${mr.iid}`,
