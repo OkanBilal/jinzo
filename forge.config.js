@@ -30,6 +30,62 @@ module.exports = {
       fs.unlinkSync(vitePkgJson);
 
       console.log('Native modules rebuilt successfully');
+
+      // Strip prebuilt binaries for other platforms to reduce bundle size
+      const targetPlatform = `${process.platform}-${process.arch}`;
+      console.log(`Stripping non-${targetPlatform} binaries...`);
+
+      const viteNodeModules = path.join(buildPath, '.vite', 'build', 'node_modules');
+      let totalSaved = 0;
+
+      const stripDirs = [
+        // node-pty prebuilds (~58 MB on darwin-arm64)
+        path.join(viteNodeModules, 'node-pty', 'prebuilds'),
+        // @github/copilot prebuilds (~24 MB)
+        path.join(viteNodeModules, '@github', 'copilot', 'prebuilds'),
+        // @github/copilot ripgrep binaries (~20 MB)
+        path.join(viteNodeModules, '@github', 'copilot', 'ripgrep', 'bin'),
+      ];
+
+      const getDirSize = (dir) => {
+        let size = 0;
+        try {
+          for (const entry of fs.readdirSync(dir, { withFileTypes: true, recursive: true })) {
+            if (entry.isFile()) {
+              try { size += fs.statSync(path.join(entry.parentPath || entry.path, entry.name)).size; } catch {}
+            }
+          }
+        } catch {}
+        return size;
+      };
+
+      for (const parentDir of stripDirs) {
+        if (!fs.existsSync(parentDir)) continue;
+        for (const entry of fs.readdirSync(parentDir, { withFileTypes: true })) {
+          if (entry.isDirectory() && entry.name !== targetPlatform) {
+            const fullPath = path.join(parentDir, entry.name);
+            const size = getDirSize(fullPath);
+            fs.rmSync(fullPath, { recursive: true, force: true });
+            totalSaved += size;
+            console.log(`  ✓ Removed ${path.relative(viteNodeModules, fullPath)} (${(size / 1024 / 1024).toFixed(1)} MB)`);
+          }
+        }
+      }
+
+      // Strip node-pty source/build artifacts not needed at runtime
+      const ptyExtras = ['third_party', 'deps', 'src', 'scripts', 'node-addon-api'].map(
+        d => path.join(viteNodeModules, 'node-pty', d)
+      );
+      for (const dir of ptyExtras) {
+        if (fs.existsSync(dir)) {
+          const size = getDirSize(dir);
+          fs.rmSync(dir, { recursive: true, force: true });
+          totalSaved += size;
+          console.log(`  ✓ Removed node-pty/${path.basename(dir)} (${(size / 1024 / 1024).toFixed(1)} MB)`);
+        }
+      }
+
+      console.log(`Total saved: ${(totalSaved / 1024 / 1024).toFixed(1)} MB`);
     },
   },
   packagerConfig: {
