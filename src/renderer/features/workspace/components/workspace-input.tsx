@@ -50,8 +50,10 @@ export function WorkspaceInput({
   const slashCommandDropdownRef = useRef<HTMLDivElement>(null);
 
   const variant = useWorkspaceVariant();
+  const providerVariant: "claude" | "copilot" =
+    variant === "claude" ? "claude" : "copilot";
   const defaultProviderId =
-    variant === "claude" ? "claude_code" : "copilot_cli";
+    providerVariant === "claude" ? "claude_code" : "copilot_cli";
   const activeProviderId = providerId ?? defaultProviderId;
 
   const {
@@ -67,7 +69,7 @@ export function WorkspaceInput({
     handlePlanModeToggle,
   } = useProviderModels(
     activeProviderId,
-    variant,
+    providerVariant,
     externalSelectedModel,
     externalOnModelChange,
     workspacePath,
@@ -169,7 +171,7 @@ export function WorkspaceInput({
         />
       </div>
       <InputToolbar
-        variant={variant}
+        variant={providerVariant}
         isLoading={isLoading}
         onSubmit={onSubmit}
         onGoalChange={onGoalChange}
