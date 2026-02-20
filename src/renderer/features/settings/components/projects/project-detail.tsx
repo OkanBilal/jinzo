@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useReducer } from "react";
 import { Heading2, Heading3, Muted } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
@@ -10,6 +10,53 @@ import {
 } from "@/lib/redux/api";
 import { SettingsRow, SettingsDivider } from "../settings-layout";
 
+interface FormState {
+  defaultBranch: string;
+  setupScript: string;
+  runScript: string;
+  archiveScript: string;
+  isDirty: boolean;
+  liveBranches: string[];
+  prevProject: any;
+}
+
+type FormAction =
+  | { type: "SYNC_PROJECT"; project: any }
+  | { type: "SET_FIELD"; field: "defaultBranch" | "setupScript" | "runScript" | "archiveScript"; value: string }
+  | { type: "SET_BRANCHES"; branches: string[] }
+  | { type: "MARK_CLEAN" };
+
+const initialState: FormState = {
+  defaultBranch: "",
+  setupScript: "",
+  runScript: "",
+  archiveScript: "",
+  isDirty: false,
+  liveBranches: [],
+  prevProject: undefined,
+};
+
+function formReducer(state: FormState, action: FormAction): FormState {
+  switch (action.type) {
+    case "SYNC_PROJECT":
+      return {
+        ...state,
+        prevProject: action.project,
+        defaultBranch: action.project?.defaultBranch ?? "",
+        setupScript: action.project?.setupScript ?? "",
+        runScript: action.project?.runScript ?? "",
+        archiveScript: action.project?.archiveScript ?? "",
+        isDirty: false,
+      };
+    case "SET_FIELD":
+      return { ...state, [action.field]: action.value, isDirty: true };
+    case "SET_BRANCHES":
+      return { ...state, liveBranches: action.branches };
+    case "MARK_CLEAN":
+      return { ...state, isDirty: false };
+  }
+}
+
 interface ProjectDetailProps {
   id: string;
 }
@@ -18,24 +65,12 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   const { data: project, isLoading, refetch } = useGetProjectByIdQuery(id);
   const [updateProject, { isLoading: saving }] = useUpdateProjectMutation();
 
-  const [defaultBranch, setDefaultBranch] = useState("");
-  const [setupScript, setSetupScript] = useState("");
-  const [runScript, setRunScript] = useState("");
-  const [archiveScript, setArchiveScript] = useState("");
-  const [isDirty, setIsDirty] = useState(false);
-  const [liveBranches, setLiveBranches] = useState<string[]>([]);
+  const [state, dispatch] = useReducer(formReducer, initialState);
+  const { defaultBranch, setupScript, runScript, archiveScript, isDirty, liveBranches } = state;
 
   // Sync form state when project data loads
-  const [prevProject, setPrevProject] = useState(project);
-  if (project !== prevProject) {
-    setPrevProject(project);
-    if (project) {
-      setDefaultBranch(project.defaultBranch ?? "");
-      setSetupScript(project.setupScript ?? "");
-      setRunScript(project.runScript ?? "");
-      setArchiveScript(project.archiveScript ?? "");
-      setIsDirty(false);
-    }
+  if (project !== state.prevProject) {
+    dispatch({ type: "SYNC_PROJECT", project });
   }
 
   // Fetch live branches (local + remote) from git
@@ -54,7 +89,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
               names.push(name);
             }
           }
-          setLiveBranches(names);
+          dispatch({ type: "SET_BRANCHES", branches: names });
         }
       })
       .catch(() => {});
@@ -80,7 +115,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
           archiveScript: archiveScript || undefined,
         },
       }).unwrap();
-      setIsDirty(false);
+      dispatch({ type: "MARK_CLEAN" });
       toast.success("Project settings saved");
     } catch (err: any) {
       toast.error(err?.message || "Failed to save project settings");
@@ -95,7 +130,8 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     return date.toLocaleString();
   }, [project?.updatedAt, project?.createdAt]);
 
-  const markDirty = () => setIsDirty(true);
+  const setField = (field: "defaultBranch" | "setupScript" | "runScript" | "archiveScript", value: string) =>
+    dispatch({ type: "SET_FIELD", field, value });
 
   const formatPath = (path: string) => {
     const parts = path.split("/");
@@ -174,10 +210,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
             useFixedBackground
             value={defaultBranch}
             options={branchOptions}
-            onChange={(val) => {
-              setDefaultBranch(val);
-              markDirty();
-            }}
+            onChange={(val) => setField("defaultBranch", val)}
             placeholder="Select branch"
           />
         ) : (
@@ -206,10 +239,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       >
         <Textarea
           value={setupScript}
-          onChange={(e) => {
-            setSetupScript(e.target.value);
-            markDirty();
-          }}
+          onChange={(e) => setField("setupScript", e.target.value)}
           placeholder="e.g., npm install"
           rows={2}
           className="min-w-0 "
@@ -225,10 +255,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       >
         <Textarea
           value={runScript}
-          onChange={(e) => {
-            setRunScript(e.target.value);
-            markDirty();
-          }}
+          onChange={(e) => setField("runScript", e.target.value)}
           placeholder="e.g., npm run dev"
           rows={2}
           className="min-w-0"
@@ -244,10 +271,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       >
         <Textarea
           value={archiveScript}
-          onChange={(e) => {
-            setArchiveScript(e.target.value);
-            markDirty();
-          }}
+          onChange={(e) => setField("archiveScript", e.target.value)}
           placeholder="e.g., rm -rf node_modules"
           rows={2}
           className="min-w-0"

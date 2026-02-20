@@ -1,0 +1,148 @@
+import { useRef, useEffect } from "react";
+import { Close, Trash, Edit, Duplicate } from "@/components/ui/icons";
+import { Muted } from "@/components/ui/text";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
+
+function RadioDot({ active }: { active: boolean }) {
+  return (
+    <span
+      className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 ${
+        active
+          ? "border-primary-900 dark:border-primary-300 bg-primary-900 dark:bg-primary-600"
+          : "border-primary-400 dark:border-primary-600"
+      }`}
+    />
+  );
+}
+
+interface SchemaListTabProps {
+  sortedEntries: StructuredOutputEntry[];
+  selectedId: string | null;
+  renamingId: string | null;
+  renameValue: string;
+  onSelectSchema: (id: string | null) => void;
+  onOpenNewEditor: () => void;
+  onOpenEditEditor: (id: string) => void;
+  onDuplicate: (id: string) => void;
+  onRequestDelete: (id: string) => void;
+  onRenameChange: (value: string) => void;
+  onRenameConfirm: (id: string) => void;
+  onRenameCancel: () => void;
+}
+
+export function SchemaListTab({
+  sortedEntries,
+  selectedId,
+  renamingId,
+  renameValue,
+  onSelectSchema,
+  onOpenNewEditor,
+  onOpenEditEditor,
+  onDuplicate,
+  onRequestDelete,
+  onRenameChange,
+  onRenameConfirm,
+  onRenameCancel,
+}: SchemaListTabProps) {
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (renamingId && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renamingId]);
+
+  return (
+    <>
+      <div className="p-4 pt-0">
+        <div className="h-78 overflow-y-auto space-y-1">
+          <button
+            onClick={() => onSelectSchema(null)}
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left text-sm transition-colors cursor-pointer ${
+              selectedId === null
+                ? "bg-primary-950/8 dark:bg-primary/12 text-primary-900 dark:text-primary-100"
+                : "text-primary-600 dark:text-primary-400 hover:bg-primary-950/4 dark:hover:bg-primary/6"
+            }`}
+          >
+            <RadioDot active={selectedId === null} />
+            <span>Do not use structured output</span>
+          </button>
+
+          {sortedEntries.map((entry) => (
+            <div
+              key={entry.id}
+              className={`group flex items-center h-10 gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-colors ${
+                selectedId === entry.id
+                  ? "bg-primary-950/8 dark:bg-primary/12 text-primary-900 dark:text-primary-100"
+                  : "text-primary-600 dark:text-primary-400 hover:bg-primary-950/4 dark:hover:bg-primary/6"
+              }`}
+            >
+              <button
+                onClick={() => onSelectSchema(entry.id)}
+                className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer"
+              >
+                <RadioDot active={selectedId === entry.id} />
+                {renamingId === entry.id ? (
+                  <Input
+                    ref={renameInputRef}
+                    value={renameValue}
+                    onChange={(e) => onRenameChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") onRenameConfirm(entry.id);
+                      if (e.key === "Escape") onRenameCancel();
+                    }}
+                    onBlur={() => onRenameConfirm(entry.id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <span className="truncate">{entry.name}</span>
+                )}
+              </button>
+
+              <div className="hidden group-hover:flex items-center gap-1 shrink-0">
+                <Button
+                  tooltip="Edit Schema"
+                  onClick={() => onOpenEditEditor(entry.id)}
+                  className="p-1 rounded hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors cursor-pointer"
+                  title="Edit"
+                >
+                  <Edit className="size-4" />
+                </Button>
+                <Button
+                  tooltip="Duplicate Schema"
+                  onClick={() => onDuplicate(entry.id)}
+                  className="p-1 rounded hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors cursor-pointer"
+                  title="Duplicate"
+                >
+                  <Duplicate className="size-4" />
+                </Button>
+                <button
+                  onClick={() => onRequestDelete(entry.id)}
+                  className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-colors cursor-pointer"
+                  title="Delete"
+                >
+                  <Trash className="size-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {sortedEntries.length === 0 && (
+            <Muted className="text-xs px-3 py-4 text-center">
+              No schemas yet. Create one using the editor tab.
+            </Muted>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end gap-3 p-4 border-t border-primary-950/5 dark:border-primary/10">
+        <Button variant="primary" size="sm" onClick={onOpenNewEditor}>
+          New schema
+        </Button>
+      </div>
+    </>
+  );
+}

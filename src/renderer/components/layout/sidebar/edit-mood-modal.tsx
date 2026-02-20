@@ -5,8 +5,6 @@ import { Input } from "@/components/ui/input";
 import { useUpdateMoodMutation } from "@/lib/redux/api";
 import type { Mood } from "@/lib/redux/api";
 import { toast } from "@/components/ui/toast";
-import { EmojiPicker } from "frimousse";
-import { useClickOutside } from "@/hooks/use-click-outside";
 import { useDarkMode } from "@/hooks/use-dark-mode";
 import {
   solidColors,
@@ -16,7 +14,8 @@ import {
 } from "@/lib/mood-themes";
 import { availableIcons, parseIcon } from "@/lib/icon-registry";
 import { Button } from "@/components/ui/button";
-import { ArrowUp } from "@/components/ui/icons";
+import MoodIconPicker from "./mood-icon-picker";
+import MoodThemeSelector from "./mood-theme-selector";
 
 type IconPickerMode = "emoji" | "icon";
 
@@ -57,14 +56,12 @@ function parseThemeConfig(themeConfig: string | null): {
     const config = JSON.parse(themeConfig);
     const darkBg = config.darkBackground || "";
 
-    // Try to find matching color in gradients first
     for (let i = 0; i < gradientColors.length; i++) {
       if (gradientColors[i].dark.value === darkBg) {
         return { colorIndex: i, isGradient: true };
       }
     }
 
-    // Then check solid colors
     for (let i = 0; i < solidColors.length; i++) {
       if (solidColors[i].dark.value === darkBg) {
         return { colorIndex: i, isGradient: false };
@@ -75,6 +72,16 @@ function parseThemeConfig(themeConfig: string | null): {
   }
 
   return { colorIndex: 0, isGradient: false };
+}
+
+function EditMoodPreviewIcon({ icon, iconMode }: { icon: string; iconMode: IconPickerMode }) {
+  if (iconMode === "icon" && icon) {
+    const IconComp = availableIcons.find((i) => i.name === icon)?.component;
+    return IconComp ? (
+      <IconComp className="size-6 text-primary-800 dark:text-primary" />
+    ) : null;
+  }
+  return <>{icon || ""}</>;
 }
 
 export default function EditMoodModal({
@@ -97,8 +104,6 @@ export default function EditMoodModal({
   });
   const { name, icon, iconMode, selectedColorIndex, isEmojiPickerOpen, showGradients, systemPrompt, isClosing } = state;
   const prevIsOpenRef = useRef(isOpen);
-
-  const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   const [updateMood, { isLoading }] = useUpdateMoodMutation();
   const { darkMode } = useDarkMode();
@@ -144,7 +149,6 @@ export default function EditMoodModal({
     prevIsOpenRef.current = isOpen;
   }
 
-  // Handle animated close
   const handleAnimatedClose = useCallback(() => {
     updateState({ isClosing: true });
     setTimeout(() => {
@@ -152,11 +156,6 @@ export default function EditMoodModal({
     }, 200);
   }, [onClose]);
 
-  useClickOutside(emojiPickerRef, () => {
-    if (isEmojiPickerOpen) updateState({ isEmojiPickerOpen: false });
-  });
-
-  // Handle escape key
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !isClosing) {
@@ -171,10 +170,6 @@ export default function EditMoodModal({
 
     return undefined;
   }, [isOpen, isClosing, handleAnimatedClose]);
-
-  const handlePresetColor = (index: number) => {
-    updateState({ selectedColorIndex: index });
-  };
 
   const handleSave = async () => {
     if (!mood) return;
@@ -246,20 +241,7 @@ export default function EditMoodModal({
             className="w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-2"
             style={{ background: currentVariant.preview }}
           >
-            {iconMode === "icon" && icon ? (
-              (() => {
-                const IconComp = availableIcons.find(
-                  (i) => i.name === icon,
-                )?.component;
-                return IconComp ? (
-                  <IconComp className="size-6 text-primary-800 dark:text-primary" />
-                ) : (
-                  ""
-                );
-              })()
-            ) : (
-              <span>{icon || ""}</span>
-            )}
+            <EditMoodPreviewIcon icon={icon} iconMode={iconMode} />
           </div>
           <Heading3 className="text-center text-primary-800 dark:text-primary">
             Edit Mood
@@ -268,7 +250,6 @@ export default function EditMoodModal({
 
         {/* Content */}
         <div className="px-4 space-y-4 overflow-y-auto max-h-[50vh] noscrollbar">
-          {/* Name Input */}
           <div className="relative">
             <Input
               type="text"
@@ -287,166 +268,18 @@ export default function EditMoodModal({
             />
           </div>
 
-          {/* Icon Picker */}
-          <div ref={emojiPickerRef} className="relative">
-            <Button
-              type="button"
-              onClick={() => updateState({ isEmojiPickerOpen: !isEmojiPickerOpen })}
-              className={`
-                w-full px-3 py-2
-                bg-primary-950/5 dark:bg-primary/4 border-primary-950/10 dark:border-primary/10
-                text-primary-800 dark:text-primary
-                text-sm focus:outline-none cursor-pointer
-                flex items-center justify-between
-                transition-all
-                shadow-[inset_0_0.5px_0_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]
-                ${
-                  isEmojiPickerOpen
-                    ? "rounded-t-xl shadow-lg"
-                    : "rounded-xl hover:bg-primary-950/8 dark:hover:bg-primary/6"
-                }
-              `}
-            >
-              <div className="flex items-center gap-2">
-                {iconMode === "icon" && icon ? (
-                  (() => {
-                    const IconComp = availableIcons.find(
-                      (i) => i.name === icon,
-                    )?.component;
-                    return IconComp ? (
-                      <IconComp className="size-5" />
-                    ) : (
-                      <span>📦</span>
-                    );
-                  })()
-                ) : (
-                  <span>{icon || "😊"}</span>
-                )}
-                <span>Choose an Icon</span>
-              </div>
-              <svg
-                className={`w-4 h-4 transition-transform duration-200 ${
-                  isEmojiPickerOpen ? "rotate-180" : ""
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </Button>
+          <MoodIconPicker
+            icon={icon}
+            iconMode={iconMode}
+            isOpen={isEmojiPickerOpen}
+            previewBackground={currentVariant.preview}
+            onToggle={() => updateState({ isEmojiPickerOpen: !isEmojiPickerOpen })}
+            onSelectEmoji={(emoji) => updateState({ icon: emoji, isEmojiPickerOpen: false })}
+            onSelectIcon={(iconName) => updateState({ icon: iconName, isEmojiPickerOpen: false })}
+            onSwitchMode={(mode) => updateState({ iconMode: mode, icon: "" })}
+            onClose={() => updateState({ isEmojiPickerOpen: false })}
+          />
 
-            {isEmojiPickerOpen && (
-              <div
-                className="absolute top-full left-0 right-0 z-50
-                  border border-t-0 border-primary-950/10 dark:border-primary/10
-                  rounded-b-xl shadow-lg overflow-hidden
-                  animate-slide-fade-down"
-                style={{ background: currentVariant.preview }}
-              >
-                {/* Mode Toggle */}
-                <div className="flex border-b border-primary-950/10 dark:border-primary/10">
-                  <Button
-                    type="button"
-                    onClick={() => updateState({ iconMode: "emoji", icon: "" })}
-                    className={`flex-1 py-2 text-xs font-medium transition-colors cursor-pointer ${
-                      iconMode === "emoji"
-                        ? "text-primary-700 dark:text-primary bg-primary-950/5 dark:bg-primary/10"
-                        : "text-primary-400 dark:text-primary-500 hover:text-primary-600 dark:hover:text-primary-300"
-                    }`}
-                  >
-                    Emoji
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => updateState({ iconMode: "icon", icon: "" })}
-                    className={`flex-1 py-2 text-xs font-medium transition-colors cursor-pointer ${
-                      iconMode === "icon"
-                        ? "text-primary-700 dark:text-primary bg-primary-950/5 dark:bg-primary/10"
-                        : "text-primary-400 dark:text-primary-500 hover:text-primary-600 dark:hover:text-primary-300"
-                    }`}
-                  >
-                    Icon
-                  </Button>
-                </div>
-
-                <div className="p-3">
-                  {iconMode === "emoji" ? (
-                    <EmojiPicker.Root
-                      onEmojiSelect={(emoji) => updateState({ icon: emoji.emoji, isEmojiPickerOpen: false })}
-                    >
-                      <EmojiPicker.Search
-                        placeholder="Search emoji..."
-                        className="w-full mb-2 px-2 py-1.5 dark:placeholder:text-primary-200 placeholder:text-primary-700 bg-primary-950/5 dark:bg-primary/10 rounded-xl text-sm outline-none focus:bg-primary-950/8 dark:focus:bg-primary/15 border border-primary-950/10 dark:border-primary/10"
-                      />
-                      <EmojiPicker.Viewport className="h-48 overflow-y-auto w-full noscrollbar">
-                        <EmojiPicker.Loading>
-                          <div className="flex items-center justify-center py-8 text-sm text-primary-500 dark:text-primary-400">
-                            Loading emojis...
-                          </div>
-                        </EmojiPicker.Loading>
-                        <EmojiPicker.Empty>
-                          <div className="flex items-center justify-center py-8 text-sm text-primary-500 dark:text-primary-400">
-                            No emoji found.
-                          </div>
-                        </EmojiPicker.Empty>
-                        <EmojiPicker.List
-                          className="select-none pb-1.5"
-                          components={{
-                            CategoryHeader: ({ ...props }) => (
-                              <div
-                                className="px-2 pt-0 pb-1.5 font-medium text-primary-600 dark:text-primary-400 text-xs"
-                                style={{ background: currentVariant.preview }}
-                                {...props}
-                              />
-                            ),
-                            Row: ({ children, ...props }) => (
-                              <div className="scroll-my-1.5 px-1" {...props}>
-                                {children}
-                              </div>
-                            ),
-                            Emoji: ({ emoji, ...props }) => (
-                              <Button
-                                className="flex size-8 items-center justify-center rounded-md text-lg hover:bg-primary-950/5 dark:hover:bg-primary/10 data-active:bg-primary-950/8 dark:data-active:bg-primary/15"
-                                {...props}
-                              >
-                                {emoji.emoji}
-                              </Button>
-                            ),
-                          }}
-                        />
-                      </EmojiPicker.Viewport>
-                    </EmojiPicker.Root>
-                  ) : (
-                    <div className="grid grid-cols-5 gap-2 max-h-48 overflow-y-auto">
-                      {availableIcons.map(({ name, component: IconComp }) => (
-                        <Button
-                          key={name}
-                          type="button"
-                          onClick={() => updateState({ icon: name, isEmojiPickerOpen: false })}
-                          className={`flex items-center justify-center size-8 rounded-lg transition-all cursor-pointer ${
-                            icon === name
-                              ? "bg-primary-950/15 dark:bg-primary/20 text-primary-700 dark:text-primary"
-                              : "hover:bg-primary-950/8 dark:hover:bg-primary/10 text-primary-500 dark:text-primary-400"
-                          }`}
-                          title={name}
-                        >
-                          <IconComp className="size-5.5" />
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* System Prompt */}
           <div className="space-y-2">
             <Text className="text-xs text-primary-500 dark:text-primary-400">
               System Prompt
@@ -466,94 +299,12 @@ export default function EditMoodModal({
             />
           </div>
 
-          {/* Theme Selector - Animated Slide */}
-          <div
-            className="rounded-xl overflow-hidden
-              bg-primary-950/5 dark:bg-primary/4
-              shadow-[inset_0_0.5px_0_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]"
-          >
-            <div
-              className="flex transition-transform duration-300 ease-in-out"
-              style={{
-                transform: showGradients
-                  ? "translateX(-100%)"
-                  : "translateX(0)",
-              }}
-            >
-              {/* Solid Colors Row */}
-              {/* Solid Colors Row */}
-              <div className="flex items-center gap-2 px-4 py-2.5 ml-2 min-w-full">
-                {solidColors.map((colorPair, index) => {
-                  const variant = getThemeVariant(colorPair, darkMode);
-                  return (
-                    <Button
-                      key={`solid-${colorPair.name}`}
-                      type="button"
-                      onClick={() => {
-                        if (!showGradients) {
-                          handlePresetColor(index);
-                        }
-                      }}
-                      className={`
-                      w-5 h-5 rounded-full transition-all duration-200 cursor-pointer shrink-0
-                      ${
-                        !showGradients && selectedColorIndex === index
-                          ? "ring-2 ring-primary-200 scale-105"
-                          : "hover:scale-101"
-                      }
-                    `}
-                      style={{ background: variant.preview }}
-                      title={colorPair.name}
-                    />
-                  );
-                })}
-                <Button
-                  type="button"
-                  onClick={() => updateState({ showGradients: true, selectedColorIndex: 0 })}
-                  className="ml-auto shrink-0 p-0.5 mr-1 rounded-lg hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
-                  title="Show Gradients"
-                >
-                  <ArrowUp className="w-5 h-5 text-primary-700 dark:text-primary-200 rotate-90" />
-                </Button>
-              </div>
-
-              <div className="flex items-center gap-2 px-4 mr-2  min-w-full">
-                <Button
-                  type="button"
-                  onClick={() => updateState({ showGradients: false, selectedColorIndex: 0 })}
-                  className="shrink-0 -ml-4 mr-1 rounded-lg p-0.5 hover:bg-primary-950/10 dark:hover:bg-primary/10 transition-colors cursor-pointer"
-                  title="Show Solid Colors"
-                >
-                  <ArrowUp className="w-5 h-5 text-primary-700 dark:text-primary-200 rotate-270" />
-                </Button>
-                {gradientColors.map((colorPair, index) => {
-                  const variant = getThemeVariant(colorPair, darkMode);
-                  return (
-                    <Button
-                      key={`gradient-${colorPair.name}`}
-                      type="button"
-                      onClick={() => {
-                        if (showGradients) {
-                          handlePresetColor(index);
-                        }
-                      }}
-                      className={`
-                                    w-5 h-5 rounded-full transition-all duration-200 cursor-pointer shrink-0
-                                    ${
-                                      showGradients &&
-                                      selectedColorIndex === index
-                                        ? "ring-2 ring-primary-200 scale-105"
-                                        : "hover:scale-101"
-                                    }
-                                  `}
-                      style={{ background: variant.preview }}
-                      title={colorPair.name}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+          <MoodThemeSelector
+            selectedColorIndex={selectedColorIndex}
+            showGradients={showGradients}
+            onSelectColor={(index) => updateState({ selectedColorIndex: index })}
+            onToggleGradients={(show) => updateState({ showGradients: show, selectedColorIndex: 0 })}
+          />
         </div>
 
         {/* Footer Actions */}

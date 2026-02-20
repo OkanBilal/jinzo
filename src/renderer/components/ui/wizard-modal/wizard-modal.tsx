@@ -1,7 +1,6 @@
 import {
   useRef,
   useEffect,
-  useLayoutEffect,
   useCallback,
   useMemo,
   useSyncExternalStore,
@@ -14,6 +13,9 @@ import { usePrefersReducedMotion } from "../../../hooks/use-prefers-reduced-moti
 import { Button } from "../button";
 import { Close } from "../icons";
 import Text from "../text";
+import { wizardReducer, resolveInitialStep } from "./wizard-reducer";
+import { useWizardEscape, useWizardFocusTrap } from "./use-wizard-keyboard";
+import { useWizardAnimation } from "./use-wizard-animation";
 
 export interface WizardStep<
   TData extends Record<string, any> = Record<string, any>,
@@ -48,80 +50,6 @@ export interface WizardModalProps<
 }
 
 const emptySubscribe = () => () => {};
-
-function resolveInitialStep(
-  steps: { id: string }[],
-  initial?: string | number,
-): number {
-  if (initial === undefined) return 0;
-  if (typeof initial === "number") {
-    return Math.max(0, Math.min(initial, steps.length - 1));
-  }
-  const idx = steps.findIndex((s) => s.id === initial);
-  return idx >= 0 ? idx : 0;
-}
-
-// ─── Reducer ──────────────────────────────────────────────────────────────────
-
-type AnimState = { height: number | "auto"; active: boolean };
-
-interface WizardState<TData> {
-  stepIndex: number;
-  data: TData;
-  errors: Record<string, string>;
-  isSubmitting: boolean;
-  animState: AnimState;
-}
-
-type WizardAction<TData> =
-  | { type: "RESET"; stepIndex: number; data: TData }
-  | { type: "SET_STEP"; index: number }
-  | { type: "INC_STEP" }
-  | { type: "DEC_STEP" }
-  | { type: "SET_DATA"; data: Partial<TData> }
-  | { type: "REPLACE_DATA"; data: TData }
-  | { type: "SET_ERRORS"; errors: Record<string, string> }
-  | { type: "CLEAR_ERRORS" }
-  | { type: "SET_SUBMITTING"; value: boolean }
-  | { type: "SET_ANIM"; animState: AnimState };
-
-function wizardReducer<TData extends Record<string, any>>(
-  state: WizardState<TData>,
-  action: WizardAction<TData>,
-): WizardState<TData> {
-  switch (action.type) {
-    case "RESET":
-      return {
-        stepIndex: action.stepIndex,
-        data: action.data,
-        errors: {},
-        isSubmitting: false,
-        animState: { height: "auto", active: false },
-      };
-    case "SET_STEP":
-      return { ...state, stepIndex: action.index };
-    case "INC_STEP":
-      return { ...state, stepIndex: state.stepIndex + 1 };
-    case "DEC_STEP":
-      return { ...state, stepIndex: state.stepIndex - 1 };
-    case "SET_DATA":
-      return { ...state, data: { ...state.data, ...action.data } };
-    case "REPLACE_DATA":
-      return { ...state, data: action.data };
-    case "SET_ERRORS":
-      return { ...state, errors: { ...state.errors, ...action.errors } };
-    case "CLEAR_ERRORS":
-      return { ...state, errors: {} };
-    case "SET_SUBMITTING":
-      return { ...state, isSubmitting: action.value };
-    case "SET_ANIM":
-      return { ...state, animState: action.animState };
-    default:
-      return state;
-  }
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export function WizardModal<
   TData extends Record<string, any> = Record<string, any>,
@@ -192,10 +120,6 @@ export function WizardModal<
     }
   }, [initialData]);
 
-  // Animation refs
-  const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const prevHeightRef = useRef<number>(0);
-
   const prefersReducedMotion = usePrefersReducedMotion();
   const shouldAnimate = !prefersReducedMotion && animationDuration > 0;
 
@@ -223,42 +147,16 @@ export function WizardModal<
     onCancel?.();
   }, [onOpenChange, onCancel]);
 
-  useLayoutEffect(() => {
-    if (!shouldAnimate || !innerRef.current) return;
-
-    const newHeight = innerRef.current.offsetHeight;
-    const prevHeight = prevHeightRef.current;
-
-    // First render or no change - just store and skip
-    if (prevHeight === 0 || Math.abs(newHeight - prevHeight) < 2) {
-      prevHeightRef.current = newHeight;
-      return;
-    }
-
-    // Clear any pending animation
-    if (animationTimeoutRef.current) {
-      clearTimeout(animationTimeoutRef.current);
-    }
-
-    // Lock to previous height immediately (before paint)
-    dispatch({ type: "SET_ANIM", animState: { height: prevHeight, active: true } });
-
-    // After paint, animate to new height
-    requestAnimationFrame(() => {
-      dispatch({ type: "SET_ANIM", animState: { height: newHeight, active: true } });
-      prevHeightRef.current = newHeight;
-
-      animationTimeoutRef.current = setTimeout(() => {
-        dispatch({ type: "SET_ANIM", animState: { height: "auto", active: false } });
-      }, animationDuration);
-    });
-
-    return () => {
-      if (animationTimeoutRef.current) {
-        clearTimeout(animationTimeoutRef.current);
-      }
-    };
-  }, [stepIndex, shouldAnimate, animationDuration]);
+  // Extracted hooks
+  const prevHeightRef = useWizardAnimation(
+    stepIndex,
+    shouldAnimate,
+    animationDuration,
+    innerRef,
+    dispatch,
+  );
+  useWizardEscape(open, isSubmitting, close);
+  useWizardFocusTrap(open, stepIndex);
 
   const goTo = useCallback(
     (indexOrId: number | string) => {
@@ -415,65 +313,6 @@ export function WizardModal<
       triggerRef.current = null;
     }
   }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !isSubmitting) {
-        e.preventDefault();
-        close();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, isSubmitting, close]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const modalEl = document.getElementById("wizard-modal-container");
-    if (!modalEl) return;
-
-    const focusableSelector =
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
-    const focusFirst = () => {
-      const focusable =
-        modalEl.querySelectorAll<HTMLElement>(focusableSelector);
-      const firstFocusable = Array.from(focusable).find(
-        (el) => !el.hasAttribute("disabled"),
-      );
-      firstFocusable?.focus();
-    };
-
-    requestAnimationFrame(focusFirst);
-
-    const handleTab = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return;
-
-      const focusable = Array.from(
-        modalEl.querySelectorAll<HTMLElement>(focusableSelector),
-      ).filter((el) => !el.hasAttribute("disabled"));
-
-      if (focusable.length === 0) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", handleTab);
-    return () => document.removeEventListener("keydown", handleTab);
-  }, [open, stepIndex]);
 
   if (!isBrowser || !open) return null;
 

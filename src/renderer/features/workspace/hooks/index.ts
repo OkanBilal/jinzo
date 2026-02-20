@@ -6,3 +6,5 @@ export type { ToolApprovalRequest } from "./use-tool-approval";
 export { useDeleteWorkspace } from "./use-delete-workspace";
 export { useArchiveWorkspace } from "./use-archive-workspace";
 export { useFileContentLoader } from "./use-file-content-loader";
+export { useWorkspacePage } from "./use-workspace-page";
+export { useProviderModels } from "./use-provider-models";
