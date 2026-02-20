@@ -40,13 +40,13 @@ export function ContextChips({
   onRemoveContextFile,
   onRemoveContextIssue,
 }: ContextChipsProps) {
-  if (contextFiles.length === 0 && contextIssues.length === 0) return null;
+  const hasContext = contextFiles.length > 0 || contextIssues.length > 0;
 
   return (
     <div
-      className={`grid transition-[grid-template-rows] duration-300 ease-out grid-rows-[1fr]`}
+      className={`grid transition-[grid-template-rows] duration-300 ease-out ${hasContext ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
     >
-      <div className="overflow-hidden">
+      <div className="overflow-hidden min-h-0">
         <div className="flex flex-wrap gap-2 px-4 pt-3 pb-1">
           {contextFiles.map((file) => (
             <div

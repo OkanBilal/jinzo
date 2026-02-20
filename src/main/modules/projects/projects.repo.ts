@@ -72,6 +72,7 @@ export const projectsRepo = {
       setupScript: payload.setupScript,
       runScript: payload.runScript,
       archiveScript: payload.archiveScript,
+      icon: payload.icon,
     });
     return payload.id;
   },
@@ -89,6 +90,7 @@ export const projectsRepo = {
     if (payload.setupScript !== undefined) updateData.setupScript = payload.setupScript;
     if (payload.runScript !== undefined) updateData.runScript = payload.runScript;
     if (payload.archiveScript !== undefined) updateData.archiveScript = payload.archiveScript;
+    if (payload.icon !== undefined) updateData.icon = payload.icon;
 
     await db.update(projects).set(updateData).where(eq(projects.id, id));
     return this.findById(id);
@@ -125,6 +127,7 @@ function mapRowToResponse(row: typeof projects.$inferSelect): ProjectResponse {
     setupScript: row.setupScript,
     runScript: row.runScript,
     archiveScript: row.archiveScript,
+    icon: row.icon,
     isArchived: row.isArchived,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

@@ -4,6 +4,7 @@ import DropdownWrapper from "@/components/ui/dropdown-wrapper";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import type { InputVariant } from "./send-button";
 import { getModelIcon } from "@/lib/model-icons";
+import { ModelLoader } from "@/components/ui/input/model-loader";
 
 interface ModelSelectDropdownProps {
   model: string;
@@ -100,10 +101,7 @@ export function ModelSelectDropdown({
           disabled={isLoading && !displayModel}
         >
           {isLoading && !displayModel ? (
-            <>
-              <div className="w-4 h-4 rounded-full bg-current opacity-20 animate-pulse" />
-              <div className="w-20 h-4 rounded bg-current opacity-20 animate-pulse" />
-            </>
+            <ModelLoader variant={variant} />
           ) : (
             <>
               {getModelIcon(displayModel)}

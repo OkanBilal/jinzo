@@ -1,10 +1,8 @@
-import { useState, useRef, type MouseEvent } from "react";
-import { Muted, Timestamp } from "@/components/ui/text";
+import { useState, useRef, type MouseEvent, type ReactNode } from "react";
+import { Muted } from "@/components/ui/text";
 import {
   Trash,
   Option,
-  Layers,
-  Check,
   Connect,
   Branch,
   Archive,
@@ -18,6 +16,8 @@ import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspacesApi";
 import Tooltip from "@/components/ui/tooltip";
 
+type GroupingMode = "none" | "status" | "project";
+
 interface WorkspaceItemProps {
   id: string;
   name: string;
@@ -26,6 +26,8 @@ interface WorkspaceItemProps {
   updatedAt?: Date;
   isActive?: boolean;
   projectId?: string | null;
+  projectIcon?: ReactNode;
+  grouping?: GroupingMode;
   onClick?: () => void;
   onDelete?: (e: MouseEvent) => void;
   onLinkIssues?: () => void;
@@ -41,6 +43,8 @@ export default function WorkspaceItem({
   updatedAt,
   isActive = false,
   projectId,
+  projectIcon,
+  grouping = "none",
   onClick,
   onDelete,
   onLinkIssues,
@@ -103,7 +107,11 @@ export default function WorkspaceItem({
       >
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <Branch className="size-3.5 text-primary-800 dark:text-primary-400 mt-0.5 shrink-0" />
+            {grouping !== "project" && (
+              <span className="shrink-0 mt-0.5">
+                {projectIcon ?? <Branch className="size-3.5 text-primary-800 dark:text-primary-400" />}
+              </span>
+            )}
             <span
               className={`truncate text-sm font-medium ${
                 isActive
@@ -116,14 +124,16 @@ export default function WorkspaceItem({
           </div>
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5">
-              <Tooltip content={statusConfig.label} position="top-right">
-              <span title={statusConfig.label} className="shrink-0 flex items-center">
-                <WorkspaceStatusIcon
-                  status={status}
-                  className={`size-2.75 ${statusConfig.iconColor}`}
-                />
-              </span>
-              </Tooltip>
+              {grouping !== "status" ? (
+                <Tooltip content={statusConfig.label} position="top-right">
+                <span title={statusConfig.label} className="shrink-0 flex items-center">
+                  <WorkspaceStatusIcon
+                    status={status}
+                    className={`size-2.75 ${statusConfig.iconColor}`}
+                  />
+                </span>
+                </Tooltip>
+              ) : <span className="size-2.75 mr-2 flex items-center"/>}
               {branch && (
                 <Muted className="text-[13px]  text-primary-900 dark:text-primary-200! truncate">
                   {branch}

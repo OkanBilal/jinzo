@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { toast } from "@/components/ui/toast";
 import { useDarkMode } from "../../../hooks/use-dark-mode";
@@ -200,13 +200,13 @@ function UpdateButton({
   switch (state.status) {
     case "checking":
       return (
-        <Button variant="ghost" disabled isLoading>
+        <Button type="button" variant="ghost" disabled isLoading>
           Checking...
         </Button>
       );
     case "available":
       return (
-        <Button variant="submit" size="md" onClick={onDownload}>
+        <Button type="button" variant="submit" size="md" onClick={onDownload}>
           Download v{state.info?.version}
         </Button>
       );
@@ -226,7 +226,7 @@ function UpdateButton({
       );
     case "downloaded":
       return (
-        <Button variant="submit" size="md" onClick={onInstall}>
+        <Button type="button" variant="submit" size="md" onClick={onInstall}>
           Restart &amp; Install
         </Button>
       );
@@ -234,7 +234,7 @@ function UpdateButton({
       return (
         <div className="flex items-center gap-2">
           <span className="text-xs text-red-500">{state.error}</span>
-          <Button variant="ghost" size="md" onClick={onCheck}>
+          <Button type="button" variant="ghost" size="md" onClick={onCheck}>
             Retry
           </Button>
         </div>
@@ -245,14 +245,14 @@ function UpdateButton({
           <span className="text-xs text-primary-500 dark:text-primary-400">
             Up to date
           </span>
-          <Button variant="ghost" size="md" onClick={onCheck}>
+          <Button type="button" variant="ghost" size="md" onClick={onCheck}>
             Check Again
           </Button>
         </div>
       );
     default:
       return (
-        <Button variant="ghost" size="md" onClick={onCheck}>
+        <Button type="button" variant="ghost" size="md" onClick={onCheck}>
           Check for Updates
         </Button>
       );
@@ -304,9 +304,7 @@ export default function GeneralSettings() {
     }
   }, [activeMood?.themeConfig]);
 
-  const [prevAccount, setPrevAccount] = useState(account);
-  if (account !== prevAccount) {
-    setPrevAccount(account);
+  useEffect(() => {
     if (account) {
       setForm({
         displayName: account.displayName ?? "",
@@ -321,7 +319,7 @@ export default function GeneralSettings() {
       });
       setIsDirty(false);
     }
-  }
+  }, [account]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer } from "react";
+import { useState, useEffect, useMemo, useReducer } from "react";
 import { Heading2, Heading3, Muted } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
@@ -9,12 +9,19 @@ import {
   useUpdateProjectMutation,
 } from "@/lib/redux/api";
 import { SettingsRow, SettingsDivider } from "../settings-layout";
+import MoodIconPicker from "@/components/layout/sidebar/mood-icon-picker";
+import { parseIcon } from "@/lib/icon-registry";
+
+type IconPickerMode = "emoji" | "icon";
 
 interface FormState {
   defaultBranch: string;
   setupScript: string;
   runScript: string;
   archiveScript: string;
+  icon: string;
+  iconMode: IconPickerMode;
+  isIconPickerOpen: boolean;
   isDirty: boolean;
   liveBranches: string[];
   prevProject: any;
@@ -23,14 +30,35 @@ interface FormState {
 type FormAction =
   | { type: "SYNC_PROJECT"; project: any }
   | { type: "SET_FIELD"; field: "defaultBranch" | "setupScript" | "runScript" | "archiveScript"; value: string }
+  | { type: "SET_ICON"; icon: string; iconMode: IconPickerMode }
+  | { type: "SET_ICON_PICKER_OPEN"; isOpen: boolean }
+  | { type: "SET_ICON_MODE"; iconMode: IconPickerMode }
   | { type: "SET_BRANCHES"; branches: string[] }
   | { type: "MARK_CLEAN" };
+
+function parseProjectIcon(iconStr: string | null | undefined): { icon: string; iconMode: IconPickerMode } {
+  if (!iconStr) return { icon: "", iconMode: "emoji" };
+  if (iconStr.startsWith("icon:")) {
+    return { icon: iconStr.replace("icon:", ""), iconMode: "icon" };
+  }
+  if (iconStr.startsWith("emoji:")) {
+    return { icon: iconStr.replace("emoji:", ""), iconMode: "emoji" };
+  }
+  const parsed = parseIcon(iconStr);
+  if (parsed.type === "icon" || parsed.type === "copilot-animate" || parsed.type === "claude-animate") {
+    return { icon: iconStr.toLowerCase(), iconMode: "icon" };
+  }
+  return { icon: typeof parsed.value === "string" ? parsed.value : "", iconMode: "emoji" };
+}
 
 const initialState: FormState = {
   defaultBranch: "",
   setupScript: "",
   runScript: "",
   archiveScript: "",
+  icon: "",
+  iconMode: "emoji",
+  isIconPickerOpen: false,
   isDirty: false,
   liveBranches: [],
   prevProject: undefined,
@@ -38,7 +66,8 @@ const initialState: FormState = {
 
 function formReducer(state: FormState, action: FormAction): FormState {
   switch (action.type) {
-    case "SYNC_PROJECT":
+    case "SYNC_PROJECT": {
+      const { icon, iconMode } = parseProjectIcon(action.project?.icon);
       return {
         ...state,
         prevProject: action.project,
@@ -46,10 +75,20 @@ function formReducer(state: FormState, action: FormAction): FormState {
         setupScript: action.project?.setupScript ?? "",
         runScript: action.project?.runScript ?? "",
         archiveScript: action.project?.archiveScript ?? "",
+        icon,
+        iconMode,
+        isIconPickerOpen: false,
         isDirty: false,
       };
+    }
     case "SET_FIELD":
       return { ...state, [action.field]: action.value, isDirty: true };
+    case "SET_ICON":
+      return { ...state, icon: action.icon, iconMode: action.iconMode, isIconPickerOpen: false, isDirty: true };
+    case "SET_ICON_PICKER_OPEN":
+      return { ...state, isIconPickerOpen: action.isOpen };
+    case "SET_ICON_MODE":
+      return { ...state, iconMode: action.iconMode };
     case "SET_BRANCHES":
       return { ...state, liveBranches: action.branches };
     case "MARK_CLEAN":
@@ -66,7 +105,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   const [updateProject, { isLoading: saving }] = useUpdateProjectMutation();
 
   const [state, dispatch] = useReducer(formReducer, initialState);
-  const { defaultBranch, setupScript, runScript, archiveScript, isDirty, liveBranches } = state;
+  const { defaultBranch, setupScript, runScript, archiveScript, icon, iconMode, isIconPickerOpen, isDirty, liveBranches } = state;
 
   // Sync form state when project data loads
   if (project !== state.prevProject) {
@@ -106,6 +145,12 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   const handleSave = async () => {
     if (saving || !project) return;
     try {
+      const iconValue = icon
+        ? iconMode === "icon"
+          ? `icon:${icon}`
+          : `emoji:${icon}`
+        : null;
+
       await updateProject({
         id: project.id,
         payload: {
@@ -113,6 +158,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
           setupScript: setupScript || undefined,
           runScript: runScript || undefined,
           archiveScript: archiveScript || undefined,
+          icon: iconValue,
         },
       }).unwrap();
       dispatch({ type: "MARK_CLEAN" });
@@ -173,6 +219,27 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
 
       <SettingsRow
         variant="detail"
+        title="Icon"
+        description="Choose an emoji or icon for this project."
+      >
+        <MoodIconPicker
+          useFixedBackground
+          icon={icon}
+          iconMode={iconMode}
+          isOpen={isIconPickerOpen}
+          onToggle={() => dispatch({ type: "SET_ICON_PICKER_OPEN", isOpen: !isIconPickerOpen })}
+          onSelectEmoji={(emoji) => dispatch({ type: "SET_ICON", icon: emoji, iconMode: "emoji" })}
+          onSelectIcon={(name) => dispatch({ type: "SET_ICON", icon: name, iconMode: "icon" })}
+          onSwitchMode={(mode) => dispatch({ type: "SET_ICON_MODE", iconMode: mode })}
+          onClose={() => dispatch({ type: "SET_ICON_PICKER_OPEN", isOpen: false })}
+          onClear={() => dispatch({ type: "SET_ICON", icon: "", iconMode: "emoji" })}
+        />
+      </SettingsRow>
+
+      <SettingsDivider />
+
+      <SettingsRow
+        variant="detail"
         title="Root path"
         description="Do not move or delete this directory."
       >
@@ -197,7 +264,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
         )}
       </SettingsRow>
 
-      {/* 
+      {/*
       TODO: will be back
             <SettingsDivider />
 
@@ -309,5 +376,3 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     </div>
   );
 }
-
-

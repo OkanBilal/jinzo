@@ -59,22 +59,24 @@ export default function ClaudePage() {
         )}
       </div>
       {/* <WorkspaceQuickActions  onSetGoal={ws.setGoal} /> */}
-      <WorkspaceInput
-        goal={ws.goal}
-        onGoalChange={ws.setGoal}
-        onSubmit={ws.handleExecute}
-        isLoading={ws.isLoading}
-        activeRun={ws.activeRun}
-        canResume={ws.canResume ?? false}
-        providerId={CLAUDE_PROVIDER_ID}
-        selectedModel={ws.selectedModel}
-        onModelChange={ws.handleModelChange}
-        contextFiles={ws.contextFiles}
-        onRemoveContextFile={ws.handleRemoveContextFile}
-        contextIssues={ws.contextIssues}
-        onRemoveContextIssue={ws.handleRemoveContextIssue}
-        workspacePath={ws.currentWorkspace?.rootPath}
-      />
+      {ws.showInput && (
+        <WorkspaceInput
+          goal={ws.goal}
+          onGoalChange={ws.setGoal}
+          onSubmit={ws.handleExecute}
+          isLoading={ws.isLoading}
+          activeRun={ws.activeRun}
+          canResume={ws.canResume ?? false}
+          providerId={CLAUDE_PROVIDER_ID}
+          selectedModel={ws.selectedModel}
+          onModelChange={ws.handleModelChange}
+          contextFiles={ws.contextFiles}
+          onRemoveContextFile={ws.handleRemoveContextFile}
+          contextIssues={ws.contextIssues}
+          onRemoveContextIssue={ws.handleRemoveContextIssue}
+          workspacePath={ws.currentWorkspace?.rootPath}
+        />
+      )}
     </div>
   );
 }

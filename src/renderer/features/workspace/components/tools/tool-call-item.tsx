@@ -5,6 +5,7 @@ import { getToolType } from "../../utils/group-tool-calls";
 import { TodoListDisplay, type TodoItem } from "./todo-list-display";
 import { TaskDisplay, type TaskParams } from "./task-display";
 import { ExitPlanDisplay, type ExitPlanParams } from "./exit-plan-display";
+import { WriteDisplay, type WriteParams } from "./write-display";
 
 interface ToolCallItemProps {
   event: RunEvent;
@@ -52,6 +53,19 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
         ? (params as TaskParams)
         : { description: summary };
     return <TaskDisplay params={taskParams} />;
+  }
+
+  // Show WriteDisplay for write/create file tool calls
+  if (toolName.toLowerCase() === "write" || toolName.toLowerCase() === "writeifempty" || toolName.toLowerCase() === "create_file") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const writeParams: WriteParams = metadataInput
+      ? (metadataInput as WriteParams)
+      : params
+        ? (params as WriteParams)
+        : { file_path: summary };
+    return <WriteDisplay params={writeParams} />;
   }
 
   if (isCompact) {

@@ -15,25 +15,31 @@ import {
 import type { SettingsSection } from "@/features/chat/components/input/types";
 import { Claude } from "@/components/ui/icons/mood";
 import { useGetProjectsQuery } from "@/lib/redux/api";
+import { parseIcon, type IconComponent } from "@/lib/icon-registry";
 
 interface SettingsViewProps {
   onClose: () => void;
 }
 
-const menuItems: Array<{
+type MenuItem = {
   id: SettingsSection;
   label: string;
   icon: React.ElementType | null;
-}> = [
+};
+
+const menuItems: Array<MenuItem> = [
   { id: "general", label: "General", icon: General },
-  { id: "claude", label: "Claude Agent", icon: Claude },
-  { id: "copilot", label: "Copilot", icon: CopilotStatic },
+  { id: "personalization", label: "Personalization", icon: Personalize },
   { id: "git", label: "Git", icon: Branch },
   { id: "apps", label: "Connections", icon: Apps },
-  { id: "personalization", label: "Personalization", icon: Personalize },
   // { id: "notifications", label: "Notifications", icon: Bell },
   // { id: "schedules", label: "Schedules", icon: Calendar },
   // { id: "security", label: "Security", icon: Security },
+];
+
+const providerItems: Array<MenuItem> = [
+  { id: "claude", label: "Claude Agent", icon: Claude },
+  { id: "copilot", label: "Copilot", icon: CopilotStatic },
 ];
 
 export default function SettingsView({ onClose }: SettingsViewProps) {
@@ -69,7 +75,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                 key={item.id}
                 style={{ animationDelay: `${index * 0.05}s` }}
                 onClick={() => handleSectionClick(item.id)}
-                className={`w-full animate-slide-in cursor-pointer text-left px-3 py-3 rounded-xl text-sm transition-all flex items-center gap-3
+                className={`w-full animate-slide-in cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-all flex items-center gap-3
                   ${
                     isActive
                       ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
@@ -88,32 +94,85 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
           })}
         </nav>
 
+        {/* Providers section */}
+        <div className="mt-6">
+          <div
+            className="px-3 mb-2 animate-slide-in"
+            style={{ animationDelay: `${menuItems.length * 0.05}s` }}
+          >
+            <span className="text-xs font-medium text-primary-900 dark:text-primary-400">
+              Providers
+            </span>
+          </div>
+          <div className="space-y-0.5">
+            {providerItems.map((item, index) => {
+              const IconComponent = item.icon;
+              const isActive = isOnSettingsPage && activeSection === item.id;
+              return (
+                <Button
+                  key={item.id}
+                  style={{
+                    animationDelay: `${(menuItems.length + 1 + index) * 0.05}s`,
+                  }}
+                  onClick={() => handleSectionClick(item.id)}
+                  className={`w-full animate-slide-in cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-all flex items-center gap-3
+                    ${
+                      isActive
+                        ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
+                        : "text-primary-900 dark:text-primary-200 bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
+                    }
+                    hover:scale-[1.01] active:scale-99`}
+                >
+                  {IconComponent ? (
+                    <IconComponent className={`w-4.5 h-4.5 `} />
+                  ) : (
+                    <div className="w-4.5 h-4.5 rounded bg-primary-300 dark:bg-primary-700" />
+                  )}
+                  <span className="font-medium">{item.label}</span>
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Projects section */}
         {projects.length > 0 && (
           <div className="mt-6">
             <div
               className="px-3 mb-2 animate-slide-in"
-              style={{ animationDelay: `${menuItems.length * 0.05}s` }}
+              style={{
+                animationDelay: `${(menuItems.length + providerItems.length + 1) * 0.05}s`,
+              }}
             >
               <span className="text-xs font-medium text-primary-900 dark:text-primary-400">
                 Projects
               </span>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {projects.map((project, index) => {
                 const isActive =
                   isOnSettingsPage &&
                   activeSection === "projects" &&
                   activeId === project.id;
+                const parsed = project.icon ? parseIcon(project.icon) : null;
                 const initial = (project.name?.[0] ?? "P").toUpperCase();
+                let iconContent: React.ReactNode;
+                if (parsed && (parsed.type === "icon" || parsed.type === "copilot-animate" || parsed.type === "claude-animate")) {
+                  const IconComp = parsed.value as IconComponent;
+                  iconContent = <IconComp className="size-4" />;
+                } else if (parsed && parsed.type === "emoji") {
+                  iconContent = <span className="text-sm leading-none">{parsed.value as string}</span>;
+                } else {
+                  iconContent = initial;
+                }
                 return (
                   <Button
                     key={project.id}
-                    style={{ animationDelay: `${(menuItems.length + 1 + index) * 0.05}s` }}
+                    style={{
+                      animationDelay: `${(menuItems.length + providerItems.length + 2 + index) * 0.05}s`,
+                    }}
                     onClick={() =>
-                      navigate(
-                        `/settings?section=projects&id=${project.id}`,
-                      )
+                      navigate(`/settings?section=projects&id=${project.id}`)
                     }
                     className={`w-full animate-slide-in cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-all flex items-center gap-2
                       ${
@@ -124,14 +183,12 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                       hover:scale-[1.01] active:scale-99`}
                   >
                     <div
-                      className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-medium text-primary-950 dark:text-primary-200 
-                        shrink-0 border border-primary-950/40 dark:border-primary/10`}
+                      className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-medium text-primary-950 dark:text-primary-200
+                        shrink-0 ${!parsed ? "border border-primary-950/40 dark:border-primary/10" : ""}`}
                     >
-                      {initial}
+                      {iconContent}
                     </div>
-                    <span className="font-medium truncate">
-                      {project.name}
-                    </span>
+                    <span className="font-medium truncate">{project.name}</span>
                   </Button>
                 );
               })}

@@ -16,6 +16,7 @@ const ALLOWED_CREATE_FIELDS = new Set([
   "setupScript",
   "runScript",
   "archiveScript",
+  "icon",
 ]);
 
 const ALLOWED_UPDATE_FIELDS = new Set([
@@ -28,6 +29,7 @@ const ALLOWED_UPDATE_FIELDS = new Set([
   "setupScript",
   "runScript",
   "archiveScript",
+  "icon",
 ]);
 
 export function validateCreateProject(

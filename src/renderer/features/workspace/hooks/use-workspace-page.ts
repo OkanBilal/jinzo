@@ -292,6 +292,11 @@ export function useWorkspacePage(providerId: string) {
     openIssueTabs.length === 0 &&
     openNoteTabs.length === 0;
 
+  // Show input only on run tabs or empty state (hide for editor/issue/note tabs)
+  const showInput =
+    showEmptyState ||
+    (activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab));
+
   return {
     // State
     goal,
@@ -312,6 +317,7 @@ export function useWorkspacePage(providerId: string) {
     eventsEndRef,
     currentWorkspace,
     showEmptyState,
+    showInput,
     // Handlers
     handleModelChange,
     handleExecute,
