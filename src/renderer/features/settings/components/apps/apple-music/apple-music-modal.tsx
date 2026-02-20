@@ -187,7 +187,11 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
 // Step: Select Resources
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SelectResourcesStepComponent({ onComplete }: { onComplete: () => void }) {
+function SelectResourcesStepComponent({
+  onComplete,
+}: {
+  onComplete: () => void;
+}) {
   const { data, setData, errors, setErrors, goTo } =
     useWizard<AppleMusicWizardData>();
   const [loading, setLoading] = useState(false);
@@ -198,7 +202,7 @@ function SelectResourcesStepComponent({ onComplete }: { onComplete: () => void }
   const selectedResources = data.selectedResources || [];
 
   const availableSources = ALL_SOURCES.filter(
-    (s) => !data.currentResources?.some((r: any) => r.source === s.id)
+    (s) => !data.currentResources?.some((r: any) => r.source === s.id),
   );
 
   const toggleResource = (resourceId: string | number) => {
@@ -246,7 +250,8 @@ function SelectResourcesStepComponent({ onComplete }: { onComplete: () => void }
       }
     } catch (err: any) {
       setErrors({
-        resources: err?.data?.error || err?.message || "Failed to save resources",
+        resources:
+          err?.data?.error || err?.message || "Failed to save resources",
       });
     } finally {
       setLoading(false);
@@ -317,11 +322,11 @@ function ManageResourcesStepComponent({ onRevoke }: { onRevoke: () => void }) {
 
     try {
       const currentResourceIds = new Set(
-        data.currentResources?.map((r: any) => r.source) || []
+        data.currentResources?.map((r: any) => r.source) || [],
       );
 
       const availableSources = ALL_SOURCES.filter(
-        (s) => !currentResourceIds.has(s.id)
+        (s) => !currentResourceIds.has(s.id),
       );
 
       if (availableSources.length === 0) {
@@ -375,7 +380,11 @@ const AppleMusicModal = ({
   isConnected,
   onSuccess,
 }: AppleMusicModalProps) => {
-  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<AppleMusicWizardData> };
+  type InitState = {
+    initializing: boolean;
+    targetStep: StepId | null;
+    data: Partial<AppleMusicWizardData>;
+  };
   const [initState, setInitState] = useReducer(
     (_: InitState, next: InitState) => next,
     { initializing: true, targetStep: null, data: {} },
@@ -427,7 +436,11 @@ const AppleMusicModal = ({
         }
       }
 
-      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
+      setInitState({
+        initializing: false,
+        targetStep: finalStep,
+        data: finalData,
+      });
     };
 
     loadInitialData();

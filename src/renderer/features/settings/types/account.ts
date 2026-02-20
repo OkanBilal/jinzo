@@ -1,8 +1,8 @@
-import { EMPTY_FORM } from "../components/account";
 import { ReactNode } from "react";
 
-
-export type AccountFormValues = typeof EMPTY_FORM;
+export type AccountFormValues = {
+  [key: string]: any;
+};
 
 export type AccountResponse = AccountFormValues & {
   id: string;

@@ -1,13 +1,4 @@
-/**
- * Normalize a repository URL to an "owner/repo" slug.
- *
- * Handles:
- *  - git@github.com:OkanBilal/feed.git   → OkanBilal/feed
- *  - https://github.com/OkanBilal/feed.git → OkanBilal/feed
- *  - https://github.com/OkanBilal/feed     → OkanBilal/feed
- *
- * Returns null if the URL doesn't match a known pattern.
- */
+
 export function normalizeRepoUrl(repoUrl: string | null | undefined): string | null {
   if (!repoUrl) return null;
 

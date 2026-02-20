@@ -8,6 +8,7 @@ import {
   useGetProjectByIdQuery,
   useUpdateProjectMutation,
 } from "@/lib/redux/api";
+import { SettingsRow, SettingsDivider } from "../settings-layout";
 
 interface ProjectDetailProps {
   id: string;
@@ -135,6 +136,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       </div>
 
       <SettingsRow
+        variant="detail"
         title="Root path"
         description="Do not move or delete this directory."
       >
@@ -144,6 +146,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       <SettingsDivider />
 
       <SettingsRow
+        variant="detail"
         title="Workspaces path"
         description={
           project.workspacesPath
@@ -197,6 +200,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       <SettingsDivider />
 
       <SettingsRow
+        variant="detail"
         title="Setup script"
         description="Runs when a new workspace is created."
       >
@@ -208,13 +212,14 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
           }}
           placeholder="e.g., npm install"
           rows={2}
-          className="min-w-0"
+          className="min-w-0 "
         />
       </SettingsRow>
 
       <SettingsDivider />
 
       <SettingsRow
+        variant="detail"
         title="Run script"
         description="Runs when a workspace session starts."
       >
@@ -233,6 +238,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       <SettingsDivider />
 
       <SettingsRow
+        variant="detail"
         title="Archive script"
         description="Runs when a workspace is archived."
       >
@@ -280,34 +286,4 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   );
 }
 
-function SettingsRow({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-start justify-between py-7 gap-8">
-      <div className="shrink-0 w-80">
-        <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100">
-          {title}
-        </h3>
-        {description && (
-          <p className="text-sm text-primary-500 dark:text-primary-500 mt-1.5">
-            {description}
-          </p>
-        )}
-      </div>
-      <div className="flex-1  text-right flex justify-end">{children}</div>
-    </div>
-  );
-}
 
-function SettingsDivider() {
-  return (
-    <div className="border-b border-primary-200 dark:border-primary-800/50" />
-  );
-}

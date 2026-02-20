@@ -3,6 +3,7 @@ import { Heading2, Muted } from "../../../components/ui/text";
 import { Toggle } from "../../../components/ui/toggle";
 import { Button } from "../../../components/ui/button";
 import { toast } from "@/components/ui/toast";
+import { SettingsRow, SettingsDivider } from "./settings-layout";
 import {
   useGetProviderByIdQuery,
   useUpdateProviderMutation,
@@ -260,39 +261,10 @@ export default function ClaudeSettings() {
       <StructuredOutputsModal
         isOpen={isStructuredOutputsModalOpen}
         onClose={() => setIsStructuredOutputsModalOpen(false)}
+        providerId="claude_code"
       />
     </div>
   );
 }
 
-function SettingsRow({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between py-7">
-      <div className="flex-1 pr-8">
-        <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100">
-          {title}
-        </h3>
-        {description && (
-          <p className="text-sm text-primary-500 dark:text-primary-500 mt-1.5">
-            {description}
-          </p>
-        )}
-      </div>
-      <div className="shrink-0">{children}</div>
-    </div>
-  );
-}
 
-function SettingsDivider() {
-  return (
-    <div className="border-b border-primary-200 dark:border-primary-800/50" />
-  );
-}

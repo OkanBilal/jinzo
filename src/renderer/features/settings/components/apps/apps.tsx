@@ -187,7 +187,10 @@ export default function AppsSettings({
         isConnected={isConnected("spotify")}
       />
 
-      <RssModal open={activeModal === "rss"} onClose={() => setActiveModal(null)} />
+      <RssModal
+        open={activeModal === "rss"}
+        onClose={() => setActiveModal(null)}
+      />
     </div>
   );
 }

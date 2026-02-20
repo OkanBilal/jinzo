@@ -1,13 +1,6 @@
 import { useReducer, useSyncExternalStore, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import {
-  Close,
-  Trash,
-  Edit,
-  Plus,
-  Asterisk,
-  Duplicate,
-} from "@/components/ui/icons";
+import { Close, Trash, Edit, Asterisk, Duplicate } from "@/components/ui/icons";
 import { Heading3, Body, Muted } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -39,7 +32,13 @@ function schemaToProperties(schema: Record<string, unknown>): SchemaProperty[] {
     } else if (def?.type) {
       type = def.type as SchemaProperty["type"];
     }
-    return { id: crypto.randomUUID(), name, type, isArray, isRequired: required.includes(name) };
+    return {
+      id: crypto.randomUUID(),
+      name,
+      type,
+      isArray,
+      isRequired: required.includes(name),
+    };
   });
 }
 
@@ -76,7 +75,10 @@ interface ModalState {
   prevOpen: boolean;
 }
 
-const mergeState = (prev: ModalState, next: Partial<ModalState>): ModalState => ({
+const mergeState = (
+  prev: ModalState,
+  next: Partial<ModalState>,
+): ModalState => ({
   ...prev,
   ...next,
 });
@@ -84,6 +86,8 @@ const mergeState = (prev: ModalState, next: Partial<ModalState>): ModalState => 
 interface StructuredOutputsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  providerId: string;
+  enableFlag?: boolean;
 }
 
 const emptySubscribe = () => () => {};
@@ -91,6 +95,8 @@ const emptySubscribe = () => () => {};
 export function StructuredOutputsModal({
   isOpen,
   onClose,
+  providerId,
+  enableFlag = false,
 }: StructuredOutputsModalProps) {
   const isBrowser = useSyncExternalStore(
     emptySubscribe,
@@ -98,7 +104,7 @@ export function StructuredOutputsModal({
     () => false,
   );
 
-  const { data: provider } = useGetProviderByIdQuery("claude_code");
+  const { data: provider } = useGetProviderByIdQuery(providerId);
   const [updateProvider] = useUpdateProviderMutation();
   const config = (provider?.config ?? {}) as Record<string, unknown>;
 
@@ -120,7 +126,16 @@ export function StructuredOutputsModal({
     renameValue: "",
     prevOpen: false,
   });
-  const { activeTab, editingId, editorName, editorProperties, isSaving, deleteTargetId, renamingId, renameValue } = state;
+  const {
+    activeTab,
+    editingId,
+    editorName,
+    editorProperties,
+    isSaving,
+    deleteTargetId,
+    renamingId,
+    renameValue,
+  } = state;
   const renameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -151,12 +166,15 @@ export function StructuredOutputsModal({
   ) {
     try {
       await updateProvider({
-        id: "claude_code",
+        id: providerId,
         payload: {
           config: {
             ...config,
             structuredOutputs: newEntries,
             structuredOutputsSelectedId: newSelectedId,
+            ...(enableFlag && {
+              structuredOutputEnabled: newSelectedId !== null,
+            }),
           },
         },
       }).unwrap();
@@ -168,13 +186,23 @@ export function StructuredOutputsModal({
   // ─── Editor helpers ───
 
   function openNewEditor() {
-    updateState({ editingId: null, editorName: "", editorProperties: [], activeTab: "editor" });
+    updateState({
+      editingId: null,
+      editorName: "",
+      editorProperties: [],
+      activeTab: "editor",
+    });
   }
 
   function openEditEditor(id: string) {
     const entry = entries[id];
     if (!entry) return;
-    updateState({ editingId: id, editorName: entry.name, editorProperties: schemaToProperties(entry.schema), activeTab: "editor" });
+    updateState({
+      editingId: id,
+      editorName: entry.name,
+      editorProperties: schemaToProperties(entry.schema),
+      activeTab: "editor",
+    });
   }
 
   // ─── Property row handlers ───
@@ -183,7 +211,13 @@ export function StructuredOutputsModal({
     updateState({
       editorProperties: [
         ...editorProperties,
-        { id: crypto.randomUUID(), name: "", type: "string", isArray: false, isRequired: false },
+        {
+          id: crypto.randomUUID(),
+          name: "",
+          type: "string",
+          isArray: false,
+          isRequired: false,
+        },
       ],
     });
   }
@@ -198,7 +232,9 @@ export function StructuredOutputsModal({
   }
 
   function handleRemoveProperty(index: number) {
-    updateState({ editorProperties: editorProperties.filter((_, i) => i !== index) });
+    updateState({
+      editorProperties: editorProperties.filter((_, i) => i !== index),
+    });
   }
 
   // ─── Save ───
@@ -248,7 +284,12 @@ export function StructuredOutputsModal({
 
       await persistConfig(newEntries, selectedId);
       toast.success(editingId ? "Schema updated" : "Schema created");
-      updateState({ activeTab: "schemas", editingId: null, editorName: "", editorProperties: [] });
+      updateState({
+        activeTab: "schemas",
+        editingId: null,
+        editorName: "",
+        editorProperties: [],
+      });
     } finally {
       updateState({ isSaving: false });
     }
@@ -285,7 +326,13 @@ export function StructuredOutputsModal({
     const newSelectedId = selectedId === deleteTargetId ? null : selectedId;
     await persistConfig(rest, newSelectedId);
     if (editingId === deleteTargetId) {
-      updateState({ editingId: null, editorName: "", editorProperties: [], activeTab: "schemas", deleteTargetId: null });
+      updateState({
+        editingId: null,
+        editorName: "",
+        editorProperties: [],
+        activeTab: "schemas",
+        deleteTargetId: null,
+      });
     } else {
       updateState({ deleteTargetId: null });
     }
@@ -324,7 +371,11 @@ export function StructuredOutputsModal({
 
   return createPortal(
     <div className="fixed inset-0 z-100 flex items-center justify-center">
-      <div className="absolute inset-0 bg-primary-950/70" role="presentation" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-primary-950/70"
+        role="presentation"
+        onClick={onClose}
+      />
       <div
         className="relative z-40 w-full max-w-180 glass-morphism h-120 rounded-3xl animate-dropdown-in "
         role="dialog"
@@ -410,18 +461,20 @@ export function StructuredOutputsModal({
                     >
                       <RadioDot active={selectedId === entry.id} />
                       {renamingId === entry.id ? (
-                        <input
+                        <Input
                           ref={renameInputRef}
                           value={renameValue}
-                          onChange={(e) => updateState({ renameValue: e.target.value })}
+                          onChange={(e) =>
+                            updateState({ renameValue: e.target.value })
+                          }
                           onKeyDown={(e) => {
                             if (e.key === "Enter")
                               handleRenameConfirm(entry.id);
-                            if (e.key === "Escape") updateState({ renamingId: null });
+                            if (e.key === "Escape")
+                              updateState({ renamingId: null });
                           }}
                           onBlur={() => handleRenameConfirm(entry.id)}
                           onClick={(e) => e.stopPropagation()}
-                          className="flex-1 min-w-0 bg-transparent border-b border-primary-400 dark:border-primary-600 outline-none text-sm"
                         />
                       ) : (
                         <span className="truncate">{entry.name}</span>
@@ -446,19 +499,10 @@ export function StructuredOutputsModal({
                       >
                         <Duplicate className="size-4" />
                       </Button>
-                      {/* <Button
-                        tooltip="Rename Schema"
-                        onClick={() => {
-                          setRenameValue(entry.name);
-                          setRenamingId(entry.id);
-                        }}
-                        className="p-1 rounded hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors cursor-pointer text-xs font-medium"
-                        title="Rename"
-                      >
-                        Aa
-                      </Button> */}
                       <button
-                        onClick={() => updateState({ deleteTargetId: entry.id })}
+                        onClick={() =>
+                          updateState({ deleteTargetId: entry.id })
+                        }
                         className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-colors cursor-pointer"
                         title="Delete"
                       >
@@ -496,7 +540,7 @@ export function StructuredOutputsModal({
                   value={editorName}
                   onChange={(e) => updateState({ editorName: e.target.value })}
                   placeholder="Schema name"
-                  className="w-full p-2 mb-2 dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
+                  className="w-full mb-2  "
                 />
                 <div className="space-y-3 flex-col">
                   <Body className="mt-1 mb-2">Property</Body>
@@ -620,7 +664,7 @@ function PropertyRow({ property, onUpdate, onRemove }: PropertyRowProps) {
           onChange={(e) => onUpdate({ name: e.target.value })}
           placeholder="Property name"
           hasError={isNameEmpty}
-          className="py-2.5 dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900"
+          className="py-2.5 "
         />
       </div>
       <div className="w-52 shrink-0">

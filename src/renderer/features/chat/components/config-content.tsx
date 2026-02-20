@@ -4,7 +4,7 @@ import { Toggle } from "@/components/ui/toggle";
 import Select from "@/components/ui/select";
 import { StopSequenceInput } from "./stop-sequence-input";
 import { StructuredOutput } from "./structured-output-toggle";
-import { StructuredOutputModal } from "./structured-output-modal";
+import { StructuredOutputsModal } from "../../settings/components/structured-outputs-modal";
 import { useChatPanelConfig } from "@/features/chat/components/use-chat-panel-config";
 
 export function ConfigContent() {
@@ -122,9 +122,11 @@ export function ConfigContent() {
           />
         </ConfigSection>
       </div>
-      <StructuredOutputModal
+      <StructuredOutputsModal
         isOpen={isStructuredOutputModalOpen}
         onClose={() => setIsStructuredOutputModalOpen(false)}
+        providerId="ollama"
+        enableFlag
       />
     </div>
   );

@@ -10,6 +10,7 @@ import Select from "@/components/ui/select";
 import { cn } from "@/lib/cn";
 import { defaultTheme } from "@/lib/theme";
 import { useGetAccountQuery, useUpdateAccountMutation } from "@/lib/redux/api";
+import { SettingsRow, SettingsDivider } from "./settings-layout";
 
 export const EMPTY_FORM = {
   displayName: "",
@@ -398,34 +399,4 @@ export default function GeneralSettings() {
   );
 }
 
-function SettingsRow({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between py-7">
-      <div className="flex-1 pr-8">
-        <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100">
-          {title}
-        </h3>
-        {description && (
-          <p className="text-sm text-primary-500 dark:text-primary-500 mt-1.5">
-            {description}
-          </p>
-        )}
-      </div>
-      <div className="shrink-0">{children}</div>
-    </div>
-  );
-}
 
-function SettingsDivider() {
-  return (
-    <div className="border-b border-primary-200 dark:border-primary-800/50" />
-  );
-}

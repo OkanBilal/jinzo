@@ -132,7 +132,6 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
   return (
     <div className="px-1 py-4 space-y-6">
       <div className="space-y-4">
-        {/* Domain field */}
         <div className="space-y-2">
           <label
             htmlFor="gitlab-domain"
@@ -149,7 +148,6 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
               setData({ domain: e.target.value });
               if (errors.domain) setErrors({ domain: "" });
             }}
-            className="w-full px-3 py-2.5 dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
           />
           <p className="text-xs text-primary-500 dark:text-primary-400">
             Leave empty for gitlab.com, or enter your self-hosted domain (e.g. gitlab.yourcompany.com)
@@ -159,7 +157,6 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
           )}
         </div>
 
-        {/* Token field */}
         <div className="space-y-2">
           <label
             htmlFor="gitlab-token"
@@ -176,7 +173,6 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
               setData({ token: e.target.value });
               if (errors.token) setErrors({ token: "" });
             }}
-            className="w-full px-3 py-2.5 dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
           />
           {errors.token && (
             <p className="text-sm text-red-500">{errors.token}</p>

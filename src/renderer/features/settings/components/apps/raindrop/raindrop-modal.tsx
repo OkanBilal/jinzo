@@ -374,7 +374,6 @@ export default function RaindropModal({
       return;
     }
 
-    // Don't re-initialize if already done (e.g., when isConnected changes after token save)
     if (initState.hasInitialized) {
       return;
     }

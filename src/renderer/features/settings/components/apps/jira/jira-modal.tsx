@@ -91,8 +91,6 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
 
       const connId = connectionResult.connection.id;
 
-      // Save credentials with domain and email in the payload
-      // The service will store domain and email in metadata
       await saveCredentials({
         provider: "jira",
         connectionId: connId,
@@ -154,7 +152,6 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
       </Muted> */}
 
       <div className="space-y-4">
-        {/* Domain field */}
         <div className="space-y-2">
           <label
             htmlFor="jira-domain"
@@ -171,14 +168,12 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
               setData({ domain: e.target.value });
               if (errors.domain) setErrors({ domain: "" });
             }}
-            className="w-full px-3 py-2.5 dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
           />
           {errors.domain && (
             <p className="text-sm text-red-500">{errors.domain}</p>
           )}
         </div>
 
-        {/* Email field */}
         <div className="space-y-2">
           <label
             htmlFor="jira-email"
@@ -195,14 +190,12 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
               setData({ email: e.target.value });
               if (errors.email) setErrors({ email: "" });
             }}
-            className="w-full px-3 py-2.5 dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
           />
           {errors.email && (
             <p className="text-sm text-red-500">{errors.email}</p>
           )}
         </div>
 
-        {/* API Token field */}
         <div className="space-y-2">
           <label
             htmlFor="jira-api-token"
@@ -219,7 +212,6 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
               setData({ apiToken: e.target.value });
               if (errors.apiToken) setErrors({ apiToken: "" });
             }}
-            className="w-full px-3 py-2.5 dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
           />
           {errors.apiToken && (
             <p className="text-sm text-red-500">{errors.apiToken}</p>

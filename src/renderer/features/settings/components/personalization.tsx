@@ -5,6 +5,7 @@ import { Button } from "../../../components/ui/button";
 import { Input, Textarea } from "../../../components/ui/input";
 import { Heading2 } from "../../../components/ui/text";
 import { useGetAccountQuery, useUpdateAccountMutation } from "@/lib/redux/api";
+import { SettingsRow, SettingsDivider } from "./settings-layout";
 
 interface PersonalizationFormValues {
   displayName: string;
@@ -119,7 +120,6 @@ export default function PersonalizationSettings() {
               onChange={handleChange("displayName")}
               disabled={saving}
               placeholder="e.g. Alex Smith"
-              className="dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
             />
           </SettingsRow>
 
@@ -132,7 +132,6 @@ export default function PersonalizationSettings() {
               onChange={handleChange("email")}
               disabled={saving}
               placeholder="you@example.com"
-              className="dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900"
             />
           </SettingsRow>
 
@@ -148,7 +147,6 @@ export default function PersonalizationSettings() {
               onChange={handleChange("company")}
               disabled={saving}
               placeholder="e.g. Laurel"
-              className="dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
             />
           </SettingsRow>
 
@@ -161,7 +159,6 @@ export default function PersonalizationSettings() {
               onChange={handleChange("jobTitle")}
               disabled={saving}
               placeholder="e.g. Product Lead"
-              className="dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
             />
           </SettingsRow>
 
@@ -177,7 +174,6 @@ export default function PersonalizationSettings() {
               onChange={handleChange("website")}
               disabled={saving}
               placeholder="https://"
-              className="dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900 "
             />
           </SettingsRow>
 
@@ -193,7 +189,7 @@ export default function PersonalizationSettings() {
               onChange={handleChange("avatarUrl")}
               disabled={saving}
               placeholder="https://cdn.example.com/me.png"
-              className="dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900! min-w-80!"
+              className="min-w-80!"
             />
           </SettingsRow>
 
@@ -205,7 +201,7 @@ export default function PersonalizationSettings() {
           >
             <Textarea
               id="bio"
-              className="resize-none w-80! h-16 dark:bg-primary! shadow-none! dark:placeholder:text-primary-800! dark:text-primary-900!"
+              className="resize-none w-80! h-16"
               value={form.bio}
               onChange={handleChange("bio")}
               disabled={saving}
@@ -246,34 +242,4 @@ export default function PersonalizationSettings() {
   );
 }
 
-function SettingsRow({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between py-7">
-      <div className="flex-1 pr-8">
-        <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100">
-          {title}
-        </h3>
-        {description && (
-          <p className="text-sm text-primary-500 dark:text-primary-500 mt-1.5">
-            {description}
-          </p>
-        )}
-      </div>
-      <div className="shrink-0">{children}</div>
-    </div>
-  );
-}
 
-function SettingsDivider() {
-  return (
-    <div className="border-b border-primary-200 dark:border-primary-800/50" />
-  );
-}
