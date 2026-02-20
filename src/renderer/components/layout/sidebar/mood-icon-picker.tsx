@@ -4,6 +4,14 @@ import { useClickOutside } from "@/hooks/use-click-outside";
 import { availableIcons } from "@/lib/icon-registry";
 import { Button } from "@/components/ui/button";
 
+function CurrentIcon({ icon, iconMode }: { icon: string; iconMode: "emoji" | "icon" }) {
+  if (iconMode === "icon" && icon) {
+    const IconComp = availableIcons.find((i) => i.name === icon)?.component;
+    return IconComp ? <IconComp className="size-5" /> : <span>📦</span>;
+  }
+  return <span>{icon || "😊"}</span>;
+}
+
 type IconPickerMode = "emoji" | "icon";
 
 interface MoodIconPickerProps {
@@ -35,14 +43,6 @@ export default function MoodIconPicker({
     if (isOpen) onClose();
   });
 
-  const renderCurrentIcon = () => {
-    if (iconMode === "icon" && icon) {
-      const IconComp = availableIcons.find((i) => i.name === icon)?.component;
-      return IconComp ? <IconComp className="size-5" /> : <span>📦</span>;
-    }
-    return <span>{icon || "😊"}</span>;
-  };
-
   return (
     <div ref={pickerRef} className="relative">
       <Button
@@ -63,7 +63,7 @@ export default function MoodIconPicker({
         `}
       >
         <div className="flex items-center gap-2">
-          {renderCurrentIcon()}
+          <CurrentIcon icon={icon} iconMode={iconMode} />
           <span>Choose an Icon</span>
         </div>
         <svg
