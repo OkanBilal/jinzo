@@ -11,6 +11,7 @@ import { cn } from "@/lib/cn";
 import { defaultTheme } from "@/lib/theme";
 import { useGetAccountQuery, useUpdateAccountMutation } from "@/lib/redux/api";
 import { SettingsRow, SettingsDivider } from "./settings-layout";
+import { useAutoUpdate } from "@/hooks/use-auto-update";
 
 export const EMPTY_FORM = {
   displayName: "",
@@ -185,9 +186,83 @@ function ThemePreviewCard({
   );
 }
 
+function UpdateButton({
+  state,
+  onCheck,
+  onDownload,
+  onInstall,
+}: {
+  state: { status: string; info: any; progress: any; error: string | null };
+  onCheck: () => void;
+  onDownload: () => void;
+  onInstall: () => void;
+}) {
+  switch (state.status) {
+    case "checking":
+      return (
+        <Button variant="ghost" disabled isLoading>
+          Checking...
+        </Button>
+      );
+    case "available":
+      return (
+        <Button variant="submit" size="md" onClick={onDownload}>
+          Download v{state.info?.version}
+        </Button>
+      );
+    case "downloading":
+      return (
+        <div className="flex items-center gap-3">
+          <div className="w-32 h-2 bg-primary-200 dark:bg-primary-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-500 rounded-full transition-all duration-300"
+              style={{ width: `${Math.round(state.progress?.percent ?? 0)}%` }}
+            />
+          </div>
+          <span className="text-xs text-primary-500 dark:text-primary-400 tabular-nums">
+            {Math.round(state.progress?.percent ?? 0)}%
+          </span>
+        </div>
+      );
+    case "downloaded":
+      return (
+        <Button variant="submit" size="md" onClick={onInstall}>
+          Restart &amp; Install
+        </Button>
+      );
+    case "error":
+      return (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-red-500">{state.error}</span>
+          <Button variant="ghost" size="md" onClick={onCheck}>
+            Retry
+          </Button>
+        </div>
+      );
+    case "not-available":
+      return (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-primary-500 dark:text-primary-400">
+            Up to date
+          </span>
+          <Button variant="ghost" size="md" onClick={onCheck}>
+            Check Again
+          </Button>
+        </div>
+      );
+    default:
+      return (
+        <Button variant="ghost" size="md" onClick={onCheck}>
+          Check for Updates
+        </Button>
+      );
+  }
+}
+
 export default function GeneralSettings() {
   const { theme, setTheme } = useDarkMode();
   const { activeMood } = useActiveMood();
+  const { state: updateState, check: checkUpdate, download: downloadUpdate, install: installUpdate } = useAutoUpdate();
   const [form, setForm] = useState<AccountFormValues>(EMPTY_FORM);
   const [isDirty, setIsDirty] = useState(false);
 
@@ -362,6 +437,19 @@ export default function GeneralSettings() {
                 setIsDirty(true);
               }}
               placeholder="Select language"
+            />
+          </SettingsRow>
+
+          <SettingsDivider />
+          <SettingsRow
+            title="Software Updates"
+            description={`Current version: v${__APP_VERSION__ ?? "1.0.0"}`}
+          >
+            <UpdateButton
+              state={updateState}
+              onCheck={checkUpdate}
+              onDownload={downloadUpdate}
+              onInstall={installUpdate}
             />
           </SettingsRow>
 

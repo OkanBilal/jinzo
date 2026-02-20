@@ -54,8 +54,9 @@ module.exports = {
       config: {},
     },
     {
-      name: '@electron-forge/maker-zip',
+      name: '@electron-forge/maker-dmg',
       platforms: ['darwin'],
+      config: { format: 'ULFO' },
     },
     {
       name: '@electron-forge/maker-deb',
@@ -64,6 +65,16 @@ module.exports = {
     {
       name: '@electron-forge/maker-rpm',
       config: {},
+    },
+  ],
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: { owner: 'OWNER', name: 'jinzo' },
+        prerelease: false,
+        draft: true,
+      },
     },
   ],
   plugins: [

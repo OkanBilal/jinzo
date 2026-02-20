@@ -28,15 +28,28 @@
     "email": "obbalci@gmail.com"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OWNER/jinzo.git"
+  },
+  "build": {
+    "publish": {
+      "provider": "github",
+      "owner": "OWNER",
+      "repo": "jinzo"
+    }
+  },
   "devDependencies": {
     "@electron-forge/cli": "^7.11.1",
     "@electron-forge/maker-deb": "^7.11.1",
+    "@electron-forge/maker-dmg": "^7.11.1",
     "@electron-forge/maker-rpm": "^7.11.1",
     "@electron-forge/maker-squirrel": "^7.11.1",
     "@electron-forge/maker-zip": "^7.11.1",
     "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
     "@electron-forge/plugin-fuses": "^7.11.1",
     "@electron-forge/plugin-vite": "^7.11.1",
+    "@electron-forge/publisher-github": "^7.11.1",
     "@electron/fuses": "^1.8.0",
     "@electron/rebuild": "^4.0.3",
     "@eslint/js": "^9.39.2",
@@ -86,6 +99,7 @@
     "better-sqlite3": "^12.6.2",
     "drizzle-orm": "^0.45.1",
     "electron-squirrel-startup": "^1.0.1",
+    "electron-updater": "^6.8.3",
     "frimousse": "^0.3.0",
     "motion": "^12.34.2",
     "nanoid": "^5.1.6",

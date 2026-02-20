@@ -427,3 +427,17 @@ export type {
   AvailableResource,
   WorkspaceIssue,
 } from "./workspaceResourcesApi";
+
+export {
+  updatesApi,
+  useGetUpdateStatusQuery,
+  useCheckForUpdatesMutation,
+  useDownloadUpdateMutation,
+  useInstallUpdateMutation,
+} from "./updatesApi";
+export type {
+  UpdateStatus,
+  UpdateInfo,
+  UpdateProgress,
+  UpdateState,
+} from "./updatesApi";

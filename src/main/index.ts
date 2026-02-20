@@ -1,3 +1,7 @@
+if (process.platform === "win32") {
+  if (require("electron-squirrel-startup")) process.exit(0);
+}
+
 import { app, ipcMain, shell } from "electron";
 import { initializeDatabase, closeDatabase, getDb } from "./db/client";
 import { registerAccountIpc, unregisterAccountIpc } from "./modules/account";
@@ -48,6 +52,7 @@ import {
 } from "./modules/terminal";
 import { createMainWindow, createSplashWindow, closeSplashWindow } from "./windows";
 import { registerImageProxyScheme, registerImageProxyHandler } from "./modules/imageProxy";
+import { registerUpdatesIpc, unregisterUpdatesIpc, updatesService } from "./modules/updates";
 
 /**
  * Initialize the application
@@ -96,6 +101,8 @@ async function initializeApp() {
     registerReviewsIpc();
     registerWorkspaceDiffsIpc();
     registerImageProxyHandler();
+    registerUpdatesIpc();
+    updatesService.initialize();
 
     // Shell utilities
     ipcMain.handle("shell:openExternal", async (_, url: string) => {
@@ -112,6 +119,11 @@ async function initializeApp() {
         // Close splash and show main window
         closeSplashWindow();
         window.show();
+
+        // Check for updates after a short delay
+        setTimeout(() => {
+          updatesService.checkForUpdates();
+        }, 3000);
       },
     });
 
@@ -162,6 +174,7 @@ async function cleanupApp() {
     unregisterTerminalIpc();
     unregisterReviewsIpc();
     unregisterWorkspaceDiffsIpc();
+    unregisterUpdatesIpc();
     ipcMain.removeHandler("shell:openExternal");
     ipcMain.removeHandler("shell:openPath");
 

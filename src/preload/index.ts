@@ -663,6 +663,17 @@ const api = {
     openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
     openPath: (path: string) => ipcRenderer.invoke("shell:openPath", path),
   },
+  updates: {
+    checkForUpdates: () => ipcRenderer.invoke("updates:check"),
+    downloadUpdate: () => ipcRenderer.invoke("updates:download"),
+    quitAndInstall: () => ipcRenderer.invoke("updates:quitAndInstall"),
+    getStatus: () => ipcRenderer.invoke("updates:getStatus"),
+    onStatusChange: (callback: (data: any) => void) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on("updates:status", listener);
+      return () => ipcRenderer.removeListener("updates:status", listener);
+    },
+  },
 };
 
 // Expose protected methods that allow the renderer process

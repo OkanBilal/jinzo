@@ -7,7 +7,7 @@ interface UserProfileProps {
 }
 
 const getInitials = (name: string) => {
-  if (!name) return "j";
+  if (!name) return "U";
   const parts = name.trim().split(" ");
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -42,7 +42,7 @@ export default function UserProfile({
         </div>
       )}
       <Body className="font-medium text-primary-900 dark:text-primary-100 truncate whitespace-nowrap">
-        {displayName || "Okan Balcı"}
+        {displayName || "User"}
       </Body>
     </div>
   );
