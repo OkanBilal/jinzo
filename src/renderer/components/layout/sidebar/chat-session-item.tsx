@@ -117,7 +117,7 @@ export default function ChatSessionItem({
         className={`block pl-3 pr-3 py-1.5 active:scale-99 group-hover:scale-[1.01] rounded-xl transition-all duration-200 ease-out  ${
           isActive
             ? "bg-primary/80 dark:bg-primary/5"
-            : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
+            : "bg-transparent hover:bg-primary/40 dark:hover:bg-primary/5"
         }`}
       >
         <div className="flex-1 min-w-0">

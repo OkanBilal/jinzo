@@ -34,10 +34,11 @@
   --color-copilot-blue: #11131a;
   --color-copilot-dark: #080A0F ;
   --color-copilot-lightblue: #ffffff;
-  --color-claude-orange: #FFBC15;
-  --color-claude-dark: #0d0907;
-  --color-claude-soft-dark: #161210;
-  --color-claude-light: #f8f4ee;
+  --color-copilot-soft-blue: #f4f9fe;
+  --color-claude-dark: #070707;
+  --color-claude-soft-dark: #151414;
+  --color-claude-light: #ffffff;
+  --color-claude-soft-light: #fff4f1;
 
 
   --font-space-mono: 'Space Mono', monospace;
@@ -628,10 +629,27 @@ input[type="range"].slider {
 }
 
 
-.glass-morphism,
-.glass-morphism-copilot,
-.glass-morphism-claude {
+.glass-morphism
+{
   background: linear-gradient(to bottom, var(--color-primary-100), var(--color-primary-50));
+  border: 0.5px solid #ffffff2e;
+  box-shadow:
+    0 1px 1px #00000011,
+    0 1px 1px #0000000a,
+    inset 0 1px 1px #00000011;
+}
+
+.glass-morphism-copilot {
+  background: linear-gradient(to bottom, var(--color-copilot-lightblue), var(--color-copilot-soft-blue));
+  border: 0.5px solid #ffffff2e;
+  box-shadow:
+    0 1px 1px #00000011,
+    0 1px 1px #0000000a,
+    inset 0 1px 1px #00000011;
+}
+
+.glass-morphism-claude {
+  background: linear-gradient(to bottom, var(--color-claude-light), var(--color-claude-soft-light));
   border: 0.5px solid #ffffff2e;
   box-shadow:
     0 1px 1px #00000011,
@@ -658,7 +676,7 @@ input[type="range"].slider {
 }
 
 .dark .glass-morphism-claude {
-  background: linear-gradient(to bottom, #16100d, #0d0907);
+  background: linear-gradient(to bottom, var(--color-claude-soft-dark), var(--color-claude-dark));
   border-color: #ffffff1f;
   box-shadow:
     0 1px 1px #00000040,

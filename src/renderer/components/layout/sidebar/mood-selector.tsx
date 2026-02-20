@@ -38,8 +38,8 @@ function MoodSelector({
             onMouseLeave={() => setHoveredMoodId(null)}
             className={`shrink-0 flex items-center justify-center size-8 hover:bg-primary-100/30 hover:scale-101 rounded-xl transition-all duration-200 ease-out active:scale-99 p-1 font-medium cursor-pointer ${
               isActive
-                ? "text-primary-950 dark:text-primary"
-                : "text-primary-900 dark:text-primary opacity-60"
+                ? "text-primary-900 dark:text-primary"
+                : "text-primary-800 dark:text-primary opacity-60"
             }`}
             title={mood.name}
             aria-label={mood.name}
@@ -49,9 +49,9 @@ function MoodSelector({
                 {icon.value as string}
               </span>
             ) : icon.type === "copilot-animate" ? (
-              <Copilot animate={isHovered} />
+              <Copilot className="text-primary-800 dark:text-primary" animate={isHovered} />
             ) : icon.type === "claude-animate" ? (
-              <Claude animate={isHovered} />
+              <Claude className="text-primary-800 dark:text-primary" animate={isHovered} />
             ) : (
               <icon.value className="size-4" />
             )}

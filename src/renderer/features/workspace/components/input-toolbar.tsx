@@ -64,7 +64,7 @@ export function InputToolbar({
               className={`flex items-center gap-1 -ml-1 px-2.5 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
                 planMode
                   ? "bg-amber-500/15 text-amber-600 dark:text-amber-500"
-                  : " text-primary-500 dark:text-primary-300 hover:bg-primary/10"
+                  : " text-primary-900 dark:text-primary-300 hover:bg-primary/10"
               }`}
               title={
                 planMode
@@ -73,7 +73,7 @@ export function InputToolbar({
               }
             >
               <Plan
-                className={`size-3.75 font-medium ${planMode ? "text-amber-600 dark:text-amber-500" : "text-primary-500 dark:text-primary-300"}`}
+                className={`size-3.75 font-medium ${planMode ? "text-amber-600 dark:text-amber-500" : "text-primary-900 dark:text-primary-300"}`}
               />
               Plan
             </Button>

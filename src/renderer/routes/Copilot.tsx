@@ -40,7 +40,7 @@ export default function CopilotPage() {
         )}
       </div>
 
-      <WorkspaceQuickActions onSetGoal={ws.setGoal} />
+      {/* <WorkspaceQuickActions onSetGoal={ws.setGoal} /> */}
       <WorkspaceInput
         goal={ws.goal}
         onGoalChange={ws.setGoal}

@@ -27,9 +27,9 @@ export function RunTab({ run, isActive, onClick, onClose, title, variant = "work
       }`}
     >
       {variant === "claude" ? (
-        <Claude className={`size-3.5 ${isActive ? "text-white" : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"}`} />
+        <Claude className={`size-3.5 ${isActive ? "text-primary-900 dark:text-primary" : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"}`} />
       ) : variant === "workspace" ? (
-        <Copilot className={`size-3.5 ${isActive ? "text-white" : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"}`} />
+        <Copilot className={`size-3.5 ${isActive ? "text-primary-900 dark:text-primary" : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"}`} />
       ) : null}
       <AnimatedTitle title={title} className="text-xs font-medium truncate flex-1" />
       <Button

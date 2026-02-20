@@ -98,7 +98,7 @@ export default function WorkspaceItem({
         className={`block px-3 py-1.5 active:scale-99 group-hover:scale-[1.01] rounded-xl transition-all duration-200 ease-out cursor-pointer ${
           isActive
             ? "bg-primary/80 dark:bg-primary/5"
-            : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
+            : "bg-transparent hover:bg-primary/40 dark:hover:bg-primary/5"
         }`}
       >
         <div className="flex flex-col gap-1">
@@ -107,8 +107,8 @@ export default function WorkspaceItem({
             <span
               className={`truncate text-sm font-medium ${
                 isActive
-                  ? "text-primary-900 dark:text-primary"
-                  : "text-primary-800 dark:text-primary-100"
+                  ? "text-primary-950 dark:text-primary"
+                  : "text-primary-900 dark:text-primary-100"
               }`}
             >
               {name}
@@ -125,17 +125,17 @@ export default function WorkspaceItem({
               </span>
               </Tooltip>
               {branch && (
-                <Muted className="text-[13px]  text-primary-800 dark:text-primary-200! truncate">
+                <Muted className="text-[13px]  text-primary-900 dark:text-primary-200! truncate">
                   {branch}
                 </Muted>
               )}
               {branch && updatedAt && (
-                <span className="text-primary-400 text-lg leading-6 dark:text-primary-200">
+                <span className="text-primary-900 text-lg leading-6 dark:text-primary-200">
                   ·
                 </span>
               )}
               {updatedAt && (
-                <Muted className="text-[13px] text-primary-700 dark:text-primary-200! truncate">
+                <Muted className="text-[13px] text-primary-900! dark:text-primary-200! truncate">
                   {formatDate(new Date(updatedAt).toISOString())}
                 </Muted>
               )}

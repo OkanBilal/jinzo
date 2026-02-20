@@ -43,8 +43,8 @@ export const seedMoods: SeedMood[] = [
     icon: "icon:claude",
     systemPrompt: "",
     themeConfig: {
-      lightBackground: "#fcc7b6",
-      darkBackground: "#161210",
+      lightBackground: "#D97757",
+      darkBackground: "#151414cc",
     },
     uiConfig: {
       sidebar: {
@@ -66,7 +66,7 @@ export const seedMoods: SeedMood[] = [
     systemPrompt: "",
     themeConfig: {
       lightBackground: "#c8ddf1",
-      darkBackground: "#11131a",
+      darkBackground: "#11131ac7",
     },
     uiConfig: {
       sidebar: {

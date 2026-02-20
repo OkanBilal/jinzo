@@ -10,12 +10,12 @@ const statusConfig: Record<WorkspaceStatus, WorkspaceStatusConfig> = {
   backlog: {
     label: "Backlog",
     color: "text-primary-500 dark:text-primary-400",
-    iconColor: "text-primary-400 dark:text-primary-500",
+    iconColor: "text-primary-800 dark:text-primary-500",
   },
   todo: {
     label: "Todo",
     color: "text-blue-600 dark:text-blue-400",
-    iconColor: "text-primary-500 dark:text-primary-300",
+    iconColor: "text-primary-800 dark:text-primary-300",
   },
   in_progress: {
     label: "In Progress",
@@ -25,12 +25,12 @@ const statusConfig: Record<WorkspaceStatus, WorkspaceStatusConfig> = {
   in_review: {
     label: "In Review",
     color: "text-purple-600 dark:text-purple-400",
-    iconColor: "text-emerald-500 dark:text-emerald-400",
+    iconColor: "text-purple-500 dark:text-purple-400",
   },
   done: {
     label: "Done",
     color: "text-emerald-600 dark:text-emerald-400",
-    iconColor: "text-indigo-500 dark:text-indigo-400",
+    iconColor: "text-emerald-500 dark:text-emerald-400",
   },
   canceled: {
     label: "Canceled",

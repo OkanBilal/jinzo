@@ -49,7 +49,7 @@ const baseThemeColors = {
 };
 
 const variantBackgrounds: Record<string, { dark: string; light: string }> = {
-  claude: { dark: "#161210", light: "#fcc7b6" },
+  claude: { dark: "#141415", light: "#fcc7b6" },
   copilot: { dark: "#11131A", light: "#c8ddf1" },
 };
 

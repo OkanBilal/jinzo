@@ -114,7 +114,7 @@ export default function PostItem({
         className={`block px-3 py-2 rounded-xl cursor-pointer group-hover:scale-[1.01] transition-all duration-200 ease-out active:scale-99 ${
           isActive
             ? "bg-primary/80 dark:bg-primary/5"
-            : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
+            : "bg-transparent hover:bg-primary/40 dark:hover:bg-primary/5"
         }`}
       >
         <div className="flex-1 min-w-0 pr-4">

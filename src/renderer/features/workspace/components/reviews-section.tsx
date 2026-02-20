@@ -3,6 +3,7 @@ import { useGetReviewsByWorkspaceQuery } from "@/lib/redux/api";
 import { openNoteTab } from "@/lib/redux/slices/workspaceSlice";
 import { Document, Notes, PullRequest, Sparkles } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
+import { Body } from "@/components/ui/text";
 
 interface ReviewsSectionProps {
   workspaceId: string;
@@ -56,9 +57,9 @@ export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
   if (reviews.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center px-4">
-        <span className="text-xs text-primary-400 dark:text-primary-300 text-center">
+        <Body className="text-xs font-medium text-primary-800 dark:text-primary-300">
           No reviews yet
-        </span>
+        </Body>
       </div>
     );
   }

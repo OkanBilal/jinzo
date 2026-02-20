@@ -30,7 +30,7 @@ export default function NewButton({
         const rect = buttonRef.current.getBoundingClientRect();
         setMenuState({
           isOpen: true,
-          position: { x: rect.bottom, y: rect.bottom + 4 },
+          position: { x: rect.right - 20, y: rect.top + 36 },
         });
       }
     } else {

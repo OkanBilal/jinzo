@@ -57,7 +57,7 @@ export const predefinedMoods: PredefinedMood[] = [
     id: "claude",
     name: "Claude",
     icon: "icon:claude",
-    theme: theme("#fcc7b6", "#161210"),
+    theme: theme("#fcc7b6", "#141415"),
     systemPrompt: "",
     uiConfig: {
       sidebar: {

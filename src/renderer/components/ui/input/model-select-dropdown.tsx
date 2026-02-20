@@ -20,11 +20,11 @@ interface ModelSelectDropdownProps {
 
 const variantStyles = {
   default: {
-    container: "hover:bg-primary-200/30 dark:hover:bg-primary-700/40",
-    button: "text-primary-700 dark:text-primary-400",
+    container: "hover:bg-primary-700/10 dark:hover:bg-primary-300/10",
+    button: "text-primary-700 dark:text-primary-300/80",
     selected:
-      "bg-primary-200/60 dark:bg-primary-800/50 text-primary-900 dark:text-primary-100",
-    item: "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100",
+      "bg-primary-300/60 dark:bg-primary-300/8 text-primary-700 dark:text-primary-300",
+    item: "hover:bg-primary-300/50 dark:hover:bg-primary-300/6 text-primary-700 dark:text-primary-300",
   },
   copilot: {
     container: "hover:bg-copilot-blue/10 dark:hover:bg-copilot-lightblue/10",
@@ -53,7 +53,7 @@ function formatClaudeModelName(model: string): string {
     return "Claude Opus 4.6";
   }
   if (lowerModel === "sonnet") {
-    return "Claude Sonnet 4.5";
+    return "Claude Sonnet 4.6";
   }
   if (lowerModel === "haiku") {
     return "Claude Haiku 4.5";

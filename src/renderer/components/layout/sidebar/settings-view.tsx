@@ -95,11 +95,11 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
               className="px-3 mb-2 animate-slide-in"
               style={{ animationDelay: `${menuItems.length * 0.05}s` }}
             >
-              <span className="text-xs font-medium text-primary-500 dark:text-primary-400">
+              <span className="text-xs font-medium text-primary-900 dark:text-primary-400">
                 Projects
               </span>
             </div>
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {projects.map((project, index) => {
                 const isActive =
                   isOnSettingsPage &&
@@ -115,16 +115,17 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                         `/settings?section=projects&id=${project.id}`,
                       )
                     }
-                    className={`w-full animate-slide-in cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-all flex items-center gap-3
+                    className={`w-full animate-slide-in cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-all flex items-center gap-2
                       ${
                         isActive
-                          ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
+                          ? "bg-primary/80 dark:bg-primary/5 text-primary-900 dark:text-primary-100"
                           : "text-primary-900 dark:text-primary-200 bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
                       }
                       hover:scale-[1.01] active:scale-99`}
                   >
                     <div
-                      className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold text-primary-900 dark:text-primary-100 shrink-0 border border-primary-700 dark:border-primary/10`}
+                      className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-medium text-primary-950 dark:text-primary-200 
+                        shrink-0 border border-primary-950/40 dark:border-primary/10`}
                     >
                       {initial}
                     </div>

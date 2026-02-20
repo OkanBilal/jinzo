@@ -96,8 +96,8 @@ export function WorkspaceTabs({
           <div
             className={`absolute bottom-0 h-0.5 transition-all duration-200 ease-out ${
               variant === "claude"
-                ? "dark:bg-primary-400 bg-primary-700"
-                : "bg-copilot-lightblue dark:bg-copilot-lightblue"
+                ? "dark:bg-claude-light bg-claude-soft-dark"
+                : "bg-copilot-blue dark:bg-copilot-lightblue"
             }`}
             style={{
               left: indicatorStyle.left,
