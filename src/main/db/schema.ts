@@ -53,6 +53,10 @@ export const appSettings = sqliteTable("app_settings", {
     .notNull()
     .default(true),
 
+  showToolCalls: integer("show_tool_calls", { mode: "boolean" })
+    .notNull()
+    .default(true),
+
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),

@@ -13,6 +13,7 @@ import { AsciiLoader } from "./ascii-loader";
 import type { ToolApprovalRequest } from "../hooks/use-tool-approval";
 import { ToolApprovalDialog } from "./tools/tool-approval-dialog";
 import { Clipboard, Check } from "@/components/ui/icons";
+import { useGetAppSettingsQuery } from "@/lib/redux/api";
 
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -219,10 +220,20 @@ export function WorkspaceEvents({
     activeRun?.status === "failed" ||
     activeRun?.status === "canceled";
 
+  // Read showToolCalls setting
+  const { data: appSettings } = useGetAppSettingsQuery();
+  const showToolCalls = appSettings?.showToolCalls !== false;
+
   // Group events for CLI-style display
-  const eventGroups = useMemo(
+  const allEventGroups = useMemo(
     () => groupEvents(currentEvents),
     [currentEvents],
+  );
+
+  // Filter out tool_calls groups when setting is off
+  const eventGroups = useMemo(
+    () => showToolCalls ? allEventGroups : allEventGroups.filter((g) => g.type !== "tool_calls"),
+    [allEventGroups, showToolCalls],
   );
 
   // Session times: index-based map of "show session bar after this group index"

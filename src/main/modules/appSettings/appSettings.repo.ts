@@ -57,4 +57,17 @@ export const appSettingsRepo = {
 
     return this.findById(id);
   },
+
+  async updateShowToolCalls(id: string, enabled: boolean): Promise<AppSettingsRecord | null> {
+    const db = getDb();
+    await db
+      .update(appSettings)
+      .set({
+        showToolCalls: enabled,
+        updatedAt: sql`(unixepoch())`,
+      })
+      .where(eq(appSettings.id, id));
+
+    return this.findById(id);
+  },
 };

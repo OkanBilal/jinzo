@@ -96,4 +96,27 @@ export const appSettingsService = {
       };
     }
   },
+
+  async setShowToolCalls(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+    try {
+      if (typeof enabled !== "boolean") {
+        return { success: false, error: "enabled must be a boolean" };
+      }
+
+      await this.ensureSettings();
+
+      const updated = await appSettingsRepo.updateShowToolCalls(SETTINGS_ID, enabled);
+      if (!updated) {
+        return { success: false, error: "Failed to update settings" };
+      }
+
+      return { success: true, data: updated };
+    } catch (error) {
+      console.error("Error updating showToolCalls:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  },
 };

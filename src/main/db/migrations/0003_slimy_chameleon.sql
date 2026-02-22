@@ -1,0 +1,1 @@
+ALTER TABLE `app_settings` ADD `show_tool_calls` integer DEFAULT true NOT NULL;

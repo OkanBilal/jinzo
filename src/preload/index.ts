@@ -270,6 +270,8 @@ const api = {
       ipcRenderer.invoke("appSettings:setActiveMood", moodId),
     setEnableWorktrees: (enabled: boolean) =>
       ipcRenderer.invoke("appSettings:setEnableWorktrees", enabled),
+    setShowToolCalls: (enabled: boolean) =>
+      ipcRenderer.invoke("appSettings:setShowToolCalls", enabled),
     onMoodChanged: (
       callback: (data: { activeMoodId: string | null }) => void,
     ) => {

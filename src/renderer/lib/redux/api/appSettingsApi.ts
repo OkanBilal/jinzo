@@ -5,6 +5,7 @@ export interface AppSettings {
   accountId: string;
   activeMoodId: string | null;
   enableWorktrees: boolean;
+  showToolCalls: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -39,6 +40,16 @@ export const appSettingsApi = baseApi.injectEndpoints({
         response.data,
       invalidatesTags: ["AppSettings"],
     }),
+
+    setShowToolCalls: builder.mutation<AppSettings, boolean>({
+      query: (enabled) => ({
+        handler: "appSettings:setShowToolCalls",
+        args: [enabled],
+      }),
+      transformResponse: (response: { success: boolean; data: AppSettings }) =>
+        response.data,
+      invalidatesTags: ["AppSettings"],
+    }),
   }),
   overrideExisting: false,
 });
@@ -48,4 +59,5 @@ export const {
   useLazyGetAppSettingsQuery,
   useSetActiveMoodMutation,
   useSetEnableWorktreesMutation,
+  useSetShowToolCallsMutation,
 } = appSettingsApi;

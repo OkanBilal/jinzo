@@ -16,4 +16,8 @@ export const appSettingsController = {
   async setEnableWorktrees(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
     return appSettingsService.setEnableWorktrees(enabled);
   },
+
+  async setShowToolCalls(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+    return appSettingsService.setShowToolCalls(enabled);
+  },
 };

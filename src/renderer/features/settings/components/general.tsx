@@ -9,7 +9,7 @@ import { AccountFormValues } from "../../../features/settings/types/account";
 import Select from "@/components/ui/select";
 import { cn } from "@/lib/cn";
 import { defaultTheme } from "@/lib/theme";
-import { useGetAccountQuery, useUpdateAccountMutation } from "@/lib/redux/api";
+import { useGetAccountQuery, useUpdateAccountMutation, useGetAppSettingsQuery, useSetShowToolCallsMutation } from "@/lib/redux/api";
 import { SettingsRow, SettingsDivider } from "./settings-layout";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
 import { Refresh } from "@/components/ui/icons";
@@ -263,6 +263,30 @@ function UpdateButton({
   }
 }
 
+const RUN_DETAIL_OPTIONS = [
+  { value: "steps_with_tool_calls", label: "Steps with tool calls", description: "Show tool calls with outputs" },
+  { value: "steps", label: "Steps", description: "Hide tool calls and outputs" },
+];
+
+function RunDetailSelect() {
+  const { data: settings } = useGetAppSettingsQuery();
+  const [setShowToolCalls] = useSetShowToolCallsMutation();
+
+  const value = settings?.showToolCalls !== false ? "steps_with_tool_calls" : "steps";
+
+  return (
+    <Select
+      useFixedBackground={true}
+      value={value}
+      options={RUN_DETAIL_OPTIONS}
+      onChange={(val) => {
+        setShowToolCalls(val === "steps_with_tool_calls");
+      }}
+      placeholder="Select detail level"
+    />
+  );
+}
+
 export default function GeneralSettings() {
   const { theme, setTheme } = useDarkMode();
   const { activeMood } = useActiveMood();
@@ -410,6 +434,14 @@ export default function GeneralSettings() {
           </SettingsRow>
 
           <SettingsDivider />
+          <SettingsRow
+            title="Run Detail"
+            description="Control how much detail is shown in run output"
+          >
+            <RunDetailSelect />
+          </SettingsRow>
+
+          <SettingsDivider />
           {/* <SettingsRow
             title="Time Zone"
             description="Set your local timezone for accurate scheduling"
@@ -455,7 +487,7 @@ export default function GeneralSettings() {
             />
           </SettingsRow>
 
-          <SettingsDivider />
+          {/* <SettingsDivider />
           <div className="flex items-center justify-between pt-6">
             <div className="text-xs text-primary-500 dark:text-primary-400">
               {lastSavedLabel
@@ -482,7 +514,7 @@ export default function GeneralSettings() {
                 Save
               </Button>
             </div>
-          </div>
+          </div> */}
         </form>
       )}
     </div>

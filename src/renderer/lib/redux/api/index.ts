@@ -155,6 +155,7 @@ export {
   useLazyGetAppSettingsQuery,
   useSetActiveMoodMutation,
   useSetEnableWorktreesMutation,
+  useSetShowToolCallsMutation,
 } from "./appSettingsApi";
 export type { AppSettings } from "./appSettingsApi";
 

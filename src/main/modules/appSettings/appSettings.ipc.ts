@@ -8,6 +8,7 @@ export function registerAppSettingsIpc() {
   ipcMain.handle("appSettings:get", () => appSettingsController.get());
   ipcMain.handle("appSettings:setActiveMood", (_, moodId) => appSettingsController.setActiveMood(moodId));
   ipcMain.handle("appSettings:setEnableWorktrees", (_, enabled) => appSettingsController.setEnableWorktrees(enabled));
+  ipcMain.handle("appSettings:setShowToolCalls", (_, enabled) => appSettingsController.setShowToolCalls(enabled));
 
   console.log("App settings IPC handlers registered");
 }
@@ -16,4 +17,5 @@ export function unregisterAppSettingsIpc() {
   ipcMain.removeHandler("appSettings:get");
   ipcMain.removeHandler("appSettings:setActiveMood");
   ipcMain.removeHandler("appSettings:setEnableWorktrees");
+  ipcMain.removeHandler("appSettings:setShowToolCalls");
 }

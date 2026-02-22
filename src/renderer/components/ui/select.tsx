@@ -11,6 +11,7 @@ interface SelectOption<T extends string = string> {
   value: T;
   label: string;
   icon?: ReactNode;
+  description?: string;
 }
 
 interface SelectProps<T extends string = string> {
@@ -203,8 +204,8 @@ export default function Select<T extends string = string>({
                     setIsOpen(false);
                   }}
                   className={`
-                  w-full cursor-pointer text-left 
-                  transition-colors px-3 py-2.5 
+                  w-full cursor-pointer text-left
+                  transition-colors px-3 py-2.5
                   text-sm flex items-center gap-2
                   ${
                     value === option.value
@@ -214,7 +215,14 @@ export default function Select<T extends string = string>({
                 `}
                 >
                   {option.icon}
-                  <span className="truncate">{option.label}</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="truncate">{option.label}</span>
+                    {option.description && (
+                      <span className="text-xs text-primary-500 dark:text-primary-400 font-normal truncate">
+                        {option.description}
+                      </span>
+                    )}
+                  </div>
                 </Button>
               ))}
             </div>
