@@ -69,6 +69,9 @@ export const appSettings = sqliteTable("app_settings", {
     .notNull()
     .default(true),
 
+  commitInstructions: text("commit_instructions").notNull().default(""),
+  prInstructions: text("pr_instructions").notNull().default(""),
+
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),

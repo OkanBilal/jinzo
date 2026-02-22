@@ -11,6 +11,7 @@ import {
   ChevronUp,
   CopilotStatic,
   Branch,
+  Gpt,
 } from "@/components/ui/icons";
 import type { SettingsSection } from "@/features/chat/components/input/types";
 import { Claude } from "@/components/ui/icons/mood";
@@ -38,8 +39,9 @@ const menuItems: Array<MenuItem> = [
 ];
 
 const providerItems: Array<MenuItem> = [
-  { id: "claude", label: "Claude Agent", icon: Claude },
+  { id: "claude", label: "Claude Code", icon: Claude },
   { id: "copilot", label: "Copilot", icon: CopilotStatic },
+  { id: "codex", label: "Codex", icon: Gpt }
 ];
 
 export default function SettingsView({ onClose }: SettingsViewProps) {
@@ -102,7 +104,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
         <div className="mt-2">
           <div className="px-3 mb-1">
             <span className="text-xs font-medium text-primary-900 dark:text-primary-400">
-              Providers
+              Agents
             </span>
           </div>
           <div className="space-y-0.5">

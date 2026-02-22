@@ -109,4 +109,30 @@ export const appSettingsRepo = {
 
     return this.findById(id);
   },
+
+  async updateCommitInstructions(id: string, instructions: string): Promise<AppSettingsRecord | null> {
+    const db = getDb();
+    await db
+      .update(appSettings)
+      .set({
+        commitInstructions: instructions,
+        updatedAt: sql`(unixepoch())`,
+      })
+      .where(eq(appSettings.id, id));
+
+    return this.findById(id);
+  },
+
+  async updatePrInstructions(id: string, instructions: string): Promise<AppSettingsRecord | null> {
+    const db = getDb();
+    await db
+      .update(appSettings)
+      .set({
+        prInstructions: instructions,
+        updatedAt: sql`(unixepoch())`,
+      })
+      .where(eq(appSettings.id, id));
+
+    return this.findById(id);
+  },
 };

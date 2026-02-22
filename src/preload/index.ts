@@ -278,6 +278,10 @@ const api = {
       ipcRenderer.invoke("appSettings:setNotifyOnRunComplete", enabled),
     setNotifyOnToolApproval: (enabled: boolean) =>
       ipcRenderer.invoke("appSettings:setNotifyOnToolApproval", enabled),
+    setCommitInstructions: (instructions: string) =>
+      ipcRenderer.invoke("appSettings:setCommitInstructions", instructions),
+    setPrInstructions: (instructions: string) =>
+      ipcRenderer.invoke("appSettings:setPrInstructions", instructions),
     onMoodChanged: (
       callback: (data: { activeMoodId: string | null }) => void,
     ) => {

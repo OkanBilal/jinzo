@@ -362,7 +362,9 @@ class GitService {
   private generateFruitName(): string {
     const fruits = [
       "apple", "banana", "cherry", "mango", "peach",
-      "grape", "orange", "pineapple", "strawberry", "watermelon"
+      "grape", "orange", "pineapple", "strawberry", "watermelon",
+      "kiwi", "blueberry", "raspberry", "lemon", "lime",
+      "papaya", "plum", "pear", "coconut", "avocado"
     ];
     const fruit = fruits[Math.floor(Math.random() * fruits.length)];
     const suffix = Math.random().toString(36).substring(2, 6);

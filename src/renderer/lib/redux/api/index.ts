@@ -159,6 +159,8 @@ export {
   useSetPreventSleepDuringRunsMutation,
   useSetNotifyOnRunCompleteMutation,
   useSetNotifyOnToolApprovalMutation,
+  useSetCommitInstructionsMutation,
+  useSetPrInstructionsMutation,
 } from "./appSettingsApi";
 export type { AppSettings } from "./appSettingsApi";
 

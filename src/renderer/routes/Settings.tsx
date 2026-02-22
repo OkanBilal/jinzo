@@ -12,6 +12,7 @@ import ClaudeSettings from "@/features/settings/components/claude";
 import CopilotSettings from "@/features/settings/components/copilot";
 import GitSettings from "@/features/settings/components/git";
 import ProjectsSettings from "@/features/settings/components/projects";
+import CodexSettings from "@/features/settings/components/codex";
 
 export default function SettingsPage() {
   const [searchParams] = useSearchParams();
@@ -68,6 +69,9 @@ export default function SettingsPage() {
       break;
     case "copilot":
       content = <CopilotSettings />;
+      break;
+    case "codex":
+      content = <CodexSettings />;
       break;
     case "git":
       content = <GitSettings />;

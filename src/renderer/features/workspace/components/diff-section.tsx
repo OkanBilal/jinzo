@@ -2,11 +2,12 @@ import { useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import {
   useGetLatestWorkspaceDiffQuery,
+  useGetAppSettingsQuery,
   type WorkspaceDiff,
 } from "@/lib/redux/api";
 import { setPendingGoal } from "@/lib/redux/slices/workspaceSlice";
 import { FileIconComponent } from "./file-explorer/components/file-icon";
-import { Diff, Sparkles } from "@/components/ui/icons";
+import { Diff, Sparkles, Check, Commit } from "@/components/ui/icons";
 import { Body } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 
@@ -79,6 +80,7 @@ export function DiffSection({
 }: DiffSectionProps) {
   const dispatch = useDispatch();
   const [selectedDiffFile, setSelectedDiffFile] = useState<string | null>(null);
+  const { data: appSettings } = useGetAppSettingsQuery();
 
   // Fetch the latest workspace diff directly
   const { currentData: diff, isFetching } = useGetLatestWorkspaceDiffQuery(
@@ -118,16 +120,36 @@ export function DiffSection({
     dispatch(setPendingGoal("/review-code changes"));
   };
 
+  const handleCommitChanges = () => {
+    const instructions = appSettings?.commitInstructions;
+    dispatch(
+      setPendingGoal(
+        instructions
+          ? instructions + "\n\nCommit the changes."
+          : "Commit the changes.",
+      ),
+    );
+  };
+
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      {/* Review Changes button */}
-      <Button
-        onClick={handleReviewChanges}
-        className="shrink-0 flex items-center justify-center gap-1.5 mb-2 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
-      >
-        <Sparkles className="w-3.5 h-3.5" />
-        Review Changes
-      </Button>
+      {/* Action buttons */}
+      <div className="shrink-0 flex items-center gap-2 mb-2">
+        <Button
+          onClick={handleReviewChanges}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          Review Changes
+        </Button>
+        <Button
+          onClick={handleCommitChanges}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
+        >
+          <Commit className="w-3.5 h-3.5" />
+          Commit Changes
+        </Button>
+      </div>
 
       {/* Stats header */}
       <div className="shrink-0 flex items-center justify-between px-1 py-1.5 mb-1">

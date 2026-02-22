@@ -32,4 +32,12 @@ export const appSettingsController = {
   async setNotifyOnToolApproval(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
     return appSettingsService.setNotifyOnToolApproval(enabled);
   },
+
+  async setCommitInstructions(instructions: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+    return appSettingsService.setCommitInstructions(instructions);
+  },
+
+  async setPrInstructions(instructions: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+    return appSettingsService.setPrInstructions(instructions);
+  },
 };

@@ -12,6 +12,8 @@ export function registerAppSettingsIpc() {
   ipcMain.handle("appSettings:setPreventSleepDuringRuns", (_, enabled) => appSettingsController.setPreventSleepDuringRuns(enabled));
   ipcMain.handle("appSettings:setNotifyOnRunComplete", (_, enabled) => appSettingsController.setNotifyOnRunComplete(enabled));
   ipcMain.handle("appSettings:setNotifyOnToolApproval", (_, enabled) => appSettingsController.setNotifyOnToolApproval(enabled));
+  ipcMain.handle("appSettings:setCommitInstructions", (_, instructions) => appSettingsController.setCommitInstructions(instructions));
+  ipcMain.handle("appSettings:setPrInstructions", (_, instructions) => appSettingsController.setPrInstructions(instructions));
 
   console.log("App settings IPC handlers registered");
 }
@@ -24,4 +26,6 @@ export function unregisterAppSettingsIpc() {
   ipcMain.removeHandler("appSettings:setPreventSleepDuringRuns");
   ipcMain.removeHandler("appSettings:setNotifyOnRunComplete");
   ipcMain.removeHandler("appSettings:setNotifyOnToolApproval");
+  ipcMain.removeHandler("appSettings:setCommitInstructions");
+  ipcMain.removeHandler("appSettings:setPrInstructions");
 }

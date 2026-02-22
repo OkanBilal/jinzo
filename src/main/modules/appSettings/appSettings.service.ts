@@ -188,4 +188,50 @@ export const appSettingsService = {
       };
     }
   },
+
+  async setCommitInstructions(instructions: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+    try {
+      if (typeof instructions !== "string") {
+        return { success: false, error: "instructions must be a string" };
+      }
+
+      await this.ensureSettings();
+
+      const updated = await appSettingsRepo.updateCommitInstructions(SETTINGS_ID, instructions);
+      if (!updated) {
+        return { success: false, error: "Failed to update settings" };
+      }
+
+      return { success: true, data: updated };
+    } catch (error) {
+      console.error("Error updating commitInstructions:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  },
+
+  async setPrInstructions(instructions: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+    try {
+      if (typeof instructions !== "string") {
+        return { success: false, error: "instructions must be a string" };
+      }
+
+      await this.ensureSettings();
+
+      const updated = await appSettingsRepo.updatePrInstructions(SETTINGS_ID, instructions);
+      if (!updated) {
+        return { success: false, error: "Failed to update settings" };
+      }
+
+      return { success: true, data: updated };
+    } catch (error) {
+      console.error("Error updating prInstructions:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  },
 };

@@ -87,3 +87,4 @@ export { default as StatusDone } from "./status-done";
 export { default as StatusCanceled } from "./status-canceled";
 export { default as StatusDuplicate } from "./status-duplicate";
 export { default as Group } from "./group";
+export { default as Commit } from "./commit";

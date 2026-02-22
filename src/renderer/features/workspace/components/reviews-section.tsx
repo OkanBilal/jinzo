@@ -1,6 +1,6 @@
 import { useDispatch } from "react-redux";
-import { useGetReviewsByWorkspaceQuery } from "@/lib/redux/api";
-import { openNoteTab } from "@/lib/redux/slices/workspaceSlice";
+import { useGetReviewsByWorkspaceQuery, useGetAppSettingsQuery } from "@/lib/redux/api";
+import { openNoteTab, setPendingGoal } from "@/lib/redux/slices/workspaceSlice";
 import { Document, Notes, PullRequest, Sparkles } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Body } from "@/components/ui/text";
@@ -42,6 +42,7 @@ function relativeTime(ts: number): string {
 
 export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
   const dispatch = useDispatch();
+  const { data: appSettings } = useGetAppSettingsQuery();
   const { data: reviews = [], isLoading } = useGetReviewsByWorkspaceQuery({
     workspaceId,
   });
@@ -69,7 +70,14 @@ export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
       {/* Create PR button */}
       <Button
         onClick={() => {
-          // TODO: Add PR creation functionality
+          const instructions = appSettings?.prInstructions;
+          dispatch(
+            setPendingGoal(
+              instructions
+                ? instructions + "\n\nCreate a pull request."
+                : "Create a pull request.",
+            ),
+          );
         }}
         className="shrink-0 flex items-center justify-center gap-1.5 mb-2 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100 dark:bg-primary/5 hover:bg-primary-200 dark:hover:bg-primary/10 text-primary-800 dark:text-primary-200 transition-colors"
       >

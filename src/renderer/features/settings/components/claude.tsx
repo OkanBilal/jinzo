@@ -70,7 +70,7 @@ export default function ClaudeSettings() {
   if (isLoading) {
     return (
       <div>
-        <Heading2 className="mb-2">Claude Agent</Heading2>
+        <Heading2 className="mb-2">Claude Code</Heading2>
         <Muted>Loading...</Muted>
       </div>
     );
@@ -79,7 +79,7 @@ export default function ClaudeSettings() {
   if (error || !provider) {
     return (
       <div>
-        <Heading2 className="mb-2">Claude Agent</Heading2>
+        <Heading2 className="mb-2">Claude Code</Heading2>
         <Muted>
           Claude Code provider not found. Make sure it is configured in the
           database.
@@ -91,7 +91,7 @@ export default function ClaudeSettings() {
   return (
     <div className="bg-primary dark:bg-primary-950">
       <div className="mb-8">
-        <Heading2 className="font-medium!">Claude Agent</Heading2>
+        <Heading2 className="font-medium!">Claude Code</Heading2>
       </div>
 
       <SettingsSection>

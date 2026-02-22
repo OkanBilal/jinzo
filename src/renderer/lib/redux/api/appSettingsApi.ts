@@ -9,6 +9,8 @@ export interface AppSettings {
   preventSleepDuringRuns: boolean;
   notifyOnRunComplete: boolean;
   notifyOnToolApproval: boolean;
+  commitInstructions: string;
+  prInstructions: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -83,6 +85,26 @@ export const appSettingsApi = baseApi.injectEndpoints({
         response.data,
       invalidatesTags: ["AppSettings"],
     }),
+
+    setCommitInstructions: builder.mutation<AppSettings, string>({
+      query: (instructions) => ({
+        handler: "appSettings:setCommitInstructions",
+        args: [instructions],
+      }),
+      transformResponse: (response: { success: boolean; data: AppSettings }) =>
+        response.data,
+      invalidatesTags: ["AppSettings"],
+    }),
+
+    setPrInstructions: builder.mutation<AppSettings, string>({
+      query: (instructions) => ({
+        handler: "appSettings:setPrInstructions",
+        args: [instructions],
+      }),
+      transformResponse: (response: { success: boolean; data: AppSettings }) =>
+        response.data,
+      invalidatesTags: ["AppSettings"],
+    }),
   }),
   overrideExisting: false,
 });
@@ -96,4 +118,6 @@ export const {
   useSetPreventSleepDuringRunsMutation,
   useSetNotifyOnRunCompleteMutation,
   useSetNotifyOnToolApprovalMutation,
+  useSetCommitInstructionsMutation,
+  useSetPrInstructionsMutation,
 } = appSettingsApi;
