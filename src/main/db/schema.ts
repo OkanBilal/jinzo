@@ -57,6 +57,10 @@ export const appSettings = sqliteTable("app_settings", {
     .notNull()
     .default(true),
 
+  preventSleepDuringRuns: integer("prevent_sleep_during_runs", { mode: "boolean" })
+    .notNull()
+    .default(false),
+
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),

@@ -39,7 +39,7 @@ import { registerProvidersIpc, unregisterProvidersIpc, shutdownAllWorkAdapters }
 import { augmentPathForPackagedApp } from "./modules/providers/providers.utils";
 import { registerToolsIpc, unregisterToolsIpc } from "./modules/tools";
 import { registerWorkspacesIpc, unregisterWorkspacesIpc } from "./modules/workspaces";
-import { registerRunsIpc, unregisterRunsIpc } from "./modules/runs";
+import { registerRunsIpc, unregisterRunsIpc, releaseAllSleepBlockers } from "./modules/runs";
 import { registerReviewsIpc, unregisterReviewsIpc } from "./modules/reviews";
 import { registerWorkspaceDiffsIpc, unregisterWorkspaceDiffsIpc } from "./modules/workspaceDiffs";
 import { registerProjectsIpc, unregisterProjectsIpc } from "./modules/projects";
@@ -270,6 +270,9 @@ async function cleanupApp() {
 
     // Shutdown work adapters (Copilot, Claude Code, etc.)
     await shutdownAllWorkAdapters();
+
+    // Release any active sleep blockers
+    releaseAllSleepBlockers();
 
     // Unregister IPC handlers
     unregisterAccountIpc();

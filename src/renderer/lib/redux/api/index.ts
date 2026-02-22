@@ -156,6 +156,7 @@ export {
   useSetActiveMoodMutation,
   useSetEnableWorktreesMutation,
   useSetShowToolCallsMutation,
+  useSetPreventSleepDuringRunsMutation,
 } from "./appSettingsApi";
 export type { AppSettings } from "./appSettingsApi";
 

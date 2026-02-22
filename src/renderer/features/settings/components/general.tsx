@@ -9,8 +9,9 @@ import { AccountFormValues } from "../../../features/settings/types/account";
 import Select from "@/components/ui/select";
 import { cn } from "@/lib/cn";
 import { defaultTheme } from "@/lib/theme";
-import { useGetAccountQuery, useUpdateAccountMutation, useGetAppSettingsQuery, useSetShowToolCallsMutation } from "@/lib/redux/api";
+import { useGetAccountQuery, useUpdateAccountMutation, useGetAppSettingsQuery, useSetShowToolCallsMutation, useSetPreventSleepDuringRunsMutation } from "@/lib/redux/api";
 import { SettingsRow, SettingsDivider } from "./settings-layout";
+import { Toggle } from "@/components/ui/toggle";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
 import { Refresh } from "@/components/ui/icons";
 
@@ -287,6 +288,18 @@ function RunDetailSelect() {
   );
 }
 
+function PreventSleepToggle() {
+  const { data: settings } = useGetAppSettingsQuery();
+  const [setPreventSleep] = useSetPreventSleepDuringRunsMutation();
+
+  return (
+    <Toggle
+      enabled={settings?.preventSleepDuringRuns ?? false}
+      onChange={(val) => setPreventSleep(val)}
+    />
+  );
+}
+
 export default function GeneralSettings() {
   const { theme, setTheme } = useDarkMode();
   const { activeMood } = useActiveMood();
@@ -439,6 +452,14 @@ export default function GeneralSettings() {
             description="Control how much detail is shown in run output"
           >
             <RunDetailSelect />
+          </SettingsRow>
+
+          <SettingsDivider />
+          <SettingsRow
+            title="Prevent Sleep"
+            description="Keep your computer awake while a run is active"
+          >
+            <PreventSleepToggle />
           </SettingsRow>
 
           <SettingsDivider />

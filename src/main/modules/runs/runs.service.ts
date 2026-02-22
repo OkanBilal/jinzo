@@ -1,6 +1,8 @@
+import { powerSaveBlocker } from "electron";
 import { runsRepo } from "./runs.repo";
 import { providersRepo } from "../providers/providers.repo";
 import { workspacesRepo } from "../workspaces/workspaces.repo";
+import { appSettingsRepo } from "../appSettings/appSettings.repo";
 import { gitService } from "../git/git.service";
 import { reviewsService } from "../reviews/reviews.service";
 import { workspaceDiffsService } from "../workspaceDiffs/workspaceDiffs.service";
@@ -40,6 +42,32 @@ import path from "path";
 
 // In-memory map: runId -> git HEAD sha captured at run start
 const runBaseRefs = new Map<string, string>();
+
+// In-memory map: runId -> powerSaveBlocker id
+const sleepBlockers = new Map<string, number>();
+
+async function acquireSleepBlocker(runId: string): Promise<void> {
+  const settings = await appSettingsRepo.findById("default");
+  if (!settings?.preventSleepDuringRuns) return;
+  if (!sleepBlockers.has(runId)) {
+    const id = powerSaveBlocker.start("prevent-app-suspension");
+    sleepBlockers.set(runId, id);
+  }
+}
+
+function releaseSleepBlocker(runId: string): void {
+  const id = sleepBlockers.get(runId);
+  if (id !== undefined && powerSaveBlocker.isStarted(id)) {
+    powerSaveBlocker.stop(id);
+  }
+  sleepBlockers.delete(runId);
+}
+
+export function releaseAllSleepBlockers(): void {
+  for (const [runId] of sleepBlockers) {
+    releaseSleepBlocker(runId);
+  }
+}
 
 /**
  * Capture HEAD sha at run start for later diff computation.
@@ -646,7 +674,10 @@ export const runsService = {
       // Track tool calls for updating when completed
       const pendingToolCalls = new Map<string, number>();
 
-      // 6. Start run with event handler (runs in background)
+      // 6. Acquire sleep blocker if enabled
+      await acquireSleepBlocker(runId);
+
+      // 7. Start run with event handler (runs in background)
       const runPromise = adapter.startRun(
         {
           runId,
@@ -738,6 +769,8 @@ export const runsService = {
           console.log(
             `[RunsService] Run ${runId} completed with status: ${finalStatus}`,
           );
+
+          releaseSleepBlocker(runId);
         })
         .catch(async (error) => {
           const errorMessage =
@@ -751,6 +784,8 @@ export const runsService = {
             endedAt: new Date(),
             lastError: errorMessage,
           });
+
+          releaseSleepBlocker(runId);
         });
 
       // Return immediately with runId
@@ -761,6 +796,7 @@ export const runsService = {
       console.error(`[RunsService] Failed to execute run:`, errorMessage);
 
       runBaseRefs.delete(runId);
+      releaseSleepBlocker(runId);
 
       // Try to mark run as failed if it was created
       try {
@@ -961,6 +997,8 @@ export const runsService = {
         lastError: "Aborted by user",
       });
 
+      releaseSleepBlocker(runId);
+
       return { success: true };
     } catch (error) {
       console.error(`[RunsService] Failed to abort run ${runId}:`, error);
@@ -1099,7 +1137,10 @@ export const runsService = {
       // Track tool calls for updating when completed
       const pendingToolCalls = new Map<string, number>();
 
-      // 9. Continue the run
+      // 9. Acquire sleep blocker if enabled
+      await acquireSleepBlocker(runId);
+
+      // 10. Continue the run
       const runPromise = adapter.continueRun(
         {
           runId,
@@ -1155,6 +1196,8 @@ export const runsService = {
           console.log(
             `[RunsService] Continued run ${runId} completed with status: ${finalStatus}`,
           );
+
+          releaseSleepBlocker(runId);
         })
         .catch(async (error) => {
           const errorMessage =
@@ -1171,6 +1214,8 @@ export const runsService = {
             endedAt: new Date(),
             lastError: errorMessage,
           });
+
+          releaseSleepBlocker(runId);
         });
 
       return { success: true, data: { runId, resumed: true } };
@@ -1180,6 +1225,7 @@ export const runsService = {
       console.error(`[RunsService] Failed to continue run:`, errorMessage);
 
       runBaseRefs.delete(runId);
+      releaseSleepBlocker(runId);
 
       // Try to reset run status if it was updated
       try {

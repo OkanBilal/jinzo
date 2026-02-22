@@ -20,4 +20,8 @@ export const appSettingsController = {
   async setShowToolCalls(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
     return appSettingsService.setShowToolCalls(enabled);
   },
+
+  async setPreventSleepDuringRuns(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+    return appSettingsService.setPreventSleepDuringRuns(enabled);
+  },
 };

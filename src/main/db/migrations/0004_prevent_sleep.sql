@@ -1,0 +1,1 @@
+ALTER TABLE `app_settings` ADD `prevent_sleep_during_runs` integer DEFAULT false NOT NULL;

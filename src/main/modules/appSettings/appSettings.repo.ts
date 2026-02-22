@@ -70,4 +70,17 @@ export const appSettingsRepo = {
 
     return this.findById(id);
   },
+
+  async updatePreventSleepDuringRuns(id: string, enabled: boolean): Promise<AppSettingsRecord | null> {
+    const db = getDb();
+    await db
+      .update(appSettings)
+      .set({
+        preventSleepDuringRuns: enabled,
+        updatedAt: sql`(unixepoch())`,
+      })
+      .where(eq(appSettings.id, id));
+
+    return this.findById(id);
+  },
 };

@@ -6,6 +6,7 @@ export interface AppSettings {
   activeMoodId: string | null;
   enableWorktrees: boolean;
   showToolCalls: boolean;
+  preventSleepDuringRuns: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -50,6 +51,16 @@ export const appSettingsApi = baseApi.injectEndpoints({
         response.data,
       invalidatesTags: ["AppSettings"],
     }),
+
+    setPreventSleepDuringRuns: builder.mutation<AppSettings, boolean>({
+      query: (enabled) => ({
+        handler: "appSettings:setPreventSleepDuringRuns",
+        args: [enabled],
+      }),
+      transformResponse: (response: { success: boolean; data: AppSettings }) =>
+        response.data,
+      invalidatesTags: ["AppSettings"],
+    }),
   }),
   overrideExisting: false,
 });
@@ -60,4 +71,5 @@ export const {
   useSetActiveMoodMutation,
   useSetEnableWorktreesMutation,
   useSetShowToolCallsMutation,
+  useSetPreventSleepDuringRunsMutation,
 } = appSettingsApi;

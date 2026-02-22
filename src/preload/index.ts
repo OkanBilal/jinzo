@@ -272,6 +272,8 @@ const api = {
       ipcRenderer.invoke("appSettings:setEnableWorktrees", enabled),
     setShowToolCalls: (enabled: boolean) =>
       ipcRenderer.invoke("appSettings:setShowToolCalls", enabled),
+    setPreventSleepDuringRuns: (enabled: boolean) =>
+      ipcRenderer.invoke("appSettings:setPreventSleepDuringRuns", enabled),
     onMoodChanged: (
       callback: (data: { activeMoodId: string | null }) => void,
     ) => {
