@@ -303,6 +303,7 @@ export {
   useFindOrCreateProjectMutation,
   useCreateProjectMutation,
   useUpdateProjectMutation,
+  useRemoveProjectMutation,
   useDeleteProjectMutation,
   useArchiveProjectMutation,
 } from "./projectsApi";

@@ -247,6 +247,8 @@ function SelectTeamsStep({ onComplete }: { onComplete: () => void }) {
   const handleBack = () => {
     if (data.fromManage) {
       goTo("manage");
+    } else if (data.isFirstConnection) {
+      onComplete();
     } else {
       goTo("setToken");
     }

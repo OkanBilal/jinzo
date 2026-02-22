@@ -350,8 +350,11 @@ export default function WorkspacesList({
 
   return (
     <div className="pb-2">
-      <Button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setIsExpanded(!isExpanded)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsExpanded(!isExpanded); } }}
         className="w-full flex items-center justify-between active:scale-99 transition-all duration-200 bg-transparent hover:bg-primary/10 dark:hover:bg-primary/5 cursor-pointer px-2 py-0.5 mb-1 rounded-lg "
       >
         <Caption className="text-primary-800 dark:text-primary-300! font-medium">
@@ -379,7 +382,7 @@ export default function WorkspacesList({
             }`}
           />
         </div>
-      </Button>
+      </div>
 
       <DropdownMenu
         isOpen={isGroupDropdownOpen}

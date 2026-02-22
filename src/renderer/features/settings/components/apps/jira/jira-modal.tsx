@@ -328,6 +328,8 @@ function SelectProjectsStep({ onComplete }: { onComplete: () => void }) {
   const handleBack = () => {
     if (data.fromManage) {
       goTo("manage");
+    } else if (data.isFirstConnection) {
+      onComplete();
     } else {
       goTo("setToken");
     }
@@ -346,13 +348,13 @@ function SelectProjectsStep({ onComplete }: { onComplete: () => void }) {
       saveButtonLabel={`Save ${selectedProjects.size} Projects`}
       renderResourceItem={(project) => (
         <div className="flex items-center gap-2">
-          {project.avatarUrl && (
+          {/* {project.avatarUrl && (
             <img
               src={project.avatarUrl}
               alt={project.name}
               className="w-6 h-6 rounded"
             />
-          )}
+          )} */}
           <BodyMedium>{project.name}</BodyMedium>
           <span className="text-xs text-primary-500">{project.key}</span>
         </div>

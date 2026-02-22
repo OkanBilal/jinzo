@@ -133,6 +133,11 @@ export const runsRepo = {
     await db.delete(runs).where(eq(runs.id, id));
   },
 
+  async deleteRunsByWorkspaceId(workspaceId: string): Promise<void> {
+    const db = getDb();
+    await db.delete(runs).where(eq(runs.workspaceId, workspaceId));
+  },
+
   async archiveRun(id: string): Promise<RunResponse | null> {
     const db = getDb();
     await db

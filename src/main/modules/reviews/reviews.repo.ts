@@ -74,6 +74,11 @@ export const reviewsRepo = {
     const db = getDb();
     await db.delete(reviews).where(eq(reviews.id, id));
   },
+
+  async deleteByWorkspaceId(workspaceId: string): Promise<void> {
+    const db = getDb();
+    await db.delete(reviews).where(eq(reviews.workspaceId, workspaceId));
+  },
 };
 
 // ─────────────────────────────────────────────────────────────

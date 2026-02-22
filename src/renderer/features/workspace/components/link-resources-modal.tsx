@@ -247,7 +247,7 @@ export function LinkResourcesModal({
                 </Caption>
               </div>
             ) : (
-              <div className="divide-y divide-primary-100 dark:divide-primary-800/60">
+              <div className="divide-y divide-primary-200/60 dark:divide-primary-800/60">
                 {resources.map(renderResourceItem)}
               </div>
             )}

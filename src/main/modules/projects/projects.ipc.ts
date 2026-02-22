@@ -13,6 +13,7 @@ const CHANNELS = {
   FIND_OR_CREATE: "projects:findOrCreate",
   CREATE: "projects:create",
   UPDATE: "projects:update",
+  REMOVE: "projects:remove",
   DELETE: "projects:delete",
   ARCHIVE: "projects:archive",
 } as const;
@@ -50,6 +51,10 @@ export function registerProjectsIpc(): void {
 
   ipcMain.handle(CHANNELS.UPDATE, async (_, id: string, payload: UpdateProjectPayload) => {
     return projectsController.update(id, payload);
+  });
+
+  ipcMain.handle(CHANNELS.REMOVE, async (_, id: string) => {
+    return projectsController.remove(id);
   });
 
   ipcMain.handle(CHANNELS.DELETE, async (_, id: string) => {

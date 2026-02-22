@@ -1,6 +1,12 @@
 import { randomUUID } from "crypto";
+import * as fs from "fs";
+import * as path from "path";
 import { projectsRepo } from "./projects.repo";
 import { normalizeRemoteOrigin } from "./projects.utils";
+import { workspacesRepo } from "../workspaces/workspaces.repo";
+import { runsRepo } from "../runs/runs.repo";
+import { reviewsRepo } from "../reviews/reviews.repo";
+import { gitService } from "../git/git.service";
 import type {
   CreateProjectPayload,
   UpdateProjectPayload,
@@ -132,6 +138,65 @@ export const projectsService = {
     } catch (error) {
       console.error(`[ProjectsService] Failed to update project ${id}:`, error);
       return { success: false, error: "Failed to update project" };
+    }
+  },
+
+  async remove(id: string): Promise<ServiceResponse<void>> {
+    try {
+      const project = await projectsRepo.findById(id);
+      if (!project) {
+        return { success: false, error: "Project not found" };
+      }
+
+      // Find all workspaces belonging to this project
+      const projectWorkspaces = await workspacesRepo.findByProjectId(id);
+
+      // Remove worktrees for each workspace
+      for (const ws of projectWorkspaces) {
+        // If workspace rootPath is under the project's workspacesPath, it's a worktree
+        if (
+          project.workspacesPath &&
+          ws.rootPath.startsWith(project.workspacesPath)
+        ) {
+          try {
+            await gitService.removeWorktree(project.rootPath, ws.rootPath);
+          } catch {
+            // If git worktree remove fails, try to remove the directory manually
+            if (fs.existsSync(ws.rootPath)) {
+              fs.rmSync(ws.rootPath, { recursive: true, force: true });
+            }
+          }
+        }
+      }
+
+      // Remove the workspacesPath directory if it exists and is empty
+      if (project.workspacesPath && fs.existsSync(project.workspacesPath)) {
+        try {
+          const remaining = fs.readdirSync(project.workspacesPath);
+          if (remaining.length === 0) {
+            fs.rmSync(project.workspacesPath, { recursive: true, force: true });
+          }
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+
+      // Delete runs, reviews for each workspace (these are set null on workspace delete, not cascade)
+      for (const ws of projectWorkspaces) {
+        await runsRepo.deleteRunsByWorkspaceId(ws.id);
+        await reviewsRepo.deleteByWorkspaceId(ws.id);
+      }
+
+      // Delete all workspaces from DB (cascades: workspaceResources, workspaceDiffs)
+      await workspacesRepo.deleteByProjectId(id);
+
+      // Delete the project from DB
+      await projectsRepo.delete(id);
+
+      return { success: true };
+    } catch (error) {
+      console.error(`[ProjectsService] Failed to remove project ${id}:`, error);
+      return { success: false, error: "Failed to remove project" };
     }
   },
 

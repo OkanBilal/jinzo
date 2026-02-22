@@ -13,6 +13,7 @@ export const projectsController = {
   findOrCreate: (payload: CreateProjectPayload) => projectsService.findOrCreate(payload),
   create: (payload: CreateProjectPayload) => projectsService.create(payload),
   update: (id: string, payload: UpdateProjectPayload) => projectsService.update(id, payload),
+  remove: (id: string) => projectsService.remove(id),
   delete: (id: string) => projectsService.delete(id),
   archive: (id: string) => projectsService.archive(id),
 };

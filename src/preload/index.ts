@@ -230,6 +230,7 @@ const api = {
       ipcRenderer.invoke("projects:create", payload),
     update: (id: string, payload: unknown) =>
       ipcRenderer.invoke("projects:update", id, payload),
+    remove: (id: string) => ipcRenderer.invoke("projects:remove", id),
     delete: (id: string) => ipcRenderer.invoke("projects:delete", id),
     archive: (id: string) => ipcRenderer.invoke("projects:archive", id),
   },

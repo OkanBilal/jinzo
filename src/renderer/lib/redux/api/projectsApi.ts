@@ -126,6 +126,14 @@ export const projectsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    removeProject: builder.mutation<void, string>({
+      query: (id) => ({
+        handler: "projects:remove",
+        args: [id],
+      }),
+      invalidatesTags: ["Projects", "Workspaces"],
+    }),
+
     deleteProject: builder.mutation<void, string>({
       query: (id) => ({
         handler: "projects:delete",
@@ -161,6 +169,7 @@ export const {
   useFindOrCreateProjectMutation,
   useCreateProjectMutation,
   useUpdateProjectMutation,
+  useRemoveProjectMutation,
   useDeleteProjectMutation,
   useArchiveProjectMutation,
 } = projectsApi;

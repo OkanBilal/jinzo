@@ -11,6 +11,7 @@ import {
   Bash,
 } from "@/components/ui/icons";
 import { useGetInstalledAppsQuery } from "@/lib/redux/api";
+import { useGetLatestWorkspaceDiffQuery } from "@/lib/redux/api/workspaceDiffsApi";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format-date";
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSub } from "@/components/ui/dropdown-menu";
@@ -57,9 +58,13 @@ export default function WorkspaceItem({
   onSettings,
 }: WorkspaceItemProps) {
   const { data: installedApps = [] } = useGetInstalledAppsQuery();
+  const { data: latestDiff } = useGetLatestWorkspaceDiffQuery(id);
   const statusConfig = getWorkspaceStatusConfig(status);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
+
+  const insertions = latestDiff?.stats?.shortstat.match(/(\d+) insertion/)?.[1];
+  const deletions = latestDiff?.stats?.shortstat.match(/(\d+) deletion/)?.[1];
 
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -109,7 +114,7 @@ export default function WorkspaceItem({
           rounded-xl transition-all duration-200 ease-out cursor-pointer ${
           isActive
             ? "bg-primary/80 dark:bg-primary/5"
-            : "bg-transparent hover:bg-primary/40 dark:hover:bg-primary/5"
+            : "bg-transparent group-hover:bg-primary/40 dark:group-hover:bg-primary/5"
         }`}
       >
         <div className="flex flex-col ">
@@ -136,7 +141,7 @@ export default function WorkspaceItem({
                 <span title={statusConfig.label} className="shrink-0 flex items-center">
                   <WorkspaceStatusIcon
                     status={status}
-                    className={`size-2.75 ${statusConfig.iconColor}`}
+                    className={`size-2.75 ml-0.5 ${statusConfig.iconColor}`}
                   />
                 </span>
                 </Tooltip>
@@ -161,16 +166,24 @@ export default function WorkspaceItem({
         </div>
       </div>
 
-      {/* Options button */}
-      <Button
-        tooltip="More options"
-        ref={buttonRef}
-        onClick={handleOptionClick}
-        className="absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer rounded-md z-10"
-        aria-label="Workspace options"
-      >
-        <Option className="w-5 h-5 text-primary-700 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200" />
-      </Button>
+      {/* Diff stats (visible by default, hidden on hover) / Options button (hidden by default, visible on hover) */}
+      <div className="absolute right-1.5 top-1/2 -translate-y-1/2 z-10">
+        {(insertions || deletions) && (
+          <span className="flex items-center gap-1 text-xs font-mono group-hover:opacity-0 transition-opacity pointer-events-none">
+            {insertions && <span className="text-green-600 dark:text-green-400">+{insertions}</span>}
+            {deletions && <span className="text-red-500 dark:text-red-400">-{deletions}</span>}
+          </span>
+        )}
+        <Button
+          tooltip="More options"
+          ref={buttonRef}
+          onClick={handleOptionClick}
+          className={`absolute right-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer rounded-md`}
+          aria-label="Workspace options"
+        >
+          <Option className="w-5 h-5 text-primary-700 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200" />
+        </Button>
+      </div>
 
       {/* Dropdown Menu */}
       <DropdownMenu

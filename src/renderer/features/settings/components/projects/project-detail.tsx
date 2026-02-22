@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo, useReducer } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Heading2, Heading3, Muted } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
+import Alert from "@/components/ui/alert";
 import {
   useGetProjectByIdQuery,
   useUpdateProjectMutation,
+  useRemoveProjectMutation,
 } from "@/lib/redux/api";
 import { SettingsRow, SettingsDivider } from "../settings-layout";
 import MoodIconPicker from "@/components/layout/sidebar/mood-icon-picker";
@@ -101,8 +104,11 @@ interface ProjectDetailProps {
 }
 
 export default function ProjectDetail({ id }: ProjectDetailProps) {
+  const [, setSearchParams] = useSearchParams();
   const { data: project, isLoading, refetch } = useGetProjectByIdQuery(id);
   const [updateProject, { isLoading: saving }] = useUpdateProjectMutation();
+  const [removeProject, { isLoading: removing }] = useRemoveProjectMutation();
+  const [showRemoveAlert, setShowRemoveAlert] = useState(false);
 
   const [state, dispatch] = useReducer(formReducer, initialState);
   const { defaultBranch, setupScript, runScript, archiveScript, icon, iconMode, isIconPickerOpen, isDirty, liveBranches } = state;
@@ -175,6 +181,19 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     if (Number.isNaN(date.getTime())) return null;
     return date.toLocaleString();
   }, [project?.updatedAt, project?.createdAt]);
+
+  const handleRemove = async () => {
+    if (removing || !project) return;
+    try {
+      await removeProject(project.id).unwrap();
+      toast.success("Repository removed");
+      setSearchParams({});
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to remove repository");
+    } finally {
+      setShowRemoveAlert(false);
+    }
+  };
 
   const setField = (field: "defaultBranch" | "setupScript" | "runScript" | "archiveScript", value: string) =>
     dispatch({ type: "SET_FIELD", field, value });
@@ -373,6 +392,35 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
           </Button>
         </div>
       </div>
+
+      <SettingsDivider />
+
+      <SettingsRow
+        variant="detail"
+        title="Remove repository"
+        description="Permanently deletes this project, all associated workspaces, and their worktree files."
+      >
+        <Button
+          type="button"
+          variant="danger"
+          size="md"
+          onClick={() => setShowRemoveAlert(true)}
+          disabled={removing}
+        >
+          Remove
+        </Button>
+      </SettingsRow>
+
+      <Alert
+        isOpen={showRemoveAlert}
+        title="Remove repository?"
+        description={`This will permanently delete "${project.name}", all its workspaces, and remove any worktree files from disk. This action cannot be undone.`}
+        primaryButtonText="Remove"
+        secondaryButtonText="Cancel"
+        onPrimary={handleRemove}
+        onSecondary={() => setShowRemoveAlert(false)}
+        isPrimaryLoading={removing}
+      />
     </div>
   );
 }

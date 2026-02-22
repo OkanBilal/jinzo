@@ -87,6 +87,21 @@ export const workspacesRepo = {
     return this.findById(id);
   },
 
+  async findByProjectId(projectId: string): Promise<WorkspaceResponse[]> {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(workspaces)
+      .where(eq(workspaces.projectId, projectId))
+      .orderBy(desc(workspaces.updatedAt));
+    return rows.map(mapRowToResponse);
+  },
+
+  async deleteByProjectId(projectId: string): Promise<void> {
+    const db = getDb();
+    await db.delete(workspaces).where(eq(workspaces.projectId, projectId));
+  },
+
   async delete(id: string): Promise<void> {
     const db = getDb();
     await db.delete(workspaces).where(eq(workspaces.id, id));

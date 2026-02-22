@@ -185,7 +185,7 @@ function MultiIssueButton({
             return (
               <button
                 key={r.id}
-                className="flex items-center first:rounded-t-xl last:rounded-b-xl gap-2.5 w-full px-3 py-2.5 text-sm text-left hover:bg-primary-100/60 dark:hover:bg-primary-800/60 transition-colors cursor-pointer"
+                className="flex items-center first:rounded-t-xl last:rounded-b-xl gap-2.5 w-full px-3 py-2.5 text-sm text-left hover:bg-primary-100/60 dark:hover:bg-primary-200/6 transition-colors cursor-pointer"
                 onClick={() => {
                   onSetGoal(config.goal);
                   setOpen(false);
