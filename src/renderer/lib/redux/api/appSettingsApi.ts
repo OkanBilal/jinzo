@@ -7,6 +7,8 @@ export interface AppSettings {
   enableWorktrees: boolean;
   showToolCalls: boolean;
   preventSleepDuringRuns: boolean;
+  notifyOnRunComplete: boolean;
+  notifyOnToolApproval: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -61,6 +63,26 @@ export const appSettingsApi = baseApi.injectEndpoints({
         response.data,
       invalidatesTags: ["AppSettings"],
     }),
+
+    setNotifyOnRunComplete: builder.mutation<AppSettings, boolean>({
+      query: (enabled) => ({
+        handler: "appSettings:setNotifyOnRunComplete",
+        args: [enabled],
+      }),
+      transformResponse: (response: { success: boolean; data: AppSettings }) =>
+        response.data,
+      invalidatesTags: ["AppSettings"],
+    }),
+
+    setNotifyOnToolApproval: builder.mutation<AppSettings, boolean>({
+      query: (enabled) => ({
+        handler: "appSettings:setNotifyOnToolApproval",
+        args: [enabled],
+      }),
+      transformResponse: (response: { success: boolean; data: AppSettings }) =>
+        response.data,
+      invalidatesTags: ["AppSettings"],
+    }),
   }),
   overrideExisting: false,
 });
@@ -72,4 +94,6 @@ export const {
   useSetEnableWorktreesMutation,
   useSetShowToolCallsMutation,
   useSetPreventSleepDuringRunsMutation,
+  useSetNotifyOnRunCompleteMutation,
+  useSetNotifyOnToolApprovalMutation,
 } = appSettingsApi;

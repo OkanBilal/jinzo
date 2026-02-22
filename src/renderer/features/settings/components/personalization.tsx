@@ -5,7 +5,7 @@ import { Button } from "../../../components/ui/button";
 import { Input, Textarea } from "../../../components/ui/input";
 import { Heading2 } from "../../../components/ui/text";
 import { useGetAccountQuery, useUpdateAccountMutation } from "@/lib/redux/api";
-import { SettingsRow, SettingsDivider } from "./settings-layout";
+import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 
 interface PersonalizationFormValues {
   displayName: string;
@@ -91,125 +91,116 @@ export default function PersonalizationSettings() {
   }, [lastSavedAt]);
 
   return (
-    <div className="space-y-2">
+    <div className="bg-primary dark:bg-primary-950">
       <div className="mb-8">
         <Heading2>Personalization</Heading2>
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50/60 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+        <div className="rounded-2xl border border-red-200 bg-red-50/60 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200 mb-6">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="rounded-3xl border border-primary-200/60 dark:border-primary-900 bg-white/50 dark:bg-primary-950/30 p-6 text-sm text-primary-600 dark:text-primary-200">
+        <div className="rounded-xl border border-primary-200/60 dark:border-primary-900 bg-white/50 dark:bg-primary-950/30 p-6 text-sm text-primary-600 dark:text-primary-200">
           Loading personalization...
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-0">
-          <SettingsRow
-            title="Display Name"
-            description="Your name displayed across the app"
-          >
-            <Input
-              id="displayName"
-              value={form.displayName}
-              onChange={handleChange("displayName")}
-              disabled={saving}
-              placeholder="e.g. Alex Smith"
-            />
-          </SettingsRow>
+          <SettingsSection title="Profile">
+            <SettingsRow
+              title="Display Name"
+              description="Your name displayed across the app"
+            >
+              <Input
+                id="displayName"
+                value={form.displayName}
+                onChange={handleChange("displayName")}
+                disabled={saving}
+                placeholder="e.g. Alex Smith"
+              />
+            </SettingsRow>
+            <SettingsDivider />
+            <SettingsRow title="Email" description="Used for notifications">
+              <Input
+                id="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange("email")}
+                disabled={saving}
+                placeholder="you@example.com"
+              />
+            </SettingsRow>
+            <SettingsDivider />
+            <SettingsRow
+              title="Company"
+              description="Your organization or workplace"
+            >
+              <Input
+                id="company"
+                value={form.company}
+                onChange={handleChange("company")}
+                disabled={saving}
+                placeholder="e.g. Laurel"
+              />
+            </SettingsRow>
+            <SettingsDivider />
+            <SettingsRow title="Job Title" description="Your role or position">
+              <Input
+                id="jobTitle"
+                value={form.jobTitle}
+                onChange={handleChange("jobTitle")}
+                disabled={saving}
+                placeholder="e.g. Product Lead"
+              />
+            </SettingsRow>
+          </SettingsSection>
 
-          <SettingsDivider />
-          <SettingsRow title="Email" description="Used for notifications">
-            <Input
-              id="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange("email")}
-              disabled={saving}
-              placeholder="you@example.com"
-            />
-          </SettingsRow>
+          <SettingsSection title="Links & Media">
+            <SettingsRow
+              title="Website"
+              description="Your personal or company website"
+            >
+              <Input
+                id="website"
+                value={form.website}
+                onChange={handleChange("website")}
+                disabled={saving}
+                placeholder="https://"
+              />
+            </SettingsRow>
+            <SettingsDivider />
+            <SettingsRow
+              title="Avatar URL"
+              description="Link to your profile picture"
+            >
+              <Input
+                id="avatarUrl"
+                value={form.avatarUrl}
+                onChange={handleChange("avatarUrl")}
+                disabled={saving}
+                placeholder="https://cdn.example.com/me.png"
+                className="min-w-80!"
+              />
+            </SettingsRow>
+            <SettingsDivider />
+            <SettingsRow
+              title="Bio"
+              description="Tell us a little about yourself"
+            >
+              <Textarea
+                id="bio"
+                className="resize-none w-80! h-16"
+                value={form.bio}
+                onChange={handleChange("bio")}
+                disabled={saving}
+                placeholder="A short description..."
+              />
+            </SettingsRow>
+          </SettingsSection>
 
-          <SettingsDivider />
-
-          <SettingsRow
-            title="Company"
-            description="Your organization or workplace"
-          >
-            <Input
-              id="company"
-              value={form.company}
-              onChange={handleChange("company")}
-              disabled={saving}
-              placeholder="e.g. Laurel"
-            />
-          </SettingsRow>
-
-          <SettingsDivider />
-
-          <SettingsRow title="Job Title" description="Your role or position">
-            <Input
-              id="jobTitle"
-              value={form.jobTitle}
-              onChange={handleChange("jobTitle")}
-              disabled={saving}
-              placeholder="e.g. Product Lead"
-            />
-          </SettingsRow>
-
-          <SettingsDivider />
-
-          <SettingsRow
-            title="Website"
-            description="Your personal or company website"
-          >
-            <Input
-              id="website"
-              value={form.website}
-              onChange={handleChange("website")}
-              disabled={saving}
-              placeholder="https://"
-            />
-          </SettingsRow>
-
-          <SettingsDivider />
-
-          <SettingsRow
-            title="Avatar URL"
-            description="Link to your profile picture"
-          >
-            <Input
-              id="avatarUrl"
-              value={form.avatarUrl}
-              onChange={handleChange("avatarUrl")}
-              disabled={saving}
-              placeholder="https://cdn.example.com/me.png"
-              className="min-w-80!"
-            />
-          </SettingsRow>
-
-          <SettingsDivider />
-
-          <SettingsRow
-            title="Bio"
-            description="Tell us a little about yourself"
-          >
-            <Textarea
-              id="bio"
-              className="resize-none w-80! h-16"
-              value={form.bio}
-              onChange={handleChange("bio")}
-              disabled={saving}
-              placeholder="A short description..."
-            />
-          </SettingsRow>
-
-          <SettingsDivider />
-
-          <div className="flex items-center justify-between pt-6">
+          <div className="flex items-center justify-between pt-2">
             <div className="text-xs text-primary-500 dark:text-primary-400">
               {lastSavedLabel
                 ? `Last saved: ${lastSavedLabel}`

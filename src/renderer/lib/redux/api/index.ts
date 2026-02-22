@@ -157,6 +157,8 @@ export {
   useSetEnableWorktreesMutation,
   useSetShowToolCallsMutation,
   useSetPreventSleepDuringRunsMutation,
+  useSetNotifyOnRunCompleteMutation,
+  useSetNotifyOnToolApprovalMutation,
 } from "./appSettingsApi";
 export type { AppSettings } from "./appSettingsApi";
 

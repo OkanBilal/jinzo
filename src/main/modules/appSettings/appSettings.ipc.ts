@@ -10,6 +10,8 @@ export function registerAppSettingsIpc() {
   ipcMain.handle("appSettings:setEnableWorktrees", (_, enabled) => appSettingsController.setEnableWorktrees(enabled));
   ipcMain.handle("appSettings:setShowToolCalls", (_, enabled) => appSettingsController.setShowToolCalls(enabled));
   ipcMain.handle("appSettings:setPreventSleepDuringRuns", (_, enabled) => appSettingsController.setPreventSleepDuringRuns(enabled));
+  ipcMain.handle("appSettings:setNotifyOnRunComplete", (_, enabled) => appSettingsController.setNotifyOnRunComplete(enabled));
+  ipcMain.handle("appSettings:setNotifyOnToolApproval", (_, enabled) => appSettingsController.setNotifyOnToolApproval(enabled));
 
   console.log("App settings IPC handlers registered");
 }
@@ -20,4 +22,6 @@ export function unregisterAppSettingsIpc() {
   ipcMain.removeHandler("appSettings:setEnableWorktrees");
   ipcMain.removeHandler("appSettings:setShowToolCalls");
   ipcMain.removeHandler("appSettings:setPreventSleepDuringRuns");
+  ipcMain.removeHandler("appSettings:setNotifyOnRunComplete");
+  ipcMain.removeHandler("appSettings:setNotifyOnToolApproval");
 }

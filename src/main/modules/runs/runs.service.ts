@@ -1,4 +1,4 @@
-import { powerSaveBlocker } from "electron";
+import { powerSaveBlocker, Notification, BrowserWindow } from "electron";
 import { runsRepo } from "./runs.repo";
 import { providersRepo } from "../providers/providers.repo";
 import { workspacesRepo } from "../workspaces/workspaces.repo";
@@ -66,6 +66,31 @@ function releaseSleepBlocker(runId: string): void {
 export function releaseAllSleepBlockers(): void {
   for (const [runId] of sleepBlockers) {
     releaseSleepBlocker(runId);
+  }
+}
+
+async function sendRunNotification(runId: string, status: string): Promise<void> {
+  try {
+    const settings = await appSettingsRepo.findById("default");
+    if (!settings?.notifyOnRunComplete) return;
+
+    const title = status === "succeeded" ? "Run Completed" : "Run Failed";
+    const body = status === "succeeded"
+      ? `Run ${runId.slice(0, 8)} finished successfully`
+      : `Run ${runId.slice(0, 8)} failed`;
+
+    const notification = new Notification({ title, body });
+    notification.on("click", () => {
+      const windows = BrowserWindow.getAllWindows();
+      if (windows.length > 0) {
+        const win = windows[0];
+        if (win.isMinimized()) win.restore();
+        win.focus();
+      }
+    });
+    notification.show();
+  } catch (err) {
+    console.error("[RunsService] Failed to send run notification:", err);
   }
 }
 
@@ -770,6 +795,7 @@ export const runsService = {
             `[RunsService] Run ${runId} completed with status: ${finalStatus}`,
           );
 
+          sendRunNotification(runId, finalStatus);
           releaseSleepBlocker(runId);
         })
         .catch(async (error) => {
@@ -785,6 +811,7 @@ export const runsService = {
             lastError: errorMessage,
           });
 
+          sendRunNotification(runId, "failed");
           releaseSleepBlocker(runId);
         });
 
@@ -1197,6 +1224,7 @@ export const runsService = {
             `[RunsService] Continued run ${runId} completed with status: ${finalStatus}`,
           );
 
+          sendRunNotification(runId, finalStatus);
           releaseSleepBlocker(runId);
         })
         .catch(async (error) => {
@@ -1215,6 +1243,7 @@ export const runsService = {
             lastError: errorMessage,
           });
 
+          sendRunNotification(runId, "failed");
           releaseSleepBlocker(runId);
         });
 

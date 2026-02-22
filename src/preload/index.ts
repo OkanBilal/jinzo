@@ -274,6 +274,10 @@ const api = {
       ipcRenderer.invoke("appSettings:setShowToolCalls", enabled),
     setPreventSleepDuringRuns: (enabled: boolean) =>
       ipcRenderer.invoke("appSettings:setPreventSleepDuringRuns", enabled),
+    setNotifyOnRunComplete: (enabled: boolean) =>
+      ipcRenderer.invoke("appSettings:setNotifyOnRunComplete", enabled),
+    setNotifyOnToolApproval: (enabled: boolean) =>
+      ipcRenderer.invoke("appSettings:setNotifyOnToolApproval", enabled),
     onMoodChanged: (
       callback: (data: { activeMoodId: string | null }) => void,
     ) => {

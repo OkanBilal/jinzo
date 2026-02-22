@@ -61,6 +61,14 @@ export const appSettings = sqliteTable("app_settings", {
     .notNull()
     .default(false),
 
+  notifyOnRunComplete: integer("notify_on_run_complete", { mode: "boolean" })
+    .notNull()
+    .default(true),
+
+  notifyOnToolApproval: integer("notify_on_tool_approval", { mode: "boolean" })
+    .notNull()
+    .default(true),
+
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),

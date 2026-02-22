@@ -142,4 +142,50 @@ export const appSettingsService = {
       };
     }
   },
+
+  async setNotifyOnRunComplete(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+    try {
+      if (typeof enabled !== "boolean") {
+        return { success: false, error: "enabled must be a boolean" };
+      }
+
+      await this.ensureSettings();
+
+      const updated = await appSettingsRepo.updateNotifyOnRunComplete(SETTINGS_ID, enabled);
+      if (!updated) {
+        return { success: false, error: "Failed to update settings" };
+      }
+
+      return { success: true, data: updated };
+    } catch (error) {
+      console.error("Error updating notifyOnRunComplete:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  },
+
+  async setNotifyOnToolApproval(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+    try {
+      if (typeof enabled !== "boolean") {
+        return { success: false, error: "enabled must be a boolean" };
+      }
+
+      await this.ensureSettings();
+
+      const updated = await appSettingsRepo.updateNotifyOnToolApproval(SETTINGS_ID, enabled);
+      if (!updated) {
+        return { success: false, error: "Failed to update settings" };
+      }
+
+      return { success: true, data: updated };
+    } catch (error) {
+      console.error("Error updating notifyOnToolApproval:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  },
 };

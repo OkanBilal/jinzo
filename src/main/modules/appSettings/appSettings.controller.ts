@@ -24,4 +24,12 @@ export const appSettingsController = {
   async setPreventSleepDuringRuns(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
     return appSettingsService.setPreventSleepDuringRuns(enabled);
   },
+
+  async setNotifyOnRunComplete(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+    return appSettingsService.setNotifyOnRunComplete(enabled);
+  },
+
+  async setNotifyOnToolApproval(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+    return appSettingsService.setNotifyOnToolApproval(enabled);
+  },
 };

@@ -83,4 +83,30 @@ export const appSettingsRepo = {
 
     return this.findById(id);
   },
+
+  async updateNotifyOnRunComplete(id: string, enabled: boolean): Promise<AppSettingsRecord | null> {
+    const db = getDb();
+    await db
+      .update(appSettings)
+      .set({
+        notifyOnRunComplete: enabled,
+        updatedAt: sql`(unixepoch())`,
+      })
+      .where(eq(appSettings.id, id));
+
+    return this.findById(id);
+  },
+
+  async updateNotifyOnToolApproval(id: string, enabled: boolean): Promise<AppSettingsRecord | null> {
+    const db = getDb();
+    await db
+      .update(appSettings)
+      .set({
+        notifyOnToolApproval: enabled,
+        updatedAt: sql`(unixepoch())`,
+      })
+      .where(eq(appSettings.id, id));
+
+    return this.findById(id);
+  },
 };

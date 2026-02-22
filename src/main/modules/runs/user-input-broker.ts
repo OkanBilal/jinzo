@@ -1,5 +1,6 @@
-import { BrowserWindow } from "electron";
+import { BrowserWindow, Notification } from "electron";
 import type { ToolApprovalRequest, ToolApprovalResponse } from "./runs.dto";
+import { appSettingsRepo } from "../appSettings/appSettings.repo";
 
 /**
  * Singleton broker that manages pending tool-approval requests.
@@ -51,6 +52,25 @@ export function requestToolApproval(
         win.webContents.send(PUSH_CHANNEL, req);
       }
     }
+
+    // Send desktop notification if enabled
+    appSettingsRepo.findById("default").then((settings) => {
+      if (settings?.notifyOnToolApproval) {
+        const notification = new Notification({
+          title: "Tool Approval Needed",
+          body: req.toolName,
+        });
+        notification.on("click", () => {
+          const windows = BrowserWindow.getAllWindows();
+          if (windows.length > 0) {
+            const win = windows[0];
+            if (win.isMinimized()) win.restore();
+            win.focus();
+          }
+        });
+        notification.show();
+      }
+    }).catch(() => {});
   });
 }
 

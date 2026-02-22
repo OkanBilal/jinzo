@@ -9,8 +9,8 @@ import { AccountFormValues } from "../../../features/settings/types/account";
 import Select from "@/components/ui/select";
 import { cn } from "@/lib/cn";
 import { defaultTheme } from "@/lib/theme";
-import { useGetAccountQuery, useUpdateAccountMutation, useGetAppSettingsQuery, useSetShowToolCallsMutation, useSetPreventSleepDuringRunsMutation } from "@/lib/redux/api";
-import { SettingsRow, SettingsDivider } from "./settings-layout";
+import { useGetAccountQuery, useUpdateAccountMutation, useGetAppSettingsQuery, useSetShowToolCallsMutation, useSetPreventSleepDuringRunsMutation, useSetNotifyOnRunCompleteMutation, useSetNotifyOnToolApprovalMutation } from "@/lib/redux/api";
+import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import { Toggle } from "@/components/ui/toggle";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
 import { Refresh } from "@/components/ui/icons";
@@ -300,6 +300,30 @@ function PreventSleepToggle() {
   );
 }
 
+function NotifyRunCompleteToggle() {
+  const { data: settings } = useGetAppSettingsQuery();
+  const [setNotifyOnRunComplete] = useSetNotifyOnRunCompleteMutation();
+
+  return (
+    <Toggle
+      enabled={settings?.notifyOnRunComplete ?? true}
+      onChange={(val) => setNotifyOnRunComplete(val)}
+    />
+  );
+}
+
+function NotifyToolApprovalToggle() {
+  const { data: settings } = useGetAppSettingsQuery();
+  const [setNotifyOnToolApproval] = useSetNotifyOnToolApprovalMutation();
+
+  return (
+    <Toggle
+      enabled={settings?.notifyOnToolApproval ?? true}
+      onChange={(val) => setNotifyOnToolApproval(val)}
+    />
+  );
+}
+
 export default function GeneralSettings() {
   const { theme, setTheme } = useDarkMode();
   const { activeMood } = useActiveMood();
@@ -388,155 +412,112 @@ export default function GeneralSettings() {
   }, [lastSavedAt]);
 
   return (
-    <div className="space-y-2 bg-primary dark:bg-primary-950 ">
+    <div className="bg-primary dark:bg-primary-950">
       <div className="mb-8">
         <Heading2>General</Heading2>
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50/60 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+        <div className="rounded-2xl border border-red-200 bg-red-50/60 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200 mb-6">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="rounded-3xl border border-primary-200/60 dark:border-primary-900 bg-white/50 dark:bg-primary-950/30 p-6 text-sm text-primary-600 dark:text-primary-200">
+        <div className="rounded-xl border border-primary-200/60 dark:border-primary-900 bg-white/50 dark:bg-primary-950/30 p-6 text-sm text-primary-600 dark:text-primary-200">
           Loading account information...
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-0">
-          <SettingsRow
-            title="Appearance"
-            description="Choose your preferred color mode"
-          >
-            <div className="flex gap-3">
-                  <ThemePreviewCard
-                    themeValue="light"
-                    label="Light"
-                    isSelected={theme === "light"}
-                    lightBackground={lightBackground}
-                    darkBackground={darkBackground}
-                    onClick={() => {
-                      setTheme("light");
-                      toast.success("Theme changed to Light");
-                    }}
-                  />
-                  <ThemePreviewCard
-                    themeValue="system"
-                    label="Auto"
-                    isSelected={theme === "system"}
-                    lightBackground={lightBackground}
-                    darkBackground={darkBackground}
-                    onClick={() => {
-                      setTheme("system");
-                      toast.success("Theme changed to Auto");
-                    }}
-                  />
-                  <ThemePreviewCard
-                    themeValue="dark"
-                    label="Dark"
-                    isSelected={theme === "dark"}
-                    lightBackground={lightBackground}
-                    darkBackground={darkBackground}
-                    onClick={() => {
-                      setTheme("dark");
-                      toast.success("Theme changed to Dark");
-                    }}
-                  />
-            </div>
-          </SettingsRow>
+        <>
+          <SettingsSection>
+            <SettingsRow
+              title="Run Detail"
+              description="Control how much detail is shown in run output"
+            >
+              <RunDetailSelect />
+            </SettingsRow>
+            <SettingsDivider />
+            <SettingsRow
+              title="Prevent Sleep"
+              description="Keep your computer awake while a run is active"
+            >
+              <PreventSleepToggle />
+            </SettingsRow>
+          </SettingsSection>
 
-          <SettingsDivider />
-          <SettingsRow
-            title="Run Detail"
-            description="Control how much detail is shown in run output"
-          >
-            <RunDetailSelect />
-          </SettingsRow>
+          <SettingsSection title="Appearance">
+            <SettingsRow
+              title="Theme"
+              description="Choose your preferred color mode"
+            >
+              <div className="flex gap-3">
+                <ThemePreviewCard
+                  themeValue="light"
+                  label="Light"
+                  isSelected={theme === "light"}
+                  lightBackground={lightBackground}
+                  darkBackground={darkBackground}
+                  onClick={() => {
+                    setTheme("light");
+                    toast.success("Theme changed to Light");
+                  }}
+                />
+                <ThemePreviewCard
+                  themeValue="system"
+                  label="Auto"
+                  isSelected={theme === "system"}
+                  lightBackground={lightBackground}
+                  darkBackground={darkBackground}
+                  onClick={() => {
+                    setTheme("system");
+                    toast.success("Theme changed to Auto");
+                  }}
+                />
+                <ThemePreviewCard
+                  themeValue="dark"
+                  label="Dark"
+                  isSelected={theme === "dark"}
+                  lightBackground={lightBackground}
+                  darkBackground={darkBackground}
+                  onClick={() => {
+                    setTheme("dark");
+                    toast.success("Theme changed to Dark");
+                  }}
+                />
+              </div>
+            </SettingsRow>
+          </SettingsSection>
 
-          <SettingsDivider />
-          <SettingsRow
-            title="Prevent Sleep"
-            description="Keep your computer awake while a run is active"
-          >
-            <PreventSleepToggle />
-          </SettingsRow>
+          <SettingsSection title="Notifications">
+            <SettingsRow
+              title="Run Complete"
+              description="Get notified when a run finishes"
+            >
+              <NotifyRunCompleteToggle />
+            </SettingsRow>
+            <SettingsDivider />
+            <SettingsRow
+              title="Tool Approval"
+              description="Get notified when a tool needs your approval"
+            >
+              <NotifyToolApprovalToggle />
+            </SettingsRow>
+          </SettingsSection>
 
-          <SettingsDivider />
-          {/* <SettingsRow
-            title="Time Zone"
-            description="Set your local timezone for accurate scheduling"
-          >
-            <Select
-              useFixedBackground={true}
-              value={form.timezone}
-              options={TIMEZONE_OPTIONS}
-              onChange={(val) => {
-                setForm((prev: any) => ({ ...prev, timezone: val }));
-                setIsDirty(true);
-              }}
-              placeholder="Select timezone"
-            />
-          </SettingsRow>
-          <SettingsDivider /> */}
-          {/* <SettingsRow
-            title="Language"
-            description="Choose your preferred language"
-          >
-            <Select
-              useFixedBackground={true}
-              value={form.locale}
-              options={LOCALE_OPTIONS}
-              onChange={(val) => {
-                setForm((prev: any) => ({ ...prev, locale: val }));
-                setIsDirty(true);
-              }}
-              placeholder="Select language"
-            />
-          </SettingsRow>
-
-          <SettingsDivider /> */}
-          <SettingsRow
-            title="Software Updates"
-            description={`Current version: v${__APP_VERSION__ ?? "1.0.0"}`}
-          >
-            <UpdateButton
-              state={updateState}
-              onCheck={checkUpdate}
-              onDownload={downloadUpdate}
-              onInstall={installUpdate}
-            />
-          </SettingsRow>
-
-          {/* <SettingsDivider />
-          <div className="flex items-center justify-between pt-6">
-            <div className="text-xs text-primary-500 dark:text-primary-400">
-              {lastSavedLabel
-                ? `Last saved: ${lastSavedLabel}`
-                : "Not saved yet"}
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                tooltip="Refresh account details"
-                type="button"
-                variant="ghost"
-                onClick={() => refetch()}
-                disabled={loading || saving}
-              >
-                Refresh
-              </Button>
-              <Button
-                type="submit"
-                size="md"
-                variant="submit"
-                disabled={!isDirty || saving}
-                isLoading={saving}
-              >
-                Save
-              </Button>
-            </div>
-          </div> */}
-        </form>
+          <SettingsSection title="Software Updates">
+            <SettingsRow
+              title="Version"
+              description={`Current version: v${__APP_VERSION__ ?? "1.0.0"}`}
+            >
+              <UpdateButton
+                state={updateState}
+                onCheck={checkUpdate}
+                onDownload={downloadUpdate}
+                onInstall={installUpdate}
+              />
+            </SettingsRow>
+          </SettingsSection>
+        </>
       )}
     </div>
   );

@@ -11,7 +11,7 @@ import {
   useUpdateProjectMutation,
   useRemoveProjectMutation,
 } from "@/lib/redux/api";
-import { SettingsRow, SettingsDivider } from "../settings-layout";
+import { SettingsSection, SettingsRow, SettingsDivider } from "../settings-layout";
 import MoodIconPicker from "@/components/layout/sidebar/mood-icon-picker";
 import { parseIcon } from "@/lib/icon-registry";
 
@@ -231,142 +231,101 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   }
 
   return (
-    <div className="space-y-2 bg-primary dark:bg-primary-950 pb-16">
+    <div className="bg-primary dark:bg-primary-950 pb-16">
       <div className="mb-8">
         <Heading2 className="font-medium!">{project.name}</Heading2>
       </div>
 
-      <SettingsRow
-        variant="detail"
-        title="Icon"
-        description="Choose an emoji or icon for this project."
-      >
-        <MoodIconPicker
-          useFixedBackground
-          icon={icon}
-          iconMode={iconMode}
-          isOpen={isIconPickerOpen}
-          onToggle={() => dispatch({ type: "SET_ICON_PICKER_OPEN", isOpen: !isIconPickerOpen })}
-          onSelectEmoji={(emoji) => dispatch({ type: "SET_ICON", icon: emoji, iconMode: "emoji" })}
-          onSelectIcon={(name) => dispatch({ type: "SET_ICON", icon: name, iconMode: "icon" })}
-          onSwitchMode={(mode) => dispatch({ type: "SET_ICON_MODE", iconMode: mode })}
-          onClose={() => dispatch({ type: "SET_ICON_PICKER_OPEN", isOpen: false })}
-          onClear={() => dispatch({ type: "SET_ICON", icon: "", iconMode: "emoji" })}
-        />
-      </SettingsRow>
-
-      <SettingsDivider />
-
-      <SettingsRow
-        variant="detail"
-        title="Root path"
-        description="Do not move or delete this directory."
-      >
-        {formatPath(project.rootPath)}
-      </SettingsRow>
-
-      <SettingsDivider />
-
-      <SettingsRow
-        variant="detail"
-        title="Workspaces path"
-        description={
-          project.workspacesPath
-            ? "Do not move or delete the workspace subdirectories."
-            : undefined
-        }
-      >
-        {project.workspacesPath ? (
-          formatPath(project.workspacesPath)
-        ) : (
-          <Muted>Not configured</Muted>
-        )}
-      </SettingsRow>
-
-      {/*
-      TODO: will be back
-            <SettingsDivider />
-
-      <SettingsRow
-        title="Branch new workspaces from"
-        description="Each workspace is an isolated copy of your codebase."
-      >
-        {branchOptions.length > 0 ? (
-          <Select
+      <SettingsSection>
+        <SettingsRow
+          variant="detail"
+          title="Icon"
+          description="Choose an emoji or icon for this project."
+        >
+          <MoodIconPicker
             useFixedBackground
-            value={defaultBranch}
-            options={branchOptions}
-            onChange={(val) => setField("defaultBranch", val)}
-            placeholder="Select branch"
+            icon={icon}
+            iconMode={iconMode}
+            isOpen={isIconPickerOpen}
+            onToggle={() => dispatch({ type: "SET_ICON_PICKER_OPEN", isOpen: !isIconPickerOpen })}
+            onSelectEmoji={(emoji) => dispatch({ type: "SET_ICON", icon: emoji, iconMode: "emoji" })}
+            onSelectIcon={(name) => dispatch({ type: "SET_ICON", icon: name, iconMode: "icon" })}
+            onSwitchMode={(mode) => dispatch({ type: "SET_ICON_MODE", iconMode: mode })}
+            onClose={() => dispatch({ type: "SET_ICON_PICKER_OPEN", isOpen: false })}
+            onClear={() => dispatch({ type: "SET_ICON", icon: "", iconMode: "emoji" })}
           />
-        ) : (
-          <Muted>No branches available</Muted>
-        )}
-      </SettingsRow> */}
+        </SettingsRow>
+        <SettingsDivider />
+        <SettingsRow
+          variant="detail"
+          title="Root path"
+          description="Do not move or delete this directory."
+        >
+          {formatPath(project.rootPath)}
+        </SettingsRow>
+        <SettingsDivider />
+        <SettingsRow
+          variant="detail"
+          title="Workspaces path"
+          description={
+            project.workspacesPath
+              ? "Do not move or delete the workspace subdirectories."
+              : undefined
+          }
+        >
+          {project.workspacesPath ? (
+            formatPath(project.workspacesPath)
+          ) : (
+            <Muted>Not configured</Muted>
+          )}
+        </SettingsRow>
+      </SettingsSection>
 
-      {/* <SettingsDivider />
-      TODO: will be back
+      <SettingsSection title="Scripts">
+        <SettingsRow
+          variant="detail"
+          title="Setup script"
+          description="Runs when a new workspace is created."
+        >
+          <Textarea
+            value={setupScript}
+            onChange={(e) => setField("setupScript", e.target.value)}
+            placeholder="e.g., npm install"
+            rows={2}
+            className="min-w-0"
+          />
+        </SettingsRow>
+        <SettingsDivider />
+        <SettingsRow
+          variant="detail"
+          title="Run script"
+          description="Runs when a workspace session starts."
+        >
+          <Textarea
+            value={runScript}
+            onChange={(e) => setField("runScript", e.target.value)}
+            placeholder="e.g., npm run dev"
+            rows={2}
+            className="min-w-0"
+          />
+        </SettingsRow>
+        <SettingsDivider />
+        <SettingsRow
+          variant="detail"
+          title="Archive script"
+          description="Runs when a workspace is archived."
+        >
+          <Textarea
+            value={archiveScript}
+            onChange={(e) => setField("archiveScript", e.target.value)}
+            placeholder="e.g., rm -rf node_modules"
+            rows={2}
+            className="min-w-0"
+          />
+        </SettingsRow>
+      </SettingsSection>
 
-      <SettingsRow
-        title="Remote origin"
-        description="Where should we push, pull, and create PRs?"
-      >
-        <span className="text-sm font-mono text-primary-500 dark:text-primary-400">
-          {project.remoteOrigin}
-        </span>
-      </SettingsRow> */}
-
-      <SettingsDivider />
-
-      <SettingsRow
-        variant="detail"
-        title="Setup script"
-        description="Runs when a new workspace is created."
-      >
-        <Textarea
-          value={setupScript}
-          onChange={(e) => setField("setupScript", e.target.value)}
-          placeholder="e.g., npm install"
-          rows={2}
-          className="min-w-0 "
-        />
-      </SettingsRow>
-
-      <SettingsDivider />
-
-      <SettingsRow
-        variant="detail"
-        title="Run script"
-        description="Runs when a workspace session starts."
-      >
-        <Textarea
-          value={runScript}
-          onChange={(e) => setField("runScript", e.target.value)}
-          placeholder="e.g., npm run dev"
-          rows={2}
-          className="min-w-0"
-        />
-      </SettingsRow>
-
-      <SettingsDivider />
-
-      <SettingsRow
-        variant="detail"
-        title="Archive script"
-        description="Runs when a workspace is archived."
-      >
-        <Textarea
-          value={archiveScript}
-          onChange={(e) => setField("archiveScript", e.target.value)}
-          placeholder="e.g., rm -rf node_modules"
-          rows={2}
-          className="min-w-0"
-        />
-      </SettingsRow>
-
-      <SettingsDivider />
-
-      <div className="flex items-center justify-between pt-6">
+      <div className="flex items-center justify-between pt-2 mb-8">
         <div className="text-xs text-primary-500 dark:text-primary-400">
           {lastSavedLabel ? `Last saved: ${lastSavedLabel}` : "Not saved yet"}
         </div>
@@ -393,23 +352,23 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
         </div>
       </div>
 
-      <SettingsDivider />
-
-      <SettingsRow
-        variant="detail"
-        title="Remove repository"
-        description="Permanently deletes this project, all associated workspaces, and their worktree files."
-      >
-        <Button
-          type="button"
-          variant="danger"
-          size="md"
-          onClick={() => setShowRemoveAlert(true)}
-          disabled={removing}
+      <SettingsSection title="Danger Zone">
+        <SettingsRow
+          variant="detail"
+          title="Remove repository"
+          description="Permanently deletes this project, all associated workspaces, and their worktree files."
         >
-          Remove
-        </Button>
-      </SettingsRow>
+          <Button
+            type="button"
+            variant="danger"
+            size="md"
+            onClick={() => setShowRemoveAlert(true)}
+            disabled={removing}
+          >
+            Remove
+          </Button>
+        </SettingsRow>
+      </SettingsSection>
 
       <Alert
         isOpen={showRemoveAlert}

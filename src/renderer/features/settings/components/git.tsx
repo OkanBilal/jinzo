@@ -1,7 +1,7 @@
 import { Heading2, Muted } from "../../../components/ui/text";
 import { Toggle } from "../../../components/ui/toggle";
 import { toast } from "@/components/ui/toast";
-import { SettingsRow, SettingsDivider } from "./settings-layout";
+import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import {
   useGetAppSettingsQuery,
   useSetEnableWorktreesMutation,
@@ -38,19 +38,19 @@ export default function GitSettings() {
   }
 
   return (
-    <div className="space-y-2 bg-primary dark:bg-primary-950">
+    <div className="bg-primary dark:bg-primary-950">
       <div className="mb-8">
         <Heading2 className="font-medium!">Git</Heading2>
       </div>
 
-      <SettingsRow
-        title="Worktrees"
-        description="Work in an isolated copy of your repo, so you can work on multiple tasks at the same time. When disabled, Jinzo uses the active branch directly."
-      >
-        <Toggle enabled={enableWorktrees} onChange={handleWorktreeToggle} />
-      </SettingsRow>
-
-      <SettingsDivider />
+      <SettingsSection>
+        <SettingsRow
+          title="Worktrees"
+          description="Work in an isolated copy of your repo, so you can work on multiple tasks at the same time. When disabled, Jinzo uses the active branch directly."
+        >
+          <Toggle enabled={enableWorktrees} onChange={handleWorktreeToggle} />
+        </SettingsRow>
+      </SettingsSection>
     </div>
   );
 }
