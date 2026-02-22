@@ -3,6 +3,7 @@ import {
   WorkspaceEmptyState,
   WorkspaceEvents,
   WorkspaceInput,
+  WorkspaceQuickActions,
 } from "@/features/workspace/components";
 import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
 
@@ -31,7 +32,7 @@ export default function ClaudePage() {
     <div className="flex flex-col h-full dark:bg-claude-dark">
       <div className="flex-1 overflow-hidden noscrollbar">
         {ws.showEmptyState ? (
-          <WorkspaceEmptyState workspace={ws.currentWorkspace} />
+            <WorkspaceEmptyState workspace={ws.currentWorkspace} />
         ) : (
           <WorkspaceEvents
             runs={ws.runs}
@@ -58,8 +59,7 @@ export default function ClaudePage() {
           />
         )}
       </div>
-      {/* <WorkspaceQuickActions  onSetGoal={ws.setGoal} /> */}
-      {ws.showInput && (
+      <WorkspaceQuickActions onSetGoal={ws.setGoal} variant="claude" workspaceId={ws.currentWorkspace?.id} />
         <WorkspaceInput
           goal={ws.goal}
           onGoalChange={ws.setGoal}
@@ -76,7 +76,6 @@ export default function ClaudePage() {
           onRemoveContextIssue={ws.handleRemoveContextIssue}
           workspacePath={ws.currentWorkspace?.rootPath}
         />
-      )}
     </div>
   );
 }

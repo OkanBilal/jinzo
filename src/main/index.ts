@@ -3,6 +3,10 @@ if (process.platform === "win32") {
 }
 
 import { app, ipcMain, shell } from "electron";
+import { spawn, exec } from "child_process";
+import { promisify } from "util";
+import * as fs from "fs";
+import * as path from "path";
 import { initializeDatabase, closeDatabase, getDb } from "./db/client";
 import { registerAccountIpc, unregisterAccountIpc } from "./modules/account";
 import { registerAppsIpc, unregisterAppsIpc } from "./modules/apps";
@@ -53,6 +57,109 @@ import {
 import { createMainWindow, createSplashWindow, closeSplashWindow } from "./windows";
 import { registerImageProxyScheme, registerImageProxyHandler } from "./modules/imageProxy";
 import { registerUpdatesIpc, unregisterUpdatesIpc, updatesService } from "./modules/updates";
+
+// ─────────────────────────────────────────────────────────────
+// Installed app detection (macOS)
+// ─────────────────────────────────────────────────────────────
+const execAsync = promisify(exec);
+
+// TODO: REFACTOR, Consider adding more apps or allowing users to specify custom apps/paths in settings 
+const KNOWN_APPS = [
+  { id: "finder", name: "Finder", bundleId: "com.apple.finder" },
+  { id: "vscode", name: "Visual Studio Code", bundleId: "com.microsoft.VSCode" },
+  { id: "cursor", name: "Cursor", bundleId: "com.todesktop.230313mzl4w4u92" },
+  { id: "terminal", name: "Terminal", bundleId: "com.apple.Terminal" },
+  { id: "iterm", name: "iTerm2", bundleId: "com.googlecode.iterm2" },
+  { id: "warp", name: "Warp", bundleId: "dev.warp.Warp-Stable" },
+  { id: "xcode", name: "Xcode", bundleId: "com.apple.dt.Xcode" },
+  { id: "android-studio", name: "Android Studio", bundleId: "com.google.android.studio" },
+  { id: "sublime-text", name: "Sublime Text", bundleId: "com.sublimetext.4" },
+  { id: "webstorm", name: "WebStorm", bundleId: "com.jetbrains.WebStorm" },
+  { id: "intellij", name: "IntelliJ IDEA", bundleId: "com.jetbrains.intellij" },
+  { id: "zed", name: "Zed", bundleId: "dev.zed.Zed" },
+  { id: "ghostty", name: "Ghostty", bundleId: "com.mitchellh.ghostty" },
+  { id: "alacritty", name: "Alacritty", bundleId: "org.alacritty" },
+  { id: "kitty", name: "kitty", bundleId: "net.kovidgoyal.kitty" },
+  { id: "nova", name: "Nova", bundleId: "com.panic.Nova" },
+];
+
+interface DetectedApp {
+  id: string;
+  name: string;
+  bundleId: string;
+  path: string;
+  icon: string | null;
+}
+
+let installedAppsCache: DetectedApp[] | null = null;
+let installedAppsCacheTime = 0;
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+async function getAppIcon(appPath: string): Promise<string | null> {
+  try {
+    // Read CFBundleIconFile from Info.plist
+    const { stdout: iconName } = await execAsync(
+      `defaults read "${appPath}/Contents/Info" CFBundleIconFile 2>/dev/null`,
+    );
+    let iconFile = iconName.trim();
+    if (!iconFile) return null;
+    if (!iconFile.endsWith(".icns")) iconFile += ".icns";
+
+    const icnsPath = path.join(appPath, "Contents", "Resources", iconFile);
+    if (!fs.existsSync(icnsPath)) return null;
+
+    // Convert .icns to PNG via sips (writes to temp file)
+    const tmpPng = path.join(app.getPath("temp"), `jinzo-icon-${Date.now()}-${Math.random().toString(36).slice(2)}.png`);
+    await execAsync(`sips -s format png -z 64 64 "${icnsPath}" --out "${tmpPng}" 2>/dev/null`);
+
+    const pngBuffer = fs.readFileSync(tmpPng);
+    fs.unlinkSync(tmpPng);
+
+    if (pngBuffer.length === 0) return null;
+    return `data:image/png;base64,${pngBuffer.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
+async function detectInstalledApps(): Promise<DetectedApp[]> {
+  if (installedAppsCache && Date.now() - installedAppsCacheTime < CACHE_TTL) {
+    return installedAppsCache;
+  }
+
+  const results = await Promise.allSettled(
+    KNOWN_APPS.map(async (knownApp) => {
+      try {
+        const { stdout } = await execAsync(
+          `mdfind "kMDItemCFBundleIdentifier == '${knownApp.bundleId}'" | head -1`,
+        );
+        const appPath = stdout.trim();
+        if (!appPath) return null;
+
+        const icon = await getAppIcon(appPath);
+
+        return {
+          id: knownApp.id,
+          name: knownApp.name,
+          bundleId: knownApp.bundleId,
+          path: appPath,
+          icon,
+        } satisfies DetectedApp;
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  const detected = results
+    .filter((r): r is PromiseFulfilledResult<DetectedApp | null> => r.status === "fulfilled")
+    .map((r) => r.value)
+    .filter((v): v is DetectedApp => v !== null);
+
+  installedAppsCache = detected;
+  installedAppsCacheTime = Date.now();
+  return detected;
+}
 
 /**
  * Initialize the application
@@ -110,6 +217,22 @@ async function initializeApp() {
     });
     ipcMain.handle("shell:openPath", async (_, path: string) => {
       await shell.openPath(path);
+    });
+    ipcMain.handle("shell:openInApp", async (_, appId: string, path: string) => {
+      const known = KNOWN_APPS.find((a) => a.id === appId);
+      if (!known) return;
+      spawn("open", ["-b", known.bundleId, path], { detached: true, stdio: "ignore" });
+    });
+    ipcMain.handle("shell:getInstalledApps", async () => {
+      try {
+        const apps = await detectInstalledApps();
+        return { success: true, data: apps };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Failed to detect apps",
+        };
+      }
     });
 
     // Create main window (hidden until ready)
@@ -177,6 +300,8 @@ async function cleanupApp() {
     unregisterUpdatesIpc();
     ipcMain.removeHandler("shell:openExternal");
     ipcMain.removeHandler("shell:openPath");
+    ipcMain.removeHandler("shell:openInApp");
+    ipcMain.removeHandler("shell:getInstalledApps");
 
     // Close database
     await closeDatabase();

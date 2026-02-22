@@ -123,7 +123,7 @@ export function DiffSection({
       {/* Review Changes button */}
       <Button
         onClick={handleReviewChanges}
-        className="shrink-0 flex items-center justify-center gap-1.5 mb-2 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100 dark:bg-primary/5 hover:bg-primary-200 dark:hover:bg-primary/10 text-primary-800 dark:text-primary-200 transition-colors"
+        className="shrink-0 flex items-center justify-center gap-1.5 mb-2 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
       >
         <Sparkles className="w-3.5 h-3.5" />
         Review Changes
@@ -131,7 +131,7 @@ export function DiffSection({
 
       {/* Stats header */}
       <div className="shrink-0 flex items-center justify-between px-1 py-1.5 mb-1">
-        <span className="text-[11px] text-primary-500 dark:text-primary-400">
+        <span className="text-[11px] text-primary-900 dark:text-primary-200">
           {diff.files.length} file{diff.files.length !== 1 ? "s" : ""} changed
         </span>
         <DiffStats stats={diff.stats} />

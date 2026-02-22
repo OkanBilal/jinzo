@@ -80,11 +80,13 @@ export function InputToolbar({
           )}
         </div>
         <div className="flex items-center space-x-2">
+          {/* 
+          TODO: re-enable dictation button when the underlying speech recognition issues are resolved. For now, it's better to hide the button than to show a non-functional one and cause confusion.
           <DictationButton
             isRecording={isRecording}
             onToggle={toggleDictation}
             variant={variant}
-          />
+          /> */}
           <SendButton
             loading={isLoading}
             onSubmit={onSubmit}

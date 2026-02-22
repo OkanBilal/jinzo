@@ -15,7 +15,7 @@ function IssueProviderIcon({ provider }: { provider: string }) {
     case "jira":
       return <Jira className="w-3 h-3" />;
     case "asana":
-      return <Asana className="w-3 h-3" />;
+      return <Asana className="h-5.5 w-6 scale-60" />;
     case "gitlab":
       return <Gitlab className="w-3 h-3" />;
     default:

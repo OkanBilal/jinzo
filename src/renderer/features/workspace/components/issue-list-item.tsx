@@ -3,7 +3,6 @@ import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
 import { Jira } from "@/components/ui/icons";
 import { getLabelColor, parseLabels } from "@/lib/label-colors";
-import { ca } from "node_modules/@linear/sdk/dist/index-BBxdiqQK.mjs";
 
 interface IssueData {
   issue: {
@@ -38,7 +37,7 @@ function ProviderIcon({ provider }: { provider: string }) {
     case "jira":
       return <Jira className={iconClass} />;
     case "asana":
-      return <Asana className={iconClass} />;
+      return <Asana className="h-5.5 w-6 scale-80" />;
     case "gitlab":
       return <Gitlab className={iconClass} />;
     default:

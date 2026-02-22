@@ -66,15 +66,15 @@ function WorkspaceGroupSection({
         className="group/section w-full flex items-center gap-1.5 px-2 py-1 mb-1 rounded-lg cursor-pointer hover:bg-primary/10 dark:hover:bg-primary/5 transition-colors"
       >
         {group.icon && <span className="shrink-0">{group.icon}</span>}
-        <span className="text-xs font-medium text-primary-700 dark:text-primary-300 truncate">
+        <span className="text-xs font-medium text-primary-900 dark:text-primary-300 truncate">
           {group.label}
         </span>
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="text-[10px] text-primary-500 dark:text-primary-400 tabular-nums group-hover/section:hidden">
+          <span className="text-[10px] text-primary-900 dark:text-primary-200 tabular-nums group-hover/section:hidden">
             {group.workspaces.length}
           </span>
           <ArrowUp
-            className={`w-3 h-3 -mr-1 text-primary-700 dark:text-primary-400 transition-transform duration-200 hidden group-hover/section:block ${
+            className={`w-3 h-3 -mr-1 text-primary-900 dark:text-primary-200 transition-transform duration-200 hidden group-hover/section:block ${
               expanded ? "rotate-180" : "rotate-90"
             }`}
           />
@@ -322,6 +322,7 @@ export default function WorkspacesList({
         key={workspace.id}
         id={workspace.id}
         name={formatWorkspaceName(workspace)}
+        rootPath={workspace.rootPath}
         status={workspace.status}
         branch={workspace.defaultBranch}
         updatedAt={workspace.updatedAt}
@@ -373,7 +374,7 @@ export default function WorkspacesList({
             />
           </Button>
           <ArrowUp
-            className={`w-4 h-4 text-primary-800 dark:text-primary-300 transition-transform duration-200 ${
+            className={`w-4 h-4 text-primary-900 dark:text-primary-200 transition-transform duration-200 ${
               isExpanded ? "rotate-180" : "rotate-90"
             }`}
           />
@@ -384,7 +385,7 @@ export default function WorkspacesList({
         isOpen={isGroupDropdownOpen}
         position={groupDropdownPosition}
         onClose={() => setIsGroupDropdownOpen(false)}
-        minWidth={170}
+        minWidth={160}
       >
         <DropdownMenuItem
           onClick={() => handleSelectGrouping("none")}
@@ -394,7 +395,7 @@ export default function WorkspacesList({
               : ""
           }
         >
-          No grouping
+          Default
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => handleSelectGrouping("status")}

@@ -5,13 +5,13 @@ import { Claude } from "@/components/ui/icons/mood";
 export function getModelIcon(modelName: string) {
   const name = modelName.toLowerCase();
   if (name.includes("deepseek")) {
-    return <DeepSeek className="w-4 h-4" />;
+    return <DeepSeek className="size-3.5" />;
   }
   if (name.includes("gpt")) {
-    return <Gpt className="w-4 h-4" />;
+    return <Gpt className="size-3.5" />;
   }
   if (name.includes("llama")) {
-    return <Meta className="w-4 h-4" />;
+    return <Meta className="size-3.5" />;
   }
   if (name.includes("gemma")) {
     return <span className="text-base">💎</span>;
@@ -23,19 +23,19 @@ export function getModelIcon(modelName: string) {
     return <span className="text-base">🌐</span>;
   }
   if (name.includes("opus")) {
-    return <Claude className="w-4 h-4" />;
+    return <Claude className="size-3.5" />;
   }
   if (name.includes("sonnet")) {
-    return <Claude className="w-4 h-4" />;
+    return <Claude className="size-3.5" />;
   }
   if (name.includes("haiku")) {
-    return <Claude className="w-4 h-4" />;
+    return <Claude className="size-3.5" />;
   }
   if (name.includes("claude")) {
-    return <Claude className="w-4 h-4" />;
+    return <Claude className="size-3.5" />;
   }
   if (name.includes("gemini")) {
-    return <Gemini className="w-4 h-4" />;
+    return <Gemini className="size-3.5" />;
   }
   // Default icon
   return <span className="text-base">⚡</span>;

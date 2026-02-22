@@ -75,6 +75,7 @@ export const baseApi = createApi({
     'Reviews',
     'Projects',
     'Updates',
+    'InstalledApps',
   ],
   endpoints: () => ({}),
 });

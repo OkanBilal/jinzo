@@ -3,17 +3,41 @@ import { SVGProps } from "react"
 const SvgComponent = (props: SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={800}
-    height={800}
-    fill="none"
-    viewBox="0 0 15 15"
+    width={1667}
+    height={2500}
+    viewBox="0 0 200 300"
     {...props}
   >
+    <title>{"Figma.logo"}</title>
     <path
-      fill="currentColor"
-      fillRule="evenodd"
-      d="M7 2.05H5.525a1.475 1.475 0 0 0 0 2.95H7V2.05Zm0-1h2.475a2.475 2.475 0 0 1 1.492 4.45A2.475 2.475 0 0 1 8 9.463V11.425A2.475 2.475 0 1 1 4.033 9.45a2.471 2.471 0 0 1-.983-1.975c0-.807.386-1.523.983-1.975a2.475 2.475 0 0 1 1.492-4.45H7Zm1 1V5h1.475a1.475 1.475 0 1 0 0-2.95H8Zm-2.475 6.9H7V6H5.525a1.475 1.475 0 0 0-.006 2.95h.006ZM4.05 11.425c0-.813.657-1.472 1.47-1.475H7v1.475a1.475 1.475 0 0 1-2.95 0ZM8 7.472a1.475 1.475 0 1 1 0 .006v-.006Z"
-      clipRule="evenodd"
+      d="M50 300c27.6 0 50-22.4 50-50v-50H50c-27.6 0-50 22.4-50 50s22.4 50 50 50z"
+      style={{
+        fill: "#0acf83",
+      }}
+    />
+    <path
+      d="M0 150c0-27.6 22.4-50 50-50h50v100H50c-27.6 0-50-22.4-50-50z"
+      style={{
+        fill: "#a259ff",
+      }}
+    />
+    <path
+      d="M0 50C0 22.4 22.4 0 50 0h50v100H50C22.4 100 0 77.6 0 50z"
+      style={{
+        fill: "#f24e1e",
+      }}
+    />
+    <path
+      d="M100 0h50c27.6 0 50 22.4 50 50s-22.4 50-50 50h-50V0z"
+      style={{
+        fill: "#ff7262",
+      }}
+    />
+    <path
+      d="M200 150c0 27.6-22.4 50-50 50s-50-22.4-50-50 22.4-50 50-50 50 22.4 50 50z"
+      style={{
+        fill: "#1abcfe",
+      }}
     />
   </svg>
 )

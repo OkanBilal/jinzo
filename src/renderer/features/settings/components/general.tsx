@@ -12,6 +12,7 @@ import { defaultTheme } from "@/lib/theme";
 import { useGetAccountQuery, useUpdateAccountMutation } from "@/lib/redux/api";
 import { SettingsRow, SettingsDivider } from "./settings-layout";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
+import { Refresh } from "@/components/ui/icons";
 
 export const EMPTY_FORM = {
   displayName: "",
@@ -252,9 +253,12 @@ function UpdateButton({
       );
     default:
       return (
-        <Button type="button" variant="ghost" size="md" onClick={onCheck}>
+        <div className="">
+        <Button className="flex" type="button" variant="primary" size="md" onClick={onCheck}>
+          <Refresh className="w-4 h-4 mr-1" />
           Check for Updates
         </Button>
+        </div>
       );
   }
 }
@@ -406,7 +410,7 @@ export default function GeneralSettings() {
           </SettingsRow>
 
           <SettingsDivider />
-          <SettingsRow
+          {/* <SettingsRow
             title="Time Zone"
             description="Set your local timezone for accurate scheduling"
           >
@@ -421,8 +425,8 @@ export default function GeneralSettings() {
               placeholder="Select timezone"
             />
           </SettingsRow>
-          <SettingsDivider />
-          <SettingsRow
+          <SettingsDivider /> */}
+          {/* <SettingsRow
             title="Language"
             description="Choose your preferred language"
           >
@@ -438,7 +442,7 @@ export default function GeneralSettings() {
             />
           </SettingsRow>
 
-          <SettingsDivider />
+          <SettingsDivider /> */}
           <SettingsRow
             title="Software Updates"
             description={`Current version: v${__APP_VERSION__ ?? "1.0.0"}`}

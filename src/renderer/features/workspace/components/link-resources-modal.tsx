@@ -154,11 +154,11 @@ export function LinkResourcesModal({
       resource.kind === "github_repo" ? (
         <Github className="w-4 h-4 shrink-0" />
       ) : resource.kind === "jira_project" ? (
-        <Jira className="w-4 h-4 shrink-0" />
+        <Jira className="size-5 shrink-0" />
       ) : resource.kind === "linear_team" ? (
         <Linear className="w-4 h-4 shrink-0" />
       ) : resource.kind === "asana_project" ? (
-        <Asana className="w-4 h-4 shrink-0" />
+        <Asana className="h-5.5 w-6 scale-80 shrink-0" />
       ) : resource.kind === "gitlab_project" ? (
         <Gitlab className="w-4 h-4 shrink-0" />
       ) : (

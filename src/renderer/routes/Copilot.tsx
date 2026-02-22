@@ -15,7 +15,7 @@ export default function CopilotPage() {
     <div className="flex flex-col h-full dark:bg-copilot-dark ">
       <div className="flex-1 overflow-hidden noscrollbar">
         {ws.showEmptyState ? (
-          <WorkspaceEmptyState workspace={ws.currentWorkspace} />
+            <WorkspaceEmptyState workspace={ws.currentWorkspace} />
         ) : (
           <WorkspaceEvents
             runs={ws.runs}
@@ -39,9 +39,7 @@ export default function CopilotPage() {
           />
         )}
       </div>
-
-      {/* <WorkspaceQuickActions onSetGoal={ws.setGoal} /> */}
-      {ws.showInput && (
+      <WorkspaceQuickActions onSetGoal={ws.setGoal} variant="copilot" workspaceId={ws.currentWorkspace?.id} />
         <WorkspaceInput
           goal={ws.goal}
           onGoalChange={ws.setGoal}
@@ -58,7 +56,6 @@ export default function CopilotPage() {
           onRemoveContextIssue={ws.handleRemoveContextIssue}
           workspacePath={ws.currentWorkspace?.rootPath}
         />
-      )}
     </div>
   );
 }

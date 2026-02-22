@@ -298,7 +298,7 @@ export function WorkspaceEvents({
         )}
         {/* Bottom fade overlay */}
         <div
-          className={`absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary ${variant === "claude" ? "dark:from-claude-dark" : "dark:from-copilot-dark"} to-transparent pointer-events-none`}
+          className={`absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary to-transparent  ${variant === "claude" ? "dark:from-claude-dark" : "dark:from-copilot-dark"} pointer-events-none`}
         />
       </div>
     </div>

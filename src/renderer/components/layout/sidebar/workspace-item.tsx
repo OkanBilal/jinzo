@@ -7,10 +7,13 @@ import {
   Branch,
   Archive,
   Settings,
+  External,
+  Bash,
 } from "@/components/ui/icons";
+import { useGetInstalledAppsQuery } from "@/lib/redux/api";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format-date";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuItem, DropdownMenuSub } from "@/components/ui/dropdown-menu";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspacesApi";
@@ -21,6 +24,7 @@ type GroupingMode = "none" | "status" | "project";
 interface WorkspaceItemProps {
   id: string;
   name: string;
+  rootPath?: string;
   status?: WorkspaceStatus;
   branch?: string | null;
   updatedAt?: Date;
@@ -38,6 +42,7 @@ interface WorkspaceItemProps {
 export default function WorkspaceItem({
   id,
   name,
+  rootPath,
   status = "todo",
   branch,
   updatedAt,
@@ -51,6 +56,7 @@ export default function WorkspaceItem({
   onArchive,
   onSettings,
 }: WorkspaceItemProps) {
+  const { data: installedApps = [] } = useGetInstalledAppsQuery();
   const statusConfig = getWorkspaceStatusConfig(status);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
@@ -99,16 +105,17 @@ export default function WorkspaceItem({
         tabIndex={0}
         onClick={onClick}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick?.(); } }}
-        className={`block px-3 py-1.5 active:scale-99 group-hover:scale-[1.01] rounded-xl transition-all duration-200 ease-out cursor-pointer ${
+        className={`block px-2.5 py-1.5 active:scale-99 group-hover:scale-[1.01] 
+          rounded-xl transition-all duration-200 ease-out cursor-pointer ${
           isActive
             ? "bg-primary/80 dark:bg-primary/5"
             : "bg-transparent hover:bg-primary/40 dark:hover:bg-primary/5"
         }`}
       >
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col ">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {grouping !== "project" && (
-              <span className="shrink-0 mt-0.5">
+              <span className="shrink-0 ">
                 {projectIcon ?? <Branch className="size-3.5 text-primary-800 dark:text-primary-400" />}
               </span>
             )}
@@ -171,6 +178,42 @@ export default function WorkspaceItem({
         position={dropdownPosition}
         onClose={() => setIsDropdownOpen(false)}
       >
+        {rootPath && installedApps.length > 0 && (
+          <DropdownMenuSub
+            label={
+              <>
+                <Bash className="size-4" />
+                <span>Open in</span>
+              </>
+            }
+          >
+            {installedApps.map((detectedApp) => (
+              <DropdownMenuItem
+                key={detectedApp.id}
+                onClick={() => {
+                  setIsDropdownOpen(false);
+                  if (detectedApp.id === "finder") {
+                    window.api.shell.openPath(rootPath);
+                  } else {
+                    window.api.shell.openInApp(detectedApp.id, rootPath);
+                  }
+                }}
+              >
+                {detectedApp.icon ? (
+                  <img
+                    src={detectedApp.icon}
+                    alt=""
+                    draggable={false}
+                    className="size-4 shrink-0 rounded-sm"
+                  />
+                ) : (
+                  <External className="size-4 shrink-0" />
+                )}
+                <span>{detectedApp.name}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSub>
+        )}
         {projectId && (
           <DropdownMenuItem onClick={handleSettingsClick}>
             <Settings className="size-4" />

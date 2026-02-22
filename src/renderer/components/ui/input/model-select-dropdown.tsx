@@ -128,7 +128,7 @@ export function ModelSelectDropdown({
                   onModelChange(m);
                   onToggle();
                 }}
-                className={`w-full text-left px-4 py-3 cursor-pointer text-sm transition-colors flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl ${
+                className={`w-full text-left px-3 py-2.5 cursor-pointer text-sm transition-colors flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl ${
                   model === m ? `${styles.selected} font-medium` : styles.item
                 }`}
               >

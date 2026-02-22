@@ -662,6 +662,8 @@ const api = {
   shell: {
     openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
     openPath: (path: string) => ipcRenderer.invoke("shell:openPath", path),
+    openInApp: (appId: string, path: string) => ipcRenderer.invoke("shell:openInApp", appId, path),
+    getInstalledApps: () => ipcRenderer.invoke("shell:getInstalledApps"),
   },
   updates: {
     checkForUpdates: () => ipcRenderer.invoke("updates:check"),

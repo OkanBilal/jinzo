@@ -441,3 +441,9 @@ export type {
   UpdateProgress,
   UpdateState,
 } from "./updatesApi";
+
+export {
+  shellApi,
+  useGetInstalledAppsQuery,
+} from "./shellApi";
+export type { InstalledApp } from "./shellApi";

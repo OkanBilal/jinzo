@@ -22,7 +22,7 @@ function ProviderIcon({ provider }: { provider: string }) {
     case "jira":
       return <Jira className={iconClass} />;
     case "asana":
-      return <Asana className={iconClass} />;
+      return <Asana className="h-5.5 w-6 scale-60" />;
     case "gitlab":
       return <Gitlab className={iconClass} />;
     default:

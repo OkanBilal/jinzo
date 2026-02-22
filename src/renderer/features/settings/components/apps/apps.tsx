@@ -64,8 +64,8 @@ export default function AppsSettings({
             <Body
               className={
                 connected
-                  ? "text-green-600 dark:text-primary-200! mt-1"
-                  : "text-primary-500 dark:text-primary-500 mt-1"
+                  ? "text-green-600 dark:text-primary-200! mt-0.5"
+                  : "text-primary-500 dark:text-primary-500 mt-0.5"
               }
             >
               {connected ? "Connected" : "Disconnected"}
@@ -205,9 +205,9 @@ function AppIcon({ app }: AppIconProps) {
       <img
         src={icon}
         alt={id}
-        width={48}
-        height={48}
-        className="w-12 h-12 rounded-xl object-cover"
+        width={40}
+        height={40}
+        className="w-10 h-10 rounded-xl object-cover"
       />
     );
   }

@@ -97,10 +97,10 @@ export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
             <Document className="size-4.5 text-primary-200 shrink-0" />
 
             <div className="flex flex-col items-start gap-0.5 min-w-0">
-              <span className="text-[13px] font-semibold text-primary-800 dark:text-primary-200 truncate max-w-full">
+              <span className="text-[13px] font-semibold text-primary-900 dark:text-primary-200 truncate max-w-full">
                 {review.title}
               </span>
-              <span className="text-[10px] text-primary-400 dark:text-primary-300">
+              <span className="text-[10px] text-primary-800 dark:text-primary-300">
                 {relativeTime(review.updatedAt)}
               </span>
             </div>

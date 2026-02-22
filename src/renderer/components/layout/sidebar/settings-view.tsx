@@ -29,7 +29,7 @@ type MenuItem = {
 
 const menuItems: Array<MenuItem> = [
   { id: "general", label: "General", icon: General },
-  { id: "personalization", label: "Personalization", icon: Personalize },
+  //{ id: "personalization", label: "Personalization", icon: Personalize },
   { id: "git", label: "Git", icon: Branch },
   { id: "apps", label: "Connections", icon: Apps },
   // { id: "notifications", label: "Notifications", icon: Bell },
@@ -58,14 +58,19 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div
+      className="flex flex-col h-full"
+      style={{
+        animation: "slide-fade-down 300ms ease-in-out",
+      }}
+    >
       <div className="flex flex-col items-start pt-16 pb-2 px-4">
         <Body className="text-left text-base! text-primary-900 dark:text-primary font-medium ">
           Settings
         </Body>
       </div>
 
-      <div className="flex-1 px-3 py-2 overflow-y-auto noscrollbar">
+      <div className="flex-1 px-3 mb-1 overflow-y-auto noscrollbar">
         <nav className="space-y-0.5">
           {menuItems.map((item, index) => {
             const IconComponent = item.icon;
@@ -73,9 +78,8 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
             return (
               <Button
                 key={item.id}
-                style={{ animationDelay: `${index * 0.05}s` }}
                 onClick={() => handleSectionClick(item.id)}
-                className={`w-full animate-slide-in cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-all flex items-center gap-3
+                className={`w-full cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-all flex items-center gap-3
                   ${
                     isActive
                       ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
@@ -84,7 +88,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                   hover:scale-[1.01] active:scale-99`}
               >
                 {IconComponent ? (
-                  <IconComponent className={`w-4.5 h-4.5 `} />
+                  <IconComponent className={`size-4 `} />
                 ) : (
                   <div className="w-4.5 h-4.5 rounded bg-primary-300 dark:bg-primary-700" />
                 )}
@@ -95,11 +99,8 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
         </nav>
 
         {/* Providers section */}
-        <div className="mt-6">
-          <div
-            className="px-3 mb-2 animate-slide-in"
-            style={{ animationDelay: `${menuItems.length * 0.05}s` }}
-          >
+        <div className="mt-2">
+          <div className="px-3 mb-1">
             <span className="text-xs font-medium text-primary-900 dark:text-primary-400">
               Providers
             </span>
@@ -111,11 +112,8 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
               return (
                 <Button
                   key={item.id}
-                  style={{
-                    animationDelay: `${(menuItems.length + 1 + index) * 0.05}s`,
-                  }}
                   onClick={() => handleSectionClick(item.id)}
-                  className={`w-full animate-slide-in cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-all flex items-center gap-3
+                  className={`w-full cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-all flex items-center gap-3
                     ${
                       isActive
                         ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
@@ -124,7 +122,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                     hover:scale-[1.01] active:scale-99`}
                 >
                   {IconComponent ? (
-                    <IconComponent className={`w-4.5 h-4.5 `} />
+                    <IconComponent className={`size-4 `} />
                   ) : (
                     <div className="w-4.5 h-4.5 rounded bg-primary-300 dark:bg-primary-700" />
                   )}
@@ -137,13 +135,8 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
 
         {/* Projects section */}
         {projects.length > 0 && (
-          <div className="mt-6">
-            <div
-              className="px-3 mb-2 animate-slide-in"
-              style={{
-                animationDelay: `${(menuItems.length + providerItems.length + 1) * 0.05}s`,
-              }}
-            >
+          <div className="mt-2">
+            <div className="px-3 mb-1">
               <span className="text-xs font-medium text-primary-900 dark:text-primary-400">
                 Projects
               </span>
@@ -157,24 +150,30 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                 const parsed = project.icon ? parseIcon(project.icon) : null;
                 const initial = (project.name?.[0] ?? "P").toUpperCase();
                 let iconContent: React.ReactNode;
-                if (parsed && (parsed.type === "icon" || parsed.type === "copilot-animate" || parsed.type === "claude-animate")) {
+                if (
+                  parsed &&
+                  (parsed.type === "icon" ||
+                    parsed.type === "copilot-animate" ||
+                    parsed.type === "claude-animate")
+                ) {
                   const IconComp = parsed.value as IconComponent;
                   iconContent = <IconComp className="size-4" />;
                 } else if (parsed && parsed.type === "emoji") {
-                  iconContent = <span className="text-sm leading-none">{parsed.value as string}</span>;
+                  iconContent = (
+                    <span className="text-sm leading-none">
+                      {parsed.value as string}
+                    </span>
+                  );
                 } else {
                   iconContent = initial;
                 }
                 return (
                   <Button
                     key={project.id}
-                    style={{
-                      animationDelay: `${(menuItems.length + providerItems.length + 2 + index) * 0.05}s`,
-                    }}
                     onClick={() =>
                       navigate(`/settings?section=projects&id=${project.id}`)
                     }
-                    className={`w-full animate-slide-in cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-all flex items-center gap-2
+                    className={`w-full cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-all flex items-center gap-2
                       ${
                         isActive
                           ? "bg-primary/80 dark:bg-primary/5 text-primary-900 dark:text-primary-100"

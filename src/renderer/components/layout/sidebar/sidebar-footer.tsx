@@ -43,7 +43,11 @@ export function SidebarFooter({
       className="px-4 py-3 space-y-3"
       style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3"
+      
+              style={{
+          animation: `slide-from-bottom 0.2s ease-out 0.1s both`,
+        }}>
         <div>
           <Button
             onClick={onSettingsClick}
@@ -54,7 +58,7 @@ export function SidebarFooter({
             tooltip="Open Settings"
             tooltipPosition="top-right"
           >
-            <Settings className="size-5 text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
+            <Settings className="size-4.5 text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
           </Button>
         </div>
         <div className="">
@@ -68,13 +72,13 @@ export function SidebarFooter({
         <div>
           <Button
             tooltip="Help & Resources"
-            tooltipPosition="right"
+            tooltipPosition="top"
             onClick={onHelpClick}
             className=" cursor-pointer transition-transform duration-300"
             aria-label="Help & Resources"
             title="Help & Resources"
           >
-            <Question className="size-5 text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
+            <Question className="size-4.5 text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
           </Button>
         </div>
       </div>

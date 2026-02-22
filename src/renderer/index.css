@@ -118,6 +118,12 @@
   will-change: transform, opacity;
 }
 
+.animate-dropdown-sub-in {
+  animation: dropdown-in 250ms both;
+  transform-origin: top left ;
+  will-change: transform, opacity;
+}
+
 @keyframes modal-in {
   0% {
     opacity: 0;
@@ -646,6 +652,22 @@ input[type="range"].slider {
     0 1px 1px #00000011,
     0 1px 1px #0000000a,
     inset 0 1px 1px #00000011;
+}
+
+.claude-gradient-bg {
+  background:
+    radial-gradient(ellipse at 15% 10%, #e8d5f5cc 0%, transparent 50%),
+    radial-gradient(ellipse at 55% 5%, #f5d5c8cc 0%, transparent 45%),
+    radial-gradient(ellipse at 85% 10%, #f5eab8cc 0%, transparent 50%),
+    radial-gradient(ellipse at 10% 90%, #c8ddf5cc 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 85%, #f5dfc8aa 0%, transparent 45%),
+    radial-gradient(ellipse at 90% 90%, #f5eacfcc 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, #f0e8f5aa 0%, transparent 60%),
+    linear-gradient(135deg, #ede4f5 0%, #f5ece4 25%, #f5f0e0 50%, #e4ecf5 75%, #f0e4f5 100%);
+}
+
+.dark .claude-gradient-bg {
+  background: var(--color-claude-dark);
 }
 
 .glass-morphism-claude {

@@ -87,6 +87,15 @@ export function WorkspaceInput({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Detect slash commands when goal is set externally (e.g. quick actions)
+  useEffect(() => {
+    const slashMatch = goal.match(/(?:^|\s)\/(\S*)$/);
+    if (slashMatch) {
+      updateSlashMenu({ filter: slashMatch[1], visible: true });
+      inputRef.current?.focus();
+    }
+  }, [goal]);
+
   const [slashMenu, updateSlashMenu] = useReducer(
     (prev: { visible: boolean; filter: string }, next: Partial<{ visible: boolean; filter: string }>) => ({ ...prev, ...next }),
     { visible: false, filter: "" },
