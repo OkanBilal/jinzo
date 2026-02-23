@@ -70,7 +70,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
 
   if (isCompact) {
     return (
-      <div className="flex items-center gap-2 py-0.5 ml-5 px-2 hover:bg-primary-100/50 dark:hover:bg-primary-800/20 rounded text-[13px] font-sans">
+      <div className="flex items-center gap-2 py-0.5 ml-5 px-2 hover:bg-primary-100/50 dark:hover:bg-primary-800/20 rounded text-s font-sans">
         <span className="text-primary-500 truncate">{summary}</span>
       </div>
     );
@@ -78,7 +78,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
 
   return (
     <div className="py-0.5 px-2 hover:bg-primary-100/50 dark:hover:bg-primary-800/20 rounded">
-      <div className="flex items-center gap-2 text-[13px] font-sans">
+      <div className="flex items-center gap-2 text-s font-sans">
         <span className="dark:text-primary-300">{icon}</span>
         <span className="dark:text-primary-300 font-medium">{displayName}</span>
         <span className="text-primary-500 truncate">{summary}</span>

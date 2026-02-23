@@ -60,8 +60,8 @@ const variantStyles: Record<ButtonVariant, string> = {
 const sizeStyles: Record<ButtonSize, string> = {
   xxs: "px-0 py-1 text-xs",
   xs: "px-3 py-1.5 text-xs rounded-lg",
-  sm: "px-3 py-2 text-[13px] rounded-xl",
-  md: "px-3 py-2 text-[13px] rounded-[14px]",
+  sm: "px-3 py-2 text-s rounded-xl",
+  md: "px-3 py-2 text-s rounded-[14px]",
   lg: "px-3 py-2.5 text-base rounded-xl",
 };
 

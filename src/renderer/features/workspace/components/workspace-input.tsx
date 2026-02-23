@@ -161,7 +161,7 @@ export function WorkspaceInput({
           placeholder={
             canResume
               ? "Ask a follow-up question, run /commands"
-              : "Ask to edit, run /commands, or add issues/files to context"
+              : "Ask to edit, run /skills, or add issues/files to context"
           }
           variant={variant}
         />

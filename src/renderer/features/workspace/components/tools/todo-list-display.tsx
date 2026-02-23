@@ -16,7 +16,7 @@ export function TodoListDisplay({ todos }: { todos: TodoItem[] }) {
     <div className="py-1 px-2">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-2 py-0.5 hover:bg-primary-100/50 dark:hover:bg-primary-800/20 rounded text-[13px] font-sans cursor-pointer"
+        className="w-full flex items-center gap-2 py-0.5 hover:bg-primary-100/50 dark:hover:bg-primary-800/20 rounded text-s font-sans cursor-pointer"
       >
         <ArrowUp
           className={`size-3 text-primary-500 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
@@ -36,7 +36,7 @@ export function TodoListDisplay({ todos }: { todos: TodoItem[] }) {
       {isExpanded && (
         <div className="mt-2 ml-5 space-y-1 border-l border-primary-200/50 dark:border-primary-700/30 pl-3">
           {todos.map((todo, idx) => (
-            <div key={todo.content} className="flex items-start gap-2 text-[13px]">
+            <div key={todo.content} className="flex items-start gap-2 text-s">
               <div
                 className={`mt-0.5 size-4 rounded flex items-center justify-center shrink-0 ${
                   todo.status === "completed"

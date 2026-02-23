@@ -19,7 +19,7 @@ import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspacesApi";
-import { useGetProjectsQuery } from "@/lib/redux/api";
+import { useGetProjectsQuery, useUpdateWorkspaceMutation } from "@/lib/redux/api";
 import { parseIcon, type IconComponent } from "@/lib/icon-registry";
 
 type GroupingMode = "none" | "status" | "project";
@@ -70,7 +70,7 @@ function WorkspaceGroupSection({
           {group.label}
         </span>
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="text-[10px] text-primary-900 dark:text-primary-200 tabular-nums group-hover/section:hidden">
+          <span className="text-t text-primary-900 dark:text-primary-200 tabular-nums group-hover/section:hidden">
             {group.workspaces.length}
           </span>
           <ArrowUp
@@ -113,6 +113,7 @@ export default function WorkspacesList({
   const navigate = useNavigate();
   const location = useLocation();
   const routeType = useRouteType();
+  const [updateWorkspace] = useUpdateWorkspaceMutation();
 
   // Grouping state
   const [grouping, setGrouping] = useState<GroupingMode>(() => {
@@ -240,7 +241,7 @@ export default function WorkspacesList({
     }
     const initial = (projectName?.[0] ?? "P").toUpperCase();
     return (
-      <div className="size-4 rounded-md flex items-center justify-center text-[9px] font-medium text-primary-950 dark:text-primary-200 border border-primary-950/40 dark:border-primary/10">
+      <div className="size-4 rounded-md flex items-center justify-center text-t font-medium text-primary-950 dark:text-primary-200 border border-primary-950/40 dark:border-primary/10">
         {initial}
       </div>
     );
@@ -338,6 +339,9 @@ export default function WorkspacesList({
         onDelete={(e) => onDeleteWorkspace?.(workspace.id, e)}
         onLinkIssues={() => handleLinkIssues(workspace)}
         onArchive={() => onArchiveWorkspace?.(workspace.id)}
+        onStatusChange={(newStatus) =>
+          updateWorkspace({ id: workspace.id, payload: { status: newStatus } })
+        }
         onSettings={
           workspace.projectId
             ? () =>

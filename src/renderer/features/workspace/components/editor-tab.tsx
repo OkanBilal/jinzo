@@ -31,7 +31,7 @@ export function EditorTab({
       }`}
     >
       <Code className="size-4.5 shrink-0" />
-      <span className="text-[13px] truncate flex-1">
+      <span className="text-s truncate flex-1">
         {fileName || "Editor"}
         {hasFile && <span className="ml-1 opacity-60">*</span>}
       </span>

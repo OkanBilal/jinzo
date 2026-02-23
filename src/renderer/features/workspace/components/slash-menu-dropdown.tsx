@@ -161,7 +161,7 @@ export function SlashMenuDropdown({
                     >
                       <div className="flex flex-col gap-0.5">
                         <div className="font-medium flex items-center gap-1.5">
-                          <span className="text-[13px]">/{skill.name}</span>
+                          <span className="text-s">/{skill.name}</span>
                           <div className="ml-auto gap-2 flex items-center">
                             {skill.argumentHint && (
                               <span
@@ -172,7 +172,7 @@ export function SlashMenuDropdown({
                             )}
                             {skill.source && (
                               <span
-                                className={` text-[10px] px-1.5 py-0.5 rounded-full ${styles.badge}`}
+                                className={` text-t px-1.5 py-0.5 rounded-full ${styles.badge}`}
                               >
                                 {getSourceLabel(skill.source)}
                               </span>
@@ -217,7 +217,7 @@ export function SlashMenuDropdown({
                     >
                       <div className="flex flex-col gap-0.5">
                         <div className="font-medium flex items-center gap-1.5">
-                          <span className="text-[13px]">/{cmd.name}</span>
+                          <span className="text-s">/{cmd.name}</span>
                         </div>
                         {cmd.description && (
                           <div

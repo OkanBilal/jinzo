@@ -74,7 +74,7 @@ export const markdownComponents: Components = {
       );
     }
     return (
-      <code className="block p-4 rounded-xl bg-primary-50 dark:bg-primary/5 text-primary-900 dark:text-primary-100 text-[13px] font-mono overflow-x-auto transition-all duration-150 ease-out">
+      <code className="block p-4 rounded-xl bg-primary-50 dark:bg-primary/5 text-primary-900 dark:text-primary-100 text-s font-mono overflow-x-auto transition-all duration-150 ease-out">
         {children}
       </code>
     );

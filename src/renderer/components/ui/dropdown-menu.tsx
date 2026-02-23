@@ -193,7 +193,7 @@ export function DropdownMenuSub({
         ref={triggerRef}
         onMouseEnter={handleTriggerEnter}
         onMouseLeave={handleTriggerLeave}
-        className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] cursor-pointer
+        className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-s cursor-pointer
           text-primary-800 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-50
           hover:bg-primary-100/50 dark:hover:bg-primary/5 transition-colors ${className}`}
       >
@@ -245,7 +245,7 @@ export function DropdownMenuItem({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px]
+      className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-s
         hover:bg-primary-100/50 dark:hover:bg-primary/5 transition-colors
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
         ${variantClasses[variant]} ${className}`}

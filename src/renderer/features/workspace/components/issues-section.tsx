@@ -65,7 +65,7 @@ export function IssuesSection({
           Issues
         </Caption>
         {issueCount > 0 ? (
-          <span className="text-[10px] text-primary-800 dark:text-primary-200! ml-auto mr-1 tabular-nums">
+          <span className="text-t text-primary-800 dark:text-primary-200! ml-auto mr-1 tabular-nums">
             {issueCount}
           </span>
         ) : (

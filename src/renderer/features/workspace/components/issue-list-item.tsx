@@ -42,7 +42,7 @@ function ProviderIcon({ provider }: { provider: string }) {
       return <Gitlab className={iconClass} />;
     default:
       return (
-        <span className="text-[9px] font-medium">
+        <span className="text-t font-medium">
           {provider.slice(0, 2).toUpperCase()}
         </span>
       );
@@ -96,7 +96,7 @@ export function IssueListItem({
 
       {/* Content - title on top, labels below */}
       <div className="flex-1 min-w-0 flex flex-col justify-center">
-        <span className="text-[13px] text-primary-900 dark:text-primary-100 font-medium truncate">
+        <span className="text-s text-primary-900 dark:text-primary-100 font-medium truncate">
           {title}
         </span>
 
@@ -105,7 +105,7 @@ export function IssueListItem({
             {labels.map((label) => (
               <span
                 key={label}
-                className={`inline-block capitalize px-1.5 py-0 text-[11px] font-medium rounded-full ${getLabelColor(label)}`}
+                className={`inline-block capitalize px-1.5 py-0 text-xxs font-medium rounded-full ${getLabelColor(label)}`}
               >
                 {label}
               </span>

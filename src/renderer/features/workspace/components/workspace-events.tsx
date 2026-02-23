@@ -46,7 +46,7 @@ function SessionTimeBar({ info }: { info: SessionInfo }) {
   if (info.elapsed <= 0) return null;
 
   return (
-    <div className="flex items-center gap-2 text-[13px] text-primary-500 dark:text-primary-400 pl-4 -mt-1">
+    <div className="flex items-center gap-2 text-s text-primary-500 dark:text-primary-400 pl-4 -mt-1">
       <span>{formatElapsed(info.elapsed)}</span>
       {info.responseContent && (
         <>

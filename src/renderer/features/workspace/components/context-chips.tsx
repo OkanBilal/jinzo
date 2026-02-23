@@ -20,7 +20,7 @@ function IssueProviderIcon({ provider }: { provider: string }) {
       return <Gitlab className="w-3 h-3" />;
     default:
       return (
-        <span className="text-[10px] font-medium uppercase">
+        <span className="text-t font-medium uppercase">
           {provider.slice(0, 2)}
         </span>
       );

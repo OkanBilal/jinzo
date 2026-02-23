@@ -8,7 +8,7 @@ export function ToolInputPreview({ toolName, toolInput }: ToolInputPreviewProps)
 
   const renderer = RENDERERS[toolName] ?? renderFallback;
   return (
-    <div className="text-[12px] bg-primary-100/30 dark:bg-primary/5 rounded-lg px-3 py-3 overflow-x-auto max-h-48 space-y-2">
+    <div className="text-xs bg-primary-100/30 dark:bg-primary/5 rounded-lg px-3 py-3 overflow-x-auto max-h-48 space-y-2">
       {renderer(toolInput)}
     </div>
   );
@@ -31,7 +31,7 @@ function Mono({ children }: { children: React.ReactNode }) {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-primary-400 dark:text-primary-500 text-[11px] uppercase tracking-wide">
+    <span className="text-primary-400 dark:text-primary-500 text-xxs uppercase tracking-wide">
       {children}
     </span>
   );
@@ -59,7 +59,7 @@ const RENDERERS: Record<string, Renderer> = {
       )}
       <CodeBlock>{str(input.command, 500)}</CodeBlock>
       {input.timeout && (
-        <div className="text-primary-500 text-[11px]">
+        <div className="text-primary-500 text-xxs">
           timeout: {String(input.timeout)}ms
         </div>
       )}
@@ -72,7 +72,7 @@ const RENDERERS: Record<string, Renderer> = {
         <Label>file</Label> <Mono>{str(input.file_path)}</Mono>
       </div>
       {(input.offset || input.limit) && (
-        <div className="text-primary-500 text-[11px]">
+        <div className="text-primary-500 text-xxs">
           {input.offset ? `from line ${input.offset}` : ""}
           {input.offset && input.limit ? ", " : ""}
           {input.limit ? `${input.limit} lines` : ""}

@@ -131,7 +131,7 @@ export default function ChatSessionItem({
               }`}
             />
           </div>
-          <Muted className="text-[13px] mt-0.5 text-primary-800 dark:text-primary-300 ">
+          <Muted className="text-s mt-0.5 text-primary-800 dark:text-primary-300 ">
             {formatDate(new Date(session.createdAt).toISOString())}
           </Muted>
         </div>

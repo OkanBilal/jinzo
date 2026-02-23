@@ -93,7 +93,7 @@ export const FileTreeNode = memo(function FileTreeNode({
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         className={`
-          group flex items-center h-7 cursor-pointer text-[13px]
+          group flex items-center h-7 cursor-pointer text-s
           transition-colors duration-75 rounded-lg 
           ${
             isSelected

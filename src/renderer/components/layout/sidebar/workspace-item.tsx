@@ -22,6 +22,16 @@ import Tooltip from "@/components/ui/tooltip";
 
 type GroupingMode = "none" | "status" | "project";
 
+const STATUS_ORDER: WorkspaceStatus[] = [
+  "in_progress",
+  "in_review",
+  "todo",
+  "backlog",
+  "done",
+  "canceled",
+  "duplicate",
+];
+
 interface WorkspaceItemProps {
   id: string;
   name: string;
@@ -38,6 +48,7 @@ interface WorkspaceItemProps {
   onLinkIssues?: () => void;
   onArchive?: () => void;
   onSettings?: () => void;
+  onStatusChange?: (status: WorkspaceStatus) => void;
 }
 
 export default function WorkspaceItem({
@@ -56,6 +67,7 @@ export default function WorkspaceItem({
   onLinkIssues,
   onArchive,
   onSettings,
+  onStatusChange,
 }: WorkspaceItemProps) {
   const { data: installedApps = [] } = useGetInstalledAppsQuery();
   const { data: latestDiff } = useGetLatestWorkspaceDiffQuery(id);
@@ -125,7 +137,7 @@ export default function WorkspaceItem({
               </span>
             )}
             <span
-              className={`truncate text-sm font-medium ${
+              className={`truncate text-s font-medium ${
                 isActive
                   ? "text-primary-950 dark:text-primary"
                   : "text-primary-900 dark:text-primary-100"
@@ -147,7 +159,7 @@ export default function WorkspaceItem({
                 </Tooltip>
               ) : <span className="size-2.75 mr-2 flex items-center"/>}
               {branch && (
-                <Muted className="text-[13px]  text-primary-900 dark:text-primary-200! truncate">
+                <Muted className="text-xs  text-primary-900 dark:text-primary-200! truncate">
                   {branch}
                 </Muted>
               )}
@@ -157,7 +169,7 @@ export default function WorkspaceItem({
                 </span>
               )}
               {updatedAt && (
-                <Muted className="text-[13px] text-primary-900! dark:text-primary-200! truncate">
+                <Muted className="text-xs text-primary-900! dark:text-primary-200! truncate">
                   {formatDate(new Date(updatedAt).toISOString())}
                 </Muted>
               )}
@@ -227,6 +239,31 @@ export default function WorkspaceItem({
             ))}
           </DropdownMenuSub>
         )}
+        <DropdownMenuSub
+          label={
+            <>
+              <WorkspaceStatusIcon status={status} className={`size-4 ${statusConfig.iconColor}`} />
+              <span>Change status</span>
+            </>
+          }
+        >
+          {STATUS_ORDER.map((s) => {
+            const config = getWorkspaceStatusConfig(s);
+            return (
+              <DropdownMenuItem
+                key={s}
+                onClick={() => {
+                  setIsDropdownOpen(false);
+                  onStatusChange?.(s);
+                }}
+                className={s === status ? "bg-primary-950/8 dark:bg-primary/10" : ""}
+              >
+                <WorkspaceStatusIcon status={s} className={`size-3.5 ${config.iconColor}`} />
+                <span>{config.label}</span>
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuSub>
         {projectId && (
           <DropdownMenuItem onClick={handleSettingsClick}>
             <Settings className="size-4" />

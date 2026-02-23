@@ -39,7 +39,7 @@ const menuItems: Array<MenuItem> = [
 ];
 
 const providerItems: Array<MenuItem> = [
-  { id: "claude", label: "Claude Code", icon: Claude },
+  { id: "claude", label: "Claude", icon: Claude },
   { id: "copilot", label: "Copilot", icon: CopilotStatic },
   { id: "codex", label: "Codex", icon: Gpt }
 ];
@@ -184,7 +184,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                       hover:scale-[1.01] active:scale-99`}
                   >
                     <div
-                      className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-medium text-primary-950 dark:text-primary-200
+                      className={`w-5 h-5 rounded-lg flex items-center justify-center text-t font-medium text-primary-950 dark:text-primary-200
                         shrink-0 ${!parsed ? "border border-primary-950/40 dark:border-primary/10" : ""}`}
                     >
                       {iconContent}
@@ -216,10 +216,10 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
           <ChevronUp className="size-4 rotate-270 text-primary-900 dark:text-primary-400" />
-          <Body className="text-primary-900 text-[13px]! dark:text-primary-100  font-medium">
+          <Body className="text-primary-900 text-s! dark:text-primary-100  font-medium">
             Return
           </Body>
-          {/* <Caption className="ml-auto text-[13px]! text-primary-900 dark:text-primary-400">
+          {/* <Caption className="ml-auto text-s! text-primary-900 dark:text-primary-400">
             Esc
           </Caption> */}
         </Button>

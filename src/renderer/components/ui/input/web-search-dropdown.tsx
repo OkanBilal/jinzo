@@ -116,7 +116,7 @@ export function WebSearchDropdown({
             </Button>
           </div>
           {!hasApiKey && (
-            <p className="text-[10px] text-primary-500 dark:text-primary-500">
+            <p className="text-t text-primary-500 dark:text-primary-500">
               Get your API key from ollama.com/settings/keys
             </p>
           )}

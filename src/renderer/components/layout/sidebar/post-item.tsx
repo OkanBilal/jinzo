@@ -123,13 +123,13 @@ export default function PostItem({
               <AnimatedTitle title={title} />
             </Body>
             {status === "draft" && (
-              <span className="shrink-0 px-1.5 py-0.5 text-[10px] rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+              <span className="shrink-0 px-1.5 py-0.5 text-t rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
                 Draft
               </span>
             )}
           </div>
           {description && (
-            <Muted className="text-[13px] mt-0.5 text-primary-800 dark:text-primary-300! line-clamp-2">
+            <Muted className="text-s mt-0.5 text-primary-800 dark:text-primary-300! line-clamp-2">
               {description}
             </Muted>
           )}

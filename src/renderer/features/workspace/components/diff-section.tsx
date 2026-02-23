@@ -25,7 +25,7 @@ function DiffStats({ stats }: { stats: WorkspaceDiff["stats"] }) {
   const deletions = stats.shortstat.match(/(\d+) deletion/)?.[1];
 
   return (
-    <div className="flex items-center gap-1.5 text-[11px] tabular-nums">
+    <div className="flex items-center gap-1.5 text-xxs tabular-nums">
       {insertions && (
         <span className="text-green-600 dark:text-green-400">
           +{insertions}
@@ -153,7 +153,7 @@ export function DiffSection({
 
       {/* Stats header */}
       <div className="shrink-0 flex items-center justify-between px-1 py-1.5 mb-1">
-        <span className="text-[11px] text-primary-900 dark:text-primary-200">
+        <span className="text-xxs text-primary-900 dark:text-primary-200">
           {diff.files.length} file{diff.files.length !== 1 ? "s" : ""} changed
         </span>
         <DiffStats stats={diff.stats} />
@@ -193,13 +193,13 @@ export function DiffSection({
                   {fileName}
                 </span>
                 {dirPath && (
-                  <span className="text-[11px] text-primary-700 dark:text-primary-300 truncate">
+                  <span className="text-xxs text-primary-700 dark:text-primary-300 truncate">
                     {dirPath}
                   </span>
                 )}
               </div>
               {fileStats[filePath] && (
-                <div className="flex items-center gap-1 text-[11px] tabular-nums shrink-0">
+                <div className="flex items-center gap-1 text-xxs tabular-nums shrink-0">
                   {fileStats[filePath].ins > 0 && (
                     <span className="text-green-600 dark:text-green-400">
                       +{fileStats[filePath].ins}

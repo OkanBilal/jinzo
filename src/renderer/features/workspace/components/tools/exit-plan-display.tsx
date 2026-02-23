@@ -16,7 +16,7 @@ export function ExitPlanDisplay({ params }: { params: ExitPlanParams }) {
     <div className="px-2">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-2 py-0.5 hover:bg-primary-100/50 dark:hover:bg-primary-800/20 rounded text-[13px] font-sans cursor-pointer"
+        className="w-full flex items-center gap-2 py-0.5 hover:bg-primary-100/50 dark:hover:bg-primary-800/20 rounded text-s font-sans cursor-pointer"
       >
         <ArrowUp
           className={`size-3 text-primary-500 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
