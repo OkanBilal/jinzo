@@ -1296,6 +1296,7 @@ export const connectionsService = {
 
       await connectionsRepo.updateStatus(connection.id, "revoked", connection.metadata || "{}");
       await connectionsRepo.markTokensNotCurrent(connection.id);
+      await connectionsRepo.deleteEntitiesByConnectionId(connection.id);
       await connectionsRepo.deleteResourcesByConnectionId(connection.id);
       await connectionsRepo.updateAppState(provider, false, null);
 

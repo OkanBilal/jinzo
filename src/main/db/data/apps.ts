@@ -129,13 +129,13 @@ export const apps = [
   //   imageAlt: "Apple Notes",
   //   category: "knowledge-base",
   // },
-  {
-    id: "notion",
-    name: "Notion",
-    imageSrc: "connections/notion.png",
-    imageAlt: "Notion",
-    category: "knowledge-base",
-  },
+  // {
+  //   id: "notion",
+  //   name: "Notion",
+  //   imageSrc: "connections/notion.png",
+  //   imageAlt: "Notion",
+  //   category: "knowledge-base",
+  // },
   // {
   //   id: "obsidian",
   //   name: "Obsidian",

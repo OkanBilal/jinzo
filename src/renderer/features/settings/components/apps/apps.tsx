@@ -18,6 +18,8 @@ import SpotifyModal from "../../components/apps/spotify/spotify-modal";
 import { Button } from "@/components/ui/button";
 import RaindropModal from "./raindrop/raindrop-modal";
 import { External } from "@/components/ui/icons";
+import { useRunEntitySyncMutation } from "@/lib/redux/api/syncApi";
+import { toast } from "@/components/ui/toast";
 
 interface AppsSettingsProps {
   apps: AppItem[];
@@ -31,6 +33,22 @@ export default function AppsSettings({
   onRefresh,
 }: AppsSettingsProps) {
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [runSync, { isLoading: isSyncing }] = useRunEntitySyncMutation();
+
+  const handleSync = async () => {
+    try {
+      const result = await runSync().unwrap();
+      if (result.success) {
+        toast.success(
+          `Sync complete: ${result.inserted} added, ${result.updated} updated`
+        );
+      } else {
+        toast.error("Sync failed");
+      }
+    } catch {
+      toast.error("Sync failed");
+    }
+  };
 
   const isConnected = (appId: string) => {
     return connectedApps.includes(appId);
@@ -88,7 +106,18 @@ export default function AppsSettings({
 
   return (
     <div className="h-full overflow-y-auto noscrollbar">
-      <Heading2 className="mb-6">Connections</Heading2>
+      <div className="flex items-center justify-between mb-6">
+        <Heading2>Connections</Heading2>
+        <Button
+          variant="secondary"
+          onClick={handleSync}
+          disabled={isSyncing}
+        >
+          <Text variant="button">
+            {isSyncing ? "Syncing..." : "Sync"}
+          </Text>
+        </Button>
+      </div>
       {apps.length > 0 && (
         <div className="">
           {/* <Text variant="muted" className="mb-4">

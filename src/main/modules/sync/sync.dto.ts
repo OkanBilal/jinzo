@@ -21,6 +21,7 @@ export interface ItemChunkInfo {
 export interface SyncJobResult {
   success: boolean;
   inserted: number;
+  updated: number;
   skipped: number;
   errors: number;
   total: number;
@@ -35,6 +36,7 @@ export interface SyncJobResult {
 
 export interface SyncJobStats {
   inserted: number;
+  updated: number;
   skipped: number;
   errors: number;
   totalChunks: number;

@@ -138,7 +138,7 @@ const api = {
   },
   // Sync operations
   sync: {
-    runEntitySync: () => ipcRenderer.invoke("sync:runEntitySync"),
+    runEntitySync: (provider?: string) => ipcRenderer.invoke("sync:runEntitySync", provider),
   },
   // Feed event operations (event log / timeline)
   feed: {

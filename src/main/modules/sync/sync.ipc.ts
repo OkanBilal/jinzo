@@ -5,7 +5,7 @@ import { syncController } from "./sync.controller";
 // IPC Handlers - Thin layer, just registers handlers
 // ─────────────────────────────────────────────────────────────
 export function registerSyncIpc() {
-  ipcMain.handle("sync:runEntitySync", () => syncController.runEntitySync());
+  ipcMain.handle("sync:runEntitySync", (_, provider?: string) => syncController.runEntitySync(provider));
 
   console.log("Sync IPC handlers registered");
 }

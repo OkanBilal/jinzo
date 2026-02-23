@@ -29,59 +29,44 @@ export const FETCH_LIMITS = {
   RSS: 10,
 } as const;
 
-export async function fetchAllEntities(): Promise<EntityInput[]> {
+const PROVIDER_FETCHERS: Record<string, () => Promise<EntityInput[]>> = {
+  github: () =>
+    fetchGitHubFromConnectionResources(
+      FETCH_LIMITS.GITHUB_ISSUES,
+      FETCH_LIMITS.GITHUB_PRS,
+    ),
+  gitlab: () =>
+    fetchGitlabFromConnectionResources(
+      FETCH_LIMITS.GITLAB_ISSUES,
+      FETCH_LIMITS.GITLAB_MRS,
+    ),
+  linear: () => fetchLinearFromConnectionResources(FETCH_LIMITS.LINEAR_ISSUES),
+  jira: () => fetchJiraFromConnectionResources(FETCH_LIMITS.JIRA_ISSUES),
+  asana: () => fetchAsanaFromConnectionResources(FETCH_LIMITS.ASANA_TASKS),
+  raindrop: () => fetchRaindropFromConnectionResources(FETCH_LIMITS.RAINDROP),
+  hackernews: () =>
+    fetchHackerNewsFromConnectionResources(
+      FETCH_LIMITS.HACKERNEWS_TOP,
+      FETCH_LIMITS.HACKERNEWS_NEW,
+      FETCH_LIMITS.HACKERNEWS_USER,
+    ),
+  podcast: () => fetchPodcastsFromConnectionResources(FETCH_LIMITS.PODCASTS),
+  "apple-music": () => fetchAppleMusicFromConnectionResources(),
+  spotify: () => fetchSpotifyFromConnectionResources(),
+  rss: () => fetchRssFromConnectionResources(FETCH_LIMITS.RSS),
+};
+
+export async function fetchAllEntities(provider?: string): Promise<EntityInput[]> {
   try {
-    const [
-      githubEntities,
-      gitlabEntities,
-      linearEntities,
-      jiraEntities,
-      asanaEntities,
-      raindropEntities,
-      hackerNewsEntities,
-      podcastEntities,
-      appleMusicEntities,
-      spotifyEntities,
-      rssEntities,
-    ] = await Promise.all([
-      fetchGitHubFromConnectionResources(
-        FETCH_LIMITS.GITHUB_ISSUES,
-        FETCH_LIMITS.GITHUB_PRS,
-      ),
-      fetchGitlabFromConnectionResources(
-        FETCH_LIMITS.GITLAB_ISSUES,
-        FETCH_LIMITS.GITLAB_MRS,
-      ),
-      fetchLinearFromConnectionResources(FETCH_LIMITS.LINEAR_ISSUES),
-      fetchJiraFromConnectionResources(FETCH_LIMITS.JIRA_ISSUES),
-      fetchAsanaFromConnectionResources(FETCH_LIMITS.ASANA_TASKS),
-      fetchRaindropFromConnectionResources(FETCH_LIMITS.RAINDROP),
-      fetchHackerNewsFromConnectionResources(
-        FETCH_LIMITS.HACKERNEWS_TOP,
-        FETCH_LIMITS.HACKERNEWS_NEW,
-        FETCH_LIMITS.HACKERNEWS_USER,
-      ),
-      fetchPodcastsFromConnectionResources(FETCH_LIMITS.PODCASTS),
-      fetchAppleMusicFromConnectionResources(),
-      fetchSpotifyFromConnectionResources(),
-      fetchRssFromConnectionResources(FETCH_LIMITS.RSS),
-    ]);
+    const fetchers =
+      provider && PROVIDER_FETCHERS[provider]
+        ? [PROVIDER_FETCHERS[provider]]
+        : Object.values(PROVIDER_FETCHERS);
 
-    const entities = [
-      ...githubEntities,
-      ...gitlabEntities,
-      ...linearEntities,
-      ...jiraEntities,
-      ...asanaEntities,
-      ...raindropEntities,
-      ...hackerNewsEntities,
-      ...podcastEntities,
-      ...appleMusicEntities,
-      ...spotifyEntities,
-      ...rssEntities,
-    ];
+    const results = await Promise.all(fetchers.map((fn) => fn()));
+    const entities = results.flat();
 
-    console.log(`📥 Fetched ${entities.length} entities from sources`);
+    console.log(`📥 Fetched ${entities.length} entities from sources${provider ? ` (provider: ${provider})` : ""}`);
     return entities;
   } catch (error) {
     console.error("Error fetching entities:", error);

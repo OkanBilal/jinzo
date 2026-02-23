@@ -1,5 +1,6 @@
 import { baseApi } from './baseApi';
 import { syncApi } from './syncApi';
+import { toast } from '@/components/ui/toast';
 
 export interface Connection {
   id: string;
@@ -352,12 +353,16 @@ export const connectionsApi = baseApi.injectEndpoints({
       }),
       transformResponse: (response: any) => ({ success: response.success }),
       invalidatesTags: ['Apps'],
-      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
-          dispatch(syncApi.endpoints.runEntitySync.initiate());
+          const syncResult = dispatch(syncApi.endpoints.runEntitySync.initiate(arg.provider));
+          const { data } = await syncResult;
+          if (data) {
+            toast.success(`Synced ${data.total} items`);
+          }
         } catch {
-          // Save failed, don't trigger sync
+          toast.error("Sync failed");
         }
       },
     }),

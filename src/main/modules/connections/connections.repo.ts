@@ -5,6 +5,7 @@ import {
   connectionTokens,
   connectionResources,
   appStates,
+  entities,
 } from "../../db/schema";
 
 // ─────────────────────────────────────────────────────────────
@@ -184,6 +185,10 @@ export const connectionsRepo = {
 
   async deleteResource(resourceId: string) {
     const db = getDb();
+    await db
+      .delete(entities)
+      .where(eq(entities.resourceId, resourceId))
+      .run();
     return db
       .delete(connectionResources)
       .where(eq(connectionResources.id, resourceId))
@@ -195,6 +200,14 @@ export const connectionsRepo = {
     await db
       .delete(connectionResources)
       .where(eq(connectionResources.connectionId, connectionId))
+      .run();
+  },
+
+  async deleteEntitiesByConnectionId(connectionId: string): Promise<void> {
+    const db = getDb();
+    await db
+      .delete(entities)
+      .where(eq(entities.connectionId, connectionId))
       .run();
   },
 
