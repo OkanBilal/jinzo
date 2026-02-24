@@ -454,3 +454,22 @@ export {
   useGetInstalledAppsQuery,
 } from "./shellApi";
 export type { InstalledApp } from "./shellApi";
+
+export {
+  statsApi,
+  useGetDashboardQuery,
+  useLazyGetDashboardQuery,
+} from "./statsApi";
+export type {
+  DashboardData,
+  DashboardSummary,
+  DailyActivity,
+  HourDistribution,
+  CostByModel,
+  ToolUsageItem,
+  StatusBreakdownDay,
+  StatusBreakdown,
+  RecentSession,
+  CodeActivityStats,
+  ProviderFilter,
+} from "./statsApi";

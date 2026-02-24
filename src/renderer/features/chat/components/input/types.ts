@@ -89,7 +89,8 @@ export type SettingsSection =
   | "copilot"
   | "git"
   | "projects"
-  | "codex";
+  | "codex"
+  | "dashboard";
 
 export interface ModalContentProps {
   children: React.ReactNode;

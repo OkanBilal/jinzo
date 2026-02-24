@@ -36,6 +36,7 @@ import type {
   ContinueRunResponse,
   RunDetailsResponse,
 } from "./runs.dto";
+import { statsRepo } from "../stats/stats.repo";
 import { createHash } from "crypto";
 import fs from "fs";
 import path from "path";
@@ -752,6 +753,26 @@ export const runsService = {
             stopReason: result.stopReason ?? null,
           });
 
+          // Persist run usage data
+          if (result.usage) {
+            try {
+              await statsRepo.insertRunUsage({
+                runId,
+                totalCostMicros: result.usage.totalCostUsd
+                  ? Math.round(result.usage.totalCostUsd * 1_000_000)
+                  : null,
+                durationMs: result.usage.durationMs ?? null,
+                numTurns: result.usage.numTurns ?? null,
+                inputTokens: result.usage.inputTokens ?? null,
+                outputTokens: result.usage.outputTokens ?? null,
+                providerId: payload.providerId,
+                model: payload.model ?? null,
+              });
+            } catch (err) {
+              console.error(`[RunsService] Failed to persist run usage for ${runId}:`, err);
+            }
+          }
+
           // Persist git diff on success
           if (finalStatus === "succeeded") {
             await persistRunDiff(runId, workspace.id, workspace.rootPath);
@@ -1212,6 +1233,26 @@ export const runsService = {
             lastError: result.status === "failed" ? result.summary : undefined,
             stopReason: result.stopReason ?? null,
           });
+
+          // Persist run usage data
+          if (result.usage) {
+            try {
+              await statsRepo.insertRunUsage({
+                runId,
+                totalCostMicros: result.usage.totalCostUsd
+                  ? Math.round(result.usage.totalCostUsd * 1_000_000)
+                  : null,
+                durationMs: result.usage.durationMs ?? null,
+                numTurns: result.usage.numTurns ?? null,
+                inputTokens: result.usage.inputTokens ?? null,
+                outputTokens: result.usage.outputTokens ?? null,
+                providerId: run.providerId,
+                model: run.model ?? null,
+              });
+            } catch (err) {
+              console.error(`[RunsService] Failed to persist run usage for ${runId}:`, err);
+            }
+          }
 
           // Persist git diff on success
           if (finalStatus === "succeeded" && workspace) {

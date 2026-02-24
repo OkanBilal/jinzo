@@ -682,6 +682,9 @@ const api = {
     send: (payload: { message: string }) =>
       ipcRenderer.invoke("feedback:send", payload),
   },
+  stats: {
+    getDashboard: (filter?: string) => ipcRenderer.invoke("stats:getDashboard", filter),
+  },
   updates: {
     checkForUpdates: () => ipcRenderer.invoke("updates:check"),
     downloadUpdate: () => ipcRenderer.invoke("updates:download"),

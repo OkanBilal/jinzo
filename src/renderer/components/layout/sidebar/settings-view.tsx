@@ -12,6 +12,7 @@ import {
   CopilotStatic,
   Branch,
   Gpt,
+  Chart,
 } from "@/components/ui/icons";
 import type { SettingsSection } from "@/features/chat/components/input/types";
 import { Claude } from "@/components/ui/icons/mood";
@@ -33,6 +34,7 @@ const menuItems: Array<MenuItem> = [
   //{ id: "personalization", label: "Personalization", icon: Personalize },
   { id: "git", label: "Git", icon: Branch },
   { id: "apps", label: "Connections", icon: Apps },
+  { id: "dashboard", label: "Dashboard", icon: Chart },
   // { id: "notifications", label: "Notifications", icon: Bell },
   // { id: "schedules", label: "Schedules", icon: Calendar },
   // { id: "security", label: "Security", icon: Security },

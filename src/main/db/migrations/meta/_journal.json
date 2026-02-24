@@ -64,6 +64,13 @@
       "when": 1771857331653,
       "tag": "0008_wild_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1771955362802,
+      "tag": "0009_square_lily_hollister",
+      "breakpoints": true
     }
   ]
 }

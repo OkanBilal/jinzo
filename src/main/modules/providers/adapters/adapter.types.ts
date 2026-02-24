@@ -158,6 +158,17 @@ export interface WorkRunArtifactSummary {
 export type StopReason = "end_turn" | "max_tokens" | "stop_sequence" | "refusal" | "tool_use" | null;
 
 /**
+ * Usage data captured from a completed work run
+ */
+export interface WorkRunUsage {
+  totalCostUsd?: number;
+  durationMs?: number;
+  numTurns?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
+/**
  * Result returned when a work run completes
  */
 export interface WorkRunResult {
@@ -165,6 +176,7 @@ export interface WorkRunResult {
   summary?: string;
   stopReason?: StopReason;
   artifacts?: WorkRunArtifactSummary[];
+  usage?: WorkRunUsage;
 }
 
 /**

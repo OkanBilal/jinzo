@@ -13,6 +13,7 @@ import CopilotSettings from "@/features/settings/components/copilot";
 import GitSettings from "@/features/settings/components/git";
 import ProjectsSettings from "@/features/settings/components/projects";
 import CodexSettings from "@/features/settings/components/codex";
+import DashboardPage from "@/features/stats/components/dashboard-page";
 
 export default function SettingsPage() {
   const [searchParams] = useSearchParams();
@@ -79,12 +80,15 @@ export default function SettingsPage() {
     case "projects":
       content = <ProjectsSettings />;
       break;
+    case "dashboard":
+      content = <DashboardPage />;
+      break;
     default:
       content = <GeneralSettings />;
   }
 
   return (
-    <div className="h-full max-w-200 mx-auto px-2 py-16 overflow-y-auto noscrollbar bg-primary dark:bg-primary-950">
+    <div className="h-full max-w-240 mx-auto px-2 py-16 overflow-y-auto noscrollbar bg-primary dark:bg-primary-950">
       {content}
     </div>
   );

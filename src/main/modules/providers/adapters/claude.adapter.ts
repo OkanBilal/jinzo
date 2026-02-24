@@ -8,6 +8,7 @@ import type {
   WorkRunResult,
   WorkRunEventHandler,
   WorkRunEvent,
+  WorkRunUsage,
   ClaudeCodeAdapterConfig,
   ModelInfo,
   CommandInfo,
@@ -1147,6 +1148,7 @@ export function createClaudeAdapter(
         | "tool_use"
         | null
         | undefined;
+      let lastUsage: WorkRunUsage | undefined;
 
       try {
         await onEvent({ type: "status", status: "running", ts: Date.now() });
@@ -1265,12 +1267,17 @@ export function createClaudeAdapter(
                 }
               }
 
-              // Capture stop reason from result messages
+              // Capture stop reason and usage from result messages
               if (msg.type === "result") {
                 const resultMsg = msg as SDKResultMessage;
                 if (resultMsg.stop_reason !== undefined) {
                   lastStopReason = resultMsg.stop_reason;
                 }
+                lastUsage = {
+                  totalCostUsd: resultMsg.total_cost_usd,
+                  durationMs: resultMsg.duration_ms,
+                  numTurns: resultMsg.num_turns,
+                };
               }
 
               // Map and emit events
@@ -1329,6 +1336,7 @@ export function createClaudeAdapter(
             summary: "Run was aborted by user",
             stopReason: lastStopReason ?? null,
             artifacts: collectedArtifacts,
+            usage: lastUsage,
           };
         }
 
@@ -1341,6 +1349,7 @@ export function createClaudeAdapter(
             summary: "The model declined to fulfill this request.",
             stopReason: lastStopReason,
             artifacts: collectedArtifacts,
+            usage: lastUsage,
           };
         }
 
@@ -1351,6 +1360,7 @@ export function createClaudeAdapter(
           summary: "Completed successfully",
           stopReason: lastStopReason ?? null,
           artifacts: collectedArtifacts,
+          usage: lastUsage,
         };
       } catch (error) {
         const errorMessage =
@@ -1395,6 +1405,7 @@ export function createClaudeAdapter(
             summary: `Request timed out after ${timeout / 1000} seconds.`,
             stopReason: lastStopReason ?? null,
             artifacts: collectedArtifacts,
+            usage: lastUsage,
           };
         }
 
@@ -1410,6 +1421,7 @@ export function createClaudeAdapter(
             summary: "Run was aborted",
             stopReason: lastStopReason ?? null,
             artifacts: collectedArtifacts,
+            usage: lastUsage,
           };
         }
 
@@ -1432,6 +1444,7 @@ export function createClaudeAdapter(
           summary: errorMessage,
           stopReason: lastStopReason ?? null,
           artifacts: collectedArtifacts,
+          usage: lastUsage,
         };
       } finally {
         activeRuns.delete(runId);
@@ -1455,6 +1468,7 @@ export function createClaudeAdapter(
         | "tool_use"
         | null
         | undefined;
+      let lastUsage: WorkRunUsage | undefined;
 
       try {
         await onEvent({ type: "status", status: "running", ts: Date.now() });
@@ -1559,12 +1573,17 @@ export function createClaudeAdapter(
                 break;
               }
 
-              // Capture stop reason from result messages
+              // Capture stop reason and usage from result messages
               if (msg.type === "result") {
                 const resultMsg = msg as SDKResultMessage;
                 if (resultMsg.stop_reason !== undefined) {
                   lastStopReason = resultMsg.stop_reason;
                 }
+                lastUsage = {
+                  totalCostUsd: resultMsg.total_cost_usd,
+                  durationMs: resultMsg.duration_ms,
+                  numTurns: resultMsg.num_turns,
+                };
               }
 
               const events = mapSDKMessage(msg, runId);
@@ -1620,6 +1639,7 @@ export function createClaudeAdapter(
             summary: "Run was aborted by user",
             stopReason: lastStopReason ?? null,
             artifacts: collectedArtifacts,
+            usage: lastUsage,
           };
         }
 
@@ -1632,6 +1652,7 @@ export function createClaudeAdapter(
             summary: "The model declined to fulfill this request.",
             stopReason: lastStopReason,
             artifacts: collectedArtifacts,
+            usage: lastUsage,
           };
         }
 
@@ -1642,6 +1663,7 @@ export function createClaudeAdapter(
           summary: "Completed successfully",
           stopReason: lastStopReason ?? null,
           artifacts: collectedArtifacts,
+          usage: lastUsage,
         };
       } catch (error) {
         const errorMessage =
@@ -1685,6 +1707,7 @@ export function createClaudeAdapter(
             summary: `Request timed out after ${timeout / 1000} seconds.`,
             stopReason: lastStopReason ?? null,
             artifacts: collectedArtifacts,
+            usage: lastUsage,
           };
         }
 
@@ -1700,6 +1723,7 @@ export function createClaudeAdapter(
             summary: "Run was aborted",
             stopReason: lastStopReason ?? null,
             artifacts: collectedArtifacts,
+            usage: lastUsage,
           };
         }
 
@@ -1722,6 +1746,7 @@ export function createClaudeAdapter(
           summary: errorMessage,
           stopReason: lastStopReason ?? null,
           artifacts: collectedArtifacts,
+          usage: lastUsage,
         };
       } finally {
         activeRuns.delete(runId);

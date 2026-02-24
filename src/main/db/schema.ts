@@ -319,6 +319,36 @@ export const runs = sqliteTable(
 );
 
 /* -----------------------------
+   RUN USAGE (cost, duration, tokens per run)
+------------------------------ */
+
+export const runUsage = sqliteTable(
+  "run_usage",
+  {
+    runId: text("run_id")
+      .primaryKey()
+      .references(() => runs.id, { onDelete: "cascade" }),
+    totalCostMicros: integer("total_cost_micros"), // USD * 1_000_000 (avoids float)
+    durationMs: integer("duration_ms"),
+    numTurns: integer("num_turns"),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    providerId: text("provider_id").references(() => providers.id, {
+      onDelete: "set null",
+    }),
+    model: text("model"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_run_usage_provider").on(t.providerId),
+    index("idx_run_usage_model").on(t.model),
+    index("idx_run_usage_created").on(t.createdAt),
+  ],
+);
+
+/* -----------------------------
    RUN CONTEXT (what the run looked at / was given)
 ------------------------------ */
 
