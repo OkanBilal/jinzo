@@ -85,13 +85,18 @@ export function WorkspaceTabs({
           width: tabRect.width,
         });
         setIsInitialized(true);
+
+        activeTabEl.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "nearest",
+        });
       }
     };
 
     // Small delay to ensure refs are set
     requestAnimationFrame(updateIndicator);
   }, [activeTab, runs.length, issueTabs.length, noteTabs.length, showNewRunTab]);
-  console.log("Rendering WorkspaceTabs with activeTab:", activeTab);
 
   return (
     <div

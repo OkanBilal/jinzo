@@ -6,9 +6,11 @@ import { Jira, Asana, Gitlab } from "@/components/ui/icons";
 import { QuickActionButton } from "./quick-action-button";
 import {
   useGetProjectResourcesQuery,
+  useGetProviderByIdQuery,
   type ProjectResourceWithDetails,
 } from "@/lib/redux/api";
 import DropdownWrapper from "@/components/ui/dropdown-wrapper";
+import { Claude } from "@/components/ui/icons/mood";
 
 const ISSUE_RESOURCE_KINDS = [
   "github_repo",
@@ -63,16 +65,21 @@ interface WorkspaceQuickActionsProps {
   onSetGoal: (goal: string) => void;
   variant?: "claude" | "copilot";
   projectId?: string;
+  providerId: string;
 }
 
 export function WorkspaceQuickActions({
   variant,
   onSetGoal,
   projectId,
+  providerId,
 }: WorkspaceQuickActionsProps) {
+  const { data: provider } = useGetProviderByIdQuery(providerId);
   const { data: resources = [] } = useGetProjectResourcesQuery(projectId!, {
     skip: !projectId,
   });
+
+  if ((provider?.config as any)?.showQuickActions === false) return null;
 
   const issueResources = getIssueResources(resources);
 
@@ -80,9 +87,21 @@ export function WorkspaceQuickActions({
     <div className="flex flex-wrap gap-2 justify-center max-w-200 mx-auto mb-4">
       <QuickActionButton
         variant={variant}
+        icon={<Claude className="size-3.5" />}
+        label="Update CLAUDE.md file"
+        onClick={() =>
+          onSetGoal(
+            "Update the CLAUDE.md file with the latest workspace information",
+          )
+        }
+      />
+      <QuickActionButton
+        variant={variant}
         icon={<Figma className="size-3.5" />}
         label="Implement design"
-        onClick={() => onSetGoal("")}
+        onClick={() =>
+          onSetGoal("Implement linked Figma design in the workspace")
+        }
       />
       {issueResources.length === 1 && (
         <SingleIssueButton

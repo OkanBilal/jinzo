@@ -21,7 +21,7 @@ export function InfoGroup({ group }: InfoGroupProps) {
       <div className="w-full overflow-hidden">
         <div className="w-full py-2 flex justify-end">
           <div className="flex flex-col items-end gap-2 max-w-[80%]">
-            <div className="px-4 py-2.5 rounded-2xl bg-primary-50 dark:bg-primary-300/15">
+            <div className="px-4 py-2.5 rounded-2xl bg-primary-50 dark:bg-primary-700/15 ">
               <div className="text-primary-950 dark:text-primary-50">
                 <p className="text-sm whitespace-pre-wrap">{message}</p>
               </div>
@@ -31,7 +31,7 @@ export function InfoGroup({ group }: InfoGroupProps) {
                 {files.map((file, idx) => (
                   <div
                     key={file.fullPath}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-50 dark:bg-primary-300/15 text-xs"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-50 dark:bg-primary-700/15 text-xs"
                     title={file.fullPath}
                   >
                     <Code className="size-3 dark:text-primary-200 text-primary-700" />

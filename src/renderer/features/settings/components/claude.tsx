@@ -25,6 +25,7 @@ export default function ClaudeSettings() {
   const config = provider?.config ?? {};
   const permissionMode = (config as any).permissionMode ?? "bypassPermissions";
   const isBypassing = permissionMode === "bypassPermissions";
+  const showQuickActions = (config as any).showQuickActions !== false;
 
   const structuredOutputs = ((config as any).structuredOutputs ?? {}) as Record<
     string,
@@ -35,6 +36,27 @@ export default function ClaudeSettings() {
   const selectedSchemaName = structuredOutputsSelectedId
     ? (structuredOutputs[structuredOutputsSelectedId]?.name ?? "Off")
     : "Off";
+
+  const handleQuickActionsToggle = async (enabled: boolean) => {
+    if (!provider || updating) return;
+
+    try {
+      await updateProvider({
+        id: "claude_code",
+        payload: {
+          config: {
+            ...config,
+            showQuickActions: enabled,
+          },
+        },
+      }).unwrap();
+      toast.success(
+        enabled ? "Quick actions enabled" : "Quick actions hidden",
+      );
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update quick actions setting");
+    }
+  };
 
   const handlePermissionToggle = async (enabled: boolean) => {
     if (!provider || updating) return;
@@ -139,6 +161,15 @@ export default function ClaudeSettings() {
               Edit
             </Button>
           </div>
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection title="Workspace">
+        <SettingsRow
+          title="Quick Actions"
+          description="Show quick action buttons in workspace"
+        >
+          <Toggle enabled={showQuickActions} onChange={handleQuickActionsToggle} />
         </SettingsRow>
       </SettingsSection>
 

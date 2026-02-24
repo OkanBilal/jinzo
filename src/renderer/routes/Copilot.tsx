@@ -42,7 +42,7 @@ export default function CopilotPage() {
           />
         )}
       </div>
-      <WorkspaceQuickActions onSetGoal={ws.setGoal} variant="copilot" projectId={ws.currentWorkspace?.projectId ?? undefined} />
+      <WorkspaceQuickActions onSetGoal={ws.setGoal} variant="copilot" projectId={ws.currentWorkspace?.projectId ?? undefined} providerId={COPILOT_CLI_PROVIDER_ID} />
         <WorkspaceInput
           goal={ws.goal}
           onGoalChange={ws.setGoal}

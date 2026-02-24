@@ -72,6 +72,7 @@ export const seedProviders: CreateProviderPayload[] = [
       // ClaudeCodeAdapterConfig interface fields
       timeout: 600000, // Timeout in milliseconds (10 minutes)
       apiKey: process.env.ANTHROPIC_API_KEY, // API key from environment
+      permissionMode: "default", // Permission mode for tool use
     },
     capabilities: {
       mode: ["run"],

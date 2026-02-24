@@ -24,8 +24,8 @@ export const seedMoods: SeedMood[] = [
   //   icon: "icon:chat",
   //   systemPrompt: "",
   //   themeConfig: {
-  //     lightBackground: "#d4dce6",
-  //     darkBackground: "#161a1e",
+  //     lightBackground: "#ffffff70",
+  //     darkBackground: "#00000070",
   //   },
   //   uiConfig: {
   //     sidebar: {

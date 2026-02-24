@@ -62,7 +62,7 @@ export default function ClaudePage() {
           />
         )}
       </div>
-      <WorkspaceQuickActions onSetGoal={ws.setGoal} variant="claude" projectId={ws.currentWorkspace?.projectId ?? undefined} />
+      <WorkspaceQuickActions onSetGoal={ws.setGoal} variant="claude" projectId={ws.currentWorkspace?.projectId ?? undefined} providerId={CLAUDE_PROVIDER_ID} />
         <WorkspaceInput
           goal={ws.goal}
           onGoalChange={ws.setGoal}
