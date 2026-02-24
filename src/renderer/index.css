@@ -65,12 +65,12 @@
   --color-primary-900: #141414;
   --color-primary-950: #0c0c0c;
   
-  --color-copilot-blue: #11131a;
+  --color-copilot-blue: #0c0f16;
   --color-copilot-dark: #080A0F ;
   --color-copilot-lightblue: #ffffff;
   --color-copilot-soft-blue: #f4f9fe;
   --color-claude-dark: #070707;
-  --color-claude-soft-dark: #151414;
+  --color-claude-soft-dark: #100f0f;
   --color-claude-light: #ffffff;
   --color-claude-soft-light: #fff4f1;
 
@@ -724,20 +724,20 @@ input[type="range"].slider {
 
 .dark .glass-morphism-copilot {
   background: linear-gradient(to bottom, var(--color-copilot-blue), var(--color-copilot-dark));
-  border-color: #ffffff1f;
+  border-color: #1c232f00;
   box-shadow:
-    0 1px 1px #00000040,
-    0 1px 1px #00000026,
-    inset 0 1px 0 #ffffff29;
+    0 1px 1px #1c232f,
+    0 1px 1px #1c232f,
+    inset 0 1px 1px #1c232f;
 }
 
 .dark .glass-morphism-claude {
   background: linear-gradient(to bottom, var(--color-claude-soft-dark), var(--color-claude-dark));
-  border-color: #ffffff1f;
+  border-color: #ffffff00;
   box-shadow:
-    0 1px 1px #00000040,
-    0 1px 1px #00000026,
-    inset 0 1px 0 #ffffff29;
+    0 1px 1px #292424,
+    0 1px 1px #292424,
+    inset 0 1px 0 #292424;
 }
 
 

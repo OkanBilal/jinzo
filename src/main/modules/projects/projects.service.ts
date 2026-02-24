@@ -187,7 +187,7 @@ export const projectsService = {
         await reviewsRepo.deleteByWorkspaceId(ws.id);
       }
 
-      // Delete all workspaces from DB (cascades: workspaceResources, workspaceDiffs)
+      // Delete all workspaces from DB (cascades: workspaceDiffs)
       await workspacesRepo.deleteByProjectId(id);
 
       // Delete the project from DB

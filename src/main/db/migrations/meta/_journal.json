@@ -57,6 +57,13 @@
       "when": 1771800529607,
       "tag": "0007_melted_warbound",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1771857331653,
+      "tag": "0008_wild_leader",
+      "breakpoints": true
     }
   ]
 }

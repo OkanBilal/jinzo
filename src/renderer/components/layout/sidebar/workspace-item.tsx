@@ -9,12 +9,18 @@ import {
   Settings,
   External,
   Bash,
+  Apps,
+  OpenWith,
 } from "@/components/ui/icons";
 import { useGetInstalledAppsQuery } from "@/lib/redux/api";
 import { useGetLatestWorkspaceDiffQuery } from "@/lib/redux/api/workspaceDiffsApi";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format-date";
-import { DropdownMenu, DropdownMenuItem, DropdownMenuSub } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuSub,
+} from "@/components/ui/dropdown-menu";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspacesApi";
@@ -23,10 +29,10 @@ import Tooltip from "@/components/ui/tooltip";
 type GroupingMode = "none" | "status" | "project";
 
 const STATUS_ORDER: WorkspaceStatus[] = [
+  "backlog",
+  "todo",
   "in_progress",
   "in_review",
-  "todo",
-  "backlog",
   "done",
   "canceled",
   "duplicate",
@@ -121,19 +127,26 @@ export default function WorkspaceItem({
         role="button"
         tabIndex={0}
         onClick={onClick}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick?.(); } }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick?.();
+          }
+        }}
         className={`block px-2.5 py-1.5 active:scale-99 group-hover:scale-[1.01] 
           rounded-xl transition-all duration-200 ease-out cursor-pointer ${
-          isActive
-            ? "bg-primary/80 dark:bg-primary/5"
-            : "bg-transparent group-hover:bg-primary/40 dark:group-hover:bg-primary/5"
-        }`}
+            isActive
+              ? "bg-primary/80 dark:bg-primary/5"
+              : "bg-transparent group-hover:bg-primary/40 dark:group-hover:bg-primary/5"
+          }`}
       >
         <div className="flex flex-col ">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {grouping !== "project" && (
               <span className="shrink-0 ">
-                {projectIcon ?? <Branch className="size-3.5 text-primary-800 dark:text-primary-400" />}
+                {projectIcon ?? (
+                  <Branch className="size-3.5 text-primary-800 dark:text-primary-400" />
+                )}
               </span>
             )}
             <span
@@ -150,14 +163,19 @@ export default function WorkspaceItem({
             <div className="flex items-center gap-1.5">
               {grouping !== "status" ? (
                 <Tooltip content={statusConfig.label} position="top-right">
-                <span title={statusConfig.label} className="shrink-0 flex items-center">
-                  <WorkspaceStatusIcon
-                    status={status}
-                    className={`size-2.75 ml-0.5 ${statusConfig.iconColor}`}
-                  />
-                </span>
+                  <span
+                    title={statusConfig.label}
+                    className="shrink-0 flex items-center"
+                  >
+                    <WorkspaceStatusIcon
+                      status={status}
+                      className={`size-2.75 ml-0.5 ${statusConfig.iconColor}`}
+                    />
+                  </span>
                 </Tooltip>
-              ) : <span className="size-2.75 mr-2 flex items-center"/>}
+              ) : (
+                <span className="size-2.75 mr-2 flex items-center" />
+              )}
               {branch && (
                 <Muted className="text-xs  text-primary-900 dark:text-primary-200! truncate">
                   {branch}
@@ -182,8 +200,16 @@ export default function WorkspaceItem({
       <div className="absolute right-1.5 top-1/2 -translate-y-1/2 z-10">
         {(insertions || deletions) && (
           <span className="flex items-center gap-1 text-xs font-mono group-hover:opacity-0 transition-opacity pointer-events-none">
-            {insertions && <span className="text-green-600 dark:text-green-400">+{insertions}</span>}
-            {deletions && <span className="text-red-500 dark:text-red-400">-{deletions}</span>}
+            {insertions && (
+              <span className="text-green-600 dark:text-green-400">
+                +{insertions}
+              </span>
+            )}
+            {deletions && (
+              <span className="text-red-500 dark:text-red-400">
+                -{deletions}
+              </span>
+            )}
           </span>
         )}
         <Button
@@ -207,8 +233,8 @@ export default function WorkspaceItem({
           <DropdownMenuSub
             label={
               <>
-                <Bash className="size-4" />
-                <span>Open in</span>
+                <OpenWith className="size-3.5" />
+                <span>Open with</span>
               </>
             }
           >
@@ -242,8 +268,11 @@ export default function WorkspaceItem({
         <DropdownMenuSub
           label={
             <>
-              <WorkspaceStatusIcon status={status} className={`size-4 ${statusConfig.iconColor}`} />
-              <span>Change status</span>
+              <WorkspaceStatusIcon
+                status={status}
+                className={`size-3.25 ${statusConfig.iconColor}`}
+              />
+              <span>Status</span>
             </>
           }
         >
@@ -256,9 +285,14 @@ export default function WorkspaceItem({
                   setIsDropdownOpen(false);
                   onStatusChange?.(s);
                 }}
-                className={s === status ? "bg-primary-950/8 dark:bg-primary/10" : ""}
+                className={
+                  s === status ? "bg-primary-950/8 dark:bg-primary/10" : ""
+                }
               >
-                <WorkspaceStatusIcon status={s} className={`size-3.5 ${config.iconColor}`} />
+                <WorkspaceStatusIcon
+                  status={s}
+                  className={`size-3.5 ${config.iconColor}`}
+                />
                 <span>{config.label}</span>
               </DropdownMenuItem>
             );
@@ -266,20 +300,20 @@ export default function WorkspaceItem({
         </DropdownMenuSub>
         {projectId && (
           <DropdownMenuItem onClick={handleSettingsClick}>
-            <Settings className="size-4" />
+            <Settings className="size-3.5" />
             <span>Project settings</span>
           </DropdownMenuItem>
         )}
         <DropdownMenuItem onClick={handleLinkIssuesClick}>
-          <Connect className="size-4" />
+          <Connect className="size-3.5" />
           <span>Connect issues</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleArchiveClick}>
-          <Archive className="size-4" />
+          <Archive className="size-3.5" />
           <span>Archive</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleDeleteClick} variant="danger">
-          <Trash className="size-4" />
+          <Trash className="size-3.5" />
           <span>Delete</span>
         </DropdownMenuItem>
       </DropdownMenu>

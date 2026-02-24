@@ -2,27 +2,27 @@ import { workspaceResourcesService } from "./workspaceResources.service";
 import type { AddResourcePayload, RemoveResourcePayload } from "./workspaceResources.dto";
 
 // ─────────────────────────────────────────────────────────────
-// Workspace Resources Controller
+// Project Resources Controller
 // ─────────────────────────────────────────────────────────────
 
 export const workspaceResourcesController = {
-  async getByWorkspace(workspaceId: string) {
-    return workspaceResourcesService.getByWorkspace(workspaceId);
+  async getByProject(projectId: string) {
+    return workspaceResourcesService.getByProject(projectId);
   },
 
-  async getAvailableResources(workspaceId: string) {
-    return workspaceResourcesService.getAvailableResources(workspaceId);
+  async getAvailableResources(projectId: string) {
+    return workspaceResourcesService.getAvailableResources(projectId);
   },
 
   async addResource(payload: AddResourcePayload) {
-    return workspaceResourcesService.addResource(payload.workspaceId, payload.resourceId);
+    return workspaceResourcesService.addResource(payload.projectId, payload.resourceId);
   },
 
   async removeResource(payload: RemoveResourcePayload) {
-    return workspaceResourcesService.removeResource(payload.workspaceId, payload.resourceId);
+    return workspaceResourcesService.removeResource(payload.projectId, payload.resourceId);
   },
 
-  async getIssuesByWorkspace(workspaceId: string) {
-    return workspaceResourcesService.getIssuesByWorkspace(workspaceId);
+  async getIssuesByProject(projectId: string) {
+    return workspaceResourcesService.getIssuesByProject(projectId);
   },
 };

@@ -1,15 +1,15 @@
 // ─────────────────────────────────────────────────────────────
-// Workspace Resources DTOs
+// Project Resources DTOs
 // ─────────────────────────────────────────────────────────────
 
-export interface WorkspaceResource {
+export interface ProjectResource {
   id: string;
-  workspaceId: string;
+  projectId: string;
   resourceId: string;
   createdAt: Date;
 }
 
-export interface WorkspaceResourceWithDetails extends WorkspaceResource {
+export interface ProjectResourceWithDetails extends ProjectResource {
   resource: {
     id: string;
     connectionId: string;
@@ -33,12 +33,12 @@ export interface AvailableResource {
 }
 
 export interface AddResourcePayload {
-  workspaceId: string;
+  projectId: string;
   resourceId: string;
 }
 
 export interface RemoveResourcePayload {
-  workspaceId: string;
+  projectId: string;
   resourceId: string;
 }
 

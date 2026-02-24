@@ -54,6 +54,7 @@ import {
   unregisterTerminalIpc,
   destroyAllTerminals,
 } from "./modules/terminal";
+import { registerFeedbackIpc, unregisterFeedbackIpc } from "./modules/feedback";
 import { createMainWindow, createSplashWindow, closeSplashWindow } from "./windows";
 import { registerImageProxyScheme, registerImageProxyHandler } from "./modules/imageProxy";
 import { registerUpdatesIpc, unregisterUpdatesIpc, updatesService } from "./modules/updates";
@@ -208,6 +209,7 @@ async function initializeApp() {
     registerReviewsIpc();
     registerWorkspaceDiffsIpc();
     registerImageProxyHandler();
+    registerFeedbackIpc();
     registerUpdatesIpc();
     updatesService.initialize();
 
@@ -300,6 +302,7 @@ async function cleanupApp() {
     unregisterTerminalIpc();
     unregisterReviewsIpc();
     unregisterWorkspaceDiffsIpc();
+    unregisterFeedbackIpc();
     unregisterUpdatesIpc();
     ipcMain.removeHandler("shell:openExternal");
     ipcMain.removeHandler("shell:openPath");

@@ -54,12 +54,15 @@ export default function ClaudePage() {
             onSelectNoteTab={ws.handleSelectNoteTab}
             onCloseNoteTab={ws.handleCloseNoteTab}
             onCloseEditorTab={ws.handleCloseEditorTab}
+            showNewRunTab={ws.showNewRunTab}
+            onSelectNewRunTab={ws.handleSelectNewRunTab}
+            onCloseNewRunTab={ws.handleCloseNewRunTab}
             pendingApproval={currentApproval}
             onApprovalRespond={handleApprovalRespond}
           />
         )}
       </div>
-      <WorkspaceQuickActions onSetGoal={ws.setGoal} variant="claude" workspaceId={ws.currentWorkspace?.id} />
+      <WorkspaceQuickActions onSetGoal={ws.setGoal} variant="claude" projectId={ws.currentWorkspace?.projectId ?? undefined} />
         <WorkspaceInput
           goal={ws.goal}
           onGoalChange={ws.setGoal}

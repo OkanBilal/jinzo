@@ -163,14 +163,14 @@ export default function Sidebar() {
                         {
                           label: "Add local repository",
                           icon: (
-                            <Plus className="w-4 h-4 text-primary-800 dark:text-primary-200" />
+                            <Plus className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
                           ),
                           onClick: handleAddProject,
                         },
                         {
                           label: "Clone from URL",
                           icon: (
-                            <Connect className="w-4 h-4 text-primary-800 dark:text-primary-200" />
+                            <Connect className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
                           ),
                           onClick: handleOpenCloneModal,
                         },

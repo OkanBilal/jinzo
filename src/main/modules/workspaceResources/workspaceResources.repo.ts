@@ -1,24 +1,24 @@
 import { eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { workspaceResources, connectionResources, entities, issues } from "../../db/schema";
-import type { WorkspaceResource, WorkspaceResourceWithDetails, AvailableResource } from "./workspaceResources.dto";
+import { projectResources, connectionResources, entities, issues } from "../../db/schema";
+import type { ProjectResource, ProjectResourceWithDetails, AvailableResource } from "./workspaceResources.dto";
 
 // ─────────────────────────────────────────────────────────────
-// Workspace Resources Repository
+// Project Resources Repository
 // ─────────────────────────────────────────────────────────────
 
 export const workspaceResourcesRepo = {
   /**
-   * Get all resources linked to a workspace
+   * Get all resources linked to a project
    */
-  async findByWorkspace(workspaceId: string): Promise<WorkspaceResourceWithDetails[]> {
+  async findByProject(projectId: string): Promise<ProjectResourceWithDetails[]> {
     const db = getDb();
     const results = await db
       .select({
-        id: workspaceResources.id,
-        workspaceId: workspaceResources.workspaceId,
-        resourceId: workspaceResources.resourceId,
-        createdAt: workspaceResources.createdAt,
+        id: projectResources.id,
+        projectId: projectResources.projectId,
+        resourceId: projectResources.resourceId,
+        createdAt: projectResources.createdAt,
         resource: {
           id: connectionResources.id,
           connectionId: connectionResources.connectionId,
@@ -29,17 +29,17 @@ export const workspaceResourcesRepo = {
           metadata: connectionResources.metadata,
         },
       })
-      .from(workspaceResources)
-      .innerJoin(connectionResources, eq(workspaceResources.resourceId, connectionResources.id))
-      .where(eq(workspaceResources.workspaceId, workspaceId));
+      .from(projectResources)
+      .innerJoin(connectionResources, eq(projectResources.resourceId, connectionResources.id))
+      .where(eq(projectResources.projectId, projectId));
 
     return results;
   },
 
   /**
-   * Get all available resources (with isLinked flag for a workspace)
+   * Get all available resources (with isLinked flag for a project)
    */
-  async findAvailableResources(workspaceId: string, kinds: string[]): Promise<AvailableResource[]> {
+  async findAvailableResources(projectId: string, kinds: string[]): Promise<AvailableResource[]> {
     const db = getDb();
     // Get all resources of the specified kinds
     const allResources = await db
@@ -52,11 +52,11 @@ export const workspaceResourcesRepo = {
         )
       );
 
-    // Get linked resource IDs for this workspace
+    // Get linked resource IDs for this project
     const linkedResources = await db
-      .select({ resourceId: workspaceResources.resourceId })
-      .from(workspaceResources)
-      .where(eq(workspaceResources.workspaceId, workspaceId));
+      .select({ resourceId: projectResources.resourceId })
+      .from(projectResources)
+      .where(eq(projectResources.projectId, projectId));
 
     const linkedIds = new Set(linkedResources.map((r) => r.resourceId));
 
@@ -73,15 +73,15 @@ export const workspaceResourcesRepo = {
   },
 
   /**
-   * Add a resource to a workspace
+   * Add a resource to a project
    */
-  async addResource(id: string, workspaceId: string, resourceId: string): Promise<WorkspaceResource> {
+  async addResource(id: string, projectId: string, resourceId: string): Promise<ProjectResource> {
     const db = getDb();
     const [result] = await db
-      .insert(workspaceResources)
+      .insert(projectResources)
       .values({
         id,
-        workspaceId,
+        projectId,
         resourceId,
       })
       .returning();
@@ -90,32 +90,32 @@ export const workspaceResourcesRepo = {
   },
 
   /**
-   * Remove a resource from a workspace
+   * Remove a resource from a project
    */
-  async removeResource(workspaceId: string, resourceId: string): Promise<void> {
+  async removeResource(projectId: string, resourceId: string): Promise<void> {
     const db = getDb();
     await db
-      .delete(workspaceResources)
+      .delete(projectResources)
       .where(
         and(
-          eq(workspaceResources.workspaceId, workspaceId),
-          eq(workspaceResources.resourceId, resourceId)
+          eq(projectResources.projectId, projectId),
+          eq(projectResources.resourceId, resourceId)
         )
       );
   },
 
   /**
-   * Check if a resource is linked to a workspace
+   * Check if a resource is linked to a project
    */
-  async isLinked(workspaceId: string, resourceId: string): Promise<boolean> {
+  async isLinked(projectId: string, resourceId: string): Promise<boolean> {
     const db = getDb();
     const result = await db
-      .select({ id: workspaceResources.id })
-      .from(workspaceResources)
+      .select({ id: projectResources.id })
+      .from(projectResources)
       .where(
         and(
-          eq(workspaceResources.workspaceId, workspaceId),
-          eq(workspaceResources.resourceId, resourceId)
+          eq(projectResources.projectId, projectId),
+          eq(projectResources.resourceId, resourceId)
         )
       )
       .limit(1);
@@ -124,15 +124,15 @@ export const workspaceResourcesRepo = {
   },
 
   /**
-   * Get issues for a workspace via linked resources
+   * Get issues for a project via linked resources
    */
-  async findIssuesByWorkspace(workspaceId: string) {
+  async findIssuesByProject(projectId: string) {
     const db = getDb();
-    // Get all linked resource IDs for this workspace
+    // Get all linked resource IDs for this project
     const linkedResources = await db
-      .select({ resourceId: workspaceResources.resourceId })
-      .from(workspaceResources)
-      .where(eq(workspaceResources.workspaceId, workspaceId));
+      .select({ resourceId: projectResources.resourceId })
+      .from(projectResources)
+      .where(eq(projectResources.projectId, projectId));
 
     if (linkedResources.length === 0) {
       return [];

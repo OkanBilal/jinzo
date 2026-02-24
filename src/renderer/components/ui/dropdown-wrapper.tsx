@@ -126,7 +126,7 @@ export default function DropdownWrapper({
     <div
       ref={dropdownRef}
       className={`${usePortal ? "fixed" : "absolute"} ${!usePortal ? positionClass : ""} ${!usePortal ? verticalClass : ""} 
-        ${minWidth} ${fixedBackgroundClass} z-100 ${glassMorphismClass} rounded-xl transition-all animate-dropdown-in`}
+        ${minWidth} ${fixedBackgroundClass} z-100 ${glassMorphismClass} rounded-2xl transition-all animate-dropdown-in`}
       style={{
         background: getDropdownBackground(),
         transformOrigin: openUpward

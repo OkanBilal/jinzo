@@ -219,17 +219,17 @@ export const workspaces = sqliteTable(
 );
 
 /* -----------------------------
-   WORKSPACE RESOURCES (pivot table)
-   Links workspaces to connection_resources
+   PROJECT RESOURCES (pivot table)
+   Links projects to connection_resources
 ------------------------------ */
 
-export const workspaceResources = sqliteTable(
-  "workspace_resources",
+export const projectResources = sqliteTable(
+  "project_resources",
   {
     id: text("id").primaryKey(),
-    workspaceId: text("workspace_id")
+    projectId: text("project_id")
       .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
+      .references(() => projects.id, { onDelete: "cascade" }),
     resourceId: text("resource_id")
       .notNull()
       .references(() => connectionResources.id, { onDelete: "cascade" }),
@@ -238,9 +238,9 @@ export const workspaceResources = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (t) => [
-    uniqueIndex("uniq_workspace_resources").on(t.workspaceId, t.resourceId),
-    index("idx_workspace_resources_workspace").on(t.workspaceId),
-    index("idx_workspace_resources_resource").on(t.resourceId),
+    uniqueIndex("uniq_project_resources").on(t.projectId, t.resourceId),
+    index("idx_project_resources_project").on(t.projectId),
+    index("idx_project_resources_resource").on(t.resourceId),
   ],
 );
 

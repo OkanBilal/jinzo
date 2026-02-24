@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Caption } from "@/components/ui/text";
-import { ArrowUp, Group } from "@/components/ui/icons";
+import { ArrowUp, Group, Layers } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
 import { Button } from "@/components/ui/button";
 import { WorkspaceResponse } from "src/main/modules/workspaces";
@@ -32,10 +32,10 @@ type WorkspaceGroup = {
 };
 
 const STATUS_ORDER: WorkspaceStatus[] = [
+  "backlog",
+  "todo",
   "in_progress",
   "in_review",
-  "todo",
-  "backlog",
   "done",
   "canceled",
   "duplicate",
@@ -107,9 +107,9 @@ export default function WorkspacesList({
   const [isExpanded, setIsExpanded] = useState(true);
   const [linkModalState, setLinkModalState] = useState<{
     isOpen: boolean;
-    workspaceId: string;
+    projectId: string;
     workspaceName: string;
-  }>({ isOpen: false, workspaceId: "", workspaceName: "" });
+  }>({ isOpen: false, projectId: "", workspaceName: "" });
   const navigate = useNavigate();
   const location = useLocation();
   const routeType = useRouteType();
@@ -172,15 +172,16 @@ export default function WorkspacesList({
   };
 
   const handleLinkIssues = (workspace: WorkspaceResponse) => {
+    if (!workspace.projectId) return;
     setLinkModalState({
       isOpen: true,
-      workspaceId: workspace.id,
+      projectId: workspace.projectId,
       workspaceName: formatWorkspaceName(workspace),
     });
   };
 
   const handleCloseLinkModal = () => {
-    setLinkModalState({ isOpen: false, workspaceId: "", workspaceName: "" });
+    setLinkModalState({ isOpen: false, projectId: "", workspaceName: "" });
   };
 
   const sortedWorkspaces = [...workspaces].sort((a, b) => {
@@ -372,7 +373,7 @@ export default function WorkspacesList({
             onClick={handleGroupButtonClick}
             className="p-1 rounded-md cursor-pointer hover:bg-primary/20 dark:hover:bg-primary/10 transition-colors"
           >
-            <Group
+            <Layers
               className={`w-3.5 h-3.5 transition-colors ${
                 grouping !== "none"
                   ? "text-primary-950 dark:text-primary"
@@ -449,7 +450,7 @@ export default function WorkspacesList({
       </div>
 
       <LinkResourcesModal
-        workspaceId={linkModalState.workspaceId}
+        projectId={linkModalState.projectId}
         workspaceName={linkModalState.workspaceName}
         isOpen={linkModalState.isOpen}
         onClose={handleCloseLinkModal}

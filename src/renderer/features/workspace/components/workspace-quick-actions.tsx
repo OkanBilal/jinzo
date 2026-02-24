@@ -5,8 +5,8 @@ import Linear from "@/components/ui/icons/linear";
 import { Jira, Asana, Gitlab } from "@/components/ui/icons";
 import { QuickActionButton } from "./quick-action-button";
 import {
-  useGetWorkspaceResourcesQuery,
-  type WorkspaceResourceWithDetails,
+  useGetProjectResourcesQuery,
+  type ProjectResourceWithDetails,
 } from "@/lib/redux/api";
 import DropdownWrapper from "@/components/ui/dropdown-wrapper";
 
@@ -55,37 +55,34 @@ function isIssueResourceKind(kind: string): kind is IssueResourceKind {
   return (ISSUE_RESOURCE_KINDS as readonly string[]).includes(kind);
 }
 
-function getIssueResources(resources: WorkspaceResourceWithDetails[]) {
+function getIssueResources(resources: ProjectResourceWithDetails[]) {
   return resources.filter((r) => isIssueResourceKind(r.resource.kind));
 }
 
 interface WorkspaceQuickActionsProps {
   onSetGoal: (goal: string) => void;
   variant?: "claude" | "copilot";
-  workspaceId?: string;
+  projectId?: string;
 }
 
 export function WorkspaceQuickActions({
   variant,
   onSetGoal,
-  workspaceId,
+  projectId,
 }: WorkspaceQuickActionsProps) {
-  const { data: resources = [] } = useGetWorkspaceResourcesQuery(
-    workspaceId!,
-    { skip: !workspaceId },
-  );
+  const { data: resources = [] } = useGetProjectResourcesQuery(projectId!, {
+    skip: !projectId,
+  });
 
   const issueResources = getIssueResources(resources);
 
   return (
     <div className="flex flex-wrap gap-2 justify-center max-w-200 mx-auto mb-4">
-            <QuickActionButton
+      <QuickActionButton
         variant={variant}
         icon={<Figma className="size-3.5" />}
         label="Implement design"
-        onClick={() =>
-          onSetGoal("")
-        }
+        onClick={() => onSetGoal("")}
       />
       {issueResources.length === 1 && (
         <SingleIssueButton
@@ -118,7 +115,7 @@ function SingleIssueButton({
   variant,
   onSetGoal,
 }: {
-  resource: WorkspaceResourceWithDetails;
+  resource: ProjectResourceWithDetails;
   variant?: "claude" | "copilot";
   onSetGoal: (goal: string) => void;
 }) {
@@ -140,7 +137,7 @@ function MultiIssueButton({
   variant,
   onSetGoal,
 }: {
-  resources: WorkspaceResourceWithDetails[];
+  resources: ProjectResourceWithDetails[];
   variant?: "claude" | "copilot";
   onSetGoal: (goal: string) => void;
 }) {
@@ -172,7 +169,7 @@ function MultiIssueButton({
         onClick={() => setOpen((v) => !v)}
       />
       <DropdownWrapper
-      useFixedBackground={true}
+        useFixedBackground={true}
         isOpen={open}
         openUpward
         dropdownRef={dropdownRef}
@@ -192,7 +189,9 @@ function MultiIssueButton({
                 }}
               >
                 {config.icon("text-primary-900 dark:text-primary-200 size-4")}
-                <span className="text-primary-900 dark:text-primary-200">{config.label}</span>
+                <span className="text-primary-900 dark:text-primary-200">
+                  {config.label}
+                </span>
                 {r.resource.name && (
                   <span className="text-xs text-primary-400 dark:text-primary-500 truncate ml-auto">
                     {r.resource.name}

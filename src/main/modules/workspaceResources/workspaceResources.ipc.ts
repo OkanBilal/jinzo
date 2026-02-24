@@ -7,11 +7,11 @@ import type { AddResourcePayload, RemoveResourcePayload } from "./workspaceResou
 // ─────────────────────────────────────────────────────────────
 
 const IPC_CHANNELS = {
-  GET_BY_WORKSPACE: "workspaceResources:getByWorkspace",
-  GET_AVAILABLE: "workspaceResources:getAvailable",
-  ADD_RESOURCE: "workspaceResources:add",
-  REMOVE_RESOURCE: "workspaceResources:remove",
-  GET_ISSUES: "workspaceResources:getIssues",
+  GET_BY_PROJECT: "projectResources:getByProject",
+  GET_AVAILABLE: "projectResources:getAvailable",
+  ADD_RESOURCE: "projectResources:add",
+  REMOVE_RESOURCE: "projectResources:remove",
+  GET_ISSUES: "projectResources:getIssues",
 } as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -20,16 +20,16 @@ const IPC_CHANNELS = {
 
 export function registerWorkspaceResourcesHandlers(): void {
   ipcMain.handle(
-    IPC_CHANNELS.GET_BY_WORKSPACE,
-    async (_event, workspaceId: string) => {
-      return workspaceResourcesController.getByWorkspace(workspaceId);
+    IPC_CHANNELS.GET_BY_PROJECT,
+    async (_event, projectId: string) => {
+      return workspaceResourcesController.getByProject(projectId);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.GET_AVAILABLE,
-    async (_event, workspaceId: string) => {
-      return workspaceResourcesController.getAvailableResources(workspaceId);
+    async (_event, projectId: string) => {
+      return workspaceResourcesController.getAvailableResources(projectId);
     }
   );
 
@@ -49,16 +49,16 @@ export function registerWorkspaceResourcesHandlers(): void {
 
   ipcMain.handle(
     IPC_CHANNELS.GET_ISSUES,
-    async (_event, workspaceId: string) => {
-      return workspaceResourcesController.getIssuesByWorkspace(workspaceId);
+    async (_event, projectId: string) => {
+      return workspaceResourcesController.getIssuesByProject(projectId);
     }
   );
 
-  console.log("Workspace resources handlers registered");
+  console.log("Project resources handlers registered");
 }
 
 export function unregisterWorkspaceResourcesHandlers(): void {
-  ipcMain.removeHandler(IPC_CHANNELS.GET_BY_WORKSPACE);
+  ipcMain.removeHandler(IPC_CHANNELS.GET_BY_PROJECT);
   ipcMain.removeHandler(IPC_CHANNELS.GET_AVAILABLE);
   ipcMain.removeHandler(IPC_CHANNELS.ADD_RESOURCE);
   ipcMain.removeHandler(IPC_CHANNELS.REMOVE_RESOURCE);

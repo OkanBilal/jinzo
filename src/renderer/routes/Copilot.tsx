@@ -36,10 +36,13 @@ export default function CopilotPage() {
             onSelectNoteTab={ws.handleSelectNoteTab}
             onCloseNoteTab={ws.handleCloseNoteTab}
             onCloseEditorTab={ws.handleCloseEditorTab}
+            showNewRunTab={ws.showNewRunTab}
+            onSelectNewRunTab={ws.handleSelectNewRunTab}
+            onCloseNewRunTab={ws.handleCloseNewRunTab}
           />
         )}
       </div>
-      <WorkspaceQuickActions onSetGoal={ws.setGoal} variant="copilot" workspaceId={ws.currentWorkspace?.id} />
+      <WorkspaceQuickActions onSetGoal={ws.setGoal} variant="copilot" projectId={ws.currentWorkspace?.projectId ?? undefined} />
         <WorkspaceInput
           goal={ws.goal}
           onGoalChange={ws.setGoal}

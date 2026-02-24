@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
-  useGetIssuesByWorkspaceQuery,
-  type WorkspaceIssue,
+  useGetIssuesByProjectQuery,
+  type ProjectIssue,
 } from "@/lib/redux/api";
 import { IssueListItem } from "./issue-list-item";
 import { ArrowUp } from "@/components/ui/icons";
@@ -9,48 +9,48 @@ import { Button } from "@/components/ui/button";
 import { Caption } from "@/components/ui/text";
 
 interface IssuesSectionProps {
-  workspaceId: string | undefined;
+  projectId: string | undefined;
   activeIssueEntityId: string | null;
-  onSelectIssue: (issue: WorkspaceIssue) => void;
-  onAddToContext?: (issue: WorkspaceIssue) => void;
+  onSelectIssue: (issue: ProjectIssue) => void;
+  onAddToContext?: (issue: ProjectIssue) => void;
 }
 
-function getStorageKey(workspaceId: string | undefined): string {
-  return `issues-section-expanded-${workspaceId ?? "none"}`;
+function getStorageKey(projectId: string | undefined): string {
+  return `issues-section-expanded-${projectId ?? "none"}`;
 }
 
 export function IssuesSection({
-  workspaceId,
+  projectId,
   activeIssueEntityId,
   onSelectIssue,
   onAddToContext,
 }: IssuesSectionProps) {
-  const { data: issues = [], isLoading } = useGetIssuesByWorkspaceQuery(
-    workspaceId || "",
-    { skip: !workspaceId }
+  const { data: issues = [], isLoading } = useGetIssuesByProjectQuery(
+    projectId || "",
+    { skip: !projectId }
   );
 
   const [expanded, setExpanded] = useState(() => {
-    const stored = localStorage.getItem(getStorageKey(workspaceId));
+    const stored = localStorage.getItem(getStorageKey(projectId));
     return stored !== null ? stored === "true" : true;
   });
 
   useEffect(() => {
-    localStorage.setItem(getStorageKey(workspaceId), String(expanded));
-  }, [expanded, workspaceId]);
+    localStorage.setItem(getStorageKey(projectId), String(expanded));
+  }, [expanded, projectId]);
 
-  // Reset expanded state when workspace changes
+  // Reset expanded state when project changes
   useEffect(() => {
-    const stored = localStorage.getItem(getStorageKey(workspaceId));
+    const stored = localStorage.getItem(getStorageKey(projectId));
     setExpanded(stored !== null ? stored === "true" : true);
-  }, [workspaceId]);
+  }, [projectId]);
 
-  if (!workspaceId) return null;
+  if (!projectId) return null;
 
   const issueCount = issues.length;
 
   return (
-    <div className="shrink-0 px-3 py-2">
+    <div className="shrink-0 px-3">
       {/* Header */}
       <Button
         variant="subtle"
@@ -79,7 +79,7 @@ export function IssuesSection({
         }`}
       >
         <div className="overflow-hidden ">
-          <div className="max-h-80 overflow-y-auto px-1 pb-2 noscrollbar">
+          <div className="max-h-84 overflow-y-auto px-1 pb-2 noscrollbar">
             {isLoading ? (
               <div className="flex items-center justify-center py-4">
                 <span className="text-xs shine-text">
@@ -89,7 +89,7 @@ export function IssuesSection({
             ) : issueCount === 0 ? (
               <div className="flex items-center justify-center py-4">
                 <span className="text-xs text-primary-800 dark:text-primary-300">
-                  No issues for this workspace.
+                  No issues for this project.
                 </span>
               </div>
             ) : (

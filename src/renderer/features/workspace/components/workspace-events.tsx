@@ -8,7 +8,7 @@ import { WorkspaceEmptyState } from "./workspace-empty-state";
 import type { Run, RunEvent, Workspace } from "../types";
 import type { IssueWithEntity } from "@/lib/redux/api";
 import type { ReviewTab } from "@/lib/redux/slices/workspaceSlice";
-import { isIssueTab, getIssueEntityId, isNoteTab, getNoteId } from "../utils/repo-utils";
+import { isIssueTab, getIssueEntityId, isNoteTab, getNoteId, isNewRunTab } from "../utils/repo-utils";
 import { AsciiLoader } from "./ascii-loader";
 import type { ToolApprovalRequest } from "../hooks/use-tool-approval";
 import { ToolApprovalDialog } from "./tools/tool-approval-dialog";
@@ -164,7 +164,7 @@ interface WorkspaceEventsProps {
   fileName?: string;
   issueTabs: IssueWithEntity[];
   noteTabs?: ReviewTab[];
-  variant?: "workspace" | "claude";
+  variant?: "copilot" | "claude";
   onSelectEditorTab: () => void;
   onSelectRunTab: (runId: string) => void;
   onCloseTab: (runId: string, e: React.MouseEvent) => void;
@@ -176,6 +176,9 @@ interface WorkspaceEventsProps {
   onCloseEditorTab?: (e: React.MouseEvent) => void;
   pendingApproval?: ToolApprovalRequest;
   onApprovalRespond?: (requestId: string, approved: boolean, answer?: string) => void;
+  showNewRunTab?: boolean;
+  onSelectNewRunTab?: () => void;
+  onCloseNewRunTab?: (e: React.MouseEvent) => void;
 }
 
 export function WorkspaceEvents({
@@ -188,7 +191,7 @@ export function WorkspaceEvents({
   fileName,
   issueTabs,
   noteTabs = EMPTY_NOTE_TABS,
-  variant = "workspace",
+  variant = "copilot",
   onSelectEditorTab,
   onSelectRunTab,
   onCloseTab,
@@ -200,16 +203,20 @@ export function WorkspaceEvents({
   onCloseEditorTab,
   pendingApproval,
   onApprovalRespond,
+  showNewRunTab,
+  onSelectNewRunTab,
+  onCloseNewRunTab,
 }: WorkspaceEventsProps) {
   const isEditorActive = activeTab === "editor";
   const isIssueActive = isIssueTab(activeTab);
   const isNoteActive = isNoteTab(activeTab);
+  const isNewRunActive = isNewRunTab(activeTab);
   const activeIssue = isIssueActive
     ? issueTabs.find((t) => t.issue.entityId === getIssueEntityId(activeTab))
     : null;
   const activeNoteId = isNoteActive ? getNoteId(activeTab) : null;
   const hasRunContent =
-    !isEditorActive && !isIssueActive && !isNoteActive && currentEvents.length > 0;
+    !isEditorActive && !isIssueActive && !isNoteActive && !isNewRunActive && currentEvents.length > 0;
 
   // Check if current run is still running
   const activeRun = runs.find((r) => r.id === activeTab);
@@ -264,12 +271,17 @@ export function WorkspaceEvents({
           onSelectNoteTab={onSelectNoteTab}
           onCloseNoteTab={onCloseNoteTab}
           onCloseEditorTab={onCloseEditorTab}
+          showNewRunTab={showNewRunTab}
+          onSelectNewRunTab={onSelectNewRunTab}
+          onCloseNewRunTab={onCloseNewRunTab}
         />
       </div>
 
       {/* Content area */}
       <div className="flex-1 min-h-0 overflow-hidden relative">
-        {isEditorActive ? (
+        {isNewRunActive ? (
+          <WorkspaceEmptyState workspace={currentWorkspace} />
+        ) : isEditorActive ? (
           <EditorContent className="h-full" />
         ) : isIssueActive && activeIssue ? (
           <IssueTabContent issue={activeIssue} />

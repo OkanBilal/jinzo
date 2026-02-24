@@ -88,3 +88,4 @@ export { default as StatusCanceled } from "./status-canceled";
 export { default as StatusDuplicate } from "./status-duplicate";
 export { default as Group } from "./group";
 export { default as Commit } from "./commit";
+export { default as OpenWith } from "./open-with";

@@ -14,8 +14,10 @@ import {
   clearNoteTabs,
   setActiveWorkspaceId,
   clearPendingGoal,
+  openNewRunTab,
+  closeNewRunTab,
 } from "@/lib/redux/slices/workspaceSlice";
-import { isIssueTab, isNoteTab } from "@/features/workspace/utils/repo-utils";
+import { isIssueTab, isNoteTab, isNewRunTab } from "@/features/workspace/utils/repo-utils";
 import type { RootState } from "@/lib/redux";
 import { toast } from "@/components/ui/toast/toast";
 import { useWorkspaceData } from "./use-workspace-data";
@@ -110,7 +112,7 @@ export function useWorkspacePage(providerId: string) {
   useEffect(() => {
     const checkResume = async () => {
       const runId =
-        activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab)
+        activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab) && !isNewRunTab(activeTab)
           ? activeTab
           : null;
       if (
@@ -135,7 +137,7 @@ export function useWorkspacePage(providerId: string) {
     }
 
     const currentRunId =
-      activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab)
+      activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab) && !isNewRunTab(activeTab)
         ? activeTab
         : null;
 
@@ -212,7 +214,20 @@ export function useWorkspacePage(providerId: string) {
   const handleNewRun = useCallback(() => {
     setActiveRunId(null);
     setGoal("");
-  }, [setActiveRunId]);
+    dispatch(openNewRunTab());
+  }, [setActiveRunId, dispatch]);
+
+  const handleSelectNewRunTab = useCallback(() => {
+    dispatch(setActiveTab("new-run"));
+  }, [dispatch]);
+
+  const handleCloseNewRunTab = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      dispatch(closeNewRunTab());
+    },
+    [dispatch],
+  );
 
   const handleSelectEditorTab = useCallback(() => {
     dispatch(setActiveTab("editor"));
@@ -282,15 +297,18 @@ export function useWorkspacePage(providerId: string) {
   );
 
   const activeRunId =
-    activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab)
+    activeTab !== "editor" && !isIssueTab(activeTab) && !isNoteTab(activeTab) && !isNewRunTab(activeTab)
       ? activeTab
       : null;
+
+  const showNewRunTab = isNewRunTab(activeTab);
 
   const showEmptyState =
     runs.length === 0 &&
     !selectedFile &&
     openIssueTabs.length === 0 &&
-    openNoteTabs.length === 0;
+    openNoteTabs.length === 0 &&
+    !showNewRunTab;
 
   // Show input only on run tabs or empty state (hide for editor/issue/note tabs)
   const showInput =
@@ -318,6 +336,7 @@ export function useWorkspacePage(providerId: string) {
     currentWorkspace,
     showEmptyState,
     showInput,
+    showNewRunTab,
     // Handlers
     handleModelChange,
     handleExecute,
@@ -325,6 +344,8 @@ export function useWorkspacePage(providerId: string) {
     handleNewRun,
     handleSelectEditorTab,
     handleSelectRunTab,
+    handleSelectNewRunTab,
+    handleCloseNewRunTab,
     handleRemoveContextFile,
     handleRemoveContextIssue,
     handleSelectIssueTab,

@@ -420,19 +420,19 @@ export type {
 } from "./reviewsApi";
 
 export {
-  workspaceResourcesApi,
-  useGetWorkspaceResourcesQuery,
+  projectResourcesApi,
+  useGetProjectResourcesQuery,
   useGetAvailableResourcesQuery,
   useLazyGetAvailableResourcesQuery,
-  useAddWorkspaceResourceMutation,
-  useRemoveWorkspaceResourceMutation,
-  useGetIssuesByWorkspaceQuery,
+  useAddProjectResourceMutation,
+  useRemoveProjectResourceMutation,
+  useGetIssuesByProjectQuery,
 } from "./workspaceResourcesApi";
 export type {
-  WorkspaceResource,
-  WorkspaceResourceWithDetails,
+  ProjectResource,
+  ProjectResourceWithDetails,
   AvailableResource,
-  WorkspaceIssue,
+  ProjectIssue,
 } from "./workspaceResourcesApi";
 
 export {

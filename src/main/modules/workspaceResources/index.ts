@@ -6,8 +6,8 @@ export {
   unregisterWorkspaceResourcesHandlers,
 } from "./workspaceResources.ipc";
 export type {
-  WorkspaceResource,
-  WorkspaceResourceWithDetails,
+  ProjectResource,
+  ProjectResourceWithDetails,
   AvailableResource,
   AddResourcePayload,
   RemoveResourcePayload,

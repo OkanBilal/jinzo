@@ -1,14 +1,14 @@
 import { baseApi } from "./baseApi";
 import type { IssueWithEntity } from "./entitiesApi";
 
-export interface WorkspaceResource {
+export interface ProjectResource {
   id: string;
-  workspaceId: string;
+  projectId: string;
   resourceId: string;
   createdAt: string;
 }
 
-export interface WorkspaceResourceWithDetails extends WorkspaceResource {
+export interface ProjectResourceWithDetails extends ProjectResource {
   resource: {
     id: string;
     connectionId: string;
@@ -31,88 +31,88 @@ export interface AvailableResource {
   isLinked: boolean;
 }
 
-export type WorkspaceIssue = IssueWithEntity;
+export type ProjectIssue = IssueWithEntity;
 
-export const workspaceResourcesApi = baseApi.injectEndpoints({
+export const projectResourcesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getWorkspaceResources: builder.query<
-      WorkspaceResourceWithDetails[],
+    getProjectResources: builder.query<
+      ProjectResourceWithDetails[],
       string
     >({
-      query: (workspaceId) => ({
-        handler: "workspaceResources:getByWorkspace",
-        args: [workspaceId],
+      query: (projectId) => ({
+        handler: "projectResources:getByProject",
+        args: [projectId],
       }),
       transformResponse: (response: {
         success: boolean;
-        data?: { resources: WorkspaceResourceWithDetails[] };
+        data?: { resources: ProjectResourceWithDetails[] };
       }) => (response.success ? (response.data?.resources ?? []) : []),
-      providesTags: (_result, _error, workspaceId) => [
-        { type: "WorkspaceResources", id: workspaceId },
+      providesTags: (_result, _error, projectId) => [
+        { type: "ProjectResources", id: projectId },
       ],
     }),
 
     getAvailableResources: builder.query<AvailableResource[], string>({
-      query: (workspaceId) => ({
-        handler: "workspaceResources:getAvailable",
-        args: [workspaceId],
+      query: (projectId) => ({
+        handler: "projectResources:getAvailable",
+        args: [projectId],
       }),
       transformResponse: (response: {
         success: boolean;
         data?: { resources: AvailableResource[] };
       }) => (response.success ? (response.data?.resources ?? []) : []),
-      providesTags: ["WorkspaceResources"],
+      providesTags: ["ProjectResources"],
     }),
 
-    addWorkspaceResource: builder.mutation<
+    addProjectResource: builder.mutation<
       { success: boolean },
-      { workspaceId: string; resourceId: string }
+      { projectId: string; resourceId: string }
     >({
       query: (payload) => ({
-        handler: "workspaceResources:add",
+        handler: "projectResources:add",
         args: [payload],
       }),
-      invalidatesTags: (_result, _error, { workspaceId }) => [
-        { type: "WorkspaceResources", id: workspaceId },
-        { type: "WorkspaceIssues", id: workspaceId },
+      invalidatesTags: (_result, _error, { projectId }) => [
+        { type: "ProjectResources", id: projectId },
+        { type: "ProjectIssues", id: projectId },
       ],
     }),
 
-    removeWorkspaceResource: builder.mutation<
+    removeProjectResource: builder.mutation<
       { success: boolean },
-      { workspaceId: string; resourceId: string }
+      { projectId: string; resourceId: string }
     >({
       query: (payload) => ({
-        handler: "workspaceResources:remove",
+        handler: "projectResources:remove",
         args: [payload],
       }),
-      invalidatesTags: (_result, _error, { workspaceId }) => [
-        { type: "WorkspaceResources", id: workspaceId },
-        { type: "WorkspaceIssues", id: workspaceId },
+      invalidatesTags: (_result, _error, { projectId }) => [
+        { type: "ProjectResources", id: projectId },
+        { type: "ProjectIssues", id: projectId },
       ],
     }),
 
-    getIssuesByWorkspace: builder.query<WorkspaceIssue[], string>({
-      query: (workspaceId) => ({
-        handler: "workspaceResources:getIssues",
-        args: [workspaceId],
+    getIssuesByProject: builder.query<ProjectIssue[], string>({
+      query: (projectId) => ({
+        handler: "projectResources:getIssues",
+        args: [projectId],
       }),
       transformResponse: (response: {
         success: boolean;
-        data?: { issues: WorkspaceIssue[] };
+        data?: { issues: ProjectIssue[] };
       }) => (response.success ? (response.data?.issues ?? []) : []),
-      providesTags: (_result, _error, workspaceId) => [
-        { type: "WorkspaceIssues", id: workspaceId },
+      providesTags: (_result, _error, projectId) => [
+        { type: "ProjectIssues", id: projectId },
       ],
     }),
   }),
 });
 
 export const {
-  useGetWorkspaceResourcesQuery,
+  useGetProjectResourcesQuery,
   useGetAvailableResourcesQuery,
   useLazyGetAvailableResourcesQuery,
-  useAddWorkspaceResourceMutation,
-  useRemoveWorkspaceResourceMutation,
-  useGetIssuesByWorkspaceQuery,
-} = workspaceResourcesApi;
+  useAddProjectResourceMutation,
+  useRemoveProjectResourceMutation,
+  useGetIssuesByProjectQuery,
+} = projectResourcesApi;

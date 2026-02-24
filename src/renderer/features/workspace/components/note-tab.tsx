@@ -6,7 +6,7 @@ interface NoteTabProps {
   isActive: boolean;
   onClick: () => void;
   onClose: (e: React.MouseEvent) => void;
-  variant?: "workspace" | "claude";
+  variant?: "copilot" | "claude";
 }
 
 export function NoteTab({ review, isActive, onClick, onClose, variant }: NoteTabProps) {

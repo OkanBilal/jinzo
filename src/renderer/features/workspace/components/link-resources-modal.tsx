@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   useGetAvailableResourcesQuery,
-  useAddWorkspaceResourceMutation,
-  useRemoveWorkspaceResourceMutation,
+  useAddProjectResourceMutation,
+  useRemoveProjectResourceMutation,
   type AvailableResource,
 } from "@/lib/redux/api";
 import { toast } from "@/components/ui/toast";
@@ -20,14 +20,14 @@ import Linear from "@/components/ui/icons/linear";
 import { Apps, Asana, Gitlab, Jira } from "@/components/ui/icons";
 
 interface LinkResourcesModalProps {
-  workspaceId: string;
+  projectId: string;
   workspaceName: string;
   isOpen: boolean;
   onClose: () => void;
 }
 
 export function LinkResourcesModal({
-  workspaceId,
+  projectId,
   workspaceName,
   isOpen,
   onClose,
@@ -35,13 +35,13 @@ export function LinkResourcesModal({
   const {
     data: resources = [],
     isLoading,
-  } = useGetAvailableResourcesQuery(workspaceId, {
-    skip: !isOpen,
+  } = useGetAvailableResourcesQuery(projectId, {
+    skip: !isOpen || !projectId,
     refetchOnMountOrArgChange: true,
   });
 
-  const [addResource] = useAddWorkspaceResourceMutation();
-  const [removeResource] = useRemoveWorkspaceResourceMutation();
+  const [addResource] = useAddProjectResourceMutation();
+  const [removeResource] = useRemoveProjectResourceMutation();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -106,12 +106,12 @@ export function LinkResourcesModal({
     try {
       // Remove unlinked resources
       for (const id of toRemove) {
-        await removeResource({ workspaceId, resourceId: id }).unwrap();
+        await removeResource({ projectId, resourceId: id }).unwrap();
       }
 
       // Add newly linked resources
       for (const id of toAdd) {
-        await addResource({ workspaceId, resourceId: id }).unwrap();
+        await addResource({ projectId, resourceId: id }).unwrap();
       }
 
       const totalChanges = toAdd.length + toRemove.length;

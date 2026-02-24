@@ -1,10 +1,22 @@
+import * as React from "react"
 import { SVGProps } from "react"
-
-const StatusDuplicate = (props: SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} viewBox="0 0 16 16" fill="none" {...props}>
-    <circle cx={8} cy={8} r={7} fill="currentColor" />
-    <path d="M5.75 5.75l4.5 4.5M10.25 5.75l-4.5 4.5" stroke="white" strokeWidth={1.5} strokeLinecap="round" />
+const SvgComponent = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={800}
+    height={800}
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    aria-labelledby="cancelIconTitle"
+    color="currentColor"
+    viewBox="0 0 24 24"
+    {...props}
+  >
+    <title>{"Cancel"}</title>
+    <path d="M15.536 15.536 8.464 8.464m7.072 0-7.072 7.072M4.929 19.071c-3.905-3.905-3.905-10.237 0-14.142 3.905-3.905 10.237-3.905 14.142 0 3.905 3.905 3.905 10.237 0 14.142-3.905 3.905-10.237 3.905-14.142 0Z" />
   </svg>
 )
-
-export default StatusDuplicate
+export default SvgComponent

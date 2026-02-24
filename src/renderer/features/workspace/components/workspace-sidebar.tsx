@@ -8,7 +8,7 @@ import {
   useGetWorkspaceByIdQuery,
   useGetLatestWorkspaceDiffQuery,
 } from "@/lib/redux/api";
-import type { WorkspaceIssue } from "@/lib/redux/api";
+import type { ProjectIssue } from "@/lib/redux/api";
 import {
   setSelectedFile,
   setActiveTab,
@@ -77,13 +77,13 @@ export function WorkspaceSidebar() {
   );
 
   const handleSelectIssue = useCallback(
-    (issue: WorkspaceIssue) => {
+    (issue: ProjectIssue) => {
       dispatch(openIssueTab(issue));
     },
     [dispatch],
   );
   const handleAddIssueToContext = useCallback(
-    (issue: WorkspaceIssue) => {
+    (issue: ProjectIssue) => {
       dispatch(
         addContextIssue({
           entityId: issue.issue.entityId,
@@ -208,7 +208,7 @@ export function WorkspaceSidebar() {
           </div>
 
           <IssuesSection
-            workspaceId={workspaceId}
+            projectId={workspace?.projectId ?? undefined}
             activeIssueEntityId={activeIssueEntityId}
             onSelectIssue={handleSelectIssue}
             onAddToContext={handleAddIssueToContext}

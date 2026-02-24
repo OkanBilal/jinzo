@@ -34,7 +34,7 @@ export function AsciiLoader({
   variant,
 }: {
   className?: string;
-  variant?: "claude" | "workspace";
+  variant?: "claude" | "copilot";
 }) {
   const [state, dispatch] = useReducer(loaderReducer, {
     frameIndex: 0,

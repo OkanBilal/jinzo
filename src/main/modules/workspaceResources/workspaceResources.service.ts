@@ -1,51 +1,51 @@
 import { workspaceResourcesRepo } from "./workspaceResources.repo";
 import type {
   ServiceResponse,
-  WorkspaceResourceWithDetails,
+  ProjectResourceWithDetails,
   AvailableResource,
-  WorkspaceResource,
+  ProjectResource,
 } from "./workspaceResources.dto";
 
 // ─────────────────────────────────────────────────────────────
-// Workspace Resources Service
+// Project Resources Service
 // ─────────────────────────────────────────────────────────────
 
-// Resource kinds that can be linked to workspaces
+// Resource kinds that can be linked to projects
 const LINKABLE_KINDS = ["github_repo", "linear_team", "jira_project", "asana_project", "gitlab_project"];
 
 export const workspaceResourcesService = {
   /**
-   * Get all resources linked to a workspace
+   * Get all resources linked to a project
    */
-  async getByWorkspace(
-    workspaceId: string
-  ): Promise<ServiceResponse<{ resources: WorkspaceResourceWithDetails[] }>> {
+  async getByProject(
+    projectId: string
+  ): Promise<ServiceResponse<{ resources: ProjectResourceWithDetails[] }>> {
     try {
-      if (!workspaceId) {
-        return { success: false, error: "workspaceId is required" };
+      if (!projectId) {
+        return { success: false, error: "projectId is required" };
       }
 
-      const resources = await workspaceResourcesRepo.findByWorkspace(workspaceId);
+      const resources = await workspaceResourcesRepo.findByProject(projectId);
       return { success: true, data: { resources } };
     } catch (error) {
-      console.error("Error getting workspace resources:", error);
-      return { success: false, error: "Failed to get workspace resources" };
+      console.error("Error getting project resources:", error);
+      return { success: false, error: "Failed to get project resources" };
     }
   },
 
   /**
-   * Get available resources that can be linked to a workspace
+   * Get available resources that can be linked to a project
    */
   async getAvailableResources(
-    workspaceId: string
+    projectId: string
   ): Promise<ServiceResponse<{ resources: AvailableResource[] }>> {
     try {
-      if (!workspaceId) {
-        return { success: false, error: "workspaceId is required" };
+      if (!projectId) {
+        return { success: false, error: "projectId is required" };
       }
 
       const resources = await workspaceResourcesRepo.findAvailableResources(
-        workspaceId,
+        projectId,
         LINKABLE_KINDS
       );
       return { success: true, data: { resources } };
@@ -56,85 +56,85 @@ export const workspaceResourcesService = {
   },
 
   /**
-   * Add a resource to a workspace
+   * Add a resource to a project
    */
   async addResource(
-    workspaceId: string,
+    projectId: string,
     resourceId: string
-  ): Promise<ServiceResponse<{ resource: WorkspaceResource }>> {
+  ): Promise<ServiceResponse<{ resource: ProjectResource }>> {
     try {
-      if (!workspaceId || !resourceId) {
-        return { success: false, error: "workspaceId and resourceId are required" };
+      if (!projectId || !resourceId) {
+        return { success: false, error: "projectId and resourceId are required" };
       }
 
       // Check if already linked
-      const isLinked = await workspaceResourcesRepo.isLinked(workspaceId, resourceId);
+      const isLinked = await workspaceResourcesRepo.isLinked(projectId, resourceId);
       if (isLinked) {
-        return { success: false, error: "Resource is already linked to this workspace" };
+        return { success: false, error: "Resource is already linked to this project" };
       }
 
       const id = crypto.randomUUID();
-      const resource = await workspaceResourcesRepo.addResource(id, workspaceId, resourceId);
+      const resource = await workspaceResourcesRepo.addResource(id, projectId, resourceId);
       return { success: true, data: { resource } };
     } catch (error) {
-      console.error("Error adding resource to workspace:", error);
-      return { success: false, error: "Failed to add resource to workspace" };
+      console.error("Error adding resource to project:", error);
+      return { success: false, error: "Failed to add resource to project" };
     }
   },
 
   /**
-   * Remove a resource from a workspace
+   * Remove a resource from a project
    */
   async removeResource(
-    workspaceId: string,
+    projectId: string,
     resourceId: string
   ): Promise<ServiceResponse<void>> {
     try {
-      if (!workspaceId || !resourceId) {
-        return { success: false, error: "workspaceId and resourceId are required" };
+      if (!projectId || !resourceId) {
+        return { success: false, error: "projectId and resourceId are required" };
       }
 
-      await workspaceResourcesRepo.removeResource(workspaceId, resourceId);
+      await workspaceResourcesRepo.removeResource(projectId, resourceId);
       return { success: true };
     } catch (error) {
-      console.error("Error removing resource from workspace:", error);
-      return { success: false, error: "Failed to remove resource from workspace" };
+      console.error("Error removing resource from project:", error);
+      return { success: false, error: "Failed to remove resource from project" };
     }
   },
 
   /**
-   * Get issues for a workspace via linked resources
+   * Get issues for a project via linked resources
    */
-  async getIssuesByWorkspace(
-    workspaceId: string
+  async getIssuesByProject(
+    projectId: string
   ): Promise<ServiceResponse<{ issues: any[] }>> {
     try {
-      if (!workspaceId) {
-        return { success: false, error: "workspaceId is required" };
+      if (!projectId) {
+        return { success: false, error: "projectId is required" };
       }
 
-      const issues = await workspaceResourcesRepo.findIssuesByWorkspace(workspaceId);
+      const issues = await workspaceResourcesRepo.findIssuesByProject(projectId);
         //TODO: CHECK SERİALİZE İSSUE LATER
       // Serialize Date objects to ISO strings for Redux compatibility
       const serializedIssues = issues.map((item) => ({
         issue: item.issue,
         entity: {
           ...item.entity,
-          occurredAt: item.entity.occurredAt instanceof Date 
-            ? item.entity.occurredAt.toISOString() 
+          occurredAt: item.entity.occurredAt instanceof Date
+            ? item.entity.occurredAt.toISOString()
             : item.entity.occurredAt,
-          createdAt: item.entity.createdAt instanceof Date 
-            ? item.entity.createdAt.toISOString() 
+          createdAt: item.entity.createdAt instanceof Date
+            ? item.entity.createdAt.toISOString()
             : item.entity.createdAt,
-          updatedAt: item.entity.updatedAt instanceof Date 
-            ? item.entity.updatedAt.toISOString() 
+          updatedAt: item.entity.updatedAt instanceof Date
+            ? item.entity.updatedAt.toISOString()
             : item.entity.updatedAt,
         },
       }));
-      
+
       return { success: true, data: { issues: serializedIssues } };
     } catch (error) {
-      console.error("Error getting issues by workspace:", error);
+      console.error("Error getting issues by project:", error);
       return { success: false, error: "Failed to get issues" };
     }
   },

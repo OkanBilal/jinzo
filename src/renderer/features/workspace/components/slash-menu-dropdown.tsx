@@ -25,7 +25,7 @@ interface SlashMenuDropdownProps {
 
 const variantStyles = {
   default: {
-    item: "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100",
+    item: "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100 ",
     description: "text-primary-500 dark:text-primary-400",
     badge:
       "bg-primary-200/50 dark:bg-primary-700/50 text-primary-600 dark:text-primary-300",

@@ -28,6 +28,11 @@ export function makeIssueTabId(entityId: string): string {
   return `issue:${entityId}`;
 }
 
+/** Check if an activeTab ID represents the new-run draft tab. */
+export function isNewRunTab(tabId: string): boolean {
+  return tabId === "new-run";
+}
+
 /** Check if an activeTab ID represents a note tab. */
 export function isNoteTab(tabId: string): boolean {
   return tabId.startsWith("note:");

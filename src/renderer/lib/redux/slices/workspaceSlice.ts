@@ -150,6 +150,14 @@ const workspaceSlice = createSlice({
     clearNoteTabs: (state) => {
       state.openNoteTabs = [];
     },
+    openNewRunTab: (state) => {
+      state.activeTab = "new-run";
+    },
+    closeNewRunTab: (state) => {
+      if (state.activeTab === "new-run") {
+        state.activeTab = "editor";
+      }
+    },
     setPendingGoal: (state, action: PayloadAction<string>) => {
       state.pendingGoal = action.payload;
     },
@@ -182,6 +190,8 @@ export const {
   openNoteTab,
   closeNoteTab,
   clearNoteTabs,
+  openNewRunTab,
+  closeNewRunTab,
   setPendingGoal,
   clearPendingGoal,
 } = workspaceSlice.actions;

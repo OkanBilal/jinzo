@@ -1,8 +1,11 @@
-import { Plus } from "@/components/ui/icons";
+import { Plus, Close } from "@/components/ui/icons";
+import { Claude, Copilot } from "@/components/ui/icons/mood";
+import { CopilotStatic } from "@/components/ui/icons";
 import { RunTab, getTabTitle } from "./run-tab";
 import { EditorTab } from "./editor-tab";
 import { IssueTab } from "./issue-tab";
 import { NoteTab } from "./note-tab";
+import { Button } from "@/components/ui/button";
 import type { Run } from "../types";
 import type { IssueWithEntity } from "@/lib/redux/api";
 import type { ReviewTab as ReviewTabType } from "@/lib/redux/slices/workspaceSlice";
@@ -17,7 +20,7 @@ interface WorkspaceTabsProps {
   fileName?: string;
   issueTabs: IssueWithEntity[];
   noteTabs?: ReviewTabType[];
-  variant?: "workspace" | "claude";
+  variant?: "copilot" | "claude";
   onSelectEditorTab: () => void;
   onSelectRunTab: (runId: string) => void;
   onCloseTab: (runId: string, e: React.MouseEvent) => void;
@@ -27,6 +30,9 @@ interface WorkspaceTabsProps {
   onSelectNoteTab?: (noteId: string) => void;
   onCloseNoteTab?: (noteId: string, e: React.MouseEvent) => void;
   onCloseEditorTab?: (e: React.MouseEvent) => void;
+  showNewRunTab?: boolean;
+  onSelectNewRunTab?: () => void;
+  onCloseNewRunTab?: (e: React.MouseEvent) => void;
 }
 
 export function WorkspaceTabs({
@@ -36,7 +42,7 @@ export function WorkspaceTabs({
   fileName,
   issueTabs,
   noteTabs = EMPTY_NOTE_TABS,
-  variant = "workspace",
+  variant = "copilot",
   onSelectEditorTab,
   onSelectRunTab,
   onCloseTab,
@@ -46,6 +52,9 @@ export function WorkspaceTabs({
   onSelectNoteTab,
   onCloseNoteTab,
   onCloseEditorTab,
+  showNewRunTab,
+  onSelectNewRunTab,
+  onCloseNewRunTab,
 }: WorkspaceTabsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -81,11 +90,12 @@ export function WorkspaceTabs({
 
     // Small delay to ensure refs are set
     requestAnimationFrame(updateIndicator);
-  }, [activeTab, runs.length, issueTabs.length, noteTabs.length]);
+  }, [activeTab, runs.length, issueTabs.length, noteTabs.length, showNewRunTab]);
+  console.log("Rendering WorkspaceTabs with activeTab:", activeTab);
 
   return (
     <div
-      className={`flex items-center  dark:border-primary-900 ${variant === "claude" ? "dark:bg-claude-soft-dark bg-primary-200/40" : "dark:bg-copilot-blue bg-primary-200/40"}`}
+      className={`flex items-center border-b dark:border-primary/4 border-primary-950/20`}
     >
       <div
         ref={containerRef}
@@ -96,8 +106,8 @@ export function WorkspaceTabs({
           <div
             className={`absolute bottom-0 h-0.5 transition-all duration-200 ease-out ${
               variant === "claude"
-                ? "dark:bg-claude-light bg-claude-soft-dark"
-                : "bg-copilot-blue dark:bg-copilot-lightblue"
+                ? "dark:bg-claude-light bg-claude-soft-dark/60"
+                : "bg-copilot-blue/60 dark:bg-copilot-lightblue"
             }`}
             style={{
               left: indicatorStyle.left,
@@ -162,9 +172,39 @@ export function WorkspaceTabs({
             </div>
           );
         })}
+        {showNewRunTab && (
+          <div ref={setTabRef("new-run")}>
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={onSelectNewRunTab}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectNewRunTab?.(); } }}
+              className={`group flex items-center gap-2 pl-3 pr-1 py-2.5 cursor-pointer transition-colors min-w-40 max-w-48 ${
+                activeTab === "new-run"
+                  ? `text-primary-950 dark:text-primary-200 ${variant === "claude" ? "dark:bg-claude-dark" : variant === "copilot" ? "dark:bg-copilot-dark bg-primary" : ""}`
+                  : "text-primary-500 hover:text-primary-700 dark:hover:text-primary-300"
+              }`}
+            >
+              {variant === "claude" ? (
+                <Claude className={`size-3.5 ${activeTab === "new-run" ? "text-primary-900 dark:text-primary" : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"}`} />
+              ) : variant === "copilot" ? (
+                <CopilotStatic className={`size-3.5 ${activeTab === "new-run" ? "text-primary-900 dark:text-primary" : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"}`} />
+              ) : null}
+              <span className="text-xs font-medium truncate flex-1">New Run</span>
+              <Button
+                tooltip="Close"
+                tooltipPosition="bottom"
+                onClick={onCloseNewRunTab}
+                className="opacity-0 group-hover:opacity-100 p-1! hover:bg-primary/8 cursor-pointer rounded transition-all"
+              >
+                <Close className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+        )}
         <button
           onClick={onNewRun}
-          className="p-2 mx-2 text-primary-800 dark:text-primary-200 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-900/10 dark:hover:bg-primary/5 rounded-xl cursor-pointer transition-colors"
+          className="p-2  text-primary-800 dark:text-primary-200 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-900/10 dark:hover:bg-primary/5 rounded-xl cursor-pointer transition-colors"
           title="New run"
         >
           <Plus className="w-4 h-4" />

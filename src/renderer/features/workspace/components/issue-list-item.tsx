@@ -85,7 +85,7 @@ export function IssueListItem({
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(e as any); } }}
-      className={`w-full text-left px-1 py-1.5  rounded-lg cursor-pointer transition-all duration-200 ease-out flex items-center gap-2 group hover:scale-[1.01] active:scale-99 ${
+      className={`w-full text-left px-1 py-1.5  rounded-xl cursor-pointer transition-all duration-200 ease-out flex items-center gap-2 group hover:scale-[1.01] active:scale-99 ${
         isActive
           ? "bg-primary/80 dark:bg-primary/5"
           : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
@@ -118,7 +118,7 @@ export function IssueListItem({
       {onAddToContext && (
         <button
           onClick={handleAddToContext}
-          className="shrink-0 w-5 h-5 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-primary/20 dark:hover:bg-primary/10 transition-all"
+          className="shrink-0 w-5 h-5 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 hover:bg-primary/20 dark:hover:bg-primary/10 transition-all"
           title="Add to context"
         >
           <Plus className="w-3 h-3 text-primary-500 dark:text-primary-400" />

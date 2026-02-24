@@ -234,18 +234,18 @@ const api = {
     delete: (id: string) => ipcRenderer.invoke("projects:delete", id),
     archive: (id: string) => ipcRenderer.invoke("projects:archive", id),
   },
-  // Workspace Resources operations
-  workspaceResources: {
-    getByWorkspace: (workspaceId: string) =>
-      ipcRenderer.invoke("workspaceResources:getByWorkspace", workspaceId),
-    getAvailable: (workspaceId: string) =>
-      ipcRenderer.invoke("workspaceResources:getAvailable", workspaceId),
-    add: (payload: { workspaceId: string; resourceId: string }) =>
-      ipcRenderer.invoke("workspaceResources:add", payload),
-    remove: (payload: { workspaceId: string; resourceId: string }) =>
-      ipcRenderer.invoke("workspaceResources:remove", payload),
-    getIssues: (workspaceId: string) =>
-      ipcRenderer.invoke("workspaceResources:getIssues", workspaceId),
+  // Project Resources operations
+  projectResources: {
+    getByProject: (projectId: string) =>
+      ipcRenderer.invoke("projectResources:getByProject", projectId),
+    getAvailable: (projectId: string) =>
+      ipcRenderer.invoke("projectResources:getAvailable", projectId),
+    add: (payload: { projectId: string; resourceId: string }) =>
+      ipcRenderer.invoke("projectResources:add", payload),
+    remove: (payload: { projectId: string; resourceId: string }) =>
+      ipcRenderer.invoke("projectResources:remove", payload),
+    getIssues: (projectId: string) =>
+      ipcRenderer.invoke("projectResources:getIssues", projectId),
   },
   // Seed operations
   seed: {
@@ -677,6 +677,10 @@ const api = {
     openPath: (path: string) => ipcRenderer.invoke("shell:openPath", path),
     openInApp: (appId: string, path: string) => ipcRenderer.invoke("shell:openInApp", appId, path),
     getInstalledApps: () => ipcRenderer.invoke("shell:getInstalledApps"),
+  },
+  feedback: {
+    send: (payload: { message: string }) =>
+      ipcRenderer.invoke("feedback:send", payload),
   },
   updates: {
     checkForUpdates: () => ipcRenderer.invoke("updates:check"),

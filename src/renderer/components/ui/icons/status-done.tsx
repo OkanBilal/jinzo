@@ -1,10 +1,22 @@
 import { SVGProps } from "react"
 
-const StatusDone = (props: SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} viewBox="0 0 16 16" fill="none" {...props}>
-    <circle cx={8} cy={8} r={7} fill="currentColor" />
-    <path d="M5.5 8.5L7 10l3.5-4" stroke="white" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+const SvgComponent = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={24}
+    height={24}
+    fill="none"
+    viewBox="0 0 24 24"
+    {...props}
+  >
+    <circle cx={12} cy={12} r={10} stroke="currentColor" strokeWidth={1.5} />
+    <path
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="m8.5 12.5 2 2 5-5"
+    />
   </svg>
 )
-
-export default StatusDone
+export default SvgComponent

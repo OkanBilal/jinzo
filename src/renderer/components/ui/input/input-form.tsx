@@ -76,7 +76,7 @@ export const InputForm = forwardRef<HTMLTextAreaElement, InputFormProps>(
             }
           }}
           placeholder={placeholder}
-          className={`rounded-3xl w-full pl-6 pr-16 py-4 placeholder:text-md outline-none resize-none overflow-hidden ${styles.input}`}
+          className={`rounded-3xl w-full pl-6 pr-16 py-4 placeholder:text-[15px] outline-none resize-none overflow-hidden ${styles.input}`}
         />
         <kbd className="absolute cursor-default right-4 top-5 px-1.5 py-0.5 text-xxs font-sans text-primary-400 dark:text-primary-500 ">
           ⌘ P to focus
