@@ -2,8 +2,8 @@ if (process.platform === "win32") {
   if (require("electron-squirrel-startup")) process.exit(0);
 }
 
-import { app, ipcMain, shell } from "electron";
-import { spawn, exec } from "child_process";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { spawn, exec, execFile } from "child_process";
 import { promisify } from "util";
 import * as fs from "fs";
 import * as path from "path";
@@ -29,21 +29,38 @@ import {
 } from "./modules/connections";
 import { registerSeedIpc, unregisterSeedIpc } from "./modules/seed";
 import { registerMoodIpc, unregisterMoodIpc } from "./modules/mood";
-import { registerAppSettingsIpc, unregisterAppSettingsIpc } from "./modules/appSettings";
 import {
-  registerJournalIpc,
-  unregisterJournalIpc,
-} from "./modules/journal";
+  registerAppSettingsIpc,
+  unregisterAppSettingsIpc,
+} from "./modules/appSettings";
+import { registerJournalIpc, unregisterJournalIpc } from "./modules/journal";
 
-import { registerProvidersIpc, unregisterProvidersIpc, shutdownAllWorkAdapters } from "./modules/providers";
+import {
+  registerProvidersIpc,
+  unregisterProvidersIpc,
+  shutdownAllWorkAdapters,
+} from "./modules/providers";
 import { augmentPathForPackagedApp } from "./modules/providers/providers.utils";
 import { registerToolsIpc, unregisterToolsIpc } from "./modules/tools";
-import { registerWorkspacesIpc, unregisterWorkspacesIpc } from "./modules/workspaces";
-import { registerRunsIpc, unregisterRunsIpc, releaseAllSleepBlockers } from "./modules/runs";
+import {
+  registerWorkspacesIpc,
+  unregisterWorkspacesIpc,
+} from "./modules/workspaces";
+import {
+  registerRunsIpc,
+  unregisterRunsIpc,
+  releaseAllSleepBlockers,
+} from "./modules/runs";
 import { registerReviewsIpc, unregisterReviewsIpc } from "./modules/reviews";
-import { registerWorkspaceDiffsIpc, unregisterWorkspaceDiffsIpc } from "./modules/workspaceDiffs";
+import {
+  registerWorkspaceDiffsIpc,
+  unregisterWorkspaceDiffsIpc,
+} from "./modules/workspaceDiffs";
 import { registerProjectsIpc, unregisterProjectsIpc } from "./modules/projects";
-import { registerFileExplorerIpc, unregisterFileExplorerIpc } from "./modules/fileExplorer";
+import {
+  registerFileExplorerIpc,
+  unregisterFileExplorerIpc,
+} from "./modules/fileExplorer";
 import { registerGitIpc, unregisterGitIpc } from "./modules/git";
 import {
   registerWorkspaceResourcesHandlers,
@@ -56,25 +73,45 @@ import {
 } from "./modules/terminal";
 import { registerFeedbackIpc, unregisterFeedbackIpc } from "./modules/feedback";
 import { registerStatsIpc, unregisterStatsIpc } from "./modules/stats";
-import { createMainWindow, createSplashWindow, closeSplashWindow } from "./windows";
-import { registerImageProxyScheme, registerImageProxyHandler } from "./modules/imageProxy";
-import { registerUpdatesIpc, unregisterUpdatesIpc, updatesService } from "./modules/updates";
+import {
+  createMainWindow,
+  createSplashWindow,
+  closeSplashWindow,
+} from "./windows";
+import {
+  registerImageProxyScheme,
+  registerImageProxyHandler,
+} from "./modules/imageProxy";
+import {
+  registerUpdatesIpc,
+  unregisterUpdatesIpc,
+  updatesService,
+} from "./modules/updates";
 
 // ─────────────────────────────────────────────────────────────
 // Installed app detection (macOS)
 // ─────────────────────────────────────────────────────────────
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
-// TODO: REFACTOR, Consider adding more apps or allowing users to specify custom apps/paths in settings 
+// TODO: Consider adding more apps or allowing users to specify custom apps/paths in settings
 const KNOWN_APPS = [
   { id: "finder", name: "Finder", bundleId: "com.apple.finder" },
-  { id: "vscode", name: "Visual Studio Code", bundleId: "com.microsoft.VSCode" },
+  {
+    id: "vscode",
+    name: "Visual Studio Code",
+    bundleId: "com.microsoft.VSCode",
+  },
   { id: "cursor", name: "Cursor", bundleId: "com.todesktop.230313mzl4w4u92" },
   { id: "terminal", name: "Terminal", bundleId: "com.apple.Terminal" },
   { id: "iterm", name: "iTerm2", bundleId: "com.googlecode.iterm2" },
   { id: "warp", name: "Warp", bundleId: "dev.warp.Warp-Stable" },
   { id: "xcode", name: "Xcode", bundleId: "com.apple.dt.Xcode" },
-  { id: "android-studio", name: "Android Studio", bundleId: "com.google.android.studio" },
+  {
+    id: "android-studio",
+    name: "Android Studio",
+    bundleId: "com.google.android.studio",
+  },
   { id: "sublime-text", name: "Sublime Text", bundleId: "com.sublimetext.4" },
   { id: "webstorm", name: "WebStorm", bundleId: "com.jetbrains.WebStorm" },
   { id: "intellij", name: "IntelliJ IDEA", bundleId: "com.jetbrains.intellij" },
@@ -93,16 +130,21 @@ interface DetectedApp {
   icon: string | null;
 }
 
+let isShuttingDown = false;
 let installedAppsCache: DetectedApp[] | null = null;
 let installedAppsCacheTime = 0;
+let detectInFlight: Promise<DetectedApp[]> | null = null;
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+const ALLOWED_EXTERNAL_PROTOCOLS = new Set(["https:", "http:", "mailto:"]);
 
 async function getAppIcon(appPath: string): Promise<string | null> {
   try {
     // Read CFBundleIconFile from Info.plist
-    const { stdout: iconName } = await execAsync(
-      `defaults read "${appPath}/Contents/Info" CFBundleIconFile 2>/dev/null`,
-    );
+    const { stdout: iconName } = await execFileAsync("defaults", [
+      "read",
+      `${appPath}/Contents/Info`,
+      "CFBundleIconFile",
+    ]);
     let iconFile = iconName.trim();
     if (!iconFile) return null;
     if (!iconFile.endsWith(".icns")) iconFile += ".icns";
@@ -111,11 +153,32 @@ async function getAppIcon(appPath: string): Promise<string | null> {
     if (!fs.existsSync(icnsPath)) return null;
 
     // Convert .icns to PNG via sips (writes to temp file)
-    const tmpPng = path.join(app.getPath("temp"), `jinzo-icon-${Date.now()}-${Math.random().toString(36).slice(2)}.png`);
-    await execAsync(`sips -s format png -z 64 64 "${icnsPath}" --out "${tmpPng}" 2>/dev/null`);
+    const tmpPng = path.join(
+      app.getPath("temp"),
+      `jinzo-icon-${Date.now()}-${Math.random().toString(36).slice(2)}.png`,
+    );
+    await execFileAsync("sips", [
+      "-s",
+      "format",
+      "png",
+      "-z",
+      "64",
+      "64",
+      icnsPath,
+      "--out",
+      tmpPng,
+    ]);
 
-    const pngBuffer = fs.readFileSync(tmpPng);
-    fs.unlinkSync(tmpPng);
+    let pngBuffer: Buffer;
+    try {
+      pngBuffer = fs.readFileSync(tmpPng);
+    } finally {
+      try {
+        fs.unlinkSync(tmpPng);
+      } catch {
+        /* ignore */
+      }
+    }
 
     if (pngBuffer.length === 0) return null;
     return `data:image/png;base64,${pngBuffer.toString("base64")}`;
@@ -128,39 +191,51 @@ async function detectInstalledApps(): Promise<DetectedApp[]> {
   if (installedAppsCache && Date.now() - installedAppsCacheTime < CACHE_TTL) {
     return installedAppsCache;
   }
+  if (detectInFlight) return detectInFlight;
 
-  const results = await Promise.allSettled(
-    KNOWN_APPS.map(async (knownApp) => {
-      try {
-        const { stdout } = await execAsync(
-          `mdfind "kMDItemCFBundleIdentifier == '${knownApp.bundleId}'" | head -1`,
-        );
-        const appPath = stdout.trim();
-        if (!appPath) return null;
+  detectInFlight = (async () => {
+    try {
+      const results = await Promise.allSettled(
+        KNOWN_APPS.map(async (knownApp) => {
+          try {
+            const { stdout } = await execAsync(
+              `mdfind "kMDItemCFBundleIdentifier == '${knownApp.bundleId}'" | head -1`,
+            );
+            const appPath = stdout.trim();
+            if (!appPath) return null;
 
-        const icon = await getAppIcon(appPath);
+            const icon = await getAppIcon(appPath);
 
-        return {
-          id: knownApp.id,
-          name: knownApp.name,
-          bundleId: knownApp.bundleId,
-          path: appPath,
-          icon,
-        } satisfies DetectedApp;
-      } catch {
-        return null;
-      }
-    }),
-  );
+            return {
+              id: knownApp.id,
+              name: knownApp.name,
+              bundleId: knownApp.bundleId,
+              path: appPath,
+              icon,
+            } satisfies DetectedApp;
+          } catch {
+            return null;
+          }
+        }),
+      );
 
-  const detected = results
-    .filter((r): r is PromiseFulfilledResult<DetectedApp | null> => r.status === "fulfilled")
-    .map((r) => r.value)
-    .filter((v): v is DetectedApp => v !== null);
+      const detected = results
+        .filter(
+          (r): r is PromiseFulfilledResult<DetectedApp | null> =>
+            r.status === "fulfilled",
+        )
+        .map((r) => r.value)
+        .filter((v): v is DetectedApp => v !== null);
 
-  installedAppsCache = detected;
-  installedAppsCacheTime = Date.now();
-  return detected;
+      installedAppsCache = detected;
+      installedAppsCacheTime = Date.now();
+      return detected;
+    } finally {
+      detectInFlight = null;
+    }
+  })();
+
+  return detectInFlight;
 }
 
 /**
@@ -217,24 +292,56 @@ async function initializeApp() {
 
     // Shell utilities
     ipcMain.handle("shell:openExternal", async (_, url: string) => {
+      if (typeof url !== "string") return;
+      let parsed: URL;
+      try {
+        parsed = new URL(url);
+      } catch {
+        return;
+      }
+      if (!ALLOWED_EXTERNAL_PROTOCOLS.has(parsed.protocol)) {
+        console.warn(
+          "shell:openExternal blocked non-allowed protocol:",
+          parsed.protocol,
+        );
+        return;
+      }
       await shell.openExternal(url);
     });
-    ipcMain.handle("shell:openPath", async (_, path: string) => {
-      await shell.openPath(path);
+    ipcMain.handle("shell:openPath", async (_, filePath: string) => {
+      if (typeof filePath !== "string" || !path.isAbsolute(filePath)) return;
+      const normalized = path.normalize(filePath);
+      if (normalized !== filePath) return;
+      await shell.openPath(filePath);
     });
-    ipcMain.handle("shell:openInApp", async (_, appId: string, path: string) => {
-      const known = KNOWN_APPS.find((a) => a.id === appId);
-      if (!known) return;
-      spawn("open", ["-b", known.bundleId, path], { detached: true, stdio: "ignore" });
-    });
+    ipcMain.handle(
+      "shell:openInApp",
+      async (_, appId: string, filePath: string) => {
+        if (process.platform !== "darwin") return;
+        const known = KNOWN_APPS.find((a) => a.id === appId);
+        if (!known) return;
+        const child = spawn("open", ["-b", known.bundleId, filePath], {
+          detached: true,
+          stdio: "ignore",
+        });
+        child.unref();
+        child.on("error", (err) =>
+          console.warn("shell:openInApp spawn error:", err),
+        );
+      },
+    );
     ipcMain.handle("shell:getInstalledApps", async () => {
+      if (process.platform !== "darwin") {
+        return { success: true, data: [] };
+      }
       try {
         const apps = await detectInstalledApps();
         return { success: true, data: apps };
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Failed to detect apps",
+          error:
+            error instanceof Error ? error.message : "Failed to detect apps",
         };
       }
     });
@@ -330,7 +437,6 @@ if (!gotTheLock) {
 } else {
   app.on("second-instance", () => {
     // Someone tried to open a second instance — focus the existing window
-    const { BrowserWindow } = require("electron");
     const allWindows = BrowserWindow.getAllWindows();
     if (allWindows.length > 0) {
       const win = allWindows[0];
@@ -346,10 +452,8 @@ registerImageProxyScheme();
 // App lifecycle events
 app.whenReady().then(initializeApp);
 
-
 app.on("activate", () => {
   // On macOS it's common to re-create a window when dock icon is clicked
-  const { BrowserWindow } = require("electron");
   const allWindows = BrowserWindow.getAllWindows();
   if (allWindows.length === 0) {
     createMainWindow({ show: true });
@@ -378,9 +482,6 @@ app.on("before-quit", async (event) => {
   app.exit(0);
 });
 
-// Track if we're currently shutting down to prevent duplicate cleanup
-let isShuttingDown = false;
-
 // Handle graceful shutdown signals
 async function handleShutdownSignal(signal: string) {
   if (isShuttingDown) {
@@ -388,14 +489,18 @@ async function handleShutdownSignal(signal: string) {
     return;
   }
   isShuttingDown = true;
-  
+
   console.log(`Received ${signal}, shutting down gracefully...`);
 
   try {
     await cleanupApp();
   } catch (error) {
     // Ignore stream-destroyed errors during shutdown
-    if (!(error instanceof Error && error.message.includes("ERR_STREAM_DESTROYED"))) {
+    if (
+      !(
+        error instanceof Error && error.message.includes("ERR_STREAM_DESTROYED")
+      )
+    ) {
       console.error("Error during graceful shutdown:", error);
     }
   }
@@ -417,7 +522,11 @@ process.on("uncaughtException", (error) => {
 
 process.on("unhandledRejection", (reason, promise) => {
   // Suppress stream-destroyed errors during shutdown
-  if (isShuttingDown && reason instanceof Error && reason.message?.includes("ERR_STREAM_DESTROYED")) {
+  if (
+    isShuttingDown &&
+    reason instanceof Error &&
+    reason.message?.includes("ERR_STREAM_DESTROYED")
+  ) {
     return;
   }
   console.error("Unhandled rejection at:", promise, "reason:", reason);

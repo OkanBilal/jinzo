@@ -61,11 +61,13 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
       sandbox: false,
       devTools: !app.isPackaged,
     },
-    titleBarStyle: "hiddenInset",
-    trafficLightPosition: { x: 16, y: 16 },
-    transparent: true,
-    vibrancy: "fullscreen-ui",
-    visualEffectState: "active",
+    ...(process.platform === "darwin" ? {
+      titleBarStyle: "hiddenInset" as const,
+      trafficLightPosition: { x: 16, y: 16 },
+      transparent: true,
+      vibrancy: "fullscreen-ui" as const,
+      visualEffectState: "active" as const,
+    } : {}),
   });
 
   // Handle ready-to-show event
@@ -77,9 +79,14 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
     }
   });
 
+  // Handle load failures
+  mainWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription) => {
+    console.error(`Failed to load: ${errorDescription} (${errorCode})`);
+  });
+
   // Load the app
-  // In development, Electron Forge's Vite plugin makes the dev server URL available
-  // through various environment variables
+  // In development, Electron Forge's Vite plugin injects the dev server URL
+  // via compile-time define (process.env.RENDERER_VITE_DEV_SERVER_URL)
   const devServerUrl =
     process.env.VITE_DEV_SERVER_URL ||
     process.env.RENDERER_VITE_DEV_SERVER_URL ||

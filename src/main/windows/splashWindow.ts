@@ -20,7 +20,7 @@ function getSplashPath(): string {
 }
 
 export function createSplashWindow(
-  options: SplashWindowOptions = {}
+  options: SplashWindowOptions = {},
 ): BrowserWindow {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;

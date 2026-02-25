@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Branch, Figma, PullRequest } from "@/components/ui/icons";
+import { Branch, Figma, PullRequest, Task } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
 import { Jira, Asana, Gitlab } from "@/components/ui/icons";
@@ -85,6 +85,16 @@ export function WorkspaceQuickActions({
 
   return (
     <div className="flex flex-wrap gap-2 justify-center max-w-200 mx-auto mb-4">
+            <QuickActionButton
+        variant={variant}
+        icon={<Task className="size-3.5" />}
+        label="Fix TODOs in code"
+        onClick={() =>
+          onSetGoal(
+            "Find and fix TODO comments in the codebase with an AI assistant",
+          )
+        }
+      />
       <QuickActionButton
         variant={variant}
         icon={<Claude className="size-3.5" />}

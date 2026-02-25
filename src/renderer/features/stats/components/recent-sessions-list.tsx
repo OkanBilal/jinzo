@@ -13,7 +13,7 @@ const PROVIDER_COLORS: Record<string, string> = {
 const MODEL_LABELS: Record<string, string> = {
   default: "Opus 4.6",
   sonnet: "Sonnet 4.6",
-  haiku: "Haiku 4.6",
+  haiku: "Haiku 4.5",
 };
 
 function displayModel(model: string | null): string | null {

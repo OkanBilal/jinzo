@@ -26,6 +26,7 @@ class DatabaseClient {
   private sqlite: SQLiteInstance | null = null;
   private dbPath: string | null = null;
   private isInitialized = false;
+  private initializePromise: Promise<DatabaseInitResult> | null = null;
 
   private constructor() {}
 
@@ -47,7 +48,6 @@ class DatabaseClient {
   ): Promise<DatabaseInitResult> {
     if (this.isInitialized && this.db && this.sqlite) {
       console.log("Database already initialized");
-      //console.log("Runtime DB:", DatabaseClient.getInstance().getDbPath());
       return {
         db: this.db,
         sqlite: this.sqlite,
@@ -55,6 +55,22 @@ class DatabaseClient {
       };
     }
 
+    // Prevent concurrent initialization
+    if (this.initializePromise) {
+      return this.initializePromise;
+    }
+
+    this.initializePromise = this.doInitialize(config);
+    try {
+      return await this.initializePromise;
+    } finally {
+      this.initializePromise = null;
+    }
+  }
+
+  private async doInitialize(
+    config?: Partial<DatabaseConfig>,
+  ): Promise<DatabaseInitResult> {
     // Ensure Electron is ready before using app.getPath()
     if (
       app &&
@@ -72,12 +88,8 @@ class DatabaseClient {
       // Ensure directory exists
       this.ensureDirectoryExists(this.dbPath);
 
-      //console.log(`Initializing database at: ${this.dbPath}`);
-
       // Create SQLite instance
-      this.sqlite = new Database(this.dbPath, {
-       //verbose: config?.verbose ? console.log : undefined,
-      });
+      this.sqlite = new Database(this.dbPath, {});
 
       // Configure database
       this.configureDatabase(config);
@@ -134,7 +146,7 @@ class DatabaseClient {
     this.sqlite.pragma("synchronous = NORMAL");
     this.sqlite.pragma("cache_size = -64000"); // 64MB cache
     this.sqlite.pragma("temp_store = MEMORY");
-    this.sqlite.pragma("mmap_size = 30000000000"); // 30GB
+    this.sqlite.pragma("mmap_size = 268435456"); // 256MB
   }
 
   /**
@@ -231,7 +243,6 @@ class DatabaseClient {
 
     for (const migrationPath of possiblePaths) {
       if (fs.existsSync(migrationPath)) {
-        //console.log(`Found migrations at: ${migrationPath}`);
         return migrationPath;
       }
     }
@@ -256,16 +267,14 @@ class DatabaseClient {
       // In production, the dylib is unpacked from asar into app.asar.unpacked
       // We need to resolve the path manually since sqlite-vec's index.cjs
       // resolves __dirname inside the asar which doesn't work for native extensions
-      let loadablePath: string;
       if (app.isPackaged) {
-        const path = require("path");
-        loadablePath = path.join(
+        const loadablePath = path.join(
           process.resourcesPath,
           "app.asar.unpacked",
           ".vite",
           "build",
           "node_modules",
-          "sqlite-vec-darwin-arm64",
+          `sqlite-vec-${process.platform}-${process.arch}`,
           "vec0"
         );
         this.sqlite.loadExtension(loadablePath);
@@ -290,34 +299,6 @@ class DatabaseClient {
     }
 
     return results;
-  }
-
-  /**
-   * Get extension path based on platform
-   * @private Reserved for future extension loading
-   */
-  private getExtensionPath(extensionName: string): string | null {
-    const platform = process.platform;
-    const arch = process.arch;
-
-    // Adjust based on your extension location
-    const extensionsDir = path.join(
-      app?.getAppPath() || process.cwd(),
-      "extensions",
-    );
-
-    let extensionFile: string;
-    if (platform === "darwin") {
-      extensionFile = `${extensionName}-darwin-${arch}.dylib`;
-    } else if (platform === "linux") {
-      extensionFile = `${extensionName}-linux-${arch}.so`;
-    } else if (platform === "win32") {
-      extensionFile = `${extensionName}-win32-${arch}.dll`;
-    } else {
-      return null;
-    }
-
-    return path.join(extensionsDir, extensionFile);
   }
 
   /**
@@ -397,8 +378,6 @@ class DatabaseClient {
 
       // Use SQLite backup API for safe backup
       await this.sqlite.backup(backupPath);
-
-     // console.log(`Database backed up to: ${backupPath}`);
     } catch (error) {
       console.error("Backup failed:", error);
       throw error;
@@ -503,6 +482,7 @@ class DatabaseClient {
     this.sqlite = null;
     this.dbPath = null;
     this.isInitialized = false;
+    this.initializePromise = null;
   }
 
   /**
