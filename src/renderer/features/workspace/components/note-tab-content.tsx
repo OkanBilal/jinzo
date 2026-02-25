@@ -9,7 +9,6 @@ interface NoteTabContentProps {
   reviewId: string;
 }
 
-// TODO: 
 const statusConfig: Record<string, { label: string; dotClass: string; badgeClass: string }> = {
   open: {
     label: "Open",

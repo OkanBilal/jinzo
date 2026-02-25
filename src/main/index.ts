@@ -94,7 +94,6 @@ import {
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 
-// TODO: Consider adding more apps or allowing users to specify custom apps/paths in settings
 const KNOWN_APPS = [
   { id: "finder", name: "Finder", bundleId: "com.apple.finder" },
   {
@@ -103,9 +102,17 @@ const KNOWN_APPS = [
     bundleId: "com.microsoft.VSCode",
   },
   { id: "cursor", name: "Cursor", bundleId: "com.todesktop.230313mzl4w4u92" },
+  { id: "windsurf", name: "Windsurf", bundleId: "com.exafunction.windsurf" },
   { id: "terminal", name: "Terminal", bundleId: "com.apple.Terminal" },
   { id: "iterm", name: "iTerm2", bundleId: "com.googlecode.iterm2" },
   { id: "warp", name: "Warp", bundleId: "dev.warp.Warp-Stable" },
+  { id: "ghostty", name: "Ghostty", bundleId: "com.mitchellh.ghostty" },
+  { id: "alacritty", name: "Alacritty", bundleId: "org.alacritty" },
+  { id: "kitty", name: "kitty", bundleId: "net.kovidgoyal.kitty" },
+  { id: "hyper", name: "Hyper", bundleId: "co.zeit.hyper" },
+  { id: "wezterm", name: "WezTerm", bundleId: "com.github.wez.wezterm" },
+  { id: "rio", name: "Rio", bundleId: "io.raphamorim.rio" },
+  { id: "tabby", name: "Tabby", bundleId: "org.tabby" },
   { id: "xcode", name: "Xcode", bundleId: "com.apple.dt.Xcode" },
   {
     id: "android-studio",
@@ -113,13 +120,31 @@ const KNOWN_APPS = [
     bundleId: "com.google.android.studio",
   },
   { id: "sublime-text", name: "Sublime Text", bundleId: "com.sublimetext.4" },
+  { id: "zed", name: "Zed", bundleId: "dev.zed.Zed" },
+  { id: "nova", name: "Nova", bundleId: "com.panic.Nova" },
+  { id: "fleet", name: "Fleet", bundleId: "com.jetbrains.fleet" },
   { id: "webstorm", name: "WebStorm", bundleId: "com.jetbrains.WebStorm" },
   { id: "intellij", name: "IntelliJ IDEA", bundleId: "com.jetbrains.intellij" },
-  { id: "zed", name: "Zed", bundleId: "dev.zed.Zed" },
-  { id: "ghostty", name: "Ghostty", bundleId: "com.mitchellh.ghostty" },
-  { id: "alacritty", name: "Alacritty", bundleId: "org.alacritty" },
-  { id: "kitty", name: "kitty", bundleId: "net.kovidgoyal.kitty" },
-  { id: "nova", name: "Nova", bundleId: "com.panic.Nova" },
+  { id: "pycharm", name: "PyCharm", bundleId: "com.jetbrains.pycharm" },
+  { id: "goland", name: "GoLand", bundleId: "com.jetbrains.goland" },
+  { id: "rustrover", name: "RustRover", bundleId: "com.jetbrains.rustrover" },
+  { id: "clion", name: "CLion", bundleId: "com.jetbrains.clion" },
+  { id: "phpstorm", name: "PhpStorm", bundleId: "com.jetbrains.PhpStorm" },
+  { id: "rider", name: "Rider", bundleId: "com.jetbrains.rider" },
+  { id: "datagrip", name: "DataGrip", bundleId: "com.jetbrains.datagrip" },
+  { id: "bbedit", name: "BBEdit", bundleId: "com.barebones.bbedit" },
+  { id: "textmate", name: "TextMate", bundleId: "com.macromates.TextMate" },
+  { id: "fork", name: "Fork", bundleId: "com.DanPristupov.Fork" },
+  { id: "tower", name: "Tower", bundleId: "com.fournova.Tower3" },
+  { id: "sourcetree", name: "Sourcetree", bundleId: "com.torusknot.SourceTreeNotMAS" },
+  { id: "gitkraken", name: "GitKraken", bundleId: "com.axosoft.gitkraken" },
+  { id: "tableplus", name: "TablePlus", bundleId: "com.tinyapp.TablePlus" },
+  { id: "dbeaver", name: "DBeaver", bundleId: "org.jkiss.dbeaver.core.product" },
+  { id: "postman", name: "Postman", bundleId: "com.postman.app" },
+  { id: "insomnia", name: "Insomnia", bundleId: "com.insomnia.app" },
+  { id: "mongodb-compass", name: "MongoDB Compass", bundleId: "com.mongodb.compass" },
+  { id: "charles", name: "Charles Proxy", bundleId: "com.xk72.Charles" },
+  { id: "proxyman", name: "Proxyman", bundleId: "com.proxyman.NSProxy" },
 ];
 
 interface DetectedApp {

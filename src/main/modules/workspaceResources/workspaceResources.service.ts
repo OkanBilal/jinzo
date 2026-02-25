@@ -114,8 +114,6 @@ export const workspaceResourcesService = {
       }
 
       const issues = await workspaceResourcesRepo.findIssuesByProject(projectId);
-        //TODO: CHECK SERİALİZE İSSUE LATER
-      // Serialize Date objects to ISO strings for Redux compatibility
       const serializedIssues = issues.map((item) => ({
         issue: item.issue,
         entity: {

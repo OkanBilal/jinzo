@@ -115,7 +115,6 @@ export function DiffSection({
       </div>
     );
   }
-  // TODO: check
   const handleReviewChanges = () => {
     dispatch(setPendingGoal("/review-code changes"));
   };
