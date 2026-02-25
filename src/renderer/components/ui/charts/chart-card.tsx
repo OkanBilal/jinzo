@@ -1,0 +1,62 @@
+import type { ComponentType, ReactNode } from "react";
+import { cn } from "@/lib/cn";
+
+interface ChartCardProps {
+  title?: string;
+  icon?: ComponentType<{ className?: string }>;
+  headerRight?: ReactNode;
+  isEmpty?: boolean;
+  emptyMessage?: string;
+  emptyHeight?: string;
+  className?: string;
+  children: ReactNode;
+}
+
+export default function ChartCard({
+  title,
+  icon: Icon,
+  headerRight,
+  isEmpty,
+  emptyMessage = "No data yet",
+  emptyHeight = "h-36",
+  className,
+  children,
+}: ChartCardProps) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border border-primary-200/60 dark:border-primary-800/40 bg-primary-50/50 dark:bg-primary-900/30 p-4",
+        className,
+      )}
+    >
+      {title && (
+        headerRight ? (
+          <div className="flex items-start justify-between mb-1">
+            <p className="text-xs font-medium text-primary-500 dark:text-primary-400 flex items-center gap-1.5">
+              {Icon && <Icon className="w-3 h-3" />}
+              {title}
+            </p>
+            {headerRight}
+          </div>
+        ) : (
+          <p className="text-xs font-medium text-primary-500 dark:text-primary-400 mb-3 flex items-center gap-1.5">
+            {Icon && <Icon className="w-3 h-3" />}
+            {title}
+          </p>
+        )
+      )}
+      {isEmpty ? (
+        <div
+          className={cn(
+            "flex items-center justify-center text-sm text-primary-400 dark:text-primary-500",
+            emptyHeight,
+          )}
+        >
+          {emptyMessage}
+        </div>
+      ) : (
+        children
+      )}
+    </div>
+  );
+}

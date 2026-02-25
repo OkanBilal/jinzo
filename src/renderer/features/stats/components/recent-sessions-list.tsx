@@ -1,4 +1,5 @@
 import { Chat } from "@/components/ui/icons";
+import { ChartCard } from "@/components/ui/charts";
 import type { RecentSession } from "@/lib/redux/api";
 
 interface RecentSessionsListProps {
@@ -36,25 +37,15 @@ function formatDuration(ms: number | null): string {
 }
 
 export default function RecentSessionsList({ sessions }: RecentSessionsListProps) {
-  if (sessions.length === 0) {
-    return (
-      <div className="rounded-xl border border-primary-200/60 dark:border-primary-800/40 bg-primary-50/50 dark:bg-primary-900/30 p-4">
-        <p className="text-xs font-medium text-primary-500 dark:text-primary-400 mb-3">
-          Recent Sessions
-        </p>
-        <div className="h-24 flex items-center justify-center text-sm text-primary-400 dark:text-primary-500">
-          No sessions yet
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="rounded-xl border border-primary-200/60 dark:border-primary-800/40 bg-primary-50/50 dark:bg-primary-900/30 p-4 h-full flex flex-col">
-      <p className="text-xs font-medium text-primary-500 dark:text-primary-400 mb-3 flex items-center gap-1.5 shrink-0">
-      <Chat className="w-3 h-3" />
-        Recent Sessions
-      </p>
+    <ChartCard
+      title="Recent Sessions"
+      icon={Chat}
+      isEmpty={sessions.length === 0}
+      emptyMessage="No sessions yet"
+      emptyHeight="flex-1"
+      className="h-full flex flex-col"
+    >
       <div className="space-y-2 overflow-y-auto min-h-0 flex-1">
         {sessions.map((s) => (
           <div
@@ -93,6 +84,6 @@ export default function RecentSessionsList({ sessions }: RecentSessionsListProps
           </div>
         ))}
       </div>
-    </div>
+    </ChartCard>
   );
 }

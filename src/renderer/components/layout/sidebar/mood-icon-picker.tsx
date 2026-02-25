@@ -86,16 +86,24 @@ export default function MoodIconPicker({
               <span className="group-hover/icon:opacity-0 transition-opacity">
                 <CurrentIcon icon={icon} iconMode={iconMode} />
               </span>
-              <button
-                type="button"
+              <span
+                role="button"
+                tabIndex={0}
                 onClick={(e) => {
                   e.stopPropagation();
                   onClear();
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onClear();
+                  }
+                }}
                 className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/icon:opacity-100 transition-opacity cursor-pointer"
               >
                 <Close className="size-3 text-primary-500 dark:text-primary-400" />
-              </button>
+              </span>
             </span>
           ) : (
             <CurrentIcon icon={icon} iconMode={iconMode} />

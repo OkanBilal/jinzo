@@ -279,6 +279,6 @@ export function DiffViewer({
   }, [diffText, filename, isDarkMode]);
 
   return (
-    <div ref={containerRef} className={`h-full overflow-auto ${className}`} />
+    <div ref={containerRef} className={`h-full overflow-auto  ${className}`} />
   );
 }

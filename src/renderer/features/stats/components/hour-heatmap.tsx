@@ -1,4 +1,5 @@
 import { Clock } from "@/components/ui/icons";
+import { ChartCard, BarChart, BarLabels } from "@/components/ui/charts";
 import type { HourDistribution } from "@/lib/redux/api";
 
 interface HourHeatmapProps {
@@ -25,56 +26,36 @@ export default function HourHeatmap({ data }: HourHeatmapProps) {
 
   const maxCount = Math.max(...full.map((d) => d.count), 1);
 
-  if (data.length === 0) {
-    return (
-      <div className="rounded-xl border border-primary-200/60 dark:border-primary-800/40 bg-primary-50/50 dark:bg-primary-900/30 p-4">
-        <p className="text-xs font-medium text-primary-500 dark:text-primary-400 mb-3">
-          Hour Distribution
-        </p>
-        <div className="h-44 flex items-center justify-center text-sm text-primary-400 dark:text-primary-500">
-          No data yet
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="rounded-xl border border-primary-200/60 dark:border-primary-800/40 bg-primary-50/50 dark:bg-primary-900/30 p-4">
-      <p className="text-xs font-medium text-primary-500 dark:text-primary-400 mb-3 flex items-center gap-1.5">
-        <Clock className="w-3 h-3" />
-        Hour Distribution
-      </p>
-      <div className="flex items-end gap-0.5" style={{ height: 150 }}>
-        {full.map((d) => {
-          const pct = (d.count / maxCount) * 100;
-          return (
-            <div
-              key={d.hour}
-              className="flex-1 h-full flex flex-col justify-end"
-              title={`${d.hour}:00 – ${d.hour}:59 · ${d.count} runs`}
-            >
-              <div
-                className="w-full rounded-t-sm"
-                style={{
-                  height: `${Math.max(pct, d.count > 0 ? 3 : 0)}%`,
-                  backgroundColor: getBarColor(d.hour),
-                }}
-              />
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex mt-1.5">
-        {full.map((d) => (
-          <div key={d.hour} className="flex-1 text-center">
-            {LABEL_HOURS.includes(d.hour) && (
-              <span className="text-[9px] text-primary-400 dark:text-primary-500">
-                {d.hour}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
+    <ChartCard
+      title="Hour Distribution"
+      icon={Clock}
+      isEmpty={data.length === 0}
+      emptyHeight="h-44"
+    >
+      <BarChart
+        height={150}
+        bars={full.map((d) => ({
+          key: d.hour,
+          hoverLabel: d.count > 0 ? `${d.hour}:00 · ${d.count}` : undefined,
+          segments: [
+            {
+              percent: Math.max((d.count / maxCount) * 100, d.count > 0 ? 3 : 0),
+              color: getBarColor(d.hour),
+            },
+          ],
+        }))}
+      />
+      <BarLabels
+        labels={full.map((d) => ({
+          key: d.hour,
+          content: LABEL_HOURS.includes(d.hour) ? (
+            <span className="text-[9px] text-primary-400 dark:text-primary-500">
+              {d.hour}
+            </span>
+          ) : null,
+        }))}
+      />
+    </ChartCard>
   );
 }

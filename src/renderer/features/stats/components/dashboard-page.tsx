@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useLayoutEffect, useCallback } from "react";
 import { useGetDashboardQuery } from "@/lib/redux/api";
 import type { ProviderFilter } from "@/lib/redux/api";
 import SummaryCards from "./summary-cards";
@@ -36,9 +36,9 @@ export default function DashboardPage() {
         width: tabRect.width,
       });
     }
-  }, [filter]);
+  }, [filter, data]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     updateIndicator();
   }, [updateIndicator]);
 

@@ -1,4 +1,5 @@
 import { Calendar } from "@/components/ui/icons";
+import { ChartCard, BarChart, BarLabels } from "@/components/ui/charts";
 import type { DailyActivity } from "@/lib/redux/api";
 
 interface ActivityChartProps {
@@ -27,56 +28,40 @@ function padTo30(data: DailyActivity[]) {
 }
 
 export default function ActivityChart({ data }: ActivityChartProps) {
+  const isEmpty = data.length === 0 || data.every(d => d.claude + d.copilot + d.other === 0);
   const chartData = padTo30(data);
   const maxTotal = Math.max(...chartData.map((d) => d.total), 1);
 
   return (
-    <div className="rounded-xl border border-primary-200/60 dark:border-primary-800/40 bg-primary-50/50 dark:bg-primary-900/30 p-4">
-      <p className="text-xs font-medium text-primary-500 dark:text-primary-400 mb-3 flex items-center gap-1.5">
-        <Calendar className="w-3 h-3" />
-        Daily Activity (30d)
-      </p>
-      <div className="flex items-end gap-0.5" style={{ height: 180 }}>
-        {chartData.map((d, i) => {
-          const claudePct = (d.claude / maxTotal) * 100;
-          const copilotPct = (d.copilot / maxTotal) * 100;
-          const otherPct = (d.other / maxTotal) * 100;
-          return (
-            <div
-              key={i}
-              className="flex-1 h-full flex flex-col justify-end"
-              title={d.total > 0 ? `Claude: ${d.claude}, Copilot: ${d.copilot}, Other: ${d.other}` : ""}
-            >
-              {d.other > 0 && (
-                <div
-                  className="w-full rounded-t-sm"
-                  style={{ height: `${otherPct}%`, backgroundColor: "#6366F1" }}
-                />
-              )}
-              {d.copilot > 0 && (
-                <div
-                  className="w-full"
-                  style={{
-                    height: `${copilotPct}%`,
-                    backgroundColor: "#3010B3",
-                    borderRadius: d.other === 0 ? "2px 2px 0 0" : undefined,
-                  }}
-                />
-              )}
-              {d.claude > 0 && (
-                <div
-                  className="w-full"
-                  style={{
-                    height: `${claudePct}%`,
-                    backgroundColor: "#D97757",
-                    borderRadius: d.copilot === 0 && d.other === 0 ? "2px 2px 0 0" : undefined,
-                  }}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <ChartCard
+      title="Daily Activity (30d)"
+      icon={Calendar}
+      isEmpty={isEmpty}
+      emptyMessage="No activity data yet"
+      emptyHeight="h-45"
+    >
+      <BarChart
+        height={180}
+        bars={chartData.map((d, i) => ({
+          key: i,
+          hoverLabel: d.total > 0 ? `${d.total} runs` : undefined,
+          segments: [
+            { percent: (d.other / maxTotal) * 100, color: "#6366F1" },
+            { percent: (d.copilot / maxTotal) * 100, color: "#3010B3" },
+            { percent: (d.claude / maxTotal) * 100, color: "#D97757" },
+          ],
+        }))}
+      />
+      <BarLabels
+        labels={chartData.map((_, i) => ({
+          key: i,
+          content: [1, 5, 10, 15, 20, 25].includes(i + 1) ? (
+            <span className="text-[9px] text-primary-400 dark:text-primary-500">
+              {i + 1}
+            </span>
+          ) : null,
+        }))}
+      />
+    </ChartCard>
   );
 }

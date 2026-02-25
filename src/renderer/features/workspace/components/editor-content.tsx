@@ -111,13 +111,13 @@ export function EditorContent({ className = "" }: EditorContentProps) {
 
   if (selectedFile.extension === "diff") {
     return (
-      <div className={`flex flex-col h-full ${className}`}>
-        <div className="flex-1 min-h-0 overflow-hidden">
+      <div className={`flex flex-col h-full noscrollbar ${className}`}>
+        <div className="flex-1 min-h-0 overflow-hidden noscrollbar">
           <Suspense fallback={null}>
             <DiffViewer
               diffText={selectedFileContent.content}
               filename={selectedFile.name}
-              className="h-full"
+              className="h-full noscrollbar"
             />
           </Suspense>
         </div>
@@ -130,7 +130,7 @@ export function EditorContent({ className = "" }: EditorContentProps) {
     <div className={`flex flex-col h-full ${className}`}>
 
       {/* Editor content */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden noscrollbar">
         <Suspense fallback={null}>
           <CodeMirrorEditor
             content={selectedFileContent.content}
