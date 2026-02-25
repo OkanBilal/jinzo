@@ -83,7 +83,7 @@ export default function BarChart({
                 style={{
                   height: animated ? `${seg.percent}%` : "0%",
                   backgroundColor: seg.color,
-                  borderRadius: i === 0 ? "2px 2px 0 0" : undefined,
+                  borderRadius: i === 0 ? "3px 3px 0 0" : undefined,
                   transitionDuration: "500ms",
                   transitionDelay: `${barIdx * 12}ms`,
                 }}

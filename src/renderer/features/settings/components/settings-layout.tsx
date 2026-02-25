@@ -12,7 +12,7 @@ export function SettingsSection({
           {title}
         </h3>
       )}
-      <div className="rounded-3xl bg-primary-100/60 dark:bg-primary-900/40 border border-primary-200/50 dark:border-primary-800/40 px-5">
+      <div className="rounded-3xl bg-primary-100/60 dark:bg-primary-900/40 border border-primary-200/50 dark:border-primary-800/40 px-6">
         {children}
       </div>
     </div>
@@ -49,7 +49,7 @@ export function SettingsRow({
   }
 
   return (
-    <div className="flex items-center justify-between py-5">
+    <div className="flex items-center justify-between py-4">
       <div className="flex-1 pr-8">
         <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100">
           {title}

@@ -49,10 +49,10 @@ export default function DashboardPage() {
           <div className="h-6 w-32 bg-primary-200 dark:bg-primary-800 rounded" />
           <div className="grid grid-cols-4 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-20 bg-primary-200/50 dark:bg-primary-800/30 rounded-xl" />
+              <div key={i} className="h-20 bg-primary-200/50 dark:bg-primary-800/30 rounded-lg" />
             ))}
           </div>
-          <div className="h-56 bg-primary-200/50 dark:bg-primary-800/30 rounded-xl" />
+          <div className="h-56 bg-primary-200/50 dark:bg-primary-800/30 rounded-lg" />
         </div>
       </div>
     );
@@ -72,10 +72,10 @@ export default function DashboardPage() {
         <Heading2 className="font-medium!">Dashboard</Heading2>
         <div
           ref={containerRef}
-          className="relative flex rounded-lg bg-primary-100/60 dark:bg-primary-800/30 p-0.5"
+          className="relative flex rounded-[11px] bg-primary-100/60 dark:bg-primary-800/30 p-0.5"
         >
           <div
-            className="absolute top-0.5 bg-white dark:bg-primary/10 rounded-md shadow-sm transition-all duration-300 ease-in-out"
+            className="absolute top-0.5 bg-white dark:bg-primary/10 rounded-lg shadow-sm transition-all duration-300 ease-in-out"
             style={{
               left: indicator.left,
               width: indicator.width,
@@ -89,7 +89,7 @@ export default function DashboardPage() {
                 if (el) tabRefs.current.set(tab.id, el);
               }}
               onClick={() => setFilter(tab.id)}
-              className={`relative z-10 flex-1 text-center px-3 py-1 text-xs font-medium rounded-md transition-colors duration-300 cursor-pointer ${
+              className={`relative z-10 flex-1 text-center px-3 py-1 text-xs font-medium rounded-lg transition-colors duration-300 cursor-pointer ${
                 filter === tab.id
                   ? "text-primary-900 dark:text-primary-100"
                   : "text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
