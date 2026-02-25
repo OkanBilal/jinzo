@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { toast } from "@/components/ui/toast";
 import { Button } from "../../../components/ui/button";
@@ -17,12 +17,6 @@ interface PersonalizationFormValues {
   bio: string;
 }
 
-interface PersonalizationResponse extends PersonalizationFormValues {
-  id: string;
-  createdAt: string | null;
-  updatedAt: string | null;
-}
-
 const EMPTY_FORM: PersonalizationFormValues = {
   displayName: "",
   email: "",
@@ -33,62 +27,25 @@ const EMPTY_FORM: PersonalizationFormValues = {
   bio: "",
 };
 
+function formFromAccount(account: Partial<PersonalizationFormValues> | undefined): PersonalizationFormValues {
+  if (!account) return EMPTY_FORM;
+  return {
+    displayName: account.displayName ?? "",
+    email: account.email ?? "",
+    company: account.company ?? "",
+    jobTitle: account.jobTitle ?? "",
+    website: account.website ?? "",
+    avatarUrl: account.avatarUrl ?? "",
+    bio: account.bio ?? "",
+  };
+}
+
 export default function PersonalizationSettings() {
-  const [form, setForm] = useState<PersonalizationFormValues>(EMPTY_FORM);
-  const [isDirty, setIsDirty] = useState(false);
-  
   const { data: account, isLoading: loading, error: queryError, refetch } = useGetAccountQuery();
   const [updateAccount, { isLoading: saving }] = useUpdateAccountMutation();
-  
+
   const error = queryError ? 'Unable to load personalization details' : null;
   const lastSavedAt = account?.updatedAt || account?.createdAt || null;
-
-  useEffect(() => {
-    if (account) {
-      setForm({
-        displayName: account.displayName ?? "",
-        email: account.email ?? "",
-        company: account.company ?? "",
-        jobTitle: account.jobTitle ?? "",
-        website: account.website ?? "",
-        avatarUrl: account.avatarUrl ?? "",
-        bio: account.bio ?? "",
-      });
-      setIsDirty(false);
-    }
-  }, [account]);
-
-  const handleChange =
-    <T extends keyof PersonalizationFormValues>(field: T) =>
-    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const value = event.target.value;
-      setForm((prev) => ({ ...prev, [field]: value }));
-      setIsDirty(true);
-    };
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (saving) return;
-
-    try {
-      const result = await updateAccount(form).unwrap();
-      
-      if (result.success && result.data) {
-        setIsDirty(false);
-        toast.success("Personalization updated");
-      }
-    } catch (err: any) {
-      const message = err?.data?.error || err?.message || "A problem occurred while saving";
-      toast.error(message);
-    }
-  };
-
-  const lastSavedLabel = useMemo(() => {
-    if (!lastSavedAt) return null;
-    const date = new Date(lastSavedAt);
-    if (Number.isNaN(date.getTime())) return null;
-    return date.toLocaleString();
-  }, [lastSavedAt]);
 
   return (
     <div className="bg-primary dark:bg-primary-950">
@@ -107,6 +64,66 @@ export default function PersonalizationSettings() {
           Loading personalization...
         </div>
       ) : (
+        <PersonalizationForm
+          key={account?.id}
+          initialValues={formFromAccount(account)}
+          lastSavedAt={lastSavedAt}
+          saving={saving}
+          loading={loading}
+          onSubmit={updateAccount}
+          onRefresh={refetch}
+        />
+      )}
+    </div>
+  );
+}
+
+interface PersonalizationFormProps {
+  initialValues: PersonalizationFormValues;
+  lastSavedAt: Date | string | null;
+  saving: boolean;
+  loading: boolean;
+  onSubmit: (form: PersonalizationFormValues) => { unwrap: () => Promise<{ success: boolean; data?: unknown }> };
+  onRefresh: () => void;
+}
+
+function PersonalizationForm({ initialValues, lastSavedAt, saving, loading, onSubmit, onRefresh }: PersonalizationFormProps) {
+  const [form, setForm] = useState<PersonalizationFormValues>(() => initialValues);
+  const [isDirty, setIsDirty] = useState(false);
+
+  const handleChange =
+    <T extends keyof PersonalizationFormValues>(field: T) =>
+    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const value = event.target.value;
+      setForm((prev) => ({ ...prev, [field]: value }));
+      setIsDirty(true);
+    };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (saving) return;
+
+    try {
+      const result = await onSubmit(form).unwrap();
+
+      if (result.success && result.data) {
+        setIsDirty(false);
+        toast.success("Personalization updated");
+      }
+    } catch (err: any) {
+      const message = err?.data?.error || err?.message || "A problem occurred while saving";
+      toast.error(message);
+    }
+  };
+
+  const lastSavedLabel = useMemo(() => {
+    if (!lastSavedAt) return null;
+    const date = new Date(lastSavedAt);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleString();
+  }, [lastSavedAt]);
+
+  return (
         <form onSubmit={handleSubmit} className="space-y-0">
           <SettingsSection title="Profile">
             <SettingsRow
@@ -210,7 +227,7 @@ export default function PersonalizationSettings() {
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => refetch()}
+                onClick={() => onRefresh()}
                 disabled={loading || saving}
               >
                 Refresh
@@ -226,8 +243,6 @@ export default function PersonalizationSettings() {
             </div>
           </div>
         </form>
-      )}
-    </div>
   );
 }
 

@@ -31,7 +31,7 @@ type MenuItem = {
 
 const menuItems: Array<MenuItem> = [
   { id: "general", label: "General", icon: General },
-  //{ id: "personalization", label: "Personalization", icon: Personalize },
+  { id: "personalization", label: "Personalization", icon: Personalize },
   { id: "git", label: "Git", icon: Branch },
   { id: "apps", label: "Connections", icon: Apps },
   { id: "dashboard", label: "Dashboard", icon: Chart },

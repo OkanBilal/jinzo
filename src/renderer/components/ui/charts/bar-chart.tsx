@@ -78,7 +78,7 @@ export default function BarChart({
             )}
             {visibleSegments.map((seg, i) => (
               <div
-                key={i}
+                key={seg.color}
                 className="w-full transition-[height] ease-out"
                 style={{
                   height: animated ? `${seg.percent}%` : "0%",

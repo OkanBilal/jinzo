@@ -49,16 +49,13 @@ export function ClaudeSetupStep() {
 
       <Text variant="mutedSmall">
         Need help?{" "}
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            window.api.shell.openExternal("https://docs.anthropic.com/en/docs/claude-code");
-          }}
+        <button
+          type="button"
+          onClick={() => window.api.shell.openExternal("https://docs.anthropic.com/en/docs/claude-code")}
           className="text-primary-600 dark:text-primary-400 underline cursor-pointer"
         >
           Anthropic setup guide
-        </a>
+        </button>
       </Text>
 
       <div className="flex justify-end pt-2">

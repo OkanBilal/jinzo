@@ -1,58 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
-import type { FormEvent } from "react";
+import { useMemo } from "react";
 import { toast } from "@/components/ui/toast";
 import { useDarkMode } from "../../../hooks/use-dark-mode";
 import { useActiveMood } from "../../../hooks/use-active-mood";
 import { Button } from "../../../components/ui/button";
 import { Heading2 } from "../../../components/ui/text";
-import { AccountFormValues } from "../../../features/settings/types/account";
 import Select from "@/components/ui/select";
 import { cn } from "@/lib/cn";
 import { defaultTheme } from "@/lib/theme";
-import { useGetAccountQuery, useUpdateAccountMutation, useGetAppSettingsQuery, useSetShowToolCallsMutation, useSetPreventSleepDuringRunsMutation, useSetNotifyOnRunCompleteMutation, useSetNotifyOnToolApprovalMutation } from "@/lib/redux/api";
+import { useGetAppSettingsQuery, useSetShowToolCallsMutation, useSetPreventSleepDuringRunsMutation, useSetNotifyOnRunCompleteMutation, useSetNotifyOnToolApprovalMutation } from "@/lib/redux/api";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import { Toggle } from "@/components/ui/toggle";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
 import { Refresh } from "@/components/ui/icons";
-
-export const EMPTY_FORM = {
-  displayName: "",
-  email: "",
-  company: "",
-  jobTitle: "",
-  timezone: "UTC",
-  locale: "en-US",
-  website: "",
-  avatarUrl: "",
-  bio: "",
-};
-
-const TIMEZONE_OPTIONS = [
-  { value: "UTC", label: "UTC" },
-  { value: "Europe/London", label: "London (GMT+00:00)" },
-  { value: "Europe/Paris", label: "Paris (GMT+01:00)" },
-  { value: "Europe/Berlin", label: "Berlin (GMT+01:00)" },
-  { value: "Europe/Istanbul", label: "Turkey (GMT+03:00)" },
-  { value: "Asia/Dubai", label: "Dubai (GMT+04:00)" },
-  { value: "Asia/Singapore", label: "Singapore (GMT+08:00)" },
-  { value: "Asia/Tokyo", label: "Tokyo (GMT+09:00)" },
-  { value: "Australia/Sydney", label: "Sydney (GMT+10:00)" },
-  { value: "America/New_York", label: "New York (GMT-05:00)" },
-  { value: "America/Los_Angeles", label: "Los Angeles (GMT-08:00)" },
-];
-
-const LOCALE_OPTIONS = [
-  { value: "en-US", label: "English (US)" },
-  { value: "tr-TR", label: "Turkish" },
-  { value: "de-DE", label: "German" },
-  { value: "es-ES", label: "Spanish" },
-  { value: "fr-FR", label: "French" },
-  { value: "ru-RU", label: "Russian" },
-  { value: "pt-BR", label: "Portuguese (Brazil)" },
-  { value: "it-IT", label: "Italian" },
-  { value: "nl-NL", label: "Dutch" },
-  { value: "sv-SE", label: "Swedish" },
-];
 
 type ThemeValue = "light" | "dark" | "system";
 
@@ -328,19 +287,6 @@ export default function GeneralSettings() {
   const { theme, setTheme } = useDarkMode();
   const { activeMood } = useActiveMood();
   const { state: updateState, check: checkUpdate, download: downloadUpdate, install: installUpdate } = useAutoUpdate();
-  const [form, setForm] = useState<AccountFormValues>(EMPTY_FORM);
-  const [isDirty, setIsDirty] = useState(false);
-
-  const {
-    data: account,
-    isLoading: loading,
-    error: queryError,
-    refetch,
-  } = useGetAccountQuery();
-  const [updateAccount, { isLoading: saving }] = useUpdateAccountMutation();
-
-  const error = queryError ? "Unable to load account details" : null;
-  const lastSavedAt = account?.updatedAt || account?.createdAt || null;
 
   const { lightBackground, darkBackground } = useMemo(() => {
     if (!activeMood?.themeConfig) {
@@ -369,66 +315,12 @@ export default function GeneralSettings() {
     }
   }, [activeMood?.themeConfig]);
 
-  useEffect(() => {
-    if (account) {
-      setForm({
-        displayName: account.displayName ?? "",
-        email: account.email ?? "",
-        company: account.company ?? "",
-        jobTitle: account.jobTitle ?? "",
-        timezone: account.timezone ?? "UTC",
-        locale: account.locale ?? "en-US",
-        website: account.website ?? "",
-        avatarUrl: account.avatarUrl ?? "",
-        bio: account.bio ?? "",
-      });
-      setIsDirty(false);
-    }
-  }, [account]);
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (saving) return;
-
-    try {
-      const result = await updateAccount(form).unwrap();
-
-      if (result.success && result.data) {
-        setIsDirty(false);
-        toast.success("Account details updated");
-      }
-    } catch (err: any) {
-      const message =
-        err?.data?.error || err?.message || "A problem occurred while saving";
-      toast.error(message);
-    }
-  };
-
-  const lastSavedLabel = useMemo(() => {
-    if (!lastSavedAt) return null;
-    const date = new Date(lastSavedAt);
-    if (Number.isNaN(date.getTime())) return null;
-    return date.toLocaleString();
-  }, [lastSavedAt]);
-
   return (
     <div className="bg-primary dark:bg-primary-950">
       <div className="mb-8">
         <Heading2>General</Heading2>
       </div>
 
-      {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50/60 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200 mb-6">
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="rounded-xl border border-primary-200/60 dark:border-primary-900 bg-white/50 dark:bg-primary-950/30 p-6 text-sm text-primary-600 dark:text-primary-200">
-          Loading account information...
-        </div>
-      ) : (
-        <>
           <SettingsSection>
             <SettingsRow
               title="Run Detail"
@@ -517,8 +409,6 @@ export default function GeneralSettings() {
               />
             </SettingsRow>
           </SettingsSection>
-        </>
-      )}
     </div>
   );
 }

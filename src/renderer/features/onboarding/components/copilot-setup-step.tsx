@@ -47,16 +47,13 @@ export function CopilotSetupStep() {
 
       <Text variant="mutedSmall">
         Requires an active{" "}
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            window.api.shell.openExternal("https://github.com/features/copilot");
-          }}
+        <button
+          type="button"
+          onClick={() => window.api.shell.openExternal("https://github.com/features/copilot")}
           className="text-primary-600 dark:text-primary-400 underline cursor-pointer"
         >
           GitHub Copilot subscription
-        </a>
+        </button>
       </Text>
 
       <div className="flex justify-between pt-2">

@@ -10,26 +10,22 @@ interface FeedbackModalProps {
 }
 
 export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
+  if (!isOpen) return null;
+  return <FeedbackModalContent onClose={onClose} />;
+}
+
+function FeedbackModalContent({ onClose }: { onClose: () => void }) {
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorText, setErrorText] = useState("");
 
   useEffect(() => {
-    if (isOpen) {
-      setMessage("");
-      setStatus("idle");
-      setErrorText("");
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [isOpen, onClose]);
+  }, [onClose]);
 
   const handleSend = async () => {
     if (!message.trim() || status === "loading") return;
@@ -50,8 +46,6 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
       setErrorText("Something went wrong");
     }
   };
-
-  if (!isOpen) return null;
 
   return createPortal(
     <div
@@ -81,7 +75,6 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
               placeholder="What's on your mind?"
               rows={4}
               className="min-w-0 mb-1"
-              autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter" && e.metaKey) handleSend();
               }}
