@@ -3,8 +3,8 @@ import { useSelector } from "react-redux";
 import type { RootState } from "@/lib/redux";
 import type { WorkspaceState } from "@/lib/redux/slices/workspaceSlice";
 
-const CodeMirrorEditor = lazy(() =>
-  import("./codemirror-editor").then((m) => ({ default: m.CodeMirrorEditor })),
+const CodeViewer = lazy(() =>
+  import("./code-viewer").then((m) => ({ default: m.CodeViewer })),
 );
 const DiffViewer = lazy(() =>
   import("./diff-viewer").then((m) => ({ default: m.DiffViewer })),
@@ -118,7 +118,6 @@ export function EditorContent({ className = "" }: EditorContentProps) {
           <Suspense fallback={null}>
             <DiffViewer
               diffText={selectedFileContent.content}
-              filename={selectedFile.name}
               className="h-full noscrollbar"
               workspaceId={activeWorkspaceId ?? undefined}
               filePath={selectedFile.fullPath}
@@ -129,14 +128,12 @@ export function EditorContent({ className = "" }: EditorContentProps) {
     );
   }
 
-  // Render CodeMirror editor
+  // Render code viewer
   return (
     <div className={`flex flex-col h-full ${className}`}>
-
-      {/* Editor content */}
       <div className="flex-1 min-h-0 overflow-hidden noscrollbar">
         <Suspense fallback={null}>
-          <CodeMirrorEditor
+          <CodeViewer
             content={selectedFileContent.content}
             filename={selectedFile.name}
             className="h-full"
