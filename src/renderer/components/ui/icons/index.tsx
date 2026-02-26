@@ -92,3 +92,5 @@ export { default as Commit } from "./commit";
 export { default as OpenWith } from "./open-with";
 export { default as Cost } from "./cost";
 export { default as Clock } from "./clock";
+export { default as Jinzo } from "./jinzo";
+export { default as CircleDot } from "./circle-dot";

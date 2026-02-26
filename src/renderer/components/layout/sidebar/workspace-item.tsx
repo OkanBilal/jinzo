@@ -199,7 +199,7 @@ export default function WorkspaceItem({
       {/* Diff stats (visible by default, hidden on hover) / Options button (hidden by default, visible on hover) */}
       <div className="absolute right-1.5 top-1/2 -translate-y-1/2 z-10">
         {(insertions || deletions) && (
-          <span className="flex items-center gap-1 text-xs font-mono group-hover:opacity-0 transition-opacity pointer-events-none">
+          <span className="flex items-center gap-1 text-xxs font-mono group-hover:opacity-0 transition-opacity pointer-events-none">
             {insertions && (
               <span className="text-green-600 dark:text-green-400">
                 +{insertions}

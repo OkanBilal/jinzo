@@ -13,6 +13,12 @@ export function getToolType(content: string): string {
   const lower = toolName.toLowerCase();
 
   // MCP tools: check for mcp__provider__ pattern first
+  if (lower.startsWith("mcp__jinzo__") || lower.includes("__jinzo__")) {
+    if (lower.includes("getworkspacediff")) return "GetDiffMcp";
+    if (lower.includes("savereview")) return "SaveReviewMcp";
+    if (lower.includes("savefinding")) return "SaveFindingsMcp";
+    return "Jinzo";
+  }
   if (lower.startsWith("mcp__linear__") || lower.includes("__linear__"))
     return "Linear";
   if (lower.startsWith("mcp__notion__") || lower.includes("__notion__"))

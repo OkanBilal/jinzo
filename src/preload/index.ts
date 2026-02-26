@@ -508,6 +508,21 @@ const api = {
     delete: (id: string) =>
       ipcRenderer.invoke("reviews:delete", id),
   },
+  // Review findings operations
+  reviewFindings: {
+    getByReview: (reviewId: string, limit?: number) =>
+      ipcRenderer.invoke("reviewFindings:getByReview", reviewId, limit),
+    getById: (id: string) =>
+      ipcRenderer.invoke("reviewFindings:getById", id),
+    create: (payload: unknown) =>
+      ipcRenderer.invoke("reviewFindings:create", payload),
+    createMany: (payloads: unknown) =>
+      ipcRenderer.invoke("reviewFindings:createMany", payloads),
+    update: (id: string, payload: unknown) =>
+      ipcRenderer.invoke("reviewFindings:update", id, payload),
+    delete: (id: string) =>
+      ipcRenderer.invoke("reviewFindings:delete", id),
+  },
   // Workspace diff operations
   workspaceDiffs: {
     getByWorkspace: (workspaceId: string, limit?: number) =>

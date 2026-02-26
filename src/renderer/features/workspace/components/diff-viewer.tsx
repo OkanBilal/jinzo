@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { EditorState, Extension } from "@codemirror/state";
 import { EditorView, lineNumbers } from "@codemirror/view";
 import { unifiedMergeView } from "@codemirror/merge";
@@ -9,11 +9,18 @@ import { css } from "@codemirror/lang-css";
 import { html } from "@codemirror/lang-html";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
+import {
+  useGetReviewsByWorkspaceQuery,
+  useGetReviewFindingsByReviewQuery,
+} from "@/lib/redux/api";
+import { createFindingsExtension } from "./findings-extension";
 
 interface DiffViewerProps {
   diffText: string;
   filename?: string;
   className?: string;
+  workspaceId?: string;
+  filePath?: string;
 }
 
 /** Reconstruct original and modified file content from a unified diff */
@@ -107,7 +114,7 @@ const lightTheme = EditorView.theme(
       fontFamily: FONT_FAMILY,
     },
     "&.cm-focused": { outline: "none" },
-    ".cm-scroller": { fontFamily: FONT_FAMILY, lineHeight: "1.6" },
+    ".cm-scroller": { fontFamily: FONT_FAMILY, lineHeight: "1.6", overflow: "auto" },
     ".cm-content": { padding: "12px 0", fontFamily: FONT_FAMILY },
     ".cm-gutters": {
       backgroundColor: "transparent",
@@ -139,7 +146,7 @@ const darkTheme = EditorView.theme(
       fontFamily: FONT_FAMILY,
     },
     "&.cm-focused": { outline: "none" },
-    ".cm-scroller": { fontFamily: FONT_FAMILY, lineHeight: "1.6" },
+    ".cm-scroller": { fontFamily: FONT_FAMILY, lineHeight: "1.6", overflow: "auto" },
     ".cm-content": { padding: "12px 0", fontFamily: FONT_FAMILY },
     ".cm-gutters": {
       backgroundColor: "transparent",
@@ -223,11 +230,36 @@ export function DiffViewer({
   diffText,
   filename,
   className = "",
+  workspaceId,
+  filePath,
 }: DiffViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
 
   const isDarkMode = document.documentElement.classList.contains("dark");
+
+  // Fetch latest review + findings for this file
+  const { data: reviews } = useGetReviewsByWorkspaceQuery(
+    { workspaceId: workspaceId! },
+    { skip: !workspaceId },
+  );
+  const latestReviewId = reviews?.[0]?.id;
+
+  const { data: allFindings } = useGetReviewFindingsByReviewQuery(
+    { reviewId: latestReviewId! },
+    { skip: !latestReviewId },
+  );
+
+  const fileFindings = useMemo(() => {
+    if (!allFindings || !filePath) return [];
+    // Normalize: strip leading ./ or / for comparison
+    const norm = (p: string) => p.replace(/^\.?\//, "");
+    const target = norm(filePath);
+    return allFindings.filter((f) => {
+      const fNorm = norm(f.file);
+      return fNorm === target || fNorm.endsWith("/" + target) || target.endsWith("/" + fNorm);
+    });
+  }, [allFindings, filePath]);
 
   useEffect(() => {
     if (!containerRef.current || !diffText) return;
@@ -236,6 +268,7 @@ export function DiffViewer({
 
     const extensions: Extension[] = [
       lineNumbers(),
+      EditorView.lineWrapping,
       EditorState.readOnly.of(true),
       EditorView.editable.of(false),
       unifiedMergeView({
@@ -251,6 +284,11 @@ export function DiffViewer({
     const realFilename = filename?.replace(/\.diff$/, "");
     const langExt = getLanguageExtension(realFilename);
     if (langExt) extensions.push(langExt);
+
+    // Findings annotations (gutter markers + line highlights + popover)
+    if (fileFindings.length > 0) {
+      extensions.push(...createFindingsExtension(fileFindings, isDarkMode));
+    }
 
     if (isDarkMode) {
       extensions.push(darkTheme);
@@ -276,7 +314,7 @@ export function DiffViewer({
       view.destroy();
       viewRef.current = null;
     };
-  }, [diffText, filename, isDarkMode]);
+  }, [diffText, filename, isDarkMode, fileFindings]);
 
   return (
     <div ref={containerRef} className={`h-full overflow-auto  ${className}`} />

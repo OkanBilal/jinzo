@@ -53,6 +53,10 @@ import {
 } from "./modules/runs";
 import { registerReviewsIpc, unregisterReviewsIpc } from "./modules/reviews";
 import {
+  registerReviewFindingsIpc,
+  unregisterReviewFindingsIpc,
+} from "./modules/reviewFindings";
+import {
   registerWorkspaceDiffsIpc,
   unregisterWorkspaceDiffsIpc,
 } from "./modules/workspaceDiffs";
@@ -308,6 +312,7 @@ async function initializeApp() {
     registerWorkspaceResourcesHandlers();
     registerTerminalIpc();
     registerReviewsIpc();
+    registerReviewFindingsIpc();
     registerWorkspaceDiffsIpc();
     registerImageProxyHandler();
     registerFeedbackIpc();
@@ -435,6 +440,7 @@ async function cleanupApp() {
     unregisterWorkspaceResourcesHandlers();
     unregisterTerminalIpc();
     unregisterReviewsIpc();
+    unregisterReviewFindingsIpc();
     unregisterWorkspaceDiffsIpc();
     unregisterFeedbackIpc();
     unregisterStatsIpc();

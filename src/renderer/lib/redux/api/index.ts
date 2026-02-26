@@ -456,6 +456,22 @@ export {
 export type { InstalledApp } from "./shellApi";
 
 export {
+  reviewFindingsApi,
+  useGetReviewFindingsByReviewQuery,
+  useGetReviewFindingByIdQuery,
+  useCreateReviewFindingMutation,
+  useCreateReviewFindingsMutation,
+  useUpdateReviewFindingMutation,
+  useDeleteReviewFindingMutation,
+} from "./reviewFindingsApi";
+export type {
+  ReviewFinding,
+  FindingSeverity,
+  CreateReviewFindingPayload,
+  UpdateReviewFindingPayload,
+} from "./reviewFindingsApi";
+
+export {
   statsApi,
   useGetDashboardQuery,
   useLazyGetDashboardQuery,

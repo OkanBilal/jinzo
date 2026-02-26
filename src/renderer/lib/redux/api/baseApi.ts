@@ -73,6 +73,7 @@ export const baseApi = createApi({
     'ProjectIssues',
     'WorkspaceDiffs',
     'Reviews',
+    'ReviewFindings',
     'Projects',
     'Updates',
     'InstalledApps',

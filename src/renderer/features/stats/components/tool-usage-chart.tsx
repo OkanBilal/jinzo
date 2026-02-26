@@ -19,7 +19,7 @@ const BAR_COLORS = [
 ];
 
 export default function ToolUsageChart({ data }: ToolUsageChartProps) {
-  const items = data.slice(0, 15);
+  const items = data.slice(0, 10);
   const maxCount = Math.max(...items.map((d) => d.count), 1);
 
   return (
@@ -57,7 +57,7 @@ export default function ToolUsageChart({ data }: ToolUsageChartProps) {
               variant="mutedSmall"
               className="text-[8px] truncate block max-w-full"
               as="span"
-              title={d.toolName}
+              
             >
               {d.toolName}
             </Text>

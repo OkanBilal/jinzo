@@ -6,6 +6,7 @@ import { TodoListDisplay, type TodoItem } from "./todo-list-display";
 import { TaskDisplay, type TaskParams } from "./task-display";
 import { ExitPlanDisplay, type ExitPlanParams } from "./exit-plan-display";
 import { WriteDisplay, type WriteParams } from "./write-display";
+import { McpDisplay } from "./mcp-display";
 
 interface ToolCallItemProps {
   event: RunEvent;
@@ -66,6 +67,21 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
         ? (params as WriteParams)
         : { file_path: summary };
     return <WriteDisplay params={writeParams} />;
+  }
+
+  // Show McpDisplay for MCP tool calls with expandable params
+  if (
+    displayName.endsWith("Mcp") ||
+    displayName === "Jinzo" ||
+    displayName === "Linear" ||
+    displayName === "Notion" ||
+    displayName === "Figma"
+  ) {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const mcpParams = metadataInput ?? params;
+    return <McpDisplay displayName={displayName} params={mcpParams} />;
   }
 
   if (isCompact) {

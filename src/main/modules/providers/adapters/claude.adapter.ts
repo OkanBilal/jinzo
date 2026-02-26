@@ -26,6 +26,10 @@ import {
 } from "../../runs/user-input-broker";
 import type { ToolApprovalRequest } from "../../runs/runs.dto";
 import { runsRepo } from "../../runs/runs.repo";
+import { workspaceDiffsRepo } from "../../workspaceDiffs/workspaceDiffs.repo";
+import { reviewsRepo } from "../../reviews/reviews.repo";
+import { reviewFindingsRepo } from "../../reviewFindings/reviewFindings.repo";
+import { z } from "zod";
 
 /**
  * NOTE: This adapter uses @anthropic-ai/claude-agent-sdk package.
@@ -57,6 +61,10 @@ const DEFAULT_ALLOWED_TOOLS = [
   "WebSearch",
   "NotebookEdit",
   "Skill",
+  "mcp__jinzo__GetWorkspaceDiff",
+  "mcp__jinzo__SaveReview",
+  "mcp__jinzo__SaveFinding",
+  "mcp__jinzo__SaveFindings",
 ];
 const ALLOWED_TOOLS_SET = new Set(DEFAULT_ALLOWED_TOOLS);
 
@@ -122,7 +130,8 @@ interface McpSSEServerConfig {
 type McpServerConfig =
   | McpStdioServerConfig
   | McpHttpServerConfig
-  | McpSSEServerConfig;
+  | McpSSEServerConfig
+  | Record<string, unknown>; // In-process SDK MCP server (McpSdkServerConfigWithInstance)
 
 interface SDKOptions {
   outputFormat?: {
@@ -337,6 +346,10 @@ export function createClaudeAdapter(
     | ((options: { prompt: string; options?: SDKOptions }) => SDKQuery)
     | null = null;
 
+  // SDK MCP server helpers (lazy loaded)
+  let createSdkMcpServerFn: ((...args: any[]) => any) | null = null;
+  let toolFn: ((...args: any[]) => any) | null = null;
+
   // Correlate tool events when toolName/input is missing in completion events
   const toolCallIndex = new Map<
     string,
@@ -377,6 +390,10 @@ export function createClaudeAdapter(
 
       queryFn = query;
 
+      // Capture in-process MCP server helpers
+      createSdkMcpServerFn = (ClaudeSDK as any).createSdkMcpServer ?? null;
+      toolFn = (ClaudeSDK as any).tool ?? null;
+
       sdkLoaded = true;
       logInfo("SDK loaded successfully (stable API)");
     } catch (error) {
@@ -405,6 +422,7 @@ export function createClaudeAdapter(
     runHooks?: HooksConfig,
     runAgents?: AgentsConfig,
     runId?: string,
+    workspaceId?: string,
   ): SDKOptions {
     // Find the Claude CLI binary
     let binaryPath: string | null = null;
@@ -470,7 +488,7 @@ export function createClaudeAdapter(
       : config.permissionMode || "default";
 
     // Setting sources for settings: default to both user and project if not specified
-    const settingSources = config.settingSources ?? ["user", "project"];
+    const settingSources = config.settingSources ?? ["user", "project", "local"];
 
     // Load MCP servers from settings files and pass them explicitly to the SDK
     // This ensures MCP servers from ~/.claude/settings.json and project settings are used
@@ -478,6 +496,13 @@ export function createClaudeAdapter(
       settingSources,
       workspacePath,
     );
+
+    // Inject the jinzo MCP server as an in-process SDK server
+    // Uses Drizzle ORM repos directly — no subprocess or sqlite3 CLI needed
+    if (!mcpServers["jinzo"] && createSdkMcpServerFn && toolFn) {
+      mcpServers["jinzo"] = buildJinzoMcpServer(workspaceId ?? null);
+      logInfo("Injected jinzo MCP server (in-process)");
+    }
 
     const options: SDKOptions = {
       model,
@@ -540,6 +565,154 @@ export function createClaudeAdapter(
     }
 
     return options;
+  }
+
+  /**
+   * Build an in-process MCP server for jinzo tools using createSdkMcpServer.
+   * Tools use Drizzle ORM repos directly — no subprocess or sqlite3 CLI needed.
+   */
+  function buildJinzoMcpServer(workspaceId: string | null): any {
+    return createSdkMcpServerFn!({
+      name: "jinzo",
+      version: "1.0.0",
+      tools: [
+        toolFn!(
+          "GetWorkspaceDiff",
+          "Read git diffs from workspace_diffs table. Uses the current workspace by default, or provide runId to get the diff for a specific run.",
+          {
+            runId: z.string().optional().describe("Run ID to get diff for a specific run"),
+          },
+          async ({ runId }: { runId?: string }) => {
+            if (!workspaceId && !runId) {
+              return {
+                content: [{ type: "text", text: "Error: No workspace context and no runId provided" }],
+                isError: true,
+              };
+            }
+
+            const row = runId
+              ? await workspaceDiffsRepo.findByRun(runId)
+              : await workspaceDiffsRepo.findLatestByWorkspace(workspaceId!);
+
+            if (!row) {
+              return { content: [{ type: "text", text: "No diff found" }] };
+            }
+
+            return {
+              content: [{
+                type: "text",
+                text: JSON.stringify(row, null, 2),
+              }],
+            };
+          },
+        ),
+        toolFn!(
+          "SaveReview",
+          "Create a new review record. Returns the generated review ID. Workspace is automatically set from the current session.",
+          {
+            title: z.string().describe("Review title"),
+            summary: z.string().optional().describe("Review summary"),
+            status: z.enum(["open", "in_review", "approved", "rejected"]).optional().default("open").describe("Review status"),
+            runId: z.string().optional().describe("Associated run ID"),
+            metadata: z.record(z.string(), z.unknown()).optional().describe("Additional metadata as JSON"),
+          },
+          async ({ title, summary, status, runId, metadata }: {
+            title: string; summary?: string; status?: string; runId?: string; metadata?: Record<string, unknown>;
+          }) => {
+            const reviewId = await reviewsRepo.insert({
+              workspaceId: workspaceId ?? undefined,
+              title,
+              summary,
+              status: (status as any) ?? "open",
+              runId,
+              metadata,
+            });
+
+            return {
+              content: [{ type: "text", text: JSON.stringify({ reviewId }) }],
+            };
+          },
+        ),
+        toolFn!(
+          "SaveFinding",
+          "Save a single code review finding. Returns the generated finding ID.",
+          {
+            reviewId: z.string().describe("ID of the parent review"),
+            severity: z.enum(["critical", "warning", "info"]).describe("Finding severity level"),
+            file: z.string().describe("File path where the finding was detected"),
+            lineStart: z.number().optional().describe("Start line number"),
+            lineEnd: z.number().optional().describe("End line number"),
+            message: z.string().describe("Description of the finding"),
+            reason: z.string().describe("Why this was flagged (e.g. bug, security, claude_md_violation)"),
+            suggestion: z.string().optional().describe("Suggested fix"),
+            metadata: z.record(z.string(), z.unknown()).optional().describe("Additional metadata as JSON"),
+          },
+          async (args: {
+            reviewId: string; severity: string; file: string;
+            lineStart?: number; lineEnd?: number; message: string;
+            reason: string; suggestion?: string; metadata?: Record<string, unknown>;
+          }) => {
+            const findingId = await reviewFindingsRepo.insert({
+              reviewId: args.reviewId,
+              severity: args.severity as any,
+              file: args.file,
+              lineStart: args.lineStart,
+              lineEnd: args.lineEnd,
+              message: args.message,
+              reason: args.reason,
+              suggestion: args.suggestion,
+              metadata: args.metadata,
+            });
+
+            return {
+              content: [{ type: "text", text: JSON.stringify({ findingId }) }],
+            };
+          },
+        ),
+        toolFn!(
+          "SaveFindings",
+          "Save multiple code review findings at once. Returns all generated finding IDs.",
+          {
+            reviewId: z.string().describe("ID of the parent review"),
+            findings: z.array(z.object({
+              severity: z.enum(["critical", "warning", "info"]),
+              file: z.string(),
+              lineStart: z.number().optional(),
+              lineEnd: z.number().optional(),
+              message: z.string(),
+              reason: z.string(),
+              suggestion: z.string().optional(),
+              metadata: z.record(z.string(), z.unknown()).optional(),
+            })).describe("Array of findings to save"),
+          },
+          async ({ reviewId, findings }: {
+            reviewId: string;
+            findings: Array<{
+              severity: string; file: string; lineStart?: number; lineEnd?: number;
+              message: string; reason: string; suggestion?: string; metadata?: Record<string, unknown>;
+            }>;
+          }) => {
+            const findingIds = await reviewFindingsRepo.insertMany(
+              findings.map((f) => ({
+                reviewId,
+                severity: f.severity as any,
+                file: f.file,
+                lineStart: f.lineStart,
+                lineEnd: f.lineEnd,
+                message: f.message,
+                reason: f.reason,
+                suggestion: f.suggestion,
+                metadata: f.metadata,
+              })),
+            );
+
+            return {
+              content: [{ type: "text", text: JSON.stringify({ findingIds }) }],
+            };
+          },
+        ),
+      ],
+    });
   }
 
   /**
@@ -1173,6 +1346,7 @@ export function createClaudeAdapter(
           request.hooks, // run-level hooks
           request.agents, // run-level agents
           runId, // for interactive tool approval
+          request.workspace.id, // workspace ID for MCP server
         );
 
         await onEvent({
@@ -1508,6 +1682,7 @@ export function createClaudeAdapter(
           request.hooks, // run-level hooks
           request.agents, // run-level agents
           runId, // for interactive tool approval
+          request.workspace.id, // workspace ID for MCP server
         );
 
         // Build prompt with any additional context
@@ -2129,7 +2304,7 @@ export function createClaudeAdapter(
       }
 
       try {
-        const settingSources = config.settingSources ?? ["user", "project"];
+        const settingSources = config.settingSources ?? ["user", "project", "local"];
         const skills: SkillInfo[] = [];
 
         // Discover skills from user directory (~/.claude/skills/)

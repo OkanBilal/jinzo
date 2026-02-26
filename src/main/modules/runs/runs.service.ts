@@ -779,43 +779,6 @@ export const runsService = {
           } else {
             runBaseRefs.delete(runId);
           }
-         // TODO: hasReviewSkill too strict
-          // Auto-create review if the run used the review-code skill
-          try {
-            const toolCallRecords = await runsRepo.findToolCallsByRun(runId);
-            const hasReviewSkill = toolCallRecords.some((tc) => {
-              if (tc.toolName !== "Skill") return false;
-              const input = tc.input as Record<string, unknown> | null;
-              return input?.skill === "review-code";
-            });
-
-            if (hasReviewSkill) {
-              const artifacts = await runsRepo.findArtifactsByRun(runId);
-              const resultArtifact = [...artifacts]
-                .reverse()
-                .find((a) => a.kind === "report");
-
-              if (resultArtifact?.content) {
-                const firstLine = resultArtifact.content.split("\n")[0] || "";
-                const title = firstLine.replace(/^#+\s*/, "").slice(0, 80) || "Code Review";
-
-                await reviewsService.create({
-                  workspaceId: payload.workspaceId,
-                  runId,
-                  title,
-                  summary: resultArtifact.content,
-                  status: "open",
-                });
-              }
-            }
-          } catch (err) {
-            console.error(`[RunsService] Failed to auto-create review for run ${runId}:`, err);
-          }
-
-          console.log(
-            `[RunsService] Run ${runId} completed with status: ${finalStatus}`,
-          );
-
           sendRunNotification(runId, finalStatus);
           releaseSleepBlocker(runId);
         })

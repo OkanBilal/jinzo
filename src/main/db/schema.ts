@@ -512,6 +512,44 @@ export const reviews = sqliteTable(
 );
 
 /* -----------------------------
+   REVIEW FINDINGS (file-level review results)
+------------------------------ */
+
+export const reviewFindings = sqliteTable(
+  "review_findings",
+  {
+    id: text("id").primaryKey(),
+    reviewId: text("review_id")
+      .notNull()
+      .references(() => reviews.id, { onDelete: "cascade" }),
+    severity: text("severity", {
+      enum: ["critical", "warning", "info"],
+    }).notNull(),
+    file: text("file").notNull(),
+    lineStart: integer("line_start"),
+    lineEnd: integer("line_end"),
+    message: text("message").notNull(),
+    reason: text("reason").notNull(),
+    suggestion: text("suggestion"),
+    validated: integer("validated", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    metadata: text("metadata"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_review_findings_review").on(t.reviewId),
+    index("idx_review_findings_severity").on(t.severity),
+    check(
+      "check_review_findings_metadata_json",
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
    RUN COMMANDS (terminal commands + exit codes)
 ------------------------------ */
 

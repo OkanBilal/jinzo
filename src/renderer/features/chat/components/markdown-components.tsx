@@ -6,17 +6,17 @@ import { Components } from "react-markdown";
  */
 export const markdownComponents: Components = {
   h1: ({ children }) => (
-    <h1 className="text-xl font-bold mt-4 mb-2 font-sans text-primary-900 dark:text-primary-100 transition-all duration-150 ease-out">
+    <h1 className="text-lg font-bold mt-4 mb-2 font-sans text-primary-900 dark:text-primary-100 transition-all duration-150 ease-out">
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="text-lg font-semibold mt-3 mb-2 font-sans text-primary-900 dark:text-primary-100 transition-all duration-150 ease-out">
+    <h2 className="text-base font-semibold mt-3 mb-2 font-sans text-primary-900 dark:text-primary-100 transition-all duration-150 ease-out">
       {children}
     </h2>
   ),
   h3: ({ children }) => (
-    <h3 className="text-base font-semibold mt-2 mb-1 font-sans text-primary-900 dark:text-primary-100 transition-all duration-150 ease-out">
+    <h3 className="text-sm font-semibold mt-2 mb-1 font-sans text-primary-900 dark:text-primary-100 transition-all duration-150 ease-out">
       {children}
     </h3>
   ),
@@ -31,12 +31,12 @@ export const markdownComponents: Components = {
     </ul>
   ),
   ol: ({ children }) => (
-    <ol className="list-decimal list-inside font-sans mb-2 space-y-1 text-primary-800 dark:text-primary-200 transition-all duration-150 ease-out">
+    <ol className="list-decimal text-sm list-inside font-sans mb-2 space-y-1 text-primary-800 dark:text-primary-200 transition-all duration-150 ease-out">
       {children}
     </ol>
   ),
   li: ({ children }) => (
-    <li className="ml-2 font-sans text-primary-800 dark:text-primary-200 transition-all duration-150 ease-out">{children}</li>
+    <li className="ml-2 font-sans text-sm text-primary-800 dark:text-primary-200 transition-all duration-150 ease-out">{children}</li>
   ),
   table: ({ children }) => (
     <div className="overflow-x-auto my-4 rounded-lg border border-primary-300 dark:border-primary-700 transition-all duration-150 ease-out">

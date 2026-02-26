@@ -3,11 +3,20 @@ import { useDispatch } from "react-redux";
 import {
   useGetLatestWorkspaceDiffQuery,
   useGetAppSettingsQuery,
+  useGetReviewsByWorkspaceQuery,
+  useGetReviewFindingsByReviewQuery,
   type WorkspaceDiff,
+  type FindingSeverity,
 } from "@/lib/redux/api";
 import { setPendingGoal } from "@/lib/redux/slices/workspaceSlice";
 import { FileIconComponent } from "./file-explorer/components/file-icon";
-import { Diff, Sparkles, Check, Commit } from "@/components/ui/icons";
+import {
+  Diff,
+  Sparkles,
+  Check,
+  Commit,
+  CircleDot,
+} from "@/components/ui/icons";
 import { Body } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 
@@ -93,6 +102,47 @@ export function DiffSection({
     [diff?.diffText],
   );
 
+  // Fetch latest review findings for badge display
+  const { data: reviews } = useGetReviewsByWorkspaceQuery(
+    { workspaceId },
+    { skip: !workspaceId },
+  );
+  const latestReviewId = reviews?.[0]?.id;
+  const { data: allFindings } = useGetReviewFindingsByReviewQuery(
+    { reviewId: latestReviewId! },
+    { skip: !latestReviewId },
+  );
+
+  // Group findings by file → { critical: n, warning: n, info: n }
+  // Normalize paths so diff file paths and finding file paths match
+  const findingsByFile = useMemo(() => {
+    if (!allFindings || !diff?.files)
+      return {} as Record<string, Record<FindingSeverity, number>>;
+    const norm = (p: string) => p.replace(/^\.?\//, "");
+    const map: Record<string, Record<FindingSeverity, number>> = {};
+    for (const f of allFindings) {
+      const fNorm = norm(f.file);
+      // Match finding to a diff file path
+      const matchedFile: string | undefined = diff.files.find((dp: string) => {
+        const dpNorm = norm(dp);
+        return (
+          dpNorm === fNorm ||
+          dpNorm.endsWith("/" + fNorm) ||
+          fNorm.endsWith("/" + dpNorm)
+        );
+      });
+      const key = matchedFile ?? f.file;
+      if (!map[key]) map[key] = { critical: 0, warning: 0, info: 0 };
+      const sev = (
+        ["critical", "warning", "info"].includes(f.severity)
+          ? f.severity
+          : "info"
+      ) as FindingSeverity;
+      map[key][sev]++;
+    }
+    return map;
+  }, [allFindings, diff?.files]);
+
   if (isFetching) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -116,7 +166,7 @@ export function DiffSection({
     );
   }
   const handleReviewChanges = () => {
-    dispatch(setPendingGoal("/review-code changes"));
+    dispatch(setPendingGoal("review code changes"));
   };
 
   const handleCommitChanges = () => {
@@ -188,7 +238,7 @@ export function DiffSection({
                 className="w-4 h-4 shrink-0"
               />
               <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-sm font-medium text-primary-900 dark:text-primary-200 truncate">
+                <span className="text-xs font-medium text-primary-900 dark:text-primary-200 truncate">
                   {fileName}
                 </span>
                 {dirPath && (
@@ -197,20 +247,50 @@ export function DiffSection({
                   </span>
                 )}
               </div>
-              {fileStats[filePath] && (
-                <div className="flex items-center gap-1 text-xxs tabular-nums shrink-0">
-                  {fileStats[filePath].ins > 0 && (
-                    <span className="text-green-600 dark:text-green-400">
-                      +{fileStats[filePath].ins}
-                    </span>
-                  )}
-                  {fileStats[filePath].del > 0 && (
-                    <span className="text-red-500 dark:text-red-400">
-                      -{fileStats[filePath].del}
-                    </span>
-                  )}
-                </div>
-              )}
+              <div className="flex flex-col items-end justify-center">
+                {fileStats[filePath] && (
+                  <div className="flex items-center gap-1 text-xxs tabular-nums shrink-0">
+                    {fileStats[filePath].ins > 0 && (
+                      <span className="text-green-600 dark:text-green-400">
+                        +{fileStats[filePath].ins}
+                      </span>
+                    )}
+                    {fileStats[filePath].del > 0 && (
+                      <span className="text-red-500 dark:text-red-400">
+                        -{fileStats[filePath].del}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {findingsByFile[filePath] && (
+                  <div className="flex items-center gap-1 text-t tabular-nums shrink-0">
+                    {findingsByFile[filePath].critical > 0 && (
+                      <span className="flex items-center gap-0.5">
+                        <CircleDot className="size-2 text-red-500 dark:text-red-400" />
+                        <span className="text-red-500 dark:text-red-400">
+                          {findingsByFile[filePath].critical}
+                        </span>
+                      </span>
+                    )}
+                    {findingsByFile[filePath].warning > 0 && (
+                      <span className="flex items-center gap-0.5">
+                        <CircleDot className="size-2 text-yellow-400" />
+                        <span className="text-yellow-400">
+                          {findingsByFile[filePath].warning}
+                        </span>
+                      </span>
+                    )}
+                    {findingsByFile[filePath].info > 0 && (
+                      <span className="flex items-center gap-0.5">
+                        <CircleDot className="size-2 text-blue-500 dark:text-blue-500" />
+                        <span className="text-blue-500 dark:text-blue-500">
+                          {findingsByFile[filePath].info}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </Button>
           );
         })}

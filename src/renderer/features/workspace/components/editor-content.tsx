@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/lib/redux";
+import type { WorkspaceState } from "@/lib/redux/slices/workspaceSlice";
 
 const CodeMirrorEditor = lazy(() =>
   import("./codemirror-editor").then((m) => ({ default: m.CodeMirrorEditor })),
@@ -14,6 +15,7 @@ interface EditorContentProps {
 }
 
 export function EditorContent({ className = "" }: EditorContentProps) {
+  const activeWorkspaceId = useSelector((state: RootState) => (state.workspace as WorkspaceState).activeWorkspaceId);
   const selectedFile = useSelector((state: RootState) => state.workspace.selectedFile);
   const selectedFileContent = useSelector((state: RootState) => state.workspace.selectedFileContent);
   const isLoadingFileContent = useSelector((state: RootState) => state.workspace.isLoadingFileContent);
@@ -118,6 +120,8 @@ export function EditorContent({ className = "" }: EditorContentProps) {
               diffText={selectedFileContent.content}
               filename={selectedFile.name}
               className="h-full noscrollbar"
+              workspaceId={activeWorkspaceId ?? undefined}
+              filePath={selectedFile.fullPath}
             />
           </Suspense>
         </div>

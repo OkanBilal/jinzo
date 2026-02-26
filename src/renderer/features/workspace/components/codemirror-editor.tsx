@@ -59,7 +59,7 @@ const lightTheme = EditorView.theme(
     "&": {
       backgroundColor: "transparent",
       color: "#1c1917",
-      fontSize: "13px",
+      fontSize: "12px",
       height: "100%",
       fontFamily:
         "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
@@ -203,7 +203,7 @@ const darkTheme = EditorView.theme(
     "&": {
       backgroundColor: "transparent",
       color: "#e7e5e4",
-      fontSize: "13px",
+      fontSize: "12px",
       height: "100%",
       fontFamily:
         "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",

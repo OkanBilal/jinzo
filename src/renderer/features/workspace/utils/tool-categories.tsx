@@ -20,12 +20,29 @@ import {
   Notion,
   Figma,
   Mcp,
+  Jinzo,
 } from "@/components/ui/icons";
 
 export const TOOL_CATEGORIES: Record<
   string,
   { category: string; icon: React.ReactNode }
 > = {
+  jinzo: {
+    category: "Review",
+    icon: <Jinzo className="w-2 h-4 " />,
+  },
+  getdiff: {
+    category: "Review",
+    icon: <Jinzo className="w-2 h-4 " />,
+  },
+  savereview: {
+    category: "Review",
+    icon: <Jinzo className="w-2 h-4 " />,
+  },
+  savefindings: {
+    category: "Review",
+    icon: <Jinzo className="w-2 h-4  " />,
+  },
   figma: {
     category: "Design",
     icon: <Figma className="size-4" />,
