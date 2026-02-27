@@ -412,7 +412,6 @@ export function createClaudeAdapter(
    * When using CLI (subscription mode), we strip ANTHROPIC_API_KEY from env
    * to avoid unexpected API billing when user has CLI login session.
    */
-  //TODO: Think about usecases of hooks https://platform.claude.com/docs/en/agent-sdk/hooks
   //TODO: Implement fork session https://platform.claude.com/docs/en/agent-sdk/sessions#forking-sessions
   function buildOptions(
     model: string,

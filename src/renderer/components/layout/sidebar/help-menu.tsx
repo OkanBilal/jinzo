@@ -14,7 +14,7 @@ export default function HelpMenu({ isOpen, position, onClose }: HelpMenuProps) {
 
   const adjustedPosition = {
     x: Math.max(8, Math.min(position.x - 60, window.innerWidth - 220)),
-    y: Math.max(8, position.y - 125),
+    y: Math.max(8, position.y - 115),
   };
 
   const handleOpenExternal = (url: string) => {

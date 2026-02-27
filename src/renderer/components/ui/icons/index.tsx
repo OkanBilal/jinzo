@@ -94,3 +94,4 @@ export { default as Cost } from "./cost";
 export { default as Clock } from "./clock";
 export { default as Jinzo } from "./jinzo";
 export { default as CircleDot } from "./circle-dot";
+export { default as Note } from "./note";

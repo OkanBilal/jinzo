@@ -206,8 +206,8 @@ export default function WorkspacesList({
     if (groupButtonRef.current) {
       const rect = groupButtonRef.current.getBoundingClientRect();
       setGroupDropdownPosition({
-        x: Math.min(rect.left, window.innerWidth - 180),
-        y: rect.bottom + 4,
+        x: Math.min(rect.left + 12, window.innerWidth - 180),
+        y: rect.bottom,
       });
     }
     setIsGroupDropdownOpen(!isGroupDropdownOpen);

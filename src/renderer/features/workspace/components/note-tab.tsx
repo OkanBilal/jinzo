@@ -1,4 +1,4 @@
-import { Close, Document, Notes } from "@/components/ui/icons";
+import { Close, Document, Note, Notes } from "@/components/ui/icons";
 import type { ReviewTab } from "@/lib/redux/slices/workspaceSlice";
 
 interface NoteTabProps {
@@ -22,8 +22,8 @@ export function NoteTab({ review, isActive, onClick, onClose, variant }: NoteTab
           : "text-primary-500 hover:text-primary-700 dark:hover:text-primary-300"
       }`}
     >
-      <Document className="w-4 h-4" />
-      <span className="text-sm font-medium truncate flex-1">{review.title}</span>
+      <Note className="w-4 h-4" />
+      <span className="text-xs font-medium truncate flex-1">{review.title}</span>
       <button
         onClick={onClose}
         className="opacity-0 group-hover:opacity-100 p-0.5 mr-1 hover:bg-primary/10 cursor-pointer rounded transition-all"

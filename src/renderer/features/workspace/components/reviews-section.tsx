@@ -1,7 +1,7 @@
 import { useDispatch } from "react-redux";
 import { useGetReviewsByWorkspaceQuery, useGetAppSettingsQuery } from "@/lib/redux/api";
 import { openNoteTab, setPendingGoal } from "@/lib/redux/slices/workspaceSlice";
-import { Document, Notes, PullRequest, Sparkles } from "@/components/ui/icons";
+import { Document, Note, Notes, PullRequest, Sparkles } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Body } from "@/components/ui/text";
 
@@ -102,7 +102,7 @@ export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
             className="w-full flex items-center px-2 gap-3 py-2.5 dark:hover:bg-primary/5 hover:bg-primary-100/60 rounded-xl transition-colors cursor-pointer animate-slide-in"
             style={{ animationDelay: `${index * 0.02}s` }}
           >
-            <Document className="size-4.5 text-primary-200 shrink-0" />
+            <Note className="size-4.5 text-primary-200 shrink-0" />
 
             <div className="flex flex-col items-start gap-0.5 min-w-0">
               <span className="text-s font-semibold text-primary-900 dark:text-primary-200 truncate max-w-full">

@@ -111,7 +111,7 @@ export default function PostItem({
         tabIndex={0}
         onClick={onClick}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick?.(); } }}
-        className={`block px-3 py-2 rounded-xl cursor-pointer group-hover:scale-[1.01] transition-all duration-200 ease-out active:scale-99 ${
+        className={`block px-3 py-2 rounded-2xl cursor-pointer group-hover:scale-[1.01] transition-all duration-200 ease-out active:scale-99 ${
           isActive
             ? "bg-primary/80 dark:bg-primary/5"
             : "bg-transparent hover:bg-primary/40 dark:hover:bg-primary/5"

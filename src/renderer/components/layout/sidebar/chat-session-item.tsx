@@ -92,7 +92,7 @@ export default function ChatSessionItem({
     return (
       <div className="relative">
         <div
-          className={`block pl-3 pr-3 py-1.5 rounded-xl ${
+          className={`block pl-3 pr-3 py-1.5 rounded-2xl ${
             isActive ? "bg-primary-950/5 dark:bg-primary/5" : "bg-transparent"
           }`}
         >
@@ -114,7 +114,7 @@ export default function ChatSessionItem({
     <div className="relative group">
       <Link
         to={`/chat/${session.id}`}
-        className={`block pl-3 pr-3 py-1.5 active:scale-99 group-hover:scale-[1.01] rounded-xl transition-all duration-200 ease-out  ${
+        className={`block pl-3 pr-3 py-1.5 active:scale-99 group-hover:scale-[1.01] rounded-2xl transition-all duration-200 ease-out  ${
           isActive
             ? "bg-primary/80 dark:bg-primary/5"
             : "bg-transparent hover:bg-primary/40 dark:hover:bg-primary/5"

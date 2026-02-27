@@ -93,8 +93,8 @@ export default function WorkspaceItem({
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setDropdownPosition({
-        x: Math.min(rect.left + 12, window.innerWidth - 150),
-        y: rect.bottom - 2,
+        x: Math.min(rect.left + 32, window.innerWidth - 150),
+        y: rect.bottom - 20,
       });
     }
 
@@ -134,7 +134,7 @@ export default function WorkspaceItem({
           }
         }}
         className={`block px-2.5 py-1.5 active:scale-99 group-hover:scale-[1.01] 
-          rounded-xl transition-all duration-200 ease-out cursor-pointer ${
+          rounded-2xl transition-all duration-200 ease-out cursor-pointer ${
             isActive
               ? "bg-primary/80 dark:bg-primary/5"
               : "bg-transparent group-hover:bg-primary/40 dark:group-hover:bg-primary/5"

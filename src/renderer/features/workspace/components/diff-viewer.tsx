@@ -42,65 +42,12 @@ const severityColors: Record<Severity, { pill: string; pillBg: string; line: str
 };
 
 const severityColorsDark: Record<Severity, { pill: string; pillBg: string; line: string }> = {
-  critical: { pill: "#f44336", pillBg: "#ef444433", line: "#6f6e6940" },
-  warning: { pill: "#fcd34d", pillBg: "#f59e0b33", line: "#6f6e6940" },
-  info: { pill: "#93c5fd", pillBg: "#3b82f633", line: "#6f6e6940" },
+  critical: { pill: "#f44336", pillBg: "#f4433633", line: "#1a1a1a" },
+  warning: { pill: "#fcd34d", pillBg: "#f59e0b33", line: "#1a1a1a" },
+  info: { pill: "#93c5fd", pillBg: "#3b82f633", line: "#1a1a1a" },
 };
 
-// ── Custom CSS for findings inside shadow DOM ────────────
 
-const FINDINGS_CSS = `
-  .finding-annotation {
-    padding: 8px 0;
-    max-width: 100%;
-    overflow: hidden;
-    box-sizing: border-box;
-  }
-  .finding-card {
-    border-left: 3px solid transparent;
-    padding: 12px;
-    margin-bottom: 2px;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    overflow-wrap: break-word;
-    word-break: break-word;
-  }
-  .finding-pill {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: capitalize;
-    letter-spacing: 0.05em;
-    padding: 1px 6px;
-    border-radius: 8px;
-    margin-right: 8px;
-    vertical-align: middle;
-  }
-  .finding-message {
-    font-size: 12px;
-    font-weight: 500;
-    vertical-align: middle;
-    overflow-wrap: break-word;
-    word-break: break-word;
-  }
-  .finding-reason {
-    font-size: 11px;
-    margin: 4px 0 0 0;
-    line-height: 1.4;
-    overflow-wrap: break-word;
-    word-break: break-word;
-    opacity: 0.7;
-  }
-  .finding-suggestion {
-    font-size: 12px;
-    margin: 3px 0 0 0;
-    line-height: 1.4;
-    overflow-wrap: break-word;
-    word-break: break-word;
-  }
-  .finding-suggestion-label {
-    font-weight: 600;
-  }
-`;
 
 // ── Component ─────────────────────────────────────────────
 
@@ -159,8 +106,8 @@ export function DiffViewer({
   }, [fileFindings]);
 
   const colors = isDarkMode ? severityColorsDark : severityColors;
-  const textColor = isDarkMode ? "#e7e5e4" : "#1c1917";
-  const mutedColor = isDarkMode ? "#a8a29e" : "#78716c";
+  const textColor = isDarkMode ? "#fff" : "#1c1917";
+  const mutedColor = isDarkMode ? "#dad8ce" : "#78716c";
   const suggestionColor = isDarkMode ? "#86efac" : "#16a34a";
 
   const renderAnnotation = useMemo(() => {
@@ -174,11 +121,11 @@ export function DiffViewer({
             return (
               <div
                 key={i}
-                className="finding-card"
+                className="finding-card py-2 my-2 border-b last:border-b-0 dark:border-primary/10 border-primary/20"
                 style={{ backgroundColor: c.line }}
               >
                 <span
-                  className="finding-pill"
+                  className="px-1 py-0.5 text-xxs rounded-sm capitalize mr-2"
                   style={{ backgroundColor: c.pillBg, color: c.pill }}
                 >
                   {sev}
@@ -192,8 +139,8 @@ export function DiffViewer({
                   </p>
                 )}
                 {f.suggestion && (
-                  <p className="finding-suggestion" style={{ color: suggestionColor }}>
-                    <span className="finding-suggestion-label">Suggestion: </span>
+                  <p className="mt-2" style={{ color: suggestionColor }}>
+                    <span className="">Suggestion: </span>
                     {f.suggestion}
                   </p>
                 )}
@@ -214,9 +161,8 @@ export function DiffViewer({
           theme: isDarkMode ? "pierre-dark" : "pierre-light",
           themeType: isDarkMode ? "dark" : "light",
           diffStyle: "unified",
-          overflow: "scroll",
+          overflow: "wrap",
           disableFileHeader: true,
-          unsafeCSS: FINDINGS_CSS,
         }}
         lineAnnotations={lineAnnotations}
         renderAnnotation={lineAnnotations ? renderAnnotation : undefined}

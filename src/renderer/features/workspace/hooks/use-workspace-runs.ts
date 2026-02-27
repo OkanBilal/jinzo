@@ -275,6 +275,17 @@ export function useWorkspaceRuns(
                 clearInterval(pollingRef.current);
                 pollingRef.current = null;
               }
+
+              // Show toast based on terminal status
+              if (result.data.status === "failed") {
+                toast.error(
+                  result.data.lastError || "Run failed",
+                  { duration: 5000 },
+                );
+              } else if (result.data.status === "canceled") {
+                toast("Run canceled");
+              }
+
               // Invalidate RTK Query cache so DiffSection and other
               // query-based consumers pick up the finished run & its diff
               dispatch(runsApi.util.invalidateTags(["Runs", "WorkspaceDiffs"]));
@@ -366,6 +377,7 @@ export function useWorkspaceRuns(
         const message =
           err instanceof Error ? err.message : "Failed to execute run";
         setError(message);
+        toast.error(message);
         return null;
       } finally {
         setIsLoading(false);
@@ -417,6 +429,7 @@ export function useWorkspaceRuns(
       const message =
         err instanceof Error ? err.message : "Failed to continue run";
       setError(message);
+      toast.error(message);
       return false;
     } finally {
       setIsLoading(false);

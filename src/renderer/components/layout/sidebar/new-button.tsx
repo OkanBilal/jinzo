@@ -30,7 +30,7 @@ export default function NewButton({
         const rect = buttonRef.current.getBoundingClientRect();
         setMenuState({
           isOpen: true,
-          position: { x: rect.right - 8, y: rect.top + 32 },
+          position: { x: rect.right , y: rect.top + 12 },
         });
       }
     } else {
@@ -81,7 +81,7 @@ export default function NewButton({
           isOpen={menuState.isOpen}
           position={menuState.position}
           onClose={handleCloseMenu}
-          minWidth={200}
+          minWidth={180}
         >
           {dropdownItems.map((item, index) => (
             <DropdownMenuItem

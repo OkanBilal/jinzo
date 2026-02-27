@@ -34,7 +34,7 @@ export default function HourHeatmap({ data }: HourHeatmapProps) {
       emptyHeight="h-44"
     >
       <BarChart
-        height={150}
+        height={180}
         bars={full.map((d) => ({
           key: d.hour,
           hoverLabel: d.count > 0 ? `${d.hour}:00 · ${d.count}` : undefined,
