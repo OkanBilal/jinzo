@@ -7,6 +7,6 @@ export default function JournalPage() {
   if (!id) {
     return <EmptyJournalState />;
   }
-
+  
   return <JournalEditor key={id} entityId={id} />;
 }

@@ -38,7 +38,7 @@ export interface WorkspaceState {
 const initialState: WorkspaceState = {
   activeWorkspaceId: null,
   selectedModelByProvider: {},
-  selectedProviderId: "copilot_cli",
+  selectedProviderId: "claude_code",
   thinkingEnabled: false,
   selectedFile: null,
   selectedFileContent: null,

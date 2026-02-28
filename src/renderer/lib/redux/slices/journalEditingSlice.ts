@@ -48,7 +48,6 @@ export const journalEditingSlice = createSlice({
         .split(/\s+/)
         .filter(Boolean).length;
     },
-    // Handle title updates from MCP tools (external source)
     handleTitleUpdate: (
       state,
       action: PayloadAction<{ entityId: string; title: string }>,

@@ -15,7 +15,7 @@ export default function CopilotPage() {
     <div className="flex flex-col h-full dark:bg-copilot-dark ">
       <div className="flex-1 overflow-hidden noscrollbar">
         {ws.showEmptyState ? (
-            <WorkspaceEmptyState workspace={ws.currentWorkspace} />
+          <WorkspaceEmptyState workspace={ws.currentWorkspace} />
         ) : (
           <WorkspaceEvents
             runs={ws.runs}
@@ -42,25 +42,30 @@ export default function CopilotPage() {
           />
         )}
       </div>
-      <WorkspaceQuickActions onSetGoal={ws.setGoal} variant="copilot" projectId={ws.currentWorkspace?.projectId ?? undefined} providerId={COPILOT_CLI_PROVIDER_ID} />
-        <WorkspaceInput
-          goal={ws.goal}
-          onGoalChange={ws.setGoal}
-          onSubmit={ws.handleExecute}
-          isLoading={ws.isLoading}
-          activeRun={ws.activeRun}
-          canResume={ws.canResume ?? false}
-          providerId={COPILOT_CLI_PROVIDER_ID}
-          selectedModel={ws.selectedModel}
-          onModelChange={ws.handleModelChange}
-          contextFiles={ws.contextFiles}
-          onRemoveContextFile={ws.handleRemoveContextFile}
-          contextIssues={ws.contextIssues}
-          onRemoveContextIssue={ws.handleRemoveContextIssue}
-          workspacePath={ws.currentWorkspace?.rootPath}
-          uploadedFiles={ws.uploadedFiles}
-          onUploadedFilesChange={ws.setUploadedFiles}
-        />
+      <WorkspaceQuickActions
+        onSetGoal={ws.setGoal}
+        variant="copilot"
+        projectId={ws.currentWorkspace?.projectId ?? undefined}
+        providerId={COPILOT_CLI_PROVIDER_ID}
+      />
+      <WorkspaceInput
+        goal={ws.goal}
+        onGoalChange={ws.setGoal}
+        onSubmit={ws.handleExecute}
+        isLoading={ws.isLoading}
+        activeRun={ws.activeRun}
+        canResume={ws.canResume ?? false}
+        providerId={COPILOT_CLI_PROVIDER_ID}
+        selectedModel={ws.selectedModel}
+        onModelChange={ws.handleModelChange}
+        contextFiles={ws.contextFiles}
+        onRemoveContextFile={ws.handleRemoveContextFile}
+        contextIssues={ws.contextIssues}
+        onRemoveContextIssue={ws.handleRemoveContextIssue}
+        workspacePath={ws.currentWorkspace?.rootPath}
+        uploadedFiles={ws.uploadedFiles}
+        onUploadedFilesChange={ws.setUploadedFiles}
+      />
     </div>
   );
 }

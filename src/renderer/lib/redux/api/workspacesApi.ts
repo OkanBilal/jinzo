@@ -7,7 +7,14 @@ export interface WorkspaceMetadata {
   [key: string]: unknown;
 }
 
-export type WorkspaceStatus = "backlog" | "todo" | "in_progress" | "in_review" | "done" | "canceled" | "duplicate";
+export type WorkspaceStatus =
+  | "backlog"
+  | "todo"
+  | "in_progress"
+  | "in_review"
+  | "done"
+  | "canceled"
+  | "duplicate";
 
 export interface Workspace {
   id: string;

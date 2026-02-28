@@ -14,10 +14,7 @@ export default function ClaudePage() {
   const ws = useWorkspacePage(CLAUDE_PROVIDER_ID);
   const [abortRun] = useAbortRunMutation();
 
-  const {
-    pendingApprovals,
-    respond: respondToolApproval,
-  } = useToolApproval();
+  const { pendingApprovals, respond: respondToolApproval } = useToolApproval();
 
   const currentApproval = ws.activeRunId
     ? pendingApprovals.find((a) => a.runId === ws.activeRunId)
@@ -40,7 +37,7 @@ export default function ClaudePage() {
     <div className="flex flex-col h-full dark:bg-claude-dark">
       <div className="flex-1 overflow-hidden noscrollbar">
         {ws.showEmptyState ? (
-            <WorkspaceEmptyState workspace={ws.currentWorkspace} />
+          <WorkspaceEmptyState workspace={ws.currentWorkspace} />
         ) : (
           <WorkspaceEvents
             runs={ws.runs}
@@ -71,26 +68,31 @@ export default function ClaudePage() {
           />
         )}
       </div>
-      <WorkspaceQuickActions onSetGoal={ws.setGoal} variant="claude" projectId={ws.currentWorkspace?.projectId ?? undefined} providerId={CLAUDE_PROVIDER_ID} />
-        <WorkspaceInput
-          goal={ws.goal}
-          onGoalChange={ws.setGoal}
-          onSubmit={ws.handleExecute}
-          isLoading={ws.isLoading}
-          activeRun={ws.activeRun}
-          canResume={ws.canResume ?? false}
-          providerId={CLAUDE_PROVIDER_ID}
-          selectedModel={ws.selectedModel}
-          onModelChange={ws.handleModelChange}
-          contextFiles={ws.contextFiles}
-          onRemoveContextFile={ws.handleRemoveContextFile}
-          contextIssues={ws.contextIssues}
-          onRemoveContextIssue={ws.handleRemoveContextIssue}
-          workspacePath={ws.currentWorkspace?.rootPath}
-          uploadedFiles={ws.uploadedFiles}
-          onUploadedFilesChange={ws.setUploadedFiles}
-          onStop={handleStop}
-        />
+      <WorkspaceQuickActions
+        onSetGoal={ws.setGoal}
+        variant="claude"
+        projectId={ws.currentWorkspace?.projectId ?? undefined}
+        providerId={CLAUDE_PROVIDER_ID}
+      />
+      <WorkspaceInput
+        goal={ws.goal}
+        onGoalChange={ws.setGoal}
+        onSubmit={ws.handleExecute}
+        isLoading={ws.isLoading}
+        activeRun={ws.activeRun}
+        canResume={ws.canResume ?? false}
+        providerId={CLAUDE_PROVIDER_ID}
+        selectedModel={ws.selectedModel}
+        onModelChange={ws.handleModelChange}
+        contextFiles={ws.contextFiles}
+        onRemoveContextFile={ws.handleRemoveContextFile}
+        contextIssues={ws.contextIssues}
+        onRemoveContextIssue={ws.handleRemoveContextIssue}
+        workspacePath={ws.currentWorkspace?.rootPath}
+        uploadedFiles={ws.uploadedFiles}
+        onUploadedFilesChange={ws.setUploadedFiles}
+        onStop={handleStop}
+      />
     </div>
   );
 }

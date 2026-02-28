@@ -26,7 +26,7 @@ export function CodeViewer({
         style={
           {
             "--diffs-font-size": "12px",
-            "--diffs-font-family": "'Geist Mono', monospace",
+            "--diffs-font-family": "'Space Mono', monospace",
           } as React.CSSProperties
         }
         options={{

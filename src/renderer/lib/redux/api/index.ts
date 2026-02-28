@@ -213,7 +213,6 @@ export type { SpaceState } from "../slices/spaceSlice";
 export {
   setDarkMode,
   setSidebarCollapsed,
-  setFontSize,
 } from "../slices/appSettingsSlice";
 export type { AppSettingsState } from "../slices/appSettingsSlice";
 

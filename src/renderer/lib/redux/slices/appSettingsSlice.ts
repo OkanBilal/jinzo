@@ -3,7 +3,6 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 export interface AppSettingsState {
   isDarkMode: boolean;
   sidebarCollapsed: boolean;
-  fontSize: "small" | "medium" | "large";
   journalSpace: boolean;
   onboardingCompleted: boolean;
 }
@@ -11,7 +10,6 @@ export interface AppSettingsState {
 const initialState: AppSettingsState = {
   isDarkMode: false,
   sidebarCollapsed: false,
-  fontSize: "medium",
   journalSpace: false,
   onboardingCompleted: false,
 };
@@ -26,12 +24,6 @@ const appSettingsSlice = createSlice({
     setSidebarCollapsed: (state, action: PayloadAction<boolean>) => {
       state.sidebarCollapsed = action.payload;
     },
-    setFontSize: (
-      state,
-      action: PayloadAction<"small" | "medium" | "large">
-    ) => {
-      state.fontSize = action.payload;
-    },
     setJournalSpace: (state, action: PayloadAction<boolean>) => {
       state.journalSpace = action.payload;
     },
@@ -41,6 +33,6 @@ const appSettingsSlice = createSlice({
   },
 });
 
-export const { setDarkMode, setSidebarCollapsed, setFontSize, setJournalSpace, setOnboardingCompleted } =
+export const { setDarkMode, setSidebarCollapsed, setJournalSpace, setOnboardingCompleted } =
   appSettingsSlice.actions;
 export default appSettingsSlice.reducer;

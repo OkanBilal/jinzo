@@ -15,7 +15,7 @@ import { useAppSelector } from "./lib/redux/hooks";
 import { OnboardingModal } from "./features/onboarding/components/onboarding-modal";
 
 function AppContent() {
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [isrightanelOpen, setIsRightPanelOpen] = useState(false);
   const { mainMarginLeft, rightPanelWidth } = useLayoutConfig();
   const location = useLocation();
   const hideRightPanel = shouldHideRightPanel(location.pathname);
@@ -32,15 +32,15 @@ function AppContent() {
         <MainContent
           marginLeft={mainMarginLeft}
           marginRight={
-            !hideRightPanel && isConfigOpen ? rightPanelWidth : "0.5rem"
+            !hideRightPanel && isrightanelOpen ? rightPanelWidth : "0.5rem"
           }
         >
           <MainRoutes />
         </MainContent>
         {!hideRightPanel && (
           <RightPanel
-            isOpen={isConfigOpen}
-            onToggle={setIsConfigOpen}
+            isOpen={isrightanelOpen}
+            onToggle={setIsRightPanelOpen}
             width={rightPanelWidth}
           />
         )}

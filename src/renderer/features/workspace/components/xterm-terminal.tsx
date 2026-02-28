@@ -91,7 +91,7 @@ export function XtermTerminal({ id, rootPath, variant }: XtermTerminalProps) {
     const term = new Terminal({
       cursorBlink: true,
       fontSize: 13,
-      fontFamily: "'Geist Mono', 'SF Mono', Monaco, 'Cascadia Code', monospace",
+      fontFamily: "'Space Mono', 'SF Mono', Monaco, 'Cascadia Code', monospace",
       theme,
       allowProposedApi: true,
       allowTransparency: true,

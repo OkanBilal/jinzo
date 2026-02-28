@@ -2,8 +2,8 @@ import type { WorkspaceStatus } from "@/lib/redux/api/workspacesApi";
 
 interface WorkspaceStatusConfig {
   label: string;
-  color: string; // tailwind text color class
-  iconColor: string; // tailwind text color class for the status icon
+  color: string; 
+  iconColor: string; 
 }
 
 const statusConfig: Record<WorkspaceStatus, WorkspaceStatusConfig> = {
