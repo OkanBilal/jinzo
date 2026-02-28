@@ -126,7 +126,7 @@ function EnableStep({ onComplete }: { onComplete: () => void }) {
             className="sr-only peer"
             disabled={loading}
           />
-          <div className="w-11 h-6 dark:bg-primary-600 bg-primary  peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:inset-s-0.5 after:bg-primary after:border-primary-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-300 dark:peer-checked:bg-primary-300"></div>
+          <div className="w-11 h-6 dark:bg-primary-600 bg-primary  peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-primary after:content-[''] after:absolute after:top-0.5 after:inset-s-0.5 after:bg-primary after:border-primary-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-300 dark:peer-checked:bg-primary-300"></div>
         </label>
       </div>
 

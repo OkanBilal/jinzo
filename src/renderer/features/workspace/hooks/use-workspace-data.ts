@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import {
   useGetWorkspacesQuery,
@@ -11,8 +11,8 @@ const EMPTY_PROVIDERS: never[] = [];
 export function useWorkspaceData() {
   const { workspaceId } = useParams<{ workspaceId?: string }>();
 
-  const [selectedProvider, setSelectedProvider] =
-    useState<string>("copilot_cli");
+  const [userSelectedProvider, setSelectedProvider] =
+    useState<string | null>(null);
 
   const { data: workspaces = [] } = useGetWorkspacesQuery();
 
@@ -37,12 +37,11 @@ export function useWorkspaceData() {
     return workspaces.length > 0 ? workspaces[0] : null;
   }, [workspaceId, workspaces, fetchedWorkspace]);
 
-  // Sync provider selection when providers load
-  useEffect(() => {
-    if (providers.length > 0 && selectedProvider === "copilot_cli") {
-      setSelectedProvider(providers[0].id);
-    }
-  }, [providers, selectedProvider]);
+  const selectedProvider = useMemo(() => {
+    if (userSelectedProvider) return userSelectedProvider;
+    if (providers.length > 0) return providers[0].id;
+    return "claude-code";
+  }, [userSelectedProvider, providers]);
 
   const selectedWorkspace = useMemo(() => {
     if (workspaceId) return workspaceId;

@@ -100,7 +100,7 @@ export default function BarChart({
               "text-xs font-light",
               "bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200",
               "border border-primary-200 dark:border-primary-800",
-              "shadow-lg shadow-black/10",
+              "shadow-lg shadow-primary-950/10",
             )}
             style={{ left: tooltip.x, top: tooltip.y - 32, zIndex: 9999 }}
           >

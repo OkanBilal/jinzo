@@ -66,13 +66,13 @@ function ThemePreviewCard({
                 className={cn("w-5 h-full flex flex-col p-1 gap-1")}
                 style={lightBgStyle}
               >
-                <div className="w-2 h-2 bg-black/15 rounded-full" />
-                <div className="w-full h-1 bg-black/10 rounded-full mt-1" />
-                <div className="w-2/3 h-1 bg-black/10 rounded-full" />
+                <div className="w-2 h-2 bg-primary-950/15 rounded-full" />
+                <div className="w-full h-1 bg-primary-950/10 rounded-full mt-1" />
+                <div className="w-2/3 h-1 bg-primary-950/10 rounded-full" />
               </div>
               <div className="flex-1 h-full bg-primary-100 flex flex-col p-1.5">
                 <div className="flex-1" />
-                <div className="w-full h-3 bg-primary-80  rounded-sm border border-black/10" />
+                <div className="w-full h-3 bg-primary-80  rounded-sm border border-primary-950/10" />
               </div>
             </div>
             <div className="w-1/2 h-full flex">
@@ -80,13 +80,13 @@ function ThemePreviewCard({
                 className={cn("w-5 h-full flex flex-col p-1 gap-1")}
                 style={darkBgStyle}
               >
-                <div className="w-2 h-2 bg-white/20 rounded-full" />
-                <div className="w-full h-1 bg-white/15 rounded-full mt-1" />
-                <div className="w-2/3 h-1 bg-white/15 rounded-full" />
+                <div className="w-2 h-2 bg-primary/20 rounded-full" />
+                <div className="w-full h-1 bg-primary/15 rounded-full mt-1" />
+                <div className="w-2/3 h-1 bg-primary/15 rounded-full" />
               </div>
               <div className="flex-1 h-full flex bg-primary-950 flex-col p-1.5">
                 <div className="flex-1" />
-                <div className="w-full h-3 bg-white/10 rounded-sm flex items-center justify-end pr-0.5"></div>
+                <div className="w-full h-3 bg-primary/10 rounded-sm flex items-center justify-end pr-0.5"></div>
               </div>
             </div>
           </div>
@@ -99,20 +99,20 @@ function ThemePreviewCard({
               <div
                 className={cn(
                   "w-2 h-2 rounded-full",
-                  isLight ? "bg-black/15" : "bg-white/20",
+                  isLight ? "bg-primary-950/15" : "bg-primary/20",
                 )}
               />
               <div className="flex flex-col gap-0.5 mt-1">
                 <div
                   className={cn(
                     "w-full h-1 rounded-full",
-                    isLight ? "bg-black/10" : "bg-white/15",
+                    isLight ? "bg-primary-950/10" : "bg-primary/15",
                   )}
                 />
                 <div
                   className={cn(
                     "w-4/5 h-1 rounded-full",
-                    isLight ? "bg-black/10" : "bg-white/15",
+                    isLight ? "bg-primary-950/10" : "bg-primary/15",
                   )}
                 />
               </div>
@@ -125,8 +125,8 @@ function ThemePreviewCard({
                 className={cn(
                   "w-full h-4 rounded-md flex items-center px-1",
                   isLight
-                    ? "bg-white/80 border border-black/10"
-                    : "bg-white/10",
+                    ? "bg-primary/80 border border-primary-950/10"
+                    : "bg-primary/10",
                 )}
               ></div>
             </div>

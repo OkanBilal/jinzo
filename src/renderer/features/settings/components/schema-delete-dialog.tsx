@@ -27,7 +27,7 @@ export function SchemaDeleteDialog({
             variant="submit"
             size="sm"
             onClick={onConfirm}
-            className="bg-red-600! hover:bg-red-700! text-white!"
+            className="bg-red-600! hover:bg-red-700! text-primary!"
           >
             Delete
           </Button>

@@ -160,7 +160,7 @@ export default function Tooltip({
           className={cn(
             "px-2 py-1 text-xs font-light whitespace-nowrap rounded-lg pointer-events-none glass-morphism",
             " text-primary-700 dark:text-primary-200",
-            "shadow-lg shadow-black/10 ",
+            "shadow-lg shadow-primary-950/10 ",
             "transition-all duration-50 ease-out",
             "flex items-center gap-2",
             isVisible ? "opacity-100 scale-100" : "opacity-0 scale-90",

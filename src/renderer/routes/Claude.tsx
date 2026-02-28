@@ -20,13 +20,6 @@ export default function ClaudePage() {
     ? pendingApprovals.find((a) => a.runId === ws.activeRunId)
     : undefined;
 
-  const handleApprovalRespond = useCallback(
-    (requestId: string, approved: boolean, answer?: string) => {
-      respondToolApproval(requestId, approved, answer);
-    },
-    [respondToolApproval],
-  );
-
   const handleStop = useCallback(() => {
     if (ws.activeRunId) {
       abortRun(ws.activeRunId);
@@ -63,7 +56,7 @@ export default function ClaudePage() {
             onSelectNewRunTab={ws.handleSelectNewRunTab}
             onCloseNewRunTab={ws.handleCloseNewRunTab}
             pendingApproval={currentApproval}
-            onApprovalRespond={handleApprovalRespond}
+            onApprovalRespond={respondToolApproval}
             onForkRun={ws.handleForkRun}
           />
         )}

@@ -106,7 +106,7 @@ export default function DropdownWrapper({
 
   // Fixed background class matching chat input style
   const fixedBackgroundClass = useFixedBackground
-    ? "bg-linear-to-b from-white/90 to-primary-50/80 dark:from-primary-900/95 dark:to-primary-900/80"
+    ? "bg-linear-to-b from-primary/90 to-primary-50/80 dark:from-primary-900/95 dark:to-primary-900/80"
     : "";
 
   if (!isOpen) return null;

@@ -60,7 +60,7 @@ export default function PersonalizationSettings() {
       )}
 
       {loading ? (
-        <div className="rounded-xl border border-primary-200/60 dark:border-primary-900 bg-white/50 dark:bg-primary-950/30 p-6 text-sm text-primary-600 dark:text-primary-200">
+        <div className="rounded-xl border border-primary-200/60 dark:border-primary-900 bg-primary/50 dark:bg-primary-950/30 p-6 text-sm text-primary-600 dark:text-primary-200">
           Loading personalization...
         </div>
       ) : (

@@ -75,7 +75,7 @@ export default function DashboardPage() {
           className="relative flex rounded-[11px] bg-primary-100/60 dark:bg-primary-800/30 p-0.5"
         >
           <div
-            className="absolute top-0.5 bg-white dark:bg-primary/10 rounded-lg shadow-sm transition-all duration-300 ease-in-out"
+            className="absolute top-0.5 bg-primary dark:bg-primary/10 rounded-lg shadow-sm transition-all duration-300 ease-in-out"
             style={{
               left: indicator.left,
               width: indicator.width,

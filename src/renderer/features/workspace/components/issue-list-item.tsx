@@ -1,8 +1,6 @@
-import { Asana, Gitlab, Plus } from "@/components/ui/icons";
-import Github from "@/components/ui/icons/github";
-import Linear from "@/components/ui/icons/linear";
-import { Jira } from "@/components/ui/icons";
+import { Plus } from "@/components/ui/icons";
 import { getLabelColor, parseLabels } from "@/lib/label-colors";
+import { ProviderIcon } from "./provider-icon";
 
 interface IssueData {
   issue: {
@@ -26,36 +24,13 @@ interface IssueListItemProps {
   onAddToContext?: () => void;
 }
 
-function ProviderIcon({ provider }: { provider: string }) {
-  const iconClass = "w-5 h-5 text-primary-800 dark:text-primary-300";
-
-  switch (provider) {
-    case "github":
-      return <Github className={iconClass} />;
-    case "linear":
-      return <Linear className={iconClass} />;
-    case "jira":
-      return <Jira className={iconClass} />;
-    case "asana":
-      return <Asana className="h-5.5 w-6 scale-80" />;
-    case "gitlab":
-      return <Gitlab className={iconClass} />;
-    default:
-      return (
-        <span className="text-t font-medium">
-          {provider.slice(0, 2).toUpperCase()}
-        </span>
-      );
-  }
-}
-
 function ProviderBadge({ provider }: { provider: string }) {
   return (
     <span
-      className={`shrink-0 inline-flex items-center justify-center px-1 text-white`}
+      className={`shrink-0 inline-flex items-center justify-center px-1 text-primary`}
       title={provider}
     >
-      <ProviderIcon provider={provider} />
+      <ProviderIcon provider={provider} className="w-5 h-5 text-primary-800 dark:text-primary-300" />
     </span>
   );
 }

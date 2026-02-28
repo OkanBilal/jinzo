@@ -1,94 +1,11 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import type { Run, RunEvent, RunArtifact, ToolCall } from "../types";
+import type { Run, RunEvent } from "../types";
 import { toast } from "@/components/ui/toast";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { runsApi, workspacesApi, reviewsApi, reviewFindingsApi } from "@/lib/redux/api";
+import { mapArtifactToEvent, mapToolCallToEvent } from "../utils/run-event-mappers";
 
-const MAX_DISPLAY_LENGTH = 200;
-
-/**
- * Format tool input/output data for display
- * Truncates long content and shows file paths nicely
- */
-function formatToolData(data: unknown): string {
-  if (!data) return "";
-
-  let parsed: unknown = data;
-
-  // Parse JSON string if needed
-  if (typeof data === "string") {
-    try {
-      parsed = JSON.parse(data);
-    } catch {
-      // Not JSON, use as-is but truncate
-      if (data.length > MAX_DISPLAY_LENGTH) {
-        return (
-          data.substring(0, MAX_DISPLAY_LENGTH) + `... (${data.length} chars)`
-        );
-      }
-      return data;
-    }
-  }
-
-  // Handle object data
-  if (typeof parsed === "object" && parsed !== null) {
-    const obj = parsed as Record<string, unknown>;
-
-    // Special handling for file content
-    if (obj.content && typeof obj.content === "string") {
-      const content = obj.content;
-      const lines = content.split("\n").length;
-      const bytes = content.length;
-
-      // If there's a path, show it prominently
-      if (obj.path && typeof obj.path === "string") {
-        return `${obj.path} (${lines} lines, ${formatBytes(bytes)})`;
-      }
-
-      // For diff/patch content
-      if (obj.detailedContent && typeof obj.detailedContent === "string") {
-        const diffLines = obj.detailedContent.split("\n").length;
-        return `File content (${lines} lines) with diff (${diffLines} lines)`;
-      }
-
-      // Truncate long content
-      if (content.length > MAX_DISPLAY_LENGTH) {
-        const preview = content
-          .substring(0, MAX_DISPLAY_LENGTH)
-          .replace(/\n/g, " ");
-        return `${preview}... (${lines} lines)`;
-      }
-    }
-
-    // Special handling for file paths
-    if (obj.path && typeof obj.path === "string") {
-      const otherKeys = Object.keys(obj).filter(
-        (k) => k !== "path" && k !== "content",
-      );
-      if (otherKeys.length === 0) {
-        return obj.path;
-      }
-      return `${obj.path} ${JSON.stringify(Object.fromEntries(otherKeys.map((k) => [k, obj[k]])))}`;
-    }
-
-    // For other objects, show compact JSON
-    const json = JSON.stringify(parsed);
-    if (json.length > MAX_DISPLAY_LENGTH) {
-      // Show key names for context
-      const keys = Object.keys(obj).slice(0, 5);
-      return `{${keys.join(", ")}${keys.length < Object.keys(obj).length ? ", ..." : ""}} (${json.length} chars)`;
-    }
-    return json;
-  }
-
-  return String(parsed);
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+type Attachments = Array<{ name: string; type: string; data: string; mimeType: string }>;
 
 export function useWorkspaceRuns(
   workspaceId: string | undefined,
@@ -104,7 +21,53 @@ export function useWorkspaceRuns(
   const eventsEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load run details (artifacts and tool calls)
+  // --- Internal helpers ---
+
+  const clearState = useCallback(() => {
+    setRuns([]);
+    setActiveRunId(null);
+    setRunEvents({});
+  }, []);
+
+  /** Wraps async run operations with loading state, account fetch, and error handling */
+  const runOperation = useCallback(async <T>(
+    fn: (accountId: string) => Promise<T>,
+    fallback: T,
+    errorLabel: string,
+  ): Promise<T> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const accountRes = await window.api.account.get();
+      if (!accountRes.success || !accountRes.data) {
+        throw new Error("No account found");
+      }
+      return await fn(accountRes.data.id);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : errorLabel;
+      setError(message);
+      toast.error(message);
+      return fallback;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  /** Fetch a newly created run, add it to state, and return its ID */
+  const registerNewRun = useCallback(async (runId: string): Promise<string | null> => {
+    const runResult = await window.api.runs.getById(runId);
+    if (runResult.success && runResult.data) {
+      setRuns((prev) => [runResult.data, ...prev]);
+      setActiveRunId(runResult.data.id);
+      dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
+      setRunEvents((prev) => ({ ...prev, [runResult.data.id]: [] }));
+      return runResult.data.id;
+    }
+    return null;
+  }, [dispatch]);
+
+  // --- Data loading ---
+
   const loadRunDetails = useCallback(async (runId: string) => {
     try {
       const [artifactsRes, toolCallsRes] = await Promise.all([
@@ -114,106 +77,29 @@ export function useWorkspaceRuns(
 
       const events: RunEvent[] = [];
 
-      // Convert artifacts to events
       if (artifactsRes.success && artifactsRes.data) {
-        artifactsRes.data.forEach((artifact: RunArtifact) => {
-          try {
-            let parsedMetadata: Record<string, unknown> | undefined;
-            if (artifact.metadata) {
-              if (typeof artifact.metadata === "string") {
-                try {
-                  parsedMetadata = JSON.parse(artifact.metadata);
-                } catch {
-                  parsedMetadata = undefined;
-                }
-              } else {
-                parsedMetadata = artifact.metadata as unknown as Record<
-                  string,
-                  unknown
-                >;
-              }
-            }
-
-            events.push({
-              id: `artifact-${artifact.id}`,
-              type: artifact.kind === "log" ? "log" : "artifact",
-              content:
-                artifact.content || artifact.path || JSON.stringify(artifact),
-              timestamp: artifact.createdAt
-                ? new Date(artifact.createdAt)
-                : new Date(),
-              metadata: { ...parsedMetadata, kind: artifact.kind },
-            });
-          } catch (parseErr) {
-            console.error("Error parsing artifact:", artifact, parseErr);
-            events.push({
-              id: `artifact-${artifact.id}`,
-              type: artifact.kind === "log" ? "log" : "artifact",
-              content: artifact.content || artifact.path || String(artifact),
-              timestamp: new Date(),
-              metadata: { kind: artifact.kind },
-            });
-          }
-        });
+        events.push(...artifactsRes.data.map(mapArtifactToEvent));
       }
 
-      // Convert tool calls to events
       if (toolCallsRes.success && toolCallsRes.data) {
-        toolCallsRes.data.forEach((tc: ToolCall) => {
-          try {
-            const inputDisplay = formatToolData(tc.input);
-            const outputDisplay = formatToolData(tc.output);
-
-            // Parse raw input for metadata
-            let rawInput: Record<string, unknown> | undefined;
-            if (tc.input) {
-              try {
-                rawInput =
-                  typeof tc.input === "string"
-                    ? JSON.parse(tc.input)
-                    : (tc.input as Record<string, unknown>);
-              } catch {
-                // Input is not valid JSON
-              }
-            }
-
-            events.push({
-              id: `tool-${tc.id}`,
-              type: "tool_call",
-              content: `${tc.toolName}: ${inputDisplay}${outputDisplay ? `\n→ ${outputDisplay}` : ""}`,
-              timestamp: tc.createdAt ? new Date(tc.createdAt) : new Date(),
-              metadata: {
-                status: tc.status,
-                toolName: tc.toolName,
-                input: rawInput,
-              },
-            });
-          } catch (parseErr) {
-            console.error("Error parsing tool call:", tc, parseErr);
-          }
-        });
+        for (const tc of toolCallsRes.data) {
+          const event = mapToolCallToEvent(tc);
+          if (event) events.push(event);
+        }
       }
 
-      // Sort by timestamp
       events.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-
-      setRunEvents((prev) => ({
-        ...prev,
-        [runId]: events,
-      }));
+      setRunEvents((prev) => ({ ...prev, [runId]: events }));
     } catch (err) {
       console.error("Failed to load run details:", err);
     }
   }, []);
 
-  // Load runs for a workspace
   const loadWorkspaceRuns = useCallback(
     async (wsId: string) => {
       try {
         const result = await window.api.runs.getByWorkspace(wsId, 50);
-
         if (result.success && result.data) {
-          // Filter runs by providerId if specified
           const filteredRuns = providerId
             ? result.data.filter((run: Run) => run.providerId === providerId)
             : result.data;
@@ -232,21 +118,14 @@ export function useWorkspaceRuns(
     [loadRunDetails, providerId],
   );
 
-  // When workspaceId changes from URL, load runs
+  // --- Effects ---
+
   useEffect(() => {
+    clearState();
     if (workspaceId) {
-      // Clear previous workspace data before loading new
-      setRuns([]);
-      setActiveRunId(null);
-      setRunEvents({});
       loadWorkspaceRuns(workspaceId);
-    } else {
-      // No workspace selected, clear everything
-      setRuns([]);
-      setActiveRunId(null);
-      setRunEvents({});
     }
-  }, [workspaceId, loadWorkspaceRuns]);
+  }, [workspaceId, loadWorkspaceRuns, clearState]);
 
   // Poll for updates when active run is running
   useEffect(() => {
@@ -276,18 +155,12 @@ export function useWorkspaceRuns(
                 pollingRef.current = null;
               }
 
-              // Show toast based on terminal status
               if (result.data.status === "failed") {
-                toast.error(
-                  result.data.lastError || "Run failed",
-                  { duration: 5000 },
-                );
+                toast.error(result.data.lastError || "Run failed", { duration: 5000 });
               } else if (result.data.status === "canceled") {
                 toast("Run canceled");
               }
 
-              // Invalidate RTK Query cache so DiffSection, ReviewsSection, and other
-              // query-based consumers pick up the finished run & its data
               dispatch(runsApi.util.invalidateTags(["Runs", "WorkspaceDiffs"]));
               dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
               dispatch(reviewsApi.util.invalidateTags(["Reviews"]));
@@ -318,44 +191,29 @@ export function useWorkspaceRuns(
     eventsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [currentEvents]);
 
-  // Execute new run
+  // --- Run operations ---
+
   const executeRun = useCallback(
     async (
       goal: string,
       selectedWorkspace: string,
       selectedProvider: string,
       model?: string,
-      attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>,
+      attachments?: Attachments,
     ) => {
       if (!goal.trim() || !selectedWorkspace || !selectedProvider) {
-        {
-          /* ADD custom error workspace */
-        }
         toast.error("Please fill in all required fields");
-        return;
+        return null;
       }
 
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const accountRes = await window.api.account.get();
-        if (!accountRes.success || !accountRes.data) {
-          throw new Error("No account found");
-        }
-
+      return runOperation(async (accountId) => {
         const result = await window.api.runs.execute({
-          accountId: accountRes.data.id,
+          accountId,
           workspaceId: selectedWorkspace,
           providerId: selectedProvider,
           goal: goal.trim(),
           model: model || undefined,
-          initialContext: [
-            {
-              kind: "note", //
-              content: `User goal: ${goal.trim()}`,
-            },
-          ],
+          initialContext: [{ kind: "note", content: `User goal: ${goal.trim()}` }],
           attachments,
         });
 
@@ -363,60 +221,26 @@ export function useWorkspaceRuns(
           throw new Error(result.error || "Failed to start run");
         }
 
-        const runResult = await window.api.runs.getById(result.data.runId);
-        if (runResult.success && runResult.data) {
-          const newRun = runResult.data;
-          setRuns((prev) => [newRun, ...prev]);
-          setActiveRunId(newRun.id);
-
-          // Workspace status changed to in_progress on the backend
-          dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
-
-          setRunEvents((prev) => ({
-            ...prev,
-            [newRun.id]: [],
-          }));
-
-          return newRun.id; // Return new run ID for tab switching
-        }
-
-        return null;
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to execute run";
-        setError(message);
-        toast.error(message);
-        return null;
-      } finally {
-        setIsLoading(false);
-      }
+        return registerNewRun(result.data.runId);
+      }, null, "Failed to execute run");
     },
-    [dispatch],
+    [runOperation, registerNewRun],
   );
 
-  // Continue an existing run (resume session)
   const continueRun = useCallback(async (
     runId: string,
     message: string,
-    attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>,
+    attachments?: Attachments,
   ) => {
     if (!message.trim()) {
       setError("Please enter a message");
       return false;
     }
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const accountRes = await window.api.account.get();
-      if (!accountRes.success || !accountRes.data) {
-        throw new Error("No account found");
-      }
-
+    return runOperation(async (accountId) => {
       const result = await window.api.runs.continue({
         runId,
-        accountId: accountRes.data.id,
+        accountId,
         message: message.trim(),
         attachments,
       });
@@ -425,7 +249,6 @@ export function useWorkspaceRuns(
         throw new Error(result.error || "Failed to continue run");
       }
 
-      // Update the run in the list
       const runResult = await window.api.runs.getById(runId);
       if (runResult.success && runResult.data) {
         setRuns((prev) =>
@@ -433,23 +256,11 @@ export function useWorkspaceRuns(
         );
       }
 
-      // Workspace status changed to in_progress on the backend
       dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
-
-
       return true;
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to continue run";
-      setError(message);
-      toast.error(message);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [dispatch]);
+    }, false, "Failed to continue run");
+  }, [runOperation, dispatch]);
 
-  // Fork an existing run's session into a new run
   const forkRun = useCallback(
     async (sourceRunId: string, message: string): Promise<string | null> => {
       if (!message.trim()) {
@@ -457,18 +268,10 @@ export function useWorkspaceRuns(
         return null;
       }
 
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const accountRes = await window.api.account.get();
-        if (!accountRes.success || !accountRes.data) {
-          throw new Error("No account found");
-        }
-
+      return runOperation(async (accountId) => {
         const result = await window.api.runs.fork({
           sourceRunId,
-          accountId: accountRes.data.id,
+          accountId,
           message: message.trim(),
         });
 
@@ -476,41 +279,12 @@ export function useWorkspaceRuns(
           throw new Error(result.error || "Failed to fork run");
         }
 
-        const newRunId = result.data.runId;
-
-        // Load the new forked run
-        const runResult = await window.api.runs.getById(newRunId);
-        if (runResult.success && runResult.data) {
-          const newRun = runResult.data;
-          setRuns((prev) => [newRun, ...prev]);
-          setActiveRunId(newRunId);
-
-          // Workspace status changed to in_progress on the backend
-          dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
-
-          setRunEvents((prev) => ({
-            ...prev,
-            [newRunId]: [],
-          }));
-
-          return newRunId;
-        }
-
-        return null;
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to fork run";
-        setError(message);
-        toast.error(message);
-        return null;
-      } finally {
-        setIsLoading(false);
-      }
+        return registerNewRun(result.data.runId);
+      }, null, "Failed to fork run");
     },
-    [dispatch],
+    [runOperation, registerNewRun],
   );
 
-  // Check if a run's session can be resumed
   const checkCanResume = useCallback(
     async (runId: string): Promise<boolean> => {
       try {
@@ -523,17 +297,14 @@ export function useWorkspaceRuns(
     [],
   );
 
-  // Close a run tab (archives it)
   const closeTab = useCallback(
     async (runId: string) => {
-      // Archive the run in backend
       try {
         await window.api.runs.archive(runId);
       } catch (error) {
         console.error("[useWorkspaceRuns] Failed to archive run:", error);
       }
 
-      // Remove from local state
       setRuns((prev) => {
         const newRuns = prev.filter((r) => r.id !== runId);
         if (activeRunId === runId && newRuns.length > 0) {
@@ -548,7 +319,6 @@ export function useWorkspaceRuns(
     [activeRunId, loadRunDetails],
   );
 
-  // Select a run tab
   const selectTab = useCallback(
     (runId: string) => {
       setActiveRunId(runId);

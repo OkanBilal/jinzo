@@ -191,7 +191,7 @@ export function LinkResourcesModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" role="presentation" onClick={handleCancel} />
+      <div className="absolute inset-0 bg-primary-950/40" role="presentation" onClick={handleCancel} />
 
       {/* Modal */}
       <div

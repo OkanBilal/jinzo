@@ -8,7 +8,7 @@ import {
 import { cn } from "../../lib/cn";
 
 const baseInputClasses =
-  "w-full rounded-xl border min-w-60 border-primary-200/70 dark:border-primary/8 bg-white/80 dark:bg-primary/4 px-3 py-2 text-sm text-primary-900 dark:text-primary-100  placeholder:text-primary-400/80 dark:placeholder:text-primary-400 focus:outline-none transition disabled:opacity-60 disabled:cursor-not-allowed";
+  "w-full rounded-xl border min-w-60 border-primary-200/70 dark:border-primary/8 bg-primary/80 dark:bg-primary/4 px-3 py-2 text-sm text-primary-900 dark:text-primary-100  placeholder:text-primary-400/80 dark:placeholder:text-primary-400 focus:outline-none transition disabled:opacity-60 disabled:cursor-not-allowed";
 
 const errorClasses =
   "border-red-300 focus:ring-red-300 focus:border-red-400 dark:border-red-800 dark:focus:ring-red-600";

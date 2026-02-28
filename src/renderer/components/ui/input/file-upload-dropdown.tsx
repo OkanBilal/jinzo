@@ -97,7 +97,7 @@ export function FileUploadDropdown({
                   <Button
                     type="button"
                     onClick={() => onRemoveFile(index)}
-                    className="absolute cursor-pointer inset-0 bg-black/50 flex items-center justify-center transition-opacity"
+                    className="absolute cursor-pointer inset-0 bg-primary-950/50 flex items-center justify-center transition-opacity"
                     aria-label="Remove image"
                   >
                     <Close className="w-4 h-4 text-primary-600 dark:text-primary-300" />

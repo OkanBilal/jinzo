@@ -1,14 +1,51 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useDeleteWorkspaceMutation } from "@/lib/redux/api";
+import { useDeleteWorkspaceMutation, useArchiveWorkspaceMutation } from "@/lib/redux/api";
 import { toast } from "@/components/ui/toast";
 import { useRouteType } from "@/hooks/use-route-type";
 import { getBaseRoutePath } from "@/lib/route-utils";
 
-export function useDeleteWorkspace() {
+function useNavigateAwayIfViewing() {
   const location = useLocation();
   const navigate = useNavigate();
   const routeType = useRouteType();
+
+  return (workspaceId: string) => {
+    const basePath = getBaseRoutePath(routeType === "claude" ? "claude" : "copilot");
+    if (location.pathname === `${basePath}/${workspaceId}`) {
+      navigate("/");
+    }
+  };
+}
+
+export function useArchiveWorkspace() {
+  const navigateAway = useNavigateAwayIfViewing();
+  const [archiveWorkspace, { isLoading: isArchiving }] = useArchiveWorkspaceMutation();
+
+  const handleArchiveClick = async (workspaceId: string) => {
+    const archivePromise = archiveWorkspace(workspaceId).unwrap();
+    toast.promise(archivePromise, {
+      loading: "Archiving workspace…",
+      success: "Workspace archived",
+      error: "Archive failed",
+    });
+
+    try {
+      await archivePromise;
+      navigateAway(workspaceId);
+    } catch (error) {
+      console.error("Failed to archive workspace:", error);
+    }
+  };
+
+  return {
+    isArchiving,
+    handleArchiveClick,
+  };
+}
+
+export function useDeleteWorkspace() {
+  const navigateAway = useNavigateAwayIfViewing();
   const [workspaceToDelete, setWorkspaceToDelete] = useState<string | null>(null);
   const [deleteWorkspace, { isLoading: isDeleting }] = useDeleteWorkspaceMutation();
 
@@ -30,13 +67,7 @@ export function useDeleteWorkspace() {
 
     try {
       await deletePromise;
-
-      // Navigate away if we were viewing the deleted workspace
-      const basePath = getBaseRoutePath(routeType === "claude" ? "claude" : "copilot");
-      if (location.pathname === `${basePath}/${workspaceToDelete}`) {
-        navigate("/");
-      }
-
+      navigateAway(workspaceToDelete);
       setWorkspaceToDelete(null);
     } catch (error) {
       console.error("Failed to delete workspace:", error);

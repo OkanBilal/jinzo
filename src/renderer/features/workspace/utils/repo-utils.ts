@@ -33,6 +33,11 @@ export function isNewRunTab(tabId: string): boolean {
   return tabId === "new-run";
 }
 
+/** Check if an activeTab ID represents a run tab (not editor, issue, note, or new-run). */
+export function isRunTab(tabId: string): boolean {
+  return tabId !== "editor" && !isIssueTab(tabId) && !isNoteTab(tabId) && !isNewRunTab(tabId);
+}
+
 /** Check if an activeTab ID represents a note tab. */
 export function isNoteTab(tabId: string): boolean {
   return tabId.startsWith("note:");

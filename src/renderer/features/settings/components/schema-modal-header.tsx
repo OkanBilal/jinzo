@@ -27,7 +27,7 @@ export function SchemaModalHeader({
         <Heading3>Structured outputs</Heading3>
         <div className="relative flex items-center rounded-xl bg-primary-950/4 dark:bg-primary/6 p-0.5">
           <div
-            className="absolute top-0.5 h-[calc(100%-4px)] w-[calc(50%-2px)] rounded-[11px] bg-white dark:bg-primary-800 shadow-sm transition-transform duration-200 ease-out"
+            className="absolute top-0.5 h-[calc(100%-4px)] w-[calc(50%-2px)] rounded-[11px] bg-primary dark:bg-primary-800 shadow-sm transition-transform duration-200 ease-out"
             style={{
               transform:
                 activeTab === "schemas"

@@ -110,7 +110,7 @@ export function WebSearchDropdown({
               variant="submit"
               onClick={handleSaveKey}
               disabled={saving}
-              className="text-xs px-2.5 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors cursor-pointer"
+              className="text-xs px-2.5 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-primary transition-colors cursor-pointer"
             >
               {saving ? "Saving..." : "Save"}
             </Button>

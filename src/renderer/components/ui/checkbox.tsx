@@ -41,7 +41,7 @@ export function Checkbox({
           ${
             checked
               ? "bg-primary-500 dark:bg-primary-500 border-primary-600 dark:border-primary-500"
-              : "bg-white dark:bg-primary-900 border-primary-300 dark:border-primary-700"
+              : "bg-primary dark:bg-primary-900 border-primary-300 dark:border-primary-700"
           }
           ${
             !disabled &&
@@ -50,7 +50,7 @@ export function Checkbox({
         `}
       >
         <svg
-          className={`w-3.5 h-3.5 text-white dark:text-primary-900 transition-opacity duration-200 ${
+          className={`w-3.5 h-3.5 text-primary dark:text-primary-900 transition-opacity duration-200 ${
             checked ? "opacity-100" : "opacity-0"
           }`}
           viewBox="0 0 16 16"

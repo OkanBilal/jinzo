@@ -212,7 +212,7 @@ export default function EditSpaceModal({
   return createPortal(
     <div className="fixed inset-0 z-100">
       <div
-        className="absolute inset-0 bg-black/50 transition-opacity duration-200"
+        className="absolute inset-0 bg-primary-950/50 transition-opacity duration-200"
         style={{ opacity: isClosing ? 0 : 1 }}
         role="presentation"
         onClick={handleAnimatedClose}
