@@ -19,11 +19,21 @@ export function useEncryptedText(
   const {
     normalDuration = 1500,
     scrambleDuration = 1500,
-    frameSpeed = 50,
   } = options;
 
   const [displayText, setDisplayText] = useState(text);
   const [isScrambling, setIsScrambling] = useState(false);
+
+  // Sync displayText when disabled or text changes while disabled
+  const [prevText, setPrevText] = useState(text);
+  const [prevEnabled, setPrevEnabled] = useState(enabled);
+  if (text !== prevText || enabled !== prevEnabled) {
+    setPrevText(text);
+    setPrevEnabled(enabled);
+    if (!enabled) {
+      setDisplayText(text);
+    }
+  }
 
   const getRandomChar = useCallback(() => {
     return CHARS[Math.floor(Math.random() * CHARS.length)];
@@ -49,7 +59,6 @@ export function useEncryptedText(
 
   useEffect(() => {
     if (!enabled) {
-      setDisplayText(text);
       return;
     }
 

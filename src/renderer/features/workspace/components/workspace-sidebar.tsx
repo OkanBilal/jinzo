@@ -38,9 +38,6 @@ export function WorkspaceSidebar() {
   const workspaceId = useSelector(
     (state: RootState) => state.workspace.activeWorkspaceId,
   );
-  const selectedFile = useSelector(
-    (state: RootState) => state.workspace.selectedFile,
-  );
 
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
 

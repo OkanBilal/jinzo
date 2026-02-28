@@ -8,8 +8,6 @@ import {
   Archive,
   Settings,
   External,
-  Bash,
-  Apps,
   OpenWith,
 } from "@/components/ui/icons";
 import { useGetInstalledAppsQuery } from "@/lib/redux/api";

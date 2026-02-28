@@ -1,5 +1,5 @@
 import { Plus, Close } from "@/components/ui/icons";
-import { Claude, Copilot } from "@/components/ui/icons/space";
+import { Claude } from "@/components/ui/icons/space";
 import { CopilotStatic } from "@/components/ui/icons";
 import { RunTab, getTabTitle } from "./run-tab";
 import { EditorTab } from "./editor-tab";

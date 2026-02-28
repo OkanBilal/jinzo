@@ -8,7 +8,6 @@ export function registerAppsIpc() {
   ipcMain.handle("apps:getAll", () => appsController.getAll());
   ipcMain.handle("apps:updateById", (_, id, payload) => appsController.updateById(id, payload));
 
-  console.log("Apps IPC handlers registered");
 }
 
 export function unregisterAppsIpc() {

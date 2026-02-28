@@ -14,7 +14,6 @@ import {
 } from "../../chat.constants";
 
 const SOURCE_DISPLAY_NAMES = new Map<string, string>(SOURCES.map((s) => [s.id, s.displayName]));
-const ITEM_TYPE_DISPLAY_NAMES = new Map<string, string>(ITEM_TYPES.map((t) => [t.id, t.displayName]));
 
 // Map entity kind → source display names and type display name
 // Keyed by actual DB kinds (e.g., "spotify_track", "hn_story") not item type IDs

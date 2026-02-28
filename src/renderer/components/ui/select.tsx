@@ -195,7 +195,7 @@ export default function Select<T extends string = string>({
             }}
           >
             <div className="max-h-60 overflow-auto noscrollbar">
-              {options.map((option, index) => (
+              {options.map((option) => (
                 <Button
                   type="button"
                   key={option.value}

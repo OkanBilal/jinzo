@@ -43,7 +43,7 @@ export function useAutoUpdate() {
     const unsubscribe = window.api.updates.onStatusChange((data: UpdateState) => {
       setState(data);
     });
-    return unsubscribe;
+    return () => { unsubscribe(); };
   }, []);
 
   const check = useCallback(async () => {

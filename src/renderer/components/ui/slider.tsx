@@ -21,7 +21,6 @@ export function Slider({
   min = 0,
   max = 100,
   step = 1,
-  label,
   minLabel,
   maxLabel,
   showValue = true,

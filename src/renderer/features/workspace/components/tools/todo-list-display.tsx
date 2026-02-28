@@ -35,7 +35,7 @@ export function TodoListDisplay({ todos }: { todos: TodoItem[] }) {
 
       {isExpanded && (
         <div className="mt-2 ml-5 space-y-1 border-l border-primary-200/50 dark:border-primary-700/30 pl-3">
-          {todos.map((todo, idx) => (
+          {todos.map((todo) => (
             <div key={todo.content} className="flex items-start gap-2 text-s">
               <div
                 className={`mt-0.5 size-4 rounded flex items-center justify-center shrink-0 ${

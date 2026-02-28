@@ -1,4 +1,3 @@
-import { Copilot as CopilotIcon } from "@/components/ui/icons/space";
 import type { Workspace } from "../types";
 import { useEncryptedText } from "../hooks/use-encrypted-text";
 import { useRouteType } from "@/hooks/use-route-type";
@@ -6,6 +5,7 @@ import { useRouteType } from "@/hooks/use-route-type";
 interface WorkspaceEmptyStateProps {
   workspace: Workspace | null;
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function WorkspaceEmptyState({ workspace }: WorkspaceEmptyStateProps) {
   const routeType = useRouteType();
   const isClaudeRoute = routeType === "claude";

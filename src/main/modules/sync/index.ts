@@ -13,7 +13,7 @@ export { syncController } from "./sync.controller";
 export { syncService } from "./sync.service";
 
 // Repository
-export { syncRepo, type InsertEntityResult } from "./sync.repo";
+export { syncRepo } from "./sync.repo";
 
 // Fetchers
 export { fetchAllEntities } from "./sync.fetchers";

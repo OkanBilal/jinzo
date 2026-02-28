@@ -1,6 +1,6 @@
-import { Archive, Close, CopilotStatic } from "@/components/ui/icons";
+import { Archive, CopilotStatic } from "@/components/ui/icons";
 import type { Run } from "../types";
-import { Claude, Copilot } from "@/components/ui/icons/space";
+import { Claude } from "@/components/ui/icons/space";
 import { Button } from "@/components/ui/button";
 import { AnimatedTitle } from "@/components/ui/animated-title";
 
@@ -13,7 +13,7 @@ interface RunTabProps {
   variant?: "copilot" | "claude";
 }
 
-export function RunTab({ run, isActive, onClick, onClose, title, variant = "copilot" }: RunTabProps) {
+export function RunTab({ isActive, onClick, onClose, title, variant = "copilot" }: RunTabProps) {
   return (
     <div
       role="button"

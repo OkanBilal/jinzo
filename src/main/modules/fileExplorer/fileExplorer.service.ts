@@ -16,6 +16,7 @@ import { DEFAULT_EXCLUDE_PATTERNS, MAX_FILE_SIZE_BYTES } from "./fileExplorer.dt
 const DEBUG = true;
 function debugLog(message: string, ...args: unknown[]) {
   if (DEBUG) {
+    console.log(`[FileExplorer] ${message}`, ...args);
   }
 }
 
@@ -565,6 +566,7 @@ export const fileExplorerService = {
               }
             }
           } catch (err) {
+            console.warn(`[FileExplorer] Cannot read subdir ${fullPath}:`, err);
             // Can't read subdirectory - assume it might have children
             debugLog(`listDir: cannot read subdir ${fullPath}, assuming hasChildren=true`);
             hasChildren = true;

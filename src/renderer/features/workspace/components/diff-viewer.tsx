@@ -111,8 +111,8 @@ export function DiffViewer({
   const suggestionColor = isDarkMode ? "#86efac" : "#16a34a";
 
   const renderAnnotation = useMemo(() => {
-    return (annotation: DiffLineAnnotation<FindingMeta>) => {
-      const { findings } = annotation.metadata!;
+    function FindingAnnotation({ metadata }: DiffLineAnnotation<FindingMeta>) {
+      const { findings } = metadata!;
       return (
         <div className="finding-annotation">
           {findings.map((f, i) => {
@@ -149,7 +149,8 @@ export function DiffViewer({
           })}
         </div>
       );
-    };
+    }
+    return FindingAnnotation;
   }, [colors, textColor, mutedColor, suggestionColor]);
 
   return (

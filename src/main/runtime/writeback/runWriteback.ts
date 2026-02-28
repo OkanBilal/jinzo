@@ -187,7 +187,7 @@ export function createRunWriteback(config: RunWritebackConfig): RunWriteback {
             }
 
             if (!dbRowId) {
-              let key = getToolCallKey(event);
+              const key = getToolCallKey(event);
               const mapped = pendingToolCalls.get(key);
               if (mapped) {
                 dbRowId = mapped;

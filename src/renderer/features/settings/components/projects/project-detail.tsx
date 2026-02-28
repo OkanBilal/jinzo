@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo, useReducer } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Heading2, Heading3, Muted, Caption } from "@/components/ui/text";
+import { Heading2, Muted, Caption } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
-import Select from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
 import Alert from "@/components/ui/alert";
 import {
@@ -12,7 +11,6 @@ import {
   useRemoveProjectMutation,
   useGetProjectResourcesQuery,
   useRemoveProjectResourceMutation,
-  type ProjectResourceWithDetails,
 } from "@/lib/redux/api";
 import { SettingsSection, SettingsRow, SettingsDivider } from "../settings-layout";
 import SpaceIconPicker from "@/components/layout/sidebar/space-icon-picker";
@@ -121,7 +119,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   const [removeResource] = useRemoveProjectResourceMutation();
 
   const [state, dispatch] = useReducer(formReducer, initialState);
-  const { defaultBranch, setupScript, runScript, archiveScript, icon, iconMode, isIconPickerOpen, isDirty, liveBranches } = state;
+  const { defaultBranch, setupScript, runScript, archiveScript, icon, iconMode, isIconPickerOpen, isDirty } = state;
 
   // Sync form state when project data loads
   if (project !== state.prevProject) {
@@ -149,14 +147,6 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       })
       .catch(() => {});
   }, [project?.rootPath]);
-
-  const branches =
-    liveBranches.length > 0 ? liveBranches : (project?.branches ?? []);
-
-  const branchOptions = useMemo(
-    () => branches.map((b) => ({ value: b, label: b })),
-    [branches],
-  );
 
   const handleSave = async () => {
     if (saving || !project) return;

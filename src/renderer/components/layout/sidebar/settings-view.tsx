@@ -1,17 +1,13 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Body, Caption } from "@/components/ui/text";
+import { Body } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import {
   Apps,
-  Calendar,
-  Bell,
   Personalize,
-  Security,
   General,
   ChevronUp,
   CopilotStatic,
   Branch,
-  Gpt,
   Chart,
 } from "@/components/ui/icons";
 import type { SettingsSection } from "@/features/chat/components/input/types";
@@ -76,7 +72,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
 
       <div className="flex-1 px-3 mb-1 overflow-y-auto noscrollbar">
         <nav className="space-y-0.5">
-          {menuItems.map((item, index) => {
+          {menuItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = isOnSettingsPage && activeSection === item.id;
             return (
@@ -110,7 +106,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
             </span>
           </div>
           <div className="space-y-0.5">
-            {providerItems.map((item, index) => {
+            {providerItems.map((item) => {
               const IconComponent = item.icon;
               const isActive = isOnSettingsPage && activeSection === item.id;
               return (
@@ -146,7 +142,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
               </span>
             </div>
             <div className="space-y-0.5">
-              {projects.map((project, index) => {
+              {projects.map((project) => {
                 const isActive =
                   isOnSettingsPage &&
                   activeSection === "projects" &&

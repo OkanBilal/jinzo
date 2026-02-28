@@ -96,6 +96,11 @@ export function WorkspaceInput({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const [slashMenu, updateSlashMenu] = useReducer(
+    (prev: { visible: boolean; filter: string }, next: Partial<{ visible: boolean; filter: string }>) => ({ ...prev, ...next }),
+    { visible: false, filter: "" },
+  );
+
   // Detect slash commands when goal is set externally (e.g. quick actions)
   useEffect(() => {
     const slashMatch = goal.match(/(?:^|\s)\/(\S*)$/);
@@ -104,11 +109,6 @@ export function WorkspaceInput({
       inputRef.current?.focus();
     }
   }, [goal]);
-
-  const [slashMenu, updateSlashMenu] = useReducer(
-    (prev: { visible: boolean; filter: string }, next: Partial<{ visible: boolean; filter: string }>) => ({ ...prev, ...next }),
-    { visible: false, filter: "" },
-  );
 
   const handleGoalChange = useCallback(
     (value: string) => {

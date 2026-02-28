@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import { Close, Trash, Edit, Duplicate } from "@/components/ui/icons";
+import { Trash, Edit, Duplicate } from "@/components/ui/icons";
 import { Muted } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

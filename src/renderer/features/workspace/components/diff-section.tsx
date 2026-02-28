@@ -13,7 +13,6 @@ import { FileIconComponent } from "./file-explorer/components/file-icon";
 import {
   Diff,
   Sparkles,
-  Check,
   Commit,
   CircleDot,
 } from "@/components/ui/icons";
@@ -97,9 +96,10 @@ export function DiffSection({
     { skip: !workspaceId },
   );
 
+  const diffText = diff?.diffText;
   const fileStats = useMemo(
-    () => (diff?.diffText ? parsePerFileStats(diff.diffText) : {}),
-    [diff?.diffText],
+    () => (diffText ? parsePerFileStats(diffText) : {}),
+    [diffText],
   );
 
   // Fetch latest review findings for badge display
@@ -115,15 +115,16 @@ export function DiffSection({
 
   // Group findings by file → { critical: n, warning: n, info: n }
   // Normalize paths so diff file paths and finding file paths match
+  const diffFiles = diff?.files;
   const findingsByFile = useMemo(() => {
-    if (!allFindings || !diff?.files)
+    if (!allFindings || !diffFiles)
       return {} as Record<string, Record<FindingSeverity, number>>;
     const norm = (p: string) => p.replace(/^\.?\//, "");
     const map: Record<string, Record<FindingSeverity, number>> = {};
     for (const f of allFindings) {
       const fNorm = norm(f.file);
       // Match finding to a diff file path
-      const matchedFile: string | undefined = diff.files.find((dp: string) => {
+      const matchedFile: string | undefined = diffFiles.find((dp: string) => {
         const dpNorm = norm(dp);
         return (
           dpNorm === fNorm ||
@@ -141,7 +142,7 @@ export function DiffSection({
       map[key][sev]++;
     }
     return map;
-  }, [allFindings, diff?.files]);
+  }, [allFindings, diffFiles]);
 
   if (isFetching) {
     return (

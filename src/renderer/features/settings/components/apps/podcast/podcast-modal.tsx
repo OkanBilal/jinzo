@@ -315,6 +315,7 @@ function AddPodcastsStep({ onComplete }: { onComplete: () => void }) {
 function ManagePodcastsStep({ onRevoke }: { onRevoke: () => void }) {
   const { data, setData, errors, setErrors, goTo } =
     useWizard<PodcastWizardData>();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(false);
 
   const [deleteResource] = useDeleteResourceMutation();

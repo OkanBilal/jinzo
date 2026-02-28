@@ -1,4 +1,4 @@
-import { Close, Document, Note, Notes } from "@/components/ui/icons";
+import { Close, Note } from "@/components/ui/icons";
 import type { ReviewTab } from "@/lib/redux/slices/workspaceSlice";
 
 interface NoteTabProps {

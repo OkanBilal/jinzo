@@ -75,7 +75,7 @@ export function IssueListItem({
     onAddToContext?.();
   };
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (_e: React.MouseEvent) => {
     onClick();
   };
 

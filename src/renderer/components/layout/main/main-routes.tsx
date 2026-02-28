@@ -1,7 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import Home from "@/routes/Home";
-import Chat from "@/routes/Chat";
-import Journal from "@/routes/Journal";
 import Settings from "@/routes/Settings";
 import Copilot from "@/routes/Copilot";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";

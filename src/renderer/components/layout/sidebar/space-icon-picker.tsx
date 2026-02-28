@@ -4,11 +4,9 @@ import { useClickOutside } from "@/hooks/use-click-outside";
 import { availableIcons } from "@/lib/icon-registry";
 import { Button } from "@/components/ui/button";
 import { Close, SelectOption } from "@/components/ui/icons";
-import Select from "@/components/ui/select";
 
 function CurrentIcon({
   icon,
-  iconMode,
 }: {
   icon: string;
   iconMode: "emoji" | "icon";

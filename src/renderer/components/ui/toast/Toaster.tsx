@@ -21,7 +21,7 @@ function getDefaultIcon(type: ToastType) {
   }
 }
 
-function ToastItem({ toast, index, onDismiss }: ToastItemProps) {
+function ToastItem({ toast, onDismiss }: ToastItemProps) {
   const [isPaused, setIsPaused] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [exiting, setExiting] = useState(false);

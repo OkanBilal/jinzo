@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { Run, RunEvent, RunArtifact, ToolCall } from "../types";
 import { toast } from "@/components/ui/toast";
 import { useAppDispatch } from "@/lib/redux/hooks";
@@ -306,10 +306,14 @@ export function useWorkspaceRuns(
         pollingRef.current = null;
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeRunId, runs, loadRunDetails]);
 
   // Auto-scroll to bottom
-  const currentEvents = activeRunId ? runEvents[activeRunId] || [] : [];
+  const currentEvents = useMemo(
+    () => (activeRunId ? runEvents[activeRunId] || [] : []),
+    [activeRunId, runEvents],
+  );
   useEffect(() => {
     eventsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [currentEvents]);
@@ -387,7 +391,7 @@ export function useWorkspaceRuns(
         setIsLoading(false);
       }
     },
-    [],
+    [dispatch],
   );
 
   // Continue an existing run (resume session)
@@ -443,7 +447,7 @@ export function useWorkspaceRuns(
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [dispatch]);
 
   // Fork an existing run's session into a new run
   const forkRun = useCallback(
@@ -503,7 +507,7 @@ export function useWorkspaceRuns(
         setIsLoading(false);
       }
     },
-    [],
+    [dispatch],
   );
 
   // Check if a run's session can be resumed

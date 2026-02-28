@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Caption } from "@/components/ui/text";
-import { ArrowUp, Group, Layers } from "@/components/ui/icons";
+import { ArrowUp, Layers } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
 import { Button } from "@/components/ui/button";
 import { WorkspaceResponse } from "src/main/modules/workspaces";

@@ -15,7 +15,6 @@ function SpaceSelector({
   spaces,
   activeSpaceId,
   onSpaceChange,
-  onContextMenu,
 }: SpaceSelectorProps) {
   const [hoveredSpaceId, setHoveredSpaceId] = useState<string | null>(null);
 

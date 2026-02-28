@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Trash, Option, Edit } from "@/components/ui/icons";
-import { Muted, Timestamp } from "@/components/ui/text";
+import { Muted } from "@/components/ui/text";
 import { AnimatedTitle } from "@/components/ui/animated-title";
 import {
   ChatSession,

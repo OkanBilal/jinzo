@@ -1,5 +1,4 @@
 import { useState, useRef } from "react";
-import { Caption } from "@/components/ui/text";
 import { Close } from "@/components/ui/icons";
 
 interface StopSequenceInputProps {

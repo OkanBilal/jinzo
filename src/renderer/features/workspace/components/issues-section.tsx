@@ -30,20 +30,21 @@ export function IssuesSection({
     { skip: !projectId }
   );
 
+  const [prevProjectId, setPrevProjectId] = useState(projectId);
   const [expanded, setExpanded] = useState(() => {
     const stored = localStorage.getItem(getStorageKey(projectId));
     return stored !== null ? stored === "true" : true;
   });
 
+  if (projectId !== prevProjectId) {
+    setPrevProjectId(projectId);
+    const stored = localStorage.getItem(getStorageKey(projectId));
+    setExpanded(stored !== null ? stored === "true" : true);
+  }
+
   useEffect(() => {
     localStorage.setItem(getStorageKey(projectId), String(expanded));
   }, [expanded, projectId]);
-
-  // Reset expanded state when project changes
-  useEffect(() => {
-    const stored = localStorage.getItem(getStorageKey(projectId));
-    setExpanded(stored !== null ? stored === "true" : true);
-  }, [projectId]);
 
   if (!projectId) return null;
 

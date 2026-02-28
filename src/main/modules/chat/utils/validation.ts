@@ -1,10 +1,6 @@
 import type { ChatRequestBody, ValidationResult } from "../chat.dto";
 import { DEFAULT_MODEL } from "../chat.constants";
 
-
-
-
-
 export function validateChatRequest(body: ChatRequestBody): ValidationResult {
   if (!body.question) {
     return {

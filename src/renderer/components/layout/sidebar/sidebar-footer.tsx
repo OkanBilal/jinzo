@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { useEffect } from "react";
-import { Settings, Plus, Question } from "@/components/ui/icons";
+import { Settings, Question } from "@/components/ui/icons";
 import SpaceSelector from "./space-selector";
 import type { Space } from "@/lib/redux/api";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,6 @@ export function SidebarFooter({
   onSpaceChange,
   onSpaceContextMenu,
   onSettingsClick,
-  onPlusClick,
   onHelpClick,
 }: SidebarFooterProps) {
   useEffect(() => {

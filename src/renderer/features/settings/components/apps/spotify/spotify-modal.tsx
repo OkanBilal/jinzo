@@ -4,14 +4,12 @@ import {
   BodyMedium,
   Caption,
   Muted,
-  ErrorText,
 } from "../../../../../components/ui/text";
 import {
   WizardModal,
   useWizard,
   type WizardStep,
 } from "../../../../../components/ui/wizard-modal";
-import { Button } from "../../../../../components/ui/button";
 import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";

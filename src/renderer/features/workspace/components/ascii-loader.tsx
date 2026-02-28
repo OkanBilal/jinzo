@@ -36,10 +36,10 @@ export function AsciiLoader({
   className?: string;
   variant?: "claude" | "copilot";
 }) {
-  const [state, dispatch] = useReducer(loaderReducer, {
+  const [state, dispatch] = useReducer(loaderReducer, undefined, () => ({
     frameIndex: 0,
     word: LOADER_WORDS[Math.floor(Math.random() * LOADER_WORDS.length)],
-  });
+  }));
 
   useEffect(() => {
     const frameInterval = setInterval(() => dispatch({ type: "tick" }), 80);

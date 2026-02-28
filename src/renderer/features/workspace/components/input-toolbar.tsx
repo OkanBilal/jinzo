@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useRef, useCallback } from "react";
 import { SendButton } from "@/components/ui/input/send-button";
 import { DictationButton } from "@/components/ui/input/dictation-button";

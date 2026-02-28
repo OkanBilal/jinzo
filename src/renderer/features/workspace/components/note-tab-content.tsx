@@ -9,28 +9,6 @@ interface NoteTabContentProps {
   reviewId: string;
 }
 
-const statusConfig: Record<string, { label: string; dotClass: string; badgeClass: string }> = {
-  open: {
-    label: "Open",
-    dotClass: "bg-blue-500",
-    badgeClass: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400",
-  },
-  in_review: {
-    label: "In Review",
-    dotClass: "bg-amber-500",
-    badgeClass: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400",
-  },
-  approved: {
-    label: "Approved",
-    dotClass: "bg-green-500",
-    badgeClass: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
-  },
-  rejected: {
-    label: "Rejected",
-    dotClass: "bg-red-500",
-    badgeClass: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
-  },
-};
 
 export function NoteTabContent({ reviewId }: NoteTabContentProps) {
   const { data: review, isLoading } = useGetReviewByIdQuery(reviewId);
@@ -51,7 +29,6 @@ export function NoteTabContent({ reviewId }: NoteTabContentProps) {
     );
   }
 
-  const config = statusConfig[review.status] ?? statusConfig.open;
   const updatedAt = review.updatedAt
     ? new Date(typeof review.updatedAt === "number" ? review.updatedAt * 1000 : review.updatedAt)
     : null;

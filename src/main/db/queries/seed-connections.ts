@@ -1,7 +1,5 @@
 import crypto from "crypto";
-
 import { eq } from "drizzle-orm";
-
 import { connections, connectionSyncState } from "../schema";
 import { getDb } from "../client";
 

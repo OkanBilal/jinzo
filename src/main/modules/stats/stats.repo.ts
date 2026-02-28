@@ -1,4 +1,4 @@
-import { sql, eq, and, gte, desc, count } from "drizzle-orm";
+import { sql, eq, count } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import {
   runUsage,

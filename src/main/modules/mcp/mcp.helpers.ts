@@ -1,4 +1,3 @@
-import type { OllamaToolDefinition } from "./mcp.dto";
 
 // ─────────────────────────────────────────────────────────────
 // Tool Type Helpers

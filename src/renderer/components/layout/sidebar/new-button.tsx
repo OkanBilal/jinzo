@@ -52,6 +52,7 @@ export default function NewButton({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onClick, dropdownItems]);
 
   return (
@@ -83,7 +84,7 @@ export default function NewButton({
           onClose={handleCloseMenu}
           minWidth={180}
         >
-          {dropdownItems.map((item, index) => (
+          {dropdownItems.map((item) => (
             <DropdownMenuItem
               key={item.label}
               onClick={() => {

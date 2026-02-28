@@ -6,7 +6,7 @@
 const BASE_CHARS_PER_TOKEN = 4;
 
 // Patterns that indicate content with different token densities
-const CODE_PATTERN = /[{}\[\]();=<>|&!+\-*/\\^~`]/g;
+const CODE_PATTERN = /[{}[\]();=<>|&!+\-*/\\^~`]/g;
 const URL_PATTERN = /https?:\/\/\S+/g;
 const WHITESPACE_HEAVY_PATTERN = /\s{2,}/g;
 

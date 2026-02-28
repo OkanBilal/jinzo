@@ -232,7 +232,7 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
           Atlassian API tokens
         </a>
         <br />
-        2. Click "Create API token"
+        2. Click &quot;Create API token&quot;
         <br />
         3. Give it a name and copy the token
       </div>

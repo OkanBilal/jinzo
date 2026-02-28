@@ -17,7 +17,6 @@ import type {
   HooksConfig,
   HookMatcher,
   AgentsConfig,
-  AgentDefinition,
   FileAttachment,
 } from "./adapter.types";
 import { findClaudeBinary, resolveCandidate } from "../providers.utils";
@@ -976,7 +975,7 @@ export function createClaudeAdapter(
     };
   }
 
-  function mapSDKMessage(msg: SDKMessage, runId: string): WorkRunEvent[] {
+  function mapSDKMessage(msg: SDKMessage, _runId: string): WorkRunEvent[] {
     const events: WorkRunEvent[] = [];
     const ts = Date.now();
 
@@ -2692,7 +2691,7 @@ export function createClaudeAdapter(
       }
 
       // Clean up: remove quotes, "Title:" prefix, markdown, and take only first line
-      let title = titleText
+      const title = titleText
         .trim()
         .split("\n")[0]
         .trim()

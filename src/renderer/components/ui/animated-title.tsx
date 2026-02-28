@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useState } from "react";
 import { LazyMotion, m, AnimatePresence, domAnimation } from "motion/react";
 
 interface AnimatedTitleProps {
@@ -7,8 +7,8 @@ interface AnimatedTitleProps {
 }
 
 export function AnimatedTitle({ title, className = "" }: AnimatedTitleProps) {
-  const initialTitleRef = useRef(title);
-  const hasChanged = title !== initialTitleRef.current;
+  const [initialTitle] = useState(title);
+  const hasChanged = title !== initialTitle;
 
   if (!hasChanged) {
     return <span className={className}>{title}</span>;

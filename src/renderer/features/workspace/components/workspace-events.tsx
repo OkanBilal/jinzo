@@ -12,7 +12,7 @@ import { isIssueTab, getIssueEntityId, isNoteTab, getNoteId, isNewRunTab } from 
 import { AsciiLoader } from "./ascii-loader";
 import type { ToolApprovalRequest } from "../hooks/use-tool-approval";
 import { ToolApprovalDialog } from "./tools/tool-approval-dialog";
-import { Clipboard, Check, Fork, Branch } from "@/components/ui/icons";
+import { Clipboard, Check, Branch } from "@/components/ui/icons";
 import { useGetAppSettingsQuery } from "@/lib/redux/api";
 import { Button } from "@/components/ui/button";
 

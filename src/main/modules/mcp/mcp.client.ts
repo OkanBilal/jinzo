@@ -8,7 +8,7 @@ import {
   executeSpaceTool,
   executeJournalTool,
 } from "./tools";
-import type { OllamaToolDefinition, MCPToolResponse } from "./mcp.dto";
+import type { OllamaToolDefinition } from "./mcp.dto";
 
 // ─────────────────────────────────────────────────────────────
 // MCP Client - Provides unified access to all MCP tools

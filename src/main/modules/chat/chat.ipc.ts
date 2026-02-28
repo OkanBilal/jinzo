@@ -8,7 +8,7 @@ import {
   validateChatRequest,
 } from "./utils";
 import { normalizeChatRequest } from "./utils/validation";
-import { IPC_CHANNELS, DEFAULT_MODEL } from "./chat.constants";
+import { IPC_CHANNELS } from "./chat.constants";
 import type { ChatRequestBody, ChatConfig } from "./chat.dto";
 
 // ─────────────────────────────────────────────────────────────

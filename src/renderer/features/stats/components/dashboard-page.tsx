@@ -7,7 +7,6 @@ import HourHeatmap from "./hour-heatmap";
 import CostByModelChart from "./cost-by-model-chart";
 import ToolUsageChart from "./tool-usage-chart";
 import RecentSessionsList from "./recent-sessions-list";
-import CodeActivityStats from "./code-activity-stats";
 import { Heading2 } from "@/components/ui/text";
 import SuccessRateChart from "./success-rate-chart";
 
@@ -36,6 +35,7 @@ export default function DashboardPage() {
         width: tabRect.width,
       });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, data]);
 
   useLayoutEffect(() => {

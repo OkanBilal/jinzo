@@ -48,8 +48,6 @@ export function augmentPathForPackagedApp(): void {
 // Environment Diagnostics
 // ─────────────────────────────────────────────────────────────
 
-let diagnosticsLogged = false;
-
 /**
  * Log environment diagnostics once. Useful for debugging packaged app issues.
  */
@@ -259,7 +257,9 @@ export function findClaudeBinary(): string | null {
         }
       }
     }
-  } catch {}
+  } catch {
+    logWarn("Error checking Anthropic versions directory:", versionsDir);
+  }
 
   // ─────────────────────────────────────────────────────────────
   // 2. Check common fixed installation paths
@@ -321,7 +321,9 @@ export function findClaudeBinary(): string | null {
         return resolved;
       }
     }
-  } catch {}
+  } catch {
+    // Ignore errors (command not found, etc.)
+  }
 
   logWarn("Claude CLI not found in any known location");
   return null;
@@ -388,7 +390,9 @@ export function findCopilotCliPath(): string | null {
           return candidate;
         }
       }
-    } catch {}
+    } catch {
+      // Ignore errors and continue checking other candidates
+    }
   }
 
   logWarn(`Copilot native binary (${nativePkg}/${binaryName}) not found in packaged app`);

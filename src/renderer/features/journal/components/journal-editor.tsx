@@ -64,6 +64,7 @@ export function JournalEditor({ entityId }: JournalEditorProps) {
         dispatch(handleTitleUpdate({ entityId, title: newTitle }));
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journal?.title]);
 
   useEffect(() => {

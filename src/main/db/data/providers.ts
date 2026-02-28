@@ -1,13 +1,6 @@
 import type { CreateProviderPayload } from "../../modules/providers/providers.dto";
 
-// ─────────────────────────────────────────────────────────────
-// Default Providers Seed Data
-// ─────────────────────────────────────────────────────────────
-
 export const seedProviders: CreateProviderPayload[] = [
-  // ─────────────────────────────────────────────
-  // LLM Runtime: Ollama (Chat)
-  // ─────────────────────────────────────────────
   // {
   //   id: "ollama",
   //   kind: "llm_runtime",
@@ -32,9 +25,6 @@ export const seedProviders: CreateProviderPayload[] = [
   //   },
   // },
 
-  // ─────────────────────────────────────────────
-  // Agent Runtime: GitHub Copilot (CLI/SDK)
-  // ─────────────────────────────────────────────
   {
     id: "copilot_cli",
     kind: "agent_runtime",
@@ -42,16 +32,13 @@ export const seedProviders: CreateProviderPayload[] = [
     isEnabled: true,
     defaultModel: "claude-opus-4-6",
     config: {
-      // CopilotAdapterConfig interface fields
-      // binary is auto-resolved from @github/copilot package; only set for custom paths
-      transport: "stdio" as const, // Transport mode: "stdio" or "tcp"
-      timeout: 600000, // Timeout in milliseconds
-      logLevel: "info" as const, // Log level for the SDK
-      autoRestart: false, // Auto-restart on crash
+      transport: "stdio" as const,
+      timeout: 600000, 
+      logLevel: "info" as const,
+      autoRestart: false,
     },
     capabilities: {
-      mode: ["run"], // work runs
-      tools: true,
+      mode: ["run"],
       streaming: true,
       workspaceAware: true,
       artifacts: ["patch", "file", "log", "command_result"],
@@ -59,20 +46,16 @@ export const seedProviders: CreateProviderPayload[] = [
     },
   },
 
-  // ─────────────────────────────────────────────
-  // Agent Runtime: Claude Code (future)
-  // ─────────────────────────────────────────────
   {
     id: "claude_code",
     kind: "agent_runtime",
     displayName: "Claude Code (Local Agent)",
-    isEnabled: true, // Enable Claude provider
-    defaultModel: "claude-opus-4-6", // Updated model name
+    isEnabled: true,
+    defaultModel: "claude-opus-4-6",
     config: {
-      // ClaudeCodeAdapterConfig interface fields
-      timeout: 600000, // Timeout in milliseconds (10 minutes)
-      apiKey: process.env.ANTHROPIC_API_KEY, // API key from environment
-      permissionMode: "default", // Permission mode for tool use
+      timeout: 600000,
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      permissionMode: "default",
     },
     capabilities: {
       mode: ["run"],
@@ -83,5 +66,4 @@ export const seedProviders: CreateProviderPayload[] = [
       notes: "Claude Code adapter using Anthropic SDK",
     },
   },
-
 ];

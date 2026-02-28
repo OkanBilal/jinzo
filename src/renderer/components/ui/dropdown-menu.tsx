@@ -155,8 +155,14 @@ export function DropdownMenuSub({
     closeTimer.current = setTimeout(() => setIsOpen(false), 150);
   }, [clearCloseTimer]);
 
+  const [submenuPos, setSubmenuPos] = useState({ top: 0, left: 0 });
+
   const handleTriggerEnter = () => {
     clearCloseTimer();
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setSubmenuPos({ top: rect.top, left: rect.right + 4 });
+    }
     setIsOpen(true);
   };
 
@@ -175,17 +181,6 @@ export function DropdownMenuSub({
   useEffect(() => {
     return () => clearCloseTimer();
   }, [clearCloseTimer]);
-
-  const getSubmenuPosition = () => {
-    if (!triggerRef.current) return { top: 0, left: 0 };
-    const rect = triggerRef.current.getBoundingClientRect();
-    return {
-      top: rect.top,
-      left: rect.right + 4,
-    };
-  };
-
-  const pos = getSubmenuPosition();
 
   return (
     <>
@@ -208,8 +203,8 @@ export function DropdownMenuSub({
             onMouseLeave={handleSubmenuLeave}
             className="fixed z-101 rounded-2xl overflow-hidden glass-morphism-button animate-dropdown-sub-in"
             style={{
-              top: pos.top,
-              left: pos.left,
+              top: submenuPos.top,
+              left: submenuPos.left,
               minWidth: 180,
             }}
           >

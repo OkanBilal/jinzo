@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Body, Heading3 } from "@/components/ui/text";
+import { Body } from "@/components/ui/text";
 import {
   useCreateSpaceMutation,
   useSetActiveSpaceMutation,

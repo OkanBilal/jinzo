@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useRef, useEffect } from "react";
 
 import { useSpeechRecognition } from "../../../../hooks/use-speech-recognition";

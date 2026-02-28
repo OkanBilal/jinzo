@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Branch, Figma, PullRequest, Task } from "@/components/ui/icons";
+import { Figma, PullRequest } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
 import { Jira, Asana, Gitlab } from "@/components/ui/icons";
@@ -44,7 +44,7 @@ const RESOURCE_CONFIG: Record<
   asana_project: {
     label: "Asana",
     goal: "Create an Asana task for this workspace",
-    icon: (cls) => <Asana className="h-5.5 w-6 scale-80" />,
+    icon: () => <Asana className="h-5.5 w-6 scale-80" />,
   },
   gitlab_project: {
     label: "GitLab",

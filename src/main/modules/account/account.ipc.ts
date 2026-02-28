@@ -6,9 +6,10 @@ import { accountController } from "./account.controller";
 // ─────────────────────────────────────────────────────────────
 export function registerAccountIpc() {
   ipcMain.handle("account:get", () => accountController.get());
-  ipcMain.handle("account:update", (_, payload) => accountController.update(payload));
+  ipcMain.handle("account:update", (_, payload) =>
+    accountController.update(payload),
+  );
 
-  console.log("Account IPC handlers registered");
 }
 
 export function unregisterAccountIpc() {

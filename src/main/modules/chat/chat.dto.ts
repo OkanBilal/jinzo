@@ -1,4 +1,4 @@
-import type { ItemTypeId, SourceMetadata as RagSourceMetadata, SourceId } from "./utils/rag";
+import type { SourceId } from "./utils/rag";
 
 // ─────────────────────────────────────────────────────────────
 // Query Analysis

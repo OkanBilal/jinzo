@@ -4,7 +4,6 @@ import { providersRepo } from "../providers/providers.repo";
 import { workspacesRepo } from "../workspaces/workspaces.repo";
 import { appSettingsRepo } from "../appSettings/appSettings.repo";
 import { gitService } from "../git/git.service";
-import { reviewsService } from "../reviews/reviews.service";
 import { workspaceDiffsService } from "../workspaceDiffs/workspaceDiffs.service";
 import { workspaceDiffsRepo } from "../workspaceDiffs/workspaceDiffs.repo";
 import {

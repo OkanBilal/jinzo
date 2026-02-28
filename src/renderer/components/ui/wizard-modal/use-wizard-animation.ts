@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
-import type { AnimState, WizardAction } from "./wizard-reducer";
+import type { WizardAction } from "./wizard-reducer";
 
 export function useWizardAnimation<TData>(
   stepIndex: number,

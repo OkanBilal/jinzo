@@ -57,7 +57,6 @@ interface SessionEvent {
   ephemeral?: boolean;
   id?: string;
   timestamp?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
 
@@ -296,7 +295,7 @@ export function createCopilotAdapter(
    */
   function mapSessionEvent(
     event: SessionEvent,
-    runId: string,
+    _runId: string,
   ): WorkRunEvent | null {
     const ts = Date.now();
 
@@ -712,14 +711,7 @@ export function createCopilotAdapter(
           ts: Date.now(),
         });
 
-        let result: SessionEvent | undefined;
-        try {
-          result = await session.sendAndWait({ prompt }, timeout);
-        } catch (error) {
-          // Re-throw to be handled by the outer catch block
-          // (timeout, abort, and general errors are all handled there)
-          throw error;
-        }
+        const result = await session.sendAndWait({ prompt }, timeout);
 
         if (!result) {
           await onEvent({
@@ -968,13 +960,7 @@ export function createCopilotAdapter(
           ts: Date.now(),
         });
 
-        let result: SessionEvent | undefined;
-        try {
-          result = await session.sendAndWait({ prompt }, timeout);
-        } catch (error) {
-          // Re-throw to be handled by the outer catch block
-          throw error;
-        }
+        const result = await session.sendAndWait({ prompt }, timeout);
 
         if (!result) {
           await onEvent({

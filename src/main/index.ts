@@ -7,7 +7,7 @@ import { spawn, exec, execFile } from "child_process";
 import { promisify } from "util";
 import * as fs from "fs";
 import * as path from "path";
-import { initializeDatabase, closeDatabase, getDb } from "./db/client";
+import { initializeDatabase, closeDatabase } from "./db/client";
 import { registerAccountIpc, unregisterAccountIpc } from "./modules/account";
 import { registerAppsIpc, unregisterAppsIpc } from "./modules/apps";
 import { registerChatHandlers, unregisterChatHandlers } from "./modules/chat";

@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import { appSettings, accounts } from "../../db/schema";
-import { ACCOUNT_ID, SETTINGS_ID } from "./appSettings.constants";
+import { ACCOUNT_ID } from "./appSettings.constants";
 import type { AppSettingsRecord } from "./appSettings.dto";
 
 // ─────────────────────────────────────────────────────────────

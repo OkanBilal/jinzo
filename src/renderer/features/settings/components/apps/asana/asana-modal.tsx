@@ -145,7 +145,7 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
             Asana Developer Console
           </a>
           <br />
-          2. Click "Create new token"
+          2. Click &quot;Create new token&quot;
           <br />
           3. Give it a name and copy the token
         </>

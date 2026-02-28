@@ -1,7 +1,7 @@
 import { useDispatch } from "react-redux";
 import { useGetReviewsByWorkspaceQuery, useGetAppSettingsQuery } from "@/lib/redux/api";
 import { openNoteTab, setPendingGoal } from "@/lib/redux/slices/workspaceSlice";
-import { Document, Note, Notes, PullRequest, Sparkles } from "@/components/ui/icons";
+import { Note, PullRequest } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Body } from "@/components/ui/text";
 
@@ -9,19 +9,6 @@ interface ReviewsSectionProps {
   workspaceId: string;
 }
 
-const statusDot: Record<string, string> = {
-  open: "bg-blue-500",
-  in_review: "bg-amber-500",
-  approved: "bg-green-500",
-  rejected: "bg-red-500",
-};
-
-const statusLabel: Record<string, string> = {
-  open: "Open",
-  in_review: "In Review",
-  approved: "Approved",
-  rejected: "Rejected",
-};
 
 function relativeTime(ts: number): string {
   const now = Date.now();

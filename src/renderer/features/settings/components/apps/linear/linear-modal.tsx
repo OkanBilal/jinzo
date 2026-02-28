@@ -159,7 +159,7 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
             Personal API keys
           </a>
           <br />
-          2. Click "Create key"
+          2. Click &quot;Create key&quot;
           <br />
           3. Give it a name and copy the key
         </>

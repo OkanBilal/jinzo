@@ -155,6 +155,7 @@ export function XtermTerminal({ id, rootPath, variant }: XtermTerminalProps) {
       termRef.current = null;
       fitAddonRef.current = null;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, rootPath]);
 
   return (

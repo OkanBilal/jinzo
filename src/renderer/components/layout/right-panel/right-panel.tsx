@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useRef } from "react";
+import { useReducer, useEffect } from "react";
 import { useLayoutConfig } from "@/hooks/use-layout-config";
 import { ToggleButton } from "./toggle-button";
 import { Panel } from "./panel";
@@ -24,11 +24,9 @@ export default function RightPanel({
 
   const handleToggle = () => onToggle(!isOpen);
 
-  const prevIsOpen = useRef(isOpen);
-  if (isOpen !== prevIsOpen.current) {
-    prevIsOpen.current = isOpen;
+  useEffect(() => {
     dispatch(isOpen ? "opening" : "closing");
-  }
+  }, [isOpen]);
 
   useEffect(() => {
     if (animationState === "opening") {

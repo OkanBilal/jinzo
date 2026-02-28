@@ -1,5 +1,4 @@
 import { apps } from "../data/apps";
-
 import { appStates } from "../schema";
 import { getDb } from "../client";
 

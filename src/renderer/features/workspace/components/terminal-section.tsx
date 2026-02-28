@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { ArrowUp, Bash } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Caption } from "@/components/ui/text";
@@ -19,28 +19,28 @@ export function TerminalSection({
   rootPath,
   variant,
 }: TerminalSectionProps) {
+  const [prevWorkspaceId, setPrevWorkspaceId] = useState(workspaceId);
   const [expanded, setExpanded] = useState(() => {
     const stored = localStorage.getItem(getStorageKey(workspaceId));
     return stored !== null ? stored === "true" : false;
   });
+  const [hasBeenExpanded, setHasBeenExpanded] = useState(expanded);
 
-  // Track whether the terminal has been expanded at least once (lazy mount)
-  const hasBeenExpanded = useRef(expanded);
-  if (expanded && !hasBeenExpanded.current) {
-    hasBeenExpanded.current = true;
+  if (expanded && !hasBeenExpanded) {
+    setHasBeenExpanded(true);
+  }
+
+  if (workspaceId !== prevWorkspaceId) {
+    setPrevWorkspaceId(workspaceId);
+    const stored = localStorage.getItem(getStorageKey(workspaceId));
+    const next = stored !== null ? stored === "true" : false;
+    setExpanded(next);
+    setHasBeenExpanded(next);
   }
 
   useEffect(() => {
     localStorage.setItem(getStorageKey(workspaceId), String(expanded));
   }, [expanded, workspaceId]);
-
-  // Reset expanded state when workspace changes
-  useEffect(() => {
-    const stored = localStorage.getItem(getStorageKey(workspaceId));
-    const next = stored !== null ? stored === "true" : false;
-    setExpanded(next);
-    hasBeenExpanded.current = next;
-  }, [workspaceId]);
 
   const terminalId = `terminal-${workspaceId}`;
 
@@ -71,7 +71,7 @@ export function TerminalSection({
       >
         <div className="overflow-hidden">
           <div className="h-80 rounded-lg overflow-hidden ">
-            {hasBeenExpanded.current && (
+            {hasBeenExpanded && (
               <XtermTerminal
                 id={terminalId}
                 rootPath={rootPath}

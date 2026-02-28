@@ -295,23 +295,25 @@ export function WizardModal<
   const [prevOpen, setPrevOpen] = useState(false);
   if (open && !prevOpen) {
     setPrevOpen(true);
-    triggerRef.current = document.activeElement as HTMLElement;
     dispatch({
       type: "RESET",
       stepIndex: resolveInitialStep(steps, initialStep),
       data: (initialData ?? {}) as TData,
     });
-    prevHeightRef.current = 0;
   }
   if (!open && prevOpen) {
     setPrevOpen(false);
   }
 
   useEffect(() => {
-    if (!open && triggerRef.current) {
+    if (open) {
+      triggerRef.current = document.activeElement as HTMLElement;
+      prevHeightRef.current = 0;
+    } else if (triggerRef.current) {
       triggerRef.current.focus();
       triggerRef.current = null;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   if (!isBrowser || !open) return null;

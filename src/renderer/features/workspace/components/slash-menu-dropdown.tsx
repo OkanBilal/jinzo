@@ -68,7 +68,6 @@ export function SlashMenuDropdown({
   commands,
   skills,
   isOpen,
-  onSelectCommand,
   onSelectSkill,
   onClose,
   dropdownRef,
@@ -84,7 +83,7 @@ export function SlashMenuDropdown({
   });
 
   // Filter and combine commands and skills
-  const { filteredCommands, filteredSkills, hasResults } = useMemo(() => {
+  const { filteredSkills, hasResults } = useMemo(() => {
     const lowerFilter = filterText.toLowerCase();
 
     // Filter commands (only user-facing)

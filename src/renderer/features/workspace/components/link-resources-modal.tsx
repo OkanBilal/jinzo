@@ -2,8 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import {
   BodyMedium,
   Caption,
-  Muted,
-  ErrorText,
   Heading3,
 } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
@@ -28,7 +26,6 @@ interface LinkResourcesModalProps {
 
 export function LinkResourcesModal({
   projectId,
-  workspaceName,
   isOpen,
   onClose,
 }: LinkResourcesModalProps) {
@@ -44,6 +41,7 @@ export function LinkResourcesModal({
   const [removeResource] = useRemoveProjectResourceMutation();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState("");
 
   // Initialize selected state from currently linked resources
@@ -135,18 +133,6 @@ export function LinkResourcesModal({
     onClose();
   };
 
-  const getResourceLabel = (kind: string) => {
-    switch (kind) {
-      case "github_repo":
-        return "GitHub";
-      case "linear_team":
-        return "Linear";
-      case "jira_project":
-        return "Jira";
-      default:
-        return kind;
-    }
-  };
 
   const renderResourceItem = (resource: AvailableResource) => {
     const selected = selectedIds.has(resource.id);
@@ -171,7 +157,7 @@ export function LinkResourcesModal({
         role="button"
         tabIndex={0}
         onClick={() => !saving && toggleResource(resource.id)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); !saving && toggleResource(resource.id); } }}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (!saving) toggleResource(resource.id); } }}
         className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-all duration-150 ${
           selected
             ? ""
@@ -201,8 +187,6 @@ export function LinkResourcesModal({
       </div>
     );
   };
-
-  const selectedCount = selectedIds.size;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

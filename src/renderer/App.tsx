@@ -10,7 +10,7 @@ import {
 import { useLayoutConfig } from "./hooks/use-layout-config";
 import { shouldHideRightPanel } from "./lib/layout";
 import { ReduxProvider } from "./providers/redux-provider";
-import { Toaster } from "./components/ui/toast/Toaster";
+import { Toaster } from "./components/ui/toast/toaster";
 import { useAppSelector } from "./lib/redux/hooks";
 import { OnboardingModal } from "./features/onboarding/components/onboarding-modal";
 

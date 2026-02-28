@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { UploadedFile } from "@/components/ui/input/file-upload-dropdown";
 import { useSelector, useDispatch } from "react-redux";
 import {
@@ -60,7 +60,7 @@ export function useWorkspacePage(providerId: string) {
   const [goal, setGoal] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [canResume, setCanResume] = useState(false);
-  const autoExecuteRef = useRef(false);
+  const [autoExecute, setAutoExecute] = useState(false);
 
   const handleModelChange = useCallback(
     (model: string) => {
@@ -86,13 +86,15 @@ export function useWorkspacePage(providerId: string) {
   }, [workspaceId, dispatch]);
 
   // Sync pendingGoal from Redux to local state
-  if (pendingGoal) {
-    setGoal(pendingGoal);
-    if (pendingAutoExecute) {
-      autoExecuteRef.current = true;
+  useEffect(() => {
+    if (pendingGoal) {
+      setGoal(pendingGoal);
+      if (pendingAutoExecute) {
+        setAutoExecute(true);
+      }
+      dispatch(clearPendingGoal());
     }
-    dispatch(clearPendingGoal());
-  }
+  }, [pendingGoal, pendingAutoExecute, dispatch]);
 
   const {
     runs,
@@ -138,6 +140,7 @@ export function useWorkspacePage(providerId: string) {
       }
     };
     checkResume();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, activeRun?.status, checkCanResume]);
 
   /** Convert UploadedFile[] to base64-encoded FileAttachment[] for IPC transport */
@@ -249,8 +252,8 @@ export function useWorkspacePage(providerId: string) {
   // Auto-execute when pendingAutoExecute was set (e.g. "Review Changes" button)
   // Always creates a new run in a new tab (never resumes an existing one)
   useEffect(() => {
-    if (autoExecuteRef.current && goal) {
-      autoExecuteRef.current = false;
+    if (autoExecute && goal) {
+      setAutoExecute(false);
       if (!workspaceId) return;
       const run = async () => {
         const newRunId = await executeRun(goal, selectedWorkspace, providerId, selectedModel);
@@ -261,7 +264,7 @@ export function useWorkspacePage(providerId: string) {
       };
       run();
     }
-  }, [goal, executeRun, workspaceId, selectedWorkspace, providerId, selectedModel, dispatch]);
+  }, [autoExecute, goal, executeRun, workspaceId, selectedWorkspace, providerId, selectedModel, dispatch]);
 
   const handleCloseTab = useCallback(
     (runId: string, e: React.MouseEvent) => {

@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useRef, useCallback } from "react";
+import { useReducer, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Text, { Heading3 } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
@@ -103,13 +103,13 @@ export default function EditSpaceModal({
     prevSpaceId: space?.id ?? null,
   });
   const { name, icon, iconMode, selectedColorIndex, isEmojiPickerOpen, showGradients, systemPrompt, isClosing } = state;
-  const prevIsOpenRef = useRef(isOpen);
 
   const [updateSpace, { isLoading }] = useUpdateSpaceMutation();
   const { darkMode } = useDarkMode();
 
-  // Initialize form when space changes (adjust state during render)
-  if (space && space.id !== state.prevSpaceId) {
+  // Initialize form when space changes
+  useEffect(() => {
+    if (!space) return;
     let newIconMode: IconPickerMode = "emoji";
     let newIcon = "";
     const iconStr = space.icon || "";
@@ -139,15 +139,15 @@ export default function EditSpaceModal({
       selectedColorIndex: colorIndex,
       showGradients: isGradient,
     });
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [space?.id]);
 
-  // Reset closing state when modal opens (adjust state during render)
-  if (isOpen && !prevIsOpenRef.current) {
-    prevIsOpenRef.current = isOpen;
-    updateState({ isClosing: false });
-  } else if (!isOpen && prevIsOpenRef.current) {
-    prevIsOpenRef.current = isOpen;
-  }
+  // Reset closing state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      updateState({ isClosing: false });
+    }
+  }, [isOpen]);
 
   const handleAnimatedClose = useCallback(() => {
     updateState({ isClosing: true });

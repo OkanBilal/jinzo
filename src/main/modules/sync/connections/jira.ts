@@ -17,7 +17,6 @@ import {
   getSelectedResources,
   normalizeLimit,
   normalizeDateToIso,
-  safeJsonParse,
 } from "../sync.connection-utils";
 
 const MAX_ITEMS_PER_PAGE = 100;
