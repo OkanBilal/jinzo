@@ -105,7 +105,6 @@ export const FileExplorer = memo(function FileExplorer({
             stats: { files: fileCount, directories: dirCount },
           });
         } else {
-          console.error("[FileExplorer] listDir failed:", result.error);
           dispatch({ type: "error", error: result.error || "Failed to load directory" });
         }
       } catch (err: unknown) {

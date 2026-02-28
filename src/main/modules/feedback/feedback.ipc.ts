@@ -6,7 +6,6 @@ export function registerFeedbackIpc() {
     feedbackService.send(payload),
   );
 
-  console.log("Feedback IPC handlers registered");
 }
 
 export function unregisterFeedbackIpc() {

@@ -10,7 +10,6 @@ export function registerUpdatesIpc() {
   ipcMain.handle("updates:quitAndInstall", () => updatesController.quitAndInstall());
   ipcMain.handle("updates:getStatus", () => updatesController.getStatus());
 
-  console.log("Updates IPC handlers registered");
 }
 
 export function unregisterUpdatesIpc() {

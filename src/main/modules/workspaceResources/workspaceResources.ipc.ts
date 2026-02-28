@@ -54,7 +54,6 @@ export function registerWorkspaceResourcesHandlers(): void {
     }
   );
 
-  console.log("Project resources handlers registered");
 }
 
 export function unregisterWorkspaceResourcesHandlers(): void {

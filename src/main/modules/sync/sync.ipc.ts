@@ -7,7 +7,6 @@ import { syncController } from "./sync.controller";
 export function registerSyncIpc() {
   ipcMain.handle("sync:runEntitySync", (_, provider?: string) => syncController.runEntitySync(provider));
 
-  console.log("Sync IPC handlers registered");
 }
 
 export function unregisterSyncIpc() {

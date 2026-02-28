@@ -15,7 +15,6 @@ export function registerAppSettingsIpc() {
   ipcMain.handle("appSettings:setCommitInstructions", (_, instructions) => appSettingsController.setCommitInstructions(instructions));
   ipcMain.handle("appSettings:setPrInstructions", (_, instructions) => appSettingsController.setPrInstructions(instructions));
 
-  console.log("App settings IPC handlers registered");
 }
 
 export function unregisterAppSettingsIpc() {

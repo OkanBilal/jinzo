@@ -16,7 +16,6 @@ export function registerMcpHandlers() {
     return mcpController.callTool(payload);
   });
 
-  console.log("MCP handlers registered");
 }
 
 export function unregisterMcpHandlers() {

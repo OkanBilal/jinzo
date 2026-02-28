@@ -21,7 +21,6 @@ export function registerFeedIpc() {
     return feedController.getEventsByEntity(entityId);
   });
 
-  console.log("Feed handlers registered");
 }
 
 export function unregisterFeedIpc() {

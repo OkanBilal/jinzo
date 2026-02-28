@@ -38,7 +38,6 @@ export function registerSpaceIpc() {
     return spaceController.archive(spaceId);
   });
 
-  console.log("Space handlers registered");
 }
 
 export function unregisterSpaceIpc() {

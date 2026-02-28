@@ -205,7 +205,6 @@ export function registerEntitiesHandlers(): void {
     }
   );
 
-  console.log("Entities IPC handlers registered");
 }
 
 // ─────────────────────────────────────────────────────────────

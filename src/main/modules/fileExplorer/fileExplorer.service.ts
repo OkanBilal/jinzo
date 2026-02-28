@@ -12,13 +12,6 @@ import type {
 } from "./fileExplorer.dto";
 import { DEFAULT_EXCLUDE_PATTERNS, MAX_FILE_SIZE_BYTES } from "./fileExplorer.dto";
 
-// Debug logging toggle
-const DEBUG = true;
-function debugLog(message: string, ...args: unknown[]) {
-  if (DEBUG) {
-    console.log(`[FileExplorer] ${message}`, ...args);
-  }
-}
 
 // ─────────────────────────────────────────────────────────────
 // File Explorer Service
@@ -520,19 +513,16 @@ export const fileExplorerService = {
     } = options;
 
     const resolvedPath = path.resolve(dirPath);
-    debugLog(`listDir called: ${resolvedPath}`);
 
     try {
       // Verify it's a directory
       const dirStat = await fs.stat(resolvedPath);
       if (!dirStat.isDirectory()) {
-        debugLog(`listDir error: not a directory: ${resolvedPath}`);
         return { success: false, error: "Path is not a directory" };
       }
 
       // Read directory entries
       const entries = await fs.readdir(resolvedPath, { withFileTypes: true });
-      debugLog(`listDir raw entries: ${entries.length} in ${resolvedPath}`);
 
       const results: DirEntry[] = [];
 
@@ -549,7 +539,6 @@ export const fileExplorerService = {
 
         // Check exclusions
         if (shouldExclude(name, excludePatterns, includeHidden)) {
-          debugLog(`listDir excluded: ${name}`);
           continue;
         }
 
@@ -568,11 +557,9 @@ export const fileExplorerService = {
           } catch (err) {
             console.warn(`[FileExplorer] Cannot read subdir ${fullPath}:`, err);
             // Can't read subdirectory - assume it might have children
-            debugLog(`listDir: cannot read subdir ${fullPath}, assuming hasChildren=true`);
             hasChildren = true;
           }
 
-          debugLog(`listDir dir: ${name}, hasChildren=${hasChildren}`);
           results.push({
             name,
             fullPath,
@@ -599,7 +586,6 @@ export const fileExplorerService = {
         }
       }
 
-      debugLog(`listDir result: ${results.length} visible entries in ${resolvedPath}`);
       return { success: true, data: results };
     } catch (error) {
       const errCode = (error as NodeJS.ErrnoException).code;

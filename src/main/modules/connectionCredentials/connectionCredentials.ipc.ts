@@ -19,7 +19,6 @@ export function registerConnectionCredentialsIpc() {
     return connectionCredentialsController.checkCredentials(provider);
   });
 
-  console.log("Connection credentials handlers registered");
 }
 
 export function unregisterConnectionCredentialsIpc() {

@@ -12,7 +12,6 @@ export function registerSeedIpc() {
   ipcMain.handle("seed:spaces", () => seedController.seedSpaces());
   ipcMain.handle("seed:all", () => seedController.seedAll());
 
-  console.log("Seed IPC handlers registered");
 }
 
 export function unregisterSeedIpc() {

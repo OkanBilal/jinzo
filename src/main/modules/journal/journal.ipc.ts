@@ -86,7 +86,6 @@ export function registerJournalIpc() {
     }
   );
 
-  console.log("Journal handlers registered");
 }
 
 export function unregisterJournalIpc() {
