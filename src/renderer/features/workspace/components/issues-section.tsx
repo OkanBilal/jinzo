@@ -30,16 +30,19 @@ export function IssuesSection({
     { skip: !projectId }
   );
 
-  const [prevProjectId, setPrevProjectId] = useState(projectId);
-  const [expanded, setExpanded] = useState(() => {
+  const [expandedState, setExpandedState] = useState(() => {
     const stored = localStorage.getItem(getStorageKey(projectId));
-    return stored !== null ? stored === "true" : true;
+    return {
+      forProjectId: projectId,
+      expanded: stored !== null ? stored === "true" : true,
+    };
   });
 
-  if (projectId !== prevProjectId) {
-    setPrevProjectId(projectId);
+  let { expanded } = expandedState;
+  if (projectId !== expandedState.forProjectId) {
     const stored = localStorage.getItem(getStorageKey(projectId));
-    setExpanded(stored !== null ? stored === "true" : true);
+    expanded = stored !== null ? stored === "true" : true;
+    setExpandedState({ forProjectId: projectId, expanded });
   }
 
   useEffect(() => {
@@ -56,7 +59,7 @@ export function IssuesSection({
       <Button
         variant="subtle"
         size="xs"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => setExpandedState((prev) => ({ ...prev, expanded: !prev.expanded }))}
         className="w-full flex items-center "
       >
         <ArrowUp

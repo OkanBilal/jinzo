@@ -2,7 +2,6 @@ import {
   useRef,
   useEffect,
   useCallback,
-  useMemo,
   useSyncExternalStore,
   useReducer,
   useState,
@@ -16,6 +15,7 @@ import Text from "../text";
 import { wizardReducer, resolveInitialStep } from "./wizard-reducer";
 import { useWizardEscape, useWizardFocusTrap } from "./use-wizard-keyboard";
 import { useWizardAnimation } from "./use-wizard-animation";
+import { useWizardNavigation } from "./use-wizard-navigation";
 
 export interface WizardStep<
   TData extends Record<string, any> = Record<string, any>,
@@ -158,139 +158,20 @@ export function WizardModal<
   useWizardEscape(open, isSubmitting, close);
   useWizardFocusTrap(open, stepIndex);
 
-  const goTo = useCallback(
-    (indexOrId: number | string) => {
-      const targetIndex =
-        typeof indexOrId === "number"
-          ? indexOrId
-          : steps.findIndex((s) => s.id === indexOrId);
-
-      if (targetIndex < 0 || targetIndex >= steps.length) return;
-      if (targetIndex === stepIndex) return;
-
-      dispatch({ type: "SET_STEP", index: targetIndex });
-    },
-    [steps, stepIndex],
-  );
-
-  const goNext = useCallback(async () => {
-    if (stepIndex >= steps.length - 1) {
-      onComplete?.(data);
-      return;
-    }
-
-    const step = steps[stepIndex];
-    const ctx = {
-      stepIndex,
-      stepCount: steps.length,
-      goNext: () => {},
-      goBack: () => {},
-      goTo: () => {},
-      data,
-      setData,
-      errors,
-      setErrors,
-      clearErrors,
-      isSubmitting,
-      setIsSubmitting,
-      close,
-    } as WizardContextValue<TData>;
-
-    if (step.canNext && !step.canNext(ctx)) return;
-
-    if (step.onNext) {
-      const result = await step.onNext(ctx);
-      if (result === false) return;
-    }
-
-    dispatch({ type: "INC_STEP" });
-  }, [
-    stepIndex,
+  const { contextValue } = useWizardNavigation<TData>({
     steps,
+    stepIndex,
     data,
-    setData,
     errors,
+    isSubmitting,
+    setData,
     setErrors,
     clearErrors,
-    isSubmitting,
     setIsSubmitting,
     close,
     onComplete,
-  ]);
-
-  const goBack = useCallback(async () => {
-    if (stepIndex <= 0) return;
-
-    const step = steps[stepIndex];
-    const ctx = {
-      stepIndex,
-      stepCount: steps.length,
-      goNext: () => {},
-      goBack: () => {},
-      goTo: () => {},
-      data,
-      setData,
-      errors,
-      setErrors,
-      clearErrors,
-      isSubmitting,
-      setIsSubmitting,
-      close,
-    } as WizardContextValue<TData>;
-
-    if (step.canBack && !step.canBack(ctx)) return;
-
-    if (step.onBack) {
-      const result = await step.onBack(ctx);
-      if (result === false) return;
-    }
-
-    dispatch({ type: "DEC_STEP" });
-  }, [
-    stepIndex,
-    steps,
-    data,
-    setData,
-    errors,
-    setErrors,
-    clearErrors,
-    isSubmitting,
-    setIsSubmitting,
-    close,
-  ]);
-
-  const contextValue = useMemo<WizardContextValue<TData>>(
-    () => ({
-      stepIndex,
-      stepCount: steps.length,
-      goNext,
-      goBack,
-      goTo,
-      data,
-      setData,
-      errors,
-      setErrors,
-      clearErrors,
-      isSubmitting,
-      setIsSubmitting,
-      close,
-    }),
-    [
-      stepIndex,
-      steps.length,
-      goNext,
-      goBack,
-      goTo,
-      data,
-      setData,
-      errors,
-      setErrors,
-      clearErrors,
-      isSubmitting,
-      setIsSubmitting,
-      close,
-    ],
-  );
+    dispatch,
+  });
 
   const [prevOpen, setPrevOpen] = useState(false);
   if (open && !prevOpen) {
@@ -305,6 +186,7 @@ export function WizardModal<
     setPrevOpen(false);
   }
 
+  // Manage focus save/restore as a DOM side effect
   useEffect(() => {
     if (open) {
       triggerRef.current = document.activeElement as HTMLElement;
@@ -313,8 +195,7 @@ export function WizardModal<
       triggerRef.current.focus();
       triggerRef.current = null;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isBrowser || !open) return null;
 

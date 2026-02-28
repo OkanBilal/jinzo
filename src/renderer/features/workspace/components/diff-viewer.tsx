@@ -47,7 +47,56 @@ const severityColorsDark: Record<Severity, { pill: string; pillBg: string; line:
   info: { pill: "#93c5fd", pillBg: "#3b82f633", line: "#1a1a1a" },
 };
 
+// ── FindingAnnotation (module-scope) ─────────────────────
 
+interface FindingAnnotationColors {
+  colors: Record<Severity, { pill: string; pillBg: string; line: string }>;
+  textColor: string;
+  mutedColor: string;
+  suggestionColor: string;
+}
+
+function makeFindingAnnotation({ colors, textColor, mutedColor, suggestionColor }: FindingAnnotationColors) {
+  return function FindingAnnotation({ metadata }: DiffLineAnnotation<FindingMeta>) {
+    const { findings } = metadata!;
+    return (
+      <div className="finding-annotation">
+        {findings.map((f) => {
+          const sev = asSeverity(f.severity);
+          const c = colors[sev];
+          return (
+            <div
+              key={`${sev}-${f.lineStart}-${f.message}`}
+              className="finding-card py-2 my-2 border-b last:border-b-0 dark:border-primary/10 border-primary/20"
+              style={{ backgroundColor: c.line }}
+            >
+              <span
+                className="px-1 py-0.5 text-xxs rounded-sm capitalize mr-2"
+                style={{ backgroundColor: c.pillBg, color: c.pill }}
+              >
+                {sev}
+              </span>
+              <span className="finding-message" style={{ color: textColor }}>
+                {f.message}
+              </span>
+              {f.reason && (
+                <p className="finding-reason" style={{ color: mutedColor }}>
+                  {f.reason}
+                </p>
+              )}
+              {f.suggestion && (
+                <p className="mt-2" style={{ color: suggestionColor }}>
+                  <span className="">Suggestion: </span>
+                  {f.suggestion}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+}
 
 // ── Component ─────────────────────────────────────────────
 
@@ -110,48 +159,10 @@ export function DiffViewer({
   const mutedColor = isDarkMode ? "#dad8ce" : "#78716c";
   const suggestionColor = isDarkMode ? "#86efac" : "#16a34a";
 
-  const renderAnnotation = useMemo(() => {
-    function FindingAnnotation({ metadata }: DiffLineAnnotation<FindingMeta>) {
-      const { findings } = metadata!;
-      return (
-        <div className="finding-annotation">
-          {findings.map((f, i) => {
-            const sev = asSeverity(f.severity);
-            const c = colors[sev];
-            return (
-              <div
-                key={i}
-                className="finding-card py-2 my-2 border-b last:border-b-0 dark:border-primary/10 border-primary/20"
-                style={{ backgroundColor: c.line }}
-              >
-                <span
-                  className="px-1 py-0.5 text-xxs rounded-sm capitalize mr-2"
-                  style={{ backgroundColor: c.pillBg, color: c.pill }}
-                >
-                  {sev}
-                </span>
-                <span className="finding-message" style={{ color: textColor }}>
-                  {f.message}
-                </span>
-                {f.reason && (
-                  <p className="finding-reason" style={{ color: mutedColor }}>
-                    {f.reason}
-                  </p>
-                )}
-                {f.suggestion && (
-                  <p className="mt-2" style={{ color: suggestionColor }}>
-                    <span className="">Suggestion: </span>
-                    {f.suggestion}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      );
-    }
-    return FindingAnnotation;
-  }, [colors, textColor, mutedColor, suggestionColor]);
+  const renderAnnotation = useMemo(
+    () => makeFindingAnnotation({ colors, textColor, mutedColor, suggestionColor }),
+    [colors, textColor, mutedColor, suggestionColor],
+  );
 
   return (
     <div className={`h-full overflow-auto ${className}`}>

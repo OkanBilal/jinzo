@@ -1,6 +1,5 @@
 import {
   useState,
-  useRef,
   useEffect,
   useMemo,
   type MouseEvent,
@@ -8,21 +7,18 @@ import {
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Caption } from "@/components/ui/text";
-import { ArrowUp, Layers } from "@/components/ui/icons";
+import { ArrowUp } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
-import { Button } from "@/components/ui/button";
 import { WorkspaceResponse } from "src/main/modules/workspaces";
 import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
 import { useRouteType } from "@/hooks/use-route-type";
 import { getBaseRoutePath } from "@/lib/route-utils";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspacesApi";
 import { useGetProjectsQuery, useUpdateWorkspaceMutation } from "@/lib/redux/api";
-import { parseIcon, type IconComponent } from "@/lib/icon-registry";
-
-type GroupingMode = "none" | "status" | "project";
+import { ProjectIcon } from "./project-icon";
+import { WorkspaceGroupDropdown, type GroupingMode } from "./workspace-group-dropdown";
 
 type WorkspaceGroup = {
   key: string;
@@ -121,12 +117,6 @@ export default function WorkspacesList({
     if (stored === "status" || stored === "project") return stored;
     return "none";
   });
-  const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false);
-  const [groupDropdownPosition, setGroupDropdownPosition] = useState({
-    x: 0,
-    y: 0,
-  });
-  const groupButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     localStorage.setItem("workspace-list-grouping", grouping);
@@ -171,6 +161,14 @@ export default function WorkspacesList({
     navigate(`${basePath}/${workspace.id}`);
   };
 
+  const formatWorkspaceName = (workspace: WorkspaceResponse): string => {
+    if (workspace.repoUrl) {
+      const match = workspace.repoUrl.match(/github\.com[/:]([^/]+\/[^/.]+)/);
+      if (match) return match[1];
+    }
+    return workspace.name;
+  };
+
   const handleLinkIssues = (workspace: WorkspaceResponse) => {
     if (!workspace.projectId) return;
     setLinkModalState({
@@ -180,73 +178,11 @@ export default function WorkspacesList({
     });
   };
 
-  const handleCloseLinkModal = () => {
-    setLinkModalState({ isOpen: false, projectId: "", workspaceName: "" });
-  };
-
   const sortedWorkspaces = [...workspaces].sort((a, b) => {
     const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
     const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
     return dateB - dateA;
   });
-
-  const formatWorkspaceName = (workspace: WorkspaceResponse): string => {
-    if (workspace.repoUrl) {
-      const match = workspace.repoUrl.match(/github\.com[/:]([^/]+\/[^/.]+)/);
-      if (match) {
-        return match[1];
-      }
-    }
-    return workspace.name;
-  };
-
-  const handleGroupButtonClick = (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (groupButtonRef.current) {
-      const rect = groupButtonRef.current.getBoundingClientRect();
-      setGroupDropdownPosition({
-        x: Math.min(rect.left + 12, window.innerWidth - 180),
-        y: rect.bottom,
-      });
-    }
-    setIsGroupDropdownOpen(!isGroupDropdownOpen);
-  };
-
-  const handleSelectGrouping = (mode: GroupingMode) => {
-    setGrouping(mode);
-    setIsGroupDropdownOpen(false);
-  };
-
-  const renderProjectIcon = (
-    iconStr: string | null,
-    projectName: string,
-  ): ReactNode => {
-    if (iconStr) {
-      const parsed = parseIcon(iconStr);
-      if (
-        parsed.type === "icon" ||
-        parsed.type === "copilot-animate" ||
-        parsed.type === "claude-animate"
-      ) {
-        const IconComp = parsed.value as IconComponent;
-        return (
-          <IconComp className="size-3.5 text-primary-900 dark:text-primary-300" />
-        );
-      }
-      if (parsed.type === "emoji") {
-        return (
-          <span className="text-xs leading-none">{parsed.value as string}</span>
-        );
-      }
-    }
-    const initial = (projectName?.[0] ?? "P").toUpperCase();
-    return (
-      <div className="size-4 rounded-md flex items-center justify-center text-t font-medium text-primary-950 dark:text-primary-200 border border-primary-950/40 dark:border-primary/10">
-        {initial}
-      </div>
-    );
-  };
 
   // Compute groups
   const computeGroups = (): WorkspaceGroup[] => {
@@ -294,7 +230,7 @@ export default function WorkspacesList({
         result.push({
           key: `project-${pid}`,
           label: projectName,
-          icon: renderProjectIcon(data?.icon ?? null, projectName),
+          icon: <ProjectIcon icon={data?.icon ?? null} projectName={projectName} />,
           workspaces: wsList,
         });
       }
@@ -332,7 +268,7 @@ export default function WorkspacesList({
         projectId={workspace.projectId}
         projectIcon={
           projectData
-            ? renderProjectIcon(projectData.icon, projectData.name)
+            ? <ProjectIcon icon={projectData.icon} projectName={projectData.name} />
             : undefined
         }
         grouping={grouping}
@@ -366,21 +302,10 @@ export default function WorkspacesList({
           Workspaces
         </Caption>
         <div className="flex items-center gap-1">
-          <Button
-            ref={groupButtonRef}
-            tooltip="Group workspaces"
-            tooltipPosition="top"
-            onClick={handleGroupButtonClick}
-            className="p-1 rounded-md cursor-pointer hover:bg-primary/20 dark:hover:bg-primary/10 transition-colors"
-          >
-            <Layers
-              className={`w-3.5 h-3.5 transition-colors ${
-                grouping !== "none"
-                  ? "text-primary-950 dark:text-primary"
-                  : "text-primary-800 dark:text-primary-300"
-              }`}
-            />
-          </Button>
+          <WorkspaceGroupDropdown
+            grouping={grouping}
+            onGroupingChange={setGrouping}
+          />
           <ArrowUp
             className={`w-4 h-4 text-primary-900 dark:text-primary-200 transition-transform duration-200 ${
               isExpanded ? "rotate-180" : "rotate-90"
@@ -388,44 +313,6 @@ export default function WorkspacesList({
           />
         </div>
       </div>
-
-      <DropdownMenu
-        isOpen={isGroupDropdownOpen}
-        position={groupDropdownPosition}
-        onClose={() => setIsGroupDropdownOpen(false)}
-        minWidth={160}
-      >
-        <DropdownMenuItem
-          onClick={() => handleSelectGrouping("none")}
-          className={
-            grouping === "none"
-              ? "bg-primary-950/8 dark:bg-primary/10 font-medium"
-              : ""
-          }
-        >
-          Default
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => handleSelectGrouping("status")}
-          className={
-            grouping === "status"
-              ? "bg-primary-950/8 dark:bg-primary/10 font-medium"
-              : ""
-          }
-        >
-          Group by status
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => handleSelectGrouping("project")}
-          className={
-            grouping === "project"
-              ? "bg-primary-950/8 dark:bg-primary/10 font-medium"
-              : ""
-          }
-        >
-          Group by project
-        </DropdownMenuItem>
-      </DropdownMenu>
 
       <div
         className={` transition-all duration-300 ${
@@ -453,7 +340,7 @@ export default function WorkspacesList({
         projectId={linkModalState.projectId}
         workspaceName={linkModalState.workspaceName}
         isOpen={linkModalState.isOpen}
-        onClose={handleCloseLinkModal}
+        onClose={() => setLinkModalState({ isOpen: false, projectId: "", workspaceName: "" })}
       />
     </div>
   );

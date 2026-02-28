@@ -7,7 +7,7 @@ interface AnimatedTitleProps {
 }
 
 export function AnimatedTitle({ title, className = "" }: AnimatedTitleProps) {
-  const [initialTitle] = useState(title);
+  const [initialTitle] = useState(() => title);
   const hasChanged = title !== initialTitle;
 
   if (!hasChanged) {

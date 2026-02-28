@@ -19,23 +19,25 @@ export function TerminalSection({
   rootPath,
   variant,
 }: TerminalSectionProps) {
-  const [prevWorkspaceId, setPrevWorkspaceId] = useState(workspaceId);
-  const [expanded, setExpanded] = useState(() => {
+  const [sectionState, setSectionState] = useState(() => {
     const stored = localStorage.getItem(getStorageKey(workspaceId));
-    return stored !== null ? stored === "true" : false;
+    const exp = stored !== null ? stored === "true" : false;
+    return { forWorkspaceId: workspaceId, expanded: exp, hasBeenExpanded: exp };
   });
-  const [hasBeenExpanded, setHasBeenExpanded] = useState(expanded);
 
-  if (expanded && !hasBeenExpanded) {
-    setHasBeenExpanded(true);
-  }
+  let { expanded, hasBeenExpanded } = sectionState;
 
-  if (workspaceId !== prevWorkspaceId) {
-    setPrevWorkspaceId(workspaceId);
+  if (workspaceId !== sectionState.forWorkspaceId) {
     const stored = localStorage.getItem(getStorageKey(workspaceId));
     const next = stored !== null ? stored === "true" : false;
-    setExpanded(next);
-    setHasBeenExpanded(next);
+    expanded = next;
+    hasBeenExpanded = next;
+    setSectionState({ forWorkspaceId: workspaceId, expanded: next, hasBeenExpanded: next });
+  }
+
+  if (expanded && !hasBeenExpanded) {
+    hasBeenExpanded = true;
+    setSectionState((prev) => ({ ...prev, hasBeenExpanded: true }));
   }
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export function TerminalSection({
       <Button
         variant="subtle"
         size="xs"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => setSectionState((prev) => ({ ...prev, expanded: !prev.expanded }))}
         className="w-full flex items-center"
       >
         <ArrowUp

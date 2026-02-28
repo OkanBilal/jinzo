@@ -13,6 +13,7 @@ import { useProviderModels } from "../hooks/use-provider-models";
 
 const EMPTY_CONTEXT_FILES: FileNode[] = [];
 const EMPTY_CONTEXT_ISSUES: ContextIssue[] = [];
+const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
 
 interface WorkspaceInputProps {
   goal: string;
@@ -49,7 +50,7 @@ export function WorkspaceInput({
   contextIssues = EMPTY_CONTEXT_ISSUES,
   onRemoveContextIssue,
   workspacePath,
-  uploadedFiles = [],
+  uploadedFiles = EMPTY_UPLOADED_FILES,
   onUploadedFilesChange,
   onStop,
 }: WorkspaceInputProps) {

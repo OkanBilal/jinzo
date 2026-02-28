@@ -107,9 +107,8 @@ export default function EditSpaceModal({
   const [updateSpace, { isLoading }] = useUpdateSpaceMutation();
   const { darkMode } = useDarkMode();
 
-  // Initialize form when space changes
-  useEffect(() => {
-    if (!space) return;
+  // Sync form state when space changes or modal opens
+  if (space && space.id !== state.prevSpaceId) {
     let newIconMode: IconPickerMode = "emoji";
     let newIcon = "";
     const iconStr = space.icon || "";
@@ -138,16 +137,9 @@ export default function EditSpaceModal({
       icon: newIcon,
       selectedColorIndex: colorIndex,
       showGradients: isGradient,
+      isClosing: false,
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [space?.id]);
-
-  // Reset closing state when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      updateState({ isClosing: false });
-    }
-  }, [isOpen]);
+  }
 
   const handleAnimatedClose = useCallback(() => {
     updateState({ isClosing: true });
