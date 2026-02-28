@@ -8,29 +8,29 @@ export const seedProviders: CreateProviderPayload[] = [
   // ─────────────────────────────────────────────
   // LLM Runtime: Ollama (Chat)
   // ─────────────────────────────────────────────
-  {
-    id: "ollama",
-    kind: "llm_runtime",
-    displayName: "Ollama (Local)",
-    isEnabled: true,
-    defaultModel: "llama3.1",
-    config: {
-      baseUrl: "http://localhost:11434",
-      // optional: a per-provider default options bag you can pass to /api/chat
-      options: {
-        // temperature: 0.7,
-        // num_ctx: 8192,
-      },
-    },
-    capabilities: {
-      mode: ["chat"], // only chat right now
-      streaming: false,
-      vision: false,
-      tools: false,
-      maxContextTokens: 8192,
-      notes: "Local LLM via Ollama HTTP API",
-    },
-  },
+  // {
+  //   id: "ollama",
+  //   kind: "llm_runtime",
+  //   displayName: "Ollama (Local)",
+  //   isEnabled: true,
+  //   defaultModel: "llama3.1",
+  //   config: {
+  //     baseUrl: "http://localhost:11434",
+  //     // optional: a per-provider default options bag you can pass to /api/chat
+  //     options: {
+  //       // temperature: 0.7,
+  //       // num_ctx: 8192,
+  //     },
+  //   },
+  //   capabilities: {
+  //     mode: ["chat"], // only chat right now
+  //     streaming: false,
+  //     vision: false,
+  //     tools: false,
+  //     maxContextTokens: 8192,
+  //     notes: "Local LLM via Ollama HTTP API",
+  //   },
+  // },
 
   // ─────────────────────────────────────────────
   // Agent Runtime: GitHub Copilot (CLI/SDK)
@@ -40,7 +40,7 @@ export const seedProviders: CreateProviderPayload[] = [
     kind: "agent_runtime",
     displayName: "GitHub Copilot (CLI/SDK)",
     isEnabled: true,
-    defaultModel: "claude-opus-4-5-20251101",
+    defaultModel: "claude-opus-4-6",
     config: {
       // CopilotAdapterConfig interface fields
       // binary is auto-resolved from @github/copilot package; only set for custom paths
@@ -67,7 +67,7 @@ export const seedProviders: CreateProviderPayload[] = [
     kind: "agent_runtime",
     displayName: "Claude Code (Local Agent)",
     isEnabled: true, // Enable Claude provider
-    defaultModel: "claude-opus-4-5-20251101", // Updated model name
+    defaultModel: "claude-opus-4-6", // Updated model name
     config: {
       // ClaudeCodeAdapterConfig interface fields
       timeout: 600000, // Timeout in milliseconds (10 minutes)

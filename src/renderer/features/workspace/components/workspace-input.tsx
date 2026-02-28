@@ -72,6 +72,8 @@ export function WorkspaceInput({
     isLoadingSkills,
     planMode,
     handlePlanModeToggle,
+    thinkingMode,
+    handleThinkingModeToggle,
   } = useProviderModels(
     activeProviderId,
     providerVariant,
@@ -195,6 +197,8 @@ export function WorkspaceInput({
         isLoadingModels={isLoadingModels}
         planMode={planMode}
         onPlanModeToggle={handlePlanModeToggle}
+        thinkingMode={thinkingMode}
+        onThinkingModeToggle={handleThinkingModeToggle}
         uploadedFiles={uploadedFiles}
         onUploadedFilesChange={onUploadedFilesChange ?? (() => {})}
       />

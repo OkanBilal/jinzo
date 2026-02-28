@@ -441,6 +441,8 @@ export interface ClaudeCodeAdapterConfig {
   structuredOutputs?: Record<string, StructuredOutputEntry>;
   /** ID of the currently selected structured output schema (null = disabled) */
   structuredOutputsSelectedId?: string | null;
+  /** When true, enables adaptive thinking (extended reasoning) */
+  thinkingMode?: boolean;
 }
 
 /**

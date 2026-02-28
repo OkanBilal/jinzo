@@ -1295,9 +1295,9 @@ function parseExitCode(text?: string): number | undefined {
 function getDefaultModels(defaultModel?: string): ModelInfo[] {
   const models: ModelInfo[] = [
     {
-      id: "claude-opus-4-5",
+      id: "claude-opus-4-6",
       displayName: "Claude Opus 4.5",
-      isDefault: defaultModel === "claude-opus-4-5" || !defaultModel,
+      isDefault: defaultModel === "claude-opus-4-6" || !defaultModel,
       capabilities: {
         streaming: true,
         vision: true,
@@ -1306,9 +1306,9 @@ function getDefaultModels(defaultModel?: string): ModelInfo[] {
       contextWindow: 128000,
     },
         {
-      id: "claude-sonnet-4-5",
-      displayName: "Claude Sonnet 4.5",
-      isDefault: defaultModel === "claude-sonnet-4-5" || !defaultModel,
+      id: "claude-sonnet-4-6",
+      displayName: "Claude Sonnet 4.6",
+      isDefault: defaultModel === "claude-sonnet-4-6" || !defaultModel,
       capabilities: {
         streaming: true,
         vision: true,

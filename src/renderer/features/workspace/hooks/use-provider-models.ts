@@ -41,6 +41,7 @@ export function useProviderModels(
   });
   const [updateProvider] = useUpdateProviderMutation();
   const planMode = !!(providerData?.config as any)?.planMode;
+  const thinkingMode = !!(providerData?.config as any)?.thinkingMode;
 
   const handlePlanModeToggle = useCallback(async () => {
     if (!providerData) return;
@@ -55,6 +56,20 @@ export function useProviderModels(
       },
     });
   }, [providerData, planMode, activeProviderId, updateProvider]);
+
+  const handleThinkingModeToggle = useCallback(async () => {
+    if (!providerData) return;
+    const currentConfig = providerData.config ?? {};
+    await updateProvider({
+      id: activeProviderId,
+      payload: {
+        config: {
+          ...currentConfig,
+          thinkingMode: !thinkingMode,
+        },
+      },
+    });
+  }, [providerData, thinkingMode, activeProviderId, updateProvider]);
 
   const { modelDisplayNames } = useMemo(() => {
     if (providerModels && providerModels.length > 0) {
@@ -116,5 +131,7 @@ export function useProviderModels(
     isLoadingSkills,
     planMode,
     handlePlanModeToggle,
+    thinkingMode,
+    handleThinkingModeToggle,
   };
 }

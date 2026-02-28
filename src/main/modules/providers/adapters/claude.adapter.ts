@@ -180,6 +180,12 @@ interface SDKOptions {
    * Keys are server names, values are server configurations.
    */
   mcpServers?: Record<string, McpServerConfig>;
+  /**
+   * Thinking mode configuration for extended reasoning.
+   * - { type: "adaptive" }: Model decides when to use extended thinking
+   * - { type: "disabled" }: No extended thinking
+   */
+  thinking?: { type: "adaptive" } | { type: "disabled" };
 }
 
 interface SDKMessageContent {
@@ -407,7 +413,7 @@ export function createClaudeAdapter(
   }
 
   function getModel(requestModel?: string | null): string {
-    return requestModel || config.defaultModel || "claude-opus-4-5-20251101";
+    return requestModel || config.defaultModel || "claude-opus-4-6";
   }
 
   /**
@@ -555,6 +561,11 @@ export function createClaudeAdapter(
         options.outputFormat = { type: "json_schema", schema: entry.schema };
       }
     }
+
+    // Configure thinking mode: adaptive (enabled) or disabled
+    options.thinking = config.thinkingMode
+      ? { type: "adaptive" }
+      : { type: "disabled" };
 
     // Inject interactive tool approval via PreToolUse hook
     // Only inject when NOT in bypassPermissions mode and we have a runId
@@ -3063,9 +3074,9 @@ function isValidMcpServerConfig(config: unknown): boolean {
 function getDefaultModels(defaultModel?: string): ModelInfo[] {
   const models: ModelInfo[] = [
     {
-      id: "claude-sonnet-4-5-20250929",
-      displayName: "Claude Sonnet 4.5",
-      isDefault: defaultModel === "claude-sonnet-4-5-20250929" || !defaultModel,
+      id: "claude-sonnet-4-6",
+      displayName: "Claude Sonnet 4.6",
+      isDefault: defaultModel === "claude-sonnet-4-6" || !defaultModel,
       capabilities: {
         streaming: true,
         vision: true,
@@ -3074,9 +3085,9 @@ function getDefaultModels(defaultModel?: string): ModelInfo[] {
       contextWindow: 200000,
     },
     {
-      id: "claude-opus-4-5-20251101",
+      id: "claude-opus-4-6",
       displayName: "Claude Opus 4.5",
-      isDefault: defaultModel === "claude-opus-4-5-20251101",
+      isDefault: defaultModel === "claude-opus-4-6",
       capabilities: {
         streaming: true,
         vision: true,

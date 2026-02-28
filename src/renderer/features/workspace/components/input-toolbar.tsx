@@ -7,7 +7,7 @@ import {
   FILE_TYPES,
   type UploadedFile,
 } from "@/components/ui/input/file-upload-dropdown";
-import { Plan } from "@/components/ui/icons";
+import { Plan, Brain } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -25,6 +25,9 @@ interface InputToolbarProps {
   // Plan mode (Claude only)
   planMode: boolean;
   onPlanModeToggle: () => void;
+  // Thinking mode (Claude only)
+  thinkingMode: boolean;
+  onThinkingModeToggle: () => void;
   // File uploads
   uploadedFiles: UploadedFile[];
   onUploadedFilesChange: (files: UploadedFile[]) => void;
@@ -41,6 +44,8 @@ export function InputToolbar({
   isLoadingModels,
   planMode,
   onPlanModeToggle,
+  thinkingMode,
+  onThinkingModeToggle,
   uploadedFiles,
   onUploadedFilesChange,
 }: InputToolbarProps) {
@@ -144,26 +149,48 @@ export function InputToolbar({
             isLoading={isLoadingModels}
           />
           {variant === "claude" && (
-            <Button
-              tooltip="Toggle Plan Mode"
-              type="button"
-              onClick={onPlanModeToggle}
-              className={`flex items-center gap-1 -ml-1 px-2.5 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
-                planMode
-                  ? "bg-amber-500/15 text-amber-600 dark:text-amber-500"
-                  : " text-primary-900 dark:text-primary-300 hover:bg-primary/10"
-              }`}
-              title={
-                planMode
-                  ? "Plan mode on — agent will plan before acting"
-                  : "Plan mode off — agent acts directly"
-              }
-            >
-              <Plan
-                className={`size-3.75 font-medium ${planMode ? "text-amber-600 dark:text-amber-500" : "text-primary-900 dark:text-primary-300"}`}
-              />
-              Plan
-            </Button>
+            <>
+              <Button
+                tooltip="Toggle Plan Mode"
+                type="button"
+                onClick={onPlanModeToggle}
+                className={`flex items-center gap-1 -ml-1 px-2.5 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                  planMode
+                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-500"
+                    : " text-primary-900 dark:text-primary-300 hover:bg-primary/10"
+                }`}
+                title={
+                  planMode
+                    ? "Plan mode on — agent will plan before acting"
+                    : "Plan mode off — agent acts directly"
+                }
+              >
+                <Plan
+                  className={`size-3.75 font-medium ${planMode ? "text-amber-600 dark:text-amber-500" : "text-primary-900 dark:text-primary-300"}`}
+                />
+                Plan
+              </Button>
+              <Button
+                tooltip="Toggle Thinking Mode"
+                type="button"
+                onClick={onThinkingModeToggle}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                  thinkingMode
+                    ? "bg-purple-500/15 text-purple-600 dark:text-purple-500"
+                    : " text-primary-900 dark:text-primary-300 hover:bg-primary/10"
+                }`}
+                title={
+                  thinkingMode
+                    ? "Thinking on — model reasons before responding"
+                    : "Thinking off — model responds directly"
+                }
+              >
+                <Brain
+                  className={`size-3.75 font-medium ${thinkingMode ? "text-purple-600 dark:text-purple-500" : "text-primary-900 dark:text-primary-300"}`}
+                />
+                Think
+              </Button>
+            </>
           )}
         </div>
         <div className="flex items-center space-x-2">
