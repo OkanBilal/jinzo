@@ -21,7 +21,7 @@ function CurrentIcon({
 
 type IconPickerMode = "emoji" | "icon";
 
-interface MoodIconPickerProps {
+interface SpaceIconPickerProps {
   icon: string;
   iconMode: IconPickerMode;
   isOpen: boolean;
@@ -35,7 +35,7 @@ interface MoodIconPickerProps {
   onClear?: () => void;
 }
 
-export default function MoodIconPicker({
+export default function SpaceIconPicker({
   icon,
   iconMode,
   isOpen,
@@ -47,7 +47,7 @@ export default function MoodIconPicker({
   onSwitchMode,
   onClose,
   onClear,
-}: MoodIconPickerProps) {
+}: SpaceIconPickerProps) {
   const pickerRef = useRef<HTMLDivElement>(null);
 
   const fixedBackgroundClass = useFixedBackground

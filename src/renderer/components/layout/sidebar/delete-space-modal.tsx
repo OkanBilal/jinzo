@@ -1,24 +1,24 @@
 import Alert from "@/components/ui/alert";
-import type { Mood } from "@/lib/redux/api";
+import type { Space } from "@/lib/redux/api";
 
-interface DeleteMoodModalProps {
-  mood: Mood | null;
+interface DeleteSpaceModalProps {
+  space: Space | null;
   isDeleting: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export default function DeleteMoodModal({
-  mood,
+export default function DeleteSpaceModal({
+  space,
   isDeleting,
   onConfirm,
   onCancel,
-}: DeleteMoodModalProps) {
+}: DeleteSpaceModalProps) {
   return (
     <Alert
-      isOpen={!!mood}
-      title="Delete Mood"
-      description={`Are you sure you want to delete "${mood?.name}"? This action cannot be undone.`}
+      isOpen={!!space}
+      title="Delete Space"
+      description={`Are you sure you want to delete "${space?.name}"? This action cannot be undone.`}
       primaryButtonText="Delete"
       secondaryButtonText="Cancel"
       onPrimary={onConfirm}

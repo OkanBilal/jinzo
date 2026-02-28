@@ -15,7 +15,7 @@ export interface CreateRunPayload {
   id: string;
   accountId: string;
   workspaceId?: string;
-  moodId?: string;
+  spaceId?: string;
   providerId: string;
   model?: string;
   title?: string;
@@ -45,7 +45,7 @@ export interface RunResponse {
   id: string;
   accountId: string;
   workspaceId: string | null;
-  moodId: string | null;
+  spaceId: string | null;
   providerId: string;
   model: string | null;
   title: string | null;
@@ -229,7 +229,7 @@ export interface StartRunContextItem {
 export interface StartRunPayload {
   accountId: string;
   workspaceId: string;
-  moodId?: string;
+  spaceId?: string;
   providerId: string; // e.g., "copilot_cli"
   goal: string;
   model?: string;

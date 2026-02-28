@@ -3,7 +3,7 @@ import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/features/chat/components/markdown-components";
 import { parseUserPromptWithFiles } from "../../utils/parse-user-prompt";
 import type { EventGroup } from "../../utils/group-events";
-import { Code } from "@/components/ui/icons/mood";
+import { Code } from "@/components/ui/icons/space";
 import { Picture, Document } from "@/components/ui/icons";
 
 interface InfoGroupProps {

@@ -23,7 +23,7 @@ export const chatRepo = {
         initialQuery: chatSessions.initialQuery,
         providerId: chatSessions.providerId,
         model: chatSessions.model,
-        moodId: chatSessions.moodId,
+        spaceId: chatSessions.spaceId,
         systemPromptSnapshot: chatSessions.systemPromptSnapshot,
         providerConfigSnapshot: chatSessions.providerConfigSnapshot,
         createdAt: chatSessions.createdAt,
@@ -50,7 +50,7 @@ export const chatRepo = {
         model: payload.model,
         title: payload.title,
         providerId: payload.providerId,
-        moodId: payload.moodId,
+        spaceId: payload.spaceId,
         systemPromptSnapshot: payload.systemPromptSnapshot,
         providerConfigSnapshot: payload.providerConfigSnapshot,
       })
@@ -68,7 +68,7 @@ export const chatRepo = {
     if (payload.title !== undefined) updateData.title = payload.title;
     if (payload.providerId !== undefined) updateData.providerId = payload.providerId;
     if (payload.model !== undefined) updateData.model = payload.model;
-    if (payload.moodId !== undefined) updateData.moodId = payload.moodId;
+    if (payload.spaceId !== undefined) updateData.spaceId = payload.spaceId;
     if (payload.systemPromptSnapshot !== undefined)
       updateData.systemPromptSnapshot = payload.systemPromptSnapshot;
     if (payload.providerConfigSnapshot !== undefined)

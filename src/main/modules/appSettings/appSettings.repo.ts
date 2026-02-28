@@ -32,12 +32,12 @@ export const appSettingsRepo = {
     await db.insert(appSettings).values(data).onConflictDoNothing();
   },
 
-  async updateActiveMood(id: string, moodId: string | null): Promise<AppSettingsRecord | null> {
+  async updateActiveSpace(id: string, spaceId: string | null): Promise<AppSettingsRecord | null> {
     const db = getDb();
     await db
       .update(appSettings)
       .set({
-        activeMoodId: moodId,
+        activeSpaceId: spaceId,
         updatedAt: sql`(unixepoch())`,
       })
       .where(eq(appSettings.id, id));

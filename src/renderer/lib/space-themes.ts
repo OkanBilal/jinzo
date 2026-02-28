@@ -80,4 +80,4 @@ export const getThemeVariant = (
   isDarkMode: boolean,
 ): ThemeVariant => (isDarkMode ? colorPair.dark : colorPair.light);
 
-export type { ThemeVariant as MoodThemeVariant, ThemeColor as MoodThemeColor };
+export type { ThemeVariant as SpaceThemeVariant, ThemeColor as SpaceThemeColor };

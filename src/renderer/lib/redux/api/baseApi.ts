@@ -53,7 +53,7 @@ export const baseApi = createApi({
     'Ollama',
     'Connections',
     'Account',
-    'Moods',
+    'Spaces',
     'AppSettings',
     'McpTools',
     'Journal',

@@ -8,8 +8,8 @@ export type AppSettingsRecord = typeof appSettings.$inferSelect;
 // ─────────────────────────────────────────────────────────────
 // Request DTOs
 // ─────────────────────────────────────────────────────────────
-export interface SetActiveMoodRequest {
-  moodId: string | null;
+export interface SetActiveSpaceRequest {
+  spaceId: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────

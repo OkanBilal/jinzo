@@ -1,6 +1,6 @@
 import { ACCOUNT_ID, SETTINGS_ID } from "./appSettings.constants";
 import { appSettingsRepo } from "./appSettings.repo";
-import { validateMoodId } from "./appSettings.validation";
+import { validateSpaceId } from "./appSettings.validation";
 import type { AppSettingsRecord, ServiceResponse } from "./appSettings.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -48,25 +48,25 @@ export const appSettingsService = {
   },
 
   /**
-   * Sets the active mood
+   * Sets the active space
    */
-  async setActiveMood(moodId: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+  async setActiveSpace(spaceId: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
     try {
-      const { value, error } = validateMoodId(moodId);
+      const { value, error } = validateSpaceId(spaceId);
       if (error) {
         return { success: false, error };
       }
 
       await this.ensureSettings();
 
-      const updated = await appSettingsRepo.updateActiveMood(SETTINGS_ID, value);
+      const updated = await appSettingsRepo.updateActiveSpace(SETTINGS_ID, value);
       if (!updated) {
         return { success: false, error: "Failed to update settings" };
       }
 
       return { success: true, data: updated };
     } catch (error) {
-      console.error("Error updating active mood:", error);
+      console.error("Error updating active space:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",

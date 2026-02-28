@@ -1,5 +1,5 @@
-import type { ThemeVariant } from "./mood-themes";
-export interface PredefinedMoodTheme {
+import type { ThemeVariant } from "./space-themes";
+export interface PredefinedSpaceTheme {
   light: ThemeVariant;
   dark: ThemeVariant;
 }
@@ -20,27 +20,27 @@ export interface RightPanelConfig {
   component?: string;
 }
 
-export interface PredefinedMoodUIConfig {
+export interface PredefinedSpaceUIConfig {
   sidebar?: SidebarConfig;
   main?: MainConfig;
   rightPanel?: RightPanelConfig;
 }
 
-export interface PredefinedMood {
+export interface PredefinedSpace {
   id: string;
   name: string;
   icon: string;
-  theme: PredefinedMoodTheme;
+  theme: PredefinedSpaceTheme;
   systemPrompt: string;
-  uiConfig?: PredefinedMoodUIConfig;
+  uiConfig?: PredefinedSpaceUIConfig;
 }
 
-const theme = (light: string, dark: string): PredefinedMoodTheme => ({
+const theme = (light: string, dark: string): PredefinedSpaceTheme => ({
   light: { value: light, preview: light.replace(/[0-9a-f]{2}$/i, "") || light },
   dark: { value: dark, preview: dark },
 });
 
-export const predefinedMoods: PredefinedMood[] = [
+export const predefinedSpaces: PredefinedSpace[] = [
   {
     id: "journal",
     name: "Journal",

@@ -1,4 +1,4 @@
-import Code from "@/components/ui/icons/mood/code";
+import Code from "@/components/ui/icons/space/code";
 import { Close } from "@/components/ui/icons";
 
 interface EditorTabProps {

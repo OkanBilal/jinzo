@@ -1,8 +1,8 @@
 // ─────────────────────────────────────────────────────────────
-// Default Moods Seed Data
+// Default Spaces Seed Data
 // ─────────────────────────────────────────────────────────────
 
-export interface SeedMood {
+export interface SeedSpace {
   id: string;
   name: string;
   slug: string;
@@ -16,7 +16,7 @@ export interface SeedMood {
   sortOrder: number;
 }
 
-export const seedMoods: SeedMood[] = [
+export const seedSpaces: SeedSpace[] = [
   // {
   //   id: "chat",
   //   name: "Chat",

@@ -23,7 +23,7 @@ export interface DispatchRunRequest {
   model?: string;
   systemPrompt?: string;
   initialContext?: StartRunContextItem[];
-  moodId?: string;
+  spaceId?: string;
   configSnapshot?: Record<string, unknown>;
   toolPolicySnapshot?: Record<string, unknown>;
 }
@@ -76,7 +76,7 @@ export async function dispatchRun(request: DispatchRunRequest): Promise<Dispatch
     id: runId,
     accountId: request.accountId,
     workspaceId: request.workspaceId,
-    moodId: request.moodId,
+    spaceId: request.spaceId,
     providerId: request.providerId,
     model: request.model,
     goal: request.goal,
@@ -227,7 +227,7 @@ async function dispatchRunInternal(
     id: runId,
     accountId: request.accountId,
     workspaceId: request.workspaceId,
-    moodId: request.moodId,
+    spaceId: request.spaceId,
     providerId: request.providerId,
     model: request.model,
     goal: request.goal,

@@ -1,5 +1,5 @@
 import { ComponentType, SVGProps } from "react";
-import * as Icons from "@/components/ui/icons/mood";
+import * as Icons from "@/components/ui/icons/space";
 
 export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 

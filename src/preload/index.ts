@@ -253,21 +253,21 @@ const api = {
     connections: () => ipcRenderer.invoke("seed:connections"),
     all: () => ipcRenderer.invoke("seed:all"),
   },
-  // Mood operations
-  mood: {
-    getAll: () => ipcRenderer.invoke("mood:getAll"),
-    getById: (moodId: string) => ipcRenderer.invoke("mood:getById", moodId),
-    create: (payload: unknown) => ipcRenderer.invoke("mood:create", payload),
-    update: (moodId: string, payload: unknown) =>
-      ipcRenderer.invoke("mood:update", moodId, payload),
-    delete: (moodId: string) => ipcRenderer.invoke("mood:delete", moodId),
-    archive: (moodId: string) => ipcRenderer.invoke("mood:archive", moodId),
+  // Space operations
+  space: {
+    getAll: () => ipcRenderer.invoke("space:getAll"),
+    getById: (spaceId: string) => ipcRenderer.invoke("space:getById", spaceId),
+    create: (payload: unknown) => ipcRenderer.invoke("space:create", payload),
+    update: (spaceId: string, payload: unknown) =>
+      ipcRenderer.invoke("space:update", spaceId, payload),
+    delete: (spaceId: string) => ipcRenderer.invoke("space:delete", spaceId),
+    archive: (spaceId: string) => ipcRenderer.invoke("space:archive", spaceId),
   },
   // App settings operations
   appSettings: {
     get: () => ipcRenderer.invoke("appSettings:get"),
-    setActiveMood: (moodId: string | null) =>
-      ipcRenderer.invoke("appSettings:setActiveMood", moodId),
+    setActiveSpace: (spaceId: string | null) =>
+      ipcRenderer.invoke("appSettings:setActiveSpace", spaceId),
     setEnableWorktrees: (enabled: boolean) =>
       ipcRenderer.invoke("appSettings:setEnableWorktrees", enabled),
     setShowToolCalls: (enabled: boolean) =>
@@ -282,13 +282,13 @@ const api = {
       ipcRenderer.invoke("appSettings:setCommitInstructions", instructions),
     setPrInstructions: (instructions: string) =>
       ipcRenderer.invoke("appSettings:setPrInstructions", instructions),
-    onMoodChanged: (
-      callback: (data: { activeMoodId: string | null }) => void,
+    onSpaceChanged: (
+      callback: (data: { activeSpaceId: string | null }) => void,
     ) => {
-      const listener = (_: any, data: { activeMoodId: string | null }) =>
+      const listener = (_: any, data: { activeSpaceId: string | null }) =>
         callback(data);
-      ipcRenderer.on("mood:changed", listener);
-      return () => ipcRenderer.removeListener("mood:changed", listener);
+      ipcRenderer.on("space:changed", listener);
+      return () => ipcRenderer.removeListener("space:changed", listener);
     },
   },
   // Journal operations
@@ -400,12 +400,12 @@ const api = {
   },
   // Tool permissions operations
   toolPermissions: {
-    getByMood: (moodId: string) =>
-      ipcRenderer.invoke("toolPermissions:getByMood", moodId),
-    set: (payload: { moodId: string; toolId: string; enabled?: boolean; policy?: unknown }) =>
+    getBySpace: (spaceId: string) =>
+      ipcRenderer.invoke("toolPermissions:getBySpace", spaceId),
+    set: (payload: { spaceId: string; toolId: string; enabled?: boolean; policy?: unknown }) =>
       ipcRenderer.invoke("toolPermissions:set", payload),
-    remove: (moodId: string, toolId: string) =>
-      ipcRenderer.invoke("toolPermissions:remove", moodId, toolId),
+    remove: (spaceId: string, toolId: string) =>
+      ipcRenderer.invoke("toolPermissions:remove", spaceId, toolId),
   },
   // Workspaces operations
   workspaces: {
@@ -450,7 +450,7 @@ const api = {
     execute: (payload: {
       accountId: string;
       workspaceId: string;
-      moodId?: string;
+      spaceId?: string;
       providerId: string;
       goal: string;
       model?: string;

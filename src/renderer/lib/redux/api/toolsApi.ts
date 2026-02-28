@@ -92,16 +92,16 @@ export interface UpdateToolCallPayload {
   metadata?: Record<string, unknown>;
 }
 
-export interface MoodToolPermission {
-  moodId: string;
+export interface SpaceToolPermission {
+  spaceId: string;
   toolId: string;
   enabled: boolean;
   policy: Record<string, unknown> | null;
   createdAt: number;
 }
 
-export interface MoodToolPermissionPayload {
-  moodId: string;
+export interface SpaceToolPermissionPayload {
+  spaceId: string;
   toolId: string;
   enabled?: boolean;
   policy?: Record<string, unknown>;
@@ -262,42 +262,42 @@ export const toolsApi = baseApi.injectEndpoints({
       invalidatesTags: ["ToolCalls"],
     }),
 
-    getToolPermissionsByMood: builder.query<MoodToolPermission[], string>({
-      query: (moodId) => ({
-        handler: "toolPermissions:getByMood",
-        args: [moodId],
+    getToolPermissionsBySpace: builder.query<SpaceToolPermission[], string>({
+      query: (spaceId) => ({
+        handler: "toolPermissions:getBySpace",
+        args: [spaceId],
       }),
       transformResponse: (response: {
         success: boolean;
-        data: MoodToolPermission[];
+        data: SpaceToolPermission[];
       }) => response.data,
-      providesTags: (_result, _error, moodId) => [
-        { type: "ToolPermissions", id: moodId },
+      providesTags: (_result, _error, spaceId) => [
+        { type: "ToolPermissions", id: spaceId },
       ],
     }),
 
-    setToolPermission: builder.mutation<void, MoodToolPermissionPayload>({
+    setToolPermission: builder.mutation<void, SpaceToolPermissionPayload>({
       query: (payload) => ({
         handler: "toolPermissions:set",
         args: [payload],
       }),
-      invalidatesTags: (_result, _error, { moodId }) => [
+      invalidatesTags: (_result, _error, { spaceId }) => [
         "ToolPermissions",
-        { type: "ToolPermissions", id: moodId },
+        { type: "ToolPermissions", id: spaceId },
       ],
     }),
 
     removeToolPermission: builder.mutation<
       void,
-      { moodId: string; toolId: string }
+      { spaceId: string; toolId: string }
     >({
-      query: ({ moodId, toolId }) => ({
+      query: ({ spaceId, toolId }) => ({
         handler: "toolPermissions:remove",
-        args: [moodId, toolId],
+        args: [spaceId, toolId],
       }),
-      invalidatesTags: (_result, _error, { moodId }) => [
+      invalidatesTags: (_result, _error, { spaceId }) => [
         "ToolPermissions",
-        { type: "ToolPermissions", id: moodId },
+        { type: "ToolPermissions", id: spaceId },
       ],
     }),
   }),
@@ -326,8 +326,8 @@ export const {
   useStartToolCallMutation,
   useCompleteToolCallMutation,
   useFailToolCallMutation,
-  useGetToolPermissionsByMoodQuery,
-  useLazyGetToolPermissionsByMoodQuery,
+  useGetToolPermissionsBySpaceQuery,
+  useLazyGetToolPermissionsBySpaceQuery,
   useSetToolPermissionMutation,
   useRemoveToolPermissionMutation,
 } = toolsApi;

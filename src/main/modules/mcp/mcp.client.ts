@@ -1,11 +1,11 @@
 import {
   ENTITY_TOOLS,
   SYNC_TOOLS,
-  MOOD_TOOLS,
+  SPACE_TOOLS,
   JOURNAL_TOOLS,
   executeEntityTool,
   executeSyncTool,
-  executeMoodTool,
+  executeSpaceTool,
   executeJournalTool,
 } from "./tools";
 import type { OllamaToolDefinition, MCPToolResponse } from "./mcp.dto";
@@ -18,7 +18,7 @@ export class FeedMCPClient {
     return [
       ...ENTITY_TOOLS,
       ...SYNC_TOOLS,
-      ...MOOD_TOOLS,
+      ...SPACE_TOOLS,
       ...JOURNAL_TOOLS,
     ];
   }
@@ -30,9 +30,9 @@ export class FeedMCPClient {
         return await executeSyncTool(toolName);
       }
       
-      // Mood tools
-      if (toolName === "switch_to_journal_mood" || toolName === "switch_to_chat_mood") {
-        return await executeMoodTool(toolName);
+      // Space tools
+      if (toolName === "switch_to_journal_space" || toolName === "switch_to_chat_space") {
+        return await executeSpaceTool(toolName);
       }
       
       // Journal tools
@@ -78,9 +78,9 @@ export {
   executeSyncTool,
   SYNC_TOOLS,
   
-  // Mood tools
-  executeMoodTool,
-  MOOD_TOOLS,
+  // Space tools
+  executeSpaceTool,
+  SPACE_TOOLS,
   
   // Journal tools
   executeJournalTool,

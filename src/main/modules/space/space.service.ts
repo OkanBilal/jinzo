@@ -1,19 +1,19 @@
 import { nanoid } from "nanoid";
-import { moodRepo } from "./mood.repo";
-import { ACCOUNT_ID } from "./mood.constants";
-import { sanitizeMoodPayload, generateSlug } from "./mood.validation";
-import type { MoodRecord, ServiceResponse } from "./mood.dto";
+import { spaceRepo } from "./space.repo";
+import { ACCOUNT_ID } from "./space.constants";
+import { sanitizeSpacePayload, generateSlug } from "./space.validation";
+import type { SpaceRecord, ServiceResponse } from "./space.dto";
 
 // ─────────────────────────────────────────────────────────────
-// Mood Service
+// Space Service
 // ─────────────────────────────────────────────────────────────
-export const moodService = {
-  async getAll(): Promise<ServiceResponse<MoodRecord[]>> {
+export const spaceService = {
+  async getAll(): Promise<ServiceResponse<SpaceRecord[]>> {
     try {
-      const result = await moodRepo.findAll();
+      const result = await spaceRepo.findAll();
       return { success: true, data: result };
     } catch (error) {
-      console.error("Error fetching moods:", error);
+      console.error("Error fetching spaces:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -21,17 +21,17 @@ export const moodService = {
     }
   },
 
-  async getById(moodId: string): Promise<ServiceResponse<MoodRecord>> {
+  async getById(spaceId: string): Promise<ServiceResponse<SpaceRecord>> {
     try {
-      const result = await moodRepo.findById(moodId);
+      const result = await spaceRepo.findById(spaceId);
 
       if (!result) {
-        return { success: false, error: "Mood not found" };
+        return { success: false, error: "Space not found" };
       }
 
       return { success: true, data: result };
     } catch (error) {
-      console.error("Error fetching mood:", error);
+      console.error("Error fetching space:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -39,9 +39,9 @@ export const moodService = {
     }
   },
 
-  async create(payload: unknown): Promise<ServiceResponse<MoodRecord>> {
+  async create(payload: unknown): Promise<ServiceResponse<SpaceRecord>> {
     try {
-      const { data, errors } = sanitizeMoodPayload(payload);
+      const { data, errors } = sanitizeSpacePayload(payload);
 
       if (Object.keys(errors).length > 0) {
         return { success: false, errors };
@@ -55,18 +55,18 @@ export const moodService = {
       const slug = data.slug || generateSlug(data.name);
 
       // Check if slug already exists
-      const existing = await moodRepo.findBySlug(slug);
+      const existing = await spaceRepo.findBySlug(slug);
       if (existing) {
         return {
           success: false,
-          errors: { slug: "A mood with this slug already exists" },
+          errors: { slug: "A space with this slug already exists" },
         };
       }
 
       // Get next sort order
-      const nextOrder = await moodRepo.getMaxSortOrder();
+      const nextOrder = await spaceRepo.getMaxSortOrder();
 
-      const newMood = {
+      const newSpace = {
         id: nanoid(),
         accountId: ACCOUNT_ID,
         name: data.name,
@@ -80,16 +80,16 @@ export const moodService = {
         sortOrder: data.sortOrder ?? nextOrder,
       };
 
-      await moodRepo.create(newMood);
+      await spaceRepo.create(newSpace);
 
-      const created = await moodRepo.findById(newMood.id);
+      const created = await spaceRepo.findById(newSpace.id);
       if (!created) {
-        return { success: false, error: "Failed to create mood" };
+        return { success: false, error: "Failed to create space" };
       }
 
       return { success: true, data: created };
     } catch (error) {
-      console.error("Error creating mood:", error);
+      console.error("Error creating space:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -98,47 +98,47 @@ export const moodService = {
   },
 
   async update(
-    moodId: string,
+    spaceId: string,
     payload: unknown
-  ): Promise<ServiceResponse<MoodRecord>> {
+  ): Promise<ServiceResponse<SpaceRecord>> {
     try {
-      const { data, errors } = sanitizeMoodPayload(payload);
+      const { data, errors } = sanitizeSpacePayload(payload);
 
       if (Object.keys(errors).length > 0) {
         return { success: false, errors };
       }
 
-      // Check if mood exists
-      const existing = await moodRepo.findById(moodId);
+      // Check if space exists
+      const existing = await spaceRepo.findById(spaceId);
       if (!existing) {
-        return { success: false, error: "Mood not found" };
+        return { success: false, error: "Space not found" };
       }
 
       // If slug is being changed, check if new slug already exists
       if (data.slug && data.slug !== existing.slug) {
-        const slugExists = await moodRepo.findBySlug(data.slug);
+        const slugExists = await spaceRepo.findBySlug(data.slug);
         if (slugExists) {
           return {
             success: false,
-            errors: { slug: "A mood with this slug already exists" },
+            errors: { slug: "A space with this slug already exists" },
           };
         }
       }
 
-      // Update mood
-      await moodRepo.update(moodId, {
+      // Update space
+      await spaceRepo.update(spaceId, {
         ...data,
         slug: data.slug || (data.name ? generateSlug(data.name) : undefined),
       });
 
-      const updated = await moodRepo.findById(moodId);
+      const updated = await spaceRepo.findById(spaceId);
       if (!updated) {
-        return { success: false, error: "Failed to update mood" };
+        return { success: false, error: "Failed to update space" };
       }
 
       return { success: true, data: updated };
     } catch (error) {
-      console.error("Error updating mood:", error);
+      console.error("Error updating space:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -146,17 +146,17 @@ export const moodService = {
     }
   },
 
-  async delete(moodId: string): Promise<ServiceResponse<void>> {
+  async delete(spaceId: string): Promise<ServiceResponse<void>> {
     try {
-      const existing = await moodRepo.findById(moodId);
+      const existing = await spaceRepo.findById(spaceId);
       if (!existing) {
-        return { success: false, error: "Mood not found" };
+        return { success: false, error: "Space not found" };
       }
 
-      await moodRepo.delete(moodId);
+      await spaceRepo.delete(spaceId);
       return { success: true, data: undefined };
     } catch (error) {
-      console.error("Error deleting mood:", error);
+      console.error("Error deleting space:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -164,17 +164,17 @@ export const moodService = {
     }
   },
 
-  async archive(moodId: string): Promise<ServiceResponse<void>> {
+  async archive(spaceId: string): Promise<ServiceResponse<void>> {
     try {
-      const existing = await moodRepo.findById(moodId);
+      const existing = await spaceRepo.findById(spaceId);
       if (!existing) {
-        return { success: false, error: "Mood not found" };
+        return { success: false, error: "Space not found" };
       }
 
-      await moodRepo.archive(moodId);
+      await spaceRepo.archive(spaceId);
       return { success: true, data: undefined };
     } catch (error) {
-      console.error("Error archiving mood:", error);
+      console.error("Error archiving space:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  useSetActiveMoodMutation,
+  useSetActiveSpaceMutation,
   useCreateJournalDraftMutation,
   useCreateWorkspaceMutation,
   useSelectDirectoryMutation,
@@ -11,7 +11,7 @@ import {
   useUpdateProjectMutation,
 } from "@/lib/redux/api";
 import { toast } from "@/components/ui/toast";
-import { useActiveMood } from "@/hooks/use-active-mood";
+import { useActiveSpace } from "@/hooks/use-active-space";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { useRouteType } from "@/hooks/use-route-type";
 import { getBaseRoutePath } from "@/lib/route-utils";
@@ -19,12 +19,12 @@ import { getBaseRoutePath } from "@/lib/route-utils";
 export function useSidebarActions() {
   const navigate = useNavigate();
   const routeType = useRouteType();
-  const { moods } = useActiveMood();
+  const { spaces } = useActiveSpace();
   const sidebarConfig = useSidebarConfig();
   const { data: account } = useGetAccountQuery();
   const { data: appSettings } = useGetAppSettingsQuery();
 
-  const [setActiveMood] = useSetActiveMoodMutation();
+  const [setActiveSpace] = useSetActiveSpaceMutation();
   const [createJournalDraft] = useCreateJournalDraftMutation();
   const [createWorkspace] = useCreateWorkspaceMutation();
   const [selectDirectory] = useSelectDirectoryMutation();
@@ -34,22 +34,22 @@ export function useSidebarActions() {
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
   const [isCloning, setIsCloning] = useState(false);
 
-  const handleMoodChange = async (moodId: string) => {
+  const handleSpaceChange = async (spaceId: string) => {
     try {
       // Parse route BEFORE mutation to avoid stale closure issues
-      const selectedMood = moods.find((m) => m.id === moodId);
+      const selectedSpace = spaces.find((s) => s.id === spaceId);
       let defaultRoute = "/";
 
-      if (selectedMood?.uiConfig) {
+      if (selectedSpace?.uiConfig) {
         try {
-          const config = JSON.parse(selectedMood.uiConfig);
+          const config = JSON.parse(selectedSpace.uiConfig);
           defaultRoute = config.sidebar?.defaultRoute || "/";
         } catch {
           // Keep default "/"
         }
       }
 
-      await setActiveMood(moodId || null).unwrap();
+      await setActiveSpace(spaceId || null).unwrap();
 
       // Use setTimeout to ensure navigation happens after React reconciliation
       // This fixes packaged version timing issues with HashRouter
@@ -57,8 +57,8 @@ export function useSidebarActions() {
         navigate(defaultRoute, { replace: true });
       }, 0);
     } catch (error) {
-      console.error("Error changing mood:", error);
-      toast.error("Failed to change mood");
+      console.error("Error changing space:", error);
+      toast.error("Failed to change space");
     }
   };
 
@@ -403,7 +403,7 @@ export function useSidebarActions() {
   };
 
   return {
-    handleMoodChange,
+    handleSpaceChange,
     handleNewClick,
     handleAddProject,
     handleCloneRepo,

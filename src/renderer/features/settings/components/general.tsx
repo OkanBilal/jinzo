@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { toast } from "@/components/ui/toast";
 import { useDarkMode } from "../../../hooks/use-dark-mode";
-import { useActiveMood } from "../../../hooks/use-active-mood";
+import { useActiveSpace } from "../../../hooks/use-active-space";
 import { Button } from "../../../components/ui/button";
 import { Heading2 } from "../../../components/ui/text";
 import Select from "@/components/ui/select";
@@ -285,11 +285,11 @@ function NotifyToolApprovalToggle() {
 
 export default function GeneralSettings() {
   const { theme, setTheme } = useDarkMode();
-  const { activeMood } = useActiveMood();
+  const { activeSpace } = useActiveSpace();
   const { state: updateState, check: checkUpdate, download: downloadUpdate, install: installUpdate } = useAutoUpdate();
 
   const { lightBackground, darkBackground } = useMemo(() => {
-    if (!activeMood?.themeConfig) {
+    if (!activeSpace?.themeConfig) {
       return {
         lightBackground: defaultTheme.lightBackground.replace(
           /[0-9a-f]{2}$/i,
@@ -302,7 +302,7 @@ export default function GeneralSettings() {
       };
     }
     try {
-      const config = JSON.parse(activeMood.themeConfig);
+      const config = JSON.parse(activeSpace.themeConfig);
       return {
         lightBackground: config.lightBackground || "#f5f3ee",
         darkBackground: config.darkBackground || "#1a1a1a",
@@ -313,7 +313,7 @@ export default function GeneralSettings() {
         darkBackground: "#1a1a1a",
       };
     }
-  }, [activeMood?.themeConfig]);
+  }, [activeSpace?.themeConfig]);
 
   return (
     <div className="bg-primary dark:bg-primary-950">

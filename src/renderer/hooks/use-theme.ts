@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useActiveMood } from "./use-active-mood";
+import { useActiveSpace } from "./use-active-space";
 import { useDarkMode } from "./use-dark-mode";
 import { getDefaultBackground } from "@/lib/theme";
 
@@ -13,18 +13,18 @@ export interface StoredThemeConfig {
   darkBackground?: string; // Dark mode background
   lightUserMessageBackground?: string; // Light mode user message background
   darkUserMessageBackground?: string; // Dark mode user message background
-  // Nested format from predefined moods
+  // Nested format from predefined spaces
   light?: { value: string; preview?: string };
   dark?: { value: string; preview?: string };
 }
 
 /**
- * Hook to get theme configuration from active mood's themeConfig
+ * Hook to get theme configuration from active space's themeConfig
  * Automatically switches between light/dark variants based on app theme
  * @returns {ThemeConfig} Theme configuration object
  */
 export function useTheme(): ThemeConfig {
-  const { activeMood } = useActiveMood();
+  const { activeSpace } = useActiveSpace();
   const { darkMode } = useDarkMode();
 
   const themeConfig = useMemo(() => {
@@ -32,9 +32,9 @@ export function useTheme(): ThemeConfig {
       backgroundColor: getDefaultBackground(darkMode),
     };
 
-    if (activeMood?.themeConfig) {
+    if (activeSpace?.themeConfig) {
       try {
-        const config: StoredThemeConfig = JSON.parse(activeMood.themeConfig);
+        const config: StoredThemeConfig = JSON.parse(activeSpace.themeConfig);
 
         // Determine background color
         let backgroundColor = defaultConfig.backgroundColor;
@@ -55,13 +55,13 @@ export function useTheme(): ThemeConfig {
           backgroundColor,
         };
       } catch (error) {
-        console.error("Failed to parse mood themeConfig:", error);
+        console.error("Failed to parse space themeConfig:", error);
         return defaultConfig;
       }
     }
 
     return defaultConfig;
-  }, [activeMood, darkMode]);
+  }, [activeSpace, darkMode]);
 
   return themeConfig;
 }

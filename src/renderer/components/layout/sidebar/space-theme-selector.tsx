@@ -2,24 +2,24 @@ import {
   solidColors,
   gradientColors,
   getThemeVariant,
-} from "@/lib/mood-themes";
+} from "@/lib/space-themes";
 import { useDarkMode } from "@/hooks/use-dark-mode";
 import { Button } from "@/components/ui/button";
 import { ArrowUp } from "@/components/ui/icons";
 
-interface MoodThemeSelectorProps {
+interface SpaceThemeSelectorProps {
   selectedColorIndex: number;
   showGradients: boolean;
   onSelectColor: (index: number) => void;
   onToggleGradients: (show: boolean) => void;
 }
 
-export default function MoodThemeSelector({
+export default function SpaceThemeSelector({
   selectedColorIndex,
   showGradients,
   onSelectColor,
   onToggleGradients,
-}: MoodThemeSelectorProps) {
+}: SpaceThemeSelectorProps) {
   const { darkMode } = useDarkMode();
 
   return (

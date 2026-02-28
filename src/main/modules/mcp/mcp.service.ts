@@ -1,15 +1,15 @@
 import {
   ENTITY_TOOLS,
   SYNC_TOOLS,
-  MOOD_TOOLS,
+  SPACE_TOOLS,
   JOURNAL_TOOLS,
   executeEntityTool,
   executeSyncTool,
-  executeMoodTool,
+  executeSpaceTool,
   executeJournalTool,
 } from "./tools";
 import type { OllamaToolDefinition, FormattedTool } from "./mcp.dto";
-import { isSyncTool, isMoodTool, isJournalTool } from "./mcp.helpers";
+import { isSyncTool, isSpaceTool, isJournalTool } from "./mcp.helpers";
 
 // ─────────────────────────────────────────────────────────────
 // Tool Registry
@@ -18,7 +18,7 @@ export function getAllTools(): OllamaToolDefinition[] {
   return [
     ...ENTITY_TOOLS,
     ...SYNC_TOOLS,
-    ...MOOD_TOOLS,
+    ...SPACE_TOOLS,
     ...JOURNAL_TOOLS,
   ];
 }
@@ -46,8 +46,8 @@ export async function executeToolByName(
     return await executeSyncTool(toolName);
   }
   
-  if (isMoodTool(toolName)) {
-    return await executeMoodTool(toolName);
+  if (isSpaceTool(toolName)) {
+    return await executeSpaceTool(toolName);
   }
   
   if (isJournalTool(toolName)) {

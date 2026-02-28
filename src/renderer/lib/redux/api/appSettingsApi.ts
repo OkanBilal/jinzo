@@ -3,7 +3,7 @@ import { baseApi } from "./baseApi";
 export interface AppSettings {
   id: string;
   accountId: string;
-  activeMoodId: string | null;
+  activeSpaceId: string | null;
   enableWorktrees: boolean;
   showToolCalls: boolean;
   preventSleepDuringRuns: boolean;
@@ -26,10 +26,10 @@ export const appSettingsApi = baseApi.injectEndpoints({
       providesTags: ["AppSettings"],
     }),
 
-    setActiveMood: builder.mutation<AppSettings, string | null>({
-      query: (moodId) => ({
-        handler: "appSettings:setActiveMood",
-        args: [moodId],
+    setActiveSpace: builder.mutation<AppSettings, string | null>({
+      query: (spaceId) => ({
+        handler: "appSettings:setActiveSpace",
+        args: [spaceId],
       }),
       transformResponse: (response: { success: boolean; data: AppSettings }) =>
         response.data,
@@ -112,7 +112,7 @@ export const appSettingsApi = baseApi.injectEndpoints({
 export const {
   useGetAppSettingsQuery,
   useLazyGetAppSettingsQuery,
-  useSetActiveMoodMutation,
+  useSetActiveSpaceMutation,
   useSetEnableWorktreesMutation,
   useSetShowToolCallsMutation,
   useSetPreventSleepDuringRunsMutation,

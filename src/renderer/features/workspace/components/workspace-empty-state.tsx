@@ -1,4 +1,4 @@
-import { Copilot as CopilotIcon } from "@/components/ui/icons/mood";
+import { Copilot as CopilotIcon } from "@/components/ui/icons/space";
 import type { Workspace } from "../types";
 import { useEncryptedText } from "../hooks/use-encrypted-text";
 import { useRouteType } from "@/hooks/use-route-type";

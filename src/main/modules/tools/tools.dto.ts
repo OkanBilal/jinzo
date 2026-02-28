@@ -113,17 +113,17 @@ export interface ToolCallResponse {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Mood Tool Permission DTOs
+// Space Tool Permission DTOs
 // ─────────────────────────────────────────────────────────────
-export interface MoodToolPermissionPayload {
-  moodId: string;
+export interface SpaceToolPermissionPayload {
+  spaceId: string;
   toolId: string;
   enabled?: boolean;
   policy?: Record<string, unknown>;
 }
 
-export interface MoodToolPermissionResponse {
-  moodId: string;
+export interface SpaceToolPermissionResponse {
+  spaceId: string;
   toolId: string;
   enabled: boolean;
   policy: Record<string, unknown> | null;

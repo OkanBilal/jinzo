@@ -58,11 +58,11 @@ export interface SyncResult {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Mood Types
+// Space Types
 // ─────────────────────────────────────────────────────────────
-export interface MoodSwitchResult {
+export interface SpaceSwitchResult {
   success: boolean;
-  mood: string;
+  space: string;
   message: string;
   error?: string;
 }
@@ -73,7 +73,7 @@ export interface MoodSwitchResult {
 export interface JournalMetadata {
   status: "draft" | "published" | "archived";
   wordCount: number;
-  mood?: string;
+  space?: string;
   tags?: string[];
 }
 

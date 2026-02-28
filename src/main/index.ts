@@ -28,7 +28,7 @@ import {
   unregisterConnectionsHandlers,
 } from "./modules/connections";
 import { registerSeedIpc, unregisterSeedIpc } from "./modules/seed";
-import { registerMoodIpc, unregisterMoodIpc } from "./modules/mood";
+import { registerSpaceIpc, unregisterSpaceIpc } from "./modules/space";
 import {
   registerAppSettingsIpc,
   unregisterAppSettingsIpc,
@@ -299,7 +299,7 @@ async function initializeApp() {
     registerConnectionCredentialsIpc();
     registerConnectionsHandlers();
     registerSeedIpc();
-    registerMoodIpc();
+    registerSpaceIpc();
     registerAppSettingsIpc();
     registerJournalIpc();
     registerProvidersIpc();
@@ -423,7 +423,7 @@ async function cleanupApp() {
     unregisterSeedIpc();
     unregisterOllamaIpc();
     unregisterMcpHandlers();
-    unregisterMoodIpc();
+    unregisterSpaceIpc();
     unregisterFeedIpc();
     unregisterConnectionCredentialsIpc();
     unregisterConnectionsHandlers();

@@ -5,7 +5,7 @@ import type {
   UpdateToolPayload,
   CreateToolCallPayload,
   UpdateToolCallPayload,
-  MoodToolPermissionPayload,
+  SpaceToolPermissionPayload,
   ToolSource,
 } from "./tools.dto";
 
@@ -32,8 +32,8 @@ const CHANNELS = {
   TOOL_CALLS_COMPLETE: "toolCalls:complete",
   TOOL_CALLS_FAIL: "toolCalls:fail",
 
-  // Mood Tool Permissions
-  PERMISSIONS_GET_BY_MOOD: "toolPermissions:getByMood",
+  // Space Tool Permissions
+  PERMISSIONS_GET_BY_SPACE: "toolPermissions:getBySpace",
   PERMISSIONS_SET: "toolPermissions:set",
   PERMISSIONS_REMOVE: "toolPermissions:remove",
 } as const;
@@ -113,17 +113,17 @@ export function registerToolsIpc(): void {
     return toolsController.failToolCall(id, error);
   });
 
-  // Mood Tool Permissions
-  ipcMain.handle(CHANNELS.PERMISSIONS_GET_BY_MOOD, async (_, moodId: string) => {
-    return toolsController.getPermissionsByMood(moodId);
+  //  Space Tool Permissions
+  ipcMain.handle(CHANNELS.PERMISSIONS_GET_BY_SPACE, async (_, spaceId: string) => {
+    return toolsController.getPermissionsBySpace(spaceId);
   });
 
-  ipcMain.handle(CHANNELS.PERMISSIONS_SET, async (_, payload: MoodToolPermissionPayload) => {
+  ipcMain.handle(CHANNELS.PERMISSIONS_SET, async (_, payload: SpaceToolPermissionPayload) => {
     return toolsController.setPermission(payload);
   });
 
-  ipcMain.handle(CHANNELS.PERMISSIONS_REMOVE, async (_, moodId: string, toolId: string) => {
-    return toolsController.removePermission(moodId, toolId);
+  ipcMain.handle(CHANNELS.PERMISSIONS_REMOVE, async (_, spaceId: string, toolId: string) => {
+    return toolsController.removePermission(spaceId, toolId);
   });
 }
 

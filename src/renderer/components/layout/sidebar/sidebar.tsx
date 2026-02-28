@@ -5,35 +5,35 @@ import { SidebarFooter } from "./sidebar-footer";
 import { SidebarContent } from "./sidebar-content";
 import DeleteConfirmationModal from "./delete-confirmation-modal";
 import NewButton from "./new-button";
-import CreateMoodView from "./create-mood-view";
-import PresetMoodsView from "./preset-moods-view";
+import CreateSpaceView from "./create-space-view";
+import PresetSpacesView from "./preset-spaces-view";
 import SettingsView from "./settings-view";
-import CreateMoodMenu from "./create-mood-menu";
+import CreateSpaceMenu from "./create-space-menu";
 import HelpMenu from "./help-menu";
-import MoodContextMenu from "./mood-context-menu";
-import EditMoodModal from "./edit-mood-modal";
-import DeleteMoodModal from "./delete-mood-modal";
+import SpaceContextMenu from "./space-context-menu";
+import EditSpaceModal from "./edit-space-modal";
+import DeleteSpaceModal from "./delete-space-modal";
 import { Edit, Plus, Connect } from "@/components/ui/icons";
 import CloneRepoModal from "./clone-repo-modal";
 import { useDeleteChatSession } from "@/features/chat/hooks/use-delete-chat-session";
 import { useDeleteJournal } from "@/features/journal/hooks";
 import { useDeleteWorkspace } from "@/features/workspace/hooks";
 import { useArchiveWorkspace } from "@/features/workspace/hooks";
-import { useMoodContextMenu } from "@/hooks/use-mood-context-menu";
-import { useMoodMenu } from "@/hooks/use-mood-menu";
+import { useSpaceContextMenu } from "@/hooks/use-space-context-menu";
+import { useSpaceMenu } from "@/hooks/use-space-menu";
 import { useSidebarSearch } from "@/hooks/use-sidebar-search";
 import { useSettingsNavigation } from "@/hooks/use-settings-navigation";
 import { useSidebarData } from "@/hooks/use-sidebar-data";
 import { useSidebarActions } from "@/hooks/use-sidebar-actions";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
-import { useActiveMood } from "@/hooks/use-active-mood";
+import { useActiveSpace } from "@/hooks/use-active-space";
 
 export default function Sidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
 
   const sidebarConfig = useSidebarConfig();
-  const { moods, activeMoodId } = useActiveMood();
+  const { spaces, activeSpaceId } = useActiveSpace();
 
   const {
     searchQuery,
@@ -47,28 +47,28 @@ export default function Sidebar() {
     useSettingsNavigation();
 
   const {
-    isCreatingMood,
-    isViewingPresetMoods,
-    createMoodMenuState,
-    handleOpenCreateMoodMenu,
-    handleCloseCreateMoodMenu,
-    handleStartCreatingMood,
-    handleStartViewingPresetMoods,
-    handleStopCreatingMood,
-  } = useMoodMenu();
+    isCreatingSpace,
+    isViewingPresetSpaces,
+    createSpaceMenuState,
+    handleOpenCreateSpaceMenu,
+    handleCloseCreateSpaceMenu,
+    handleStartCreatingSpace,
+    handleStartViewingPresetSpaces,
+    handleStopCreatingSpace,
+  } = useSpaceMenu();
 
   const {
     contextMenuState,
     editModalState,
-    deleteMoodState,
-    handleMoodContextMenu,
+    deleteSpaceState,
+    handleSpaceContextMenu,
     handleCloseContextMenu,
-    handleEditMood,
+    handleEditSpace,
     handleCloseEditModal,
-    handleDeleteMood,
-    handleConfirmDeleteMood,
-    handleCancelDeleteMood,
-  } = useMoodContextMenu();
+    handleDeleteSpace,
+    handleConfirmDeleteSpace,
+    handleCancelDeleteSpace,
+  } = useSpaceContextMenu();
 
   // Help menu state
   const [helpMenuState, setHelpMenuState] = useState<{
@@ -100,7 +100,7 @@ export default function Sidebar() {
   } = useSidebarData({ searchQuery, sidebarConfig });
 
   const {
-    handleMoodChange,
+    handleSpaceChange,
     handleNewClick,
     handleAddProject,
     handleCloneRepo,
@@ -128,10 +128,10 @@ export default function Sidebar() {
       >
         {isSettingsOpen ? (
           <SettingsView onClose={handleCloseSettings} />
-        ) : isCreatingMood ? (
-          <CreateMoodView onClose={handleStopCreatingMood} />
-        ) : isViewingPresetMoods ? (
-          <PresetMoodsView onClose={handleStopCreatingMood} />
+        ) : isCreatingSpace ? (
+          <CreateSpaceView onClose={handleStopCreatingSpace} />
+        ) : isViewingPresetSpaces ? (
+          <PresetSpacesView onClose={handleStopCreatingSpace} />
         ) : (
           <div className="h-full overflow-hidden flex flex-col">
             <SidebarHeader
@@ -194,12 +194,12 @@ export default function Sidebar() {
               onArchiveWorkspace={archiveWorkspace.handleArchiveClick}
             />
             <SidebarFooter
-              moods={moods}
-              activeMoodId={activeMoodId}
-              onMoodChange={handleMoodChange}
-              onMoodContextMenu={handleMoodContextMenu}
+              spaces={spaces}
+              activeSpaceId={activeSpaceId}
+              onSpaceChange={handleSpaceChange}
+              onSpaceContextMenu={handleSpaceContextMenu}
               onSettingsClick={handleOpenSettings}
-              onPlusClick={handleOpenCreateMoodMenu}
+              onPlusClick={handleOpenCreateSpaceMenu}
               onHelpClick={handleOpenHelpMenu}
             />
           </div>
@@ -231,35 +231,35 @@ export default function Sidebar() {
         description="This action cannot be undone. The workspace will be permanently deleted."
       />
 
-      <MoodContextMenu
+      <SpaceContextMenu
         isOpen={contextMenuState.isOpen}
         position={contextMenuState.position}
-        mood={contextMenuState.targetMood}
-        onEdit={handleEditMood}
-        onDelete={handleDeleteMood}
+        space={contextMenuState.targetSpace}
+        onEdit={handleEditSpace}
+        onDelete={handleDeleteSpace}
         onClose={handleCloseContextMenu}
       />
 
-      <EditMoodModal
+      <EditSpaceModal
         isOpen={editModalState.isOpen}
-        mood={editModalState.mood}
+        space={editModalState.space}
         onClose={handleCloseEditModal}
         sidebarWidth={sidebarConfig.width}
       />
 
-      <DeleteMoodModal
-        mood={deleteMoodState.mood}
-        isDeleting={deleteMoodState.isDeleting}
-        onConfirm={handleConfirmDeleteMood}
-        onCancel={handleCancelDeleteMood}
+      <DeleteSpaceModal
+        space={deleteSpaceState.space}
+        isDeleting={deleteSpaceState.isDeleting}
+        onConfirm={handleConfirmDeleteSpace}
+        onCancel={handleCancelDeleteSpace}
       />
 
-      <CreateMoodMenu
-        isOpen={createMoodMenuState.isOpen}
-        position={createMoodMenuState.position}
-        onCreateMood={handleStartCreatingMood}
-        onPresetMoods={handleStartViewingPresetMoods}
-        onClose={handleCloseCreateMoodMenu}
+      <CreateSpaceMenu
+        isOpen={createSpaceMenuState.isOpen}
+        position={createSpaceMenuState.position}
+        onCreateSpace={handleStartCreatingSpace}
+        onPresetSpaces={handleStartViewingPresetSpaces}
+        onClose={handleCloseCreateSpaceMenu}
       />
 
       <HelpMenu

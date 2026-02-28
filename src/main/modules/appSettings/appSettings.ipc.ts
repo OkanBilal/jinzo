@@ -6,7 +6,7 @@ import { appSettingsController } from "./appSettings.controller";
 // ─────────────────────────────────────────────────────────────
 export function registerAppSettingsIpc() {
   ipcMain.handle("appSettings:get", () => appSettingsController.get());
-  ipcMain.handle("appSettings:setActiveMood", (_, moodId) => appSettingsController.setActiveMood(moodId));
+  ipcMain.handle("appSettings:setActiveSpace", (_, spaceId) => appSettingsController.setActiveSpace(spaceId));
   ipcMain.handle("appSettings:setEnableWorktrees", (_, enabled) => appSettingsController.setEnableWorktrees(enabled));
   ipcMain.handle("appSettings:setShowToolCalls", (_, enabled) => appSettingsController.setShowToolCalls(enabled));
   ipcMain.handle("appSettings:setPreventSleepDuringRuns", (_, enabled) => appSettingsController.setPreventSleepDuringRuns(enabled));
@@ -20,7 +20,7 @@ export function registerAppSettingsIpc() {
 
 export function unregisterAppSettingsIpc() {
   ipcMain.removeHandler("appSettings:get");
-  ipcMain.removeHandler("appSettings:setActiveMood");
+  ipcMain.removeHandler("appSettings:setActiveSpace");
   ipcMain.removeHandler("appSettings:setEnableWorktrees");
   ipcMain.removeHandler("appSettings:setShowToolCalls");
   ipcMain.removeHandler("appSettings:setPreventSleepDuringRuns");

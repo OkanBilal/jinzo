@@ -78,6 +78,13 @@
       "when": 1772057301584,
       "tag": "0010_yellow_zemo",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1772273148046,
+      "tag": "0011_foamy_sunspot",
+      "breakpoints": true
     }
   ]
 }

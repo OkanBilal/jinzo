@@ -1,25 +1,25 @@
 import type { CSSProperties } from "react";
 import { useEffect } from "react";
 import { Settings, Plus, Question } from "@/components/ui/icons";
-import MoodSelector from "./mood-selector";
-import type { Mood } from "@/lib/redux/api";
+import SpaceSelector from "./space-selector";
+import type { Space } from "@/lib/redux/api";
 import { Button } from "@/components/ui/button";
 
 interface SidebarFooterProps {
-  moods: Mood[];
-  activeMoodId: string | null;
-  onMoodChange: (moodId: string) => void;
-  onMoodContextMenu?: (mood: Mood, event: React.MouseEvent) => void;
+  spaces: Space[];
+  activeSpaceId: string | null;
+  onSpaceChange: (spaceId: string) => void;
+  onSpaceContextMenu?: (space: Space, event: React.MouseEvent) => void;
   onSettingsClick: () => void;
   onPlusClick: (event: React.MouseEvent) => void;
   onHelpClick: (event: React.MouseEvent) => void;
 }
 
 export function SidebarFooter({
-  moods,
-  activeMoodId,
-  onMoodChange,
-  onMoodContextMenu,
+  spaces,
+  activeSpaceId,
+  onSpaceChange,
+  onSpaceContextMenu,
   onSettingsClick,
   onPlusClick,
   onHelpClick,
@@ -62,11 +62,11 @@ export function SidebarFooter({
           </Button>
         </div>
         <div className="">
-          <MoodSelector
-            moods={moods}
-            activeMoodId={activeMoodId}
-            onMoodChange={onMoodChange}
-            onContextMenu={onMoodContextMenu}
+          <SpaceSelector
+            spaces={spaces}
+            activeSpaceId={activeSpaceId}
+            onSpaceChange={onSpaceChange}
+            onContextMenu={onSpaceContextMenu}
           />
         </div>
         <div>

@@ -11,12 +11,12 @@ export { appSettingsService } from "./appSettings.service";
 export { appSettingsRepo } from "./appSettings.repo";
 
 // Validation
-export { validateMoodId } from "./appSettings.validation";
+export { validateSpaceId } from "./appSettings.validation";
 
 // DTOs
 export type {
   AppSettingsRecord,
-  SetActiveMoodRequest,
+  SetActiveSpaceRequest,
   ServiceResponse,
   SuccessResponse,
   ErrorResponse,

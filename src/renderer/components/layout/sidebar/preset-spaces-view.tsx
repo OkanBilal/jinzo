@@ -2,39 +2,39 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Body, Heading3 } from "@/components/ui/text";
 import {
-  useCreateMoodMutation,
-  useSetActiveMoodMutation,
+  useCreateSpaceMutation,
+  useSetActiveSpaceMutation,
 } from "@/lib/redux/api";
 import { toast } from "@/components/ui/toast";
 import { useDarkMode } from "@/hooks/use-dark-mode";
-import { useActiveMood } from "@/hooks/use-active-mood";
+import { useActiveSpace } from "@/hooks/use-active-space";
 import { parseIcon } from "@/lib/icon-registry";
-import { predefinedMoods, type PredefinedMood } from "@/lib/predefined-moods";
+import { predefinedSpaces, type PredefinedSpace } from "@/lib/predefined-spaces";
 import { Button } from "@/components/ui/button";
 
-interface PresetMoodsViewProps {
+interface PresetSpacesViewProps {
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-export default function PresetMoodsView({
+export default function PresetSpacesView({
   onClose,
   onSuccess,
-}: PresetMoodsViewProps) {
+}: PresetSpacesViewProps) {
   const navigate = useNavigate();
   const [selectedTemplate, setSelectedTemplate] =
-    useState<PredefinedMood | null>(null);
-  const [createMood, { isLoading }] = useCreateMoodMutation();
-  const [setActiveMood] = useSetActiveMoodMutation();
+    useState<PredefinedSpace | null>(null);
+  const [createSpace, { isLoading }] = useCreateSpaceMutation();
+  const [setActiveSpace] = useSetActiveSpaceMutation();
   const { darkMode } = useDarkMode();
-  const { moods } = useActiveMood();
+  const { spaces } = useActiveSpace();
   const originalBackgroundColor = useRef<string>("");
 
-  // Filter out presets that already exist as moods
+  // Filter out presets that already exist as spaces
   const availablePresets = useMemo(() => {
-    const existingMoodNames = moods.map((m) => m.name);
-    return predefinedMoods.filter((preset) => !existingMoodNames.includes(preset.name));
-  }, [moods]);
+    const existingSpaceNames = spaces.map((m) => m.name);
+    return predefinedSpaces.filter((preset) => !existingSpaceNames.includes(preset.name));
+  }, [spaces]);
 
   useEffect(() => {
     const appRoot = document.querySelector(".app-root") as HTMLElement;
@@ -47,7 +47,7 @@ export default function PresetMoodsView({
         if (originalBackgroundColor.current) {
           appRoot.style.backgroundColor = originalBackgroundColor.current;
         }
-        appRoot.style.removeProperty("--mood-preview-bg");
+        appRoot.style.removeProperty("--space-preview-bg");
       }
     };
   }, []);
@@ -72,13 +72,13 @@ export default function PresetMoodsView({
 
       // Set CSS custom property for dropdown backgrounds
       const dropdownBg = templateVariant.preview;
-      appRoot.style.setProperty("--mood-preview-bg", dropdownBg);
+      appRoot.style.setProperty("--space-preview-bg", dropdownBg);
     }
   }, [selectedTemplate, darkMode]);
 
   const handleCreate = async () => {
     if (!selectedTemplate) {
-      toast.error("Please select a mood template");
+      toast.error("Please select a space template");
       return;
     }
 
@@ -92,7 +92,7 @@ export default function PresetMoodsView({
         ? JSON.stringify(selectedTemplate.uiConfig)
         : undefined;
 
-      const result = await createMood({
+      const result = await createSpace({
         name: selectedTemplate.name,
         icon: selectedTemplate.icon,
         themeConfig,
@@ -101,7 +101,7 @@ export default function PresetMoodsView({
       }).unwrap();
 
       if (result?.id) {
-        await setActiveMood(result.id).unwrap();
+        await setActiveSpace(result.id).unwrap();
       }
 
       // Clear the original color ref so cleanup doesn't restore it
@@ -111,12 +111,12 @@ export default function PresetMoodsView({
       const defaultRoute = selectedTemplate.uiConfig?.sidebar?.defaultRoute || "/";
       navigate(defaultRoute);
 
-      toast.success("Mood created!");
+      toast.success("Space created!");
       onSuccess?.();
       onClose();
     } catch (error) {
-      console.error("Error creating mood:", error);
-      toast.error("Failed to create mood");
+      console.error("Error creating space:", error);
+      toast.error("Failed to create space");
     }
   };
 
@@ -127,7 +127,7 @@ export default function PresetMoodsView({
     >
       <div className="flex flex-col items-center pt-12 px-3">
         <Body className="text-center text-base! text-primary-800 dark:text-primary">
-          Preset Moods
+          Preset Spaces
         </Body>
       </div>
 

@@ -9,8 +9,8 @@ export const appSettingsController = {
     return appSettingsService.getSettings();
   },
 
-  async setActiveMood(moodId: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
-    return appSettingsService.setActiveMood(moodId);
+  async setActiveSpace(spaceId: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+    return appSettingsService.setActiveSpace(spaceId);
   },
 
   async setEnableWorktrees(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {

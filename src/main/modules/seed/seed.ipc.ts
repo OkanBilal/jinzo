@@ -9,7 +9,7 @@ export function registerSeedIpc() {
   ipcMain.handle("seed:apps", () => seedController.seedApps());
   ipcMain.handle("seed:connections", () => seedController.seedConnections());
   ipcMain.handle("seed:providers", () => seedController.seedProviders());
-  ipcMain.handle("seed:moods", () => seedController.seedMoods());
+  ipcMain.handle("seed:spaces", () => seedController.seedSpaces());
   ipcMain.handle("seed:all", () => seedController.seedAll());
 
   console.log("Seed IPC handlers registered");
@@ -20,6 +20,6 @@ export function unregisterSeedIpc() {
   ipcMain.removeHandler("seed:apps");
   ipcMain.removeHandler("seed:connections");
   ipcMain.removeHandler("seed:providers");
-  ipcMain.removeHandler("seed:moods");
+  ipcMain.removeHandler("seed:spaces");
   ipcMain.removeHandler("seed:all");
 }

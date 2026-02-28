@@ -7,8 +7,8 @@ export function isSyncTool(name: string): boolean {
   return name === "trigger_entity_sync" || name === "trigger_feed_sync";
 }
 
-export function isMoodTool(name: string): boolean {
-  return name === "switch_to_journal_mood" || name === "switch_to_chat_mood";
+export function isSpaceTool(name: string): boolean {
+  return name === "switch_to_journal_space" || name === "switch_to_chat_space";
 }
 
 export function isJournalTool(name: string): boolean {

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useActiveMood } from "./use-active-mood";
+import { useActiveSpace } from "./use-active-space";
 
 interface LayoutConfig {
   mainMarginLeft: string;
@@ -8,7 +8,7 @@ interface LayoutConfig {
 }
 
 export function useLayoutConfig(): LayoutConfig {
-  const { activeMood } = useActiveMood();
+  const { activeSpace } = useActiveSpace();
 
   return useMemo(() => {
     const defaults: LayoutConfig = {
@@ -17,20 +17,20 @@ export function useLayoutConfig(): LayoutConfig {
       rightPanelComponent: "config",
     };
 
-    if (!activeMood?.uiConfig) {
+    if (!activeSpace?.uiConfig) {
       return defaults;
     }
 
     try {
-      const config = JSON.parse(activeMood.uiConfig);
+      const config = JSON.parse(activeSpace.uiConfig);
       return {
         mainMarginLeft: config.main?.margin || defaults.mainMarginLeft,
         rightPanelWidth: config.rightPanel?.width || defaults.rightPanelWidth,
         rightPanelComponent: config.rightPanel?.component || defaults.rightPanelComponent,
       };
     } catch (error) {
-      console.error("Failed to parse mood uiConfig:", error);
+      console.error("Failed to parse space uiConfig:", error);
       return defaults;
     }
-  }, [activeMood]);
+  }, [activeSpace]);
 }

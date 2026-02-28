@@ -187,7 +187,7 @@ class DatabaseClient {
       const { seedProvidersData } = await import("./queries/seed-providers");
       const { seedApps } = await import("./queries/seed-apps");
       const { seedConnections } = await import("./queries/seed-connections");
-      const { seedMoodsData } = await import("./queries/seed-moods");
+      const { seedSpacesData } = await import("./queries/seed-spaces");
 
       // Check if any data exists
       const accountsCount = this.sqlite
@@ -214,7 +214,7 @@ class DatabaseClient {
         await seedApps();
         await seedConnections();
         await seedProvidersData();
-        await seedMoodsData();
+        await seedSpacesData();
         console.log("Initial data seeded successfully");
       } else {
         console.log("Data already exists, skipping seed");

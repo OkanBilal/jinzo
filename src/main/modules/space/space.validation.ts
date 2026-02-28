@@ -1,4 +1,4 @@
-import type { MoodPayload, SanitizedMoodResult } from "./mood.dto";
+import type { SpacePayload, SanitizedSpaceResult } from "./space.dto";
 
 // ─────────────────────────────────────────────────────────────
 // Validation Helpers
@@ -15,14 +15,14 @@ export function generateSlug(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export function sanitizeMoodPayload(payload: unknown): SanitizedMoodResult {
+export function sanitizeSpacePayload(payload: unknown): SanitizedSpaceResult {
   if (typeof payload !== "object" || payload === null) {
     return { data: {}, errors: { body: "Invalid payload" } };
   }
 
   const raw = payload as Record<string, unknown>;
   const errors: Record<string, string> = {};
-  const data: Partial<MoodPayload> = {};
+  const data: Partial<SpacePayload> = {};
 
   // Name (required)
   const name = sanitizeString(raw.name, 100);

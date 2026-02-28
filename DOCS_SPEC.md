@@ -35,7 +35,7 @@ docs/
     diffs                 # Git diff tracking
     reviews               # Code reviews / notes
     journal               # Rich text journal
-    moods                 # Profiles & system prompts
+    spaces                 # Profiles & system prompts
     feed                  # Home feed / timeline
     tasks                 # Task management
     search                # Vector & keyword search
@@ -81,7 +81,7 @@ Jinzo is an Electron desktop application that brings together:
 - **Agent Workspaces** — Run GitHub Copilot CLI or Claude Code agents inside workspaces linked to local git repos. Agents can read files, run commands, write code, and track diffs.
 - **Knowledge Hub** — Sync and unify content from 12+ external services (GitHub issues, Linear tickets, Notion pages, RSS feeds, bookmarks, podcasts, videos, etc.) into a single searchable entity store.
 - **Journal** — Rich text editor (BlockNote) with revision history for personal notes and documentation.
-- **Moods / Profiles** — Define named configurations that control the system prompt, model, theme, connected services, and tool permissions. Switch contexts instantly.
+- **Spaces / Profiles** — Define named configurations that control the system prompt, model, theme, connected services, and tool permissions. Switch contexts instantly.
 
 The app runs fully local. SQLite database with sqlite-vec for vector search. No cloud backend required (external services are optional integrations).
 
@@ -151,7 +151,7 @@ The chat interface provides direct conversation with LLMs.
 - Provider config
 
 **Data model:**
-- `chatSessions` — id, title, providerId, modelId, moodId, systemPromptSnapshot, providerConfigSnapshot, createdAt, updatedAt
+- `chatSessions` — id, title, providerId, modelId, spaceId, systemPromptSnapshot, providerConfigSnapshot, createdAt, updatedAt
 - `chatMessages` — id, sessionId, role, content, providerId, modelId, traceId, latencyMs, inputTokens, outputTokens, createdAt
 
 #### Workspaces (`features/workspaces`)
@@ -280,11 +280,11 @@ Rich text editor for personal notes and documentation.
 - Stored as entities with kind "doc"
 - Route: `/journal/:id?`
 
-#### Moods / Profiles (`features/moods`)
+#### Spaces / Profiles (`features/spaces`)
 
 Named configurations that change how the app behaves.
 
-**Mood properties:**
+**Space properties:**
 - Name, slug, description
 - System prompt
 - Model override
@@ -293,13 +293,13 @@ Named configurations that change how the app behaves.
 - UI config (JSON)
 - Sort order
 
-**Mood associations:**
-- `moodConnections` — Which external services are visible in this mood
-- `moodResources` — Which specific resources (repos, teams, feeds) are available
-- `moodAppOverrides` — Override app-level settings per mood
-- `moodToolPermissions` — Control which MCP tools are allowed/denied
+**Space associations:**
+- `spaceConnections` — Which external services are visible in this space
+- `spaceResources` — Which specific resources (repos, teams, feeds) are available
+- `spaceAppOverrides` — Override app-level settings per space
+- `spaceToolPermissions` — Control which MCP tools are allowed/denied
 
-Switch moods to instantly change your system prompt, connected services, theme, and tool access.
+Switch spaces to instantly change your system prompt, connected services, theme, and tool access.
 
 #### Feed (`features/feed`)
 
@@ -486,7 +486,7 @@ All layers are **plain object literals** (no classes, no DI).
 - `git` — Git operations via simple-git
 - `journal` — Documents and revisions
 - `mcp` — Model Context Protocol tools
-- `moods` — Profile configurations
+- `spaces` — Profile configurations
 - `providers` — LLM/agent runtime management + adapters
 - `reviews` — Code review notes
 - `runs` — Agent run lifecycle and events
@@ -503,7 +503,7 @@ React 19 app with HashRouter.
 
 **State management:**
 - RTK Query with custom `ipcBaseQuery` for server state (no HTTP — all IPC)
-- Redux slices for UI state: `chatSlice`, `moodSlice`, `appSettingsSlice`, `workspaceSlice`
+- Redux slices for UI state: `chatSlice`, `spaceSlice`, `appSettingsSlice`, `workspaceSlice`
 - API files: `src/renderer/lib/redux/api/{name}Api.ts` — use `baseApi.injectEndpoints()`
 
 **Workspace slice state:**
@@ -558,7 +558,7 @@ All responses use `ServiceResponse<T>`:
 { success: false, error: string }
 ```
 
-**IPC namespaces:** chat, entities, feed, sync, runs, workspaces, workspaceResources, workspaceDiffs, reviews, fileExplorer, git, terminal, providers, tools, moods, journal, connections, account, platform, shell
+**IPC namespaces:** chat, entities, feed, sync, runs, workspaces, workspaceResources, workspaceDiffs, reviews, fileExplorer, git, terminal, providers, tools, spaces, journal, connections, account, platform, shell
 
 #### Database (`architecture/database`)
 
@@ -586,9 +586,9 @@ All responses use `ServiceResponse<T>`:
 | `connectionSyncState` | Sync cursors and state |
 | `feedItems` | Timeline events |
 | `chatSessions` / `chatMessages` | Chat history |
-| `moods` + associations | Profile configurations |
+| `spaces` + associations | Profile configurations |
 | `runs` / `runContext` / `runArtifacts` / `runCommands` | Agent run data |
-| `tools` / `toolCalls` / `moodToolPermissions` | Tool registry |
+| `tools` / `toolCalls` / `spaceToolPermissions` | Tool registry |
 | `workspaceDiffs` | Git diffs per run |
 | `reviews` | Code review notes |
 | `mcpServers` | MCP server registry |

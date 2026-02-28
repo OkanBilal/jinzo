@@ -107,7 +107,7 @@ export interface CreateSessionPayload {
   model?: string;
   title?: string;
   providerId?: string;
-  moodId?: string;
+  spaceId?: string;
   systemPromptSnapshot?: string;
   providerConfigSnapshot?: string;
 }
@@ -116,7 +116,7 @@ export interface UpdateSessionPayload {
   title?: string;
   providerId?: string;
   model?: string;
-  moodId?: string;
+  spaceId?: string;
   systemPromptSnapshot?: string;
   providerConfigSnapshot?: string;
 }
@@ -127,7 +127,7 @@ export interface SessionResponse {
   initialQuery: string | null;
   providerId: string | null;
   model: string | null;
-  moodId: string | null;
+  spaceId: string | null;
   systemPromptSnapshot: string | null;
   providerConfigSnapshot: string | null;
   createdAt: Date;

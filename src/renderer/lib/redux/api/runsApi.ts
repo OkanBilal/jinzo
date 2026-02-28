@@ -31,7 +31,7 @@ export interface Run {
   id: string;
   accountId: string;
   workspaceId: string | null;
-  moodId: string | null;
+  spaceId: string | null;
   providerId: string;
   model: string | null;
   title: string | null;
@@ -53,7 +53,7 @@ export interface CreateRunPayload {
   id: string;
   accountId: string;
   workspaceId?: string;
-  moodId?: string;
+  spaceId?: string;
   providerId: string;
   model?: string;
   title?: string;

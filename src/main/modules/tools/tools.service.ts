@@ -6,8 +6,8 @@ import type {
   CreateToolCallPayload,
   UpdateToolCallPayload,
   ToolCallResponse,
-  MoodToolPermissionPayload,
-  MoodToolPermissionResponse,
+  SpaceToolPermissionPayload,
+  SpaceToolPermissionResponse,
   ServiceResponse,
   ToolSource,
 } from "./tools.dto";
@@ -177,19 +177,19 @@ export const toolsService = {
   },
 
   // ─────────────────────────────────────────────────────────────
-  // Mood Tool Permissions
+  // Space Tool Permissions
   // ─────────────────────────────────────────────────────────────
-  async getPermissionsByMood(moodId: string): Promise<ServiceResponse<MoodToolPermissionResponse[]>> {
+  async getPermissionsBySpace(spaceId: string): Promise<ServiceResponse<SpaceToolPermissionResponse[]>> {
     try {
-      const permissions = await toolsRepo.findPermissionsByMood(moodId);
+      const permissions = await toolsRepo.findPermissionsBySpace(spaceId);
       return { success: true, data: permissions };
     } catch (error) {
-      console.error(`[ToolsService] Failed to get permissions for mood ${moodId}:`, error);
+      console.error(`[ToolsService] Failed to get permissions for space ${spaceId}:`, error);
       return { success: false, error: "Failed to get permissions" };
     }
   },
 
-  async setPermission(payload: MoodToolPermissionPayload): Promise<ServiceResponse<void>> {
+  async setPermission(payload: SpaceToolPermissionPayload): Promise<ServiceResponse<void>> {
     try {
       await toolsRepo.upsertPermission(payload);
       return { success: true };
@@ -199,9 +199,9 @@ export const toolsService = {
     }
   },
 
-  async removePermission(moodId: string, toolId: string): Promise<ServiceResponse<void>> {
+  async removePermission(spaceId: string, toolId: string): Promise<ServiceResponse<void>> {
     try {
-      await toolsRepo.deletePermission(moodId, toolId);
+      await toolsRepo.deletePermission(spaceId, toolId);
       return { success: true };
     } catch (error) {
       console.error(`[ToolsService] Failed to remove permission:`, error);

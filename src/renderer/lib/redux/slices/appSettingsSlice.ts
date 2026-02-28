@@ -4,7 +4,7 @@ export interface AppSettingsState {
   isDarkMode: boolean;
   sidebarCollapsed: boolean;
   fontSize: "small" | "medium" | "large";
-  journalMood: boolean;
+  journalSpace: boolean;
   onboardingCompleted: boolean;
 }
 
@@ -12,7 +12,7 @@ const initialState: AppSettingsState = {
   isDarkMode: false,
   sidebarCollapsed: false,
   fontSize: "medium",
-  journalMood: false,
+  journalSpace: false,
   onboardingCompleted: false,
 };
 
@@ -32,8 +32,8 @@ const appSettingsSlice = createSlice({
     ) => {
       state.fontSize = action.payload;
     },
-    setJournalMood: (state, action: PayloadAction<boolean>) => {
-      state.journalMood = action.payload;
+    setJournalSpace: (state, action: PayloadAction<boolean>) => {
+      state.journalSpace = action.payload;
     },
     setOnboardingCompleted: (state, action: PayloadAction<boolean>) => {
       state.onboardingCompleted = action.payload;
@@ -41,6 +41,6 @@ const appSettingsSlice = createSlice({
   },
 });
 
-export const { setDarkMode, setSidebarCollapsed, setFontSize, setJournalMood, setOnboardingCompleted } =
+export const { setDarkMode, setSidebarCollapsed, setFontSize, setJournalSpace, setOnboardingCompleted } =
   appSettingsSlice.actions;
 export default appSettingsSlice.reducer;

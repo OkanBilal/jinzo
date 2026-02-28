@@ -138,22 +138,22 @@ export {
 export type { OllamaModel, OllamaModelsResponse } from "./ollamaApi";
 
 export {
-  moodApi,
-  useGetMoodsQuery,
-  useGetMoodByIdQuery,
-  useLazyGetMoodByIdQuery,
-  useCreateMoodMutation,
-  useUpdateMoodMutation,
-  useDeleteMoodMutation,
-  useArchiveMoodMutation,
-} from "./moodApi";
-export type { Mood, CreateMoodPayload, UpdateMoodPayload } from "./moodApi";
+  spaceApi,
+  useGetSpacesQuery,
+  useGetSpaceByIdQuery,
+  useLazyGetSpaceByIdQuery,
+  useCreateSpaceMutation,
+  useUpdateSpaceMutation,
+  useDeleteSpaceMutation,
+  useArchiveSpaceMutation,
+} from "./spaceApi";
+export type { Space, CreateSpacePayload, UpdateSpacePayload } from "./spaceApi";
 
 export {
   appSettingsApi,
   useGetAppSettingsQuery,
   useLazyGetAppSettingsQuery,
-  useSetActiveMoodMutation,
+  useSetActiveSpaceMutation,
   useSetEnableWorktreesMutation,
   useSetShowToolCallsMutation,
   useSetPreventSleepDuringRunsMutation,
@@ -205,10 +205,10 @@ export {
 export type { ChatState, ModelCapabilities } from "../slices/chatSlice";
 
 export {
-  setActiveMoodId,
-  setSelectedMoodForEdit,
-} from "../slices/moodSlice";
-export type { MoodState } from "../slices/moodSlice";
+  setActiveSpaceId,
+  setSelectedSpaceForEdit,
+} from "../slices/spaceSlice";
+export type { SpaceState } from "../slices/spaceSlice";
 
 export {
   setDarkMode,
@@ -276,8 +276,8 @@ export {
   useStartToolCallMutation,
   useCompleteToolCallMutation,
   useFailToolCallMutation,
-  useGetToolPermissionsByMoodQuery,
-  useLazyGetToolPermissionsByMoodQuery,
+  useGetToolPermissionsBySpaceQuery,
+  useLazyGetToolPermissionsBySpaceQuery,
   useSetToolPermissionMutation,
   useRemoveToolPermissionMutation,
 } from "./toolsApi";
@@ -292,8 +292,8 @@ export type {
   ToolCallStatus,
   CreateToolCallPayload,
   UpdateToolCallPayload,
-  MoodToolPermission,
-  MoodToolPermissionPayload,
+  SpaceToolPermission,
+  SpaceToolPermissionPayload,
 } from "./toolsApi";
 
 export {

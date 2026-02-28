@@ -1,8 +1,8 @@
 import { BrowserWindow } from "electron";
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "../../../db/client";
-import { moods, appSettings } from "../../../db/schema";
-import type { OllamaToolDefinition, MoodSwitchResult } from "../mcp.dto";
+import { spaces, appSettings } from "../../../db/schema";
+import type { OllamaToolDefinition, SpaceSwitchResult } from "../mcp.dto";
 
 const ACCOUNT_ID = "default";
 const SETTINGS_ID = "default";
@@ -10,10 +10,10 @@ const SETTINGS_ID = "default";
 // ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
-function broadcastMoodChange(moodId: string | null) {
+function broadcastSpaceChange(spaceId: string | null) {
   const windows = BrowserWindow.getAllWindows();
   for (const window of windows) {
-    window.webContents.send("mood:changed", { activeMoodId: moodId });
+    window.webContents.send("space:changed", { activeSpaceId: spaceId });
   }
 }
 
@@ -43,104 +43,104 @@ async function ensureAppSettingsRow() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Mood Tools
+// Space Tools
 // ─────────────────────────────────────────────────────────────
-export async function switchToJournalMood(): Promise<MoodSwitchResult> {
+export async function switchToJournalSpace(): Promise<SpaceSwitchResult> {
   try {
     const db = getDb();
     await ensureAppSettingsRow();
 
-    const allMoods = await db.query.moods.findMany({
-      where: eq(moods.accountId, ACCOUNT_ID),
+    const allSpaces = await db.query.spaces.findMany({
+      where: eq(spaces.accountId, ACCOUNT_ID),
     });
 
-    const journalMood = allMoods.find((m) => m.slug === "journal");
+    const journalSpace = allSpaces.find((s) => s.slug === "journal");
 
-    if (!journalMood) {
+    if (!journalSpace) {
       return {
         success: false,
-        mood: "journal",
-        message: "Journal mood not found. Please create a mood with slug 'journal' first.",
-        error: "Mood not found",
+        space: "journal",
+        message: "Journal space not found. Please create a space with slug 'journal' first.",
+        error: "Space not found",
       };
     }
 
     await db
       .update(appSettings)
       .set({
-        activeMoodId: journalMood.id,
+        activeSpaceId: journalSpace.id,
         updatedAt: sql`(unixepoch())`,
       })
       .where(eq(appSettings.id, SETTINGS_ID));
 
-    broadcastMoodChange(journalMood.id);
+    broadcastSpaceChange(journalSpace.id);
 
     return {
       success: true,
-      mood: "journal",
-      message: "Successfully switched to journal mood. The editor is now ready for you to write.",
+      space: "journal",
+      message: "Successfully switched to journal space. The editor is now ready for you to write.",
     };
   } catch (error) {
-    console.error("Failed to switch to journal mood:", error);
+    console.error("Failed to switch to journal space:", error);
     return {
       success: false,
-      mood: "journal",
-      message: "Failed to switch to journal mood",
+      space: "journal",
+      message: "Failed to switch to journal space",
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
   }
 }
 
-export async function switchToChatMood(): Promise<MoodSwitchResult> {
+export async function switchToChatSpace(): Promise<SpaceSwitchResult> {
   try {
     const db = getDb();
     await ensureAppSettingsRow();
 
-    const allMoods = await db.query.moods.findMany({
-      where: eq(moods.accountId, ACCOUNT_ID),
+    const allSpaces = await db.query.spaces.findMany({
+      where: eq(spaces.accountId, ACCOUNT_ID),
     });
 
-    const chatMood = allMoods.find((m) => m.slug === "chat" || m.slug === "default");
+    const chatSpace = allSpaces.find((s) => s.slug === "chat" || s.slug === "default");
 
-    if (!chatMood) {
+    if (!chatSpace) {
       await db
         .update(appSettings)
         .set({
-          activeMoodId: null,
+          activeSpaceId: null,
           updatedAt: sql`(unixepoch())`,
         })
         .where(eq(appSettings.id, SETTINGS_ID));
 
-      broadcastMoodChange(null);
+      broadcastSpaceChange(null);
 
       return {
         success: true,
-        mood: "chat",
-        message: "Successfully switched to chat mood.",
+        space: "chat",
+        message: "Successfully switched to chat space.",
       };
     }
 
     await db
       .update(appSettings)
       .set({
-        activeMoodId: chatMood.id,
+        activeSpaceId: chatSpace.id,
         updatedAt: sql`(unixepoch())`,
       })
       .where(eq(appSettings.id, SETTINGS_ID));
 
-    broadcastMoodChange(chatMood.id);
+    broadcastSpaceChange(chatSpace.id);
 
     return {
       success: true,
-      mood: "chat",
-      message: "Successfully switched to chat mood.",
+      space: "chat",
+      message: "Successfully switched to chat space.",
     };
   } catch (error) {
-    console.error("Failed to switch to chat mood:", error);
+    console.error("Failed to switch to chat space:", error);
     return {
       success: false,
-      mood: "chat",
-      message: "Failed to switch to chat mood",
+      space: "chat",
+      message: "Failed to switch to chat space",
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
   }
@@ -149,13 +149,13 @@ export async function switchToChatMood(): Promise<MoodSwitchResult> {
 // ─────────────────────────────────────────────────────────────
 // Tool Definitions
 // ─────────────────────────────────────────────────────────────
-export const MOOD_TOOLS: OllamaToolDefinition[] = [
+export const SPACE_TOOLS: OllamaToolDefinition[] = [
   {
     type: "function",
     function: {
-      name: "switch_to_journal_mood",
+      name: "switch_to_journal_space",
       description:
-        "Switch to journal mood. Use this when the user wants to: write, start writing, open editor, enter journal mood, write something, create a document, or compose text. This activates the BlockNote editor on the home screen.",
+        "Switch to journal space. Use this when the user wants to: write, start writing, open editor, enter journal space, write something, create a document, or compose text. This activates the BlockNote editor on the home screen.",
       parameters: {
         type: "object",
         properties: {},
@@ -166,9 +166,9 @@ export const MOOD_TOOLS: OllamaToolDefinition[] = [
   {
     type: "function",
     function: {
-      name: "switch_to_chat_mood",
+      name: "switch_to_chat_space",
       description:
-        "Switch to chat mood. Use this when the user wants to: chat, go back to chat, exit journal mood, leave editor, return to chat, or talk. This returns to the normal chat interface.",
+        "Switch to chat space. Use this when the user wants to: chat, go back to chat, exit journal space, leave editor, return to chat, or talk. This returns to the normal chat interface.",
       parameters: {
         type: "object",
         properties: {},
@@ -181,13 +181,13 @@ export const MOOD_TOOLS: OllamaToolDefinition[] = [
 // ─────────────────────────────────────────────────────────────
 // Tool Executor
 // ─────────────────────────────────────────────────────────────
-export async function executeMoodTool(toolName: string): Promise<MoodSwitchResult> {
+export async function executeSpaceTool(toolName: string): Promise<SpaceSwitchResult> {
   switch (toolName) {
-    case "switch_to_journal_mood":
-      return switchToJournalMood();
-    case "switch_to_chat_mood":
-      return switchToChatMood();
+    case "switch_to_journal_space":
+      return switchToJournalSpace();
+    case "switch_to_chat_space":
+      return switchToChatSpace();
     default:
-      throw new Error(`Unknown mood tool: ${toolName}`);
+      throw new Error(`Unknown space tool: ${toolName}`);
   }
 }

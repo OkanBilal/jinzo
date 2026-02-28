@@ -267,14 +267,14 @@ export const JOURNAL_TOOLS: OllamaToolDefinition[] = [
     function: {
       name: "update_journal_title",
       description:
-        "Update or change the title of the user's current journal entry based on its content. Use this when the user asks you to: suggest a title, change the title, update the title, give a title based on content, rename the journal, or when you analyze the content and want to propose an appropriate title. The title should reflect the main theme, topic, or mood of the journal content.",
+        "Update or change the title of the user's current journal entry based on its content. Use this when the user asks you to: suggest a title, change the title, update the title, give a title based on content, rename the journal, or when you analyze the content and want to propose an appropriate title. The title should reflect the main theme, topic, or space of the journal content.",
       parameters: {
         type: "object",
         properties: {
           title: {
             type: "string",
             description:
-              "The new title for the journal entry. This should be concise (typically 3-10 words), descriptive, and capture the essence of the journal content. It can reflect the mood, main topic, key events, or overall theme of the writing.",
+              "The new title for the journal entry. This should be concise (typically 3-10 words), descriptive, and capture the essence of the journal content. It can reflect the space, main topic, key events, or overall theme of the writing.",
           },
         },
         required: ["title"],

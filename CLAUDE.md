@@ -39,7 +39,7 @@ Jinzo is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM, sq
 
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
-- Namespaced by domain: `api.chat`, `api.entities`, `api.tasks`, `api.issues`, `api.playlists`, `api.feed`, `api.sync`, `api.runs`, `api.runContext`, `api.runArtifacts`, `api.runCommands`, `api.workspaceDiffs`, `api.reviews`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.account`, `api.apps`, `api.appSettings`, `api.connections`, `api.connectionCredentials`, `api.mood`, `api.journal`, `api.projects`, `api.providers`, `api.tools`, `api.toolCalls`, `api.toolPermissions`, `api.ollama`, `api.workspaceResources`, `api.seed`
+- Namespaced by domain: `api.chat`, `api.entities`, `api.tasks`, `api.issues`, `api.playlists`, `api.feed`, `api.sync`, `api.runs`, `api.runContext`, `api.runArtifacts`, `api.runCommands`, `api.workspaceDiffs`, `api.reviews`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.account`, `api.apps`, `api.appSettings`, `api.connections`, `api.connectionCredentials`, `api.space`, `api.journal`, `api.projects`, `api.providers`, `api.tools`, `api.toolCalls`, `api.toolPermissions`, `api.ollama`, `api.workspaceResources`, `api.seed`
 - After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
@@ -63,7 +63,7 @@ Each domain module follows a layered pattern (see `src/main/modules/account/` as
 
 **Critical**: All layers are **plain object literals**, never classes. No DI — repos call `getDb()` inline.
 
-All modules: `account`, `appSettings`, `apps`, `chat`, `connectionCredentials`, `connections`, `entities`, `feed`, `fileExplorer`, `git`, `imageProxy`, `journal`, `mcp`, `mood`, `ollama`, `projects`, `providers`, `reviews`, `runs`, `seed`, `sync`, `terminal`, `tools`, `workspaceDiffs`, `workspaceResources`, `workspaces`
+All modules: `account`, `appSettings`, `apps`, `chat`, `connectionCredentials`, `connections`, `entities`, `feed`, `fileExplorer`, `git`, `imageProxy`, `journal`, `mcp`, `space`, `ollama`, `projects`, `providers`, `reviews`, `runs`, `seed`, `sync`, `terminal`, `tools`, `workspaceDiffs`, `workspaceResources`, `workspaces`
 
 ### IPC Convention
 
@@ -80,7 +80,7 @@ All IPC responses use `ServiceResponse<T>` envelope: `{ success: true, data }` o
 1. **IPC Communication**: Renderer calls `window.api.namespace.method()` → Preload invokes IPC → Main handles
 2. **Module Flow**: IPC handler → Controller → Service → Repository → Database
 3. **Redux Integration**: `src/renderer/lib/redux/api/baseApi.ts` wraps IPC in RTK Query with custom `ipcBaseQuery` (no HTTP)
-4. **State Management**: RTK Query for server state, Redux slices for UI state (`chatSlice`, `moodSlice`, `appSettingsSlice`, `workspaceSlice`, `journalEditingSlice`)
+4. **State Management**: RTK Query for server state, Redux slices for UI state (`chatSlice`, `spaceSlice`, `appSettingsSlice`, `workspaceSlice`, `journalEditingSlice`)
 
 ### Database Schema (`src/main/db/schema.ts`)
 
@@ -94,7 +94,7 @@ Conventions:
 
 Core tables:
 - `accounts` - User profiles (display name, email, bio, avatar)
-- `appSettings` - App-level config (activeMoodId, enableWorktrees)
+- `appSettings` - App-level config (activeSpaceId, enableWorktrees)
 - `providers` - LLM/agent runtimes (ollama, copilot_cli, claude_code)
 - `projects` - Groups workspaces by shared remote origin (rootPath, branches, scripts)
 - `workspaces` - Local repos with status tracking (backlog → todo → in_progress → in_review → done → canceled → duplicate)
@@ -103,9 +103,9 @@ Core tables:
 - `entityChunks` / `vecEntityChunks` / `vecEntityChunkMap` - Chunked content with embeddings for vector search
 - `connections` / `connectionResources` / `connectionTokens` / `connectionSyncState` - External service connections, encrypted tokens, sync cursors
 - `appStates` - App integration states (GitHub, Notion, Raindrop, etc. — tracks isConnected, features, config)
-- `moods` - User-defined UI/prompt configurations with theme/UI config JSON
-- `moodConnections` / `moodResources` / `moodAppOverrides` - Mood-specific overrides for connections, resources, and apps
-- `moodToolPermissions` - Mood-specific tool permission policies
+- `spaces` - User-defined UI/prompt configurations with theme/UI config JSON
+- `spaceConnections` / `spaceResources` / `spaceAppOverrides` - Space-specific overrides for connections, resources, and apps
+- `spaceToolPermissions` - Space-specific tool permission policies
 - `feedItems` - Event log/timeline entries
 - `chatSessions` / `chatMessages` - Chat history with provider/model tracking, observability (traceId, latencyMs, token counts)
 - `runs` / `runContext` / `runArtifacts` / `runCommands` - Terminal/code-writing flow (agent runs with session resumption via sessionId)
@@ -136,7 +136,7 @@ Domain-specific views on entities:
 
 **MCP Tools** (`src/main/modules/mcp/`)
 - Model Context Protocol integration for tool use
-- Tools in `tools/`: entity-tools, sync-tools, mood-tools, journal-tools
+- Tools in `tools/`: entity-tools, sync-tools, space-tools, journal-tools
 - Server/client pattern for Ollama tool calling
 
 **Chat System** (`src/main/modules/chat/`)
@@ -193,18 +193,18 @@ Domain-specific views on entities:
 - Documents stored as entities (kind: doc/journal), revisions in `documentRevisions` table
 - Live update support via IPC events
 
-**Mood System** (`src/main/modules/mood/`)
+**Space System** (`src/main/modules/space/`)
 - User-defined profiles with systemPrompt, model, icon, themeConfig, uiConfig
-- Mood-level overrides for connections, resources, apps, and tool permissions
-- Active mood set via appSettings
+- Space-level overrides for connections, resources, apps, and tool permissions
+- Active space set via appSettings
 
 **Tools System** (`src/main/modules/tools/`)
 - Registry for local, MCP, and provider-builtin tools
-- Tool permission policies per mood via `moodToolPermissions`
+- Tool permission policies per space via `spaceToolPermissions`
 - Tool call tracking with nested call support (parentToolCallId)
 
 **Seed Module** (`src/main/modules/seed/`)
-- Database seeding for initial setup (apps, connections, providers, moods, accounts)
+- Database seeding for initial setup (apps, connections, providers, spaces, accounts)
 
 **Image Proxy** (`src/main/modules/imageProxy/`)
 - Protocol handler for enhanced image loading in the renderer
@@ -222,8 +222,8 @@ Domain-specific views on entities:
 ### Frontend Conventions
 
 - **Redux**: RTK Query with custom `ipcBaseQuery`, `baseApi.injectEndpoints()` per domain
-- **Redux API files**: `accountApi`, `appsApi`, `appSettingsApi`, `chatApi`, `connectionsApi`, `entitiesApi`, `feedApi`, `journalApi`, `mcpApi`, `moodApi`, `ollamaApi`, `projectsApi`, `providersApi`, `reviewsApi`, `runsApi`, `syncApi`, `toolsApi`, `workspaceDiffsApi`, `workspaceResourcesApi`, `workspacesApi`
-- **Redux slices**: `chatSlice`, `moodSlice`, `appSettingsSlice`, `workspaceSlice`, `journalEditingSlice`
+- **Redux API files**: `accountApi`, `appsApi`, `appSettingsApi`, `chatApi`, `connectionsApi`, `entitiesApi`, `feedApi`, `journalApi`, `mcpApi`, `spaceApi`, `ollamaApi`, `projectsApi`, `providersApi`, `reviewsApi`, `runsApi`, `syncApi`, `toolsApi`, `workspaceDiffsApi`, `workspaceResourcesApi`, `workspacesApi`
+- **Redux slices**: `chatSlice`, `spaceSlice`, `appSettingsSlice`, `workspaceSlice`, `journalEditingSlice`
 - **Hooks**: `use-kebab-case.ts` filenames, `useCamelCase` export names
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`
 - **Feature dirs**: `chat`, `journal`, `onboarding`, `settings`, `workspace`

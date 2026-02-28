@@ -2,8 +2,8 @@ import { useReducer, useEffect, useRef } from "react";
 import Text, { Heading3 } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
 import {
-  useCreateMoodMutation,
-  useSetActiveMoodMutation,
+  useCreateSpaceMutation,
+  useSetActiveSpaceMutation,
 } from "@/lib/redux/api";
 import { toast } from "@/components/ui/toast";
 import { useDarkMode } from "@/hooks/use-dark-mode";
@@ -11,15 +11,15 @@ import {
   solidColors,
   gradientColors,
   getThemeVariant,
-} from "@/lib/mood-themes";
+} from "@/lib/space-themes";
 import { availableIcons } from "@/lib/icon-registry";
 import { Button } from "@/components/ui/button";
-import MoodIconPicker from "./mood-icon-picker";
-import MoodThemeSelector from "./mood-theme-selector";
+import SpaceIconPicker from "./space-icon-picker";
+import SpaceThemeSelector from "./space-theme-selector";
 
 type IconPickerMode = "emoji" | "icon";
 
-function MoodPreviewIcon({ icon, iconMode }: { icon: string; iconMode: IconPickerMode }) {
+function SpacePreviewIcon({ icon, iconMode }: { icon: string; iconMode: IconPickerMode }) {
   if (iconMode === "icon" && icon) {
     const IconComp = availableIcons.find((i) => i.name === icon)?.component;
     return IconComp ? (
@@ -29,7 +29,7 @@ function MoodPreviewIcon({ icon, iconMode }: { icon: string; iconMode: IconPicke
   return <>{icon || ""}</>;
 }
 
-interface CreateMoodFormState {
+interface CreateSpaceFormState {
   name: string;
   icon: string;
   iconMode: IconPickerMode;
@@ -39,20 +39,20 @@ interface CreateMoodFormState {
   systemPrompt: string;
 }
 
-const mergeState = (prev: CreateMoodFormState, next: Partial<CreateMoodFormState>): CreateMoodFormState => ({
+const mergeState = (prev: CreateSpaceFormState, next: Partial<CreateSpaceFormState>): CreateSpaceFormState => ({
   ...prev,
   ...next,
 });
 
-interface CreateMoodViewProps {
+interface CreateSpaceViewProps {
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-export default function CreateMoodView({
+export default function CreateSpaceView({
   onClose,
   onSuccess,
-}: CreateMoodViewProps) {
+}: CreateSpaceViewProps) {
   const [state, updateState] = useReducer(mergeState, {
     name: "",
     icon: "",
@@ -66,8 +66,8 @@ export default function CreateMoodView({
 
   const originalBackgroundColor = useRef<string>("");
 
-  const [createMood, { isLoading }] = useCreateMoodMutation();
-  const [setActiveMood] = useSetActiveMoodMutation();
+  const [createSpace, { isLoading }] = useCreateSpaceMutation();
+  const [setActiveSpace] = useSetActiveSpaceMutation();
   const { darkMode } = useDarkMode();
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export default function CreateMoodView({
         if (originalBackgroundColor.current) {
           appRoot.style.backgroundColor = originalBackgroundColor.current;
         }
-        appRoot.style.removeProperty("--mood-preview-bg");
+        appRoot.style.removeProperty("--space-preview-bg");
       }
     };
   }, []);
@@ -100,13 +100,13 @@ export default function CreateMoodView({
         appRoot.style.background = "none";
         appRoot.style.backgroundColor = backgroundColor;
       }
-      appRoot.style.setProperty("--mood-preview-bg", currentVariant.preview);
+      appRoot.style.setProperty("--space-preview-bg", currentVariant.preview);
     }
   }, [backgroundColor, currentVariant.preview]);
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      toast.error("Please enter a mood name");
+      toast.error("Please enter a space name");
       return;
     }
 
@@ -122,7 +122,7 @@ export default function CreateMoodView({
           : `emoji:${icon}`
         : "emoji:😊";
 
-      const result = await createMood({
+      const result = await createSpace({
         name: name.trim(),
         icon: iconValue,
         themeConfig,
@@ -130,16 +130,16 @@ export default function CreateMoodView({
       }).unwrap();
 
       if (result?.id) {
-        await setActiveMood(result.id).unwrap();
+        await setActiveSpace(result.id).unwrap();
       }
 
       originalBackgroundColor.current = "";
-      toast.success("Mood created!");
+      toast.success("Space created!");
       onSuccess?.();
       onClose();
     } catch (error) {
-      console.error("Error creating mood:", error);
-      toast.error("Failed to create mood");
+      console.error("Error creating space:", error);
+      toast.error("Failed to create space");
     }
   };
 
@@ -153,10 +153,10 @@ export default function CreateMoodView({
           className="w-14 h-14 rounded-full flex items-center justify-center text-3xl mb-2 "
           style={{ background: currentVariant.preview }}
         >
-          <MoodPreviewIcon icon={icon} iconMode={iconMode} />
+          <SpacePreviewIcon icon={icon} iconMode={iconMode} />
         </div>
         <Heading3 className="text-center text-primary-800 dark:text-primary">
-          {name || "Create Mood"}{" "}
+          {name || "Create Space"}{" "}
         </Heading3>
       </div>
 
@@ -166,7 +166,7 @@ export default function CreateMoodView({
             type="text"
             value={name}
             onChange={(e) => updateState({ name: e.target.value })}
-            placeholder="Mood name..."
+            placeholder="Space name..."
             className="w-full px-3 py-2 border-0! shadow-none!
               bg-primary-950/10! dark:bg-primary/4
               dark:placeholder:text-primary-100!
@@ -179,7 +179,7 @@ export default function CreateMoodView({
           />
         </div>
 
-        <MoodIconPicker
+        <SpaceIconPicker
           icon={icon}
           iconMode={iconMode}
           isOpen={isEmojiPickerOpen}
@@ -210,7 +210,7 @@ export default function CreateMoodView({
           />
         </div>
 
-        <MoodThemeSelector
+        <SpaceThemeSelector
           selectedColorIndex={selectedColorIndex}
           showGradients={showGradients}
           onSelectColor={(index) => updateState({ selectedColorIndex: index })}
@@ -226,7 +226,7 @@ export default function CreateMoodView({
           disabled:cursor-not-allowed brightness-120 hover:scale-101 active:scale-99 text-primary-800 dark:text-primary"
           style={{ background: currentVariant.preview }}
         >
-          {isLoading ? "Creating..." : "Create Mood"}
+          {isLoading ? "Creating..." : "Create Space"}
         </Button>
         <Button
           onClick={onClose}

@@ -10,7 +10,7 @@ import {
   type ProjectResourceWithDetails,
 } from "@/lib/redux/api";
 import DropdownWrapper from "@/components/ui/dropdown-wrapper";
-import { Claude } from "@/components/ui/icons/mood";
+import { Claude } from "@/components/ui/icons/space";
 
 const ISSUE_RESOURCE_KINDS = [
   "github_repo",

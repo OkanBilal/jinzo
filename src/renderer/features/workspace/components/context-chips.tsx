@@ -4,7 +4,7 @@ import type { ContextIssue } from "@/lib/redux/slices/workspaceSlice";
 import { Asana, Close, Gitlab, Jira } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
-import { Code } from "@/components/ui/icons/mood";
+import { Code } from "@/components/ui/icons/space";
 
 function IssueProviderIcon({ provider }: { provider: string }) {
   switch (provider) {

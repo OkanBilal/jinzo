@@ -45,7 +45,7 @@ export const appSettings = sqliteTable("app_settings", {
     .notNull()
     .references(() => accounts.id, { onDelete: "cascade" }),
 
-  activeMoodId: text("active_mood_id").references(() => moods.id, {
+  activeSpaceId: text("active_space_id").references(() => spaces.id, {
     onDelete: "set null",
   }),
 
@@ -260,8 +260,8 @@ export const runs = sqliteTable(
       onDelete: "set null",
     }),
 
-    // optional: which mood/profile initiated this run (tool policies etc.)
-    moodId: text("mood_id").references(() => moods.id, {
+    // optional: which space/profile initiated this run (tool policies etc.)
+    spaceId: text("space_id").references(() => spaces.id, {
       onDelete: "set null",
     }),
 
@@ -305,7 +305,7 @@ export const runs = sqliteTable(
     index("idx_runs_account_status").on(t.accountId, t.status),
     index("idx_runs_provider").on(t.providerId),
     index("idx_runs_workspace").on(t.workspaceId),
-    index("idx_runs_mood").on(t.moodId),
+    index("idx_runs_space").on(t.spaceId),
     index("idx_runs_updated").on(t.updatedAt),
     check(
       "check_runs_config_snapshot_json",
@@ -689,15 +689,15 @@ export const tools = sqliteTable(
 );
 
 /* -----------------------------
-   MOOD TOOL PERMISSIONS (simple + powerful)
+   SPACE TOOL PERMISSIONS (simple + powerful)
 ------------------------------ */
 
-export const moodToolPermissions = sqliteTable(
-  "mood_tool_permissions",
+export const spaceToolPermissions = sqliteTable(
+  "space_tool_permissions",
   {
-    moodId: text("mood_id")
+    spaceId: text("space_id")
       .notNull()
-      .references(() => moods.id, { onDelete: "cascade" }),
+      .references(() => spaces.id, { onDelete: "cascade" }),
     toolId: text("tool_id")
       .notNull()
       .references(() => tools.id, { onDelete: "cascade" }),
@@ -712,10 +712,10 @@ export const moodToolPermissions = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (t) => [
-    uniqueIndex("uniq_mood_tool").on(t.moodId, t.toolId),
-    index("idx_mood_tool_tool").on(t.toolId),
+    uniqueIndex("uniq_space_tool").on(t.spaceId, t.toolId),
+    index("idx_space_tool_tool").on(t.toolId),
     check(
-      "check_mood_tool_policy_json",
+      "check_space_tool_policy_json",
       sql`json_valid(${t.policy}) OR ${t.policy} IS NULL`,
     ),
   ],
@@ -931,7 +931,7 @@ export const connectionResources = sqliteTable(
 );
 
 /* -----------------------------
-   MOODS / APP STATE
+   SPACES / APP STATE
 ------------------------------ */
 
 export const appStates = sqliteTable(
@@ -974,8 +974,8 @@ export const appStates = sqliteTable(
   ],
 );
 
-export const moods = sqliteTable(
-  "moods",
+export const spaces = sqliteTable(
+  "spaces",
   {
     id: text("id").primaryKey(),
     accountId: text("account_id")
@@ -1001,28 +1001,28 @@ export const moods = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (t) => [
-    uniqueIndex("uniq_moods_account_slug").on(t.accountId, t.slug),
-    uniqueIndex("uniq_moods_account_name").on(t.accountId, t.name),
-    index("idx_moods_account").on(t.accountId),
-    index("idx_moods_sort").on(t.sortOrder),
-    index("idx_moods_updated").on(t.updatedAt),
+    uniqueIndex("uniq_spaces_account_slug").on(t.accountId, t.slug),
+    uniqueIndex("uniq_spaces_account_name").on(t.accountId, t.name),
+    index("idx_spaces_account").on(t.accountId),
+    index("idx_spaces_sort").on(t.sortOrder),
+    index("idx_spaces_updated").on(t.updatedAt),
     check(
-      "check_moods_theme_json",
+      "check_spaces_theme_json",
       sql`json_valid(${t.themeConfig}) OR ${t.themeConfig} IS NULL`,
     ),
     check(
-      "check_moods_ui_json",
+      "check_spaces_ui_json",
       sql`json_valid(${t.uiConfig}) OR ${t.uiConfig} IS NULL`,
     ),
   ],
 );
 
-export const moodConnections = sqliteTable(
-  "mood_connections",
+export const spaceConnections = sqliteTable(
+  "space_connections",
   {
-    moodId: text("mood_id")
+    spaceId: text("space_id")
       .notNull()
-      .references(() => moods.id, { onDelete: "cascade" }),
+      .references(() => spaces.id, { onDelete: "cascade" }),
     connectionId: text("connection_id")
       .notNull()
       .references(() => connections.id, { onDelete: "cascade" }),
@@ -1032,17 +1032,17 @@ export const moodConnections = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (t) => [
-    uniqueIndex("uniq_mood_conn").on(t.moodId, t.connectionId),
-    index("idx_mood_conn_conn").on(t.connectionId),
+    uniqueIndex("uniq_space_conn").on(t.spaceId, t.connectionId),
+    index("idx_space_conn_conn").on(t.connectionId),
   ],
 );
 
-export const moodResources = sqliteTable(
-  "mood_resources",
+export const spaceResources = sqliteTable(
+  "space_resources",
   {
-    moodId: text("mood_id")
+    spaceId: text("space_id")
       .notNull()
-      .references(() => moods.id, { onDelete: "cascade" }),
+      .references(() => spaces.id, { onDelete: "cascade" }),
     resourceId: text("resource_id")
       .notNull()
       .references(() => connectionResources.id, { onDelete: "cascade" }),
@@ -1054,22 +1054,22 @@ export const moodResources = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (t) => [
-    uniqueIndex("uniq_mood_resource").on(t.moodId, t.resourceId),
-    index("idx_mood_resource_resource").on(t.resourceId),
-    index("idx_mood_resource_sort").on(t.moodId, t.sortOrder),
+    uniqueIndex("uniq_space_resource").on(t.spaceId, t.resourceId),
+    index("idx_space_resource_resource").on(t.resourceId),
+    index("idx_space_resource_sort").on(t.spaceId, t.sortOrder),
     check(
-      "check_mood_resources_metadata_json",
+      "check_space_resources_metadata_json",
       sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
     ),
   ],
 );
 
-export const moodAppOverrides = sqliteTable(
-  "mood_app_overrides",
+export const spaceAppOverrides = sqliteTable(
+  "space_app_overrides",
   {
-    moodId: text("mood_id")
+    spaceId: text("space_id")
       .notNull()
-      .references(() => moods.id, { onDelete: "cascade" }),
+      .references(() => spaces.id, { onDelete: "cascade" }),
     appId: text("app_id")
       .notNull()
       .references(() => appStates.id, { onDelete: "cascade" }),
@@ -1084,7 +1084,7 @@ export const moodAppOverrides = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (t) => [
-    uniqueIndex("uniq_mood_app").on(t.moodId, t.appId),
+    uniqueIndex("uniq_space_app").on(t.spaceId, t.appId),
     check(
       "check_enabled_features_json",
       sql`json_valid(${t.enabledFeatures}) OR ${t.enabledFeatures} IS NULL`,
@@ -1428,7 +1428,7 @@ export const chatSessions = sqliteTable(
     // keep model as session default (optional)
     model: text("model"),
 
-    moodId: text("mood_id").references(() => moods.id, {
+    spaceId: text("space_id").references(() => spaces.id, {
       onDelete: "set null",
     }),
     systemPromptSnapshot: text("system_prompt_snapshot"),
@@ -1446,7 +1446,7 @@ export const chatSessions = sqliteTable(
   (t) => [
     index("idx_chat_sessions_updated_at").on(t.updatedAt),
     index("idx_chat_sessions_created_at").on(t.createdAt),
-    index("idx_chat_sessions_mood").on(t.moodId),
+    index("idx_chat_sessions_space").on(t.spaceId),
 
     // NEW indexes
     index("idx_chat_sessions_provider").on(t.providerId),

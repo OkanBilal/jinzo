@@ -15,7 +15,7 @@ import {
   Chart,
 } from "@/components/ui/icons";
 import type { SettingsSection } from "@/features/chat/components/input/types";
-import { Claude } from "@/components/ui/icons/mood";
+import { Claude } from "@/components/ui/icons/space";
 import { useGetProjectsQuery } from "@/lib/redux/api";
 import { parseIcon, type IconComponent } from "@/lib/icon-registry";
 
@@ -43,7 +43,7 @@ const menuItems: Array<MenuItem> = [
 const providerItems: Array<MenuItem> = [
   { id: "claude", label: "Claude", icon: Claude },
   { id: "copilot", label: "Copilot", icon: CopilotStatic },
-  { id: "codex", label: "Codex", icon: Gpt }
+  // { id: "codex", label: "Codex", icon: Gpt }
 ];
 
 export default function SettingsView({ onClose }: SettingsViewProps) {

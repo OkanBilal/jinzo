@@ -12,11 +12,11 @@ export {
 } from "./sync-tools";
 
 export {
-  switchToJournalMood,
-  switchToChatMood,
-  executeMoodTool,
-  MOOD_TOOLS,
-} from "./mood-tools";
+  switchToJournalSpace,
+  switchToChatSpace,
+  executeSpaceTool,
+  SPACE_TOOLS,
+} from "./space-tools";
 
 export {
   appendToJournal,

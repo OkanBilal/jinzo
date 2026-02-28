@@ -1,5 +1,5 @@
 import { DeepSeek, Gemini, Gpt, Meta } from "@/components/ui/icons";
-import { Claude } from "@/components/ui/icons/mood";
+import { Claude } from "@/components/ui/icons/space";
 
 
 export function getModelIcon(modelName: string) {

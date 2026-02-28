@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useActiveMood } from "./use-active-mood";
+import { useActiveSpace } from "./use-active-space";
 
 export type SidebarItemType = "chat" | "post" | "workspace";
 
@@ -11,7 +11,7 @@ export interface SidebarConfig {
 }
 
 export function useSidebarConfig(): SidebarConfig {
-  const { activeMood } = useActiveMood();
+  const { activeSpace } = useActiveSpace();
 
   const sidebarConfig = useMemo(() => {
     const defaultConfig: SidebarConfig = {
@@ -21,9 +21,9 @@ export function useSidebarConfig(): SidebarConfig {
       defaultRoute: "/",
     };
 
-    if (activeMood?.uiConfig) {
+    if (activeSpace?.uiConfig) {
       try {
-        const config = JSON.parse(activeMood.uiConfig);
+        const config = JSON.parse(activeSpace.uiConfig);
         return {
           width: config.sidebar?.width || defaultConfig.width,
           title: config.sidebar?.title || defaultConfig.title,
@@ -33,13 +33,13 @@ export function useSidebarConfig(): SidebarConfig {
             config.sidebar?.defaultRoute || defaultConfig.defaultRoute,
         };
       } catch (error) {
-        console.error("Failed to parse mood uiConfig:", error);
+        console.error("Failed to parse space uiConfig:", error);
         return defaultConfig;
       }
     }
 
     return defaultConfig;
-  }, [activeMood]);
+  }, [activeSpace]);
 
   return sidebarConfig;
 }

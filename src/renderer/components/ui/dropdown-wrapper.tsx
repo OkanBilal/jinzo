@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useActiveMood } from "@/hooks/use-active-mood";
+import { useActiveSpace } from "@/hooks/use-active-space";
 import { useDarkMode } from "@/hooks/use-dark-mode";
 import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
 import { getDefaultDropdownBackground } from "@/lib/theme";
@@ -37,7 +37,7 @@ export default function DropdownWrapper({
   const dropdownRef = externalDropdownRef || internalDropdownRef;
 
   // Call hooks before any conditional returns
-  const { activeMood } = useActiveMood();
+  const { activeSpace } = useActiveSpace();
   const { darkMode } = useDarkMode();
   const variant = useWorkspaceVariant();
 
@@ -61,28 +61,28 @@ export default function DropdownWrapper({
     }
   }, [isOpen, usePortal, triggerRef, openUpward, position]);
 
-  // Get background color from active mood theme
+  // Get background color from active space theme
   const getDropdownBackground = () => {
     // If using fixed background, return the glassmorphism gradient matching the chat input
     if (useFixedBackground) {
       return undefined; // Will use CSS class instead
     }
 
-    // First check if we're in preview mode (create mood view)
+    // First check if we're in preview mode (create space view)
     const appRoot = document.querySelector(".app-root") as HTMLElement;
     const previewBg = appRoot
-      ? getComputedStyle(appRoot).getPropertyValue("--mood-preview-bg").trim()
+      ? getComputedStyle(appRoot).getPropertyValue("--space-preview-bg").trim()
       : "";
     if (previewBg) {
       return previewBg;
     }
 
-    if (!activeMood?.themeConfig) {
+    if (!activeSpace?.themeConfig) {
       return getDefaultDropdownBackground(darkMode);
     }
 
     try {
-      const themeConfig = JSON.parse(activeMood.themeConfig);
+      const themeConfig = JSON.parse(activeSpace.themeConfig);
       const bgColor = darkMode
         ? themeConfig.darkBackground
         : themeConfig.lightBackground;

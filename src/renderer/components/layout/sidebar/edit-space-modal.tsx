@@ -2,8 +2,8 @@ import { useReducer, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Text, { Heading3 } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
-import { useUpdateMoodMutation } from "@/lib/redux/api";
-import type { Mood } from "@/lib/redux/api";
+import { useUpdateSpaceMutation } from "@/lib/redux/api";
+import type { Space } from "@/lib/redux/api";
 import { toast } from "@/components/ui/toast";
 import { useDarkMode } from "@/hooks/use-dark-mode";
 import {
@@ -11,15 +11,15 @@ import {
   gradientColors,
   getThemeVariant,
   type ThemeColor,
-} from "@/lib/mood-themes";
+} from "@/lib/space-themes";
 import { availableIcons, parseIcon } from "@/lib/icon-registry";
 import { Button } from "@/components/ui/button";
-import MoodIconPicker from "./mood-icon-picker";
-import MoodThemeSelector from "./mood-theme-selector";
+import SpaceIconPicker from "./space-icon-picker";
+import SpaceThemeSelector from "./space-theme-selector";
 
 type IconPickerMode = "emoji" | "icon";
 
-interface EditMoodFormState {
+interface EditSpaceFormState {
   name: string;
   icon: string;
   iconMode: IconPickerMode;
@@ -28,17 +28,17 @@ interface EditMoodFormState {
   showGradients: boolean;
   systemPrompt: string;
   isClosing: boolean;
-  prevMoodId: string | null;
+  prevSpaceId: string | null;
 }
 
-const mergeState = (prev: EditMoodFormState, next: Partial<EditMoodFormState>): EditMoodFormState => ({
+const mergeState = (prev: EditSpaceFormState, next: Partial<EditSpaceFormState>): EditSpaceFormState => ({
   ...prev,
   ...next,
 });
 
-interface EditMoodModalProps {
+interface EditSpaceModalProps {
   isOpen: boolean;
-  mood: Mood | null;
+  space: Space | null;
   onClose: () => void;
   onSuccess?: () => void;
   sidebarWidth?: string;
@@ -74,7 +74,7 @@ function parseThemeConfig(themeConfig: string | null): {
   return { colorIndex: 0, isGradient: false };
 }
 
-function EditMoodPreviewIcon({ icon, iconMode }: { icon: string; iconMode: IconPickerMode }) {
+function EditSpacePreviewIcon({ icon, iconMode }: { icon: string; iconMode: IconPickerMode }) {
   if (iconMode === "icon" && icon) {
     const IconComp = availableIcons.find((i) => i.name === icon)?.component;
     return IconComp ? (
@@ -84,13 +84,13 @@ function EditMoodPreviewIcon({ icon, iconMode }: { icon: string; iconMode: IconP
   return <>{icon || ""}</>;
 }
 
-export default function EditMoodModal({
+export default function EditSpaceModal({
   isOpen,
-  mood,
+  space,
   onClose,
   onSuccess,
   sidebarWidth = "19rem",
-}: EditMoodModalProps) {
+}: EditSpaceModalProps) {
   const [state, updateState] = useReducer(mergeState, {
     name: "",
     icon: "",
@@ -100,19 +100,19 @@ export default function EditMoodModal({
     showGradients: false,
     systemPrompt: "",
     isClosing: false,
-    prevMoodId: mood?.id ?? null,
+    prevSpaceId: space?.id ?? null,
   });
   const { name, icon, iconMode, selectedColorIndex, isEmojiPickerOpen, showGradients, systemPrompt, isClosing } = state;
   const prevIsOpenRef = useRef(isOpen);
 
-  const [updateMood, { isLoading }] = useUpdateMoodMutation();
+  const [updateSpace, { isLoading }] = useUpdateSpaceMutation();
   const { darkMode } = useDarkMode();
 
-  // Initialize form when mood changes (adjust state during render)
-  if (mood && mood.id !== state.prevMoodId) {
+  // Initialize form when space changes (adjust state during render)
+  if (space && space.id !== state.prevSpaceId) {
     let newIconMode: IconPickerMode = "emoji";
     let newIcon = "";
-    const iconStr = mood.icon || "";
+    const iconStr = space.icon || "";
     if (iconStr.startsWith("icon:")) {
       newIconMode = "icon";
       newIcon = iconStr.replace("icon:", "");
@@ -129,11 +129,11 @@ export default function EditMoodModal({
         newIcon = typeof parsedIcon.value === "string" ? parsedIcon.value : "😊";
       }
     }
-    const { colorIndex, isGradient } = parseThemeConfig(mood.themeConfig);
+    const { colorIndex, isGradient } = parseThemeConfig(space.themeConfig);
     updateState({
-      prevMoodId: mood.id,
-      name: mood.name,
-      systemPrompt: mood.systemPrompt || "",
+      prevSpaceId: space.id,
+      name: space.name,
+      systemPrompt: space.systemPrompt || "",
       iconMode: newIconMode,
       icon: newIcon,
       selectedColorIndex: colorIndex,
@@ -172,10 +172,10 @@ export default function EditMoodModal({
   }, [isOpen, isClosing, handleAnimatedClose]);
 
   const handleSave = async () => {
-    if (!mood) return;
+    if (!space) return;
 
     if (!name.trim()) {
-      toast.error("Please enter a mood name");
+      toast.error("Please enter a space name");
       return;
     }
 
@@ -191,8 +191,8 @@ export default function EditMoodModal({
           : `emoji:${icon}`
         : "emoji:😊";
 
-      await updateMood({
-        id: mood.id,
+      await updateSpace({
+        id: space.id,
         payload: {
           name: name.trim(),
           icon: iconValue,
@@ -201,16 +201,16 @@ export default function EditMoodModal({
         },
       }).unwrap();
 
-      toast.success("Mood updated!");
+      toast.success("Space updated!");
       onSuccess?.();
       onClose();
     } catch (error) {
-      console.error("Error updating mood:", error);
-      toast.error("Failed to update mood");
+      console.error("Error updating space:", error);
+      toast.error("Failed to update space");
     }
   };
 
-  if (!isOpen || !mood) return null;
+  if (!isOpen || !space) return null;
 
   const currentColors = showGradients ? gradientColors : solidColors;
   const selectedColorPair: ThemeColor =
@@ -241,10 +241,10 @@ export default function EditMoodModal({
             className="w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-2"
             style={{ background: currentVariant.preview }}
           >
-            <EditMoodPreviewIcon icon={icon} iconMode={iconMode} />
+            <EditSpacePreviewIcon icon={icon} iconMode={iconMode} />
           </div>
           <Heading3 className="text-center text-primary-800 dark:text-primary">
-            Edit Mood
+            Edit Space
           </Heading3>
         </div>
 
@@ -255,7 +255,7 @@ export default function EditMoodModal({
               type="text"
               value={name}
               onChange={(e) => updateState({ name: e.target.value })}
-              placeholder="Mood name..."
+              placeholder="Space name..."
               className="w-full px-3 py-2 border-0! shadow-none!
                 bg-primary-950/10! dark:bg-primary/4
                 dark:placeholder:text-primary-100!
@@ -268,7 +268,7 @@ export default function EditMoodModal({
             />
           </div>
 
-          <MoodIconPicker
+          <SpaceIconPicker
             icon={icon}
             iconMode={iconMode}
             isOpen={isEmojiPickerOpen}
@@ -299,7 +299,7 @@ export default function EditMoodModal({
             />
           </div>
 
-          <MoodThemeSelector
+          <SpaceThemeSelector
             selectedColorIndex={selectedColorIndex}
             showGradients={showGradients}
             onSelectColor={(index) => updateState({ selectedColorIndex: index })}

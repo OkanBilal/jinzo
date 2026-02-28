@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
-// Mood Payload Types
+// Space Payload Types
 // ─────────────────────────────────────────────────────────────
-export interface MoodPayload {
+export interface SpacePayload {
   name: string;
   slug?: string;
   description?: string;
@@ -13,15 +13,15 @@ export interface MoodPayload {
   sortOrder?: number;
 }
 
-export interface SanitizedMoodResult {
-  data: Partial<MoodPayload>;
+export interface SanitizedSpaceResult {
+  data: Partial<SpacePayload>;
   errors: Record<string, string>;
 }
 
 // ─────────────────────────────────────────────────────────────
 // Response Types
 // ─────────────────────────────────────────────────────────────
-export interface MoodRecord {
+export interface SpaceRecord {
   id: string;
   accountId: string;
   name: string;

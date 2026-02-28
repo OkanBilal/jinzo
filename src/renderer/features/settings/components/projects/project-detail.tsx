@@ -15,7 +15,7 @@ import {
   type ProjectResourceWithDetails,
 } from "@/lib/redux/api";
 import { SettingsSection, SettingsRow, SettingsDivider } from "../settings-layout";
-import MoodIconPicker from "@/components/layout/sidebar/mood-icon-picker";
+import SpaceIconPicker from "@/components/layout/sidebar/space-icon-picker";
 import { parseIcon } from "@/lib/icon-registry";
 import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
 import Github from "@/components/ui/icons/github";
@@ -278,7 +278,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
           title="Icon"
           description="Choose an emoji or icon for this project."
         >
-          <MoodIconPicker
+          <SpaceIconPicker
             useFixedBackground
             icon={icon}
             iconMode={iconMode}

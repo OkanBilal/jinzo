@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useActiveMood } from "@/hooks/use-active-mood";
+import { useActiveSpace } from "@/hooks/use-active-space";
 import { useDarkMode } from "@/hooks/use-dark-mode";
 import { getDefaultDropdownBackground } from "@/lib/theme";
 import { Button } from "./button";
@@ -85,31 +85,31 @@ export default function Select<T extends string = string>({
   }, [isOpen]);
 
   const selectedOption = options.find((opt) => opt.value === value);
-  const { activeMood } = useActiveMood();
+  const { activeSpace } = useActiveSpace();
   const { darkMode } = useDarkMode();
 
-  // Get background color from active mood theme
+  // Get background color from active space theme
   const getDropdownBackground = () => {
     // If using fixed background, return undefined to use CSS class instead
     if (useFixedBackground) {
       return undefined;
     }
 
-    // First check if we're in preview mode (create mood view)
+    // First check if we're in preview mode (create space view)
     const appRoot = document.querySelector(".app-root") as HTMLElement;
     const previewBg = appRoot
-      ? getComputedStyle(appRoot).getPropertyValue("--mood-preview-bg").trim()
+      ? getComputedStyle(appRoot).getPropertyValue("--space-preview-bg").trim()
       : "";
     if (previewBg) {
       return previewBg;
     }
 
-    if (!activeMood?.themeConfig) {
+    if (!activeSpace?.themeConfig) {
       return getDefaultDropdownBackground(darkMode, 0.98);
     }
 
     try {
-      const themeConfig = JSON.parse(activeMood.themeConfig);
+      const themeConfig = JSON.parse(activeSpace.themeConfig);
       const bgColor = darkMode
         ? themeConfig.darkBackground
         : themeConfig.lightBackground;

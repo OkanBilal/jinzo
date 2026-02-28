@@ -1,22 +1,22 @@
 import { Preset } from "@/components/ui/icons";
-import { Bolt } from "@/components/ui/icons/mood";
+import { Bolt } from "@/components/ui/icons/space";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
-interface CreateMoodMenuProps {
+interface CreateSpaceMenuProps {
   isOpen: boolean;
   position: { x: number; y: number };
-  onCreateMood: () => void;
-  onPresetMoods: () => void;
+  onCreateSpace: () => void;
+  onPresetSpaces: () => void;
   onClose: () => void;
 }
 
-export default function CreateMoodMenu({
+export default function CreateSpaceMenu({
   isOpen,
   position,
-  onCreateMood,
-  onPresetMoods,
+  onCreateSpace,
+  onPresetSpaces,
   onClose,
-}: CreateMoodMenuProps) {
+}: CreateSpaceMenuProps) {
   const adjustedPosition = {
     x: Math.max(8, Math.min(position.x - 70, window.innerWidth - 160)),
     y: Math.max(8, position.y - 90),
@@ -31,21 +31,21 @@ export default function CreateMoodMenu({
     >
       <DropdownMenuItem
         onClick={() => {
-          onCreateMood();
+          onCreateSpace();
           onClose();
         }}
       >
         <Bolt className="size-4" />
-        <span>Create Mood</span>
+        <span>Create Space</span>
       </DropdownMenuItem>
       <DropdownMenuItem
         onClick={() => {
-          onPresetMoods();
+          onPresetSpaces();
           onClose();
         }}
       >
         <Preset className="size-4" />
-        <span>Choose Mood</span>
+        <span>Choose Space</span>
       </DropdownMenuItem>
     </DropdownMenu>
   );

@@ -49,7 +49,7 @@ Jinzo is an AI-powered personal assistant that helps you organize, search, and i
 ### 🤖 AI Chat
 - Multiple chat modes: direct chat, RAG-augmented, and MCP tool-enabled
 - Conversation history with provider/model tracking
-- Custom moods (UI/prompt configurations)
+- Custom spaces (UI/prompt configurations)
 - Rich markdown support with code highlighting
 
 ### 📚 Content Aggregation
@@ -149,13 +149,13 @@ npm run db:seed
 
 4. **Start Chatting**:
    - Click "New Chat" to create a conversation
-   - Choose a mood/configuration
+   - Choose a space/configuration
    - Enable RAG mode to search your synced content
 
 ### Key Concepts
 
 - **Entities**: Unified storage for all your content (tasks, bookmarks, articles, etc.)
-- **Moods**: Pre-configured chat personalities and system prompts
+- **Spaces**: Pre-configured chat personalities and system prompts
 - **RAG Mode**: Enable context-aware responses using your personal knowledge base
 - **MCP Tools**: Allow the AI to perform actions (search entities, manage tasks, etc.)
 
@@ -230,7 +230,7 @@ Located at `~/Library/Application Support/jinzo/jinzo.db`
 - `connections` / `connectionResources` - External service connections
 - `feedItems` - Event log/timeline entries
 - `chatSessions` / `chatMessages` - Chat history
-- `moods` - User-defined UI/prompt configurations
+- `spaces` - User-defined UI/prompt configurations
 - `tools` / `toolCalls` - Tool registry and invocation tracking
 
 ## Configuration
@@ -255,7 +255,7 @@ jinzo/
 │   │   │   ├── entities/        # Content entities
 │   │   │   ├── feed/            # Timeline feed
 │   │   │   ├── mcp/             # Model Context Protocol tools
-│   │   │   ├── moods/           # UI/prompt configurations
+│   │   │   ├── spaces/           # UI/prompt configurations
 │   │   │   ├── providers/       # LLM providers
 │   │   │   ├── sync/            # Content synchronization
 │   │   │   └── ...

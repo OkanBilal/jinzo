@@ -1,6 +1,6 @@
 import { eq, desc, and, isNull } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { tools, toolCalls, moodToolPermissions } from "../../db/schema";
+import { tools, toolCalls, spaceToolPermissions } from "../../db/schema";
 import type {
   CreateToolPayload,
   UpdateToolPayload,
@@ -8,8 +8,8 @@ import type {
   CreateToolCallPayload,
   UpdateToolCallPayload,
   ToolCallResponse,
-  MoodToolPermissionPayload,
-  MoodToolPermissionResponse,
+  SpaceToolPermissionPayload,
+  SpaceToolPermissionResponse,
 } from "./tools.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -169,61 +169,61 @@ export const toolsRepo = {
   },
 
   // ─────────────────────────────────────────────────────────────
-  // Mood Tool Permissions
+  // Space Tool Permissions
   // ─────────────────────────────────────────────────────────────
-  async findPermissionsByMood(
-    moodId: string,
-  ): Promise<MoodToolPermissionResponse[]> {
+  async findPermissionsBySpace(
+    spaceId: string,
+  ): Promise<SpaceToolPermissionResponse[]> {
     const db = getDb();
     const rows = await db
       .select()
-      .from(moodToolPermissions)
-      .where(eq(moodToolPermissions.moodId, moodId));
-    return rows.map(mapPermissionRowToResponse);
+      .from(spaceToolPermissions)
+      .where(eq(spaceToolPermissions.spaceId, spaceId));
+    return rows.map(mapSpaceToolPermissionRowToResponse);
   },
 
   async findPermissionsByTool(
     toolId: string,
-  ): Promise<MoodToolPermissionResponse[]> {
+  ): Promise<SpaceToolPermissionResponse[]> {
     const db = getDb();
     const rows = await db
       .select()
-      .from(moodToolPermissions)
-      .where(eq(moodToolPermissions.toolId, toolId));
-    return rows.map(mapPermissionRowToResponse);
+      .from(spaceToolPermissions)
+      .where(eq(spaceToolPermissions.toolId, toolId));
+    return rows.map(mapSpaceToolPermissionRowToResponse);
   },
 
-  async upsertPermission(payload: MoodToolPermissionPayload): Promise<void> {
+  async upsertPermission(payload: SpaceToolPermissionPayload): Promise<void> {
     const db = getDb();
 
     // Check if exists
     const existingRows = await db
       .select()
-      .from(moodToolPermissions)
+      .from(spaceToolPermissions)
       .where(
         and(
-          eq(moodToolPermissions.moodId, payload.moodId),
-          eq(moodToolPermissions.toolId, payload.toolId),
+          eq(spaceToolPermissions.spaceId, payload.spaceId),
+          eq(spaceToolPermissions.toolId, payload.toolId),
         ),
       )
       .limit(1);
 
     if (existingRows.length > 0) {
       await db
-        .update(moodToolPermissions)
+        .update(spaceToolPermissions)
         .set({
           enabled: payload.enabled ?? true,
           policy: payload.policy ? JSON.stringify(payload.policy) : null,
         })
         .where(
           and(
-            eq(moodToolPermissions.moodId, payload.moodId),
-            eq(moodToolPermissions.toolId, payload.toolId),
+            eq(spaceToolPermissions.spaceId, payload.spaceId),
+            eq(spaceToolPermissions.toolId, payload.toolId),
           ),
         );
     } else {
-      await db.insert(moodToolPermissions).values({
-        moodId: payload.moodId,
+      await db.insert(spaceToolPermissions).values({
+        spaceId: payload.spaceId,
         toolId: payload.toolId,
         enabled: payload.enabled ?? true,
         policy: payload.policy ? JSON.stringify(payload.policy) : null,
@@ -231,14 +231,14 @@ export const toolsRepo = {
     }
   },
 
-  async deletePermission(moodId: string, toolId: string): Promise<void> {
+  async deletePermission(spaceId: string, toolId: string): Promise<void> {
     const db = getDb();
     await db
-      .delete(moodToolPermissions)
+      .delete(spaceToolPermissions)
       .where(
         and(
-          eq(moodToolPermissions.moodId, moodId),
-          eq(moodToolPermissions.toolId, toolId),
+          eq(spaceToolPermissions.spaceId, spaceId),
+          eq(spaceToolPermissions.toolId, toolId),
         ),
       );
   },
@@ -324,11 +324,11 @@ function mapToolCallRowToResponse(
   };
 }
 
-function mapPermissionRowToResponse(
-  row: typeof moodToolPermissions.$inferSelect,
-): MoodToolPermissionResponse {
+function mapSpaceToolPermissionRowToResponse(
+  row: typeof spaceToolPermissions.$inferSelect,
+): SpaceToolPermissionResponse {
   return {
-    moodId: row.moodId,
+    spaceId: row.spaceId,
     toolId: row.toolId,
     enabled: row.enabled,
     policy: row.policy ? JSON.parse(row.policy) : null,

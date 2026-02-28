@@ -1,6 +1,6 @@
 import { Archive, Close, CopilotStatic } from "@/components/ui/icons";
 import type { Run } from "../types";
-import { Claude, Copilot } from "@/components/ui/icons/mood";
+import { Claude, Copilot } from "@/components/ui/icons/space";
 import { Button } from "@/components/ui/button";
 import { AnimatedTitle } from "@/components/ui/animated-title";
 

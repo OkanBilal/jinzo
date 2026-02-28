@@ -4,7 +4,7 @@ import storage from "redux-persist/lib/storage";
 
 import { baseApi } from "./api/baseApi";
 import chatReducer from "./slices/chatSlice";
-import moodReducer from "./slices/moodSlice";
+import spaceReducer from "./slices/spaceSlice";
 import appSettingsReducer from "./slices/appSettingsSlice";
 import journalEditingReducer from "./slices/journalEditingSlice";
 import workspaceReducer from "./slices/workspaceSlice";
@@ -15,10 +15,10 @@ const chatPersistConfig = {
   whitelist: ["selectedModel", "thinkingLevel", "thinkingEnabled", "toolMode"],
 };
 
-const moodPersistConfig = {
-  key: "mood",
+const spacePersistConfig = {
+  key: "space",
   storage,
-  whitelist: ["activeMoodId"],
+  whitelist: ["activeSpaceId"],
 };
 
 const appSettingsPersistConfig = {
@@ -38,7 +38,7 @@ const workspacePersistConfig = {
 };
 
 const persistedChatReducer = persistReducer(chatPersistConfig, chatReducer);
-const persistedMoodReducer = persistReducer(moodPersistConfig, moodReducer);
+const persistedSpaceReducer = persistReducer(spacePersistConfig, spaceReducer);
 const persistedAppSettingsReducer = persistReducer(
   appSettingsPersistConfig,
   appSettingsReducer,
@@ -52,7 +52,7 @@ export const store = configureStore({
   reducer: {
     [baseApi.reducerPath]: baseApi.reducer,
     chat: persistedChatReducer,
-    mood: persistedMoodReducer,
+    space: persistedSpaceReducer,
     appSettings: persistedAppSettingsReducer,
     journalEditing: journalEditingReducer,
     workspace: persistedWorkspaceReducer,

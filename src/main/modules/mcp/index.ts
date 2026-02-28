@@ -24,7 +24,7 @@ export type {
   CallToolPayload,
   MCPToolResponse,
   SyncResult,
-  MoodSwitchResult,
+  SpaceSwitchResult,
   JournalAppendResult,
   JournalMetadata,
   EntityListParams,
@@ -34,7 +34,7 @@ export type {
 // Helpers
 export {
   isSyncTool,
-  isMoodTool,
+  isSpaceTool,
   isJournalTool,
   isEntityTool,
 } from "./mcp.helpers";
@@ -50,11 +50,11 @@ export {
   // Sync tools
   triggerEntitySync,
   
-  // Mood tools
-  switchToJournalMood,
-  switchToChatMood,
-  executeMoodTool,
-  MOOD_TOOLS,
+  // Space tools
+  switchToJournalSpace,
+  switchToChatSpace,
+  executeSpaceTool,
+  SPACE_TOOLS,
   
   // Journal tools
   appendToJournal,

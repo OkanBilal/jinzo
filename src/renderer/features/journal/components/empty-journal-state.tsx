@@ -1,4 +1,4 @@
-import { Textitalic } from "@/components/ui/icons/mood";
+import { Textitalic } from "@/components/ui/icons/space";
 
 export function EmptyJournalState() {
   return (

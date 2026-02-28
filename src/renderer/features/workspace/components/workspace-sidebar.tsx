@@ -27,14 +27,14 @@ import {
   isIssueTab,
   getIssueEntityId,
 } from "@/features/workspace/utils/repo-utils";
-import { useActiveMood } from "@/hooks/use-active-mood";
+import { useActiveSpace } from "@/hooks/use-active-space";
 import { Button } from "@/components/ui/button";
 
 type SidebarTab = "files" | "changes" | "reviews";
 
 export function WorkspaceSidebar() {
   const dispatch = useDispatch();
-  const { activeMoodId, moodSlug } = useActiveMood();
+  const { activeSpaceId, spaceSlug } = useActiveSpace();
   const workspaceId = useSelector(
     (state: RootState) => state.workspace.activeWorkspaceId,
   );
@@ -198,7 +198,7 @@ export function WorkspaceSidebar() {
           {/* File Explorer */}
           <div className="flex-1 px-3 flex flex-col min-h-0">
             <FileExplorer
-              key={`${activeMoodId}-${workspaceId || rootPath}`}
+              key={`${activeSpaceId}-${workspaceId || rootPath}`}
               rootPath={rootPath}
               onFileSelect={handleFileSelect}
               onAddToContext={handleAddToContext}
@@ -214,7 +214,7 @@ export function WorkspaceSidebar() {
             onAddToContext={handleAddIssueToContext}
           />
           <TerminalSection
-            variant={moodSlug}
+            variant={spaceSlug}
             workspaceId={workspaceId}
             rootPath={rootPath}
           />

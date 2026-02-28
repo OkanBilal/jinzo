@@ -13,7 +13,7 @@ export type {
   CreateToolCallPayload,
   UpdateToolCallPayload,
   ToolCallResponse,
-  MoodToolPermissionPayload,
-  MoodToolPermissionResponse,
+  SpaceToolPermissionPayload,
+  SpaceToolPermissionResponse,
   ServiceResponse,
 } from "./tools.dto";
