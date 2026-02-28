@@ -18,6 +18,7 @@ import type {
   HookMatcher,
   AgentsConfig,
   AgentDefinition,
+  FileAttachment,
 } from "./adapter.types";
 import { findClaudeBinary, resolveCandidate } from "../providers.utils";
 import {
@@ -1288,6 +1289,76 @@ export function createClaudeAdapter(
   /**
    * Build the prompt with context
    */
+  /**
+   * Save base64-encoded file attachments to temp directory and return their paths.
+   * Images are saved as files for Claude's Read tool. Text documents are read inline.
+   */
+  function saveAttachments(
+    attachments: FileAttachment[],
+    runId: string,
+  ): { savedPaths: string[]; inlineTexts: string[] } {
+    const uploadDir = path.join(os.tmpdir(), "jinzo-uploads", runId);
+    fs.mkdirSync(uploadDir, { recursive: true });
+
+    const savedPaths: string[] = [];
+    const inlineTexts: string[] = [];
+
+    for (const attachment of attachments) {
+      const filePath = path.join(uploadDir, attachment.name);
+      const buffer = Buffer.from(attachment.data, "base64");
+
+      if (attachment.type === "image") {
+        // Save image to disk — Claude's Read tool can read images natively
+        fs.writeFileSync(filePath, buffer);
+        savedPaths.push(filePath);
+      } else {
+        // Documents: inline text content for .txt, save and reference for binary formats
+        const ext = path.extname(attachment.name).toLowerCase();
+        if (ext === ".txt") {
+          inlineTexts.push(
+            `[Attached document: ${attachment.name}]\n${buffer.toString("utf-8")}`,
+          );
+        } else {
+          // PDF, doc, docx — save to disk and reference
+          fs.writeFileSync(filePath, buffer);
+          savedPaths.push(filePath);
+        }
+      }
+    }
+
+    return { savedPaths, inlineTexts };
+  }
+
+  /**
+   * Build attachment prompt section from saved files and inline texts.
+   */
+  function buildAttachmentPrompt(attachments: FileAttachment[], runId: string): string {
+    if (!attachments || attachments.length === 0) return "";
+
+    const { savedPaths, inlineTexts } = saveAttachments(attachments, runId);
+    const parts: string[] = [];
+
+    for (const filePath of savedPaths) {
+      const ext = path.extname(filePath).toLowerCase();
+      const isImage = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"].includes(ext);
+      if (isImage) {
+        parts.push(
+          `I've attached an image: ${filePath}\nUse the Read tool to view it.`,
+        );
+      } else {
+        parts.push(
+          `I've attached a file: ${filePath}\nUse the Read tool to read its contents.`,
+        );
+      }
+    }
+
+    for (const text of inlineTexts) {
+      parts.push(text);
+    }
+
+    return parts.join("\n\n");
+  }
+
   function buildPrompt(request: WorkRunRequest): string {
     let prompt = request.goal;
 
@@ -1302,6 +1373,14 @@ export function createClaudeAdapter(
         .join("\n\n---\n\n");
 
       prompt = `Context:\n${contextParts}\n\n---\n\nGoal: ${request.goal}`;
+    }
+
+    // Append file attachment references
+    if (request.attachments && request.attachments.length > 0) {
+      const attachmentSection = buildAttachmentPrompt(request.attachments, request.runId);
+      if (attachmentSection) {
+        prompt = `${prompt}\n\n---\n\nAttached files:\n${attachmentSection}`;
+      }
     }
 
     return prompt;
@@ -1369,6 +1448,11 @@ export function createClaudeAdapter(
           content: request.goal,
           metadata: {
             source: "user",
+            attachments: request.attachments?.map((a) => ({
+              name: a.name,
+              type: a.type,
+              mimeType: a.mimeType,
+            })),
           },
         });
 
@@ -1704,6 +1788,14 @@ export function createClaudeAdapter(
           prompt = `Context:\n${contextParts}\n\n---\n\n${message}`;
         }
 
+        // Append file attachment references
+        if (request.attachments && request.attachments.length > 0) {
+          const attachmentSection = buildAttachmentPrompt(request.attachments, runId);
+          if (attachmentSection) {
+            prompt = `${prompt}\n\n---\n\nAttached files:\n${attachmentSection}`;
+          }
+        }
+
         // Emit user's follow-up message as artifact for UI display
         await onEvent({
           type: "artifact",
@@ -1711,6 +1803,11 @@ export function createClaudeAdapter(
           content: message,
           metadata: {
             source: "user",
+            attachments: request.attachments?.map((a) => ({
+              name: a.name,
+              type: a.type,
+              mimeType: a.mimeType,
+            })),
           },
         });
 
@@ -2007,12 +2104,27 @@ export function createClaudeAdapter(
           prompt = `Context:\n${contextParts}\n\n---\n\n${message}`;
         }
 
+        // Append file attachment references
+        if (request.attachments && request.attachments.length > 0) {
+          const attachmentSection = buildAttachmentPrompt(request.attachments, runId);
+          if (attachmentSection) {
+            prompt = `${prompt}\n\n---\n\nAttached files:\n${attachmentSection}`;
+          }
+        }
+
         // Emit user's message as artifact for UI display
         await onEvent({
           type: "artifact",
           kind: "user-prompt",
           content: message,
-          metadata: { source: "user" },
+          metadata: {
+            source: "user",
+            attachments: request.attachments?.map((a) => ({
+              name: a.name,
+              type: a.type,
+              mimeType: a.mimeType,
+            })),
+          },
         });
 
         await onEvent({

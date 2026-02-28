@@ -198,6 +198,22 @@ export interface ToolCallResponse {
 }
 
 // ─────────────────────────────────────────────────────────────
+// File Attachment Types
+// ─────────────────────────────────────────────────────────────
+
+/** A file attachment serialized for IPC transport (base64-encoded data) */
+export interface FileAttachment {
+  /** Original file name */
+  name: string;
+  /** Attachment category */
+  type: "image" | "document";
+  /** Base64-encoded file data */
+  data: string;
+  /** MIME type (e.g. "image/png", "application/pdf") */
+  mimeType: string;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Execute Run DTOs (for starting work runs)
 // ─────────────────────────────────────────────────────────────
 
@@ -221,6 +237,8 @@ export interface StartRunPayload {
   initialContext?: StartRunContextItem[];
   configSnapshot?: Record<string, unknown>;
   toolPolicySnapshot?: Record<string, unknown>;
+  /** File attachments (images/documents) serialized as base64 for IPC */
+  attachments?: FileAttachment[];
 }
 
 /** Response when a run is started */
@@ -236,6 +254,8 @@ export interface ContinueRunPayload {
   message: string;
   /** Additional context to add */
   additionalContext?: StartRunContextItem[];
+  /** File attachments (images/documents) serialized as base64 for IPC */
+  attachments?: FileAttachment[];
 }
 
 /** Response when a run is continued */
@@ -253,6 +273,8 @@ export interface ForkRunPayload {
   message: string;
   /** Additional context to add */
   additionalContext?: StartRunContextItem[];
+  /** File attachments (images/documents) serialized as base64 for IPC */
+  attachments?: FileAttachment[];
 }
 
 /** Response when a run is forked */

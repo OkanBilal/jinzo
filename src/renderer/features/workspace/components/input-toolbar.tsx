@@ -1,10 +1,16 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { SendButton } from "@/components/ui/input/send-button";
 import { DictationButton } from "@/components/ui/input/dictation-button";
 import { ModelSelectDropdown } from "@/components/ui/input/model-select-dropdown";
+import {
+  FileUploadDropdown,
+  FILE_TYPES,
+  type UploadedFile,
+} from "@/components/ui/input/file-upload-dropdown";
 import { Plan } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { useClickOutside } from "@/hooks/use-click-outside";
 
 interface InputToolbarProps {
   variant: "claude" | "copilot";
@@ -19,6 +25,9 @@ interface InputToolbarProps {
   // Plan mode (Claude only)
   planMode: boolean;
   onPlanModeToggle: () => void;
+  // File uploads
+  uploadedFiles: UploadedFile[];
+  onUploadedFilesChange: (files: UploadedFile[]) => void;
 }
 
 export function InputToolbar({
@@ -32,18 +41,96 @@ export function InputToolbar({
   isLoadingModels,
   planMode,
   onPlanModeToggle,
+  uploadedFiles,
+  onUploadedFilesChange,
 }: InputToolbarProps) {
   const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [showFileDropdown, setShowFileDropdown] = useState(false);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const fileDropdownRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { isRecording, toggle: toggleDictation } = useSpeechRecognition(
     (value) => onGoalChange(value),
+  );
+
+  useClickOutside(fileDropdownRef, () => {
+    if (showFileDropdown) setShowFileDropdown(false);
+  });
+
+  const openFilePicker = useCallback((accept: string) => {
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = accept;
+      fileInputRef.current.click();
+    }
+    setShowFileDropdown(false);
+  }, []);
+
+  const handleImageUpload = useCallback(() => {
+    openFilePicker(FILE_TYPES.IMAGE);
+  }, [openFilePicker]);
+
+  const handleDocumentUpload = useCallback(() => {
+    openFilePicker(FILE_TYPES.DOCUMENT);
+  }, [openFilePicker]);
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+
+      const newFiles: UploadedFile[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const isImage = file.type.startsWith("image/");
+        const uploaded: UploadedFile = {
+          file,
+          type: isImage ? "image" : "document",
+          preview: isImage ? URL.createObjectURL(file) : undefined,
+        };
+        newFiles.push(uploaded);
+      }
+
+      onUploadedFilesChange([...uploadedFiles, ...newFiles]);
+      // Reset so the same file can be selected again
+      e.target.value = "";
+    },
+    [uploadedFiles, onUploadedFilesChange],
+  );
+
+  const handleRemoveFile = useCallback(
+    (index: number) => {
+      const file = uploadedFiles[index];
+      if (file.preview) {
+        URL.revokeObjectURL(file.preview);
+      }
+      onUploadedFilesChange(uploadedFiles.filter((_, i) => i !== index));
+    },
+    [uploadedFiles, onUploadedFilesChange],
   );
 
   return (
     <div className="flex items-start space-x-2 px-4">
       <div className="flex items-center justify-between w-full">
         <div className="flex items-center relative gap-1">
+        <FileUploadDropdown
+            isOpen={showFileDropdown}
+            onToggle={() => setShowFileDropdown(!showFileDropdown)}
+            onImageUpload={handleImageUpload}
+            onDocumentUpload={handleDocumentUpload}
+            dropdownRef={fileDropdownRef}
+            openUpward={true}
+            uploadedFiles={uploadedFiles}
+            onRemoveFile={handleRemoveFile}
+            variant={variant}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            multiple
+            onChange={handleFileChange}
+          />
           <ModelSelectDropdown
             model={selectedModelDisplayName}
             models={modelDisplayNames}
@@ -80,13 +167,6 @@ export function InputToolbar({
           )}
         </div>
         <div className="flex items-center space-x-2">
-          {/* 
-          TODO: re-enable dictation button when the underlying speech recognition issues are resolved. For now, it's better to hide the button than to show a non-functional one and cause confusion.
-          <DictationButton
-            isRecording={isRecording}
-            onToggle={toggleDictation}
-            variant={variant}
-          /> */}
           <SendButton
             loading={isLoading}
             onSubmit={onSubmit}

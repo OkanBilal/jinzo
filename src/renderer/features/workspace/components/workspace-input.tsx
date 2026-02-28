@@ -3,6 +3,7 @@ import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
 import type { FileNode } from "@/features/workspace/components/file-explorer";
 import type { ContextIssue } from "@/lib/redux/slices/workspaceSlice";
+import type { UploadedFile } from "@/components/ui/input/file-upload-dropdown";
 import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
 import { InputForm } from "@/components/ui/input/input-form";
 import { SlashMenuDropdown } from "@/features/workspace/components/slash-menu-dropdown";
@@ -28,6 +29,8 @@ interface WorkspaceInputProps {
   contextIssues?: ContextIssue[];
   onRemoveContextIssue?: (entityId: string) => void;
   workspacePath?: string;
+  uploadedFiles?: UploadedFile[];
+  onUploadedFilesChange?: (files: UploadedFile[]) => void;
 }
 
 export function WorkspaceInput({
@@ -45,6 +48,8 @@ export function WorkspaceInput({
   contextIssues = EMPTY_CONTEXT_ISSUES,
   onRemoveContextIssue,
   workspacePath,
+  uploadedFiles = [],
+  onUploadedFilesChange,
 }: WorkspaceInputProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const slashCommandDropdownRef = useRef<HTMLDivElement>(null);
@@ -190,6 +195,8 @@ export function WorkspaceInput({
         isLoadingModels={isLoadingModels}
         planMode={planMode}
         onPlanModeToggle={handlePlanModeToggle}
+        uploadedFiles={uploadedFiles}
+        onUploadedFilesChange={onUploadedFilesChange ?? (() => {})}
       />
     </div>
   );

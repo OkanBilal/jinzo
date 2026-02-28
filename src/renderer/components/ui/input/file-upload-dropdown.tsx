@@ -68,7 +68,7 @@ export function FileUploadDropdown({
       <Button
         type="button"
         tooltip="Upload file or photo"
-        tooltipPosition="left"
+        tooltipPosition="top"
         onClick={onToggle}
         className={`p-1.5 ${styles.button} rounded-full transition-colors cursor-pointer`}
         aria-label="Upload file"

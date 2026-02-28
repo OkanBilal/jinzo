@@ -1,6 +1,7 @@
 import { RefObject, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import DropdownWrapper from "@/components/ui/dropdown-wrapper";
+import { useClickOutside } from "@/hooks/use-click-outside";
 import type { InputVariant } from "../../../components/ui/input/send-button";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import { Skill } from "../../../components/ui/icons";
@@ -77,6 +78,10 @@ export function SlashMenuDropdown({
   isLoadingSkills = false,
 }: SlashMenuDropdownProps) {
   const styles = variantStyles[variant];
+
+  useClickOutside(dropdownRef, () => {
+    if (isOpen) onClose();
+  });
 
   // Filter and combine commands and skills
   const { filteredCommands, filteredSkills, hasResults } = useMemo(() => {

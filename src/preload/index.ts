@@ -463,6 +463,7 @@ const api = {
       }>;
       configSnapshot?: Record<string, unknown>;
       toolPolicySnapshot?: Record<string, unknown>;
+      attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>;
     }) => ipcRenderer.invoke("runs:execute", payload),
     abort: (runId: string) => ipcRenderer.invoke("runs:abort", runId),
     getToolCalls: (runId: string) =>
@@ -478,6 +479,7 @@ const api = {
         content?: string;
         metadata?: Record<string, unknown>;
       }>;
+      attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>;
     }) => ipcRenderer.invoke("runs:continue", payload),
     canResume: (runId: string) => ipcRenderer.invoke("runs:canResume", runId),
     fork: (payload: {
@@ -490,6 +492,7 @@ const api = {
         content?: string;
         metadata?: Record<string, unknown>;
       }>;
+      attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>;
     }) => ipcRenderer.invoke("runs:fork", payload),
     deleteSession: (runId: string) =>
       ipcRenderer.invoke("runs:deleteSession", runId),

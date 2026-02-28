@@ -728,6 +728,7 @@ export const runsService = {
           systemPrompt: payload.systemPrompt,
           context: payload.initialContext as WorkRunContextItem[] | undefined,
           toolPolicy: payload.toolPolicySnapshot,
+          attachments: payload.attachments,
         },
         async (event: WorkRunEvent) => {
           try {
@@ -1172,6 +1173,7 @@ export const runsService = {
             : { id: "", rootPath: process.cwd() },
           message,
           context: additionalContext as any,
+          attachments: payload.attachments,
         },
         async (event) => {
           try {
@@ -1393,6 +1395,7 @@ export const runsService = {
             : { id: "", rootPath: process.cwd() },
           message,
           context: payload.additionalContext as any,
+          attachments: payload.attachments,
         },
         async (event) => {
           try {

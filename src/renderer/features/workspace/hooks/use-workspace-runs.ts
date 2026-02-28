@@ -321,6 +321,7 @@ export function useWorkspaceRuns(
       selectedWorkspace: string,
       selectedProvider: string,
       model?: string,
+      attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>,
     ) => {
       if (!goal.trim() || !selectedWorkspace || !selectedProvider) {
         {
@@ -351,6 +352,7 @@ export function useWorkspaceRuns(
               content: `User goal: ${goal.trim()}`,
             },
           ],
+          attachments,
         });
 
         if (!result.success) {
@@ -389,7 +391,11 @@ export function useWorkspaceRuns(
   );
 
   // Continue an existing run (resume session)
-  const continueRun = useCallback(async (runId: string, message: string) => {
+  const continueRun = useCallback(async (
+    runId: string,
+    message: string,
+    attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>,
+  ) => {
     if (!message.trim()) {
       setError("Please enter a message");
       return false;
@@ -408,6 +414,7 @@ export function useWorkspaceRuns(
         runId,
         accountId: accountRes.data.id,
         message: message.trim(),
+        attachments,
       });
 
       if (!result.success) {

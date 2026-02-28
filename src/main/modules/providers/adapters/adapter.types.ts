@@ -17,6 +17,17 @@ export interface WorkRunContextItem {
 }
 
 /**
+ * A file attachment serialized for IPC transport (base64-encoded data).
+ * Re-exported from runs.dto for adapter-level use.
+ */
+export interface FileAttachment {
+  name: string;
+  type: "image" | "document";
+  data: string;
+  mimeType: string;
+}
+
+/**
  * Request to start a work run
  */
 export interface WorkRunRequest {
@@ -31,6 +42,8 @@ export interface WorkRunRequest {
   systemPrompt?: string | null;
   context?: WorkRunContextItem[];
   toolPolicy?: Record<string, unknown> | null;
+  /** File attachments (images/documents) to include in the prompt */
+  attachments?: FileAttachment[];
   /**
    * Per-run hooks configuration that overrides or extends adapter-level hooks.
    * Useful for dynamic hook configuration based on the specific run context.
@@ -198,6 +211,8 @@ export interface WorkRunContinueRequest {
   message: string;
   /** Additional context to add */
   context?: WorkRunContextItem[];
+  /** File attachments (images/documents) to include in the prompt */
+  attachments?: FileAttachment[];
   /**
    * Per-run hooks configuration for this continuation.
    * Useful for dynamic hook configuration based on the continuation context.
@@ -228,6 +243,8 @@ export interface WorkRunForkRequest {
   message: string;
   /** Additional context to add */
   context?: WorkRunContextItem[];
+  /** File attachments (images/documents) to include in the prompt */
+  attachments?: FileAttachment[];
   /** Per-run hooks configuration */
   hooks?: HooksConfig;
   /** Per-run subagents configuration */

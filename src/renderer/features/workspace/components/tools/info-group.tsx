@@ -4,6 +4,7 @@ import { markdownComponents } from "@/features/chat/components/markdown-componen
 import { parseUserPromptWithFiles } from "../../utils/parse-user-prompt";
 import type { EventGroup } from "../../utils/group-events";
 import { Code } from "@/components/ui/icons/mood";
+import { Picture, Document } from "@/components/ui/icons";
 
 interface InfoGroupProps {
   group: EventGroup;
@@ -16,6 +17,11 @@ export function InfoGroup({ group }: InfoGroupProps) {
   if (event.type === "artifact" && event.metadata?.kind === "user-prompt") {
     // Parse file paths from content and format them nicely
     const { message, files } = parseUserPromptWithFiles(event.content);
+    const attachments = (event.metadata?.attachments ?? []) as Array<{
+      name: string;
+      type: "image" | "document";
+      mimeType: string;
+    }>;
 
     return (
       <div className="w-full overflow-hidden">
@@ -26,9 +32,9 @@ export function InfoGroup({ group }: InfoGroupProps) {
                 <p className="text-sm whitespace-pre-wrap">{message}</p>
               </div>
             </div>
-            {files.length > 0 && (
+            {(files.length > 0 || attachments.length > 0) && (
               <div className="flex flex-wrap gap-1.5 justify-end">
-                {files.map((file, idx) => (
+                {files.map((file) => (
                   <div
                     key={file.fullPath}
                     className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-50 dark:bg-primary-700/15 text-xs"
@@ -37,6 +43,22 @@ export function InfoGroup({ group }: InfoGroupProps) {
                     <Code className="size-3 dark:text-primary-200 text-primary-700" />
                     <span className="text-primary-700 dark:text-primary-200">
                       {file.displayName}
+                    </span>
+                  </div>
+                ))}
+                {attachments.map((att) => (
+                  <div
+                    key={att.name}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-50 dark:bg-primary-700/15 text-xs"
+                    title={att.name}
+                  >
+                    {att.type === "image" ? (
+                      <Picture className="size-3 dark:text-primary-200 text-primary-700" />
+                    ) : (
+                      <Document className="size-3 dark:text-primary-200 text-primary-700" />
+                    )}
+                    <span className="text-primary-700 dark:text-primary-200">
+                      {att.name}
                     </span>
                   </div>
                 ))}

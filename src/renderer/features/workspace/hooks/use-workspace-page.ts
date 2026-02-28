@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import type { UploadedFile } from "@/components/ui/input/file-upload-dropdown";
 import { useSelector, useDispatch } from "react-redux";
 import {
   setWorkspaceModel,
@@ -57,6 +58,7 @@ export function useWorkspacePage(providerId: string) {
   );
 
   const [goal, setGoal] = useState("");
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [canResume, setCanResume] = useState(false);
   const autoExecuteRef = useRef(false);
 
@@ -138,6 +140,32 @@ export function useWorkspacePage(providerId: string) {
     checkResume();
   }, [activeTab, activeRun?.status, checkCanResume]);
 
+  /** Convert UploadedFile[] to base64-encoded FileAttachment[] for IPC transport */
+  const serializeAttachments = useCallback(
+    async (files: UploadedFile[]): Promise<Array<{ name: string; type: string; data: string; mimeType: string }>> => {
+      return Promise.all(
+        files.map(
+          (f) =>
+            new Promise<{ name: string; type: string; data: string; mimeType: string }>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const base64 = (reader.result as string).split(",")[1] || "";
+                resolve({
+                  name: f.file.name,
+                  type: f.type,
+                  data: base64,
+                  mimeType: f.file.type || "application/octet-stream",
+                });
+              };
+              reader.onerror = () => reject(reader.error);
+              reader.readAsDataURL(f.file);
+            }),
+        ),
+      );
+    },
+    [],
+  );
+
   const handleExecute = useCallback(async () => {
     if (!workspaceId) {
       toast.error("Select a workspace before sending a prompt.");
@@ -165,15 +193,21 @@ export function useWorkspacePage(providerId: string) {
       finalGoal = `Use these issues as context:\n\n${issuesList}\n\n${finalGoal}`;
     }
 
+    // Serialize uploaded files to base64 for IPC
+    const attachments = uploadedFiles.length > 0
+      ? await serializeAttachments(uploadedFiles)
+      : undefined;
+
     if (
       currentRunId &&
       canResume &&
       activeRun &&
       activeRun.status !== "running"
     ) {
-      const success = (await continueRun(currentRunId, finalGoal)) ?? false;
+      const success = (await continueRun(currentRunId, finalGoal, attachments)) ?? false;
       if (success) {
         setGoal("");
+        setUploadedFiles([]);
         dispatch(clearContextFiles());
         dispatch(clearContextIssues());
       }
@@ -183,10 +217,12 @@ export function useWorkspacePage(providerId: string) {
         selectedWorkspace,
         providerId,
         selectedModel,
+        attachments,
       );
 
       if (newRunId) {
         setGoal("");
+        setUploadedFiles([]);
         dispatch(clearContextFiles());
         dispatch(clearContextIssues());
         dispatch(setActiveTab(newRunId));
@@ -194,6 +230,7 @@ export function useWorkspacePage(providerId: string) {
     }
   }, [
     goal,
+    uploadedFiles,
     contextFiles,
     contextIssues,
     workspaceId,
@@ -201,6 +238,7 @@ export function useWorkspacePage(providerId: string) {
     selectedModel,
     executeRun,
     continueRun,
+    serializeAttachments,
     activeTab,
     activeRun,
     canResume,
@@ -355,6 +393,8 @@ export function useWorkspacePage(providerId: string) {
     // State
     goal,
     setGoal,
+    uploadedFiles,
+    setUploadedFiles,
     canResume,
     selectedModel,
     activeTab,

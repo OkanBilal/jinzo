@@ -4,6 +4,7 @@
 
 // Types
 export type {
+  FileAttachment,
   WorkRunContextItem,
   WorkRunRequest,
   WorkRunContinueRequest,
