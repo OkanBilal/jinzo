@@ -96,3 +96,4 @@ export { default as Jinzo } from "./jinzo";
 export { default as CircleDot } from "./circle-dot";
 export { default as Note } from "./note";
 export { default as Fork } from "./fork";
+export { default as Stop } from "./stop";

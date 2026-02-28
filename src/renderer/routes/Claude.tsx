@@ -6,11 +6,13 @@ import {
   WorkspaceQuickActions,
 } from "@/features/workspace/components";
 import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
+import { useAbortRunMutation } from "@/lib/redux/api";
 
 const CLAUDE_PROVIDER_ID = "claude_code";
 
 export default function ClaudePage() {
   const ws = useWorkspacePage(CLAUDE_PROVIDER_ID);
+  const [abortRun] = useAbortRunMutation();
 
   const {
     pendingApprovals,
@@ -27,6 +29,12 @@ export default function ClaudePage() {
     },
     [respondToolApproval],
   );
+
+  const handleStop = useCallback(() => {
+    if (ws.activeRunId) {
+      abortRun(ws.activeRunId);
+    }
+  }, [ws.activeRunId, abortRun]);
 
   return (
     <div className="flex flex-col h-full dark:bg-claude-dark">
@@ -81,6 +89,7 @@ export default function ClaudePage() {
           workspacePath={ws.currentWorkspace?.rootPath}
           uploadedFiles={ws.uploadedFiles}
           onUploadedFilesChange={ws.setUploadedFiles}
+          onStop={handleStop}
         />
     </div>
   );

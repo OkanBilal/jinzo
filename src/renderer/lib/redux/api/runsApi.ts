@@ -284,6 +284,14 @@ export const runsApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, id) => ["Runs", { type: "Runs", id }],
     }),
 
+    abortRun: builder.mutation<void, string>({
+      query: (runId) => ({
+        handler: "runs:abort",
+        args: [runId],
+      }),
+      invalidatesTags: (_result, _error, runId) => ["Runs", { type: "Runs", id: runId }],
+    }),
+
     deleteRun: builder.mutation<void, string>({
       query: (id) => ({
         handler: "runs:delete",
@@ -477,6 +485,7 @@ export const {
   useCompleteRunMutation,
   useFailRunMutation,
   useCancelRunMutation,
+  useAbortRunMutation,
   useDeleteRunMutation,
   useArchiveRunMutation,
   useGetRunContextQuery,

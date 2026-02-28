@@ -28,6 +28,9 @@ interface InputToolbarProps {
   // Thinking mode (Claude only)
   thinkingMode: boolean;
   onThinkingModeToggle: () => void;
+  // Stop run (active run is running)
+  isRunning: boolean;
+  onStop?: () => void;
   // File uploads
   uploadedFiles: UploadedFile[];
   onUploadedFilesChange: (files: UploadedFile[]) => void;
@@ -46,6 +49,8 @@ export function InputToolbar({
   onPlanModeToggle,
   thinkingMode,
   onThinkingModeToggle,
+  isRunning,
+  onStop,
   uploadedFiles,
   onUploadedFilesChange,
 }: InputToolbarProps) {
@@ -195,8 +200,9 @@ export function InputToolbar({
         </div>
         <div className="flex items-center space-x-2">
           <SendButton
-            loading={isLoading}
+            loading={isLoading || isRunning}
             onSubmit={onSubmit}
+            onStop={isRunning ? onStop : undefined}
             variant={variant}
           />
         </div>

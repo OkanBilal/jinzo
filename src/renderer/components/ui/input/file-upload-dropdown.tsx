@@ -48,7 +48,6 @@ const variantStyles = {
   },
 };
 
-//TODO: implement for chat and code sessions file handling
 export function FileUploadDropdown({
   isOpen,
   onToggle,

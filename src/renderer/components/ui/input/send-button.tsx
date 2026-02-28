@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { ChevronUp } from "@/components/ui/icons";
+import { ChevronUp, Stop } from "@/components/ui/icons";
 
 export type InputVariant = "default" | "copilot" | "claude";
 
 interface SendButtonProps {
   loading: boolean;
   onSubmit: () => void;
+  onStop?: () => void;
   variant?: InputVariant;
 }
 
@@ -13,19 +14,36 @@ const variantStyles = {
   default: {
     spinner: "border-primary-900",
     icon: "text-primary-900",
+    stop: "text-primary-900",
   },
   copilot: {
     spinner: "border-copilot-blue",
     icon: "text-copilot-blue",
+    stop: "text-copilot-blue",
   },
   claude: {
     spinner: "border-claude-dark",
     icon: "text-claude-dark",
+    stop: "text-claude-dark",
   },
 };
 
-export function SendButton({ loading, onSubmit, variant = "default" }: SendButtonProps) {
+export function SendButton({ loading, onSubmit, onStop, variant = "default" }: SendButtonProps) {
   const styles = variantStyles[variant];
+
+  if (loading && onStop) {
+    return (
+      <Button
+        type="button"
+        tooltip="Stop run"
+        onClick={onStop}
+        className="metallic-button relative"
+        aria-label="Stop run"
+      >
+        <Stop className={`w-5 h-5 ${styles.stop}`} />
+      </Button>
+    );
+  }
 
   return (
     <Button

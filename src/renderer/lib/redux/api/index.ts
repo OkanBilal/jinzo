@@ -360,6 +360,7 @@ export {
   useCompleteRunMutation,
   useFailRunMutation,
   useCancelRunMutation,
+  useAbortRunMutation,
   useDeleteRunMutation,
   useArchiveRunMutation,
   useGetRunContextQuery,

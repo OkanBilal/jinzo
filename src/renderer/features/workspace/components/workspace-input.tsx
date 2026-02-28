@@ -31,6 +31,7 @@ interface WorkspaceInputProps {
   workspacePath?: string;
   uploadedFiles?: UploadedFile[];
   onUploadedFilesChange?: (files: UploadedFile[]) => void;
+  onStop?: () => void;
 }
 
 export function WorkspaceInput({
@@ -50,6 +51,7 @@ export function WorkspaceInput({
   workspacePath,
   uploadedFiles = [],
   onUploadedFilesChange,
+  onStop,
 }: WorkspaceInputProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const slashCommandDropdownRef = useRef<HTMLDivElement>(null);
@@ -199,6 +201,8 @@ export function WorkspaceInput({
         onPlanModeToggle={handlePlanModeToggle}
         thinkingMode={thinkingMode}
         onThinkingModeToggle={handleThinkingModeToggle}
+        isRunning={activeRun?.status === "running"}
+        onStop={onStop}
         uploadedFiles={uploadedFiles}
         onUploadedFilesChange={onUploadedFilesChange ?? (() => {})}
       />
