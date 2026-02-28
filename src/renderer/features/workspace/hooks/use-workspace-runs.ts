@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import type { Run, RunEvent, RunArtifact, ToolCall } from "../types";
 import { toast } from "@/components/ui/toast";
 import { useAppDispatch } from "@/lib/redux/hooks";
-import { runsApi, workspacesApi } from "@/lib/redux/api";
+import { runsApi, workspacesApi, reviewsApi, reviewFindingsApi } from "@/lib/redux/api";
 
 const MAX_DISPLAY_LENGTH = 200;
 
@@ -286,10 +286,12 @@ export function useWorkspaceRuns(
                 toast("Run canceled");
               }
 
-              // Invalidate RTK Query cache so DiffSection and other
-              // query-based consumers pick up the finished run & its diff
+              // Invalidate RTK Query cache so DiffSection, ReviewsSection, and other
+              // query-based consumers pick up the finished run & its data
               dispatch(runsApi.util.invalidateTags(["Runs", "WorkspaceDiffs"]));
               dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
+              dispatch(reviewsApi.util.invalidateTags(["Reviews"]));
+              dispatch(reviewFindingsApi.util.invalidateTags(["ReviewFindings"]));
             }
           }
         }
@@ -436,6 +438,67 @@ export function useWorkspaceRuns(
     }
   }, []);
 
+  // Fork an existing run's session into a new run
+  const forkRun = useCallback(
+    async (sourceRunId: string, message: string): Promise<string | null> => {
+      if (!message.trim()) {
+        setError("Please enter a message");
+        return null;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const accountRes = await window.api.account.get();
+        if (!accountRes.success || !accountRes.data) {
+          throw new Error("No account found");
+        }
+
+        const result = await window.api.runs.fork({
+          sourceRunId,
+          accountId: accountRes.data.id,
+          message: message.trim(),
+        });
+
+        if (!result.success) {
+          throw new Error(result.error || "Failed to fork run");
+        }
+
+        const newRunId = result.data.runId;
+
+        // Load the new forked run
+        const runResult = await window.api.runs.getById(newRunId);
+        if (runResult.success && runResult.data) {
+          const newRun = runResult.data;
+          setRuns((prev) => [newRun, ...prev]);
+          setActiveRunId(newRunId);
+
+          // Workspace status changed to in_progress on the backend
+          dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
+
+          setRunEvents((prev) => ({
+            ...prev,
+            [newRunId]: [],
+          }));
+
+          return newRunId;
+        }
+
+        return null;
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to fork run";
+        setError(message);
+        toast.error(message);
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+  );
+
   // Check if a run's session can be resumed
   const checkCanResume = useCallback(
     async (runId: string): Promise<boolean> => {
@@ -499,6 +562,7 @@ export function useWorkspaceRuns(
     setActiveRunId,
     executeRun,
     continueRun,
+    forkRun,
     checkCanResume,
     closeTab,
     selectTab,

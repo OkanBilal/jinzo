@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   setWorkspaceModel,
@@ -52,9 +52,13 @@ export function useWorkspacePage(providerId: string) {
   const pendingGoal = useSelector(
     (state: RootState) => state.workspace.pendingGoal,
   );
+  const pendingAutoExecute = useSelector(
+    (state: RootState) => state.workspace.pendingAutoExecute,
+  );
 
   const [goal, setGoal] = useState("");
   const [canResume, setCanResume] = useState(false);
+  const autoExecuteRef = useRef(false);
 
   const handleModelChange = useCallback(
     (model: string) => {
@@ -82,6 +86,9 @@ export function useWorkspacePage(providerId: string) {
   // Sync pendingGoal from Redux to local state
   if (pendingGoal) {
     setGoal(pendingGoal);
+    if (pendingAutoExecute) {
+      autoExecuteRef.current = true;
+    }
     dispatch(clearPendingGoal());
   }
 
@@ -94,6 +101,7 @@ export function useWorkspacePage(providerId: string) {
     setActiveRunId,
     executeRun,
     continueRun,
+    forkRun,
     checkCanResume,
     closeTab,
     selectTab,
@@ -200,6 +208,23 @@ export function useWorkspacePage(providerId: string) {
     providerId,
   ]);
 
+  // Auto-execute when pendingAutoExecute was set (e.g. "Review Changes" button)
+  // Always creates a new run in a new tab (never resumes an existing one)
+  useEffect(() => {
+    if (autoExecuteRef.current && goal) {
+      autoExecuteRef.current = false;
+      if (!workspaceId) return;
+      const run = async () => {
+        const newRunId = await executeRun(goal, selectedWorkspace, providerId, selectedModel);
+        if (newRunId) {
+          setGoal("");
+          dispatch(setActiveTab(newRunId));
+        }
+      };
+      run();
+    }
+  }, [goal, executeRun, workspaceId, selectedWorkspace, providerId, selectedModel, dispatch]);
+
   const handleCloseTab = useCallback(
     (runId: string, e: React.MouseEvent) => {
       e.stopPropagation();
@@ -285,6 +310,17 @@ export function useWorkspacePage(providerId: string) {
     [dispatch],
   );
 
+  const handleForkRun = useCallback(
+    async (sourceRunId: string, message: string) => {
+      const newRunId = await forkRun(sourceRunId, message);
+      if (newRunId) {
+        dispatch(setActiveTab(newRunId));
+      }
+      return newRunId;
+    },
+    [forkRun, dispatch],
+  );
+
   const handleCloseEditorTab = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -353,5 +389,6 @@ export function useWorkspacePage(providerId: string) {
     handleSelectNoteTab,
     handleCloseNoteTab,
     handleCloseEditorTab,
+    handleForkRun,
   };
 }

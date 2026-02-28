@@ -5,6 +5,7 @@ import type {
   WorkRunAdapter,
   WorkRunRequest,
   WorkRunContinueRequest,
+  WorkRunForkRequest,
   WorkRunResult,
   WorkRunEventHandler,
   WorkRunEvent,
@@ -149,6 +150,7 @@ interface SDKOptions {
   permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan";
   cwd?: string;
   resume?: string;
+  forkSession?: boolean;
   abortController?: AbortController;
   additionalDirectories?: string[];
   /**
@@ -412,7 +414,6 @@ export function createClaudeAdapter(
    * When using CLI (subscription mode), we strip ANTHROPIC_API_KEY from env
    * to avoid unexpected API billing when user has CLI login session.
    */
-  //TODO: Implement fork session https://platform.claude.com/docs/en/agent-sdk/sessions#forking-sessions
   function buildOptions(
     model: string,
     workspacePath?: string,
@@ -422,6 +423,7 @@ export function createClaudeAdapter(
     runAgents?: AgentsConfig,
     runId?: string,
     workspaceId?: string,
+    forkSession?: boolean,
   ): SDKOptions {
     // Find the Claude CLI binary
     let binaryPath: string | null = null;
@@ -527,6 +529,9 @@ export function createClaudeAdapter(
 
     if (resumeSessionId) {
       options.resume = resumeSessionId;
+      if (forkSession) {
+        options.forkSession = true;
+      }
     }
 
     // Add agents if configured (merge config-level and run-level agents)
@@ -1926,6 +1931,293 @@ export function createClaudeAdapter(
         activeRuns.delete(runId);
       }
     },
+
+    async forkRun(
+      request: WorkRunForkRequest,
+      onEvent: WorkRunEventHandler,
+    ): Promise<WorkRunResult> {
+      const { runId, sourceRunId, message } = request;
+      const timeout = config.timeout ?? 600000;
+
+      const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
+      const abortController = new AbortController();
+      let lastStopReason:
+        | "end_turn"
+        | "max_tokens"
+        | "stop_sequence"
+        | "refusal"
+        | "tool_use"
+        | null
+        | undefined;
+      let lastUsage: WorkRunUsage | undefined;
+
+      try {
+        await onEvent({ type: "status", status: "running", ts: Date.now() });
+        await onEvent({
+          type: "log",
+          message: `Forking session from run ${sourceRunId} into new run ${runId}`,
+          level: "start",
+          ts: Date.now(),
+        });
+
+        await ensureSDK();
+
+        if (!queryFn) {
+          throw new Error("Claude SDK not properly initialized");
+        }
+
+        // Get the session ID from the SOURCE run
+        let sourceSessionId = sessionIdMap.get(sourceRunId);
+        if (!sourceSessionId) {
+          const sourceRun = await runsRepo.findRunById(sourceRunId);
+          if (sourceRun?.sessionId) {
+            sourceSessionId = sourceRun.sessionId;
+          }
+        }
+        if (!sourceSessionId) {
+          throw new Error(
+            `Session not found for source run ${sourceRunId}. Cannot fork.`,
+          );
+        }
+
+        const options = buildOptions(
+          getModel(config.defaultModel),
+          request.workspace.rootPath,
+          abortController,
+          sourceSessionId,
+          request.hooks,
+          request.agents,
+          runId,
+          request.workspace.id,
+          true, // forkSession: true
+        );
+
+        // Build prompt with any additional context
+        let prompt = message;
+        if (request.context && request.context.length > 0) {
+          const contextParts = request.context
+            .map((ctx) => {
+              const header = ctx.ref
+                ? `[${ctx.kind}: ${ctx.ref}]`
+                : `[${ctx.kind}]`;
+              return `${header}\n${ctx.content || "(no content)"}`;
+            })
+            .join("\n\n---\n\n");
+
+          prompt = `Context:\n${contextParts}\n\n---\n\n${message}`;
+        }
+
+        // Emit user's message as artifact for UI display
+        await onEvent({
+          type: "artifact",
+          kind: "user-prompt",
+          content: message,
+          metadata: { source: "user" },
+        });
+
+        await onEvent({
+          type: "log",
+          message: `Sending forked session message (${prompt.length} chars)`,
+          level: "start",
+          ts: Date.now(),
+        });
+
+        // Create the query with fork
+        const query = queryFn({ prompt, options });
+
+        // Store query in activeRuns for abort/interrupt support
+        activeRuns.set(runId, {
+          abortController,
+          aborted: false,
+          query,
+        });
+
+        // Stream the response
+        let timeoutId: NodeJS.Timeout | undefined;
+        let timedOut = false;
+
+        const timeoutPromise = new Promise<void>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            timedOut = true;
+            abortController.abort();
+            reject(new Error(`Request timed out after ${timeout}ms`));
+          }, timeout);
+        });
+
+        try {
+          const streamPromise = (async () => {
+            for await (const msg of query) {
+              const runState = activeRuns.get(runId);
+              if (runState?.aborted || timedOut) {
+                break;
+              }
+
+              // Capture the NEW session ID from the forked session
+              if (msg.session_id) {
+                const newSessionId = msg.session_id;
+                sessionIdMap.set(runId, newSessionId);
+                const state = activeRuns.get(runId);
+                if (state) {
+                  activeRuns.set(runId, { ...state, sessionId: newSessionId, query });
+                }
+                runsRepo
+                  .updateRun(runId, { sessionId: newSessionId })
+                  .catch((err: unknown) =>
+                    logError("Failed to persist forked session ID:", err),
+                  );
+              }
+
+              // Capture stop reason and usage from result messages
+              if (msg.type === "result") {
+                const resultMsg = msg as SDKResultMessage;
+                if (resultMsg.stop_reason !== undefined) {
+                  lastStopReason = resultMsg.stop_reason;
+                }
+                lastUsage = {
+                  totalCostUsd: resultMsg.total_cost_usd,
+                  durationMs: resultMsg.duration_ms,
+                  numTurns: resultMsg.num_turns,
+                };
+              }
+
+              // Map and emit events
+              const events = mapSDKMessage(msg, runId);
+              for (const event of events) {
+                await onEvent(event);
+
+                if (event.type === "artifact") {
+                  collectedArtifacts.push({
+                    kind: event.kind,
+                    path: event.path,
+                  });
+                }
+
+                if (
+                  event.type === "tool_call" &&
+                  event.metadata?.phase === "complete" &&
+                  event.output
+                ) {
+                  const artifactEvents = extractArtifactsFromToolOutput(
+                    event.toolName,
+                    event.output,
+                  );
+                  for (const artEvent of artifactEvents) {
+                    await onEvent(artEvent);
+                    if (artEvent.type === "artifact") {
+                      collectedArtifacts.push({
+                        kind: artEvent.kind,
+                        path: artEvent.path,
+                      });
+                    }
+                    if (artEvent.type === "command") {
+                      collectedArtifacts.push({ kind: "command_result" });
+                    }
+                  }
+                }
+              }
+            }
+          })();
+
+          await Promise.race([streamPromise, timeoutPromise]);
+        } finally {
+          if (timeoutId) clearTimeout(timeoutId);
+        }
+
+        const runState = activeRuns.get(runId);
+        const wasAborted = runState?.aborted || abortController.signal.aborted;
+
+        if (timedOut) {
+          await onEvent({
+            type: "status",
+            status: "failed",
+            error: "Request timed out",
+            ts: Date.now(),
+          });
+          return {
+            status: "failed",
+            summary: "Request timed out",
+            stopReason: lastStopReason ?? null,
+            artifacts: collectedArtifacts,
+            usage: lastUsage,
+          };
+        }
+
+        if (wasAborted) {
+          await onEvent({
+            type: "status",
+            status: "canceled",
+            ts: Date.now(),
+          });
+          return {
+            status: "canceled",
+            summary: "Forked run was canceled",
+            stopReason: lastStopReason ?? null,
+            artifacts: collectedArtifacts,
+            usage: lastUsage,
+          };
+        }
+
+        await onEvent({
+          type: "status",
+          status: "succeeded",
+          ts: Date.now(),
+        });
+
+        return {
+          status: "succeeded",
+          stopReason: lastStopReason ?? null,
+          artifacts: collectedArtifacts,
+          usage: lastUsage,
+        };
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        logError("Fork run failed:", errorMessage);
+
+        if (
+          abortController.signal.aborted ||
+          activeRuns.get(runId)?.aborted
+        ) {
+          await onEvent({
+            type: "status",
+            status: "canceled",
+            ts: Date.now(),
+          });
+          return {
+            status: "canceled",
+            summary: "Forked run was canceled",
+            stopReason: lastStopReason ?? null,
+            artifacts: collectedArtifacts,
+            usage: lastUsage,
+          };
+        }
+
+        await onEvent({
+          type: "log",
+          message: `Fork run failed: ${errorMessage}`,
+          level: "error",
+          ts: Date.now(),
+        });
+
+        await onEvent({
+          type: "status",
+          status: "failed",
+          error: errorMessage,
+          ts: Date.now(),
+        });
+
+        return {
+          status: "failed",
+          summary: errorMessage,
+          stopReason: lastStopReason ?? null,
+          artifacts: collectedArtifacts,
+          usage: lastUsage,
+        };
+      } finally {
+        activeRuns.delete(runId);
+      }
+    },
+
     //TODO improve canresume logic - https://platform.claude.com/docs/en/agent-sdk/sessions#resuming-sessions
     async canResumeSession(runId: string): Promise<boolean> {
       // Check if we have a session ID stored for this run (in-memory, then DB)

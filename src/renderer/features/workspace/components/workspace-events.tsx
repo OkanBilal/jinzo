@@ -12,8 +12,9 @@ import { isIssueTab, getIssueEntityId, isNoteTab, getNoteId, isNewRunTab } from 
 import { AsciiLoader } from "./ascii-loader";
 import type { ToolApprovalRequest } from "../hooks/use-tool-approval";
 import { ToolApprovalDialog } from "./tools/tool-approval-dialog";
-import { Clipboard, Check } from "@/components/ui/icons";
+import { Clipboard, Check, Fork, Branch } from "@/components/ui/icons";
 import { useGetAppSettingsQuery } from "@/lib/redux/api";
+import { Button } from "@/components/ui/button";
 
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -31,8 +32,14 @@ interface SessionInfo {
   responseContent: string;
 }
 
-/** Session time bar with dot separator and copy button */
-function SessionTimeBar({ info }: { info: SessionInfo }) {
+/** Session time bar with dot separator, copy button, and fork button */
+function SessionTimeBar({
+  info,
+  onFork,
+}: {
+  info: SessionInfo;
+  onFork?: (responseContent: string) => void;
+}) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(() => {
@@ -43,6 +50,12 @@ function SessionTimeBar({ info }: { info: SessionInfo }) {
     });
   }, [info.responseContent]);
 
+  const handleFork = useCallback(() => {
+    if (onFork) {
+      onFork(info.responseContent);
+    }
+  }, [onFork, info.responseContent]);
+
   if (info.elapsed <= 0) return null;
 
   return (
@@ -51,16 +64,30 @@ function SessionTimeBar({ info }: { info: SessionInfo }) {
       {info.responseContent && (
         <>
           <span className="size-0.75 rounded-full bg-current opacity-50" />
-          <button
+          <Button
+            tooltip="Copy response"
             onClick={handleCopy}
             className="flex items-center gap-1 hover:text-primary-900 dark:hover:text-primary-100 transition-colors cursor-pointer"
+            title="Copy response"
           >
             {copied ? (
               <Check className="size-4" />
             ) : (
               <Clipboard className="size-4" />
             )}
-          </button>
+          </Button>
+        </>
+      )}
+      {onFork && (
+        <>
+          <Button
+            tooltip="Fork run from here"
+            onClick={handleFork}
+            className="flex items-center gap-1 ml-0.5 hover:text-primary-900 dark:hover:text-primary-100 transition-colors cursor-pointer"
+            title="Fork run from here"
+          >
+            <Branch className="size-4" />
+          </Button>
         </>
       )}
     </div>
@@ -179,6 +206,7 @@ interface WorkspaceEventsProps {
   showNewRunTab?: boolean;
   onSelectNewRunTab?: () => void;
   onCloseNewRunTab?: (e: React.MouseEvent) => void;
+  onForkRun?: (sourceRunId: string, message: string) => Promise<string | null>;
 }
 
 export function WorkspaceEvents({
@@ -206,6 +234,7 @@ export function WorkspaceEvents({
   showNewRunTab,
   onSelectNewRunTab,
   onCloseNewRunTab,
+  onForkRun,
 }: WorkspaceEventsProps) {
   const isEditorActive = activeTab === "editor";
   const isIssueActive = isIssueTab(activeTab);
@@ -247,6 +276,15 @@ export function WorkspaceEvents({
   const sessionTimes = useMemo(
     () => computeSessionTimes(eventGroups, activeRun?.startedAt, isRunCompleted),
     [eventGroups, activeRun?.startedAt, isRunCompleted],
+  );
+
+  // Fork handler: forks from the current run with a default prompt
+  const handleFork = useCallback(
+    (_responseContent: string) => {
+      if (!activeRun || !onForkRun) return;
+      onForkRun(activeRun.id, "Continue from where this session left off.");
+    },
+    [activeRun, onForkRun],
   );
 
   return (
@@ -302,7 +340,10 @@ export function WorkspaceEvents({
                     <InfoGroup group={group} />
                   )}
                   {sessionTimes.has(index) && (
-                    <SessionTimeBar info={sessionTimes.get(index)!} />
+                    <SessionTimeBar
+                      info={sessionTimes.get(index)!}
+                      onFork={isRunCompleted && onForkRun ? handleFork : undefined}
+                    />
                   )}
                 </Fragment>
               ))}

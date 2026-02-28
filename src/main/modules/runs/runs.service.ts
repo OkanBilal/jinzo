@@ -34,6 +34,8 @@ import type {
   StartRunContextItem,
   ContinueRunPayload,
   ContinueRunResponse,
+  ForkRunPayload,
+  ForkRunResponse,
   RunDetailsResponse,
 } from "./runs.dto";
 import { statsRepo } from "../stats/stats.repo";
@@ -131,12 +133,14 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
     let diffText = diffResult.success ? (diffResult.data ?? "") : "";
     const trackedFiles = filesResult.success ? (filesResult.data ?? []) : [];
     const untrackedFiles = untrackedResult.success ? (untrackedResult.data ?? []) : [];
-    const shortstat = statResult.success ? (statResult.data ?? "") : "";
+    let shortstat = statResult.success ? (statResult.data ?? "") : "";
 
     // Merge tracked and untracked file lists (deduplicated)
     const files = [...new Set([...trackedFiles, ...untrackedFiles])];
 
     // Generate diff entries for untracked (new) files
+    // Also count their lines to include in shortstat (git diff --shortstat doesn't cover untracked files)
+    let untrackedInsertions = 0;
     if (untrackedFiles.length > 0) {
       const untrackedDiffs: string[] = [];
       for (const filePath of untrackedFiles) {
@@ -152,6 +156,7 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
           }
           const content = fs.readFileSync(fullPath, "utf-8");
           const lines = content.split("\n");
+          untrackedInsertions += lines.length;
           const diffHeader = [
             `diff --git a/${filePath} b/${filePath}`,
             `new file mode 100644`,
@@ -173,6 +178,12 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
           ? `${diffText}\n${untrackedDiffs.join("\n")}`
           : untrackedDiffs.join("\n");
       }
+    }
+
+    // Merge untracked file insertions into shortstat
+    // git diff --shortstat only covers tracked files, so new (untracked) files are missing
+    if (untrackedInsertions > 0) {
+      shortstat = mergeUntrackedIntoShortstat(shortstat, untrackedFiles.length, untrackedInsertions);
     }
 
     // Skip if no files changed
@@ -1276,6 +1287,227 @@ export const runsService = {
   },
 
   /**
+   * Fork an existing run's session into a new run.
+   * Creates a new run that branches from the source run's session state.
+   */
+  async forkRun(
+    payload: ForkRunPayload,
+  ): Promise<ServiceResponse<ForkRunResponse>> {
+    const { sourceRunId, accountId, message } = payload;
+    const newRunId = generateRunId();
+
+    try {
+      // 1. Load source run
+      const sourceRun = await runsRepo.findRunById(sourceRunId);
+      if (!sourceRun) {
+        return { success: false, error: "Source run not found" };
+      }
+
+      // 2. Verify ownership
+      if (sourceRun.accountId !== accountId) {
+        return { success: false, error: "Source run does not belong to this account" };
+      }
+
+      // 3. Load provider
+      const provider = await providersRepo.findById(sourceRun.providerId);
+      if (!provider) {
+        return {
+          success: false,
+          error: `Provider "${sourceRun.providerId}" not found`,
+        };
+      }
+      if (!provider.isEnabled) {
+        return {
+          success: false,
+          error: `Provider "${provider.displayName}" is not enabled`,
+        };
+      }
+
+      // 4. Load workspace
+      const workspace = sourceRun.workspaceId
+        ? await workspacesRepo.findById(sourceRun.workspaceId)
+        : null;
+
+      // 5. Create adapter and check if it supports forkRun
+      const adapter = createWorkAdapter(provider);
+      if (!adapter.forkRun) {
+        return {
+          success: false,
+          error: "Provider does not support session forking",
+        };
+      }
+
+      // 6. Check if source session exists
+      if (adapter.canResumeSession) {
+        const canResume = await adapter.canResumeSession(sourceRunId);
+        if (!canResume) {
+          return {
+            success: false,
+            error: "Source session cannot be forked (not found or expired)",
+          };
+        }
+      }
+
+      // Transition workspace to in_progress
+      if (workspace) {
+        await workspacesRepo.update(workspace.id, { status: "in_progress" });
+      }
+
+      // 7. Create new run record
+      await runsRepo.insertRun({
+        id: newRunId,
+        accountId,
+        workspaceId: sourceRun.workspaceId ?? undefined,
+        moodId: sourceRun.moodId ?? undefined,
+        providerId: sourceRun.providerId,
+        model: sourceRun.model ?? undefined,
+        goal: message,
+        status: "running",
+        systemPrompt: sourceRun.systemPrompt ?? undefined,
+      });
+
+      // Capture git HEAD sha for diff computation
+      if (workspace) {
+        await captureBaseRef(newRunId, workspace.rootPath);
+      }
+
+      // Track tool calls for updating when completed
+      const pendingToolCalls = new Map<string, number>();
+
+      // 8. Acquire sleep blocker
+      await acquireSleepBlocker(newRunId);
+
+      // 9. Generate title in background
+      generateRunTitle(newRunId, adapter, message).catch((err) =>
+        console.error(`[RunsService] Title generation failed for forked run ${newRunId}:`, err),
+      );
+
+      // 10. Fork the run
+      const runPromise = adapter.forkRun(
+        {
+          runId: newRunId,
+          sourceRunId,
+          accountId,
+          workspace: workspace
+            ? { id: workspace.id, rootPath: workspace.rootPath }
+            : { id: "", rootPath: process.cwd() },
+          message,
+          context: payload.additionalContext as any,
+        },
+        async (event) => {
+          try {
+            await this.handleRunEvent(
+              newRunId,
+              accountId,
+              sourceRun.providerId,
+              event,
+              pendingToolCalls,
+            );
+          } catch (err) {
+            console.error(
+              `[RunsService] Error handling event for forked run ${newRunId}:`,
+              err,
+            );
+          }
+        },
+      );
+
+      // 11. Handle completion in background
+      runPromise
+        .then(async (result) => {
+          const finalStatus: RunStatus =
+            result.status === "succeeded"
+              ? "succeeded"
+              : result.status === "canceled"
+                ? "canceled"
+                : "failed";
+
+          await runsRepo.updateRun(newRunId, {
+            status: finalStatus,
+            endedAt: new Date(),
+            lastError: result.status === "failed" ? result.summary : undefined,
+            stopReason: result.stopReason ?? null,
+          });
+
+          // Persist run usage data
+          if (result.usage) {
+            try {
+              await statsRepo.insertRunUsage({
+                runId: newRunId,
+                totalCostMicros: result.usage.totalCostUsd
+                  ? Math.round(result.usage.totalCostUsd * 1_000_000)
+                  : null,
+                durationMs: result.usage.durationMs ?? null,
+                numTurns: result.usage.numTurns ?? null,
+                inputTokens: result.usage.inputTokens ?? null,
+                outputTokens: result.usage.outputTokens ?? null,
+                providerId: sourceRun.providerId,
+                model: sourceRun.model ?? null,
+              });
+            } catch (err) {
+              console.error(`[RunsService] Failed to persist run usage for forked run ${newRunId}:`, err);
+            }
+          }
+
+          // Persist git diff on success
+          if (finalStatus === "succeeded" && workspace) {
+            await persistRunDiff(newRunId, workspace.id, workspace.rootPath);
+          } else {
+            runBaseRefs.delete(newRunId);
+          }
+
+          console.log(
+            `[RunsService] Forked run ${newRunId} (from ${sourceRunId}) completed with status: ${finalStatus}`,
+          );
+
+          sendRunNotification(newRunId, finalStatus);
+          releaseSleepBlocker(newRunId);
+        })
+        .catch(async (error) => {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          console.error(
+            `[RunsService] Forked run ${newRunId} failed:`,
+            errorMessage,
+          );
+
+          runBaseRefs.delete(newRunId);
+
+          await runsRepo.updateRun(newRunId, {
+            status: "failed",
+            endedAt: new Date(),
+            lastError: errorMessage,
+          });
+
+          sendRunNotification(newRunId, "failed");
+          releaseSleepBlocker(newRunId);
+        });
+
+      return { success: true, data: { runId: newRunId, sourceRunId } };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`[RunsService] Failed to fork run:`, errorMessage);
+
+      runBaseRefs.delete(newRunId);
+      releaseSleepBlocker(newRunId);
+
+      // Try to reset run status
+      try {
+        await runsRepo.updateRun(newRunId, {
+          status: "failed",
+          endedAt: new Date(),
+          lastError: errorMessage,
+        });
+      } catch {
+        // Ignore cleanup errors
+      }
+
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  /**
    * Delete a run's persisted session
    */
   async deleteRunSession(runId: string): Promise<ServiceResponse<void>> {
@@ -1321,4 +1553,35 @@ function generateRunId(): string {
 
 function hashContent(content: string): string {
   return createHash("sha256").update(content).digest("hex").substring(0, 16);
+}
+
+/**
+ * Merge untracked file stats into a git shortstat string.
+ * git diff --shortstat only covers tracked files, so new (untracked) files
+ * and their insertions are missing from the shortstat output.
+ *
+ * Input shortstat format: "N file(s) changed, X insertion(s)(+), Y deletion(s)(-)"
+ * Any part may be missing if count is 0.
+ */
+function mergeUntrackedIntoShortstat(shortstat: string, newFileCount: number, newInsertions: number): string {
+  if (newFileCount === 0 && newInsertions === 0) return shortstat;
+
+  // Parse existing values from shortstat
+  const existingFiles = parseInt(shortstat.match(/(\d+) file/)?.[1] ?? "0", 10);
+  const existingInsertions = parseInt(shortstat.match(/(\d+) insertion/)?.[1] ?? "0", 10);
+  const existingDeletions = parseInt(shortstat.match(/(\d+) deletion/)?.[1] ?? "0", 10);
+
+  const totalFiles = existingFiles + newFileCount;
+  const totalInsertions = existingInsertions + newInsertions;
+
+  const parts: string[] = [];
+  parts.push(`${totalFiles} file${totalFiles !== 1 ? "s" : ""} changed`);
+  if (totalInsertions > 0) {
+    parts.push(`${totalInsertions} insertion${totalInsertions !== 1 ? "s" : ""}(+)`);
+  }
+  if (existingDeletions > 0) {
+    parts.push(`${existingDeletions} deletion${existingDeletions !== 1 ? "s" : ""}(-)`);
+  }
+
+  return parts.join(", ");
 }

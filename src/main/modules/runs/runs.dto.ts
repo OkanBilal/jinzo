@@ -244,6 +244,25 @@ export interface ContinueRunResponse {
   resumed: boolean;
 }
 
+/** Payload for forking an existing run's session into a new run */
+export interface ForkRunPayload {
+  /** The source run whose session will be forked */
+  sourceRunId: string;
+  accountId: string;
+  /** The message/goal for the forked session */
+  message: string;
+  /** Additional context to add */
+  additionalContext?: StartRunContextItem[];
+}
+
+/** Response when a run is forked */
+export interface ForkRunResponse {
+  /** The new run ID created from the fork */
+  runId: string;
+  /** The source run that was forked from */
+  sourceRunId: string;
+}
+
 /** Full run details with related data */
 export interface RunDetailsResponse {
   run: RunResponse;

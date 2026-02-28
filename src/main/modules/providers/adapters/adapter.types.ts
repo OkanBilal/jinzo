@@ -211,6 +211,30 @@ export interface WorkRunContinueRequest {
 }
 
 /**
+ * Request to fork an existing run's session into a new run.
+ * Creates a new session branched from the source run's session state.
+ */
+export interface WorkRunForkRequest {
+  /** The new run ID for the forked session */
+  runId: string;
+  /** The source run whose session will be forked */
+  sourceRunId: string;
+  accountId: string;
+  workspace: {
+    id: string;
+    rootPath: string;
+  };
+  /** The message/goal for the forked session */
+  message: string;
+  /** Additional context to add */
+  context?: WorkRunContextItem[];
+  /** Per-run hooks configuration */
+  hooks?: HooksConfig;
+  /** Per-run subagents configuration */
+  agents?: AgentsConfig;
+}
+
+/**
  * Interface that all work run adapters must implement
  */
 export interface WorkRunAdapter {
@@ -230,6 +254,16 @@ export interface WorkRunAdapter {
    * @returns Promise resolving to the final result when the continuation completes
    */
   continueRun?(request: WorkRunContinueRequest, onEvent: WorkRunEventHandler): Promise<WorkRunResult>;
+
+  /**
+   * Fork an existing run's session into a new run.
+   * Creates a new session branched from the source run's session state,
+   * leaving the original session unchanged.
+   * @param request - The fork request with sourceRunId, new runId, and message
+   * @param onEvent - Callback invoked for each event during the run
+   * @returns Promise resolving to the final result when the forked run completes
+   */
+  forkRun?(request: WorkRunForkRequest, onEvent: WorkRunEventHandler): Promise<WorkRunResult>;
 
   /**
    * Abort a currently running work run.

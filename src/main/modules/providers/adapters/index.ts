@@ -7,6 +7,7 @@ export type {
   WorkRunContextItem,
   WorkRunRequest,
   WorkRunContinueRequest,
+  WorkRunForkRequest,
   WorkRunLogEvent,
   WorkRunToolCallEvent,
   WorkRunCommandEvent,

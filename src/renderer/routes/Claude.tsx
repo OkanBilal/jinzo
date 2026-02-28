@@ -59,6 +59,7 @@ export default function ClaudePage() {
             onCloseNewRunTab={ws.handleCloseNewRunTab}
             pendingApproval={currentApproval}
             onApprovalRespond={handleApprovalRespond}
+            onForkRun={ws.handleForkRun}
           />
         )}
       </div>

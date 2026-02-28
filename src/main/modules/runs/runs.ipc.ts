@@ -10,6 +10,7 @@ import type {
   RunStatus,
   StartRunPayload,
   ContinueRunPayload,
+  ForkRunPayload,
   ToolApprovalResponse,
 } from "./runs.dto";
 import { handleToolApprovalResponse } from "./user-input-broker";
@@ -36,6 +37,7 @@ const CHANNELS = {
   RUNS_EXECUTE: "runs:execute",
   RUNS_ABORT: "runs:abort",
   RUNS_CONTINUE: "runs:continue",
+  RUNS_FORK: "runs:fork",
   RUNS_CAN_RESUME: "runs:canResume",
   RUNS_DELETE_SESSION: "runs:deleteSession",
 
@@ -135,6 +137,10 @@ export function registerRunsIpc(): void {
 
   ipcMain.handle(CHANNELS.RUNS_CONTINUE, async (_, payload: ContinueRunPayload) => {
     return runsController.continueRun(payload);
+  });
+
+  ipcMain.handle(CHANNELS.RUNS_FORK, async (_, payload: ForkRunPayload) => {
+    return runsController.forkRun(payload);
   });
 
   ipcMain.handle(CHANNELS.RUNS_CAN_RESUME, async (_, runId: string) => {

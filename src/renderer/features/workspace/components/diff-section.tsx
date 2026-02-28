@@ -8,7 +8,7 @@ import {
   type WorkspaceDiff,
   type FindingSeverity,
 } from "@/lib/redux/api";
-import { setPendingGoal } from "@/lib/redux/slices/workspaceSlice";
+import { setPendingGoal, setPendingAutoExecute } from "@/lib/redux/slices/workspaceSlice";
 import { FileIconComponent } from "./file-explorer/components/file-icon";
 import {
   Diff,
@@ -166,7 +166,8 @@ export function DiffSection({
     );
   }
   const handleReviewChanges = () => {
-    dispatch(setPendingGoal("review code changes"));
+    dispatch(setPendingGoal("review code changes in this workspace"));
+    dispatch(setPendingAutoExecute(true));
   };
 
   const handleCommitChanges = () => {

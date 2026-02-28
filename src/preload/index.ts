@@ -480,6 +480,17 @@ const api = {
       }>;
     }) => ipcRenderer.invoke("runs:continue", payload),
     canResume: (runId: string) => ipcRenderer.invoke("runs:canResume", runId),
+    fork: (payload: {
+      sourceRunId: string;
+      accountId: string;
+      message: string;
+      additionalContext?: Array<{
+        kind: "file" | "diff" | "selection" | "note";
+        ref?: string;
+        content?: string;
+        metadata?: Record<string, unknown>;
+      }>;
+    }) => ipcRenderer.invoke("runs:fork", payload),
     deleteSession: (runId: string) =>
       ipcRenderer.invoke("runs:deleteSession", runId),
     // Interactive tool approval
