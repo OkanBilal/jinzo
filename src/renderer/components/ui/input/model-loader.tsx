@@ -49,7 +49,7 @@ export function ModelLoader({
     variant === "claude"
       ? "text-claude-dark dark:text-claude-light"
       : variant === "copilot"
-        ? "text-copilot-blue dark:text-copilot-lightblue"
+        ? "text-copilot-blue dark:text-copilot-light"
         : "text-primary-600 dark:text-primary-400";
 
   return (

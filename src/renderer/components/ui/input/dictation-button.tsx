@@ -15,9 +15,9 @@ const variantStyles = {
     icon: "dark:text-primary-400 text-primary-500",
   },
   copilot: {
-    recording: "bg-copilot-blue/30 dark:bg-copilot-lightblue/50",
-    hover: "hover:bg-copilot-blue/10 dark:hover:bg-copilot-lightblue/20",
-    icon: "dark:text-copilot-lightblue/70 text-copilot-blue",
+    recording: "bg-copilot-blue/30 dark:bg-copilot-light/50",
+    hover: "hover:bg-copilot-blue/10 dark:hover:bg-copilot-light/20",
+    icon: "dark:text-copilot-light/70 text-copilot-blue",
   },
   claude: {
     recording: "bg-claude-dark/30 dark:bg-claude-light/50",

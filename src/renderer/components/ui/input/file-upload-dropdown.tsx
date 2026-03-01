@@ -35,10 +35,10 @@ const variantStyles = {
     menuItem: "hover:bg-primary-200/30 dark:hover:bg-primary-600/20",
   },
   copilot: {
-    button: "hover:bg-primary-200/30 dark:hover:bg-copilot-lightblue/10",
-    icon: "dark:text-copilot-lightblue text-primary-800",
-    fileBg: "bg-primary-100 dark:bg-copilot-lightblue/10",
-    menuItem: "hover:bg-copilot-lightblue dark:hover:bg-copilot-lightblue/10",
+    button: "hover:bg-primary-200/30 dark:hover:bg-copilot-light/10",
+    icon: "dark:text-copilot-light text-primary-800",
+    fileBg: "bg-primary-100 dark:bg-copilot-light/10",
+    menuItem: "hover:bg-copilot-light dark:hover:bg-copilot-light/10",
   },
   claude: {
     button: "hover:bg-primary-200/30 dark:hover:bg-claude-light/10",

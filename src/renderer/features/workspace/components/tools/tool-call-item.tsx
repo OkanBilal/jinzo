@@ -7,6 +7,7 @@ import { TaskDisplay, type TaskParams } from "./task-display";
 import { ExitPlanDisplay, type ExitPlanParams } from "./exit-plan-display";
 import { WriteDisplay, type WriteParams } from "./write-display";
 import { McpDisplay } from "./mcp-display";
+import { AgentDisplay, type AgentParams } from "./agent-display";
 
 interface ToolCallItemProps {
   event: RunEvent;
@@ -54,6 +55,19 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
         ? (params as TaskParams)
         : { description: summary };
     return <TaskDisplay params={taskParams} />;
+  }
+
+  // Show AgentDisplay for agent tool calls
+  if (toolName.toLowerCase() === "agent") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const agentParams: AgentParams = metadataInput
+      ? (metadataInput as AgentParams)
+      : params
+        ? (params as AgentParams)
+        : { description: summary };
+    return <AgentDisplay params={agentParams} />;
   }
 
   // Show WriteDisplay for write/create file tool calls

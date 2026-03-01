@@ -26,11 +26,11 @@ export function WorkspaceEmptyState({ workspace }: WorkspaceEmptyStateProps) {
       ) : (
         <div className=" flex flex-col items-center">
           {/* <CopilotIcon
-            className="mb-2 text-primary-700 dark:text-copilot-lightblue/60"
+            className="mb-2 text-primary-700 dark:text-copilot-light/60"
             size={80}
             animate
           /> */}
-            <p className="text-xl text-primary-700 dark:text-copilot-lightblue/60 font-mono ">
+            <p className="text-xl text-primary-700 dark:text-copilot-light/60 font-mono ">
             {displayText}
           </p>
         </div>

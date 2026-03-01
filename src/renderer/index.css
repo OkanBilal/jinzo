@@ -4,7 +4,6 @@
 @import "@xterm/xterm/css/xterm.css";
 @import "tailwindcss";
 
-/* Enable class-based dark mode instead of media query */
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
@@ -64,22 +63,20 @@
   --color-primary-900: #141414;
   --color-primary-950: #0c0c0c;
   
-  --color-copilot-blue: #0c0f16;
   --color-copilot-dark: #080A0F ;
-  --color-copilot-lightblue: #ffffff;
-  --color-copilot-soft-blue: #f4f9fe;
+  --color-copilot-soft-dark: #0c0f16;
+  --color-copilot-light: #ffffff;
+  --color-copilot-soft-light: #f4f9fe;
   --color-claude-dark: #070707;
   --color-claude-soft-dark: #100f0f;
   --color-claude-light: #ffffff;
   --color-claude-soft-light: #fff4f1;
 
 
-  --font-space-mono: 'Space Mono', monospace;
-  --font-inter: 'Inter', sans-serif;
   --font-sans: 'Geist', system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
     'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-  --font-mono: 'Space Mono', 'Space Mono', monospace;
+  --font-mono: 'Space Mono', monospace;
   
 }
 
@@ -87,9 +84,9 @@
   outline: none !important;
 }
 
-/* * {
+* {
   user-select: none;
-} */
+}
 
 @keyframes blink {
   0%, 49% { opacity: 1; }
@@ -679,7 +676,7 @@ input[type="range"].slider {
 }
 
 .glass-morphism-copilot {
-  background: linear-gradient(to bottom, var(--color-copilot-lightblue), var(--color-copilot-soft-blue));
+  background: linear-gradient(to bottom, var(--color-copilot-light), var(--color-copilot-soft-light));
   border: 0.5px solid #ffffff2e;
   box-shadow:
     0 1px 1px #00000011,
@@ -688,9 +685,6 @@ input[type="range"].slider {
 }
 
 
-.dark .claude-gradient-bg {
-  background: var(--color-claude-dark);
-}
 
 .glass-morphism-claude {
   background: linear-gradient(to bottom, var(--color-claude-light), var(--color-claude-soft-light));
@@ -711,7 +705,7 @@ input[type="range"].slider {
 }
 
 .dark .glass-morphism-copilot {
-  background: linear-gradient(to bottom, var(--color-copilot-blue), var(--color-copilot-dark));
+  background: linear-gradient(to bottom, var(--color-copilot-soft-dark), var(--color-copilot-dark));
   border-color: #1c232f00;
   box-shadow:
     0 1px 1px #1c232f,

@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/refs */
+/* TODO: */
 import {
   useRef,
   useEffect,
@@ -143,6 +145,10 @@ export function WizardModal<
   }, []);
 
   const close = useCallback(() => {
+    if (triggerRef.current) {
+      triggerRef.current.focus();
+      triggerRef.current = null;
+    }
     onOpenChange(false);
     onCancel?.();
   }, [onOpenChange, onCancel]);
@@ -176,6 +182,8 @@ export function WizardModal<
   const [prevOpen, setPrevOpen] = useState(false);
   if (open && !prevOpen) {
     setPrevOpen(true);
+    triggerRef.current = document.activeElement as HTMLElement;
+    prevHeightRef.current = 0;
     dispatch({
       type: "RESET",
       stepIndex: resolveInitialStep(steps, initialStep),
@@ -185,17 +193,6 @@ export function WizardModal<
   if (!open && prevOpen) {
     setPrevOpen(false);
   }
-
-  // Manage focus save/restore as a DOM side effect
-  useEffect(() => {
-    if (open) {
-      triggerRef.current = document.activeElement as HTMLElement;
-      prevHeightRef.current = 0;
-    } else if (triggerRef.current) {
-      triggerRef.current.focus();
-      triggerRef.current = null;
-    }
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isBrowser || !open) return null;
 

@@ -34,12 +34,12 @@ const variantStyles = {
     divider: "border-primary-200 dark:border-primary-700",
   },
   copilot: {
-    item: "hover:bg-copilot-lightblue/50 dark:hover:bg-copilot-lightblue/6 text-copilot-blue dark:text-copilot-lightblue",
-    description: "text-copilot-blue/60 dark:text-copilot-lightblue/60",
+    item: "hover:bg-copilot-light/50 dark:hover:bg-copilot-light/6 text-copilot-blue dark:text-copilot-light",
+    description: "text-copilot-blue/60 dark:text-copilot-light/60",
     badge:
-      "bg-copilot-lightblue/30 dark:bg-copilot-lightblue/10 text-copilot-blue dark:text-copilot-lightblue",
-    sectionHeader: "text-copilot-blue/50 dark:text-copilot-lightblue/50",
-    divider: "border-copilot-lightblue/20 dark:border-copilot-lightblue/10",
+      "bg-copilot-light/30 dark:bg-copilot-light/10 text-copilot-blue dark:text-copilot-light",
+    sectionHeader: "text-copilot-blue/50 dark:text-copilot-light/50",
+    divider: "border-copilot-light/20 dark:border-copilot-light/10",
   },
   claude: {
     item: "hover:bg-claude-light/50 dark:hover:bg-claude-light/6 text-claude-dark dark:text-claude-light",

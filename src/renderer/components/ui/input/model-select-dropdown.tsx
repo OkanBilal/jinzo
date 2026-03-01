@@ -28,11 +28,11 @@ const variantStyles = {
     item: "hover:bg-primary-300/50 dark:hover:bg-primary-300/6 text-primary-700 dark:text-primary-300",
   },
   copilot: {
-    container: "hover:bg-copilot-blue/10 dark:hover:bg-copilot-lightblue/10",
-    button: "text-copilot-blue dark:text-copilot-lightblue/80",
+    container: "hover:bg-copilot-blue/10 dark:hover:bg-copilot-light/10",
+    button: "text-copilot-blue dark:text-copilot-light/80",
     selected:
-      "bg-copilot-lightblue/60 dark:bg-copilot-lightblue/8 text-copilot-blue dark:text-copilot-lightblue",
-    item: "hover:bg-copilot-lightblue/50 dark:hover:bg-copilot-lightblue/6 text-copilot-blue dark:text-copilot-lightblue",
+      "bg-copilot-light/60 dark:bg-copilot-light/8 text-copilot-blue dark:text-copilot-light",
+    item: "hover:bg-copilot-light/50 dark:hover:bg-copilot-light/6 text-copilot-blue dark:text-copilot-light",
   },
   claude: {
     container: "hover:bg-claude-dark/10 dark:hover:bg-claude-light/10",
