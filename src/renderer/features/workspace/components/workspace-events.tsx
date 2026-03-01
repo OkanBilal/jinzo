@@ -6,7 +6,7 @@ import { IssueTabContent } from "./issue-tab-content";
 import { NoteTabContent } from "./note-tab-content";
 import { WorkspaceEmptyState } from "./workspace-empty-state";
 import type { Run, RunEvent, Workspace } from "../types";
-import type { IssueWithEntity } from "@/lib/redux/api";
+import type { IssueWithEntity, RunTurn, ModelUsageEntry } from "@/lib/redux/api";
 import type { ReviewTab } from "@/lib/redux/slices/workspaceSlice";
 import { isIssueTab, getIssueEntityId, isNoteTab, getNoteId, isNewRunTab } from "../utils/repo-utils";
 import { AsciiLoader } from "./ascii-loader";
@@ -15,6 +15,7 @@ import { ToolApprovalDialog } from "./tools/tool-approval-dialog";
 import { Clipboard, Check, Branch } from "@/components/ui/icons";
 import { useGetAppSettingsQuery } from "@/lib/redux/api";
 import { Button } from "@/components/ui/button";
+import Tooltip from "@/components/ui/tooltip";
 
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -30,9 +31,112 @@ function formatElapsed(ms: number): string {
 interface SessionInfo {
   elapsed: number;
   responseContent: string;
+  turn?: RunTurn;
 }
 
-/** Session time bar with dot separator, copy button, and fork button */
+function formatNumber(n: number): string {
+  return n.toLocaleString("en-US");
+}
+
+function formatCost(micros: number): string {
+  const usd = micros / 1_000_000;
+  return usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`;
+}
+
+
+/** Single model usage block */
+function ModelUsageBlock({ modelName, usage }: { modelName: string; usage: ModelUsageEntry }) {
+  return (
+    <div className="space-y-0.5">
+      <div className="text-[11px] opacity-70 flex justify-between gap-4">
+        <span>{modelName}</span>
+        <span>${usage.costUSD.toFixed(4)}</span>
+      </div>
+      <div className="flex justify-between gap-4">
+        <span className="opacity-60">Input</span>
+        <span>{formatNumber(usage.inputTokens)}</span>
+      </div>
+      <div className="flex justify-between gap-4">
+        <span className="opacity-60">Output</span>
+        <span>{formatNumber(usage.outputTokens)}</span>
+      </div>
+      {usage.cacheReadInputTokens > 0 && (
+        <div className="flex justify-between gap-4">
+          <span className="opacity-60">Cache read</span>
+          <span>{formatNumber(usage.cacheReadInputTokens)}</span>
+        </div>
+      )}
+      {usage.cacheCreationInputTokens > 0 && (
+        <div className="flex justify-between gap-4">
+          <span className="opacity-60">Cache write</span>
+          <span>{formatNumber(usage.cacheCreationInputTokens)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Build rich usage content for the tooltip */
+function UsageTooltipContent({ turn }: { turn: RunTurn }) {
+  const modelEntries = turn.modelUsage ? Object.entries(turn.modelUsage) : [];
+  const hasPerModel = modelEntries.length > 0;
+
+  return (
+    <div className="text-xs  space-y-1 min-w-44">
+
+      {hasPerModel ? (
+        <>
+          {modelEntries.map(([name, usage], idx) => (
+            <div key={name}>
+              {idx > 0 && <div className="border-t border-current/15 my-1" />}
+              <ModelUsageBlock modelName={name} usage={usage} />
+            </div>
+          ))}
+        </>
+      ) : (
+        <>
+          {turn.model && (
+            <div className="text-[11px] opacity-70 mb-1">{turn.model}</div>
+          )}
+          <div className="border-t border-current/15 pt-1 space-y-0.5">
+            {turn.inputTokens != null && (
+              <div className="flex justify-between gap-4">
+                <span className="opacity-60">Input</span>
+                <span>{formatNumber(turn.inputTokens)}</span>
+              </div>
+            )}
+            {turn.outputTokens != null && (
+              <div className="flex justify-between gap-4">
+                <span className="opacity-60">Output</span>
+                <span>{formatNumber(turn.outputTokens)}</span>
+              </div>
+            )}
+            {turn.cacheReadTokens != null && (
+              <div className="flex justify-between gap-4">
+                <span className="opacity-60">Cache read</span>
+                <span>{formatNumber(turn.cacheReadTokens)}</span>
+              </div>
+            )}
+            {turn.cacheWriteTokens != null && (
+              <div className="flex justify-between gap-4">
+                <span className="opacity-60">Cache write</span>
+                <span>{formatNumber(turn.cacheWriteTokens)}</span>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+      {turn.costMicros != null && (
+        <div className="border-t border-current/15 pt-1 flex justify-between gap-4 font-medium">
+          <span className="opacity-60">Total</span>
+          <span>{formatCost(turn.costMicros)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Session time bar with dot separator, copy button, fork button, and usage tooltip */
 function SessionTimeBar({
   info,
   onFork,
@@ -58,9 +162,22 @@ function SessionTimeBar({
 
   if (info.elapsed <= 0) return null;
 
+  const turn = info.turn;
+  const hasUsage = turn && (turn.inputTokens || turn.outputTokens || turn.cacheReadTokens || turn.cacheWriteTokens || turn.costMicros);
+
   return (
     <div className="flex items-center gap-2 text-s text-primary-500 dark:text-primary-400 pl-4 -mt-1">
-      <span>{formatElapsed(info.elapsed)}</span>
+      {hasUsage ? (
+        <Tooltip
+          content={<UsageTooltipContent turn={turn} />}
+          position="top-right"
+          className="whitespace-normal! max-w-none!"
+        >
+          <span className="cursor-default">{formatElapsed(info.elapsed)}</span>
+        </Tooltip>
+      ) : (
+        <span>{formatElapsed(info.elapsed)}</span>
+      )}
       {info.responseContent && (
         <>
           <span className="size-0.75 rounded-full bg-current opacity-50" />
@@ -95,12 +212,95 @@ function SessionTimeBar({
 }
 
 /**
- * Compute session times and collect response content for each turn.
- *
- * A "turn" starts at a user-prompt or status event (or run start for the first turn).
- * A "turn" ends right before the next user-prompt, or at the last group if the run is done.
+ * Match backend turns to event group indices.
+ * For each completed turn, find the last event group whose endTime falls
+ * within that turn's time range, or the closest group before the next turn.
  */
-function computeSessionTimes(
+function matchTurnsToGroups(
+  groups: EventGroup[],
+  turns: RunTurn[],
+  runStartedAt?: Date,
+  isRunCompleted?: boolean,
+): Map<number, SessionInfo> {
+  const result = new Map<number, SessionInfo>();
+
+  if (turns.length === 0) {
+    // Fallback: no turns from backend yet — compute from events like before
+    return computeSessionTimesFromEvents(groups, runStartedAt, isRunCompleted);
+  }
+
+  // Build a list of turn boundaries using turn endedAt timestamps
+  // For each completed turn, find the group index closest to endedAt
+  const collectResponseContent = (fromIdx: number, toIdx: number): string => {
+    const parts: string[] = [];
+    for (let j = fromIdx; j <= toIdx; j++) {
+      if (groups[j].type === "response") {
+        for (const event of groups[j].events) {
+          if (event.content) parts.push(event.content);
+        }
+      }
+    }
+    return parts.join("\n\n");
+  };
+
+  // For each turn, find the group range and place the session bar
+  let lastGroupIdx = 0;
+  for (const turn of turns) {
+    if (turn.status !== "completed" || !turn.elapsedMs || turn.elapsedMs <= 0) continue;
+
+    // Find the best group index for this turn's end time
+    const turnEndMs = turn.endedAt
+      ? new Date(turn.endedAt).getTime()
+      : null;
+
+    let bestIdx = lastGroupIdx;
+    if (turnEndMs) {
+      // Timestamps from DB are in epoch seconds, but Date constructor handles both
+      const endMs = turnEndMs < 1e12 ? turnEndMs * 1000 : turnEndMs;
+      for (let i = lastGroupIdx; i < groups.length; i++) {
+        const groupEndMs = new Date(groups[i].endTime).getTime();
+        if (groupEndMs <= endMs) {
+          bestIdx = i;
+        } else {
+          break;
+        }
+      }
+    } else {
+      // No endedAt — find next user-prompt or use last group
+      for (let i = lastGroupIdx + 1; i < groups.length; i++) {
+        const isUserPrompt =
+          groups[i].type === "info" &&
+          groups[i].events[0]?.metadata?.kind === "user-prompt";
+        if (isUserPrompt) {
+          bestIdx = i - 1;
+          break;
+        }
+        bestIdx = i;
+      }
+    }
+
+    // Skip if this group is a user-prompt itself
+    const groupAtBest = groups[bestIdx];
+    if (groupAtBest?.type === "info" && groupAtBest.events[0]?.metadata?.kind === "user-prompt") {
+      if (bestIdx > 0) bestIdx--;
+    }
+
+    result.set(bestIdx, {
+      elapsed: turn.elapsedMs,
+      responseContent: turn.responseContent || collectResponseContent(lastGroupIdx, bestIdx),
+      turn,
+    });
+
+    lastGroupIdx = bestIdx + 1;
+  }
+
+  return result;
+}
+
+/**
+ * Fallback: compute session times from events (for runs that don't have turns yet).
+ */
+function computeSessionTimesFromEvents(
   groups: EventGroup[],
   runStartedAt?: Date,
   isRunCompleted?: boolean,
@@ -131,7 +331,6 @@ function computeSessionTimes(
     const isStatus =
       group.type === "info" && group.events[0]?.type === "status";
 
-    // When we hit a new user-prompt, close the previous turn
     if (isUserPrompt && turnStartMs !== null && i > 0) {
       const prevGroup = groups[i - 1];
       const prevIsPromptOrStatus =
@@ -150,14 +349,12 @@ function computeSessionTimes(
       }
     }
 
-    // Mark new turn start
     if (isUserPrompt || isStatus) {
       turnStartMs = new Date(group.startTime).getTime();
       turnStartIdx = i;
     }
   }
 
-  // Close the last turn if the run is completed
   if (isRunCompleted && turnStartMs !== null && groups.length > 0) {
     const lastIdx = groups.length - 1;
     const lastGroup = groups[lastIdx];
@@ -191,6 +388,7 @@ interface WorkspaceEventsProps {
   fileName?: string;
   issueTabs: IssueWithEntity[];
   noteTabs?: ReviewTab[];
+  turns?: RunTurn[];
   variant?: "copilot" | "claude";
   onSelectEditorTab: () => void;
   onSelectRunTab: (runId: string) => void;
@@ -219,6 +417,7 @@ export function WorkspaceEvents({
   fileName,
   issueTabs,
   noteTabs = EMPTY_NOTE_TABS,
+  turns = [],
   variant = "copilot",
   onSelectEditorTab,
   onSelectRunTab,
@@ -274,8 +473,8 @@ export function WorkspaceEvents({
 
   // Session times: index-based map of "show session bar after this group index"
   const sessionTimes = useMemo(
-    () => computeSessionTimes(eventGroups, activeRun?.startedAt, isRunCompleted),
-    [eventGroups, activeRun?.startedAt, isRunCompleted],
+    () => matchTurnsToGroups(eventGroups, turns, activeRun?.startedAt, isRunCompleted),
+    [eventGroups, turns, activeRun?.startedAt, isRunCompleted],
   );
 
   // Fork handler: forks from the current run with a default prompt

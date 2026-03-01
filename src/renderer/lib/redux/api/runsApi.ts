@@ -155,6 +155,37 @@ export interface UpdateRunCommandPayload {
   metadata?: Record<string, unknown>;
 }
 
+export type RunTurnStatus = "active" | "completed";
+
+export interface ModelUsageEntry {
+  costUSD: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadInputTokens: number;
+  cacheCreationInputTokens: number;
+}
+
+export interface RunTurn {
+  id: number;
+  runId: string;
+  turnIndex: number;
+  promptContent: string | null;
+  responseContent: string | null;
+  startedAt: number | null;
+  endedAt: number | null;
+  elapsedMs: number | null;
+  status: RunTurnStatus;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheReadTokens: number | null;
+  cacheWriteTokens: number | null;
+  costMicros: number | null;
+  model: string | null;
+  modelUsage: Record<string, ModelUsageEntry> | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: number;
+}
+
 export const runsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getRuns: builder.query<Run[], number | void>({
@@ -465,6 +496,18 @@ export const runsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    getRunTurns: builder.query<RunTurn[], string>({
+      query: (runId) => ({
+        handler: "runTurns:getByRun",
+        args: [runId],
+      }),
+      transformResponse: (response: { success: boolean; data: RunTurn[] }) =>
+        response.data,
+      providesTags: (_result, _error, runId) => [
+        { type: "RunTurns", id: runId },
+      ],
+    }),
+
   }),
 });
 
@@ -503,4 +546,6 @@ export const {
   useStartRunCommandMutation,
   useCompleteRunCommandMutation,
   useRemoveRunCommandMutation,
+  useGetRunTurnsQuery,
+  useLazyGetRunTurnsQuery,
 } = runsApi;

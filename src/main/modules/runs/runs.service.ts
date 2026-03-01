@@ -36,8 +36,9 @@ import type {
   ForkRunPayload,
   ForkRunResponse,
   RunDetailsResponse,
+  RunTurnResponse,
 } from "./runs.dto";
-import { statsRepo } from "../stats/stats.repo";
+import type { WorkRunUsage } from "../providers/adapters/adapter.types";
 import { createHash } from "crypto";
 import fs from "fs";
 import path from "path";
@@ -47,6 +48,10 @@ const runBaseRefs = new Map<string, string>();
 
 // In-memory map: runId -> powerSaveBlocker id
 const sleepBlockers = new Map<string, number>();
+
+// In-memory maps for turn tracking
+const activeTurnIds = new Map<string, number>(); // runId → active turn DB id
+const turnCounters = new Map<string, number>(); // runId → last turnIndex
 
 async function acquireSleepBlocker(runId: string): Promise<void> {
   const settings = await appSettingsRepo.findById("default");
@@ -109,6 +114,84 @@ async function captureBaseRef(runId: string, rootPath: string): Promise<void> {
   } catch {
     // Not a git repo or git error – ignore
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Turn Tracking Helpers
+// ─────────────────────────────────────────────────────────────
+
+async function createInitialTurn(runId: string, promptContent?: string): Promise<void> {
+  try {
+    const turnIndex = 0;
+    const id = await runsRepo.insertTurn({
+      runId,
+      turnIndex,
+      promptContent,
+      startedAt: new Date(),
+    });
+    activeTurnIds.set(runId, id);
+    turnCounters.set(runId, turnIndex);
+  } catch (err) {
+    console.error(`[RunsService] Failed to create initial turn for ${runId}:`, err);
+  }
+}
+
+async function closeActiveTurn(runId: string, usage?: WorkRunUsage): Promise<void> {
+  const turnId = activeTurnIds.get(runId);
+  if (turnId === undefined) return;
+
+  try {
+    const now = new Date();
+    // Find the turn to compute elapsed
+    const turns = await runsRepo.findTurnsByRun(runId);
+    const activeTurn = turns.find((t) => t.id === turnId);
+    const elapsedMs = activeTurn?.startedAt
+      ? now.getTime() - new Date(activeTurn.startedAt).getTime()
+      : undefined;
+
+    await runsRepo.updateTurn(turnId, {
+      endedAt: now,
+      elapsedMs,
+      status: "completed",
+      inputTokens: usage?.inputTokens,
+      outputTokens: usage?.outputTokens,
+      cacheReadTokens: usage?.cacheReadTokens,
+      cacheWriteTokens: usage?.cacheWriteTokens,
+      costMicros: usage?.totalCostUsd
+        ? Math.round(usage.totalCostUsd * 1_000_000)
+        : undefined,
+      model: usage?.model,
+      modelUsage: usage?.modelUsage,
+    });
+
+    activeTurnIds.delete(runId);
+  } catch (err) {
+    console.error(`[RunsService] Failed to close active turn for ${runId}:`, err);
+  }
+}
+
+async function startNewTurn(runId: string, promptContent?: string): Promise<void> {
+  // Close current active turn without usage (usage comes at completion)
+  await closeActiveTurn(runId);
+
+  try {
+    const nextIndex = (turnCounters.get(runId) ?? -1) + 1;
+    const id = await runsRepo.insertTurn({
+      runId,
+      turnIndex: nextIndex,
+      promptContent,
+      startedAt: new Date(),
+    });
+    activeTurnIds.set(runId, id);
+    turnCounters.set(runId, nextIndex);
+  } catch (err) {
+    console.error(`[RunsService] Failed to start new turn for ${runId}:`, err);
+  }
+}
+
+function cleanupTurnState(runId: string): void {
+  activeTurnIds.delete(runId);
+  turnCounters.delete(runId);
 }
 
 /**
@@ -599,11 +682,12 @@ export const runsService = {
         return { success: false, error: "Run not found" };
       }
 
-      const [context, artifacts, commands, toolCalls] = await Promise.all([
+      const [context, artifacts, commands, toolCalls, turns] = await Promise.all([
         runsRepo.findContextByRun(runId),
         runsRepo.findArtifactsByRun(runId),
         runsRepo.findCommandsByRun(runId),
         runsRepo.findToolCallsByRun(runId),
+        runsRepo.findTurnsByRun(runId),
       ]);
 
       return {
@@ -614,6 +698,7 @@ export const runsService = {
           artifacts,
           commands,
           toolCalls,
+          turns,
         },
       };
     } catch (error) {
@@ -710,10 +795,13 @@ export const runsService = {
       // Track tool calls for updating when completed
       const pendingToolCalls = new Map<string, number>();
 
-      // 6. Acquire sleep blocker if enabled
+      // 6. Create initial turn
+      await createInitialTurn(runId, payload.goal);
+
+      // 7. Acquire sleep blocker if enabled
       await acquireSleepBlocker(runId);
 
-      // 7. Start run with event handler (runs in background)
+      // 8. Start run with event handler (runs in background)
       const runPromise = adapter.startRun(
         {
           runId,
@@ -764,32 +852,14 @@ export const runsService = {
             stopReason: result.stopReason ?? null,
           });
 
-          // Persist run usage data
-          if (result.usage) {
-            try {
-              await statsRepo.insertRunUsage({
-                runId,
-                totalCostMicros: result.usage.totalCostUsd
-                  ? Math.round(result.usage.totalCostUsd * 1_000_000)
-                  : null,
-                durationMs: result.usage.durationMs ?? null,
-                numTurns: result.usage.numTurns ?? null,
-                inputTokens: result.usage.inputTokens ?? null,
-                outputTokens: result.usage.outputTokens ?? null,
-                providerId: payload.providerId,
-                model: payload.model ?? null,
-              });
-            } catch (err) {
-              console.error(`[RunsService] Failed to persist run usage for ${runId}:`, err);
-            }
-          }
-
           // Persist git diff on success
           if (finalStatus === "succeeded") {
             await persistRunDiff(runId, workspace.id, workspace.rootPath);
           } else {
             runBaseRefs.delete(runId);
           }
+          await closeActiveTurn(runId, result.usage);
+          cleanupTurnState(runId);
           sendRunNotification(runId, finalStatus);
           releaseSleepBlocker(runId);
         })
@@ -806,6 +876,8 @@ export const runsService = {
             lastError: errorMessage,
           });
 
+          await closeActiveTurn(runId);
+          cleanupTurnState(runId);
           sendRunNotification(runId, "failed");
           releaseSleepBlocker(runId);
         });
@@ -970,6 +1042,23 @@ export const runsService = {
           contentHash: event.content ? hashContent(event.content) : undefined,
           metadata: event.metadata,
         });
+
+        // Turn tracking: new user-prompt → start new turn
+        const artifactKind = (event.metadata as Record<string, unknown> | undefined)?.kind;
+        if (artifactKind === "user-prompt") {
+          await startNewTurn(runId, event.content);
+        }
+        // Turn tracking: result → append response content
+        if (artifactKind === "result" && event.content) {
+          const turnId = activeTurnIds.get(runId);
+          if (turnId !== undefined) {
+            try {
+              await runsRepo.appendResponseContent(turnId, event.content);
+            } catch (err) {
+              console.error(`[RunsService] Failed to append response for turn ${turnId}:`, err);
+            }
+          }
+        }
         break;
       }
 
@@ -1019,6 +1108,8 @@ export const runsService = {
         lastError: "Aborted by user",
       });
 
+      await closeActiveTurn(runId);
+      cleanupTurnState(runId);
       releaseSleepBlocker(runId);
 
       return { success: true };
@@ -1142,6 +1233,12 @@ export const runsService = {
         await captureBaseRef(runId, workspace.rootPath);
       }
 
+      // Recover turn counter from existing turns and start new turn
+      const existingTurns = await runsRepo.findTurnsByRun(runId);
+      const maxIndex = existingTurns.reduce((max, t) => Math.max(max, t.turnIndex), -1);
+      turnCounters.set(runId, maxIndex);
+      await startNewTurn(runId, message);
+
       // 8. Add any additional context
       if (additionalContext && additionalContext.length > 0) {
         for (const ctx of additionalContext) {
@@ -1209,26 +1306,6 @@ export const runsService = {
             stopReason: result.stopReason ?? null,
           });
 
-          // Persist run usage data
-          if (result.usage) {
-            try {
-              await statsRepo.insertRunUsage({
-                runId,
-                totalCostMicros: result.usage.totalCostUsd
-                  ? Math.round(result.usage.totalCostUsd * 1_000_000)
-                  : null,
-                durationMs: result.usage.durationMs ?? null,
-                numTurns: result.usage.numTurns ?? null,
-                inputTokens: result.usage.inputTokens ?? null,
-                outputTokens: result.usage.outputTokens ?? null,
-                providerId: run.providerId,
-                model: run.model ?? null,
-              });
-            } catch (err) {
-              console.error(`[RunsService] Failed to persist run usage for ${runId}:`, err);
-            }
-          }
-
           // Persist git diff on success
           if (finalStatus === "succeeded" && workspace) {
             await persistRunDiff(runId, workspace.id, workspace.rootPath);
@@ -1240,6 +1317,8 @@ export const runsService = {
             `[RunsService] Continued run ${runId} completed with status: ${finalStatus}`,
           );
 
+          await closeActiveTurn(runId, result.usage);
+          cleanupTurnState(runId);
           sendRunNotification(runId, finalStatus);
           releaseSleepBlocker(runId);
         })
@@ -1259,6 +1338,8 @@ export const runsService = {
             lastError: errorMessage,
           });
 
+          await closeActiveTurn(runId);
+          cleanupTurnState(runId);
           sendRunNotification(runId, "failed");
           releaseSleepBlocker(runId);
         });
@@ -1270,6 +1351,8 @@ export const runsService = {
       console.error(`[RunsService] Failed to continue run:`, errorMessage);
 
       runBaseRefs.delete(runId);
+      await closeActiveTurn(runId);
+      cleanupTurnState(runId);
       releaseSleepBlocker(runId);
 
       // Try to reset run status if it was updated
@@ -1375,6 +1458,9 @@ export const runsService = {
       // Track tool calls for updating when completed
       const pendingToolCalls = new Map<string, number>();
 
+      // Create initial turn for forked run
+      await createInitialTurn(newRunId, message);
+
       // 8. Acquire sleep blocker
       await acquireSleepBlocker(newRunId);
 
@@ -1431,26 +1517,6 @@ export const runsService = {
             stopReason: result.stopReason ?? null,
           });
 
-          // Persist run usage data
-          if (result.usage) {
-            try {
-              await statsRepo.insertRunUsage({
-                runId: newRunId,
-                totalCostMicros: result.usage.totalCostUsd
-                  ? Math.round(result.usage.totalCostUsd * 1_000_000)
-                  : null,
-                durationMs: result.usage.durationMs ?? null,
-                numTurns: result.usage.numTurns ?? null,
-                inputTokens: result.usage.inputTokens ?? null,
-                outputTokens: result.usage.outputTokens ?? null,
-                providerId: sourceRun.providerId,
-                model: sourceRun.model ?? null,
-              });
-            } catch (err) {
-              console.error(`[RunsService] Failed to persist run usage for forked run ${newRunId}:`, err);
-            }
-          }
-
           // Persist git diff on success
           if (finalStatus === "succeeded" && workspace) {
             await persistRunDiff(newRunId, workspace.id, workspace.rootPath);
@@ -1462,6 +1528,8 @@ export const runsService = {
             `[RunsService] Forked run ${newRunId} (from ${sourceRunId}) completed with status: ${finalStatus}`,
           );
 
+          await closeActiveTurn(newRunId, result.usage);
+          cleanupTurnState(newRunId);
           sendRunNotification(newRunId, finalStatus);
           releaseSleepBlocker(newRunId);
         })
@@ -1481,6 +1549,8 @@ export const runsService = {
             lastError: errorMessage,
           });
 
+          await closeActiveTurn(newRunId);
+          cleanupTurnState(newRunId);
           sendRunNotification(newRunId, "failed");
           releaseSleepBlocker(newRunId);
         });
@@ -1492,6 +1562,8 @@ export const runsService = {
       console.error(`[RunsService] Failed to fork run:`, errorMessage);
 
       runBaseRefs.delete(newRunId);
+      await closeActiveTurn(newRunId);
+      cleanupTurnState(newRunId);
       releaseSleepBlocker(newRunId);
 
       // Try to reset run status
@@ -1506,6 +1578,21 @@ export const runsService = {
       }
 
       return { success: false, error: errorMessage };
+    }
+  },
+
+  /**
+   * Get turns for a run
+   */
+  async getTurnsByRun(
+    runId: string,
+  ): Promise<ServiceResponse<RunTurnResponse[]>> {
+    try {
+      const turns = await runsRepo.findTurnsByRun(runId);
+      return { success: true, data: turns };
+    } catch (error) {
+      console.error(`[RunsService] Failed to get turns for run ${runId}:`, error);
+      return { success: false, error: "Failed to get run turns" };
     }
   },
 

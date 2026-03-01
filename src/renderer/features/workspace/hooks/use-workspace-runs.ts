@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { Run, RunEvent } from "../types";
+import type { RunTurn } from "@/lib/redux/api";
 import { toast } from "@/components/ui/toast";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { runsApi, workspacesApi, reviewsApi, reviewFindingsApi } from "@/lib/redux/api";
@@ -14,6 +15,7 @@ export function useWorkspaceRuns(
   const [runs, setRuns] = useState<Run[]>([]);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [runEvents, setRunEvents] = useState<Record<string, RunEvent[]>>({});
+  const [runTurns, setRunTurns] = useState<Record<string, RunTurn[]>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dispatch = useAppDispatch();
@@ -27,6 +29,7 @@ export function useWorkspaceRuns(
     setRuns([]);
     setActiveRunId(null);
     setRunEvents({});
+    setRunTurns({});
   }, []);
 
   /** Wraps async run operations with loading state, account fetch, and error handling */
@@ -70,9 +73,10 @@ export function useWorkspaceRuns(
 
   const loadRunDetails = useCallback(async (runId: string) => {
     try {
-      const [artifactsRes, toolCallsRes] = await Promise.all([
+      const [artifactsRes, toolCallsRes, turnsRes] = await Promise.all([
         window.api.runArtifacts.getByRun(runId),
         window.api.runs.getToolCalls(runId),
+        window.api.runTurns.getByRun(runId),
       ]);
 
       const events: RunEvent[] = [];
@@ -90,6 +94,10 @@ export function useWorkspaceRuns(
 
       events.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
       setRunEvents((prev) => ({ ...prev, [runId]: events }));
+
+      if (turnsRes.success && turnsRes.data) {
+        setRunTurns((prev) => ({ ...prev, [runId]: turnsRes.data }));
+      }
     } catch (err) {
       console.error("Failed to load run details:", err);
     }
@@ -330,6 +338,10 @@ export function useWorkspaceRuns(
   );
 
   const activeRun = runs.find((r) => r.id === activeRunId);
+  const currentTurns = useMemo(
+    () => (activeRunId ? runTurns[activeRunId] || [] : []),
+    [activeRunId, runTurns],
+  );
 
   return {
     runs,
@@ -337,6 +349,7 @@ export function useWorkspaceRuns(
     activeRun,
     runEvents,
     currentEvents,
+    currentTurns,
     isLoading,
     error,
     eventsEndRef,

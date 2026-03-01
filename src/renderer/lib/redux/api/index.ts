@@ -377,6 +377,8 @@ export {
   useStartRunCommandMutation,
   useCompleteRunCommandMutation,
   useRemoveRunCommandMutation,
+  useGetRunTurnsQuery,
+  useLazyGetRunTurnsQuery,
 } from "./runsApi";
 export type {
   Run,
@@ -393,6 +395,9 @@ export type {
   RunCommandStatus,
   CreateRunCommandPayload,
   UpdateRunCommandPayload,
+  RunTurn,
+  RunTurnStatus,
+  ModelUsageEntry,
 } from "./runsApi";
 
 export {

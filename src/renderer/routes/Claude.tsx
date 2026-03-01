@@ -42,6 +42,7 @@ export default function ClaudePage() {
             fileName={ws.selectedFile?.name}
             issueTabs={ws.openIssueTabs}
             noteTabs={ws.openNoteTabs}
+            turns={ws.currentTurns}
             variant="claude"
             onSelectEditorTab={ws.handleSelectEditorTab}
             onSelectRunTab={ws.handleSelectRunTab}

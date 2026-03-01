@@ -171,6 +171,17 @@ export interface WorkRunArtifactSummary {
 export type StopReason = "end_turn" | "max_tokens" | "stop_sequence" | "refusal" | "tool_use" | null;
 
 /**
+ * Per-model token/cost breakdown from SDK modelUsage
+ */
+export interface ModelUsageEntry {
+  costUSD: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadInputTokens: number;
+  cacheCreationInputTokens: number;
+}
+
+/**
  * Usage data captured from a completed work run
  */
 export interface WorkRunUsage {
@@ -179,6 +190,10 @@ export interface WorkRunUsage {
   numTurns?: number;
   inputTokens?: number;
   outputTokens?: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
+  model?: string;
+  modelUsage?: Record<string, ModelUsageEntry>;
 }
 
 /**

@@ -85,6 +85,20 @@
       "when": 1772273148046,
       "tag": "0011_foamy_sunspot",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1772402581060,
+      "tag": "0012_loud_crystal",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1772404468358,
+      "tag": "0013_sloppy_rhino",
+      "breakpoints": true
     }
   ]
 }

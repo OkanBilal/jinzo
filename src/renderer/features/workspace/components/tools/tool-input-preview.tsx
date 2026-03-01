@@ -8,7 +8,7 @@ export function ToolInputPreview({ toolName, toolInput }: ToolInputPreviewProps)
 
   const renderer = RENDERERS[toolName] ?? renderFallback;
   return (
-    <div className="text-xs bg-primary-100/30 dark:bg-primary/5 rounded-lg px-3 py-3 overflow-x-auto max-h-48 space-y-2">
+    <div className="text-xs bg-primary-100/30 dark:bg-primary/5 rounded-lg  overflow-x-auto max-h-48 space-y-2">
       {renderer(toolInput)}
     </div>
   );
@@ -39,7 +39,7 @@ function Label({ children }: { children: React.ReactNode }) {
 
 function CodeBlock({ children }: { children: React.ReactNode }) {
   return (
-    <pre className="text-primary-300 dark:text-primary-400 whitespace-pre-wrap break-all bg-primary-100/40 dark:bg-primary/5 rounded px-2 py-1.5 mt-1">
+    <pre className="text-primary-300 dark:text-primary-400 whitespace-pre-wrap break-all px-3 py-2 mt-1">
       {children}
     </pre>
   );
@@ -57,7 +57,7 @@ const RENDERERS: Record<string, Renderer> = {
           {str(input.description)}
         </div>
       )}
-      <CodeBlock>{str(input.command, 500)}</CodeBlock>
+      <CodeBlock>{str(input.command, 1200)}</CodeBlock>
       {input.timeout && (
         <div className="text-primary-500 text-xxs">
           timeout: {String(input.timeout)}ms
@@ -83,7 +83,7 @@ const RENDERERS: Record<string, Renderer> = {
 
   Write: (input) => (
     <>
-      <div>
+      <div className="bg-primary/5 px-3 py-2">
         <Label>file</Label> <Mono>{str(input.file_path)}</Mono>
       </div>
       {input.content && (

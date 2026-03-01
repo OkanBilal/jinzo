@@ -1,0 +1,1 @@
+ALTER TABLE `run_turns` ADD `model_usage` text;

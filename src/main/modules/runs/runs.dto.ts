@@ -198,6 +198,62 @@ export interface ToolCallResponse {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Run Turn DTOs
+// ─────────────────────────────────────────────────────────────
+export type RunTurnStatus = "active" | "completed";
+
+export interface CreateRunTurnPayload {
+  runId: string;
+  turnIndex: number;
+  promptContent?: string;
+  startedAt?: Date;
+}
+
+export interface ModelUsageEntry {
+  costUSD: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadInputTokens: number;
+  cacheCreationInputTokens: number;
+}
+
+export interface UpdateRunTurnPayload {
+  responseContent?: string;
+  endedAt?: Date;
+  elapsedMs?: number;
+  status?: RunTurnStatus;
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
+  costMicros?: number;
+  model?: string;
+  modelUsage?: Record<string, ModelUsageEntry>;
+  metadata?: Record<string, unknown>;
+}
+
+export interface RunTurnResponse {
+  id: number;
+  runId: string;
+  turnIndex: number;
+  promptContent: string | null;
+  responseContent: string | null;
+  startedAt: Date | null;
+  endedAt: Date | null;
+  elapsedMs: number | null;
+  status: RunTurnStatus;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheReadTokens: number | null;
+  cacheWriteTokens: number | null;
+  costMicros: number | null;
+  model: string | null;
+  modelUsage: Record<string, ModelUsageEntry> | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: Date;
+}
+
+// ─────────────────────────────────────────────────────────────
 // File Attachment Types
 // ─────────────────────────────────────────────────────────────
 
@@ -292,6 +348,7 @@ export interface RunDetailsResponse {
   artifacts: RunArtifactResponse[];
   commands: RunCommandResponse[];
   toolCalls: ToolCallResponse[];
+  turns: RunTurnResponse[];
 }
 
 // ─────────────────────────────────────────────────────────────

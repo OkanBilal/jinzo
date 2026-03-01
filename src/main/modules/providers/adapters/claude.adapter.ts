@@ -62,6 +62,7 @@ const DEFAULT_ALLOWED_TOOLS = [
   "WebSearch",
   "NotebookEdit",
   "Skill",
+  "Agent",
   "mcp__jinzo__GetWorkspaceDiff",
   "mcp__jinzo__SaveReview",
   "mcp__jinzo__SaveFinding",
@@ -217,6 +218,14 @@ interface SDKUserMessage {
   parent_tool_use_id: string | null;
 }
 
+interface SDKModelUsage {
+  costUSD: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadInputTokens: number;
+  cacheCreationInputTokens: number;
+}
+
 interface SDKResultMessage {
   type: "result";
   subtype:
@@ -240,6 +249,7 @@ interface SDKResultMessage {
     | "refusal"
     | "tool_use"
     | null;
+  modelUsage?: Record<string, SDKModelUsage>;
 }
 
 interface SDKSystemMessage {
@@ -1545,10 +1555,30 @@ export function createClaudeAdapter(
                 if (resultMsg.stop_reason !== undefined) {
                   lastStopReason = resultMsg.stop_reason;
                 }
+
+                // Aggregate token counts across all models
+                let inputTokens = 0, outputTokens = 0, cacheRead = 0, cacheWrite = 0;
+                let primaryModel: string | undefined;
+                if (resultMsg.modelUsage) {
+                  for (const [modelName, usage] of Object.entries(resultMsg.modelUsage)) {
+                    inputTokens += usage.inputTokens;
+                    outputTokens += usage.outputTokens;
+                    cacheRead += usage.cacheReadInputTokens;
+                    cacheWrite += usage.cacheCreationInputTokens;
+                    if (!primaryModel) primaryModel = modelName;
+                  }
+                }
+
                 lastUsage = {
                   totalCostUsd: resultMsg.total_cost_usd,
                   durationMs: resultMsg.duration_ms,
                   numTurns: resultMsg.num_turns,
+                  inputTokens: inputTokens || undefined,
+                  outputTokens: outputTokens || undefined,
+                  cacheReadTokens: cacheRead || undefined,
+                  cacheWriteTokens: cacheWrite || undefined,
+                  model: primaryModel,
+                  modelUsage: resultMsg.modelUsage,
                 };
               }
 
@@ -1865,10 +1895,30 @@ export function createClaudeAdapter(
                 if (resultMsg.stop_reason !== undefined) {
                   lastStopReason = resultMsg.stop_reason;
                 }
+
+                // Aggregate token counts across all models
+                let inputTokens = 0, outputTokens = 0, cacheRead = 0, cacheWrite = 0;
+                let primaryModel: string | undefined;
+                if (resultMsg.modelUsage) {
+                  for (const [modelName, usage] of Object.entries(resultMsg.modelUsage)) {
+                    inputTokens += usage.inputTokens;
+                    outputTokens += usage.outputTokens;
+                    cacheRead += usage.cacheReadInputTokens;
+                    cacheWrite += usage.cacheCreationInputTokens;
+                    if (!primaryModel) primaryModel = modelName;
+                  }
+                }
+
                 lastUsage = {
                   totalCostUsd: resultMsg.total_cost_usd,
                   durationMs: resultMsg.duration_ms,
                   numTurns: resultMsg.num_turns,
+                  inputTokens: inputTokens || undefined,
+                  outputTokens: outputTokens || undefined,
+                  cacheReadTokens: cacheRead || undefined,
+                  cacheWriteTokens: cacheWrite || undefined,
+                  model: primaryModel,
+                  modelUsage: resultMsg.modelUsage,
                 };
               }
 
@@ -2195,10 +2245,30 @@ export function createClaudeAdapter(
                 if (resultMsg.stop_reason !== undefined) {
                   lastStopReason = resultMsg.stop_reason;
                 }
+
+                // Aggregate token counts across all models
+                let inputTokens = 0, outputTokens = 0, cacheRead = 0, cacheWrite = 0;
+                let primaryModel: string | undefined;
+                if (resultMsg.modelUsage) {
+                  for (const [modelName, usage] of Object.entries(resultMsg.modelUsage)) {
+                    inputTokens += usage.inputTokens;
+                    outputTokens += usage.outputTokens;
+                    cacheRead += usage.cacheReadInputTokens;
+                    cacheWrite += usage.cacheCreationInputTokens;
+                    if (!primaryModel) primaryModel = modelName;
+                  }
+                }
+
                 lastUsage = {
                   totalCostUsd: resultMsg.total_cost_usd,
                   durationMs: resultMsg.duration_ms,
                   numTurns: resultMsg.num_turns,
+                  inputTokens: inputTokens || undefined,
+                  outputTokens: outputTokens || undefined,
+                  cacheReadTokens: cacheRead || undefined,
+                  cacheWriteTokens: cacheWrite || undefined,
+                  model: primaryModel,
+                  modelUsage: resultMsg.modelUsage,
                 };
               }
 

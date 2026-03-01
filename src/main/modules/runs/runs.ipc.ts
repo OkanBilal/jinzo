@@ -62,6 +62,9 @@ const CHANNELS = {
   // Tool Calls
   TOOL_CALLS_GET_BY_RUN: "runToolCalls:getByRun",
 
+  // Run Turns
+  TURNS_GET_BY_RUN: "runTurns:getByRun",
+
   // Tool Approval (interactive)
   RUNS_TOOL_APPROVAL_RESPONSE: "runs:toolApprovalResponse",
 } as const;
@@ -211,6 +214,11 @@ export function registerRunsIpc(): void {
   // Tool Calls
   ipcMain.handle(CHANNELS.TOOL_CALLS_GET_BY_RUN, async (_, runId: string) => {
     return runsController.getToolCallsByRun(runId);
+  });
+
+  // Run Turns
+  ipcMain.handle(CHANNELS.TURNS_GET_BY_RUN, async (_, runId: string) => {
+    return runsController.getTurnsByRun(runId);
   });
 
   // Tool Approval (interactive)

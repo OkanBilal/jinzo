@@ -77,4 +77,7 @@ export const runsController = {
 
   // Delete run session
   deleteRunSession: (runId: string) => runsService.deleteRunSession(runId),
+
+  // Run Turns
+  getTurnsByRun: (runId: string) => runsService.getTurnsByRun(runId),
 };

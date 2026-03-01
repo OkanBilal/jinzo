@@ -572,6 +572,10 @@ const api = {
       ipcRenderer.invoke("runCommands:complete", id, exitCode, stdout, stderr),
     remove: (id: number) => ipcRenderer.invoke("runCommands:remove", id),
   },
+  // Run turns operations
+  runTurns: {
+    getByRun: (runId: string) => ipcRenderer.invoke("runTurns:getByRun", runId),
+  },
   // File explorer operations
   fileExplorer: {
     readDirectory: (options: {

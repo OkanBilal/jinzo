@@ -349,6 +349,49 @@ export const runUsage = sqliteTable(
 );
 
 /* -----------------------------
+   RUN TURNS (per-turn tracking with usage)
+------------------------------ */
+
+export const runTurns = sqliteTable(
+  "run_turns",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    runId: text("run_id")
+      .notNull()
+      .references(() => runs.id, { onDelete: "cascade" }),
+    turnIndex: integer("turn_index").notNull(),
+    promptContent: text("prompt_content"),
+    responseContent: text("response_content"),
+    startedAt: integer("started_at", { mode: "timestamp" }),
+    endedAt: integer("ended_at", { mode: "timestamp" }),
+    elapsedMs: integer("elapsed_ms"),
+    status: text("status", { enum: ["active", "completed"] })
+      .notNull()
+      .default("active"),
+    // Usage fields
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    cacheReadTokens: integer("cache_read_tokens"),
+    cacheWriteTokens: integer("cache_write_tokens"),
+    costMicros: integer("cost_micros"), // USD * 1_000_000
+    model: text("model"),
+    modelUsage: text("model_usage"), // JSON: Record<modelName, { costUSD, inputTokens, outputTokens, cacheReadInputTokens, cacheCreationInputTokens }>
+    metadata: text("metadata"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_run_turns_run").on(t.runId),
+    index("idx_run_turns_run_index").on(t.runId, t.turnIndex),
+    check(
+      "check_run_turns_metadata_json",
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
    RUN CONTEXT (what the run looked at / was given)
 ------------------------------ */
 

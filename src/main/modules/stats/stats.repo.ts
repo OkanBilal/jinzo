@@ -1,7 +1,7 @@
 import { sql, eq, count } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import {
-  runUsage,
+  runTurns,
   runs,
   projects,
   workspaces,
@@ -9,7 +9,6 @@ import {
   workspaceDiffs,
 } from "../../db/schema";
 import type {
-  InsertRunUsagePayload,
   DashboardSummary,
   DailyActivity,
   HourDistribution,
@@ -26,37 +25,12 @@ function providerWhere(filter: ProviderFilter) {
   return sql`${runs.providerId} = ${filter}`;
 }
 
-function providerWhereUsage(filter: ProviderFilter) {
+function providerWhereTurns(filter: ProviderFilter) {
   if (filter === "all") return sql`1=1`;
-  return sql`${runUsage.providerId} = ${filter}`;
+  return sql`r.provider_id = ${filter}`;
 }
 
 export const statsRepo = {
-  async insertRunUsage(payload: InsertRunUsagePayload): Promise<void> {
-    const db = getDb();
-    await db.insert(runUsage).values({
-      runId: payload.runId,
-      totalCostMicros: payload.totalCostMicros ?? null,
-      durationMs: payload.durationMs ?? null,
-      numTurns: payload.numTurns ?? null,
-      inputTokens: payload.inputTokens ?? null,
-      outputTokens: payload.outputTokens ?? null,
-      providerId: payload.providerId ?? null,
-      model: payload.model ?? null,
-    }).onConflictDoUpdate({
-      target: runUsage.runId,
-      set: {
-        totalCostMicros: payload.totalCostMicros ?? null,
-        durationMs: payload.durationMs ?? null,
-        numTurns: payload.numTurns ?? null,
-        inputTokens: payload.inputTokens ?? null,
-        outputTokens: payload.outputTokens ?? null,
-        providerId: payload.providerId ?? null,
-        model: payload.model ?? null,
-      },
-    });
-  },
-
   async getSummary(filter: ProviderFilter = "all"): Promise<DashboardSummary> {
     const db = getDb();
 
@@ -80,10 +54,13 @@ export const statsRepo = {
       SELECT COUNT(*) AS count FROM ${runs} WHERE ${pw}
     `);
 
-    const puw = providerWhereUsage(filter);
+    // Sum cost from all completed turns
+    const ptw = providerWhereTurns(filter);
     const [costResult] = await db.all<{ total: number }>(sql`
-      SELECT COALESCE(SUM(${runUsage.totalCostMicros}), 0) AS total
-      FROM ${runUsage} WHERE ${puw}
+      SELECT COALESCE(SUM(${runTurns.costMicros}), 0) AS total
+      FROM ${runTurns}
+      INNER JOIN ${runs} r ON r.id = ${runTurns.runId}
+      WHERE ${runTurns.status} = 'completed' AND ${ptw}
     `);
 
     return {
@@ -152,27 +129,36 @@ export const statsRepo = {
 
   async getCostByModel(filter: ProviderFilter = "all"): Promise<CostByModel[]> {
     const db = getDb();
-    const puw = providerWhereUsage(filter);
+
+    // Extract per-model costs from runTurns.model_usage JSON
+    // Each turn has model_usage: { "model-name": { costUSD, ... }, ... }
+    const ptw = providerWhereTurns(filter);
     const rows = await db.all<{
-      model: string;
+      model_name: string;
       cost_micros: number;
-      runs: number;
+      turn_count: number;
     }>(sql`
       SELECT
-        COALESCE(${runUsage.model}, 'unknown') AS model,
-        COALESCE(SUM(${runUsage.totalCostMicros}), 0) AS cost_micros,
-        COUNT(*) AS runs
-      FROM ${runUsage}
-      WHERE ${runUsage.totalCostMicros} > 0 AND ${puw}
-      GROUP BY model
+        j.key AS model_name,
+        COALESCE(SUM(CAST(json_extract(j.value, '$.costUSD') * 1000000 AS INTEGER)), 0) AS cost_micros,
+        COUNT(*) AS turn_count
+      FROM ${runTurns} t
+      INNER JOIN ${runs} r ON r.id = t.run_id
+      , json_each(t.model_usage) j
+      WHERE t.status = 'completed'
+        AND t.model_usage IS NOT NULL
+        AND ${ptw}
+      GROUP BY j.key
       ORDER BY cost_micros DESC
     `);
 
-    return rows.map((r) => ({
-      model: r.model,
-      costUsd: r.cost_micros / 1_000_000,
-      runs: r.runs,
-    }));
+    return rows
+      .map((r) => ({
+        model: r.model_name,
+        costUsd: r.cost_micros / 1_000_000,
+        runs: r.turn_count,
+      }))
+      .filter((r) => r.costUsd > 0);
   },
 
   async getToolUsage(limit: number = 10, filter: ProviderFilter = "all"): Promise<ToolUsageItem[]> {
@@ -274,7 +260,7 @@ export const statsRepo = {
       model: string | null;
       project_name: string | null;
       duration_ms: number | null;
-      total_cost_micros: number | null;
+      cost_micros: number | null;
       created_at: number;
     }>(sql`
       SELECT
@@ -285,13 +271,20 @@ export const statsRepo = {
         r.provider_id,
         r.model,
         p.name AS project_name,
-        ru.duration_ms,
-        ru.total_cost_micros,
+        tc.duration_ms,
+        tc.cost_micros,
         r.created_at
       FROM ${runs} r
       LEFT JOIN ${workspaces} w ON w.id = r.workspace_id
       LEFT JOIN ${projects} p ON p.id = w.project_id
-      LEFT JOIN ${runUsage} ru ON ru.run_id = r.id
+      LEFT JOIN (
+        SELECT ${runTurns.runId} AS run_id,
+               SUM(${runTurns.costMicros}) AS cost_micros,
+               SUM(${runTurns.elapsedMs}) AS duration_ms
+        FROM ${runTurns}
+        WHERE ${runTurns.status} = 'completed'
+        GROUP BY ${runTurns.runId}
+      ) tc ON tc.run_id = r.id
       WHERE ${pw}
       ORDER BY r.created_at DESC
       LIMIT ${limit}
@@ -306,8 +299,7 @@ export const statsRepo = {
       model: r.model,
       projectName: r.project_name,
       durationMs: r.duration_ms,
-      totalCostUsd:
-        r.total_cost_micros != null ? r.total_cost_micros / 1_000_000 : null,
+      totalCostUsd: r.cost_micros != null ? r.cost_micros / 1_000_000 : null,
       createdAt: r.created_at,
     }));
   },

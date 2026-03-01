@@ -124,14 +124,14 @@ export function ToolApprovalDialog({
   // tool_approval mode
   return (
     <div className="mr-auto max-w-160 mb-4">
-      <div className=" space-y-3 bg-primary-50/50 dark:bg-primary/3 rounded-xl p-5 ">
+      <div className=" space-y-3 bg-primary-50/50 dark:bg-primary/3 rounded-2xl p-5 ">
         <div className="flex items-start gap-2">
           <div className="space-y-2 flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-primary-200 dark:text-primary-300 mb-2">
                 Tool approval required
               </span>
-              <span className="px-1.5 py-0.5 mb-2 rounded text-xxs bg-primary-200/10 dark:bg-primary/10 text-primary-300 dark:text-primary-400">
+              <span className="px-1.5 py-0.5 mb-2 rounded-lg text-xxs bg-primary-200/10 dark:bg-primary/10 text-primary-300 dark:text-primary-400">
                 {request.toolName}
               </span>
             </div>
@@ -144,7 +144,7 @@ export function ToolApprovalDialog({
             <div className="flex items-center gap-2 pt-2">
               <Button
                 variant="primary"
-                size="sm"
+                size="xs"
                 className="min-w-16"
                 onClick={handleAllow}
               >
@@ -152,7 +152,7 @@ export function ToolApprovalDialog({
               </Button>
               <Button
                 variant="secondary"
-                size="sm"
+                size="xs"
                 className="min-w-16"
                 onClick={handleDeny}
               >

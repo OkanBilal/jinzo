@@ -2,17 +2,6 @@
 // Stats DTO — Types for the statistics dashboard
 // ─────────────────────────────────────────────────────────────
 
-export interface InsertRunUsagePayload {
-  runId: string;
-  totalCostMicros?: number | null;
-  durationMs?: number | null;
-  numTurns?: number | null;
-  inputTokens?: number | null;
-  outputTokens?: number | null;
-  providerId?: string | null;
-  model?: string | null;
-}
-
 export interface DashboardSummary {
   totalProjects: number;
   runsToday: number;

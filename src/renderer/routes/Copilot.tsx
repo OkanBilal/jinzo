@@ -27,6 +27,7 @@ export default function CopilotPage() {
             fileName={ws.selectedFile?.name}
             issueTabs={ws.openIssueTabs}
             noteTabs={ws.openNoteTabs}
+            turns={ws.currentTurns}
             onSelectEditorTab={ws.handleSelectEditorTab}
             onSelectRunTab={ws.handleSelectRunTab}
             onCloseTab={ws.handleCloseTab}

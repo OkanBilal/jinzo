@@ -1,6 +1,6 @@
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, asc } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { runs, runContext, runArtifacts, runCommands, toolCalls } from "../../db/schema";
+import { runs, runContext, runArtifacts, runCommands, toolCalls, runTurns } from "../../db/schema";
 import type {
   CreateRunPayload,
   UpdateRunPayload,
@@ -15,6 +15,9 @@ import type {
   CreateToolCallPayload,
   UpdateToolCallPayload,
   ToolCallResponse,
+  CreateRunTurnPayload,
+  UpdateRunTurnPayload,
+  RunTurnResponse,
 } from "./runs.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -304,6 +307,80 @@ export const runsRepo = {
 
     await db.update(toolCalls).set(updateData).where(eq(toolCalls.id, id));
   },
+
+  // ─────────────────────────────────────────────────────────────
+  // Run Turn Operations
+  // ─────────────────────────────────────────────────────────────
+  async findTurnsByRun(runId: string): Promise<RunTurnResponse[]> {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(runTurns)
+      .where(eq(runTurns.runId, runId))
+      .orderBy(asc(runTurns.turnIndex));
+    return rows.map(mapTurnRowToResponse);
+  },
+
+  async findActiveTurnByRun(runId: string): Promise<RunTurnResponse | null> {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(runTurns)
+      .where(and(eq(runTurns.runId, runId), eq(runTurns.status, "active")))
+      .orderBy(desc(runTurns.turnIndex))
+      .limit(1);
+    return rows[0] ? mapTurnRowToResponse(rows[0]) : null;
+  },
+
+  async insertTurn(payload: CreateRunTurnPayload): Promise<number> {
+    const db = getDb();
+    const result = await db
+      .insert(runTurns)
+      .values({
+        runId: payload.runId,
+        turnIndex: payload.turnIndex,
+        promptContent: payload.promptContent,
+        startedAt: payload.startedAt ?? new Date(),
+        status: "active",
+      })
+      .returning({ id: runTurns.id });
+    return result[0]?.id ?? 0;
+  },
+
+  async updateTurn(id: number, payload: UpdateRunTurnPayload): Promise<void> {
+    const db = getDb();
+    const updateData: Record<string, unknown> = {};
+
+    if (payload.responseContent !== undefined) updateData.responseContent = payload.responseContent;
+    if (payload.endedAt !== undefined) updateData.endedAt = payload.endedAt;
+    if (payload.elapsedMs !== undefined) updateData.elapsedMs = payload.elapsedMs;
+    if (payload.status !== undefined) updateData.status = payload.status;
+    if (payload.inputTokens !== undefined) updateData.inputTokens = payload.inputTokens;
+    if (payload.outputTokens !== undefined) updateData.outputTokens = payload.outputTokens;
+    if (payload.cacheReadTokens !== undefined) updateData.cacheReadTokens = payload.cacheReadTokens;
+    if (payload.cacheWriteTokens !== undefined) updateData.cacheWriteTokens = payload.cacheWriteTokens;
+    if (payload.costMicros !== undefined) updateData.costMicros = payload.costMicros;
+    if (payload.model !== undefined) updateData.model = payload.model;
+    if (payload.modelUsage !== undefined) updateData.modelUsage = JSON.stringify(payload.modelUsage);
+    if (payload.metadata !== undefined) updateData.metadata = JSON.stringify(payload.metadata);
+
+    await db.update(runTurns).set(updateData).where(eq(runTurns.id, id));
+  },
+
+  async appendResponseContent(id: number, content: string): Promise<void> {
+    const db = getDb();
+    await db
+      .update(runTurns)
+      .set({
+        responseContent: sql`COALESCE(${runTurns.responseContent}, '') || ${content}`,
+      })
+      .where(eq(runTurns.id, id));
+  },
+
+  async deleteTurnsByRun(runId: string): Promise<void> {
+    const db = getDb();
+    await db.delete(runTurns).where(eq(runTurns.runId, runId));
+  },
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -376,6 +453,29 @@ function mapCommandRowToResponse(row: typeof runCommands.$inferSelect): RunComma
     exitCode: row.exitCode,
     stdout: row.stdout,
     stderr: row.stderr,
+    metadata: row.metadata ? JSON.parse(row.metadata) : null,
+    createdAt: row.createdAt,
+  };
+}
+
+function mapTurnRowToResponse(row: typeof runTurns.$inferSelect): RunTurnResponse {
+  return {
+    id: row.id,
+    runId: row.runId,
+    turnIndex: row.turnIndex,
+    promptContent: row.promptContent,
+    responseContent: row.responseContent,
+    startedAt: row.startedAt,
+    endedAt: row.endedAt,
+    elapsedMs: row.elapsedMs,
+    status: row.status,
+    inputTokens: row.inputTokens,
+    outputTokens: row.outputTokens,
+    cacheReadTokens: row.cacheReadTokens,
+    cacheWriteTokens: row.cacheWriteTokens,
+    costMicros: row.costMicros,
+    model: row.model,
+    modelUsage: row.modelUsage ? JSON.parse(row.modelUsage) : null,
     metadata: row.metadata ? JSON.parse(row.metadata) : null,
     createdAt: row.createdAt,
   };
