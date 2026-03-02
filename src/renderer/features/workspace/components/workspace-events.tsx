@@ -477,6 +477,15 @@ export function WorkspaceEvents({
     [eventGroups, turns, activeRun?.startedAt, isRunCompleted],
   );
 
+  // Last session time index — fork button only shown on the last one
+  const lastSessionIndex = useMemo(() => {
+    let last = -1;
+    for (const idx of sessionTimes.keys()) {
+      if (idx > last) last = idx;
+    }
+    return last;
+  }, [sessionTimes]);
+
   // Fork handler: forks from the current run with a default prompt
   const handleFork = useCallback(
     (_responseContent: string) => {
@@ -541,7 +550,7 @@ export function WorkspaceEvents({
                   {sessionTimes.has(index) && (
                     <SessionTimeBar
                       info={sessionTimes.get(index)!}
-                      onFork={isRunCompleted && onForkRun ? handleFork : undefined}
+                      onFork={index === lastSessionIndex && isRunCompleted && onForkRun ? handleFork : undefined}
                     />
                   )}
                 </Fragment>

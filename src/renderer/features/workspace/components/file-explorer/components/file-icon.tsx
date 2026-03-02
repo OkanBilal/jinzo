@@ -11,10 +11,17 @@ import {
   PostcssFileIcon,
   ReactFileIcon,
   TsconfigFileIcon,
+  GoFileIcon,
+  SumFileIcon,
   FolderIcon,
   FolderOpenIcon,
   HtmlFileIcon,
-  CssFileIcon
+  CssFileIcon,
+  JsonFileIcon,
+  ImageFileIcon,
+  EjsFileIcon,
+  IcoFileIcon,
+  SvgFileIcon
 } from "@/components/ui/icons/file-icons";
 
 type FileIconType = ComponentType<SVGProps<SVGSVGElement>>;
@@ -31,6 +38,17 @@ const EXTENSION_ICONS: Record<string, FileIconType> = {
   md: MarkdownFileIcon,
   mdx: MarkdownFileIcon,
   postcss: PostcssFileIcon,
+  go: GoFileIcon,
+  sum: SumFileIcon,
+  mod: SumFileIcon,
+  png: ImageFileIcon,
+  jpg: ImageFileIcon,
+  jpeg: ImageFileIcon,
+  gif: ImageFileIcon,
+  svg: SvgFileIcon,
+  icns: ImageFileIcon,
+  ejs: EjsFileIcon,
+  ico: IcoFileIcon,
 };
 
 const FILENAME_ICONS: Record<string, FileIconType> = {
@@ -63,6 +81,7 @@ const FILENAME_ICONS: Record<string, FileIconType> = {
   "tsconfig.main.json": TsconfigFileIcon,
   "tsconfig.preload.json": TsconfigFileIcon,
   "tsconfig.renderer.json": TsconfigFileIcon,
+  "manifest.json": JsonFileIcon,
 };
 
 const EXTENSION_COLORS: Record<string, string> = {
