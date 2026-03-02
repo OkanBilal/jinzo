@@ -985,7 +985,7 @@ export function createClaudeAdapter(
     };
   }
 
-  function mapSDKMessage(msg: SDKMessage, _runId: string): WorkRunEvent[] {
+  function mapSDKMessage(msg: SDKMessage, _runId: string, context?: { hasAssistantContent?: boolean }): WorkRunEvent[] {
     const events: WorkRunEvent[] = [];
     const ts = Date.now();
 
@@ -1107,8 +1107,20 @@ export function createClaudeAdapter(
       }
 
       case "result": {
-        // Final result message - content is already streamed via assistant.message
         const resultMsg = msg as SDKResultMessage;
+
+        // Emit result content only when no assistant message was streamed
+        // (e.g. slash command output like /cost)
+        if (resultMsg.result && !context?.hasAssistantContent) {
+          events.push({
+            type: "artifact",
+            kind: "report",
+            content: resultMsg.result,
+            metadata: {
+              source: "result.message",
+            },
+          });
+        }
 
         // Emit stop reason log when notable
         if (resultMsg.stop_reason && resultMsg.stop_reason !== "end_turn") {
@@ -1528,10 +1540,19 @@ export function createClaudeAdapter(
 
         try {
           const streamPromise = (async () => {
+            let hasAssistantContent = false;
             for await (const msg of query) {
               const runState = activeRuns.get(runId);
               if (runState?.aborted || timedOut) {
                 break;
+              }
+
+              // Track whether any assistant text content has been streamed
+              if (msg.type === "assistant") {
+                const aMsg = msg as SDKAssistantMessage;
+                if (aMsg.message?.content?.some((b: any) => b.type === "text" && b.text)) {
+                  hasAssistantContent = true;
+                }
               }
 
               // Capture session ID for resume capability
@@ -1583,7 +1604,7 @@ export function createClaudeAdapter(
               }
 
               // Map and emit events
-              const events = mapSDKMessage(msg, runId);
+              const events = mapSDKMessage(msg, runId, { hasAssistantContent });
               for (const event of events) {
                 await onEvent(event);
 
@@ -1883,10 +1904,19 @@ export function createClaudeAdapter(
 
         try {
           const streamPromise = (async () => {
+            let hasAssistantContent = false;
             for await (const msg of query) {
               const runState = activeRuns.get(runId);
               if (runState?.aborted || timedOut) {
                 break;
+              }
+
+              // Track whether any assistant text content has been streamed
+              if (msg.type === "assistant") {
+                const aMsg = msg as SDKAssistantMessage;
+                if (aMsg.message?.content?.some((b: any) => b.type === "text" && b.text)) {
+                  hasAssistantContent = true;
+                }
               }
 
               // Capture stop reason and usage from result messages
@@ -1922,7 +1952,7 @@ export function createClaudeAdapter(
                 };
               }
 
-              const events = mapSDKMessage(msg, runId);
+              const events = mapSDKMessage(msg, runId, { hasAssistantContent });
               for (const event of events) {
                 await onEvent(event);
 
@@ -2218,10 +2248,19 @@ export function createClaudeAdapter(
 
         try {
           const streamPromise = (async () => {
+            let hasAssistantContent = false;
             for await (const msg of query) {
               const runState = activeRuns.get(runId);
               if (runState?.aborted || timedOut) {
                 break;
+              }
+
+              // Track whether any assistant text content has been streamed
+              if (msg.type === "assistant") {
+                const aMsg = msg as SDKAssistantMessage;
+                if (aMsg.message?.content?.some((b: any) => b.type === "text" && b.text)) {
+                  hasAssistantContent = true;
+                }
               }
 
               // Capture the NEW session ID from the forked session
@@ -2273,7 +2312,7 @@ export function createClaudeAdapter(
               }
 
               // Map and emit events
-              const events = mapSDKMessage(msg, runId);
+              const events = mapSDKMessage(msg, runId, { hasAssistantContent });
               for (const event of events) {
                 await onEvent(event);
 

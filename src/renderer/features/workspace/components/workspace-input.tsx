@@ -1,12 +1,15 @@
 import { useReducer, useRef, useEffect, useCallback } from "react";
+import { useDispatch } from "react-redux";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
 import type { FileNode } from "@/features/workspace/components/file-explorer";
 import type { ContextIssue } from "@/lib/redux/slices/workspaceSlice";
+import { addContextFile } from "@/lib/redux/slices/workspaceSlice";
 import type { UploadedFile } from "@/components/ui/input/file-upload-dropdown";
 import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
 import { InputForm } from "@/components/ui/input/input-form";
 import { SlashMenuDropdown } from "@/features/workspace/components/slash-menu-dropdown";
+import { FileMentionDropdown } from "@/features/workspace/components/file-mention-dropdown";
 import { ContextChips } from "./context-chips";
 import { InputToolbar } from "./input-toolbar";
 import { useProviderModels } from "../hooks/use-provider-models";
@@ -56,6 +59,8 @@ export function WorkspaceInput({
 }: WorkspaceInputProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const slashCommandDropdownRef = useRef<HTMLDivElement>(null);
+  const fileMentionDropdownRef = useRef<HTMLDivElement>(null);
+  const dispatch = useDispatch();
 
   const variant = useWorkspaceVariant();
   const providerVariant: "claude" | "copilot" =
@@ -102,6 +107,11 @@ export function WorkspaceInput({
     { visible: false, filter: "" },
   );
 
+  const [atMenu, updateAtMenu] = useReducer(
+    (prev: { visible: boolean; filter: string }, next: Partial<{ visible: boolean; filter: string }>) => ({ ...prev, ...next }),
+    { visible: false, filter: "" },
+  );
+
   // Detect slash commands when goal is set externally (e.g. quick actions)
   useEffect(() => {
     const slashMatch = goal.match(/(?:^|\s)\/(\S*)$/);
@@ -119,6 +129,13 @@ export function WorkspaceInput({
         updateSlashMenu({ filter: slashMatch[1], visible: true });
       } else {
         updateSlashMenu({ visible: false, filter: "" });
+      }
+
+      const atMatch = value.match(/(?:^|\s)@(\S*)$/);
+      if (atMatch) {
+        updateAtMenu({ filter: atMatch[1], visible: true });
+      } else {
+        updateAtMenu({ visible: false, filter: "" });
       }
     },
     [onGoalChange],
@@ -148,6 +165,35 @@ export function WorkspaceInput({
     [goal, onGoalChange],
   );
 
+  const handleFileSelect = useCallback(
+    (node: FileNode) => {
+      const newGoal = goal.replace(/(?:^|\s)@\S*$/, (match) =>
+        match.startsWith(" ") ? " " : "",
+      );
+      onGoalChange(newGoal.trimEnd());
+      updateAtMenu({ visible: false, filter: "" });
+      dispatch(addContextFile(node));
+    },
+    [goal, onGoalChange, dispatch],
+  );
+
+  const handleAtMenuNavigate = useCallback(
+    (dirPath: string) => {
+      const newGoal = goal.replace(/(?:^|\s)@\S*$/, (match) => {
+        const prefix = match.startsWith(" ") ? " " : "";
+        return `${prefix}@${dirPath}`;
+      });
+      onGoalChange(newGoal);
+      updateAtMenu({ filter: dirPath });
+    },
+    [goal, onGoalChange],
+  );
+
+  const handleSubmit = useCallback(() => {
+    if (atMenu.visible || slashMenu.visible) return;
+    onSubmit();
+  }, [atMenu.visible, slashMenu.visible, onSubmit]);
+
   const glassMorphismClass =
     variant === "claude" ? "glass-morphism-claude" : "glass-morphism-copilot";
 
@@ -167,11 +213,11 @@ export function WorkspaceInput({
           ref={inputRef}
           query={goal}
           onQueryChange={handleGoalChange}
-          onSubmit={onSubmit}
+          onSubmit={handleSubmit}
           placeholder={
             canResume
-              ? "Ask a follow-up question, run /commands"
-              : "Ask to edit, run /skills, or add issues/files to context"
+              ? "Ask a follow-up question, run /commands or @mention files to context"
+              : "Ask to edit, run /skills, or @mention files to context"
           }
           variant={variant}
         />
@@ -188,11 +234,21 @@ export function WorkspaceInput({
           isLoadingCommands={isLoadingCommands}
           isLoadingSkills={isLoadingSkills}
         />
+        <FileMentionDropdown
+          isOpen={atMenu.visible}
+          filterText={atMenu.filter}
+          workspacePath={workspacePath}
+          onSelectFile={handleFileSelect}
+          onNavigate={handleAtMenuNavigate}
+          onClose={() => updateAtMenu({ visible: false, filter: "" })}
+          dropdownRef={fileMentionDropdownRef}
+          variant={variant}
+        />
       </div>
       <InputToolbar
         variant={providerVariant}
         isLoading={isLoading}
-        onSubmit={onSubmit}
+        onSubmit={handleSubmit}
         onGoalChange={onGoalChange}
         selectedModelDisplayName={selectedModelDisplayName}
         modelDisplayNames={modelDisplayNames}

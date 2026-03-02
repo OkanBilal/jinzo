@@ -68,6 +68,7 @@ export function SlashMenuDropdown({
   commands,
   skills,
   isOpen,
+  onSelectCommand,
   onSelectSkill,
   onClose,
   dropdownRef,
@@ -83,7 +84,7 @@ export function SlashMenuDropdown({
   });
 
   // Filter and combine commands and skills
-  const { filteredSkills, hasResults } = useMemo(() => {
+  const { filteredCommands, filteredSkills, hasResults } = useMemo(() => {
     const lowerFilter = filterText.toLowerCase();
 
     // Filter commands (only user-facing)
@@ -197,15 +198,15 @@ export function SlashMenuDropdown({
               )}
 
               {/* Divider between skills and commands */}
-              {/* {filteredSkills.length > 0 && filteredCommands.length > 0 && (
+              {filteredSkills.length > 0 && filteredCommands.length > 0 && (
                 <div className={`mx-3 my-1 border-t ${styles.divider}`} />
-              )} */}
+              )}
 
               {/* Commands Section */}
-              {/* {filteredCommands.length > 0 && (
+              {filteredCommands.length > 0 && (
                 <>
                   <div
-                    className={`px-3 pt-2 pb-1 text-sm font-medium  ${styles.sectionHeader}`}
+                    className={`px-3 pt-2 pb-1 text-sm font-medium ${styles.sectionHeader}`}
                   >
                     ⌘ Commands
                   </div>
@@ -234,7 +235,7 @@ export function SlashMenuDropdown({
                     </Button>
                   ))}
                 </>
-              )} */}
+              )}
             </>
           )}
         </div>
