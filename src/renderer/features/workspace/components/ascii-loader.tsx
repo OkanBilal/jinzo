@@ -29,6 +29,32 @@ function loaderReducer(state: LoaderState, action: LoaderAction): LoaderState {
   }
 }
 
+// Braille dots ordered by fill density: empty → full → empty (breathing cycle)
+const BREATHING_FRAMES = [
+  "⠀", "⠁", "⠃", "⠇", "⠏", "⠟", "⠿", "⣿",
+  "⣿", "⠿", "⠟", "⠏", "⠇", "⠃", "⠁", "⠀",
+];
+
+export function AsciiSpinner({ variant }: { variant?: "claude" | "copilot" }) {
+  const [frameIndex, dispatch] = useReducer(
+    (i: number) => (i + 1) % BREATHING_FRAMES.length,
+    0,
+  );
+
+  useEffect(() => {
+    const id = setInterval(dispatch, 120);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <span
+      className={`font-mono text-xs leading-none ${variant === "claude" ? "text-[#D97757]" : "text-[#4361c2]"}`}
+    >
+      {BREATHING_FRAMES[frameIndex]}
+    </span>
+  );
+}
+
 export function AsciiLoader({
   className,
   variant,

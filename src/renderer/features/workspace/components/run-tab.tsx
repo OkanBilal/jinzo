@@ -3,6 +3,7 @@ import type { Run } from "../types";
 import { Claude } from "@/components/ui/icons/space";
 import { AnimatedTitle } from "@/components/ui/animated-title";
 import { BaseTab } from "./base-tab";
+import { AsciiSpinner } from "./ascii-loader";
 
 interface RunTabProps {
   run: Run;
@@ -14,7 +15,7 @@ interface RunTabProps {
 }
 
 function VariantIcon({ variant, isActive }: { variant: string; isActive: boolean }) {
-  const className = `size-3.5 ${
+  const className = `size-full ${
     isActive
       ? "text-primary-900 dark:text-primary"
       : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"
@@ -25,13 +26,26 @@ function VariantIcon({ variant, isActive }: { variant: string; isActive: boolean
   return null;
 }
 
-export function RunTab({ isActive, onClick, onClose, title, variant = "copilot" }: RunTabProps) {
+function TabIcon({ run, variant, isActive }: { run: Run; variant: string; isActive: boolean }) {
+  const isRunning = run.status === "running" || run.status === "queued";
+  return (
+    <span className="flex items-center justify-center size-3.5 shrink-0">
+      {isRunning ? (
+        <AsciiSpinner variant={variant as "claude" | "copilot"} />
+      ) : (
+        <VariantIcon variant={variant} isActive={isActive} />
+      )}
+    </span>
+  );
+}
+
+export function RunTab({ run, isActive, onClick, onClose, title, variant = "copilot" }: RunTabProps) {
   return (
     <BaseTab
       isActive={isActive}
       onClick={onClick}
       onClose={onClose}
-      icon={<VariantIcon variant={variant} isActive={isActive} />}
+      icon={<TabIcon run={run} variant={variant} isActive={isActive} />}
       label={<AnimatedTitle title={title} className="text-xs font-medium truncate flex-1" />}
       closeIcon={<Archive className="size-3.5" />}
       variant={variant}
