@@ -164,7 +164,24 @@ export function useWorkspaceRuns(
               }
 
               if (result.data.status === "failed") {
-                toast.error(result.data.lastError || "Run failed", { duration: 5000 });
+                const lastError = result.data.lastError || "Run failed";
+
+                // Detect auth error from lastError or run artifacts
+                let isAuthError = /not logged in/i.test(lastError);
+                if (!isAuthError && /exited with code/i.test(lastError)) {
+                  const artRes = await window.api.runArtifacts.getByRun(activeRunId);
+                  if (artRes.success && artRes.data) {
+                    isAuthError = artRes.data.some(
+                      (a: { content: any; }) => /not logged in/i.test(a.content ?? ""),
+                    );
+                  }
+                }
+
+                if (isAuthError) {
+                  toast.error("Not logged in — run `claude login` in your terminal", { duration: 8000 });
+                } else {
+                  toast.error(lastError, { duration: 5000 });
+                }
               } else if (result.data.status === "canceled") {
                 toast("Run canceled");
               }
