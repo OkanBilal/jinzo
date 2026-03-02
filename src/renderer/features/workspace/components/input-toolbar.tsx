@@ -124,7 +124,7 @@ export function InputToolbar({
     <div className="flex items-start space-x-2 px-4">
       <div className="flex items-center justify-between w-full">
         <div className="flex items-center relative gap-1">
-        <FileUploadDropdown
+          <FileUploadDropdown
             isOpen={showFileDropdown}
             onToggle={() => setShowFileDropdown(!showFileDropdown)}
             onImageUpload={handleImageUpload}
@@ -162,7 +162,7 @@ export function InputToolbar({
                 onClick={onPlanModeToggle}
                 className={`flex items-center gap-1 -ml-1 px-2.5 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
                   planMode
-                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-500"
+                    ? "bg-amber-200/15 text-amber-600 dark:text-amber-200"
                     : " text-primary-900 dark:text-primary-300 hover:bg-primary/10"
                 }`}
                 title={
@@ -172,7 +172,7 @@ export function InputToolbar({
                 }
               >
                 <Plan
-                  className={`size-3.75 font-medium ${planMode ? "text-amber-600 dark:text-amber-500" : "text-primary-900 dark:text-primary-300"}`}
+                  className={`size-3.75 font-medium ${planMode ? "text-amber-600 dark:text-amber-200" : "text-primary-900 dark:text-primary-300"}`}
                 />
                 Plan
               </Button>
@@ -180,9 +180,9 @@ export function InputToolbar({
                 tooltip="Toggle Thinking Mode"
                 type="button"
                 onClick={onThinkingModeToggle}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                className={`flex items-center px-2 py-1.5  rounded-full text-sm font-medium transition-all cursor-pointer ${
                   thinkingMode
-                    ? "bg-purple-500/15 text-purple-600 dark:text-purple-500"
+                    ? "bg-primary-500/15 text-primary-600 dark:text-primary-500"
                     : " text-primary-900 dark:text-primary-300 hover:bg-primary/10"
                 }`}
                 title={
@@ -192,9 +192,13 @@ export function InputToolbar({
                 }
               >
                 <Brain
-                  className={`size-3.75 font-medium ${thinkingMode ? "text-purple-600 dark:text-purple-500" : "text-primary-900 dark:text-primary-300"}`}
+                  className={`size-3.75 font-medium ${thinkingMode ? "text-primary-600 dark:text-yellow-100" : "text-primary-900 dark:text-primary-300"}`}
                 />
-                Think
+                <span
+                  className={`transition-all duration-300 ${thinkingMode ? "text-primary-600 ml-1 dark:text-yellow-100 opacity-100 translate-x-0" : "text-primary-900 dark:text-primary-300 opacity-0 translate-x-1"}`}
+                >
+                  {thinkingMode ? "Think" : ""}
+                </span>
               </Button>
             </>
           )}
