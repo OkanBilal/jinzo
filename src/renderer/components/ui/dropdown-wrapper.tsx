@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useDarkMode } from "@/hooks/use-dark-mode";
@@ -36,7 +36,6 @@ export default function DropdownWrapper({
   const internalDropdownRef = useRef<HTMLDivElement>(null);
   const dropdownRef = externalDropdownRef || internalDropdownRef;
 
-  // Call hooks before any conditional returns
   const { activeSpace } = useActiveSpace();
   const { darkMode } = useDarkMode();
   const variant = useWorkspaceVariant();
@@ -61,21 +60,9 @@ export default function DropdownWrapper({
     }
   }, [isOpen, usePortal, triggerRef, openUpward, position]);
 
-  // Get background color from active space theme
-  const getDropdownBackground = () => {
-    // If using fixed background, return the glassmorphism gradient matching the chat input
-    if (useFixedBackground) {
-      return undefined; // Will use CSS class instead
-    }
-
-    // First check if we're in preview mode (create space view)
-    const appRoot = document.querySelector(".app-root") as HTMLElement;
-    const previewBg = appRoot
-      ? getComputedStyle(appRoot).getPropertyValue("--space-preview-bg").trim()
-      : "";
-    if (previewBg) {
-      return previewBg;
-    }
+  // Cache background — avoid DOM queries on every render
+  const dropdownBackground = useMemo(() => {
+    if (useFixedBackground) return undefined;
 
     if (!activeSpace?.themeConfig) {
       return getDefaultDropdownBackground(darkMode);
@@ -91,44 +78,35 @@ export default function DropdownWrapper({
         return getDefaultDropdownBackground(darkMode);
       }
 
-      // For gradients, return as is; for solid colors, remove opacity to prevent transparency
       if (bgColor.startsWith("linear-gradient")) {
         return bgColor;
       } else {
-        // Remove opacity suffix if present (e.g., #RRGGBBAA -> #RRGGBB)
         return bgColor.length === 9 ? bgColor.slice(0, 7) : bgColor;
       }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e) {
+    } catch {
       return getDefaultDropdownBackground(darkMode);
     }
-  };
+  }, [useFixedBackground, activeSpace?.themeConfig, darkMode]);
 
-  // Fixed background class matching chat input style
   const fixedBackgroundClass = useFixedBackground
     ? "bg-linear-to-b from-primary/90 to-primary-50/80 dark:from-primary-900/95 dark:to-primary-900/80"
     : "";
 
-  if (!isOpen) return null;
-
-  // Portal kullanıyorsa koordinatlar hesaplanana kadar render etme
-  if (usePortal && !coords) return null;
-
-  if (!isOpen) return null;
-
-  // Portal kullanıyorsa koordinatlar hesaplanana kadar render etme
-  if (usePortal && !coords) return null;
+  // Portal mode: wait for coords before rendering
+  if (usePortal && isOpen && !coords) return null;
 
   const positionClass = position === "right" ? "right-0" : "left-0";
   const verticalClass = openUpward ? "bottom-10" : "top-8";
 
+  const hiddenClass = isOpen ? "animate-dropdown-in" : "invisible pointer-events-none";
+
   const dropdown = (
     <div
       ref={dropdownRef}
-      className={`${usePortal ? "fixed" : "absolute"} ${!usePortal ? positionClass : ""} ${!usePortal ? verticalClass : ""} 
-        ${minWidth} ${fixedBackgroundClass} z-100 ${glassMorphismClass} rounded-2xl transition-all animate-dropdown-in`}
+      className={`${usePortal ? "fixed" : "absolute"} ${!usePortal ? positionClass : ""} ${!usePortal ? verticalClass : ""}
+        ${minWidth} ${fixedBackgroundClass} z-100 ${glassMorphismClass} rounded-2xl ${hiddenClass}`}
       style={{
-        background: getDropdownBackground(),
+        background: dropdownBackground,
         transformOrigin: openUpward
           ? position === "right"
             ? "bottom right"
@@ -156,7 +134,7 @@ export default function DropdownWrapper({
   );
 
   if (usePortal) {
-    return createPortal(dropdown, document.body);
+    return isOpen ? createPortal(dropdown, document.body) : null;
   }
 
   return dropdown;

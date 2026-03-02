@@ -70,7 +70,7 @@ export default function SpaceIconPicker({
           text-primary-800 dark:text-primary
           text-sm focus:outline-none cursor-pointer
           flex items-center justify-between
-          transition-all
+          transition-colors
           ${
             isOpen
               ? "rounded-t-xl shadow-lg"
@@ -113,14 +113,13 @@ export default function SpaceIconPicker({
         />
       </Button>
 
-      {isOpen && (
-        <div
-          className={`absolute top-full left-0 right-0 z-50
+      <div
+        className={`absolute top-full left-0 right-0 z-50
             border border-t-0 border-primary-950/10 dark:border-primary/10
             rounded-b-xl shadow-lg overflow-hidden
-            animate-dropdown-in ${fixedBackgroundClass}`}
-          style={backgroundStyle}
-        >
+            ${isOpen ? "animate-dropdown-in" : "invisible pointer-events-none"} ${fixedBackgroundClass}`}
+        style={backgroundStyle}
+      >
           <div className="flex border-b border-primary-950/10 dark:border-primary/10">
             <Button
               type="button"
@@ -202,7 +201,7 @@ export default function SpaceIconPicker({
                     key={name}
                     type="button"
                     onClick={() => onSelectIcon(name)}
-                    className={`flex items-center justify-center size-8 rounded-lg transition-all cursor-pointer ${
+                    className={`flex items-center justify-center size-8 rounded-lg transition-colors cursor-pointer ${
                       icon === name
                         ? "bg-primary-950/15 dark:bg-primary/20 text-primary-700 dark:text-primary"
                         : "hover:bg-primary-950/8 dark:hover:bg-primary/10 text-primary-700 dark:text-primary-200"
@@ -215,8 +214,7 @@ export default function SpaceIconPicker({
               </div>
             )}
           </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

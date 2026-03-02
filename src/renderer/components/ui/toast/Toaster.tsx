@@ -23,14 +23,8 @@ function getDefaultIcon(type: ToastType) {
 
 function ToastItem({ toast, onDismiss }: ToastItemProps) {
   const [isPaused, setIsPaused] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [exiting, setExiting] = useState(false);
   const dismissedRef = useRef(false);
-
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => setMounted(true));
-    return () => cancelAnimationFrame(raf);
-  }, []);
 
   // Auto-dismiss timer
   useEffect(() => {
@@ -71,11 +65,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
     }
   };
 
-  const animationClass = !mounted
-    ? "opacity-0 scale-55"
-    : exiting
-      ? "animate-toast-out"
-      : "animate-toast-in";
+  const animationClass = exiting ? "animate-toast-out" : "animate-toast-in";
 
   return (
     <div

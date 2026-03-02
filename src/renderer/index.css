@@ -146,12 +146,14 @@
   animation: dropdown-in 250ms both;
   transform-origin: top;
   will-change: transform, opacity;
+  contain: layout style paint;
 }
 
 .animate-dropdown-sub-in {
   animation: dropdown-in 250ms both;
   transform-origin: top left ;
   will-change: transform, opacity;
+  contain: layout style paint;
 }
 
 @keyframes modal-in {
@@ -187,12 +189,14 @@
   animation: modal-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
   transform-origin: bottom;
   will-change: transform, opacity;
+  contain: layout style paint;
 }
 
 .animate-modal-out {
   animation: modal-out 200ms ease-in both;
   transform-origin: bottom;
   will-change: transform, opacity;
+  contain: layout style paint;
 }
 
 @keyframes toast-in {
@@ -228,12 +232,14 @@
   animation: toast-in 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
   transform-origin: top;
   will-change: transform, opacity;
+  contain: layout style paint;
 }
 
 .animate-toast-out {
   animation: toast-out 200ms ease-in both;
   transform-origin: bottom;
   will-change: transform, opacity;
+  contain: layout style paint;
 }
 
 
@@ -280,6 +286,26 @@
 
 .animate-claude-pulse {
   animation: claudePulse 2s ease-in-out infinite;
+}
+
+@keyframes wizardModalIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.015);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes wizardStepFade {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
 }
 
 /* ==========================================================================
@@ -646,7 +672,7 @@ input[type="range"].slider {
 
 .glass-morphism-button{
   background: transparent;
-  backdrop-filter: blur(30px);
+  backdrop-filter: blur(12px);
   border: 0.5px solid #ffffff2e;
   box-shadow:
     0 1px 1px #00000021,
@@ -656,7 +682,7 @@ input[type="range"].slider {
 
 .dark .glass-morphism-button {
   background: transparent;
-  backdrop-filter: blur(30px);
+  backdrop-filter: blur(12px);
   border-color: #ffffff1f;
   box-shadow:
     0 1px 1px #00000040,

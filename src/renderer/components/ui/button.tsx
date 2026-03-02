@@ -81,7 +81,7 @@ const sizeStyles: Record<ButtonSize, string> = {
 };
 
 const baseStyles =
-  " items-center active:scale-99 hover:scale-[1.01]  duration-200 transition-all justify-center font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
+  " items-center active:scale-99 hover:scale-[1.01]  duration-200 transition-[color,background-color,border-color,box-shadow,transform] justify-center font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
