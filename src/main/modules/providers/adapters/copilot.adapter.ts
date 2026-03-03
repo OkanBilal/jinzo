@@ -3,16 +3,31 @@
 // Implements WorkRunAdapter using GitHub Copilot SDK
 // ─────────────────────────────────────────────────────────────
 
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
 import type {
   WorkRunAdapter,
   WorkRunRequest,
   WorkRunContinueRequest,
   WorkRunResult,
+  WorkRunUsage,
   WorkRunEventHandler,
   WorkRunEvent,
   CopilotAdapterConfig,
   ModelInfo,
+  FileAttachment,
 } from "./adapter.types";
+import {
+  requestToolApproval,
+  cancelPendingRequests,
+} from "../../runs/user-input-broker";
+import type { ToolApprovalRequest } from "../../runs/runs.dto";
+import { workspaceDiffsRepo } from "../../workspaceDiffs/workspaceDiffs.repo";
+import { reviewsRepo } from "../../reviews/reviews.repo";
+import { reviewFindingsRepo } from "../../reviewFindings/reviewFindings.repo";
+import { updateRunBaseRef } from "../../runs";
+import { gitService } from "../../git/git.service";
 
 /**
  * NOTE: This adapter is designed for the @github/copilot-sdk package.
@@ -37,12 +52,35 @@ interface CopilotClientOptions {
   env?: Record<string, string | undefined>;
 }
 
+interface CopilotTool {
+  name: string;
+  description?: string;
+  parameters?: Record<string, unknown>;
+  handler: (args: any, invocation: { sessionId: string; toolCallId: string; toolName: string; arguments: unknown }) => Promise<unknown> | unknown;
+}
+
 interface SessionConfig {
   sessionId?: string;
   model?: string;
-  systemMessage?: { content: string };
+  systemMessage?: { content: string } | { mode: "append"; content?: string } | { mode: "replace"; content: string };
   streaming?: boolean;
   cwd?: string;
+  workingDirectory?: string;
+  tools?: CopilotTool[];
+  onPermissionRequest: (
+    request: { kind: string; toolCallId?: string; [key: string]: any },
+    invocation: { sessionId: string },
+  ) => Promise<{ kind: string; rules?: unknown[] }> | { kind: string; rules?: unknown[] };
+  onUserInputRequest?: (
+    request: { question: string; choices?: string[]; allowFreeform?: boolean },
+    invocation: { sessionId: string },
+  ) => Promise<{ answer: string; wasFreeform: boolean }> | { answer: string; wasFreeform: boolean };
+  hooks?: {
+    onPreToolUse?: (
+      input: { toolName: string; toolArgs: unknown; timestamp: number; cwd: string },
+      invocation: { sessionId: string },
+    ) => Promise<{ permissionDecision?: "allow" | "deny" | "ask"; permissionDecisionReason?: string; modifiedArgs?: unknown } | void> | { permissionDecision?: "allow" | "deny" | "ask"; permissionDecisionReason?: string; modifiedArgs?: unknown } | void;
+  };
 }
 
 interface SessionEvent {
@@ -94,7 +132,7 @@ interface CopilotClientInterface {
   stop(): Promise<Error[]>;
   forceStop(): Promise<void>;
   createSession(config?: SessionConfig): Promise<CopilotSession>;
-  resumeSession(sessionId: string): Promise<CopilotSession>;
+  resumeSession(sessionId: string, config: Omit<SessionConfig, 'sessionId'>): Promise<CopilotSession>;
   listSessions(): Promise<Array<{ sessionId: string }>>;
   deleteSession(sessionId: string): Promise<void>;
   ping(message?: string): Promise<{ message: string; timestamp: number }>;
@@ -108,6 +146,106 @@ const activeRuns = new Map<
   string,
   { session: CopilotSession; aborted: boolean }
 >();
+
+// ─────────────────────────────────────────────────────────────
+// Pre-approved tools (auto-allow without user dialog)
+// ─────────────────────────────────────────────────────────────
+const DEFAULT_ALLOWED_TOOLS = [
+  "Bash", "Read", "Glob", "Grep", "LSP", "report_intent", "view", "permission:read",
+  "Task", "TaskCreate", "TaskList", "TaskGet", "TaskUpdate", "TodoWrite",
+  "ExitPlanMode", "EnterPlanMode",
+  "ListMcpResources", "ReadMcpResource",
+  "WebFetch", "WebSearch", "NotebookEdit", "Skill", "Agent",
+  "mcp__jinzo__GetWorkspaceDiff", "mcp__jinzo__SaveReview",
+  "mcp__jinzo__SaveFinding", "mcp__jinzo__SaveFindings",
+  "mcp__jinzo__CommitChanges",
+];
+const ALLOWED_TOOLS_SET = new Set(DEFAULT_ALLOWED_TOOLS);
+
+// ─────────────────────────────────────────────────────────────
+// Permission & tool approval handlers
+// ─────────────────────────────────────────────────────────────
+
+/** Always-approve handler for bypassPermissions mode */
+function approveAllPermissions(): { kind: string } {
+  return { kind: "approved" };
+}
+
+/** Build operation-level permission handler (shell/write/read/mcp/url/custom-tool) */
+function buildPermissionHandler(runId: string) {
+  return async (
+    request: { kind: string; toolCallId?: string; [key: string]: any },
+  ): Promise<{ kind: string; rules?: unknown[] }> => {
+    const req: ToolApprovalRequest = {
+      requestId: `perm-${runId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      runId,
+      toolName: `[permission:${request.kind}]`,
+      toolInput: request as Record<string, unknown>,
+      kind: "tool_approval",
+      question: `Copilot requests "${request.kind}" permission`,
+      timestamp: Date.now(),
+    };
+
+    const response = await requestToolApproval(req);
+    return { kind: response.approved ? "approved" : "denied-interactively-by-user" };
+  };
+}
+
+/** Build tool-level pre-use hook (toolName + toolArgs) */
+function buildPreToolUseHook(runId: string) {
+  return async (
+    input: { toolName: string; toolArgs: unknown; timestamp: number; cwd: string },
+  ): Promise<{ permissionDecision?: "allow" | "deny" | "ask"; permissionDecisionReason?: string; modifiedArgs?: unknown } | void> => {
+    // Auto-allow pre-approved tools
+    if (ALLOWED_TOOLS_SET.has(input.toolName)) {
+      return { permissionDecision: "allow" };
+    }
+
+    // Auto-allow MCP tools (mcp__ prefix)
+    if (input.toolName.startsWith("mcp__")) {
+      return { permissionDecision: "allow" };
+    }
+
+    // Interactive approval for unknown tools
+    const req: ToolApprovalRequest = {
+      requestId: `tool-${runId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      runId,
+      toolName: input.toolName,
+      toolInput: (typeof input.toolArgs === "object" && input.toolArgs !== null
+        ? input.toolArgs
+        : { args: input.toolArgs }) as Record<string, unknown>,
+      kind: "tool_approval",
+      timestamp: Date.now(),
+    };
+
+    const response = await requestToolApproval(req);
+    if (response.approved) {
+      return { permissionDecision: "allow" };
+    }
+    return { permissionDecision: "deny", permissionDecisionReason: "User denied" };
+  };
+}
+
+/** Build user-input handler (ask_user questions) */
+function buildUserInputHandler(runId: string) {
+  return async (
+    request: { question: string; choices?: string[]; allowFreeform?: boolean },
+  ): Promise<{ answer: string; wasFreeform: boolean }> => {
+    const options = request.choices?.map((c) => ({ label: c }));
+    const req: ToolApprovalRequest = {
+      requestId: `ask-${runId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      runId,
+      toolName: "AskUser",
+      kind: "ask_user",
+      question: request.question,
+      options,
+      timestamp: Date.now(),
+    };
+
+    const response = await requestToolApproval(req);
+    return { answer: response.answer || "", wasFreeform: true };
+  };
+}
 
 // ─────────────────────────────────────────────────────────────
 // Logging
@@ -142,21 +280,332 @@ export function createCopilotAdapter(
     { toolName: string; input?: unknown; startedAt?: number }
   >();
 
+  // Accumulate usage data from assistant.usage events per run
+  const usageAccumulator = new Map<string, {
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens: number;
+    cacheWriteTokens: number;
+    totalCostUsd: number;
+    numTurns: number;
+    model: string;
+    modelUsage: Record<string, { costUSD: number; inputTokens: number; outputTokens: number; cacheReadInputTokens: number; cacheCreationInputTokens: number }>;
+  }>();
+
+  function getOrCreateUsage(runId: string) {
+    let acc = usageAccumulator.get(runId);
+    if (!acc) {
+      acc = {
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        totalCostUsd: 0,
+        numTurns: 0,
+        model: "",
+        modelUsage: {},
+      };
+      usageAccumulator.set(runId, acc);
+    }
+    return acc;
+  }
+
+  function accumulateUsage(runId: string, payload: Record<string, unknown>) {
+    const acc = getOrCreateUsage(runId);
+    const input = typeof payload.inputTokens === "number" ? payload.inputTokens : 0;
+    const output = typeof payload.outputTokens === "number" ? payload.outputTokens : 0;
+    const cacheRead = typeof payload.cacheReadTokens === "number" ? payload.cacheReadTokens : 0;
+
+    // SDK reports cacheWriteTokens: 0 at top level — get real value from tokenDetails
+    let cacheWrite = typeof payload.cacheWriteTokens === "number" ? payload.cacheWriteTokens : 0;
+    const copilotUsage = payload.copilotUsage as Record<string, unknown> | undefined;
+    if (copilotUsage && Array.isArray(copilotUsage.tokenDetails)) {
+      const writeDetail = (copilotUsage.tokenDetails as any[]).find(
+        (d) => d.tokenType === "cache_write",
+      );
+      if (writeDetail && typeof writeDetail.tokenCount === "number") {
+        cacheWrite = writeDetail.tokenCount;
+      }
+    }
+
+    // payload.cost is premium request count, NOT USD — compute from totalNanoAiu
+    // Copilot uses nanoAIU internally; approximate conversion: 1B nanoAIU ≈ $1 USD
+    const nanoAiu = copilotUsage && typeof copilotUsage.totalNanoAiu === "number"
+      ? copilotUsage.totalNanoAiu
+      : 0;
+    const costUsd = nanoAiu / 1_000_000_000;
+
+    acc.inputTokens += input;
+    acc.outputTokens += output;
+    acc.cacheReadTokens += cacheRead;
+    acc.cacheWriteTokens += cacheWrite;
+    acc.totalCostUsd += costUsd;
+
+    // Track model — normalize Copilot names (e.g. "claude-opus-4.6" → "claude-opus-4-6")
+    const rawModel = typeof payload.model === "string" ? payload.model : "";
+    const model = rawModel.replace(/(\d+)\.(\d+)/g, "$1-$2");
+    if (model) {
+      acc.model = model;
+      if (!acc.modelUsage[model]) {
+        acc.modelUsage[model] = { costUSD: 0, inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 };
+      }
+      acc.modelUsage[model].costUSD += costUsd;
+      acc.modelUsage[model].inputTokens += input;
+      acc.modelUsage[model].outputTokens += output;
+      acc.modelUsage[model].cacheReadInputTokens += cacheRead;
+      acc.modelUsage[model].cacheCreationInputTokens += cacheWrite;
+    }
+  }
+
+  function flushUsage(runId: string): WorkRunUsage | undefined {
+    const acc = usageAccumulator.get(runId);
+    usageAccumulator.delete(runId);
+    if (!acc || (acc.inputTokens === 0 && acc.outputTokens === 0 && acc.totalCostUsd === 0)) {
+      return undefined;
+    }
+    return {
+      totalCostUsd: acc.totalCostUsd,
+      inputTokens: acc.inputTokens,
+      outputTokens: acc.outputTokens,
+      cacheReadTokens: acc.cacheReadTokens,
+      cacheWriteTokens: acc.cacheWriteTokens,
+      numTurns: acc.numTurns,
+      model: acc.model || undefined,
+      modelUsage: Object.keys(acc.modelUsage).length > 0 ? acc.modelUsage : undefined,
+    };
+  }
+
+  /**
+   * Build Jinzo custom tools for Copilot SDK sessions.
+   * These give the model access to workspace diffs, reviews, and findings.
+   */
+  function buildJinzoTools(workspaceId: string | null, rootPath: string | null = null, runId: string | null = null): CopilotTool[] {
+    return [
+      {
+        name: "mcp__jinzo__GetWorkspaceDiff",
+        description: "Read git diffs from workspace_diffs table. Uses the current workspace by default, or provide runId to get the diff for a specific run.",
+        parameters: {
+          type: "object",
+          properties: {
+            runId: { type: "string", description: "Run ID to get diff for a specific run" },
+          },
+        },
+        handler: async (args: { runId?: string }) => {
+          if (!workspaceId && !args.runId) {
+            return "Error: No workspace context and no runId provided";
+          }
+          const row = args.runId
+            ? await workspaceDiffsRepo.findByRun(args.runId)
+            : await workspaceDiffsRepo.findLatestByWorkspace(workspaceId!);
+          if (!row) return "No diff found";
+          return JSON.stringify(row, null, 2);
+        },
+      },
+      {
+        name: "mcp__jinzo__SaveReview",
+        description: "Create a new review record. Returns the generated review ID. Workspace is automatically set from the current session.",
+        parameters: {
+          type: "object",
+          properties: {
+            title: { type: "string", description: "Review title" },
+            summary: { type: "string", description: "Review summary" },
+            status: { type: "string", enum: ["open", "in_review", "approved", "rejected"], description: "Review status" },
+            runId: { type: "string", description: "Associated run ID" },
+            metadata: { type: "object", description: "Additional metadata as JSON" },
+          },
+          required: ["title"],
+        },
+        handler: async (args: { title: string; summary?: string; status?: string; runId?: string; metadata?: Record<string, unknown> }) => {
+          const reviewId = await reviewsRepo.insert({
+            workspaceId: workspaceId ?? undefined,
+            title: args.title,
+            summary: args.summary,
+            status: (args.status as any) ?? "open",
+            runId: args.runId,
+            metadata: args.metadata,
+          });
+          return JSON.stringify({ reviewId });
+        },
+      },
+      {
+        name: "mcp__jinzo__SaveFinding",
+        description: "Save a single code review finding. Returns the generated finding ID.",
+        parameters: {
+          type: "object",
+          properties: {
+            reviewId: { type: "string", description: "ID of the parent review" },
+            severity: { type: "string", enum: ["critical", "warning", "info"], description: "Finding severity level" },
+            file: { type: "string", description: "File path where the finding was detected" },
+            lineStart: { type: "number", description: "Start line number" },
+            lineEnd: { type: "number", description: "End line number" },
+            message: { type: "string", description: "Description of the finding" },
+            reason: { type: "string", description: "Why this was flagged (e.g. bug, security, claude_md_violation)" },
+            suggestion: { type: "string", description: "Suggested fix" },
+            metadata: { type: "object", description: "Additional metadata as JSON" },
+          },
+          required: ["reviewId", "severity", "file", "message", "reason"],
+        },
+        handler: async (args: {
+          reviewId: string; severity: string; file: string;
+          lineStart?: number; lineEnd?: number; message: string;
+          reason: string; suggestion?: string; metadata?: Record<string, unknown>;
+        }) => {
+          const findingId = await reviewFindingsRepo.insert({
+            reviewId: args.reviewId,
+            severity: args.severity as any,
+            file: args.file,
+            lineStart: args.lineStart,
+            lineEnd: args.lineEnd,
+            message: args.message,
+            reason: args.reason,
+            suggestion: args.suggestion,
+            metadata: args.metadata,
+          });
+          return JSON.stringify({ findingId });
+        },
+      },
+      {
+        name: "mcp__jinzo__SaveFindings",
+        description: "Save multiple code review findings at once. Returns all generated finding IDs.",
+        parameters: {
+          type: "object",
+          properties: {
+            reviewId: { type: "string", description: "ID of the parent review" },
+            findings: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  severity: { type: "string", enum: ["critical", "warning", "info"] },
+                  file: { type: "string" },
+                  lineStart: { type: "number" },
+                  lineEnd: { type: "number" },
+                  message: { type: "string" },
+                  reason: { type: "string" },
+                  suggestion: { type: "string" },
+                  metadata: { type: "object" },
+                },
+                required: ["severity", "file", "message", "reason"],
+              },
+              description: "Array of findings to save",
+            },
+          },
+          required: ["reviewId", "findings"],
+        },
+        handler: async (args: {
+          reviewId: string;
+          findings: Array<{
+            severity: string; file: string; lineStart?: number; lineEnd?: number;
+            message: string; reason: string; suggestion?: string; metadata?: Record<string, unknown>;
+          }>;
+        }) => {
+          const findingIds = await reviewFindingsRepo.insertMany(
+            args.findings.map((f) => ({
+              reviewId: args.reviewId,
+              severity: f.severity as any,
+              file: f.file,
+              lineStart: f.lineStart,
+              lineEnd: f.lineEnd,
+              message: f.message,
+              reason: f.reason,
+              suggestion: f.suggestion,
+              metadata: f.metadata,
+            })),
+          );
+          return JSON.stringify({ findingIds });
+        },
+      },
+      {
+        name: "mcp__jinzo__CommitChanges",
+        description: "Stage and commit changes in the workspace git repository. Use commitInstructions if provided for message style guidance.",
+        parameters: {
+          type: "object",
+          properties: {
+            message: { type: "string", description: "The commit message" },
+            files: {
+              type: "array",
+              items: { type: "string" },
+              description: "Specific files to stage. If omitted, stages all changes (git add -A)",
+            },
+          },
+          required: ["message"],
+        },
+        handler: async (args: { message: string; files?: string[] }) => {
+          if (!rootPath) {
+            return JSON.stringify({ error: "No workspace root path" });
+          }
+          try {
+            await gitService.stageFiles(rootPath, args.files);
+            const result = await gitService.commit(rootPath, args.message);
+
+            // Recapture diff from the new HEAD so the Changes tab
+            // reflects the post-commit state (clean working tree).
+            const headResult = await gitService.getHeadSha(rootPath);
+            const newHead = headResult.success ? headResult.data : null;
+
+            if (workspaceId && newHead) {
+              const [statusResult, untrackedResult] = await Promise.all([
+                gitService.getDiffSince(rootPath, newHead),
+                gitService.getUntrackedFiles(rootPath),
+              ]);
+              const diffText = statusResult.success ? (statusResult.data ?? "") : "";
+              const untrackedFiles = untrackedResult.success ? (untrackedResult.data ?? []) : [];
+
+              await workspaceDiffsRepo.deleteByWorkspace(workspaceId);
+              if (untrackedFiles.length > 0 || diffText) {
+                await workspaceDiffsRepo.insertDiff({
+                  id: crypto.randomUUID(),
+                  workspaceId,
+                  runId: runId ?? undefined,
+                  baseRef: newHead,
+                  diffText,
+                  filesJson: JSON.stringify(untrackedFiles),
+                  statsJson: JSON.stringify({ shortstat: "", files: untrackedFiles.length, newFiles: untrackedFiles.length }),
+                });
+              }
+            }
+            if (runId && newHead) {
+              updateRunBaseRef(runId, newHead);
+            }
+
+            return JSON.stringify(result);
+          } catch (error) {
+            return JSON.stringify({ error: error instanceof Error ? error.message : String(error) });
+          }
+        },
+      },
+    ];
+  }
+
   /**
    * Lazily initialize the Copilot client for a specific workspace
    */
   async function ensureClient(workspaceCwd?: string): Promise<CopilotClientInterface> {
-    // If workspace changed, stop existing client and reinitialize
-    if (client && workspaceCwd && currentClientCwd !== workspaceCwd) {
+    // If workspace changed between two non-null paths, stop and reinitialize.
+    // When currentClientCwd is null (client initialized without workspace, e.g. listModels),
+    // skip reinit — the session config sets its own cwd so a full restart isn't needed.
+    if (client && workspaceCwd && currentClientCwd && currentClientCwd !== workspaceCwd) {
       logInfo(`Workspace changed from ${currentClientCwd} to ${workspaceCwd}, reinitializing client`);
       try {
-        await client.forceStop();
-      } catch (err) {
-        logWarn("Error stopping client during workspace change:", err);
+        const stopTimeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Stop timed out")), 5000),
+        );
+        await Promise.race([client.stop(), stopTimeout]);
+      } catch {
+        try {
+          await client.forceStop();
+        } catch (err) {
+          logWarn("Error force stopping client during workspace change:", err);
+        }
       }
       client = null;
       clientInitPromise = null;
       initError = null;
+    }
+
+    // Track the workspace path without reinitializing
+    if (workspaceCwd && !currentClientCwd) {
+      currentClientCwd = workspaceCwd;
     }
 
     if (initError) {
@@ -196,6 +645,16 @@ export function createCopilotAdapter(
         if (!CopilotClient) {
           throw new Error(
             "Could not find CopilotClient in @github/copilot-sdk",
+          );
+        }
+
+        // Check GitHub CLI auth before starting the Copilot client
+        try {
+          const { execSync } = require("child_process");
+          execSync("gh auth status", { stdio: "pipe", timeout: 5000 });
+        } catch {
+          throw new Error(
+            "GitHub CLI is not authenticated. Please run `gh auth login` in your terminal to sign in.",
           );
         }
 
@@ -295,11 +754,12 @@ export function createCopilotAdapter(
    */
   function mapSessionEvent(
     event: SessionEvent,
-    _runId: string,
+    runId: string,
   ): WorkRunEvent | null {
     const ts = Date.now();
 
-    if (isEphemeral(event)) return null;
+    // Let usage events through even if ephemeral
+    if (event.type !== "assistant.usage" && isEphemeral(event)) return null;
 
     const payload = getPayload(event);
 
@@ -307,18 +767,22 @@ export function createCopilotAdapter(
       // ─────────────── Ignore noisy flow markers
       case "pending_messages.modified":
       case "assistant.turn_start":
-      case "assistant.turn_end":
       case "session.usage_info":
         return null;
 
-      // ─────────────── Usage telemetry (keep debug)
-      case "assistant.usage":
-        return {
-          type: "log",
-          message: `[usage] ${safeJson(payload)}`,
-          level: "info",
-          ts,
-        };
+      case "assistant.turn_end": {
+        const acc = usageAccumulator.get(runId);
+        if (acc) acc.numTurns++;
+        return null;
+      }
+
+      // ─────────────── Usage telemetry — accumulate per run
+      case "assistant.usage": {
+        if (payload && typeof payload === "object") {
+          accumulateUsage(runId, payload as Record<string, unknown>);
+        }
+        return null;
+      }
 
       // ─────────────── Assistant content (best-effort)
       case "assistant.message": {
@@ -359,7 +823,11 @@ export function createCopilotAdapter(
         const input =
           (payload as any)?.toolInput ??
           (payload as any)?.input ??
-          event.toolInput;
+          (payload as any)?.toolArgs ??
+          (payload as any)?.arguments ??
+          event.toolInput ??
+          (event as any).toolArgs ??
+          (event as any).arguments;
 
         if (toolCallId) {
           toolCallIndex.set(toolCallId, { toolName, input, startedAt: ts });
@@ -394,8 +862,12 @@ export function createCopilotAdapter(
         const input =
           (payload as any)?.toolInput ??
           (payload as any)?.input ??
+          (payload as any)?.toolArgs ??
+          (payload as any)?.arguments ??
           prev?.input ??
-          event.toolInput;
+          event.toolInput ??
+          (event as any).toolArgs ??
+          (event as any).arguments;
 
         const success = (payload as any)?.success;
         const result =
@@ -552,6 +1024,73 @@ export function createCopilotAdapter(
   }
 
   /**
+   * Save base64-encoded file attachments to temp directory and return their paths.
+   * Images are saved as files for tool-based reading. Text documents are inlined.
+   */
+  function saveAttachments(
+    attachments: FileAttachment[],
+    runId: string,
+  ): { savedPaths: string[]; inlineTexts: string[] } {
+    const uploadDir = path.join(os.tmpdir(), "jinzo-uploads", runId);
+    fs.mkdirSync(uploadDir, { recursive: true });
+
+    const savedPaths: string[] = [];
+    const inlineTexts: string[] = [];
+
+    for (const attachment of attachments) {
+      const filePath = path.join(uploadDir, attachment.name);
+      const buffer = Buffer.from(attachment.data, "base64");
+
+      if (attachment.type === "image") {
+        fs.writeFileSync(filePath, buffer);
+        savedPaths.push(filePath);
+      } else {
+        const ext = path.extname(attachment.name).toLowerCase();
+        if (ext === ".txt") {
+          inlineTexts.push(
+            `[Attached document: ${attachment.name}]\n${buffer.toString("utf-8")}`,
+          );
+        } else {
+          fs.writeFileSync(filePath, buffer);
+          savedPaths.push(filePath);
+        }
+      }
+    }
+
+    return { savedPaths, inlineTexts };
+  }
+
+  /**
+   * Build attachment prompt section from saved files and inline texts.
+   */
+  function buildAttachmentPrompt(attachments: FileAttachment[], runId: string): string {
+    if (!attachments || attachments.length === 0) return "";
+
+    const { savedPaths, inlineTexts } = saveAttachments(attachments, runId);
+    const parts: string[] = [];
+
+    for (const filePath of savedPaths) {
+      const ext = path.extname(filePath).toLowerCase();
+      const isImage = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"].includes(ext);
+      if (isImage) {
+        parts.push(
+          `I've attached an image: ${filePath}\nUse the Read tool to view it.`,
+        );
+      } else {
+        parts.push(
+          `I've attached a file: ${filePath}\nUse the Read tool to read its contents.`,
+        );
+      }
+    }
+
+    for (const text of inlineTexts) {
+      parts.push(text);
+    }
+
+    return parts.join("\n\n");
+  }
+
+  /**
    * Build the prompt with context, including workspace path
    */
   function buildPrompt(request: WorkRunRequest): string {
@@ -571,6 +1110,14 @@ export function createCopilotAdapter(
       prompt = `${workspaceInfo}\n\nContext:\n${contextParts}\n\n---\n\nGoal: ${request.goal}`;
     } else {
       prompt = `${workspaceInfo}\n\nGoal: ${request.goal}`;
+    }
+
+    // Append file attachment references
+    if (request.attachments && request.attachments.length > 0) {
+      const attachmentSection = buildAttachmentPrompt(request.attachments, request.runId);
+      if (attachmentSection) {
+        prompt = `${prompt}\n\n---\n\nAttached files:\n${attachmentSection}`;
+      }
     }
 
     return prompt;
@@ -598,22 +1145,38 @@ export function createCopilotAdapter(
 
         const copilotClient = await ensureClient(request.workspace.rootPath);
 
+        const permissionMode = config.permissionMode || "default";
+
         const sessionConfig: SessionConfig = {
           sessionId: runId,
           streaming: true,
           cwd: request.workspace.rootPath,
+          onPermissionRequest: permissionMode === "bypassPermissions"
+            ? approveAllPermissions
+            : buildPermissionHandler(runId),
         };
+
+        if (permissionMode !== "bypassPermissions") {
+          sessionConfig.hooks = { onPreToolUse: buildPreToolUseHook(runId) };
+          sessionConfig.onUserInputRequest = buildUserInputHandler(runId);
+        }
 
         if (model || config.defaultModel) {
           sessionConfig.model = model || config.defaultModel;
         }
 
+        // Inject Jinzo tools for workspace reviews
+        const workspaceId = request.workspace.id ?? null;
+        sessionConfig.tools = buildJinzoTools(workspaceId, request.workspace.rootPath, runId);
+
         // Build system message with explicit workspace context
+        //TODO: CHECK
+        const commitInstruction = "\nIMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the jinzo MCP server to stage and commit changes.";
         const workspaceContext = `You are working in the directory: ${request.workspace.rootPath}\nAll file operations should be relative to this workspace root.`;
         if (systemPrompt) {
-          sessionConfig.systemMessage = { content: `${workspaceContext}\n\n${systemPrompt}` };
+          sessionConfig.systemMessage = { content: `${workspaceContext}\n\n${systemPrompt}${commitInstruction}` };
         } else {
-          sessionConfig.systemMessage = { content: workspaceContext };
+          sessionConfig.systemMessage = { content: `${workspaceContext}${commitInstruction}` };
         }
 
         session = await copilotClient.createSession(sessionConfig);
@@ -630,7 +1193,8 @@ export function createCopilotAdapter(
           const runState = activeRuns.get(runId);
           if (runState?.aborted) return;
 
-          if (isEphemeral(event)) return;
+          // Let usage/turn events through even if ephemeral
+          if (event.type !== "assistant.usage" && event.type !== "assistant.turn_end" && isEphemeral(event)) return;
 
           const mappedEvent = mapSessionEvent(event, runId);
           if (mappedEvent) {
@@ -701,6 +1265,11 @@ export function createCopilotAdapter(
           content: request.goal,
           metadata: {
             source: "user",
+            attachments: request.attachments?.map((a) => ({
+              name: a.name,
+              type: a.type,
+              mimeType: a.mimeType,
+            })),
           },
         });
 
@@ -732,6 +1301,7 @@ export function createCopilotAdapter(
             status: "canceled",
             summary: "Run was aborted by user",
             artifacts: collectedArtifacts,
+            usage: flushUsage(runId),
           };
         }
 
@@ -749,6 +1319,7 @@ export function createCopilotAdapter(
           status: "succeeded",
           summary: finalText || "Completed successfully",
           artifacts: collectedArtifacts,
+          usage: flushUsage(runId),
         };
       } catch (error) {
         const errorMessage =
@@ -792,6 +1363,7 @@ export function createCopilotAdapter(
             status: "failed",
             summary: `Request timed out after ${timeout / 1000} seconds.`,
             artifacts: collectedArtifacts,
+            usage: flushUsage(runId),
           };
         }
 
@@ -803,6 +1375,7 @@ export function createCopilotAdapter(
             status: "canceled",
             summary: "Run was aborted",
             artifacts: collectedArtifacts,
+            usage: flushUsage(runId),
           };
         }
 
@@ -824,8 +1397,10 @@ export function createCopilotAdapter(
           status: "failed",
           summary: errorMessage,
           artifacts: collectedArtifacts,
+          usage: flushUsage(runId),
         };
       } finally {
+        cancelPendingRequests(runId);
         activeRuns.delete(runId);
 
         if (session) {
@@ -859,15 +1434,28 @@ export function createCopilotAdapter(
 
         const copilotClient = await ensureClient(request.workspace.rootPath);
 
-        // Resume the existing session
-        session = await copilotClient.resumeSession(runId);
+        // Resume the existing session with permission handlers
+        const permissionMode = config.permissionMode || "default";
+        const workspaceId = request.workspace.id ?? null;
+        const resumeConfig: Omit<SessionConfig, 'sessionId'> = {
+          tools: buildJinzoTools(workspaceId, request.workspace.rootPath, runId),
+          onPermissionRequest: permissionMode === "bypassPermissions"
+            ? approveAllPermissions
+            : buildPermissionHandler(runId),
+          ...(permissionMode !== "bypassPermissions" && {
+            hooks: { onPreToolUse: buildPreToolUseHook(runId) },
+            onUserInputRequest: buildUserInputHandler(runId),
+          }),
+        };
+        session = await copilotClient.resumeSession(runId, resumeConfig);
         activeRuns.set(runId, { session, aborted: false });
 
         const unsubscribe = session.on((event: SessionEvent) => {
           const runState = activeRuns.get(runId);
           if (runState?.aborted) return;
 
-          if (isEphemeral(event)) return;
+          // Let usage/turn events through even if ephemeral
+          if (event.type !== "assistant.usage" && event.type !== "assistant.turn_end" && isEphemeral(event)) return;
 
           const mappedEvent = mapSessionEvent(event, runId);
           if (mappedEvent) {
@@ -943,6 +1531,14 @@ export function createCopilotAdapter(
           prompt = `Context:\n${contextParts}\n\n---\n\n${message}`;
         }
 
+        // Append file attachment references
+        if (request.attachments && request.attachments.length > 0) {
+          const attachmentSection = buildAttachmentPrompt(request.attachments, runId);
+          if (attachmentSection) {
+            prompt = `${prompt}\n\n---\n\nAttached files:\n${attachmentSection}`;
+          }
+        }
+
         // Emit user's follow-up message as artifact for UI display
         await onEvent({
           type: "artifact",
@@ -950,6 +1546,11 @@ export function createCopilotAdapter(
           content: message,
           metadata: {
             source: "user",
+            attachments: request.attachments?.map((a) => ({
+              name: a.name,
+              type: a.type,
+              mimeType: a.mimeType,
+            })),
           },
         });
 
@@ -981,6 +1582,7 @@ export function createCopilotAdapter(
             status: "canceled",
             summary: "Run was aborted by user",
             artifacts: collectedArtifacts,
+            usage: flushUsage(runId),
           };
         }
 
@@ -997,6 +1599,7 @@ export function createCopilotAdapter(
           status: "succeeded",
           summary: finalText || "Completed successfully",
           artifacts: collectedArtifacts,
+          usage: flushUsage(runId),
         };
       } catch (error) {
         const errorMessage =
@@ -1040,6 +1643,7 @@ export function createCopilotAdapter(
             status: "failed",
             summary: `Request timed out after ${timeout / 1000} seconds.`,
             artifacts: collectedArtifacts,
+            usage: flushUsage(runId),
           };
         }
 
@@ -1051,6 +1655,7 @@ export function createCopilotAdapter(
             status: "canceled",
             summary: "Run was aborted",
             artifacts: collectedArtifacts,
+            usage: flushUsage(runId),
           };
         }
 
@@ -1072,8 +1677,10 @@ export function createCopilotAdapter(
           status: "failed",
           summary: errorMessage,
           artifacts: collectedArtifacts,
+          usage: flushUsage(runId),
         };
       } finally {
+        cancelPendingRequests(runId);
         activeRuns.delete(runId);
 
         if (session) {
@@ -1109,6 +1716,7 @@ export function createCopilotAdapter(
     },
 
     async abortRun(runId: string): Promise<void> {
+      cancelPendingRequests(runId);
       const runState = activeRuns.get(runId);
       if (runState) {
         runState.aborted = true;
@@ -1153,12 +1761,18 @@ export function createCopilotAdapter(
 
       if (client) {
         try {
-          // Use forceStop to avoid stream write errors during shutdown
-          await client.forceStop();
-        } catch (err) {
-          // Ignore stream-related errors during shutdown
-          if (!(err instanceof Error && err.message.includes("ERR_STREAM_DESTROYED"))) {
-            logError("Error force stopping client:", err);
+          // Try graceful stop first, fall back to forceStop on timeout
+          const stopTimeout = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Stop timed out")), 5000),
+          );
+          await Promise.race([client.stop(), stopTimeout]);
+        } catch {
+          try {
+            await client.forceStop();
+          } catch (err) {
+            if (!(err instanceof Error && err.message.includes("ERR_STREAM_DESTROYED"))) {
+              logError("Error force stopping client:", err);
+            }
           }
         }
         client = null;
@@ -1173,28 +1787,40 @@ export function createCopilotAdapter(
     async generateTitle(goal: string, context?: import("./adapter.types").WorkRunContextItem[]): Promise<string> {
       const copilotClient = await ensureClient();
 
-      // Build a concise prompt with goal + optional context summary
-      let userPrompt = goal;
+      // Build context snippet if available
+      let contextSnippet = "";
       if (context && context.length > 0) {
-        const contextSummary = context
+        contextSnippet = context
           .map((ctx) => {
             const header = ctx.ref ? `[${ctx.kind}: ${ctx.ref}]` : `[${ctx.kind}]`;
             return `${header} ${(ctx.content || "").substring(0, 200)}`;
           })
           .join("\n")
           .substring(0, 500);
-        userPrompt = `${goal}\n\nContext:\n${contextSummary}`;
       }
 
+      // Embed the title instruction directly in the prompt so it can't be overridden
+      const titlePrompt = [
+        "TASK: Generate a short title (3-5 words) for the following coding task.",
+        "RULES: Reply with ONLY the title. No quotes, no explanation, no punctuation at the end, no prefixes like 'Title:'.",
+        "",
+        `User's request: ${goal}`,
+        contextSnippet ? `\nContext:\n${contextSnippet}` : "",
+        "",
+        "Title:",
+      ].filter(Boolean).join("\n");
+
       const session = await copilotClient.createSession({
+        model: "gpt-4.1-nano",
         systemMessage: {
-          content: "Generate a concise 3-6 word title for the given coding task. Respond with ONLY the title, no quotes, no punctuation at the end, no explanation.",
+          content: "You are a title generator. Output ONLY a short title (3-5 words). Never explain, never use tools, never write code.",
         },
+        onPermissionRequest: approveAllPermissions,
       });
 
       try {
         const result = await session.sendAndWait(
-          { prompt: userPrompt },
+          { prompt: titlePrompt },
           15000, // 15s timeout for title generation
         );
 
@@ -1202,13 +1828,23 @@ export function createCopilotAdapter(
           (result as any)?.content ??
           (result as any)?.data?.content ??
           "",
-        ).trim().replace(/^["']|["']$/g, "").trim();
+        );
 
-        if (!titleText) {
+        // Clean up: remove quotes, "Title:" prefix, markdown, and take only first line
+        const title = titleText
+          .trim()
+          .split("\n")[0]
+          .trim()
+          .replace(/^(title:\s*)/i, "")
+          .replace(/^["'`]|["'`]$/g, "")
+          .replace(/[.!?]$/, "")
+          .trim();
+
+        if (!title) {
           throw new Error("Empty title generated");
         }
 
-        return titleText.slice(0, 60);
+        return title.slice(0, 50);
       } finally {
         try {
           await session.destroy();
@@ -1247,6 +1883,11 @@ export function createCopilotAdapter(
           metadata: model.metadata,
         }));
       } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        // Auth errors should bubble up, not be silently swallowed
+        if (/not authenticated|gh auth login/i.test(msg)) {
+          throw error;
+        }
         logError("Failed to list models:", error);
         // Return default models on error
         return getDefaultModels(config.defaultModel);

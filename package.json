@@ -20,7 +20,8 @@
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "reset": "npm rebuild better-sqlite3 && npm run db:clean:dev && rm -f .data/jinzo.db",
-    "hard-reset": "npm run reset && rm -rf node_modules package-lock.json .vite dist .webpack && npm install"
+    "hard-reset": "npm run reset && rm -rf node_modules package-lock.json .vite dist .webpack && npm install",
+    "clean": "rm -rf .vite dist out .webpack node_modules/.vite node_modules/.cache"
   },
   "keywords": [],
   "author": {
@@ -71,12 +72,12 @@
     "vite": "^7.3.1"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.49",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.63",
     "@anthropic-ai/sdk": "^0.78.0",
     "@blocknote/core": "^0.46.2",
     "@blocknote/mantine": "^0.46.2",
     "@blocknote/react": "^0.46.2",
-    "@github/copilot-sdk": "^0.1.25",
+    "@github/copilot-sdk": "^0.1.29",
     "@linear/sdk": "^75.0.0",
     "@lottiefiles/dotlottie-react": "^0.18.1",
     "@modelcontextprotocol/sdk": "^1.26.0",

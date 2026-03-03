@@ -79,6 +79,13 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
     }
   });
 
+  // Disable Cmd/Ctrl+R reload
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    if ((input.meta || input.control) && input.key === "r") {
+      event.preventDefault();
+    }
+  });
+
   // Handle load failures
   mainWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription) => {
     console.error(`Failed to load: ${errorDescription} (${errorCode})`);

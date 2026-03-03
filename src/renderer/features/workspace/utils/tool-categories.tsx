@@ -107,6 +107,10 @@ export const TOOL_CATEGORIES: Record<
     category: "Todo",
     icon: <EnterPlan className="size-4" />,
   },
+  create: {
+    category: "General",
+    icon: <EnterPlan className="size-4" />,
+  },
   exitplanmode: {
     category: "Todo",
     icon: <ExitPlan className="size-4" />,
@@ -185,6 +189,6 @@ export function getToolInfo(toolName: string): {
 
   return {
     category: "Tool",
-    icon: <Glob className=" size-4" />,
+    icon: <Jinzo className=" size-4" />,
   };
 }

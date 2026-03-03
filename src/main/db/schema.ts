@@ -147,6 +147,8 @@ export const projects = sqliteTable(
     runScript: text("run_script"),
     archiveScript: text("archive_script"),
     icon: text("icon"), // "icon:rocket", "emoji:🚀", or null
+    commitInstructions: text("commit_instructions"),
+    prInstructions: text("pr_instructions"),
     isArchived: integer("is_archived", { mode: "boolean" })
       .notNull()
       .default(false),

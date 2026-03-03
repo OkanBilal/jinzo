@@ -7,6 +7,8 @@ export interface FormState {
   setupScript: string;
   runScript: string;
   archiveScript: string;
+  commitInstructions: string;
+  prInstructions: string;
   icon: string;
   iconMode: IconPickerMode;
   isIconPickerOpen: boolean;
@@ -17,7 +19,7 @@ export interface FormState {
 
 export type FormAction =
   | { type: "SYNC_PROJECT"; project: any }
-  | { type: "SET_FIELD"; field: "defaultBranch" | "setupScript" | "runScript" | "archiveScript"; value: string }
+  | { type: "SET_FIELD"; field: "defaultBranch" | "setupScript" | "runScript" | "archiveScript" | "commitInstructions" | "prInstructions"; value: string }
   | { type: "SET_ICON"; icon: string; iconMode: IconPickerMode }
   | { type: "SET_ICON_PICKER_OPEN"; isOpen: boolean }
   | { type: "SET_ICON_MODE"; iconMode: IconPickerMode }
@@ -44,6 +46,8 @@ export const initialFormState: FormState = {
   setupScript: "",
   runScript: "",
   archiveScript: "",
+  commitInstructions: "",
+  prInstructions: "",
   icon: "",
   iconMode: "emoji",
   isIconPickerOpen: false,
@@ -63,6 +67,8 @@ export function formReducer(state: FormState, action: FormAction): FormState {
         setupScript: action.project?.setupScript ?? "",
         runScript: action.project?.runScript ?? "",
         archiveScript: action.project?.archiveScript ?? "",
+        commitInstructions: action.project?.commitInstructions ?? "",
+        prInstructions: action.project?.prInstructions ?? "",
         icon,
         iconMode,
         isIconPickerOpen: false,

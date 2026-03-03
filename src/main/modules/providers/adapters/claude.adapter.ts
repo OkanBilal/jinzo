@@ -27,6 +27,8 @@ import {
 } from "../../runs/user-input-broker";
 import type { ToolApprovalRequest } from "../../runs/runs.dto";
 import { runsRepo } from "../../runs/runs.repo";
+import { updateRunBaseRef } from "../../runs";
+import { gitService } from "../../git/git.service";
 import { workspaceDiffsRepo } from "../../workspaceDiffs/workspaceDiffs.repo";
 import { reviewsRepo } from "../../reviews/reviews.repo";
 import { reviewFindingsRepo } from "../../reviewFindings/reviewFindings.repo";
@@ -67,6 +69,7 @@ const DEFAULT_ALLOWED_TOOLS = [
   "mcp__jinzo__SaveReview",
   "mcp__jinzo__SaveFinding",
   "mcp__jinzo__SaveFindings",
+  "mcp__jinzo__CommitChanges",
 ];
 const ALLOWED_TOOLS_SET = new Set(DEFAULT_ALLOWED_TOOLS);
 
@@ -440,6 +443,7 @@ export function createClaudeAdapter(
     runId?: string,
     workspaceId?: string,
     forkSession?: boolean,
+    onEvent?: WorkRunEventHandler,
   ): SDKOptions {
     // Find the Claude CLI binary
     let binaryPath: string | null = null;
@@ -517,7 +521,7 @@ export function createClaudeAdapter(
     // Inject the jinzo MCP server as an in-process SDK server
     // Uses Drizzle ORM repos directly — no subprocess or sqlite3 CLI needed
     if (!mcpServers["jinzo"] && createSdkMcpServerFn && toolFn) {
-      mcpServers["jinzo"] = buildJinzoMcpServer(workspaceId ?? null);
+      mcpServers["jinzo"] = buildJinzoMcpServer(workspaceId ?? null, workspacePath ?? null, runId ?? null);
       logInfo("Injected jinzo MCP server (in-process)");
     }
 
@@ -589,6 +593,27 @@ export function createClaudeAdapter(
       options.hooks.PreToolUse.push(approvalHook);
     }
 
+    // Inject PostToolUse hook to capture tool output
+    // Always inject (even in bypass mode) since this is for data capture, not approval
+    if (runId && onEvent) {
+      if (!options.hooks) {
+        options.hooks = {};
+      }
+      if (!options.hooks.PostToolUse) {
+        options.hooks.PostToolUse = [];
+      }
+      options.hooks.PostToolUse.push(buildPostToolUseHook(onEvent));
+    }
+
+    // Instruct the agent to always use the CommitChanges MCP tool
+    // instead of running git add/commit via Bash
+    //TODO:
+    options.systemPrompt = {
+      type: "preset",
+      preset: "claude_code",
+      append: "IMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the jinzo MCP server to stage and commit changes.",
+    };
+
     return options;
   }
 
@@ -596,7 +621,7 @@ export function createClaudeAdapter(
    * Build an in-process MCP server for jinzo tools using createSdkMcpServer.
    * Tools use Drizzle ORM repos directly — no subprocess or sqlite3 CLI needed.
    */
-  function buildJinzoMcpServer(workspaceId: string | null): any {
+  function buildJinzoMcpServer(workspaceId: string | null, rootPath: string | null, runId: string | null): any {
     return createSdkMcpServerFn!({
       name: "jinzo",
       version: "1.0.0",
@@ -736,6 +761,68 @@ export function createClaudeAdapter(
             };
           },
         ),
+        toolFn!(
+          "CommitChanges",
+          "Stage and commit changes in the workspace git repository. Use commitInstructions if provided for message style guidance.",
+          {
+            message: z.string().describe("The commit message"),
+            files: z.array(z.string()).optional().describe("Specific files to stage. If omitted, stages all changes (git add -A)"),
+          },
+          async ({ message, files }: { message: string; files?: string[] }) => {
+            if (!rootPath) {
+              return {
+                content: [{ type: "text", text: "Error: No workspace root path" }],
+                isError: true,
+              };
+            }
+            try {
+              await gitService.stageFiles(rootPath, files);
+              const result = await gitService.commit(rootPath, message);
+
+              // Recapture diff from the new HEAD so the Changes tab
+              // reflects the post-commit state (clean working tree).
+              // Also update the run base ref so persistRunDiff at run-end
+              // doesn't re-insert stale committed changes.
+              const headResult = await gitService.getHeadSha(rootPath);
+              const newHead = headResult.success ? headResult.data : null;
+
+              if (workspaceId && newHead) {
+                const [statusResult, untrackedResult] = await Promise.all([
+                  gitService.getDiffSince(rootPath, newHead),
+                  gitService.getUntrackedFiles(rootPath),
+                ]);
+                const diffText = statusResult.success ? (statusResult.data ?? "") : "";
+                const untrackedFiles = untrackedResult.success ? (untrackedResult.data ?? []) : [];
+                const files = untrackedFiles; // only untracked remain after commit
+
+                await workspaceDiffsRepo.deleteByWorkspace(workspaceId);
+                if (files.length > 0 || diffText) {
+                  await workspaceDiffsRepo.insertDiff({
+                    id: crypto.randomUUID(),
+                    workspaceId,
+                    runId: runId ?? undefined,
+                    baseRef: newHead,
+                    diffText,
+                    filesJson: JSON.stringify(files),
+                    statsJson: JSON.stringify({ shortstat: "", files: files.length, newFiles: files.length }),
+                  });
+                }
+              }
+              if (runId && newHead) {
+                updateRunBaseRef(runId, newHead);
+              }
+
+              return {
+                content: [{ type: "text", text: JSON.stringify(result) }],
+              };
+            } catch (error) {
+              return {
+                content: [{ type: "text", text: `Error: ${error instanceof Error ? error.message : String(error)}` }],
+                isError: true,
+              };
+            }
+          },
+        ),
       ],
     });
   }
@@ -855,6 +942,39 @@ export function createClaudeAdapter(
     }
 
     return sdkHooks;
+  }
+
+  /**
+   * Build a PostToolUse SDK hook that captures tool output and emits
+   * a "complete" tool_call event so the output gets persisted to the DB.
+   */
+  function buildPostToolUseHook(onEvent: WorkRunEventHandler): SDKHookMatcher {
+    return {
+      hooks: [
+        async (
+          input: Record<string, unknown>,
+          toolUseId: string | null,
+        ): Promise<Record<string, unknown>> => {
+          const toolName = (input.tool_name as string) || "unknown";
+          const toolResponse = input.tool_response;
+
+          if (toolResponse !== undefined) {
+            await onEvent({
+              type: "tool_call",
+              toolName,
+              output: toolResponse,
+              endedAt: Date.now(),
+              metadata: {
+                phase: "complete",
+                toolCallId: toolUseId || undefined,
+              },
+            });
+          }
+
+          return {};
+        },
+      ],
+    };
   }
 
   /**
@@ -1083,12 +1203,24 @@ export function createClaudeAdapter(
         }
 
         if (userContent && userContent.trim().length > 0) {
-          events.push({
-            type: "log",
-            message: userContent,
-            level: "sdk-user",
-            ts,
-          });
+          //TODO:
+          // Continuation summaries (from /compact) should be visible as artifacts
+          const isContinuationSummary = userContent.includes("continued from a previous conversation");
+          if (isContinuationSummary) {
+            events.push({
+              type: "artifact",
+              kind: "report",
+              content: userContent,
+              metadata: { source: "continuation-summary" },
+            });
+          } else {
+            events.push({
+              type: "log",
+              message: userContent,
+              level: "sdk-user",
+              ts,
+            });
+          }
         }
         break;
       }
@@ -1110,7 +1242,7 @@ export function createClaudeAdapter(
         const resultMsg = msg as SDKResultMessage;
 
         // Emit result content only when no assistant message was streamed
-        // (e.g. slash command output like /cost)
+        // (e.g. slash command output like /cost, /compact)
         if (resultMsg.result && !context?.hasAssistantContent) {
           events.push({
             type: "artifact",
@@ -1462,6 +1594,8 @@ export function createClaudeAdapter(
           request.agents, // run-level agents
           runId, // for interactive tool approval
           request.workspace.id, // workspace ID for MCP server
+          undefined, // forkSession
+          onEvent, // for PostToolUse output capture
         );
 
         await onEvent({
@@ -1832,6 +1966,8 @@ export function createClaudeAdapter(
           request.agents, // run-level agents
           runId, // for interactive tool approval
           request.workspace.id, // workspace ID for MCP server
+          undefined, // forkSession
+          onEvent, // for PostToolUse output capture
         );
 
         // Build prompt with any additional context
@@ -2177,6 +2313,7 @@ export function createClaudeAdapter(
           runId,
           request.workspace.id,
           true, // forkSession: true
+          onEvent, // for PostToolUse output capture
         );
 
         // Build prompt with any additional context
@@ -3040,6 +3177,7 @@ function safeJson(value: unknown): string {
 }
 
 /**
+ * TODO: CHECK
  * Read MCP servers from Claude settings files.
  * Merges servers from user (~/.claude/settings.json) and project (.claude/settings.json) configs.
  * Project-level servers override user-level servers with the same name.

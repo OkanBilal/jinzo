@@ -6,42 +6,6 @@ export interface WriteParams {
   content?: string;
 }
 
-function getLanguageFromPath(filePath: string): string {
-  const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
-  const map: Record<string, string> = {
-    ts: "TypeScript",
-    tsx: "React TSX",
-    js: "JavaScript",
-    jsx: "React JSX",
-    py: "Python",
-    rs: "Rust",
-    go: "Go",
-    rb: "Ruby",
-    java: "Java",
-    kt: "Kotlin",
-    swift: "Swift",
-    c: "C",
-    cpp: "C++",
-    h: "C Header",
-    css: "CSS",
-    scss: "SCSS",
-    html: "HTML",
-    json: "JSON",
-    yaml: "YAML",
-    yml: "YAML",
-    md: "Markdown",
-    sql: "SQL",
-    sh: "Shell",
-    bash: "Shell",
-    zsh: "Shell",
-    toml: "TOML",
-    xml: "XML",
-    svg: "SVG",
-    vue: "Vue",
-    svelte: "Svelte",
-  };
-  return map[ext] ?? ext.toUpperCase();
-}
 
 export function WriteDisplay({ params }: { params: WriteParams }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -50,7 +14,6 @@ export function WriteDisplay({ params }: { params: WriteParams }) {
   const content = params.content ?? "";
   const fileName = filePath.split("/").pop() || filePath;
   const lineCount = content ? content.split("\n").length : 0;
-  const language = filePath ? getLanguageFromPath(filePath) : "";
 
   const dirPath = useMemo(() => {
     if (!filePath) return "";
@@ -68,7 +31,7 @@ export function WriteDisplay({ params }: { params: WriteParams }) {
     <div className="px-2">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-2 py-0.5 hover:bg-primary-100/50 dark:hover:bg-primary-800/20 rounded text-s font-sans cursor-pointer"
+        className="w-full flex items-center gap-2 py-0.5 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans cursor-pointer"
       >
         <ArrowUp
           className={`size-3 text-primary-500 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
@@ -80,10 +43,12 @@ export function WriteDisplay({ params }: { params: WriteParams }) {
         <span className="text-primary-700 dark:text-primary-200 font-medium truncate">
           {fileName}
         </span>
-        <span className="text-primary-500 text-xs shrink-0">
-          {lineCount > 0 ? `${lineCount} lines` : ""}
-          {language ? ` · ${language}` : ""}
-        </span>
+        {lineCount > 0 && (
+          <span className="text-green-600 dark:text-green-400 text-xs shrink-0">
+            +{lineCount}
+          </span>
+        )}
+
       </button>
 
       {isExpanded && (
@@ -94,9 +59,13 @@ export function WriteDisplay({ params }: { params: WriteParams }) {
             </div>
           )}
           {content && (
-            <pre className="noscrollbar text-xs leading-relaxed text-primary-700 dark:text-primary-300 font-mono whitespace-pre-wrap bg-primary-100/50 dark:bg-primary-900/50 rounded-xl p-3 max-h-80 overflow-y-auto">
-              {content}
-            </pre>
+            <div className="noscrollbar text-xs leading-relaxed font-mono bg-primary-50 dark:bg-primary/5 rounded-xl p-3 max-h-80 overflow-y-auto">
+              {content.split("\n").map((line, i) => (
+                <div key={i} className="text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30">
+                  +{line}
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}

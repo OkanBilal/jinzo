@@ -51,7 +51,7 @@ export default function CostByModelChart({ data }: CostByModelChartProps) {
           const pct = maxCost > 0 ? (d.costUsd / maxCost) * 100 : 0;
           return (
             <div key={d.model} className="flex items-center gap-3" title={`${d.model}: $${d.costUsd.toFixed(2)} · ${d.runs} runs`}>
-              <span className="text-xs text-primary-500 dark:text-primary-400 w-20 shrink-0 truncate">
+              <span className="text-xs text-primary-500 dark:text-primary-400 w-26 shrink-0 truncate">
                 {displayModel(d.model)}
               </span>
               <div className="flex-1 h-5 rounded-sm overflow-hidden">

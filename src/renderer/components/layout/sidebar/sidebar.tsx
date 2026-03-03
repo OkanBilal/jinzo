@@ -28,6 +28,7 @@ import { useSidebarData } from "@/hooks/use-sidebar-data";
 import { useSidebarActions } from "@/hooks/use-sidebar-actions";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { useActiveSpace } from "@/hooks/use-active-space";
+import { useScriptNotifications } from "@/hooks/use-script-notifications";
 
 export default function Sidebar() {
   const location = useLocation();
@@ -71,6 +72,9 @@ export default function Sidebar() {
     handleCancelDeleteSpace,
   } = useSpaceContextMenu();
 
+  // Global listeners
+  useScriptNotifications();
+
   // Feedback modal state
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
@@ -82,7 +86,11 @@ export default function Sidebar() {
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    const unsubscribe = window.api.feedback.onOpenFeedback(() => setFeedbackOpen(true));
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      unsubscribe();
+    };
   }, []);
 
   // Help menu state

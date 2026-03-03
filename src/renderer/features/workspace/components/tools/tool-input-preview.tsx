@@ -6,15 +6,38 @@ interface ToolInputPreviewProps {
 export function ToolInputPreview({ toolName, toolInput }: ToolInputPreviewProps) {
   if (!toolInput || Object.keys(toolInput).length === 0) return null;
 
-  const renderer = RENDERERS[toolName] ?? renderFallback;
+  // Normalize: if toolInput is { args: "<json>" }, parse it
+  const input = normalizeInput(toolInput);
+
+  // Case-insensitive lookup (Copilot sends "edit", Claude sends "Edit")
+  const renderer = RENDERERS[toolName]
+    ?? RENDERERS[toolName.charAt(0).toUpperCase() + toolName.slice(1)]
+    ?? (toolName.startsWith("[permission:") ? renderPermissionFallback : renderFallback);
+  const canonName = RENDERERS[toolName] ? toolName : toolName.charAt(0).toUpperCase() + toolName.slice(1);
+  const noBg = canonName === "Edit" || canonName === "Write" || toolName === "[permission:write]";
   return (
-    <div className="text-xs bg-primary-100/30 dark:bg-primary/5 rounded-lg  overflow-x-auto max-h-48 space-y-2">
-      {renderer(toolInput)}
+    <div className={`text-xs rounded-lg overflow-x-auto max-h-48 space-y-2 ${noBg ? "" : "bg-primary-50 dark:bg-primary/5"}`}>
+      {renderer(input)}
     </div>
   );
 }
 
 // --- helpers ---
+
+/** If input is { args: "<json string>" }, parse args and merge into top level */
+function normalizeInput(input: Record<string, unknown>): Record<string, unknown> {
+  if (typeof input.args === "string") {
+    try {
+      const parsed = JSON.parse(input.args);
+      if (typeof parsed === "object" && parsed !== null) return { ...input, ...parsed };
+    } catch { /* ignore */ }
+  }
+  return input;
+}
+
+function filePath(input: Record<string, unknown>): string {
+  return str(input.fileName ?? input.filePath ?? input.file_path ?? input.path ?? input.file ?? "");
+}
 
 function str(val: unknown, maxLen = 300): string {
   const s = typeof val === "string" ? val : String(val ?? "");
@@ -31,7 +54,7 @@ function Mono({ children }: { children: React.ReactNode }) {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-primary-400 dark:text-primary-500 text-xxs uppercase tracking-wide">
+    <span className="text-primary-400 dark:text-primary-500 text-xxs capitalize tracking-wide">
       {children}
     </span>
   );
@@ -42,6 +65,45 @@ function CodeBlock({ children }: { children: React.ReactNode }) {
     <pre className="text-primary-300 dark:text-primary-400 whitespace-pre-wrap break-all px-3 py-2 mt-1">
       {children}
     </pre>
+  );
+}
+
+function DiffView({ diff, oldStr, newStr }: { diff?: string; oldStr?: string; newStr?: string }) {
+  let lines: { prefix: string; text: string; type: "add" | "remove" | "context" }[] = [];
+
+  if (diff) {
+    lines = diff
+      .split("\n")
+      .filter((l) => !l.startsWith("diff ") && !l.startsWith("index ") && !l.startsWith("--- ") && !l.startsWith("+++ ") && !l.startsWith("@@") && l !== "")
+      .map((l) => {
+        if (l.startsWith("+")) return { prefix: "+", text: l.slice(1), type: "add" as const };
+        if (l.startsWith("-")) return { prefix: "-", text: l.slice(1), type: "remove" as const };
+        return { prefix: " ", text: l.startsWith(" ") ? l.slice(1) : l, type: "context" as const };
+      });
+  } else if (oldStr || newStr) {
+    if (oldStr) for (const l of oldStr.split("\n")) lines.push({ prefix: "-", text: l, type: "remove" });
+    if (newStr) for (const l of newStr.split("\n")) lines.push({ prefix: "+", text: l, type: "add" });
+  }
+
+  if (lines.length === 0) return null;
+
+  return (
+    <div className="text-xs leading-relaxed font-mono px-3 py-2 max-h-40 overflow-y-auto noscrollbar">
+      {lines.map((l, i) => (
+        <div
+          key={i}
+          className={
+            l.type === "add"
+              ? "text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30"
+              : l.type === "remove"
+                ? "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30"
+                : "text-primary-600 dark:text-primary-400"
+          }
+        >
+          {l.prefix}{l.text}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -83,30 +145,28 @@ const RENDERERS: Record<string, Renderer> = {
 
   Write: (input) => (
     <>
-      <div className="bg-primary/5 px-3 py-2">
+      <div className="px-1 pb-1">
         <Label>file</Label> <Mono>{str(input.file_path)}</Mono>
       </div>
       {input.content && (
-        <CodeBlock>{str(input.content, 400)}</CodeBlock>
+        <div className="bg-primary-50 dark:bg-primary/5 rounded-lg">
+          <DiffView newStr={str(input.content, 600)} />
+        </div>
       )}
     </>
   ),
 
   Edit: (input) => (
     <>
-      <div>
-        <Label>file</Label> <Mono>{str(input.file_path)}</Mono>
+      <div className="px-1 pb-1">
+        <Label>file</Label> <Mono>{str(input.file_path ?? input.path)}</Mono>
       </div>
-      {input.old_string && (
-        <pre className="text-red-400/80 bg-red-500/5 rounded px-2 py-1.5 mt-1 whitespace-pre-wrap break-all line-through decoration-red-400/30">
-          {str(input.old_string, 300)}
-        </pre>
-      )}
-      {input.new_string && (
-        <pre className="text-green-400/80 bg-green-500/5 rounded px-2 py-1.5 mt-0.5 whitespace-pre-wrap break-all">
-          {str(input.new_string, 300)}
-        </pre>
-      )}
+      <div className="bg-primary-50 dark:bg-primary/5 rounded-lg">
+        <DiffView
+          oldStr={input.old_string ? str(input.old_string, 600) : input.old_str ? str(input.old_str, 600) : undefined}
+          newStr={input.new_string ? str(input.new_string, 600) : input.new_str ? str(input.new_str, 600) : undefined}
+        />
+      </div>
     </>
   ),
 
@@ -199,7 +259,43 @@ const RENDERERS: Record<string, Renderer> = {
       )}
     </>
   ),
+
+  "[permission:write]": (input) => (
+    <>
+
+      <div className="px-1 pb-1">
+        <Label>file</Label> <Mono>{filePath(input)}</Mono>
+      </div>
+      {input.diff && (
+        <div className="bg-primary-50 dark:bg-primary/5 rounded-lg">
+          <DiffView diff={String(input.diff)} />
+        </div>
+      )}
+    </>
+  ),
+
+  "[permission:shell]": (input) => (
+    <>
+      {input.cwd && (
+        <div className="px-3 pt-2">
+          <Label>cwd</Label> <Mono>{str(input.cwd)}</Mono>
+        </div>
+      )}
+      <CodeBlock>{str(input.command, 1200)}</CodeBlock>
+    </>
+  ),
+
+  "[permission:read]": (input) => (
+    <div className="px-3 py-2">
+      <Label>file</Label> <Mono>{filePath(input)}</Mono>
+    </div>
+  ),
 };
+
+function renderPermissionFallback(input: Record<string, unknown>): React.ReactNode {
+  const { kind: _, toolCallId: __, ...rest } = input;
+  return renderFallback(rest);
+}
 
 function renderFallback(input: Record<string, unknown>): React.ReactNode {
   try {

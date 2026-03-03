@@ -24,7 +24,7 @@ export function useProviderModels(
       state.workspace.selectedModelByProvider[activeProviderId],
   );
 
-  const { data: providerModels, isLoading: isLoadingModels } =
+  const { data: providerModels, isLoading: isLoadingModels, error: modelsError } =
     useGetProviderModelsQuery(activeProviderId, { skip: !activeProviderId });
 
   const { data: providerCommands = [], isLoading: isLoadingCommands } =
@@ -129,6 +129,7 @@ export function useProviderModels(
     isLoadingCommands,
     providerSkills,
     isLoadingSkills,
+    modelsError,
     planMode,
     handlePlanModeToggle,
     thinkingMode,

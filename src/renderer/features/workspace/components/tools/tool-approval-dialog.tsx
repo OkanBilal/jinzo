@@ -131,7 +131,7 @@ export function ToolApprovalDialog({
               <span className="text-sm font-medium text-primary-200 dark:text-primary-300 mb-2">
                 Tool approval required
               </span>
-              <span className="px-1.5 py-0.5 mb-2 rounded-lg text-xxs bg-primary-200/10 dark:bg-primary/10 text-primary-300 dark:text-primary-400">
+              <span className="px-1.5 py-0.5 mb-2 rounded-lg text-xxs bg-primary-200/10 capitalize dark:bg-primary/10 text-primary-300 dark:text-primary-400">
                 {request.toolName}
               </span>
             </div>

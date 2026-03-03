@@ -3,6 +3,8 @@ import { useDispatch } from "react-redux";
 import {
   useGetLatestWorkspaceDiffQuery,
   useGetAppSettingsQuery,
+  useGetWorkspaceByIdQuery,
+  useGetProjectByIdQuery,
   useGetReviewsByWorkspaceQuery,
   useGetReviewFindingsByReviewQuery,
   type WorkspaceDiff,
@@ -89,6 +91,9 @@ export function DiffSection({
   const dispatch = useDispatch();
   const [selectedDiffFile, setSelectedDiffFile] = useState<string | null>(null);
   const { data: appSettings } = useGetAppSettingsQuery();
+  const { data: workspace } = useGetWorkspaceByIdQuery(workspaceId, { skip: !workspaceId });
+  const projectId = workspace?.projectId;
+  const { data: project } = useGetProjectByIdQuery(projectId ?? "", { skip: !projectId });
 
   // Fetch the latest workspace diff directly
   const { currentData: diff, isFetching } = useGetLatestWorkspaceDiffQuery(
@@ -172,14 +177,12 @@ export function DiffSection({
   };
 
   const handleCommitChanges = () => {
-    const instructions = appSettings?.commitInstructions;
-    dispatch(
-      setPendingGoal(
-        instructions
-          ? instructions + "\n\nCommit the changes."
-          : "Commit the changes.",
-      ),
-    );
+    const instructions = project?.commitInstructions || appSettings?.commitInstructions;
+    const goal = instructions
+      ? instructions + "\n\nUse the CommitChanges tool to commit the changes."
+      : "Use the CommitChanges tool to commit the changes.";
+    dispatch(setPendingGoal(goal));
+    dispatch(setPendingAutoExecute(true));
   };
 
   return (

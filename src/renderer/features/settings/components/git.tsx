@@ -102,7 +102,7 @@ export default function GitSettings() {
 
         <SettingsRow
           variant="detail"
-          title="PR Instructions"
+          title="PR Template Instructions"
           description="Added to pull request creation prompts"
         >
           <Textarea

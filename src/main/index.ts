@@ -2,7 +2,7 @@ if (process.platform === "win32") {
   if (require("electron-squirrel-startup")) process.exit(0);
 }
 
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell } from "electron";
 import { spawn, exec, execFile } from "child_process";
 import { promisify } from "util";
 import * as fs from "fs";
@@ -376,6 +376,89 @@ async function initializeApp() {
       }
     });
 
+    // Build custom application menu
+    const template: Electron.MenuItemConstructorOptions[] = [
+      ...(process.platform === "darwin"
+        ? [{
+            label: app.name,
+            submenu: [
+              {
+                label: "About Jinzo",
+                click: () => {
+                  const iconPath = !app.isPackaged
+                    ? path.join(app.getAppPath(), "src/renderer/public/icon.png")
+                    : fs.existsSync(path.join(process.resourcesPath, "icon.png"))
+                      ? path.join(process.resourcesPath, "icon.png")
+                      : path.join(app.getAppPath(), ".vite/renderer/icon.png");
+                  dialog.showMessageBox({
+                    type: "info",
+                    title: "About Jinzo",
+                    message: "Jinzo",
+                    detail: `Version ${app.getVersion()}\n© 2026 True Laurel Labs`,
+                    icon: nativeImage.createFromPath(iconPath),
+                  });
+                },
+              },
+              {
+                label: "Check for Updates…",
+                click: () => updatesService.checkForUpdates(),
+              },
+              { type: "separator" as const },
+              { role: "services" as const },
+              { type: "separator" as const },
+              { role: "hide" as const },
+              { role: "hideOthers" as const },
+              { role: "unhide" as const },
+              { type: "separator" as const },
+              { role: "quit" as const },
+            ],
+          }]
+        : []),
+      { role: "fileMenu" as const },
+      { role: "editMenu" as const },
+      {
+        label: "View",
+        submenu: app.isPackaged
+          ? [
+              { role: "resetZoom" as const },
+              { role: "zoomIn" as const },
+              { role: "zoomOut" as const },
+              { type: "separator" as const },
+              { role: "togglefullscreen" as const },
+            ]
+          : [
+              { role: "reload" as const },
+              { role: "forceReload" as const },
+              { role: "toggleDevTools" as const },
+              { type: "separator" as const },
+              { role: "resetZoom" as const },
+              { role: "zoomIn" as const },
+              { role: "zoomOut" as const },
+              { type: "separator" as const },
+              { role: "togglefullscreen" as const },
+            ],
+      },
+      { role: "windowMenu" as const },
+      {
+        role: "help",
+        submenu: [
+          {
+            label: "Documentation",
+            click: () => shell.openExternal("https://jinzo.dev/docs"),
+          },
+          {
+            label: "Send Feedback",
+            accelerator: "CmdOrCtrl+Shift+F",
+            click: () => {
+              const win = BrowserWindow.getFocusedWindow();
+              if (win) win.webContents.send("open-feedback");
+            },
+          },
+        ],
+      },
+    ];
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+
     // Create main window (hidden until ready)
     createMainWindow({
       show: false,
@@ -476,6 +559,19 @@ if (!gotTheLock) {
     }
   });
 }
+
+// Ensure app name is "jinzo" even in dev (Electron Forge defaults to "Electron")
+if (!app.isPackaged) {
+  app.setName("jinzo");
+}
+
+// Custom About panel
+app.setAboutPanelOptions({
+  applicationName: "Jinzo",
+  applicationVersion: app.getVersion(),
+  copyright: "© 2026 True Laurel Labs of Tokyo & İzmir",
+  website: "https://jinzo.dev",
+});
 
 // Register custom protocol scheme (must be before app.ready)
 registerImageProxyScheme();

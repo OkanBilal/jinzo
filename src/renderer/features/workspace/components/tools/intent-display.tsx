@@ -1,16 +1,12 @@
 import { useState } from "react";
-import { ArrowUp, ExitPlan } from "@/components/ui/icons";
+import { ArrowUp, Notes } from "@/components/ui/icons";
 
-export interface ExitPlanParams {
-  plan?: string;
-  allowedPrompts?: { tool: string; prompt: string }[];
+export interface IntentParams {
+  intent?: string;
 }
 
-export function ExitPlanDisplay({ params }: { params: ExitPlanParams }) {
+export function IntentDisplay({ params }: { params: IntentParams }) {
   const [isExpanded, setIsExpanded] = useState(false);
-
-  const plan = params.plan || "";
-  const charCount = plan.length;
 
   return (
     <div className="px-2">
@@ -21,19 +17,19 @@ export function ExitPlanDisplay({ params }: { params: ExitPlanParams }) {
         <ArrowUp
           className={`size-3 text-primary-500 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
-        <ExitPlan className="size-4 dark:text-primary-300 text-primary-700" />
+        <Notes className="size-4 dark:text-primary-300 text-primary-700" />
         <span className="dark:text-primary-300 text-primary-700 font-medium">
-          Plan
+          Intent
         </span>
         <span className="text-primary-500 truncate">
-          {charCount > 0 ? `(${charCount} chars)` : "No plan content"}
+          {params.intent || "Unknown intent"}
         </span>
       </button>
 
-      {isExpanded && plan && (
+      {isExpanded && params.intent && (
         <div className="mt-2 ml-5 space-y-2 border-l border-primary-200/50 dark:border-primary-700/30 pl-3">
-          <div className="noscrollbar text-sm text-primary-700 dark:text-primary-300 whitespace-pre-wrap bg-primary-50 dark:bg-primary/3 rounded-xl p-3 max-h-80 overflow-y-auto">
-            {plan}
+          <div className="noscrollbar text-s text-primary-700 dark:text-primary-300 whitespace-pre-wrap bg-primary-50 dark:bg-primary/3 rounded p-2 max-h-48 overflow-y-auto">
+            {params.intent}
           </div>
         </div>
       )}

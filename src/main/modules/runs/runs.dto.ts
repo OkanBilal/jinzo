@@ -169,6 +169,7 @@ export interface CreateToolCallPayload {
 
 export interface UpdateToolCallPayload {
   status?: ToolCallStatus;
+  input?: Record<string, unknown>;
   output?: unknown;
   error?: string;
   startedAt?: Date;

@@ -3,20 +3,25 @@ import { SVGProps } from "react"
 const SvgComponent = (props: SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={24}
-    height={24}
+    width={16}
+    height={16}
     fill="none"
-    viewBox="0 0 24 24"
+    viewBox="0 0 16 16"
     {...props}
   >
-    <circle cx={12} cy={12} r={10} stroke="currentColor" strokeWidth={1.5} />
-    <path
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="m8.5 12.5 2 2 5-5"
-    />
+    <defs>
+      <mask id="check-cutout">
+        <circle cx={8} cy={8} r={8} fill="white" />
+        <path
+          stroke="black"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="m5.5 8.5 1.5 1.5 3.5-3.5"
+        />
+      </mask>
+    </defs>
+    <circle cx={8} cy={8} r={8} fill="currentColor" mask="url(#check-cutout)" />
   </svg>
 )
 export default SvgComponent

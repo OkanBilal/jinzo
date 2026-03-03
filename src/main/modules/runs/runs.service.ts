@@ -102,6 +102,14 @@ async function sendRunNotification(runId: string, status: string): Promise<void>
 }
 
 /**
+ * Update the base ref for a run (e.g. after a commit so persistRunDiff
+ * compares against the post-commit HEAD instead of the pre-commit one).
+ */
+export function updateRunBaseRef(runId: string, sha: string): void {
+  runBaseRefs.set(runId, sha);
+}
+
+/**
  * Capture HEAD sha at run start for later diff computation.
  * Silently no-ops if the workspace is not a git repo.
  */
@@ -988,6 +996,7 @@ export const runsService = {
 
             await runsRepo.updateToolCall(toolCallId, {
               status: event.error ? "error" : "done",
+              input: event.input as Record<string, unknown> | undefined,
               output: event.output,
               error: event.error,
               endedAt: event.endedAt ? new Date(event.endedAt) : new Date(),

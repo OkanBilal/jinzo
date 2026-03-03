@@ -374,6 +374,8 @@ export interface CopilotAdapterConfig {
   timeout?: number;
   /** Whether to start the CLI process automatically */
   autoStart?: boolean;
+  /** Permission mode for tool access */
+  permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
 }
 
 /**

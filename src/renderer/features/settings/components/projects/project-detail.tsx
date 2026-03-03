@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useReducer } from "react";
+import { useState, useEffect, useMemo, useReducer, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Heading2, Muted } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   const [showLinkModal, setShowLinkModal] = useState(false);
 
   const [state, dispatch] = useReducer(formReducer, initialFormState);
-  const { defaultBranch, setupScript, runScript, archiveScript, icon, iconMode, isIconPickerOpen, isDirty } = state;
+  const { defaultBranch, setupScript, runScript, archiveScript, commitInstructions, prInstructions, icon, iconMode, isIconPickerOpen, isDirty } = state;
 
   // Sync form state when project data loads
   if (project !== state.prevProject) {
@@ -74,6 +74,8 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
           setupScript: setupScript || undefined,
           runScript: runScript || undefined,
           archiveScript: archiveScript || undefined,
+          commitInstructions: commitInstructions || undefined,
+          prInstructions: prInstructions || undefined,
           icon: iconValue,
         },
       }).unwrap();
@@ -105,8 +107,36 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     }
   };
 
-  const setField = (field: "defaultBranch" | "setupScript" | "runScript" | "archiveScript", value: string) =>
+  const setField = (field: "defaultBranch" | "setupScript" | "runScript" | "archiveScript" | "commitInstructions" | "prInstructions", value: string) =>
     dispatch({ type: "SET_FIELD", field, value });
+
+  const [importing, setImporting] = useState(false);
+
+  const handleImportPrTemplate = useCallback(async () => {
+    if (!project?.rootPath || importing) return;
+    setImporting(true);
+    try {
+      const paths = [
+        `${project.rootPath}/.github/PULL_REQUEST_TEMPLATE.md`,
+        `${project.rootPath}/.github/pull_request_template.md`,
+        `${project.rootPath}/PULL_REQUEST_TEMPLATE.md`,
+        `${project.rootPath}/pull_request_template.md`,
+      ];
+      for (const path of paths) {
+        const result = await window.api.fileExplorer.readFile(path);
+        if (result?.success && result.data) {
+          setField("prInstructions", result.data);
+          toast.success("PR template imported");
+          return;
+        }
+      }
+      toast.error("No PR template found in repository");
+    } catch {
+      toast.error("Failed to read PR template");
+    } finally {
+      setImporting(false);
+    }
+  }, [project?.rootPath, importing]);
 
   const formatPath = (path: string) => {
     const parts = path.split("/");
@@ -169,7 +199,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
         <SettingsRow
           variant="detail"
           title="Root path"
-          description="Do not move or delete this directory."
+          description="The main repository directory for this project."
         >
           {formatPath(project.rootPath)}
         </SettingsRow>
@@ -179,7 +209,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
           title="Workspaces path"
           description={
             project.workspacesPath
-              ? "Do not move or delete the workspace subdirectories."
+              ? "Directory where workspace worktrees are stored."
               : undefined
           }
         >
@@ -199,36 +229,36 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       <SettingsSection title="Scripts">
         <SettingsRow
           variant="detail"
-          title="Setup script"
-          description="Runs when a new workspace is created."
+          title="Setup"
+          description="Runs after a new workspace is created, e.g. installing dependencies."
         >
           <Textarea
             value={setupScript}
             onChange={(e) => setField("setupScript", e.target.value)}
-            placeholder="e.g., npm install"
+            placeholder="e.g., npm i && npm run build"
             rows={2}
             className="min-w-0"
           />
         </SettingsRow>
-        <SettingsDivider />
+        {/* <SettingsDivider />
         <SettingsRow
           variant="detail"
           title="Run script"
-          description="Runs when a workspace session starts."
+          description="Runs when a workspace session starts, e.g. starting a dev server."
         >
           <Textarea
             value={runScript}
             onChange={(e) => setField("runScript", e.target.value)}
-            placeholder="e.g., npm run dev"
+            placeholder="e.g., npm run start"
             rows={2}
             className="min-w-0"
           />
-        </SettingsRow>
+        </SettingsRow> */}
         <SettingsDivider />
         <SettingsRow
           variant="detail"
-          title="Archive script"
-          description="Runs when a workspace is archived."
+          title="Archive"
+          description="Runs when archiving a workspace, e.g. cleaning up node_modules."
         >
           <Textarea
             value={archiveScript}
@@ -240,7 +270,69 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
         </SettingsRow>
       </SettingsSection>
 
-      <div className="flex items-center justify-between pt-2 mb-8">
+      <SettingsSection title="Instructions">
+        <SettingsRow
+          variant="detail"
+          title="Commit Instructions"
+          description="Instructions prepended to commit goals. Overrides global setting if provided."
+        >
+          <Textarea
+            value={commitInstructions}
+            onChange={(e) => setField("commitInstructions", e.target.value)}
+            placeholder="Overrides global setting if provided"
+            rows={3}
+            className="min-w-0"
+          />
+        </SettingsRow>
+        <SettingsDivider />
+        <SettingsRow
+          variant="detail"
+          title="PR Template Instructions"
+          description="Instructions prepended to PR goals. Overrides global setting if provided."
+        >
+          <div className="flex flex-col gap-2 min-w-0 w-full">
+            <Textarea
+              value={prInstructions}
+              onChange={(e) => setField("prInstructions", e.target.value)}
+              placeholder="Overrides global setting if provided"
+              rows={3}
+              className="min-w-0"
+            />
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={importing}
+                isLoading={importing}
+                onClick={handleImportPrTemplate}
+              >
+                Import from repo
+              </Button>
+            </div>
+          </div>
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection title="Danger Zone">
+        <SettingsRow
+          variant="detail"
+          title="Remove project"
+          description="Permanently deletes this project, all associated workspaces, and their worktree files."
+        >
+          <Button
+            type="button"
+            variant="danger"
+            size="md"
+            onClick={() => setShowRemoveAlert(true)}
+            disabled={removing}
+          >
+            Remove
+          </Button>
+        </SettingsRow>
+      </SettingsSection>
+
+            <div className="flex items-center justify-between pt-2 mb-8">
         <div className="text-xs text-primary-500 dark:text-primary-400">
           {lastSavedLabel ? `Last saved: ${lastSavedLabel}` : "Not saved yet"}
         </div>
@@ -266,24 +358,6 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
           </Button>
         </div>
       </div>
-
-      <SettingsSection title="Danger Zone">
-        <SettingsRow
-          variant="detail"
-          title="Remove repository"
-          description="Permanently deletes this project, all associated workspaces, and their worktree files."
-        >
-          <Button
-            type="button"
-            variant="danger"
-            size="md"
-            onClick={() => setShowRemoveAlert(true)}
-            disabled={removing}
-          >
-            Remove
-          </Button>
-        </SettingsRow>
-      </SettingsSection>
 
       <Alert
         isOpen={showRemoveAlert}

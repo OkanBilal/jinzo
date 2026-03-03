@@ -39,7 +39,7 @@ Jinzo is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM, sq
 
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
-- Namespaced by domain: `api.chat`, `api.entities`, `api.tasks`, `api.issues`, `api.playlists`, `api.feed`, `api.sync`, `api.runs`, `api.runContext`, `api.runArtifacts`, `api.runCommands`, `api.workspaceDiffs`, `api.reviews`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.account`, `api.apps`, `api.appSettings`, `api.connections`, `api.connectionCredentials`, `api.space`, `api.journal`, `api.projects`, `api.providers`, `api.tools`, `api.toolCalls`, `api.toolPermissions`, `api.ollama`, `api.workspaceResources`, `api.seed`
+- Namespaced by domain: `api.chat`, `api.entities`, `api.tasks`, `api.issues`, `api.playlists`, `api.feed`, `api.sync`, `api.runs`, `api.runContext`, `api.runArtifacts`, `api.runCommands`, `api.runTurns`, `api.workspaceDiffs`, `api.reviews`, `api.reviewFindings`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.account`, `api.apps`, `api.appSettings`, `api.connections`, `api.connectionCredentials`, `api.space`, `api.journal`, `api.projects`, `api.projectResources`, `api.providers`, `api.tools`, `api.toolCalls`, `api.toolPermissions`, `api.ollama`, `api.workspaceResources`, `api.seed`, `api.feedback`, `api.stats`, `api.updates`
 - After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
@@ -63,7 +63,7 @@ Each domain module follows a layered pattern (see `src/main/modules/account/` as
 
 **Critical**: All layers are **plain object literals**, never classes. No DI — repos call `getDb()` inline.
 
-All modules: `account`, `appSettings`, `apps`, `chat`, `connectionCredentials`, `connections`, `entities`, `feed`, `fileExplorer`, `git`, `imageProxy`, `journal`, `mcp`, `space`, `ollama`, `projects`, `providers`, `reviews`, `runs`, `seed`, `sync`, `terminal`, `tools`, `workspaceDiffs`, `workspaceResources`, `workspaces`
+All modules: `account`, `appSettings`, `apps`, `chat`, `connectionCredentials`, `connections`, `entities`, `feed`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `journal`, `mcp`, `space`, `ollama`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceDiffs`, `workspaceResources`, `workspaces`
 
 ### IPC Convention
 
@@ -108,10 +108,12 @@ Core tables:
 - `spaceToolPermissions` - Space-specific tool permission policies
 - `feedItems` - Event log/timeline entries
 - `chatSessions` / `chatMessages` - Chat history with provider/model tracking, observability (traceId, latencyMs, token counts)
-- `runs` / `runContext` / `runArtifacts` / `runCommands` - Terminal/code-writing flow (agent runs with session resumption via sessionId)
+- `runs` / `runContext` / `runArtifacts` / `runCommands` / `runTurns` / `runUsage` - Terminal/code-writing flow (agent runs with session resumption via sessionId, turn tracking, and usage metrics)
 - `tools` / `toolCalls` - Tool registry (local, mcp, provider_builtin) and invocation tracking with nested tool call support (parentToolCallId)
 - `workspaceDiffs` - Git diffs captured per workspace/run (base ref, diff text, files, stats)
 - `reviews` - Workspace-level review notes (status: open, in_review, approved, rejected)
+- `reviewFindings` - Individual code review findings linked to reviews
+- `projectResources` - Pivot table linking projects to connectionResources
 - `mcpServers` - MCP server registry (transport: stdio, http, ws)
 - `documentRevisions` - Journal revision history (title, body, wordCount per entity)
 - `outbox` - Offline-first action queue for retryable external operations
@@ -185,8 +187,9 @@ Domain-specific views on entities:
 - Captures git HEAD sha at run start, computes diffs after run completion
 - Stores diff text, file lists, and stats linked to runs and workspaces
 
-**Reviews** (`src/main/modules/reviews/`)
+**Reviews** (`src/main/modules/reviews/`, `src/main/modules/reviewFindings/`)
 - Workspace-level review/notes system with status tracking (open → in_review → approved/rejected)
+- Individual code review findings linked to reviews with severity, file, line range, and suggestions
 
 **Journal System** (`src/main/modules/journal/`)
 - Full document management with drafts, publishing, and revision history
@@ -212,6 +215,15 @@ Domain-specific views on entities:
 **Ollama Integration** (`src/main/modules/ollama/`)
 - Local LLM model management and info
 
+**Feedback Module** (`src/main/modules/feedback/`)
+- User feedback collection and management
+
+**Stats Module** (`src/main/modules/stats/`)
+- Dashboard statistics and analytics
+
+**Updates Module** (`src/main/modules/updates/`)
+- Application update checking and management
+
 ### Configuration
 
 - `drizzle.config.ts` - Drizzle Kit config (dev database: `.data/jinzo.db`)
@@ -222,11 +234,11 @@ Domain-specific views on entities:
 ### Frontend Conventions
 
 - **Redux**: RTK Query with custom `ipcBaseQuery`, `baseApi.injectEndpoints()` per domain
-- **Redux API files**: `accountApi`, `appsApi`, `appSettingsApi`, `chatApi`, `connectionsApi`, `entitiesApi`, `feedApi`, `journalApi`, `mcpApi`, `spaceApi`, `ollamaApi`, `projectsApi`, `providersApi`, `reviewsApi`, `runsApi`, `syncApi`, `toolsApi`, `workspaceDiffsApi`, `workspaceResourcesApi`, `workspacesApi`
+- **Redux API files**: `accountApi`, `appsApi`, `appSettingsApi`, `chatApi`, `connectionsApi`, `entitiesApi`, `feedApi`, `journalApi`, `mcpApi`, `spaceApi`, `ollamaApi`, `projectsApi`, `providersApi`, `reviewsApi`, `reviewFindingsApi`, `runsApi`, `shellApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceDiffsApi`, `workspaceResourcesApi`, `workspacesApi`
 - **Redux slices**: `chatSlice`, `spaceSlice`, `appSettingsSlice`, `workspaceSlice`, `journalEditingSlice`
 - **Hooks**: `use-kebab-case.ts` filenames, `useCamelCase` export names
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`
-- **Feature dirs**: `chat`, `journal`, `onboarding`, `settings`, `workspace`
+- **Feature dirs**: `chat`, `journal`, `onboarding`, `settings`, `stats`, `workspace`
 - **Routing**: HashRouter — routes defined in `src/renderer/routes/`
 - **Styling**: Tailwind CSS v4 (PostCSS-based)
 

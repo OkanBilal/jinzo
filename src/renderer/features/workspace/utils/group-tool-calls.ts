@@ -14,9 +14,10 @@ export function getToolType(content: string): string {
 
   // MCP tools: check for mcp__provider__ pattern first
   if (lower.startsWith("mcp__jinzo__") || lower.includes("__jinzo__")) {
-    if (lower.includes("getworkspacediff")) return "GetDiffMcp";
-    if (lower.includes("savereview")) return "SaveReviewMcp";
-    if (lower.includes("savefinding")) return "SaveFindingsMcp";
+    if (lower.includes("getworkspacediff")) return "GetDiff";
+    if (lower.includes("savereview")) return "PersistReview";
+    if (lower.includes("savefinding")) return "PersistFinding";
+    if (lower.includes("commitchanges")) return "Commit";
     return "Jinzo";
   }
   if (lower.startsWith("mcp__linear__") || lower.includes("__linear__"))
@@ -28,15 +29,21 @@ export function getToolType(content: string): string {
 
   if (lower === "todowrite") return "TodoWrite";
   if (lower === "task") return "Task";
-  if (lower === "read" || lower === "view" || lower.includes("read"))
+  if (lower === "read" ||  lower.includes("read"))
     return "Read";
-  if (lower === "bash" || lower === "shell" || lower === "terminal")
+  if (lower === "view" || lower.includes("view"))
+    return "View";
+  if (lower === "bash" || lower === "terminal")
     return "Bash";
+  if (lower === "shell" || lower.includes("shell"))
+    return "Shell";
   if (lower === "edit" || lower.includes("edit")) return "Edit";
   if (lower === "write" || lower.includes("write")) return "Write";
   if (lower === "search" || lower === "find") return "Search";
   if (lower === "glob") return "Glob";
   if (lower === "grep") return "Grep";
+  if (lower === "report_intent") return "Report Intent";
+
   return toolName;
 }
 

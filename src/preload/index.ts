@@ -422,6 +422,11 @@ const api = {
     delete: (id: string) => ipcRenderer.invoke("workspaces:delete", id),
     archive: (id: string) => ipcRenderer.invoke("workspaces:archive", id),
     selectDirectory: () => ipcRenderer.invoke("workspaces:selectDirectory"),
+    onScriptComplete: (callback: (data: { workspaceId: string; script: string; success: boolean; error?: string }) => void) => {
+      const listener = (_: any, data: { workspaceId: string; script: string; success: boolean; error?: string }) => callback(data);
+      ipcRenderer.on("workspaces:scriptComplete", listener);
+      return () => ipcRenderer.removeListener("workspaces:scriptComplete", listener);
+    },
   },
   // Runs operations
   runs: {
@@ -714,6 +719,11 @@ const api = {
   feedback: {
     send: (payload: { message: string }) =>
       ipcRenderer.invoke("feedback:send", payload),
+    onOpenFeedback: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on("open-feedback", listener);
+      return () => ipcRenderer.removeListener("open-feedback", listener);
+    },
   },
   stats: {
     getDashboard: (filter?: string) => ipcRenderer.invoke("stats:getDashboard", filter),

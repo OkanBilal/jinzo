@@ -60,6 +60,7 @@ export function mapToolCallToEvent(tc: ToolCall): RunEvent | null {
         status: tc.status,
         toolName: tc.toolName,
         input: parseRawInput(tc.input),
+        output: tc.output,
       },
     };
   } catch (err) {

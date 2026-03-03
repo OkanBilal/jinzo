@@ -302,10 +302,12 @@ export default function WorkspacesList({
           Workspaces
         </Caption>
         <div className="flex items-center gap-1">
-          <WorkspaceGroupDropdown
-            grouping={grouping}
-            onGroupingChange={setGrouping}
-          />
+          <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+            <WorkspaceGroupDropdown
+              grouping={grouping}
+              onGroupingChange={setGrouping}
+            />
+          </div>
           <ArrowUp
             className={`w-4 h-4 text-primary-900 dark:text-primary-200 transition-transform duration-200 ${
               isExpanded ? "rotate-180" : "rotate-90"
@@ -320,14 +322,14 @@ export default function WorkspacesList({
         }`}
       >
         {grouping === "none" ? (
-          <div className="flex flex-col space-y-1">
+          <div className="flex flex-col space-y-0.5">
             {sortedWorkspaces.map(renderWorkspaceItem)}
           </div>
         ) : (
-          <div className="flex flex-col space-y-0.5">
+          <div className="flex flex-col ">
             {groups.map((group) => (
               <WorkspaceGroupSection key={group.key} group={group}>
-                <div className="flex flex-col space-y-1 pl-1">
+                <div className="flex flex-col space-y-0.5 pl-1 pr-1">
                   {group.workspaces.map(renderWorkspaceItem)}
                 </div>
               </WorkspaceGroupSection>

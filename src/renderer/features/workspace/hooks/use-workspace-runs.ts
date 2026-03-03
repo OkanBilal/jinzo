@@ -167,18 +167,24 @@ export function useWorkspaceRuns(
                 const lastError = result.data.lastError || "Run failed";
 
                 // Detect auth error from lastError or run artifacts
-                let isAuthError = /not logged in/i.test(lastError);
+                let isAuthError = /not logged in|not authenticated|gh auth login/i.test(lastError);
                 if (!isAuthError && /exited with code/i.test(lastError)) {
                   const artRes = await window.api.runArtifacts.getByRun(activeRunId);
                   if (artRes.success && artRes.data) {
                     isAuthError = artRes.data.some(
-                      (a: { content: any; }) => /not logged in/i.test(a.content ?? ""),
+                      (a: { content: any; }) => /not logged in|not authenticated|gh auth login/i.test(a.content ?? ""),
                     );
                   }
                 }
-
+                // TODO: IMPROVE: This is a very naive way to detect auth errors. We should standardize error reporting from providers to make this more robust.
                 if (isAuthError) {
-                  toast.error("Not logged in — run `claude login` in your terminal", { duration: 8000 });
+                  const isCopilot = /gh auth/i.test(lastError);
+                  toast.error(
+                    isCopilot
+                      ? "GitHub CLI not authenticated — run `gh auth login` in your terminal"
+                      : "Not logged in — run `claude login` in your terminal",
+                    { duration: 8000 },
+                  );
                 } else {
                   toast.error(lastError, { duration: 5000 });
                 }

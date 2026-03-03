@@ -1,6 +1,6 @@
 export { registerRunsIpc, unregisterRunsIpc } from "./runs.ipc";
 export { runsController } from "./runs.controller";
-export { runsService, releaseAllSleepBlockers } from "./runs.service";
+export { runsService, releaseAllSleepBlockers, updateRunBaseRef } from "./runs.service";
 export { runsRepo } from "./runs.repo";
 export type {
   RunStatus,

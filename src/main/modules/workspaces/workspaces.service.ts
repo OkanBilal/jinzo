@@ -1,5 +1,8 @@
 import { randomUUID } from "crypto";
+import { exec } from "child_process";
+import { BrowserWindow } from "electron";
 import { workspacesRepo } from "./workspaces.repo";
+import { projectsRepo } from "../projects/projects.repo";
 import type {
   CreateWorkspacePayload,
   UpdateWorkspacePayload,
@@ -7,6 +10,28 @@ import type {
   ServiceResponse,
   WorkspaceStatus,
 } from "./workspaces.dto";
+
+// ─────────────────────────────────────────────────────────────
+// Script Execution Helper
+// ─────────────────────────────────────────────────────────────
+function executeScript(script: string, cwd: string): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    exec(script, { cwd, timeout: 300_000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`[WorkspacesService] Script failed in ${cwd}:`, error.message);
+        reject(error);
+        return;
+      }
+      resolve({ stdout, stderr });
+    });
+  });
+}
+
+function notifyRenderer(channel: string, data: unknown): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send(channel, data);
+  }
+}
 
 // ─────────────────────────────────────────────────────────────
 // Workspaces Service
@@ -80,6 +105,26 @@ export const workspacesService = {
       if (!workspace) {
         return { success: false, error: "Failed to retrieve created workspace" };
       }
+
+      // Fire-and-forget: run project setupScript in background
+      if (workspace.projectId) {
+        const wsId = id;
+        const rootPath = workspace.rootPath;
+        projectsRepo.findById(workspace.projectId).then((project) => {
+          if (!project?.setupScript) return;
+          console.log(`[WorkspacesService] Running setup script for workspace ${wsId} in ${rootPath}`);
+          executeScript(project.setupScript, rootPath)
+            .then(() => {
+              console.log(`[WorkspacesService] Setup script completed for workspace ${wsId}`);
+              notifyRenderer("workspaces:scriptComplete", { workspaceId: wsId, script: "setup", success: true });
+            })
+            .catch((err) => {
+              console.error(`[WorkspacesService] Setup script failed for workspace ${wsId}:`, err);
+              notifyRenderer("workspaces:scriptComplete", { workspaceId: wsId, script: "setup", success: false, error: err?.message });
+            });
+        }).catch(() => {});
+      }
+
       return { success: true, data: workspace };
     } catch (error) {
       console.error("[WorkspacesService] Failed to create workspace:", error);
@@ -122,10 +167,35 @@ export const workspacesService = {
 
   async archive(id: string): Promise<ServiceResponse<WorkspaceResponse>> {
     try {
-      const archived = await workspacesRepo.archive(id);
-      if (!archived) {
+      const workspace = await workspacesRepo.findById(id);
+      if (!workspace) {
         return { success: false, error: "Workspace not found" };
       }
+
+      const archived = await workspacesRepo.archive(id);
+      if (!archived) {
+        return { success: false, error: "Failed to archive workspace" };
+      }
+
+      // Fire-and-forget: run project archiveScript in background
+      if (workspace.projectId) {
+        const wsId = id;
+        const rootPath = workspace.rootPath;
+        projectsRepo.findById(workspace.projectId).then((project) => {
+          if (!project?.archiveScript) return;
+          console.log(`[WorkspacesService] Running archive script for workspace ${wsId} in ${rootPath}`);
+          executeScript(project.archiveScript, rootPath)
+            .then(() => {
+              console.log(`[WorkspacesService] Archive script completed for workspace ${wsId}`);
+              notifyRenderer("workspaces:scriptComplete", { workspaceId: wsId, script: "archive", success: true });
+            })
+            .catch((err) => {
+              console.error(`[WorkspacesService] Archive script failed for workspace ${wsId}:`, err);
+              notifyRenderer("workspaces:scriptComplete", { workspaceId: wsId, script: "archive", success: false, error: err?.message });
+            });
+        }).catch(() => {});
+      }
+
       return { success: true, data: archived };
     } catch (error) {
       console.error(`[WorkspacesService] Failed to archive workspace ${id}:`, error);

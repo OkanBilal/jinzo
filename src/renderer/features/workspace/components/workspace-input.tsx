@@ -78,6 +78,7 @@ export function WorkspaceInput({
     isLoadingCommands,
     providerSkills,
     isLoadingSkills,
+    modelsError,
     planMode,
     handlePlanModeToggle,
     thinkingMode,
@@ -194,10 +195,31 @@ export function WorkspaceInput({
     onSubmit();
   }, [atMenu.visible, slashMenu.visible, onSubmit]);
 
+  //Copilot related TODO:
+  const authErrorMessage = (() => {
+    if (!modelsError) return null;
+    const msg =
+      typeof modelsError === "string"
+        ? modelsError
+        : typeof modelsError === "object" && "error" in modelsError
+          ? String((modelsError as any).error)
+          : null;
+    if (msg && /not authenticated|gh auth login/i.test(msg)) return msg;
+    return null;
+  })();
+
   const glassMorphismClass =
     variant === "claude" ? "glass-morphism-claude" : "glass-morphism-copilot";
 
   return (
+    <>
+          {authErrorMessage && (
+        <div className="w-200 mx-auto mb-2 px-3 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/10 text-yellow-200/80 text-xs">
+          <span className="font-medium">Auth required:</span>{" "}
+          {authErrorMessage}
+        </div>
+      )}
+   
     <div
       className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-3xl ${glassMorphismClass}
         cursor-pointer transition-all`}
@@ -262,7 +284,9 @@ export function WorkspaceInput({
         onStop={onStop}
         uploadedFiles={uploadedFiles}
         onUploadedFilesChange={onUploadedFilesChange ?? (() => {})}
+        disabled={!!authErrorMessage}
       />
     </div>
+     </>
   );
 }

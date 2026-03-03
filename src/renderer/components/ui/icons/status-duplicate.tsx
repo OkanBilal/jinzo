@@ -3,20 +3,25 @@ import { SVGProps } from "react"
 const SvgComponent = (props: SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={800}
-    height={800}
+    width={16}
+    height={16}
     fill="none"
-    stroke="currentColor"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    strokeWidth={2}
-    aria-labelledby="cancelIconTitle"
-    color="currentColor"
-    viewBox="0 0 24 24"
+    viewBox="0 0 16 16"
     {...props}
   >
-    <title>{"Cancel"}</title>
-    <path d="M15.536 15.536 8.464 8.464m7.072 0-7.072 7.072M4.929 19.071c-3.905-3.905-3.905-10.237 0-14.142 3.905-3.905 10.237-3.905 14.142 0 3.905 3.905 3.905 10.237 0 14.142-3.905 3.905-10.237 3.905-14.142 0Z" />
+    <defs>
+      <mask id="cancel-cutout">
+        <circle cx={8} cy={8} r={8} fill="white" />
+        <path
+          stroke="black"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="m5.5 10.5 5-5m0 5-5-5"
+        />
+      </mask>
+    </defs>
+    <circle cx={8} cy={8} r={8} fill="currentColor" mask="url(#cancel-cutout)" />
   </svg>
 )
 export default SvgComponent

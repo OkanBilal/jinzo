@@ -8,6 +8,13 @@ import { ExitPlanDisplay, type ExitPlanParams } from "./exit-plan-display";
 import { WriteDisplay, type WriteParams } from "./write-display";
 import { McpDisplay } from "./mcp-display";
 import { AgentDisplay, type AgentParams } from "./agent-display";
+import { IntentDisplay, type IntentParams } from "./intent-display";
+import { BashDisplay, type BashParams } from "./bash-display";
+import { GlobDisplay, type GlobParams } from "./glob-display";
+import { ReadDisplay, type ReadParams } from "./read-display";
+import { GrepDisplay, type GrepParams } from "./grep-display";
+import { EditDisplay, type EditParams } from "./edit-display";
+import { ViewDisplay, type ViewParams } from "./view-display";
 
 interface ToolCallItemProps {
   event: RunEvent;
@@ -70,6 +77,19 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     return <AgentDisplay params={agentParams} />;
   }
 
+  // Show EditDisplay for edit tool calls
+  if (toolName.toLowerCase() === "edit" || toolName.toLowerCase() === "replace") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const editParams: EditParams = metadataInput
+      ? (metadataInput as EditParams)
+      : params
+        ? (params as EditParams)
+        : { file_path: summary };
+    return <EditDisplay params={editParams} output={event.metadata?.output} isCompact={isCompact} />;
+  }
+
   // Show WriteDisplay for write/create file tool calls
   if (toolName.toLowerCase() === "write" || toolName.toLowerCase() === "writeifempty" || toolName.toLowerCase() === "create_file") {
     const metadataInput = event.metadata?.input as
@@ -81,6 +101,84 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
         ? (params as WriteParams)
         : { file_path: summary };
     return <WriteDisplay params={writeParams} />;
+  }
+
+  // Show BashDisplay for bash/shell tool calls
+  if (toolName.toLowerCase() === "bash" || toolName.toLowerCase() === "shell") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const bashParams: BashParams = metadataInput
+      ? (metadataInput as BashParams)
+      : params
+        ? (params as BashParams)
+        : { command: summary };
+    return <BashDisplay params={bashParams} output={event.metadata?.output} isCompact={isCompact} />;
+  }
+
+  // Show GlobDisplay for glob/find tool calls
+  if (toolName.toLowerCase() === "glob" || toolName.toLowerCase() === "find") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const globParams: GlobParams = metadataInput
+      ? (metadataInput as GlobParams)
+      : params
+        ? (params as GlobParams)
+        : { pattern: summary };
+    return <GlobDisplay params={globParams} output={event.metadata?.output} isCompact={isCompact} />;
+  }
+
+  // Show GrepDisplay for grep/search tool calls
+  if (toolName.toLowerCase() === "grep" || toolName.toLowerCase() === "search") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const grepParams: GrepParams = metadataInput
+      ? (metadataInput as GrepParams)
+      : params
+        ? (params as GrepParams)
+        : { pattern: summary };
+    return <GrepDisplay params={grepParams} output={event.metadata?.output} isCompact={isCompact} />;
+  }
+
+  // Show ReadDisplay for read tool calls
+  if (toolName.toLowerCase() === "read") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const readParams: ReadParams = metadataInput
+      ? (metadataInput as ReadParams)
+      : params
+        ? (params as ReadParams)
+        : { file_path: summary };
+    return <ReadDisplay params={readParams} output={event.metadata?.output} isCompact={isCompact} />;
+  }
+
+  // Show ViewDisplay for Copilot view tool calls
+  if (toolName.toLowerCase() === "view") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const viewParams: ViewParams = metadataInput
+      ? (metadataInput as ViewParams)
+      : params
+        ? (params as ViewParams)
+        : { path: summary };
+    return <ViewDisplay params={viewParams} output={event.metadata?.output} isCompact={isCompact} />;
+  }
+
+  // Show IntentDisplay for report_intent tool calls
+  if (toolName.toLowerCase() === "report_intent") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const intentParams: IntentParams = metadataInput
+      ? (metadataInput as IntentParams)
+      : params
+        ? (params as IntentParams)
+        : { intent: summary };
+    return <IntentDisplay params={intentParams} />;
   }
 
   // Show McpDisplay for MCP tool calls with expandable params
@@ -100,14 +198,14 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
 
   if (isCompact) {
     return (
-      <div className="flex items-center gap-2 py-0.5 ml-5 px-2 hover:bg-primary-100/50 dark:hover:bg-primary-800/20 rounded text-s font-sans">
+      <div className="flex items-center gap-2 py-0.5 ml-5 px-2 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans">
         <span className="text-primary-500 truncate">{summary}</span>
       </div>
     );
   }
 
   return (
-    <div className="py-0.5 px-2 hover:bg-primary-100/50 dark:hover:bg-primary-800/20 rounded">
+    <div className="py-0.5 px-2 hover:bg-primary-50 dark:hover:bg-primary/5 rounded">
       <div className="flex items-center gap-2 text-s font-sans">
         <span className="dark:text-primary-300">{icon}</span>
         <span className="dark:text-primary-300 font-medium">{displayName}</span>

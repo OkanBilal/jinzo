@@ -8,6 +8,7 @@ interface SendButtonProps {
   onSubmit: () => void;
   onStop?: () => void;
   variant?: InputVariant;
+  disabled?: boolean;
 }
 
 const variantStyles = {
@@ -28,8 +29,9 @@ const variantStyles = {
   },
 };
 
-export function SendButton({ loading, onSubmit, onStop, variant = "default" }: SendButtonProps) {
+export function SendButton({ loading, onSubmit, onStop, variant = "default", disabled = false }: SendButtonProps) {
   const styles = variantStyles[variant];
+  const isDisabled = loading || disabled;
 
   if (loading && onStop) {
     return (
@@ -50,13 +52,13 @@ export function SendButton({ loading, onSubmit, onStop, variant = "default" }: S
       type="button"
       tooltip="Send a message"
       onClick={() => {
-        if (!loading) onSubmit();
+        if (!isDisabled) onSubmit();
       }}
       className={`metallic-button relative ${
-        loading ? "opacity-70 cursor-not-allowed" : ""
+        isDisabled ? "opacity-70 cursor-not-allowed" : ""
       }`}
       aria-label={loading ? "Submitting..." : "Send prompt"}
-      disabled={loading}
+      disabled={isDisabled}
     >
       {loading && (
         <span className="absolute inset-0 flex items-center justify-center">

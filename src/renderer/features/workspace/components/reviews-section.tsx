@@ -1,5 +1,5 @@
 import { useDispatch } from "react-redux";
-import { useGetReviewsByWorkspaceQuery, useGetAppSettingsQuery } from "@/lib/redux/api";
+import { useGetReviewsByWorkspaceQuery, useGetAppSettingsQuery, useGetWorkspaceByIdQuery, useGetProjectByIdQuery } from "@/lib/redux/api";
 import { openNoteTab, setPendingGoal } from "@/lib/redux/slices/workspaceSlice";
 import { Note, PullRequest } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,9 @@ function relativeTime(ts: number): string {
 export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
   const dispatch = useDispatch();
   const { data: appSettings } = useGetAppSettingsQuery();
+  const { data: workspace } = useGetWorkspaceByIdQuery(workspaceId, { skip: !workspaceId });
+  const projectId = workspace?.projectId;
+  const { data: project } = useGetProjectByIdQuery(projectId ?? "", { skip: !projectId });
   const { data: reviews = [], isLoading } = useGetReviewsByWorkspaceQuery({
     workspaceId,
   });
@@ -44,10 +47,13 @@ export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
 
   if (reviews.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center px-4">
-        <Body className="text-xs font-medium text-primary-800 dark:text-primary-300">
-          No reviews yet
-        </Body>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2 px-4 text-center">
+          <Note className="w-6 h-6 dark:text-primary-500 text-primary-800" />
+          <Body className="text-xs font-medium text-primary-800 dark:text-primary-300">
+            No reviews yet.
+          </Body>
+        </div>
       </div>
     );
   }
@@ -57,7 +63,7 @@ export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
       {/* Create PR button */}
       <Button
         onClick={() => {
-          const instructions = appSettings?.prInstructions;
+          const instructions = project?.prInstructions || appSettings?.prInstructions;
           dispatch(
             setPendingGoal(
               instructions

@@ -575,6 +575,30 @@ class GitService {
   }
 
   /**
+   * Stage files for commit
+   */
+  async stageFiles(rootPath: string, files?: string[]): Promise<void> {
+    const git = this.getGit(rootPath);
+    if (files && files.length > 0) {
+      await git.add(files);
+    } else {
+      await git.add("-A");
+    }
+  }
+
+  /**
+   * Commit staged changes
+   */
+  async commit(rootPath: string, message: string): Promise<{ hash: string; summary: string }> {
+    const git = this.getGit(rootPath);
+    const result = await git.commit(message);
+    return {
+      hash: result.commit || "",
+      summary: `${result.summary.changes} changed, ${result.summary.insertions} insertions, ${result.summary.deletions} deletions`,
+    };
+  }
+
+  /**
    * Remove a worktree
    */
   async removeWorktree(

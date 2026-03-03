@@ -35,6 +35,8 @@ interface InputToolbarProps {
   // File uploads
   uploadedFiles: UploadedFile[];
   onUploadedFilesChange: (files: UploadedFile[]) => void;
+  // Disable send
+  disabled?: boolean;
 }
 
 export function InputToolbar({
@@ -54,6 +56,7 @@ export function InputToolbar({
   onStop,
   uploadedFiles,
   onUploadedFilesChange,
+  disabled,
 }: InputToolbarProps) {
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [showFileDropdown, setShowFileDropdown] = useState(false);
@@ -209,6 +212,7 @@ export function InputToolbar({
             onSubmit={onSubmit}
             onStop={isRunning ? onStop : undefined}
             variant={variant}
+            disabled={disabled}
           />
         </div>
       </div>

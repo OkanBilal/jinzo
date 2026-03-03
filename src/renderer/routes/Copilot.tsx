@@ -1,15 +1,30 @@
+import { useCallback } from "react";
 import {
   WorkspaceEmptyState,
   WorkspaceEvents,
   WorkspaceInput,
   WorkspaceQuickActions,
 } from "@/features/workspace/components";
-import { useWorkspacePage } from "@/features/workspace/hooks";
+import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
+import { useAbortRunMutation } from "@/lib/redux/api";
 
 const COPILOT_CLI_PROVIDER_ID = "copilot_cli";
 
 export default function CopilotPage() {
   const ws = useWorkspacePage(COPILOT_CLI_PROVIDER_ID);
+  const [abortRun] = useAbortRunMutation();
+
+  const { pendingApprovals, respond: respondToolApproval } = useToolApproval();
+
+  const currentApproval = ws.activeRunId
+    ? pendingApprovals.find((a) => a.runId === ws.activeRunId)
+    : undefined;
+
+  const handleStop = useCallback(() => {
+    if (ws.activeRunId) {
+      abortRun(ws.activeRunId);
+    }
+  }, [ws.activeRunId, abortRun]);
 
   return (
     <div className="flex flex-col h-full dark:bg-copilot-dark ">
@@ -40,6 +55,8 @@ export default function CopilotPage() {
             showNewRunTab={ws.showNewRunTab}
             onSelectNewRunTab={ws.handleSelectNewRunTab}
             onCloseNewRunTab={ws.handleCloseNewRunTab}
+            pendingApproval={currentApproval}
+            onApprovalRespond={respondToolApproval}
           />
         )}
       </div>
@@ -66,6 +83,7 @@ export default function CopilotPage() {
         workspacePath={ws.currentWorkspace?.rootPath}
         uploadedFiles={ws.uploadedFiles}
         onUploadedFilesChange={ws.setUploadedFiles}
+        onStop={handleStop}
       />
     </div>
   );

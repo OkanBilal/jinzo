@@ -24,18 +24,18 @@ const statusConfig: Record<WorkspaceStatus, WorkspaceStatusConfig> = {
   },
   in_review: {
     label: "In Review",
-    color: "text-orange-600 dark:text-orange-600",
-    iconColor: "text-orange-500 dark:text-orange-600",
+    color: "text-green-600 dark:text-green-600",
+    iconColor: "text-green-500 dark:text-green-600",
   },
   done: {
     label: "Done",
-    color: "text-green-600 dark:text-green-700",
-    iconColor: "text-green-500 dark:text-green-700",
+    color: "text-indigo-500 dark:text-indigo-500",
+    iconColor: "text-indigo-500 dark:text-indigo-500",
   },
   canceled: {
     label: "Canceled",
-    color: "text-red-600 dark:text-red-600",
-    iconColor: "text-red-500 dark:text-red-600",
+    color: "text-red-600 dark:text-red-500",
+    iconColor: "text-red-500 dark:text-red-500",
   },
   duplicate: {
     label: "Duplicate",

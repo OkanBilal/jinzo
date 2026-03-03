@@ -13,6 +13,8 @@ export interface Project {
   runScript: string | null;
   archiveScript: string | null;
   icon: string | null;
+  commitInstructions: string | null;
+  prInstructions: string | null;
   isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -31,6 +33,8 @@ export interface CreateProjectPayload {
   runScript?: string;
   archiveScript?: string;
   icon?: string;
+  commitInstructions?: string;
+  prInstructions?: string;
 }
 
 export interface UpdateProjectPayload {
@@ -44,6 +48,8 @@ export interface UpdateProjectPayload {
   runScript?: string;
   archiveScript?: string;
   icon?: string | null;
+  commitInstructions?: string;
+  prInstructions?: string;
 }
 
 export const projectsApi = baseApi.injectEndpoints({

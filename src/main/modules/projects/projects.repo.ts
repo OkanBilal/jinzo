@@ -73,6 +73,8 @@ export const projectsRepo = {
       runScript: payload.runScript,
       archiveScript: payload.archiveScript,
       icon: payload.icon,
+      commitInstructions: payload.commitInstructions,
+      prInstructions: payload.prInstructions,
     });
     return payload.id;
   },
@@ -91,6 +93,8 @@ export const projectsRepo = {
     if (payload.runScript !== undefined) updateData.runScript = payload.runScript;
     if (payload.archiveScript !== undefined) updateData.archiveScript = payload.archiveScript;
     if (payload.icon !== undefined) updateData.icon = payload.icon;
+    if (payload.commitInstructions !== undefined) updateData.commitInstructions = payload.commitInstructions;
+    if (payload.prInstructions !== undefined) updateData.prInstructions = payload.prInstructions;
 
     await db.update(projects).set(updateData).where(eq(projects.id, id));
     return this.findById(id);
@@ -128,6 +132,8 @@ function mapRowToResponse(row: typeof projects.$inferSelect): ProjectResponse {
     runScript: row.runScript,
     archiveScript: row.archiveScript,
     icon: row.icon,
+    commitInstructions: row.commitInstructions,
+    prInstructions: row.prInstructions,
     isArchived: row.isArchived,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

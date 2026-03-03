@@ -66,6 +66,11 @@ export const workspaceDiffsRepo = {
     return rows[0] ? mapRowToResponse(rows[0]) : null;
   },
 
+  async deleteByWorkspace(workspaceId: string): Promise<void> {
+    const db = getDb();
+    await db.delete(workspaceDiffs).where(eq(workspaceDiffs.workspaceId, workspaceId));
+  },
+
   async findByWorkspaceAndBaseRef(
     workspaceId: string,
     baseRef: string,

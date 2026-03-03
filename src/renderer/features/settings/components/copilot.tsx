@@ -16,7 +16,34 @@ export default function CopilotSettings() {
   const [updateProvider, { isLoading: updating }] = useUpdateProviderMutation();
 
   const config = provider?.config ?? {};
+  const permissionMode = (config as any).permissionMode ?? "default";
+  const isBypassing = permissionMode === "bypassPermissions";
   const showQuickActions = (config as any).showQuickActions !== false;
+
+  const handlePermissionToggle = async (enabled: boolean) => {
+    if (!provider || updating) return;
+
+    const newMode = enabled ? "bypassPermissions" : "default";
+
+    try {
+      await updateProvider({
+        id: "copilot_cli",
+        payload: {
+          config: {
+            ...config,
+            permissionMode: newMode,
+          },
+        },
+      }).unwrap();
+      toast.success(
+        enabled
+          ? "Permission bypass enabled"
+          : "Permission bypass disabled — tools will require approval",
+      );
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update permission mode");
+    }
+  };
 
   const handleQuickActionsToggle = async (enabled: boolean) => {
     if (!provider || updating) return;
@@ -65,6 +92,22 @@ export default function CopilotSettings() {
       <div className="mb-8">
         <Heading2 className="font-medium!">Copilot</Heading2>
       </div>
+
+      <SettingsSection>
+        <SettingsRow
+          title="Bypass Permissions"
+          description={
+            <>
+              <span className="text-amber-700 dark:text-amber-600 font-medium ">
+                Enabling this gives the agent full control over file operations
+                and terminal commands.
+              </span>
+            </>
+          }
+        >
+          <Toggle enabled={isBypassing} onChange={handlePermissionToggle} />
+        </SettingsRow>
+      </SettingsSection>
 
       <SettingsSection title="Workspace">
         <SettingsRow

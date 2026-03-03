@@ -233,8 +233,9 @@ function matchTurnsToGroups(
   // For each completed turn, find the group index closest to endedAt
   const collectResponseContent = (fromIdx: number, toIdx: number): string => {
     const parts: string[] = [];
-    for (let j = fromIdx; j <= toIdx; j++) {
-      if (groups[j].type === "response") {
+    const end = Math.min(toIdx, groups.length - 1);
+    for (let j = fromIdx; j <= end; j++) {
+      if (groups[j]?.type === "response") {
         for (const event of groups[j].events) {
           if (event.content) parts.push(event.content);
         }
@@ -313,8 +314,9 @@ function computeSessionTimesFromEvents(
 
   const collectResponseContent = (fromIdx: number, toIdx: number): string => {
     const parts: string[] = [];
-    for (let j = fromIdx; j <= toIdx; j++) {
-      if (groups[j].type === "response") {
+    const end = Math.min(toIdx, groups.length - 1);
+    for (let j = fromIdx; j <= end; j++) {
+      if (groups[j]?.type === "response") {
         for (const event of groups[j].events) {
           if (event.content) parts.push(event.content);
         }
@@ -499,7 +501,6 @@ export function WorkspaceEvents({
     <div className=" text-sm h-full flex flex-col">
       {/* Sticky header + tabs */}
       <div className="sticky top-0 z-10 shrink-0">
-        {/* <WorkspaceHeader workspace={currentWorkspace} /> */}
         <WorkspaceTabs
           runs={runs}
           activeTab={activeTab}

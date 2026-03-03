@@ -297,6 +297,7 @@ export const runsRepo = {
     const updateData: Record<string, unknown> = {};
 
     if (payload.status !== undefined) updateData.status = payload.status;
+    if (payload.input !== undefined) updateData.input = JSON.stringify(payload.input);
     if (payload.output !== undefined) updateData.output = JSON.stringify(payload.output);
     if (payload.error !== undefined) updateData.error = payload.error;
     if (payload.startedAt !== undefined) updateData.startedAt = payload.startedAt;
