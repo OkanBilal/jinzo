@@ -1,3 +1,4 @@
+require('dotenv').config({ path: '.env.local' });
 const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 const { AutoUnpackNativesPlugin } = require('@electron-forge/plugin-auto-unpack-natives');
@@ -91,6 +92,7 @@ module.exports = {
   packagerConfig: {
     name: 'Jinzo',
     executableName: 'jinzo',
+    appBundleId: 'build.jinzo.app', // TODO: change this to your own bundle ID
     asar: {
       unpack: '{**/*.node,**/copilot,**/spawn-helper,**/rg,**/*.wasm}',
       unpackDir: '.vite/build/node_modules/{sqlite-vec-darwin-arm64,node-pty,@github/copilot-darwin-arm64,@github/copilot/prebuilds,@github/copilot/ripgrep,@anthropic-ai/claude-agent-sdk/vendor}',
@@ -100,6 +102,21 @@ module.exports = {
       'src/main/db/migrations',
       'src/renderer/public/icon.png',
     ],
+    ...(process.env.APPLE_ID && {
+      osxSign: {
+        identity: 'Developer ID Application',
+        optionsForFile: () => ({
+          hardenedRuntime: true,
+          entitlements: 'entitlements.plist',
+          'entitlements-inherit': 'entitlements.plist',
+        }),
+      },
+      osxNotarize: {
+        appleId: process.env.APPLE_ID,
+        appleIdPassword: process.env.APPLE_PASSWORD,
+        teamId: process.env.APPLE_TEAM_ID,
+      },
+    }),
   },
   rebuildConfig: {
     force: true,
@@ -108,6 +125,10 @@ module.exports = {
     {
       name: '@electron-forge/maker-squirrel',
       config: {},
+    },
+    {
+      name: '@electron-forge/maker-zip',
+      platforms: ['darwin'],
     },
     {
       name: '@electron-forge/maker-dmg',
@@ -127,7 +148,7 @@ module.exports = {
     {
       name: '@electron-forge/publisher-github',
       config: {
-        repository: { owner: 'OWNER', name: 'jinzo' },
+        repository: { owner: 'laurelresearch', name: 'jinzo' },
         prerelease: false,
         draft: true,
       },

@@ -29,6 +29,7 @@ import { useSidebarActions } from "@/hooks/use-sidebar-actions";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useScriptNotifications } from "@/hooks/use-script-notifications";
+import { UpdateBanner } from "./update-banner";
 
 export default function Sidebar() {
   const location = useLocation();
@@ -216,6 +217,7 @@ export default function Sidebar() {
               onDeleteWorkspace={deleteWorkspace.handleDeleteClick}
               onArchiveWorkspace={archiveWorkspace.handleArchiveClick}
             />
+            <UpdateBanner />
             <SidebarFooter
               spaces={spaces}
               activeSpaceId={activeSpaceId}

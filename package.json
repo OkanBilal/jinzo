@@ -3,8 +3,13 @@
   "type": "commonjs",
   "productName": "jinzo",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "AI-powered developer workspace",
   "main": ".vite/build/main.js",
+  "publish": {
+    "provider": "github",
+    "owner": "laurelresearch",
+    "repo": "jinzo"
+  },
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
@@ -59,6 +64,7 @@
     "@types/uuid": "^8.3.4",
     "@vitejs/plugin-react": "^5.1.4",
     "autoprefixer": "^10.4.24",
+    "dotenv": "^17.3.1",
     "drizzle-kit": "^0.31.9",
     "electron": "40.6.0",
     "eslint": "^9.39.2",
