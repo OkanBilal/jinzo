@@ -9,6 +9,22 @@ interface PtyInstance {
 
 const instances = new Map<string, PtyInstance>();
 
+const SENSITIVE_ENV_PREFIXES = [
+  "APPLE_", "GITHUB_TOKEN", "GITHUB_CLIENT_SECRET",
+  "RESEND_", "NOTION_", "TADDY_", "RAINDROP_",
+  "LINEAR_", "JIRA_", "ASANA_",
+];
+
+function getSafeEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value === undefined) continue;
+    if (SENSITIVE_ENV_PREFIXES.some((p) => key.startsWith(p))) continue;
+    env[key] = value;
+  }
+  return env;
+}
+
 export const terminalService = {
   create(id: string, cwd: string, onData: DataCallback): void {
     // Kill existing instance if present
@@ -20,7 +36,7 @@ export const terminalService = {
       cols: 80,
       rows: 24,
       cwd,
-      env: process.env as Record<string, string>,
+      env: getSafeEnv(),
     });
 
     const onDataDispose = proc.onData((data) => {
