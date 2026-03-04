@@ -150,6 +150,58 @@ class DatabaseClient {
   }
 
   /**
+   * Create a backup of the database before migrations
+   */
+  private backupDatabase(): string | null {
+    if (!this.dbPath || !fs.existsSync(this.dbPath)) return null;
+
+    const backupPath = `${this.dbPath}.pre-migration-backup`;
+    try {
+      fs.copyFileSync(this.dbPath, backupPath);
+      // Also backup WAL/SHM if they exist
+      const walPath = `${this.dbPath}-wal`;
+      const shmPath = `${this.dbPath}-shm`;
+      if (fs.existsSync(walPath)) fs.copyFileSync(walPath, `${backupPath}-wal`);
+      if (fs.existsSync(shmPath)) fs.copyFileSync(shmPath, `${backupPath}-shm`);
+      console.log(`Database backup created at ${backupPath}`);
+      return backupPath;
+    } catch (err) {
+      console.error("Failed to create database backup:", err);
+      return null;
+    }
+  }
+
+  /**
+   * Restore database from backup
+   */
+  private restoreFromBackup(backupPath: string): void {
+    if (!this.dbPath) return;
+    try {
+      fs.copyFileSync(backupPath, this.dbPath);
+      const walBackup = `${backupPath}-wal`;
+      const shmBackup = `${backupPath}-shm`;
+      if (fs.existsSync(walBackup)) fs.copyFileSync(walBackup, `${this.dbPath}-wal`);
+      if (fs.existsSync(shmBackup)) fs.copyFileSync(shmBackup, `${this.dbPath}-shm`);
+      console.log("Database restored from backup");
+    } catch (err) {
+      console.error("Failed to restore database from backup:", err);
+    }
+  }
+
+  /**
+   * Remove backup files after successful migration
+   */
+  private removeBackup(backupPath: string): void {
+    try {
+      if (fs.existsSync(backupPath)) fs.unlinkSync(backupPath);
+      if (fs.existsSync(`${backupPath}-wal`)) fs.unlinkSync(`${backupPath}-wal`);
+      if (fs.existsSync(`${backupPath}-shm`)) fs.unlinkSync(`${backupPath}-shm`);
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
+
+  /**
    * Run database migrations (sync)
    */
   private runMigrations(): void {
@@ -165,9 +217,22 @@ class DatabaseClient {
     }
 
     if (fs.existsSync(migrationsFolder)) {
-      console.log("Running migrations...");
-      migrate(this.db, { migrationsFolder });
-      console.log("Migrations completed");
+      const backupPath = this.backupDatabase();
+
+      try {
+        console.log("Running migrations...");
+        migrate(this.db, { migrationsFolder });
+        console.log("Migrations completed");
+
+        // Remove backup after success
+        if (backupPath) this.removeBackup(backupPath);
+      } catch (err) {
+        console.error("Migration failed:", err);
+        if (backupPath) {
+          this.restoreFromBackup(backupPath);
+        }
+        throw err;
+      }
     } else {
       console.log("No migrations folder found, skipping migrations");
     }
