@@ -1,8 +1,63 @@
 import { app, BrowserWindow, nativeImage, screen } from "electron";
 import path from "path";
-import { existsSync } from "fs";
+import fs, { existsSync } from "fs";
 
 let mainWindow: BrowserWindow | null = null;
+
+// ── Window state persistence ──────────────────────────────────
+
+interface WindowState {
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+  isMaximized?: boolean;
+}
+
+function getStatePath(): string {
+  return path.join(app.getPath("userData"), "window-state.json");
+}
+
+function loadWindowState(): WindowState | null {
+  try {
+    const data = fs.readFileSync(getStatePath(), "utf-8");
+    return JSON.parse(data) as WindowState;
+  } catch {
+    return null;
+  }
+}
+
+function saveWindowState(win: BrowserWindow): void {
+  const isMaximized = win.isMaximized();
+  const bounds = isMaximized ? win.getNormalBounds() : win.getBounds();
+
+  const state: WindowState = {
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    isMaximized,
+  };
+
+  try {
+    fs.writeFileSync(getStatePath(), JSON.stringify(state));
+  } catch {
+    // Ignore write errors
+  }
+}
+
+function isStateVisible(state: WindowState): boolean {
+  const displays = screen.getAllDisplays();
+  return displays.some((display) => {
+    const { x, y, width, height } = display.bounds;
+    return (
+      (state.x ?? 0) >= x - 100 &&
+      (state.y ?? 0) >= y - 100 &&
+      (state.x ?? 0) < x + width + 100 &&
+      (state.y ?? 0) < y + height + 100
+    );
+  });
+}
 
 export interface MainWindowOptions {
   show?: boolean;
@@ -31,7 +86,10 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
     return mainWindow;
   }
 
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const defaults = screen.getPrimaryDisplay().workAreaSize;
+  const saved = loadWindowState();
+  const useSaved = saved && isStateVisible(saved);
+
   const iconPath = getIconPath();
 
   // Set dock icon on macOS
@@ -47,8 +105,11 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
   }
 
   mainWindow = new BrowserWindow({
-    width,
-    height,
+    width: useSaved ? saved.width : defaults.width,
+    height: useSaved ? saved.height : defaults.height,
+    ...(useSaved && saved.x !== undefined && saved.y !== undefined
+      ? { x: saved.x, y: saved.y }
+      : {}),
     minWidth: 800,
     title: "Jinzo",
     minHeight: 600,
@@ -69,6 +130,22 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
       visualEffectState: "active" as const,
     } : {}),
   });
+
+  // Restore maximized state
+  if (useSaved && saved.isMaximized) {
+    mainWindow.maximize();
+  }
+
+  // Save state on resize/move
+  const persistState = () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      saveWindowState(mainWindow);
+    }
+  };
+  mainWindow.on("resize", persistState);
+  mainWindow.on("move", persistState);
+  mainWindow.on("maximize", persistState);
+  mainWindow.on("unmaximize", persistState);
 
   // Handle ready-to-show event
   mainWindow.once("ready-to-show", () => {
