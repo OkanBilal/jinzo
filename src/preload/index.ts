@@ -529,6 +529,8 @@ const api = {
   },
   // Review findings operations
   reviewFindings: {
+    getByWorkspace: (workspaceId: string) =>
+      ipcRenderer.invoke("reviewFindings:getByWorkspace", workspaceId),
     getByReview: (reviewId: string, limit?: number) =>
       ipcRenderer.invoke("reviewFindings:getByReview", reviewId, limit),
     getById: (id: string) =>
@@ -550,6 +552,17 @@ const api = {
       ipcRenderer.invoke("workspaceDiffs:getLatest", workspaceId),
     getByRun: (runId: string) =>
       ipcRenderer.invoke("workspaceDiffs:getByRun", runId),
+  },
+  // Workspace activity operations
+  workspaceActivity: {
+    getByWorkspace: (workspaceId: string, limit?: number) =>
+      ipcRenderer.invoke("workspaceActivity:getByWorkspace", workspaceId, limit),
+    create: (payload: unknown) =>
+      ipcRenderer.invoke("workspaceActivity:create", payload),
+    createMany: (payloads: unknown) =>
+      ipcRenderer.invoke("workspaceActivity:createMany", payloads),
+    delete: (id: string) =>
+      ipcRenderer.invoke("workspaceActivity:delete", id),
   },
   // Run context operations
   runContext: {

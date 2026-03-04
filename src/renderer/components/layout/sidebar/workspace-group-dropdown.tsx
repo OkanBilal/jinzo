@@ -36,7 +36,7 @@ export function WorkspaceGroupDropdown({
     setIsOpen(false);
   };
 
-  const activeClass = "bg-primary-950/8 dark:bg-primary/10 font-medium";
+  const activeClass = "bg-primary-100/80 dark:bg-primary/5 font-medium";
 
   return (
     <>
@@ -45,12 +45,12 @@ export function WorkspaceGroupDropdown({
         tooltip="Group workspaces"
         tooltipPosition="top"
         onClick={handleClick}
-        className="p-1 rounded-md cursor-pointer hover:bg-primary/20 dark:hover:bg-primary/10 transition-colors"
+        className={` ${grouping !== "none" ? "bg-primary-100/80 dark:bg-primary/5" : " "} p-1 rounded-md cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 transition-colors`}
       >
         <Layers
           className={`w-3.5 h-3.5 transition-colors ${
             grouping !== "none"
-              ? "text-primary-950 dark:text-primary"
+              ? "text-primary-950 dark:text-primary "
               : "text-primary-800 dark:text-primary-300"
           }`}
         />

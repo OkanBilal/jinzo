@@ -23,16 +23,16 @@ export function OnboardingModal({ open }: OnboardingModalProps) {
   const steps: WizardStep[] = useMemo(
     () => [
       {
+        id: "welcome",
+        render: () => <WelcomeStep />,
+      },
+      {
         id: "claude",
         render: () => <ClaudeSetupStep />,
       },
       {
         id: "copilot",
         render: () => <CopilotSetupStep />,
-      },
-      {
-        id: "welcome",
-        render: () => <WelcomeStep />,
       },
     ],
     [],
@@ -45,9 +45,10 @@ export function OnboardingModal({ open }: OnboardingModalProps) {
         if (!isOpen) completeOnboarding();
       }}
       steps={steps}
-      title="Setup"
+      title=""
       onComplete={completeOnboarding}
       onCancel={completeOnboarding}
+      className="max-w-210 mb-24"
     />
   );
 }

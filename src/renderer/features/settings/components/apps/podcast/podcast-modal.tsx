@@ -1,7 +1,6 @@
 import { useState, useReducer, useEffect, useCallback } from "react";
 
 import {
-  BodyMedium,
   Body,
   Muted,
   ErrorText,
@@ -359,7 +358,7 @@ function ManagePodcastsStep({ onRevoke }: { onRevoke: () => void }) {
       addButtonLabel="Add Podcast"
       renderResourceItem={(resource) => (
         <div className="flex-1">
-          <BodyMedium>{resource.name}</BodyMedium>
+          <Body>{resource.name}</Body>
         </div>
       )}
     />

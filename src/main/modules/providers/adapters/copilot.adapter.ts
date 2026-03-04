@@ -26,6 +26,7 @@ import type { ToolApprovalRequest } from "../../runs/runs.dto";
 import { workspaceDiffsRepo } from "../../workspaceDiffs/workspaceDiffs.repo";
 import { reviewsRepo } from "../../reviews/reviews.repo";
 import { reviewFindingsRepo } from "../../reviewFindings/reviewFindings.repo";
+import { workspaceActivityService } from "../../workspaceActivity/workspaceActivity.service";
 import { updateRunBaseRef } from "../../runs";
 import { gitService } from "../../git/git.service";
 
@@ -424,6 +425,15 @@ export function createCopilotAdapter(
             runId: args.runId,
             metadata: args.metadata,
           });
+          if (workspaceId) {
+            workspaceActivityService.log({
+              workspaceId,
+              type: "review",
+              title: args.title,
+              summary: args.summary,
+              refId: reviewId,
+            });
+          }
           return JSON.stringify({ reviewId });
         },
       },
@@ -461,6 +471,23 @@ export function createCopilotAdapter(
             suggestion: args.suggestion,
             metadata: args.metadata,
           });
+          if (workspaceId) {
+            workspaceActivityService.log({
+              workspaceId,
+              type: "finding",
+              title: `Finding in ${args.file}`,
+              summary: args.message,
+              refId: findingId,
+              metadata: {
+                severity: args.severity,
+                file: args.file,
+                reason: args.reason,
+                lineStart: args.lineStart,
+                lineEnd: args.lineEnd,
+                hasSuggestion: !!args.suggestion,
+              },
+            });
+          }
           return JSON.stringify({ findingId });
         },
       },
@@ -512,6 +539,20 @@ export function createCopilotAdapter(
               metadata: f.metadata,
             })),
           );
+          if (workspaceId) {
+            workspaceActivityService.log({
+              workspaceId,
+              type: "finding",
+              title: `${args.findings.length} finding${args.findings.length === 1 ? "" : "s"} saved`,
+              refId: args.reviewId,
+              metadata: {
+                count: args.findings.length,
+                critical: args.findings.filter((f) => f.severity === "critical").length,
+                warning: args.findings.filter((f) => f.severity === "warning").length,
+                info: args.findings.filter((f) => f.severity === "info").length,
+              },
+            });
+          }
           return JSON.stringify({ findingIds });
         },
       },
@@ -566,6 +607,16 @@ export function createCopilotAdapter(
             }
             if (runId && newHead) {
               updateRunBaseRef(runId, newHead);
+            }
+
+            if (workspaceId) {
+              workspaceActivityService.log({
+                workspaceId,
+                type: "commit",
+                title: args.message,
+                refId: newHead ?? undefined,
+                metadata: { files: args.files?.length },
+              });
             }
 
             return JSON.stringify(result);

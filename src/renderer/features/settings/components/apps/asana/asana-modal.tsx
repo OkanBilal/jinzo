@@ -1,6 +1,6 @@
 import { useState, useReducer, useEffect, useCallback } from "react";
 
-import { BodyMedium, Muted } from "../../../../../components/ui/text";
+import { Body, Muted } from "../../../../../components/ui/text";
 import {
   WizardModal,
   useWizard,
@@ -253,7 +253,7 @@ function SelectProjectsStep({ onComplete }: { onComplete: () => void }) {
       saveButtonLabel={`Save ${selectedProjects.size} Projects`}
       renderResourceItem={(project) => (
         <div className="flex items-center gap-2">
-          <BodyMedium>{project.name}</BodyMedium>
+          <Body>{project.name}</Body>
           {project.workspaceName && (
             <span className="text-xs text-primary-500">{project.workspaceName}</span>
           )}
@@ -343,7 +343,7 @@ function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
       renderResourceItem={(resource) => (
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <BodyMedium>{resource.name}</BodyMedium>
+            <Body>{resource.name}</Body>
             {resource.metadata?.workspaceName && (
               <span className="text-xs text-primary-500">{resource.metadata.workspaceName}</span>
             )}

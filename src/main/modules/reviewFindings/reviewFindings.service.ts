@@ -10,6 +10,43 @@ import type {
 // Review Findings Service
 // ─────────────────────────────────────────────────────────────
 export const reviewFindingsService = {
+  // TODO: Filtering is done in JS for simplicity. Consider moving to SQL if data volume grows.
+  async getByWorkspace(
+    workspaceId: string,
+  ): Promise<ServiceResponse<ReviewFindingResponse[]>> {
+    try {
+      const allFindings =
+        await reviewFindingsRepo.findByWorkspace(workspaceId);
+
+      // Per file, keep only findings from the most recent review
+      const latestReviewByFile = new Map<string, string>();
+      const latestTimeByFile = new Map<string, number>();
+
+      for (const f of allFindings) {
+        const ts = (f.reviewCreatedAt as any) instanceof Date
+          ? f.reviewCreatedAt.getTime()
+          : Number(f.reviewCreatedAt) * 1000;
+        const existing = latestTimeByFile.get(f.file);
+        if (existing === undefined || ts > existing) {
+          latestTimeByFile.set(f.file, ts);
+          latestReviewByFile.set(f.file, f.reviewId);
+        }
+      }
+
+      const filtered = allFindings
+        .filter((f) => latestReviewByFile.get(f.file) === f.reviewId)
+        .map(({ reviewCreatedAt: _, ...rest }) => rest);
+
+      return { success: true, data: filtered };
+    } catch (error) {
+      console.error(
+        `[ReviewFindingsService] Failed to get findings for workspace ${workspaceId}:`,
+        error,
+      );
+      return { success: false, error: "Failed to get workspace findings" };
+    }
+  },
+
   async getByReview(
     reviewId: string,
     limit?: number,

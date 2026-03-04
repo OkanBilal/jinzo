@@ -2,7 +2,6 @@ import {
   Body,
   Muted,
   ErrorText,
-  BodyMedium,
   Caption,
 } from "../../../../../components/ui/text";
 import { Button } from "../../../../../components/ui/button";
@@ -75,7 +74,7 @@ export function ManageResourcesStep({
                 renderResourceItem(resource)
               ) : (
                 <div className="flex-1">
-                  <BodyMedium>{resource.name}</BodyMedium>
+                  <Body>{resource.name}</Body>
                   {resource.source && (
                     <Caption className="mt-0.5">{resource.source}</Caption>
                   )}

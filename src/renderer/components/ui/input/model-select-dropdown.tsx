@@ -28,18 +28,18 @@ const variantStyles = {
     item: "hover:bg-primary-300/50 dark:hover:bg-primary-300/6 text-primary-700 dark:text-primary-300",
   },
   copilot: {
-    container: "hover:bg-copilot-blue/10 dark:hover:bg-copilot-light/10",
-    button: "text-copilot-blue dark:text-copilot-light/80",
+    container: "hover:bg-copilot-dark/6 dark:hover:bg-copilot-light/6",
+    button: "text-copilot-dark dark:text-copilot-light/80",
     selected:
-      "bg-copilot-light/60 dark:bg-copilot-light/8 text-copilot-blue dark:text-copilot-light",
-    item: "hover:bg-copilot-light/50 dark:hover:bg-copilot-light/6 text-copilot-blue dark:text-copilot-light",
+      "bg-copilot-light/60 dark:bg-copilot-light/8 text-copilot-dark dark:text-copilot-light",
+    item: "hover:bg-copilot-dark/6 dark:hover:bg-copilot-light/6 text-copilot-dark dark:text-copilot-light",
   },
   claude: {
-    container: "hover:bg-claude-dark/10 dark:hover:bg-claude-light/10",
+    container: "hover:bg-claude-dark/6 dark:hover:bg-claude-light/6",
     button: "text-claude-dark dark:text-claude-light/80",
     selected:
-      "bg-claude-light/60 dark:bg-claude-light/8 text-claude-dark dark:text-claude-light",
-    item: "hover:bg-claude-light/50 dark:hover:bg-claude-light/6 text-claude-dark dark:text-claude-light",
+      "bg-claude-dark/6 dark:bg-claude-light/6 text-claude-dark dark:text-claude-light",
+    item: "hover:bg-claude-dark/6 dark:hover:bg-claude-light/6 text-claude-dark dark:text-claude-light",
   },
 };
 

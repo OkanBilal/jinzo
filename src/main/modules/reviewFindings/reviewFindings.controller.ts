@@ -8,6 +8,8 @@ import type {
 // Review Findings Controller
 // ─────────────────────────────────────────────────────────────
 export const reviewFindingsController = {
+  getByWorkspace: (workspaceId: string) =>
+    reviewFindingsService.getByWorkspace(workspaceId),
   getByReview: (reviewId: string, limit?: number) =>
     reviewFindingsService.getByReview(reviewId, limit),
   getById: (id: string) => reviewFindingsService.getById(id),

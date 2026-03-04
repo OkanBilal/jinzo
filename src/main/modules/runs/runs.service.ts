@@ -5,6 +5,7 @@ import { workspacesRepo } from "../workspaces/workspaces.repo";
 import { appSettingsRepo } from "../appSettings/appSettings.repo";
 import { gitService } from "../git/git.service";
 import { workspaceDiffsService } from "../workspaceDiffs/workspaceDiffs.service";
+import { workspaceActivityService } from "../workspaceActivity/workspaceActivity.service";
 import { workspaceDiffsRepo } from "../workspaceDiffs/workspaceDiffs.repo";
 import {
   createWorkAdapter,
@@ -299,6 +300,15 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
       diffText,
       filesJson: JSON.stringify(files),
       statsJson: JSON.stringify({ shortstat, files: files.length, newFiles: untrackedFiles.length }),
+    });
+
+    workspaceActivityService.log({
+      workspaceId,
+      type: "diff",
+      title: `${files.length} file${files.length === 1 ? "" : "s"} changed`,
+      summary: shortstat || undefined,
+      refId: runId,
+      metadata: { files: files.length, shortstat },
     });
   } catch (err) {
     console.error(`[RunsService] Failed to persist run diff for ${runId}:`, err);

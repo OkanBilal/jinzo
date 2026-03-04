@@ -1,15 +1,16 @@
-import { Plus, Close } from "@/components/ui/icons";
+import { Plus } from "@/components/ui/icons";
 import { Claude } from "@/components/ui/icons/space";
 import { CopilotStatic } from "@/components/ui/icons";
 import { RunTab, getTabTitle } from "./run-tab";
 import { EditorTab } from "./editor-tab";
 import { IssueTab } from "./issue-tab";
 import { NoteTab } from "./note-tab";
-import { Button } from "@/components/ui/button";
+import { BaseTab } from "./base-tab";
 import type { Run } from "../types";
 import type { IssueWithEntity } from "@/lib/redux/api";
 import type { ReviewTab as ReviewTabType } from "@/lib/redux/slices/workspaceSlice";
 import { useRef, useState, useLayoutEffect } from "react";
+import { Button } from "@/components/ui/button";
 
 const EMPTY_NOTE_TABS: ReviewTabType[] = [];
 
@@ -96,7 +97,7 @@ export function WorkspaceTabs({
 
     // Small delay to ensure refs are set
     requestAnimationFrame(updateIndicator);
-  }, [activeTab, runs.length, issueTabs.length, noteTabs.length, showNewRunTab]);
+  }, [activeTab, runs.length, issueTabs.length, noteTabs.length, showNewRunTab, hasSelectedFile]);
 
   return (
     <div
@@ -109,10 +110,10 @@ export function WorkspaceTabs({
         {/* Sliding indicator */}
         {isInitialized && indicatorStyle.width > 0 && (
           <div
-            className={`absolute bottom-0 h-0.5 transition-all duration-200 ease-out ${
+            className={`absolute bottom-0 z-10 h-0.5 transition-all duration-200 ease-out ${
               variant === "claude"
                 ? "dark:bg-claude-light bg-claude-soft-dark/60"
-                : "bg-copilot-blue/60 dark:bg-copilot-light"
+                : "bg-copilot-soft-dark/60 dark:bg-copilot-light"
             }`}
             style={{
               left: indicatorStyle.left,
@@ -179,42 +180,41 @@ export function WorkspaceTabs({
         })}
         {showNewRunTab && (
           <div ref={setTabRef("new-run")}>
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={onSelectNewRunTab}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectNewRunTab?.(); } }}
-              className={`group flex items-center gap-2 pl-3 pr-1 py-2.5 cursor-pointer transition-colors min-w-40 max-w-48 ${
-                activeTab === "new-run"
-                  ? `text-primary-950 dark:text-primary-200 ${variant === "claude" ? "dark:bg-claude-dark" : variant === "copilot" ? "dark:bg-copilot-dark bg-primary" : ""}`
-                  : "text-primary-500 hover:text-primary-700 dark:hover:text-primary-300"
-              }`}
-            >
-              {variant === "claude" ? (
-                <Claude className={`size-3.5 ${activeTab === "new-run" ? "text-primary-900 dark:text-primary" : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"}`} />
-              ) : variant === "copilot" ? (
-                <CopilotStatic className={`size-3.5 ${activeTab === "new-run" ? "text-primary-900 dark:text-primary" : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"}`} />
-              ) : null}
-              <span className="text-xs font-medium truncate flex-1">New Run</span>
-              <Button
-                tooltip="Close"
-                tooltipPosition="bottom"
-                onClick={onCloseNewRunTab}
-                className="opacity-0 group-hover:opacity-100 p-1! hover:bg-primary/8 cursor-pointer rounded transition-all"
-              >
-                <Close className="size-3.5" />
-              </Button>
-            </div>
+            <NewRunTab
+              isActive={activeTab === "new-run"}
+              variant={variant}
+              onClick={() => onSelectNewRunTab?.()}
+              onClose={(e) => onCloseNewRunTab?.(e)}
+            />
           </div>
         )}
-        <button
+        <Button
           onClick={onNewRun}
-          className="p-2  text-primary-800 mr-8 dark:text-primary-200 hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-900/10 dark:hover:bg-primary/5 rounded-xl cursor-pointer transition-colors"
+          className="p-2  text-primary-800 mr-8 dark:text-primary-200  hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-900/10 dark:hover:bg-primary/3 rounded-xl cursor-pointer transition-colors"
           title="New run"
         >
           <Plus className="w-4 h-4" />
-        </button>
+        </Button>
       </div>
     </div>
+  );
+}
+
+function NewRunTab({ isActive, variant, onClick, onClose }: {
+  isActive: boolean;
+  variant: "copilot" | "claude";
+  onClick: () => void;
+  onClose: (e: React.MouseEvent) => void;
+}) {
+  const VariantIcon = variant === "claude" ? Claude : CopilotStatic;
+  return (
+    <BaseTab
+      isActive={isActive}
+      onClick={onClick}
+      onClose={onClose}
+      icon={<VariantIcon className="size-4" />}
+      label="New Run"
+      variant={variant}
+    />
   );
 }

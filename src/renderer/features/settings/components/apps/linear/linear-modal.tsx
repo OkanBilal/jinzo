@@ -1,6 +1,6 @@
 import { useState, useReducer, useEffect, useCallback } from "react";
 
-import { BodyMedium, Muted } from "../../../../../components/ui/text";
+import { Body, Muted } from "../../../../../components/ui/text";
 import {
   WizardModal,
   useWizard,
@@ -267,7 +267,7 @@ function SelectTeamsStep({ onComplete }: { onComplete: () => void }) {
       saveButtonLabel={`Save ${selectedTeams.size} Teams`}
       renderResourceItem={(team) => (
         <div className="flex items-center gap-2">
-          <BodyMedium>{team.name}</BodyMedium>
+          <Body>{team.name}</Body>
           {team.description && (
             <span className="text-xs text-primary-500 truncate max-w-50">
               {team.description}
@@ -362,7 +362,7 @@ function ManageTeamsStep({ onRevoke }: { onRevoke: () => void }) {
       renderResourceItem={(resource) => (
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <BodyMedium>{resource.name}</BodyMedium>
+            <Body>{resource.name}</Body>
           </div>
         </div>
       )}

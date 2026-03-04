@@ -1,4 +1,4 @@
-import { Muted, ErrorText, BodyMedium } from "../../../../../components/ui/text";
+import { Muted, ErrorText, Body } from "../../../../../components/ui/text";
 import { Button } from "../../../../../components/ui/button";
 import { Checkbox } from "../../../../../components/ui/checkbox";
 
@@ -98,7 +98,7 @@ export function SelectResourcesStep<T extends SelectableResource>({
       <div className="max-h-52 overflow-y-auto border border-primary-200 dark:border-primary-800 rounded-xl">
         {resources.length === 0 ? (
           <div className="p-8 text-center text-primary-500 dark:text-primary-400">
-            <BodyMedium>{emptyMessage}</BodyMedium>
+            <Body>{emptyMessage}</Body>
           </div>
         ) : (
           resources.map((resource) => (

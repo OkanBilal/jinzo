@@ -1,6 +1,6 @@
 import { useState, useReducer, useEffect, useCallback } from "react";
 
-import { BodyMedium, Muted } from "../../../../../components/ui/text";
+import { Body, Muted } from "../../../../../components/ui/text";
 import {
   WizardModal,
   useWizard,
@@ -312,7 +312,7 @@ function SelectProjectsStep({ onComplete }: { onComplete: () => void }) {
       saveButtonLabel={`Save ${selectedProjects.size} Projects`}
       renderResourceItem={(project) => (
         <div className="flex items-center gap-2">
-          <BodyMedium>{project.pathWithNamespace || project.name}</BodyMedium>
+          <Body>{project.pathWithNamespace || project.name}</Body>
           {project.visibility && (
             project.visibility === "private" ? (
               <LockIcon className="w-3.5 h-3.5 text-primary-500" />
@@ -413,7 +413,7 @@ function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
         return (
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <BodyMedium>{resource.name}</BodyMedium>
+              <Body>{resource.name}</Body>
               {visibility && (
                 visibility === "private" ? (
                   <LockIcon className="w-3.5 h-3.5 text-primary-500" />

@@ -5,16 +5,31 @@ const SvgComponent = (props: SVGProps<SVGSVGElement>) => (
     xmlns="http://www.w3.org/2000/svg"
     width={800}
     height={800}
-    fill="none"
-    viewBox="0 0 24 24"
+    viewBox="0 0 512 512"
     {...props}
   >
+    <title>{"ionicons-v5-d"}</title>
+    <circle
+      cx={256}
+      cy={256}
+      r={96}
+      style={{
+        fill: "none",
+        stroke: "currentColor",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: 32,
+      }}
+    />
     <path
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={1.5}
-      d="M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM8 12H3M16 12h5"
+      d="M160 256H48M464 256H352"
+      style={{
+        fill: "none",
+        stroke: "currentColor",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: 32,
+      }}
     />
   </svg>
 )

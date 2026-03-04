@@ -1,7 +1,7 @@
 import { useState, useReducer, useEffect, useCallback } from "react";
 
 import {
-  BodyMedium,
+  Body,
   Caption,
   Muted,
   ErrorText,
@@ -117,7 +117,7 @@ function EnableStep({ onComplete }: { onComplete: () => void }) {
       <Muted>Enable HackerNews to add stories to your feed.</Muted>
 
       <div className="flex items-center justify-between py-4 px-4 dark:bg-primary-900 bg-primary-200/60 rounded-xl">
-        <BodyMedium>Enable</BodyMedium>
+        <Body>Enable</Body>
         <label aria-label="Enable HackerNews" className="relative inline-flex items-center cursor-pointer">
           <input
             type="checkbox"
@@ -197,7 +197,7 @@ function ConfigureStep({
     <div className="space-y-4">
       <div>
         <label htmlFor="hn-username" className="block mb-2">
-          <BodyMedium>Username (Optional)</BodyMedium>
+          <Body>Username (Optional)</Body>
         </label>
         <Input
           id="hn-username"
@@ -214,11 +214,11 @@ function ConfigureStep({
       </div>
 
       <div>
-        <BodyMedium className="block mb-2">What to fetch:</BodyMedium>
+        <Body className="block mb-2">What to fetch:</Body>
         <div className="max-h-60 overflow-y-auto noscrollbar border border-primary-200 dark:border-primary-800 rounded-xl">
           <div className="flex items-center cursor-pointer border-b border-primary-200 dark:border-primary-800 last:border-b-0">
             <div className="flex-1 px-3 py-3">
-              <BodyMedium>Top Stories</BodyMedium>
+              <Body>Top Stories</Body>
               <Caption>Latest top stories from HackerNews</Caption>
             </div>
             <div className="mr-4">
@@ -232,7 +232,7 @@ function ConfigureStep({
 
           <div className="flex items-center cursor-pointer border-b border-primary-200 dark:border-primary-800 last:border-b-0 ">
             <div className="flex-1 px-3 py-3">
-              <BodyMedium>My Submissions</BodyMedium>
+              <Body>My Submissions</Body>
               <Caption>Your submitted stories (requires username)</Caption>
             </div>
             <div className="mr-4">
@@ -246,7 +246,7 @@ function ConfigureStep({
 
           <div className="flex items-center cursor-pointer last:border-b-0 ">
             <div className="flex-1 px-3 py-3">
-              <BodyMedium>My Comments</BodyMedium>
+              <Body>My Comments</Body>
               <Caption>Your comments on stories (requires username)</Caption>
             </div>
             <div className="mr-4">

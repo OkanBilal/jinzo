@@ -462,6 +462,7 @@ export type { InstalledApp } from "./shellApi";
 
 export {
   reviewFindingsApi,
+  useGetReviewFindingsByWorkspaceQuery,
   useGetReviewFindingsByReviewQuery,
   useGetReviewFindingByIdQuery,
   useCreateReviewFindingMutation,
@@ -475,6 +476,18 @@ export type {
   CreateReviewFindingPayload,
   UpdateReviewFindingPayload,
 } from "./reviewFindingsApi";
+
+export {
+  workspaceActivityApi,
+  useGetWorkspaceActivityQuery,
+  useCreateWorkspaceActivityMutation,
+  useDeleteWorkspaceActivityMutation,
+} from "./workspaceActivityApi";
+export type {
+  WorkspaceActivity,
+  ActivityType,
+  CreateWorkspaceActivityPayload,
+} from "./workspaceActivityApi";
 
 export {
   statsApi,

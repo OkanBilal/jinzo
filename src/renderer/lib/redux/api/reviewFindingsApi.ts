@@ -45,6 +45,18 @@ export interface UpdateReviewFindingPayload {
 
 export const reviewFindingsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    getReviewFindingsByWorkspace: builder.query<
+      ReviewFinding[],
+      { workspaceId: string }
+    >({
+      query: ({ workspaceId }) => ({
+        handler: "reviewFindings:getByWorkspace",
+        args: [workspaceId],
+      }),
+      transformResponse: (response: any) => response?.data ?? [],
+      providesTags: ["ReviewFindings"],
+    }),
+
     getReviewFindingsByReview: builder.query<
       ReviewFinding[],
       { reviewId: string; limit?: number }
@@ -113,6 +125,7 @@ export const reviewFindingsApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useGetReviewFindingsByWorkspaceQuery,
   useGetReviewFindingsByReviewQuery,
   useGetReviewFindingByIdQuery,
   useCreateReviewFindingMutation,

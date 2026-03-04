@@ -1,9 +1,6 @@
 import { useMemo } from "react";
 import { PatchDiff, type DiffLineAnnotation } from "@pierre/diffs/react";
-import {
-  useGetReviewsByWorkspaceQuery,
-  useGetReviewFindingsByReviewQuery,
-} from "@/lib/redux/api";
+import { useGetReviewFindingsByWorkspaceQuery } from "@/lib/redux/api";
 
 interface Finding {
   lineStart: number | null;
@@ -108,16 +105,10 @@ export function DiffViewer({
 }: DiffViewerProps) {
   const isDarkMode = document.documentElement.classList.contains("dark");
 
-  // Fetch latest review + findings for this file
-  const { data: reviews } = useGetReviewsByWorkspaceQuery(
+  // Fetch findings for this workspace (per-file latest review filtering is done server-side)
+  const { data: allFindings } = useGetReviewFindingsByWorkspaceQuery(
     { workspaceId: workspaceId! },
     { skip: !workspaceId },
-  );
-  const latestReviewId = reviews?.[0]?.id;
-
-  const { data: allFindings } = useGetReviewFindingsByReviewQuery(
-    { reviewId: latestReviewId! },
-    { skip: !latestReviewId },
   );
 
   const fileFindings = useMemo(() => {

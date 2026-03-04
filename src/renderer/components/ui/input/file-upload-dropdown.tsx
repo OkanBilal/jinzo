@@ -35,16 +35,16 @@ const variantStyles = {
     menuItem: "hover:bg-primary-200/30 dark:hover:bg-primary-600/20",
   },
   copilot: {
-    button: "hover:bg-primary-200/30 dark:hover:bg-copilot-light/10",
-    icon: "dark:text-copilot-light text-primary-800",
-    fileBg: "bg-primary-100 dark:bg-copilot-light/10",
-    menuItem: "hover:bg-copilot-light dark:hover:bg-copilot-light/10",
+    button: "hover:bg-copilot-dark/6 dark:hover:bg-copilot-light/6",
+    icon: "dark:text-copilot-light text-copilot-dark",
+    fileBg: "bg-primary-100 dark:bg-copilot-light/6",
+    menuItem: "text-copilot-dark dark:text-copilot-light hover:bg-copilot-dark/6 dark:hover:bg-copilot-light/6",
   },
   claude: {
-    button: "hover:bg-primary-200/30 dark:hover:bg-claude-light/10",
-    icon: "dark:text-claude-light text-primary-800",
-    fileBg: "bg-primary-100 dark:bg-claude-light/10",
-    menuItem: "hover:bg-claude-light dark:hover:bg-claude-light/10",
+    button: "hover:bg-claude-dark/6 dark:hover:bg-claude-light/6",
+    icon: "dark:text-claude-light text-claude-dark",
+    fileBg: "bg-claude-light/6 dark:bg-claude-light/6",
+    menuItem: "text-claude-dark dark:text-claude-light hover:bg-claude-dark/6 dark:hover:bg-claude-light/6",
   },
 };
 
@@ -151,7 +151,7 @@ export function FileUploadDropdown({
             type="button"
             onClick={onClick}
             role="menuitem"
-            className={`flex w-full text-left text-sm first:rounded-t-xl last:rounded-b-xl items-center px-3 py-2.5 ${styles.menuItem} text-primary-700 dark:text-primary-100 cursor-pointer`}
+            className={`flex w-full text-left text-sm first:rounded-t-xl last:rounded-b-xl items-center px-3 py-2.5 ${styles.menuItem} cursor-pointer`}
           >
             <Icon className="mr-2 size-3.5" />
             {label}

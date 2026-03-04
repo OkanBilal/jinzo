@@ -1,6 +1,6 @@
 import { useState, useReducer, useEffect, useCallback } from "react";
 
-import { Caption, BodyMedium, Muted } from "../../../../../components/ui/text";
+import { Caption, Muted, Body } from "../../../../../components/ui/text";
 import {
   WizardModal,
   useWizard,
@@ -280,7 +280,7 @@ function SelectResourcesStepComponent({
       saveButtonLabel={`Save ${selectedResources.length} Resources`}
       renderResourceItem={(source) => (
         <>
-          <BodyMedium>{source.name}</BodyMedium>
+          <Body>{source.name}</Body>
           <Caption className="mt-0.5">{source.description}</Caption>
         </>
       )}
@@ -362,7 +362,7 @@ function ManageResourcesStepComponent({ onRevoke }: { onRevoke: () => void }) {
       revokeButtonLabel="Revoke Apple Music Access"
       renderResourceItem={(resource) => (
         <div className="flex-1">
-          <BodyMedium>{resource.name}</BodyMedium>
+          <Body>{resource.name}</Body>
           <Caption className="mt-0.5">{resource.source}</Caption>
         </div>
       )}

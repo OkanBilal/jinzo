@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { reviewFindings } from "../../db/schema";
+import { reviewFindings, reviews } from "../../db/schema";
 import type {
   CreateReviewFindingPayload,
   UpdateReviewFindingPayload,
@@ -23,6 +23,27 @@ export const reviewFindingsRepo = {
       .orderBy(desc(reviewFindings.createdAt))
       .limit(limit);
     return rows.map(mapRowToResponse);
+  },
+
+  async findByWorkspace(
+    workspaceId: string,
+    limit = 500,
+  ): Promise<(ReviewFindingResponse & { reviewCreatedAt: Date })[]> {
+    const db = getDb();
+    const rows = await db
+      .select({
+        finding: reviewFindings,
+        reviewCreatedAt: reviews.createdAt,
+      })
+      .from(reviewFindings)
+      .innerJoin(reviews, eq(reviewFindings.reviewId, reviews.id))
+      .where(eq(reviews.workspaceId, workspaceId))
+      .orderBy(desc(reviewFindings.createdAt))
+      .limit(limit);
+    return rows.map((r) => ({
+      ...mapRowToResponse(r.finding),
+      reviewCreatedAt: r.reviewCreatedAt,
+    }));
   },
 
   async findById(id: string): Promise<ReviewFindingResponse | null> {

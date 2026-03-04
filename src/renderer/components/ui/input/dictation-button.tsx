@@ -15,13 +15,13 @@ const variantStyles = {
     icon: "dark:text-primary-400 text-primary-500",
   },
   copilot: {
-    recording: "bg-copilot-blue/30 dark:bg-copilot-light/50",
-    hover: "hover:bg-copilot-blue/10 dark:hover:bg-copilot-light/20",
-    icon: "dark:text-copilot-light/70 text-copilot-blue",
+    recording: "bg-copilot-dark/30 dark:bg-copilot-light/50",
+    hover: "hover:bg-copilot-dark/6 dark:hover:bg-copilot-light/6",
+    icon: "dark:text-copilot-light/70 text-copilot-dark",
   },
   claude: {
     recording: "bg-claude-dark/30 dark:bg-claude-light/50",
-    hover: "hover:bg-claude-dark/10 dark:hover:bg-claude-light/20",
+    hover: "hover:bg-claude-dark/6 dark:hover:bg-claude-light/6",
     icon: "dark:text-claude-light/70 text-claude-dark",
   },
 };

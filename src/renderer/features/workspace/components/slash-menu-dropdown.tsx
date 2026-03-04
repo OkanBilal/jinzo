@@ -34,11 +34,11 @@ const variantStyles = {
     divider: "border-primary-200 dark:border-primary-700",
   },
   copilot: {
-    item: "hover:bg-copilot-light/50 dark:hover:bg-copilot-light/6 text-copilot-blue dark:text-copilot-light",
-    description: "text-copilot-blue/60 dark:text-copilot-light/60",
+    item: "hover:bg-copilot-light/50 dark:hover:bg-copilot-light/6 text-copilot-dark dark:text-copilot-light",
+    description: "text-copilot-dark/60 dark:text-copilot-light/60",
     badge:
-      "bg-copilot-light/30 dark:bg-copilot-light/10 text-copilot-blue dark:text-copilot-light",
-    sectionHeader: "text-copilot-blue/50 dark:text-copilot-light/50",
+      "bg-copilot-light/30 dark:bg-copilot-light/10 text-copilot-dark dark:text-copilot-light",
+    sectionHeader: "text-copilot-dark/50 dark:text-copilot-light/50",
     divider: "border-copilot-light/20 dark:border-copilot-light/10",
   },
   claude: {

@@ -32,6 +32,7 @@ import { gitService } from "../../git/git.service";
 import { workspaceDiffsRepo } from "../../workspaceDiffs/workspaceDiffs.repo";
 import { reviewsRepo } from "../../reviews/reviews.repo";
 import { reviewFindingsRepo } from "../../reviewFindings/reviewFindings.repo";
+import { workspaceActivityService } from "../../workspaceActivity/workspaceActivity.service";
 import { z } from "zod";
 
 /**
@@ -678,6 +679,16 @@ export function createClaudeAdapter(
               metadata,
             });
 
+            if (workspaceId) {
+              workspaceActivityService.log({
+                workspaceId,
+                type: "review",
+                title,
+                summary,
+                refId: reviewId,
+              });
+            }
+
             return {
               content: [{ type: "text", text: JSON.stringify({ reviewId }) }],
             };
@@ -713,6 +724,24 @@ export function createClaudeAdapter(
               suggestion: args.suggestion,
               metadata: args.metadata,
             });
+
+            if (workspaceId) {
+              workspaceActivityService.log({
+                workspaceId,
+                type: "finding",
+                title: `Finding in ${args.file}`,
+                summary: args.message,
+                refId: findingId,
+                metadata: {
+                  severity: args.severity,
+                  file: args.file,
+                  reason: args.reason,
+                  lineStart: args.lineStart,
+                  lineEnd: args.lineEnd,
+                  hasSuggestion: !!args.suggestion,
+                },
+              });
+            }
 
             return {
               content: [{ type: "text", text: JSON.stringify({ findingId }) }],
@@ -755,6 +784,21 @@ export function createClaudeAdapter(
                 metadata: f.metadata,
               })),
             );
+
+            if (workspaceId) {
+              workspaceActivityService.log({
+                workspaceId,
+                type: "finding",
+                title: `${findings.length} finding${findings.length === 1 ? "" : "s"} saved`,
+                refId: reviewId,
+                metadata: {
+                  count: findings.length,
+                  critical: findings.filter((f) => f.severity === "critical").length,
+                  warning: findings.filter((f) => f.severity === "warning").length,
+                  info: findings.filter((f) => f.severity === "info").length,
+                },
+              });
+            }
 
             return {
               content: [{ type: "text", text: JSON.stringify({ findingIds }) }],
@@ -810,6 +854,16 @@ export function createClaudeAdapter(
               }
               if (runId && newHead) {
                 updateRunBaseRef(runId, newHead);
+              }
+
+              if (workspaceId) {
+                workspaceActivityService.log({
+                  workspaceId,
+                  type: "commit",
+                  title: message,
+                  refId: newHead ?? undefined,
+                  metadata: { files: files?.length },
+                });
               }
 
               return {

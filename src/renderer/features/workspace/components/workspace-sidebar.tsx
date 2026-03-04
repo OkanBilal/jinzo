@@ -147,9 +147,9 @@ export function WorkspaceSidebar() {
   return (
     <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 -pb-4 rounded-xl overflow-hidden">
       <div className="shrink-0 py-2 mt-8 px-3">
-        <div className="relative flex items-center p-0.5 rounded-[10px] bg-primary-100/20 dark:bg-primary/4">
+        <div className="relative flex items-center p-0.5 rounded-[10px] bg-primary-100/20  dark:bg-primary/4">
           <div
-            className={`absolute top-0.5 bottom-0.5 rounded-lg dark:bg-primary/10 bg-primary-100/40 transition-transform duration-200 ease-out`}
+            className={`absolute top-0.5 bottom-0.5 rounded-lg dark:bg-primary/10 bg-primary  transition-transform duration-200 ease-out`}
             style={{
               width: "calc((100% - 0.75rem) / 3)",
               left: "0.125rem",
@@ -184,7 +184,7 @@ export function WorkspaceSidebar() {
                 : "text-primary-800 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200"
             }`}
           >
-            Reviews
+            Activity
           </Button>
         </div>
       </div>

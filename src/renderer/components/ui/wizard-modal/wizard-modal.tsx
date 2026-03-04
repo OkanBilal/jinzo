@@ -206,9 +206,9 @@ export function WizardModal<
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-9999 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-primary-950/40"
+        className="absolute inset-0 dark:bg-primary-950/60 bg-primary/50 backdrop-blur-xs "
         onClick={() => !isSubmitting && close()}
         aria-hidden="true"
       />
@@ -218,14 +218,14 @@ export function WizardModal<
         role="dialog"
         aria-modal="true"
         aria-labelledby="wizard-title"
-        className={`relative z-50 w-full max-w-2xl rounded-3xl overflow-hidden glass-morphism ${className}`}
+        className={`relative z-50 w-full rounded-3xl overflow-hidden glass-morphism ${className.includes("max-w-") ? "" : "max-w-2xl"} ${className}`}
         style={{
           animation: shouldAnimate
             ? "wizardModalIn 250ms cubic-bezier(0.22, 1, 0.36, 1) both"
             : undefined,
         }}
       >
-        <div className="flex items-center justify-between px-6 py-4">
+        <div className="flex items-center justify-between pl-6 pr-3 py-4">
           <div className="flex items-center gap-2">
             {icon && (
               <img
@@ -244,7 +244,7 @@ export function WizardModal<
             onClick={() => !isSubmitting && close()}
             disabled={isSubmitting}
             aria-label="Close modal"
-            className="p-2 flex cursor-pointer items-center justify-center rounded-full text-primary-600 dark:text-primary-400 hover:bg-primary-200/60 dark:hover:bg-primary-800 transition-colors"
+            className="p-2 flex cursor-pointer items-center justify-center rounded-full text-primary-600 dark:text-primary-400 hover:bg-primary-200/60 dark:hover:bg-primary/8 transition-colors"
           >
             <Close className="w-4 h-4" />
           </Button>

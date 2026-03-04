@@ -18,9 +18,9 @@ const variantStyles = {
     stop: "text-primary-900",
   },
   copilot: {
-    spinner: "border-copilot-blue",
-    icon: "text-copilot-blue",
-    stop: "text-copilot-blue",
+    spinner: "border-copilot-dark",
+    icon: "text-copilot-dark",
+    stop: "text-copilot-dark",
   },
   claude: {
     spinner: "border-claude-dark",

@@ -5,8 +5,7 @@ import {
   useGetAppSettingsQuery,
   useGetWorkspaceByIdQuery,
   useGetProjectByIdQuery,
-  useGetReviewsByWorkspaceQuery,
-  useGetReviewFindingsByReviewQuery,
+  useGetReviewFindingsByWorkspaceQuery,
   type WorkspaceDiff,
   type FindingSeverity,
 } from "@/lib/redux/api";
@@ -107,15 +106,10 @@ export function DiffSection({
     [diffText],
   );
 
-  // Fetch latest review findings for badge display
-  const { data: reviews } = useGetReviewsByWorkspaceQuery(
+  // Fetch findings for this workspace (per-file latest review filtering is done server-side)
+  const { data: allFindings } = useGetReviewFindingsByWorkspaceQuery(
     { workspaceId },
     { skip: !workspaceId },
-  );
-  const latestReviewId = reviews?.[0]?.id;
-  const { data: allFindings } = useGetReviewFindingsByReviewQuery(
-    { reviewId: latestReviewId! },
-    { skip: !latestReviewId },
   );
 
   // Group findings by file → { critical: n, warning: n, info: n }
@@ -163,8 +157,8 @@ export function DiffSection({
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-2 px-4 text-center">
-          <Diff className="w-6 h-6 dark:text-primary-500 text-primary-800" />
-          <Body className="text-xs font-medium text-primary-800 dark:text-primary-300">
+          <Diff className="w-4 h-4 dark:text-primary-300 text-primary-600" />
+          <Body className="text-xxs font-medium text-primary-600! dark:text-primary-300!">
             No changes detected.
           </Body>
         </div>
@@ -191,14 +185,14 @@ export function DiffSection({
       <div className="shrink-0 flex items-center gap-2 mb-2">
         <Button
           onClick={handleReviewChanges}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/60 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
         >
           <Sparkles className="w-3.5 h-3.5" />
           Review Changes
         </Button>
         <Button
           onClick={handleCommitChanges}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/60 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
         >
           <Commit className="w-3.5 h-3.5" />
           Commit Changes

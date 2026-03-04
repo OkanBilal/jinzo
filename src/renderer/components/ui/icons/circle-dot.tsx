@@ -9,7 +9,7 @@ const SvgComponent = (props: SVGProps<SVGSVGElement>) => (
     fill="none"
     {...props}
   >
-    <circle cx={8} cy={8} r={6.5} stroke="currentColor" strokeWidth={1.5} />
+    <circle cx={8} cy={8} r={6.5} stroke="currentColor" strokeWidth={1} />
     <circle cx={8} cy={8} r={1.5} fill="currentColor" />
   </svg>
 );

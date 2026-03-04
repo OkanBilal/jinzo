@@ -1,7 +1,7 @@
 import { useState, useReducer, useEffect, useCallback } from "react";
 
 import { Lock } from "../../../../../components/ui/icons";
-import { BodyMedium, Muted } from "../../../../../components/ui/text";
+import { Body, Muted } from "../../../../../components/ui/text";
 import {
   WizardModal,
   useWizard,
@@ -254,7 +254,7 @@ function SelectReposStep({ onComplete }: { onComplete: () => void }) {
       saveButtonLabel={`Save ${selectedRepos.size} Repositories`}
       renderResourceItem={(repo) => (
         <div className="flex items-center gap-2">
-          <BodyMedium>{repo.fullName}</BodyMedium>
+          <Body>{repo.fullName}</Body>
           {repo.private && (
             <Lock className="w-4 h-4 text-primary-500 dark:text-primary-600" />
           )}
@@ -341,7 +341,7 @@ function ManageReposStep({ onRevoke }: { onRevoke: () => void }) {
       renderResourceItem={(resource) => (
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <BodyMedium>{resource.fullName}</BodyMedium>
+            <Body>{resource.fullName}</Body>
             {resource.metadata?.private && (
               <Lock className="w-4 h-4 text-primary-500 dark:text-primary-600" />
             )}

@@ -1,6 +1,6 @@
 import { useState, useReducer, useEffect, useCallback } from "react";
 
-import { Caption, BodyMedium, Muted } from "../../../../../components/ui/text";
+import { Caption, Body, Muted } from "../../../../../components/ui/text";
 import {
   WizardModal,
   useWizard,
@@ -224,7 +224,7 @@ function SelectCollectionsStep({ onComplete }: { onComplete: () => void }) {
       saveButtonLabel={`Save ${selectedCollections.size} Collections`}
       renderResourceItem={(collection) => (
         <div className="flex items-center gap-2">
-          <BodyMedium>{collection.title}</BodyMedium>
+          <Body>{collection.title}</Body>
           <Caption>({collection.count} items)</Caption>
         </div>
       )}
@@ -314,7 +314,7 @@ function ManageCollectionsStep({ onRevoke }: { onRevoke: () => void }) {
       renderResourceItem={(collection) => (
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <BodyMedium>{collection.name}</BodyMedium>
+            <Body>{collection.name}</Body>
             {collection.metadata?.count !== undefined && (
               <Caption>({collection.metadata.count} items)</Caption>
             )}

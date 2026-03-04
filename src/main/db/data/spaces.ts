@@ -43,7 +43,7 @@ export const seedSpaces: SeedSpace[] = [
     icon: "icon:claude",
     systemPrompt: "",
     themeConfig: {
-      lightBackground: "#D97757",
+      lightBackground: "#fac0ad",
       darkBackground: "#151414cc",
     },
     uiConfig: {
@@ -65,7 +65,7 @@ export const seedSpaces: SeedSpace[] = [
     icon: "icon:copilot",
     systemPrompt: "",
     themeConfig: {
-      lightBackground: "#c8ddf1",
+      lightBackground: "#D2E9FF",
       darkBackground: "#11131ac7",
     },
     uiConfig: {

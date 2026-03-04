@@ -1,6 +1,6 @@
 import { useState, useReducer, useEffect, useCallback } from "react";
 
-import { BodyMedium, Muted } from "../../../../../components/ui/text";
+import { Body, Muted } from "../../../../../components/ui/text";
 import {
   WizardModal,
   useWizard,
@@ -355,7 +355,7 @@ function SelectProjectsStep({ onComplete }: { onComplete: () => void }) {
               className="w-6 h-6 rounded"
             />
           )} */}
-          <BodyMedium>{project.name}</BodyMedium>
+          <Body>{project.name}</Body>
           <span className="text-xs text-primary-500">{project.key}</span>
         </div>
       )}
@@ -446,7 +446,7 @@ function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
       renderResourceItem={(resource) => (
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <BodyMedium>{resource.name}</BodyMedium>
+            <Body>{resource.name}</Body>
             <span className="text-xs text-primary-500">{resource.key}</span>
           </div>
         </div>

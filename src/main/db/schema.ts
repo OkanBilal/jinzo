@@ -595,6 +595,39 @@ export const reviewFindings = sqliteTable(
 );
 
 /* -----------------------------
+   WORKSPACE ACTIVITY (unified activity timeline)
+------------------------------ */
+
+export const workspaceActivity = sqliteTable(
+  "workspace_activity",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    type: text("type", {
+      enum: ["diff", "review", "finding", "commit", "pr"],
+    }).notNull(),
+    title: text("title").notNull(),
+    summary: text("summary"),
+    metadata: text("metadata"),
+    refId: text("ref_id"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_workspace_activity_workspace").on(t.workspaceId),
+    index("idx_workspace_activity_type").on(t.type),
+    index("idx_workspace_activity_created").on(t.createdAt),
+    check(
+      "check_workspace_activity_metadata_json",
+      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
    RUN COMMANDS (terminal commands + exit codes)
 ------------------------------ */
 

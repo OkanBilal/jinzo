@@ -17,8 +17,12 @@ const MODEL_LOADER_WORDS = [
 ];
 
 type LoaderState = { frameIndex: number; wordIndex: number };
+type LoaderAction = { type: "tick" } | { type: "randomize" };
 
-function loaderReducer(state: LoaderState): LoaderState {
+function loaderReducer(state: LoaderState, action: LoaderAction): LoaderState {
+  if (action.type === "randomize") {
+    return { ...state, wordIndex: Math.floor(Math.random() * MODEL_LOADER_WORDS.length) };
+  }
   const nextFrame = (state.frameIndex + 1) % ASCII_FRAMES.length;
   // Cycle word every full spinner rotation
   if (nextFrame === 0) {
@@ -37,20 +41,16 @@ export function ModelLoader({
 }) {
   const [state, dispatch] = useReducer(loaderReducer, {
     frameIndex: 0,
-    wordIndex: Math.floor(Math.random() * MODEL_LOADER_WORDS.length),
+    wordIndex: 0,
   });
 
   useEffect(() => {
-    const id = setInterval(() => dispatch(), 100);
+    dispatch({ type: "randomize" });
+    const id = setInterval(() => dispatch({ type: "tick" }), 100);
     return () => clearInterval(id);
   }, []);
 
-  const spinnerColor =
-    variant === "claude"
-      ? "text-claude-dark dark:text-claude-light"
-      : variant === "copilot"
-        ? "text-copilot-blue dark:text-copilot-light"
-        : "text-primary-600 dark:text-primary-400";
+
 
   return (
     <span className="inline-flex items-center gap-1.5">

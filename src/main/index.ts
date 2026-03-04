@@ -60,6 +60,10 @@ import {
   registerWorkspaceDiffsIpc,
   unregisterWorkspaceDiffsIpc,
 } from "./modules/workspaceDiffs";
+import {
+  registerWorkspaceActivityIpc,
+  unregisterWorkspaceActivityIpc,
+} from "./modules/workspaceActivity";
 import { registerProjectsIpc, unregisterProjectsIpc } from "./modules/projects";
 import {
   registerFileExplorerIpc,
@@ -314,6 +318,7 @@ async function initializeApp() {
     registerReviewsIpc();
     registerReviewFindingsIpc();
     registerWorkspaceDiffsIpc();
+    registerWorkspaceActivityIpc();
     registerImageProxyHandler();
     registerFeedbackIpc();
     registerStatsIpc();
@@ -525,6 +530,7 @@ async function cleanupApp() {
     unregisterReviewsIpc();
     unregisterReviewFindingsIpc();
     unregisterWorkspaceDiffsIpc();
+    unregisterWorkspaceActivityIpc();
     unregisterFeedbackIpc();
     unregisterStatsIpc();
     unregisterUpdatesIpc();

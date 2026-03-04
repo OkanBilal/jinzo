@@ -1,7 +1,7 @@
 import { useState, useReducer, useEffect, useCallback } from "react";
 
 import {
-  BodyMedium,
+  Body,
   Caption,
   Muted,
   ErrorText,
@@ -108,7 +108,7 @@ function EnableStep({ onComplete }: { onComplete: () => void }) {
       <Muted>Enable RSS to add custom RSS feeds to your feed.</Muted>
 
       <div className="flex items-center justify-between py-4 px-4 dark:bg-primary-900 bg-primary-200/60 rounded-xl">
-        <BodyMedium>Enable RSS</BodyMedium>
+        <Body>Enable RSS</Body>
         <label aria-label="Enable RSS" className="relative inline-flex items-center cursor-pointer">
           <input
             type="checkbox"
@@ -243,7 +243,7 @@ function AddFeedsStep({ onComplete }: { onComplete: () => void }) {
       <div className="space-y-3">
         <div>
           <label htmlFor="rss-feed-name" className="block mb-2">
-            <BodyMedium>Feed Name</BodyMedium>
+            <Body>Feed Name</Body>
           </label>
           <Input
             id="rss-feed-name"
@@ -258,7 +258,7 @@ function AddFeedsStep({ onComplete }: { onComplete: () => void }) {
 
         <div>
           <label htmlFor="rss-feed-url" className="block mb-2">
-            <BodyMedium>Feed URL</BodyMedium>
+            <Body>Feed URL</Body>
           </label>
           <div className="flex gap-2">
             <Input
@@ -292,7 +292,7 @@ function AddFeedsStep({ onComplete }: { onComplete: () => void }) {
               className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-800 last:border-b-0"
             >
               <div className="flex-1 min-w-0">
-                <BodyMedium>{feed.name}</BodyMedium>
+                <Body>{feed.name}</Body>
                 <Caption className="truncate">{feed.url}</Caption>
               </div>
               <Button
@@ -397,7 +397,7 @@ function ManageFeedsStep({ onRevoke }: { onRevoke: () => void }) {
               className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-800 last:border-b-0"
             >
               <div className="flex-1">
-                <BodyMedium>{feed.name}</BodyMedium>
+                <Body>{feed.name}</Body>
                 {feed.metadata?.url && (
                   <Caption className="mt-0.5 truncate">
                     {feed.metadata.url}

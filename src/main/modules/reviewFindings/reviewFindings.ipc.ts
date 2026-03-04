@@ -9,6 +9,7 @@ import type {
 // IPC Channel Names
 // ─────────────────────────────────────────────────────────────
 const CHANNELS = {
+  GET_BY_WORKSPACE: "reviewFindings:getByWorkspace",
   GET_BY_REVIEW: "reviewFindings:getByReview",
   GET_BY_ID: "reviewFindings:getById",
   CREATE: "reviewFindings:create",
@@ -21,6 +22,13 @@ const CHANNELS = {
 // IPC Handlers
 // ─────────────────────────────────────────────────────────────
 export function registerReviewFindingsIpc(): void {
+  ipcMain.handle(
+    CHANNELS.GET_BY_WORKSPACE,
+    async (_, workspaceId: string) => {
+      return reviewFindingsController.getByWorkspace(workspaceId);
+    },
+  );
+
   ipcMain.handle(
     CHANNELS.GET_BY_REVIEW,
     async (_, reviewId: string, limit?: number) => {

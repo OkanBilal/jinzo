@@ -15,7 +15,7 @@ interface RunTabProps {
 }
 
 function VariantIcon({ variant, isActive }: { variant: string; isActive: boolean }) {
-  const className = `size-full ${
+  const className = `size-4 ${
     isActive
       ? "text-primary-900 dark:text-primary"
       : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"

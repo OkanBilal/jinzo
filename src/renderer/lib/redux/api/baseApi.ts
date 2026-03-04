@@ -79,6 +79,7 @@ export const baseApi = createApi({
     'Updates',
     'InstalledApps',
     'Stats',
+    'WorkspaceActivity',
   ],
   endpoints: () => ({}),
 });

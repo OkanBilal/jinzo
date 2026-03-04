@@ -50,11 +50,11 @@
   --color-foreground: var(--foreground);
 
   --color-primary: #ffffff;
-  --color-primary-50: #f8f4ee;
-  --color-primary-100: #fcfbf2;
+  --color-primary-50: #efeeee;
+  --color-primary-100: #f7f7f6;
   --color-primary-150: #dad8ce;
-  --color-primary-200: #cecdc3;
-  --color-primary-300: #b7b5ac;
+  --color-primary-200: #d3d3d3;
+  --color-primary-300: #b5b5b5;
   --color-primary-400: #a09d95;
   --color-primary-500: #878580;
   --color-primary-600: #6f6e69;

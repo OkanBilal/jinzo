@@ -47,9 +47,9 @@ const variantStyles = {
     sectionHeader: "text-primary-400 dark:text-primary-500",
   },
   copilot: {
-    item: "hover:bg-copilot-light/50 dark:hover:bg-copilot-light/6 text-copilot-blue dark:text-copilot-light first:rounded-t-xl last:rounded-b-xl",
-    description: "text-copilot-blue/60 dark:text-copilot-light/60",
-    sectionHeader: "text-copilot-blue/50 dark:text-copilot-light/50",
+    item: "hover:bg-copilot-dark/6 dark:hover:bg-copilot-light/6 text-copilot-dark dark:text-copilot-light first:rounded-t-xl last:rounded-b-xl",
+    description: "text-copilot-dark/60 dark:text-copilot-light/60",
+    sectionHeader: "text-copilot-dark/50 dark:text-copilot-light/50",
   },
   claude: {
     item: "hover:bg-claude-light/50 dark:hover:bg-claude-light/6 text-claude-dark dark:text-claude-light first:rounded-t-xl last:rounded-b-xlp to",
