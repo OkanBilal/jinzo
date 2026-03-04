@@ -1,13 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import { connectionResources, connections, connectionTokens } from "../../db/schema";
-
-// ─────────────────────────────────────────────────────────────
-// Token Decryption
-// ─────────────────────────────────────────────────────────────
-export function decryptToken(buffer: Buffer): string {
-  return buffer.toString("utf-8");
-}
+import { decryptToken } from "../connectionCredentials/connectionCredentials.utils";
 
 // ─────────────────────────────────────────────────────────────
 // Connection Queries

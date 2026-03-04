@@ -1,12 +1,27 @@
 import crypto from "crypto";
+import { safeStorage } from "electron";
 import type { ParsedCredentials } from "./connectionCredentials.dto";
 
 // ─────────────────────────────────────────────────────────────
 // Encryption Helpers
 // ─────────────────────────────────────────────────────────────
 export function encryptToken(token: string): Buffer {
-  // TODO: Implement proper encryption here
+  if (safeStorage.isEncryptionAvailable()) {
+    return safeStorage.encryptString(token);
+  }
   return Buffer.from(token, "utf-8");
+}
+
+export function decryptToken(buffer: Buffer): string {
+  if (safeStorage.isEncryptionAvailable()) {
+    try {
+      return safeStorage.decryptString(buffer);
+    } catch {
+      // Legacy plaintext token — return as-is
+      return buffer.toString("utf-8");
+    }
+  }
+  return buffer.toString("utf-8");
 }
 
 export function createTokenHash(tokens: string[]): Buffer {

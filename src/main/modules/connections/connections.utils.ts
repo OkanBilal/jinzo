@@ -1,10 +1,5 @@
-// ─────────────────────────────────────────────────────────────
-// Decryption Helper
-// ─────────────────────────────────────────────────────────────
-export function decryptToken(buffer: Buffer): string {
-  // TODO: Implement proper decryption here
-  return buffer.toString("utf-8");
-}
+// Re-export from canonical source
+export { decryptToken } from "../connectionCredentials/connectionCredentials.utils";
 
 // ─────────────────────────────────────────────────────────────
 // Source Name Formatting
