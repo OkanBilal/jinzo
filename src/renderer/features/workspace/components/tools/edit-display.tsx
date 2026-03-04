@@ -60,7 +60,7 @@ export function EditDisplay({ params, output, isCompact = false }: { params: Edi
           <div className="noscrollbar text-xs leading-relaxed font-mono bg-primary-50 dark:bg-primary/3 rounded-xl p-3 max-h-80 overflow-y-auto">
             {patchLines.map((line, i) => (
               <div
-                key={i}
+                key={`${i}-${line.type}${line.text.slice(0, 20)}`}
                 className={
                   line.type === "add"
                     ? "text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30"

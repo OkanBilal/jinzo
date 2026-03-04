@@ -61,7 +61,7 @@ export function WriteDisplay({ params }: { params: WriteParams }) {
           {content && (
             <div className="noscrollbar text-xs leading-relaxed font-mono bg-primary-50 dark:bg-primary/5 rounded-xl p-3 max-h-80 overflow-y-auto">
               {content.split("\n").map((line, i) => (
-                <div key={i} className="text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30">
+                <div key={`${i}-${line.slice(0, 20)}`} className="text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30">
                   +{line}
                 </div>
               ))}

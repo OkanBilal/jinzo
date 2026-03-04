@@ -42,8 +42,8 @@ export function GlobDisplay({ params, output, isCompact = false }: { params: Glo
       {isExpanded && hasFiles && (
         <div className="mt-2 ml-5 space-y-1 border-l border-primary-200/50 dark:border-primary-700/30 pl-3">
           <div className="noscrollbar text-s font-mono text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary/3 rounded p-2 max-h-48 overflow-y-auto">
-            {filenames.map((f, i) => (
-              <div key={i} className="truncate">{shortPath(f)}</div>
+            {filenames.map((f) => (
+              <div key={f} className="truncate">{shortPath(f)}</div>
             ))}
           </div>
         </div>
