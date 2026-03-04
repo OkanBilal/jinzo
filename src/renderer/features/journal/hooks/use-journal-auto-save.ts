@@ -37,6 +37,12 @@ export function useJournalAutosave(
     error: null,
   });
 
+  // Notify main process of unsaved changes
+  useEffect(() => {
+    window.api.app.setUnsavedChanges(state.isDirty);
+    return () => { window.api.app.setUnsavedChanges(false); };
+  }, [state.isDirty]);
+
   const pendingPayloadRef = useRef<AutosavePayload | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const maxWaitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -136,8 +142,10 @@ export function useJournalAutosave(
     };
 
     window.addEventListener("blur", handleBlur);
+    const unsubscribe = window.api.app.onFlushAndQuit(() => flush());
     return () => {
       window.removeEventListener("blur", handleBlur);
+      unsubscribe();
     };
   }, [flush]);
 

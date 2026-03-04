@@ -741,6 +741,15 @@ const api = {
   stats: {
     getDashboard: (filter?: string) => ipcRenderer.invoke("stats:getDashboard", filter),
   },
+  app: {
+    setUnsavedChanges: (hasChanges: boolean) =>
+      ipcRenderer.invoke("app:setUnsavedChanges", hasChanges),
+    onFlushAndQuit: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on("app:flushAndQuit", listener);
+      return () => ipcRenderer.removeListener("app:flushAndQuit", listener);
+    },
+  },
   updates: {
     checkForUpdates: () => ipcRenderer.invoke("updates:check"),
     downloadUpdate: () => ipcRenderer.invoke("updates:download"),

@@ -164,6 +164,8 @@ interface DetectedApp {
 }
 
 let isShuttingDown = false;
+let hasUnsavedChanges = false;
+let quitConfirmed = false;
 let installedAppsCache: DetectedApp[] | null = null;
 let installedAppsCacheTime = 0;
 let detectInFlight: Promise<DetectedApp[]> | null = null;
@@ -381,6 +383,10 @@ async function initializeApp() {
       }
     });
 
+    ipcMain.handle("app:setUnsavedChanges", (_, value: boolean) => {
+      hasUnsavedChanges = value;
+    });
+
     // Build custom application menu
     const template: Electron.MenuItemConstructorOptions[] = [
       ...(process.platform === "darwin"
@@ -538,6 +544,7 @@ async function cleanupApp() {
     ipcMain.removeHandler("shell:openPath");
     ipcMain.removeHandler("shell:openInApp");
     ipcMain.removeHandler("shell:getInstalledApps");
+    ipcMain.removeHandler("app:setUnsavedChanges");
 
     // Close database
     await closeDatabase();
@@ -607,8 +614,39 @@ app.on("window-all-closed", () => {
 
 app.on("before-quit", async (event) => {
   if (isShuttingDown) {
-    return; // Already cleaning up, let it proceed
+    return;
   }
+
+  // Show confirmation if there are unsaved changes
+  if (hasUnsavedChanges && !quitConfirmed) {
+    event.preventDefault();
+    const { response } = await dialog.showMessageBox({
+      type: "question",
+      buttons: ["Save & Quit", "Quit without saving", "Cancel"],
+      defaultId: 0,
+      cancelId: 2,
+      title: "Unsaved Changes",
+      message: "You have unsaved changes.",
+      detail: "Do you want to save before quitting?",
+    });
+
+    if (response === 2) {
+      return; // Cancel — don't quit
+    }
+
+    if (response === 0) {
+      // Save & Quit — notify renderer to flush, then quit
+      const win = BrowserWindow.getAllWindows()[0];
+      if (win && !win.isDestroyed()) {
+        win.webContents.send("app:flushAndQuit");
+        // Give renderer time to save
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+
+    quitConfirmed = true;
+  }
+
   event.preventDefault();
   isShuttingDown = true;
   await cleanupApp();
