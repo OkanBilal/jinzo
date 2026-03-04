@@ -13,6 +13,7 @@ import { ReduxProvider } from "./providers/redux-provider";
 import { Toaster } from "./components/ui/toast/toaster";
 import { useAppSelector } from "./lib/redux/hooks";
 import { OnboardingModal } from "./features/onboarding/components/onboarding-modal";
+import { ErrorBoundary } from "./components/ui/error-boundary";
 
 function AppContent() {
   const [isrightanelOpen, setIsRightPanelOpen] = useState(false);
@@ -35,7 +36,9 @@ function AppContent() {
             !hideRightPanel && isrightanelOpen ? rightPanelWidth : "0.5rem"
           }
         >
-          <MainRoutes />
+          <ErrorBoundary level="route">
+            <MainRoutes />
+          </ErrorBoundary>
         </MainContent>
         {!hideRightPanel && (
           <RightPanel
@@ -51,10 +54,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ReduxProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </ReduxProvider>
+    <ErrorBoundary level="app">
+      <ReduxProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </ReduxProvider>
+    </ErrorBoundary>
   );
 }
