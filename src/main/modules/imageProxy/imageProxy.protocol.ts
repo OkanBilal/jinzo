@@ -1,6 +1,16 @@
 import { protocol, net } from "electron";
 import { imageProxyService } from "./imageProxy.service";
 
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+function checkContentLength(response: Response): Response | null {
+  const length = response.headers.get("content-length");
+  if (length && parseInt(length, 10) > MAX_IMAGE_SIZE) {
+    return new Response("Image too large", { status: 413 });
+  }
+  return null;
+}
+
 /**
  * Register the jinzo-img scheme as privileged.
  * MUST be called BEFORE app.ready.
@@ -55,6 +65,9 @@ export function registerImageProxyHandler() {
             headers
           );
 
+          const tooLarge = checkContentLength(response);
+          if (tooLarge) return tooLarge;
+
           return new Response(response.body, {
             status: response.status,
             headers: {
@@ -69,6 +82,9 @@ export function registerImageProxyHandler() {
 
       // Everything else — passthrough with net.fetch
       const response = await net.fetch(originalUrl);
+      const tooLarge = checkContentLength(response);
+      if (tooLarge) return tooLarge;
+
       return new Response(response.body, {
         status: response.status,
         headers: {
