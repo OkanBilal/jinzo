@@ -24,6 +24,11 @@ npm run lint:fix        # Run ESLint with auto-fix
 # Build & Package
 npm run package         # Package app for current platform
 npm run make            # Create distributable
+
+# Maintenance
+npm run clean           # Remove build artifacts (.vite, dist, out, caches)
+npm run reset           # Rebuild better-sqlite3 + reset dev database
+npm run hard-reset      # Full reset (reset + nuke node_modules + reinstall)
 ```
 
 ## Architecture Overview
@@ -39,12 +44,13 @@ Jinzo is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM, sq
 
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
-- Namespaced by domain: `api.chat`, `api.entities`, `api.tasks`, `api.issues`, `api.playlists`, `api.feed`, `api.sync`, `api.runs`, `api.runContext`, `api.runArtifacts`, `api.runCommands`, `api.runTurns`, `api.workspaceDiffs`, `api.reviews`, `api.reviewFindings`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.account`, `api.apps`, `api.appSettings`, `api.connections`, `api.connectionCredentials`, `api.space`, `api.journal`, `api.projects`, `api.projectResources`, `api.providers`, `api.tools`, `api.toolCalls`, `api.toolPermissions`, `api.ollama`, `api.workspaceResources`, `api.seed`, `api.feedback`, `api.stats`, `api.updates`
+- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.playlists`, `api.account`, `api.apps`, `api.chat`, `api.sync`, `api.feed`, `api.mcp`, `api.ollama`, `api.connectionCredentials`, `api.connections`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.journal`, `api.providers`, `api.tools`, `api.toolCalls`, `api.toolPermissions`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runCommands`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.feedback`, `api.stats`, `api.app`, `api.updates`
 - After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
 - React app with Redux Toolkit, React Router (HashRouter), `@/` alias → `src/renderer/`
-- Routes: `/` (Home), `/chat/:id` (Chat), `/copilot/:workspaceId` (Copilot — GitHub Copilot agent), `/claude/:workspaceId` (Claude Code agent), `/journal` (Journal), `/settings` (Settings)
+- Routes: `/` (Home with defaultRoute redirect), `/settings` (Settings), `/copilot` and `/copilot/:workspaceId` (Copilot — GitHub Copilot agent), `/claude` and `/claude/:workspaceId` (Claude Code agent)
+- Chat (`/chat/:id`) and Journal (`/journal`) routes exist but are currently commented out
 - Copilot and Claude routes share the same workspace UI but use different provider IDs (`copilot_cli` vs `claude_code`)
 
 ### Module Architecture (`src/main/modules/`)
@@ -63,7 +69,7 @@ Each domain module follows a layered pattern (see `src/main/modules/account/` as
 
 **Critical**: All layers are **plain object literals**, never classes. No DI — repos call `getDb()` inline.
 
-All modules: `account`, `appSettings`, `apps`, `chat`, `connectionCredentials`, `connections`, `entities`, `feed`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `journal`, `mcp`, `space`, `ollama`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceDiffs`, `workspaceResources`, `workspaces`
+All modules: `account`, `appSettings`, `apps`, `chat`, `connectionCredentials`, `connections`, `entities`, `feed`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `journal`, `mcp`, `space`, `ollama`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
 
 ### IPC Convention
 
@@ -110,6 +116,7 @@ Core tables:
 - `chatSessions` / `chatMessages` - Chat history with provider/model tracking, observability (traceId, latencyMs, token counts)
 - `runs` / `runContext` / `runArtifacts` / `runCommands` / `runTurns` / `runUsage` - Terminal/code-writing flow (agent runs with session resumption via sessionId, turn tracking, and usage metrics)
 - `tools` / `toolCalls` - Tool registry (local, mcp, provider_builtin) and invocation tracking with nested tool call support (parentToolCallId)
+- `workspaceActivity` - Workspace activity log (types: diff, review, finding, commit, pr — with title, summary, metadata JSON, refId)
 - `workspaceDiffs` - Git diffs captured per workspace/run (base ref, diff text, files, stats)
 - `reviews` - Workspace-level review notes (status: open, in_review, approved, rejected)
 - `reviewFindings` - Individual code review findings linked to reviews
@@ -183,6 +190,11 @@ Domain-specific views on entities:
 - Secure filesystem operations within workspace boundaries
 - Path traversal prevention, symlink escape detection, file size limits (2MB), binary detection
 
+**Workspace Activity** (`src/main/modules/workspaceActivity/`)
+- Activity log per workspace (types: diff, review, finding, commit, pr)
+- Fire-and-forget `log()` method for non-blocking activity recording
+- Supports batch creation via `createMany`
+
 **Workspace Diffs** (`src/main/modules/workspaceDiffs/`)
 - Captures git HEAD sha at run start, computes diffs after run completion
 - Stores diff text, file lists, and stats linked to runs and workspaces
@@ -234,7 +246,7 @@ Domain-specific views on entities:
 ### Frontend Conventions
 
 - **Redux**: RTK Query with custom `ipcBaseQuery`, `baseApi.injectEndpoints()` per domain
-- **Redux API files**: `accountApi`, `appsApi`, `appSettingsApi`, `chatApi`, `connectionsApi`, `entitiesApi`, `feedApi`, `journalApi`, `mcpApi`, `spaceApi`, `ollamaApi`, `projectsApi`, `providersApi`, `reviewsApi`, `reviewFindingsApi`, `runsApi`, `shellApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceDiffsApi`, `workspaceResourcesApi`, `workspacesApi`
+- **Redux API files**: `accountApi`, `appsApi`, `appSettingsApi`, `chatApi`, `connectionsApi`, `entitiesApi`, `feedApi`, `journalApi`, `mcpApi`, `spaceApi`, `ollamaApi`, `projectsApi`, `providersApi`, `reviewsApi`, `reviewFindingsApi`, `runsApi`, `shellApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceActivityApi`, `workspaceDiffsApi`, `workspaceResourcesApi`, `workspacesApi`
 - **Redux slices**: `chatSlice`, `spaceSlice`, `appSettingsSlice`, `workspaceSlice`, `journalEditingSlice`
 - **Hooks**: `use-kebab-case.ts` filenames, `useCamelCase` export names
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`

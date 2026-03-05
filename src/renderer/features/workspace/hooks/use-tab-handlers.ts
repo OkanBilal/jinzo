@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
+import { useAppSelector } from "@/lib/redux/hooks";
 import {
   setActiveTab,
   clearSelectedFile,
@@ -29,16 +30,39 @@ export function useTabHandlers({
   setGoal,
 }: UseTabHandlersParams) {
   const dispatch = useDispatch();
+  const { openIssueTabs, openNoteTabs, selectedFile } = useAppSelector(
+    (state) => state.workspace,
+  );
+
+  /** Find the best tab to switch to after closing `closingTabId`. */
+  const getNextTab = useCallback(
+    (closingTabId: string): string => {
+      for (const r of runs) {
+        if (r.id !== closingTabId) return r.id;
+      }
+      for (const t of openIssueTabs) {
+        const id = `issue:${t.issue.entityId}`;
+        if (id !== closingTabId) return id;
+      }
+      for (const t of openNoteTabs) {
+        const id = `note:${t.id}`;
+        if (id !== closingTabId) return id;
+      }
+      if (selectedFile && closingTabId !== "editor") return "editor";
+      return "editor";
+    },
+    [runs, openIssueTabs, openNoteTabs, selectedFile],
+  );
 
   const handleCloseTab = useCallback(
     (runId: string, e: React.MouseEvent) => {
       e.stopPropagation();
-      closeTab(runId);
       if (runId === activeTab) {
-        dispatch(setActiveTab("editor"));
+        dispatch(setActiveTab(getNextTab(runId)));
       }
+      closeTab(runId);
     },
-    [closeTab, activeTab, dispatch],
+    [closeTab, activeTab, dispatch, getNextTab],
   );
 
   const handleNewRun = useCallback(() => {
@@ -54,9 +78,12 @@ export function useTabHandlers({
   const handleCloseNewRunTab = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
+      if (activeTab === "new-run") {
+        dispatch(setActiveTab(getNextTab("new-run")));
+      }
       dispatch(closeNewRunTab());
     },
-    [dispatch],
+    [dispatch, activeTab, getNextTab],
   );
 
   const handleSelectEditorTab = useCallback(() => {
@@ -81,9 +108,13 @@ export function useTabHandlers({
   const handleCloseIssueTab = useCallback(
     (entityId: string, e: React.MouseEvent) => {
       e.stopPropagation();
+      const closingId = `issue:${entityId}`;
+      if (activeTab === closingId) {
+        dispatch(setActiveTab(getNextTab(closingId)));
+      }
       dispatch(closeIssueTab(entityId));
     },
-    [dispatch],
+    [dispatch, activeTab, getNextTab],
   );
 
   const handleSelectNoteTab = useCallback(
@@ -96,20 +127,24 @@ export function useTabHandlers({
   const handleCloseNoteTab = useCallback(
     (noteId: string, e: React.MouseEvent) => {
       e.stopPropagation();
+      const closingId = `note:${noteId}`;
+      if (activeTab === closingId) {
+        dispatch(setActiveTab(getNextTab(closingId)));
+      }
       dispatch(closeNoteTab(noteId));
     },
-    [dispatch],
+    [dispatch, activeTab, getNextTab],
   );
 
   const handleCloseEditorTab = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      dispatch(clearSelectedFile());
-      if (runs.length > 0) {
-        dispatch(setActiveTab(runs[0].id));
+      if (activeTab === "editor") {
+        dispatch(setActiveTab(getNextTab("editor")));
       }
+      dispatch(clearSelectedFile());
     },
-    [dispatch, runs],
+    [dispatch, activeTab, getNextTab],
   );
 
   const handleForkRun = useCallback(

@@ -7,6 +7,10 @@ import { TaskDisplay, type TaskParams } from "./task-display";
 import { ExitPlanDisplay, type ExitPlanParams } from "./exit-plan-display";
 import { WriteDisplay, type WriteParams } from "./write-display";
 import { McpDisplay } from "./mcp-display";
+import { GetDiffDisplay, type GetDiffParams } from "./get-diff-display";
+import { PersistReviewDisplay, type PersistReviewParams } from "./persist-review-display";
+import { CommitDisplay, type CommitParams } from "./commit-display";
+import { PersistFindingDisplay, type PersistFindingParams } from "./persist-finding-display";
 import { AgentDisplay, type AgentParams } from "./agent-display";
 import { IntentDisplay, type IntentParams } from "./intent-display";
 import { BashDisplay, type BashParams } from "./bash-display";
@@ -179,6 +183,58 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
         ? (params as IntentParams)
         : { intent: summary };
     return <IntentDisplay params={intentParams} />;
+  }
+
+  // Show GetDiffDisplay for Jinzo GetDiff tool calls
+  if (displayName === "GetDiff") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const diffParams: GetDiffParams = metadataInput
+      ? (metadataInput as GetDiffParams)
+      : params
+        ? (params as GetDiffParams)
+        : {};
+    return <GetDiffDisplay params={diffParams} output={event.metadata?.output} isCompact={isCompact} />;
+  }
+
+  // Show PersistReviewDisplay for Jinzo SaveReview tool calls
+  if (displayName === "SaveReview") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const reviewParams: PersistReviewParams = metadataInput
+      ? (metadataInput as PersistReviewParams)
+      : params
+        ? (params as PersistReviewParams)
+        : {};
+    return <PersistReviewDisplay params={reviewParams} isCompact={isCompact} />;
+  }
+
+  // Show PersistFindingDisplay for Jinzo SaveFinding/SaveFindings tool calls
+  if (displayName === "SaveFinding") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const findingParams: PersistFindingParams = metadataInput
+      ? (metadataInput as PersistFindingParams)
+      : params
+        ? (params as PersistFindingParams)
+        : {};
+    return <PersistFindingDisplay params={findingParams} isCompact={isCompact} />;
+  }
+
+  // Show CommitDisplay for Jinzo CommitChanges tool calls
+  if (displayName === "Commit") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const commitParams: CommitParams = metadataInput
+      ? (metadataInput as CommitParams)
+      : params
+        ? (params as CommitParams)
+        : {};
+    return <CommitDisplay params={commitParams} isCompact={isCompact} />;
   }
 
   // Show McpDisplay for MCP tool calls with expandable params

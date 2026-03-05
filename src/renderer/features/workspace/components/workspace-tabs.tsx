@@ -77,7 +77,7 @@ export function WorkspaceTabs({
       if (!container) return;
 
       const activeTabEl = tabRefs.current.get(activeTab);
-      if (activeTabEl) {
+      if (activeTabEl && activeTabEl.isConnected) {
         const containerRect = container.getBoundingClientRect();
         const tabRect = activeTabEl.getBoundingClientRect();
 
@@ -92,6 +92,9 @@ export function WorkspaceTabs({
           block: "nearest",
           inline: "nearest",
         });
+      } else {
+        // Active tab no longer in DOM (e.g. just closed) — hide indicator
+        setIndicatorStyle({ left: 0, width: 0 });
       }
     };
 

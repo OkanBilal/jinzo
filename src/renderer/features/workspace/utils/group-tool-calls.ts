@@ -15,8 +15,8 @@ export function getToolType(content: string): string {
   // MCP tools: check for mcp__provider__ pattern first
   if (lower.startsWith("mcp__jinzo__") || lower.includes("__jinzo__")) {
     if (lower.includes("getworkspacediff")) return "GetDiff";
-    if (lower.includes("savereview")) return "PersistReview";
-    if (lower.includes("savefinding")) return "PersistFinding";
+    if (lower.includes("savereview")) return "SaveReview";
+    if (lower.includes("savefinding")) return "SaveFinding";
     if (lower.includes("commitchanges")) return "Commit";
     return "Jinzo";
   }

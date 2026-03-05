@@ -37,9 +37,13 @@ export const TOOL_CATEGORIES: Record<
   },
   savereview: {
     category: "Review",
-    icon: <Jinzo className="w-2 h-4 " />,
+    icon: <Jinzo className="w-2 h-4" />,
   },
   savefindings: {
+    category: "Review",
+    icon: <Jinzo className="w-2 h-4  " />,
+  },
+    savefinding: {
     category: "Review",
     icon: <Jinzo className="w-2 h-4  " />,
   },

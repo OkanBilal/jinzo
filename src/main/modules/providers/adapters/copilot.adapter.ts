@@ -152,7 +152,7 @@ const activeRuns = new Map<
 // Pre-approved tools (auto-allow without user dialog)
 // ─────────────────────────────────────────────────────────────
 const DEFAULT_ALLOWED_TOOLS = [
-  "Bash", "Read", "Glob", "Grep", "LSP", "report_intent", "view", "permission:read",
+  "bash", "read", "glob", "grep", "LSP", "report_intent", "view", "permission:read",
   "Task", "TaskCreate", "TaskList", "TaskGet", "TaskUpdate", "TodoWrite",
   "ExitPlanMode", "EnterPlanMode",
   "ListMcpResources", "ReadMcpResource",
@@ -177,6 +177,14 @@ function buildPermissionHandler(runId: string) {
   return async (
     request: { kind: string; toolCallId?: string; [key: string]: any },
   ): Promise<{ kind: string; rules?: unknown[] }> => {
+    if (request.kind === "read" || request.kind === "shell" || request.kind === "task") {
+      return { kind: "approved" };
+    }
+
+    if (request.kind === "custom-tool" && typeof request.toolName === "string" && request.toolName.startsWith("mcp__jinzo__")) {
+      return { kind: "approved" };
+    }
+
     const req: ToolApprovalRequest = {
       requestId: `perm-${runId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       runId,
