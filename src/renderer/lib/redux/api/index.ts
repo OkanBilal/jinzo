@@ -103,7 +103,6 @@ export {
   useGetIssueByEntityIdQuery,
   useUpdateIssueStateMutation,
   useGetIssuesByRepoQuery,
-  useGetPlaylistItemsQuery,
 } from "./entitiesApi";
 export type {
   Entity,
@@ -114,7 +113,6 @@ export type {
   Issue,
   IssueRecord,
   IssueWithEntity,
-  PlaylistItem,
 } from "./entitiesApi";
 
 export {

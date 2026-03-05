@@ -1,0 +1,1 @@
+DROP TABLE `playlist_items`;

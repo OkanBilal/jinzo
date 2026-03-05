@@ -1176,32 +1176,6 @@ export const issues = sqliteTable(
   ],
 );
 
-/* Optional: playlist membership if you need local ordering/queue */
-export const playlistItems = sqliteTable(
-  "playlist_items",
-  {
-    playlistEntityId: text("playlist_entity_id")
-      .notNull()
-      .references(() => entities.id, { onDelete: "cascade" }),
-    itemEntityId: text("item_entity_id")
-      .notNull()
-      .references(() => entities.id, { onDelete: "cascade" }),
-    position: integer("position").notNull().default(0),
-    addedAt: integer("added_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-    metadata: text("metadata"), // JSON
-  },
-  (t) => [
-    uniqueIndex("uniq_playlist_item").on(t.playlistEntityId, t.itemEntityId),
-    index("idx_playlist_items_order").on(t.playlistEntityId, t.position),
-    check(
-      "check_playlist_items_metadata_json",
-      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
-    ),
-  ],
-);
-
 /* -----------------------------
    FEED = EVENT LOG (timeline + retrieval trigger)
 ------------------------------ */

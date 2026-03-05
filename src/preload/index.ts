@@ -41,39 +41,6 @@ const api = {
       ipcRenderer.invoke("issues:update", entityId, payload),
     delete: (entityId: string) => ipcRenderer.invoke("issues:delete", entityId),
   },
-  // Playlist operations
-  playlists: {
-    getItems: (playlistEntityId: string) =>
-      ipcRenderer.invoke("playlists:getItems", playlistEntityId),
-    addItem: (
-      playlistEntityId: string,
-      itemEntityId: string,
-      position?: number,
-    ) =>
-      ipcRenderer.invoke(
-        "playlists:addItem",
-        playlistEntityId,
-        itemEntityId,
-        position,
-      ),
-    removeItem: (playlistEntityId: string, itemEntityId: string) =>
-      ipcRenderer.invoke(
-        "playlists:removeItem",
-        playlistEntityId,
-        itemEntityId,
-      ),
-    reorderItem: (
-      playlistEntityId: string,
-      itemEntityId: string,
-      newPosition: number,
-    ) =>
-      ipcRenderer.invoke(
-        "playlists:reorderItem",
-        playlistEntityId,
-        itemEntityId,
-        newPosition,
-      ),
-  },
   // Account operations
   account: {
     get: () => ipcRenderer.invoke("account:get"),

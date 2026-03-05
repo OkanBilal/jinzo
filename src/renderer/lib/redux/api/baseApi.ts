@@ -47,7 +47,6 @@ export const baseApi = createApi({
     'Entity',
     'Task',
     'Issue',
-    'Playlist',
     'Feed',
     'Models',
     'Ollama',

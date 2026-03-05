@@ -87,16 +87,6 @@ export interface IssueWithEntity {
   entity: Entity;
 }
 
-export interface PlaylistItem {
-  id: string;
-  entityId: string;
-  playlistId: string;
-  position: number;
-  addedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export const entitiesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getEntities: builder.query<Entity[], EntityQueryParams>({
@@ -249,18 +239,6 @@ export const entitiesApi = baseApi.injectEndpoints({
       providesTags: ["Issue"],
     }),
 
-    getPlaylistItems: builder.query<
-      PlaylistItem[],
-      { playlistId?: string; limit?: number }
-    >({
-      query: (params) => ({
-        handler: "playlists:getItems",
-        args: [params],
-      }),
-      transformResponse: (response: any) =>
-        response.success ? response.data : [],
-      providesTags: ["Playlist"],
-    }),
   }),
   overrideExisting: false,
 });
@@ -282,5 +260,4 @@ export const {
   useGetIssueByEntityIdQuery,
   useUpdateIssueStateMutation,
   useGetIssuesByRepoQuery,
-  useGetPlaylistItemsQuery,
 } = entitiesApi;

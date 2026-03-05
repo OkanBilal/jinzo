@@ -83,28 +83,4 @@ export const entitiesController = {
     return entitiesService.deleteIssue(entityId);
   },
 
-  // Playlist Operations
-  async getPlaylistItems(playlistEntityId: string) {
-    return entitiesService.getPlaylistItems(playlistEntityId);
-  },
-
-  async addPlaylistItem(
-    playlistEntityId: string,
-    itemEntityId: string,
-    position?: number
-  ) {
-    return entitiesService.addPlaylistItem(playlistEntityId, itemEntityId, position);
-  },
-
-  async removePlaylistItem(playlistEntityId: string, itemEntityId: string) {
-    return entitiesService.removePlaylistItem(playlistEntityId, itemEntityId);
-  },
-
-  async reorderPlaylistItem(
-    playlistEntityId: string,
-    itemEntityId: string,
-    newPosition: number
-  ) {
-    return entitiesService.reorderPlaylistItem(playlistEntityId, itemEntityId, newPosition);
-  },
 };

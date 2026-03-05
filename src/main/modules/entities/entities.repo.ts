@@ -1,6 +1,6 @@
 import { desc, eq, and, like, or, inArray, sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { entities, tasks, issues, playlistItems } from "../../db/schema";
+import { entities, tasks, issues } from "../../db/schema";
 import { serializeLabels, serializeMetadata } from "./entities.utils";
 import type {
   CreateEntityPayload,
@@ -318,77 +318,4 @@ export const entitiesRepo = {
     return this.findIssueById(entityId);
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // Playlist Operations
-  // ─────────────────────────────────────────────────────────────
-  async findPlaylistItems(playlistEntityId: string) {
-    const db = getDb();
-    return db
-      .select({
-        playlistItem: playlistItems,
-        entity: entities,
-      })
-      .from(playlistItems)
-      .innerJoin(entities, eq(playlistItems.itemEntityId, entities.id))
-      .where(
-        and(
-          eq(playlistItems.playlistEntityId, playlistEntityId),
-          eq(entities.isDeleted, false)
-        )
-      )
-      .orderBy(playlistItems.position);
-  },
-
-  async addPlaylistItem(
-    playlistEntityId: string,
-    itemEntityId: string,
-    position?: number
-  ) {
-    const db = getDb();
-
-    let targetPosition = position;
-    if (targetPosition === undefined) {
-      const maxPos = await db
-        .select({ maxPosition: sql<number>`MAX(${playlistItems.position})` })
-        .from(playlistItems)
-        .where(eq(playlistItems.playlistEntityId, playlistEntityId));
-
-      targetPosition = (maxPos[0]?.maxPosition ?? -1) + 1;
-    }
-
-    await db.insert(playlistItems).values({
-      playlistEntityId,
-      itemEntityId,
-      position: targetPosition,
-    });
-  },
-
-  async removePlaylistItem(playlistEntityId: string, itemEntityId: string) {
-    const db = getDb();
-    await db
-      .delete(playlistItems)
-      .where(
-        and(
-          eq(playlistItems.playlistEntityId, playlistEntityId),
-          eq(playlistItems.itemEntityId, itemEntityId)
-        )
-      );
-  },
-
-  async reorderPlaylistItem(
-    playlistEntityId: string,
-    itemEntityId: string,
-    newPosition: number
-  ) {
-    const db = getDb();
-    await db
-      .update(playlistItems)
-      .set({ position: newPosition })
-      .where(
-        and(
-          eq(playlistItems.playlistEntityId, playlistEntityId),
-          eq(playlistItems.itemEntityId, itemEntityId)
-        )
-      );
-  },
 };

@@ -36,11 +36,6 @@ const IPC_CHANNELS = {
   ISSUES_CREATE: "issues:create",
   ISSUES_UPDATE: "issues:update",
   ISSUES_DELETE: "issues:delete",
-  // Playlist channels
-  PLAYLISTS_GET_ITEMS: "playlists:getItems",
-  PLAYLISTS_ADD_ITEM: "playlists:addItem",
-  PLAYLISTS_REMOVE_ITEM: "playlists:removeItem",
-  PLAYLISTS_REORDER_ITEM: "playlists:reorderItem",
 } as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -159,49 +154,6 @@ export function registerEntitiesHandlers(): void {
     IPC_CHANNELS.ISSUES_DELETE,
     async (_event, entityId: string) => {
       return entitiesController.deleteIssue(entityId);
-    }
-  );
-
-  // Playlist handlers
-  ipcMain.handle(
-    IPC_CHANNELS.PLAYLISTS_GET_ITEMS,
-    async (_event, playlistEntityId: string) => {
-      return entitiesController.getPlaylistItems(playlistEntityId);
-    }
-  );
-
-  ipcMain.handle(
-    IPC_CHANNELS.PLAYLISTS_ADD_ITEM,
-    async (
-      _event,
-      playlistEntityId: string,
-      itemEntityId: string,
-      position?: number
-    ) => {
-      return entitiesController.addPlaylistItem(playlistEntityId, itemEntityId, position);
-    }
-  );
-
-  ipcMain.handle(
-    IPC_CHANNELS.PLAYLISTS_REMOVE_ITEM,
-    async (_event, playlistEntityId: string, itemEntityId: string) => {
-      return entitiesController.removePlaylistItem(playlistEntityId, itemEntityId);
-    }
-  );
-
-  ipcMain.handle(
-    IPC_CHANNELS.PLAYLISTS_REORDER_ITEM,
-    async (
-      _event,
-      playlistEntityId: string,
-      itemEntityId: string,
-      newPosition: number
-    ) => {
-      return entitiesController.reorderPlaylistItem(
-        playlistEntityId,
-        itemEntityId,
-        newPosition
-      );
     }
   );
 
