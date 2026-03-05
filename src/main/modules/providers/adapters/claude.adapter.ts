@@ -1459,47 +1459,7 @@ export function createClaudeAdapter(
       }
     }
 
-    // Handle shell/command tools
-    if (
-      toolName === "Bash" ||
-      toolName === "bash" ||
-      toolName === "shell" ||
-      toolName === "terminal" ||
-      toolName === "run_command" ||
-      toolName === "execute_shell" ||
-      toolName === "command_result"
-    ) {
-      const out = output as any;
 
-      const text =
-        typeof out?.stdout === "string"
-          ? out.stdout
-          : typeof out?.output === "string"
-            ? out.output
-            : typeof out?.content === "string"
-              ? out.content
-              : typeof out === "string"
-                ? out
-                : undefined;
-
-      const exitCode =
-        typeof out?.exit_code === "number"
-          ? out.exit_code
-          : typeof out?.exitCode === "number"
-            ? out.exitCode
-            : undefined;
-
-      artifacts.push({
-        type: "command",
-        command: typeof out?.command === "string" ? out.command : "unknown",
-        cwd: typeof out?.cwd === "string" ? out.cwd : undefined,
-        stdout: text,
-        stderr: typeof out?.stderr === "string" ? out.stderr : undefined,
-        exitCode,
-        endedAt: Date.now(),
-        metadata: { toolName },
-      });
-    }
 
     return artifacts;
   }
@@ -1840,9 +1800,6 @@ export function createClaudeAdapter(
                         kind: artEvent.kind,
                         path: artEvent.path,
                       });
-                    }
-                    if (artEvent.type === "command") {
-                      collectedArtifacts.push({ kind: "command_result" });
                     }
                   }
                 }
@@ -2205,9 +2162,6 @@ export function createClaudeAdapter(
                         path: artEvent.path,
                       });
                     }
-                    if (artEvent.type === "command") {
-                      collectedArtifacts.push({ kind: "command_result" });
-                    }
                   }
                 }
               }
@@ -2565,9 +2519,6 @@ export function createClaudeAdapter(
                         kind: artEvent.kind,
                         path: artEvent.path,
                       });
-                    }
-                    if (artEvent.type === "command") {
-                      collectedArtifacts.push({ kind: "command_result" });
                     }
                   }
                 }

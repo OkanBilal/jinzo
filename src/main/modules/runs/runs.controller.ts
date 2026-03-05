@@ -4,8 +4,6 @@ import type {
   UpdateRunPayload,
   CreateRunContextPayload,
   CreateRunArtifactPayload,
-  CreateRunCommandPayload,
-  UpdateRunCommandPayload,
   RunStatus,
   StartRunPayload,
   ContinueRunPayload,
@@ -44,15 +42,6 @@ export const runsController = {
   addArtifact: (payload: CreateRunArtifactPayload) => runsService.addArtifact(payload),
   removeArtifact: (id: number) => runsService.removeArtifact(id),
 
-  // Run Command Operations
-  getCommandsByRun: (runId: string) => runsService.getCommandsByRun(runId),
-  addCommand: (payload: CreateRunCommandPayload) => runsService.addCommand(payload),
-  updateCommand: (id: number, payload: UpdateRunCommandPayload) =>
-    runsService.updateCommand(id, payload),
-  startCommand: (id: number) => runsService.startCommand(id),
-  completeCommand: (id: number, exitCode: number, stdout?: string, stderr?: string) =>
-    runsService.completeCommand(id, exitCode, stdout, stderr),
-  removeCommand: (id: number) => runsService.removeCommand(id),
 
   // Tool Call Operations
   getToolCallsByRun: (runId: string) => runsService.getToolCallsByRun(runId),

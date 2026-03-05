@@ -114,34 +114,6 @@ export function createRunWriteback(config: RunWritebackConfig): RunWriteback {
           break;
         }
 
-        case "command": {
-          const commandResult = await runsService.addCommand({
-            runId,
-            cwd: event.cwd,
-            command: event.command,
-            status:
-              event.exitCode !== undefined
-                ? event.exitCode === 0
-                  ? "done"
-                  : "error"
-                : "done",
-          });
-
-          if (commandResult.success && commandResult.data) {
-            await runsService.updateCommand(commandResult.data, {
-              stdout: event.stdout,
-              stderr: event.stderr,
-              exitCode: event.exitCode,
-              startedAt: event.startedAt
-                ? new Date(event.startedAt)
-                : undefined,
-              endedAt: event.endedAt ? new Date(event.endedAt) : new Date(),
-              metadata: event.metadata,
-            });
-          }
-          break;
-        }
-
         case "tool_call": {
           const meta =
             (event.metadata as Record<string, unknown> | undefined) ??

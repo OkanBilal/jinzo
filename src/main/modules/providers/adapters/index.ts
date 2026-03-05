@@ -11,7 +11,6 @@ export type {
   WorkRunForkRequest,
   WorkRunLogEvent,
   WorkRunToolCallEvent,
-  WorkRunCommandEvent,
   WorkRunArtifactEvent,
   WorkRunStatusEvent,
   WorkRunSubagentEvent,

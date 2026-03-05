@@ -627,55 +627,6 @@ export const workspaceActivity = sqliteTable(
   ],
 );
 
-/* -----------------------------
-   RUN COMMANDS (terminal commands + exit codes)
------------------------------- */
-
-export const runCommands = sqliteTable(
-  "run_commands",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    runId: text("run_id")
-      .notNull()
-      .references(() => runs.id, { onDelete: "cascade" }),
-
-    cwd: text("cwd"),
-    command: text("command").notNull(), // raw command string
-    envKeys: text("env_keys"), // JSON array of keys (no secrets)
-
-    status: text("status", {
-      enum: ["queued", "running", "done", "error", "canceled"],
-    })
-      .notNull()
-      .default("queued"),
-
-    startedAt: integer("started_at", { mode: "timestamp" }),
-    endedAt: integer("ended_at", { mode: "timestamp" }),
-    exitCode: integer("exit_code"),
-
-    // keep short outputs here; big outputs -> runArtifacts(kind=log/command_result)
-    stdout: text("stdout"),
-    stderr: text("stderr"),
-
-    metadata: text("metadata"), // JSON
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-  },
-  (t) => [
-    index("idx_run_commands_run").on(t.runId),
-    index("idx_run_commands_status").on(t.status),
-    index("idx_run_commands_created").on(t.createdAt),
-    check(
-      "check_run_commands_env_keys_json",
-      sql`json_valid(${t.envKeys}) OR ${t.envKeys} IS NULL`,
-    ),
-    check(
-      "check_run_commands_metadata_json",
-      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
-    ),
-  ],
-);
 
 /* -----------------------------
    MCP SERVERS (optional, but useful if you discover tools dynamically)

@@ -582,18 +582,6 @@ const api = {
     add: (payload: unknown) => ipcRenderer.invoke("runArtifacts:add", payload),
     remove: (id: number) => ipcRenderer.invoke("runArtifacts:remove", id),
   },
-  // Run commands operations
-  runCommands: {
-    getByRun: (runId: string) =>
-      ipcRenderer.invoke("runCommands:getByRun", runId),
-    add: (payload: unknown) => ipcRenderer.invoke("runCommands:add", payload),
-    update: (id: number, payload: unknown) =>
-      ipcRenderer.invoke("runCommands:update", id, payload),
-    start: (id: number) => ipcRenderer.invoke("runCommands:start", id),
-    complete: (id: number, exitCode: number, stdout?: string, stderr?: string) =>
-      ipcRenderer.invoke("runCommands:complete", id, exitCode, stdout, stderr),
-    remove: (id: number) => ipcRenderer.invoke("runCommands:remove", id),
-  },
   // Run turns operations
   runTurns: {
     getByRun: (runId: string) => ipcRenderer.invoke("runTurns:getByRun", runId),

@@ -44,7 +44,7 @@ Jinzo is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM, sq
 
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
-- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.playlists`, `api.account`, `api.apps`, `api.chat`, `api.sync`, `api.feed`, `api.mcp`, `api.ollama`, `api.connectionCredentials`, `api.connections`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.journal`, `api.providers`, `api.tools`, `api.toolCalls`, `api.toolPermissions`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runCommands`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.feedback`, `api.stats`, `api.app`, `api.updates`
+- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.playlists`, `api.account`, `api.apps`, `api.chat`, `api.sync`, `api.feed`, `api.mcp`, `api.ollama`, `api.connectionCredentials`, `api.connections`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.journal`, `api.providers`, `api.tools`, `api.toolCalls`, `api.toolPermissions`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.feedback`, `api.stats`, `api.app`, `api.updates`
 - After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
@@ -114,7 +114,7 @@ Core tables:
 - `spaceToolPermissions` - Space-specific tool permission policies
 - `feedItems` - Event log/timeline entries
 - `chatSessions` / `chatMessages` - Chat history with provider/model tracking, observability (traceId, latencyMs, token counts)
-- `runs` / `runContext` / `runArtifacts` / `runCommands` / `runTurns` / `runUsage` - Terminal/code-writing flow (agent runs with session resumption via sessionId, turn tracking, and usage metrics)
+- `runs` / `runContext` / `runArtifacts` / `runTurns` / `runUsage` - Terminal/code-writing flow (agent runs with session resumption via sessionId, turn tracking, and usage metrics)
 - `tools` / `toolCalls` - Tool registry (local, mcp, provider_builtin) and invocation tracking with nested tool call support (parentToolCallId)
 - `workspaceActivity` - Workspace activity log (types: diff, review, finding, commit, pr — with title, summary, metadata JSON, refId)
 - `workspaceDiffs` - Git diffs captured per workspace/run (base ref, diff text, files, stats)

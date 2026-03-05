@@ -21,9 +21,6 @@ import type {
   RunContextResponse,
   CreateRunArtifactPayload,
   RunArtifactResponse,
-  CreateRunCommandPayload,
-  UpdateRunCommandPayload,
-  RunCommandResponse,
   CreateToolCallPayload,
   UpdateToolCallPayload,
   ToolCallResponse,
@@ -573,77 +570,6 @@ export const runsService = {
     }
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // Run Command Operations
-  // ─────────────────────────────────────────────────────────────
-  async getCommandsByRun(
-    runId: string,
-  ): Promise<ServiceResponse<RunCommandResponse[]>> {
-    try {
-      const commands = await runsRepo.findCommandsByRun(runId);
-      return { success: true, data: commands };
-    } catch (error) {
-      console.error(
-        `[RunsService] Failed to get commands for run ${runId}:`,
-        error,
-      );
-      return { success: false, error: "Failed to get commands" };
-    }
-  },
-
-  async addCommand(
-    payload: CreateRunCommandPayload,
-  ): Promise<ServiceResponse<number>> {
-    try {
-      const id = await runsRepo.insertCommand(payload);
-      return { success: true, data: id };
-    } catch (error) {
-      console.error("[RunsService] Failed to add command:", error);
-      return { success: false, error: "Failed to add command" };
-    }
-  },
-
-  async updateCommand(
-    id: number,
-    payload: UpdateRunCommandPayload,
-  ): Promise<ServiceResponse<void>> {
-    try {
-      await runsRepo.updateCommand(id, payload);
-      return { success: true };
-    } catch (error) {
-      console.error(`[RunsService] Failed to update command ${id}:`, error);
-      return { success: false, error: "Failed to update command" };
-    }
-  },
-
-  async startCommand(id: number): Promise<ServiceResponse<void>> {
-    return this.updateCommand(id, { status: "running", startedAt: new Date() });
-  },
-
-  async completeCommand(
-    id: number,
-    exitCode: number,
-    stdout?: string,
-    stderr?: string,
-  ): Promise<ServiceResponse<void>> {
-    return this.updateCommand(id, {
-      status: exitCode === 0 ? "done" : "error",
-      endedAt: new Date(),
-      exitCode,
-      stdout,
-      stderr,
-    });
-  },
-
-  async removeCommand(id: number): Promise<ServiceResponse<void>> {
-    try {
-      await runsRepo.deleteCommand(id);
-      return { success: true };
-    } catch (error) {
-      console.error(`[RunsService] Failed to remove command ${id}:`, error);
-      return { success: false, error: "Failed to remove command" };
-    }
-  },
 
   // ─────────────────────────────────────────────────────────────
   // Tool Call Operations
@@ -700,10 +626,9 @@ export const runsService = {
         return { success: false, error: "Run not found" };
       }
 
-      const [context, artifacts, commands, toolCalls, turns] = await Promise.all([
+      const [context, artifacts, toolCalls, turns] = await Promise.all([
         runsRepo.findContextByRun(runId),
         runsRepo.findArtifactsByRun(runId),
-        runsRepo.findCommandsByRun(runId),
         runsRepo.findToolCallsByRun(runId),
         runsRepo.findTurnsByRun(runId),
       ]);
@@ -714,7 +639,6 @@ export const runsService = {
           run,
           context,
           artifacts,
-          commands,
           toolCalls,
           turns,
         },
@@ -1022,31 +946,6 @@ export const runsService = {
         break;
       }
 
-      case "command": {
-        // Insert command record
-        const commandId = await runsRepo.insertCommand({
-          runId,
-          cwd: event.cwd,
-          command: event.command,
-          status:
-            event.exitCode !== undefined
-              ? event.exitCode === 0
-                ? "done"
-                : "error"
-              : "done",
-        });
-
-        // Update with results
-        await runsRepo.updateCommand(commandId, {
-          stdout: event.stdout,
-          stderr: event.stderr,
-          exitCode: event.exitCode,
-          startedAt: event.startedAt ? new Date(event.startedAt) : undefined,
-          endedAt: event.endedAt ? new Date(event.endedAt) : new Date(),
-          metadata: event.metadata,
-        });
-        break;
-      }
 
       case "artifact": {
         await runsRepo.insertArtifact({

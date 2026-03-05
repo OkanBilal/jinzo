@@ -5,8 +5,6 @@ import type {
   UpdateRunPayload,
   CreateRunContextPayload,
   CreateRunArtifactPayload,
-  CreateRunCommandPayload,
-  UpdateRunCommandPayload,
   RunStatus,
   StartRunPayload,
   ContinueRunPayload,
@@ -51,13 +49,6 @@ const CHANNELS = {
   ARTIFACTS_ADD: "runArtifacts:add",
   ARTIFACTS_REMOVE: "runArtifacts:remove",
 
-  // Run Commands
-  COMMANDS_GET_BY_RUN: "runCommands:getByRun",
-  COMMANDS_ADD: "runCommands:add",
-  COMMANDS_UPDATE: "runCommands:update",
-  COMMANDS_START: "runCommands:start",
-  COMMANDS_COMPLETE: "runCommands:complete",
-  COMMANDS_REMOVE: "runCommands:remove",
 
   // Tool Calls
   TOOL_CALLS_GET_BY_RUN: "runToolCalls:getByRun",
@@ -180,36 +171,6 @@ export function registerRunsIpc(): void {
     return runsController.removeArtifact(id);
   });
 
-  // Run Commands
-  ipcMain.handle(CHANNELS.COMMANDS_GET_BY_RUN, async (_, runId: string) => {
-    return runsController.getCommandsByRun(runId);
-  });
-
-  ipcMain.handle(CHANNELS.COMMANDS_ADD, async (_, payload: CreateRunCommandPayload) => {
-    return runsController.addCommand(payload);
-  });
-
-  ipcMain.handle(
-    CHANNELS.COMMANDS_UPDATE,
-    async (_, id: number, payload: UpdateRunCommandPayload) => {
-      return runsController.updateCommand(id, payload);
-    }
-  );
-
-  ipcMain.handle(CHANNELS.COMMANDS_START, async (_, id: number) => {
-    return runsController.startCommand(id);
-  });
-
-  ipcMain.handle(
-    CHANNELS.COMMANDS_COMPLETE,
-    async (_, id: number, exitCode: number, stdout?: string, stderr?: string) => {
-      return runsController.completeCommand(id, exitCode, stdout, stderr);
-    }
-  );
-
-  ipcMain.handle(CHANNELS.COMMANDS_REMOVE, async (_, id: number) => {
-    return runsController.removeCommand(id);
-  });
 
   // Tool Calls
   ipcMain.handle(CHANNELS.TOOL_CALLS_GET_BY_RUN, async (_, runId: string) => {

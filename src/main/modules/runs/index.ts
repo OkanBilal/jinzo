@@ -6,7 +6,6 @@ export type {
   RunStatus,
   RunContextKind,
   RunArtifactKind,
-  RunCommandStatus,
   ToolCallStatus,
   RunTurnStatus,
   CreateRunPayload,
@@ -16,9 +15,7 @@ export type {
   RunContextResponse,
   CreateRunArtifactPayload,
   RunArtifactResponse,
-  CreateRunCommandPayload,
-  UpdateRunCommandPayload,
-  RunCommandResponse,
+
   CreateToolCallPayload,
   UpdateToolCallPayload,
   ToolCallResponse,

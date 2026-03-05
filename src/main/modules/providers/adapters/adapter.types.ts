@@ -87,20 +87,6 @@ export interface WorkRunToolCallEvent {
   metadata?: Record<string, unknown>;
 }
 
-/**
- * Command execution event emitted during a run
- */
-export interface WorkRunCommandEvent {
-  type: "command";
-  cwd?: string;
-  command: string;
-  stdout?: string;
-  stderr?: string;
-  exitCode?: number;
-  startedAt?: number;
-  endedAt?: number;
-  metadata?: Record<string, unknown>;
-}
 
 /**
  * Artifact produced during a run
@@ -154,7 +140,6 @@ export interface WorkRunSubagentEvent {
 export type WorkRunEvent =
   | WorkRunLogEvent
   | WorkRunToolCallEvent
-  | WorkRunCommandEvent
   | WorkRunArtifactEvent
   | WorkRunStatusEvent
   | WorkRunSubagentEvent;

@@ -1,6 +1,6 @@
 import { eq, desc, and, sql, asc } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { runs, runContext, runArtifacts, runCommands, toolCalls, runTurns } from "../../db/schema";
+import { runs, runContext, runArtifacts, toolCalls, runTurns } from "../../db/schema";
 import type {
   CreateRunPayload,
   UpdateRunPayload,
@@ -9,9 +9,6 @@ import type {
   RunContextResponse,
   CreateRunArtifactPayload,
   RunArtifactResponse,
-  CreateRunCommandPayload,
-  UpdateRunCommandPayload,
-  RunCommandResponse,
   CreateToolCallPayload,
   UpdateToolCallPayload,
   ToolCallResponse,
@@ -213,53 +210,6 @@ export const runsRepo = {
     await db.delete(runArtifacts).where(eq(runArtifacts.id, id));
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // Run Command Operations
-  // ─────────────────────────────────────────────────────────────
-  async findCommandsByRun(runId: string): Promise<RunCommandResponse[]> {
-    const db = getDb();
-    const rows = await db
-      .select()
-      .from(runCommands)
-      .where(eq(runCommands.runId, runId))
-      .orderBy(runCommands.createdAt);
-    return rows.map(mapCommandRowToResponse);
-  },
-
-  async insertCommand(payload: CreateRunCommandPayload): Promise<number> {
-    const db = getDb();
-    const result = await db
-      .insert(runCommands)
-      .values({
-        runId: payload.runId,
-        cwd: payload.cwd,
-        command: payload.command,
-        envKeys: payload.envKeys ? JSON.stringify(payload.envKeys) : null,
-        status: payload.status ?? "queued",
-      })
-      .returning({ id: runCommands.id });
-    return result[0]?.id ?? 0;
-  },
-
-  async updateCommand(id: number, payload: UpdateRunCommandPayload): Promise<void> {
-    const db = getDb();
-    const updateData: Record<string, unknown> = {};
-
-    if (payload.status !== undefined) updateData.status = payload.status;
-    if (payload.startedAt !== undefined) updateData.startedAt = payload.startedAt;
-    if (payload.endedAt !== undefined) updateData.endedAt = payload.endedAt;
-    if (payload.exitCode !== undefined) updateData.exitCode = payload.exitCode;
-    if (payload.stdout !== undefined) updateData.stdout = payload.stdout;
-    if (payload.stderr !== undefined) updateData.stderr = payload.stderr;
-    if (payload.metadata !== undefined) updateData.metadata = JSON.stringify(payload.metadata);
-
-    await db.update(runCommands).set(updateData).where(eq(runCommands.id, id));
-  },
-
-  async deleteCommand(id: number): Promise<void> {
-    const db = getDb();
-    await db.delete(runCommands).where(eq(runCommands.id, id));
-  },
 
   // ─────────────────────────────────────────────────────────────
   // Tool Call Operations
@@ -436,24 +386,6 @@ function mapArtifactRowToResponse(row: typeof runArtifacts.$inferSelect): RunArt
     blobData: row.blobData as Buffer | null,
     entityId: row.entityId,
     contentHash: row.contentHash,
-    metadata: row.metadata ? JSON.parse(row.metadata) : null,
-    createdAt: row.createdAt,
-  };
-}
-
-function mapCommandRowToResponse(row: typeof runCommands.$inferSelect): RunCommandResponse {
-  return {
-    id: row.id,
-    runId: row.runId,
-    cwd: row.cwd,
-    command: row.command,
-    envKeys: row.envKeys ? JSON.parse(row.envKeys) : null,
-    status: row.status,
-    startedAt: row.startedAt,
-    endedAt: row.endedAt,
-    exitCode: row.exitCode,
-    stdout: row.stdout,
-    stderr: row.stderr,
     metadata: row.metadata ? JSON.parse(row.metadata) : null,
     createdAt: row.createdAt,
   };

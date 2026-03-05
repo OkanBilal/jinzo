@@ -31,7 +31,6 @@ export type {
   WorkRunRequest,
   WorkRunLogEvent,
   WorkRunToolCallEvent,
-  WorkRunCommandEvent,
   WorkRunArtifactEvent,
   WorkRunStatusEvent,
   WorkRunEvent,

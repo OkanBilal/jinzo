@@ -5,7 +5,6 @@
 export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "canceled";
 export type RunContextKind = "file" | "selection" | "diff" | "git" | "terminal" | "env" | "note";
 export type RunArtifactKind = "patch" | "file" | "log" | "report" | "command_result" | "result";
-export type RunCommandStatus = "queued" | "running" | "done" | "error" | "canceled";
 export type ToolCallStatus = "queued" | "running" | "done" | "error" | "canceled";
 
 // ─────────────────────────────────────────────────────────────
@@ -112,43 +111,6 @@ export interface RunArtifactResponse {
   blobData: Buffer | null;
   entityId: string | null;
   contentHash: string | null;
-  metadata: Record<string, unknown> | null;
-  createdAt: Date;
-}
-
-// ─────────────────────────────────────────────────────────────
-// Run Command DTOs
-// ─────────────────────────────────────────────────────────────
-export interface CreateRunCommandPayload {
-  runId: string;
-  cwd?: string;
-  command: string;
-  envKeys?: string[];
-  status?: RunCommandStatus;
-}
-
-export interface UpdateRunCommandPayload {
-  status?: RunCommandStatus;
-  startedAt?: Date;
-  endedAt?: Date;
-  exitCode?: number;
-  stdout?: string;
-  stderr?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface RunCommandResponse {
-  id: number;
-  runId: string;
-  cwd: string | null;
-  command: string;
-  envKeys: string[] | null;
-  status: RunCommandStatus;
-  startedAt: Date | null;
-  endedAt: Date | null;
-  exitCode: number | null;
-  stdout: string | null;
-  stderr: string | null;
   metadata: Record<string, unknown> | null;
   createdAt: Date;
 }
@@ -355,7 +317,6 @@ export interface RunDetailsResponse {
   run: RunResponse;
   context: RunContextResponse[];
   artifacts: RunArtifactResponse[];
-  commands: RunCommandResponse[];
   toolCalls: ToolCallResponse[];
   turns: RunTurnResponse[];
 }

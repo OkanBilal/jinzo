@@ -113,6 +113,13 @@
       "when": 1772578428873,
       "tag": "0015_ancient_terrax",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1772718223516,
+      "tag": "0016_hard_the_stranger",
+      "breakpoints": true
     }
   ]
 }

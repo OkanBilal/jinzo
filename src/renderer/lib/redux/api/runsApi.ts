@@ -20,12 +20,6 @@ export type RunArtifactKind =
   | "log"
   | "report"
   | "command_result";
-export type RunCommandStatus =
-  | "queued"
-  | "running"
-  | "done"
-  | "error"
-  | "canceled";
 
 export interface Run {
   id: string;
@@ -121,39 +115,6 @@ export interface CreateRunArtifactPayload {
   metadata?: Record<string, unknown>;
 }
 
-export interface RunCommand {
-  id: number;
-  runId: string;
-  cwd: string | null;
-  command: string;
-  envKeys: string[] | null;
-  status: RunCommandStatus;
-  startedAt: number | null;
-  endedAt: number | null;
-  exitCode: number | null;
-  stdout: string | null;
-  stderr: string | null;
-  metadata: Record<string, unknown> | null;
-  createdAt: number;
-}
-
-export interface CreateRunCommandPayload {
-  runId: string;
-  cwd?: string;
-  command: string;
-  envKeys?: string[];
-  status?: RunCommandStatus;
-}
-
-export interface UpdateRunCommandPayload {
-  status?: RunCommandStatus;
-  startedAt?: number;
-  endedAt?: number;
-  exitCode?: number;
-  stdout?: string;
-  stderr?: string;
-  metadata?: Record<string, unknown>;
-}
 
 export type RunTurnStatus = "active" | "completed";
 
@@ -415,86 +376,6 @@ export const runsApi = baseApi.injectEndpoints({
       ],
     }),
 
-    getRunCommands: builder.query<RunCommand[], string>({
-      query: (runId) => ({
-        handler: "runCommands:getByRun",
-        args: [runId],
-      }),
-      transformResponse: (response: { success: boolean; data: RunCommand[] }) =>
-        response.data,
-      providesTags: (_result, _error, runId) => [
-        { type: "RunCommands", id: runId },
-      ],
-    }),
-
-    addRunCommand: builder.mutation<number, CreateRunCommandPayload>({
-      query: (payload) => ({
-        handler: "runCommands:add",
-        args: [payload],
-      }),
-      transformResponse: (response: { success: boolean; data: number }) =>
-        response.data,
-      invalidatesTags: (_result, _error, { runId }) => [
-        "RunCommands",
-        { type: "RunCommands", id: runId },
-      ],
-    }),
-
-    updateRunCommand: builder.mutation<
-      void,
-      { id: number; runId: string; payload: UpdateRunCommandPayload }
-    >({
-      query: ({ id, payload }) => ({
-        handler: "runCommands:update",
-        args: [id, payload],
-      }),
-      invalidatesTags: (_result, _error, { runId }) => [
-        "RunCommands",
-        { type: "RunCommands", id: runId },
-      ],
-    }),
-
-    startRunCommand: builder.mutation<void, { id: number; runId: string }>({
-      query: ({ id }) => ({
-        handler: "runCommands:start",
-        args: [id],
-      }),
-      invalidatesTags: (_result, _error, { runId }) => [
-        "RunCommands",
-        { type: "RunCommands", id: runId },
-      ],
-    }),
-
-    completeRunCommand: builder.mutation<
-      void,
-      {
-        id: number;
-        runId: string;
-        exitCode: number;
-        stdout?: string;
-        stderr?: string;
-      }
-    >({
-      query: ({ id, exitCode, stdout, stderr }) => ({
-        handler: "runCommands:complete",
-        args: [id, exitCode, stdout, stderr],
-      }),
-      invalidatesTags: (_result, _error, { runId }) => [
-        "RunCommands",
-        { type: "RunCommands", id: runId },
-      ],
-    }),
-
-    removeRunCommand: builder.mutation<void, { id: number; runId: string }>({
-      query: ({ id }) => ({
-        handler: "runCommands:remove",
-        args: [id],
-      }),
-      invalidatesTags: (_result, _error, { runId }) => [
-        "RunCommands",
-        { type: "RunCommands", id: runId },
-      ],
-    }),
 
     getRunTurns: builder.query<RunTurn[], string>({
       query: (runId) => ({
@@ -539,13 +420,6 @@ export const {
   useLazyGetRunArtifactsQuery,
   useAddRunArtifactMutation,
   useRemoveRunArtifactMutation,
-  useGetRunCommandsQuery,
-  useLazyGetRunCommandsQuery,
-  useAddRunCommandMutation,
-  useUpdateRunCommandMutation,
-  useStartRunCommandMutation,
-  useCompleteRunCommandMutation,
-  useRemoveRunCommandMutation,
   useGetRunTurnsQuery,
   useLazyGetRunTurnsQuery,
 } = runsApi;

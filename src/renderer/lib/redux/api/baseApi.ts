@@ -68,7 +68,6 @@ export const baseApi = createApi({
     'Runs',
     'RunContext',
     'RunArtifacts',
-    'RunCommands',
     'RunTurns',
     'ProjectResources',
     'ProjectIssues',
