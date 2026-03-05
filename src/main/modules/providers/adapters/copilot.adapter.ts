@@ -337,18 +337,12 @@ export function createCopilotAdapter(
       }
     }
 
-    // payload.cost is premium request count, NOT USD — compute from totalNanoAiu
-    // Copilot uses nanoAIU internally; approximate conversion: 1B nanoAIU ≈ $1 USD
-    const nanoAiu = copilotUsage && typeof copilotUsage.totalNanoAiu === "number"
-      ? copilotUsage.totalNanoAiu
-      : 0;
-    const costUsd = nanoAiu / 1_000_000_000;
-
     acc.inputTokens += input;
     acc.outputTokens += output;
     acc.cacheReadTokens += cacheRead;
     acc.cacheWriteTokens += cacheWrite;
-    acc.totalCostUsd += costUsd;
+    // Cost calculation for Copilot is not yet implemented — skipped intentionally
+    //TODO: Implement cost calculation for Copilot later
 
     // Track model — normalize Copilot names (e.g. "claude-opus-4.6" → "claude-opus-4-6")
     const rawModel = typeof payload.model === "string" ? payload.model : "";
@@ -358,7 +352,6 @@ export function createCopilotAdapter(
       if (!acc.modelUsage[model]) {
         acc.modelUsage[model] = { costUSD: 0, inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 };
       }
-      acc.modelUsage[model].costUSD += costUsd;
       acc.modelUsage[model].inputTokens += input;
       acc.modelUsage[model].outputTokens += output;
       acc.modelUsage[model].cacheReadInputTokens += cacheRead;
@@ -369,11 +362,11 @@ export function createCopilotAdapter(
   function flushUsage(runId: string): WorkRunUsage | undefined {
     const acc = usageAccumulator.get(runId);
     usageAccumulator.delete(runId);
-    if (!acc || (acc.inputTokens === 0 && acc.outputTokens === 0 && acc.totalCostUsd === 0)) {
+    if (!acc || (acc.inputTokens === 0 && acc.outputTokens === 0)) {
       return undefined;
     }
     return {
-      totalCostUsd: acc.totalCostUsd,
+      totalCostUsd: undefined,
       inputTokens: acc.inputTokens,
       outputTokens: acc.outputTokens,
       cacheReadTokens: acc.cacheReadTokens,

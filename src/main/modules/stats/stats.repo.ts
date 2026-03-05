@@ -54,13 +54,13 @@ export const statsRepo = {
       SELECT COUNT(*) AS count FROM ${runs} WHERE ${pw}
     `);
 
-    // Sum cost from all completed turns
+    // Sum cost from all completed turns — copilot excluded (cost calculation not yet implemented)
     const ptw = providerWhereTurns(filter);
     const [costResult] = await db.all<{ total: number }>(sql`
       SELECT COALESCE(SUM(${runTurns.costMicros}), 0) AS total
       FROM ${runTurns}
       INNER JOIN ${runs} r ON r.id = ${runTurns.runId}
-      WHERE ${runTurns.status} = 'completed' AND ${ptw}
+      WHERE ${runTurns.status} = 'completed' AND r.provider_id != 'copilot_cli' AND ${ptw}
     `);
 
     return {
@@ -147,6 +147,7 @@ export const statsRepo = {
       , json_each(t.model_usage) j
       WHERE t.status = 'completed'
         AND t.model_usage IS NOT NULL
+        AND r.provider_id != 'copilot_cli'
         AND ${ptw}
       GROUP BY j.key
       ORDER BY cost_micros DESC
@@ -299,7 +300,7 @@ export const statsRepo = {
       model: r.model,
       projectName: r.project_name,
       durationMs: r.duration_ms,
-      totalCostUsd: r.cost_micros != null ? r.cost_micros / 1_000_000 : null,
+      totalCostUsd: r.provider_id === "copilot_cli" ? null : r.cost_micros != null ? r.cost_micros / 1_000_000 : null,
       createdAt: r.created_at,
     }));
   },
