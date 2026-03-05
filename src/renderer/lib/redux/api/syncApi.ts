@@ -5,7 +5,6 @@ export interface SyncStats {
   updated: number;
   skipped: number;
   errors: number;
-  totalChunks: number;
 }
 
 export interface SyncResult {
@@ -15,12 +14,9 @@ export interface SyncResult {
   skipped: number;
   errors: number;
   total: number;
-  totalChunks: number;
   duration: number;
   stats: {
-    avgEmbeddingTime: number;
     itemsPerSecond: number;
-    avgChunksPerItem: number;
   };
 }
 

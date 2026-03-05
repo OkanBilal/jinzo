@@ -54,83 +54,9 @@ const api = {
       payload: { isConnected: boolean; connectionId?: string | null },
     ) => ipcRenderer.invoke("apps:updateById", id, payload),
   },
-  // Chat operations
-  chat: {
-    getConfig: () => ipcRenderer.invoke("chat:getConfig"),
-    updateConfig: (payload: unknown) =>
-      ipcRenderer.invoke("chat:updateConfig", payload),
-    getSessions: () => ipcRenderer.invoke("chat:getSessions"),
-    getSessionById: (sessionId: number) =>
-      ipcRenderer.invoke("chat:getSessionById", sessionId),
-    getMessages: (sessionId: number) =>
-      ipcRenderer.invoke("chat:getMessages", sessionId),
-    createSession: (payload: unknown) =>
-      ipcRenderer.invoke("chat:createSession", payload),
-    deleteSession: (sessionId: number) =>
-      ipcRenderer.invoke("chat:deleteSession", sessionId),
-    updateTitle: (sessionId: number, title: string) =>
-      ipcRenderer.invoke("chat:updateTitle", sessionId, title),
-    generateTitle: (sessionId: number, model?: string) =>
-      ipcRenderer.invoke("chat:generateTitle", sessionId, model),
-    send: (payload: unknown) => ipcRenderer.invoke("chat:send", payload),
-    onStreamChunk: (
-      callback: (data: { sessionId: number; content: string }) => void,
-    ) => {
-      const listener = (_: any, data: { sessionId: number; content: string }) =>
-        callback(data);
-      ipcRenderer.on("chat:stream-chunk", listener);
-      return () => ipcRenderer.removeListener("chat:stream-chunk", listener);
-    },
-    onStreamFinal: (callback: (data: any) => void) => {
-      const listener = (_: any, data: any) => callback(data);
-      ipcRenderer.on("chat:stream-final", listener);
-      return () => ipcRenderer.removeListener("chat:stream-final", listener);
-    },
-    onStreamError: (
-      callback: (data: { sessionId: number; error: string }) => void,
-    ) => {
-      const listener = (_: any, data: { sessionId: number; error: string }) =>
-        callback(data);
-      ipcRenderer.on("chat:stream-error", listener);
-      return () => ipcRenderer.removeListener("chat:stream-error", listener);
-    },
-    onToolStatus: (
-      callback: (data: { sessionId: number; tool: string; status: string }) => void,
-    ) => {
-      const listener = (_: any, data: { sessionId: number; tool: string; status: string }) =>
-        callback(data);
-      ipcRenderer.on("chat:tool-status", listener);
-      return () => ipcRenderer.removeListener("chat:tool-status", listener);
-    },
-  },
   // Sync operations
   sync: {
     runEntitySync: (provider?: string) => ipcRenderer.invoke("sync:runEntitySync", provider),
-  },
-  // Feed event operations (event log / timeline)
-  feed: {
-    getEvents: (options?: {
-      connectionIds?: string[];
-      eventTypes?: string[];
-      itemTypes?: string[];
-      entityId?: string;
-      limit?: number;
-    }) => ipcRenderer.invoke("feed:getEvents", options),
-    getEventById: (id: number) => ipcRenderer.invoke("feed:getEventById", id),
-    getEventsByEntity: (entityId: string) =>
-      ipcRenderer.invoke("feed:getEventsByEntity", entityId),
-  },
-  // MCP (Model Context Protocol) operations
-  mcp: {
-    listTools: () => ipcRenderer.invoke("mcp:listTools"),
-    callTool: (payload: { name: string; arguments?: any }) =>
-      ipcRenderer.invoke("mcp:callTool", payload),
-  },
-  // Ollama operations
-  ollama: {
-    getModels: () => ipcRenderer.invoke("ollama:getModels"),
-    showModel: (modelName: string) =>
-      ipcRenderer.invoke("ollama:showModel", modelName),
   },
   // Connection credentials operations
   connectionCredentials: {
@@ -146,8 +72,6 @@ const api = {
   connections: {
     getGithubRepos: (connectionId: string) =>
       ipcRenderer.invoke("connections:getGithubRepos", connectionId),
-    getRaindropCollections: (connectionId: string) =>
-      ipcRenderer.invoke("connections:getRaindropCollections", connectionId),
     getLinearTeams: (connectionId: string) =>
       ipcRenderer.invoke("connections:getLinearTeams", connectionId),
     getJiraProjects: (connectionId: string) =>
@@ -156,15 +80,6 @@ const api = {
       ipcRenderer.invoke("connections:getAsanaProjects", connectionId),
     getGitlabProjects: (connectionId: string) =>
       ipcRenderer.invoke("connections:getGitlabProjects", connectionId),
-    getHackerNewsStatus: () =>
-      ipcRenderer.invoke("connections:getHackerNewsStatus"),
-    toggleHackerNews: (payload: {
-      enabled: boolean;
-      username?: string;
-      topStories?: boolean;
-      userSubmissions?: boolean;
-      userComments?: boolean;
-    }) => ipcRenderer.invoke("connections:toggleHackerNews", payload),
     saveResources: (payload: {
       provider: string;
       connectionId: string;
@@ -179,9 +94,6 @@ const api = {
       ipcRenderer.invoke("connections:getByProvider", provider),
     getSelectedResources: (provider: string) =>
       ipcRenderer.invoke("connections:getSelectedResources", provider),
-    getRssStatus: () => ipcRenderer.invoke("connections:getRssStatus"),
-    toggleRss: (enabled: boolean) =>
-      ipcRenderer.invoke("connections:toggleRss", enabled),
   },
   // Projects operations
   projects: {

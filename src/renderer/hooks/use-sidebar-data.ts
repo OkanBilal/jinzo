@@ -1,30 +1,11 @@
 import { useMemo } from "react";
 import {
-  useGetChatSessionsQuery,
   useGetAppsQuery,
   useGetAccountQuery,
   useGetWorkspacesQuery,
 } from "@/lib/redux/api";
 import type { SidebarConfig } from "@/hooks/use-sidebar-config";
 
-function filterItems<
-  T extends {
-    title?: string | null;
-    initialQuery?: string | null;
-    description?: string | null;
-  },
->(items: T[] | undefined, query: string): T[] {
-  if (!items || !query.trim()) return items || [];
-  const lowerQuery = query.toLowerCase().trim();
-  return items.filter((item) => {
-    const title = (item.title || item.initialQuery || "").toString();
-    const description = (item.description || "").toString();
-    return (
-      title.toLowerCase().includes(lowerQuery) ||
-      description.toLowerCase().includes(lowerQuery)
-    );
-  });
-}
 
 interface UseSidebarDataOptions {
   searchQuery: string;
@@ -33,7 +14,6 @@ interface UseSidebarDataOptions {
 
 export function useSidebarData({ searchQuery, sidebarConfig }: UseSidebarDataOptions) {
   // Data queries
-  const { data: sessions, isLoading: isLoadingSessions } = useGetChatSessionsQuery();
   const { data: account } = useGetAccountQuery();
   const { data: apps = [], refetch: refetchApps } = useGetAppsQuery();
 
@@ -46,12 +26,6 @@ export function useSidebarData({ searchQuery, sidebarConfig }: UseSidebarDataOpt
   const connectedApps = useMemo(() => {
     return apps.filter((app) => app.isConnected).map((app) => app.id);
   }, [apps]);
-
-  // Filtered data
-  const filteredSessions = useMemo(
-    () => filterItems(sessions, searchQuery),
-    [sessions, searchQuery],
-  );
 
   // Filtered workspaces
   const filteredWorkspaces = useMemo(() => {
@@ -73,11 +47,9 @@ export function useSidebarData({ searchQuery, sidebarConfig }: UseSidebarDataOpt
 
   return {
     account,
-    sessions: filteredSessions,
     workspaces: filteredWorkspaces,
     apps,
     connectedApps,
-    isLoadingSessions,
     isLoadingWorkspaces,
     handleRefreshApps,
   };

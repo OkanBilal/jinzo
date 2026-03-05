@@ -16,29 +16,6 @@ export interface GithubRepo {
   updatedAt: string | null;
 }
 
-export interface RaindropCollection {
-  id: number;
-  title: string;
-  count: number;
-  public: boolean;
-  cover: string | null;
-  color: string | null;
-  created: string;
-  lastUpdate: string;
-}
-
-export interface PodcastResource {
-  name: string;
-  uuid: string;
-  imageUrl?: string;
-  description?: string;
-}
-
-export interface RssFeed {
-  name: string;
-  url: string;
-}
-
 export interface LinearTeam {
   id: string;
   key: string;
@@ -92,25 +69,8 @@ export interface ConnectionResource {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Settings Types
-// ─────────────────────────────────────────────────────────────
-export interface HackerNewsSettings {
-  topStories: boolean;
-  userSubmissions: boolean;
-  userComments: boolean;
-}
-
-// ─────────────────────────────────────────────────────────────
 // Payload Types
 // ─────────────────────────────────────────────────────────────
-export interface HackerNewsTogglePayload {
-  enabled: boolean;
-  username?: string;
-  topStories?: boolean;
-  userSubmissions?: boolean;
-  userComments?: boolean;
-}
-
 export interface SaveResourcesPayload {
   provider: string;
   connectionId: string;

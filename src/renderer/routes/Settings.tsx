@@ -7,7 +7,22 @@ import PersonalizationSettings from "@/features/settings/components/personalizat
 import SchedulesSettings from "@/features/settings/components/schedules";
 import SecuritySettings from "@/features/settings/components/security";
 import { useGetAppsQuery } from "@/lib/redux/api";
-import type { SettingsSection } from "@/features/chat/components/input/types";
+type SettingsSection =
+  | "general"
+  | "notifications"
+  | "personalization"
+  | "apps"
+  | "schedules"
+  | "data"
+  | "security"
+  | "parental"
+  | "account"
+  | "claude"
+  | "copilot"
+  | "git"
+  | "projects"
+  | "codex"
+  | "dashboard";
 import ClaudeSettings from "@/features/settings/components/claude";
 import CopilotSettings from "@/features/settings/components/copilot";
 import GitSettings from "@/features/settings/components/git";

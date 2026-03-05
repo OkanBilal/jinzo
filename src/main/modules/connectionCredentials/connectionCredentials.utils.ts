@@ -62,7 +62,6 @@ export function parseProviderCredentials(
 
   switch (provider) {
     case "github":
-    case "raindrop":
       if (!credentials.token) {
         return { success: false, error: "Token is required" };
       }
@@ -77,45 +76,6 @@ export function parseProviderCredentials(
       accessToken = credentials.apiKey as string;
       tokensForHash = [credentials.apiKey as string];
       break;
-
-    case "podcast":
-      if (!credentials.apiKey || !credentials.userId) {
-        return {
-          success: false,
-          error: "API Key and User ID are required",
-        };
-      }
-      accessToken = credentials.apiKey as string;
-      refreshToken = credentials.userId as string;
-      tokensForHash = [
-        credentials.apiKey as string,
-        credentials.userId as string,
-      ];
-      break;
-
-    case "apple-music":
-      if (!credentials.developerToken || !credentials.userToken) {
-        return {
-          success: false,
-          error: "Developer Token and User Token are required",
-        };
-      }
-      accessToken = credentials.developerToken as string;
-      refreshToken = credentials.userToken as string;
-      tokensForHash = [
-        credentials.developerToken as string,
-        credentials.userToken as string,
-      ];
-      break;
-
-    case "spotify":
-      if (!credentials.accessToken) {
-        return { success: false, error: "Access token is required" };
-      }
-      accessToken = credentials.accessToken as string;
-      tokensForHash = [credentials.accessToken as string];
-      break;
-
 
     case "jira":
       // Jira requires apiToken, domain, and email

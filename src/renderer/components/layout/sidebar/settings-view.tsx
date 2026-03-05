@@ -10,7 +10,22 @@ import {
   Branch,
   Chart,
 } from "@/components/ui/icons";
-import type { SettingsSection } from "@/features/chat/components/input/types";
+type SettingsSection =
+  | "general"
+  | "notifications"
+  | "personalization"
+  | "apps"
+  | "schedules"
+  | "data"
+  | "security"
+  | "parental"
+  | "account"
+  | "claude"
+  | "copilot"
+  | "git"
+  | "projects"
+  | "codex"
+  | "dashboard";
 import { Claude } from "@/components/ui/icons/space";
 import { useGetProjectsQuery } from "@/lib/redux/api";
 import { parseIcon, type IconComponent } from "@/lib/icon-registry";

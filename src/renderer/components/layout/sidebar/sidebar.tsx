@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import { SidebarHeader } from "./sidebar-header";
 import { SidebarFooter } from "./sidebar-footer";
 import { SidebarContent } from "./sidebar-content";
@@ -16,7 +15,6 @@ import EditSpaceModal from "./edit-space-modal";
 import DeleteSpaceModal from "./delete-space-modal";
 import { Edit, Plus, Connect } from "@/components/ui/icons";
 import CloneRepoModal from "./clone-repo-modal";
-import { useDeleteChatSession } from "@/features/chat/hooks/use-delete-chat-session";
 import { useDeleteWorkspace } from "@/features/workspace/hooks";
 import { useArchiveWorkspace } from "@/features/workspace/hooks";
 import { useSpaceContextMenu } from "@/hooks/use-space-context-menu";
@@ -31,9 +29,6 @@ import { useScriptNotifications } from "@/hooks/use-script-notifications";
 import { UpdateBanner } from "./update-banner";
 
 export default function Sidebar() {
-  const location = useLocation();
-  const currentPath = location.pathname;
-
   const sidebarConfig = useSidebarConfig();
   const { spaces, activeSpaceId } = useActiveSpace();
 
@@ -113,9 +108,7 @@ export default function Sidebar() {
 
   const {
     account,
-    sessions,
     workspaces,
-    isLoadingSessions,
     isLoadingWorkspaces,
     handleRefreshApps,
   } = useSidebarData({ searchQuery, sidebarConfig });
@@ -131,7 +124,6 @@ export default function Sidebar() {
     isCloning,
   } = useSidebarActions();
 
-  const deleteSession = useDeleteChatSession();
   const deleteWorkspace = useDeleteWorkspace();
   const archiveWorkspace = useArchiveWorkspace();
 
@@ -144,7 +136,7 @@ export default function Sidebar() {
         className="fixed top-0 bottom-0 left-0 z-30 transition-all duration-300"
         style={{ width: sidebarConfig.width }}
         role="complementary"
-        aria-label="Chat sessions sidebar"
+        aria-label="Workspace sidebar"
       >
         {isSettingsOpen ? (
           <SettingsView onClose={handleCloseSettings} />
@@ -200,13 +192,8 @@ export default function Sidebar() {
               />
             </div>
             <SidebarContent
-              itemType={sidebarConfig.itemType}
-              sessions={sessions}
               workspaces={workspaces}
-              isLoadingSessions={isLoadingSessions}
               isLoadingWorkspaces={isLoadingWorkspaces}
-              currentPath={currentPath}
-              onDeleteSession={deleteSession.handleDeleteClick}
               onDeleteWorkspace={deleteWorkspace.handleDeleteClick}
               onArchiveWorkspace={archiveWorkspace.handleArchiveClick}
             />
@@ -223,13 +210,6 @@ export default function Sidebar() {
           </div>
         )}
       </aside>
-
-      <DeleteConfirmationModal
-        isOpen={!!deleteSession.sessionToDelete}
-        isDeleting={deleteSession.isDeleting}
-        onConfirm={deleteSession.handleConfirmDelete}
-        onCancel={deleteSession.handleCancelDelete}
-      />
 
       <DeleteConfirmationModal
         isOpen={!!deleteWorkspace.workspaceToDelete}

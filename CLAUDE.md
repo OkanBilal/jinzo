@@ -33,24 +33,23 @@ npm run hard-reset      # Full reset (reset + nuke node_modules + reinstall)
 
 ## Architecture Overview
 
-Jinzo is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM, sqlite-vec for vector search). CommonJS package with ESM Vite configs (`.mjs`).
+Jinzo is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM). CommonJS package with ESM Vite configs (`.mjs`).
 
 ### Process Boundaries
 
 **Main Process** (`src/main/`)
 - Entry point: `src/main/index.ts` - initializes database, registers IPC handlers, creates window
-- Database client: `src/main/db/client.ts` - singleton with better-sqlite3, Drizzle ORM, sqlite-vec extension
+- Database client: `src/main/db/client.ts` - singleton with better-sqlite3, Drizzle ORM
 - Modules: `src/main/modules/` - domain modules with layered architecture
 
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
-- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.account`, `api.apps`, `api.chat`, `api.sync`, `api.feed`, `api.mcp`, `api.ollama`, `api.connectionCredentials`, `api.connections`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.providers`, `api.tools`, `api.toolCalls`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.feedback`, `api.stats`, `api.app`, `api.updates`
+- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.account`, `api.apps`, `api.sync`, `api.connectionCredentials`, `api.connections`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.providers`, `api.tools`, `api.toolCalls`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.feedback`, `api.stats`, `api.app`, `api.updates`
 - After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
 - React app with Redux Toolkit, React Router (HashRouter), `@/` alias → `src/renderer/`
-- Routes: `/` (Home with defaultRoute redirect), `/settings` (Settings), `/copilot` and `/copilot/:workspaceId` (Copilot — GitHub Copilot agent), `/claude` and `/claude/:workspaceId` (Claude Code agent)
-- Chat (`/chat/:id`) route exists but is currently commented out
+- Routes: `/` (Home — redirects to `/copilot`), `/settings` (Settings), `/copilot` and `/copilot/:workspaceId` (Copilot — GitHub Copilot agent), `/claude` and `/claude/:workspaceId` (Claude Code agent)
 - Copilot and Claude routes share the same workspace UI but use different provider IDs (`copilot_cli` vs `claude_code`)
 
 ### Module Architecture (`src/main/modules/`)
@@ -69,11 +68,11 @@ Each domain module follows a layered pattern (see `src/main/modules/account/` as
 
 **Critical**: All layers are **plain object literals**, never classes. No DI — repos call `getDb()` inline.
 
-All modules: `account`, `appSettings`, `apps`, `chat`, `connectionCredentials`, `connections`, `entities`, `feed`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `mcp`, `space`, `ollama`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
+All modules: `account`, `appSettings`, `apps`, `connectionCredentials`, `connections`, `entities`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `space`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
 
 ### IPC Convention
 
-Channel format: `"domain:action"` (e.g. `"chat:send"`, `"entities:getAll"`). Channels must stay in sync across three files — there is no shared registry:
+Channel format: `"domain:action"` (e.g. `"entities:getAll"`). Channels must stay in sync across three files — there is no shared registry:
 
 1. `src/preload/index.ts` — `ipcRenderer.invoke("domain:action")`
 2. `src/main/modules/{name}/{name}.ipc.ts` — `ipcMain.handle("domain:action")`
@@ -86,7 +85,7 @@ All IPC responses use `ServiceResponse<T>` envelope: `{ success: true, data }` o
 1. **IPC Communication**: Renderer calls `window.api.namespace.method()` → Preload invokes IPC → Main handles
 2. **Module Flow**: IPC handler → Controller → Service → Repository → Database
 3. **Redux Integration**: `src/renderer/lib/redux/api/baseApi.ts` wraps IPC in RTK Query with custom `ipcBaseQuery` (no HTTP)
-4. **State Management**: RTK Query for server state, Redux slices for UI state (`chatSlice`, `spaceSlice`, `appSettingsSlice`, `workspaceSlice`)
+4. **State Management**: RTK Query for server state, Redux slices for UI state (`spaceSlice`, `appSettingsSlice`, `workspaceSlice`)
 
 ### Database Schema (`src/main/db/schema.ts`)
 
@@ -101,25 +100,21 @@ Conventions:
 Core tables:
 - `accounts` - User profiles (display name, email, bio, avatar)
 - `appSettings` - App-level config (activeSpaceId, enableWorktrees)
-- `providers` - LLM/agent runtimes (ollama, copilot_cli, claude_code)
+- `providers` - Agent runtimes (copilot_cli, claude_code)
 - `projects` - Groups workspaces by shared remote origin (rootPath, branches, scripts)
 - `workspaces` - Local repos with status tracking (backlog → todo → in_progress → in_review → done → canceled → duplicate)
 - `workspaceResources` - Pivot table linking workspaces to connectionResources
-- `entities` - Unified canonical content (tasks, issues, bookmarks, articles, podcasts, videos, etc.)
-- `entityChunks` / `vecEntityChunks` / `vecEntityChunkMap` - Chunked content with embeddings for vector search
+- `entities` - Unified canonical content (tasks, issues, etc.)
 - `connections` / `connectionResources` / `connectionTokens` / `connectionSyncState` - External service connections, encrypted tokens, sync cursors
-- `appStates` - App integration states (GitHub, Notion, Raindrop, etc. — tracks isConnected, features, config)
+- `appStates` - App integration states (GitHub, GitLab, Linear, Jira, Asana, Notion — tracks isConnected, features, config)
 - `spaces` - User-defined UI/prompt configurations with theme/UI config JSON
-- `feedItems` - Event log/timeline entries
-- `chatSessions` / `chatMessages` - Chat history with provider/model tracking, observability (traceId, latencyMs, token counts)
 - `runs` / `runContext` / `runArtifacts` / `runTurns` - Terminal/code-writing flow (agent runs with session resumption via sessionId, turn tracking)
-- `tools` / `toolCalls` - Tool registry (local, mcp, provider_builtin) and invocation tracking with nested tool call support (parentToolCallId)
+- `tools` / `toolCalls` - Tool registry (local, provider_builtin) and invocation tracking with nested tool call support (parentToolCallId)
 - `workspaceActivity` - Workspace activity log (types: diff, review, finding, commit, pr — with title, summary, metadata JSON, refId)
 - `workspaceDiffs` - Git diffs captured per workspace/run (base ref, diff text, files, stats)
 - `reviews` - Workspace-level review notes (status: open, in_review, approved, rejected)
 - `reviewFindings` - Individual code review findings linked to reviews
 - `projectResources` - Pivot table linking projects to connectionResources
-- `outbox` - Offline-first action queue for retryable external operations
 
 Domain-specific views on entities:
 - `tasks` - Actionable tasks (status, priority, due date)
@@ -129,24 +124,8 @@ Domain-specific views on entities:
 
 **Sync System** (`src/main/modules/sync/`)
 - `sync.service.ts` - Orchestrates fetching from all connections
-- `connections/` - Provider-specific fetchers (GitHub, GitLab, Raindrop, RSS, Spotify, Apple Music, Podcasts, YouTube, Notion, Linear, Jira, Asana, HackerNews)
+- `connections/` - Provider-specific fetchers (GitHub, GitLab, Linear, Jira, Asana, Notion)
 - Produces `EntityInput[]` which gets persisted to `entities` table
-
-**RAG Pipeline** (`src/renderer/lib/rag/`)
-- `embed.ts` - Embedding generation (Ollama)
-- `retrieval.ts` - Vector + keyword search with reranking
-- `chunking.ts` - Text chunking strategies
-- `prompt-optimizer.ts` - Builds context-aware prompts
-
-**MCP Tools** (`src/main/modules/mcp/`)
-- Model Context Protocol integration for tool use
-- Tools in `tools/`: entity-tools, sync-tools, space-tools
-- Server/client pattern for Ollama tool calling
-
-**Chat System** (`src/main/modules/chat/`)
-- Supports multiple modes: direct chat, RAG-augmented, MCP tool-enabled
-- Tracks provider/model per session and per message
-- Per-message observability: traceId, latencyMs, inputTokens, outputTokens
 
 **Workspace/Runs System** (`src/main/modules/workspaces/`, `src/main/modules/runs/`)
 - Workspaces link to local git repositories via `rootPath`, belong to projects via `projectId`
@@ -204,7 +183,7 @@ Domain-specific views on entities:
 - Active space set via appSettings
 
 **Tools System** (`src/main/modules/tools/`)
-- Registry for local, MCP, and provider-builtin tools
+- Registry for local and provider-builtin tools
 - Tool call tracking with nested call support (parentToolCallId)
 
 **Seed Module** (`src/main/modules/seed/`)
@@ -212,9 +191,6 @@ Domain-specific views on entities:
 
 **Image Proxy** (`src/main/modules/imageProxy/`)
 - Protocol handler for enhanced image loading in the renderer
-
-**Ollama Integration** (`src/main/modules/ollama/`)
-- Local LLM model management and info
 
 **Feedback Module** (`src/main/modules/feedback/`)
 - User feedback collection and management
@@ -229,17 +205,16 @@ Domain-specific views on entities:
 
 - `drizzle.config.ts` - Drizzle Kit config (dev database: `.data/jinzo.db`)
 - `drizzle.config.runtime.ts` - Runtime database config (`~/Library/Application Support/jinzo/jinzo.db`)
-- `src/renderer/lib/config/` - Chunking, embedding, retrieval, cache settings
 - Migration `.sql` files are copied into the build via Vite plugin and bundled as `extraResource`
 
 ### Frontend Conventions
 
 - **Redux**: RTK Query with custom `ipcBaseQuery`, `baseApi.injectEndpoints()` per domain
-- **Redux API files**: `accountApi`, `appsApi`, `appSettingsApi`, `chatApi`, `connectionsApi`, `entitiesApi`, `feedApi`, `mcpApi`, `spaceApi`, `ollamaApi`, `projectsApi`, `providersApi`, `reviewsApi`, `reviewFindingsApi`, `runsApi`, `shellApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceActivityApi`, `workspaceDiffsApi`, `workspaceResourcesApi`, `workspacesApi`
-- **Redux slices**: `chatSlice`, `spaceSlice`, `appSettingsSlice`, `workspaceSlice`
+- **Redux API files**: `accountApi`, `appsApi`, `appSettingsApi`, `connectionsApi`, `entitiesApi`, `spaceApi`, `projectsApi`, `providersApi`, `reviewsApi`, `reviewFindingsApi`, `runsApi`, `shellApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceActivityApi`, `workspaceDiffsApi`, `workspaceResourcesApi`, `workspacesApi`
+- **Redux slices**: `spaceSlice`, `appSettingsSlice`, `workspaceSlice`
 - **Hooks**: `use-kebab-case.ts` filenames, `useCamelCase` export names
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`
-- **Feature dirs**: `chat`, `onboarding`, `settings`, `stats`, `workspace`
+- **Feature dirs**: `onboarding`, `settings`, `stats`, `workspace`
 - **Routing**: HashRouter — routes defined in `src/renderer/routes/`
 - **Styling**: Tailwind CSS v4 (PostCSS-based)
 
@@ -257,11 +232,10 @@ Each connection type has:
 - Fetcher in `src/main/modules/sync/connections/`
 - IPC handlers for credentials and resource management
 
-Supported: GitHub, GitLab, Linear, Jira, Asana, Raindrop, HackerNews, RSS, Spotify, Apple Music, Podcasts, YouTube, Notion
+Supported: GitHub, GitLab, Linear, Jira, Asana, Notion
 
 ### Troubleshooting
 
 - **Preload changes not taking effect**: Restart the dev server completely; changes to `src/preload/index.ts` require a full restart
 - **Database locked errors**: Close all app instances, then `npm run db:clean:dev && npm run db:push`
-- **Ollama connection issues**: Ensure Ollama is running with `ollama serve`
 - **Dual DB paths**: `.data/jinzo.db` (dev) vs `~/Library/Application Support/jinzo/jinzo.db` (packaged)

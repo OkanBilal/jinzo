@@ -17,25 +17,6 @@ export interface SeedSpace {
 }
 
 export const seedSpaces: SeedSpace[] = [
-  // {
-  //   id: "chat",
-  //   name: "Chat",
-  //   slug: "chat",
-  //   icon: "icon:chat",
-  //   systemPrompt: "",
-  //   themeConfig: {
-  //     lightBackground: "#ffffff70",
-  //     darkBackground: "#00000070",
-  //   },
-  //   uiConfig: {
-  //     sidebar: {
-  //       title: "Chat",
-  //       itemType: "chat",
-  //       defaultRoute: "/",
-  //     },
-  //   },
-  //   sortOrder: 0,
-  // },
   {
     id: "claude",
     name: "Claude",

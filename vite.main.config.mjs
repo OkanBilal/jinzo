@@ -27,7 +27,6 @@ export default defineConfig(({ mode }) => {
       external: [
         'electron',
         'better-sqlite3',
-        'sqlite-vec',
         'node-pty',
         '@anthropic-ai/claude-agent-sdk',
         '@github/copilot-sdk',
@@ -54,8 +53,6 @@ export default defineConfig(({ mode }) => {
           'file-uri-to-path',
           'node-addon-api',
           'node-pty',
-          'sqlite-vec',
-          'sqlite-vec-darwin-arm64',
           'vscode-jsonrpc',
           'zod',
           'electron-updater',

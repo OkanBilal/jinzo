@@ -1,7 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
-import { markdownComponents } from "@/features/chat/components/markdown-components";
+import { markdownComponents } from "@/components/markdown-components";
 import type { IssueWithEntity } from "@/lib/redux/api";
 import { Heading2 } from "@/components/ui/text";
 import { getLabelColor } from "@/lib/label-colors";

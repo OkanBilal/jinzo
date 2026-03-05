@@ -14,8 +14,8 @@ export default function DeleteConfirmationModal({
     isDeleting,
     onConfirm,
     onCancel,
-    title = "Delete Chat",
-    description = "This action cannot be undone. The chat will be permanently deleted.",
+    title = "Delete",
+    description = "This action cannot be undone. The workspace will be permanently deleted.",
 }: DeleteConfirmationModalProps) {
     return (
         <Alert

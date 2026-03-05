@@ -18,16 +18,8 @@ export { syncRepo } from "./sync.repo";
 // Fetchers
 export { fetchAllEntities } from "./sync.fetchers";
 
-// Chunking
-export {
-  createChunksForEntities,
-  createEntityChunkMap,
-  generateChunkEmbeddings,
-} from "./sync.chunking";
-
 // Helpers
 export {
-  extractImageFromHtml,
   pickUrl,
   isValidUrl,
   sanitizeUrl,
@@ -36,7 +28,6 @@ export {
 
 // Connection Utils
 export {
-  decryptToken,
   getConnectionByProvider,
   getConnectionTokens,
   getSelectedResources,
@@ -48,8 +39,6 @@ export {
 
 // DTOs
 export type {
-  ChunkData,
-  ItemChunkInfo,
   SyncJobResult,
   SyncJobStats,
   EntityInput,

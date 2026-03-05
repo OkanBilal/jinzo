@@ -1,29 +1,6 @@
 import type { CreateProviderPayload } from "../../modules/providers/providers.dto";
 
 export const seedProviders: CreateProviderPayload[] = [
-  // {
-  //   id: "ollama",
-  //   kind: "llm_runtime",
-  //   displayName: "Ollama (Local)",
-  //   isEnabled: true,
-  //   defaultModel: "llama3.1",
-  //   config: {
-  //     baseUrl: "http://localhost:11434",
-  //     // optional: a per-provider default options bag you can pass to /api/chat
-  //     options: {
-  //       // temperature: 0.7,
-  //       // num_ctx: 8192,
-  //     },
-  //   },
-  //   capabilities: {
-  //     mode: ["chat"], // only chat right now
-  //     streaming: false,
-  //     vision: false,
-  //     tools: false,
-  //     maxContextTokens: 8192,
-  //     notes: "Local LLM via Ollama HTTP API",
-  //   },
-  // },
 
   {
     id: "copilot_cli",

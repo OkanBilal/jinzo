@@ -98,66 +98,6 @@ export interface SelectedGitLabProject {
   metadata: any;
 }
 
-export interface SelectedCollection {
-  id: string;
-  externalId: string;
-  name: string;
-  metadata: any;
-}
-
-export interface SelectedPodcast {
-  id: string;
-  name: string;
-  metadata: any;
-}
-
-export interface HackerNewsSettings {
-  topStories: boolean;
-  userSubmissions: boolean;
-  userComments: boolean;
-}
-
-export interface HackerNewsStatus {
-  enabled: boolean;
-  username: string | null;
-  settings: HackerNewsSettings;
-}
-
-export interface UpdateHackerNewsPayload {
-  enabled: boolean;
-  username: string | null;
-  topStories: boolean;
-  userSubmissions: boolean;
-  userComments: boolean;
-}
-
-export interface RssFeed {
-  id: string;
-  name: string;
-  metadata: any;
-}
-
-export interface RssStatus {
-  enabled: boolean;
-  connectionId: string | null;
-  feeds: RssFeed[];
-}
-
-export interface UpdateRssPayload {
-  enabled: boolean;
-}
-
-export interface RaindropCollection {
-  id: number;
-  title: string;
-  count: number;
-  public: boolean;
-  cover: string | null;
-  color: string | null;
-  created: string;
-  lastUpdate: string;
-}
-
 export interface SaveCredentialsPayload {
   provider: string;
   connectionId: string;
@@ -205,14 +145,6 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [connectionId],
       }),
       transformResponse: (response: any) => response.success ? { success: true, repos: response.data.repos } : { success: false, repos: [] },
-    }),
-
-    getRaindropCollections: builder.query<{ success: boolean; collections: RaindropCollection[] }, string>({
-      query: (connectionId) => ({
-        handler: 'connections:getRaindropCollections',
-        args: [connectionId],
-      }),
-      transformResponse: (response: any) => response.success ? { success: true, collections: response.data.collections } : { success: false, collections: [] },
     }),
 
     getLinearTeams: builder.query<{ success: boolean; teams: LinearTeam[] }, string>({
@@ -292,60 +224,6 @@ export const connectionsApi = baseApi.injectEndpoints({
       providesTags: ['Apps'],
     }),
 
-    getSelectedCollections: builder.query<{ success: boolean; collections: SelectedCollection[]; connectionId: string }, string>({
-      query: (provider) => ({
-        handler: 'connections:getSelectedResources',
-        args: [provider],
-      }),
-      transformResponse: (response: any) => response.success ? { success: true, collections: response.data.collections, connectionId: response.data.connectionId } : { success: false, collections: [], connectionId: '' },
-      providesTags: ['Apps'],
-    }),
-
-    getSelectedPodcasts: builder.query<{ success: boolean; podcasts: SelectedPodcast[]; connectionId: string }, string>({
-      query: (provider) => ({
-        handler: 'connections:getSelectedResources',
-        args: [provider],
-      }),
-      transformResponse: (response: any) => response.success ? { success: true, podcasts: response.data.podcasts, connectionId: response.data.connectionId } : { success: false, podcasts: [], connectionId: '' },
-      providesTags: ['Apps'],
-    }),
-
-    getHackerNewsStatus: builder.query<{ success: boolean; enabled: boolean; username: string | null; settings: HackerNewsSettings }, void>({
-      query: () => ({
-        handler: 'connections:getHackerNewsStatus',
-        args: [],
-      }),
-      transformResponse: (response: any) => response.success ? { success: true, ...response.data } : { success: false, enabled: false, username: null, settings: { topStories: false, userSubmissions: false, userComments: false } },
-      providesTags: ['Apps'],
-    }),
-
-    updateHackerNewsSettings: builder.mutation<{ success: boolean }, UpdateHackerNewsPayload>({
-      query: (body) => ({
-        handler: 'connections:toggleHackerNews',
-        args: [body],
-      }),
-      transformResponse: (response: any) => ({ success: response.success }),
-      invalidatesTags: ['Apps'],
-    }),
-
-    getRssStatus: builder.query<{ success: boolean; enabled: boolean; connectionId: string | null; feeds: RssFeed[] }, void>({
-      query: () => ({
-        handler: 'connections:getRssStatus',
-        args: [],
-      }),
-      transformResponse: (response: any) => response.success ? { success: true, ...response.data } : { success: false, enabled: false, connectionId: null, feeds: [] },
-      providesTags: ['Apps'],
-    }),
-
-    updateRssSettings: builder.mutation<{ success: boolean; connectionId?: string }, UpdateRssPayload>({
-      query: (body) => ({
-        handler: 'connections:toggleRss',
-        args: [body],
-      }),
-      transformResponse: (response: any) => response.success ? { success: true, connectionId: response.data?.connectionId } : { success: false },
-      invalidatesTags: ['Apps'],
-    }),
-
     saveResources: builder.mutation<{ success: boolean }, SaveResourcesPayload>({
       query: (body) => ({
         handler: 'connections:saveResources',
@@ -393,7 +271,6 @@ export const {
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,
   useLazyGetGitHubReposQuery,
-  useLazyGetRaindropCollectionsQuery,
   useLazyGetLinearTeamsQuery,
   useLazyGetJiraProjectsQuery,
   useLazyGetAsanaProjectsQuery,
@@ -408,16 +285,6 @@ export const {
   useLazyGetSelectedAsanaProjectsQuery,
   useGetSelectedGitLabProjectsQuery,
   useLazyGetSelectedGitLabProjectsQuery,
-  useGetSelectedCollectionsQuery,
-  useLazyGetSelectedCollectionsQuery,
-  useGetSelectedPodcastsQuery,
-  useLazyGetSelectedPodcastsQuery,
-  useGetHackerNewsStatusQuery,
-  useLazyGetHackerNewsStatusQuery,
-  useUpdateHackerNewsSettingsMutation,
-  useGetRssStatusQuery,
-  useLazyGetRssStatusQuery,
-  useUpdateRssSettingsMutation,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
   useRevokeConnectionMutation,

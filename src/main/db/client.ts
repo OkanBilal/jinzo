@@ -318,52 +318,10 @@ class DatabaseClient {
   }
 
   /**
-   * Load SQLite extensions (e.g., sqlite-vec for vector search)
+   * Load SQLite extensions
    */
   private loadExtensions(): ExtensionLoadResult[] {
-    const results: ExtensionLoadResult[] = [];
-
-    if (!this.sqlite) {
-      return results;
-    }
-
-    // Load sqlite-vec extension for vector operations
-    try {
-      // In production, the dylib is unpacked from asar into app.asar.unpacked
-      // We need to resolve the path manually since sqlite-vec's index.cjs
-      // resolves __dirname inside the asar which doesn't work for native extensions
-      if (app.isPackaged) {
-        const loadablePath = path.join(
-          process.resourcesPath,
-          "app.asar.unpacked",
-          ".vite",
-          "build",
-          "node_modules",
-          `sqlite-vec-${process.platform}-${process.arch}`,
-          "vec0"
-        );
-        this.sqlite.loadExtension(loadablePath);
-      } else {
-        const sqliteVec = require("sqlite-vec");
-        sqliteVec.load(this.sqlite);
-      }
-      results.push({
-        success: true,
-        extensionName: "sqlite-vec",
-        message: "Vector extension loaded successfully",
-      });
-      console.log("sqlite-vec extension loaded successfully");
-    } catch (error) {
-      console.error("Failed to load sqlite-vec extension:", error);
-      results.push({
-        success: false,
-        extensionName: "sqlite-vec",
-        error: error as Error,
-        message: "Failed to load vector extension",
-      });
-    }
-
-    return results;
+    return [];
   }
 
   /**

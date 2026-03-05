@@ -1,8 +1,8 @@
 import { eq, and, isNull, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { getDb, getSqlite } from "../../db/client";
-import { entities, entityChunks, issues } from "../../db/schema";
-import type { ChunkData, ItemChunkInfo, EntityInput, SyncJobStats } from "./sync.dto";
+import { getDb } from "../../db/client";
+import { entities, issues } from "../../db/schema";
+import type { EntityInput, SyncJobStats } from "./sync.dto";
 
 const DEFAULT_ACCOUNT_ID = "default";
 
@@ -133,7 +133,7 @@ export const syncRepo = {
     accountId: string = DEFAULT_ACCOUNT_ID
   ): Promise<SyncJobStats> {
     const db = getDb();
-    const stats: SyncJobStats = { inserted: 0, updated: 0, skipped: 0, errors: 0, totalChunks: 0 };
+    const stats: SyncJobStats = { inserted: 0, updated: 0, skipped: 0, errors: 0 };
 
     db.transaction(() => {
       for (const item of items) {
@@ -254,107 +254,4 @@ export const syncRepo = {
     }
   },
 
-  // TODO: Re-enable when chunking & embedding pipeline is restored
-  async insertEntityChunks(
-    entityId: string,
-    chunks: ChunkData[],
-    embeddings: number[][],
-    itemChunks: ItemChunkInfo[]
-  ): Promise<number> {
-    const db = getDb();
-    const sqlite = getSqlite();
-    let insertedChunks = 0;
-
-    for (const { embeddingIndex } of itemChunks) {
-      const chunkData = chunks[embeddingIndex];
-      const embedding = embeddings[embeddingIndex];
-
-      if (!embedding || embedding.length === 0) {
-        console.warn(`⚠️  Missing embedding for chunk at index ${embeddingIndex}`);
-        continue;
-      }
-
-      try {
-        const chunkEmbeddingBuf = Buffer.from(
-          Float32Array.from(embedding).buffer
-        );
-
-        const chunkResult = await db.insert(entityChunks).values({
-          entityId,
-          chunkIndex: chunkData.chunk.index,
-          content: chunkData.chunk.content,
-          tokenCount: chunkData.chunk.tokenCount,
-        });
-
-        if (chunkResult.changes > 0) {
-          const chunkId = chunkResult.lastInsertRowid;
-
-          const vecResult = sqlite
-            .prepare(`INSERT INTO vec_entity_chunks(embedding) VALUES (?)`)
-            .run(chunkEmbeddingBuf);
-
-          sqlite
-            .prepare(`INSERT INTO vec_entity_chunk_map(vec_rowid, chunk_id) VALUES (?, ?)`)
-            .run(vecResult.lastInsertRowid, chunkId);
-
-          insertedChunks++;
-        }
-      } catch (err) {
-        console.error(`❌ Error inserting chunk for entity ${entityId}:`, err);
-      }
-    }
-
-    return insertedChunks;
-  },
-
-  async processAndInsertEntities(
-    items: EntityInput[],
-    chunks: ChunkData[],
-    embeddings: number[][],
-    itemChunkMap: Map<number, ItemChunkInfo[]>,
-    accountId: string = DEFAULT_ACCOUNT_ID
-  ): Promise<SyncJobStats> {
-    console.log("💾 Processing and inserting entities...");
-
-    const stats: SyncJobStats = {
-      inserted: 0,
-      updated: 0,
-      skipped: 0,
-      errors: 0,
-      totalChunks: 0,
-    };
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      const itemChunks = itemChunkMap.get(i) || [];
-
-      if (itemChunks.length === 0) {
-        console.warn(`⚠️  No chunks for entity: ${item.url}`);
-        stats.errors++;
-        continue;
-      }
-
-      const insertResult = await this.upsertEntity(item, accountId);
-
-      if (insertResult.status === "error") {
-        stats.errors++;
-        continue;
-      }
-
-      stats[insertResult.status]++;
-
-      const chunksInserted = await this.insertEntityChunks(
-        insertResult.entityId!,
-        chunks,
-        embeddings,
-        itemChunks
-      );
-
-      stats.totalChunks += chunksInserted;
-    }
-
-    console.log(`✅ Insertion complete:`, stats);
-
-    return stats;
-  },
 };

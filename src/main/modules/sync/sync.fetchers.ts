@@ -1,14 +1,8 @@
 import {
-  fetchPodcastsFromConnectionResources,
-  fetchRaindropFromConnectionResources,
-  fetchRssFromConnectionResources,
-  fetchAppleMusicFromConnectionResources,
-  fetchSpotifyFromConnectionResources,
   fetchGitHubFromConnectionResources,
   fetchLinearFromConnectionResources,
   fetchJiraFromConnectionResources,
   fetchAsanaFromConnectionResources,
-  fetchHackerNewsFromConnectionResources,
   fetchGitlabFromConnectionResources,
 } from "./connections";
 import type { EntityInput } from "./sync.dto";
@@ -21,12 +15,6 @@ export const FETCH_LIMITS = {
   LINEAR_ISSUES: 50,
   JIRA_ISSUES: 50,
   ASANA_TASKS: 50,
-  RAINDROP: 20,
-  HACKERNEWS_TOP: 20,
-  HACKERNEWS_NEW: 20,
-  HACKERNEWS_USER: 10,
-  PODCASTS: 10,
-  RSS: 10,
 } as const;
 
 const PROVIDER_FETCHERS: Record<string, () => Promise<EntityInput[]>> = {
@@ -43,17 +31,6 @@ const PROVIDER_FETCHERS: Record<string, () => Promise<EntityInput[]>> = {
   linear: () => fetchLinearFromConnectionResources(FETCH_LIMITS.LINEAR_ISSUES),
   jira: () => fetchJiraFromConnectionResources(FETCH_LIMITS.JIRA_ISSUES),
   asana: () => fetchAsanaFromConnectionResources(FETCH_LIMITS.ASANA_TASKS),
-  raindrop: () => fetchRaindropFromConnectionResources(FETCH_LIMITS.RAINDROP),
-  hackernews: () =>
-    fetchHackerNewsFromConnectionResources(
-      FETCH_LIMITS.HACKERNEWS_TOP,
-      FETCH_LIMITS.HACKERNEWS_NEW,
-      FETCH_LIMITS.HACKERNEWS_USER,
-    ),
-  podcast: () => fetchPodcastsFromConnectionResources(FETCH_LIMITS.PODCASTS),
-  "apple-music": () => fetchAppleMusicFromConnectionResources(),
-  spotify: () => fetchSpotifyFromConnectionResources(),
-  rss: () => fetchRssFromConnectionResources(FETCH_LIMITS.RSS),
 };
 
 export async function fetchAllEntities(provider?: string): Promise<EntityInput[]> {

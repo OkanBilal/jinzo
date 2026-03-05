@@ -19,7 +19,6 @@ export {
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,
   useLazyGetGitHubReposQuery,
-  useLazyGetRaindropCollectionsQuery,
   useLazyGetLinearTeamsQuery,
   useLazyGetJiraProjectsQuery,
   useLazyGetAsanaProjectsQuery,
@@ -29,12 +28,6 @@ export {
   useLazyGetSelectedProjectsQuery,
   useLazyGetSelectedAsanaProjectsQuery,
   useLazyGetSelectedGitLabProjectsQuery,
-  useLazyGetSelectedCollectionsQuery,
-  useLazyGetSelectedPodcastsQuery,
-  useLazyGetHackerNewsStatusQuery,
-  useUpdateHackerNewsSettingsMutation,
-  useLazyGetRssStatusQuery,
-  useUpdateRssSettingsMutation,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
   useRevokeConnectionMutation,
@@ -43,7 +36,6 @@ export type {
   Connection,
   GitHubRepo,
   GitLabProject,
-  RaindropCollection,
   LinearTeam,
   JiraProject,
   AsanaProject,
@@ -52,38 +44,10 @@ export type {
   SelectedProject,
   SelectedAsanaProject,
   SelectedGitLabProject,
-  SelectedCollection,
-  SelectedPodcast,
-  HackerNewsSettings,
-  HackerNewsStatus,
-  UpdateHackerNewsPayload,
-  RssFeed,
-  RssStatus,
-  UpdateRssPayload,
   SaveCredentialsPayload,
   SaveResourcesPayload,
 } from "./connectionsApi";
 
-export {
-  chatApi,
-  useGetChatConfigQuery,
-  useUpdateChatConfigMutation,
-  useCreateChatSessionMutation,
-  useGetChatSessionQuery,
-  useGetChatMessagesQuery,
-  useGetChatSessionsQuery,
-  useDeleteChatSessionMutation,
-  useUpdateChatSessionTitleMutation,
-  useGenerateChatSessionTitleMutation,
-} from "./chatApi";
-export type {
-  ChatSession,
-  ChatMessage,
-  CreateSessionPayload,
-  ChatConfig,
-  StructuredOutputProperty,
-  StructuredOutputSchema,
-} from "./chatApi";
 
 export {
   entitiesApi,
@@ -115,12 +79,6 @@ export type {
   IssueWithEntity,
 } from "./entitiesApi";
 
-export {
-  feedApi,
-  useGetFeedEventsQuery,
-  useGetRecentFeedEventsQuery,
-} from "./feedApi";
-export type { FeedEvent, FeedEventQueryParams } from "./feedApi";
 
 export {
   syncApi,
@@ -128,12 +86,6 @@ export {
 } from "./syncApi";
 export type { SyncStats, SyncResult } from "./syncApi";
 
-export {
-  ollamaApi,
-  useGetOllamaModelsQuery,
-  useCheckOllamaStatusQuery,
-} from "./ollamaApi";
-export type { OllamaModel, OllamaModelsResponse } from "./ollamaApi";
 
 export {
   spaceApi,
@@ -162,21 +114,7 @@ export {
 } from "./appSettingsApi";
 export type { AppSettings } from "./appSettingsApi";
 
-export {
-  mcpApi,
-  useListMcpToolsQuery,
-  useCallMcpToolMutation,
-} from "./mcpApi";
-export type { McpTool, McpToolsResponse, CallToolPayload, CallToolResponse } from "./mcpApi";
 
-export {
-  setSelectedModel,
-  setThinkingLevel,
-  setThinkingEnabled,
-  setToolMode,
-  setModelCapabilities,
-} from "../slices/chatSlice";
-export type { ChatState, ModelCapabilities } from "../slices/chatSlice";
 
 export {
   setActiveSpaceId,

@@ -1,21 +1,4 @@
 // ─────────────────────────────────────────────────────────────
-// Chunk Types
-// ─────────────────────────────────────────────────────────────
-export interface ChunkData {
-  itemIndex: number;
-  chunk: {
-    content: string;
-    index: number;
-    tokenCount: number;
-  };
-}
-
-export interface ItemChunkInfo {
-  chunkIndex: number;
-  embeddingIndex: number;
-}
-
-// ─────────────────────────────────────────────────────────────
 // Sync Job Types
 // ─────────────────────────────────────────────────────────────
 export interface SyncJobResult {
@@ -25,12 +8,9 @@ export interface SyncJobResult {
   skipped: number;
   errors: number;
   total: number;
-  totalChunks: number;
   duration: number;
   stats: {
-    avgEmbeddingTime: number;
     itemsPerSecond: number;
-    avgChunksPerItem: number;
   };
 }
 
@@ -39,7 +19,6 @@ export interface SyncJobStats {
   updated: number;
   skipped: number;
   errors: number;
-  totalChunks: number;
 }
 
 // ─────────────────────────────────────────────────────────────

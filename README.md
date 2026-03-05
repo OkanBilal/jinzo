@@ -15,13 +15,12 @@
 
 ## Overview
 
-Jinzo is a desktop app that brings together AI agents, code workspaces, and content from external services into a single interface. It supports multiple AI providers (Ollama, GitHub Copilot, Claude Code), tracks agent runs with full observability, and provides RAG-augmented chat over a personal knowledge base synced from GitHub, Linear, Jira, Notion, and more.
+Jinzo is a desktop app that brings AI agents and code workspaces into a single interface. It supports GitHub Copilot and Claude Code agents, tracks agent runs with full observability, and syncs issues and tasks from GitHub, Linear, Jira, Asana, and Notion.
 
 ## Features
 
-### AI Agents & Chat
+### AI Agents
 - Run GitHub Copilot and Claude Code agents in managed workspaces
-- Direct chat, RAG-augmented, and MCP tool-enabled modes
 - Agent run tracking with commands, artifacts, turns, and usage metrics
 - Session resumption and continuation
 - Interactive tool approval with pre-approved tool lists
@@ -34,35 +33,22 @@ Jinzo is a desktop app that brings together AI agents, code workspaces, and cont
 - Workspace diffs captured per run (base ref, file stats)
 - Code reviews with findings (severity, file, line range, suggestions)
 
-### Content Aggregation
-- Unified entity system for tasks, issues, bookmarks, articles, podcasts, videos, notes
-- Automatic chunking and embedding for semantic search (sqlite-vec)
-- Timeline feed for tracking updates
-- Offline-first action queue for retryable external operations
-
-
 ### Integrations
 - **GitHub** / **GitLab**: Issues, PRs, repositories
 - **Linear** / **Jira** / **Asana**: Issue tracking
-- **Raindrop**: Bookmarks and collections
 - **Notion**: Pages and databases
-- **RSS** / **HackerNews**: News feeds and articles
-- **Spotify** / **Apple Music**: Playlists and tracks
-- **Podcasts**: Episodes and shows
-- **YouTube**: Videos and playlists
 
 ### Developer Tools
 - Built-in terminal (node-pty)
 - File explorer with path traversal prevention
 - Git operations (status, log, diff, branches, remotes, worktrees)
-- MCP server registry (stdio, http, ws transports)
 
 ## Tech Stack
 
 - **Framework**: Electron 40
 - **Frontend**: React 19, Redux Toolkit, React Router
-- **Database**: SQLite (better-sqlite3), Drizzle ORM, sqlite-vec
-- **AI Providers**: Ollama, GitHub Copilot SDK, Claude Agent SDK
+- **Database**: SQLite (better-sqlite3), Drizzle ORM
+- **AI Providers**: GitHub Copilot SDK, Claude Agent SDK
 - **Styling**: Tailwind CSS v4
 - **Build**: Vite, Electron Forge, TypeScript
 
@@ -71,7 +57,6 @@ Jinzo is a desktop app that brings together AI agents, code workspaces, and cont
 ### Prerequisites
 
 - **Node.js** 18+ ([Download](https://nodejs.org/))
-- **Ollama** (optional, for local LLM support) — [ollama.ai](https://ollama.ai/)
 - **Git**
 
 ### Setup
@@ -90,11 +75,10 @@ npm run db:push
 npm start
 ```
 
-1. **Configure a provider**: Connect Ollama, GitHub Copilot, or Claude Code in Settings
-2. **Add connections** (optional): Link GitHub, Linear, Notion, etc. and sync content
-3. **Create a workspace**: Import a local repo or create from a project
+1. **Configure a provider**: Connect GitHub Copilot or Claude Code in Settings
+2. **Add connections** (optional): Link GitHub, Linear, Jira, Notion, etc. and sync issues
+3. **Create a workspace**: Import a local repo or clone from a URL
 4. **Run an agent**: Open the Copilot or Claude view to run agents against your workspace
-5. **Chat**: Use direct chat or enable RAG mode to query your synced content
 
 ## Development
 
@@ -126,15 +110,12 @@ src/
 │   ├── db/                # Database client, schema, migrations
 │   └── modules/           # Domain modules (layered architecture)
 │       ├── account/       # User accounts
-│       ├── chat/          # Chat sessions and messages
 │       ├── connections/   # External service connections
 │       ├── entities/      # Unified content entities
-│       ├── feed/          # Timeline feed
 │       ├── fileExplorer/  # Secure filesystem operations
 │       ├── git/           # Git operations and worktrees
-│       ├── mcp/           # Model Context Protocol tools
 │       ├── projects/      # Project grouping
-│       ├── providers/     # LLM provider adapters
+│       ├── providers/     # Agent provider adapters
 │       ├── reviews/       # Code review management
 │       ├── runs/          # Agent run tracking
 │       ├── space/         # UI/prompt configurations
@@ -146,10 +127,9 @@ src/
 ├── preload/               # IPC bridge (window.api)
 └── renderer/              # React app
     ├── components/        # Shared UI components
-    ├── features/          # Feature modules (chat, workspace, settings, ...)
+    ├── features/          # Feature modules (workspace, settings, ...)
     ├── hooks/             # Custom hooks
     ├── lib/
-    │   ├── rag/           # RAG pipeline (embed, retrieval, chunking)
     │   └── redux/         # Redux store, slices, RTK Query APIs
     └── routes/            # Route components
 ```
@@ -157,8 +137,6 @@ src/
 Each domain module follows a consistent layered pattern: IPC → Controller → Service → Repository → DTO. All layers are plain object literals (no classes, no DI).
 
 ## Troubleshooting
-
-**Ollama connection issues**: Ensure Ollama is running with `ollama serve`
 
 **Database locked errors**: Close all app instances, then `npm run db:clean:dev && npm run db:push`
 

@@ -1,5 +1,5 @@
 import { connectionsService } from "./connections.service";
-import type { HackerNewsTogglePayload, SaveResourcesPayload } from "./connections.dto";
+import type { SaveResourcesPayload } from "./connections.dto";
 
 // ─────────────────────────────────────────────────────────────
 // Connections Controller
@@ -7,10 +7,6 @@ import type { HackerNewsTogglePayload, SaveResourcesPayload } from "./connection
 export const connectionsController = {
   async getGithubRepos(connectionId: string) {
     return connectionsService.getGithubRepos(connectionId);
-  },
-
-  async getRaindropCollections(connectionId: string) {
-    return connectionsService.getRaindropCollections(connectionId);
   },
 
   async getLinearTeams(connectionId: string) {
@@ -29,14 +25,6 @@ export const connectionsController = {
     return connectionsService.getGitlabProjects(connectionId);
   },
 
-  async getHackerNewsStatus() {
-    return connectionsService.getHackerNewsStatus();
-  },
-
-  async toggleHackerNews(payload: HackerNewsTogglePayload) {
-    return connectionsService.toggleHackerNews(payload);
-  },
-
   async saveResources(payload: SaveResourcesPayload) {
     return connectionsService.saveResources(payload);
   },
@@ -51,14 +39,6 @@ export const connectionsController = {
 
   async getSelectedResources(provider: string) {
     return connectionsService.getSelectedResources(provider);
-  },
-
-  async getRssStatus() {
-    return connectionsService.getRssStatus();
-  },
-
-  async toggleRss(enabled: boolean) {
-    return connectionsService.toggleRss(enabled);
   },
 
   async deleteResource(resourceId: string) {

@@ -82,14 +82,13 @@ export const appSettings = sqliteTable("app_settings", {
 
 /* -----------------------------
    PROVIDERS (LLM / agent runtimes)
-   - shared by chat_sessions (normal chat UI)
    - shared by runs (terminal/code-writing flow)
 ------------------------------ */
 
 export const providers = sqliteTable(
   "providers",
   {
-    id: text("id").primaryKey(), // "ollama" | "copilot_cli" | "claude_code" | ...
+    id: text("id").primaryKey(), // "copilot_cli" | "claude_code" | ...
     kind: text("kind", { enum: ["llm_runtime", "agent_runtime"] }).notNull(),
     displayName: text("display_name").notNull(),
     isEnabled: integer("is_enabled", { mode: "boolean" })
@@ -646,9 +645,8 @@ export const tools = sqliteTable(
 
 /* -----------------------------
    TOOL CALLS (invocation log)
-   - can be used by BOTH chat + runs
+   - can be used by  runs
    - link to runId when terminal/code-writing
-   - link to chatMessages via messageId if you want later (optional)
 ------------------------------ */
 
 // tool_calls
@@ -1008,44 +1006,6 @@ export const entities = sqliteTable(
   ],
 );
 
-export const entityChunks = sqliteTable(
-  "entity_chunks",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    entityId: text("entity_id")
-      .notNull()
-      .references(() => entities.id, { onDelete: "cascade" }),
-    chunkIndex: integer("chunk_index").notNull(),
-    content: text("content").notNull(),
-    tokenCount: integer("token_count"),
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-  },
-  (t) => [
-    uniqueIndex("uniq_entity_chunk").on(t.entityId, t.chunkIndex),
-    index("idx_entity_chunks_entity").on(t.entityId),
-  ],
-);
-
-export const vecEntityChunks = sqliteTable("vec_entity_chunks", {
-  rowid: integer("rowid").primaryKey(),
-  embedding: blob("embedding"),
-});
-
-export const vecEntityChunkMap = sqliteTable(
-  "vec_entity_chunk_map",
-  {
-    vecRowid: integer("vec_rowid")
-      .primaryKey()
-      .references(() => vecEntityChunks.rowid, { onDelete: "cascade" }),
-    chunkId: integer("chunk_id")
-      .notNull()
-      .unique()
-      .references(() => entityChunks.id, { onDelete: "cascade" }),
-  },
-  (t) => [index("idx_vec_entity_chunk_map_chunk").on(t.chunkId)],
-);
 
 /* -----------------------------
    ACTIONABLE DOMAIN TABLES
@@ -1103,159 +1063,3 @@ export const issues = sqliteTable(
   ],
 );
 
-/* -----------------------------
-   FEED = EVENT LOG (timeline + retrieval trigger)
------------------------------- */
-
-export const feedItems = sqliteTable(
-  "feed_items",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-
-    accountId: text("account_id")
-      .notNull()
-      .references(() => accounts.id, { onDelete: "cascade" }),
-
-    connectionId: text("connection_id").references(() => connections.id, {
-      onDelete: "set null",
-    }),
-    resourceId: text("resource_id").references(() => connectionResources.id, {
-      onDelete: "set null",
-    }),
-
-    // which entity this event is about (optional but strongly recommended)
-    entityId: text("entity_id").references(() => entities.id, {
-      onDelete: "set null",
-    }),
-
-    // 'entity.created'|'entity.updated'|'task.completed'|'sync.error'...
-    eventType: text("event_type").notNull(),
-
-    // for UI list grouping/filter
-    itemType: text("item_type"), // task|issue|doc|rss_article|...
-    title: text("title").notNull(),
-    summary: text("summary"), // short textual context (LLM-friendly)
-    url: text("url"),
-
-    // state snapshot at that time (JSON)
-    snapshot: text("snapshot"), // JSON
-    metadata: text("metadata"), // JSON
-
-    // event time (remote or local)
-    occurredAt: integer("occurred_at", { mode: "timestamp" }).notNull(),
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-
-    // embeddings
-    embedding: blob("embedding"),
-  },
-  (t) => [
-    index("idx_feed_account_time").on(t.accountId, t.occurredAt),
-    index("idx_feed_entity_time").on(t.entityId, t.occurredAt),
-    index("idx_feed_conn_time").on(t.connectionId, t.occurredAt),
-    index("idx_feed_event_time").on(t.eventType, t.occurredAt),
-    index("idx_feed_item_type_time").on(t.itemType, t.occurredAt),
-    check(
-      "check_feed_snapshot_json",
-      sql`json_valid(${t.snapshot}) OR ${t.snapshot} IS NULL`,
-    ),
-    check(
-      "check_feed_metadata_json",
-      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
-    ),
-  ],
-);
-
-/* -----------------------------
-   CHAT 
------------------------------- */
-
-export const chatSessions = sqliteTable(
-  "chat_sessions",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    title: text("title"),
-    initialQuery: text("initial_query"),
-
-    // NEW: default runtime for this session
-    providerId: text("provider_id").references(() => providers.id, {
-      onDelete: "set null",
-    }),
-
-    // keep model as session default (optional)
-    model: text("model"),
-
-    spaceId: text("space_id").references(() => spaces.id, {
-      onDelete: "set null",
-    }),
-    systemPromptSnapshot: text("system_prompt_snapshot"),
-
-    // NEW: optional provider config snapshot (for reproducibility)
-    providerConfigSnapshot: text("provider_config_snapshot"), // JSON
-
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-  },
-  (t) => [
-    index("idx_chat_sessions_updated_at").on(t.updatedAt),
-    index("idx_chat_sessions_created_at").on(t.createdAt),
-    index("idx_chat_sessions_space").on(t.spaceId),
-
-    // NEW indexes
-    index("idx_chat_sessions_provider").on(t.providerId),
-    index("idx_chat_sessions_model").on(t.model),
-
-    check(
-      "check_chat_sessions_provider_config_json",
-      sql`json_valid(${t.providerConfigSnapshot}) OR ${t.providerConfigSnapshot} IS NULL`,
-    ),
-  ],
-);
-
-export const chatMessages = sqliteTable(
-  "chat_messages",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    sessionId: integer("session_id")
-      .notNull()
-      .references(() => chatSessions.id, { onDelete: "cascade" }),
-
-    role: text("role", {
-      enum: ["system", "user", "assistant", "tool"],
-    }).notNull(),
-    content: text("content").notNull(),
-
-    // NEW: per-message runtime overrides (optional)
-    providerId: text("provider_id").references(() => providers.id, {
-      onDelete: "set null",
-    }),
-    model: text("model"),
-
-    // NEW: observability (optional but super useful)
-    traceId: text("trace_id"),
-    latencyMs: integer("latency_ms"),
-    inputTokens: integer("input_tokens"),
-    outputTokens: integer("output_tokens"),
-
-    // NEW: if this assistant message produced tool calls, you can link later
-    // (optional; you can also do it via tool_calls.chat_message_id)
-    toolCallGroupId: text("tool_call_group_id"),
-
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-  },
-  (t) => [
-    index("idx_chat_messages_session").on(t.sessionId),
-
-    // NEW indexes
-    index("idx_chat_messages_provider").on(t.providerId),
-    index("idx_chat_messages_model").on(t.model),
-    index("idx_chat_messages_trace").on(t.traceId),
-  ],
-);

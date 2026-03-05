@@ -1,13 +1,4 @@
-import { IMAGE_SRC_REGEX } from "../chat/chat.constants";
 
-// ─────────────────────────────────────────────────────────────
-// Image Extraction
-// ─────────────────────────────────────────────────────────────
-export function extractImageFromHtml(html?: string | null): string | null {
-  if (!html) return null;
-  const match = html.match(IMAGE_SRC_REGEX);
-  return match ? match[1] : null;
-}
 
 // ─────────────────────────────────────────────────────────────
 // URL Helpers

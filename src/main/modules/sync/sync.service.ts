@@ -1,6 +1,4 @@
 import { fetchAllEntities } from "./sync.fetchers";
-// TODO: Re-enable chunking & embedding pipeline
-// import { createChunksForEntities, createEntityChunkMap, generateChunkEmbeddings } from "./sync.chunking";
 import { syncRepo } from "./sync.repo";
 import type { SyncJobResult, SyncJobStats, ServiceResponse } from "./sync.dto";
 
@@ -8,16 +6,11 @@ import type { SyncJobResult, SyncJobStats, ServiceResponse } from "./sync.dto";
 // Result Builders
 // ─────────────────────────────────────────────────────────────
 function calculateStats(
-  stats: SyncJobStats,
   totalEntities: number,
   duration: number
 ): SyncJobResult["stats"] {
   return {
-    avgEmbeddingTime: totalEntities > 0 ? Math.round(duration / totalEntities) : 0,
     itemsPerSecond: duration > 0 ? Math.round((totalEntities / duration) * 1000) : 0,
-    avgChunksPerItem: stats.inserted > 0
-      ? parseFloat((stats.totalChunks / stats.inserted).toFixed(2))
-      : 0,
   };
 }
 
@@ -33,9 +26,8 @@ function createSuccessResult(
     skipped: stats.skipped,
     errors: stats.errors,
     total: totalEntities,
-    totalChunks: stats.totalChunks,
     duration,
-    stats: calculateStats(stats, totalEntities, duration),
+    stats: calculateStats(totalEntities, duration),
   };
 }
 
@@ -47,9 +39,8 @@ function createFailureResult(duration: number): SyncJobResult {
     skipped: 0,
     errors: 1,
     total: 0,
-    totalChunks: 0,
     duration,
-    stats: { avgEmbeddingTime: 0, itemsPerSecond: 0, avgChunksPerItem: 0 },
+    stats: { itemsPerSecond: 0 },
   };
 }
 
@@ -61,9 +52,8 @@ function createEmptyResult(duration: number): SyncJobResult {
     skipped: 0,
     errors: 0,
     total: 0,
-    totalChunks: 0,
     duration,
-    stats: { avgEmbeddingTime: 0, itemsPerSecond: 0, avgChunksPerItem: 0 },
+    stats: { itemsPerSecond: 0 },
   };
 }
 
@@ -82,11 +72,6 @@ export const syncService = {
         const result = createEmptyResult(Date.now() - startTime);
         return { success: true, data: result };
       }
-
-      // TODO: Re-enable chunking & embedding pipeline
-      // const chunks = createChunksForEntities(entities);
-      // const embeddings = await generateChunkEmbeddings(chunks);
-      // const entityChunkMap = createEntityChunkMap(chunks);
 
       const stats = await syncRepo.upsertEntities(entities);
 

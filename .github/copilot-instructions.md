@@ -43,11 +43,11 @@ Every backend domain uses this exact structure (see `src/main/modules/account/` 
 
 **Critical**: All layers are **plain object literals**, never classes. No DI — repos call `getDb()` inline.
 
-All modules: `account`, `appSettings`, `apps`, `chat`, `connectionCredentials`, `connections`, `entities`, `feed`, `feedback`, `fileExplorer`, `git`, `imageProxy`,`mcp`, `ollama`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `space`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
+All modules: `account`, `appSettings`, `apps`, `connectionCredentials`, `connections`, `entities`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `space`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
 
 ## IPC Convention
 
-Channel format: `"domain:action"` (e.g. `"chat:send"`, `"entities:getAll"`). Channels must stay in sync across three files — there is no shared registry:
+Channel format: `"domain:action"` (e.g. `"runs:start"`, `"entities:getAll"`). Channels must stay in sync across three files — there is no shared registry:
 
 1. `src/preload/index.ts` — `ipcRenderer.invoke("domain:action")`
 2. `src/main/modules/{name}/{name}.ipc.ts` — `ipcMain.handle("domain:action")`

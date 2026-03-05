@@ -1,6 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { markdownComponents } from "@/features/chat/components/markdown-components";
+import { markdownComponents } from "@/components/markdown-components";
 import type { EventGroup } from "../../utils/group-events";
 import { Code } from "@/components/ui/icons/space";
 import { Picture, Document, Jira, Gitlab, Asana } from "@/components/ui/icons";

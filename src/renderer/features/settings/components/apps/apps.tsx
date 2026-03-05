@@ -1,22 +1,28 @@
 import { useState } from "react";
-import { AppIconProps, AppItem } from "../../../chat/components/input/types";
+type AppItem = {
+  id: string;
+  displayName: string | null;
+  iconPath: string | null;
+  isConnected: boolean;
+  connectionId: string | null;
+  category: string | null;
+  sortOrder: number;
+  enabledFeatures: string | null;
+  config: string | null;
+};
+
+type AppIconProps = { app: AppItem };
 import Text, {
   Heading2,
   BodyMedium,
   Body,
 } from "../../../../components/ui/text";
-import AppleMusicModal from "../../components/apps/apple-music/apple-music-modal";
 import AsanaModal from "../../components/apps/asana/asana-modal";
 import GitHubModal from "../../components/apps/github/github-modal";
 import GitLabModal from "../../components/apps/gitlab/gitlab-modal";
-import HackerNewsModal from "../../components/apps/hackernews/hackernews-modal";
 import JiraModal from "../../components/apps/jira/jira-modal";
 import LinearModal from "../../components/apps/linear/linear-modal";
-import PodcastModal from "../../components/apps/podcast/podcast-modal";
-import RssModal from "../../components/apps/rss/rss-modal";
-import SpotifyModal from "../../components/apps/spotify/spotify-modal";
 import { Button } from "@/components/ui/button";
-import RaindropModal from "./raindrop/raindrop-modal";
 import { External } from "@/components/ui/icons";
 import { useRunEntitySyncMutation } from "@/lib/redux/api/syncApi";
 import { toast } from "@/components/ui/toast";
@@ -186,40 +192,6 @@ export default function AppsSettings({
         onSuccess={handleConnectionSuccess}
       />
 
-      <RaindropModal
-        open={activeModal === "raindrop"}
-        onClose={() => setActiveModal(null)}
-        isConnected={isConnected("raindrop")}
-      />
-
-      <HackerNewsModal
-        open={activeModal === "hackernews"}
-        onClose={() => setActiveModal(null)}
-      />
-
-      <PodcastModal
-        open={activeModal === "podcast"}
-        onClose={() => setActiveModal(null)}
-        isConnected={isConnected("podcast")}
-      />
-
-      <AppleMusicModal
-        open={activeModal === "apple-music"}
-        onClose={() => setActiveModal(null)}
-        isConnected={isConnected("apple-music")}
-        onSuccess={handleConnectionSuccess}
-      />
-
-      <SpotifyModal
-        open={activeModal === "spotify"}
-        onClose={() => setActiveModal(null)}
-        isConnected={isConnected("spotify")}
-      />
-
-      <RssModal
-        open={activeModal === "rss"}
-        onClose={() => setActiveModal(null)}
-      />
     </div>
   );
 }

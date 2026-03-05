@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useActiveSpace } from "./use-active-space";
 
-export type SidebarItemType = "chat" | "workspace";
+export type SidebarItemType = "workspace";
 
 export interface SidebarConfig {
   width: string;
@@ -16,9 +16,9 @@ export function useSidebarConfig(): SidebarConfig {
   const sidebarConfig = useMemo(() => {
     const defaultConfig: SidebarConfig = {
       width: "19rem",
-      title: "Chat",
-      itemType: "chat",
-      defaultRoute: "/",
+      title: "Workspaces",
+      itemType: "workspace",
+      defaultRoute: "/copilot",
     };
 
     if (activeSpace?.uiConfig) {

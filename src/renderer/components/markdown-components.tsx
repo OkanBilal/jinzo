@@ -1,8 +1,7 @@
 import { Components } from "react-markdown";
 
 /**
- * Custom ReactMarkdown component overrides for consistent styling
- * across the chat interface.
+ * Custom ReactMarkdown component overrides for consistent styling.
  */
 export const markdownComponents: Components = {
   h1: ({ children }) => (
@@ -50,7 +49,7 @@ export const markdownComponents: Components = {
     <tbody className="bg-primary dark:bg-primary/3 transition-all duration-150 ease-out">{children}</tbody>
   ),
   tr: ({ children }) => (
-    <tr className="border-b border-primary-200  dark:border-primary-700 hover:bg-primary-200/20 dark:hover:bg-primary/5 transition-all duration-150 ease-out">
+    <tr className="border-b border-primary-200 dark:border-primary-700 hover:bg-primary-200/20 dark:hover:bg-primary/5 transition-all duration-150 ease-out">
       {children}
     </tr>
   ),
@@ -126,5 +125,3 @@ export const markdownComponents: Components = {
     );
   },
 };
-
-//TODO img handling noted

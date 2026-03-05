@@ -10,15 +10,11 @@ import * as path from "path";
 import { initializeDatabase, closeDatabase } from "./db/client";
 import { registerAccountIpc, unregisterAccountIpc } from "./modules/account";
 import { registerAppsIpc, unregisterAppsIpc } from "./modules/apps";
-import { registerChatHandlers, unregisterChatHandlers } from "./modules/chat";
 import { registerSyncIpc, unregisterSyncIpc } from "./modules/sync";
-import { registerFeedIpc, unregisterFeedIpc } from "./modules/feed";
 import {
   registerEntitiesHandlers,
   unregisterEntitiesHandlers,
 } from "./modules/entities";
-import { registerMcpHandlers, unregisterMcpHandlers } from "./modules/mcp";
-import { registerOllamaIpc, unregisterOllamaIpc } from "./modules/ollama";
 import {
   registerConnectionCredentialsIpc,
   unregisterConnectionCredentialsIpc,
@@ -294,12 +290,8 @@ async function initializeApp() {
     // Register IPC handlers
     registerAccountIpc();
     registerAppsIpc();
-    registerChatHandlers();
     registerSyncIpc();
-    registerFeedIpc();
     registerEntitiesHandlers();
-    registerMcpHandlers();
-    registerOllamaIpc();
     registerConnectionCredentialsIpc();
     registerConnectionsHandlers();
     registerSeedIpc();
@@ -512,14 +504,10 @@ async function cleanupApp() {
     unregisterAppSettingsIpc();
     unregisterSyncIpc();
     unregisterSeedIpc();
-    unregisterOllamaIpc();
-    unregisterMcpHandlers();
     unregisterSpaceIpc();
-    unregisterFeedIpc();
     unregisterConnectionCredentialsIpc();
     unregisterConnectionsHandlers();
     unregisterEntitiesHandlers();
-    unregisterChatHandlers();
     unregisterProvidersIpc();
     unregisterToolsIpc();
     unregisterWorkspacesIpc();
