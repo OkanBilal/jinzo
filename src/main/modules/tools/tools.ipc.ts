@@ -1,26 +1,14 @@
 import { ipcMain } from "electron";
 import { toolsController } from "./tools.controller";
 import type {
-  CreateToolPayload,
-  UpdateToolPayload,
   CreateToolCallPayload,
   UpdateToolCallPayload,
-  ToolSource,
 } from "./tools.dto";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Channel Names
 // ─────────────────────────────────────────────────────────────
 const CHANNELS = {
-  // Tools
-  TOOLS_GET_ALL: "tools:getAll",
-  TOOLS_GET_BY_ID: "tools:getById",
-  TOOLS_GET_BY_SOURCE: "tools:getBySource",
-  TOOLS_GET_ENABLED: "tools:getEnabled",
-  TOOLS_CREATE: "tools:create",
-  TOOLS_UPDATE: "tools:update",
-  TOOLS_DELETE: "tools:delete",
-
   // Tool Calls
   TOOL_CALLS_GET_BY_RUN: "toolCalls:getByRun",
   TOOL_CALLS_GET_BY_ACCOUNT: "toolCalls:getByAccount",
@@ -36,35 +24,6 @@ const CHANNELS = {
 // IPC Handlers
 // ─────────────────────────────────────────────────────────────
 export function registerToolsIpc(): void {
-  // Tools
-  ipcMain.handle(CHANNELS.TOOLS_GET_ALL, async () => {
-    return toolsController.getAllTools();
-  });
-
-  ipcMain.handle(CHANNELS.TOOLS_GET_BY_ID, async (_, id: string) => {
-    return toolsController.getToolById(id);
-  });
-
-  ipcMain.handle(CHANNELS.TOOLS_GET_BY_SOURCE, async (_, source: ToolSource) => {
-    return toolsController.getToolsBySource(source);
-  });
-
-  ipcMain.handle(CHANNELS.TOOLS_GET_ENABLED, async () => {
-    return toolsController.getEnabledTools();
-  });
-
-  ipcMain.handle(CHANNELS.TOOLS_CREATE, async (_, payload: CreateToolPayload) => {
-    return toolsController.createTool(payload);
-  });
-
-  ipcMain.handle(CHANNELS.TOOLS_UPDATE, async (_, id: string, payload: UpdateToolPayload) => {
-    return toolsController.updateTool(id, payload);
-  });
-
-  ipcMain.handle(CHANNELS.TOOLS_DELETE, async (_, id: string) => {
-    return toolsController.deleteTool(id);
-  });
-
   // Tool Calls
   ipcMain.handle(CHANNELS.TOOL_CALLS_GET_BY_RUN, async (_, runId: string) => {
     return toolsController.getToolCallsByRun(runId);

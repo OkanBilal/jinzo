@@ -598,52 +598,6 @@ export const workspaceActivity = sqliteTable(
 
 
 /* -----------------------------
-   TOOLS REGISTRY (local + mcp + provider builtins)
------------------------------- */
-
-export const tools = sqliteTable(
-  "tools",
-  {
-    id: text("id").primaryKey(), // stable id you control
-    source: text("source", {
-      enum: ["local", "mcp", "provider_builtin"],
-    }).notNull(),
-
-    // display + invocation
-    name: text("name").notNull(),
-    description: text("description"),
-    version: text("version"),
-    isEnabled: integer("is_enabled", { mode: "boolean" })
-      .notNull()
-      .default(true),
-
-    // JSON Schema
-    schema: text("schema"), // JSON
-
-    metadata: text("metadata"), // JSON
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-  },
-  (t) => [
-    uniqueIndex("uniq_tools_source_name").on(t.source, t.name),
-    index("idx_tools_source").on(t.source),
-    index("idx_tools_enabled").on(t.isEnabled),
-    check(
-      "check_tools_schema_json",
-      sql`json_valid(${t.schema}) OR ${t.schema} IS NULL`,
-    ),
-    check(
-      "check_tools_metadata_json",
-      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
-    ),
-  ],
-);
-
-/* -----------------------------
    TOOL CALLS (invocation log)
    - can be used by  runs
    - link to runId when terminal/code-writing
@@ -662,10 +616,6 @@ export const toolCalls = sqliteTable(
     runId: text("run_id").references(() => runs.id, { onDelete: "cascade" }),
 
     providerId: text("provider_id").references(() => providers.id, {
-      onDelete: "set null",
-    }),
-
-    toolId: text("tool_id").references(() => tools.id, {
       onDelete: "set null",
     }),
 
@@ -703,7 +653,6 @@ export const toolCalls = sqliteTable(
     index("idx_tool_calls_account_created").on(t.accountId, t.createdAt),
     index("idx_tool_calls_run").on(t.runId),
     index("idx_tool_calls_provider").on(t.providerId),
-    index("idx_tool_calls_tool").on(t.toolId),
     index("idx_tool_calls_status").on(t.status),
 
     // ✅ NEW: fast lookup for end event updates

@@ -1,8 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-// Tool Types
+// Tool Call Types
 // ─────────────────────────────────────────────────────────────
-
-export type ToolSource = "local" | "mcp" | "provider_builtin";
 
 export type ToolCallStatus =
   | "queued"
@@ -11,56 +9,6 @@ export type ToolCallStatus =
   | "error"
   | "canceled";
 
-export interface ToolSchema {
-  type: "object";
-  properties: Record<string, unknown>;
-  required?: string[];
-  [key: string]: unknown;
-}
-
-export interface ToolMetadata {
-  author?: string;
-  version?: string;
-  category?: string;
-  [key: string]: unknown;
-}
-
-// ─────────────────────────────────────────────────────────────
-// Tool DTOs
-// ─────────────────────────────────────────────────────────────
-export interface CreateToolPayload {
-  id: string;
-  source: ToolSource;
-  name: string;
-  description?: string;
-  version?: string;
-  isEnabled?: boolean;
-  schema?: ToolSchema;
-  metadata?: ToolMetadata;
-}
-
-export interface UpdateToolPayload {
-  name?: string;
-  description?: string;
-  version?: string;
-  isEnabled?: boolean;
-  schema?: ToolSchema;
-  metadata?: ToolMetadata;
-}
-
-export interface ToolResponse {
-  id: string;
-  source: ToolSource;
-  name: string;
-  description: string | null;
-  version: string | null;
-  isEnabled: boolean;
-  schema: ToolSchema | null;
-  metadata: ToolMetadata | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 // ─────────────────────────────────────────────────────────────
 // Tool Call DTOs
 // ─────────────────────────────────────────────────────────────
@@ -68,7 +16,6 @@ export interface CreateToolCallPayload {
   accountId: string;
   runId?: string;
   providerId?: string;
-  toolId?: string;
   toolName: string;
   toolCallId?: string | null;
   parentToolCallId?: string | null;
@@ -94,7 +41,6 @@ export interface ToolCallResponse {
   accountId: string;
   runId: string | null;
   providerId: string | null;
-  toolId: string | null;
   toolName: string;
   toolCallId: string | null;
   parentToolCallId: string | null;

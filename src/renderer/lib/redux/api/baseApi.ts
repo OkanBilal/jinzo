@@ -53,7 +53,6 @@ export const baseApi = createApi({
     'ProviderModels',
     'ProviderCommands',
     'ProviderSkills',
-    'Tools',
     'ToolCalls',
     'Workspaces',
     'Runs',

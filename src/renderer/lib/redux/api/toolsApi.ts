@@ -1,61 +1,12 @@
 import { baseApi } from "./baseApi";
 
-export type ToolSource = "local" | "mcp" | "provider_builtin";
 export type ToolCallStatus = "queued" | "running" | "done" | "error" | "canceled";
-
-export interface ToolSchema {
-  type: "object";
-  properties: Record<string, unknown>;
-  required?: string[];
-  [key: string]: unknown;
-}
-
-export interface ToolMetadata {
-  author?: string;
-  version?: string;
-  category?: string;
-  [key: string]: unknown;
-}
-
-export interface Tool {
-  id: string;
-  source: ToolSource;
-  name: string;
-  description: string | null;
-  version: string | null;
-  isEnabled: boolean;
-  schema: ToolSchema | null;
-  metadata: ToolMetadata | null;
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface CreateToolPayload {
-  id: string;
-  source: ToolSource;
-  name: string;
-  description?: string;
-  version?: string;
-  isEnabled?: boolean;
-  schema?: ToolSchema;
-  metadata?: ToolMetadata;
-}
-
-export interface UpdateToolPayload {
-  name?: string;
-  description?: string;
-  version?: string;
-  isEnabled?: boolean;
-  schema?: ToolSchema;
-  metadata?: ToolMetadata;
-}
 
 export interface ToolCall {
   id: number;
   accountId: string;
   runId: string | null;
   providerId: string | null;
-  toolId: string | null;
   toolName: string;
   status: ToolCallStatus;
   input: Record<string, unknown> | null;
@@ -73,7 +24,6 @@ export interface CreateToolCallPayload {
   accountId: string;
   runId?: string;
   providerId?: string;
-  toolId?: string;
   toolName: string;
   status?: ToolCallStatus;
   input?: Record<string, unknown>;
@@ -92,76 +42,6 @@ export interface UpdateToolCallPayload {
 
 export const toolsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    // Tools
-    getTools: builder.query<Tool[], void>({
-      query: () => ({
-        handler: "tools:getAll",
-      }),
-      transformResponse: (response: { success: boolean; data: Tool[] }) =>
-        response.data,
-      providesTags: ["Tools"],
-    }),
-
-    getToolById: builder.query<Tool, string>({
-      query: (id) => ({
-        handler: "tools:getById",
-        args: [id],
-      }),
-      transformResponse: (response: { success: boolean; data: Tool }) =>
-        response.data,
-      providesTags: (_result, _error, id) => [{ type: "Tools", id }],
-    }),
-
-    getToolsBySource: builder.query<Tool[], ToolSource>({
-      query: (source) => ({
-        handler: "tools:getBySource",
-        args: [source],
-      }),
-      transformResponse: (response: { success: boolean; data: Tool[] }) =>
-        response.data,
-      providesTags: ["Tools"],
-    }),
-
-    getEnabledTools: builder.query<Tool[], void>({
-      query: () => ({
-        handler: "tools:getEnabled",
-      }),
-      transformResponse: (response: { success: boolean; data: Tool[] }) =>
-        response.data,
-      providesTags: ["Tools"],
-    }),
-
-    createTool: builder.mutation<string, CreateToolPayload>({
-      query: (payload) => ({
-        handler: "tools:create",
-        args: [payload],
-      }),
-      transformResponse: (response: { success: boolean; data: string }) =>
-        response.data,
-      invalidatesTags: ["Tools"],
-    }),
-
-    updateTool: builder.mutation<Tool, { id: string; payload: UpdateToolPayload }>({
-      query: ({ id, payload }) => ({
-        handler: "tools:update",
-        args: [id, payload],
-      }),
-      transformResponse: (response: { success: boolean; data: Tool }) =>
-        response.data,
-      invalidatesTags: (_result, _error, { id }) => [
-        "Tools",
-        { type: "Tools", id },
-      ],
-    }),
-
-    deleteTool: builder.mutation<void, string>({
-      query: (id) => ({
-        handler: "tools:delete",
-        args: [id],
-      }),
-      invalidatesTags: ["Tools"],
-    }),
-
     getToolCallsByRun: builder.query<ToolCall[], string>({
       query: (runId) => ({
         handler: "toolCalls:getByRun",
@@ -239,17 +119,6 @@ export const toolsApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useGetToolsQuery,
-  useLazyGetToolsQuery,
-  useGetToolByIdQuery,
-  useLazyGetToolByIdQuery,
-  useGetToolsBySourceQuery,
-  useLazyGetToolsBySourceQuery,
-  useGetEnabledToolsQuery,
-  useLazyGetEnabledToolsQuery,
-  useCreateToolMutation,
-  useUpdateToolMutation,
-  useDeleteToolMutation,
   useGetToolCallsByRunQuery,
   useLazyGetToolCallsByRunQuery,
   useGetToolCallsByAccountQuery,

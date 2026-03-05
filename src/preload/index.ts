@@ -188,18 +188,6 @@ const api = {
     getCommands: (id: string) => ipcRenderer.invoke("providers:getCommands", id),
     getSkills: (id: string, workspacePath?: string) => ipcRenderer.invoke("providers:getSkills", id, workspacePath),
   },
-  // Tools operations
-  tools: {
-    getAll: () => ipcRenderer.invoke("tools:getAll"),
-    getById: (id: string) => ipcRenderer.invoke("tools:getById", id),
-    getBySource: (source: "local" | "mcp" | "provider_builtin") =>
-      ipcRenderer.invoke("tools:getBySource", source),
-    getEnabled: () => ipcRenderer.invoke("tools:getEnabled"),
-    create: (payload: unknown) => ipcRenderer.invoke("tools:create", payload),
-    update: (id: string, payload: unknown) =>
-      ipcRenderer.invoke("tools:update", id, payload),
-    delete: (id: string) => ipcRenderer.invoke("tools:delete", id),
-  },
   // Tool calls operations
   toolCalls: {
     getByRun: (runId: string) =>

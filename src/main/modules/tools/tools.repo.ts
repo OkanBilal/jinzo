@@ -1,10 +1,7 @@
 import { eq, desc, and, isNull } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { tools, toolCalls } from "../../db/schema";
+import { toolCalls } from "../../db/schema";
 import type {
-  CreateToolPayload,
-  UpdateToolPayload,
-  ToolResponse,
   CreateToolCallPayload,
   UpdateToolCallPayload,
   ToolCallResponse,
@@ -14,77 +11,6 @@ import type {
 // Tools Repository
 // ─────────────────────────────────────────────────────────────
 export const toolsRepo = {
-  // ─────────────────────────────────────────────────────────────
-  // Tool Operations
-  // ─────────────────────────────────────────────────────────────
-  async findAllTools(): Promise<ToolResponse[]> {
-    const db = getDb();
-    const rows = await db.select().from(tools).orderBy(desc(tools.updatedAt));
-    return rows.map(mapToolRowToResponse);
-  },
-
-  async findToolById(id: string): Promise<ToolResponse | null> {
-    const db = getDb();
-    const rows = await db.select().from(tools).where(eq(tools.id, id)).limit(1);
-    return rows[0] ? mapToolRowToResponse(rows[0]) : null;
-  },
-
-  async findToolsBySource(
-    source: "local" | "mcp" | "provider_builtin",
-  ): Promise<ToolResponse[]> {
-    const db = getDb();
-    const rows = await db.select().from(tools).where(eq(tools.source, source));
-    return rows.map(mapToolRowToResponse);
-  },
-
-  async findEnabledTools(): Promise<ToolResponse[]> {
-    const db = getDb();
-    const rows = await db.select().from(tools).where(eq(tools.isEnabled, true));
-    return rows.map(mapToolRowToResponse);
-  },
-
-  async insertTool(payload: CreateToolPayload): Promise<string> {
-    const db = getDb();
-    await db.insert(tools).values({
-      id: payload.id,
-      source: payload.source,
-      name: payload.name,
-      description: payload.description,
-      version: payload.version,
-      isEnabled: payload.isEnabled ?? true,
-      schema: payload.schema ? JSON.stringify(payload.schema) : null,
-      metadata: payload.metadata ? JSON.stringify(payload.metadata) : null,
-    });
-    return payload.id;
-  },
-
-  async updateTool(
-    id: string,
-    payload: UpdateToolPayload,
-  ): Promise<ToolResponse | null> {
-    const db = getDb();
-    const updateData: Record<string, unknown> = { updatedAt: new Date() };
-
-    if (payload.name !== undefined) updateData.name = payload.name;
-    if (payload.description !== undefined)
-      updateData.description = payload.description;
-    if (payload.version !== undefined) updateData.version = payload.version;
-    if (payload.isEnabled !== undefined)
-      updateData.isEnabled = payload.isEnabled;
-    if (payload.schema !== undefined)
-      updateData.schema = JSON.stringify(payload.schema);
-    if (payload.metadata !== undefined)
-      updateData.metadata = JSON.stringify(payload.metadata);
-
-    await db.update(tools).set(updateData).where(eq(tools.id, id));
-    return this.findToolById(id);
-  },
-
-  async deleteTool(id: string): Promise<void> {
-    const db = getDb();
-    await db.delete(tools).where(eq(tools.id, id));
-  },
-
   // ─────────────────────────────────────────────────────────────
   // Tool Call Operations
   // ─────────────────────────────────────────────────────────────
@@ -120,7 +46,6 @@ export const toolsRepo = {
         accountId: payload.accountId,
         runId: payload.runId,
         providerId: payload.providerId,
-        toolId: payload.toolId,
         toolName: payload.toolName,
         toolCallId: payload.toolCallId ?? null,
         parentToolCallId: payload.parentToolCallId ?? null,
@@ -197,21 +122,6 @@ export const toolsRepo = {
 // ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
-function mapToolRowToResponse(row: typeof tools.$inferSelect): ToolResponse {
-  return {
-    id: row.id,
-    source: row.source,
-    name: row.name,
-    description: row.description,
-    version: row.version,
-    isEnabled: row.isEnabled,
-    schema: row.schema ? JSON.parse(row.schema) : null,
-    metadata: row.metadata ? JSON.parse(row.metadata) : null,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
 function mapToolCallRowToResponse(
   row: typeof toolCalls.$inferSelect,
 ): ToolCallResponse {
@@ -220,7 +130,6 @@ function mapToolCallRowToResponse(
     accountId: row.accountId,
     runId: row.runId,
     providerId: row.providerId,
-    toolId: row.toolId,
     toolName: row.toolName,
     toolCallId: row.toolCallId ?? null,
     parentToolCallId: row.parentToolCallId ?? null,

@@ -1,102 +1,15 @@
 import { toolsRepo } from "./tools.repo";
 import type {
-  CreateToolPayload,
-  UpdateToolPayload,
-  ToolResponse,
   CreateToolCallPayload,
   UpdateToolCallPayload,
   ToolCallResponse,
   ServiceResponse,
-  ToolSource,
 } from "./tools.dto";
 
 // ─────────────────────────────────────────────────────────────
 // Tools Service
 // ─────────────────────────────────────────────────────────────
 export const toolsService = {
-  // ─────────────────────────────────────────────────────────────
-  // Tool Operations
-  // ─────────────────────────────────────────────────────────────
-  async getAllTools(): Promise<ServiceResponse<ToolResponse[]>> {
-    try {
-      const tools = await toolsRepo.findAllTools();
-      return { success: true, data: tools };
-    } catch (error) {
-      console.error("[ToolsService] Failed to get all tools:", error);
-      return { success: false, error: "Failed to get tools" };
-    }
-  },
-
-  async getToolById(id: string): Promise<ServiceResponse<ToolResponse>> {
-    try {
-      const tool = await toolsRepo.findToolById(id);
-      if (!tool) {
-        return { success: false, error: "Tool not found" };
-      }
-      return { success: true, data: tool };
-    } catch (error) {
-      console.error(`[ToolsService] Failed to get tool ${id}:`, error);
-      return { success: false, error: "Failed to get tool" };
-    }
-  },
-
-  async getToolsBySource(source: ToolSource): Promise<ServiceResponse<ToolResponse[]>> {
-    try {
-      const tools = await toolsRepo.findToolsBySource(source);
-      return { success: true, data: tools };
-    } catch (error) {
-      console.error(`[ToolsService] Failed to get tools by source ${source}:`, error);
-      return { success: false, error: "Failed to get tools" };
-    }
-  },
-
-  async getEnabledTools(): Promise<ServiceResponse<ToolResponse[]>> {
-    try {
-      const tools = await toolsRepo.findEnabledTools();
-      return { success: true, data: tools };
-    } catch (error) {
-      console.error("[ToolsService] Failed to get enabled tools:", error);
-      return { success: false, error: "Failed to get tools" };
-    }
-  },
-
-  async createTool(payload: CreateToolPayload): Promise<ServiceResponse<string>> {
-    try {
-      const existing = await toolsRepo.findToolById(payload.id);
-      if (existing) {
-        return { success: false, error: "Tool with this ID already exists" };
-      }
-      const id = await toolsRepo.insertTool(payload);
-      return { success: true, data: id };
-    } catch (error) {
-      console.error("[ToolsService] Failed to create tool:", error);
-      return { success: false, error: "Failed to create tool" };
-    }
-  },
-
-  async updateTool(id: string, payload: UpdateToolPayload): Promise<ServiceResponse<ToolResponse>> {
-    try {
-      const updated = await toolsRepo.updateTool(id, payload);
-      if (!updated) {
-        return { success: false, error: "Tool not found" };
-      }
-      return { success: true, data: updated };
-    } catch (error) {
-      console.error(`[ToolsService] Failed to update tool ${id}:`, error);
-      return { success: false, error: "Failed to update tool" };
-    }
-  },
-
-  async deleteTool(id: string): Promise<ServiceResponse<void>> {
-    try {
-      await toolsRepo.deleteTool(id);
-      return { success: true };
-    } catch (error) {
-      console.error(`[ToolsService] Failed to delete tool ${id}:`, error);
-      return { success: false, error: "Failed to delete tool" };
-    }
-  },
-
   // ─────────────────────────────────────────────────────────────
   // Tool Call Operations
   // ─────────────────────────────────────────────────────────────
