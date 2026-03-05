@@ -1013,84 +1013,8 @@ export const spaces = sqliteTable(
   ],
 );
 
-export const spaceConnections = sqliteTable(
-  "space_connections",
-  {
-    spaceId: text("space_id")
-      .notNull()
-      .references(() => spaces.id, { onDelete: "cascade" }),
-    connectionId: text("connection_id")
-      .notNull()
-      .references(() => connections.id, { onDelete: "cascade" }),
-    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-  },
-  (t) => [
-    uniqueIndex("uniq_space_conn").on(t.spaceId, t.connectionId),
-    index("idx_space_conn_conn").on(t.connectionId),
-  ],
-);
 
-export const spaceResources = sqliteTable(
-  "space_resources",
-  {
-    spaceId: text("space_id")
-      .notNull()
-      .references(() => spaces.id, { onDelete: "cascade" }),
-    resourceId: text("resource_id")
-      .notNull()
-      .references(() => connectionResources.id, { onDelete: "cascade" }),
-    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-    sortOrder: integer("sort_order").notNull().default(0),
-    metadata: text("metadata"), // JSON
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-  },
-  (t) => [
-    uniqueIndex("uniq_space_resource").on(t.spaceId, t.resourceId),
-    index("idx_space_resource_resource").on(t.resourceId),
-    index("idx_space_resource_sort").on(t.spaceId, t.sortOrder),
-    check(
-      "check_space_resources_metadata_json",
-      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
-    ),
-  ],
-);
 
-export const spaceAppOverrides = sqliteTable(
-  "space_app_overrides",
-  {
-    spaceId: text("space_id")
-      .notNull()
-      .references(() => spaces.id, { onDelete: "cascade" }),
-    appId: text("app_id")
-      .notNull()
-      .references(() => appStates.id, { onDelete: "cascade" }),
-
-    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-
-    enabledFeatures: text("enabled_features"), // JSON override
-    config: text("config"), // JSON override
-
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-  },
-  (t) => [
-    uniqueIndex("uniq_space_app").on(t.spaceId, t.appId),
-    check(
-      "check_enabled_features_json",
-      sql`json_valid(${t.enabledFeatures}) OR ${t.enabledFeatures} IS NULL`,
-    ),
-    check(
-      "check_config_json",
-      sql`json_valid(${t.config}) OR ${t.config} IS NULL`,
-    ),
-  ],
-);
 
 /* -----------------------------
    UNIFIED CANONICAL CONTENT: ENTITIES

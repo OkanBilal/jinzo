@@ -110,7 +110,6 @@ Core tables:
 - `connections` / `connectionResources` / `connectionTokens` / `connectionSyncState` - External service connections, encrypted tokens, sync cursors
 - `appStates` - App integration states (GitHub, Notion, Raindrop, etc. — tracks isConnected, features, config)
 - `spaces` - User-defined UI/prompt configurations with theme/UI config JSON
-- `spaceConnections` / `spaceResources` / `spaceAppOverrides` - Space-specific overrides for connections, resources, and apps
 - `feedItems` - Event log/timeline entries
 - `chatSessions` / `chatMessages` - Chat history with provider/model tracking, observability (traceId, latencyMs, token counts)
 - `runs` / `runContext` / `runArtifacts` / `runTurns` / `runUsage` - Terminal/code-writing flow (agent runs with session resumption via sessionId, turn tracking, and usage metrics)
