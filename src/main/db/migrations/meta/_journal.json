@@ -120,6 +120,13 @@
       "when": 1772718223516,
       "tag": "0016_hard_the_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1772719125515,
+      "tag": "0017_green_wolf_cub",
+      "breakpoints": true
     }
   ]
 }

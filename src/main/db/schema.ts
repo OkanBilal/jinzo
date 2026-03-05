@@ -1312,45 +1312,6 @@ export const playlistItems = sqliteTable(
 );
 
 /* -----------------------------
-   OUTBOX: tool actions (offline-first retries)
------------------------------- */
-
-export const outbox = sqliteTable(
-  "outbox",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    accountId: text("account_id")
-      .notNull()
-      .references(() => accounts.id, { onDelete: "cascade" }),
-
-    entityId: text("entity_id").references(() => entities.id, {
-      onDelete: "set null",
-    }),
-    connectionId: text("connection_id").references(() => connections.id, {
-      onDelete: "cascade",
-    }),
-
-    actionType: text("action_type").notNull(), // 'github.issue.update'|'linear.issue.create'...
-    payload: text("payload").notNull(), // JSON
-    status: text("status", { enum: ["queued", "running", "done", "error"] })
-      .notNull()
-      .default("queued"),
-    attempts: integer("attempts").notNull().default(0),
-    nextRunAt: integer("next_run_at", { mode: "timestamp" }),
-    lastError: text("last_error"),
-
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-  },
-  (t) => [
-    index("idx_outbox_status_next").on(t.status, t.nextRunAt),
-    index("idx_outbox_account").on(t.accountId),
-    check("check_outbox_payload_json", sql`json_valid(${t.payload})`),
-  ],
-);
-
-/* -----------------------------
    FEED = EVENT LOG (timeline + retrieval trigger)
 ------------------------------ */
 
