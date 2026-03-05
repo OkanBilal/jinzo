@@ -3,7 +3,7 @@ import { Body } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import {
   Apps,
-  Personalize,
+//  Personalize,
   General,
   ChevronUp,
   CopilotStatic,

@@ -2,10 +2,10 @@
 
 <div align="center">
 
-**A powerful AI-powered personal assistant for knowledge management**
+**AI-powered developer workspace**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Electron](https://img.shields.io/badge/Electron-40.0.0-blue.svg)](https://www.electronjs.org/)
+[![Electron](https://img.shields.io/badge/Electron-40-blue.svg)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-19-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 
@@ -13,329 +13,171 @@
 
 ---
 
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Screenshots](#screenshots)
-- [Tech Stack](#tech-stack)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Development](#development)
-- [Architecture](#architecture)
-- [Database](#database)
-- [Configuration](#configuration)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
-
 ## Overview
 
-Jinzo is an AI-powered personal assistant that helps you organize, search, and interact with your digital content from multiple sources. It features:
-
-- **RAG-Augmented Chat**: Context-aware conversations using retrieval-augmented generation
-- **Vector Search**: SQLite-based vector database with semantic search capabilities
-- **Multi-Provider Support**: Compatible with Ollama, GitHub Copilot, and Claude
-- **External Integrations**: Sync content from GitHub, Raindrop, RSS feeds, Spotify, Apple Music, YouTube, Notion, and more
-- **MCP Tools**: Model Context Protocol integration for advanced tool use
-- **Personal Knowledge Base**: Unified storage for tasks, issues, bookmarks, articles, podcasts, videos, and notes
-
-## Screenshots
-
-> 🚧 *Screenshots coming soon*
+Jinzo is a desktop app that brings together AI agents, code workspaces, and content from external services into a single interface. It supports multiple AI providers (Ollama, GitHub Copilot, Claude Code), tracks agent runs with full observability, and provides RAG-augmented chat over a personal knowledge base synced from GitHub, Linear, Jira, Notion, and more.
 
 ## Features
 
-### 🤖 AI Chat
-- Multiple chat modes: direct chat, RAG-augmented, and MCP tool-enabled
-- Conversation history with provider/model tracking
-- Custom spaces (UI/prompt configurations)
-- Rich markdown support with code highlighting
+### AI Agents & Chat
+- Run GitHub Copilot and Claude Code agents in managed workspaces
+- Direct chat, RAG-augmented, and MCP tool-enabled modes
+- Agent run tracking with commands, artifacts, turns, and usage metrics
+- Session resumption and continuation
+- Interactive tool approval with pre-approved tool lists
+- Custom spaces with system prompts, themes, and UI configuration
 
-### 📚 Content Aggregation
-- Pull content from multiple services into a unified entity system
-- Automatic chunking and embedding for semantic search
-- Timeline-based feed for tracking updates
-- Support for tasks, issues, bookmarks, articles, podcasts, videos, and more
+### Workspaces & Projects
+- Git-backed workspaces with status tracking (backlog → done)
+- Projects group workspaces by shared git remote origin
+- Worktree support for isolated branch work
+- Workspace diffs captured per run (base ref, file stats)
+- Code reviews with findings (severity, file, line range, suggestions)
 
-### 🔌 Integrations
-- **GitHub**: Issues, PRs, repositories
+### Content Aggregation
+- Unified entity system for tasks, issues, bookmarks, articles, podcasts, videos, notes
+- Automatic chunking and embedding for semantic search (sqlite-vec)
+- Timeline feed for tracking updates
+- Offline-first action queue for retryable external operations
+
+### Journal
+- Full document management with drafts, publishing, and revision history
+- Rich text editing with word count tracking
+
+### Integrations
+- **GitHub** / **GitLab**: Issues, PRs, repositories
+- **Linear** / **Jira** / **Asana**: Issue tracking
 - **Raindrop**: Bookmarks and collections
-- **RSS/HackerNews**: News feeds and articles
-- **Spotify/Apple Music**: Playlists and tracks
+- **Notion**: Pages and databases
+- **RSS** / **HackerNews**: News feeds and articles
+- **Spotify** / **Apple Music**: Playlists and tracks
 - **Podcasts**: Episodes and shows
 - **YouTube**: Videos and playlists
-- **Notion**: Pages and databases
+
+### Developer Tools
+- Built-in terminal (node-pty)
+- File explorer with path traversal prevention
+- Git operations (status, log, diff, branches, remotes, worktrees)
+- MCP server registry (stdio, http, ws transports)
 
 ## Tech Stack
 
-- **Framework**: Electron 40.0.0
+- **Framework**: Electron 40
 - **Frontend**: React 19, Redux Toolkit, React Router
-- **Database**: SQLite with better-sqlite3, Drizzle ORM
-- **Vector Search**: sqlite-vec extension
-- **AI/ML**: Ollama, GitHub Copilot SDK, MCP SDK
+- **Database**: SQLite (better-sqlite3), Drizzle ORM, sqlite-vec
+- **AI Providers**: Ollama, GitHub Copilot SDK, Claude Agent SDK
 - **Styling**: Tailwind CSS v4
-- **Build**: Vite, TypeScript
-
-## Architecture
-
-Jinzo follows a clean architecture pattern with clear separation between processes:
-
-```
-jinzo/
-├── src/
-│   ├── main/          # Electron main process
-│   │   ├── db/        # Database client and schema
-│   │   └── modules/   # Domain modules (layered architecture)
-│   ├── preload/       # IPC bridge (window.api)
-│   └── renderer/      # React app (UI)
-```
-
-### Module Structure
-
-Each domain module follows a consistent layered pattern:
-- **IPC Layer**: Handler registration/unregistration
-- **Controller**: Request handling and validation
-- **Service**: Business logic
-- **Repository**: Database queries
-- **DTO**: Type definitions and response formatters
+- **Build**: Vite, Electron Forge, TypeScript
 
 ## Installation
 
 ### Prerequisites
 
-Before installing Jinzo, ensure you have the following:
-
-- **Node.js** 18 or higher ([Download](https://nodejs.org/))
-- **npm** (comes with Node.js)
-- **Ollama** (for local LLM support) - [Installation Guide](https://ollama.ai/)
-  - After installing Ollama, pull a model: `ollama pull llama3`
-- **Git** (for cloning the repository)
+- **Node.js** 18+ ([Download](https://nodejs.org/))
+- **Ollama** (optional, for local LLM support) — [ollama.ai](https://ollama.ai/)
+- **Git**
 
 ### Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/jinzo.git
+git clone https://github.com/laurelresearch/jinzo.git
 cd jinzo
-
-# Install dependencies
 npm install
-
-# Set up development database
 npm run db:push
-
-# Seed initial data
-npm run db:seed
 ```
 
 ## Usage
 
-### Quick Start
-
-1. **Start the application**:
-   ```bash
-   npm start
-   ```
-
-2. **Configure Ollama** (first-time setup):
-   - Ensure Ollama is running: `ollama serve`
-   - The app will automatically detect available models
-
-3. **Add Connections** (optional):
-   - Navigate to Settings → Connections
-   - Connect your GitHub, Raindrop, Notion, or other services
-   - Sync content with the "Sync" button
-
-4. **Start Chatting**:
-   - Click "New Chat" to create a conversation
-   - Choose a space/configuration
-   - Enable RAG mode to search your synced content
-
-### Key Concepts
-
-- **Entities**: Unified storage for all your content (tasks, bookmarks, articles, etc.)
-- **Spaces**: Pre-configured chat personalities and system prompts
-- **RAG Mode**: Enable context-aware responses using your personal knowledge base
-- **MCP Tools**: Allow the AI to perform actions (search entities, manage tasks, etc.)
-
-## Development
-
-### Start Development Server
-
 ```bash
+# Start the app
 npm start
 ```
 
-### Database Operations
+1. **Configure a provider**: Connect Ollama, GitHub Copilot, or Claude Code in Settings
+2. **Add connections** (optional): Link GitHub, Linear, Notion, etc. and sync content
+3. **Create a workspace**: Import a local repo or create from a project
+4. **Run an agent**: Open the Copilot or Claude view to run agents against your workspace
+5. **Chat**: Use direct chat or enable RAG mode to query your synced content
+
+## Development
 
 ```bash
-# Generate migrations from schema changes
-npm run db:generate
-
-# Push schema to development database
-npm run db:push
-
-# Open Drizzle Studio (dev database)
-npm run db:studio
-
-# Open Drizzle Studio (runtime database)
-npm run db:studio:runtime
-
-# Seed apps and connections
-npm run db:seed
-
-# Reset development database
-npm run db:clean:dev
-
-# Reset runtime database
-npm run db:clean:runtime
-
-# Reset all databases
-npm run db:clean:all
+npm start                  # Start dev server
+npm run lint               # Run ESLint
+npm run lint:fix           # ESLint with auto-fix
+npm run package            # Package for current platform
+npm run make               # Create distributable
 ```
 
-### Linting
+### Database
 
 ```bash
-# Run ESLint
-npm run lint
-
-# Run ESLint with auto-fix
-npm run lint:fix
+npm run db:generate        # Generate migrations from schema changes
+npm run db:push            # Push schema to dev database
+npm run db:studio          # Drizzle Studio (dev: .data/jinzo.db)
+npm run db:studio:runtime  # Drizzle Studio (runtime: ~/Library/Application Support/jinzo/jinzo.db)
+npm run db:clean:dev       # Reset dev database
+npm run db:clean:runtime   # Reset runtime database
+npm run db:clean:all       # Reset both databases
 ```
 
-### Build & Package
-
-```bash
-# Package app for current platform
-npm run package
-
-# Create distributable
-npm run make
-```
-
-## Database
-
-### Development Database
-Located at `.data/jinzo.db` (gitignored)
-
-### Runtime Database
-Located at `~/Library/Application Support/jinzo/jinzo.db`
-
-### Core Tables
-- `providers` - LLM/agent runtimes
-- `entities` - Unified canonical content
-- `entityChunks` / `vecEntityChunks` - Chunked content with embeddings
-- `connections` / `connectionResources` - External service connections
-- `feedItems` - Event log/timeline entries
-- `chatSessions` / `chatMessages` - Chat history
-- `spaces` - User-defined UI/prompt configurations
-- `tools` / `toolCalls` - Tool registry and invocation tracking
-
-## Configuration
-
-- **Drizzle Config**: `drizzle.config.ts` (dev), `drizzle.config.runtime.ts` (runtime)
-- **RAG Settings**: `src/renderer/lib/config/` (chunking, embedding, retrieval)
-- **Vite Config**: `vite.main.config.mjs`, `vite.preload.config.mjs`, `vite.renderer.config.mjs`
-
-## Project Structure
+## Architecture
 
 ```
-jinzo/
-├── assets/                      # Application assets
-├── docs/                        # Documentation
-├── src/
-│   ├── main/
-│   │   ├── db/                  # Database client, schema, queries
-│   │   ├── modules/             # Domain modules
-│   │   │   ├── account/         # User account management
-│   │   │   ├── chat/            # Chat sessions and messages
-│   │   │   ├── connections/     # External service connections
-│   │   │   ├── entities/        # Content entities
-│   │   │   ├── feed/            # Timeline feed
-│   │   │   ├── mcp/             # Model Context Protocol tools
-│   │   │   ├── spaces/           # UI/prompt configurations
-│   │   │   ├── providers/       # LLM providers
-│   │   │   ├── sync/            # Content synchronization
-│   │   │   └── ...
-│   │   └── index.ts             # Main process entry point
-│   ├── preload/
-│   │   └── index.ts             # IPC bridge (exposes window.api)
-│   └── renderer/
-│       ├── components/          # Shared UI components
-│       ├── features/            # Feature modules
-│       ├── hooks/               # Global custom hooks
-│       ├── lib/                 # Utilities and libraries
-│       │   ├── rag/             # RAG pipeline (embed, retrieval, chunking)
-│       │   └── redux/           # Redux store and slices
-│       ├── routes/              # Route components
-│       └── index.tsx            # Renderer entry point
-├── .data/                       # Development database (gitignored)
-├── drizzle.config.ts            # Drizzle Kit config (dev)
-├── drizzle.config.runtime.ts    # Drizzle Kit config (runtime)
-└── package.json
+src/
+├── main/                  # Electron main process
+│   ├── db/                # Database client, schema, migrations
+│   └── modules/           # Domain modules (layered architecture)
+│       ├── account/       # User accounts
+│       ├── chat/          # Chat sessions and messages
+│       ├── connections/   # External service connections
+│       ├── entities/      # Unified content entities
+│       ├── feed/          # Timeline feed
+│       ├── fileExplorer/  # Secure filesystem operations
+│       ├── git/           # Git operations and worktrees
+│       ├── journal/       # Document management
+│       ├── mcp/           # Model Context Protocol tools
+│       ├── projects/      # Project grouping
+│       ├── providers/     # LLM provider adapters
+│       ├── reviews/       # Code review management
+│       ├── runs/          # Agent run tracking
+│       ├── space/         # UI/prompt configurations
+│       ├── sync/          # Content synchronization
+│       ├── terminal/      # Pseudoterminal (node-pty)
+│       ├── tools/         # Tool registry and permissions
+│       ├── workspaces/    # Workspace management
+│       └── ...
+├── preload/               # IPC bridge (window.api)
+└── renderer/              # React app
+    ├── components/        # Shared UI components
+    ├── features/          # Feature modules (chat, workspace, journal, settings, ...)
+    ├── hooks/             # Custom hooks
+    ├── lib/
+    │   ├── rag/           # RAG pipeline (embed, retrieval, chunking)
+    │   └── redux/         # Redux store, slices, RTK Query APIs
+    └── routes/            # Route components
 ```
+
+Each domain module follows a consistent layered pattern: IPC → Controller → Service → Repository → DTO. All layers are plain object literals (no classes, no DI).
 
 ## Troubleshooting
 
-### Common Issues
+**Ollama connection issues**: Ensure Ollama is running with `ollama serve`
 
-**Ollama connection issues**
-```bash
-# Check if Ollama is running
-curl http://localhost:11434/api/tags
+**Database locked errors**: Close all app instances, then `npm run db:clean:dev && npm run db:push`
 
-# Start Ollama service
-ollama serve
-```
+**Preload changes not taking effect**: Restart the dev server completely — changes to `src/preload/index.ts` require a full restart
 
-**Database locked errors**
-```bash
-# Close all instances of the app
-# Reset the development database
-npm run db:clean:dev
-npm run db:push
-```
+**Build errors after pulling updates**: `rm -rf node_modules package-lock.json && npm install`
 
-**Build errors after pulling updates**
-```bash
-# Clean install
-rm -rf node_modules package-lock.json
-npm install
-```
-
-**Preload changes not taking effect**
-- Restart the development server completely (Ctrl+C, then `npm start`)
-- Changes to `src/preload/index.ts` require a full restart
-
-### Getting Help
-
-- Check the [CLAUDE.md](./CLAUDE.md) file for detailed development guidance
-- Open an issue on GitHub with:
-  - Your OS version
-  - Node.js version (`node --version`)
-  - Steps to reproduce the problem
-  - Error messages or logs
+See [CLAUDE.md](./CLAUDE.md) for detailed development guidance.
 
 ## Contributing
 
-Contributions, issues, and feature requests are welcome! This is a personal project, but community input is appreciated.
-
-### How to Contribute
-
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow the existing code style and architecture patterns
-- Run `npm run lint:fix` before committing
-- Update documentation for significant changes
-- See [CLAUDE.md](./CLAUDE.md) for detailed development guidance
+3. Run `npm run lint:fix` before committing
+4. Open a Pull Request
 
 ## License
 
@@ -345,17 +187,4 @@ MIT © Okan Bilal Balcı
 
 - **Author**: Okan Bilal Balcı
 - **Email**: obbalci@gmail.com
-- **Project Link**: [https://github.com/yourusername/jinzo](https://github.com/yourusername/jinzo)
-
-## Acknowledgments
-
-- Built with [Electron](https://www.electronjs.org/)
-- Powered by [Ollama](https://ollama.ai/) for local LLM inference
-- Vector search via [sqlite-vec](https://github.com/asg017/sqlite-vec)
-- UI components styled with [Tailwind CSS](https://tailwindcss.com/)
-
----
-
-⭐ If you find Jinzo useful, consider starring the repository!
-
-For detailed development guidance, see [CLAUDE.md](./CLAUDE.md).
+- **Project**: [github.com/laurelresearch/jinzo](https://github.com/laurelresearch/jinzo)

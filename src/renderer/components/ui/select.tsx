@@ -94,7 +94,8 @@ export default function Select<T extends string = string>({
       } else {
         return bgColor.length === 9 ? bgColor.slice(0, 7) : bgColor;
       }
-    } catch (_e) {
+    } catch (e) {
+      console.error("Error parsing themeConfig:", e);
       return getDefaultDropdownBackground(darkMode, 0.98);
     }
   }, [useFixedBackground, activeSpace?.themeConfig, darkMode]);

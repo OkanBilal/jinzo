@@ -136,7 +136,7 @@ export default function ClaudeSettings() {
           title="Structured Output"
           description={
             <>
-              Define JSON Schemas to constrain the agent's output format. The
+              Define JSON Schemas to constrain the agent&apos;s output format. The
               selected schema is sent to the Claude SDK as outputFormat.{" "}
               <a
                 href="https://platform.claude.com/docs/en/agent-sdk/structured-outputs"
@@ -205,7 +205,7 @@ export default function ClaudeSettings() {
           title="Skills"
           description={
             <>
-              SKILL.md files that extend Claude's capabilities. Located in
+              SKILL.md files that extend Claude&apos;s capabilities. Located in
               ~/.claude/skills/ (user) and .claude/skills/ (project).{" "}
               <a
                 href="https://platform.claude.com/docs/en/agent-sdk/skills"

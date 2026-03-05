@@ -7,6 +7,7 @@ const SvgComponent = (props: SVGProps<SVGSVGElement>) => (
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className="shrink-0"
+      {...props}
     >
       <path
         d="M12 4L4 12M4 4L12 12"

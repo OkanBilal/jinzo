@@ -10,9 +10,13 @@ npm run lint           # ESLint on src/
 npm run lint:fix       # Auto-fix
 npm run db:generate    # Generate Drizzle migrations from schema changes
 npm run db:push        # Push schema to dev DB (.data/jinzo.db)
-npm run db:seed        # Seed apps and connections
+npm run db:studio      # Open Drizzle Studio (dev database)
+npm run db:studio:runtime  # Open Drizzle Studio (runtime database)
 npm run db:clean:dev   # Reset dev database
+npm run db:clean:runtime   # Reset runtime database
+npm run db:clean:all   # Reset both databases
 npm run package        # Package for current platform
+npm run make           # Create distributable
 ```
 
 ## Architecture
@@ -25,7 +29,7 @@ Three Electron processes with strict boundaries:
 
 ## Module Pattern (`src/main/modules/{name}/`)
 
-Every backend domain uses this exact structure (see [src/main/modules/account/](src/main/modules/account/) as reference):
+Every backend domain uses this exact structure (see `src/main/modules/account/` as reference):
 
 | File | Role |
 |------|------|
@@ -38,6 +42,8 @@ Every backend domain uses this exact structure (see [src/main/modules/account/](
 | `index.ts` | Barrel exports |
 
 **Critical**: All layers are **plain object literals**, never classes. No DI — repos call `getDb()` inline.
+
+All modules: `account`, `appSettings`, `apps`, `chat`, `connectionCredentials`, `connections`, `entities`, `feed`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `journal`, `mcp`, `ollama`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `space`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
 
 ## IPC Convention
 
@@ -62,7 +68,7 @@ All IPC responses use `ServiceResponse<T>` envelope: `{ success: true, data }` o
 - **Redux**: RTK Query with custom `ipcBaseQuery` (no HTTP), `baseApi.injectEndpoints()` per domain
 - **Hooks**: `use-kebab-case.ts` filenames, `useCamelCase` export names
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`
-- **Routing**: HashRouter — routes at `/`, `/chat/:id`, `/copilot/:workspaceId`, `/claude/:workspaceId`, `/journal`, `/settings`
+- **Routing**: HashRouter — routes at `/`, `/copilot`, `/copilot/:workspaceId`, `/claude`, `/claude/:workspaceId`, `/settings`
 - **Styling**: Tailwind CSS v4 (PostCSS-based)
 
 ## Code Style
