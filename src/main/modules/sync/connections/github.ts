@@ -112,7 +112,7 @@ export async function fetchIssues(
       per_page: normalizeLimit(limit, 1, MAX_ITEMS_PER_PAGE),
     });
 
-    return items.data.map((i): EntityInput => {
+    return items.data.filter((i) => !i.pull_request).map((i): EntityInput => {
       const labels = extractLabels(i.labels);
       const repoId = formatRepoIdentifier(owner, repo);
 
