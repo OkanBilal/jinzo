@@ -12,14 +12,12 @@ export function useActiveSpace() {
   }, [spaces, activeSpaceId]);
 
   const spaceSlug = activeSpace?.slug;
-  const isJournalSpace = spaceSlug === "journal";
   const isClaudeSpace = spaceSlug === "claude";
 
   return {
     activeSpaceId,
     activeSpace,
     spaceSlug,
-    isJournalSpace,
     isClaudeSpace,
     spaces,
   };

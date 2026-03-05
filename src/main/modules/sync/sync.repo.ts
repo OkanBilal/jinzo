@@ -1,5 +1,5 @@
 import { eq, and, isNull, sql } from "drizzle-orm";
-import { v4 as uuidv4 } from "uuid";
+import { nanoid } from "nanoid";
 import { getDb, getSqlite } from "../../db/client";
 import { entities, entityChunks, issues } from "../../db/schema";
 import type { ChunkData, ItemChunkInfo, EntityInput, SyncJobStats } from "./sync.dto";
@@ -59,7 +59,7 @@ export const syncRepo = {
           })
           .where(eq(entities.id, entityId));
       } else {
-        entityId = uuidv4();
+        entityId = nanoid();
         await db.insert(entities).values({
           id: entityId,
           accountId,
@@ -185,7 +185,7 @@ export const syncRepo = {
           .where(eq(entities.id, entityId))
           .run();
       } else {
-        entityId = uuidv4();
+        entityId = nanoid();
         db.insert(entities).values({
           id: entityId,
           accountId,

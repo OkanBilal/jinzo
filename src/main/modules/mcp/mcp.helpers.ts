@@ -7,11 +7,7 @@ export function isSyncTool(name: string): boolean {
 }
 
 export function isSpaceTool(name: string): boolean {
-  return name === "switch_to_journal_space" || name === "switch_to_chat_space";
-}
-
-export function isJournalTool(name: string): boolean {
-  return name === "append_to_journal";
+  return name === "switch_to_chat_space";
 }
 
 export function isEntityTool(name: string): boolean {

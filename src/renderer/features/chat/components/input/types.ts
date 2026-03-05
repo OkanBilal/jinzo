@@ -1,4 +1,3 @@
-import { JournalEditingState } from "@/lib/redux/api";
 import { RefObject } from "react";
 
 export interface InputFormProps {
@@ -6,7 +5,6 @@ export interface InputFormProps {
   onQueryChange: (value: string) => void;
   onSubmit: () => void;
   placeholder?: string;
-  context?: JournalEditingState | null;
 }
 
 export interface AppState {

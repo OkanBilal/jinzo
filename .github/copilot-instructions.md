@@ -43,7 +43,7 @@ Every backend domain uses this exact structure (see `src/main/modules/account/` 
 
 **Critical**: All layers are **plain object literals**, never classes. No DI — repos call `getDb()` inline.
 
-All modules: `account`, `appSettings`, `apps`, `chat`, `connectionCredentials`, `connections`, `entities`, `feed`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `journal`, `mcp`, `ollama`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `space`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
+All modules: `account`, `appSettings`, `apps`, `chat`, `connectionCredentials`, `connections`, `entities`, `feed`, `feedback`, `fileExplorer`, `git`, `imageProxy`,`mcp`, `ollama`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `space`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
 
 ## IPC Convention
 

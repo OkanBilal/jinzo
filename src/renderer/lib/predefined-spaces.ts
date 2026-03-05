@@ -42,18 +42,6 @@ const theme = (light: string, dark: string): PredefinedSpaceTheme => ({
 
 export const predefinedSpaces: PredefinedSpace[] = [
   {
-    id: "journal",
-    name: "Journal",
-    icon: "icon:textitalic",
-    theme: theme("#E6C7E699", "#2D1F33"),
-    systemPrompt:
-      "You are a creative writing assistant. Help the user with writing tasks including drafting, editing, brainstorming ideas, and improving prose. Focus on clarity, style, and engaging content.",
-    uiConfig: {
-      sidebar: { title: "Post", itemType: "post", defaultRoute: "/journal" },
-      rightPanel: { width: "30rem", component: "journal" },
-    },
-  },
-  {
     id: "claude",
     name: "Claude",
     icon: "icon:claude",

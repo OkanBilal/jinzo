@@ -68,33 +68,6 @@ export interface SpaceSwitchResult {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Journal Types
-// ─────────────────────────────────────────────────────────────
-export interface JournalMetadata {
-  status: "draft" | "published" | "archived";
-  wordCount: number;
-  space?: string;
-  tags?: string[];
-}
-
-export interface JournalAppendResult {
-  success: boolean;
-  message: string;
-  entityId?: string;
-  newWordCount?: number;
-  error?: string;
-}
-
-export interface JournalTitleUpdateResult {
-  success: boolean;
-  message: string;
-  entityId?: string;
-  oldTitle?: string;
-  newTitle?: string;
-  error?: string;
-}
-
-// ─────────────────────────────────────────────────────────────
 // MCP Response Types
 // ─────────────────────────────────────────────────────────────
 export interface FormattedTool {

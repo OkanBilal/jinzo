@@ -33,8 +33,6 @@ import {
   registerAppSettingsIpc,
   unregisterAppSettingsIpc,
 } from "./modules/appSettings";
-import { registerJournalIpc, unregisterJournalIpc } from "./modules/journal";
-
 import {
   registerProvidersIpc,
   unregisterProvidersIpc,
@@ -307,7 +305,6 @@ async function initializeApp() {
     registerSeedIpc();
     registerSpaceIpc();
     registerAppSettingsIpc();
-    registerJournalIpc();
     registerProvidersIpc();
     registerToolsIpc();
     registerWorkspacesIpc();
@@ -522,7 +519,6 @@ async function cleanupApp() {
     unregisterConnectionCredentialsIpc();
     unregisterConnectionsHandlers();
     unregisterEntitiesHandlers();
-    unregisterJournalIpc();
     unregisterChatHandlers();
     unregisterProvidersIpc();
     unregisterToolsIpc();

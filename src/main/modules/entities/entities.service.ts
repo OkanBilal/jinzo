@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from "uuid";
+import { nanoid } from "nanoid";
 import { entitiesRepo } from "./entities.repo";
 import type {
   CreateEntityPayload,
@@ -43,7 +43,7 @@ export const entitiesService = {
 
   async create(payload: CreateEntityPayload): Promise<ServiceResponse<unknown>> {
     try {
-      const id = uuidv4();
+      const id = nanoid();
       const created = await entitiesRepo.insert(id, payload);
       return { success: true, data: created };
     } catch (error) {
@@ -107,7 +107,7 @@ export const entitiesService = {
 
   async createTask(payload: CreateTaskPayload): Promise<ServiceResponse<unknown>> {
     try {
-      const entityId = uuidv4();
+      const entityId = nanoid();
       const created = await entitiesRepo.insertTask(entityId, payload);
       return { success: true, data: created };
     } catch (error) {
@@ -161,7 +161,7 @@ export const entitiesService = {
 
   async createIssue(payload: CreateIssuePayload): Promise<ServiceResponse<unknown>> {
     try {
-      const entityId = uuidv4();
+      const entityId = nanoid();
       const created = await entitiesRepo.insertIssue(entityId, payload);
       return { success: true, data: created };
     } catch (error) {

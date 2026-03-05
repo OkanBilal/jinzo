@@ -17,7 +17,6 @@ import DeleteSpaceModal from "./delete-space-modal";
 import { Edit, Plus, Connect } from "@/components/ui/icons";
 import CloneRepoModal from "./clone-repo-modal";
 import { useDeleteChatSession } from "@/features/chat/hooks/use-delete-chat-session";
-import { useDeleteJournal } from "@/features/journal/hooks";
 import { useDeleteWorkspace } from "@/features/workspace/hooks";
 import { useArchiveWorkspace } from "@/features/workspace/hooks";
 import { useSpaceContextMenu } from "@/hooks/use-space-context-menu";
@@ -115,10 +114,8 @@ export default function Sidebar() {
   const {
     account,
     sessions,
-    entities,
     workspaces,
     isLoadingSessions,
-    isLoadingEntities,
     isLoadingWorkspaces,
     handleRefreshApps,
   } = useSidebarData({ searchQuery, sidebarConfig });
@@ -135,7 +132,6 @@ export default function Sidebar() {
   } = useSidebarActions();
 
   const deleteSession = useDeleteChatSession();
-  const deleteJournal = useDeleteJournal();
   const deleteWorkspace = useDeleteWorkspace();
   const archiveWorkspace = useArchiveWorkspace();
 
@@ -206,14 +202,11 @@ export default function Sidebar() {
             <SidebarContent
               itemType={sidebarConfig.itemType}
               sessions={sessions}
-              entities={entities}
               workspaces={workspaces}
               isLoadingSessions={isLoadingSessions}
-              isLoadingEntities={isLoadingEntities}
               isLoadingWorkspaces={isLoadingWorkspaces}
               currentPath={currentPath}
               onDeleteSession={deleteSession.handleDeleteClick}
-              onDeletePost={deleteJournal.handleDeleteClick}
               onDeleteWorkspace={deleteWorkspace.handleDeleteClick}
               onArchiveWorkspace={archiveWorkspace.handleArchiveClick}
             />
@@ -236,15 +229,6 @@ export default function Sidebar() {
         isDeleting={deleteSession.isDeleting}
         onConfirm={deleteSession.handleConfirmDelete}
         onCancel={deleteSession.handleCancelDelete}
-      />
-
-      <DeleteConfirmationModal
-        isOpen={!!deleteJournal.journalToDelete}
-        isDeleting={deleteJournal.isDeleting}
-        onConfirm={deleteJournal.handleConfirmDelete}
-        onCancel={deleteJournal.handleCancelDelete}
-        title="Delete Post?"
-        description="This action cannot be undone. The post will be permanently deleted."
       />
 
       <DeleteConfirmationModal

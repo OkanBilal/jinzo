@@ -55,7 +55,6 @@ export const baseApi = createApi({
     'Spaces',
     'AppSettings',
     'McpTools',
-    'Journal',
     'Providers',
     'ProviderModels',
     'ProviderCommands',

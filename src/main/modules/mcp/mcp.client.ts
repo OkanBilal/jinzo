@@ -2,11 +2,9 @@ import {
   ENTITY_TOOLS,
   SYNC_TOOLS,
   SPACE_TOOLS,
-  JOURNAL_TOOLS,
   executeEntityTool,
   executeSyncTool,
   executeSpaceTool,
-  executeJournalTool,
 } from "./tools";
 import type { OllamaToolDefinition } from "./mcp.dto";
 
@@ -19,7 +17,6 @@ export class FeedMCPClient {
       ...ENTITY_TOOLS,
       ...SYNC_TOOLS,
       ...SPACE_TOOLS,
-      ...JOURNAL_TOOLS,
     ];
   }
 
@@ -29,17 +26,12 @@ export class FeedMCPClient {
       if (toolName === "trigger_entity_sync" || toolName === "trigger_feed_sync") {
         return await executeSyncTool(toolName);
       }
-      
+
       // Space tools
-      if (toolName === "switch_to_journal_space" || toolName === "switch_to_chat_space") {
+      if (toolName === "switch_to_chat_space") {
         return await executeSpaceTool(toolName);
       }
-      
-      // Journal tools
-      if (toolName === "append_to_journal" || toolName === "update_journal_title") {
-        return await executeJournalTool(toolName, params as { text?: string; title?: string });
-      }
-      
+
       // Entity tools (entity_list, entity_search, feed_list, feed_search)
       return await executeEntityTool(toolName, params);
     } catch (error) {
@@ -73,16 +65,12 @@ export {
   // Entity tools
   executeEntityTool,
   ENTITY_TOOLS,
-  
+
   // Sync tools
   executeSyncTool,
   SYNC_TOOLS,
-  
+
   // Space tools
   executeSpaceTool,
   SPACE_TOOLS,
-  
-  // Journal tools
-  executeJournalTool,
-  JOURNAL_TOOLS,
 };

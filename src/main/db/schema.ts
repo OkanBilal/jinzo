@@ -1168,30 +1168,6 @@ export const feedItems = sqliteTable(
 );
 
 /* -----------------------------
-   DOCUMENT REVISIONS (for journal history)
------------------------------- */
-
-export const documentRevisions = sqliteTable(
-  "document_revisions",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    entityId: text("entity_id")
-      .notNull()
-      .references(() => entities.id, { onDelete: "cascade" }),
-    title: text("title"),
-    body: text("body"),
-    wordCount: integer("word_count"),
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-  },
-  (t) => [
-    index("idx_doc_revisions_entity").on(t.entityId),
-    index("idx_doc_revisions_created").on(t.createdAt),
-  ],
-);
-
-/* -----------------------------
    CHAT 
 ------------------------------ */
 

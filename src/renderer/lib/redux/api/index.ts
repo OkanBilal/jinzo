@@ -170,30 +170,6 @@ export {
 export type { McpTool, McpToolsResponse, CallToolPayload, CallToolResponse } from "./mcpApi";
 
 export {
-  journalApi,
-  useGetJournalEntriesQuery,
-  useLazyGetJournalEntriesQuery,
-  useGetJournalByIdQuery,
-  useLazyGetJournalByIdQuery,
-  useCreateJournalDraftMutation,
-  useUpdateJournalDraftMutation,
-  useSaveJournalMutation,
-  usePublishJournalMutation,
-  useDeleteJournalMutation,
-  useGetJournalRevisionsQuery,
-  useLazyGetJournalRevisionsQuery,
-  useMarkJournalForIndexingMutation,
-} from "./journalApi";
-export type {
-  JournalEntry,
-  JournalMetadata,
-  JournalRevision,
-  CreateJournalDraftPayload,
-  UpdateJournalDraftPayload,
-  JournalQueryParams,
-} from "./journalApi";
-
-export {
   setSelectedModel,
   setThinkingLevel,
   setThinkingEnabled,
@@ -213,16 +189,6 @@ export {
   setSidebarCollapsed,
 } from "../slices/appSettingsSlice";
 export type { AppSettingsState } from "../slices/appSettingsSlice";
-
-export {
-  setEditingJournal,
-  updateEditingTitle,
-  updateEditingBody,
-  handleTitleUpdate,
-  handleContentUpdate,
-  clearEditingJournal,
-} from "../slices/journalEditingSlice";
-export type { JournalEditingState } from "../slices/journalEditingSlice";
 
 export {
   providersApi,

@@ -3,7 +3,6 @@ import {
   useGetChatSessionsQuery,
   useGetAppsQuery,
   useGetAccountQuery,
-  useGetJournalEntriesQuery,
   useGetWorkspacesQuery,
 } from "@/lib/redux/api";
 import type { SidebarConfig } from "@/hooks/use-sidebar-config";
@@ -38,38 +37,11 @@ export function useSidebarData({ searchQuery, sidebarConfig }: UseSidebarDataOpt
   const { data: account } = useGetAccountQuery();
   const { data: apps = [], refetch: refetchApps } = useGetAppsQuery();
 
-  // Journal entries for post mode
-  const { data: journalEntries = [], isLoading: isLoadingJournal } =
-    useGetJournalEntriesQuery(
-      { limit: 50 },
-      { skip: sidebarConfig.itemType !== "post" },
-    );
-
   // Workspaces for workspace mode
   const { data: workspaces = [], isLoading: isLoadingWorkspaces } =
     useGetWorkspacesQuery(undefined, {
       skip: sidebarConfig.itemType !== "workspace",
     });
-
-  // Convert journal entries to a format compatible with existing entity type
-  const entities = useMemo(() => {
-    return journalEntries.map((entry) => ({
-      id: entry.id,
-      accountId: entry.accountId,
-      kind: "journal_entry",
-      title: entry.title || "Untitled",
-      url: `/journal/${entry.id}`,
-      body: entry.body,
-      summary: entry.summary,
-      occurredAt: entry.occurredAt || entry.createdAt,
-      connectionId: null,
-      resourceId: null,
-      externalId: null,
-      metadata: entry.metadata,
-      createdAt: entry.createdAt,
-      updatedAt: entry.updatedAt,
-    }));
-  }, [journalEntries]);
 
   const connectedApps = useMemo(() => {
     return apps.filter((app) => app.isConnected).map((app) => app.id);
@@ -79,11 +51,6 @@ export function useSidebarData({ searchQuery, sidebarConfig }: UseSidebarDataOpt
   const filteredSessions = useMemo(
     () => filterItems(sessions, searchQuery),
     [sessions, searchQuery],
-  );
-
-  const filteredEntities = useMemo(
-    () => filterItems(entities, searchQuery),
-    [entities, searchQuery],
   );
 
   // Filtered workspaces
@@ -107,12 +74,10 @@ export function useSidebarData({ searchQuery, sidebarConfig }: UseSidebarDataOpt
   return {
     account,
     sessions: filteredSessions,
-    entities: filteredEntities,
     workspaces: filteredWorkspaces,
     apps,
     connectedApps,
     isLoadingSessions,
-    isLoadingEntities: isLoadingJournal,
     isLoadingWorkspaces,
     handleRefreshApps,
   };

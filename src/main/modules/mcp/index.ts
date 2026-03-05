@@ -25,8 +25,6 @@ export type {
   MCPToolResponse,
   SyncResult,
   SpaceSwitchResult,
-  JournalAppendResult,
-  JournalMetadata,
   EntityListParams,
   EntitySearchParams,
 } from "./mcp.dto";
@@ -35,7 +33,6 @@ export type {
 export {
   isSyncTool,
   isSpaceTool,
-  isJournalTool,
   isEntityTool,
 } from "./mcp.helpers";
 
@@ -51,13 +48,8 @@ export {
   triggerEntitySync,
   
   // Space tools
-  switchToJournalSpace,
   switchToChatSpace,
   executeSpaceTool,
   SPACE_TOOLS,
   
-  // Journal tools
-  appendToJournal,
-  executeJournalTool,
-  JOURNAL_TOOLS,
 } from "./tools";

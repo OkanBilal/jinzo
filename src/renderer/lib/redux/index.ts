@@ -6,7 +6,6 @@ import { baseApi } from "./api/baseApi";
 import chatReducer from "./slices/chatSlice";
 import spaceReducer from "./slices/spaceSlice";
 import appSettingsReducer from "./slices/appSettingsSlice";
-import journalEditingReducer from "./slices/journalEditingSlice";
 import workspaceReducer from "./slices/workspaceSlice";
 
 const chatPersistConfig = {
@@ -54,7 +53,6 @@ export const store = configureStore({
     chat: persistedChatReducer,
     space: persistedSpaceReducer,
     appSettings: persistedAppSettingsReducer,
-    journalEditing: journalEditingReducer,
     workspace: persistedWorkspaceReducer,
   },
   middleware: (getDefaultMiddleware) =>

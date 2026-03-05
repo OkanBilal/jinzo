@@ -12,14 +12,8 @@ export {
 } from "./sync-tools";
 
 export {
-  switchToJournalSpace,
   switchToChatSpace,
   executeSpaceTool,
   SPACE_TOOLS,
 } from "./space-tools";
 
-export {
-  appendToJournal,
-  executeJournalTool,
-  JOURNAL_TOOLS,
-} from "./journal-tools";

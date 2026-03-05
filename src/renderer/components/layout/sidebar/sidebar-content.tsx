@@ -1,33 +1,19 @@
 import type { CSSProperties, MouseEvent } from "react";
 import ChatSessionList from "./chat-session-list";
-import PostsList from "./post-list";
 import WorkspacesList from "./workspace-list";
 import type { ChatSession } from "@/lib/redux/api";
 import { WorkspaceResponse } from "src/main/modules/workspaces";
 
-interface JournalEntity {
-  id: string;
-  url: string;
-  title: string | null;
-  summary: string | null;
-  metadata: { status?: "draft" | "published" } | null;
-  updatedAt: string;
-  createdAt: string;
-}
-
 const EMPTY_WORKSPACES: WorkspaceResponse[] = [];
 
 interface SidebarContentProps {
-  itemType: "chat" | "post" | "workspace" | "claude";
+  itemType: "chat" | "workspace" | "claude";
   sessions: ChatSession[];
-  entities: JournalEntity[];
   workspaces: WorkspaceResponse[];
   isLoadingSessions: boolean;
-  isLoadingEntities: boolean;
   isLoadingWorkspaces: boolean;
   currentPath: string;
   onDeleteSession: (session: ChatSession, e: MouseEvent) => void;
-  onDeletePost?: (postId: string, e: MouseEvent) => void;
   onDeleteWorkspace?: (workspaceId: string, e: MouseEvent) => void;
   onArchiveWorkspace?: (workspaceId: string) => void;
 }
@@ -35,14 +21,11 @@ interface SidebarContentProps {
 export function SidebarContent({
   itemType,
   sessions,
-  entities,
   workspaces = EMPTY_WORKSPACES,
   isLoadingSessions,
-  isLoadingEntities,
   isLoadingWorkspaces = false,
   currentPath,
   onDeleteSession,
-  onDeletePost,
   onDeleteWorkspace,
   onArchiveWorkspace,
 }: SidebarContentProps) {
@@ -65,22 +48,7 @@ export function SidebarContent({
             onDeleteSession={onDeleteSession}
           />
         )}
-        {itemType === "post" && (
-          <PostsList
-            posts={entities.map((entity) => ({
-              id: entity.id,
-              url: entity.url,
-              title: entity.title || "Untitled",
-              description: entity.summary || "",
-              status: entity.metadata?.status,
-              updatedAt: entity.updatedAt,
-              createdAt: entity.createdAt,
-            }))}
-            isLoading={isLoadingEntities}
-            onDeletePost={onDeletePost}
-          />
-        )}
-        {(itemType === "workspace") && (
+        {itemType === "workspace" && (
           <WorkspacesList
             workspaces={workspaces}
             isLoading={isLoadingWorkspaces}

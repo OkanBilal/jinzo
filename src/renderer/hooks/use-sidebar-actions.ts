@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   useSetActiveSpaceMutation,
-  useCreateJournalDraftMutation,
   useCreateWorkspaceMutation,
   useSelectDirectoryMutation,
   useGetAccountQuery,
@@ -25,7 +24,6 @@ export function useSidebarActions() {
   const { data: appSettings } = useGetAppSettingsQuery();
 
   const [setActiveSpace] = useSetActiveSpaceMutation();
-  const [createJournalDraft] = useCreateJournalDraftMutation();
   const [createWorkspace] = useCreateWorkspaceMutation();
   const [selectDirectory] = useSelectDirectoryMutation();
   const [findOrCreateProject] = useFindOrCreateProjectMutation();
@@ -374,19 +372,7 @@ export function useSidebarActions() {
   };
 
   const handleNewClick = async () => {
-    if (sidebarConfig.itemType === "post") {
-      try {
-        const result = await createJournalDraft({
-          accountId: account?.id || "default",
-        }).unwrap();
-        if (result?.id) {
-          navigate(`/journal/${result.id}`);
-        }
-      } catch (error) {
-        console.error("Failed to create journal draft:", error);
-        toast.error("Failed to create new post");
-      }
-    } else if (sidebarConfig.itemType === "workspace") {
+    if (sidebarConfig.itemType === "workspace") {
       // This is now handled by dropdown items, but keep as fallback
       handleAddProject();
     } else {

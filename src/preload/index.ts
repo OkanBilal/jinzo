@@ -258,65 +258,6 @@ const api = {
       return () => ipcRenderer.removeListener("space:changed", listener);
     },
   },
-  // Journal operations
-  journal: {
-    getAll: (options?: { limit?: number }) =>
-      ipcRenderer.invoke("journal:getAll", options),
-    getById: (id: string) => ipcRenderer.invoke("journal:getById", id),
-    createDraft: (payload: {
-      accountId: string;
-      title?: string;
-      body?: string;
-      occurredAt?: Date;
-    }) => ipcRenderer.invoke("journal:createDraft", payload),
-    updateDraft: (
-      id: string,
-      payload: {
-        title?: string;
-        body?: string;
-        summary?: string;
-        metadata?: { status?: "draft" | "published"; wordCount?: number };
-      },
-    ) => ipcRenderer.invoke("journal:updateDraft", id, payload),
-    save: (id: string) => ipcRenderer.invoke("journal:save", id),
-    publish: (id: string) => ipcRenderer.invoke("journal:publish", id),
-    delete: (id: string) => ipcRenderer.invoke("journal:delete", id),
-    getRevisions: (entityId: string, options?: { limit?: number }) =>
-      ipcRenderer.invoke("journal:getRevisions", entityId, options),
-    markForIndexing: (entityId: string) =>
-      ipcRenderer.invoke("journal:markForIndexing", entityId),
-    setEditing: (entityId: string | null) =>
-      ipcRenderer.invoke("journal:setEditing", entityId),
-    getEditing: () => ipcRenderer.invoke("journal:getEditing"),
-    appendText: (entityId: string, text: string) =>
-      ipcRenderer.invoke("journal:appendText", entityId, text),
-    onContentUpdated: (
-      callback: (data: {
-        entityId: string;
-        body: string;
-        wordCount: number;
-      }) => void,
-    ) => {
-      const listener = (
-        _: any,
-        data: { entityId: string; body: string; wordCount: number },
-      ) => callback(data);
-      ipcRenderer.on("journal:contentUpdated", listener);
-      return () =>
-        ipcRenderer.removeListener("journal:contentUpdated", listener);
-    },
-    onTitleUpdated: (
-      callback: (data: { entityId: string; title: string }) => void,
-    ) => {
-      const listener = (
-        _: any,
-        data: { entityId: string; title: string },
-      ) => callback(data);
-      ipcRenderer.on("journal:titleUpdated", listener);
-      return () =>
-        ipcRenderer.removeListener("journal:titleUpdated", listener);
-    },
-  },
   // Provider operations
   providers: {
     getAll: () => ipcRenderer.invoke("providers:getAll"),

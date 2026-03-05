@@ -40,9 +40,6 @@ Jinzo is a desktop app that brings together AI agents, code workspaces, and cont
 - Timeline feed for tracking updates
 - Offline-first action queue for retryable external operations
 
-### Journal
-- Full document management with drafts, publishing, and revision history
-- Rich text editing with word count tracking
 
 ### Integrations
 - **GitHub** / **GitLab**: Issues, PRs, repositories
@@ -135,7 +132,6 @@ src/
 │       ├── feed/          # Timeline feed
 │       ├── fileExplorer/  # Secure filesystem operations
 │       ├── git/           # Git operations and worktrees
-│       ├── journal/       # Document management
 │       ├── mcp/           # Model Context Protocol tools
 │       ├── projects/      # Project grouping
 │       ├── providers/     # LLM provider adapters
@@ -150,7 +146,7 @@ src/
 ├── preload/               # IPC bridge (window.api)
 └── renderer/              # React app
     ├── components/        # Shared UI components
-    ├── features/          # Feature modules (chat, workspace, journal, settings, ...)
+    ├── features/          # Feature modules (chat, workspace, settings, ...)
     ├── hooks/             # Custom hooks
     ├── lib/
     │   ├── rag/           # RAG pipeline (embed, retrieval, chunking)

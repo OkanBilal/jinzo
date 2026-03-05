@@ -44,13 +44,13 @@ Jinzo is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM, sq
 
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
-- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.account`, `api.apps`, `api.chat`, `api.sync`, `api.feed`, `api.mcp`, `api.ollama`, `api.connectionCredentials`, `api.connections`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.journal`, `api.providers`, `api.tools`, `api.toolCalls`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.feedback`, `api.stats`, `api.app`, `api.updates`
+- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.account`, `api.apps`, `api.chat`, `api.sync`, `api.feed`, `api.mcp`, `api.ollama`, `api.connectionCredentials`, `api.connections`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.providers`, `api.tools`, `api.toolCalls`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.feedback`, `api.stats`, `api.app`, `api.updates`
 - After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
 - React app with Redux Toolkit, React Router (HashRouter), `@/` alias → `src/renderer/`
 - Routes: `/` (Home with defaultRoute redirect), `/settings` (Settings), `/copilot` and `/copilot/:workspaceId` (Copilot — GitHub Copilot agent), `/claude` and `/claude/:workspaceId` (Claude Code agent)
-- Chat (`/chat/:id`) and Journal (`/journal`) routes exist but are currently commented out
+- Chat (`/chat/:id`) route exists but is currently commented out
 - Copilot and Claude routes share the same workspace UI but use different provider IDs (`copilot_cli` vs `claude_code`)
 
 ### Module Architecture (`src/main/modules/`)
@@ -69,7 +69,7 @@ Each domain module follows a layered pattern (see `src/main/modules/account/` as
 
 **Critical**: All layers are **plain object literals**, never classes. No DI — repos call `getDb()` inline.
 
-All modules: `account`, `appSettings`, `apps`, `chat`, `connectionCredentials`, `connections`, `entities`, `feed`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `journal`, `mcp`, `space`, `ollama`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
+All modules: `account`, `appSettings`, `apps`, `chat`, `connectionCredentials`, `connections`, `entities`, `feed`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `mcp`, `space`, `ollama`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
 
 ### IPC Convention
 
@@ -86,7 +86,7 @@ All IPC responses use `ServiceResponse<T>` envelope: `{ success: true, data }` o
 1. **IPC Communication**: Renderer calls `window.api.namespace.method()` → Preload invokes IPC → Main handles
 2. **Module Flow**: IPC handler → Controller → Service → Repository → Database
 3. **Redux Integration**: `src/renderer/lib/redux/api/baseApi.ts` wraps IPC in RTK Query with custom `ipcBaseQuery` (no HTTP)
-4. **State Management**: RTK Query for server state, Redux slices for UI state (`chatSlice`, `spaceSlice`, `appSettingsSlice`, `workspaceSlice`, `journalEditingSlice`)
+4. **State Management**: RTK Query for server state, Redux slices for UI state (`chatSlice`, `spaceSlice`, `appSettingsSlice`, `workspaceSlice`)
 
 ### Database Schema (`src/main/db/schema.ts`)
 
@@ -119,7 +119,6 @@ Core tables:
 - `reviews` - Workspace-level review notes (status: open, in_review, approved, rejected)
 - `reviewFindings` - Individual code review findings linked to reviews
 - `projectResources` - Pivot table linking projects to connectionResources
-- `documentRevisions` - Journal revision history (title, body, wordCount per entity)
 - `outbox` - Offline-first action queue for retryable external operations
 
 Domain-specific views on entities:
@@ -141,7 +140,7 @@ Domain-specific views on entities:
 
 **MCP Tools** (`src/main/modules/mcp/`)
 - Model Context Protocol integration for tool use
-- Tools in `tools/`: entity-tools, sync-tools, space-tools, journal-tools
+- Tools in `tools/`: entity-tools, sync-tools, space-tools
 - Server/client pattern for Ollama tool calling
 
 **Chat System** (`src/main/modules/chat/`)
@@ -199,11 +198,6 @@ Domain-specific views on entities:
 - Workspace-level review/notes system with status tracking (open → in_review → approved/rejected)
 - Individual code review findings linked to reviews with severity, file, line range, and suggestions
 
-**Journal System** (`src/main/modules/journal/`)
-- Full document management with drafts, publishing, and revision history
-- Documents stored as entities (kind: doc/journal), revisions in `documentRevisions` table
-- Live update support via IPC events
-
 **Space System** (`src/main/modules/space/`)
 - User-defined profiles with systemPrompt, model, icon, themeConfig, uiConfig
 - Space-level overrides for connections, resources, apps, and tool permissions
@@ -241,11 +235,11 @@ Domain-specific views on entities:
 ### Frontend Conventions
 
 - **Redux**: RTK Query with custom `ipcBaseQuery`, `baseApi.injectEndpoints()` per domain
-- **Redux API files**: `accountApi`, `appsApi`, `appSettingsApi`, `chatApi`, `connectionsApi`, `entitiesApi`, `feedApi`, `journalApi`, `mcpApi`, `spaceApi`, `ollamaApi`, `projectsApi`, `providersApi`, `reviewsApi`, `reviewFindingsApi`, `runsApi`, `shellApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceActivityApi`, `workspaceDiffsApi`, `workspaceResourcesApi`, `workspacesApi`
-- **Redux slices**: `chatSlice`, `spaceSlice`, `appSettingsSlice`, `workspaceSlice`, `journalEditingSlice`
+- **Redux API files**: `accountApi`, `appsApi`, `appSettingsApi`, `chatApi`, `connectionsApi`, `entitiesApi`, `feedApi`, `mcpApi`, `spaceApi`, `ollamaApi`, `projectsApi`, `providersApi`, `reviewsApi`, `reviewFindingsApi`, `runsApi`, `shellApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceActivityApi`, `workspaceDiffsApi`, `workspaceResourcesApi`, `workspacesApi`
+- **Redux slices**: `chatSlice`, `spaceSlice`, `appSettingsSlice`, `workspaceSlice`
 - **Hooks**: `use-kebab-case.ts` filenames, `useCamelCase` export names
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`
-- **Feature dirs**: `chat`, `journal`, `onboarding`, `settings`, `stats`, `workspace`
+- **Feature dirs**: `chat`, `onboarding`, `settings`, `stats`, `workspace`
 - **Routing**: HashRouter — routes defined in `src/renderer/routes/`
 - **Styling**: Tailwind CSS v4 (PostCSS-based)
 
