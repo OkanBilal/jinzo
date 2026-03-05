@@ -18,6 +18,7 @@ import {
   type SelectedTeam,
 } from "../../../../../lib/redux/api";
 import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
+import { toast } from "@/components/ui/toast";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
 import { CredentialStep } from "../shared/credential-step";
@@ -491,12 +492,14 @@ export default function LinearModal({
   }, [onClose]);
 
   const handleRevoke = async () => {
-    setShowRevokeConfirm(false);
     try {
       await revokeConnection("linear").unwrap();
+      setShowRevokeConfirm(false);
       handleClose();
     } catch (err) {
       console.error("[handleRevoke] Error:", err);
+      setShowRevokeConfirm(false);
+      toast.error("Failed to revoke Linear access");
     }
   };
 

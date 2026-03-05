@@ -8,6 +8,13 @@
       "when": 1772728897199,
       "tag": "0000_volatile_lifeguard",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1772747690198,
+      "tag": "0001_fluffy_zarda",
+      "breakpoints": true
     }
   ]
 }

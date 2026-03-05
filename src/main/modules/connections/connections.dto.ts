@@ -23,7 +23,9 @@ export interface LinearTeam {
   description: string | null;
   icon: string | null;
   color: string | null;
-  issueCount: number;
+  private: boolean;
+  updatedAt: string | null;
+  url?: string;
 }
 
 export interface JiraProject {
@@ -32,6 +34,9 @@ export interface JiraProject {
   name: string;
   projectTypeKey: string;
   avatarUrl: string | null;
+  description: string | null;
+  isPrivate: boolean;
+  url?: string;
 }
 
 export interface AsanaProject {
@@ -43,6 +48,9 @@ export interface AsanaProject {
   workspaceName: string;
   teamGid?: string | null;
   teamName?: string | null;
+  modifiedAt: string | null;
+  public: boolean;
+  url?: string;
 }
 
 export interface GitlabProject {
@@ -53,6 +61,11 @@ export interface GitlabProject {
   description: string | null;
   visibility: string;
   lastActivityAt: string | null;
+  stars: number;
+  forks: number;
+  defaultBranch: string | null;
+  private: boolean;
+  url?: string;
 }
 
 export interface ConnectionResource {
@@ -65,7 +78,6 @@ export interface ConnectionResource {
   selected: boolean;
   metadata: string | null;
   lastSeenAt: Date;
-  lastIngestAt: Date | null;
 }
 
 // ─────────────────────────────────────────────────────────────

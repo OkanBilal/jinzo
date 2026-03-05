@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import Text, { Muted } from "../../../../../components/ui/text";
 import { Button } from "../../../../../components/ui/button";
 
@@ -18,10 +19,10 @@ export function RevokeConfirmModal({
 }: RevokeConfirmModalProps) {
   const defaultDescription = `This will disconnect your ${appName} account and remove all associated sources from your feed. This action cannot be undone.`;
 
-  return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center p-4  ">
-      <div className="absolute inset-0 bg-primary-950/60 " role="presentation" onClick={onCancel} />
-      <div className="relative z-70 w-full max-w-md  glass-morphism rounded-2xl overflow-hidden ">
+  return createPortal(
+    <div className="fixed inset-0 z-10000 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-primary-950/60" role="presentation" onClick={onCancel} />
+      <div className="relative w-full max-w-md glass-morphism rounded-2xl overflow-hidden">
         <div className="p-6">
           <Text variant="h3" className="mb-3">
             Revoke {appName} Access?
@@ -43,6 +44,7 @@ export function RevokeConfirmModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

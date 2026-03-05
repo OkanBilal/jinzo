@@ -784,14 +784,12 @@ export const connectionResources = sqliteTable(
     selected: integer("selected", { mode: "boolean" }).notNull().default(true),
     metadata: text("metadata"), // JSON
     lastSeenAt: integer("last_seen_at", { mode: "timestamp" }),
-    lastIngestAt: integer("last_ingest_at", { mode: "timestamp" }),
   },
   (t) => [
     uniqueIndex("uniq_resources_conn_ext").on(t.connectionId, t.externalId),
     index("idx_resources_kind").on(t.kind),
     index("idx_resources_selected").on(t.selected),
     index("idx_resources_conn").on(t.connectionId),
-    index("idx_resources_last_ingest").on(t.lastIngestAt),
     index("idx_resources_last_seen").on(t.lastSeenAt),
     check(
       "check_resources_metadata_json",

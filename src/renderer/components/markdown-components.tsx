@@ -84,9 +84,13 @@ export const markdownComponents: Components = {
   a: ({ href, children }) => (
     <a
       href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 underline transition-all duration-150 ease-out"
+      onClick={(e) => {
+        if (href) {
+          e.preventDefault();
+          window.api.shell.openExternal(href);
+        }
+      }}
+      className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 underline cursor-pointer transition-all duration-150 ease-out"
     >
       {children}
     </a>

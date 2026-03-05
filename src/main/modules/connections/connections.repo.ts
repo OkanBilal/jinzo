@@ -139,7 +139,6 @@ export const connectionsRepo = {
     selected: boolean;
     metadata: string | null;
     lastSeenAt: Date;
-    lastIngestAt: Date | null;
   }): Promise<void> {
     const db = getDb();
     await db.insert(connectionResources).values(data);
@@ -156,7 +155,6 @@ export const connectionsRepo = {
       selected: boolean;
       metadata: string | null;
       lastSeenAt: Date;
-      lastIngestAt: Date | null;
     }>
   ): Promise<void> {
     const db = getDb();
