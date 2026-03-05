@@ -275,10 +275,6 @@ export {
   useStartToolCallMutation,
   useCompleteToolCallMutation,
   useFailToolCallMutation,
-  useGetToolPermissionsBySpaceQuery,
-  useLazyGetToolPermissionsBySpaceQuery,
-  useSetToolPermissionMutation,
-  useRemoveToolPermissionMutation,
 } from "./toolsApi";
 export type {
   Tool,
@@ -291,8 +287,6 @@ export type {
   ToolCallStatus,
   CreateToolCallPayload,
   UpdateToolCallPayload,
-  SpaceToolPermission,
-  SpaceToolPermissionPayload,
 } from "./toolsApi";
 
 export {

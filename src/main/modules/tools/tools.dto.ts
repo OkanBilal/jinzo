@@ -113,24 +113,6 @@ export interface ToolCallResponse {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Space Tool Permission DTOs
-// ─────────────────────────────────────────────────────────────
-export interface SpaceToolPermissionPayload {
-  spaceId: string;
-  toolId: string;
-  enabled?: boolean;
-  policy?: Record<string, unknown>;
-}
-
-export interface SpaceToolPermissionResponse {
-  spaceId: string;
-  toolId: string;
-  enabled: boolean;
-  policy: Record<string, unknown> | null;
-  createdAt: Date;
-}
-
-// ─────────────────────────────────────────────────────────────
 // Service Response
 // ─────────────────────────────────────────────────────────────
 export interface ServiceResponse<T> {

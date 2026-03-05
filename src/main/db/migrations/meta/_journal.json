@@ -127,6 +127,13 @@
       "when": 1772719125515,
       "tag": "0017_green_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1772719488491,
+      "tag": "0018_slow_celestials",
+      "breakpoints": true
     }
   ]
 }

@@ -4,7 +4,6 @@ import type {
   UpdateToolPayload,
   CreateToolCallPayload,
   UpdateToolCallPayload,
-  SpaceToolPermissionPayload,
   ToolSource,
 } from "./tools.dto";
 
@@ -34,9 +33,4 @@ export const toolsController = {
     toolsService.completeToolCall(id, output, latencyMs),
   failToolCall: (id: number, error: string) => toolsService.failToolCall(id, error),
 
-  // Space Tool Permissions
-  getPermissionsBySpace: (spaceId: string) => toolsService.getPermissionsBySpace(spaceId),
-  setPermission: (payload: SpaceToolPermissionPayload) => toolsService.setPermission(payload),
-  removePermission: (spaceId: string, toolId: string) =>
-    toolsService.removePermission(spaceId, toolId),
 };

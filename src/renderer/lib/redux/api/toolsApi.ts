@@ -92,21 +92,6 @@ export interface UpdateToolCallPayload {
   metadata?: Record<string, unknown>;
 }
 
-export interface SpaceToolPermission {
-  spaceId: string;
-  toolId: string;
-  enabled: boolean;
-  policy: Record<string, unknown> | null;
-  createdAt: number;
-}
-
-export interface SpaceToolPermissionPayload {
-  spaceId: string;
-  toolId: string;
-  enabled?: boolean;
-  policy?: Record<string, unknown>;
-}
-
 export const toolsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // Tools
@@ -262,44 +247,6 @@ export const toolsApi = baseApi.injectEndpoints({
       invalidatesTags: ["ToolCalls"],
     }),
 
-    getToolPermissionsBySpace: builder.query<SpaceToolPermission[], string>({
-      query: (spaceId) => ({
-        handler: "toolPermissions:getBySpace",
-        args: [spaceId],
-      }),
-      transformResponse: (response: {
-        success: boolean;
-        data: SpaceToolPermission[];
-      }) => response.data,
-      providesTags: (_result, _error, spaceId) => [
-        { type: "ToolPermissions", id: spaceId },
-      ],
-    }),
-
-    setToolPermission: builder.mutation<void, SpaceToolPermissionPayload>({
-      query: (payload) => ({
-        handler: "toolPermissions:set",
-        args: [payload],
-      }),
-      invalidatesTags: (_result, _error, { spaceId }) => [
-        "ToolPermissions",
-        { type: "ToolPermissions", id: spaceId },
-      ],
-    }),
-
-    removeToolPermission: builder.mutation<
-      void,
-      { spaceId: string; toolId: string }
-    >({
-      query: ({ spaceId, toolId }) => ({
-        handler: "toolPermissions:remove",
-        args: [spaceId, toolId],
-      }),
-      invalidatesTags: (_result, _error, { spaceId }) => [
-        "ToolPermissions",
-        { type: "ToolPermissions", id: spaceId },
-      ],
-    }),
   }),
 });
 
@@ -326,8 +273,4 @@ export const {
   useStartToolCallMutation,
   useCompleteToolCallMutation,
   useFailToolCallMutation,
-  useGetToolPermissionsBySpaceQuery,
-  useLazyGetToolPermissionsBySpaceQuery,
-  useSetToolPermissionMutation,
-  useRemoveToolPermissionMutation,
 } = toolsApi;

@@ -6,8 +6,6 @@ import type {
   CreateToolCallPayload,
   UpdateToolCallPayload,
   ToolCallResponse,
-  SpaceToolPermissionPayload,
-  SpaceToolPermissionResponse,
   ServiceResponse,
   ToolSource,
 } from "./tools.dto";
@@ -176,36 +174,4 @@ export const toolsService = {
     return this.updateToolCall(id, { status: "error", error, endedAt: new Date() });
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // Space Tool Permissions
-  // ─────────────────────────────────────────────────────────────
-  async getPermissionsBySpace(spaceId: string): Promise<ServiceResponse<SpaceToolPermissionResponse[]>> {
-    try {
-      const permissions = await toolsRepo.findPermissionsBySpace(spaceId);
-      return { success: true, data: permissions };
-    } catch (error) {
-      console.error(`[ToolsService] Failed to get permissions for space ${spaceId}:`, error);
-      return { success: false, error: "Failed to get permissions" };
-    }
-  },
-
-  async setPermission(payload: SpaceToolPermissionPayload): Promise<ServiceResponse<void>> {
-    try {
-      await toolsRepo.upsertPermission(payload);
-      return { success: true };
-    } catch (error) {
-      console.error("[ToolsService] Failed to set permission:", error);
-      return { success: false, error: "Failed to set permission" };
-    }
-  },
-
-  async removePermission(spaceId: string, toolId: string): Promise<ServiceResponse<void>> {
-    try {
-      await toolsRepo.deletePermission(spaceId, toolId);
-      return { success: true };
-    } catch (error) {
-      console.error(`[ToolsService] Failed to remove permission:`, error);
-      return { success: false, error: "Failed to remove permission" };
-    }
-  },
 };

@@ -44,7 +44,7 @@ Jinzo is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM, sq
 
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
-- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.playlists`, `api.account`, `api.apps`, `api.chat`, `api.sync`, `api.feed`, `api.mcp`, `api.ollama`, `api.connectionCredentials`, `api.connections`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.journal`, `api.providers`, `api.tools`, `api.toolCalls`, `api.toolPermissions`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.feedback`, `api.stats`, `api.app`, `api.updates`
+- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.playlists`, `api.account`, `api.apps`, `api.chat`, `api.sync`, `api.feed`, `api.mcp`, `api.ollama`, `api.connectionCredentials`, `api.connections`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.journal`, `api.providers`, `api.tools`, `api.toolCalls`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.feedback`, `api.stats`, `api.app`, `api.updates`
 - After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
@@ -111,7 +111,6 @@ Core tables:
 - `appStates` - App integration states (GitHub, Notion, Raindrop, etc. — tracks isConnected, features, config)
 - `spaces` - User-defined UI/prompt configurations with theme/UI config JSON
 - `spaceConnections` / `spaceResources` / `spaceAppOverrides` - Space-specific overrides for connections, resources, and apps
-- `spaceToolPermissions` - Space-specific tool permission policies
 - `feedItems` - Event log/timeline entries
 - `chatSessions` / `chatMessages` - Chat history with provider/model tracking, observability (traceId, latencyMs, token counts)
 - `runs` / `runContext` / `runArtifacts` / `runTurns` / `runUsage` - Terminal/code-writing flow (agent runs with session resumption via sessionId, turn tracking, and usage metrics)
@@ -215,7 +214,6 @@ Domain-specific views on entities:
 
 **Tools System** (`src/main/modules/tools/`)
 - Registry for local, MCP, and provider-builtin tools
-- Tool permission policies per space via `spaceToolPermissions`
 - Tool call tracking with nested call support (parentToolCallId)
 
 **Seed Module** (`src/main/modules/seed/`)

@@ -398,15 +398,6 @@ const api = {
     fail: (id: number, error: string) =>
       ipcRenderer.invoke("toolCalls:fail", id, error),
   },
-  // Tool permissions operations
-  toolPermissions: {
-    getBySpace: (spaceId: string) =>
-      ipcRenderer.invoke("toolPermissions:getBySpace", spaceId),
-    set: (payload: { spaceId: string; toolId: string; enabled?: boolean; policy?: unknown }) =>
-      ipcRenderer.invoke("toolPermissions:set", payload),
-    remove: (spaceId: string, toolId: string) =>
-      ipcRenderer.invoke("toolPermissions:remove", spaceId, toolId),
-  },
   // Workspaces operations
   workspaces: {
     getAll: () => ipcRenderer.invoke("workspaces:getAll"),

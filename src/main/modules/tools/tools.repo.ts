@@ -1,6 +1,6 @@
 import { eq, desc, and, isNull } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { tools, toolCalls, spaceToolPermissions } from "../../db/schema";
+import { tools, toolCalls } from "../../db/schema";
 import type {
   CreateToolPayload,
   UpdateToolPayload,
@@ -8,8 +8,6 @@ import type {
   CreateToolCallPayload,
   UpdateToolCallPayload,
   ToolCallResponse,
-  SpaceToolPermissionPayload,
-  SpaceToolPermissionResponse,
 } from "./tools.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -168,80 +166,6 @@ export const toolsRepo = {
     await db.update(toolCalls).set(updateData).where(eq(toolCalls.id, id));
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // Space Tool Permissions
-  // ─────────────────────────────────────────────────────────────
-  async findPermissionsBySpace(
-    spaceId: string,
-  ): Promise<SpaceToolPermissionResponse[]> {
-    const db = getDb();
-    const rows = await db
-      .select()
-      .from(spaceToolPermissions)
-      .where(eq(spaceToolPermissions.spaceId, spaceId));
-    return rows.map(mapSpaceToolPermissionRowToResponse);
-  },
-
-  async findPermissionsByTool(
-    toolId: string,
-  ): Promise<SpaceToolPermissionResponse[]> {
-    const db = getDb();
-    const rows = await db
-      .select()
-      .from(spaceToolPermissions)
-      .where(eq(spaceToolPermissions.toolId, toolId));
-    return rows.map(mapSpaceToolPermissionRowToResponse);
-  },
-
-  async upsertPermission(payload: SpaceToolPermissionPayload): Promise<void> {
-    const db = getDb();
-
-    // Check if exists
-    const existingRows = await db
-      .select()
-      .from(spaceToolPermissions)
-      .where(
-        and(
-          eq(spaceToolPermissions.spaceId, payload.spaceId),
-          eq(spaceToolPermissions.toolId, payload.toolId),
-        ),
-      )
-      .limit(1);
-
-    if (existingRows.length > 0) {
-      await db
-        .update(spaceToolPermissions)
-        .set({
-          enabled: payload.enabled ?? true,
-          policy: payload.policy ? JSON.stringify(payload.policy) : null,
-        })
-        .where(
-          and(
-            eq(spaceToolPermissions.spaceId, payload.spaceId),
-            eq(spaceToolPermissions.toolId, payload.toolId),
-          ),
-        );
-    } else {
-      await db.insert(spaceToolPermissions).values({
-        spaceId: payload.spaceId,
-        toolId: payload.toolId,
-        enabled: payload.enabled ?? true,
-        policy: payload.policy ? JSON.stringify(payload.policy) : null,
-      });
-    }
-  },
-
-  async deletePermission(spaceId: string, toolId: string): Promise<void> {
-    const db = getDb();
-    await db
-      .delete(spaceToolPermissions)
-      .where(
-        and(
-          eq(spaceToolPermissions.spaceId, spaceId),
-          eq(spaceToolPermissions.toolId, toolId),
-        ),
-      );
-  },
   async findToolCallRowIdByRunAndToolCallId(
     runId: string,
     toolCallId: string,
@@ -324,14 +248,3 @@ function mapToolCallRowToResponse(
   };
 }
 
-function mapSpaceToolPermissionRowToResponse(
-  row: typeof spaceToolPermissions.$inferSelect,
-): SpaceToolPermissionResponse {
-  return {
-    spaceId: row.spaceId,
-    toolId: row.toolId,
-    enabled: row.enabled,
-    policy: row.policy ? JSON.parse(row.policy) : null,
-    createdAt: row.createdAt,
-  };
-}

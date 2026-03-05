@@ -718,39 +718,6 @@ export const tools = sqliteTable(
 );
 
 /* -----------------------------
-   SPACE TOOL PERMISSIONS (simple + powerful)
------------------------------- */
-
-export const spaceToolPermissions = sqliteTable(
-  "space_tool_permissions",
-  {
-    spaceId: text("space_id")
-      .notNull()
-      .references(() => spaces.id, { onDelete: "cascade" }),
-    toolId: text("tool_id")
-      .notNull()
-      .references(() => tools.id, { onDelete: "cascade" }),
-
-    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-
-    // e.g. { fs: { allowWrite: false, allowedPaths: [...] }, network: {...}, limits: {...} }
-    policy: text("policy"), // JSON
-
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-  },
-  (t) => [
-    uniqueIndex("uniq_space_tool").on(t.spaceId, t.toolId),
-    index("idx_space_tool_tool").on(t.toolId),
-    check(
-      "check_space_tool_policy_json",
-      sql`json_valid(${t.policy}) OR ${t.policy} IS NULL`,
-    ),
-  ],
-);
-
-/* -----------------------------
    TOOL CALLS (invocation log)
    - can be used by BOTH chat + runs
    - link to runId when terminal/code-writing
