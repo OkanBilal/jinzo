@@ -412,25 +412,24 @@ export function createCopilotAdapter(
       },
       {
         name: "mcp__jinzo__SaveReview",
-        description: "Create a new review record. Returns the generated review ID. Workspace is automatically set from the current session.",
+        description: "Create a new review record. Returns the generated review ID. Workspace and run are automatically set from the current session.",
         parameters: {
           type: "object",
           properties: {
             title: { type: "string", description: "Review title" },
             summary: { type: "string", description: "Review summary" },
             status: { type: "string", enum: ["open", "in_review", "approved", "rejected"], description: "Review status" },
-            runId: { type: "string", description: "Associated run ID" },
             metadata: { type: "object", description: "Additional metadata as JSON" },
           },
           required: ["title"],
         },
-        handler: async (args: { title: string; summary?: string; status?: string; runId?: string; metadata?: Record<string, unknown> }) => {
+        handler: async (args: { title: string; summary?: string; status?: string; metadata?: Record<string, unknown> }) => {
           const reviewId = await reviewsRepo.insert({
             workspaceId: workspaceId ?? undefined,
             title: args.title,
             summary: args.summary,
             status: (args.status as any) ?? "open",
-            runId: args.runId,
+            runId: runId ?? undefined,
             metadata: args.metadata,
           });
           if (workspaceId) {

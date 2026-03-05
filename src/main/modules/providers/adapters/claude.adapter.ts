@@ -659,23 +659,22 @@ export function createClaudeAdapter(
         ),
         toolFn!(
           "SaveReview",
-          "Create a new review record. Returns the generated review ID. Workspace is automatically set from the current session.",
+          "Create a new review record. Returns the generated review ID. Workspace and run are automatically set from the current session.",
           {
             title: z.string().describe("Review title"),
             summary: z.string().optional().describe("Review summary"),
             status: z.enum(["open", "in_review", "approved", "rejected"]).optional().default("open").describe("Review status"),
-            runId: z.string().optional().describe("Associated run ID"),
             metadata: z.record(z.string(), z.unknown()).optional().describe("Additional metadata as JSON"),
           },
-          async ({ title, summary, status, runId, metadata }: {
-            title: string; summary?: string; status?: string; runId?: string; metadata?: Record<string, unknown>;
+          async ({ title, summary, status, metadata }: {
+            title: string; summary?: string; status?: string; metadata?: Record<string, unknown>;
           }) => {
             const reviewId = await reviewsRepo.insert({
               workspaceId: workspaceId ?? undefined,
               title,
               summary,
               status: (status as any) ?? "open",
-              runId,
+              runId: runId ?? undefined,
               metadata,
             });
 
