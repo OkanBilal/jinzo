@@ -7,6 +7,8 @@ import { runsApi, workspacesApi, reviewsApi, reviewFindingsApi } from "@/lib/red
 import { mapArtifactToEvent, mapToolCallToEvent } from "../utils/run-event-mappers";
 
 type Attachments = Array<{ name: string; type: string; data: string; mimeType: string }>;
+type ContextIssue = { provider: string; number?: number | null; title: string; body?: string | null };
+type ContextFile = { fullPath: string; displayName?: string };
 
 export function useWorkspaceRuns(
   workspaceId: string | undefined,
@@ -231,6 +233,8 @@ export function useWorkspaceRuns(
       selectedProvider: string,
       model?: string,
       attachments?: Attachments,
+      contextIssues?: ContextIssue[],
+      contextFiles?: ContextFile[],
     ) => {
       if (!goal.trim() || !selectedWorkspace || !selectedProvider) {
         toast.error("Please fill in all required fields");
@@ -244,8 +248,10 @@ export function useWorkspaceRuns(
           providerId: selectedProvider,
           goal: goal.trim(),
           model: model || undefined,
-          initialContext: [{ kind: "note", content: `User goal: ${goal.trim()}` }],
+          initialContext: [],
           attachments,
+          contextIssues: contextIssues?.map(i => ({ provider: i.provider, number: i.number, title: i.title, body: i.body })),
+          contextFiles: contextFiles?.map(f => ({ path: f.fullPath })),
         });
 
         if (!result.success) {
@@ -262,6 +268,8 @@ export function useWorkspaceRuns(
     runId: string,
     message: string,
     attachments?: Attachments,
+    contextIssues?: ContextIssue[],
+    contextFiles?: ContextFile[],
   ) => {
     if (!message.trim()) {
       setError("Please enter a message");
@@ -274,6 +282,8 @@ export function useWorkspaceRuns(
         accountId,
         message: message.trim(),
         attachments,
+        contextIssues: contextIssues?.map(i => ({ provider: i.provider, number: i.number, title: i.title, body: i.body })),
+        contextFiles: contextFiles?.map(f => ({ path: f.fullPath })),
       });
 
       if (!result.success) {

@@ -4,12 +4,14 @@ import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
 import type { FileNode } from "@/features/workspace/components/file-explorer";
 import type { ContextIssue } from "@/lib/redux/slices/workspaceSlice";
-import { addContextFile } from "@/lib/redux/slices/workspaceSlice";
+import { addContextFile, addContextIssue } from "@/lib/redux/slices/workspaceSlice";
 import type { UploadedFile } from "@/components/ui/input/file-upload-dropdown";
 import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
 import { InputForm } from "@/components/ui/input/input-form";
 import { SlashMenuDropdown } from "@/features/workspace/components/slash-menu-dropdown";
 import { FileMentionDropdown } from "@/features/workspace/components/file-mention-dropdown";
+import { IssueMentionDropdown } from "@/features/workspace/components/issue-mention-dropdown";
+import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { ContextChips } from "./context-chips";
 import { InputToolbar } from "./input-toolbar";
 import { useProviderModels } from "../hooks/use-provider-models";
@@ -33,6 +35,7 @@ interface WorkspaceInputProps {
   contextIssues?: ContextIssue[];
   onRemoveContextIssue?: (entityId: string) => void;
   workspacePath?: string;
+  projectId?: string;
   uploadedFiles?: UploadedFile[];
   onUploadedFilesChange?: (files: UploadedFile[]) => void;
   onStop?: () => void;
@@ -53,6 +56,7 @@ export function WorkspaceInput({
   contextIssues = EMPTY_CONTEXT_ISSUES,
   onRemoveContextIssue,
   workspacePath,
+  projectId,
   uploadedFiles = EMPTY_UPLOADED_FILES,
   onUploadedFilesChange,
   onStop,
@@ -60,6 +64,7 @@ export function WorkspaceInput({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const slashCommandDropdownRef = useRef<HTMLDivElement>(null);
   const fileMentionDropdownRef = useRef<HTMLDivElement>(null);
+  const issueMentionDropdownRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
 
   const variant = useWorkspaceVariant();
@@ -113,6 +118,11 @@ export function WorkspaceInput({
     { visible: false, filter: "" },
   );
 
+  const [hashMenu, updateHashMenu] = useReducer(
+    (prev: { visible: boolean; filter: string }, next: Partial<{ visible: boolean; filter: string }>) => ({ ...prev, ...next }),
+    { visible: false, filter: "" },
+  );
+
   // Detect slash commands when goal is set externally (e.g. quick actions)
   useEffect(() => {
     const slashMatch = goal.match(/(?:^|\s)\/(\S*)$/);
@@ -137,6 +147,13 @@ export function WorkspaceInput({
         updateAtMenu({ filter: atMatch[1], visible: true });
       } else {
         updateAtMenu({ visible: false, filter: "" });
+      }
+
+      const hashMatch = value.match(/(?:^|\s)#(\S*)$/);
+      if (hashMatch) {
+        updateHashMenu({ filter: hashMatch[1], visible: true });
+      } else {
+        updateHashMenu({ visible: false, filter: "" });
       }
     },
     [onGoalChange],
@@ -178,6 +195,25 @@ export function WorkspaceInput({
     [goal, onGoalChange, dispatch],
   );
 
+  const handleIssueSelect = useCallback(
+    (item: IssueWithEntity) => {
+      const newGoal = goal.replace(/(?:^|\s)#\S*$/, (match) =>
+        match.startsWith(" ") ? " " : "",
+      );
+      onGoalChange(newGoal.trimEnd());
+      updateHashMenu({ visible: false, filter: "" });
+      dispatch(addContextIssue({
+        entityId: item.issue.entityId,
+        title: item.entity.title,
+        body: item.entity.body,
+        provider: item.issue.provider,
+        number: item.issue.number,
+        labels: item.issue.labels,
+      }));
+    },
+    [goal, onGoalChange, dispatch],
+  );
+
   const handleAtMenuNavigate = useCallback(
     (dirPath: string) => {
       const newGoal = goal.replace(/(?:^|\s)@\S*$/, (match) => {
@@ -191,9 +227,9 @@ export function WorkspaceInput({
   );
 
   const handleSubmit = useCallback(() => {
-    if (atMenu.visible || slashMenu.visible) return;
+    if (atMenu.visible || slashMenu.visible || hashMenu.visible) return;
     onSubmit();
-  }, [atMenu.visible, slashMenu.visible, onSubmit]);
+  }, [atMenu.visible, slashMenu.visible, hashMenu.visible, onSubmit]);
 
   //Copilot related TODO:
   const authErrorMessage = (() => {
@@ -264,6 +300,15 @@ export function WorkspaceInput({
           onNavigate={handleAtMenuNavigate}
           onClose={() => updateAtMenu({ visible: false, filter: "" })}
           dropdownRef={fileMentionDropdownRef}
+          variant={variant}
+        />
+        <IssueMentionDropdown
+          isOpen={hashMenu.visible}
+          filterText={hashMenu.filter}
+          projectId={projectId}
+          onSelectIssue={handleIssueSelect}
+          onClose={() => updateHashMenu({ visible: false, filter: "" })}
+          dropdownRef={issueMentionDropdownRef}
           variant={variant}
         />
       </div>

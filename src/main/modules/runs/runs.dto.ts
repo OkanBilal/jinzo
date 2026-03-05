@@ -296,6 +296,10 @@ export interface StartRunPayload {
   toolPolicySnapshot?: Record<string, unknown>;
   /** File attachments (images/documents) serialized as base64 for IPC */
   attachments?: FileAttachment[];
+  /** Structured context issues (displayed as chips in the UI) */
+  contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
+  /** Structured context files (displayed as chips in the UI, injected into LLM prompt by adapter) */
+  contextFiles?: Array<{ path: string }>;
 }
 
 /** Response when a run is started */
@@ -313,6 +317,10 @@ export interface ContinueRunPayload {
   additionalContext?: StartRunContextItem[];
   /** File attachments (images/documents) serialized as base64 for IPC */
   attachments?: FileAttachment[];
+  /** Structured context issues to inject into this follow-up */
+  contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
+  /** Structured context files to inject into this follow-up */
+  contextFiles?: Array<{ path: string }>;
 }
 
 /** Response when a run is continued */

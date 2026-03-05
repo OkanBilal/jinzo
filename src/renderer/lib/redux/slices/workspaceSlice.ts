@@ -109,7 +109,9 @@ const workspaceSlice = createSlice({
       state.contextFiles = [];
     },
     addContextIssue: (state, action: PayloadAction<ContextIssue>) => {
-      state.contextIssues = [action.payload];
+      if (!state.contextIssues.some(i => i.entityId === action.payload.entityId)) {
+        state.contextIssues.push(action.payload);
+      }
     },
     removeContextIssue: (state, action: PayloadAction<string>) => {
       state.contextIssues = state.contextIssues.filter(i => i.entityId !== action.payload);

@@ -81,6 +81,7 @@ export default function CopilotPage() {
         contextIssues={ws.contextIssues}
         onRemoveContextIssue={ws.handleRemoveContextIssue}
         workspacePath={ws.currentWorkspace?.rootPath}
+        projectId={ws.currentWorkspace?.projectId ?? undefined}
         uploadedFiles={ws.uploadedFiles}
         onUploadedFilesChange={ws.setUploadedFiles}
         onStop={handleStop}

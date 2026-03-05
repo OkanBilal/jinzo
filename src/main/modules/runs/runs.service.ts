@@ -834,6 +834,8 @@ export const runsService = {
           context: payload.initialContext as WorkRunContextItem[] | undefined,
           toolPolicy: payload.toolPolicySnapshot,
           attachments: payload.attachments,
+          contextIssues: payload.contextIssues,
+          contextFiles: payload.contextFiles,
         },
         async (event: WorkRunEvent) => {
           try {
@@ -1289,6 +1291,8 @@ export const runsService = {
           message,
           context: additionalContext as any,
           attachments: payload.attachments,
+          contextIssues: payload.contextIssues,
+          contextFiles: payload.contextFiles,
         },
         async (event) => {
           try {

@@ -1171,6 +1171,23 @@ export function createCopilotAdapter(
       prompt = `${workspaceInfo}\n\nGoal: ${request.goal}`;
     }
 
+    // Append context issues for the LLM
+    if (request.contextIssues && request.contextIssues.length > 0) {
+      const issuesList = request.contextIssues
+        .map((i) => {
+          const label = `[${i.provider.toUpperCase()}${i.number ? ` #${i.number}` : ""}] ${i.title}`;
+          return i.body ? `${label}\n${i.body}` : label;
+        })
+        .join("\n\n---\n\n");
+      prompt = `${prompt}\n\n---\n\nContext issues:\n${issuesList}`;
+    }
+
+    // Append context files for the LLM
+    if (request.contextFiles && request.contextFiles.length > 0) {
+      const filesList = request.contextFiles.map((f) => `- ${f.path}`).join("\n");
+      prompt = `${prompt}\n\n---\n\nContext files (read these before starting):\n${filesList}`;
+    }
+
     // Append file attachment references
     if (request.attachments && request.attachments.length > 0) {
       const attachmentSection = buildAttachmentPrompt(request.attachments, request.runId);
@@ -1329,6 +1346,8 @@ export function createCopilotAdapter(
               type: a.type,
               mimeType: a.mimeType,
             })),
+            issues: request.contextIssues,
+            files: request.contextFiles,
           },
         });
 
@@ -1590,6 +1609,20 @@ export function createCopilotAdapter(
           prompt = `Context:\n${contextParts}\n\n---\n\n${message}`;
         }
 
+        // Append context issues for the LLM
+        if (request.contextIssues && request.contextIssues.length > 0) {
+          const issuesList = request.contextIssues
+            .map((i) => `[${i.provider.toUpperCase()}${i.number ? ` #${i.number}` : ""}] ${i.title}`)
+            .join("\n");
+          prompt = `${prompt}\n\n---\n\nContext issues:\n${issuesList}`;
+        }
+
+        // Append context files for the LLM
+        if (request.contextFiles && request.contextFiles.length > 0) {
+          const filesList = request.contextFiles.map((f) => `- ${f.path}`).join("\n");
+          prompt = `${prompt}\n\n---\n\nContext files (read these before starting):\n${filesList}`;
+        }
+
         // Append file attachment references
         if (request.attachments && request.attachments.length > 0) {
           const attachmentSection = buildAttachmentPrompt(request.attachments, runId);
@@ -1610,6 +1643,8 @@ export function createCopilotAdapter(
               type: a.type,
               mimeType: a.mimeType,
             })),
+            issues: request.contextIssues,
+            files: request.contextFiles,
           },
         });
 

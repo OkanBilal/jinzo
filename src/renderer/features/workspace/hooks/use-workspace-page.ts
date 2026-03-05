@@ -21,7 +21,7 @@ import { useWorkspaceData } from "./use-workspace-data";
 import { useWorkspaceRuns } from "./use-workspace-runs";
 import { useFileContentLoader } from "./use-file-content-loader";
 import { useTabHandlers } from "./use-tab-handlers";
-import { serializeAttachments, buildGoalWithContext } from "@/features/workspace/utils/run-helpers";
+import { serializeAttachments } from "@/features/workspace/utils/run-helpers";
 
 export function useWorkspacePage(providerId: string) {
   const dispatch = useDispatch();
@@ -163,21 +163,22 @@ export function useWorkspacePage(providerId: string) {
       return;
     }
 
-    const finalGoal = buildGoalWithContext(goal, contextFiles, contextIssues);
     const attachments = uploadedFiles.length > 0
       ? await serializeAttachments(uploadedFiles)
       : undefined;
 
     if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
-      const success = (await continueRun(activeRunId, finalGoal, attachments)) ?? false;
+      const success = (await continueRun(activeRunId, goal, attachments, contextIssues, contextFiles)) ?? false;
       if (success) clearInputState();
     } else {
       const newRunId = await executeRun(
-        finalGoal,
+        goal,
         selectedWorkspace,
         providerId,
         selectedModel,
         attachments,
+        contextIssues,
+        contextFiles,
       );
       if (newRunId) {
         clearInputState();

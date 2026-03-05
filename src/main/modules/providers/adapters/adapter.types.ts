@@ -44,6 +44,10 @@ export interface WorkRunRequest {
   toolPolicy?: Record<string, unknown> | null;
   /** File attachments (images/documents) to include in the prompt */
   attachments?: FileAttachment[];
+  /** Structured context issues passed from the UI */
+  contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
+  /** Structured context files passed from the UI */
+  contextFiles?: Array<{ path: string }>;
   /**
    * Per-run hooks configuration that overrides or extends adapter-level hooks.
    * Useful for dynamic hook configuration based on the specific run context.
@@ -228,6 +232,10 @@ export interface WorkRunContinueRequest {
   context?: WorkRunContextItem[];
   /** File attachments (images/documents) to include in the prompt */
   attachments?: FileAttachment[];
+  /** Structured context issues to inject into this follow-up */
+  contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
+  /** Structured context files to inject into this follow-up */
+  contextFiles?: Array<{ path: string }>;
   /**
    * Per-run hooks configuration for this continuation.
    * Useful for dynamic hook configuration based on the continuation context.

@@ -469,6 +469,8 @@ const api = {
       configSnapshot?: Record<string, unknown>;
       toolPolicySnapshot?: Record<string, unknown>;
       attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>;
+      contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
+      contextFiles?: Array<{ path: string }>;
     }) => ipcRenderer.invoke("runs:execute", payload),
     abort: (runId: string) => ipcRenderer.invoke("runs:abort", runId),
     getToolCalls: (runId: string) =>
@@ -485,6 +487,8 @@ const api = {
         metadata?: Record<string, unknown>;
       }>;
       attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>;
+      contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
+      contextFiles?: Array<{ path: string }>;
     }) => ipcRenderer.invoke("runs:continue", payload),
     canResume: (runId: string) => ipcRenderer.invoke("runs:canResume", runId),
     fork: (payload: {
