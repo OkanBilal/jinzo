@@ -18,12 +18,18 @@ CREATE INDEX `idx_accounts_display_name` ON `accounts` (`display_name`);--> stat
 CREATE TABLE `app_settings` (
 	`id` text PRIMARY KEY DEFAULT 'default' NOT NULL,
 	`account_id` text NOT NULL,
-	`active_mood_id` text,
+	`active_space_id` text,
 	`enable_worktrees` integer DEFAULT true NOT NULL,
+	`show_tool_calls` integer DEFAULT true NOT NULL,
+	`prevent_sleep_during_runs` integer DEFAULT false NOT NULL,
+	`notify_on_run_complete` integer DEFAULT true NOT NULL,
+	`notify_on_tool_approval` integer DEFAULT true NOT NULL,
+	`commit_instructions` text DEFAULT '' NOT NULL,
+	`pr_instructions` text DEFAULT '' NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`active_mood_id`) REFERENCES `moods`(`id`) ON UPDATE no action ON DELETE set null
+	FOREIGN KEY (`active_space_id`) REFERENCES `spaces`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
 CREATE TABLE `app_states` (
@@ -47,48 +53,6 @@ CREATE INDEX `idx_app_states_connected` ON `app_states` (`is_connected`);--> sta
 CREATE INDEX `idx_app_states_sort` ON `app_states` (`sort_order`);--> statement-breakpoint
 CREATE INDEX `idx_app_states_updated_at` ON `app_states` (`updated_at`);--> statement-breakpoint
 CREATE INDEX `idx_app_states_created_at` ON `app_states` (`created_at`);--> statement-breakpoint
-CREATE TABLE `chat_messages` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`session_id` integer NOT NULL,
-	`role` text NOT NULL,
-	`content` text NOT NULL,
-	`provider_id` text,
-	`model` text,
-	`trace_id` text,
-	`latency_ms` integer,
-	`input_tokens` integer,
-	`output_tokens` integer,
-	`tool_call_group_id` text,
-	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	FOREIGN KEY (`session_id`) REFERENCES `chat_sessions`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`provider_id`) REFERENCES `providers`(`id`) ON UPDATE no action ON DELETE set null
-);
---> statement-breakpoint
-CREATE INDEX `idx_chat_messages_session` ON `chat_messages` (`session_id`);--> statement-breakpoint
-CREATE INDEX `idx_chat_messages_provider` ON `chat_messages` (`provider_id`);--> statement-breakpoint
-CREATE INDEX `idx_chat_messages_model` ON `chat_messages` (`model`);--> statement-breakpoint
-CREATE INDEX `idx_chat_messages_trace` ON `chat_messages` (`trace_id`);--> statement-breakpoint
-CREATE TABLE `chat_sessions` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`title` text,
-	`initial_query` text,
-	`provider_id` text,
-	`model` text,
-	`mood_id` text,
-	`system_prompt_snapshot` text,
-	`provider_config_snapshot` text,
-	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
-	FOREIGN KEY (`provider_id`) REFERENCES `providers`(`id`) ON UPDATE no action ON DELETE set null,
-	FOREIGN KEY (`mood_id`) REFERENCES `moods`(`id`) ON UPDATE no action ON DELETE set null,
-	CONSTRAINT "check_chat_sessions_provider_config_json" CHECK(json_valid("chat_sessions"."provider_config_snapshot") OR "chat_sessions"."provider_config_snapshot" IS NULL)
-);
---> statement-breakpoint
-CREATE INDEX `idx_chat_sessions_updated_at` ON `chat_sessions` (`updated_at`);--> statement-breakpoint
-CREATE INDEX `idx_chat_sessions_created_at` ON `chat_sessions` (`created_at`);--> statement-breakpoint
-CREATE INDEX `idx_chat_sessions_mood` ON `chat_sessions` (`mood_id`);--> statement-breakpoint
-CREATE INDEX `idx_chat_sessions_provider` ON `chat_sessions` (`provider_id`);--> statement-breakpoint
-CREATE INDEX `idx_chat_sessions_model` ON `chat_sessions` (`model`);--> statement-breakpoint
 CREATE TABLE `connection_resources` (
 	`id` text PRIMARY KEY NOT NULL,
 	`connection_id` text NOT NULL,
@@ -164,18 +128,6 @@ CREATE INDEX `idx_connections_provider` ON `connections` (`provider`);--> statem
 CREATE INDEX `idx_connections_status` ON `connections` (`status`);--> statement-breakpoint
 CREATE INDEX `idx_connections_connected_at` ON `connections` (`connected_at`);--> statement-breakpoint
 CREATE INDEX `idx_connections_updated_at` ON `connections` (`updated_at`);--> statement-breakpoint
-CREATE TABLE `document_revisions` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`entity_id` text NOT NULL,
-	`title` text,
-	`body` text,
-	`word_count` integer,
-	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	FOREIGN KEY (`entity_id`) REFERENCES `entities`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE INDEX `idx_doc_revisions_entity` ON `document_revisions` (`entity_id`);--> statement-breakpoint
-CREATE INDEX `idx_doc_revisions_created` ON `document_revisions` (`created_at`);--> statement-breakpoint
 CREATE TABLE `entities` (
 	`id` text PRIMARY KEY NOT NULL,
 	`account_id` text NOT NULL,
@@ -206,47 +158,6 @@ CREATE INDEX `idx_entities_conn` ON `entities` (`connection_id`);--> statement-b
 CREATE INDEX `idx_entities_resource` ON `entities` (`resource_id`);--> statement-breakpoint
 CREATE INDEX `idx_entities_occurred` ON `entities` (`occurred_at`);--> statement-breakpoint
 CREATE INDEX `idx_entities_updated` ON `entities` (`updated_at`);--> statement-breakpoint
-CREATE TABLE `entity_chunks` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`entity_id` text NOT NULL,
-	`chunk_index` integer NOT NULL,
-	`content` text NOT NULL,
-	`token_count` integer,
-	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	FOREIGN KEY (`entity_id`) REFERENCES `entities`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `uniq_entity_chunk` ON `entity_chunks` (`entity_id`,`chunk_index`);--> statement-breakpoint
-CREATE INDEX `idx_entity_chunks_entity` ON `entity_chunks` (`entity_id`);--> statement-breakpoint
-CREATE TABLE `feed_items` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`account_id` text NOT NULL,
-	`connection_id` text,
-	`resource_id` text,
-	`entity_id` text,
-	`event_type` text NOT NULL,
-	`item_type` text,
-	`title` text NOT NULL,
-	`summary` text,
-	`url` text,
-	`snapshot` text,
-	`metadata` text,
-	`occurred_at` integer NOT NULL,
-	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	`embedding` blob,
-	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`connection_id`) REFERENCES `connections`(`id`) ON UPDATE no action ON DELETE set null,
-	FOREIGN KEY (`resource_id`) REFERENCES `connection_resources`(`id`) ON UPDATE no action ON DELETE set null,
-	FOREIGN KEY (`entity_id`) REFERENCES `entities`(`id`) ON UPDATE no action ON DELETE set null,
-	CONSTRAINT "check_feed_snapshot_json" CHECK(json_valid("feed_items"."snapshot") OR "feed_items"."snapshot" IS NULL),
-	CONSTRAINT "check_feed_metadata_json" CHECK(json_valid("feed_items"."metadata") OR "feed_items"."metadata" IS NULL)
-);
---> statement-breakpoint
-CREATE INDEX `idx_feed_account_time` ON `feed_items` (`account_id`,`occurred_at`);--> statement-breakpoint
-CREATE INDEX `idx_feed_entity_time` ON `feed_items` (`entity_id`,`occurred_at`);--> statement-breakpoint
-CREATE INDEX `idx_feed_conn_time` ON `feed_items` (`connection_id`,`occurred_at`);--> statement-breakpoint
-CREATE INDEX `idx_feed_event_time` ON `feed_items` (`event_type`,`occurred_at`);--> statement-breakpoint
-CREATE INDEX `idx_feed_item_type_time` ON `feed_items` (`item_type`,`occurred_at`);--> statement-breakpoint
 CREATE TABLE `issues` (
 	`entity_id` text PRIMARY KEY NOT NULL,
 	`provider` text NOT NULL,
@@ -263,133 +174,44 @@ CREATE TABLE `issues` (
 --> statement-breakpoint
 CREATE INDEX `idx_issues_provider_state` ON `issues` (`provider`,`state`);--> statement-breakpoint
 CREATE INDEX `idx_issues_repo` ON `issues` (`repo`);--> statement-breakpoint
-CREATE TABLE `mcp_servers` (
+CREATE TABLE `project_resources` (
 	`id` text PRIMARY KEY NOT NULL,
-	`account_id` text NOT NULL,
-	`name` text NOT NULL,
-	`transport` text NOT NULL,
-	`endpoint` text,
-	`status` text DEFAULT 'active' NOT NULL,
-	`metadata` text,
-	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
-	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "check_mcp_servers_metadata_json" CHECK(json_valid("mcp_servers"."metadata") OR "mcp_servers"."metadata" IS NULL)
-);
---> statement-breakpoint
-CREATE INDEX `idx_mcp_servers_account` ON `mcp_servers` (`account_id`);--> statement-breakpoint
-CREATE INDEX `idx_mcp_servers_status` ON `mcp_servers` (`status`);--> statement-breakpoint
-CREATE TABLE `mood_app_overrides` (
-	`mood_id` text NOT NULL,
-	`app_id` text NOT NULL,
-	`enabled` integer DEFAULT true NOT NULL,
-	`enabled_features` text,
-	`config` text,
-	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	FOREIGN KEY (`mood_id`) REFERENCES `moods`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`app_id`) REFERENCES `app_states`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "check_enabled_features_json" CHECK(json_valid("mood_app_overrides"."enabled_features") OR "mood_app_overrides"."enabled_features" IS NULL),
-	CONSTRAINT "check_config_json" CHECK(json_valid("mood_app_overrides"."config") OR "mood_app_overrides"."config" IS NULL)
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `uniq_mood_app` ON `mood_app_overrides` (`mood_id`,`app_id`);--> statement-breakpoint
-CREATE TABLE `mood_connections` (
-	`mood_id` text NOT NULL,
-	`connection_id` text NOT NULL,
-	`enabled` integer DEFAULT true NOT NULL,
-	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	FOREIGN KEY (`mood_id`) REFERENCES `moods`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`connection_id`) REFERENCES `connections`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `uniq_mood_conn` ON `mood_connections` (`mood_id`,`connection_id`);--> statement-breakpoint
-CREATE INDEX `idx_mood_conn_conn` ON `mood_connections` (`connection_id`);--> statement-breakpoint
-CREATE TABLE `mood_resources` (
-	`mood_id` text NOT NULL,
+	`project_id` text NOT NULL,
 	`resource_id` text NOT NULL,
-	`enabled` integer DEFAULT true NOT NULL,
-	`sort_order` integer DEFAULT 0 NOT NULL,
-	`metadata` text,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	FOREIGN KEY (`mood_id`) REFERENCES `moods`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`resource_id`) REFERENCES `connection_resources`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "check_mood_resources_metadata_json" CHECK(json_valid("mood_resources"."metadata") OR "mood_resources"."metadata" IS NULL)
+	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`resource_id`) REFERENCES `connection_resources`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `uniq_mood_resource` ON `mood_resources` (`mood_id`,`resource_id`);--> statement-breakpoint
-CREATE INDEX `idx_mood_resource_resource` ON `mood_resources` (`resource_id`);--> statement-breakpoint
-CREATE INDEX `idx_mood_resource_sort` ON `mood_resources` (`mood_id`,`sort_order`);--> statement-breakpoint
-CREATE TABLE `mood_tool_permissions` (
-	`mood_id` text NOT NULL,
-	`tool_id` text NOT NULL,
-	`enabled` integer DEFAULT true NOT NULL,
-	`policy` text,
-	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	FOREIGN KEY (`mood_id`) REFERENCES `moods`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`tool_id`) REFERENCES `tools`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "check_mood_tool_policy_json" CHECK(json_valid("mood_tool_permissions"."policy") OR "mood_tool_permissions"."policy" IS NULL)
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `uniq_mood_tool` ON `mood_tool_permissions` (`mood_id`,`tool_id`);--> statement-breakpoint
-CREATE INDEX `idx_mood_tool_tool` ON `mood_tool_permissions` (`tool_id`);--> statement-breakpoint
-CREATE TABLE `moods` (
+CREATE UNIQUE INDEX `uniq_project_resources` ON `project_resources` (`project_id`,`resource_id`);--> statement-breakpoint
+CREATE INDEX `idx_project_resources_project` ON `project_resources` (`project_id`);--> statement-breakpoint
+CREATE INDEX `idx_project_resources_resource` ON `project_resources` (`resource_id`);--> statement-breakpoint
+CREATE TABLE `projects` (
 	`id` text PRIMARY KEY NOT NULL,
 	`account_id` text NOT NULL,
 	`name` text NOT NULL,
-	`slug` text NOT NULL,
-	`description` text,
-	`system_prompt` text,
-	`model` text,
+	`root_path` text NOT NULL,
+	`workspaces_path` text,
+	`branches` text,
+	`remote_origin` text NOT NULL,
+	`default_branch` text,
+	`setup_script` text,
+	`run_script` text,
+	`archive_script` text,
 	`icon` text,
-	`theme_config` text,
-	`ui_config` text,
+	`commit_instructions` text,
+	`pr_instructions` text,
 	`is_archived` integer DEFAULT false NOT NULL,
-	`sort_order` integer DEFAULT 0 NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "check_moods_theme_json" CHECK(json_valid("moods"."theme_config") OR "moods"."theme_config" IS NULL),
-	CONSTRAINT "check_moods_ui_json" CHECK(json_valid("moods"."ui_config") OR "moods"."ui_config" IS NULL)
+	CONSTRAINT "check_projects_branches_json" CHECK(json_valid("projects"."branches") OR "projects"."branches" IS NULL)
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `uniq_moods_account_slug` ON `moods` (`account_id`,`slug`);--> statement-breakpoint
-CREATE UNIQUE INDEX `uniq_moods_account_name` ON `moods` (`account_id`,`name`);--> statement-breakpoint
-CREATE INDEX `idx_moods_account` ON `moods` (`account_id`);--> statement-breakpoint
-CREATE INDEX `idx_moods_sort` ON `moods` (`sort_order`);--> statement-breakpoint
-CREATE INDEX `idx_moods_updated` ON `moods` (`updated_at`);--> statement-breakpoint
-CREATE TABLE `outbox` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`account_id` text NOT NULL,
-	`entity_id` text,
-	`connection_id` text,
-	`action_type` text NOT NULL,
-	`payload` text NOT NULL,
-	`status` text DEFAULT 'queued' NOT NULL,
-	`attempts` integer DEFAULT 0 NOT NULL,
-	`next_run_at` integer,
-	`last_error` text,
-	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`entity_id`) REFERENCES `entities`(`id`) ON UPDATE no action ON DELETE set null,
-	FOREIGN KEY (`connection_id`) REFERENCES `connections`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "check_outbox_payload_json" CHECK(json_valid("outbox"."payload"))
-);
---> statement-breakpoint
-CREATE INDEX `idx_outbox_status_next` ON `outbox` (`status`,`next_run_at`);--> statement-breakpoint
-CREATE INDEX `idx_outbox_account` ON `outbox` (`account_id`);--> statement-breakpoint
-CREATE TABLE `playlist_items` (
-	`playlist_entity_id` text NOT NULL,
-	`item_entity_id` text NOT NULL,
-	`position` integer DEFAULT 0 NOT NULL,
-	`added_at` integer DEFAULT (unixepoch()) NOT NULL,
-	`metadata` text,
-	FOREIGN KEY (`playlist_entity_id`) REFERENCES `entities`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`item_entity_id`) REFERENCES `entities`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "check_playlist_items_metadata_json" CHECK(json_valid("playlist_items"."metadata") OR "playlist_items"."metadata" IS NULL)
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `uniq_playlist_item` ON `playlist_items` (`playlist_entity_id`,`item_entity_id`);--> statement-breakpoint
-CREATE INDEX `idx_playlist_items_order` ON `playlist_items` (`playlist_entity_id`,`position`);--> statement-breakpoint
+CREATE UNIQUE INDEX `uniq_projects_account_origin` ON `projects` (`account_id`,`remote_origin`);--> statement-breakpoint
+CREATE INDEX `idx_projects_account` ON `projects` (`account_id`);--> statement-breakpoint
+CREATE INDEX `idx_projects_remote_origin` ON `projects` (`remote_origin`);--> statement-breakpoint
+CREATE INDEX `idx_projects_updated` ON `projects` (`updated_at`);--> statement-breakpoint
 CREATE TABLE `providers` (
 	`id` text PRIMARY KEY NOT NULL,
 	`kind` text NOT NULL,
@@ -407,6 +229,25 @@ CREATE TABLE `providers` (
 CREATE INDEX `idx_providers_kind` ON `providers` (`kind`);--> statement-breakpoint
 CREATE INDEX `idx_providers_enabled` ON `providers` (`is_enabled`);--> statement-breakpoint
 CREATE INDEX `idx_providers_updated` ON `providers` (`updated_at`);--> statement-breakpoint
+CREATE TABLE `review_findings` (
+	`id` text PRIMARY KEY NOT NULL,
+	`review_id` text NOT NULL,
+	`severity` text NOT NULL,
+	`file` text NOT NULL,
+	`line_start` integer,
+	`line_end` integer,
+	`message` text NOT NULL,
+	`reason` text NOT NULL,
+	`suggestion` text,
+	`validated` integer DEFAULT false NOT NULL,
+	`metadata` text,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`review_id`) REFERENCES `reviews`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "check_review_findings_metadata_json" CHECK(json_valid("review_findings"."metadata") OR "review_findings"."metadata" IS NULL)
+);
+--> statement-breakpoint
+CREATE INDEX `idx_review_findings_review` ON `review_findings` (`review_id`);--> statement-breakpoint
+CREATE INDEX `idx_review_findings_severity` ON `review_findings` (`severity`);--> statement-breakpoint
 CREATE TABLE `reviews` (
 	`id` text PRIMARY KEY NOT NULL,
 	`workspace_id` text,
@@ -446,28 +287,6 @@ CREATE INDEX `idx_run_artifacts_kind` ON `run_artifacts` (`kind`);--> statement-
 CREATE INDEX `idx_run_artifacts_path` ON `run_artifacts` (`path`);--> statement-breakpoint
 CREATE INDEX `idx_run_artifacts_entity` ON `run_artifacts` (`entity_id`);--> statement-breakpoint
 CREATE INDEX `idx_run_artifacts_hash` ON `run_artifacts` (`content_hash`);--> statement-breakpoint
-CREATE TABLE `run_commands` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`run_id` text NOT NULL,
-	`cwd` text,
-	`command` text NOT NULL,
-	`env_keys` text,
-	`status` text DEFAULT 'queued' NOT NULL,
-	`started_at` integer,
-	`ended_at` integer,
-	`exit_code` integer,
-	`stdout` text,
-	`stderr` text,
-	`metadata` text,
-	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	FOREIGN KEY (`run_id`) REFERENCES `runs`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "check_run_commands_env_keys_json" CHECK(json_valid("run_commands"."env_keys") OR "run_commands"."env_keys" IS NULL),
-	CONSTRAINT "check_run_commands_metadata_json" CHECK(json_valid("run_commands"."metadata") OR "run_commands"."metadata" IS NULL)
-);
---> statement-breakpoint
-CREATE INDEX `idx_run_commands_run` ON `run_commands` (`run_id`);--> statement-breakpoint
-CREATE INDEX `idx_run_commands_status` ON `run_commands` (`status`);--> statement-breakpoint
-CREATE INDEX `idx_run_commands_created` ON `run_commands` (`created_at`);--> statement-breakpoint
 CREATE TABLE `run_context` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`run_id` text NOT NULL,
@@ -487,11 +306,36 @@ CREATE INDEX `idx_run_context_run` ON `run_context` (`run_id`);--> statement-bre
 CREATE INDEX `idx_run_context_kind` ON `run_context` (`kind`);--> statement-breakpoint
 CREATE INDEX `idx_run_context_entity` ON `run_context` (`entity_id`);--> statement-breakpoint
 CREATE INDEX `idx_run_context_hash` ON `run_context` (`content_hash`);--> statement-breakpoint
+CREATE TABLE `run_turns` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`run_id` text NOT NULL,
+	`turn_index` integer NOT NULL,
+	`prompt_content` text,
+	`response_content` text,
+	`started_at` integer,
+	`ended_at` integer,
+	`elapsed_ms` integer,
+	`status` text DEFAULT 'active' NOT NULL,
+	`input_tokens` integer,
+	`output_tokens` integer,
+	`cache_read_tokens` integer,
+	`cache_write_tokens` integer,
+	`cost_micros` integer,
+	`model` text,
+	`model_usage` text,
+	`metadata` text,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`run_id`) REFERENCES `runs`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "check_run_turns_metadata_json" CHECK(json_valid("run_turns"."metadata") OR "run_turns"."metadata" IS NULL)
+);
+--> statement-breakpoint
+CREATE INDEX `idx_run_turns_run` ON `run_turns` (`run_id`);--> statement-breakpoint
+CREATE INDEX `idx_run_turns_run_index` ON `run_turns` (`run_id`,`turn_index`);--> statement-breakpoint
 CREATE TABLE `runs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`account_id` text NOT NULL,
 	`workspace_id` text,
-	`mood_id` text,
+	`space_id` text,
 	`provider_id` text NOT NULL,
 	`model` text,
 	`title` text,
@@ -510,7 +354,7 @@ CREATE TABLE `runs` (
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE no action ON DELETE set null,
-	FOREIGN KEY (`mood_id`) REFERENCES `moods`(`id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`space_id`) REFERENCES `spaces`(`id`) ON UPDATE no action ON DELETE set null,
 	FOREIGN KEY (`provider_id`) REFERENCES `providers`(`id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "check_runs_config_snapshot_json" CHECK(json_valid("runs"."config_snapshot") OR "runs"."config_snapshot" IS NULL),
 	CONSTRAINT "check_runs_tool_policy_snapshot_json" CHECK(json_valid("runs"."tool_policy_snapshot") OR "runs"."tool_policy_snapshot" IS NULL)
@@ -520,8 +364,33 @@ CREATE INDEX `idx_runs_account_created` ON `runs` (`account_id`,`created_at`);--
 CREATE INDEX `idx_runs_account_status` ON `runs` (`account_id`,`status`);--> statement-breakpoint
 CREATE INDEX `idx_runs_provider` ON `runs` (`provider_id`);--> statement-breakpoint
 CREATE INDEX `idx_runs_workspace` ON `runs` (`workspace_id`);--> statement-breakpoint
-CREATE INDEX `idx_runs_mood` ON `runs` (`mood_id`);--> statement-breakpoint
+CREATE INDEX `idx_runs_space` ON `runs` (`space_id`);--> statement-breakpoint
 CREATE INDEX `idx_runs_updated` ON `runs` (`updated_at`);--> statement-breakpoint
+CREATE TABLE `spaces` (
+	`id` text PRIMARY KEY NOT NULL,
+	`account_id` text NOT NULL,
+	`name` text NOT NULL,
+	`slug` text NOT NULL,
+	`description` text,
+	`system_prompt` text,
+	`model` text,
+	`icon` text,
+	`theme_config` text,
+	`ui_config` text,
+	`is_archived` integer DEFAULT false NOT NULL,
+	`sort_order` integer DEFAULT 0 NOT NULL,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "check_spaces_theme_json" CHECK(json_valid("spaces"."theme_config") OR "spaces"."theme_config" IS NULL),
+	CONSTRAINT "check_spaces_ui_json" CHECK(json_valid("spaces"."ui_config") OR "spaces"."ui_config" IS NULL)
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `uniq_spaces_account_slug` ON `spaces` (`account_id`,`slug`);--> statement-breakpoint
+CREATE UNIQUE INDEX `uniq_spaces_account_name` ON `spaces` (`account_id`,`name`);--> statement-breakpoint
+CREATE INDEX `idx_spaces_account` ON `spaces` (`account_id`);--> statement-breakpoint
+CREATE INDEX `idx_spaces_sort` ON `spaces` (`sort_order`);--> statement-breakpoint
+CREATE INDEX `idx_spaces_updated` ON `spaces` (`updated_at`);--> statement-breakpoint
 CREATE TABLE `tasks` (
 	`entity_id` text PRIMARY KEY NOT NULL,
 	`status` text DEFAULT 'todo' NOT NULL,
@@ -539,7 +408,6 @@ CREATE TABLE `tool_calls` (
 	`account_id` text NOT NULL,
 	`run_id` text,
 	`provider_id` text,
-	`tool_id` text,
 	`tool_call_id` text,
 	`parent_tool_call_id` text,
 	`tool_name` text NOT NULL,
@@ -556,7 +424,6 @@ CREATE TABLE `tool_calls` (
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`run_id`) REFERENCES `runs`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`provider_id`) REFERENCES `providers`(`id`) ON UPDATE no action ON DELETE set null,
-	FOREIGN KEY (`tool_id`) REFERENCES `tools`(`id`) ON UPDATE no action ON DELETE set null,
 	CONSTRAINT "check_tool_calls_input_json" CHECK(json_valid("tool_calls"."input") OR "tool_calls"."input" IS NULL),
 	CONSTRAINT "check_tool_calls_output_json" CHECK(json_valid("tool_calls"."output") OR "tool_calls"."output" IS NULL),
 	CONSTRAINT "check_tool_calls_metadata_json" CHECK(json_valid("tool_calls"."metadata") OR "tool_calls"."metadata" IS NULL)
@@ -565,44 +432,24 @@ CREATE TABLE `tool_calls` (
 CREATE INDEX `idx_tool_calls_account_created` ON `tool_calls` (`account_id`,`created_at`);--> statement-breakpoint
 CREATE INDEX `idx_tool_calls_run` ON `tool_calls` (`run_id`);--> statement-breakpoint
 CREATE INDEX `idx_tool_calls_provider` ON `tool_calls` (`provider_id`);--> statement-breakpoint
-CREATE INDEX `idx_tool_calls_tool` ON `tool_calls` (`tool_id`);--> statement-breakpoint
 CREATE INDEX `idx_tool_calls_status` ON `tool_calls` (`status`);--> statement-breakpoint
 CREATE INDEX `idx_tool_calls_run_toolcallid` ON `tool_calls` (`run_id`,`tool_call_id`);--> statement-breakpoint
-CREATE TABLE `tools` (
+CREATE TABLE `workspace_activity` (
 	`id` text PRIMARY KEY NOT NULL,
-	`source` text NOT NULL,
-	`name` text NOT NULL,
-	`description` text,
-	`version` text,
-	`is_enabled` integer DEFAULT true NOT NULL,
-	`schema` text,
-	`mcp_server_id` text,
+	`workspace_id` text NOT NULL,
+	`type` text NOT NULL,
+	`title` text NOT NULL,
+	`summary` text,
 	`metadata` text,
+	`ref_id` text,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
-	FOREIGN KEY (`mcp_server_id`) REFERENCES `mcp_servers`(`id`) ON UPDATE no action ON DELETE set null,
-	CONSTRAINT "check_tools_schema_json" CHECK(json_valid("tools"."schema") OR "tools"."schema" IS NULL),
-	CONSTRAINT "check_tools_metadata_json" CHECK(json_valid("tools"."metadata") OR "tools"."metadata" IS NULL)
+	FOREIGN KEY (`workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "check_workspace_activity_metadata_json" CHECK(json_valid("workspace_activity"."metadata") OR "workspace_activity"."metadata" IS NULL)
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `uniq_tools_source_name` ON `tools` (`source`,`name`);--> statement-breakpoint
-CREATE INDEX `idx_tools_source` ON `tools` (`source`);--> statement-breakpoint
-CREATE INDEX `idx_tools_enabled` ON `tools` (`is_enabled`);--> statement-breakpoint
-CREATE INDEX `idx_tools_mcp_server` ON `tools` (`mcp_server_id`);--> statement-breakpoint
-CREATE TABLE `vec_entity_chunk_map` (
-	`vec_rowid` integer PRIMARY KEY NOT NULL,
-	`chunk_id` integer NOT NULL,
-	FOREIGN KEY (`vec_rowid`) REFERENCES `vec_entity_chunks`(`rowid`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`chunk_id`) REFERENCES `entity_chunks`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `vec_entity_chunk_map_chunk_id_unique` ON `vec_entity_chunk_map` (`chunk_id`);--> statement-breakpoint
-CREATE INDEX `idx_vec_entity_chunk_map_chunk` ON `vec_entity_chunk_map` (`chunk_id`);--> statement-breakpoint
-CREATE TABLE `vec_entity_chunks` (
-	`rowid` integer PRIMARY KEY NOT NULL,
-	`embedding` blob
-);
---> statement-breakpoint
+CREATE INDEX `idx_workspace_activity_workspace` ON `workspace_activity` (`workspace_id`);--> statement-breakpoint
+CREATE INDEX `idx_workspace_activity_type` ON `workspace_activity` (`type`);--> statement-breakpoint
+CREATE INDEX `idx_workspace_activity_created` ON `workspace_activity` (`created_at`);--> statement-breakpoint
 CREATE TABLE `workspace_diffs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`workspace_id` text NOT NULL,
@@ -620,21 +467,10 @@ CREATE TABLE `workspace_diffs` (
 --> statement-breakpoint
 CREATE INDEX `idx_workspace_diffs_workspace` ON `workspace_diffs` (`workspace_id`);--> statement-breakpoint
 CREATE INDEX `idx_workspace_diffs_created` ON `workspace_diffs` (`created_at`);--> statement-breakpoint
-CREATE TABLE `workspace_resources` (
-	`id` text PRIMARY KEY NOT NULL,
-	`workspace_id` text NOT NULL,
-	`resource_id` text NOT NULL,
-	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	FOREIGN KEY (`workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`resource_id`) REFERENCES `connection_resources`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `uniq_workspace_resources` ON `workspace_resources` (`workspace_id`,`resource_id`);--> statement-breakpoint
-CREATE INDEX `idx_workspace_resources_workspace` ON `workspace_resources` (`workspace_id`);--> statement-breakpoint
-CREATE INDEX `idx_workspace_resources_resource` ON `workspace_resources` (`resource_id`);--> statement-breakpoint
 CREATE TABLE `workspaces` (
 	`id` text PRIMARY KEY NOT NULL,
 	`account_id` text NOT NULL,
+	`project_id` text,
 	`name` text NOT NULL,
 	`root_path` text NOT NULL,
 	`repo_url` text,
@@ -645,10 +481,12 @@ CREATE TABLE `workspaces` (
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE set null,
 	CONSTRAINT "check_workspaces_metadata_json" CHECK(json_valid("workspaces"."metadata") OR "workspaces"."metadata" IS NULL)
 );
 --> statement-breakpoint
 CREATE INDEX `idx_workspaces_account` ON `workspaces` (`account_id`);--> statement-breakpoint
+CREATE INDEX `idx_workspaces_project` ON `workspaces` (`project_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `uniq_workspaces_account_root` ON `workspaces` (`account_id`,`root_path`);--> statement-breakpoint
 CREATE INDEX `idx_workspaces_status` ON `workspaces` (`status`);--> statement-breakpoint
 CREATE INDEX `idx_workspaces_updated` ON `workspaces` (`updated_at`);

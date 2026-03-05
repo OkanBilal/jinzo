@@ -1,1 +1,0 @@
-ALTER TABLE `app_settings` ADD `commit_instructions` text DEFAULT '' NOT NULL;

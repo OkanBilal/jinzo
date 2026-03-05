@@ -3,10 +3,14 @@ import Home from "@/routes/Home";
 import Settings from "@/routes/Settings";
 import Copilot from "@/routes/Copilot";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
+import { useActiveSpace } from "@/hooks/use-active-space";
 import ClaudePage from "@/routes/Claude";
 
 function DefaultRoute() {
+  const { activeSpace } = useActiveSpace();
   const sidebarConfig = useSidebarConfig();
+
+  if (!activeSpace) return null;
 
   if (sidebarConfig.defaultRoute !== "/") {
     return <Navigate to={sidebarConfig.defaultRoute} replace />;
@@ -19,12 +23,12 @@ export function MainRoutes() {
   return (
     <Routes>
       <Route path="/" element={<DefaultRoute />} />
-
+      <Route path="/claude" element={<ClaudePage />} />
+      <Route path="/claude/:workspaceId" element={<ClaudePage />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/copilot" element={<Copilot />} />
       <Route path="/copilot/:workspaceId" element={<Copilot />} />
-      <Route path="/claude" element={<ClaudePage />} />
-      <Route path="/claude/:workspaceId" element={<ClaudePage />} />
+
     </Routes>
   );
 }

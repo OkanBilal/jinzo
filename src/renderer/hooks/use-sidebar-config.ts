@@ -18,7 +18,7 @@ export function useSidebarConfig(): SidebarConfig {
       width: "19rem",
       title: "Workspaces",
       itemType: "workspace",
-      defaultRoute: "/copilot",
+      defaultRoute: "/claude",
     };
 
     if (activeSpace?.uiConfig) {

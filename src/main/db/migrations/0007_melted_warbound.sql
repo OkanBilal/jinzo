@@ -1,1 +1,0 @@
-ALTER TABLE `app_settings` ADD `pr_instructions` text DEFAULT '' NOT NULL;
