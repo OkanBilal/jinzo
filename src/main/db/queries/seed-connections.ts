@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { eq } from "drizzle-orm";
-import { connections, connectionSyncState } from "../schema";
+import { connections } from "../schema";
 import { getDb } from "../client";
 
 
@@ -37,18 +37,6 @@ async function ensureConnectionExists(
     status: defaultStatus,
     scopes: JSON.stringify([]),
     metadata: JSON.stringify(metadata),
-  });
-
-  // Initialize sync state
-  await db.insert(connectionSyncState).values({
-    connectionId,
-    cursor: null,
-    lastSyncAt: null,
-    lastSuccessAt: null,
-    lastErrorAt: null,
-    lastError: null,
-    backoffUntil: null,
-    etag: null,
   });
 
   return connectionId;

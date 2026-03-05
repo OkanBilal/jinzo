@@ -745,30 +745,6 @@ export const connectionTokens = sqliteTable(
   ],
 );
 
-export const connectionSyncState = sqliteTable(
-  "connection_sync_state",
-  {
-    connectionId: text("connection_id")
-      .primaryKey()
-      .references(() => connections.id, { onDelete: "cascade" }),
-    cursor: text("cursor"), // JSON
-    lastSyncAt: integer("last_sync_at", { mode: "timestamp" }),
-    lastSuccessAt: integer("last_success_at", { mode: "timestamp" }),
-    lastErrorAt: integer("last_error_at", { mode: "timestamp" }),
-    lastError: text("last_error"),
-    backoffUntil: integer("backoff_until", { mode: "timestamp" }),
-    etag: text("etag"),
-  },
-  (t) => [
-    index("idx_sync_state_last_sync").on(t.lastSyncAt),
-    index("idx_sync_state_last_success").on(t.lastSuccessAt),
-    index("idx_sync_state_backoff_until").on(t.backoffUntil),
-    check(
-      "check_sync_cursor_json",
-      sql`json_valid(${t.cursor}) OR ${t.cursor} IS NULL`,
-    ),
-  ],
-);
 
 export const connectionResources = sqliteTable(
   "connection_resources",
