@@ -112,7 +112,7 @@ Core tables:
 - `spaces` - User-defined UI/prompt configurations with theme/UI config JSON
 - `feedItems` - Event log/timeline entries
 - `chatSessions` / `chatMessages` - Chat history with provider/model tracking, observability (traceId, latencyMs, token counts)
-- `runs` / `runContext` / `runArtifacts` / `runTurns` / `runUsage` - Terminal/code-writing flow (agent runs with session resumption via sessionId, turn tracking, and usage metrics)
+- `runs` / `runContext` / `runArtifacts` / `runTurns` - Terminal/code-writing flow (agent runs with session resumption via sessionId, turn tracking)
 - `tools` / `toolCalls` - Tool registry (local, mcp, provider_builtin) and invocation tracking with nested tool call support (parentToolCallId)
 - `workspaceActivity` - Workspace activity log (types: diff, review, finding, commit, pr — with title, summary, metadata JSON, refId)
 - `workspaceDiffs` - Git diffs captured per workspace/run (base ref, diff text, files, stats)

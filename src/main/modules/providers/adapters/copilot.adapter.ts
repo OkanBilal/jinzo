@@ -1035,49 +1035,6 @@ export function createCopilotAdapter(
       }
     }
 
-    // Handle shell/command tools (Copilot often returns {content, displayContent})
-    if (
-      toolName === "Bash" ||
-      toolName === "bash" ||
-      toolName === "shell" ||
-      toolName === "terminal" ||
-      toolName === "run_command" ||
-      toolName === "execute_shell" ||
-      toolName === "command_result"
-    ) {
-      const out = output as any;
-
-      const text =
-        typeof out?.stdout === "string"
-          ? out.stdout
-          : typeof out?.displayContent === "string"
-            ? out.displayContent
-            : typeof out?.output === "string"
-              ? out.output
-              : typeof out?.content === "string"
-                ? out.content
-                : typeof out === "string"
-                  ? out
-                  : undefined;
-
-      const exitCode =
-        typeof out?.exit_code === "number"
-          ? out.exit_code
-          : typeof out?.exitCode === "number"
-            ? out.exitCode
-            : parseExitCode(text);
-
-      artifacts.push({
-        type: "command",
-        command: typeof out?.command === "string" ? out.command : "unknown",
-        cwd: typeof out?.cwd === "string" ? out.cwd : undefined,
-        stdout: text,
-        stderr: typeof out?.stderr === "string" ? out.stderr : undefined,
-        exitCode,
-        endedAt: Date.now(),
-        metadata: { toolName },
-      });
-    }
 
     return artifacts;
   }
@@ -1322,9 +1279,6 @@ export function createCopilotAdapter(
                       kind: artEvent.kind,
                       path: artEvent.path,
                     });
-                  }
-                  if (artEvent.type === "command") {
-                    collectedArtifacts.push({ kind: "command_result" });
                   }
                 }
               }
@@ -1584,9 +1538,6 @@ export function createCopilotAdapter(
                       kind: artEvent.kind,
                       path: artEvent.path,
                     });
-                  }
-                  if (artEvent.type === "command") {
-                    collectedArtifacts.push({ kind: "command_result" });
                   }
                 }
               }
@@ -2000,14 +1951,6 @@ function safeJson(value: unknown): string {
   } catch {
     return String(value);
   }
-}
-
-function parseExitCode(text?: string): number | undefined {
-  if (!text) return undefined;
-  const m = text.match(/exited with exit code\s+(\d+)/i);
-  if (!m) return undefined;
-  const n = Number(m[1]);
-  return Number.isFinite(n) ? n : undefined;
 }
 
 /**
