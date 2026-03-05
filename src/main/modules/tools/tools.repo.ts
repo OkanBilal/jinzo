@@ -37,15 +37,6 @@ export const toolsRepo = {
     return rows.map(mapToolRowToResponse);
   },
 
-  async findToolsByMcpServer(mcpServerId: string): Promise<ToolResponse[]> {
-    const db = getDb();
-    const rows = await db
-      .select()
-      .from(tools)
-      .where(eq(tools.mcpServerId, mcpServerId));
-    return rows.map(mapToolRowToResponse);
-  },
-
   async findEnabledTools(): Promise<ToolResponse[]> {
     const db = getDb();
     const rows = await db.select().from(tools).where(eq(tools.isEnabled, true));
@@ -62,7 +53,6 @@ export const toolsRepo = {
       version: payload.version,
       isEnabled: payload.isEnabled ?? true,
       schema: payload.schema ? JSON.stringify(payload.schema) : null,
-      mcpServerId: payload.mcpServerId,
       metadata: payload.metadata ? JSON.stringify(payload.metadata) : null,
     });
     return payload.id;
@@ -216,7 +206,6 @@ function mapToolRowToResponse(row: typeof tools.$inferSelect): ToolResponse {
     version: row.version,
     isEnabled: row.isEnabled,
     schema: row.schema ? JSON.parse(row.schema) : null,
-    mcpServerId: row.mcpServerId,
     metadata: row.metadata ? JSON.parse(row.metadata) : null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

@@ -50,16 +50,6 @@ export const toolsService = {
     }
   },
 
-  async getToolsByMcpServer(mcpServerId: string): Promise<ServiceResponse<ToolResponse[]>> {
-    try {
-      const tools = await toolsRepo.findToolsByMcpServer(mcpServerId);
-      return { success: true, data: tools };
-    } catch (error) {
-      console.error(`[ToolsService] Failed to get tools for MCP server ${mcpServerId}:`, error);
-      return { success: false, error: "Failed to get tools" };
-    }
-  },
-
   async getEnabledTools(): Promise<ServiceResponse<ToolResponse[]>> {
     try {
       const tools = await toolsRepo.findEnabledTools();

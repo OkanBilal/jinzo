@@ -16,7 +16,6 @@ const CHANNELS = {
   TOOLS_GET_ALL: "tools:getAll",
   TOOLS_GET_BY_ID: "tools:getById",
   TOOLS_GET_BY_SOURCE: "tools:getBySource",
-  TOOLS_GET_BY_MCP_SERVER: "tools:getByMcpServer",
   TOOLS_GET_ENABLED: "tools:getEnabled",
   TOOLS_CREATE: "tools:create",
   TOOLS_UPDATE: "tools:update",
@@ -48,10 +47,6 @@ export function registerToolsIpc(): void {
 
   ipcMain.handle(CHANNELS.TOOLS_GET_BY_SOURCE, async (_, source: ToolSource) => {
     return toolsController.getToolsBySource(source);
-  });
-
-  ipcMain.handle(CHANNELS.TOOLS_GET_BY_MCP_SERVER, async (_, mcpServerId: string) => {
-    return toolsController.getToolsByMcpServer(mcpServerId);
   });
 
   ipcMain.handle(CHANNELS.TOOLS_GET_ENABLED, async () => {

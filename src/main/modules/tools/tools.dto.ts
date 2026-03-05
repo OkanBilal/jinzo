@@ -36,7 +36,6 @@ export interface CreateToolPayload {
   version?: string;
   isEnabled?: boolean;
   schema?: ToolSchema;
-  mcpServerId?: string;
   metadata?: ToolMetadata;
 }
 
@@ -57,7 +56,6 @@ export interface ToolResponse {
   version: string | null;
   isEnabled: boolean;
   schema: ToolSchema | null;
-  mcpServerId: string | null;
   metadata: ToolMetadata | null;
   createdAt: Date;
   updatedAt: Date;

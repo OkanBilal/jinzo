@@ -341,8 +341,6 @@ const api = {
     getById: (id: string) => ipcRenderer.invoke("tools:getById", id),
     getBySource: (source: "local" | "mcp" | "provider_builtin") =>
       ipcRenderer.invoke("tools:getBySource", source),
-    getByMcpServer: (mcpServerId: string) =>
-      ipcRenderer.invoke("tools:getByMcpServer", mcpServerId),
     getEnabled: () => ipcRenderer.invoke("tools:getEnabled"),
     create: (payload: unknown) => ipcRenderer.invoke("tools:create", payload),
     update: (id: string, payload: unknown) =>

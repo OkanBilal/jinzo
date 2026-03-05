@@ -25,7 +25,6 @@ export interface Tool {
   version: string | null;
   isEnabled: boolean;
   schema: ToolSchema | null;
-  mcpServerId: string | null;
   metadata: ToolMetadata | null;
   createdAt: number;
   updatedAt: number;
@@ -39,7 +38,6 @@ export interface CreateToolPayload {
   version?: string;
   isEnabled?: boolean;
   schema?: ToolSchema;
-  mcpServerId?: string;
   metadata?: ToolMetadata;
 }
 
@@ -118,16 +116,6 @@ export const toolsApi = baseApi.injectEndpoints({
       query: (source) => ({
         handler: "tools:getBySource",
         args: [source],
-      }),
-      transformResponse: (response: { success: boolean; data: Tool[] }) =>
-        response.data,
-      providesTags: ["Tools"],
-    }),
-
-    getToolsByMcpServer: builder.query<Tool[], string>({
-      query: (mcpServerId) => ({
-        handler: "tools:getByMcpServer",
-        args: [mcpServerId],
       }),
       transformResponse: (response: { success: boolean; data: Tool[] }) =>
         response.data,
@@ -257,8 +245,6 @@ export const {
   useLazyGetToolByIdQuery,
   useGetToolsBySourceQuery,
   useLazyGetToolsBySourceQuery,
-  useGetToolsByMcpServerQuery,
-  useLazyGetToolsByMcpServerQuery,
   useGetEnabledToolsQuery,
   useLazyGetEnabledToolsQuery,
   useCreateToolMutation,

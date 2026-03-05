@@ -257,8 +257,6 @@ export {
   useLazyGetToolByIdQuery,
   useGetToolsBySourceQuery,
   useLazyGetToolsBySourceQuery,
-  useGetToolsByMcpServerQuery,
-  useLazyGetToolsByMcpServerQuery,
   useGetEnabledToolsQuery,
   useLazyGetEnabledToolsQuery,
   useCreateToolMutation,

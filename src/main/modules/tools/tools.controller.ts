@@ -15,7 +15,6 @@ export const toolsController = {
   getAllTools: () => toolsService.getAllTools(),
   getToolById: (id: string) => toolsService.getToolById(id),
   getToolsBySource: (source: ToolSource) => toolsService.getToolsBySource(source),
-  getToolsByMcpServer: (mcpServerId: string) => toolsService.getToolsByMcpServer(mcpServerId),
   getEnabledTools: () => toolsService.getEnabledTools(),
   createTool: (payload: CreateToolPayload) => toolsService.createTool(payload),
   updateTool: (id: string, payload: UpdateToolPayload) => toolsService.updateTool(id, payload),

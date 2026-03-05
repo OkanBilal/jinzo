@@ -119,7 +119,6 @@ Core tables:
 - `reviews` - Workspace-level review notes (status: open, in_review, approved, rejected)
 - `reviewFindings` - Individual code review findings linked to reviews
 - `projectResources` - Pivot table linking projects to connectionResources
-- `mcpServers` - MCP server registry (transport: stdio, http, ws)
 - `documentRevisions` - Journal revision history (title, body, wordCount per entity)
 - `outbox` - Offline-first action queue for retryable external operations
 

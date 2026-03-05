@@ -629,43 +629,6 @@ export const workspaceActivity = sqliteTable(
 
 
 /* -----------------------------
-   MCP SERVERS (optional, but useful if you discover tools dynamically)
------------------------------- */
-
-export const mcpServers = sqliteTable(
-  "mcp_servers",
-  {
-    id: text("id").primaryKey(), // uuid or "local"
-    accountId: text("account_id")
-      .notNull()
-      .references(() => accounts.id, { onDelete: "cascade" }),
-
-    name: text("name").notNull(),
-    transport: text("transport", { enum: ["stdio", "http", "ws"] }).notNull(),
-    endpoint: text("endpoint"), // url or command (depends on transport)
-    status: text("status", { enum: ["active", "disabled", "error"] })
-      .notNull()
-      .default("active"),
-
-    metadata: text("metadata"), // JSON (auth hints, headers, etc.)
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
-  },
-  (t) => [
-    index("idx_mcp_servers_account").on(t.accountId),
-    index("idx_mcp_servers_status").on(t.status),
-    check(
-      "check_mcp_servers_metadata_json",
-      sql`json_valid(${t.metadata}) OR ${t.metadata} IS NULL`,
-    ),
-  ],
-);
-
-/* -----------------------------
    TOOLS REGISTRY (local + mcp + provider builtins)
 ------------------------------ */
 
@@ -688,11 +651,6 @@ export const tools = sqliteTable(
     // JSON Schema
     schema: text("schema"), // JSON
 
-    // if MCP-sourced
-    mcpServerId: text("mcp_server_id").references(() => mcpServers.id, {
-      onDelete: "set null",
-    }),
-
     metadata: text("metadata"), // JSON
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
@@ -705,7 +663,6 @@ export const tools = sqliteTable(
     uniqueIndex("uniq_tools_source_name").on(t.source, t.name),
     index("idx_tools_source").on(t.source),
     index("idx_tools_enabled").on(t.isEnabled),
-    index("idx_tools_mcp_server").on(t.mcpServerId),
     check(
       "check_tools_schema_json",
       sql`json_valid(${t.schema}) OR ${t.schema} IS NULL`,
