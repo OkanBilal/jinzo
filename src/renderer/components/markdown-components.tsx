@@ -82,18 +82,17 @@ export const markdownComponents: Components = {
     <pre className="my-2 rounded-xl overflow-hidden bg-primary-50 dark:bg-primary/8 transition-all duration-150 ease-out">{children}</pre>
   ),
   a: ({ href, children }) => (
-    <a
-      href={href}
-      onClick={(e) => {
+    <button
+      type="button"
+      onClick={() => {
         if (href) {
-          e.preventDefault();
           window.api.shell.openExternal(href);
         }
       }}
-      className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 underline cursor-pointer transition-all duration-150 ease-out"
+      className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 underline cursor-pointer transition-all duration-150 ease-out inline"
     >
       {children}
-    </a>
+    </button>
   ),
   blockquote: ({ children }) => (
     <blockquote className="border-l-4 border-primary-400 dark:border-primary-600 pl-4 py-1 my-2 italic text-primary-700 dark:text-primary-300 transition-all duration-150 ease-out">

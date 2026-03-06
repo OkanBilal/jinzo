@@ -30,7 +30,7 @@ export function WorkspaceEmptyState({ workspace }: WorkspaceEmptyStateProps) {
             size={80}
             animate
           /> */}
-            <p className="text-xl text-primary-700 dark:text-copilot-light/60 font-mono ">
+            <p className="text-xl text-primary-700 dark:text-primary-200 font-mono ">
             {displayText}
           </p>
         </div>

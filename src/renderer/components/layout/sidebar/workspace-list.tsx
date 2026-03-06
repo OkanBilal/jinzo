@@ -302,7 +302,7 @@ export default function WorkspacesList({
           Workspaces
         </Caption>
         <div className="flex items-center gap-1">
-          <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+          <div role="presentation" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <WorkspaceGroupDropdown
               grouping={grouping}
               onGroupingChange={setGrouping}

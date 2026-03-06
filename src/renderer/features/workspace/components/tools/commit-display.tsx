@@ -50,8 +50,8 @@ export function CommitDisplay({
         <div className="mt-2 ml-5 border-l border-primary-200/50 dark:border-primary-700/30 pl-3 space-y-2">
                     {params.files?.length && (
             <div className="space-y-0.5">
-              {params.files.map((file, i) => (
-                <div key={i} className="text-xs font-mono text-primary-500 py-0.5">
+              {params.files.map((file) => (
+                <div key={file} className="text-xs font-mono text-primary-500 py-0.5">
                   {shortPath(file)}
                 </div>
               ))}

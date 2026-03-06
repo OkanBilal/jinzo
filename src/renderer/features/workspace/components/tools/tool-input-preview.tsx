@@ -89,9 +89,9 @@ function DiffView({ diff, oldStr, newStr }: { diff?: string; oldStr?: string; ne
 
   return (
     <div className="text-xs leading-relaxed font-mono px-3 py-2 max-h-40 overflow-y-auto noscrollbar">
-      {lines.map((l, i) => (
+      {lines.map((l, lineNum) => (
         <div
-          key={`${i}-${l.prefix}${l.text.slice(0, 20)}`}
+          key={`${lineNum}:${l.type}`}
           className={
             l.type === "add"
               ? "text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30"

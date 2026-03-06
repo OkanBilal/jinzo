@@ -32,6 +32,7 @@ export default function ClaudePage() {
     () =>
       ws.showEmptyState ? null : (
         <WorkspaceTabs
+          variant="claude"
           runs={ws.runs}
           activeTab={ws.activeTab}
           hasSelectedFile={!!ws.selectedFile}

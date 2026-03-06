@@ -1,24 +1,26 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 
-interface MainHeaderContextType {
+interface MainHeaderState {
   header: ReactNode | null;
-  setHeader: (header: ReactNode | null) => void;
   firstTabActive: boolean;
-  setFirstTabActive: (active: boolean) => void;
+}
+
+const DEFAULT_STATE: MainHeaderState = { header: null, firstTabActive: false };
+
+interface MainHeaderContextType extends MainHeaderState {
+  setMainHeader: (state: MainHeaderState) => void;
 }
 
 const MainHeaderContext = createContext<MainHeaderContextType>({
-  header: null,
-  setHeader: () => {},
-  firstTabActive: false,
-  setFirstTabActive: () => {},
+  ...DEFAULT_STATE,
+  setMainHeader: () => {},
 });
 
 export function MainHeaderProvider({ children }: { children: ReactNode }) {
-  const [header, setHeader] = useState<ReactNode | null>(null);
-  const [firstTabActive, setFirstTabActive] = useState(false);
+  const [state, setState] = useState<MainHeaderState>(DEFAULT_STATE);
+  const setMainHeader = useCallback((s: MainHeaderState) => setState(s), []);
   return (
-    <MainHeaderContext.Provider value={{ header, setHeader, firstTabActive, setFirstTabActive }}>
+    <MainHeaderContext.Provider value={{ ...state, setMainHeader }}>
       {children}
     </MainHeaderContext.Provider>
   );
@@ -30,13 +32,9 @@ export function useMainHeader() {
 
 /** Set a header element that renders in the transparent area above MainContent's opaque container. */
 export function useSetMainHeader(header: ReactNode | null, firstTabActive = false) {
-  const { setHeader, setFirstTabActive } = useMainHeader();
+  const { setMainHeader } = useMainHeader();
   useEffect(() => {
-    setHeader(header);
-    setFirstTabActive(firstTabActive);
-    return () => {
-      setHeader(null);
-      setFirstTabActive(false);
-    };
-  }, [header, firstTabActive, setHeader, setFirstTabActive]);
+    setMainHeader({ header, firstTabActive });
+    return () => setMainHeader(DEFAULT_STATE);
+  }, [header, firstTabActive, setMainHeader]);
 }

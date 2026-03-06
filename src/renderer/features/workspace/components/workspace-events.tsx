@@ -6,6 +6,8 @@ import { NoteTabContent } from "./note-tab-content";
 import { WorkspaceEmptyState } from "./workspace-empty-state";
 import type { Run, RunEvent, Workspace } from "../types";
 import type { IssueWithEntity, RunTurn, ModelUsageEntry } from "@/lib/redux/api";
+
+const EMPTY_TURNS: RunTurn[] = [];
 import { isIssueTab, getIssueEntityId, isNoteTab, getNoteId, isNewRunTab } from "../utils/repo-utils";
 import { AsciiLoader } from "./ascii-loader";
 import type { ToolApprovalRequest } from "../hooks/use-tool-approval";
@@ -396,7 +398,7 @@ export function WorkspaceEvents({
   currentWorkspace,
   eventsEndRef,
   issueTabs,
-  turns = [],
+  turns = EMPTY_TURNS,
   variant = "copilot",
   pendingApproval,
   onApprovalRespond,

@@ -32,6 +32,7 @@ export default function CopilotPage() {
     () =>
       ws.showEmptyState ? null : (
         <WorkspaceTabs
+          variant="copilot"
           runs={ws.runs}
           activeTab={ws.activeTab}
           hasSelectedFile={!!ws.selectedFile}
@@ -71,7 +72,7 @@ export default function CopilotPage() {
   useSetMainHeader(tabBar, !ws.showEmptyState && isFirstTabActive);
 
   return (
-    <div className="flex flex-col h-full dark:bg-copilot rounded-t-2xl overflow-hidden">
+    <div className="flex flex-col h-full dark:bg-primary-950 rounded-t-2xl overflow-hidden">
       <div className="flex-1 overflow-hidden noscrollbar">
         {ws.showEmptyState ? (
           <WorkspaceEmptyState workspace={ws.currentWorkspace} />

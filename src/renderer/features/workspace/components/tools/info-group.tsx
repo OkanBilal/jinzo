@@ -47,9 +47,9 @@ export function InfoGroup({ group }: InfoGroupProps) {
             </div>
             {(files.length > 0 || attachments.length > 0 || issues.length > 0) && (
               <div className="flex flex-wrap gap-1.5 justify-end">
-                {issues.map((issue, i) => (
+                {issues.map((issue) => (
                   <div
-                    key={`issue-${i}`}
+                    key={`${issue.provider}-${issue.number ?? issue.title}`}
                     className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs ${getIssueChipColor(issue.provider)}`}
                   >
                     <IssueIcon provider={issue.provider} />

@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useReducer, useCallback } from "react";
+import { useState, useEffect, useMemo, useReducer } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Heading2, Muted, Button, Textarea, toast, Alert } from "@/components/ui";
+import { Heading2, Muted, Button, toast, Alert } from "@/components/ui";
 import {
   useGetProjectByIdQuery,
   useUpdateProjectMutation,
@@ -11,6 +11,9 @@ import SpaceIconPicker from "@/components/layout/sidebar/space-icon-picker";
 import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
 import { formReducer, initialFormState } from "./project-form-reducer";
 import { ProjectLinkedResources } from "./project-linked-resources";
+import { ProjectScriptsSection } from "./project-scripts-section";
+import { ProjectInstructionsSection } from "./project-instructions-section";
+import { ProjectSaveBar } from "./project-save-bar";
 
 interface ProjectDetailProps {
   id: string;
@@ -106,34 +109,6 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   const setField = (field: "defaultBranch" | "setupScript" | "runScript" | "archiveScript" | "commitInstructions" | "prInstructions", value: string) =>
     dispatch({ type: "SET_FIELD", field, value });
 
-  const [importing, setImporting] = useState(false);
-
-  const handleImportPrTemplate = useCallback(async () => {
-    if (!project?.rootPath || importing) return;
-    setImporting(true);
-    try {
-      const paths = [
-        `${project.rootPath}/.github/PULL_REQUEST_TEMPLATE.md`,
-        `${project.rootPath}/.github/pull_request_template.md`,
-        `${project.rootPath}/PULL_REQUEST_TEMPLATE.md`,
-        `${project.rootPath}/pull_request_template.md`,
-      ];
-      for (const path of paths) {
-        const result = await window.api.fileExplorer.readFile(path);
-        if (result?.success && result.data) {
-          setField("prInstructions", result.data);
-          toast.success("PR template imported");
-          return;
-        }
-      }
-      toast.error("No PR template found in repository");
-    } catch {
-      toast.error("Failed to read PR template");
-    } finally {
-      setImporting(false);
-    }
-  }, [project?.rootPath, importing]);
-
   const formatPath = (path: string) => {
     const parts = path.split("/");
     const last = parts.pop();
@@ -222,93 +197,18 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
         onManageClick={() => setShowLinkModal(true)}
       />
 
-      <SettingsSection title="Scripts">
-        <SettingsRow
-          variant="detail"
-          title="Setup"
-          description="Runs after a new workspace is created, e.g. installing dependencies."
-        >
-          <Textarea
-            value={setupScript}
-            onChange={(e) => setField("setupScript", e.target.value)}
-            placeholder="e.g., npm i && npm run build"
-            rows={2}
-            className="min-w-0"
-          />
-        </SettingsRow>
-        {/* <SettingsDivider />
-        <SettingsRow
-          variant="detail"
-          title="Run script"
-          description="Runs when a workspace session starts, e.g. starting a dev server."
-        >
-          <Textarea
-            value={runScript}
-            onChange={(e) => setField("runScript", e.target.value)}
-            placeholder="e.g., npm run start"
-            rows={2}
-            className="min-w-0"
-          />
-        </SettingsRow> */}
-        <SettingsDivider />
-        <SettingsRow
-          variant="detail"
-          title="Archive"
-          description="Runs when archiving a workspace, e.g. cleaning up node_modules."
-        >
-          <Textarea
-            value={archiveScript}
-            onChange={(e) => setField("archiveScript", e.target.value)}
-            placeholder="e.g., rm -rf node_modules"
-            rows={2}
-            className="min-w-0"
-          />
-        </SettingsRow>
-      </SettingsSection>
+      <ProjectScriptsSection
+        setupScript={setupScript}
+        archiveScript={archiveScript}
+        onFieldChange={setField}
+      />
 
-      <SettingsSection title="Instructions">
-        <SettingsRow
-          variant="detail"
-          title="Commit Instructions"
-          description="Instructions prepended to commit goals. Overrides global setting if provided."
-        >
-          <Textarea
-            value={commitInstructions}
-            onChange={(e) => setField("commitInstructions", e.target.value)}
-            placeholder="Overrides global setting if provided"
-            rows={3}
-            className="min-w-0"
-          />
-        </SettingsRow>
-        <SettingsDivider />
-        <SettingsRow
-          variant="detail"
-          title="PR Template Instructions"
-          description="Instructions prepended to PR goals. Overrides global setting if provided."
-        >
-          <div className="flex flex-col gap-2 min-w-0 w-full">
-            <Textarea
-              value={prInstructions}
-              onChange={(e) => setField("prInstructions", e.target.value)}
-              placeholder="Overrides global setting if provided"
-              rows={3}
-              className="min-w-0"
-            />
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={importing}
-                isLoading={importing}
-                onClick={handleImportPrTemplate}
-              >
-                Import from repo
-              </Button>
-            </div>
-          </div>
-        </SettingsRow>
-      </SettingsSection>
+      <ProjectInstructionsSection
+        commitInstructions={commitInstructions}
+        prInstructions={prInstructions}
+        rootPath={project.rootPath}
+        onFieldChange={setField}
+      />
 
       <SettingsSection title="Danger Zone">
         <SettingsRow
@@ -328,32 +228,14 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
         </SettingsRow>
       </SettingsSection>
 
-            <div className="flex items-center justify-between pt-2 mb-8">
-        <div className="text-xs text-primary-500 dark:text-primary-400">
-          {lastSavedLabel ? `Last saved: ${lastSavedLabel}` : "Not saved yet"}
-        </div>
-        <div className="flex items-center gap-3">
-          <Button
-            tooltip="Refresh project details"
-            type="button"
-            variant="ghost"
-            onClick={() => refetch()}
-            disabled={isLoading || saving}
-          >
-            Refresh
-          </Button>
-          <Button
-            type="button"
-            size="md"
-            variant="submit"
-            disabled={!isDirty || saving}
-            isLoading={saving}
-            onClick={handleSave}
-          >
-            Save
-          </Button>
-        </div>
-      </div>
+      <ProjectSaveBar
+        lastSavedLabel={lastSavedLabel}
+        isDirty={isDirty}
+        saving={saving}
+        isLoading={isLoading}
+        onRefresh={refetch}
+        onSave={handleSave}
+      />
 
       <Alert
         isOpen={showRemoveAlert}
