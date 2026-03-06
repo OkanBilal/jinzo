@@ -244,8 +244,6 @@ export function WorkspaceInput({
     return null;
   })();
 
-  const glassMorphismClass =
-    variant === "claude" ? "glass-morphism-claude" : "glass-morphism-copilot";
 
   return (
     <>
@@ -257,7 +255,7 @@ export function WorkspaceInput({
       )}
    
     <div
-      className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-3xl ${glassMorphismClass}
+      className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism
         cursor-pointer transition-all`}
     >
       <ContextChips
@@ -277,7 +275,6 @@ export function WorkspaceInput({
               ? "Ask a follow-up question, run /commands or @mention files to context"
               : "Ask to edit, run /skills, or @mention files to context"
           }
-          variant={variant}
         />
         <SlashMenuDropdown
           commands={providerCommands}
@@ -288,7 +285,6 @@ export function WorkspaceInput({
           onClose={() => updateSlashMenu({ visible: false })}
           dropdownRef={slashCommandDropdownRef}
           filterText={slashMenu.filter}
-          variant={variant}
           isLoadingCommands={isLoadingCommands}
           isLoadingSkills={isLoadingSkills}
         />
@@ -300,7 +296,6 @@ export function WorkspaceInput({
           onNavigate={handleAtMenuNavigate}
           onClose={() => updateAtMenu({ visible: false, filter: "" })}
           dropdownRef={fileMentionDropdownRef}
-          variant={variant}
         />
         <IssueMentionDropdown
           isOpen={hashMenu.visible}
@@ -309,7 +304,6 @@ export function WorkspaceInput({
           onSelectIssue={handleIssueSelect}
           onClose={() => updateHashMenu({ visible: false, filter: "" })}
           dropdownRef={issueMentionDropdownRef}
-          variant={variant}
         />
       </div>
       <InputToolbar

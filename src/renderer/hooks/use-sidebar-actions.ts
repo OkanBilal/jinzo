@@ -81,11 +81,6 @@ export function useSidebarActions() {
                   ?.fetchUrl ?? null)
               : null;
 
-          if (!originUrl) {
-            toast.error("Repository must have a remote origin");
-            return;
-          }
-
           // 2. Get base branch
           const branchResult =
             await window.api.git.getCurrentBranch(selectedPath);
@@ -95,13 +90,15 @@ export function useSidebarActions() {
               : "main";
 
           // 3. Find or create project first so we have the project name
-          const projectResult = await findOrCreateProject({
-            accountId: account?.id || "default",
-            name: folderName,
-            rootPath: selectedPath,
-            remoteOrigin: originUrl,
-            defaultBranch: baseBranch,
-          }).unwrap();
+          const projectResult = originUrl
+            ? await findOrCreateProject({
+                accountId: account?.id || "default",
+                name: folderName,
+                rootPath: selectedPath,
+                remoteOrigin: originUrl,
+                defaultBranch: baseBranch,
+              }).unwrap()
+            : null;
 
           const projectName = projectResult?.name || folderName;
 
@@ -150,7 +147,7 @@ export function useSidebarActions() {
               sourcePath: selectedPath,
               branch: branchName,
             },
-            origin: { url: originUrl },
+            origin: originUrl ? { url: originUrl } : undefined,
             baseBranch,
           };
 
@@ -159,7 +156,7 @@ export function useSidebarActions() {
             accountId: account?.id || "default",
             name: folderName,
             rootPath: worktreePath,
-            repoUrl: originUrl,
+            repoUrl: originUrl || undefined,
             defaultBranch: branchName,
             metadata,
             projectId: projectResult?.id,
@@ -182,21 +179,17 @@ export function useSidebarActions() {
             originUrl,
           } = importResult.data;
 
-          // Reject if no remote origin
-          if (!originUrl) {
-            toast.error("Repository must have a remote origin");
-            return;
-          }
-
-          // Find or create project for this remote origin
-          const projectResult = await findOrCreateProject({
-            accountId: account?.id || "default",
-            name: folderName,
-            rootPath: selectedPath,
-            remoteOrigin: originUrl,
-            branches: [branchName],
-            defaultBranch: baseBranch,
-          }).unwrap();
+          // Find or create project for this remote origin (skip if no remote)
+          const projectResult = originUrl
+            ? await findOrCreateProject({
+                accountId: account?.id || "default",
+                name: folderName,
+                rootPath: selectedPath,
+                remoteOrigin: originUrl,
+                branches: [branchName],
+                defaultBranch: baseBranch,
+              }).unwrap()
+            : null;
 
           const metadata = {
             isGitRepo: true,
@@ -204,7 +197,7 @@ export function useSidebarActions() {
             ahead,
             behind,
             worktree: { enabled: false as const },
-            origin: { url: originUrl },
+            origin: originUrl ? { url: originUrl } : undefined,
             baseBranch,
           };
 
@@ -213,7 +206,7 @@ export function useSidebarActions() {
             accountId: account?.id || "default",
             name: folderName,
             rootPath: selectedPath,
-            repoUrl: originUrl,
+            repoUrl: originUrl || undefined,
             defaultBranch: branchName,
             metadata,
             projectId: projectResult?.id,

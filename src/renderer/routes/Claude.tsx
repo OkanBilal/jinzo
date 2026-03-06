@@ -38,7 +38,6 @@ export default function ClaudePage() {
           fileName={ws.selectedFile?.name}
           issueTabs={ws.openIssueTabs}
           noteTabs={ws.openNoteTabs}
-          variant="claude"
           onSelectEditorTab={ws.handleSelectEditorTab}
           onSelectRunTab={ws.handleSelectRunTab}
           onCloseTab={ws.handleCloseTab}
@@ -63,7 +62,7 @@ export default function ClaudePage() {
     ],
   );
 
-  const isFirstTabActive = !!ws.selectedFile
+  const isFirstTabActive = ws.selectedFile
     ? ws.activeTab === "editor"
     : ws.runs.length > 0
       ? ws.activeTab === ws.runs[0]?.id
@@ -94,7 +93,6 @@ export default function ClaudePage() {
       </div>
       <WorkspaceQuickActions
         onSetGoal={ws.setGoal}
-        variant="claude"
         projectId={ws.currentWorkspace?.projectId ?? undefined}
         providerId={CLAUDE_PROVIDER_ID}
       />

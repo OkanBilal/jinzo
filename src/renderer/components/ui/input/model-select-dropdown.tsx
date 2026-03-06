@@ -2,7 +2,6 @@ import { RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import DropdownWrapper from "@/components/ui/dropdown-wrapper";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import type { InputVariant } from "./send-button";
 import { getModelIcon } from "@/lib/model-icons";
 import { ModelLoader } from "@/components/ui/input/model-loader";
 
@@ -15,33 +14,8 @@ interface ModelSelectDropdownProps {
   onClose?: () => void;
   dropdownRef: RefObject<HTMLDivElement | null>;
   openUpward?: boolean;
-  variant?: InputVariant;
   isLoading?: boolean;
 }
-
-const variantStyles = {
-  default: {
-    container: "hover:bg-primary-700/10 dark:hover:bg-primary-300/10",
-    button: "text-primary-700 dark:text-primary-300/80",
-    selected:
-      "bg-primary-300/60 dark:bg-primary-300/8 text-primary-700 dark:text-primary-300",
-    item: "hover:bg-primary-300/50 dark:hover:bg-primary-300/6 text-primary-700 dark:text-primary-300",
-  },
-  copilot: {
-    container: "hover:bg-copilot-dark/6 dark:hover:bg-copilot-light/6",
-    button: "text-copilot-dark dark:text-copilot-light/80",
-    selected:
-      "bg-copilot-light/60 dark:bg-copilot-light/8 text-copilot-dark dark:text-copilot-light",
-    item: "hover:bg-copilot-dark/6 dark:hover:bg-copilot-light/6 text-copilot-dark dark:text-copilot-light",
-  },
-  claude: {
-    container: "hover:bg-claude-dark/6 dark:hover:bg-claude-light/6",
-    button: "text-claude-dark dark:text-claude-light/80",
-    selected:
-      "bg-claude-dark/6 dark:bg-claude-light/6 text-claude-dark dark:text-claude-light",
-    item: "hover:bg-claude-dark/6 dark:hover:bg-claude-light/6 text-claude-dark dark:text-claude-light",
-  },
-};
 
 function formatClaudeModelName(model: string): string {
   const lowerModel = model.toLowerCase();
@@ -72,11 +46,9 @@ export function ModelSelectDropdown({
   onClose,
   dropdownRef,
   openUpward = false,
-  variant = "default",
   isLoading = false,
 }: ModelSelectDropdownProps) {
   const modelList = Array.isArray(models) ? models : [];
-  const styles = variantStyles[variant];
   const displayModel = formatClaudeModelName(model);
 
   useClickOutside(dropdownRef, () => {
@@ -88,20 +60,20 @@ export function ModelSelectDropdown({
   return (
     <div className="relative" ref={dropdownRef}>
       <div
-        className={`flex cursor-pointer  items-center ${styles.container} transition-colors rounded-3xl`}
+        className="flex cursor-pointer items-center hover:bg-primary-200/30 dark:hover:bg-primary-600/20 transition-colors rounded-3xl"
       >
         <Button
           tooltip="Select model"
           tooltipPosition="top"
           type="button"
           onClick={onToggle}
-          className={`text-sm cursor-pointer ${styles.button} font-medium px-2 py-1.5 flex items-center gap-1.5`}
+          className="text-sm cursor-pointer text-primary-700 dark:text-primary-300/80 font-medium px-2 py-1.5 flex items-center gap-1.5"
           aria-haspopup="true"
           aria-expanded={isOpen}
           disabled={isLoading && !displayModel}
         >
           {isLoading && !displayModel ? (
-            <ModelLoader variant={variant} />
+            <ModelLoader />
           ) : (
             <>
               {getModelIcon(displayModel)}
@@ -129,7 +101,7 @@ export function ModelSelectDropdown({
                   onToggle();
                 }}
                 className={`w-full text-left px-3 py-2.5 cursor-pointer text-sm transition-colors flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl ${
-                  model === m ? `${styles.selected} font-medium` : styles.item
+                  model === m ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-300 font-medium" : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
                 }`}
               >
                 {getModelIcon(displayName)}

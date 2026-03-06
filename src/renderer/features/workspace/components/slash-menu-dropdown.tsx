@@ -2,7 +2,6 @@ import { RefObject, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import DropdownWrapper from "@/components/ui/dropdown-wrapper";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import type { InputVariant } from "../../../components/ui/input/send-button";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import { Skill } from "../../../components/ui/icons";
 
@@ -19,37 +18,11 @@ interface SlashMenuDropdownProps {
   onClose: () => void;
   dropdownRef: RefObject<HTMLDivElement | null>;
   filterText?: string;
-  variant?: InputVariant;
   isLoadingCommands?: boolean;
   isLoadingSkills?: boolean;
 }
 
-const variantStyles = {
-  default: {
-    item: "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100 ",
-    description: "text-primary-500 dark:text-primary-400",
-    badge:
-      "bg-primary-200/50 dark:bg-primary-700/50 text-primary-600 dark:text-primary-300",
-    sectionHeader: "text-primary-400 dark:text-primary-500",
-    divider: "border-primary-200 dark:border-primary-700",
-  },
-  copilot: {
-    item: "hover:bg-copilot-light/50 dark:hover:bg-copilot-light/6 text-copilot-dark dark:text-copilot-light",
-    description: "text-copilot-dark/60 dark:text-copilot-light/60",
-    badge:
-      "bg-copilot-light/30 dark:bg-copilot-light/10 text-copilot-dark dark:text-copilot-light",
-    sectionHeader: "text-copilot-dark/50 dark:text-copilot-light/50",
-    divider: "border-copilot-light/20 dark:border-copilot-light/10",
-  },
-  claude: {
-    item: "hover:bg-claude-light/50 dark:hover:bg-claude-light/6 text-claude-dark dark:text-claude-light",
-    description: "text-claude-dark/60 dark:text-claude-light/60",
-    badge:
-      "bg-claude-light/30 dark:bg-claude-light/10 text-claude-dark dark:text-claude-light",
-    sectionHeader: "text-claude-dark/50 dark:text-claude-light/50",
-    divider: "border-claude-light/20 dark:border-claude-light/10",
-  },
-};
+
 
 function getSourceLabel(source?: string): string {
   switch (source) {
@@ -73,11 +46,9 @@ export function SlashMenuDropdown({
   onClose,
   dropdownRef,
   filterText = "",
-  variant = "default",
   isLoadingCommands = false,
   isLoadingSkills = false,
 }: SlashMenuDropdownProps) {
-  const styles = variantStyles[variant];
 
   useClickOutside(dropdownRef, () => {
     if (isOpen) onClose();
@@ -149,7 +120,7 @@ export function SlashMenuDropdown({
               {filteredSkills.length > 0 && (
                 <>
                   <div
-                    className={`px-3 pt-2 pb-1 flex items-center gap-1.5  ${styles.sectionHeader}`}
+                    className="px-3 pt-2 pb-1 flex items-center gap-1.5 text-primary-400 dark:text-primary-500"
                   >
                     <Skill className="size-3.5" />{" "}
                     <span className="text-sm font-medium ">Skills</span>
@@ -162,7 +133,7 @@ export function SlashMenuDropdown({
                         onSelectSkill(skill);
                         onClose();
                       }}
-                      className={`w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors ${styles.item}`}
+                      className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100"
                     >
                       <div className="flex flex-col gap-0.5">
                         <div className="font-medium flex items-center gap-1.5">
@@ -170,14 +141,14 @@ export function SlashMenuDropdown({
                           <div className="ml-auto gap-2 flex items-center">
                             {skill.argumentHint && (
                               <span
-                                className={`font-normal  text-xs ${styles.description}`}
+                                className="font-normal text-xs text-primary-500 dark:text-primary-400"
                               >
                                 {skill.argumentHint}
                               </span>
                             )}
                             {skill.source && (
                               <span
-                                className={` text-t px-1.5 py-0.5 rounded-full ${styles.badge}`}
+                                className="text-t px-1.5 py-0.5 rounded-full bg-primary-200/50 dark:bg-primary-700/50 text-primary-600 dark:text-primary-300"
                               >
                                 {getSourceLabel(skill.source)}
                               </span>
@@ -186,7 +157,7 @@ export function SlashMenuDropdown({
                         </div>
                         {skill.description && (
                           <div
-                            className={`text-xs line-clamp-2 ${styles.description}`}
+                            className="text-xs line-clamp-2 text-primary-500 dark:text-primary-400"
                           >
                             {skill.description}
                           </div>
@@ -199,14 +170,14 @@ export function SlashMenuDropdown({
 
               {/* Divider between skills and commands */}
               {filteredSkills.length > 0 && filteredCommands.length > 0 && (
-                <div className={`mx-3 my-1 border-t ${styles.divider}`} />
+                <div className="mx-3 my-1 border-t border-primary-200 dark:border-primary-700" />
               )}
 
               {/* Commands Section */}
               {filteredCommands.length > 0 && (
                 <>
                   <div
-                    className={`px-3 pt-2 pb-1 text-sm font-medium ${styles.sectionHeader}`}
+                    className="px-3 pt-2 pb-1 text-sm font-medium text-primary-400 dark:text-primary-500"
                   >
                     ⌘ Commands
                   </div>
@@ -218,7 +189,7 @@ export function SlashMenuDropdown({
                         onSelectCommand(cmd);
                         onClose();
                       }}
-                      className={`w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors last:rounded-b-xl ${styles.item}`}
+                      className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors last:rounded-b-xl hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100"
                     >
                       <div className="flex flex-col gap-0.5">
                         <div className="font-medium flex items-center gap-1.5">
@@ -226,7 +197,7 @@ export function SlashMenuDropdown({
                         </div>
                         {cmd.description && (
                           <div
-                            className={`text-xs line-clamp-2 ${styles.description}`}
+                            className="text-xs line-clamp-2 text-primary-500 dark:text-primary-400"
                           >
                             {cmd.description}
                           </div>

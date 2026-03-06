@@ -34,11 +34,7 @@ function loaderReducer(state: LoaderState, action: LoaderAction): LoaderState {
   return { ...state, frameIndex: nextFrame };
 }
 
-export function ModelLoader({
-  variant = "default",
-}: {
-  variant?: "claude" | "copilot" | "default";
-}) {
+export function ModelLoader() {
   const [state, dispatch] = useReducer(loaderReducer, {
     frameIndex: 0,
     wordIndex: 0,
@@ -54,7 +50,7 @@ export function ModelLoader({
 
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className={`font-mono text-sm ${variant === "claude" ? "text-[#D97757]" : "text-[#4361c2]"}`}>
+      <span className="font-mono text-sm text-primary-900 dark:text-primary-400">
         {ASCII_FRAMES[state.frameIndex]}
       </span>
       <span className="shine-text text-sm">

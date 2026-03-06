@@ -2,30 +2,11 @@ import { RefObject, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import DropdownWrapper from "@/components/ui/dropdown-wrapper";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import type { InputVariant } from "../../../components/ui/input/send-button";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { useGetIssuesByProjectQuery } from "@/lib/redux/api";
 import { Asana, Gitlab, Jira } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
-
-const variantStyles = {
-  default: {
-    item: "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100 first:rounded-t-xl last:rounded-b-xl",
-    description: "text-primary-500 dark:text-primary-400",
-    sectionHeader: "text-primary-400 dark:text-primary-500",
-  },
-  copilot: {
-    item: "hover:bg-copilot-dark/6 dark:hover:bg-copilot-light/6 text-copilot-dark dark:text-copilot-light first:rounded-t-xl last:rounded-b-xl",
-    description: "text-copilot-dark/60 dark:text-copilot-light/60",
-    sectionHeader: "text-copilot-dark/50 dark:text-copilot-light/50",
-  },
-  claude: {
-    item: "hover:bg-claude-light/50 dark:hover:bg-claude-light/6 text-claude-dark dark:text-claude-light first:rounded-t-xl last:rounded-b-xl",
-    description: "text-claude-dark/60 dark:text-claude-light/60",
-    sectionHeader: "text-claude-dark/50 dark:text-claude-light/50",
-  },
-};
 
 function ProviderIcon({ provider }: { provider: string }) {
   switch (provider) {
@@ -55,7 +36,6 @@ interface IssueMentionDropdownProps {
   onSelectIssue: (issue: IssueWithEntity) => void;
   onClose: () => void;
   dropdownRef: RefObject<HTMLDivElement | null>;
-  variant?: InputVariant;
 }
 
 export function IssueMentionDropdown({
@@ -65,9 +45,7 @@ export function IssueMentionDropdown({
   onSelectIssue,
   onClose,
   dropdownRef,
-  variant = "default",
 }: IssueMentionDropdownProps) {
-  const styles = variantStyles[variant];
 
   useClickOutside(dropdownRef, () => {
     if (isOpen) onClose();
@@ -101,7 +79,7 @@ export function IssueMentionDropdown({
         useFixedBackground={true}
       >
         <div className="max-h-80 max-w-110 overflow-auto noscrollbar">
-          <div className={`px-3 pt-2 pb-1 text-xs font-medium ${styles.sectionHeader}`}>
+          <div className="px-3 pt-2 pb-1 text-xs font-medium text-primary-400 dark:text-primary-500">
             Issues
           </div>
           {isLoading ? (
@@ -118,12 +96,12 @@ export function IssueMentionDropdown({
                 key={item.issue.entityId}
                 type="button"
                 onClick={() => onSelectIssue(item)}
-                className={`w-full text-left px-3 py-2 cursor-pointer text-sm transition-colors ${styles.item}`}
+                className="w-full text-left px-3 py-2 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100 first:rounded-t-xl last:rounded-b-xl"
               >
                 <div className="flex items-center gap-2">
                   <ProviderIcon provider={item.issue.provider} />
                   {item.issue.number != null && (
-                    <span className={`text-xs shrink-0 ${styles.description}`}>
+                    <span className="text-xs shrink-0 text-primary-500 dark:text-primary-400">
                       #{item.issue.number}
                     </span>
                   )}

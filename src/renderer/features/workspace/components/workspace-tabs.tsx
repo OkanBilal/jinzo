@@ -1,5 +1,4 @@
 import { Plus } from "@/components/ui/icons";
-import { Claude } from "@/components/ui/icons/space";
 import { CopilotStatic } from "@/components/ui/icons";
 import { RunTab, getTabTitle } from "./run-tab";
 import { EditorTab } from "./editor-tab";
@@ -21,7 +20,6 @@ interface WorkspaceTabsProps {
   fileName?: string;
   issueTabs: IssueWithEntity[];
   noteTabs?: ReviewTabType[];
-  variant?: "copilot" | "claude";
   onSelectEditorTab: () => void;
   onSelectRunTab: (runId: string) => void;
   onCloseTab: (runId: string, e: React.MouseEvent) => void;
@@ -43,7 +41,6 @@ export function WorkspaceTabs({
   fileName,
   issueTabs,
   noteTabs = EMPTY_NOTE_TABS,
-  variant = "copilot",
   onSelectEditorTab,
   onSelectRunTab,
   onCloseTab,
@@ -73,7 +70,6 @@ export function WorkspaceTabs({
             hasFile={hasSelectedFile}
             fileName={fileName}
             onClose={onCloseEditorTab}
-            variant={variant}
           />
         )}
 
@@ -86,7 +82,6 @@ export function WorkspaceTabs({
             onClick={() => onSelectRunTab(run.id)}
             onClose={(e) => onCloseTab(run.id, e)}
             title={getTabTitle(run)}
-            variant={variant}
           />
         ))}
 
@@ -100,7 +95,6 @@ export function WorkspaceTabs({
               isFirst={!hasSelectedFile && runs.length === 0 && i === 0}
               onClick={() => onSelectIssueTab(issue.issue.entityId)}
               onClose={(e) => onCloseIssueTab(issue.issue.entityId, e)}
-              variant={variant}
             />
           );
         })}
@@ -115,7 +109,6 @@ export function WorkspaceTabs({
               isFirst={!hasSelectedFile && runs.length === 0 && issueTabs.length === 0 && i === 0}
               onClick={() => onSelectNoteTab?.(note.id)}
               onClose={(e) => onCloseNoteTab?.(note.id, e)}
-              variant={variant}
             />
           );
         })}
@@ -123,7 +116,6 @@ export function WorkspaceTabs({
           <div className="animate-slide-in-left">
             <NewRunTab
               isActive={activeTab === "new-run"}
-              variant={variant}
               onClick={() => onSelectNewRunTab?.()}
               onClose={(e) => onCloseNewRunTab?.(e)}
             />
@@ -141,9 +133,8 @@ export function WorkspaceTabs({
   );
 }
 
-function NewRunTab({ isActive, variant, onClick, onClose }: {
+function NewRunTab({ isActive, onClick, onClose }: {
   isActive: boolean;
-  variant: "copilot" | "claude";
   onClick: () => void;
   onClose: (e: React.MouseEvent) => void;
 }) {
@@ -152,11 +143,9 @@ function NewRunTab({ isActive, variant, onClick, onClose }: {
       isActive={isActive}
       onClick={onClick}
       onClose={onClose}
-      icon={ variant === "claude" ? <Claude className="text-[#D97453]" /> : 
-      <CopilotStatic className={`size-4 ${isActive ? "text-primary-900 dark:text-primary-200" :
-        "text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200"}`} /> }
+      icon={<CopilotStatic className={`size-4 ${isActive ? "text-primary-900 dark:text-primary-200" :
+        "text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200"}`} />}
       label="New Run"
-      variant={variant}
     />
   );
 }

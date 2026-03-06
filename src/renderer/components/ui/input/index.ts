@@ -1,5 +1,4 @@
 // Input components barrel export
-export type { InputVariant } from "./send-button";
 export { SendButton } from "./send-button";
 export { DictationButton } from "./dictation-button";
 export { InputForm } from "./input-form";

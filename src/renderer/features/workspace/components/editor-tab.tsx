@@ -8,10 +8,9 @@ interface EditorTabProps {
   hasFile?: boolean;
   fileName?: string;
   onClose?: (e: React.MouseEvent) => void;
-  variant?: "copilot" | "claude";
 }
 
-export function EditorTab({ isActive, isFirst, onClick, hasFile, fileName, onClose, variant }: EditorTabProps) {
+export function EditorTab({ isActive, isFirst, onClick, hasFile, fileName, onClose }: EditorTabProps) {
   return (
     <BaseTab
       isActive={isActive}
@@ -25,7 +24,6 @@ export function EditorTab({ isActive, isFirst, onClick, hasFile, fileName, onClo
           {hasFile && <span className="ml-1 ">*</span>}
         </span>
       }
-      variant={variant}
     />
   );
 }

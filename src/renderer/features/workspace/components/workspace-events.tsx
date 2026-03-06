@@ -510,6 +510,10 @@ export function WorkspaceEvents({
         ) : (
           <WorkspaceEmptyState workspace={currentWorkspace} />
         )}
+        {/* Top fade overlay */}
+        <div
+          className={`absolute top-0 left-0 right-0 h-24 bg-linear-to-b from-primary to-transparent ${variant === "claude" ? "dark:from-claude-dark" : "dark:from-copilot-dark"} pointer-events-none z-10`}
+        />
         {/* Bottom fade overlay */}
         <div
           className={`absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary to-transparent  ${variant === "claude" ? "dark:from-claude-dark" : "dark:from-copilot-dark"} pointer-events-none`}

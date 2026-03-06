@@ -2,7 +2,6 @@ import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useDarkMode } from "@/hooks/use-dark-mode";
-import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
 import { getDefaultDropdownBackground } from "@/lib/theme";
 
 interface DropdownWrapperProps {
@@ -38,14 +37,8 @@ export default function DropdownWrapper({
 
   const { activeSpace } = useActiveSpace();
   const { darkMode } = useDarkMode();
-  const variant = useWorkspaceVariant();
 
-  const glassMorphismClass =
-    variant === "claude"
-      ? "glass-morphism-claude"
-      : variant === "copilot"
-        ? "glass-morphism-copilot"
-        : "glass-morphism";
+
 
   useEffect(() => {
     if (isOpen && usePortal && triggerRef?.current) {
@@ -104,7 +97,7 @@ export default function DropdownWrapper({
     <div
       ref={dropdownRef}
       className={`${usePortal ? "fixed" : "absolute"} ${!usePortal ? positionClass : ""} ${!usePortal ? verticalClass : ""}
-        ${minWidth} ${fixedBackgroundClass} z-100 ${glassMorphismClass} rounded-2xl ${hiddenClass}`}
+        ${minWidth} ${fixedBackgroundClass} z-100 glass-morphism rounded-2xl ${hiddenClass}`}
       style={{
         background: dropdownBackground,
         transformOrigin: openUpward

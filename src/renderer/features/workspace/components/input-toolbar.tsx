@@ -136,7 +136,6 @@ export function InputToolbar({
             openUpward={true}
             uploadedFiles={uploadedFiles}
             onRemoveFile={handleRemoveFile}
-            variant={variant}
           />
           <input
             ref={fileInputRef}
@@ -154,7 +153,6 @@ export function InputToolbar({
             onClose={() => setShowModelDropdown(false)}
             dropdownRef={modelDropdownRef}
             openUpward={true}
-            variant={variant}
             isLoading={isLoadingModels}
           />
           {variant === "claude" && (
@@ -211,7 +209,6 @@ export function InputToolbar({
             loading={isLoading || isRunning}
             onSubmit={onSubmit}
             onStop={isRunning ? onStop : undefined}
-            variant={variant}
             disabled={disabled}
           />
         </div>

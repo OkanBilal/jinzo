@@ -5,7 +5,6 @@ import { useClickOutside } from "@/hooks/use-click-outside";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
 import type { DirEntry } from "@/features/workspace/components/file-explorer/types";
 import type { FileNode } from "@/features/workspace/components/file-explorer/types";
-import type { InputVariant } from "../../../components/ui/input/send-button";
 
 interface FetchState {
   entries: DirEntry[];
@@ -37,26 +36,7 @@ interface FileMentionDropdownProps {
   onNavigate: (dirPath: string) => void;
   onClose: () => void;
   dropdownRef: RefObject<HTMLDivElement | null>;
-  variant?: InputVariant;
 }
-
-const variantStyles = {
-  default: {
-    item: "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100 first:rounded-t-xl last:rounded-b-xl",
-    description: "text-primary-500 dark:text-primary-400",
-    sectionHeader: "text-primary-400 dark:text-primary-500",
-  },
-  copilot: {
-    item: "hover:bg-copilot-dark/6 dark:hover:bg-copilot-light/6 text-copilot-dark dark:text-copilot-light first:rounded-t-xl last:rounded-b-xl",
-    description: "text-copilot-dark/60 dark:text-copilot-light/60",
-    sectionHeader: "text-copilot-dark/50 dark:text-copilot-light/50",
-  },
-  claude: {
-    item: "hover:bg-claude-light/50 dark:hover:bg-claude-light/6 text-claude-dark dark:text-claude-light first:rounded-t-xl last:rounded-b-xlp to",
-    description: "text-claude-dark/60 dark:text-claude-light/60",
-    sectionHeader: "text-claude-dark/50 dark:text-claude-light/50",
-  },
-};
 
 function parseFilterText(filterText: string): { dirPath: string; nameFilter: string } {
   const lastSlash = filterText.lastIndexOf("/");
@@ -77,9 +57,7 @@ export function FileMentionDropdown({
   onNavigate,
   onClose,
   dropdownRef,
-  variant = "default",
 }: FileMentionDropdownProps) {
-  const styles = variantStyles[variant];
   const [fetchState, dispatchFetch] = useReducer(fetchReducer, {
     entries: [],
     loading: false,
@@ -150,7 +128,7 @@ export function FileMentionDropdown({
       >
         <div className="max-h-80 max-w-100 overflow-auto noscrollbar">
           {dirPath && (
-            <div className={`px-3 pt-2 pb-1 text-xs font-medium truncate ${styles.sectionHeader}`}>
+            <div className="px-3 pt-2 pb-1 text-xs font-medium truncate text-primary-400 dark:text-primary-500">
               {dirPath}
             </div>
           )}
@@ -184,7 +162,7 @@ export function FileMentionDropdown({
                     });
                   }
                 }}
-                className={`w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors ${styles.item}`}
+                className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100 first:rounded-t-xl last:rounded-b-xl"
               >
                 <div className="flex items-center gap-2">
                   <FileIconComponent
@@ -195,7 +173,7 @@ export function FileMentionDropdown({
                   />
                   <span className="truncate">{entry.name}</span>
                   {entry.type === "directory" && (
-                    <span className={`ml-auto text-xs ${styles.description}`}>/</span>
+                    <span className="ml-auto text-xs text-primary-500 dark:text-primary-400">/</span>
                   )}
                 </div>
               </Button>

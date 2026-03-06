@@ -1,36 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { ChevronUp, Stop } from "@/components/ui/icons";
 
-export type InputVariant = "default" | "copilot" | "claude";
-
 interface SendButtonProps {
   loading: boolean;
   onSubmit: () => void;
   onStop?: () => void;
-  variant?: InputVariant;
   disabled?: boolean;
 }
 
-const variantStyles = {
-  default: {
-    spinner: "border-primary-900",
-    icon: "text-primary-900",
-    stop: "text-primary-900",
-  },
-  copilot: {
-    spinner: "border-copilot-dark",
-    icon: "text-copilot-dark",
-    stop: "text-copilot-dark",
-  },
-  claude: {
-    spinner: "border-claude-dark",
-    icon: "text-claude-dark",
-    stop: "text-claude-dark",
-  },
-};
-
-export function SendButton({ loading, onSubmit, onStop, variant = "default", disabled = false }: SendButtonProps) {
-  const styles = variantStyles[variant];
+export function SendButton({ loading, onSubmit, onStop, disabled = false }: SendButtonProps) {
   const isDisabled = loading || disabled;
 
   if (loading && onStop) {
@@ -42,7 +20,7 @@ export function SendButton({ loading, onSubmit, onStop, variant = "default", dis
         className="metallic-button relative"
         aria-label="Stop run"
       >
-        <Stop className={`w-5 h-5 ${styles.stop}`} />
+        <Stop className="w-5 h-5 text-primary-900" />
       </Button>
     );
   }
@@ -62,11 +40,11 @@ export function SendButton({ loading, onSubmit, onStop, variant = "default", dis
     >
       {loading && (
         <span className="absolute inset-0 flex items-center justify-center">
-          <span className={`h-4 w-4 animate-spin rounded-full border-2 ${styles.spinner} border-t-transparent`} />
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-900 border-t-transparent" />
         </span>
       )}
       <ChevronUp
-        className={`w-5 h-5 ${styles.icon} transition-opacity ${
+        className={`w-5 h-5 text-primary-900 transition-opacity ${
           loading ? "opacity-0" : "opacity-100"
         }`}
       />

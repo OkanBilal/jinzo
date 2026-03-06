@@ -38,7 +38,6 @@ export default function CopilotPage() {
           fileName={ws.selectedFile?.name}
           issueTabs={ws.openIssueTabs}
           noteTabs={ws.openNoteTabs}
-          variant="copilot"
           onSelectEditorTab={ws.handleSelectEditorTab}
           onSelectRunTab={ws.handleSelectRunTab}
           onCloseTab={ws.handleCloseTab}
@@ -63,7 +62,7 @@ export default function CopilotPage() {
     ],
   );
 
-  const isFirstTabActive = !!ws.selectedFile
+  const isFirstTabActive = ws.selectedFile
     ? ws.activeTab === "editor"
     : ws.runs.length > 0
       ? ws.activeTab === ws.runs[0]?.id
@@ -92,7 +91,6 @@ export default function CopilotPage() {
       </div>
       <WorkspaceQuickActions
         onSetGoal={ws.setGoal}
-        variant="copilot"
         projectId={ws.currentWorkspace?.projectId ?? undefined}
         providerId={COPILOT_CLI_PROVIDER_ID}
       />

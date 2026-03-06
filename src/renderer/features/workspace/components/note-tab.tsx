@@ -8,10 +8,9 @@ interface NoteTabProps {
   isFirst?: boolean;
   onClick: () => void;
   onClose: (e: React.MouseEvent) => void;
-  variant?: "copilot" | "claude";
 }
 
-export function NoteTab({ review, isActive, isFirst, onClick, onClose, variant }: NoteTabProps) {
+export function NoteTab({ review, isActive, isFirst, onClick, onClose }: NoteTabProps) {
   return (
     <BaseTab
       isActive={isActive}
@@ -20,7 +19,6 @@ export function NoteTab({ review, isActive, isFirst, onClick, onClose, variant }
       onClose={onClose}
       icon={<Note className="w-4 h-4" />}
       label={review.title}
-      variant={variant}
     />
   );
 }

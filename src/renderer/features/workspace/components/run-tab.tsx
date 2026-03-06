@@ -50,7 +50,6 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, title, varian
       icon={<TabIcon run={run} variant={variant} isActive={isActive} />}
       label={<AnimatedTitle title={title} className="text-xs text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200 font-medium truncate flex-1" />}
       closeIcon={<Archive className="size-3.5 text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200" />}
-      variant={variant}
     />
   );
 }

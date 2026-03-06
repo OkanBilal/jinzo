@@ -2,7 +2,6 @@ import { useState, RefObject } from "react";
 import { Attach, Picture, Document, Close } from "@/components/ui/icons";
 import DropdownWrapper from "@/components/ui/dropdown-wrapper";
 import { Button } from "@/components/ui/button";
-import type { InputVariant } from "./send-button";
 
 export interface UploadedFile {
   file: File;
@@ -24,29 +23,7 @@ interface FileUploadDropdownProps {
   openUpward?: boolean;
   uploadedFiles: UploadedFile[];
   onRemoveFile: (index: number) => void;
-  variant?: InputVariant;
 }
-
-const variantStyles = {
-  default: {
-    button: "hover:bg-primary-200/30 dark:hover:bg-primary-800",
-    icon: "dark:text-primary-400 text-primary-500",
-    fileBg: "bg-primary-100 dark:bg-primary-800",
-    menuItem: "hover:bg-primary-200/30 dark:hover:bg-primary-600/20",
-  },
-  copilot: {
-    button: "hover:bg-copilot-dark/6 dark:hover:bg-copilot-light/6",
-    icon: "dark:text-copilot-light text-copilot-dark",
-    fileBg: "bg-primary-100 dark:bg-copilot-light/6",
-    menuItem: "text-copilot-dark dark:text-copilot-light hover:bg-copilot-dark/6 dark:hover:bg-copilot-light/6",
-  },
-  claude: {
-    button: "hover:bg-claude-dark/6 dark:hover:bg-claude-light/6",
-    icon: "dark:text-claude-light text-claude-dark",
-    fileBg: "bg-claude-light/6 dark:bg-claude-light/6",
-    menuItem: "text-claude-dark dark:text-claude-light hover:bg-claude-dark/6 dark:hover:bg-claude-light/6",
-  },
-};
 
 export function FileUploadDropdown({
   isOpen,
@@ -57,10 +34,8 @@ export function FileUploadDropdown({
   openUpward = false,
   uploadedFiles,
   onRemoveFile,
-  variant = "default",
 }: FileUploadDropdownProps) {
   const [hoveredFileIndex, setHoveredFileIndex] = useState<number | null>(null);
-  const styles = variantStyles[variant];
 
   return (
     <div className="relative flex items-center gap-2" ref={dropdownRef}>
@@ -69,11 +44,11 @@ export function FileUploadDropdown({
         tooltip="Upload file or photo"
         tooltipPosition="top"
         onClick={onToggle}
-        className={`p-1.5 ${styles.button} rounded-full transition-colors cursor-pointer`}
+        className="p-1.5 hover:bg-primary-200/30 dark:hover:bg-primary-300/20 rounded-full transition-colors cursor-pointer"
         aria-label="Upload file"
         aria-expanded={isOpen}
       >
-        <Attach className={`${styles.icon} `} />
+        <Attach className="dark:text-primary-400 text-primary-500" />
       </Button>
       {uploadedFiles.map((uploadedFile, index) => (
         <div
@@ -84,7 +59,7 @@ export function FileUploadDropdown({
         >
           {uploadedFile.type === "image" ? (
             <div
-              className={`flex items-center gap-2 ${styles.fileBg} rounded-2xl px-1.5 py-1 mr-1`}
+              className="flex items-center gap-2 bg-primary-100 dark:bg-primary-800 rounded-2xl px-1.5 py-1 mr-1"
             >
               <div className="relative w-5 h-5 rounded overflow-hidden group">
                 <img
@@ -110,7 +85,7 @@ export function FileUploadDropdown({
             </div>
           ) : (
             <div
-              className={`flex items-center gap-2 px-2 py-1.5 ${styles.fileBg} rounded-2xl mr-1`}
+              className="flex items-center gap-2 px-2 py-1.5 bg-primary-100 dark:bg-primary-800 rounded-2xl mr-1"
             >
               {hoveredFileIndex === index ? (
                 <Button
@@ -151,7 +126,7 @@ export function FileUploadDropdown({
             type="button"
             onClick={onClick}
             role="menuitem"
-            className={`flex w-full text-left text-sm first:rounded-t-xl last:rounded-b-xl items-center px-3 py-2.5 ${styles.menuItem} cursor-pointer`}
+            className="flex w-full text-left text-sm first:rounded-t-xl text-primary-900 dark:text-primary-200 last:rounded-b-xl items-center px-3 py-2.5 hover:bg-primary-200/30 dark:hover:bg-primary-600/20 cursor-pointer"
           >
             <Icon className="mr-2 size-3.5" />
             {label}

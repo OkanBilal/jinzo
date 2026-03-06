@@ -63,13 +63,11 @@ function getIssueResources(resources: ProjectResourceWithDetails[]) {
 
 interface WorkspaceQuickActionsProps {
   onSetGoal: (goal: string) => void;
-  variant?: "claude" | "copilot";
   projectId?: string;
   providerId: string;
 }
 
 export function WorkspaceQuickActions({
-  variant,
   onSetGoal,
   projectId,
   providerId,
@@ -96,7 +94,6 @@ export function WorkspaceQuickActions({
         }
       /> */}
       <QuickActionButton
-        variant={variant}
         icon={<Claude className="size-3.5" />}
         label="Update CLAUDE.md file"
         onClick={() =>
@@ -106,7 +103,6 @@ export function WorkspaceQuickActions({
         }
       />
       <QuickActionButton
-        variant={variant}
         icon={<Figma className="size-3.5" />}
         label="Implement design"
         onClick={() =>
@@ -116,19 +112,16 @@ export function WorkspaceQuickActions({
       {issueResources.length === 1 && (
         <SingleIssueButton
           resource={issueResources[0]}
-          variant={variant}
           onSetGoal={onSetGoal}
         />
       )}
       {issueResources.length > 1 && (
         <MultiIssueButton
           resources={issueResources}
-          variant={variant}
           onSetGoal={onSetGoal}
         />
       )}
       <QuickActionButton
-        variant={variant}
         icon={<PullRequest className="size-3.5" />}
         label="Pull latest changes"
         onClick={() =>
@@ -141,11 +134,9 @@ export function WorkspaceQuickActions({
 
 function SingleIssueButton({
   resource,
-  variant,
   onSetGoal,
 }: {
   resource: ProjectResourceWithDetails;
-  variant?: "claude" | "copilot";
   onSetGoal: (goal: string) => void;
 }) {
   const kind = resource.resource.kind as IssueResourceKind;
@@ -154,7 +145,6 @@ function SingleIssueButton({
   return (
     <QuickActionButton
       icon={config.icon("size-3.5")}
-      variant={variant}
       label="Create issue"
       onClick={() => onSetGoal(config.goal)}
     />
@@ -163,11 +153,9 @@ function SingleIssueButton({
 
 function MultiIssueButton({
   resources,
-  variant,
   onSetGoal,
 }: {
   resources: ProjectResourceWithDetails[];
-  variant?: "claude" | "copilot";
   onSetGoal: (goal: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -192,7 +180,6 @@ function MultiIssueButton({
   return (
     <div className="relative" ref={buttonRef}>
       <QuickActionButton
-        variant={variant}
         label="Create issue"
         hasArrow
         onClick={() => setOpen((v) => !v)}

@@ -8,18 +8,11 @@ interface BaseTabProps {
   label: React.ReactNode;
   onClose?: (e: React.MouseEvent) => void;
   closeIcon?: React.ReactNode;
-  variant?: "copilot" | "claude";
 }
 
-const activeShadowVar: Record<string, { light: string; dark: string }> = {
-  claude: {
-    light: "var(--color-primary, #ffffff)",
-    dark: "var(--color-claude-dark)",
-  },
-  copilot: {
-    light: "var(--color-primary, #ffffff)",
-    dark: "var(--color-copilot-dark)",
-  },
+const COLORS = {
+  light: "var(--color-primary, #ffffff)",
+  dark: "var(--color-primary-950)",
 };
 
 export function BaseTab({
@@ -30,9 +23,7 @@ export function BaseTab({
   label,
   onClose,
   closeIcon,
-  variant = "copilot",
 }: BaseTabProps) {
-  const colors = activeShadowVar[variant] || activeShadowVar.copilot;
 
   return (
     <div
@@ -55,16 +46,16 @@ export function BaseTab({
       <div
         className={`absolute inset-0 rounded-t-2xl transition-opacity duration-150 ease-out hidden dark:block ${isActive ? "opacity-100" : "opacity-0"}`}
         style={{
-          backgroundColor: colors.dark,
+          backgroundColor: COLORS.dark,
           boxShadow: "inset 0 1px 0 #ffffff34",
         }}
       />
 
       {/* Inverted corners — always rendered, opacity transitions */}
       {!isFirst && (
-        <InvertedCorner side="left" variant={variant} visible={isActive} />
+        <InvertedCorner side="left" visible={isActive} />
       )}
-      <InvertedCorner side="right" variant={variant} visible={isActive} />
+      <InvertedCorner side="right" visible={isActive} />
 
       {/* Content */}
       <span className={`relative flex items-center justify-center size-4.5 shrink-0 transition-colors duration-150 ${
@@ -82,14 +73,13 @@ export function BaseTab({
         )}
       </span>
       {onClose && (
-        <CloseOverlay isActive={isActive} variant={variant} onClose={onClose} closeIcon={closeIcon} />
+        <CloseOverlay isActive={isActive} onClose={onClose} closeIcon={closeIcon} />
       )}
     </div>
   );
 }
 
-function InvertedCorner({ side, variant, visible }: { side: "left" | "right"; variant: string; visible: boolean }) {
-  const colors = activeShadowVar[variant] || activeShadowVar.copilot;
+function InvertedCorner({ side, visible }: { side: "left" | "right"; visible: boolean }) {
   const isLeft = side === "left";
 
   return (
@@ -97,13 +87,13 @@ function InvertedCorner({ side, variant, visible }: { side: "left" | "right"; va
       <div
         className={`absolute bottom-0 ${isLeft ? "-left-3" : "-right-3"} size-3 block dark:hidden transition-opacity duration-150 ease-out ${visible ? "opacity-100" : "opacity-0"}`}
         style={{
-          background: `radial-gradient(circle at ${isLeft ? "top left" : "top right"}, transparent 12px, ${colors.light} 12px)`,
+          background: `radial-gradient(circle at ${isLeft ? "top left" : "top right"}, transparent 12px, ${COLORS.light} 12px)`,
         }}
       />
       <div
         className={`absolute bottom-0 ${isLeft ? "-left-3" : "-right-3"} size-3 hidden dark:block transition-opacity duration-150 ease-out ${visible ? "opacity-100" : "opacity-0"}`}
         style={{
-          background: `radial-gradient(circle at ${isLeft ? "top left" : "top right"}, transparent 12px, ${colors.dark} 12px)`,
+          background: `radial-gradient(circle at ${isLeft ? "top left" : "top right"}, transparent 12px, ${COLORS.dark} 12px)`,
         }}
       />
     </>
@@ -112,18 +102,13 @@ function InvertedCorner({ side, variant, visible }: { side: "left" | "right"; va
 
 function CloseOverlay({
   isActive,
-  variant,
   onClose,
   closeIcon,
 }: {
   isActive: boolean;
-  variant: string;
   onClose: (e: React.MouseEvent) => void;
   closeIcon?: React.ReactNode;
 }) {
-  const darkBg = variant === "claude" ? "var(--color-claude-dark)" : "var(--color-copilot-dark)";
-  const lightBg = "var(--color-primary, #ffffff)";
-
   return (
     <div
       className="absolute right-0 top-0.5 bottom-0 flex items-center pr-1.5 pl-6.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
@@ -132,11 +117,11 @@ function CloseOverlay({
         <>
           <div
             className="absolute inset-0 block dark:hidden rounded-r-2xl"
-            style={{ background: `linear-gradient(to left, ${lightBg} 60%, transparent)` }}
+            style={{ background: `linear-gradient(to left, ${COLORS.light} 60%, transparent)` }}
           />
           <div
             className="absolute inset-0 hidden dark:block rounded-r-2xl"
-            style={{ background: `linear-gradient(to left, ${darkBg} 60%, transparent)` }}
+            style={{ background: `linear-gradient(to left, ${COLORS.dark} 60%, transparent)` }}
           />
         </>
       )}

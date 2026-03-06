@@ -1,40 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Microphone } from "@/components/ui/icons";
-import type { InputVariant } from "./send-button";
 
 interface DictationButtonProps {
   isRecording: boolean;
   onToggle: () => void;
-  variant?: InputVariant;
 }
-
-const variantStyles = {
-  default: {
-    recording: "bg-primary-300 dark:bg-primary-700/50",
-    hover: "hover:bg-primary-200/30 dark:hover:bg-primary/20",
-    icon: "dark:text-primary-400 text-primary-500",
-  },
-  copilot: {
-    recording: "bg-copilot-dark/30 dark:bg-copilot-light/50",
-    hover: "hover:bg-copilot-dark/6 dark:hover:bg-copilot-light/6",
-    icon: "dark:text-copilot-light/70 text-copilot-dark",
-  },
-  claude: {
-    recording: "bg-claude-dark/30 dark:bg-claude-light/50",
-    hover: "hover:bg-claude-dark/6 dark:hover:bg-claude-light/6",
-    icon: "dark:text-claude-light/70 text-claude-dark",
-  },
-};
 
 export function DictationButton({
   isRecording,
   onToggle,
-  variant = "default",
 }: DictationButtonProps) {
-  const styles = variantStyles[variant];
-
   const buttonClass = `p-1.5 mr-2 rounded-full transition-all duration-200 ${
-    isRecording ? `${styles.recording} animate-pulse` : styles.hover
+    isRecording ? "bg-primary-300 dark:bg-primary-700/50 animate-pulse" : "hover:bg-primary-200/30 dark:hover:bg-primary/20"
   }`;
 
   return (
@@ -46,7 +23,7 @@ export function DictationButton({
       aria-label={isRecording ? "Stop recording" : "Start voice input"}
       title={isRecording ? "Stop recording" : "Voice input"}
     >
-      <Microphone className={styles.icon} isRecording={isRecording} />
+      <Microphone className="dark:text-primary-400 text-primary-500" isRecording={isRecording} />
     </Button>
   );
 }
