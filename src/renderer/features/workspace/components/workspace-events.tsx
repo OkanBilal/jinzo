@@ -511,11 +511,11 @@ export function WorkspaceEvents({
         )}
         {/* Top fade overlay */}
         <div
-          className={`absolute top-0 left-0 right-0 h-24 bg-linear-to-b from-primary to-transparent ${variant === "claude" ? "dark:from-claude-dark" : "dark:from-copilot-dark"} pointer-events-none z-10`}
+          className={`absolute top-0 left-0 right-0 h-24 bg-linear-to-b from-primary to-transparent dark:from-primary-950 dark:to-transparent pointer-events-none z-(--z-base)`}
         />
         {/* Bottom fade overlay */}
         <div
-          className={`absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary to-transparent  ${variant === "claude" ? "dark:from-claude-dark" : "dark:from-copilot-dark"} pointer-events-none`}
+          className={`absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary to-transparent dark:from-primary-950 dark:to-transparent  pointer-events-none`}
         />
       </div>
     </div>

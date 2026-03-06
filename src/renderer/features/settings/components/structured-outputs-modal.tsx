@@ -126,14 +126,14 @@ export function StructuredOutputsModal({
     (editorProperties.length === 0 || !hasEmptyPropertyName);
 
   return createPortal(
-    <div className="fixed inset-0 z-100 flex items-center justify-center">
+    <div className="fixed inset-0 z-(--z-dropdown) flex items-center justify-center">
       <div
         className="absolute inset-0 bg-primary-950/70"
         role="presentation"
         onClick={onClose}
       />
       <div
-        className="relative z-40 w-full max-w-180 glass-morphism h-120 rounded-3xl animate-dropdown-in "
+        className="relative z-(--z-panel) w-full max-w-180 glass-morphism h-120 rounded-3xl animate-dropdown-in "
         role="dialog"
         aria-modal="true"
       >

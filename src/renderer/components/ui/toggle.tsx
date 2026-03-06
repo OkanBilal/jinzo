@@ -21,7 +21,7 @@ export function Toggle({ enabled, onChange, label, className }: ToggleProps) {
       <Button
         onClick={() => onChange(!enabled)}
         className={cn(
-          "relative inline-flex h-6 w-11 items-center rounded-full transition-all shadow-[inset_0_0.5px_2px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_0.5px_2px_rgba(0,0,0,0.3)]",
+          "relative inline-flex h-6 w-11 items-center rounded-full transition-all shadow-(--shadow-inset-toggle) dark:shadow-(--shadow-inset-toggle-dark)",
           enabled
             ? "bg-primary-950/50 dark:bg-primary/50"
             : "bg-primary-950/10 dark:bg-primary/10",

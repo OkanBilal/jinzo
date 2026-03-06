@@ -98,15 +98,37 @@
   --color-primary-900: #141414;
   --color-primary-950: #0c0c0c;
   
-  --color-copilot-dark: #0c0c0c ;
-  --color-copilot-soft-dark: #141414;
-  --color-copilot-light: #f7f7f6;
-  --color-copilot-soft-light: #efeeee;
-  --color-claude-dark: #0c0c0c;
-  --color-claude-soft-dark: #141414;
-  --color-claude-light: #f7f7f6;
-  --color-claude-soft-light: #efeeee;
+  /* Semantic status colors */
+  --color-accent: #009EFF;
+  --color-accent-hover: #007ACC;
+  --color-danger: #ff4436;
+  --color-danger-hover: #e33221;
+  --color-claude: #D97757;
+  --color-copilot: #4361c2;
 
+  /* Z-index layers */
+  --z-base: 10;
+  --z-sidebar: 30;
+  --z-panel: 40;
+  --z-overlay: 50;
+  --z-panel-toggle: 60;
+  --z-dropdown: 100;
+  --z-dropdown-sub: 101;
+  --z-modal: 9999;
+  --z-modal-critical: 10000;
+
+
+  /* Layout */
+  --sidebar-width: 19rem;
+  --panel-width: 19rem;
+  --drag-region-height: 1rem;
+  --dropdown-min-width: 140px;
+
+  /* Shadows */
+  --shadow-inset-subtle: inset 0 0.5px 0 rgba(0, 0, 0, 0.03);
+  --shadow-inset-subtle-dark: inset 0 0.5px 0 rgba(255, 255, 255, 0.03);
+  --shadow-inset-toggle: inset 0 0.5px 2px rgba(0, 0, 0, 0.1);
+  --shadow-inset-toggle-dark: inset 0 0.5px 2px rgba(0, 0, 0, 0.3);
 
   --font-sans: 'Geist', system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
@@ -358,251 +380,6 @@
   to { opacity: 1; }
 }
 
-/* ==========================================================================
-   BlockNote Editor Overrides
-   ========================================================================== */
-
-/* Base editor container */
-.bn-container[data-theming-css-demo] {
-  --bn-font-family: var(--font-sans);
-  --bn-border-radius: 8px;
-}
-
-/* Light mode */
-.bn-container[data-theming-css-demo][data-color-scheme="light"] {
-  /* Editor colors */
-  --bn-colors-editor-text: var(--color-primary-800);
-  --bn-colors-editor-background: transparent;
-  
-  /* Menu & UI colors */
-  --bn-colors-menu-text: var(--color-primary-800);
-  --bn-colors-menu-background: var(--color-primary);
-  
-  /* Highlights */
-  --bn-colors-highlights-gray-text: var(--color-primary-700);
-  --bn-colors-highlights-gray-background: var(--color-primary-100);
-  
-  /* Borders */
-  --bn-colors-borders-default: var(--color-primary-200);
-  --bn-colors-side-menu: var(--color-primary-400);
-  
-  /* Tooltip */
-  --bn-colors-tooltip-text: var(--color-primary-50);
-  --bn-colors-tooltip-background: var(--color-primary-900);
-  
-  /* Placeholder */
-  --bn-colors-placeholder-text: var(--color-primary-400);
-  
-  /* Selection */
-  --bn-colors-selected-background: var(--color-primary-100);
-  --bn-colors-hovered-background: var(--color-primary-50);
-}
-
-/* Dark mode */
-.bn-container[data-theming-css-demo][data-color-scheme="dark"] {
-  /* Editor colors */
-  --bn-colors-editor-text: var(--color-primary-200);
-  --bn-colors-editor-background: transparent;
-  
-  /* Menu & UI colors */
-  --bn-colors-menu-text: var(--color-primary-200);
-  --bn-colors-menu-background: var(--color-primary-900);
-  
-  /* Highlights */
-  --bn-colors-highlights-gray-text: var(--color-primary-300);
-  --bn-colors-highlights-gray-background: var(--color-primary-800);
-  
-  /* Borders */
-  --bn-colors-borders-default: var(--color-primary-700);
-  --bn-colors-side-menu: var(--color-primary-500);
-  
-  /* Tooltip */
-  --bn-colors-tooltip-text: var(--color-primary-900);
-  --bn-colors-tooltip-background: var(--color-primary-100);
-  
-  /* Placeholder */
-  --bn-colors-placeholder-text: var(--color-primary-600);
-  
-  /* Selection */
-  --bn-colors-selected-background: var(--color-primary-800);
-  --bn-colors-hovered-background: var(--color-primary-900);
-}
-
-/* Slash menu / Suggestion menu */
-.bn-container[data-theming-css-demo] .bn-suggestion-menu {
-  background: var(--bn-colors-menu-background);
-  border: 1px solid var(--bn-colors-borders-default);
-  border-radius: var(--bn-border-radius);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(8px);
-}
-
-.bn-container[data-theming-css-demo] .bn-suggestion-menu-item {
-  color: var(--bn-colors-menu-text);
-  border-radius: 6px;
-}
-
-.bn-container[data-theming-css-demo] .bn-suggestion-menu-item:hover,
-.bn-container[data-theming-css-demo] .bn-suggestion-menu-item[data-hovered="true"] {
-  background: var(--bn-colors-hovered-background);
-}
-
-.bn-container[data-theming-css-demo] .bn-suggestion-menu-item-title {
-  color: var(--bn-colors-menu-text);
-}
-
-.bn-container[data-theming-css-demo] .bn-suggestion-menu-item-subtitle {
-  color: var(--bn-colors-placeholder-text);
-}
-
-/* Formatting toolbar */
-.bn-container[data-theming-css-demo] .bn-formatting-toolbar,
-.bn-container[data-theming-css-demo] .bn-toolbar {
-  background: var(--bn-colors-menu-background);
-  border: 1px solid var(--bn-colors-borders-default);
-  border-radius: var(--bn-border-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(8px);
-}
-
-.bn-container[data-theming-css-demo] .bn-toolbar button,
-.bn-container[data-theming-css-demo] .bn-formatting-toolbar button {
-  color: var(--bn-colors-menu-text);
-  border-radius: 4px;
-}
-
-.bn-container[data-theming-css-demo] .bn-toolbar button:hover,
-.bn-container[data-theming-css-demo] .bn-formatting-toolbar button:hover {
-  background: var(--bn-colors-hovered-background);
-}
-
-.bn-container[data-theming-css-demo] .bn-toolbar button[data-active="true"],
-.bn-container[data-theming-css-demo] .bn-formatting-toolbar button[data-active="true"] {
-  background: var(--bn-colors-selected-background);
-}
-
-/* Side menu (drag handle, add button) */
-.bn-container[data-theming-css-demo] .bn-side-menu {
-  color: var(--bn-colors-side-menu);
-}
-
-.bn-container[data-theming-css-demo] .bn-side-menu button:hover {
-  background: var(--bn-colors-hovered-background);
-  color: var(--bn-colors-menu-text);
-}
-
-/* Drag handle menu */
-.bn-container[data-theming-css-demo] .bn-drag-handle-menu {
-  background: var(--bn-colors-menu-background);
-  border: 1px solid var(--bn-colors-borders-default);
-  border-radius: var(--bn-border-radius);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* Link toolbar */
-.bn-container[data-theming-css-demo] .bn-link-toolbar {
-  background: var(--bn-colors-menu-background);
-  border: 1px solid var(--bn-colors-borders-default);
-  border-radius: var(--bn-border-radius);
-}
-
-.bn-container[data-theming-css-demo] .bn-link-toolbar input {
-  background: transparent;
-  color: var(--bn-colors-menu-text);
-  border: 1px solid var(--bn-colors-borders-default);
-}
-
-/* Table handles */
-.bn-container[data-theming-css-demo] .bn-table-handle {
-  background: var(--bn-colors-menu-background);
-  border: 1px solid var(--bn-colors-borders-default);
-}
-
-/* Image toolbar */
-.bn-container[data-theming-css-demo] .bn-image-toolbar {
-  background: var(--bn-colors-menu-background);
-  border: 1px solid var(--bn-colors-borders-default);
-  border-radius: var(--bn-border-radius);
-}
-
-/* Inline content (links, etc) */
-.bn-container[data-theming-css-demo] a {
-  color: var(--color-primary-600);
-}
-
-.dark .bn-container[data-theming-css-demo] a {
-  color: var(--color-primary-300);
-}
-
-/* Code blocks */
-.bn-container[data-theming-css-demo] pre {
-  background: var(--bn-colors-highlights-gray-background);
-  border-radius: 6px;
-  font-family: var(--font-mono);
-}
-
-.bn-container[data-theming-css-demo] code {
-  font-family: var(--font-mono);
-  background: var(--bn-colors-highlights-gray-background);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-/* Block quote */
-.bn-container[data-theming-css-demo] [data-content-type="blockquote"] {
-  border-left: 3px solid var(--bn-colors-side-menu);
-  padding-left: 1rem;
-  color: var(--bn-colors-placeholder-text);
-}
-
-/* Heading styles */
-.bn-container[data-theming-css-demo] [data-content-type="heading"][data-level="1"] {
-  font-size: 2rem;
-  font-weight: 700;
-}
-
-.bn-container[data-theming-css-demo] [data-content-type="heading"][data-level="2"] {
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-.bn-container[data-theming-css-demo] [data-content-type="heading"][data-level="3"] {
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-/* Paragraph styles */
-.bn-container[data-theming-css-demo] [data-content-type="paragraph"] {
-  margin-bottom: 1rem;
-  line-height: 1.6;
-  font-family: var(--font-sans);
-}
-
-/* List styles */
-.bn-container[data-theming-css-demo] [data-content-type="bulletListItem"]::before,
-.bn-container[data-theming-css-demo] [data-content-type="numberedListItem"]::before {
-  color: var(--bn-colors-side-menu);
-}
-
-/* Mantine component overrides within BlockNote */
-.bn-container[data-theming-css-demo] .mantine-Menu-dropdown {
-  background: var(--bn-colors-menu-background) !important;
-  border: 1px solid var(--bn-colors-borders-default) !important;
-  border-radius: var(--bn-border-radius) !important;
-}
-
-.bn-container[data-theming-css-demo] .mantine-Menu-item {
-  color: var(--bn-colors-menu-text) !important;
-}
-
-.bn-container[data-theming-css-demo] .mantine-Menu-item:hover {
-  background: var(--bn-colors-hovered-background) !important;
-}
-
-.bn-container[data-theming-css-demo] .mantine-Tooltip-tooltip {
-  background: var(--bn-colors-tooltip-background) !important;
-  color: var(--bn-colors-tooltip-text) !important;
-}
 
 .metallic-button {
   padding: 4px;

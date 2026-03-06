@@ -71,7 +71,7 @@ export default function ClaudePage() {
   useSetMainHeader(tabBar, !ws.showEmptyState && isFirstTabActive);
 
   return (
-    <div className="flex flex-col h-full dark:bg-claude-dark rounded-t-2xl overflow-hidden">
+    <div className="flex flex-col h-full dark:bg-primary-950 rounded-t-2xl overflow-hidden">
       <div className="flex-1 overflow-hidden noscrollbar">
         {ws.showEmptyState ? (
           <WorkspaceEmptyState workspace={ws.currentWorkspace} />

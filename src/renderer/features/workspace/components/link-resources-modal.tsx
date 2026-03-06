@@ -189,13 +189,13 @@ export function LinkResourcesModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-(--z-overlay) flex items-center justify-center p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-primary-950/40" role="presentation" onClick={handleCancel} />
 
       {/* Modal */}
       <div
-        className="relative z-50 w-full max-w-xl rounded-3xl overflow-hidden glass-morphism"
+        className="relative z-(--z-overlay) w-full max-w-xl rounded-3xl overflow-hidden glass-morphism"
         style={{
           animation: "wizardModalIn 250ms cubic-bezier(0.22, 1, 0.36, 1) both",
         }}

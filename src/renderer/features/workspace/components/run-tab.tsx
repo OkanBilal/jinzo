@@ -22,7 +22,7 @@ function VariantIcon({ variant, isActive }: { variant: string; isActive: boolean
       : "text-primary-900 dark:text-primary-200 group-hover:text-primary-900 dark:group-hover:text-primary-200"
   }`;
 
-  if (variant === "claude") return <Claude className="text-[#D97453]" />;
+  if (variant === "claude") return <Claude className="text-claude" />;
   if (variant === "copilot") return <CopilotStatic className={className} />;
   return null;
 }

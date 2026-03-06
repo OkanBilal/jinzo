@@ -206,7 +206,7 @@ export function WizardModal<
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-9999 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-(--z-modal) flex items-center justify-center p-4">
       <div
         className="absolute inset-0 dark:bg-primary-950/60 bg-primary/50 backdrop-blur-xs "
         onClick={() => !isSubmitting && close()}
@@ -218,7 +218,7 @@ export function WizardModal<
         role="dialog"
         aria-modal="true"
         aria-labelledby="wizard-title"
-        className={`relative z-50 w-full rounded-3xl overflow-hidden glass-morphism ${className.includes("max-w-") ? "" : "max-w-2xl"} ${className}`}
+        className={`relative z-(--z-overlay) w-full rounded-3xl overflow-hidden glass-morphism ${className.includes("max-w-") ? "" : "max-w-2xl"} ${className}`}
         style={{
           animation: shouldAnimate
             ? "wizardModalIn 250ms cubic-bezier(0.22, 1, 0.36, 1) both"

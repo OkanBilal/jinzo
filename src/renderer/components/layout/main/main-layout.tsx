@@ -30,8 +30,8 @@ export function MainLayout({ children }: MainLayoutProps) {
 function DragRegion() {
   return (
     <div
-      className="fixed top-0 left-0 right-0 h-4 z-50"
-      style={{ WebkitAppRegion: "drag" } as CSSProperties}
+      className="fixed top-0 left-0 right-0 z-(--z-overlay)"
+      style={{ height: "var(--drag-region-height)", WebkitAppRegion: "drag" } as CSSProperties}
     />
   );
 }

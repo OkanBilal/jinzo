@@ -114,7 +114,7 @@ export default function SpaceIconPicker({
       </Button>
 
       <div
-        className={`absolute top-full left-0 right-0 z-50
+        className={`absolute top-full left-0 right-0 z-(--z-overlay)
             border border-t-0 border-primary-950/10 dark:border-primary/10
             rounded-b-xl shadow-lg overflow-hidden
             ${isOpen ? "animate-dropdown-in" : "invisible pointer-events-none"} ${fixedBackgroundClass}`}

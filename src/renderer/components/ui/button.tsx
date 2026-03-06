@@ -54,11 +54,11 @@ const variantStyles: Record<ButtonVariant, string> = {
   secondary:
     "cursor-pointer bg-primary-950/80 dark:bg-primary-200/20 hover:bg-primary-950/90 dark:hover:bg-primary-600 text-primary-50 dark:text-primary-200",
   submit:
-    "cursor-pointer bg-[#009EFF] hover:bg-[#007ACC] text-primary disabled:bg-[#007ACC]/50",
-    ghost:
+    "cursor-pointer bg-accent hover:bg-accent-hover text-primary disabled:bg-accent-hover/50",
+  ghost:
     "cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900",
   danger:
-    "cursor-pointer text-primary bg-[#ff4436]  hover:bg-[#e33221] disabled:bg-[#e33221]/50",
+    "cursor-pointer text-primary bg-danger hover:bg-danger-hover disabled:bg-danger-hover/50",
   warning:
     "cursor-pointer bg-primary-200/60 text-primary-600 dark:bg-primary-700/80 dark:text-primary-200 hover:bg-primary-300/60 dark:hover:bg-primary-800/80",
   success:

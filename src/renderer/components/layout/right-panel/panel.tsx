@@ -14,7 +14,7 @@ export function Panel({ isVisible, isAnimatedIn, width, component }: PanelProps)
 
   return (
     <div
-      className="block fixed top-0 bottom-0 right-0 overflow-hidden transition-all duration-300 ease-out bg-transparent z-50"
+      className="block fixed top-0 bottom-0 right-0 overflow-hidden transition-all duration-300 ease-out bg-transparent z-(--z-overlay)"
       style={{
         width: width,
         transform: isAnimatedIn ? "translateX(0)" : "translateX(100%)",

@@ -133,7 +133,7 @@ export default function Sidebar() {
   return (
     <>
       <aside
-        className="fixed top-0 bottom-0 left-0 z-30 transition-all duration-300"
+        className="fixed top-0 bottom-0 left-0 z-(--z-sidebar) transition-all duration-300"
         style={{ width: sidebarConfig.width }}
         role="complementary"
         aria-label="Workspace sidebar"

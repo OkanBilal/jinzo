@@ -207,7 +207,7 @@ export default function EditSpaceModal({
   const currentVariant = getThemeVariant(selectedColorPair, darkMode);
 
   return createPortal(
-    <div className="fixed inset-0 z-100">
+    <div className="fixed inset-0 z-(--z-dropdown)">
       <div
         className="absolute inset-0 bg-primary-950/50 transition-opacity duration-200"
         style={{ opacity: isClosing ? 0 : 1 }}
@@ -215,7 +215,7 @@ export default function EditSpaceModal({
         onClick={handleAnimatedClose}
       />
       <div
-        className={`absolute left-0 bottom-0 z-40 min-h-[calc(60vh-2rem)] overflow-hidden rounded-t-3xl ${isClosing ? "animate-modal-out" : "animate-modal-in"}`}
+        className={`absolute left-0 bottom-0 z-(--z-panel) min-h-[calc(60vh-2rem)] overflow-hidden rounded-t-3xl ${isClosing ? "animate-modal-out" : "animate-modal-in"}`}
         style={{
           width: sidebarWidth,
           background: currentVariant.preview,
@@ -253,7 +253,7 @@ export default function EditSpaceModal({
                 text-sm focus:outline-none
                 flex items-center justify-between
                 transition-all
-                dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]"
+                dark:shadow-(--shadow-inset-subtle-dark)"
             />
           </div>
 
@@ -284,7 +284,7 @@ export default function EditSpaceModal({
                 text-primary-800 dark:text-primary
                 text-sm focus:outline-none
                 rounded-xl transition-all
-                dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]"
+                dark:shadow-(--shadow-inset-subtle-dark)"
             />
           </div>
 

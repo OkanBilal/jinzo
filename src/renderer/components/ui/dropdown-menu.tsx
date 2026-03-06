@@ -102,7 +102,7 @@ export function DropdownMenu({
     <DropdownContext.Provider value={{ registerSubmenu, unregisterSubmenu }}>
       <div
         ref={menuRef}
-        className={cn("fixed z-100 rounded-2xl overflow-hidden glass-morphism animate-dropdown-in", className)}
+        className={cn("fixed z-(--z-dropdown) rounded-2xl overflow-hidden glass-morphism animate-dropdown-in", className)}
         style={{
           left: adjustedPosition.x,
           top: adjustedPosition.y,
@@ -205,7 +205,7 @@ export function DropdownMenuSub({
             ref={submenuRefCallback}
             onMouseEnter={handleSubmenuEnter}
             onMouseLeave={handleSubmenuLeave}
-            className="fixed z-101 rounded-2xl overflow-hidden glass-morphism animate-dropdown-sub-in"
+            className="fixed z-(--z-dropdown-sub) rounded-2xl overflow-hidden glass-morphism animate-dropdown-sub-in"
             style={{
               top: submenuPos.top,
               left: submenuPos.left,
@@ -237,7 +237,7 @@ export function DropdownMenuItem({
 }: DropdownMenuItemProps) {
   const variantClasses = {
     default: "text-primary-800 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-50",
-    danger: "text-[#f44336] dark:text-[#f44336]",
+    danger: "text-danger dark:text-danger",
   };
 
   return (

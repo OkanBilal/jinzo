@@ -72,7 +72,7 @@ export default function DashboardPage() {
         <Heading2 className="font-medium!">Dashboard</Heading2>
         <div
           ref={containerRef}
-          className="relative flex rounded-[11px] bg-primary-100/60 dark:bg-primary-800/30 p-0.5"
+          className="relative flex rounded-sm bg-primary-100/60 dark:bg-primary-800/30 p-0.5"
         >
           <div
             className="absolute top-0.5 bg-primary dark:bg-primary/10 rounded-lg shadow-sm transition-all duration-300 ease-in-out"
@@ -89,7 +89,7 @@ export default function DashboardPage() {
                 if (el) tabRefs.current.set(tab.id, el);
               }}
               onClick={() => setFilter(tab.id)}
-              className={`relative z-10 flex-1 text-center px-3 py-1 text-xs font-medium rounded-lg transition-colors duration-300 cursor-pointer ${
+              className={`relative z-(--z-base) flex-1 text-center px-3 py-1 text-xs font-medium rounded-lg transition-colors duration-300 cursor-pointer ${
                 filter === tab.id
                   ? "text-primary-900 dark:text-primary-100"
                   : "text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"

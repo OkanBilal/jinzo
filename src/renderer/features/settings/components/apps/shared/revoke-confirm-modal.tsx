@@ -19,7 +19,7 @@ export function RevokeConfirmModal({
   const defaultDescription = `This will disconnect your ${appName} account and remove all associated sources from your feed. This action cannot be undone.`;
 
   return createPortal(
-    <div className="fixed inset-0 z-10000 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-(--z-modal-critical) flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-primary-950/60" role="presentation" onClick={onCancel} />
       <div className="relative w-full max-w-md glass-morphism rounded-2xl overflow-hidden">
         <div className="p-6">

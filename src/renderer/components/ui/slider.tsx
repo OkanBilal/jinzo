@@ -72,7 +72,7 @@ export function Slider({
           text-sm focus:outline-none cursor-pointer 
           flex items-center justify-between 
           transition-all
-          shadow-[inset_0_0.5px_0_rgba(0,0,0,0.03)] dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]
+          shadow-(--shadow-inset-subtle) dark:shadow-(--shadow-inset-subtle-dark)
         "
       >
         <div

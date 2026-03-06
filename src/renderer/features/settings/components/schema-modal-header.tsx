@@ -26,7 +26,7 @@ export function SchemaModalHeader({
         <Heading3>Structured outputs</Heading3>
         <div className="relative flex items-center rounded-xl bg-primary-950/4 dark:bg-primary/6 p-0.5">
           <div
-            className="absolute top-0.5 h-[calc(100%-4px)] w-[calc(50%-2px)] rounded-[11px] bg-primary dark:bg-primary-800 shadow-sm transition-transform duration-200 ease-out"
+            className="absolute top-0.5 h-[calc(100%-4px)] w-[calc(50%-2px)] rounded-sm bg-primary dark:bg-primary-800 shadow-sm transition-transform duration-200 ease-out"
             style={{
               transform:
                 activeTab === "schemas"
@@ -36,7 +36,7 @@ export function SchemaModalHeader({
           />
           <Button
             onClick={() => onTabChange("schemas")}
-            className={`relative z-10 px-3 py-1.5 rounded-xl text-sm transition-colors duration-200 cursor-pointer min-w-20 ${
+            className={`relative z-(--z-base) px-3 py-1.5 rounded-xl text-sm transition-colors duration-200 cursor-pointer min-w-20 ${
               activeTab === "schemas" ? activeClass : inactiveClass
             }`}
           >
@@ -44,7 +44,7 @@ export function SchemaModalHeader({
           </Button>
           <Button
             onClick={() => onTabChange("editor")}
-            className={`relative z-10 px-3 py-1.5 rounded-xl text-sm transition-colors duration-200 cursor-pointer min-w-20 ${
+            className={`relative z-(--z-base) px-3 py-1.5 rounded-xl text-sm transition-colors duration-200 cursor-pointer min-w-20 ${
               activeTab === "editor" ? activeClass : inactiveClass
             }`}
           >

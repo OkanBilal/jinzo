@@ -18,13 +18,13 @@ export function ConnectionModalWrapper({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-(--z-overlay) flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-primary-950/40 "
         role="presentation"
         onClick={onClose}
       />
-      <div className="relative z-50 w-full max-w-2xl rounded-2xl overflow-hidden glass-morphism">
+      <div className="relative z-(--z-overlay) w-full max-w-2xl rounded-2xl overflow-hidden glass-morphism">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
             <img

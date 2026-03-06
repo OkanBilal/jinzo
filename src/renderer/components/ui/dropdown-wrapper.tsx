@@ -21,7 +21,7 @@ export default function DropdownWrapper({
   isOpen,
   children,
   openUpward = false,
-  minWidth = "min-w-[140px]",
+  minWidth = "min-w-(--dropdown-min-width)",
   position = "left",
   usePortal = false,
   triggerRef,
@@ -103,7 +103,7 @@ export default function DropdownWrapper({
         !usePortal && verticalClass,
         minWidth,
         fixedBackgroundClass,
-        "z-100 glass-morphism rounded-2xl",
+        "z-(--z-dropdown) glass-morphism rounded-2xl",
         hiddenClass,
       )}
       style={{

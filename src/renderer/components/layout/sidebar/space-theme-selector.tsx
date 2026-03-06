@@ -26,7 +26,7 @@ export default function SpaceThemeSelector({
     <div
       className="rounded-2xl overflow-hidden
         bg-primary-950/5 dark:bg-primary/4
-        shadow-[inset_0_0.5px_0_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]"
+        shadow-(--shadow-inset-subtle) dark:shadow-(--shadow-inset-subtle-dark)"
     >
       <div
         className="flex transition-transform duration-300 ease-in-out"

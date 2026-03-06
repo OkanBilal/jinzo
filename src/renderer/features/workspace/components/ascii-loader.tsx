@@ -48,7 +48,7 @@ export function AsciiSpinner({ variant }: { variant?: "claude" | "copilot" }) {
 
   return (
     <span
-      className={`font-mono text-xs leading-none ${variant === "claude" ? "text-[#D97757]" : "text-[#4361c2]"}`}
+      className={`font-mono text-xs leading-none ${variant === "claude" ? "text-claude" : "text-copilot"}`}
     >
       {BREATHING_FRAMES[frameIndex]}
     </span>
@@ -80,7 +80,7 @@ export function AsciiLoader({
   return (
     <div className={`flex items-center gap-2 py-2 ${className || ""}`}>
       <span
-        className={`font-mono text-base ${variant === "claude" ? "text-[#D97757]" : "text-[#4361c2]"}`}
+        className={`font-mono text-base ${variant === "claude" ? "text-claude" : "text-copilot"}`}
       >
         {ASCII_FRAMES[state.frameIndex]}
       </span>

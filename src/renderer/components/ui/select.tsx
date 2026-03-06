@@ -119,7 +119,7 @@ export default function Select<T extends string = string>({
           text-sm focus:outline-none cursor-pointer
           flex items-center justify-between
           transition-colors
-          shadow-[inset_0_0.5px_0_rgba(0,0,0,0.03)] dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]
+          shadow-(--shadow-inset-subtle) dark:shadow-(--shadow-inset-subtle-dark)
           ${
             isOpen
               ? "rounded-t-xl shadow-lg"
@@ -151,7 +151,7 @@ export default function Select<T extends string = string>({
       {createPortal(
         <div
           ref={dropdownRef}
-          className={`fixed z-9999
+          className={`fixed z-(--z-modal)
             border border-t-0 border-primary-950/10 dark:border-primary/10
             rounded-b-xl shadow-lg overflow-hidden
             ${isOpen ? "animate-dropdown-in" : "pointer-events-none invisible"}

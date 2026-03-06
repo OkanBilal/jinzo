@@ -15,7 +15,7 @@ export function useSidebarConfig(): SidebarConfig {
 
   const sidebarConfig = useMemo(() => {
     const defaultConfig: SidebarConfig = {
-      width: "19rem",
+      width: "var(--sidebar-width)",
       title: "Workspaces",
       itemType: "workspace",
       defaultRoute: "/claude",

@@ -203,7 +203,7 @@ export default function CreateSpaceView({
               text-primary-800 dark:text-primary
               text-sm focus:outline-none
               rounded-xl transition-all
-              dark:shadow-[inset_0_0.5px_0_rgba(255,255,255,0.03)]"
+              dark:shadow-(--shadow-inset-subtle-dark)"
           />
         </div>
 

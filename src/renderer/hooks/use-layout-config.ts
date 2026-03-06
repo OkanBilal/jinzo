@@ -12,8 +12,8 @@ export function useLayoutConfig(): LayoutConfig {
 
   return useMemo(() => {
     const defaults: LayoutConfig = {
-      mainMarginLeft: "19rem",
-      rightPanelWidth: "19rem",
+      mainMarginLeft: "var(--sidebar-width)",
+      rightPanelWidth: "var(--panel-width)",
       rightPanelComponent: "config",
     };
 
