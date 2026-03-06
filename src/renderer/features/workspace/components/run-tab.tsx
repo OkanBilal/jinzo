@@ -8,6 +8,7 @@ import { AsciiSpinner } from "./ascii-loader";
 interface RunTabProps {
   run: Run;
   isActive: boolean;
+  isFirst?: boolean;
   onClick: () => void;
   onClose: (e: React.MouseEvent) => void;
   title: string;
@@ -17,11 +18,11 @@ interface RunTabProps {
 function VariantIcon({ variant, isActive }: { variant: string; isActive: boolean }) {
   const className = `size-4 ${
     isActive
-      ? "text-primary-900 dark:text-primary"
-      : "text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-300"
+      ? "text-primary-900 dark:text-primary-200"
+      : "text-primary-900 dark:text-primary-200 group-hover:text-primary-900 dark:group-hover:text-primary-200"
   }`;
 
-  if (variant === "claude") return <Claude className={className} />;
+  if (variant === "claude") return <Claude className="text-[#D97453]" />;
   if (variant === "copilot") return <CopilotStatic className={className} />;
   return null;
 }
@@ -39,15 +40,16 @@ function TabIcon({ run, variant, isActive }: { run: Run; variant: string; isActi
   );
 }
 
-export function RunTab({ run, isActive, onClick, onClose, title, variant = "copilot" }: RunTabProps) {
+export function RunTab({ run, isActive, isFirst, onClick, onClose, title, variant = "copilot" }: RunTabProps) {
   return (
     <BaseTab
       isActive={isActive}
+      isFirst={isFirst}
       onClick={onClick}
       onClose={onClose}
       icon={<TabIcon run={run} variant={variant} isActive={isActive} />}
-      label={<AnimatedTitle title={title} className="text-xs font-medium truncate flex-1" />}
-      closeIcon={<Archive className="size-3.5" />}
+      label={<AnimatedTitle title={title} className="text-xs text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200 font-medium truncate flex-1" />}
+      closeIcon={<Archive className="size-3.5 text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200" />}
       variant={variant}
     />
   );

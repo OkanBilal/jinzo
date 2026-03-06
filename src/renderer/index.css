@@ -98,14 +98,14 @@
   --color-primary-900: #141414;
   --color-primary-950: #0c0c0c;
   
-  --color-copilot-dark: #080A0F ;
-  --color-copilot-soft-dark: #0c0f16;
-  --color-copilot-light: #ffffff;
-  --color-copilot-soft-light: #f4f9fe;
-  --color-claude-dark: #070707;
-  --color-claude-soft-dark: #100f0f;
-  --color-claude-light: #ffffff;
-  --color-claude-soft-light: #fff4f1;
+  --color-copilot-dark: #0c0c0c ;
+  --color-copilot-soft-dark: #141414;
+  --color-copilot-light: #f7f7f6;
+  --color-copilot-soft-light: #efeeee;
+  --color-claude-dark: #0c0c0c;
+  --color-claude-soft-dark: #141414;
+  --color-claude-light: #f7f7f6;
+  --color-claude-soft-light: #efeeee;
 
 
   --font-sans: 'Geist', system-ui, -apple-system, BlinkMacSystemFont,
@@ -308,6 +308,21 @@
 
 .animate-slide-in {
   animation: slide-fade-down 0.15s ease-out both;
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-6px) scale(0.90);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.1s ease-out both;
 }
 
 @keyframes claudePulse {
@@ -726,8 +741,7 @@ input[type="range"].slider {
 }
 
 
-.glass-morphism
-{
+.glass-morphism {
   background: linear-gradient(to bottom, var(--color-primary-100), var(--color-primary-50));
   border: 0.5px solid #ffffff2e;
   box-shadow:
@@ -767,20 +781,20 @@ input[type="range"].slider {
 
 .dark .glass-morphism-copilot {
   background: linear-gradient(to bottom, var(--color-copilot-soft-dark), var(--color-copilot-dark));
-  border-color: #1c232f00;
+  border-color: #ffffff1f;
   box-shadow:
-    0 1px 1px #1c232f,
-    0 1px 1px #1c232f,
-    inset 0 1px 1px #1c232f;
+    0 1px 1px #00000040,
+    0 1px 1px #00000026,
+    inset 0 1px 0 #ffffff29;
 }
 
 .dark .glass-morphism-claude {
   background: linear-gradient(to bottom, var(--color-claude-soft-dark), var(--color-claude-dark));
-  border-color: #ffffff00;
+  border-color: #ffffff1f;
   box-shadow:
-    0 1px 1px #292424,
-    0 1px 1px #292424,
-    inset 0 1px 0 #292424;
+    0 1px 1px #00000040,
+    0 1px 1px #00000026,
+    inset 0 1px 0 #ffffff29;
 }
 
 

@@ -180,7 +180,7 @@ function buildPermissionHandler(runId: string) {
   return async (
     request: { kind: string; toolCallId?: string; [key: string]: any },
   ): Promise<{ kind: string; rules?: unknown[] }> => {
-    if (request.kind === "read" || request.kind === "shell" || request.kind === "task") {
+    if (request.kind === "read" || request.kind === "shell" || request.kind === "task" || request.kind === "ask_user" ) {
       return { kind: "approved" };
     }
 

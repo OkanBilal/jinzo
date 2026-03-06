@@ -19,6 +19,7 @@ import { ReadDisplay, type ReadParams } from "./read-display";
 import { GrepDisplay, type GrepParams } from "./grep-display";
 import { EditDisplay, type EditParams } from "./edit-display";
 import { ViewDisplay, type ViewParams } from "./view-display";
+import { ToolSearchDisplay, type ToolSearchParams } from "./tool-search-display";
 
 interface ToolCallItemProps {
   event: RunEvent;
@@ -183,6 +184,19 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
         ? (params as IntentParams)
         : { intent: summary };
     return <IntentDisplay params={intentParams} />;
+  }
+
+  // Show ToolSearchDisplay for ToolSearch tool calls
+  if (toolName.toLowerCase() === "toolsearch") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const tsParams: ToolSearchParams = metadataInput
+      ? (metadataInput as ToolSearchParams)
+      : params
+        ? (params as ToolSearchParams)
+        : { query: summary };
+    return <ToolSearchDisplay params={tsParams} output={event.metadata?.output} isCompact={isCompact} />;
   }
 
   // Show GetDiffDisplay for Jinzo GetDiff tool calls

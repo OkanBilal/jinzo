@@ -9,7 +9,7 @@ import { BaseTab } from "./base-tab";
 import type { Run } from "../types";
 import type { IssueWithEntity } from "@/lib/redux/api";
 import type { ReviewTab as ReviewTabType } from "@/lib/redux/slices/workspaceSlice";
-import { useRef, useState, useLayoutEffect } from "react";
+import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 
 const EMPTY_NOTE_TABS: ReviewTabType[] = [];
@@ -58,131 +58,69 @@ export function WorkspaceTabs({
   onCloseNewRunTab,
 }: WorkspaceTabsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  const setTabRef = (id: string) => (el: HTMLDivElement | null) => {
-    if (el) {
-      tabRefs.current.set(id, el);
-    } else {
-      tabRefs.current.delete(id);
-    }
-  };
-
-  // Calculate indicator position
-  useLayoutEffect(() => {
-    const updateIndicator = () => {
-      const container = containerRef.current;
-      if (!container) return;
-
-      const activeTabEl = tabRefs.current.get(activeTab);
-      if (activeTabEl && activeTabEl.isConnected) {
-        const containerRect = container.getBoundingClientRect();
-        const tabRect = activeTabEl.getBoundingClientRect();
-
-        setIndicatorStyle({
-          left: tabRect.left - containerRect.left + container.scrollLeft,
-          width: tabRect.width,
-        });
-        setIsInitialized(true);
-
-        activeTabEl.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-          inline: "nearest",
-        });
-      } else {
-        // Active tab no longer in DOM (e.g. just closed) — hide indicator
-        setIndicatorStyle({ left: 0, width: 0 });
-      }
-    };
-
-    // Small delay to ensure refs are set
-    requestAnimationFrame(updateIndicator);
-  }, [activeTab, runs.length, issueTabs.length, noteTabs.length, showNewRunTab, hasSelectedFile]);
 
   return (
-    <div
-      className={`flex items-center border-b dark:border-primary/4 border-primary-950/20`}
-    >
+    <div className="flex items-end">
       <div
         ref={containerRef}
-        className="relative flex-1 flex items-center overflow-x-auto noscrollbar"
+        className="relative flex-1 flex items-end overflow-x-auto noscrollbar"
       >
-        {/* Sliding indicator */}
-        {isInitialized && indicatorStyle.width > 0 && (
-          <div
-            className={`absolute bottom-0 z-10 h-0.5 transition-all duration-200 ease-out ${
-              variant === "claude"
-                ? "dark:bg-claude-light bg-claude-soft-dark/60"
-                : "bg-copilot-soft-dark/60 dark:bg-copilot-light"
-            }`}
-            style={{
-              left: indicatorStyle.left,
-              width: indicatorStyle.width,
-            }}
+        {hasSelectedFile && (
+          <EditorTab
+            isActive={activeTab === "editor"}
+            isFirst
+            onClick={onSelectEditorTab}
+            hasFile={hasSelectedFile}
+            fileName={fileName}
+            onClose={onCloseEditorTab}
+            variant={variant}
           />
         )}
 
-        {hasSelectedFile && (
-          <div ref={setTabRef("editor")}>
-            <EditorTab
-              isActive={activeTab === "editor"}
-              onClick={onSelectEditorTab}
-              hasFile={hasSelectedFile}
-              fileName={fileName}
-              onClose={onCloseEditorTab}
-              variant={variant}
-            />
-          </div>
-        )}
-
-        {/* Run tabs */}
-        {runs.slice(0, 8).map((run) => (
-          <div key={run.id} ref={setTabRef(run.id)}>
-            <RunTab
-              run={run}
-              isActive={run.id === activeTab}
-              onClick={() => onSelectRunTab(run.id)}
-              onClose={(e) => onCloseTab(run.id, e)}
-              title={getTabTitle(run)}
-              variant={variant}
-            />
-          </div>
+        {runs.slice(0, 8).map((run, i) => (
+          <RunTab
+            key={run.id}
+            run={run}
+            isActive={run.id === activeTab}
+            isFirst={!hasSelectedFile && i === 0}
+            onClick={() => onSelectRunTab(run.id)}
+            onClose={(e) => onCloseTab(run.id, e)}
+            title={getTabTitle(run)}
+            variant={variant}
+          />
         ))}
 
-        {issueTabs.map((issue) => {
+        {issueTabs.map((issue, i) => {
           const tabId = `issue:${issue.issue.entityId}`;
           return (
-            <div key={tabId} ref={setTabRef(tabId)}>
-              <IssueTab
-                issue={issue}
-                isActive={activeTab === tabId}
-                onClick={() => onSelectIssueTab(issue.issue.entityId)}
-                onClose={(e) => onCloseIssueTab(issue.issue.entityId, e)}
-                variant={variant}
-              />
-            </div>
+            <IssueTab
+              key={tabId}
+              issue={issue}
+              isActive={activeTab === tabId}
+              isFirst={!hasSelectedFile && runs.length === 0 && i === 0}
+              onClick={() => onSelectIssueTab(issue.issue.entityId)}
+              onClose={(e) => onCloseIssueTab(issue.issue.entityId, e)}
+              variant={variant}
+            />
           );
         })}
 
-        {noteTabs.map((note) => {
+        {noteTabs.map((note, i) => {
           const tabId = `note:${note.id}`;
           return (
-            <div key={tabId} ref={setTabRef(tabId)}>
-              <NoteTab
-                review={note}
-                isActive={activeTab === tabId}
-                onClick={() => onSelectNoteTab?.(note.id)}
-                onClose={(e) => onCloseNoteTab?.(note.id, e)}
-                variant={variant}
-              />
-            </div>
+            <NoteTab
+              key={tabId}
+              review={note}
+              isActive={activeTab === tabId}
+              isFirst={!hasSelectedFile && runs.length === 0 && issueTabs.length === 0 && i === 0}
+              onClick={() => onSelectNoteTab?.(note.id)}
+              onClose={(e) => onCloseNoteTab?.(note.id, e)}
+              variant={variant}
+            />
           );
         })}
         {showNewRunTab && (
-          <div ref={setTabRef("new-run")}>
+          <div className="animate-slide-in-left">
             <NewRunTab
               isActive={activeTab === "new-run"}
               variant={variant}
@@ -193,10 +131,10 @@ export function WorkspaceTabs({
         )}
         <Button
           onClick={onNewRun}
-          className="p-2  text-primary-800 mr-8 dark:text-primary-200  hover:text-primary-700 dark:hover:text-primary-300 hover:bg-primary-900/10 dark:hover:bg-primary/3 rounded-xl cursor-pointer transition-colors"
+          className="p-2.5  text-primary-900 ml-0.5 mb-0.5 mr-8 dark:text-primary-200  hover:text-primary-950 dark:hover:text-primary-300 hover:bg-primary/30 dark:hover:bg-primary/3  rounded-xl cursor-pointer transition-colors"
           title="New run"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="size-4" />
         </Button>
       </div>
     </div>
@@ -209,13 +147,14 @@ function NewRunTab({ isActive, variant, onClick, onClose }: {
   onClick: () => void;
   onClose: (e: React.MouseEvent) => void;
 }) {
-  const VariantIcon = variant === "claude" ? Claude : CopilotStatic;
   return (
     <BaseTab
       isActive={isActive}
       onClick={onClick}
       onClose={onClose}
-      icon={<VariantIcon className="size-4" />}
+      icon={ variant === "claude" ? <Claude className="text-[#D97453]" /> : 
+      <CopilotStatic className={`size-4 ${isActive ? "text-primary-900 dark:text-primary-200" :
+        "text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200"}`} /> }
       label="New Run"
       variant={variant}
     />

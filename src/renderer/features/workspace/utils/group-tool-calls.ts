@@ -43,6 +43,7 @@ export function getToolType(content: string): string {
   if (lower === "glob") return "Glob";
   if (lower === "grep") return "Grep";
   if (lower === "report_intent") return "Report Intent";
+  if (lower === "toolsearch") return "ToolSearch";
 
   return toolName;
 }

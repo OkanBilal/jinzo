@@ -1,5 +1,4 @@
 import { Fragment, RefObject, useMemo, useState, useCallback } from "react";
-import { WorkspaceTabs } from "./workspace-tabs";
 import { ToolCallGroup, InfoGroup, groupEvents, type EventGroup } from "./tools/tool-call-group";
 import { EditorContent } from "./editor-content";
 import { IssueTabContent } from "./issue-tab-content";
@@ -7,7 +6,6 @@ import { NoteTabContent } from "./note-tab-content";
 import { WorkspaceEmptyState } from "./workspace-empty-state";
 import type { Run, RunEvent, Workspace } from "../types";
 import type { IssueWithEntity, RunTurn, ModelUsageEntry } from "@/lib/redux/api";
-import type { ReviewTab } from "@/lib/redux/slices/workspaceSlice";
 import { isIssueTab, getIssueEntityId, isNoteTab, getNoteId, isNewRunTab } from "../utils/repo-utils";
 import { AsciiLoader } from "./ascii-loader";
 import type { ToolApprovalRequest } from "../hooks/use-tool-approval";
@@ -378,34 +376,17 @@ function computeSessionTimesFromEvents(
   return result;
 }
 
-const EMPTY_NOTE_TABS: ReviewTab[] = [];
-
 interface WorkspaceEventsProps {
   runs: Run[];
   activeTab: "editor" | string;
   currentEvents: RunEvent[];
   currentWorkspace: Workspace | null;
   eventsEndRef: RefObject<HTMLDivElement>;
-  hasSelectedFile?: boolean;
-  fileName?: string;
   issueTabs: IssueWithEntity[];
-  noteTabs?: ReviewTab[];
   turns?: RunTurn[];
   variant?: "copilot" | "claude";
-  onSelectEditorTab: () => void;
-  onSelectRunTab: (runId: string) => void;
-  onCloseTab: (runId: string, e: React.MouseEvent) => void;
-  onNewRun: () => void;
-  onSelectIssueTab: (entityId: string) => void;
-  onCloseIssueTab: (entityId: string, e: React.MouseEvent) => void;
-  onSelectNoteTab?: (noteId: string) => void;
-  onCloseNoteTab?: (noteId: string, e: React.MouseEvent) => void;
-  onCloseEditorTab?: (e: React.MouseEvent) => void;
   pendingApproval?: ToolApprovalRequest;
   onApprovalRespond?: (requestId: string, approved: boolean, answer?: string) => void;
-  showNewRunTab?: boolean;
-  onSelectNewRunTab?: () => void;
-  onCloseNewRunTab?: (e: React.MouseEvent) => void;
   onForkRun?: (sourceRunId: string, message: string) => Promise<string | null>;
 }
 
@@ -415,26 +396,11 @@ export function WorkspaceEvents({
   currentEvents,
   currentWorkspace,
   eventsEndRef,
-  hasSelectedFile,
-  fileName,
   issueTabs,
-  noteTabs = EMPTY_NOTE_TABS,
   turns = [],
   variant = "copilot",
-  onSelectEditorTab,
-  onSelectRunTab,
-  onCloseTab,
-  onNewRun,
-  onSelectIssueTab,
-  onCloseIssueTab,
-  onSelectNoteTab,
-  onCloseNoteTab,
-  onCloseEditorTab,
   pendingApproval,
   onApprovalRespond,
-  showNewRunTab,
-  onSelectNewRunTab,
-  onCloseNewRunTab,
   onForkRun,
 }: WorkspaceEventsProps) {
   const isEditorActive = activeTab === "editor";
@@ -499,31 +465,6 @@ export function WorkspaceEvents({
 
   return (
     <div className=" text-sm h-full flex flex-col">
-      {/* Sticky header + tabs */}
-      <div className="sticky top-0 z-10 shrink-0">
-        <WorkspaceTabs
-          runs={runs}
-          activeTab={activeTab}
-          hasSelectedFile={hasSelectedFile}
-          fileName={fileName}
-          issueTabs={issueTabs}
-          noteTabs={noteTabs}
-          variant={variant}
-          onSelectEditorTab={onSelectEditorTab}
-          onSelectRunTab={onSelectRunTab}
-          onCloseTab={onCloseTab}
-          onNewRun={onNewRun}
-          onSelectIssueTab={onSelectIssueTab}
-          onCloseIssueTab={onCloseIssueTab}
-          onSelectNoteTab={onSelectNoteTab}
-          onCloseNoteTab={onCloseNoteTab}
-          onCloseEditorTab={onCloseEditorTab}
-          showNewRunTab={showNewRunTab}
-          onSelectNewRunTab={onSelectNewRunTab}
-          onCloseNewRunTab={onCloseNewRunTab}
-        />
-      </div>
-
       {/* Content area */}
       <div className="flex-1 min-h-0 overflow-hidden relative">
         {isNewRunActive ? (
