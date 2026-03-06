@@ -3,9 +3,6 @@
 // Implements WorkRunAdapter using GitHub Copilot SDK
 // ─────────────────────────────────────────────────────────────
 
-import fs from "node:fs";
-import path from "node:path";
-import os from "node:os";
 import type {
   WorkRunAdapter,
   WorkRunRequest,
@@ -16,19 +13,30 @@ import type {
   WorkRunEvent,
   CopilotAdapterConfig,
   ModelInfo,
-  FileAttachment,
 } from "./adapter.types";
 import {
   requestToolApproval,
   cancelPendingRequests,
 } from "../../runs/user-input-broker";
 import type { ToolApprovalRequest } from "../../runs/runs.dto";
-import { workspaceDiffsRepo } from "../../workspaceDiffs/workspaceDiffs.repo";
-import { reviewsRepo } from "../../reviews/reviews.repo";
-import { reviewFindingsRepo } from "../../reviewFindings/reviewFindings.repo";
-import { workspaceActivityService } from "../../workspaceActivity/workspaceActivity.service";
-import { updateRunBaseRef } from "../../runs";
-import { gitService } from "../../git/git.service";
+import {
+  createLogger,
+  ALLOWED_TOOLS_SET,
+  safeJson,
+  extractArtifactsFromToolOutput,
+  formatContextSection,
+  appendPromptSections,
+  emitUserPromptArtifact,
+} from "./adapter.shared";
+import type { JinzoToolContext } from "./jinzo-tools.core";
+import {
+  TOOL_DESCRIPTIONS,
+  handleGetWorkspaceDiff,
+  handleSaveReview,
+  handleSaveFinding,
+  handleSaveFindings,
+  handleCommitChanges,
+} from "./jinzo-tools.core";
 
 /**
  * NOTE: This adapter is designed for the @github/copilot-sdk package.
@@ -148,20 +156,15 @@ const activeRuns = new Map<
   { session: CopilotSession; aborted: boolean }
 >();
 
-// ─────────────────────────────────────────────────────────────
-// Pre-approved tools (auto-allow without user dialog)
-// ─────────────────────────────────────────────────────────────
-const DEFAULT_ALLOWED_TOOLS = [
-  "bash", "read", "glob", "grep", "LSP", "report_intent", "view", "permission:read",
-  "Task", "TaskCreate", "TaskList", "TaskGet", "TaskUpdate", "TodoWrite",
-  "ExitPlanMode", "EnterPlanMode",
-  "ListMcpResources", "ReadMcpResource",
-  "WebFetch", "WebSearch", "NotebookEdit", "Skill", "Agent",
-  "mcp__jinzo__GetWorkspaceDiff", "mcp__jinzo__SaveReview",
-  "mcp__jinzo__SaveFinding", "mcp__jinzo__SaveFindings",
-  "mcp__jinzo__CommitChanges",
-];
-const ALLOWED_TOOLS_SET = new Set(DEFAULT_ALLOWED_TOOLS);
+// Pre-approved tools imported from adapter.shared (ALLOWED_TOOLS_SET)
+// Copilot also auto-allows these additional lowercase/copilot-specific tool names
+const COPILOT_EXTRA_ALLOWED = new Set([
+  "bash", "read", "glob", "grep", "report_intent", "view", "permission:read",
+]);
+
+function isCopilotToolAllowed(toolName: string): boolean {
+  return ALLOWED_TOOLS_SET.has(toolName) || COPILOT_EXTRA_ALLOWED.has(toolName);
+}
 
 // ─────────────────────────────────────────────────────────────
 // Permission & tool approval handlers
@@ -206,7 +209,7 @@ function buildPreToolUseHook(runId: string) {
     input: { toolName: string; toolArgs: unknown; timestamp: number; cwd: string },
   ): Promise<{ permissionDecision?: "allow" | "deny" | "ask"; permissionDecisionReason?: string; modifiedArgs?: unknown } | void> => {
     // Auto-allow pre-approved tools
-    if (ALLOWED_TOOLS_SET.has(input.toolName)) {
+    if (isCopilotToolAllowed(input.toolName)) {
       return { permissionDecision: "allow" };
     }
 
@@ -256,20 +259,7 @@ function buildUserInputHandler(runId: string) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────
-// Logging
-// ─────────────────────────────────────────────────────────────
-function logInfo(...args: unknown[]): void {
-  console.log("[CopilotAdapter]", ...args);
-}
-
-function logWarn(...args: unknown[]): void {
-  console.warn("[CopilotAdapter]", ...args);
-}
-
-function logError(...args: unknown[]): void {
-  console.error("[CopilotAdapter]", ...args);
-}
+const { info: logInfo, warn: logWarn, error: logError } = createLogger("[CopilotAdapter]");
 
 /**
  * Creates a Copilot SDK adapter instance
@@ -379,33 +369,32 @@ export function createCopilotAdapter(
 
   /**
    * Build Jinzo custom tools for Copilot SDK sessions.
-   * These give the model access to workspace diffs, reviews, and findings.
+   * Handlers are shared from jinzo-tools.core.ts — only the Copilot wrapper lives here.
    */
   function buildJinzoTools(workspaceId: string | null, rootPath: string | null = null, runId: string | null = null): CopilotTool[] {
+    const ctx: JinzoToolContext = { workspaceId, rootPath, runId };
+
+    // Copilot tool handlers return plain strings, so we unwrap the MCP-style response
+    const unwrap = async (result: { content: Array<{ text: string }>; isError?: boolean }) => {
+      const text = result.content[0]?.text ?? "";
+      return result.isError ? text : text;
+    };
+
     return [
       {
         name: "mcp__jinzo__GetWorkspaceDiff",
-        description: "Read git diffs from workspace_diffs table. Uses the current workspace by default, or provide runId to get the diff for a specific run.",
+        description: TOOL_DESCRIPTIONS.GetWorkspaceDiff,
         parameters: {
           type: "object",
           properties: {
             runId: { type: "string", description: "Run ID to get diff for a specific run" },
           },
         },
-        handler: async (args: { runId?: string }) => {
-          if (!workspaceId && !args.runId) {
-            return "Error: No workspace context and no runId provided";
-          }
-          const row = args.runId
-            ? await workspaceDiffsRepo.findByRun(args.runId)
-            : await workspaceDiffsRepo.findLatestByWorkspace(workspaceId!);
-          if (!row) return "No diff found";
-          return JSON.stringify(row, null, 2);
-        },
+        handler: async (args: { runId?: string }) => unwrap(await handleGetWorkspaceDiff(args, ctx)),
       },
       {
         name: "mcp__jinzo__SaveReview",
-        description: "Create a new review record. Returns the generated review ID. Workspace and run are automatically set from the current session.",
+        description: TOOL_DESCRIPTIONS.SaveReview,
         parameters: {
           type: "object",
           properties: {
@@ -416,30 +405,12 @@ export function createCopilotAdapter(
           },
           required: ["title"],
         },
-        handler: async (args: { title: string; summary?: string; status?: string; metadata?: Record<string, unknown> }) => {
-          const reviewId = await reviewsRepo.insert({
-            workspaceId: workspaceId ?? undefined,
-            title: args.title,
-            summary: args.summary,
-            status: (args.status as any) ?? "open",
-            runId: runId ?? undefined,
-            metadata: args.metadata,
-          });
-          if (workspaceId) {
-            workspaceActivityService.log({
-              workspaceId,
-              type: "review",
-              title: args.title,
-              summary: args.summary,
-              refId: reviewId,
-            });
-          }
-          return JSON.stringify({ reviewId });
-        },
+        handler: async (args: { title: string; summary?: string; status?: string; metadata?: Record<string, unknown> }) =>
+          unwrap(await handleSaveReview(args, ctx)),
       },
       {
         name: "mcp__jinzo__SaveFinding",
-        description: "Save a single code review finding. Returns the generated finding ID.",
+        description: TOOL_DESCRIPTIONS.SaveFinding,
         parameters: {
           type: "object",
           properties: {
@@ -459,41 +430,11 @@ export function createCopilotAdapter(
           reviewId: string; severity: string; file: string;
           lineStart?: number; lineEnd?: number; message: string;
           reason: string; suggestion?: string; metadata?: Record<string, unknown>;
-        }) => {
-          const findingId = await reviewFindingsRepo.insert({
-            reviewId: args.reviewId,
-            severity: args.severity as any,
-            file: args.file,
-            lineStart: args.lineStart,
-            lineEnd: args.lineEnd,
-            message: args.message,
-            reason: args.reason,
-            suggestion: args.suggestion,
-            metadata: args.metadata,
-          });
-          if (workspaceId) {
-            workspaceActivityService.log({
-              workspaceId,
-              type: "finding",
-              title: `Finding in ${args.file}`,
-              summary: args.message,
-              refId: findingId,
-              metadata: {
-                severity: args.severity,
-                file: args.file,
-                reason: args.reason,
-                lineStart: args.lineStart,
-                lineEnd: args.lineEnd,
-                hasSuggestion: !!args.suggestion,
-              },
-            });
-          }
-          return JSON.stringify({ findingId });
-        },
+        }) => unwrap(await handleSaveFinding(args, ctx)),
       },
       {
         name: "mcp__jinzo__SaveFindings",
-        description: "Save multiple code review findings at once. Returns all generated finding IDs.",
+        description: TOOL_DESCRIPTIONS.SaveFindings,
         parameters: {
           type: "object",
           properties: {
@@ -525,40 +466,11 @@ export function createCopilotAdapter(
             severity: string; file: string; lineStart?: number; lineEnd?: number;
             message: string; reason: string; suggestion?: string; metadata?: Record<string, unknown>;
           }>;
-        }) => {
-          const findingIds = await reviewFindingsRepo.insertMany(
-            args.findings.map((f) => ({
-              reviewId: args.reviewId,
-              severity: f.severity as any,
-              file: f.file,
-              lineStart: f.lineStart,
-              lineEnd: f.lineEnd,
-              message: f.message,
-              reason: f.reason,
-              suggestion: f.suggestion,
-              metadata: f.metadata,
-            })),
-          );
-          if (workspaceId) {
-            workspaceActivityService.log({
-              workspaceId,
-              type: "finding",
-              title: `${args.findings.length} finding${args.findings.length === 1 ? "" : "s"} saved`,
-              refId: args.reviewId,
-              metadata: {
-                count: args.findings.length,
-                critical: args.findings.filter((f) => f.severity === "critical").length,
-                warning: args.findings.filter((f) => f.severity === "warning").length,
-                info: args.findings.filter((f) => f.severity === "info").length,
-              },
-            });
-          }
-          return JSON.stringify({ findingIds });
-        },
+        }) => unwrap(await handleSaveFindings(args, ctx)),
       },
       {
         name: "mcp__jinzo__CommitChanges",
-        description: "Stage and commit changes in the workspace git repository. Use commitInstructions if provided for message style guidance.",
+        description: TOOL_DESCRIPTIONS.CommitChanges,
         parameters: {
           type: "object",
           properties: {
@@ -571,59 +483,8 @@ export function createCopilotAdapter(
           },
           required: ["message"],
         },
-        handler: async (args: { message: string; files?: string[] }) => {
-          if (!rootPath) {
-            return JSON.stringify({ error: "No workspace root path" });
-          }
-          try {
-            await gitService.stageFiles(rootPath, args.files);
-            const result = await gitService.commit(rootPath, args.message);
-
-            // Recapture diff from the new HEAD so the Changes tab
-            // reflects the post-commit state (clean working tree).
-            const headResult = await gitService.getHeadSha(rootPath);
-            const newHead = headResult.success ? headResult.data : null;
-
-            if (workspaceId && newHead) {
-              const [statusResult, untrackedResult] = await Promise.all([
-                gitService.getDiffSince(rootPath, newHead),
-                gitService.getUntrackedFiles(rootPath),
-              ]);
-              const diffText = statusResult.success ? (statusResult.data ?? "") : "";
-              const untrackedFiles = untrackedResult.success ? (untrackedResult.data ?? []) : [];
-
-              await workspaceDiffsRepo.deleteByWorkspace(workspaceId);
-              if (untrackedFiles.length > 0 || diffText) {
-                await workspaceDiffsRepo.insertDiff({
-                  id: crypto.randomUUID(),
-                  workspaceId,
-                  runId: runId ?? undefined,
-                  baseRef: newHead,
-                  diffText,
-                  filesJson: JSON.stringify(untrackedFiles),
-                  statsJson: JSON.stringify({ shortstat: "", files: untrackedFiles.length, newFiles: untrackedFiles.length }),
-                });
-              }
-            }
-            if (runId && newHead) {
-              updateRunBaseRef(runId, newHead);
-            }
-
-            if (workspaceId) {
-              workspaceActivityService.log({
-                workspaceId,
-                type: "commit",
-                title: args.message,
-                refId: newHead ?? undefined,
-                metadata: { files: args.files?.length },
-              });
-            }
-
-            return JSON.stringify(result);
-          } catch (error) {
-            return JSON.stringify({ error: error instanceof Error ? error.message : String(error) });
-          }
-        },
+        handler: async (args: { message: string; files?: string[] }) =>
+          unwrap(await handleCommitChanges(args, ctx)),
       },
     ];
   }
@@ -967,185 +828,30 @@ export function createCopilotAdapter(
     }
   }
 
-  /**
-   * Extract artifacts from tool outputs
-   */
-  function extractArtifactsFromToolOutput(
-    toolName: string,
-    output: unknown,
-  ): WorkRunEvent[] {
-    const artifacts: WorkRunEvent[] = [];
+  // extractArtifactsFromToolOutput imported from adapter.shared
 
-    // Handle common file-writing tools
-    if (
-      toolName === "Write" ||
-      toolName === "Edit" ||
-      toolName === "write_file" ||
-      toolName === "edit_file" ||
-      toolName === "create_file" ||
-      toolName === "str_replace_editor"
-    ) {
-      const out = output as Record<string, unknown> | undefined;
-      if (out?.path && typeof out.path === "string") {
-        artifacts.push({
-          type: "artifact",
-          kind: "file",
-          path: out.path,
-          content: typeof out.content === "string" ? out.content : undefined,
-          metadata: { toolName },
-        });
-      } else if (out?.file_path && typeof out.file_path === "string") {
-        artifacts.push({
-          type: "artifact",
-          kind: "file",
-          path: out.file_path,
-          content: typeof out.content === "string" ? out.content : undefined,
-          metadata: { toolName },
-        });
-      }
-    }
-
-    // Handle patch/diff tools
-    if (
-      toolName === "apply_patch" ||
-      toolName === "apply_diff" ||
-      toolName === "patch"
-    ) {
-      const out = output as Record<string, unknown> | undefined;
-      const patch = (out as any)?.patch ?? (out as any)?.diff;
-      if (patch) {
-        artifacts.push({
-          type: "artifact",
-          kind: "patch",
-          path:
-            typeof (out as any)?.path === "string"
-              ? String((out as any).path)
-              : undefined,
-          content: typeof patch === "string" ? patch : safeJson(patch),
-          metadata: { toolName },
-        });
-      }
-    }
-
-
-    return artifacts;
-  }
-
-  /**
-   * Save base64-encoded file attachments to temp directory and return their paths.
-   * Images are saved as files for tool-based reading. Text documents are inlined.
-   */
-  function saveAttachments(
-    attachments: FileAttachment[],
-    runId: string,
-  ): { savedPaths: string[]; inlineTexts: string[] } {
-    const uploadDir = path.join(os.tmpdir(), "jinzo-uploads", runId);
-    fs.mkdirSync(uploadDir, { recursive: true });
-
-    const savedPaths: string[] = [];
-    const inlineTexts: string[] = [];
-
-    for (const attachment of attachments) {
-      const filePath = path.join(uploadDir, attachment.name);
-      const buffer = Buffer.from(attachment.data, "base64");
-
-      if (attachment.type === "image") {
-        fs.writeFileSync(filePath, buffer);
-        savedPaths.push(filePath);
-      } else {
-        const ext = path.extname(attachment.name).toLowerCase();
-        if (ext === ".txt") {
-          inlineTexts.push(
-            `[Attached document: ${attachment.name}]\n${buffer.toString("utf-8")}`,
-          );
-        } else {
-          fs.writeFileSync(filePath, buffer);
-          savedPaths.push(filePath);
-        }
-      }
-    }
-
-    return { savedPaths, inlineTexts };
-  }
-
-  /**
-   * Build attachment prompt section from saved files and inline texts.
-   */
-  function buildAttachmentPrompt(attachments: FileAttachment[], runId: string): string {
-    if (!attachments || attachments.length === 0) return "";
-
-    const { savedPaths, inlineTexts } = saveAttachments(attachments, runId);
-    const parts: string[] = [];
-
-    for (const filePath of savedPaths) {
-      const ext = path.extname(filePath).toLowerCase();
-      const isImage = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"].includes(ext);
-      if (isImage) {
-        parts.push(
-          `I've attached an image: ${filePath}\nUse the Read tool to view it.`,
-        );
-      } else {
-        parts.push(
-          `I've attached a file: ${filePath}\nUse the Read tool to read its contents.`,
-        );
-      }
-    }
-
-    for (const text of inlineTexts) {
-      parts.push(text);
-    }
-
-    return parts.join("\n\n");
-  }
+  // saveAttachments, buildAttachmentPrompt are internal to adapter.shared
 
   /**
    * Build the prompt with context, including workspace path
    */
   function buildPrompt(request: WorkRunRequest): string {
     const workspaceInfo = `Working directory: ${request.workspace.rootPath}`;
-    let prompt = request.goal;
+    let prompt: string;
 
     if (request.context && request.context.length > 0) {
-      const contextParts = request.context
-        .map((ctx) => {
-          const header = ctx.ref
-            ? `[${ctx.kind}: ${ctx.ref}]`
-            : `[${ctx.kind}]`;
-          return `${header}\n${ctx.content || "(no content)"}`;
-        })
-        .join("\n\n---\n\n");
-
+      const contextParts = formatContextSection(request.context);
       prompt = `${workspaceInfo}\n\nContext:\n${contextParts}\n\n---\n\nGoal: ${request.goal}`;
     } else {
       prompt = `${workspaceInfo}\n\nGoal: ${request.goal}`;
     }
 
-    // Append context issues for the LLM
-    if (request.contextIssues && request.contextIssues.length > 0) {
-      const issuesList = request.contextIssues
-        .map((i) => {
-          const label = `[${i.provider.toUpperCase()}${i.number ? ` #${i.number}` : ""}] ${i.title}`;
-          return i.body ? `${label}\n${i.body}` : label;
-        })
-        .join("\n\n---\n\n");
-      prompt = `${prompt}\n\n---\n\nContext issues:\n${issuesList}`;
-    }
-
-    // Append context files for the LLM
-    if (request.contextFiles && request.contextFiles.length > 0) {
-      const filesList = request.contextFiles.map((f) => `- ${f.path}`).join("\n");
-      prompt = `${prompt}\n\n---\n\nContext files (read these before starting):\n${filesList}`;
-    }
-
-    // Append file attachment references
-    if (request.attachments && request.attachments.length > 0) {
-      const attachmentSection = buildAttachmentPrompt(request.attachments, request.runId);
-      if (attachmentSection) {
-        prompt = `${prompt}\n\n---\n\nAttached files:\n${attachmentSection}`;
-      }
-    }
-
-    return prompt;
+    return appendPromptSections(prompt, {
+      contextIssues: request.contextIssues,
+      contextFiles: request.contextFiles,
+      attachments: request.attachments,
+      runId: request.runId,
+    });
   }
 
   return {
@@ -1281,20 +987,10 @@ export function createCopilotAdapter(
         const prompt = buildPrompt(request);
 
         // Emit user's original goal as artifact for UI display
-        await onEvent({
-          type: "artifact",
-          kind: "user-prompt",
-          content: request.goal,
-          metadata: {
-            source: "user",
-            attachments: request.attachments?.map((a) => ({
-              name: a.name,
-              type: a.type,
-              mimeType: a.mimeType,
-            })),
-            issues: request.contextIssues,
-            files: request.contextFiles,
-          },
+        await emitUserPromptArtifact(onEvent, request.goal, {
+          attachments: request.attachments,
+          contextIssues: request.contextIssues,
+          contextFiles: request.contextFiles,
         });
 
         await onEvent({
@@ -1540,55 +1236,23 @@ export function createCopilotAdapter(
         // Build prompt with any additional context
         let prompt = message;
         if (request.context && request.context.length > 0) {
-          const contextParts = request.context
-            .map((ctx) => {
-              const header = ctx.ref
-                ? `[${ctx.kind}: ${ctx.ref}]`
-                : `[${ctx.kind}]`;
-              return `${header}\n${ctx.content || "(no content)"}`;
-            })
-            .join("\n\n---\n\n");
-
+          const contextParts = formatContextSection(request.context);
           prompt = `Context:\n${contextParts}\n\n---\n\n${message}`;
         }
 
-        // Append context issues for the LLM
-        if (request.contextIssues && request.contextIssues.length > 0) {
-          const issuesList = request.contextIssues
-            .map((i) => `[${i.provider.toUpperCase()}${i.number ? ` #${i.number}` : ""}] ${i.title}`)
-            .join("\n");
-          prompt = `${prompt}\n\n---\n\nContext issues:\n${issuesList}`;
-        }
-
-        // Append context files for the LLM
-        if (request.contextFiles && request.contextFiles.length > 0) {
-          const filesList = request.contextFiles.map((f) => `- ${f.path}`).join("\n");
-          prompt = `${prompt}\n\n---\n\nContext files (read these before starting):\n${filesList}`;
-        }
-
-        // Append file attachment references
-        if (request.attachments && request.attachments.length > 0) {
-          const attachmentSection = buildAttachmentPrompt(request.attachments, runId);
-          if (attachmentSection) {
-            prompt = `${prompt}\n\n---\n\nAttached files:\n${attachmentSection}`;
-          }
-        }
+        prompt = appendPromptSections(prompt, {
+          contextIssues: request.contextIssues,
+          contextFiles: request.contextFiles,
+          attachments: request.attachments,
+          runId,
+          includeIssueBody: false,
+        });
 
         // Emit user's follow-up message as artifact for UI display
-        await onEvent({
-          type: "artifact",
-          kind: "user-prompt",
-          content: message,
-          metadata: {
-            source: "user",
-            attachments: request.attachments?.map((a) => ({
-              name: a.name,
-              type: a.type,
-              mimeType: a.mimeType,
-            })),
-            issues: request.contextIssues,
-            files: request.contextFiles,
-          },
+        await emitUserPromptArtifact(onEvent, message, {
+          attachments: request.attachments,
+          contextIssues: request.contextIssues,
+          contextFiles: request.contextFiles,
         });
 
         await onEvent({
@@ -1937,13 +1601,7 @@ export function createCopilotAdapter(
 // Helpers
 // ─────────────────────────────────────────────────────────────
 
-function safeJson(value: unknown): string {
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-}
+// safeJson imported from adapter.shared
 
 /**
  * Get default models for Copilot when API is unavailable

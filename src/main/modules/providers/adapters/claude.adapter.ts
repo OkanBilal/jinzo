@@ -17,7 +17,6 @@ import type {
   HooksConfig,
   HookMatcher,
   AgentsConfig,
-  FileAttachment,
 } from "./adapter.types";
 import { findClaudeBinary, resolveCandidate } from "../providers.utils";
 import {
@@ -27,13 +26,25 @@ import {
 } from "../../runs/user-input-broker";
 import type { ToolApprovalRequest } from "../../runs/runs.dto";
 import { runsRepo } from "../../runs/runs.repo";
-import { updateRunBaseRef } from "../../runs";
-import { gitService } from "../../git/git.service";
-import { workspaceDiffsRepo } from "../../workspaceDiffs/workspaceDiffs.repo";
-import { reviewsRepo } from "../../reviews/reviews.repo";
-import { reviewFindingsRepo } from "../../reviewFindings/reviewFindings.repo";
-import { workspaceActivityService } from "../../workspaceActivity/workspaceActivity.service";
 import { z } from "zod";
+import {
+  createLogger,
+  ALLOWED_TOOLS_SET,
+  safeJson,
+  extractArtifactsFromToolOutput,
+  formatContextSection,
+  appendPromptSections,
+  emitUserPromptArtifact,
+} from "./adapter.shared";
+import type { JinzoToolContext } from "./jinzo-tools.core";
+import {
+  TOOL_DESCRIPTIONS,
+  handleGetWorkspaceDiff,
+  handleSaveReview,
+  handleSaveFinding,
+  handleSaveFindings,
+  handleCommitChanges,
+} from "./jinzo-tools.core";
 
 /**
  * NOTE: This adapter uses @anthropic-ai/claude-agent-sdk package.
@@ -42,37 +53,9 @@ import { z } from "zod";
 
 /**
  * Tools that are pre-approved and skip the interactive approval dialog.
- * Matches the standard permissions.allow list from Claude Code settings.
+ * Imported from adapter.shared.ts — ALLOWED_TOOLS_SET used for auto-approval.
  */
 //TODO: In the future, we may want to dynamically load this from the user's Claude Code config directory (~/.claude/permissions.json) to reflect their actual allowed tools, but for now we'll hardcode a default set of commonly used tools.
-const DEFAULT_ALLOWED_TOOLS = [
-  "Bash",
-  "Read",
-  "Glob",
-  "Grep",
-  "LSP",
-  "Task",
-  "TaskCreate",
-  "TaskList",
-  "TaskGet",
-  "TaskUpdate",
-  "TodoWrite",
-  "ExitPlanMode",
-  "EnterPlanMode",
-  "ListMcpResources",
-  "ReadMcpResource",
-  "WebFetch",
-  "WebSearch",
-  "NotebookEdit",
-  "Skill",
-  "Agent",
-  "mcp__jinzo__GetWorkspaceDiff",
-  "mcp__jinzo__SaveReview",
-  "mcp__jinzo__SaveFinding",
-  "mcp__jinzo__SaveFindings",
-  "mcp__jinzo__CommitChanges",
-];
-const ALLOWED_TOOLS_SET = new Set(DEFAULT_ALLOWED_TOOLS);
 
 /**
  * SDK hook matcher format (matches SDK's expected structure)
@@ -339,20 +322,7 @@ const COMMANDS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const skillsCache = new Map<string, { skills: SkillInfo[]; timestamp: number }>();
 const SKILLS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes (skills may change more often during development)
 
-// ─────────────────────────────────────────────────────────────
-// Logging
-// ─────────────────────────────────────────────────────────────
-function logInfo(...args: unknown[]): void {
-  console.log("[ClaudeAdapter]", ...args);
-}
-
-function logWarn(...args: unknown[]): void {
-  console.warn("[ClaudeAdapter]", ...args);
-}
-
-function logError(...args: unknown[]): void {
-  console.error("[ClaudeAdapter]", ...args);
-}
+const { info: logInfo, warn: logWarn, error: logError } = createLogger("[ClaudeAdapter]");
 
 /**
  * Creates a Claude Agent SDK adapter instance
@@ -620,82 +590,36 @@ export function createClaudeAdapter(
 
   /**
    * Build an in-process MCP server for jinzo tools using createSdkMcpServer.
-   * Tools use Drizzle ORM repos directly — no subprocess or sqlite3 CLI needed.
+   * Handlers are shared from jinzo-tools.core.ts — only the SDK wrapper lives here.
    */
   function buildJinzoMcpServer(workspaceId: string | null, rootPath: string | null, runId: string | null): any {
+    const ctx: JinzoToolContext = { workspaceId, rootPath, runId };
+
     return createSdkMcpServerFn!({
       name: "jinzo",
       version: "1.0.0",
       tools: [
         toolFn!(
           "GetWorkspaceDiff",
-          "Read git diffs from workspace_diffs table. Uses the current workspace by default, or provide runId to get the diff for a specific run.",
-          {
-            runId: z.string().optional().describe("Run ID to get diff for a specific run"),
-          },
-          async ({ runId }: { runId?: string }) => {
-            if (!workspaceId && !runId) {
-              return {
-                content: [{ type: "text", text: "Error: No workspace context and no runId provided" }],
-                isError: true,
-              };
-            }
-
-            const row = runId
-              ? await workspaceDiffsRepo.findByRun(runId)
-              : await workspaceDiffsRepo.findLatestByWorkspace(workspaceId!);
-
-            if (!row) {
-              return { content: [{ type: "text", text: "No diff found" }] };
-            }
-
-            return {
-              content: [{
-                type: "text",
-                text: JSON.stringify(row, null, 2),
-              }],
-            };
-          },
+          TOOL_DESCRIPTIONS.GetWorkspaceDiff,
+          { runId: z.string().optional().describe("Run ID to get diff for a specific run") },
+          (args: { runId?: string }) => handleGetWorkspaceDiff(args, ctx),
         ),
         toolFn!(
           "SaveReview",
-          "Create a new review record. Returns the generated review ID. Workspace and run are automatically set from the current session.",
+          TOOL_DESCRIPTIONS.SaveReview,
           {
             title: z.string().describe("Review title"),
             summary: z.string().optional().describe("Review summary"),
             status: z.enum(["open", "in_review", "approved", "rejected"]).optional().default("open").describe("Review status"),
             metadata: z.record(z.string(), z.unknown()).optional().describe("Additional metadata as JSON"),
           },
-          async ({ title, summary, status, metadata }: {
-            title: string; summary?: string; status?: string; metadata?: Record<string, unknown>;
-          }) => {
-            const reviewId = await reviewsRepo.insert({
-              workspaceId: workspaceId ?? undefined,
-              title,
-              summary,
-              status: (status as any) ?? "open",
-              runId: runId ?? undefined,
-              metadata,
-            });
-
-            if (workspaceId) {
-              workspaceActivityService.log({
-                workspaceId,
-                type: "review",
-                title,
-                summary,
-                refId: reviewId,
-              });
-            }
-
-            return {
-              content: [{ type: "text", text: JSON.stringify({ reviewId }) }],
-            };
-          },
+          (args: { title: string; summary?: string; status?: string; metadata?: Record<string, unknown> }) =>
+            handleSaveReview(args, ctx),
         ),
         toolFn!(
           "SaveFinding",
-          "Save a single code review finding. Returns the generated finding ID.",
+          TOOL_DESCRIPTIONS.SaveFinding,
           {
             reviewId: z.string().describe("ID of the parent review"),
             severity: z.enum(["critical", "warning", "info"]).describe("Finding severity level"),
@@ -707,49 +631,15 @@ export function createClaudeAdapter(
             suggestion: z.string().optional().describe("Suggested fix"),
             metadata: z.record(z.string(), z.unknown()).optional().describe("Additional metadata as JSON"),
           },
-          async (args: {
+          (args: {
             reviewId: string; severity: string; file: string;
             lineStart?: number; lineEnd?: number; message: string;
             reason: string; suggestion?: string; metadata?: Record<string, unknown>;
-          }) => {
-            const findingId = await reviewFindingsRepo.insert({
-              reviewId: args.reviewId,
-              severity: args.severity as any,
-              file: args.file,
-              lineStart: args.lineStart,
-              lineEnd: args.lineEnd,
-              message: args.message,
-              reason: args.reason,
-              suggestion: args.suggestion,
-              metadata: args.metadata,
-            });
-
-            if (workspaceId) {
-              workspaceActivityService.log({
-                workspaceId,
-                type: "finding",
-                title: `Finding in ${args.file}`,
-                summary: args.message,
-                refId: findingId,
-                metadata: {
-                  severity: args.severity,
-                  file: args.file,
-                  reason: args.reason,
-                  lineStart: args.lineStart,
-                  lineEnd: args.lineEnd,
-                  hasSuggestion: !!args.suggestion,
-                },
-              });
-            }
-
-            return {
-              content: [{ type: "text", text: JSON.stringify({ findingId }) }],
-            };
-          },
+          }) => handleSaveFinding(args, ctx),
         ),
         toolFn!(
           "SaveFindings",
-          "Save multiple code review findings at once. Returns all generated finding IDs.",
+          TOOL_DESCRIPTIONS.SaveFindings,
           {
             reviewId: z.string().describe("ID of the parent review"),
             findings: z.array(z.object({
@@ -763,118 +653,22 @@ export function createClaudeAdapter(
               metadata: z.record(z.string(), z.unknown()).optional(),
             })).describe("Array of findings to save"),
           },
-          async ({ reviewId, findings }: {
+          (args: {
             reviewId: string;
             findings: Array<{
               severity: string; file: string; lineStart?: number; lineEnd?: number;
               message: string; reason: string; suggestion?: string; metadata?: Record<string, unknown>;
             }>;
-          }) => {
-            const findingIds = await reviewFindingsRepo.insertMany(
-              findings.map((f) => ({
-                reviewId,
-                severity: f.severity as any,
-                file: f.file,
-                lineStart: f.lineStart,
-                lineEnd: f.lineEnd,
-                message: f.message,
-                reason: f.reason,
-                suggestion: f.suggestion,
-                metadata: f.metadata,
-              })),
-            );
-
-            if (workspaceId) {
-              workspaceActivityService.log({
-                workspaceId,
-                type: "finding",
-                title: `${findings.length} finding${findings.length === 1 ? "" : "s"} saved`,
-                refId: reviewId,
-                metadata: {
-                  count: findings.length,
-                  critical: findings.filter((f) => f.severity === "critical").length,
-                  warning: findings.filter((f) => f.severity === "warning").length,
-                  info: findings.filter((f) => f.severity === "info").length,
-                },
-              });
-            }
-
-            return {
-              content: [{ type: "text", text: JSON.stringify({ findingIds }) }],
-            };
-          },
+          }) => handleSaveFindings(args, ctx),
         ),
         toolFn!(
           "CommitChanges",
-          "Stage and commit changes in the workspace git repository. Use commitInstructions if provided for message style guidance.",
+          TOOL_DESCRIPTIONS.CommitChanges,
           {
             message: z.string().describe("The commit message"),
             files: z.array(z.string()).optional().describe("Specific files to stage. If omitted, stages all changes (git add -A)"),
           },
-          async ({ message, files }: { message: string; files?: string[] }) => {
-            if (!rootPath) {
-              return {
-                content: [{ type: "text", text: "Error: No workspace root path" }],
-                isError: true,
-              };
-            }
-            try {
-              await gitService.stageFiles(rootPath, files);
-              const result = await gitService.commit(rootPath, message);
-
-              // Recapture diff from the new HEAD so the Changes tab
-              // reflects the post-commit state (clean working tree).
-              // Also update the run base ref so persistRunDiff at run-end
-              // doesn't re-insert stale committed changes.
-              const headResult = await gitService.getHeadSha(rootPath);
-              const newHead = headResult.success ? headResult.data : null;
-
-              if (workspaceId && newHead) {
-                const [statusResult, untrackedResult] = await Promise.all([
-                  gitService.getDiffSince(rootPath, newHead),
-                  gitService.getUntrackedFiles(rootPath),
-                ]);
-                const diffText = statusResult.success ? (statusResult.data ?? "") : "";
-                const untrackedFiles = untrackedResult.success ? (untrackedResult.data ?? []) : [];
-                const files = untrackedFiles; // only untracked remain after commit
-
-                await workspaceDiffsRepo.deleteByWorkspace(workspaceId);
-                if (files.length > 0 || diffText) {
-                  await workspaceDiffsRepo.insertDiff({
-                    id: crypto.randomUUID(),
-                    workspaceId,
-                    runId: runId ?? undefined,
-                    baseRef: newHead,
-                    diffText,
-                    filesJson: JSON.stringify(files),
-                    statsJson: JSON.stringify({ shortstat: "", files: files.length, newFiles: files.length }),
-                  });
-                }
-              }
-              if (runId && newHead) {
-                updateRunBaseRef(runId, newHead);
-              }
-
-              if (workspaceId) {
-                workspaceActivityService.log({
-                  workspaceId,
-                  type: "commit",
-                  title: message,
-                  refId: newHead ?? undefined,
-                  metadata: { files: files?.length },
-                });
-              }
-
-              return {
-                content: [{ type: "text", text: JSON.stringify(result) }],
-              };
-            } catch (error) {
-              return {
-                content: [{ type: "text", text: `Error: ${error instanceof Error ? error.message : String(error)}` }],
-                isError: true,
-              };
-            }
-          },
+          (args: { message: string; files?: string[] }) => handleCommitChanges(args, ctx),
         ),
       ],
     });
@@ -1402,182 +1196,24 @@ export function createClaudeAdapter(
     return events;
   }
 
-  function extractArtifactsFromToolOutput(
-    toolName: string,
-    output: unknown,
-  ): WorkRunEvent[] {
-    const artifacts: WorkRunEvent[] = [];
+  // extractArtifactsFromToolOutput imported from adapter.shared
 
-    if (
-      toolName === "Write" ||
-      toolName === "Edit" ||
-      toolName === "write_file" ||
-      toolName === "edit_file" ||
-      toolName === "create_file" ||
-      toolName === "str_replace_editor"
-    ) {
-      const out = output as Record<string, unknown> | undefined;
-      if (out?.path && typeof out.path === "string") {
-        artifacts.push({
-          type: "artifact",
-          kind: "file",
-          path: out.path,
-          content: typeof out.content === "string" ? out.content : undefined,
-          metadata: { toolName },
-        });
-      } else if (out?.file_path && typeof out.file_path === "string") {
-        artifacts.push({
-          type: "artifact",
-          kind: "file",
-          path: out.file_path,
-          content: typeof out.content === "string" ? out.content : undefined,
-          metadata: { toolName },
-        });
-      }
-    }
-
-    // Handle patch/diff tools
-    if (
-      toolName === "apply_patch" ||
-      toolName === "apply_diff" ||
-      toolName === "patch"
-    ) {
-      const out = output as Record<string, unknown> | undefined;
-      const patch = (out as any)?.patch ?? (out as any)?.diff;
-      if (patch) {
-        artifacts.push({
-          type: "artifact",
-          kind: "patch",
-          path:
-            typeof (out as any)?.path === "string"
-              ? String((out as any).path)
-              : undefined,
-          content: typeof patch === "string" ? patch : safeJson(patch),
-          metadata: { toolName },
-        });
-      }
-    }
-
-
-
-    return artifacts;
-  }
-
-  /**
-   * Build the prompt with context
-   */
-  /**
-   * Save base64-encoded file attachments to temp directory and return their paths.
-   * Images are saved as files for Claude's Read tool. Text documents are read inline.
-   */
-  function saveAttachments(
-    attachments: FileAttachment[],
-    runId: string,
-  ): { savedPaths: string[]; inlineTexts: string[] } {
-    const uploadDir = path.join(os.tmpdir(), "jinzo-uploads", runId);
-    fs.mkdirSync(uploadDir, { recursive: true });
-
-    const savedPaths: string[] = [];
-    const inlineTexts: string[] = [];
-
-    for (const attachment of attachments) {
-      const filePath = path.join(uploadDir, attachment.name);
-      const buffer = Buffer.from(attachment.data, "base64");
-
-      if (attachment.type === "image") {
-        // Save image to disk — Claude's Read tool can read images natively
-        fs.writeFileSync(filePath, buffer);
-        savedPaths.push(filePath);
-      } else {
-        // Documents: inline text content for .txt, save and reference for binary formats
-        const ext = path.extname(attachment.name).toLowerCase();
-        if (ext === ".txt") {
-          inlineTexts.push(
-            `[Attached document: ${attachment.name}]\n${buffer.toString("utf-8")}`,
-          );
-        } else {
-          // PDF, doc, docx — save to disk and reference
-          fs.writeFileSync(filePath, buffer);
-          savedPaths.push(filePath);
-        }
-      }
-    }
-
-    return { savedPaths, inlineTexts };
-  }
-
-  /**
-   * Build attachment prompt section from saved files and inline texts.
-   */
-  function buildAttachmentPrompt(attachments: FileAttachment[], runId: string): string {
-    if (!attachments || attachments.length === 0) return "";
-
-    const { savedPaths, inlineTexts } = saveAttachments(attachments, runId);
-    const parts: string[] = [];
-
-    for (const filePath of savedPaths) {
-      const ext = path.extname(filePath).toLowerCase();
-      const isImage = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"].includes(ext);
-      if (isImage) {
-        parts.push(
-          `I've attached an image: ${filePath}\nUse the Read tool to view it.`,
-        );
-      } else {
-        parts.push(
-          `I've attached a file: ${filePath}\nUse the Read tool to read its contents.`,
-        );
-      }
-    }
-
-    for (const text of inlineTexts) {
-      parts.push(text);
-    }
-
-    return parts.join("\n\n");
-  }
+  // saveAttachments, buildAttachmentPrompt are internal to adapter.shared
 
   function buildPrompt(request: WorkRunRequest): string {
     let prompt = request.goal;
 
     if (request.context && request.context.length > 0) {
-      const contextParts = request.context
-        .map((ctx) => {
-          const header = ctx.ref
-            ? `[${ctx.kind}: ${ctx.ref}]`
-            : `[${ctx.kind}]`;
-          return `${header}\n${ctx.content || "(no content)"}`;
-        })
-        .join("\n\n---\n\n");
-
+      const contextParts = formatContextSection(request.context);
       prompt = `Context:\n${contextParts}\n\n---\n\nGoal: ${request.goal}`;
     }
 
-    // Append context issues for the LLM
-    if (request.contextIssues && request.contextIssues.length > 0) {
-      const issuesList = request.contextIssues
-        .map((i) => {
-          const label = `[${i.provider.toUpperCase()}${i.number ? ` #${i.number}` : ""}] ${i.title}`;
-          return i.body ? `${label}\n${i.body}` : label;
-        })
-        .join("\n\n---\n\n");
-      prompt = `${prompt}\n\n---\n\nContext issues:\n${issuesList}`;
-    }
-
-    // Append context files for the LLM
-    if (request.contextFiles && request.contextFiles.length > 0) {
-      const filesList = request.contextFiles.map((f) => `- ${f.path}`).join("\n");
-      prompt = `${prompt}\n\n---\n\nContext files (read these before starting):\n${filesList}`;
-    }
-
-    // Append file attachment references
-    if (request.attachments && request.attachments.length > 0) {
-      const attachmentSection = buildAttachmentPrompt(request.attachments, request.runId);
-      if (attachmentSection) {
-        prompt = `${prompt}\n\n---\n\nAttached files:\n${attachmentSection}`;
-      }
-    }
-
-    return prompt;
+    return appendPromptSections(prompt, {
+      contextIssues: request.contextIssues,
+      contextFiles: request.contextFiles,
+      attachments: request.attachments,
+      runId: request.runId,
+    });
   }
 
   return {
@@ -1638,20 +1274,10 @@ export function createClaudeAdapter(
         const prompt = buildPrompt(request);
 
         // Emit user's original goal as artifact for UI display
-        await onEvent({
-          type: "artifact",
-          kind: "user-prompt",
-          content: request.goal,
-          metadata: {
-            source: "user",
-            attachments: request.attachments?.map((a) => ({
-              name: a.name,
-              type: a.type,
-              mimeType: a.mimeType,
-            })),
-            issues: request.contextIssues,
-            files: request.contextFiles,
-          },
+        await emitUserPromptArtifact(onEvent, request.goal, {
+          attachments: request.attachments,
+          contextIssues: request.contextIssues,
+          contextFiles: request.contextFiles,
         });
 
         await onEvent({
@@ -2002,55 +1628,23 @@ export function createClaudeAdapter(
         // Build prompt with any additional context
         let prompt = message;
         if (request.context && request.context.length > 0) {
-          const contextParts = request.context
-            .map((ctx) => {
-              const header = ctx.ref
-                ? `[${ctx.kind}: ${ctx.ref}]`
-                : `[${ctx.kind}]`;
-              return `${header}\n${ctx.content || "(no content)"}`;
-            })
-            .join("\n\n---\n\n");
-
+          const contextParts = formatContextSection(request.context);
           prompt = `Context:\n${contextParts}\n\n---\n\n${message}`;
         }
 
-        // Append context issues for the LLM
-        if (request.contextIssues && request.contextIssues.length > 0) {
-          const issuesList = request.contextIssues
-            .map((i) => `[${i.provider.toUpperCase()}${i.number ? ` #${i.number}` : ""}] ${i.title}`)
-            .join("\n");
-          prompt = `${prompt}\n\n---\n\nContext issues:\n${issuesList}`;
-        }
-
-        // Append context files for the LLM
-        if (request.contextFiles && request.contextFiles.length > 0) {
-          const filesList = request.contextFiles.map((f) => `- ${f.path}`).join("\n");
-          prompt = `${prompt}\n\n---\n\nContext files (read these before starting):\n${filesList}`;
-        }
-
-        // Append file attachment references
-        if (request.attachments && request.attachments.length > 0) {
-          const attachmentSection = buildAttachmentPrompt(request.attachments, runId);
-          if (attachmentSection) {
-            prompt = `${prompt}\n\n---\n\nAttached files:\n${attachmentSection}`;
-          }
-        }
+        prompt = appendPromptSections(prompt, {
+          contextIssues: request.contextIssues,
+          contextFiles: request.contextFiles,
+          attachments: request.attachments,
+          runId,
+          includeIssueBody: false,
+        });
 
         // Emit user's follow-up message as artifact for UI display
-        await onEvent({
-          type: "artifact",
-          kind: "user-prompt",
-          content: message,
-          metadata: {
-            source: "user",
-            attachments: request.attachments?.map((a) => ({
-              name: a.name,
-              type: a.type,
-              mimeType: a.mimeType,
-            })),
-            issues: request.contextIssues,
-            files: request.contextFiles,
-          },
+        await emitUserPromptArtifact(onEvent, message, {
+          attachments: request.attachments,
+          contextIssues: request.contextIssues,
+          contextFiles: request.contextFiles,
         });
 
         await onEvent({
@@ -2361,39 +1955,18 @@ export function createClaudeAdapter(
         // Build prompt with any additional context
         let prompt = message;
         if (request.context && request.context.length > 0) {
-          const contextParts = request.context
-            .map((ctx) => {
-              const header = ctx.ref
-                ? `[${ctx.kind}: ${ctx.ref}]`
-                : `[${ctx.kind}]`;
-              return `${header}\n${ctx.content || "(no content)"}`;
-            })
-            .join("\n\n---\n\n");
-
+          const contextParts = formatContextSection(request.context);
           prompt = `Context:\n${contextParts}\n\n---\n\n${message}`;
         }
 
-        // Append file attachment references
-        if (request.attachments && request.attachments.length > 0) {
-          const attachmentSection = buildAttachmentPrompt(request.attachments, runId);
-          if (attachmentSection) {
-            prompt = `${prompt}\n\n---\n\nAttached files:\n${attachmentSection}`;
-          }
-        }
+        prompt = appendPromptSections(prompt, {
+          attachments: request.attachments,
+          runId,
+        });
 
         // Emit user's message as artifact for UI display
-        await onEvent({
-          type: "artifact",
-          kind: "user-prompt",
-          content: message,
-          metadata: {
-            source: "user",
-            attachments: request.attachments?.map((a) => ({
-              name: a.name,
-              type: a.type,
-              mimeType: a.mimeType,
-            })),
-          },
+        await emitUserPromptArtifact(onEvent, message, {
+          attachments: request.attachments,
         });
 
         await onEvent({
@@ -3207,13 +2780,7 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
   return result;
 }
 
-function safeJson(value: unknown): string {
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-}
+// safeJson imported from adapter.shared
 
 /**
  * TODO: CHECK
