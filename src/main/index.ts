@@ -3,6 +3,9 @@ if (process.platform === "win32") {
 }
 
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell } from "electron";
+
+// Prevent macOS Apple Music access prompt triggered by Chromium's media session API
+app.commandLine.appendSwitch("disable-features", "HardwareMediaKeyHandling,MediaSessionService");
 import { spawn, exec, execFile } from "child_process";
 import { promisify } from "util";
 import * as fs from "fs";

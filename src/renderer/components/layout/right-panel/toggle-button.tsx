@@ -16,9 +16,9 @@ export function ToggleButton({ isOpen, onClick }: ToggleButtonProps) {
       aria-label={isOpen ? "Close right panel" : "Open right panel"}
     >
       {isOpen ? (
-        <Close className="size-4" />
+        <Close className="size-4.25" />
       ) : (
-        <RightPanelOpen className="size-4.75" />
+        <RightPanelOpen className="size-4.25 rotate-180" />
       )}
     </Button>
   );

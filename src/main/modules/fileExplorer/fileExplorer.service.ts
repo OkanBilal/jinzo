@@ -321,10 +321,10 @@ export const fileExplorerService = {
       const content = await fs.readFile(filePath, "utf-8");
       return { success: true, data: content };
     } catch (error) {
-      console.error("[FileExplorer] Failed to read file:", error);
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return { success: false, error: "File does not exist" };
       }
+      console.error("[FileExplorer] Failed to read file:", error);
       if ((error as NodeJS.ErrnoException).code === "EACCES") {
         return { success: false, error: "Permission denied" };
       }

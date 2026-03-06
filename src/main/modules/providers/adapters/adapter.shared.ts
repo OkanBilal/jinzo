@@ -56,7 +56,6 @@ export const DEFAULT_ALLOWED_TOOLS = [
   "ToolSearch",
   "NotebookEdit",
   "Skill",
-  "Ask_User",
   "Agent",
   "mcp__jinzo__GetWorkspaceDiff",
   "mcp__jinzo__SaveReview",

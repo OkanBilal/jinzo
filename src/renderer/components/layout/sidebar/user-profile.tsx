@@ -22,7 +22,7 @@ export default function UserProfile({
 }: UserProfileProps) {
   return (
     <div
-      className={`flex items-center gap-3 transition-all duration-300 ease-in-out ${
+      className={`flex items-center gap-2 transition-all duration-300 ease-in-out ${
         isVisible
           ? "opacity-100 flex-1 scale-100"
           : "opacity-0 w-0 scale-95 pointer-events-none"
@@ -35,7 +35,7 @@ export default function UserProfile({
           className="w-8 h-8 rounded-full object-cover"
         />
       ) : (
-        <div className="w-10 h-10 rounded-full bg-primary-200 dark:bg-primary-700 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full bg-primary-200 dark:bg-primary/5 flex items-center justify-center">
           <Caption className="text-primary-900 dark:text-primary-300 font-semibold">
             {getInitials(displayName || "")}
           </Caption>

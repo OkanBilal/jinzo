@@ -241,6 +241,18 @@ const RENDERERS: Record<string, Renderer> = {
     </>
   ),
 
+  AskUser: (input) => (
+    <div className="px-3 py-2 text-primary-300 dark:text-primary-400">
+      {str(input.question, 500)}
+    </div>
+  ),
+
+  Ask_user: (input) => (
+    <div className="px-3 py-2 text-primary-300 dark:text-primary-400">
+      {str(input.question, 500)}
+    </div>
+  ),
+
   NotebookEdit: (input) => (
     <>
       <div>
