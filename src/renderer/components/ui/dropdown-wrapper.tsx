@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { cn } from "../../lib/cn";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useDarkMode } from "@/hooks/use-dark-mode";
 import { getDefaultDropdownBackground } from "@/lib/theme";
@@ -96,8 +97,15 @@ export default function DropdownWrapper({
   const dropdown = (
     <div
       ref={dropdownRef}
-      className={`${usePortal ? "fixed" : "absolute"} ${!usePortal ? positionClass : ""} ${!usePortal ? verticalClass : ""}
-        ${minWidth} ${fixedBackgroundClass} z-100 glass-morphism rounded-2xl ${hiddenClass}`}
+      className={cn(
+        usePortal ? "fixed" : "absolute",
+        !usePortal && positionClass,
+        !usePortal && verticalClass,
+        minWidth,
+        fixedBackgroundClass,
+        "z-100 glass-morphism rounded-2xl",
+        hiddenClass,
+      )}
       style={{
         background: dropdownBackground,
         transformOrigin: openUpward
