@@ -1,6 +1,6 @@
 import { Edit, Trash } from "@/components/ui/icons";
 import type { Space } from "@/lib/redux/api";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
 
 interface SpaceContextMenuProps {
   isOpen: boolean;

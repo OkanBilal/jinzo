@@ -1,6 +1,5 @@
 import { Close } from "@/components/ui/icons";
-import { Heading3 } from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
+import { Heading3, Button } from "@/components/ui";
 
 type Tab = "schemas" | "editor";
 

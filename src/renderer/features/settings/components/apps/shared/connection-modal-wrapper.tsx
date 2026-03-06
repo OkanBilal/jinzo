@@ -1,6 +1,5 @@
-import { Button } from "@/components/ui/button";
-import { Close } from "../../../../../components/ui/icons"
-import Text, { Muted } from "../../../../../components/ui/text";
+import { Button, Text, Muted } from "@/components/ui";
+import { Close } from "@/components/ui/icons";
 interface ConnectionModalWrapperProps {
   open: boolean;
   onClose: () => void;

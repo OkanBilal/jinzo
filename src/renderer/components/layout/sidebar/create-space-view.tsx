@@ -1,11 +1,9 @@
 import { useReducer, useEffect, useRef } from "react";
-import Text, { Heading3 } from "@/components/ui/text";
-import { Input } from "@/components/ui/input";
+import { Text, Heading3, Input, Button, toast } from "@/components/ui";
 import {
   useCreateSpaceMutation,
   useSetActiveSpaceMutation,
 } from "@/lib/redux/api";
-import { toast } from "@/components/ui/toast";
 import { useDarkMode } from "@/hooks/use-dark-mode";
 import {
   solidColors,
@@ -13,7 +11,6 @@ import {
   getThemeVariant,
 } from "@/lib/space-themes";
 import { availableIcons } from "@/lib/icon-registry";
-import { Button } from "@/components/ui/button";
 import SpaceIconPicker from "./space-icon-picker";
 import SpaceThemeSelector from "./space-theme-selector";
 

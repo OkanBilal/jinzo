@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDeleteWorkspaceMutation, useArchiveWorkspaceMutation } from "@/lib/redux/api";
-import { toast } from "@/components/ui/toast";
+import { toast } from "@/components/ui";
 import { useRouteType } from "@/hooks/use-route-type";
 import { getBaseRoutePath } from "@/lib/route-utils";
 

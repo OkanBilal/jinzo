@@ -1,5 +1,4 @@
-import { Plus } from "@/components/ui/icons";
-import { CopilotStatic } from "@/components/ui/icons";
+import { Plus, CopilotStatic } from "@/components/ui/icons";
 import { RunTab, getTabTitle } from "./run-tab";
 import { EditorTab } from "./editor-tab";
 import { IssueTab } from "./issue-tab";
@@ -9,7 +8,7 @@ import type { Run } from "../types";
 import type { IssueWithEntity } from "@/lib/redux/api";
 import type { ReviewTab as ReviewTabType } from "@/lib/redux/slices/workspaceSlice";
 import { useRef } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui";
 
 const EMPTY_NOTE_TABS: ReviewTabType[] = [];
 

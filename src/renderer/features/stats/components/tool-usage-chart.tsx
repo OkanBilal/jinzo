@@ -1,6 +1,5 @@
+import { Text, ChartCard, BarChart, BarLabels } from "@/components/ui";
 import { Apps } from "@/components/ui/icons";
-import Text from "@/components/ui/text";
-import { ChartCard, BarChart, BarLabels } from "@/components/ui/charts";
 import type { ToolUsageItem } from "@/lib/redux/api";
 
 interface ToolUsageChartProps {

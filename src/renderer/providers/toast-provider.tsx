@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Toaster } from "../components/ui/toast/toaster";
+import { Toaster } from "@/components/ui/toast/toaster";
 
 interface ToastProviderProps {
   children: ReactNode;

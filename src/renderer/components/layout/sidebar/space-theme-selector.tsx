@@ -4,7 +4,7 @@ import {
   getThemeVariant,
 } from "@/lib/space-themes";
 import { useDarkMode } from "@/hooks/use-dark-mode";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui";
 import { ArrowUp } from "@/components/ui/icons";
 
 interface SpaceThemeSelectorProps {

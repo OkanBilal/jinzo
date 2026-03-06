@@ -1,15 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { Figma, PullRequest } from "@/components/ui/icons";
+import { Figma, PullRequest, Jira, Asana, Gitlab } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
-import { Jira, Asana, Gitlab } from "@/components/ui/icons";
 import { QuickActionButton } from "./quick-action-button";
 import {
   useGetProjectResourcesQuery,
   useGetProviderByIdQuery,
   type ProjectResourceWithDetails,
 } from "@/lib/redux/api";
-import DropdownWrapper from "@/components/ui/dropdown-wrapper";
+import { DropdownWrapper } from "@/components/ui";
 import { Claude } from "@/components/ui/icons/space";
 
 const ISSUE_RESOURCE_KINDS = [

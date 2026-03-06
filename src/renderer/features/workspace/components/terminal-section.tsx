@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { ArrowUp, Bash } from "@/components/ui/icons";
-import { Button } from "@/components/ui/button";
-import { Caption } from "@/components/ui/text";
+import { Button, Caption } from "@/components/ui";
 import { XtermTerminal } from "./xterm-terminal";
 
 interface TerminalSectionProps {

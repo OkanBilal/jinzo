@@ -1,6 +1,6 @@
 import { Preset } from "@/components/ui/icons";
 import { Bolt } from "@/components/ui/icons/space";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
 
 interface CreateSpaceMenuProps {
   isOpen: boolean;

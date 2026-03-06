@@ -1,16 +1,14 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Body } from "@/components/ui/text";
+import { Body, Button, toast } from "@/components/ui";
 import {
   useCreateSpaceMutation,
   useSetActiveSpaceMutation,
 } from "@/lib/redux/api";
-import { toast } from "@/components/ui/toast";
 import { useDarkMode } from "@/hooks/use-dark-mode";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { parseIcon } from "@/lib/icon-registry";
 import { predefinedSpaces, type PredefinedSpace } from "@/lib/predefined-spaces";
-import { Button } from "@/components/ui/button";
 
 interface PresetSpacesViewProps {
   onClose: () => void;

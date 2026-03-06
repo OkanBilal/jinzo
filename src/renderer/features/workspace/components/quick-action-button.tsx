@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui";
 import { SelectOption } from "@/components/ui/icons";
 
 interface QuickActionButtonProps {

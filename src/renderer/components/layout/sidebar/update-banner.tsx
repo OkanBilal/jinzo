@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui";
 import { Sparkles, Restart } from "@/components/ui/icons";
 
 export function UpdateBanner() {

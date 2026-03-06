@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { Run, RunEvent } from "../types";
 import type { RunTurn } from "@/lib/redux/api";
-import { toast } from "@/components/ui/toast";
+import { toast } from "@/components/ui";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { runsApi, workspacesApi, reviewsApi, reviewFindingsApi } from "@/lib/redux/api";
 import { mapArtifactToEvent, mapToolCallToEvent } from "../utils/run-event-mappers";

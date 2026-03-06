@@ -1,7 +1,7 @@
 import { useState, RefObject } from "react";
-import { Attach, Picture, Document, Close } from "@/components/ui/icons";
-import DropdownWrapper from "@/components/ui/dropdown-wrapper";
-import { Button } from "@/components/ui/button";
+import { Attach, Picture, Document, Close } from "../icons";
+import DropdownWrapper from "../dropdown-wrapper";
+import { Button } from "../button";
 
 export interface UploadedFile {
   file: File;

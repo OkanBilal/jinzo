@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import NumberFlow from "@number-flow/react";
-import Text from "@/components/ui/text";
+import { Text } from "@/components/ui";
 import type { DashboardSummary } from "@/lib/redux/api";
 
 interface SummaryCardsProps {

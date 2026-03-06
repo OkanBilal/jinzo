@@ -1,4 +1,4 @@
-import { Caption, Body } from "@/components/ui/text";
+import { Caption, Body } from "@/components/ui";
 
 interface UserProfileProps {
   avatarUrl?: string;

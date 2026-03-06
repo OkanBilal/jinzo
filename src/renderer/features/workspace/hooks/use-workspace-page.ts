@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import type { UploadedFile } from "@/components/ui/input/file-upload-dropdown";
+import { toast, type UploadedFile } from "@/components/ui";
 import { useSelector, useDispatch } from "react-redux";
 import {
   setWorkspaceModel,
@@ -16,7 +16,6 @@ import {
 } from "@/lib/redux/slices/workspaceSlice";
 import { isRunTab, isNewRunTab } from "@/features/workspace/utils/repo-utils";
 import type { RootState } from "@/lib/redux";
-import { toast } from "@/components/ui/toast/toast";
 import { useWorkspaceData } from "./use-workspace-data";
 import { useWorkspaceRuns } from "./use-workspace-runs";
 import { useFileContentLoader } from "./use-file-content-loader";

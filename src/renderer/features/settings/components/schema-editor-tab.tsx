@@ -1,8 +1,5 @@
-import { Body } from "@/components/ui/text";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Body, Input, Button, Select } from "@/components/ui";
 import { Trash, Asterisk } from "@/components/ui/icons";
-import Select from "@/components/ui/select";
 
 export interface SchemaProperty {
   id: string;

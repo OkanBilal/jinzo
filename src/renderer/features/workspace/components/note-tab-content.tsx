@@ -3,7 +3,7 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { markdownComponents } from "@/components/markdown-components";
 import { useGetReviewByIdQuery } from "@/lib/redux/api";
-import { Heading2 } from "@/components/ui/text";
+import { Heading2 } from "@/components/ui";
 
 interface NoteTabContentProps {
   reviewId: string;

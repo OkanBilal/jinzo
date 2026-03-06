@@ -9,7 +9,7 @@ import {
   useFindOrCreateProjectMutation,
   useUpdateProjectMutation,
 } from "@/lib/redux/api";
-import { toast } from "@/components/ui/toast";
+import { toast } from "@/components/ui";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { useRouteType } from "@/hooks/use-route-type";

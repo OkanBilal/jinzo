@@ -1,5 +1,4 @@
-import { Body, Muted } from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
+import { Body, Muted, Button } from "@/components/ui";
 
 interface SchemaDeleteDialogProps {
   schemaName: string;

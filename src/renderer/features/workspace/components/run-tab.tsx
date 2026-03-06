@@ -1,7 +1,7 @@
 import { Archive, CopilotStatic } from "@/components/ui/icons";
 import type { Run } from "../types";
 import { Claude } from "@/components/ui/icons/space";
-import { AnimatedTitle } from "@/components/ui/animated-title";
+import { AnimatedTitle } from "@/components/ui";
 import { BaseTab } from "./base-tab";
 import { AsciiSpinner } from "./ascii-loader";
 

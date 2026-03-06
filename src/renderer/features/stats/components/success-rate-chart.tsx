@@ -1,5 +1,5 @@
+import { ChartCard, BarChart, BarLabels } from "@/components/ui";
 import { Check } from "@/components/ui/icons";
-import { ChartCard, BarChart, BarLabels } from "@/components/ui/charts";
 import type { StatusBreakdown } from "@/lib/redux/api";
 
 interface SuccessRateChartProps {

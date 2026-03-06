@@ -1,6 +1,4 @@
-import { Muted, ErrorText, Body } from "../../../../../components/ui/text";
-import { Button } from "../../../../../components/ui/button";
-import { Checkbox } from "../../../../../components/ui/checkbox";
+import { Muted, ErrorText, Body, Button, Checkbox } from "@/components/ui";
 
 interface SelectableResource {
   id: string | number;

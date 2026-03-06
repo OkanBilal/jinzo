@@ -5,7 +5,7 @@ import {
   useSetActiveSpaceMutation,
   type Space,
 } from "@/lib/redux/api";
-import { toast } from "@/components/ui/toast";
+import { toast } from "@/components/ui";
 import { useActiveSpace } from "@/hooks/use-active-space";
 
 export function useSpaceContextMenu() {

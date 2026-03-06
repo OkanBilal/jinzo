@@ -1,4 +1,4 @@
-import type { UploadedFile } from "@/components/ui/input/file-upload-dropdown";
+import type { UploadedFile } from "@/components/ui";
 
 export interface SerializedAttachment {
   name: string;

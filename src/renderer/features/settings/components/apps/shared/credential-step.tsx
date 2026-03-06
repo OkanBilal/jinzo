@@ -1,10 +1,4 @@
-import Text, {
-  Muted,
-  ErrorText,
-  Caption,
-} from "../../../../../components/ui/text";
-import { Button } from "../../../../../components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Text, Muted, ErrorText, Caption, Button, Input } from "@/components/ui";
 
 interface CredentialField {
   id: string;

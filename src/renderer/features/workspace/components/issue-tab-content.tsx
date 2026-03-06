@@ -3,9 +3,8 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { markdownComponents } from "@/components/markdown-components";
 import type { IssueWithEntity } from "@/lib/redux/api";
-import { Heading2 } from "@/components/ui/text";
+import { Heading2, Button } from "@/components/ui";
 import { getLabelColor } from "@/lib/label-colors";
-import { Button } from "@/components/ui/button";
 
 interface IssueTabContentProps {
   issue: IssueWithEntity;

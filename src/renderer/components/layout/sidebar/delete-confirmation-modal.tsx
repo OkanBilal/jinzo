@@ -1,4 +1,4 @@
-import Alert from "@/components/ui/alert";
+import { Alert } from "@/components/ui";
 
 interface DeleteConfirmationModalProps {
     isOpen: boolean;

@@ -1,5 +1,5 @@
+import { ChartCard } from "@/components/ui";
 import { Chat } from "@/components/ui/icons";
-import { ChartCard } from "@/components/ui/charts";
 import type { RecentSession } from "@/lib/redux/api";
 
 interface RecentSessionsListProps {

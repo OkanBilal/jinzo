@@ -1,7 +1,6 @@
 import { useState, useRef, type MouseEvent } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
 import { Layers } from "@/components/ui/icons";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 export type GroupingMode = "none" | "status" | "project";
 

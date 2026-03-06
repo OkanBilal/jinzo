@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { EmojiPicker } from "frimousse";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { availableIcons } from "@/lib/icon-registry";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui";
 import { Close, SelectOption } from "@/components/ui/icons";
 
 function CurrentIcon({

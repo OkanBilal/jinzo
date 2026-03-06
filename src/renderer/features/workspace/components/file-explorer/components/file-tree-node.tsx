@@ -2,7 +2,7 @@ import { memo, useState, useCallback } from "react";
 import type { FileNode } from "../types";
 import { FileIconComponent } from "./file-icon";
 import { ArrowUp, Plus } from "@/components/ui/icons";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui";
 
 interface FileTreeNodeProps {
   node: FileNode;

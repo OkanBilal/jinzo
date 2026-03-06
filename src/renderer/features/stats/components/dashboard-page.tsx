@@ -7,7 +7,7 @@ import HourHeatmap from "./hour-heatmap";
 import CostByModelChart from "./cost-by-model-chart";
 import ToolUsageChart from "./tool-usage-chart";
 import RecentSessionsList from "./recent-sessions-list";
-import { Heading2 } from "@/components/ui/text";
+import { Heading2 } from "@/components/ui";
 import SuccessRateChart from "./success-rate-chart";
 
 const TABS: { id: ProviderFilter; label: string }[] = [

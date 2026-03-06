@@ -1,8 +1,5 @@
 import { useCallback, useMemo } from "react";
-import {
-  WizardModal,
-  type WizardStep,
-} from "@/components/ui/wizard-modal";
+import { WizardModal, type WizardStep } from "@/components/ui";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { setOnboardingCompleted } from "@/lib/redux/slices/appSettingsSlice";
 import { ClaudeSetupStep } from "./claude-setup-step";

@@ -1,4 +1,4 @@
-import { toast } from "@/components/ui/toast";
+import { toast } from "@/components/ui";
 import { useUpdateProviderMutation } from "@/lib/redux/api";
 import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
 import type { SchemaProperty } from "./schema-editor-tab";

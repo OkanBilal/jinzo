@@ -1,7 +1,4 @@
-import { Caption } from "@/components/ui/text";
-import { Muted } from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/toast";
+import { Caption, Muted, Button, toast } from "@/components/ui";
 import { useGetProjectResourcesQuery, useRemoveProjectResourceMutation } from "@/lib/redux/api";
 import { SettingsSection, SettingsDivider } from "../settings-layout";
 import Github from "@/components/ui/icons/github";

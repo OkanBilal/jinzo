@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { workspacesApi } from "@/lib/redux/api/workspacesApi";
-import { toast } from "@/components/ui/toast";
+import { toast } from "@/components/ui";
 
 /**
  * Listens for workspace script completion events from the main process

@@ -9,8 +9,7 @@ import {
 import type { WorkspaceActivity } from "@/lib/redux/api";
 import { openNoteTab, setPendingGoal } from "@/lib/redux/slices/workspaceSlice";
 import { Note, PullRequest, Diff, Commit, CircleDot, ArrowUp } from "@/components/ui/icons";
-import { Button } from "@/components/ui/button";
-import { Body } from "@/components/ui/text";
+import { Button, Body } from "@/components/ui";
 import { formatDate } from "@/lib/format-date";
 
 interface ReviewsSectionProps {

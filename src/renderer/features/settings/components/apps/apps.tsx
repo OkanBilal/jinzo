@@ -12,20 +12,14 @@ type AppItem = {
 };
 
 type AppIconProps = { app: AppItem };
-import Text, {
-  Heading2,
-  BodyMedium,
-  Body,
-} from "../../../../components/ui/text";
+import { Text, Heading2, BodyMedium, Body, Button, toast } from "@/components/ui";
 import AsanaModal from "../../components/apps/asana/asana-modal";
 import GitHubModal from "../../components/apps/github/github-modal";
 import GitLabModal from "../../components/apps/gitlab/gitlab-modal";
 import JiraModal from "../../components/apps/jira/jira-modal";
 import LinearModal from "../../components/apps/linear/linear-modal";
-import { Button } from "@/components/ui/button";
 import { External } from "@/components/ui/icons";
 import { useRunEntitySyncMutation } from "@/lib/redux/api/syncApi";
-import { toast } from "@/components/ui/toast";
 
 interface AppsSettingsProps {
   apps: AppItem[];

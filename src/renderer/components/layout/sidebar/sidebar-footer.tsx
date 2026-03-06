@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { Settings, Question } from "@/components/ui/icons";
 import SpaceSelector from "./space-selector";
 import type { Space } from "@/lib/redux/api";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui";
 
 interface SidebarFooterProps {
   spaces: Space[];

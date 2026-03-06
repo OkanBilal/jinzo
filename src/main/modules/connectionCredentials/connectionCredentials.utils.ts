@@ -57,6 +57,7 @@ export function parseProviderCredentials(
   | { success: true; data: ParsedCredentials }
   | { success: false; error: string } {
   let accessToken: string | null = null;
+  // eslint-disable-next-line prefer-const
   let refreshToken: string | null = null;
   let tokensForHash: string[] = [];
 

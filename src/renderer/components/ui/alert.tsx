@@ -1,4 +1,4 @@
-import Text, { Body } from "@/components/ui/text";
+import Text, { Body } from "./text";
 import { Button } from "./button";
 
 interface AlertProps {

@@ -1,5 +1,5 @@
 import { useSearchParams } from "react-router-dom";
-import { Muted } from "@/components/ui/text";
+import { Muted } from "@/components/ui";
 import ProjectDetail from "./project-detail";
 
 export default function ProjectsSettings() {

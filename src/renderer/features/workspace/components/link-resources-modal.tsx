@@ -3,16 +3,16 @@ import {
   BodyMedium,
   Caption,
   Heading3,
-} from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+  Button,
+  Checkbox,
+  toast,
+} from "@/components/ui";
 import {
   useGetAvailableResourcesQuery,
   useAddProjectResourceMutation,
   useRemoveProjectResourceMutation,
   type AvailableResource,
 } from "@/lib/redux/api";
-import { toast } from "@/components/ui/toast";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
 import { Apps, Asana, Gitlab, Jira } from "@/components/ui/icons";

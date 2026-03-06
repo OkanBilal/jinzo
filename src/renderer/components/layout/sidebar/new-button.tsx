@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Body, Caption } from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { Body, Caption, Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
 
 interface NewButtonProps {
   onClick: () => void;

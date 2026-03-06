@@ -17,8 +17,7 @@ import {
   Commit,
   CircleDot,
 } from "@/components/ui/icons";
-import { Body } from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
+import { Body, Button } from "@/components/ui";
 
 interface DiffSectionProps {
   workspaceId: string;

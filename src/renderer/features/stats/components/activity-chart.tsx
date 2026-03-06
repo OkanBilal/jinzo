@@ -1,5 +1,5 @@
+import { ChartCard, BarChart, BarLabels } from "@/components/ui";
 import { Calendar } from "@/components/ui/icons";
-import { ChartCard, BarChart, BarLabels } from "@/components/ui/charts";
 import type { DailyActivity } from "@/lib/redux/api";
 
 interface ActivityChartProps {

@@ -1,10 +1,4 @@
-import {
-  Body,
-  Muted,
-  ErrorText,
-  Caption,
-} from "../../../../../components/ui/text";
-import { Button } from "../../../../../components/ui/button";
+import { Body, Muted, ErrorText, Caption, Button } from "@/components/ui";
 
 interface Resource {
   id: string;

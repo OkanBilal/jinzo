@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Caption } from "@/components/ui/text";
+import { Caption } from "@/components/ui";
 import { ArrowUp } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
 import { WorkspaceResponse } from "src/main/modules/workspaces";

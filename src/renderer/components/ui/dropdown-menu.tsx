@@ -101,7 +101,7 @@ export function DropdownMenu({
     <DropdownContext.Provider value={{ registerSubmenu, unregisterSubmenu }}>
       <div
         ref={menuRef}
-        className={`fixed z-100 rounded-2xl overflow-hidden glass-morphism-button animate-dropdown-in ${className}`}
+        className={`fixed z-100 rounded-2xl overflow-hidden glass-morphism animate-dropdown-in ${className}`}
         style={{
           left: adjustedPosition.x,
           top: adjustedPosition.y,
@@ -188,7 +188,7 @@ export function DropdownMenuSub({
         ref={triggerRef}
         onMouseEnter={handleTriggerEnter}
         onMouseLeave={handleTriggerLeave}
-        className={`w-full flex items-center gap-2 px-3 py-2 text-s cursor-pointer
+        className={`w-full flex items-center gap-2 px-3 py-2 text-s cursor-pointer 
           text-primary-800 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-50
           hover:bg-primary-100/80 dark:hover:bg-primary/5 transition-colors ${className}`}
       >
@@ -201,7 +201,7 @@ export function DropdownMenuSub({
             ref={submenuRefCallback}
             onMouseEnter={handleSubmenuEnter}
             onMouseLeave={handleSubmenuLeave}
-            className="fixed z-101 rounded-2xl overflow-hidden glass-morphism-button animate-dropdown-sub-in"
+            className="fixed z-101 rounded-2xl overflow-hidden glass-morphism animate-dropdown-sub-in"
             style={{
               top: submenuPos.top,
               left: submenuPos.left,

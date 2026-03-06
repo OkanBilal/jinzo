@@ -1,6 +1,4 @@
-import { Heading2, Muted } from "../../../components/ui/text";
-import { Toggle } from "../../../components/ui/toggle";
-import { toast } from "@/components/ui/toast";
+import { Heading2, Muted, Toggle, toast } from "@/components/ui";
 import { SettingsSection, SettingsRow } from "./settings-layout";
 import {
   useGetProviderByIdQuery,

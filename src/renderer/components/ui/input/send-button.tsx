@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button";
-import { ChevronUp, Stop } from "@/components/ui/icons";
+import { Button } from "../button";
+import { ChevronUp, Stop } from "../icons";
 
 interface SendButtonProps {
   loading: boolean;

@@ -1,4 +1,4 @@
-import { Heading2, Muted } from "../../../components/ui/text";
+import { Heading2, Muted } from "@/components/ui";
 
 export default function CodexSettings() {
   return (

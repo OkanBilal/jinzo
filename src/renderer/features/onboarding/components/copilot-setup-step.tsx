@@ -1,6 +1,4 @@
-import Text from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
-import { useWizard } from "@/components/ui/wizard-modal";
+import { Text, Button, useWizard } from "@/components/ui";
 import { Check, Clipboard } from "@/components/ui/icons";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 

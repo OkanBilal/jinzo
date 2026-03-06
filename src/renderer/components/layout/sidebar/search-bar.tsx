@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui";
 import { Search, Close } from "@/components/ui/icons";
 
 interface SearchBarProps {

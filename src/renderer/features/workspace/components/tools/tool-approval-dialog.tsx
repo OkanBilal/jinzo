@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { Question } from "@/components/ui/icons";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui";
 import type { ToolApprovalRequest } from "../../hooks";
 import { ToolInputPreview } from "./tool-input-preview";
 

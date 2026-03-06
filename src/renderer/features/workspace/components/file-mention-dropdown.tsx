@@ -1,6 +1,5 @@
 import { RefObject, useEffect, useMemo, useReducer } from "react";
-import { Button } from "@/components/ui/button";
-import DropdownWrapper from "@/components/ui/dropdown-wrapper";
+import { Button, DropdownWrapper } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
 import type { DirEntry } from "@/features/workspace/components/file-explorer/types";

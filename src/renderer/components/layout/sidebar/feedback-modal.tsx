@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Body } from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/input";
+import { Body, Button, Textarea } from "@/components/ui";
 
 interface FeedbackModalProps {
   isOpen: boolean;

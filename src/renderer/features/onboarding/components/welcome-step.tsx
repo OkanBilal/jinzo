@@ -1,5 +1,5 @@
+import { useWizard } from "@/components/ui";
 import { ChevronUp } from "@/components/ui/icons";
-import { useWizard } from "@/components/ui/wizard-modal";
 
 export function WelcomeStep() {
   const { goNext } = useWizard();

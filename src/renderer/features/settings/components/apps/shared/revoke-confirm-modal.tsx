@@ -1,6 +1,5 @@
 import { createPortal } from "react-dom";
-import Text, { Muted } from "../../../../../components/ui/text";
-import { Button } from "../../../../../components/ui/button";
+import { Text, Muted, Button } from "@/components/ui";
 
 interface RevokeConfirmModalProps {
   onConfirm: () => void;

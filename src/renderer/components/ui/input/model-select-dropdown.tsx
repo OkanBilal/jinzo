@@ -1,9 +1,9 @@
 import { RefObject } from "react";
-import { Button } from "@/components/ui/button";
-import DropdownWrapper from "@/components/ui/dropdown-wrapper";
+import { Button } from "../button";
+import DropdownWrapper from "../dropdown-wrapper";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { getModelIcon } from "@/lib/model-icons";
-import { ModelLoader } from "@/components/ui/input/model-loader";
+import { ModelLoader } from "./model-loader";
 
 interface ModelSelectDropdownProps {
   model: string;

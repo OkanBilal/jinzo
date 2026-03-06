@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Body, Caption } from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
+import { Body, Caption, Button } from "@/components/ui";
 
 interface CloneRepoModalProps {
   isOpen: boolean;

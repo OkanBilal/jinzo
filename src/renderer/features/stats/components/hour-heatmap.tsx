@@ -1,5 +1,5 @@
+import { ChartCard, BarChart, BarLabels } from "@/components/ui";
 import { Clock } from "@/components/ui/icons";
-import { ChartCard, BarChart, BarLabels } from "@/components/ui/charts";
 import type { HourDistribution } from "@/lib/redux/api";
 
 interface HourHeatmapProps {

@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button";
-import { Microphone } from "@/components/ui/icons";
+import { Button } from "../button";
+import { Microphone } from "../icons";
 
 interface DictationButtonProps {
   isRecording: boolean;

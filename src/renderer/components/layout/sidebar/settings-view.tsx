@@ -1,6 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Body } from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
+import { Body, Button } from "@/components/ui";
 import {
   Apps,
 //  Personalize,

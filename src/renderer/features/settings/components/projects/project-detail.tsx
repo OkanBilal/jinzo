@@ -1,10 +1,6 @@
 import { useState, useEffect, useMemo, useReducer, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Heading2, Muted } from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/input";
-import { toast } from "@/components/ui/toast";
-import Alert from "@/components/ui/alert";
+import { Heading2, Muted, Button, Textarea, toast, Alert } from "@/components/ui";
 import {
   useGetProjectByIdQuery,
   useUpdateProjectMutation,

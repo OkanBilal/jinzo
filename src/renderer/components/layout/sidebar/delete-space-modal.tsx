@@ -1,4 +1,4 @@
-import Alert from "@/components/ui/alert";
+import { Alert } from "@/components/ui";
 import type { Space } from "@/lib/redux/api";
 
 interface DeleteSpaceModalProps {

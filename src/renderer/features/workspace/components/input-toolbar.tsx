@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useRef, useCallback } from "react";
-import { SendButton } from "@/components/ui/input/send-button";
-import { DictationButton } from "@/components/ui/input/dictation-button";
-import { ModelSelectDropdown } from "@/components/ui/input/model-select-dropdown";
 import {
+  SendButton,
+  DictationButton,
+  ModelSelectDropdown,
   FileUploadDropdown,
   FILE_TYPES,
   type UploadedFile,
-} from "@/components/ui/input/file-upload-dropdown";
+  Button,
+} from "@/components/ui";
 import { Plan, Brain } from "@/components/ui/icons";
-import { Button } from "@/components/ui/button";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useClickOutside } from "@/hooks/use-click-outside";
 

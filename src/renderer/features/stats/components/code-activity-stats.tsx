@@ -1,4 +1,4 @@
-import { ChartCard } from "@/components/ui/charts";
+import { ChartCard } from "@/components/ui";
 import type { CodeActivityStats as CodeActivityData } from "@/lib/redux/api";
 
 interface CodeActivityStatsProps {

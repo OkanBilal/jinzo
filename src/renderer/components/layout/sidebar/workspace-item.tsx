@@ -1,5 +1,5 @@
 import { useState, useRef, type MouseEvent, type ReactNode } from "react";
-import { Muted } from "@/components/ui/text";
+import { Muted, Button, DropdownMenu, DropdownMenuItem, DropdownMenuSub, Tooltip } from "@/components/ui";
 import {
   Trash,
   Option,
@@ -12,17 +12,10 @@ import {
 } from "@/components/ui/icons";
 import { useGetInstalledAppsQuery } from "@/lib/redux/api";
 import { useGetLatestWorkspaceDiffQuery } from "@/lib/redux/api/workspaceDiffsApi";
-import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format-date";
-import {
-  DropdownMenu,
-  DropdownMenuItem,
-  DropdownMenuSub,
-} from "@/components/ui/dropdown-menu";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspacesApi";
-import Tooltip from "@/components/ui/tooltip";
 
 type GroupingMode = "none" | "status" | "project";
 

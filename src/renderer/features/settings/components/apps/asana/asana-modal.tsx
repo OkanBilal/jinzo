@@ -1,11 +1,6 @@
 import { useState, useReducer, useEffect, useCallback } from "react";
 
-import { Body, Muted } from "../../../../../components/ui/text";
-import {
-  WizardModal,
-  useWizard,
-  type WizardStep,
-} from "../../../../../components/ui/wizard-modal";
+import { Body, Muted, WizardModal, useWizard, type WizardStep } from "@/components/ui";
 import {
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,
@@ -16,9 +11,9 @@ import {
   useRevokeConnectionMutation,
   type AsanaProject,
   type SelectedAsanaProject,
-} from "../../../../../lib/redux/api";
+} from "@/lib/redux/api";
 import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
-import { toast } from "@/components/ui/toast";
+import { toast } from "@/components/ui";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
 import { CredentialStep } from "../shared/credential-step";

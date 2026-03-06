@@ -1,15 +1,11 @@
 import { useMemo } from "react";
-import { toast } from "@/components/ui/toast";
+import { Button, Heading2, Select, Toggle, toast } from "@/components/ui";
 import { useDarkMode } from "../../../hooks/use-dark-mode";
 import { useActiveSpace } from "../../../hooks/use-active-space";
-import { Button } from "../../../components/ui/button";
-import { Heading2 } from "../../../components/ui/text";
-import Select from "@/components/ui/select";
 import { cn } from "@/lib/cn";
 import { defaultTheme } from "@/lib/theme";
 import { useGetAppSettingsQuery, useSetShowToolCallsMutation, useSetPreventSleepDuringRunsMutation, useSetNotifyOnRunCompleteMutation, useSetNotifyOnToolApprovalMutation } from "@/lib/redux/api";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
-import { Toggle } from "@/components/ui/toggle";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
 import { Refresh } from "@/components/ui/icons";
 

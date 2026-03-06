@@ -28,7 +28,7 @@ import {
   getIssueEntityId,
 } from "@/features/workspace/utils/repo-utils";
 import { useActiveSpace } from "@/hooks/use-active-space";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui";
 
 type SidebarTab = "files" | "changes" | "reviews";
 

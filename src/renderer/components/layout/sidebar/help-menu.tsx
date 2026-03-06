@@ -1,5 +1,5 @@
 import { Chat, BookOpen, Feed, External } from "@/components/ui/icons";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
 
 interface HelpMenuProps {
   isOpen: boolean;

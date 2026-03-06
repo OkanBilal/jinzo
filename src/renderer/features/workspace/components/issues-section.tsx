@@ -5,8 +5,7 @@ import {
 } from "@/lib/redux/api";
 import { IssueListItem } from "./issue-list-item";
 import { ArrowUp } from "@/components/ui/icons";
-import { Button } from "@/components/ui/button";
-import { Caption } from "@/components/ui/text";
+import { Button, Caption } from "@/components/ui";
 
 interface IssuesSectionProps {
   projectId: string | undefined;

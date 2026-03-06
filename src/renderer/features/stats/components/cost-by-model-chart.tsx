@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { ChartCard } from "@/components/ui";
 import { Cost } from "@/components/ui/icons";
-import { ChartCard } from "@/components/ui/charts";
 import type { CostByModel } from "@/lib/redux/api";
 
 interface CostByModelChartProps {

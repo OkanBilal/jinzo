@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Space } from "@/lib/redux/api";
 import { parseIcon } from "@/lib/icon-registry";
 import { Copilot, Claude } from "@/components/ui/icons/space";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui";
 
 interface SpaceSelectorProps {
   spaces: Space[];

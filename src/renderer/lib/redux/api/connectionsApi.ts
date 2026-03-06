@@ -1,6 +1,6 @@
 import { baseApi } from './baseApi';
 import { syncApi } from './syncApi';
-import { toast } from '@/components/ui/toast';
+import { toast } from '@/components/ui';
 
 export interface Connection {
   id: string;

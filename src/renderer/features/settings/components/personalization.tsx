@@ -1,9 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { toast } from "@/components/ui/toast";
-import { Button } from "../../../components/ui/button";
-import { Input, Textarea } from "../../../components/ui/input";
-import { Heading2 } from "../../../components/ui/text";
+import { toast, Button, Input, Textarea, Heading2 } from "@/components/ui";
 import { useGetAccountQuery, useUpdateAccountMutation } from "@/lib/redux/api";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 

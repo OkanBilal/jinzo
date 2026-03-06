@@ -1,6 +1,5 @@
 import { RefObject, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import DropdownWrapper from "@/components/ui/dropdown-wrapper";
+import { Button, DropdownWrapper } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { useGetIssuesByProjectQuery } from "@/lib/redux/api";

@@ -1,8 +1,5 @@
 import { useState } from "react";
-import { Heading2, Muted } from "../../../components/ui/text";
-import { Toggle } from "../../../components/ui/toggle";
-import { Textarea } from "@/components/ui/input";
-import { toast } from "@/components/ui/toast";
+import { Heading2, Muted, Toggle, Textarea, toast } from "@/components/ui";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import {
   useGetAppSettingsQuery,

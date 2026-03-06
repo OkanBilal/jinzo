@@ -12,8 +12,7 @@ import type { ToolApprovalRequest } from "../hooks/use-tool-approval";
 import { ToolApprovalDialog } from "./tools/tool-approval-dialog";
 import { Clipboard, Check, Branch } from "@/components/ui/icons";
 import { useGetAppSettingsQuery } from "@/lib/redux/api";
-import { Button } from "@/components/ui/button";
-import Tooltip from "@/components/ui/tooltip";
+import { Button, Tooltip } from "@/components/ui";
 
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
