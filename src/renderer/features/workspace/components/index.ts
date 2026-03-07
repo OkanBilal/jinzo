@@ -6,7 +6,7 @@ export { IssueListItem } from "./issue-list-item";
 export { IssuesSection } from "./issues-section";
 export { NoteTab } from "./note-tab";
 export { NoteTabContent } from "./note-tab-content";
-export { ReviewsSection } from "./reviews-section";
+export { ActivitySection } from "./activity-section";
 export { EditorContent } from "./editor-content";
 export { ToolCallGroup, InfoGroup, groupEvents } from "./tools/tool-call-group";
 export { QuickActionButton } from "./quick-action-button";

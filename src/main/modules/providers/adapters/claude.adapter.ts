@@ -44,6 +44,7 @@ import {
   handleSaveFinding,
   handleSaveFindings,
   handleCommitChanges,
+  handleCreatePR,
 } from "./jinzo-tools.core";
 
 /**
@@ -582,7 +583,7 @@ export function createClaudeAdapter(
     options.systemPrompt = {
       type: "preset",
       preset: "claude_code",
-      append: "IMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the jinzo MCP server to stage and commit changes.",
+      append: "IMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the jinzo MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the jinzo MCP server instead.",
     };
 
     return options;
@@ -665,10 +666,22 @@ export function createClaudeAdapter(
           "CommitChanges",
           TOOL_DESCRIPTIONS.CommitChanges,
           {
-            message: z.string().describe("The commit message"),
+            message: z.string().optional().describe("The commit message. Omit on first call to retrieve commitInstructions if configured."),
             files: z.array(z.string()).optional().describe("Specific files to stage. If omitted, stages all changes (git add -A)"),
           },
-          (args: { message: string; files?: string[] }) => handleCommitChanges(args, ctx),
+          (args: { message?: string; files?: string[] }) => handleCommitChanges(args, ctx),
+        ),
+        toolFn!(
+          "CreatePR",
+          TOOL_DESCRIPTIONS.CreatePR,
+          {
+            title: z.string().describe("The pull request title"),
+            body: z.string().optional().describe("The pull request body/description"),
+            base: z.string().optional().describe("The base branch to merge into (defaults to the repo default branch)"),
+            draft: z.boolean().optional().describe("Create as a draft pull request"),
+            labels: z.array(z.string()).optional().describe("Labels to add to the pull request"),
+          },
+          (args: { title: string; body?: string; base?: string; draft?: boolean; labels?: string[] }) => handleCreatePR(args, ctx),
         ),
       ],
     });

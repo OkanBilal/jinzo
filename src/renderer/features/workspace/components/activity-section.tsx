@@ -7,12 +7,12 @@ import {
   useGetProjectByIdQuery,
 } from "@/lib/redux/api";
 import type { WorkspaceActivity } from "@/lib/redux/api";
-import { openNoteTab, setPendingGoal } from "@/lib/redux/slices/workspaceSlice";
+import { openNoteTab, setPendingGoal, setPendingAutoExecute } from "@/lib/redux/slices/workspaceSlice";
 import { Note, PullRequest, Diff, Commit, CircleDot, ArrowUp } from "@/components/ui/icons";
 import { Button, Body } from "@/components/ui";
 import { formatDate } from "@/lib/format-date";
 
-interface ReviewsSectionProps {
+interface ActivitySectionProps {
   workspaceId: string;
 }
 
@@ -53,7 +53,7 @@ function activityDetail(activity: WorkspaceActivity): string | null {
   }
 }
 
-export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
+export function ActivitySection({ workspaceId }: ActivitySectionProps) {
   const dispatch = useDispatch();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const { data: appSettings } = useGetAppSettingsQuery();
@@ -106,13 +106,11 @@ export function ReviewsSection({ workspaceId }: ReviewsSectionProps) {
         onClick={() => {
           const instructions =
             project?.prInstructions || appSettings?.prInstructions;
-          dispatch(
-            setPendingGoal(
-              instructions
-                ? instructions + "\n\nCreate a pull request."
-                : "Create a pull request.",
-            ),
-          );
+          const goal = instructions
+            ? instructions + "\n\nCreate a pull request."
+            : "Create a pull request.";
+          dispatch(setPendingGoal(goal));
+          dispatch(setPendingAutoExecute(true));
         }}
         className="shrink-0 flex items-center justify-center gap-1.5 mb-2 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/60 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200"
       >

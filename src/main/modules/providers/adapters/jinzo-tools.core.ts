@@ -6,12 +6,20 @@
 // each adapter wraps them into its SDK-specific format.
 // ─────────────────────────────────────────────────────────────
 
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { workspaceDiffsRepo } from "../../workspaceDiffs/workspaceDiffs.repo";
 import { reviewsRepo } from "../../reviews/reviews.repo";
 import { reviewFindingsRepo } from "../../reviewFindings/reviewFindings.repo";
 import { workspaceActivityService } from "../../workspaceActivity/workspaceActivity.service";
 import { updateRunBaseRef } from "../../runs";
 import { gitService } from "../../git/git.service";
+import { workspacesRepo } from "../../workspaces/workspaces.repo";
+import { projectsRepo } from "../../projects/projects.repo";
+import { appSettingsRepo } from "../../appSettings/appSettings.repo";
+import { SETTINGS_ID } from "../../appSettings/appSettings.constants";
+
+const execFileAsync = promisify(execFile);
 
 /**
  * Context values captured at run start and threaded through every handler.
@@ -36,7 +44,9 @@ export const TOOL_DESCRIPTIONS = {
   SaveFindings:
     "Save multiple code review findings at once. Returns all generated finding IDs.",
   CommitChanges:
-    "Stage and commit changes in the workspace git repository. Use commitInstructions if provided for message style guidance.",
+    "Stage and commit changes in the workspace git repository. If the project has commitInstructions configured, the tool will return them on the first call (when message is not provided) so you can follow them before committing.",
+  CreatePR:
+    "Create a GitHub pull request for the current branch using the GitHub CLI (gh). Requires gh to be installed and authenticated. Push the branch before calling this tool. If the project has prInstructions configured, the tool will return them on the first call (when body is not provided) so you can follow them before creating the PR.",
 } as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -209,7 +219,7 @@ export async function handleSaveFindings(
 }
 
 export async function handleCommitChanges(
-  args: { message: string; files?: string[] },
+  args: { message?: string; files?: string[] },
   ctx: JinzoToolContext,
 ) {
   if (!ctx.rootPath) {
@@ -222,6 +232,43 @@ export async function handleCommitChanges(
   }
 
   try {
+    // Fetch commit instructions (project-level > app-level)
+    let commitInstructions: string | null = null;
+    if (ctx.workspaceId) {
+      const workspace = await workspacesRepo.findById(ctx.workspaceId);
+      if (workspace?.projectId) {
+        const project = await projectsRepo.findById(workspace.projectId);
+        commitInstructions = project?.commitInstructions ?? null;
+      }
+    }
+    if (!commitInstructions) {
+      const settings = await appSettingsRepo.findById(SETTINGS_ID);
+      commitInstructions = settings?.commitInstructions ?? null;
+    }
+
+    if (commitInstructions && !args.message) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({
+              commitInstructions,
+              hint: "This project has commit instructions. Please follow them to craft the commit message, then call CommitChanges again with the appropriate message.",
+            }),
+          },
+        ],
+      };
+    }
+
+    if (!args.message) {
+      return {
+        content: [
+          { type: "text" as const, text: "Error: No commit message provided" },
+        ],
+        isError: true,
+      };
+    }
+
     await gitService.stageFiles(ctx.rootPath, args.files);
     const result = await gitService.commit(ctx.rootPath, args.message);
 
@@ -290,4 +337,154 @@ export async function handleCommitChanges(
       isError: true,
     };
   }
+}
+
+export async function handleCreatePR(
+  args: {
+    title: string;
+    body?: string;
+    base?: string;
+    draft?: boolean;
+    labels?: string[];
+  },
+  ctx: JinzoToolContext,
+) {
+  if (!ctx.rootPath) {
+    return {
+      content: [
+        { type: "text" as const, text: "Error: No workspace root path" },
+      ],
+      isError: true,
+    };
+  }
+
+  try {
+    // Fetch project and verify remote origin
+    let prInstructions: string | null = null;
+    if (ctx.workspaceId) {
+      const workspace = await workspacesRepo.findById(ctx.workspaceId);
+      if (workspace?.projectId) {
+        const project = await projectsRepo.findById(workspace.projectId);
+        prInstructions = project?.prInstructions ?? null;
+
+        // Verify the working directory's remote matches the project's expected remote
+        if (project?.remoteOrigin) {
+          const remotesResult = await gitService.getRemotes(ctx.rootPath);
+          if (remotesResult.success && remotesResult.data) {
+            const origin = remotesResult.data.find((r) => r.name === "origin");
+            const currentRemote = origin?.fetchUrl || origin?.pushUrl;
+            if (currentRemote && normalizeGitUrl(currentRemote) !== normalizeGitUrl(project.remoteOrigin)) {
+              return {
+                content: [
+                  {
+                    type: "text" as const,
+                    text: `Error: Remote origin mismatch. Expected "${project.remoteOrigin}" but found "${currentRemote}". Aborting to prevent creating a PR in the wrong repository.`,
+                  },
+                ],
+                isError: true,
+              };
+            }
+          }
+        }
+      }
+    }
+    if (!prInstructions) {
+      const settings = await appSettingsRepo.findById(SETTINGS_ID);
+      prInstructions = settings?.prInstructions ?? null;
+    }
+
+    if (prInstructions && !args.body) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({
+              prInstructions,
+              hint: "This project has PR instructions. Please follow them to set the title, body, and other parameters, then call CreatePR again with the appropriate values.",
+            }),
+          },
+        ],
+      };
+    }
+
+    const ghArgs = ["pr", "create", "--title", args.title];
+
+    if (args.body) {
+      ghArgs.push("--body", args.body);
+    }
+    if (args.base) {
+      ghArgs.push("--base", args.base);
+    }
+    if (args.draft) {
+      ghArgs.push("--draft");
+    }
+    if (args.labels && args.labels.length > 0) {
+      for (const label of args.labels) {
+        ghArgs.push("--label", label);
+      }
+    }
+
+    const { stdout, stderr } = await execFileAsync("gh", ghArgs, {
+      cwd: ctx.rootPath,
+      timeout: 30_000,
+    });
+
+    const output = stdout.trim();
+    const prUrl = output.match(/https:\/\/github\.com\/[^\s]+/)?.[0];
+
+    if (ctx.workspaceId) {
+      workspaceActivityService.log({
+        workspaceId: ctx.workspaceId,
+        type: "pr",
+        title: args.title,
+        summary: args.body,
+        refId: prUrl ?? undefined,
+        metadata: {
+          base: args.base,
+          draft: args.draft,
+          labels: args.labels,
+        },
+      });
+    }
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify({
+            url: prUrl ?? output,
+            stdout: output,
+            stderr: stderr?.trim() || undefined,
+          }),
+        },
+      ],
+    };
+  } catch (error) {
+    const msg =
+      error instanceof Error ? error.message : String(error);
+    const stderr = (error as any)?.stderr?.trim?.();
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: `Error creating PR: ${stderr || msg}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+/**
+ * Normalize a git remote URL so SSH and HTTPS variants match.
+ * e.g. "git@github.com:user/repo.git" and "https://github.com/user/repo.git"
+ * both become "github.com/user/repo".
+ */
+function normalizeGitUrl(url: string): string {
+  return url
+    .replace(/^(https?:\/\/|git@|ssh:\/\/git@)/, "")
+    .replace(/:(\d+\/)?/, "/")
+    .replace(/\.git$/, "")
+    .replace(/\/$/, "")
+    .toLowerCase();
 }

@@ -36,6 +36,7 @@ import {
   handleSaveFinding,
   handleSaveFindings,
   handleCommitChanges,
+  handleCreatePR,
 } from "./jinzo-tools.core";
 
 /**
@@ -474,17 +475,37 @@ export function createCopilotAdapter(
         parameters: {
           type: "object",
           properties: {
-            message: { type: "string", description: "The commit message" },
+            message: { type: "string", description: "The commit message. Omit on first call to retrieve commitInstructions if configured." },
             files: {
               type: "array",
               items: { type: "string" },
               description: "Specific files to stage. If omitted, stages all changes (git add -A)",
             },
           },
-          required: ["message"],
         },
-        handler: async (args: { message: string; files?: string[] }) =>
+        handler: async (args: { message?: string; files?: string[] }) =>
           unwrap(await handleCommitChanges(args, ctx)),
+      },
+      {
+        name: "mcp__jinzo__CreatePR",
+        description: TOOL_DESCRIPTIONS.CreatePR,
+        parameters: {
+          type: "object",
+          properties: {
+            title: { type: "string", description: "The pull request title" },
+            body: { type: "string", description: "The pull request body/description" },
+            base: { type: "string", description: "The base branch to merge into (defaults to the repo default branch)" },
+            draft: { type: "boolean", description: "Create as a draft pull request" },
+            labels: {
+              type: "array",
+              items: { type: "string" },
+              description: "Labels to add to the pull request",
+            },
+          },
+          required: ["title"],
+        },
+        handler: async (args: { title: string; body?: string; base?: string; draft?: boolean; labels?: string[] }) =>
+          unwrap(await handleCreatePR(args, ctx)),
       },
     ];
   }
@@ -902,7 +923,7 @@ export function createCopilotAdapter(
 
         // Build system message with explicit workspace context
         //TODO: CHECK
-        const commitInstruction = "\nIMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the jinzo MCP server to stage and commit changes.";
+        const commitInstruction = "\nIMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the jinzo MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the jinzo MCP server instead.";
         const workspaceContext = `You are working in the directory: ${request.workspace.rootPath}\nAll file operations should be relative to this workspace root.`;
         if (systemPrompt) {
           sessionConfig.systemMessage = { content: `${workspaceContext}\n\n${systemPrompt}${commitInstruction}` };

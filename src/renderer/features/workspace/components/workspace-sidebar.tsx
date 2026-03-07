@@ -22,7 +22,7 @@ import { FolderIcon } from "@/components/ui/icons/file-icons";
 import { IssuesSection } from "@/features/workspace/components/issues-section";
 import { TerminalSection } from "@/features/workspace/components/terminal-section";
 import { DiffSection } from "@/features/workspace/components/diff-section";
-import { ReviewsSection } from "@/features/workspace/components/reviews-section";
+import { ActivitySection } from "@/features/workspace/components/activity-section";
 import {
   isIssueTab,
   getIssueEntityId,
@@ -226,8 +226,7 @@ export function WorkspaceSidebar() {
           />
         </div>
       ) : (
-        /* Reviews view */
-        <ReviewsSection workspaceId={workspaceId} />
+        <ActivitySection workspaceId={workspaceId} />
       )}
     </div>
   );
