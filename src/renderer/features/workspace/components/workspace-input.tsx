@@ -226,20 +226,6 @@ export function WorkspaceInput({
     [goal, onGoalChange],
   );
 
-  const handleAtClick = useCallback(() => {
-    const newGoal = goal.endsWith(" ") || goal === "" ? `${goal}@` : `${goal} @`;
-    onGoalChange(newGoal);
-    updateAtMenu({ filter: "", visible: true });
-    inputRef.current?.focus();
-  }, [goal, onGoalChange]);
-
-  const handleHashClick = useCallback(() => {
-    const newGoal = goal.endsWith(" ") || goal === "" ? `${goal}#` : `${goal} #`;
-    onGoalChange(newGoal);
-    updateHashMenu({ filter: "", visible: true });
-    inputRef.current?.focus();
-  }, [goal, onGoalChange]);
-
   const handleSubmit = useCallback(() => {
     if (atMenu.visible || slashMenu.visible || hashMenu.visible) return;
     onSubmit();
@@ -338,8 +324,6 @@ export function WorkspaceInput({
         uploadedFiles={uploadedFiles}
         onUploadedFilesChange={onUploadedFilesChange ?? (() => {})}
         disabled={!!authErrorMessage}
-        onAtClick={handleAtClick}
-        onHashClick={handleHashClick}
       />
     </div>
      </>
