@@ -135,6 +135,15 @@ export interface WorkRunSubagentEvent {
 }
 
 /**
+ * Prompt suggestion event emitted after a turn completes
+ */
+export interface WorkRunPromptSuggestionEvent {
+  type: "prompt_suggestion";
+  suggestion: string;
+  ts?: number;
+}
+
+/**
  * Union of all possible events emitted during a work run
  */
 export type WorkRunEvent =
@@ -142,7 +151,8 @@ export type WorkRunEvent =
   | WorkRunToolCallEvent
   | WorkRunArtifactEvent
   | WorkRunStatusEvent
-  | WorkRunSubagentEvent;
+  | WorkRunSubagentEvent
+  | WorkRunPromptSuggestionEvent;
 
 /**
  * Artifact summary in the result

@@ -2,7 +2,7 @@ import type { RunEvent } from "../types";
 
 export interface EventGroup {
   id: string;
-  type: "tool_calls" | "info" | "response";
+  type: "tool_calls" | "info" | "response" | "prompt_suggestion";
   events: RunEvent[];
   startTime: Date;
   endTime: Date;
@@ -31,15 +31,33 @@ export function groupEvents(events: RunEvent[]): EventGroup[] {
       currentToolGroup.push(event);
     } else if (event.type === "artifact") {
       flushToolGroup();
-      // Determine if this is a user prompt or response
       const isUserPrompt = event.metadata?.kind === "user-prompt";
-      groups.push({
-        id: `${isUserPrompt ? "user" : "response"}-${event.id}`,
-        type: isUserPrompt ? "info" : "response",
-        events: [event],
-        startTime: event.timestamp,
-        endTime: event.timestamp,
-      });
+      const isPromptSuggestion = event.metadata?.kind === "prompt_suggestion";
+
+      if (isPromptSuggestion) {
+        // Merge consecutive suggestions into one group
+        const lastGroup = groups[groups.length - 1];
+        if (lastGroup?.type === "prompt_suggestion") {
+          lastGroup.events.push(event);
+          lastGroup.endTime = event.timestamp;
+        } else {
+          groups.push({
+            id: `suggestion-${event.id}`,
+            type: "prompt_suggestion",
+            events: [event],
+            startTime: event.timestamp,
+            endTime: event.timestamp,
+          });
+        }
+      } else {
+        groups.push({
+          id: `${isUserPrompt ? "user" : "response"}-${event.id}`,
+          type: isUserPrompt ? "info" : "response",
+          events: [event],
+          startTime: event.timestamp,
+          endTime: event.timestamp,
+        });
+      }
     } else if (event.type === "log") {
       // Skip start/resume level logs (internal system messages)
       const level = event.metadata?.level as string | undefined;

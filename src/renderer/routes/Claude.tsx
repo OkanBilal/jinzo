@@ -28,6 +28,14 @@ export default function ClaudePage() {
     }
   }, [ws.activeRunId, abortRun]);
 
+  const handleSuggestionSelect = useCallback(
+    (suggestion: string) => {
+      ws.setGoal(suggestion);
+      ws.setAutoExecute(true);
+    },
+    [ws],
+  );
+
   const tabBar = useMemo(
     () =>
       ws.showEmptyState ? null : (
@@ -89,6 +97,7 @@ export default function ClaudePage() {
             pendingApproval={currentApproval}
             onApprovalRespond={respondToolApproval}
             onForkRun={ws.handleForkRun}
+            onSuggestionSelect={handleSuggestionSelect}
           />
         )}
       </div>

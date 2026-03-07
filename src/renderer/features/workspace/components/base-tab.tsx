@@ -36,7 +36,7 @@ export function BaseTab({
           onClick();
         }
       }}
-      className="group relative flex items-center gap-2 pl-3.5 pr-6 py-2 cursor-pointer w-50"
+      className="group relative flex items-center gap-2 pl-3.5 pr-6 py-2 cursor-pointer w-50 min-h-10"
     >
       {/* Active background layer — always rendered, opacity transitions */}
       <div

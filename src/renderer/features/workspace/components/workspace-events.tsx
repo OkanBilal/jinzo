@@ -15,6 +15,7 @@ import { ToolApprovalDialog } from "./tools/tool-approval-dialog";
 import { Clipboard, Check, Branch } from "@/components/ui/icons";
 import { useGetAppSettingsQuery } from "@/lib/redux/api";
 import { Button, Tooltip } from "@/components/ui";
+import { PromptSuggestionChips } from "./prompt-suggestion-chips";
 
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -389,6 +390,7 @@ interface WorkspaceEventsProps {
   pendingApproval?: ToolApprovalRequest;
   onApprovalRespond?: (requestId: string, approved: boolean, answer?: string) => void;
   onForkRun?: (sourceRunId: string, message: string) => Promise<string | null>;
+  onSuggestionSelect?: (suggestion: string) => void;
 }
 
 export function WorkspaceEvents({
@@ -403,6 +405,7 @@ export function WorkspaceEvents({
   pendingApproval,
   onApprovalRespond,
   onForkRun,
+  onSuggestionSelect,
 }: WorkspaceEventsProps) {
   const isEditorActive = activeTab === "editor";
   const isIssueActive = isIssueTab(activeTab);
@@ -455,6 +458,23 @@ export function WorkspaceEvents({
     return last;
   }, [sessionTimes]);
 
+  // Last prompt_suggestion group index — only show if nothing comes after it
+  // (i.e. no user-prompt or other content after the suggestion)
+  const lastSuggestionIndex = useMemo(() => {
+    let last = -1;
+    for (let i = 0; i < eventGroups.length; i++) {
+      if (eventGroups[i].type === "prompt_suggestion") last = i;
+    }
+    // If there's any non-suggestion group after the last suggestion,
+    // it means the user already acted — hide the suggestion
+    if (last !== -1) {
+      for (let i = last + 1; i < eventGroups.length; i++) {
+        if (eventGroups[i].type !== "prompt_suggestion") return -1;
+      }
+    }
+    return last;
+  }, [eventGroups]);
+
   // Fork handler: forks from the current run with a default prompt
   const handleFork = useCallback(
     (_responseContent: string) => {
@@ -479,25 +499,54 @@ export function WorkspaceEvents({
         ) : hasRunContent ? (
           <div className="h-full overflow-y-auto noscrollbar">
             <div className="min-h-75 max-w-210 mx-auto space-y-4 pt-12 pb-24 px-4">
-              {eventGroups.map((group, index) => (
-                <Fragment key={group.id}>
-                  {group.type === "tool_calls" ? (
-                    <ToolCallGroup
-                      group={group}
-                      defaultExpanded={index === eventGroups.length - 1}
-                      variant={variant}
-                    />
-                  ) : (
-                    <InfoGroup group={group} />
-                  )}
-                  {sessionTimes.has(index) && (
-                    <SessionTimeBar
-                      info={sessionTimes.get(index)!}
-                      onFork={index === lastSessionIndex && isRunCompleted && onForkRun ? handleFork : undefined}
-                    />
-                  )}
-                </Fragment>
-              ))}
+              {eventGroups.map((group, index) => {
+                // If this is a prompt_suggestion, render any session time bar
+                // that was assigned to it BEFORE the suggestion (so it appears
+                // after the model's last message, not after the suggestion chip).
+                const isLastSuggestion =
+                  group.type === "prompt_suggestion" &&
+                  onSuggestionSelect &&
+                  isRunCompleted &&
+                  index === lastSuggestionIndex;
+                const sessionBarForThis = sessionTimes.has(index)
+                  ? sessionTimes.get(index)!
+                  : null;
+
+                return (
+                  <Fragment key={group.id}>
+                    {group.type === "prompt_suggestion" ? (
+                      <>
+                        {sessionBarForThis && (
+                          <SessionTimeBar
+                            info={sessionBarForThis}
+                            onFork={index === lastSessionIndex && isRunCompleted && onForkRun ? handleFork : undefined}
+                          />
+                        )}
+                        {isLastSuggestion ? (
+                          <PromptSuggestionChips
+                            suggestions={group.events.map((e) => e.content).filter(Boolean)}
+                            onSelect={onSuggestionSelect}
+                          />
+                        ) : null}
+                      </>
+                    ) : group.type === "tool_calls" ? (
+                      <ToolCallGroup
+                        group={group}
+                        defaultExpanded={index === eventGroups.length - 1}
+                        variant={variant}
+                      />
+                    ) : (
+                      <InfoGroup group={group} />
+                    )}
+                    {group.type !== "prompt_suggestion" && sessionBarForThis && (
+                      <SessionTimeBar
+                        info={sessionBarForThis}
+                        onFork={index === lastSessionIndex && isRunCompleted && onForkRun ? handleFork : undefined}
+                      />
+                    )}
+                  </Fragment>
+                );
+              })}
               {isRunning && <AsciiLoader variant={variant} />}
               {isRunning && pendingApproval && onApprovalRespond && (
                 <ToolApprovalDialog

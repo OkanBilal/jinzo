@@ -982,6 +982,16 @@ export const runsService = {
         break;
       }
 
+      case "prompt_suggestion": {
+        await runsRepo.insertArtifact({
+          runId,
+          kind: "prompt_suggestion",
+          content: event.suggestion,
+          metadata: { ts: event.ts },
+        });
+        break;
+      }
+
       case "status": {
         // Status changes are handled by the main run promise
         // Log them for debugging

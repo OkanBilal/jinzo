@@ -3,7 +3,7 @@ import type { Run, RunEvent } from "../types";
 import type { RunTurn } from "@/lib/redux/api";
 import { toast } from "@/components/ui";
 import { useAppDispatch } from "@/lib/redux/hooks";
-import { runsApi, workspacesApi, reviewsApi, reviewFindingsApi } from "@/lib/redux/api";
+import { runsApi, workspacesApi, reviewsApi, reviewFindingsApi, workspaceDiffsApi } from "@/lib/redux/api";
 import { mapArtifactToEvent, mapToolCallToEvent } from "../utils/run-event-mappers";
 
 type Attachments = Array<{ name: string; type: string; data: string; mimeType: string }>;
@@ -24,6 +24,7 @@ export function useWorkspaceRuns(
 
   const eventsEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const lastCommitCountRef = useRef<number>(0);
 
   // --- Internal helpers ---
 
@@ -65,6 +66,7 @@ export function useWorkspaceRuns(
       setRuns((prev) => [runResult.data, ...prev]);
       setActiveRunId(runResult.data.id);
       dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
+      lastCommitCountRef.current = 0;
       setRunEvents((prev) => ({ ...prev, [runResult.data.id]: [] }));
       return runResult.data.id;
     }
@@ -92,6 +94,15 @@ export function useWorkspaceRuns(
           const event = mapToolCallToEvent(tc);
           if (event) events.push(event);
         }
+
+        // Invalidate diffs cache when a new CommitChanges tool call appears mid-run
+        const commitCount = toolCallsRes.data.filter(
+          (tc: { toolName: string }) => tc.toolName.includes("CommitChanges"),
+        ).length;
+        if (commitCount > lastCommitCountRef.current) {
+          lastCommitCountRef.current = commitCount;
+          dispatch(workspaceDiffsApi.util.invalidateTags(["WorkspaceDiffs"]));
+        }
       }
 
       events.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
@@ -103,6 +114,7 @@ export function useWorkspaceRuns(
     } catch (err) {
       console.error("Failed to load run details:", err);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadWorkspaceRuns = useCallback(

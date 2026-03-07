@@ -14,15 +14,10 @@ export interface WorkspaceDiff {
 export const workspaceDiffsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getLatestWorkspaceDiff: builder.query<WorkspaceDiff | null, string>({
-      query: (workspaceId) => ({
-        handler: "workspaceDiffs:getLatest",
-        args: [workspaceId],
-      }),
-      transformResponse: (response: {
-        success: boolean;
-        data?: WorkspaceDiff;
-        error?: string;
-      }) => (response.success ? (response.data ?? null) : null),
+      queryFn: async (workspaceId) => {
+        const result = await window.api.workspaceDiffs.getLatest(workspaceId);
+        return { data: result.success ? (result.data ?? null) : null };
+      },
       providesTags: (_result, _error, workspaceId) => [
         { type: "WorkspaceDiffs", id: workspaceId },
       ],

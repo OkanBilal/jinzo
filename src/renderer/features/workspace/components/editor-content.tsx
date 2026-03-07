@@ -114,7 +114,7 @@ export function EditorContent({ className = "" }: EditorContentProps) {
   if (selectedFile.extension === "diff") {
     return (
       <div className={`flex flex-col h-full noscrollbar ${className}`}>
-        <div className="flex-1 min-h-0 overflow-hidden noscrollbar">
+        <div className="flex-1 min-h-0 my-2 overflow-hidden noscrollbar">
           <Suspense fallback={null}>
             <DiffViewer
               diffText={selectedFileContent.content}
@@ -131,7 +131,7 @@ export function EditorContent({ className = "" }: EditorContentProps) {
   // Render code viewer
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      <div className="flex-1 min-h-0 overflow-hidden noscrollbar">
+      <div className="flex-1 min-h-0 py-2 overflow-hidden noscrollbar">
         <Suspense fallback={null}>
           <CodeViewer
             content={selectedFileContent.content}

@@ -202,21 +202,26 @@ export function useWorkspacePage(providerId: string) {
     providerId,
   ]);
 
-  // Auto-execute when pendingAutoExecute was set (e.g. "Review Changes" button)
+  // Auto-execute when pendingAutoExecute was set (e.g. "Review Changes" button, suggestion chips)
   useEffect(() => {
     if (autoExecute && goal) {
       setAutoExecute(false);
       if (!workspaceId) return;
       const run = async () => {
-        const newRunId = await executeRun(goal, selectedWorkspace, providerId, selectedModel);
-        if (newRunId) {
-          setGoal("");
-          dispatch(setActiveTab(newRunId));
+        if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
+          const success = (await continueRun(activeRunId, goal)) ?? false;
+          if (success) clearInputState();
+        } else {
+          const newRunId = await executeRun(goal, selectedWorkspace, providerId, selectedModel);
+          if (newRunId) {
+            clearInputState();
+            dispatch(setActiveTab(newRunId));
+          }
         }
       };
       run();
     }
-  }, [autoExecute, goal, executeRun, workspaceId, selectedWorkspace, providerId, selectedModel, dispatch]);
+  }, [autoExecute, goal, executeRun, continueRun, workspaceId, selectedWorkspace, providerId, selectedModel, dispatch, activeRunId, canResume, activeRun, clearInputState]);
 
   const handleRemoveContextFile = useCallback(
     (filePath: string) => {
@@ -274,6 +279,7 @@ export function useWorkspacePage(providerId: string) {
     handleExecute,
     handleRemoveContextFile,
     handleRemoveContextIssue,
+    setAutoExecute,
     ...tabHandlers,
   };
 }

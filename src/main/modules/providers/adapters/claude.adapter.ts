@@ -174,6 +174,7 @@ interface SDKOptions {
    * - { type: "disabled" }: No extended thinking
    */
   thinking?: { type: "adaptive" } | { type: "disabled" };
+  promptSuggestions?: boolean;
 }
 
 interface SDKMessageContent {
@@ -551,6 +552,9 @@ export function createClaudeAdapter(
     options.thinking = config.thinkingMode
       ? { type: "adaptive" }
       : { type: "disabled" };
+
+    // Enable prompt suggestions
+    options.promptSuggestions = true;
 
     // Inject interactive tool approval via PreToolUse hook
     // Only inject when NOT in bypassPermissions mode and we have a runId
@@ -1130,6 +1134,18 @@ export function createClaudeAdapter(
             type: "log",
             message: `[error] ${resultMsg.errors.join(", ")}`,
             level: "error",
+            ts,
+          });
+        }
+        break;
+      }
+
+      case "prompt_suggestion": {
+        const suggestionMsg = msg as { type: "prompt_suggestion"; suggestion: string };
+        if (suggestionMsg.suggestion) {
+          events.push({
+            type: "prompt_suggestion",
+            suggestion: suggestionMsg.suggestion,
             ts,
           });
         }
