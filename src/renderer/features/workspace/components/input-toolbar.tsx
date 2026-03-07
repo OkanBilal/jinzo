@@ -37,9 +37,6 @@ interface InputToolbarProps {
   onUploadedFilesChange: (files: UploadedFile[]) => void;
   // Disable send
   disabled?: boolean;
-  // Context shortcuts
-  onAtClick?: () => void;
-  onHashClick?: () => void;
 }
 
 export function InputToolbar({
@@ -60,8 +57,6 @@ export function InputToolbar({
   uploadedFiles,
   onUploadedFilesChange,
   disabled,
-  onAtClick,
-  onHashClick,
 }: InputToolbarProps) {
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [showFileDropdown, setShowFileDropdown] = useState(false);
@@ -160,28 +155,6 @@ export function InputToolbar({
             openUpward={true}
             isLoading={isLoadingModels}
           />
-          <button
-            type="button"
-            onClick={onAtClick}
-            className="group flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-100 hover:bg-primary-200/30 dark:hover:bg-primary-600/20 transition-all cursor-pointer"
-            title="Add file context (@files)"
-          >
-            <span className="opacity-60 group-hover:opacity-100 transition-opacity font-mono">@</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-all duration-150 max-w-0 group-hover:max-w-10 overflow-hidden whitespace-nowrap">
-              files
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={onHashClick}
-            className="group flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-100 hover:bg-primary-200/30 dark:hover:bg-primary-600/20 transition-all cursor-pointer"
-            title="Add issue context (#issues)"
-          >
-            <span className="opacity-60 group-hover:opacity-100 transition-opacity font-mono">#</span>
-            <span className="opacity-0 group-hover:opacity-100 transition-all duration-150 max-w-0 group-hover:max-w-12 overflow-hidden whitespace-nowrap">
-              issues
-            </span>
-          </button>
           {variant === "claude" && (
             <>
               <Button
