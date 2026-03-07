@@ -272,8 +272,8 @@ export function WorkspaceInput({
           onSubmit={handleSubmit}
           placeholder={
             canResume
-              ? "Ask a follow-up question, run /commands or @mention files to context"
-              : "Ask to edit, run /skills, or @mention files to context"
+              ? "Ask a follow-up question, run /commands, @files or #issues to add context"
+              : "Ask to edit, run /skills, @files or #issues to add context"
           }
         />
         <SlashMenuDropdown
