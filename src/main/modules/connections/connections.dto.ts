@@ -68,6 +68,17 @@ export interface GitlabProject {
   url?: string;
 }
 
+export interface TrelloBoard {
+  id: string;
+  name: string;
+  shortLink: string;
+  shortUrl: string;
+  desc: string;
+  closed: boolean;
+  organizationName?: string | null;
+  url?: string;
+}
+
 export interface ConnectionResource {
   id: string;
   connectionId: string;

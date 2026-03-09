@@ -15,7 +15,7 @@ import {
 } from "@/lib/redux/api";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
-import { Apps, Asana, Gitlab, Jira } from "@/components/ui/icons";
+import { Apps, Asana, Gitlab, Jira, Trello } from "@/components/ui/icons";
 
 interface LinkResourcesModalProps {
   projectId: string;
@@ -147,6 +147,8 @@ export function LinkResourcesModal({
         <Asana className="h-5.5 w-6 scale-80 shrink-0" />
       ) : resource.kind === "gitlab_project" ? (
         <Gitlab className="w-4 h-4 shrink-0" />
+      ) : resource.kind === "trello_board" ? (
+        <Trello className="w-4 h-4 shrink-0" />
       ) : (
         <Apps className="w-4 h-4 shrink-0" />
       );

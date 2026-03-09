@@ -40,7 +40,7 @@ export default function HelpMenu({ isOpen, position, onClose, onFeedback }: Help
           </span>
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => handleOpenExternal("https://jinzo.dev/docs")}
+          onClick={() => handleOpenExternal("https://docs.usejinzo.com")}
         >
           <BookOpen className="size-4 shrink-0" />
           <span className="flex-1 text-left">Docs</span>

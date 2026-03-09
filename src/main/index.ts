@@ -447,7 +447,7 @@ async function initializeApp() {
         submenu: [
           {
             label: "Documentation",
-            click: () => shell.openExternal("https://jinzo.dev/docs"),
+            click: () => shell.openExternal("https://docs.usejinzo.com"),
           },
           {
             label: "Send Feedback",
@@ -569,8 +569,8 @@ if (!app.isPackaged) {
 app.setAboutPanelOptions({
   applicationName: "Jinzo",
   applicationVersion: app.getVersion(),
-  copyright: "© 2026 True Laurel Labs of Tokyo & İzmir",
-  website: "https://jinzo.dev",
+  copyright: "© 2026 True Laurel Labs",
+  website: "https://usejinzo.com",
 });
 
 // Register custom protocol scheme (must be before app.ready)

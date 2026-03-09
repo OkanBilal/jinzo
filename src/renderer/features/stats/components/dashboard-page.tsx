@@ -72,7 +72,7 @@ export default function DashboardPage() {
         <Heading2 className="font-medium!">Dashboard</Heading2>
         <div
           ref={containerRef}
-          className="relative flex rounded-sm bg-primary-100/60 dark:bg-primary-800/30 p-0.5"
+          className="relative flex rounded-lg bg-primary-100/60 dark:bg-primary-800/30 p-0.5"
         >
           <div
             className="absolute top-0.5 bg-primary dark:bg-primary/10 rounded-lg shadow-sm transition-all duration-300 ease-in-out"

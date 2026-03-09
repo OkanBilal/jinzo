@@ -3,7 +3,7 @@ import { Button, DropdownWrapper } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { useGetIssuesByProjectQuery } from "@/lib/redux/api";
-import { Asana, Gitlab, Jira } from "@/components/ui/icons";
+import { Asana, Gitlab, Jira, Trello } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
 
@@ -19,6 +19,8 @@ function ProviderIcon({ provider }: { provider: string }) {
       return <Asana className="h-5.5 w-6 scale-60 shrink-0" />;
     case "gitlab":
       return <Gitlab className="w-3.5 h-3.5 shrink-0" />;
+    case "trello":
+      return <Trello className="w-3.5 h-3.5 shrink-0" />;
     default:
       return (
         <span className="text-xs font-medium uppercase shrink-0">

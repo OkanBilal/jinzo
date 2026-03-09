@@ -18,6 +18,7 @@ import GitHubModal from "../../components/apps/github/github-modal";
 import GitLabModal from "../../components/apps/gitlab/gitlab-modal";
 import JiraModal from "../../components/apps/jira/jira-modal";
 import LinearModal from "../../components/apps/linear/linear-modal";
+import TrelloModal from "../../components/apps/trello/trello-modal";
 import { External } from "@/components/ui/icons";
 import { useRunEntitySyncMutation } from "@/lib/redux/api/syncApi";
 
@@ -183,6 +184,13 @@ export default function AppsSettings({
         open={activeModal === "linear"}
         onClose={() => setActiveModal(null)}
         isConnected={isConnected("linear")}
+        onSuccess={handleConnectionSuccess}
+      />
+
+      <TrelloModal
+        open={activeModal === "trello"}
+        onClose={() => setActiveModal(null)}
+        isConnected={isConnected("trello")}
         onSuccess={handleConnectionSuccess}
       />
 

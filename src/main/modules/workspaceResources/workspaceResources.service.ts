@@ -11,7 +11,7 @@ import type {
 // ─────────────────────────────────────────────────────────────
 
 // Resource kinds that can be linked to projects
-const LINKABLE_KINDS = ["github_repo", "linear_team", "jira_project", "asana_project", "gitlab_project"];
+const LINKABLE_KINDS = ["github_repo", "linear_team", "jira_project", "asana_project", "gitlab_project" ,"trello_board"];
 
 export const workspaceResourcesService = {
   /**

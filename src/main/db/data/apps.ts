@@ -35,5 +35,12 @@ export const apps = [
     imageAlt: "GitLab",
     category: "developer-tools",
   },
+  {
+    id: "trello",
+    name: "Trello",
+    imageSrc: "connections/trello.png",
+    imageAlt: "Trello",
+    category: "developer-tools",
+  },
 
 ];

@@ -4,3 +4,4 @@ export * from "./jira";
 export * from "./asana";
 export * from "./notion";
 export * from "./gitlab";
+export * from "./trello";

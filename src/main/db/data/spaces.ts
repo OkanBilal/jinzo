@@ -25,7 +25,7 @@ export const seedSpaces: SeedSpace[] = [
     systemPrompt: "",
     themeConfig: {
       lightBackground: "#fac0ad",
-      darkBackground: "#151414cc",
+      darkBackground: "#0e0d0dbf",
     },
     uiConfig: {
       sidebar: {
@@ -47,7 +47,7 @@ export const seedSpaces: SeedSpace[] = [
     systemPrompt: "",
     themeConfig: {
       lightBackground: "#D2E9FF",
-      darkBackground: "#11131ac7",
+      darkBackground: "#11131abf",
     },
     uiConfig: {
       sidebar: {

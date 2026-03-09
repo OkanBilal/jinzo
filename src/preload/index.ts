@@ -80,6 +80,8 @@ const api = {
       ipcRenderer.invoke("connections:getAsanaProjects", connectionId),
     getGitlabProjects: (connectionId: string) =>
       ipcRenderer.invoke("connections:getGitlabProjects", connectionId),
+    getTrelloBoards: (connectionId: string) =>
+      ipcRenderer.invoke("connections:getTrelloBoards", connectionId),
     saveResources: (payload: {
       provider: string;
       connectionId: string;

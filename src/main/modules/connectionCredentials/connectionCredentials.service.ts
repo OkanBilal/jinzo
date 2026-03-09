@@ -1,6 +1,6 @@
 import { connectionCredentialsRepo } from "./connectionCredentials.repo";
 import {
-  encryptToken,
+  encryptSecrets,
   createTokenHash,
   parseProviderCredentials,
   parseConnectionMetadata,
@@ -11,6 +11,18 @@ import type {
   SaveCredentialsResult,
   ServiceResponse,
 } from "./connectionCredentials.dto";
+
+// ─────────────────────────────────────────────────────────────
+// Non-secret metadata fields per provider
+// ─────────────────────────────────────────────────────────────
+const PROVIDER_METADATA_FIELDS: Record<string, string[]> = {
+  jira: ["domain", "email"],
+  gitlab: ["domain"],
+};
+
+const PROVIDER_METADATA_DEFAULTS: Record<string, Record<string, string>> = {
+  gitlab: { domain: "gitlab.com" },
+};
 
 // ─────────────────────────────────────────────────────────────
 // Connection Credentials Service
@@ -44,7 +56,7 @@ export const connectionCredentialsService = {
         return { success: false, error: parseResult.error };
       }
 
-      const { accessToken, refreshToken, tokensForHash } = parseResult.data;
+      const { secrets, tokensForHash } = parseResult.data;
 
       const connection = await connectionCredentialsRepo.findConnectionById(connectionId);
       if (!connection) {
@@ -54,16 +66,15 @@ export const connectionCredentialsService = {
       // Mark existing tokens as not current
       await connectionCredentialsRepo.markTokensNotCurrent(connectionId);
 
+      // Encrypt all secrets as a single JSON blob
       const tokenHash = createTokenHash(tokensForHash);
-      const encryptedAccessToken = accessToken
-        ? encryptToken(accessToken)
-        : Buffer.from("");
+      const encryptedSecrets = encryptSecrets(secrets);
 
       // Insert new token
       await connectionCredentialsRepo.insertToken({
         connectionId,
-        accessTokenEnc: encryptedAccessToken,
-        refreshTokenEnc: refreshToken ? encryptToken(refreshToken) : null,
+        accessTokenEnc: encryptedSecrets,
+        refreshTokenEnc: null,
         tokenType: "bearer",
         expiresAt: null,
         tokenHash,
@@ -71,27 +82,21 @@ export const connectionCredentialsService = {
         isCurrent: true,
       });
 
-      // Update connection status and metadata
+      // Update connection status and metadata (non-secret fields only)
       const currentMetadata = parseConnectionMetadata(connection.metadata);
       const updatedMetadata: Record<string, unknown> = {
         ...currentMetadata,
         lastCredentialUpdate: new Date().toISOString(),
       };
 
-      // For Jira, store domain and email in metadata
-      if (provider === "jira") {
-        const { domain, email } = payload;
-        if (!domain || !email) {
-          return { success: false, error: "Jira requires domain and email" };
+      // Extract non-secret metadata fields (domain, email, etc.)
+      const metadataFields = PROVIDER_METADATA_FIELDS[provider];
+      if (metadataFields) {
+        const defaults = PROVIDER_METADATA_DEFAULTS[provider] || {};
+        for (const field of metadataFields) {
+          const value = (payload as Record<string, unknown>)[field];
+          updatedMetadata[field] = value || defaults[field] || updatedMetadata[field];
         }
-        updatedMetadata.domain = domain;
-        updatedMetadata.email = email;
-      }
-
-      // For GitLab, store domain in metadata (defaults to gitlab.com)
-      if (provider === "gitlab") {
-        const { domain } = payload;
-        updatedMetadata.domain = domain || "gitlab.com";
       }
 
       await connectionCredentialsRepo.updateConnectionStatus(

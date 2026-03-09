@@ -15,7 +15,8 @@ export { connectionCredentialsRepo } from "./connectionCredentials.repo";
 
 // Utils
 export {
-  encryptToken,
+  encryptSecrets,
+  decryptSecrets,
   createTokenHash,
   parseConnectionMetadata,
   parseProviderCredentials,

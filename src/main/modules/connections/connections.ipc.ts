@@ -11,6 +11,7 @@ const IPC_CHANNELS = {
   GET_JIRA_PROJECTS: "connections:getJiraProjects",
   GET_ASANA_PROJECTS: "connections:getAsanaProjects",
   GET_GITLAB_PROJECTS: "connections:getGitlabProjects",
+  GET_TRELLO_BOARDS: "connections:getTrelloBoards",
   SAVE_RESOURCES: "connections:saveResources",
   REMOVE_RESOURCE: "connections:removeResource",
   GET_BY_PROVIDER: "connections:getByProvider",
@@ -55,6 +56,13 @@ export function registerConnectionsHandlers(): void {
     IPC_CHANNELS.GET_GITLAB_PROJECTS,
     async (_event, connectionId: string) => {
       return connectionsController.getGitlabProjects(connectionId);
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GET_TRELLO_BOARDS,
+    async (_event, connectionId: string) => {
+      return connectionsController.getTrelloBoards(connectionId);
     }
   );
 

@@ -3,7 +3,7 @@ import { useGetProjectResourcesQuery, useRemoveProjectResourceMutation } from "@
 import { SettingsSection, SettingsDivider } from "../settings-layout";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
-import { Apps, Asana, Gitlab, Jira, Close, Plus } from "@/components/ui/icons";
+import { Apps, Asana, Gitlab, Jira, Close, Plus, Trello } from "@/components/ui/icons";
 
 function getResourceIcon(kind: string) {
   switch (kind) {
@@ -17,6 +17,8 @@ function getResourceIcon(kind: string) {
       return <Asana className="h-5.5 w-6 scale-80 shrink-0" />;
     case "gitlab_project":
       return <Gitlab className="w-4 h-4 shrink-0" />;
+    case "trello_board":
+      return <Trello className="w-4 h-4 shrink-0" />;
     default:
       return <Apps className="w-4 h-4 shrink-0" />;
   }

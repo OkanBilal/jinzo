@@ -1,6 +1,6 @@
 import type { EntityInput } from "../sync.dto";
 import {
-  getConnectionWithTokens,
+  getConnectionWithSecrets,
   getSelectedResources,
   normalizeLimit,
   normalizeDateToIso,
@@ -30,14 +30,14 @@ function getBaseUrl(domain: string): string {
 }
 
 async function getConnection(): Promise<GitLabConnection | null> {
-  const connection = await getConnectionWithTokens("gitlab");
-  if (!connection?.accessToken) return null;
+  const connection = await getConnectionWithSecrets("gitlab");
+  if (!connection?.secrets.token) return null;
 
   const domain = (connection.metadata?.domain as string) || DEFAULT_DOMAIN;
 
   return {
     id: connection.id,
-    token: connection.accessToken,
+    token: connection.secrets.token,
     domain,
   };
 }

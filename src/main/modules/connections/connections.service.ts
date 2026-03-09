@@ -2,16 +2,17 @@ import { Octokit } from "@octokit/rest";
 import { LinearClient } from "@linear/sdk";
 import { connectionsRepo } from "./connections.repo";
 import {
-  decryptToken,
   parseConnectionMetadata,
   parseResourceMetadata,
 } from "./connections.utils";
+import { decryptSecrets } from "../connectionCredentials/connectionCredentials.utils";
 import type {
   GithubRepo,
   LinearTeam,
   JiraProject,
   AsanaProject,
   GitlabProject,
+  TrelloBoard,
   SaveResourcesPayload,
   ServiceResponse,
 } from "./connections.dto";
@@ -20,18 +21,18 @@ import type {
 // Helpers
 // ─────────────────────────────────────────────────────────────
 
-type ConnectionAndToken =
-  | { ok: true; connection: NonNullable<Awaited<ReturnType<typeof connectionsRepo.findById>>>; decryptedToken: string }
+type ConnectionAndSecrets =
+  | { ok: true; connection: NonNullable<Awaited<ReturnType<typeof connectionsRepo.findById>>>; secrets: Record<string, string> }
   | { ok: false; error: string };
 
-async function getConnectionAndToken(connectionId: string): Promise<ConnectionAndToken> {
+async function getConnectionAndSecrets(connectionId: string): Promise<ConnectionAndSecrets> {
   const connection = await connectionsRepo.findById(connectionId);
   if (!connection) return { ok: false, error: "Connection not found" };
 
   const token = await connectionsRepo.findCurrentToken(connectionId);
   if (!token?.accessTokenEnc) return { ok: false, error: "Token not found" };
 
-  return { ok: true, connection, decryptedToken: decryptToken(token.accessTokenEnc as Buffer) };
+  return { ok: true, connection, secrets: decryptSecrets(token.accessTokenEnc as Buffer) };
 }
 
 async function upsertConnectionResource(params: {
@@ -113,6 +114,13 @@ const RESOURCE_MAPPERS: Record<string, ResourceMapper> = {
     url: project.webUrl,
     metadata: { private: project.private, visibility: project.visibility, description: project.description, stars: project.stars, forks: project.forks, defaultBranch: project.defaultBranch, htmlUrl: project.webUrl, lastActivityAt: project.lastActivityAt, pathWithNamespace: project.pathWithNamespace },
   }),
+  trello: (board: TrelloBoard) => ({
+    externalId: board.id,
+    kind: "trello_board",
+    name: board.name,
+    url: board.shortUrl,
+    metadata: { id: board.id, name: board.name, shortLink: board.shortLink, desc: board.desc, closed: board.closed, organizationName: board.organizationName },
+  }),
 };
 
 const SELECTED_RESOURCE_CONFIGS: Record<string, {
@@ -145,6 +153,11 @@ const SELECTED_RESOURCE_CONFIGS: Record<string, {
     responseKey: "projects",
     formatItem: (r) => ({ id: r.id, externalId: r.externalId, name: r.name || r.externalId, metadata: parseResourceMetadata(r.metadata) }),
   },
+  trello: {
+    kind: "trello_board",
+    responseKey: "boards",
+    formatItem: (r) => ({ id: r.id, boardId: r.externalId, name: r.name || r.externalId, metadata: parseResourceMetadata(r.metadata) }),
+  },
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -156,10 +169,10 @@ export const connectionsService = {
     try {
       if (!connectionId) return { success: false, error: "connectionId is required" };
 
-      const result = await getConnectionAndToken(connectionId);
+      const result = await getConnectionAndSecrets(connectionId);
       if (!result.ok) return { success: false, error: result.error };
 
-      const octokit = new Octokit({ auth: result.decryptedToken });
+      const octokit = new Octokit({ auth: result.secrets.token });
       const { data: repos } = await octokit.repos.listForAuthenticatedUser({
         sort: "updated",
         per_page: 100,
@@ -193,10 +206,10 @@ export const connectionsService = {
     try {
       if (!connectionId) return { success: false, error: "connectionId is required" };
 
-      const result = await getConnectionAndToken(connectionId);
+      const result = await getConnectionAndSecrets(connectionId);
       if (!result.ok) return { success: false, error: result.error };
 
-      const linearClient = new LinearClient({ apiKey: result.decryptedToken });
+      const linearClient = new LinearClient({ apiKey: result.secrets.apiKey });
       const [teamsConnection, organization] = await Promise.all([linearClient.teams(), linearClient.organization]);
       const orgUrlKey = organization.urlKey;
 
@@ -225,7 +238,7 @@ export const connectionsService = {
     try {
       if (!connectionId) return { success: false, error: "connectionId is required" };
 
-      const result = await getConnectionAndToken(connectionId);
+      const result = await getConnectionAndSecrets(connectionId);
       if (!result.ok) return { success: false, error: result.error };
 
       const metadata = result.connection.metadata ? JSON.parse(result.connection.metadata) : {};
@@ -236,7 +249,7 @@ export const connectionsService = {
         return { success: false, error: "Jira domain and email are required in connection metadata" };
       }
 
-      const credentials = Buffer.from(`${email}:${result.decryptedToken}`).toString("base64");
+      const credentials = Buffer.from(`${email}:${result.secrets.apiToken}`).toString("base64");
       const baseUrl = `https://${domain.replace(/^https?:\/\//, "").replace(/\/$/, "")}/rest/api/3`;
 
       const response = await fetch(`${baseUrl}/project/search?maxResults=100`, {
@@ -276,10 +289,10 @@ export const connectionsService = {
     try {
       if (!connectionId) return { success: false, error: "connectionId is required" };
 
-      const result = await getConnectionAndToken(connectionId);
+      const result = await getConnectionAndSecrets(connectionId);
       if (!result.ok) return { success: false, error: result.error };
 
-      const headers = { Authorization: `Bearer ${result.decryptedToken}`, Accept: "application/json" };
+      const headers = { Authorization: `Bearer ${result.secrets.accessToken}`, Accept: "application/json" };
 
       const workspacesResponse = await fetch("https://app.asana.com/api/1.0/workspaces", { headers });
 
@@ -343,7 +356,7 @@ export const connectionsService = {
     try {
       if (!connectionId) return { success: false, error: "connectionId is required" };
 
-      const result = await getConnectionAndToken(connectionId);
+      const result = await getConnectionAndSecrets(connectionId);
       if (!result.ok) return { success: false, error: result.error };
 
       const metadata = result.connection.metadata ? JSON.parse(result.connection.metadata) : {};
@@ -353,7 +366,7 @@ export const connectionsService = {
 
       const response = await fetch(
         `${baseUrl}/projects?membership=true&per_page=100&order_by=last_activity_at`,
-        { headers: { "PRIVATE-TOKEN": result.decryptedToken, Accept: "application/json" } }
+        { headers: { "PRIVATE-TOKEN": result.secrets.token, Accept: "application/json" } }
       );
 
       if (!response.ok) {
@@ -383,6 +396,53 @@ export const connectionsService = {
     } catch (error: any) {
       console.error("Error fetching GitLab projects:", error);
       return { success: false, error: error?.message || "Failed to fetch projects" };
+    }
+  },
+
+  // Trello
+  async getTrelloBoards(connectionId: string): Promise<ServiceResponse<{ boards: TrelloBoard[] }>> {
+    try {
+      if (!connectionId) return { success: false, error: "connectionId is required" };
+
+      const result = await getConnectionAndSecrets(connectionId);
+      if (!result.ok) return { success: false, error: result.error };
+
+      const { apiKey, token } = result.secrets;
+
+      if (!apiKey || !token) {
+        return { success: false, error: "Trello API key and token are required" };
+      }
+
+      const authParams = `key=${encodeURIComponent(apiKey)}&token=${encodeURIComponent(token)}`;
+      const response = await fetch(
+        `https://api.trello.com/1/members/me/boards?${authParams}&fields=id,name,shortLink,shortUrl,closed,desc,prefs,organization&filter=open`,
+        { headers: { Accept: "application/json" } }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Trello API error (${response.status}):`, errorText);
+        return { success: false, error: `Trello API error: ${response.status}` };
+      }
+
+      const data = await response.json();
+      const formattedBoards: TrelloBoard[] = (data || [])
+        .filter((board: Record<string, unknown>) => !board.closed)
+        .map((board: Record<string, unknown>) => ({
+          id: board.id as string,
+          name: board.name as string,
+          shortLink: board.shortLink as string,
+          shortUrl: board.shortUrl as string,
+          desc: (board.desc as string) || "",
+          closed: board.closed as boolean,
+          organizationName: (board.organization as Record<string, unknown>)?.displayName as string || null,
+          url: board.shortUrl as string,
+        }));
+
+      return { success: true, data: { boards: formattedBoards } };
+    } catch (error: any) {
+      console.error("Error fetching Trello boards:", error);
+      return { success: false, error: error?.message || "Failed to fetch boards" };
     }
   },
 

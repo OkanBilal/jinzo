@@ -106,7 +106,7 @@ Core tables:
 - `workspaceResources` - Pivot table linking workspaces to connectionResources
 - `entities` - Unified canonical content (tasks, issues, etc.)
 - `connections` / `connectionResources` / `connectionTokens` / `connectionSyncState` - External service connections, encrypted tokens, sync cursors
-- `appStates` - App integration states (GitHub, GitLab, Linear, Jira, Asana, Notion — tracks isConnected, features, config)
+- `appStates` - App integration states (GitHub, GitLab, Linear, Jira, Asana, Trello, Notion — tracks isConnected, features, config)
 - `spaces` - User-defined UI/prompt configurations with theme/UI config JSON
 - `runs` / `runContext` / `runArtifacts` / `runTurns` - Terminal/code-writing flow (agent runs with session resumption via sessionId, turn tracking)
 - `tools` / `toolCalls` - Tool registry (local, provider_builtin) and invocation tracking with nested tool call support (parentToolCallId)
@@ -118,13 +118,13 @@ Core tables:
 
 Domain-specific views on entities:
 - `tasks` - Actionable tasks (status, priority, due date)
-- `issues` - GitHub/Linear/Jira/Asana issues
+- `issues` - GitHub/Linear/Jira/Asana/Trello issues
 
 ### Key Subsystems
 
 **Sync System** (`src/main/modules/sync/`)
 - `sync.service.ts` - Orchestrates fetching from all connections
-- `connections/` - Provider-specific fetchers (GitHub, GitLab, Linear, Jira, Asana, Notion)
+- `connections/` - Provider-specific fetchers (GitHub, GitLab, Linear, Jira, Asana, Trello, Notion)
 - Produces `EntityInput[]` which gets persisted to `entities` table
 
 **Workspace/Runs System** (`src/main/modules/workspaces/`, `src/main/modules/runs/`)
@@ -232,7 +232,28 @@ Each connection type has:
 - Fetcher in `src/main/modules/sync/connections/`
 - IPC handlers for credentials and resource management
 
-Supported: GitHub, GitLab, Linear, Jira, Asana, Notion
+Supported: GitHub, GitLab, Linear, Jira, Asana, Trello, Notion
+
+**Credential Storage (Encrypted JSON Blob)**
+
+All provider secrets are stored as a single encrypted JSON blob in `connectionTokens.accessTokenEnc`. Each provider defines its secret fields in `PROVIDER_SECRET_FIELDS` (`connectionCredentials.utils.ts`):
+
+| Provider | Secret fields | Non-secret metadata |
+|----------|--------------|---------------------|
+| GitHub   | `{ token }` | — |
+| Linear   | `{ apiKey }` | — |
+| Jira     | `{ apiToken }` | `domain`, `email` |
+| GitLab   | `{ token }` | `domain` |
+| Asana    | `{ accessToken }` | — |
+| Trello   | `{ token, apiKey }` | — |
+
+Key functions:
+- `encryptSecrets(secrets)` / `decryptSecrets(buffer)` — encrypt/decrypt the JSON blob
+- `parseProviderCredentials(provider, credentials)` — validates and extracts secrets per provider config
+- `getConnectionWithSecrets(provider)` — returns `{ id, secrets: Record<string, string>, metadata }` for sync fetchers
+- `getConnectionAndSecrets(connectionId)` — same pattern for `connections.service.ts`
+
+To add a new provider's secrets: add an entry to `PROVIDER_SECRET_FIELDS`. Non-secret fields (domain, email) go in `PROVIDER_METADATA_FIELDS` in `connectionCredentials.service.ts`.
 
 ### Troubleshooting
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Figma, PullRequest, Jira, Asana, Gitlab } from "@/components/ui/icons";
+import { Figma, PullRequest, Jira, Asana, Gitlab, Trello } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
 import { QuickActionButton } from "./quick-action-button";
@@ -17,6 +17,7 @@ const ISSUE_RESOURCE_KINDS = [
   "jira_project",
   "asana_project",
   "gitlab_project",
+  "trello_board",
 ] as const;
 
 type IssueResourceKind = (typeof ISSUE_RESOURCE_KINDS)[number];
@@ -49,6 +50,11 @@ const RESOURCE_CONFIG: Record<
     label: "GitLab",
     goal: "Create a GitLab issue for this workspace",
     icon: (cls) => <Gitlab className={cls} />,
+  },
+  trello_board: {
+    label: "Trello",
+    goal: "Create a Trello card for this workspace",
+    icon: (cls) => <Trello className={cls} />,
   },
 };
 

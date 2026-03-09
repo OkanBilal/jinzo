@@ -99,6 +99,16 @@ export async function seedConnections(): Promise<void> {
       null
     );
 
+    // Trello Connection
+    const trelloConnectionId = await ensureConnectionExists(
+      db,
+      "trello",
+      "Trello",
+      "api_key",
+      "revoked",
+      null
+    );
+
     // Summary
     console.log("\n✨ Successfully seeded connections!");
     console.log("\n📊 Summary:");
@@ -107,6 +117,7 @@ export async function seedConnections(): Promise<void> {
     console.log(`   Linear: ${linearConnectionId}`);
     console.log(`   Jira: ${jiraConnectionId}`);
     console.log(`   Asana: ${asanaConnectionId}`);
+    console.log(`   Trello: ${trelloConnectionId}`);
   } catch (error) {
     console.error("❌ Error seeding connections:", error);
     throw error;

@@ -98,6 +98,23 @@ export interface SelectedGitLabProject {
   metadata: any;
 }
 
+export interface TrelloBoard {
+  id: string;
+  name: string;
+  shortLink: string;
+  shortUrl: string;
+  desc: string;
+  closed: boolean;
+  organizationName?: string | null;
+}
+
+export interface SelectedTrelloBoard {
+  id: string;
+  boardId: string;
+  name: string;
+  metadata: any;
+}
+
 export interface SaveCredentialsPayload {
   provider: string;
   connectionId: string;
@@ -110,6 +127,7 @@ export interface SaveCredentialsPayload {
   apiToken?: string; // jira
   domain?: string; // jira
   email?: string; // jira
+  apiKey?: string; // trello
 }
 
 export interface SaveResourcesPayload {
@@ -177,6 +195,23 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [connectionId],
       }),
       transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
+    }),
+
+    getTrelloBoards: builder.query<{ success: boolean; boards: TrelloBoard[] }, string>({
+      query: (connectionId) => ({
+        handler: 'connections:getTrelloBoards',
+        args: [connectionId],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, boards: response.data.boards } : { success: false, boards: [] },
+    }),
+
+    getSelectedTrelloBoards: builder.query<{ success: boolean; boards: SelectedTrelloBoard[]; connectionId: string }, string>({
+      query: (provider) => ({
+        handler: 'connections:getSelectedResources',
+        args: [provider],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, boards: response.data.boards, connectionId: response.data.connectionId } : { success: false, boards: [], connectionId: '' },
+      providesTags: ['Apps'],
     }),
 
     getSelectedGitLabProjects: builder.query<{ success: boolean; projects: SelectedGitLabProject[]; connectionId: string }, string>({
@@ -275,6 +310,7 @@ export const {
   useLazyGetJiraProjectsQuery,
   useLazyGetAsanaProjectsQuery,
   useLazyGetGitLabProjectsQuery,
+  useLazyGetTrelloBoardsQuery,
   useGetSelectedReposQuery,
   useLazyGetSelectedReposQuery,
   useGetSelectedTeamsQuery,
@@ -285,6 +321,8 @@ export const {
   useLazyGetSelectedAsanaProjectsQuery,
   useGetSelectedGitLabProjectsQuery,
   useLazyGetSelectedGitLabProjectsQuery,
+  useGetSelectedTrelloBoardsQuery,
+  useLazyGetSelectedTrelloBoardsQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
   useRevokeConnectionMutation,

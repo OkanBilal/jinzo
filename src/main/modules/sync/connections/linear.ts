@@ -2,7 +2,7 @@ import { LinearClient } from "@linear/sdk";
 
 import type { EntityInput } from "../sync.dto";
 import {
-  getConnectionWithTokens,
+  getConnectionWithSecrets,
   getSelectedResources,
   normalizeLimit,
   normalizeDateToIso,
@@ -25,8 +25,8 @@ interface LinearResource {
 }
 
 async function getCredentials(): Promise<string | null> {
-  const connection = await getConnectionWithTokens("linear");
-  return connection?.accessToken || null;
+  const connection = await getConnectionWithSecrets("linear");
+  return connection?.secrets.apiKey || null;
 }
 
 async function getLinearClient(token?: string): Promise<LinearClient | null> {
@@ -42,12 +42,12 @@ async function getLinearClient(token?: string): Promise<LinearClient | null> {
 }
 
 async function getConnection(): Promise<LinearConnection | null> {
-  const connection = await getConnectionWithTokens("linear");
-  if (!connection?.accessToken) return null;
+  const connection = await getConnectionWithSecrets("linear");
+  if (!connection?.secrets.apiKey) return null;
 
   return {
     id: connection.id,
-    token: connection.accessToken,
+    token: connection.secrets.apiKey,
   };
 }
 

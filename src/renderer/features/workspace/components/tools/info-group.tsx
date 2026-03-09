@@ -3,7 +3,7 @@ import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/components/markdown-components";
 import type { EventGroup } from "../../utils/group-events";
 import { Code } from "@/components/ui/icons/space";
-import { Picture, Document, Jira, Gitlab, Asana } from "@/components/ui/icons";
+import { Picture, Document, Jira, Gitlab, Asana, Trello } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
 
@@ -140,6 +140,8 @@ function IssueIcon({ provider }: { provider: string }) {
       return <Asana className="h-5.5 w-6 scale-60" />;
     case "gitlab":
       return <Gitlab className="w-3 h-3" />;
+    case "trello":
+      return <Trello className="w-3 h-3" />;
     default:
       return <span className="text-t font-medium uppercase">{provider.slice(0, 2)}</span>;
   }

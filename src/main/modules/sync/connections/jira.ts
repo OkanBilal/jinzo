@@ -13,7 +13,7 @@
 
 import type { EntityInput } from "../sync.dto";
 import {
-  getConnectionWithTokens,
+  getConnectionWithSecrets,
   getSelectedResources,
   normalizeLimit,
   normalizeDateToIso,
@@ -155,8 +155,8 @@ function extractTextFromADF(adfContent: unknown): string {
 // ─────────────────────────────────────────────────────────────
 
 async function getConnection(): Promise<JiraConnection | null> {
-  const connection = await getConnectionWithTokens("jira");
-  if (!connection?.accessToken) return null;
+  const connection = await getConnectionWithSecrets("jira");
+  if (!connection?.secrets.apiToken) return null;
 
   const metadata = connection.metadata || {};
   const domain = metadata.domain as string;
@@ -169,7 +169,7 @@ async function getConnection(): Promise<JiraConnection | null> {
 
   return {
     id: connection.id,
-    token: connection.accessToken,
+    token: connection.secrets.apiToken,
     domain,
     email,
   };

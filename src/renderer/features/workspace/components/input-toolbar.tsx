@@ -161,9 +161,9 @@ export function InputToolbar({
                 tooltip="Toggle Plan Mode"
                 type="button"
                 onClick={onPlanModeToggle}
-                className={`flex items-center gap-1 -ml-1 px-2.5 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 -ml-1 px-2 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
                   planMode
-                    ? "bg-amber-200/15 text-amber-600 dark:text-amber-200"
+                    ? "dark:bg-primary-200/20 bg-primary-500/30 text-primary-700 dark:text-primary-100"
                     : " text-primary-700 dark:text-primary-300 hover:bg-primary/10"
                 }`}
                 title={
@@ -173,7 +173,7 @@ export function InputToolbar({
                 }
               >
                 <Plan
-                  className={`size-3.75 font-medium ${planMode ? "text-amber-600 dark:text-amber-200" : "text-primary-700 dark:text-primary-300"}`}
+                  className={`size-3.5 font-medium ${planMode ? "text-primary-700 dark:text-primary-100" : "text-primary-700 dark:text-primary-300"}`}
                 />
                 Plan
               </Button>
@@ -181,22 +181,22 @@ export function InputToolbar({
                 tooltip="Toggle Thinking Mode"
                 type="button"
                 onClick={onThinkingModeToggle}
-                className={`flex items-center px-2 py-1.5  rounded-full text-sm font-medium transition-all cursor-pointer ${
+                className={`flex items-center px-2 py-1 -ml-px  rounded-full text-sm font-medium transition-all cursor-pointer ${
                   thinkingMode
-                    ? "bg-primary-500/15 text-primary-600 dark:text-primary-500"
+                    ? "dark:bg-orange-200/10 bg-orange-300/30 text-orange-500 dark:text-orange-100"
                     : " text-primary-700 dark:text-primary-300 hover:bg-primary/10"
                 }`}
                 title={
-                  thinkingMode
+                  thinkingMode  
                     ? "Thinking on — model reasons before responding"
                     : "Thinking off — model responds directly"
                 }
               >
                 <Brain
-                  className={`size-3.75 font-medium ${thinkingMode ? "text-primary-600 dark:text-yellow-100" : "text-primary-700 dark:text-primary-300"}`}
+                  className={`size-3.5  font-medium ${thinkingMode ? "text-orange-500 dark:text-orange-100" : "text-primary-700 dark:text-primary-300"}`}
                 />
                 <span
-                  className={`transition-all duration-300 ${thinkingMode ? "text-primary-600 ml-1 dark:text-yellow-100 opacity-100 translate-x-0" : "text-primary-900 dark:text-primary-300 opacity-0 translate-x-1"}`}
+                  className={`transition-all duration-300 ${thinkingMode ? "text-orange-500 ml-1 dark:text-orange-100 opacity-100 translate-x-0" : "text-primary-900 dark:text-primary-300 opacity-0 translate-x-1"}`}
                 >
                   {thinkingMode ? "Think" : ""}
                 </span>

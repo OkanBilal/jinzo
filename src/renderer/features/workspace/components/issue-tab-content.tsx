@@ -112,6 +112,10 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
                       ? "View on Asana"
                       : iss.provider === "github"
                         ? "View on GitHub"
+                        : iss.provider === "gitlab"
+                          ? "View on GitLab"
+                          : iss.provider === "trello"
+                            ? "View on Trello"  
                         : "View on Provider"}
               </Button>
             </p>

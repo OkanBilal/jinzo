@@ -5,23 +5,38 @@ import type { ParsedCredentials } from "./connectionCredentials.dto";
 // ─────────────────────────────────────────────────────────────
 // Encryption Helpers
 // ─────────────────────────────────────────────────────────────
-export function encryptToken(token: string): Buffer {
+function encryptToken(token: string): Buffer {
   if (safeStorage.isEncryptionAvailable()) {
     return safeStorage.encryptString(token);
   }
   return Buffer.from(token, "utf-8");
 }
 
-export function decryptToken(buffer: Buffer): string {
+function decryptToken(buffer: Buffer): string {
   if (safeStorage.isEncryptionAvailable()) {
     try {
       return safeStorage.decryptString(buffer);
     } catch {
-      // Legacy plaintext token — return as-is
       return buffer.toString("utf-8");
     }
   }
   return buffer.toString("utf-8");
+}
+
+/**
+ * Encrypt a secrets map as a single JSON blob.
+ * All provider secrets (tokens, API keys, etc.) are stored together.
+ */
+export function encryptSecrets(secrets: Record<string, string>): Buffer {
+  return encryptToken(JSON.stringify(secrets));
+}
+
+/**
+ * Decrypt a secrets blob back into a key-value map.
+ */
+export function decryptSecrets(buffer: Buffer): Record<string, string> {
+  const raw = decryptToken(buffer);
+  return JSON.parse(raw);
 }
 
 export function createTokenHash(tokens: string[]): Buffer {
@@ -48,71 +63,66 @@ export function parseConnectionMetadata(
 }
 
 // ─────────────────────────────────────────────────────────────
-// Provider Credential Parsing
+// Provider Secret Fields Configuration
 // ─────────────────────────────────────────────────────────────
+
+/**
+ * Defines which credential fields are secrets for each provider.
+ * These get encrypted together as a JSON blob in accessTokenEnc.
+ */
+const PROVIDER_SECRET_FIELDS: Record<string, { required: string[]; optional?: string[] }> = {
+  github:  { required: ["token"] },
+  linear:  { required: ["apiKey"] },
+  jira:    { required: ["apiToken"] },
+  gitlab:  { required: ["token"] },
+  asana:   { required: ["accessToken"] },
+  trello:  { required: ["token", "apiKey"] },
+};
+
+/**
+ * Parse and validate provider credentials.
+ * Extracts secret fields based on PROVIDER_SECRET_FIELDS config.
+ * Returns a secrets map to be encrypted as a JSON blob.
+ */
 export function parseProviderCredentials(
   provider: string,
   credentials: Record<string, unknown>
 ):
   | { success: true; data: ParsedCredentials }
   | { success: false; error: string } {
-  let accessToken: string | null = null;
-  // eslint-disable-next-line prefer-const
-  let refreshToken: string | null = null;
-  let tokensForHash: string[] = [];
 
-  switch (provider) {
-    case "github":
-      if (!credentials.token) {
-        return { success: false, error: "Token is required" };
+  const config = PROVIDER_SECRET_FIELDS[provider];
+  if (!config) {
+    return { success: false, error: `Unsupported provider: ${provider}` };
+  }
+
+  const secrets: Record<string, string> = {};
+  const allValues: string[] = [];
+
+  for (const field of config.required) {
+    const value = credentials[field];
+    if (!value || typeof value !== "string") {
+      return { success: false, error: `${field} is required` };
+    }
+    secrets[field] = value;
+    allValues.push(value);
+  }
+
+  if (config.optional) {
+    for (const field of config.optional) {
+      const value = credentials[field];
+      if (value && typeof value === "string") {
+        secrets[field] = value;
+        allValues.push(value);
       }
-      accessToken = credentials.token as string;
-      tokensForHash = [credentials.token as string];
-      break;
-
-    case "linear":
-      if (!credentials.apiKey) {
-        return { success: false, error: "API Key is required" };
-      }
-      accessToken = credentials.apiKey as string;
-      tokensForHash = [credentials.apiKey as string];
-      break;
-
-    case "jira":
-      // Jira requires apiToken, domain, and email
-      // apiToken is stored as accessToken, domain and email stored in connection metadata
-      if (!credentials.apiToken) {
-        return { success: false, error: "API Token is required" };
-      }
-      accessToken = credentials.apiToken as string;
-      tokensForHash = [credentials.apiToken as string];
-      break;
-
-    case "gitlab":
-      // GitLab uses a Personal Access Token (PAT)
-      // PAT is stored as accessToken, domain stored in connection metadata
-      if (!credentials.token) {
-        return { success: false, error: "Personal Access Token is required" };
-      }
-      accessToken = credentials.token as string;
-      tokensForHash = [credentials.token as string];
-      break;
-
-    case "asana":
-      // Asana uses a Personal Access Token (PAT)
-      if (!credentials.accessToken) {
-        return { success: false, error: "Access Token is required" };
-      }
-      accessToken = credentials.accessToken as string;
-      tokensForHash = [credentials.accessToken as string];
-      break;
-
-    default:
-      return { success: false, error: `Unsupported provider: ${provider}` };
+    }
   }
 
   return {
     success: true,
-    data: { accessToken, refreshToken, tokensForHash },
+    data: {
+      secrets,
+      tokensForHash: allValues,
+    },
   };
 }

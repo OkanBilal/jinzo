@@ -13,7 +13,7 @@
 
 import type { EntityInput } from "../sync.dto";
 import {
-  getConnectionWithTokens,
+  getConnectionWithSecrets,
   getSelectedResources,
   normalizeLimit,
   normalizeDateToIso,
@@ -119,12 +119,12 @@ function buildAuthHeaders(token: string): Record<string, string> {
 // ─────────────────────────────────────────────────────────────
 
 async function getConnection(): Promise<AsanaConnection | null> {
-  const connection = await getConnectionWithTokens("asana");
-  if (!connection?.accessToken) return null;
+  const connection = await getConnectionWithSecrets("asana");
+  if (!connection?.secrets.accessToken) return null;
 
   return {
     id: connection.id,
-    token: connection.accessToken,
+    token: connection.secrets.accessToken,
   };
 }
 

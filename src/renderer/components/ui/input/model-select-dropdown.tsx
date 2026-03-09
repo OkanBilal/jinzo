@@ -60,14 +60,14 @@ export function ModelSelectDropdown({
   return (
     <div className="relative" ref={dropdownRef}>
       <div
-        className="flex cursor-pointer items-center hover:bg-primary-200/30 dark:hover:bg-primary-600/20 transition-colors rounded-3xl"
+        className="flex cursor-pointer items-center hover:bg-primary-200/30 dark:hover:bg-primary-600/20 transition-colors rounded-2xl"
       >
         <Button
           tooltip="Select model"
           tooltipPosition="top"
           type="button"
           onClick={onToggle}
-          className="text-sm cursor-pointer text-primary-700 dark:text-primary-300/80 font-medium px-2 py-1.5 flex items-center gap-1.5"
+          className="text-sm cursor-pointer text-primary-700 dark:text-primary-300 font-medium px-2 py-1.5 flex items-center gap-1.5"
           aria-haspopup="true"
           aria-expanded={isOpen}
           disabled={isLoading && !displayModel}

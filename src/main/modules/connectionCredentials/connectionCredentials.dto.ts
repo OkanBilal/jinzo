@@ -15,8 +15,7 @@ export interface SaveCredentialsPayload {
 }
 
 export interface ParsedCredentials {
-  accessToken: string | null;
-  refreshToken: string | null;
+  secrets: Record<string, string>;
   tokensForHash: string[];
 }
 

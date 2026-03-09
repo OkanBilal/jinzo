@@ -25,6 +25,10 @@ export const connectionsController = {
     return connectionsService.getGitlabProjects(connectionId);
   },
 
+  async getTrelloBoards(connectionId: string) {
+    return connectionsService.getTrelloBoards(connectionId);
+  },
+
   async saveResources(payload: SaveResourcesPayload) {
     return connectionsService.saveResources(payload);
   },

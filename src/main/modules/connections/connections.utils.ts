@@ -1,6 +1,3 @@
-// Re-export from canonical source
-export { decryptToken } from "../connectionCredentials/connectionCredentials.utils";
-
 // ─────────────────────────────────────────────────────────────
 // Source Name Formatting
 // ─────────────────────────────────────────────────────────────

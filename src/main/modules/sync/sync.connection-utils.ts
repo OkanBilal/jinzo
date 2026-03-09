@@ -1,7 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import { connectionResources, connections, connectionTokens } from "../../db/schema";
-import { decryptToken } from "../connectionCredentials/connectionCredentials.utils";
+import { decryptSecrets } from "../connectionCredentials/connectionCredentials.utils";
 
 // ─────────────────────────────────────────────────────────────
 // Connection Queries
@@ -31,9 +31,9 @@ export async function getConnectionByProvider(
   }
 }
 
-export async function getConnectionTokens(
+export async function getConnectionSecrets(
   connectionId: string
-): Promise<{ accessToken?: string; refreshToken?: string } | null> {
+): Promise<Record<string, string> | null> {
   try {
     const db = getDb();
     const token = db
@@ -47,21 +47,14 @@ export async function getConnectionTokens(
       )
       .get();
 
-    if (!token) {
+    if (!token?.accessTokenEnc) {
       console.warn(`No active token found for connection ${connectionId}`);
       return null;
     }
 
-    return {
-      accessToken: token.accessTokenEnc
-        ? decryptToken(token.accessTokenEnc as Buffer)
-        : undefined,
-      refreshToken: token.refreshTokenEnc
-        ? decryptToken(token.refreshTokenEnc as Buffer)
-        : undefined,
-    };
+    return decryptSecrets(token.accessTokenEnc as Buffer);
   } catch (error) {
-    console.error("Error getting connection tokens:", error);
+    console.error("Error getting connection secrets:", error);
     return null;
   }
 }
@@ -110,24 +103,22 @@ export async function getSelectedResources(
   }
 }
 
-export async function getConnectionWithTokens(
+export async function getConnectionWithSecrets(
   provider: string
 ): Promise<{
   id: string;
-  accessToken?: string;
-  refreshToken?: string;
+  secrets: Record<string, string>;
   metadata?: Record<string, unknown>;
 } | null> {
   const connection = await getConnectionByProvider(provider);
   if (!connection) return null;
 
-  const tokens = await getConnectionTokens(connection.id);
-  if (!tokens) return null;
+  const secrets = await getConnectionSecrets(connection.id);
+  if (!secrets) return null;
 
   return {
     id: connection.id,
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
+    secrets,
     metadata: connection.metadata,
   };
 }

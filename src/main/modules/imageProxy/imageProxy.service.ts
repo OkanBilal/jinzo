@@ -1,4 +1,4 @@
-import { getConnectionWithTokens } from "../sync/sync.connection-utils";
+import { getConnectionWithSecrets } from "../sync/sync.connection-utils";
 
 // ─────────────────────────────────────────────────────────────
 // Domain Map
@@ -19,9 +19,9 @@ export const imageProxyService = {
   },
 
   async buildGithubAuthHeaders(): Promise<Record<string, string> | null> {
-    const conn = await getConnectionWithTokens("github");
-    if (!conn?.accessToken) return null;
-    return { Authorization: `token ${conn.accessToken}` };
+    const conn = await getConnectionWithSecrets("github");
+    if (!conn?.secrets.token) return null;
+    return { Authorization: `token ${conn.secrets.token}` };
   },
 
   async fetchWithAuth(

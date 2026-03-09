@@ -2,7 +2,7 @@ import { Octokit } from "@octokit/rest";
 
 import type { EntityInput } from "../sync.dto";
 import {
-  getConnectionWithTokens,
+  getConnectionWithSecrets,
   getSelectedResources,
   normalizeLimit,
   normalizeDateToIso,
@@ -12,8 +12,8 @@ const MAX_ITEMS_PER_PAGE = 100;
 const DEFAULT_LIMIT = 5;
 
 async function getCredentials(): Promise<string | null> {
-  const connection = await getConnectionWithTokens("github");
-  return connection?.accessToken || null;
+  const connection = await getConnectionWithSecrets("github");
+  return connection?.secrets.token || null;
 }
 
 async function getOctokit(token?: string): Promise<Octokit | null> {
@@ -66,12 +66,12 @@ interface GitHubConnection {
 }
 
 async function getConnection(): Promise<GitHubConnection | null> {
-  const connection = await getConnectionWithTokens("github");
-  if (!connection?.accessToken) return null;
+  const connection = await getConnectionWithSecrets("github");
+  if (!connection?.secrets.token) return null;
 
   return {
     id: connection.id,
-    token: connection.accessToken,
+    token: connection.secrets.token,
   };
 }
 

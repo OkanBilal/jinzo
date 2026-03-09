@@ -1,7 +1,7 @@
 import { getContextIssueColor } from "@/lib/label-colors";
 import type { FileNode } from "@/features/workspace/components/file-explorer";
 import type { ContextIssue } from "@/lib/redux/slices/workspaceSlice";
-import { Asana, Close, Gitlab, Jira } from "@/components/ui/icons";
+import { Asana, Close, Gitlab, Jira, Trello } from "@/components/ui/icons";
 import Github from "@/components/ui/icons/github";
 import Linear from "@/components/ui/icons/linear";
 import { Code } from "@/components/ui/icons/space";
@@ -18,6 +18,8 @@ function IssueProviderIcon({ provider }: { provider: string }) {
       return <Asana className="h-5.5 w-6 scale-60" />;
     case "gitlab":
       return <Gitlab className="w-3 h-3" />;
+    case "trello":
+      return <Trello className="w-3 h-3" />;
     default:
       return (
         <span className="text-t font-medium uppercase">

@@ -29,9 +29,9 @@ export {
 // Connection Utils
 export {
   getConnectionByProvider,
-  getConnectionTokens,
+  getConnectionSecrets,
   getSelectedResources,
-  getConnectionWithTokens,
+  getConnectionWithSecrets,
   normalizeLimit,
   normalizeDateToIso,
   safeJsonParse,
@@ -44,13 +44,10 @@ export type {
   EntityInput,
   EntityQueryParams,
   JSONValue,
-  FeedItem,
   ServiceResponse,
   SuccessResponse,
   ErrorResponse,
 } from "./sync.dto";
-
-export { feedItemToEntityInput } from "./sync.dto";
 
 // Connections
 export * from "./connections";
