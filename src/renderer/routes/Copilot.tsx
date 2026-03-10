@@ -67,7 +67,11 @@ export default function CopilotPage() {
     ? ws.activeTab === "editor"
     : ws.runs.length > 0
       ? ws.activeTab === ws.runs[0]?.id
-      : false;
+      : ws.openIssueTabs.length > 0
+        ? ws.activeTab === `issue:${ws.openIssueTabs[0]?.issue.entityId}`
+        : ws.openNoteTabs.length > 0
+          ? ws.activeTab === `note:${ws.openNoteTabs[0]?.id}`
+          : false;
 
   useSetMainHeader(tabBar, !ws.showEmptyState && isFirstTabActive);
 

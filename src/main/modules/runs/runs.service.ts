@@ -289,6 +289,26 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
       return;
     }
 
+    // Compute incremental file count: if a previous diff shares the same baseRef,
+    // compare per-file diff hashes to find only files whose content actually changed
+    // since the last recorded diff (avoids cumulative inflation when multiple runs
+    // happen without a commit in between).
+    let incrementalFileCount = files.length;
+    let incrementalFileNames: string[] = files;
+    const prevDiffWithSameBase = recentDiffs.find((d) => d.baseRef === baseRef);
+    if (prevDiffWithSameBase) {
+      const prevPerFile = buildPerFileDiffHashes(prevDiffWithSameBase.diffText);
+      const currPerFile = buildPerFileDiffHashes(diffText);
+      const changedFiles: string[] = [];
+      for (const [file, hash] of currPerFile) {
+        if (prevPerFile.get(file) !== hash) {
+          changedFiles.push(file);
+        }
+      }
+      incrementalFileCount = changedFiles.length;
+      incrementalFileNames = changedFiles;
+    }
+
     await workspaceDiffsService.createDiff({
       id: generateRunId(),
       workspaceId,
@@ -299,14 +319,22 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
       statsJson: JSON.stringify({ shortstat, files: files.length, newFiles: untrackedFiles.length }),
     });
 
-    workspaceActivityService.log({
-      workspaceId,
-      type: "diff",
-      title: `${files.length} file${files.length === 1 ? "" : "s"} changed`,
-      summary: shortstat || undefined,
-      refId: runId,
-      metadata: { files: files.length, shortstat },
-    });
+    // Log activity with incremental count (only files that actually changed since last diff)
+    const activityFileCount = incrementalFileCount;
+    if (activityFileCount > 0) {
+      // Show changed file names (basename only) instead of cumulative shortstat
+      const summaryLines = incrementalFileNames
+        .map((f) => f.split("/").pop() ?? f)
+        .join(", ");
+      workspaceActivityService.log({
+        workspaceId,
+        type: "diff",
+        title: `${activityFileCount} file${activityFileCount === 1 ? "" : "s"} changed`,
+        summary: summaryLines,
+        refId: runId,
+        metadata: { files: activityFileCount, fileNames: incrementalFileNames },
+      });
+    }
   } catch (err) {
     console.error(`[RunsService] Failed to persist run diff for ${runId}:`, err);
   }
@@ -1574,6 +1602,29 @@ function generateRunId(): string {
 
 function hashContent(content: string): string {
   return createHash("sha256").update(content).digest("hex").substring(0, 16);
+}
+
+/**
+ * Split a unified diff into per-file chunks and return a map of
+ * filename → content hash. Used to detect which files actually changed
+ * between two cumulative diffs that share the same baseRef.
+ */
+function buildPerFileDiffHashes(diffText: string): Map<string, string> {
+  const result = new Map<string, string>();
+  if (!diffText) return result;
+
+  // Split on "diff --git" boundaries
+  const chunks = diffText.split(/^(?=diff --git )/m);
+  for (const chunk of chunks) {
+    if (!chunk.trim()) continue;
+    // Extract filename from "diff --git a/path b/path"
+    const match = chunk.match(/^diff --git a\/(.+?) b\/(.+)/);
+    if (match) {
+      const fileName = match[2];
+      result.set(fileName, hashContent(chunk));
+    }
+  }
+  return result;
 }
 
 /**

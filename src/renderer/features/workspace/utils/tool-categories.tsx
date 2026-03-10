@@ -10,7 +10,6 @@ import {
   Task,
   Glob,
   Web,
-  Skill,
   Question,
   EnterPlan,
   AgentTeams,
@@ -21,6 +20,7 @@ import {
   Figma,
   Mcp,
   Jinzo,
+  Sparkles,
 } from "@/components/ui/icons";
 
 export const TOOL_CATEGORIES: Record<
@@ -121,7 +121,7 @@ export const TOOL_CATEGORIES: Record<
   },
   skill: {
     category: "Skill",
-    icon: <Skill className="size-4" />,
+    icon: <Sparkles className="size-4" />,
   },
   askuserquestion: {
     category: "Interaction",

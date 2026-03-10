@@ -32,11 +32,11 @@ export default function UserProfile({
         <img
           src={avatarUrl}
           alt={displayName || "User"}
-          className="w-8 h-8 rounded-full object-cover"
+          className="w-7 h-7 rounded-full object-cover"
         />
       ) : (
-        <div className="w-8 h-8 rounded-full bg-primary-200 dark:bg-primary/5 flex items-center justify-center">
-          <Caption className="text-primary-900 dark:text-primary-300 font-semibold">
+        <div className="w-7 h-7 rounded-full bg-primary-200 dark:bg-primary/5 flex items-center justify-center">
+          <Caption className="text-primary-900 dark:text-primary-300 font-medium">
             {getInitials(displayName || "")}
           </Caption>
         </div>

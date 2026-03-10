@@ -2,7 +2,7 @@ import { RefObject, useMemo } from "react";
 import { Button, DropdownWrapper } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
-import { Skill } from "../../../components/ui/icons";
+import { Sparkles } from "../../../components/ui/icons";
 
 export type SlashMenuItem =
   | { type: "command"; item: CommandInfo }
@@ -121,7 +121,7 @@ export function SlashMenuDropdown({
                   <div
                     className="px-3 pt-2 pb-1 flex items-center gap-1.5 text-primary-400 dark:text-primary-500"
                   >
-                    <Skill className="size-3.5" />{" "}
+                    <Sparkles className="size-3.5" />{" "}
                     <span className="text-sm font-medium ">Skills</span>
                   </div>
                   {filteredSkills.map((skill) => (
