@@ -11,6 +11,9 @@
     "repo": "jinzo"
   },
   "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
@@ -62,6 +65,7 @@
     "@tailwindcss/postcss": "^4.2.0",
     "@types/better-sqlite3": "^7.6.13",
     "@vitejs/plugin-react": "^5.1.4",
+    "@vitest/coverage-v8": "^4.0.18",
     "autoprefixer": "^10.4.24",
     "dotenv": "^17.3.1",
     "drizzle-kit": "^0.31.9",
@@ -74,7 +78,8 @@
     "tailwindcss": "^4.2.0",
     "tsx": "^4.21.0",
     "typescript-eslint": "^8.56.0",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.69",
