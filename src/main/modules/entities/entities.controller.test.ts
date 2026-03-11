@@ -58,7 +58,6 @@ describe("entitiesController", () => {
 
   describe("getById", () => {
     it("returns entity when found", async () => {
-      const entity = createEntity(db, { id: "e1", accountId: "default", kind: "task", title: "Test" });
 
       const result = await entitiesController.getById("e1");
       expect(result.success).toBe(true);
@@ -123,7 +122,7 @@ describe("entitiesController", () => {
     });
 
     it("returns tasks", async () => {
-      createTask(db, { accountId: "default" });
+      createTask(db, { entity: { accountId: "default" } });
 
       const result = await entitiesController.getAllTasks();
       expect(result.success).toBe(true);
@@ -133,9 +132,9 @@ describe("entitiesController", () => {
 
   describe("getTaskById", () => {
     it("returns task when found", async () => {
-      const task = createTask(db, { accountId: "default" });
+      const task = createTask(db, { entity: { accountId: "default" } });
 
-      const result = await entitiesController.getTaskById(task.entityId);
+      const result = await entitiesController.getTaskById(task.entity.id);
       expect(result.success).toBe(true);
       expect(result.data).toBeDefined();
     });
@@ -153,18 +152,18 @@ describe("entitiesController", () => {
 
   describe("updateTask", () => {
     it("updates a task", async () => {
-      const task = createTask(db, { accountId: "default", status: "todo" });
+      const task = createTask(db, { entity: { accountId: "default" }, task: { status: "todo" } });
 
-      const result = await entitiesController.updateTask(task.entityId, { status: "done" });
+      const result = await entitiesController.updateTask(task.entity.id, { status: "done" });
       expect(result.success).toBe(true);
     });
   });
 
   describe("deleteTask", () => {
     it("deletes a task", async () => {
-      const task = createTask(db, { accountId: "default" });
+      const task = createTask(db, { entity: { accountId: "default" } });
 
-      const result = await entitiesController.deleteTask(task.entityId);
+      const result = await entitiesController.deleteTask(task.entity.id);
       expect(result.success).toBe(true);
     });
   });
@@ -180,7 +179,7 @@ describe("entitiesController", () => {
     });
 
     it("returns issues", async () => {
-      createIssue(db, { accountId: "default" });
+      createIssue(db, { entity: { accountId: "default" } });
 
       const result = await entitiesController.getAllIssues();
       expect(result.success).toBe(true);
@@ -190,9 +189,9 @@ describe("entitiesController", () => {
 
   describe("getIssueById", () => {
     it("returns issue when found", async () => {
-      const issue = createIssue(db, { accountId: "default" });
+      const issue = createIssue(db, { entity: { accountId: "default" } });
 
-      const result = await entitiesController.getIssueById(issue.entityId);
+      const result = await entitiesController.getIssueById(issue.entity.id);
       expect(result.success).toBe(true);
       expect(result.data).toBeDefined();
     });
@@ -211,18 +210,18 @@ describe("entitiesController", () => {
 
   describe("updateIssue", () => {
     it("updates an issue", async () => {
-      const issue = createIssue(db, { accountId: "default", state: "open" });
+      const issue = createIssue(db, { entity: { accountId: "default" }, issue: { state: "open" } });
 
-      const result = await entitiesController.updateIssue(issue.entityId, { state: "closed" });
+      const result = await entitiesController.updateIssue(issue.entity.id, { state: "closed" });
       expect(result.success).toBe(true);
     });
   });
 
   describe("deleteIssue", () => {
     it("deletes an issue", async () => {
-      const issue = createIssue(db, { accountId: "default" });
+      const issue = createIssue(db, { entity: { accountId: "default" } });
 
-      const result = await entitiesController.deleteIssue(issue.entityId);
+      const result = await entitiesController.deleteIssue(issue.entity.id);
       expect(result.success).toBe(true);
     });
   });

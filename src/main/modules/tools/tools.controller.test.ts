@@ -3,7 +3,6 @@ import { createTestDb } from "../../../test/setup-db";
 import {
   createAccount,
   createRun,
-  createProvider,
   createToolCall,
 } from "../../../test/factories";
 import type { DatabaseInstance } from "../../db/types";

@@ -32,7 +32,7 @@ describe("connectionCredentialsService", () => {
         token: "abc",
       });
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Provider and connectionId are required");
+      if (!result.success) expect(result.error).toBe("Provider and connectionId are required");
     });
 
     it("returns error when connectionId missing", async () => {
@@ -42,7 +42,7 @@ describe("connectionCredentialsService", () => {
         token: "abc",
       });
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Provider and connectionId are required");
+      if (!result.success) expect(result.error).toBe("Provider and connectionId are required");
     });
 
     it("returns error for unsupported provider", async () => {
@@ -54,7 +54,7 @@ describe("connectionCredentialsService", () => {
         token: "abc",
       });
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Unsupported provider");
+      if (!result.success) expect(result.error).toContain("Unsupported provider");
     });
 
     it("returns error when required secret field missing", async () => {
@@ -66,7 +66,7 @@ describe("connectionCredentialsService", () => {
         // token is missing
       });
       expect(result.success).toBe(false);
-      expect(result.error).toContain("token is required");
+      if (!result.success) expect(result.error).toContain("token is required");
     });
 
     it("returns error when connection not found", async () => {
@@ -76,7 +76,7 @@ describe("connectionCredentialsService", () => {
         token: "ghp_abc",
       });
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Connection not found");
+      if (!result.success) expect(result.error).toBe("Connection not found");
     });
 
     it("saves github credentials successfully", async () => {
@@ -89,7 +89,7 @@ describe("connectionCredentialsService", () => {
         token: "ghp_test123",
       });
       expect(result.success).toBe(true);
-      expect(result.data!.message).toContain("saved successfully");
+      if (result.success) expect(result.data.message).toContain("saved successfully");
 
       // Verify token was inserted
       const tokens = _sqlite.prepare("SELECT * FROM connection_tokens WHERE connection_id = 'c1'").all() as any[];
@@ -176,7 +176,7 @@ describe("connectionCredentialsService", () => {
         // apiKey missing
       });
       expect(result.success).toBe(false);
-      expect(result.error).toContain("apiKey is required");
+      if (!result.success) expect(result.error).toContain("apiKey is required");
     });
   });
 
@@ -187,13 +187,13 @@ describe("connectionCredentialsService", () => {
     it("returns error when provider is empty", async () => {
       const result = await connectionCredentialsService.checkCredentials("");
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Provider is required");
+      if (!result.success) expect(result.error).toBe("Provider is required");
     });
 
     it("returns error when connection not found", async () => {
       const result = await connectionCredentialsService.checkCredentials("github");
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Connection not found");
+      if (!result.success) expect(result.error).toBe("Connection not found");
     });
 
     it("returns hasCredentials false when no tokens", async () => {
@@ -201,8 +201,10 @@ describe("connectionCredentialsService", () => {
 
       const result = await connectionCredentialsService.checkCredentials("github");
       expect(result.success).toBe(true);
-      expect(result.data!.hasCredentials).toBe(false);
-      expect(result.data!.connectionId).toBe("c1");
+      if (result.success) {
+        expect(result.data.hasCredentials).toBe(false);
+        expect(result.data.connectionId).toBe("c1");
+      }
     });
 
     it("returns hasCredentials true when tokens exist", async () => {
@@ -218,8 +220,10 @@ describe("connectionCredentialsService", () => {
 
       const result = await connectionCredentialsService.checkCredentials("github");
       expect(result.success).toBe(true);
-      expect(result.data!.hasCredentials).toBe(true);
-      expect(result.data!.status).toBe("active");
+      if (result.success) {
+        expect(result.data.hasCredentials).toBe(true);
+        expect(result.data.status).toBe("active");
+      }
     });
   });
 });

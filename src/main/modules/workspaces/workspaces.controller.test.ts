@@ -29,7 +29,7 @@ vi.mock("electron", () => ({
 }));
 
 vi.mock("child_process", () => ({
-  exec: vi.fn((_cmd: string, _opts: any, cb: Function) => cb(null, "", "")),
+  exec: vi.fn((_cmd: string, _opts: any, cb: (err: null, stdout: string, stderr: string) => void) => cb(null, "", "")),
 }));
 
 import { workspacesController } from "./workspaces.controller";

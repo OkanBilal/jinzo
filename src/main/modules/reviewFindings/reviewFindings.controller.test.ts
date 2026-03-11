@@ -46,8 +46,8 @@ describe("reviewFindingsController", () => {
     });
 
     it("returns findings for a workspace", async () => {
-      createReviewFinding(db, { reviewId, workspaceId, message: "Finding 1" });
-      createReviewFinding(db, { reviewId, workspaceId, message: "Finding 2" });
+      createReviewFinding(db, { reviewId, message: "Finding 1" });
+      createReviewFinding(db, { reviewId, message: "Finding 2" });
 
       const result = await reviewFindingsController.getByWorkspace(workspaceId);
       expect(result.success).toBe(true);
@@ -67,8 +67,8 @@ describe("reviewFindingsController", () => {
     });
 
     it("returns findings for a review", async () => {
-      createReviewFinding(db, { reviewId, workspaceId, message: "Finding A" });
-      createReviewFinding(db, { reviewId, workspaceId, message: "Finding B" });
+      createReviewFinding(db, { reviewId, message: "Finding A" });
+      createReviewFinding(db, { reviewId, message: "Finding B" });
 
       const result = await reviewFindingsController.getByReview(reviewId);
       expect(result.success).toBe(true);
@@ -78,9 +78,9 @@ describe("reviewFindingsController", () => {
     });
 
     it("respects limit parameter", async () => {
-      createReviewFinding(db, { reviewId, workspaceId, message: "F1" });
-      createReviewFinding(db, { reviewId, workspaceId, message: "F2" });
-      createReviewFinding(db, { reviewId, workspaceId, message: "F3" });
+      createReviewFinding(db, { reviewId, message: "F1" });
+      createReviewFinding(db, { reviewId, message: "F2" });
+      createReviewFinding(db, { reviewId, message: "F3" });
 
       const result = await reviewFindingsController.getByReview(reviewId, 2);
       expect(result.success).toBe(true);
@@ -94,7 +94,6 @@ describe("reviewFindingsController", () => {
     it("returns a finding by id", async () => {
       const finding = createReviewFinding(db, {
         reviewId,
-        workspaceId,
         message: "Specific finding",
         severity: "critical",
         file: "src/app.ts",
@@ -181,7 +180,6 @@ describe("reviewFindingsController", () => {
     it("updates an existing finding", async () => {
       const finding = createReviewFinding(db, {
         reviewId,
-        workspaceId,
         severity: "warning",
         file: "src/old.ts",
       });
@@ -207,7 +205,7 @@ describe("reviewFindingsController", () => {
 
   describe("delete", () => {
     it("deletes an existing finding", async () => {
-      const finding = createReviewFinding(db, { reviewId, workspaceId });
+      const finding = createReviewFinding(db, { reviewId });
 
       const result = await reviewFindingsController.delete(finding.id);
       expect(result.success).toBe(true);

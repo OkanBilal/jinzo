@@ -21,7 +21,7 @@ describe("feedbackService", () => {
 
       const result = await feedbackService.send({ message: "hello" });
       expect(result.success).toBe(false);
-      expect(result.error).toBe("RESEND_API_KEY is not configured");
+      if (!result.success) expect(result.error).toBe("RESEND_API_KEY is not configured");
     });
 
     it("returns error when message is empty", async () => {
@@ -29,7 +29,7 @@ describe("feedbackService", () => {
 
       const result = await feedbackService.send({ message: "" });
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Message is required");
+      if (!result.success) expect(result.error).toBe("Message is required");
     });
 
     it("returns error when message is whitespace only", async () => {
@@ -37,7 +37,7 @@ describe("feedbackService", () => {
 
       const result = await feedbackService.send({ message: "   " });
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Message is required");
+      if (!result.success) expect(result.error).toBe("Message is required");
     });
 
     it("sends feedback successfully", async () => {
@@ -50,7 +50,7 @@ describe("feedbackService", () => {
 
       const result = await feedbackService.send({ message: "Great app!" });
       expect(result.success).toBe(true);
-      expect(result.data!.id).toBe("email-123");
+      if (result.success) expect(result.data.id).toBe("email-123");
 
       // Verify fetch was called with correct params
       expect(fetch).toHaveBeenCalledWith(
@@ -75,7 +75,7 @@ describe("feedbackService", () => {
 
       const result = await feedbackService.send({ message: "feedback" });
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Failed to send feedback");
+      if (!result.success) expect(result.error).toBe("Failed to send feedback");
     });
 
     it("returns error on network failure", async () => {
@@ -85,7 +85,7 @@ describe("feedbackService", () => {
 
       const result = await feedbackService.send({ message: "feedback" });
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Failed to send feedback");
+      if (!result.success) expect(result.error).toBe("Failed to send feedback");
     });
   });
 });
