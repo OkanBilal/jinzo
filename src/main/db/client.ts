@@ -239,53 +239,19 @@ class DatabaseClient {
   }
 
   /**
-   * Seed initial data if tables are empty
+   * Run versioned seeds — applies only new seed versions.
+   * Replaces the old "all tables empty?" check with version tracking.
    */
   private async seedInitialData(): Promise<void> {
-    if (!this.db || !this.sqlite) {
+    if (!this.db) {
       return;
     }
 
     try {
-      // Import seed functions dynamically to avoid circular dependencies
-      const { seedAccountsData } = await import("./queries/seed-accounts");
-      const { seedProvidersData } = await import("./queries/seed-providers");
-      const { seedApps } = await import("./queries/seed-apps");
-      const { seedConnections } = await import("./queries/seed-connections");
-      const { seedSpacesData } = await import("./queries/seed-spaces");
-
-      // Check if any data exists
-      const accountsCount = this.sqlite
-        .prepare("SELECT COUNT(*) as count FROM accounts")
-        .get() as { count: number };
-      const providersCount = this.sqlite
-        .prepare("SELECT COUNT(*) as count FROM providers")
-        .get() as { count: number };
-      const appsCount = this.sqlite
-        .prepare("SELECT COUNT(*) as count FROM app_states")
-        .get() as { count: number };
-      const connectionsCount = this.sqlite
-        .prepare("SELECT COUNT(*) as count FROM connections")
-        .get() as { count: number };
-
-      if (
-        accountsCount.count === 0 &&
-        providersCount.count === 0 &&
-        appsCount.count === 0 &&
-        connectionsCount.count === 0
-      ) {
-        console.log("Seeding initial data...");
-        await seedAccountsData(); // MUST be first - referenced by workspaces
-        await seedApps();
-        await seedConnections();
-        await seedProvidersData();
-        await seedSpacesData();
-        console.log("Initial data seeded successfully");
-      } else {
-        console.log("Data already exists, skipping seed");
-      }
+      const { runSeeds } = await import("./seeds");
+      await runSeeds(this.db);
     } catch (error) {
-      console.error("Failed to seed initial data:", error);
+      console.error("Failed to run seeds:", error);
       // Don't throw - seeding is optional
     }
   }

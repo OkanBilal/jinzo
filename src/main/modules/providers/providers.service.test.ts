@@ -234,5 +234,198 @@ describe("providersService", () => {
       expect(result.success).toBe(false);
       expect(result.error).toBe("Provider not found");
     });
+
+    it("returns error for disabled provider", async () => {
+      createProvider(db, { id: "p1", isEnabled: false });
+
+      const result = await providersService.getSkills("p1");
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Provider is not enabled");
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Missing branch: getCommands nonexistent provider
+  // ─────────────────────────────────────────────────────────────
+  describe("getCommands (additional)", () => {
+    it("returns error for nonexistent provider", async () => {
+      const result = await providersService.getCommands("nonexistent");
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Provider not found");
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Catch block coverage via repo failures
+  // ─────────────────────────────────────────────────────────────
+  describe("error handling (catch blocks)", () => {
+    it("getAll returns error on repo failure", async () => {
+      const { providersRepo } = await import("./providers.repo");
+      const spy = vi.spyOn(providersRepo, "findAll").mockRejectedValueOnce(new Error("db error"));
+
+      const result = await providersService.getAll();
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to get providers");
+
+      spy.mockRestore();
+    });
+
+    it("getById returns error on repo failure", async () => {
+      const { providersRepo } = await import("./providers.repo");
+      const spy = vi.spyOn(providersRepo, "findById").mockRejectedValueOnce(new Error("db error"));
+
+      const result = await providersService.getById("p1");
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to get provider");
+
+      spy.mockRestore();
+    });
+
+    it("getByKind returns error on repo failure", async () => {
+      const { providersRepo } = await import("./providers.repo");
+      const spy = vi.spyOn(providersRepo, "findByKind").mockRejectedValueOnce(new Error("db error"));
+
+      const result = await providersService.getByKind("agent_runtime");
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to get providers");
+
+      spy.mockRestore();
+    });
+
+    it("getEnabled returns error on repo failure", async () => {
+      const { providersRepo } = await import("./providers.repo");
+      const spy = vi.spyOn(providersRepo, "findEnabled").mockRejectedValueOnce(new Error("db error"));
+
+      const result = await providersService.getEnabled();
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to get providers");
+
+      spy.mockRestore();
+    });
+
+    it("create returns error on repo failure", async () => {
+      const { providersRepo } = await import("./providers.repo");
+      const spy = vi.spyOn(providersRepo, "findById").mockRejectedValueOnce(new Error("db error"));
+
+      const result = await providersService.create({
+        id: "fail-provider",
+        kind: "agent_runtime",
+        displayName: "Fail",
+      });
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to create provider");
+
+      spy.mockRestore();
+    });
+
+    it("update returns error on repo failure", async () => {
+      const { providersRepo } = await import("./providers.repo");
+      const spy = vi.spyOn(providersRepo, "update").mockRejectedValueOnce(new Error("db error"));
+
+      const result = await providersService.update("p1", { displayName: "X" });
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to update provider");
+
+      spy.mockRestore();
+    });
+
+    it("delete returns error on repo failure", async () => {
+      const { providersRepo } = await import("./providers.repo");
+      const spy = vi.spyOn(providersRepo, "delete").mockRejectedValueOnce(new Error("db error"));
+
+      const result = await providersService.delete("p1");
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to delete provider");
+
+      spy.mockRestore();
+    });
+
+    it("enable returns error on repo failure", async () => {
+      const { providersRepo } = await import("./providers.repo");
+      const spy = vi.spyOn(providersRepo, "setEnabled").mockRejectedValueOnce(new Error("db error"));
+
+      const result = await providersService.enable("p1");
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to enable provider");
+
+      spy.mockRestore();
+    });
+
+    it("disable returns error on repo failure", async () => {
+      const { providersRepo } = await import("./providers.repo");
+      const spy = vi.spyOn(providersRepo, "setEnabled").mockRejectedValueOnce(new Error("db error"));
+
+      const result = await providersService.disable("p1");
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to disable provider");
+
+      spy.mockRestore();
+    });
+
+    it("getModels returns error.message when error is an Error instance", async () => {
+      createProvider(db, { id: "p1", isEnabled: true });
+      const { listModelsForProvider } = await import("./adapters");
+      const mockFn = vi.mocked(listModelsForProvider);
+      mockFn.mockRejectedValueOnce(new Error("Model fetch failed"));
+
+      const result = await providersService.getModels("p1");
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Model fetch failed");
+    });
+
+    it("getModels returns generic message when error is not an Error instance", async () => {
+      createProvider(db, { id: "p1", isEnabled: true });
+      const { listModelsForProvider } = await import("./adapters");
+      const mockFn = vi.mocked(listModelsForProvider);
+      mockFn.mockRejectedValueOnce("string error");
+
+      const result = await providersService.getModels("p1");
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to get models");
+    });
+
+    it("getCommands returns error.message when error is an Error instance", async () => {
+      createProvider(db, { id: "p1", isEnabled: true });
+      const { listCommandsForProvider } = await import("./adapters");
+      const mockFn = vi.mocked(listCommandsForProvider);
+      mockFn.mockRejectedValueOnce(new Error("Command fetch failed"));
+
+      const result = await providersService.getCommands("p1");
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Command fetch failed");
+    });
+
+    it("getCommands returns generic message when error is not an Error instance", async () => {
+      createProvider(db, { id: "p1", isEnabled: true });
+      const { listCommandsForProvider } = await import("./adapters");
+      const mockFn = vi.mocked(listCommandsForProvider);
+      mockFn.mockRejectedValueOnce("string error");
+
+      const result = await providersService.getCommands("p1");
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to get commands");
+    });
+
+    it("getSkills returns error.message when error is an Error instance", async () => {
+      createProvider(db, { id: "p1", isEnabled: true });
+      const { listSkillsForProvider } = await import("./adapters");
+      const mockFn = vi.mocked(listSkillsForProvider);
+      mockFn.mockRejectedValueOnce(new Error("Skill fetch failed"));
+
+      const result = await providersService.getSkills("p1");
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Skill fetch failed");
+    });
+
+    it("getSkills returns generic message when error is not an Error instance", async () => {
+      createProvider(db, { id: "p1", isEnabled: true });
+      const { listSkillsForProvider } = await import("./adapters");
+      const mockFn = vi.mocked(listSkillsForProvider);
+      mockFn.mockRejectedValueOnce("string error");
+
+      const result = await providersService.getSkills("p1");
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to get skills");
+    });
   });
 });

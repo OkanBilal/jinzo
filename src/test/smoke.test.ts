@@ -21,12 +21,8 @@ vi.mock("../main/db/client", () => ({
   getDb: () => db,
 }));
 
-// ── Seed functions ──────────────────────────────────────────
-import { seedAccountsData } from "../main/db/queries/seed-accounts";
-import { seedProvidersData } from "../main/db/queries/seed-providers";
-import { seedSpacesData } from "../main/db/queries/seed-spaces";
-import { seedApps } from "../main/db/queries/seed-apps";
-import { seedConnections } from "../main/db/queries/seed-connections";
+// ── Seed runner ─────────────────────────────────────────────
+import { runSeeds, CURRENT_SEED_VERSION } from "../main/db/seeds";
 
 // ── Services under test ─────────────────────────────────────
 import { accountService } from "../main/modules/account/account.service";
@@ -45,12 +41,8 @@ describe("smoke", () => {
   beforeAll(async () => {
     ({ db, sqlite: _sqlite, cleanup } = createTestDb());
 
-    // Run seeds in dependency order (mirrors production boot)
-    await seedAccountsData();
-    await seedApps();
-    await seedConnections();
-    await seedProvidersData();
-    await seedSpacesData();
+    // Run versioned seeds (mirrors production boot)
+    await runSeeds(db);
   });
 
   afterAll(() => {
@@ -104,6 +96,24 @@ describe("smoke", () => {
       expect(result.data.id).toBe("default");
       expect(result.data.accountId).toBe("default");
       expect(result.data.activeSpaceId).toBe("claude");
+    });
+
+    it("sets seedVersion to current version", async () => {
+      const result = await appSettingsService.getSettings();
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+
+      expect(result.data.seedVersion).toBe(CURRENT_SEED_VERSION);
+    });
+
+    it("runSeeds is idempotent (no-op on second call)", async () => {
+      // Should not throw or duplicate data
+      await runSeeds(db);
+
+      const result = await providersService.getAll();
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.data!.length).toBe(2);
     });
 
     it("seeds app states for all integrations", async () => {

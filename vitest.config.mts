@@ -10,7 +10,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/main/**"],
-      exclude: ["src/main/**/*.ipc.ts"],
+      exclude: [
+        "src/main/**/*.ipc.ts",
+        "src/main/**/*.dto.ts",
+        "src/main/index.ts",
+        "src/main/db/migrations/**",
+        "src/main/db/client.ts",
+        "src/main/windows/**",
+      ],
     },
   },
   resolve: {

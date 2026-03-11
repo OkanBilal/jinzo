@@ -72,6 +72,8 @@ export const appSettings = sqliteTable("app_settings", {
   commitInstructions: text("commit_instructions").notNull().default(""),
   prInstructions: text("pr_instructions").notNull().default(""),
 
+  seedVersion: integer("seed_version").notNull().default(0),
+
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),

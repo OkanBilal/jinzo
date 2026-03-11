@@ -1,0 +1,1 @@
+ALTER TABLE `app_settings` ADD `seed_version` integer DEFAULT 0 NOT NULL;

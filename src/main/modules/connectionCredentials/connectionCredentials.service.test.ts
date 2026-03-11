@@ -11,6 +11,7 @@ let cleanup: () => void;
 vi.mock("../../db/client", () => ({ getDb: () => db }));
 
 import { connectionCredentialsService } from "./connectionCredentials.service";
+import { connectionCredentialsRepo } from "./connectionCredentials.repo";
 
 describe("connectionCredentialsService", () => {
   beforeEach(() => {
@@ -178,6 +179,119 @@ describe("connectionCredentialsService", () => {
       expect(result.success).toBe(false);
       if (!result.success) expect(result.error).toContain("apiKey is required");
     });
+
+    it("saves gitlab credentials with default domain metadata", async () => {
+      createConnection(db, { id: "c5", provider: "gitlab", status: "active", metadata: "{}" });
+      createAppState(db, { id: "gitlab", isConnected: false });
+
+      const result = await connectionCredentialsService.saveCredentials({
+        provider: "gitlab",
+        connectionId: "c5",
+        token: "glpat_test123",
+        // domain not provided — should use default "gitlab.com"
+      });
+      expect(result.success).toBe(true);
+
+      const conn = _sqlite.prepare("SELECT * FROM connections WHERE id = 'c5'").get() as any;
+      const metadata = JSON.parse(conn.metadata);
+      expect(metadata.domain).toBe("gitlab.com");
+    });
+
+    it("saves gitlab credentials with custom domain metadata", async () => {
+      createConnection(db, { id: "c6", provider: "gitlab", status: "active", metadata: "{}" });
+      createAppState(db, { id: "gitlab", isConnected: false });
+
+      const result = await connectionCredentialsService.saveCredentials({
+        provider: "gitlab",
+        connectionId: "c6",
+        token: "glpat_test123",
+        domain: "gitlab.mycompany.com",
+      });
+      expect(result.success).toBe(true);
+
+      const conn = _sqlite.prepare("SELECT * FROM connections WHERE id = 'c6'").get() as any;
+      const metadata = JSON.parse(conn.metadata);
+      expect(metadata.domain).toBe("gitlab.mycompany.com");
+    });
+
+    it("saves asana credentials successfully", async () => {
+      createConnection(db, { id: "c7", provider: "asana", status: "active", metadata: "{}" });
+      createAppState(db, { id: "asana", isConnected: false });
+
+      const result = await connectionCredentialsService.saveCredentials({
+        provider: "asana",
+        connectionId: "c7",
+        accessToken: "asana_token_123",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("preserves existing metadata fields when saving credentials", async () => {
+      createConnection(db, {
+        id: "c8",
+        provider: "jira",
+        status: "active",
+        metadata: JSON.stringify({ existingField: "keep_me" }),
+      });
+      createAppState(db, { id: "jira", isConnected: false });
+
+      const result = await connectionCredentialsService.saveCredentials({
+        provider: "jira",
+        connectionId: "c8",
+        apiToken: "jira_token",
+        domain: "test.atlassian.net",
+        email: "a@b.com",
+      });
+      expect(result.success).toBe(true);
+
+      const conn = _sqlite.prepare("SELECT * FROM connections WHERE id = 'c8'").get() as any;
+      const metadata = JSON.parse(conn.metadata);
+      expect(metadata.existingField).toBe("keep_me");
+      expect(metadata.domain).toBe("test.atlassian.net");
+      expect(metadata.lastCredentialUpdate).toBeDefined();
+    });
+
+    it("falls back to existing metadata when provider field not in payload and no default", async () => {
+      // Jira has metadata fields [domain, email] but no defaults in PROVIDER_METADATA_DEFAULTS
+      // Set existing metadata with domain already set, then save without providing domain
+      createConnection(db, {
+        id: "c9",
+        provider: "jira",
+        status: "active",
+        metadata: JSON.stringify({ domain: "existing.atlassian.net", email: "old@co.com" }),
+      });
+      createAppState(db, { id: "jira", isConnected: false });
+
+      const result = await connectionCredentialsService.saveCredentials({
+        provider: "jira",
+        connectionId: "c9",
+        apiToken: "jira_token",
+        // domain and email not provided — should fall back to existing metadata values
+      });
+      expect(result.success).toBe(true);
+
+      const conn = _sqlite.prepare("SELECT * FROM connections WHERE id = 'c9'").get() as any;
+      const metadata = JSON.parse(conn.metadata);
+      expect(metadata.domain).toBe("existing.atlassian.net");
+      expect(metadata.email).toBe("old@co.com");
+    });
+
+    it("catches unexpected errors and returns failure", async () => {
+      createConnection(db, { id: "c1", provider: "github", status: "active", metadata: "{}" });
+
+      // Spy on markTokensNotCurrent to throw an error after connection is found
+      const spy = vi.spyOn(connectionCredentialsRepo, "markTokensNotCurrent").mockRejectedValueOnce(new Error("DB exploded"));
+
+      const result = await connectionCredentialsService.saveCredentials({
+        provider: "github",
+        connectionId: "c1",
+        token: "ghp_test",
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error).toBe("Failed to save credentials");
+
+      spy.mockRestore();
+    });
   });
 
   // ─────────────────────────────────────────────────────────────
@@ -224,6 +338,16 @@ describe("connectionCredentialsService", () => {
         expect(result.data.hasCredentials).toBe(true);
         expect(result.data.status).toBe("active");
       }
+    });
+
+    it("catches unexpected errors and returns failure", async () => {
+      const spy = vi.spyOn(connectionCredentialsRepo, "findConnectionByProvider").mockRejectedValueOnce(new Error("DB exploded"));
+
+      const result = await connectionCredentialsService.checkCredentials("github");
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error).toBe("Failed to check credentials");
+
+      spy.mockRestore();
     });
   });
 });

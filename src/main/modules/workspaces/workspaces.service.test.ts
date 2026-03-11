@@ -14,7 +14,7 @@ vi.mock("../../db/client", () => ({
 
 vi.mock("electron", () => ({
   BrowserWindow: {
-    getAllWindows: () => [],
+    getAllWindows: vi.fn(() => []),
   },
   app: {
     getPath: () => "/tmp",
@@ -36,6 +36,9 @@ vi.mock("child_process", () => ({
 
 import { workspacesService } from "./workspaces.service";
 import { workspacesRepo } from "./workspaces.repo";
+import { projectsRepo } from "../projects/projects.repo";
+import { BrowserWindow } from "electron";
+import { exec } from "child_process";
 
 describe("workspacesService", () => {
   beforeEach(() => {
@@ -299,6 +302,262 @@ describe("workspacesService", () => {
       const result = await workspacesService.archive("ws1");
       expect(result.success).toBe(false);
       expect(result.error).toBe("Failed to archive workspace");
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Uncovered branches: create - failed to retrieve after insert
+  // ─────────────────────────────────────────────────────────────
+  describe("create - post-insert findById returns null", () => {
+    it("returns error when workspace cannot be retrieved after insert", async () => {
+      vi.spyOn(workspacesRepo, "findByRootPath").mockResolvedValueOnce(null);
+      vi.spyOn(workspacesRepo, "insert").mockResolvedValueOnce("new-id");
+      vi.spyOn(workspacesRepo, "findById").mockResolvedValueOnce(null);
+
+      const result = await workspacesService.create({
+        accountId: "default",
+        name: "Ghost",
+        rootPath: "/projects/ghost",
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to retrieve created workspace");
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Uncovered branches: archive - repo.archive returns null
+  // ─────────────────────────────────────────────────────────────
+  describe("archive - repo returns null", () => {
+    it("returns error when archive repo call returns null", async () => {
+      createWorkspace(db, { id: "ws-arch", name: "To Archive" });
+      vi.spyOn(workspacesRepo, "archive").mockResolvedValueOnce(null);
+
+      const result = await workspacesService.archive("ws-arch");
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to archive workspace");
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Uncovered: create fire-and-forget setup script paths
+  // ─────────────────────────────────────────────────────────────
+  describe("create - setup script execution", () => {
+    it("skips setup script when project has no setupScript", async () => {
+      const project = createProject(db, {
+        id: "p-no-setup",
+        name: "NoSetup",
+        setupScript: null,
+      });
+      const result = await workspacesService.create({
+        accountId: "default",
+        name: "WS no setup",
+        rootPath: "/projects/no-setup",
+        projectId: project.id,
+      });
+
+      expect(result.success).toBe(true);
+      // Allow microtasks to flush
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    it("notifies renderer on successful setup script", async () => {
+      const mockSend = vi.fn();
+      vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([
+        { webContents: { send: mockSend } } as any,
+      ]);
+
+      const project = createProject(db, {
+        id: "p-setup-ok",
+        name: "SetupOK",
+        setupScript: "echo hello",
+      });
+
+      const result = await workspacesService.create({
+        accountId: "default",
+        name: "WS setup ok",
+        rootPath: "/projects/setup-ok",
+        projectId: project.id,
+      });
+
+      expect(result.success).toBe(true);
+      // Allow fire-and-forget promise chain to resolve
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(mockSend).toHaveBeenCalledWith("workspaces:scriptComplete", expect.objectContaining({
+        script: "setup",
+        success: true,
+      }));
+    });
+
+    it("notifies renderer on failed setup script", async () => {
+      const mockSend = vi.fn();
+      vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([
+        { webContents: { send: mockSend } } as any,
+      ]);
+
+      vi.mocked(exec).mockImplementationOnce((_cmd: any, _opts: any, cb: any) => {
+        cb(new Error("script crashed"), "", "err");
+        return undefined as any;
+      });
+
+      const project = createProject(db, {
+        id: "p-setup-fail",
+        name: "SetupFail",
+        setupScript: "exit 1",
+      });
+
+      const result = await workspacesService.create({
+        accountId: "default",
+        name: "WS setup fail",
+        rootPath: "/projects/setup-fail",
+        projectId: project.id,
+      });
+
+      expect(result.success).toBe(true);
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(mockSend).toHaveBeenCalledWith("workspaces:scriptComplete", expect.objectContaining({
+        script: "setup",
+        success: false,
+        error: "script crashed",
+      }));
+    });
+
+    it("silently catches projectsRepo.findById rejection in create", async () => {
+      const project = createProject(db, { id: "p-create-catch", name: "CreateCatch" });
+      vi.spyOn(projectsRepo, "findById").mockRejectedValueOnce(new Error("db fail"));
+
+      const result = await workspacesService.create({
+        accountId: "default",
+        name: "WS project fail",
+        rootPath: "/projects/project-fail",
+        projectId: project.id,
+      });
+
+      expect(result.success).toBe(true);
+      await new Promise((r) => setTimeout(r, 50));
+      // No error thrown - the .catch(() => {}) swallows it
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Uncovered: archive fire-and-forget archive script paths
+  // ─────────────────────────────────────────────────────────────
+  describe("archive - archive script execution", () => {
+    it("skips archive script when project has no archiveScript", async () => {
+      const project = createProject(db, {
+        id: "p-no-archive",
+        name: "NoArchive",
+        archiveScript: null,
+      });
+      createWorkspace(db, { id: "ws-no-arch", projectId: project.id });
+
+      const result = await workspacesService.archive("ws-no-arch");
+      expect(result.success).toBe(true);
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    it("notifies renderer on successful archive script", async () => {
+      const mockSend = vi.fn();
+      vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([
+        { webContents: { send: mockSend } } as any,
+      ]);
+
+      const project = createProject(db, {
+        id: "p-arch-ok",
+        name: "ArchOK",
+        archiveScript: "echo bye",
+      });
+      createWorkspace(db, { id: "ws-arch-ok", projectId: project.id });
+
+      const result = await workspacesService.archive("ws-arch-ok");
+      expect(result.success).toBe(true);
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(mockSend).toHaveBeenCalledWith("workspaces:scriptComplete", expect.objectContaining({
+        script: "archive",
+        success: true,
+      }));
+    });
+
+    it("notifies renderer on failed archive script", async () => {
+      const mockSend = vi.fn();
+      vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([
+        { webContents: { send: mockSend } } as any,
+      ]);
+
+      vi.mocked(exec).mockImplementationOnce((_cmd: any, _opts: any, cb: any) => {
+        cb(new Error("archive failed"), "", "err");
+        return undefined as any;
+      });
+
+      const project = createProject(db, {
+        id: "p-arch-fail",
+        name: "ArchFail",
+        archiveScript: "exit 1",
+      });
+      createWorkspace(db, { id: "ws-arch-fail", projectId: project.id });
+
+      const result = await workspacesService.archive("ws-arch-fail");
+      expect(result.success).toBe(true);
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(mockSend).toHaveBeenCalledWith("workspaces:scriptComplete", expect.objectContaining({
+        script: "archive",
+        success: false,
+        error: "archive failed",
+      }));
+    });
+
+    it("silently catches projectsRepo.findById rejection in archive", async () => {
+      const project = createProject(db, { id: "p-arch-catch", name: "ArchCatch" });
+      createWorkspace(db, { id: "ws-arch-proj-fail", projectId: project.id });
+      vi.spyOn(projectsRepo, "findById").mockRejectedValueOnce(new Error("db fail"));
+
+      const result = await workspacesService.archive("ws-arch-proj-fail");
+      expect(result.success).toBe(true);
+      await new Promise((r) => setTimeout(r, 50));
+      // No error thrown - the .catch(() => {}) swallows it
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // notifyRenderer with actual windows
+  // ─────────────────────────────────────────────────────────────
+  describe("notifyRenderer", () => {
+    it("sends to multiple windows", async () => {
+      const mockSend1 = vi.fn();
+      const mockSend2 = vi.fn();
+      vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([
+        { webContents: { send: mockSend1 } } as any,
+        { webContents: { send: mockSend2 } } as any,
+      ]);
+
+      const project = createProject(db, {
+        id: "p-multi-win",
+        name: "MultiWin",
+        setupScript: "echo hi",
+      });
+
+      const result = await workspacesService.create({
+        accountId: "default",
+        name: "WS multi win",
+        rootPath: "/projects/multi-win",
+        projectId: project.id,
+      });
+
+      expect(result.success).toBe(true);
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(mockSend1).toHaveBeenCalledWith("workspaces:scriptComplete", expect.objectContaining({
+        script: "setup",
+        success: true,
+      }));
+      expect(mockSend2).toHaveBeenCalledWith("workspaces:scriptComplete", expect.objectContaining({
+        script: "setup",
+        success: true,
+      }));
     });
   });
 });
