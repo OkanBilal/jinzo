@@ -7,7 +7,7 @@
   "main": ".vite/build/main.js",
   "publish": {
     "provider": "github",
-    "owner": "laurelresearch",
+    "owner": "OkanBilal",
     "repo": "jinzo"
   },
   "scripts": {
@@ -31,20 +31,38 @@
     "hard-reset": "npm run reset && rm -rf node_modules package-lock.json .vite dist .webpack && npm install",
     "clean": "rm -rf .vite dist out .webpack node_modules/.vite node_modules/.cache"
   },
-  "keywords": [],
+  "keywords": [
+    "electron",
+    "ai",
+    "developer-tools",
+    "github-copilot",
+    "claude",
+    "workspace",
+    "sqlite",
+    "react",
+    "desktop-app"
+  ],
   "author": {
     "name": "Okan Bilal Balcı",
-    "email": "obbalci@gmail.com"
+    "email": "obbalci@gmail.com",
+    "url": "https://github.com/OkanBilal"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/OWNER/jinzo.git"
+    "url": "https://github.com/OkanBilal/jinzo.git"
+  },
+  "homepage": "https://github.com/OkanBilal/jinzo#readme",
+  "bugs": {
+    "url": "https://github.com/OkanBilal/jinzo/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "build": {
     "publish": {
       "provider": "github",
-      "owner": "OWNER",
+      "owner": "OkanBilal",
       "repo": "jinzo"
     }
   },

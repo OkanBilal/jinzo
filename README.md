@@ -1,91 +1,52 @@
-# Jinzo
-
 <div align="center">
+
+# Jinzo
 
 **AI-powered developer workspace**
 
+Run GitHub Copilot and Claude Code agents in managed workspaces, track runs with full observability, and sync issues from GitHub, Linear, Jira, Asana, and Notion — all from a single desktop app.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Electron](https://img.shields.io/badge/Electron-40-blue.svg)](https://www.electronjs.org/)
-[![React](https://img.shields.io/badge/React-19-blue.svg)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
+[![Electron](https://img.shields.io/badge/Electron-40-47848F.svg?logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![SQLite](https://img.shields.io/badge/SQLite-Drizzle_ORM-003B57.svg?logo=sqlite&logoColor=white)](https://orm.drizzle.team/)
 
 </div>
 
----
-
-## Overview
-
-Jinzo is a desktop app that brings AI agents and code workspaces into a single interface. It supports GitHub Copilot and Claude Code agents, tracks agent runs with full observability, and syncs issues and tasks from GitHub, Linear, Jira, Asana, and Notion.
-
 ## Features
 
-### AI Agents
-- Run GitHub Copilot and Claude Code agents in managed workspaces
-- Agent run tracking with commands, artifacts, turns, and usage metrics
-- Session resumption and continuation
-- Interactive tool approval with pre-approved tool lists
-- Custom spaces with system prompts, themes, and UI configuration
+- **AI Agents** — Run GitHub Copilot and Claude Code in managed workspaces with session resumption, tool approval, and run tracking (commands, artifacts, turns, usage)
+- **Workspaces & Projects** — Git-backed workspaces with status tracking (backlog → done), worktree support, diffs per run, and code reviews with findings
+- **Integrations** — Sync issues and tasks from GitHub, GitLab, Linear, Jira, Asana, Trello, and Notion
+- **Spaces** — Custom profiles with system prompts, models, themes, and UI configuration per agent
+- **Developer Tools** — Built-in terminal, file explorer, and git operations
 
-### Workspaces & Projects
-- Git-backed workspaces with status tracking (backlog → done)
-- Projects group workspaces by shared git remote origin
-- Worktree support for isolated branch work
-- Workspace diffs captured per run (base ref, file stats)
-- Code reviews with findings (severity, file, line range, suggestions)
+## Quick Start
 
-### Integrations
-- **GitHub** / **GitLab**: Issues, PRs, repositories
-- **Linear** / **Jira** / **Asana**: Issue tracking
-- **Notion**: Pages and databases
-
-### Developer Tools
-- Built-in terminal (node-pty)
-- File explorer with path traversal prevention
-- Git operations (status, log, diff, branches, remotes, worktrees)
-
-## Tech Stack
-
-- **Framework**: Electron 40
-- **Frontend**: React 19, Redux Toolkit, React Router
-- **Database**: SQLite (better-sqlite3), Drizzle ORM
-- **AI Providers**: GitHub Copilot SDK, Claude Agent SDK
-- **Styling**: Tailwind CSS v4
-- **Build**: Vite, Electron Forge, TypeScript
-
-## Installation
-
-### Prerequisites
-
-- **Node.js** 18+ ([Download](https://nodejs.org/))
-- **Git**
-
-### Setup
+**Prerequisites:** [Node.js](https://nodejs.org/) 18+, Git
 
 ```bash
-git clone https://github.com/laurelresearch/jinzo.git
+git clone https://github.com/OkanBilal/jinzo.git
 cd jinzo
 npm install
 npm run db:push
-```
-
-## Usage
-
-```bash
-# Start the app
 npm start
 ```
 
-1. **Configure a provider**: Connect GitHub Copilot or Claude Code in Settings
-2. **Add connections** (optional): Link GitHub, Linear, Jira, Notion, etc. and sync issues
-3. **Create a workspace**: Import a local repo or clone from a URL
-4. **Run an agent**: Open the Copilot or Claude view to run agents against your workspace
+Then:
+1. Configure a provider (Copilot or Claude) in **Settings**
+2. Link integrations (GitHub, Linear, etc.) and sync issues
+3. Create a workspace from a local repo
+4. Open the Copilot or Claude view and run an agent
 
 ## Development
 
 ```bash
 npm start                  # Start dev server
-npm run lint               # Run ESLint
-npm run lint:fix           # ESLint with auto-fix
+npm test                   # Run tests
+npm run test:coverage      # Coverage report
+npm run lint:fix           # Lint with auto-fix
 npm run package            # Package for current platform
 npm run make               # Create distributable
 ```
@@ -93,72 +54,70 @@ npm run make               # Create distributable
 ### Database
 
 ```bash
-npm run db:generate        # Generate migrations from schema changes
 npm run db:push            # Push schema to dev database
-npm run db:studio          # Drizzle Studio (dev: .data/jinzo.db)
-npm run db:studio:runtime  # Drizzle Studio (runtime: ~/Library/Application Support/jinzo/jinzo.db)
+npm run db:studio          # Open Drizzle Studio
+npm run db:generate        # Generate migration from schema changes
 npm run db:clean:dev       # Reset dev database
-npm run db:clean:runtime   # Reset runtime database
-npm run db:clean:all       # Reset both databases
 ```
 
 ## Architecture
+
+Jinzo is an Electron 40 app with a React 19 renderer and SQLite + Drizzle ORM on the main process.
 
 ```
 src/
 ├── main/                  # Electron main process
 │   ├── db/                # Database client, schema, migrations
-│   └── modules/           # Domain modules (layered architecture)
-│       ├── account/       # User accounts
-│       ├── connections/   # External service connections
-│       ├── entities/      # Unified content entities
-│       ├── fileExplorer/  # Secure filesystem operations
-│       ├── git/           # Git operations and worktrees
-│       ├── projects/      # Project grouping
-│       ├── providers/     # Agent provider adapters
-│       ├── reviews/       # Code review management
-│       ├── runs/          # Agent run tracking
-│       ├── space/         # UI/prompt configurations
-│       ├── sync/          # Content synchronization
-│       ├── terminal/      # Pseudoterminal (node-pty)
-│       ├── tools/         # Tool registry and permissions
-│       ├── workspaces/    # Workspace management
-│       └── ...
+│   ├── modules/           # Domain modules (layered architecture)
+│   │   ├── account/       # User accounts
+│   │   ├── connections/   # External service connections
+│   │   ├── entities/      # Unified content (tasks, issues)
+│   │   ├── git/           # Git operations and worktrees
+│   │   ├── projects/      # Project grouping by remote origin
+│   │   ├── providers/     # Agent adapters (Copilot, Claude)
+│   │   ├── runs/          # Agent run tracking
+│   │   ├── sync/          # Integration sync engine
+│   │   ├── workspaces/    # Workspace management
+│   │   └── ...            # 25+ modules total
+│   └── runtime/           # Run dispatcher and writeback
 ├── preload/               # IPC bridge (window.api)
 └── renderer/              # React app
-    ├── components/        # Shared UI components
-    ├── features/          # Feature modules (workspace, settings, ...)
-    ├── hooks/             # Custom hooks
-    ├── lib/
-    │   └── redux/         # Redux store, slices, RTK Query APIs
+    ├── features/          # Feature modules (workspace, settings, stats)
+    ├── lib/redux/         # Redux store, RTK Query APIs
     └── routes/            # Route components
 ```
 
-Each domain module follows a consistent layered pattern: IPC → Controller → Service → Repository → DTO. All layers are plain object literals (no classes, no DI).
+Each domain module follows: **IPC → Controller → Service → Repository → DTO**. All layers are plain object literals — no classes, no DI.
+
+### Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Electron 40 |
+| Frontend | React 19, Redux Toolkit, React Router |
+| Database | SQLite (better-sqlite3), Drizzle ORM |
+| AI Providers | GitHub Copilot SDK, Claude Agent SDK |
+| Styling | Tailwind CSS v4 |
+| Build | Vite, Electron Forge, TypeScript |
+| Testing | Vitest, v8 coverage |
 
 ## Troubleshooting
 
-**Database locked errors**: Close all app instances, then `npm run db:clean:dev && npm run db:push`
-
-**Preload changes not taking effect**: Restart the dev server completely — changes to `src/preload/index.ts` require a full restart
-
-**Build errors after pulling updates**: `rm -rf node_modules package-lock.json && npm install`
-
-See [CLAUDE.md](./CLAUDE.md) for detailed development guidance.
+| Problem | Solution |
+|---------|----------|
+| Database locked | Close all instances, then `npm run db:clean:dev && npm run db:push` |
+| Preload changes not working | Full restart required for `src/preload/index.ts` changes |
+| Build errors after pull | `rm -rf node_modules package-lock.json && npm install` |
+| better-sqlite3 mismatch | `npm rebuild better-sqlite3` |
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Run `npm run lint:fix` before committing
-4. Open a Pull Request
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, code style, and development workflow.
+
+## Security
+
+To report vulnerabilities, see [SECURITY.md](./SECURITY.md).
 
 ## License
 
-MIT © Okan Bilal Balcı
-
-## Contact
-
-- **Author**: Okan Bilal Balcı
-- **Email**: obbalci@gmail.com
-- **Project**: [github.com/laurelresearch/jinzo](https://github.com/laurelresearch/jinzo)
+[MIT](./LICENSE) &copy; [Okan Bilal Balcı](https://github.com/OkanBilal)

@@ -148,7 +148,7 @@ module.exports = {
     {
       name: '@electron-forge/publisher-github',
       config: {
-        repository: { owner: 'laurelresearch', name: 'jinzo' },
+        repository: { owner: 'OkanBilal', name: 'jinzo' },
         prerelease: false,
         draft: true,
       },

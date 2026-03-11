@@ -1,0 +1,53 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+labels: ["enhancement"]
+body:
+  - type: description
+    attributes:
+      value: |
+        Have an idea for Jinzo? We'd love to hear it.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem does this solve? What's the pain point?
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How do you think this should work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any other solutions or workarounds you've thought about?
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the app does this relate to?
+      options:
+        - AI Agents (Copilot / Claude)
+        - Workspaces & Projects
+        - Integrations (GitHub, Linear, Jira, etc.)
+        - Terminal / File Explorer
+        - UI / UX
+        - Database / Performance
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Screenshots, mockups, links, or any other context.

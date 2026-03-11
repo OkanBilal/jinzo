@@ -1,0 +1,111 @@
+# Contributing to Jinzo
+
+Thanks for your interest in contributing! This guide will help you get started.
+
+## Development Setup
+
+```bash
+git clone https://github.com/OkanBilal/jinzo.git
+cd jinzo
+npm install
+npm run db:push
+npm start
+```
+
+**Requirements:** Node.js 18+, Git
+
+## Project Structure
+
+```
+src/
+├── main/          # Electron main process (DB, IPC, modules)
+├── preload/       # IPC bridge (window.api)
+└── renderer/      # React app (Redux, Router, Tailwind)
+```
+
+Each domain module in `src/main/modules/` follows the pattern:
+**IPC → Controller → Service → Repository → DTO**
+
+All layers are plain object literals — no classes, no dependency injection.
+
+## Workflow
+
+1. Fork the repo and create a branch from `master`
+2. Make your changes
+3. Run checks before committing:
+
+```bash
+npm run lint:fix    # Fix lint issues
+npm test            # Run all tests
+```
+
+4. Push and open a Pull Request
+
+## Code Style
+
+- **TypeScript** throughout, strict mode enabled
+- **No Prettier** — formatting via ESLint + editor settings
+- `any` is allowed (`no-explicit-any: off`)
+- Unused vars prefixed with `_`
+- No `import React` needed (jsx transform)
+- Snake_case SQL columns, camelCase TypeScript — Drizzle handles mapping
+
+## Writing Tests
+
+- Test framework: **Vitest**
+- DB tests use `createTestDb()` for in-memory SQLite
+- Factory functions in `src/test/factories.ts` for test data
+- Mock `getDb()` via `vi.mock("../../db/client", ...)`
+- Use `vi.spyOn` for error path coverage
+
+```bash
+npm test                           # Run all tests
+npm run test:watch                 # Watch mode
+npm run test:coverage              # Coverage report
+npx vitest run path/to/file.test.ts  # Single file
+```
+
+## Database Changes
+
+1. Edit the schema in `src/main/db/schema.ts`
+2. Generate a migration: `npm run db:generate`
+3. Apply to dev DB: `npm run db:push`
+4. If things break: `npm run db:clean:dev && npm run db:push`
+
+## Adding a New Module
+
+Create files in `src/main/modules/{name}/`:
+
+| File | Role |
+|------|------|
+| `{name}.ipc.ts` | IPC handlers (`ipcMain.handle`) |
+| `{name}.controller.ts` | Request validation, delegates to service |
+| `{name}.service.ts` | Business logic |
+| `{name}.repo.ts` | Database queries (Drizzle) |
+| `{name}.dto.ts` | Types and formatters |
+| `{name}.validation.ts` | Input validation (hand-rolled, no zod) |
+| `index.ts` | Barrel exports |
+
+Then register the IPC handlers in `src/main/index.ts` and expose methods in `src/preload/index.ts`.
+
+## IPC Channels
+
+Channel format: `"domain:action"` (e.g. `"entities:getAll"`). Must stay in sync across:
+1. `src/preload/index.ts`
+2. `src/main/modules/{name}/{name}.ipc.ts`
+3. `src/renderer/lib/redux/api/{name}Api.ts`
+
+## Important Notes
+
+- **Preload changes** require a full dev server restart
+- All IPC responses use `ServiceResponse<T>`: `{ success, data }` or `{ success, error }`
+- Repos call `getDb()` per method (no shared instance)
+- Updates must manually set `updatedAt: sql\`(unixepoch())\``
+
+## Reporting Issues
+
+Use the [issue templates](https://github.com/OkanBilal/jinzo/issues/new/choose) for bug reports and feature requests.
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the [MIT License](./LICENSE).
