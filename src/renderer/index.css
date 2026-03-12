@@ -97,7 +97,7 @@
   --color-primary-800: #403e3c;
   --color-primary-900: #141414;
   --color-primary-950: #0c0c0c;
-  
+
   /* Semantic status colors */
   --color-accent: #009EFF;
   --color-accent-hover: #007ACC;
@@ -134,7 +134,7 @@
     'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
     'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --font-mono: 'Space Mono', monospace;
-  
+
 }
 
 *:focus {
@@ -184,13 +184,13 @@
   0% {
     opacity: 0;
     transform: scale(0.22);
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); 
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   70% {
     opacity: 1;
     transform: scale(1.015);
-    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); 
+    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   100% {
@@ -233,7 +233,7 @@
   0% {
     opacity: 1;
     transform: translateY(0) scale(1);
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); 
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 
   }
   100% {
@@ -519,7 +519,7 @@ input[type="range"].slider {
 
 
 .glass-morphism {
-  background: linear-gradient(to bottom, var(--color-primary-100), var(--color-primary-50));
+  background: linear-gradient(to bottom, var(--color-primary-100), var(--color-primary-100));
   border: 0.5px solid #ffffff2e;
   box-shadow:
     0 1px 1px #00000011,
@@ -528,7 +528,7 @@ input[type="range"].slider {
 }
 
 .dark .glass-morphism {
-  background: linear-gradient(to bottom, var(--color-primary-900), var(--color-primary-950));
+  background: linear-gradient(to bottom, var(--color-primary-900), var(--color-primary-900));
   border-color: #ffffff1f;
   box-shadow:
     0 1px 1px #00000040,

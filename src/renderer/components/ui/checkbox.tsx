@@ -43,8 +43,8 @@ export function Checkbox({
           "w-5 h-5 min-w-5 min-h-5 rounded-md border transition-colors duration-200 flex items-center justify-center",
           checked
             ? "bg-primary-800 dark:bg-primary-200 border-primary-600 dark:border-primary-500"
-            : "bg-primary dark:bg-primary-900 border-primary-300 dark:border-primary-700",
-          !disabled && "hover:border-primary-500 dark:hover:border-primary-400",
+            : "bg-primary dark:bg-primary-950 border-primary-300 dark:border-primary-800/60",
+          !disabled && "hover:border-primary-500 dark:hover:border-primary-700",
         )}
       >
         <svg

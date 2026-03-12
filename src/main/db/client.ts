@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { app } from "electron";
+import crypto from "node:crypto";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
@@ -217,6 +218,11 @@ class DatabaseClient {
     }
 
     if (fs.existsSync(migrationsFolder)) {
+      // Guard: if tables exist but migration tracker is empty/missing,
+      // backfill the tracker so migrate() doesn't re-run old migrations.
+      // This happens when db:push was used to create tables without tracking.
+      this.backfillMigrationTracker(migrationsFolder);
+
       const backupPath = this.backupDatabase();
 
       try {
@@ -235,6 +241,108 @@ class DatabaseClient {
       }
     } else {
       console.log("No migrations folder found, skipping migrations");
+    }
+  }
+
+  /**
+   * Detect and fix tracker/schema mismatch.
+   *
+   * If application tables already exist (e.g. created by `db:push`)
+   * but `__drizzle_migrations` is empty, backfill the tracker with
+   * all migration entries so that `migrate()` skips them.
+   */
+  private backfillMigrationTracker(migrationsFolder: string): void {
+    if (!this.sqlite) return;
+
+    try {
+      // Check if __drizzle_migrations table exists
+      const trackerExists = this.sqlite
+        .prepare(
+          `SELECT name FROM sqlite_master WHERE type='table' AND name='__drizzle_migrations'`,
+        )
+        .get();
+
+      // Check if any app table exists (accounts is always the first)
+      const appTableExists = this.sqlite
+        .prepare(
+          `SELECT name FROM sqlite_master WHERE type='table' AND name='accounts'`,
+        )
+        .get();
+
+      // No app tables → fresh DB, migrate() will handle everything
+      if (!appTableExists) return;
+
+      // Create tracker table if needed
+      if (!trackerExists) {
+        this.sqlite.exec(`
+          CREATE TABLE IF NOT EXISTS "__drizzle_migrations" (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hash TEXT NOT NULL,
+            created_at INTEGER
+          );
+        `);
+      }
+
+      // Check if tracker has any entries
+      const count = this.sqlite
+        .prepare(`SELECT COUNT(*) as cnt FROM "__drizzle_migrations"`)
+        .get() as { cnt: number };
+
+      if (count.cnt > 0) return; // Tracker is populated, nothing to do
+
+      // Tables exist but tracker is empty — read journal and backfill
+      const journalPath = path.join(migrationsFolder, "meta", "_journal.json");
+      if (!fs.existsSync(journalPath)) return;
+
+      const journal = JSON.parse(fs.readFileSync(journalPath, "utf-8"));
+      const entries: Array<{ tag: string; when: number }> = journal.entries || [];
+
+      console.log(
+        `Migration tracker empty but tables exist — backfilling ${entries.length} migration(s)`,
+      );
+
+      const insert = this.sqlite.prepare(
+        `INSERT INTO "__drizzle_migrations" (hash, created_at) VALUES (?, ?)`,
+      );
+
+      const backfill = this.sqlite.transaction(() => {
+        for (const entry of entries) {
+          const sqlPath = path.join(migrationsFolder, `${entry.tag}.sql`);
+          if (!fs.existsSync(sqlPath)) continue;
+
+          // Check if the tables from this migration already exist
+          // by trying to see if the first CREATE TABLE target exists
+          const sql = fs.readFileSync(sqlPath, "utf-8");
+          const tableMatch = sql.match(/CREATE TABLE\s+`?(\w+)`?/i);
+
+          if (tableMatch) {
+            const tableName = tableMatch[1];
+            const exists = this.sqlite!
+              .prepare(
+                `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
+              )
+              .get(tableName);
+
+            if (!exists) {
+              // This migration's tables don't exist yet — stop backfilling,
+              // let migrate() apply this and subsequent migrations normally
+              break;
+            }
+          }
+
+          const hash = crypto
+            .createHash("sha256")
+            .update(sql)
+            .digest("hex");
+          insert.run(hash, entry.when);
+        }
+      });
+
+      backfill();
+      console.log("Migration tracker backfill complete");
+    } catch (err) {
+      console.warn("Migration tracker backfill failed (non-fatal):", err);
+      // Non-fatal — migrate() will try anyway
     }
   }
 
@@ -486,8 +594,8 @@ class DatabaseClient {
 }
 
 // Export singleton instance getter
-export const getDb = () => DatabaseClient.getInstance().getDb();
-export const getSqlite = () => DatabaseClient.getInstance().getSqlite();
+export const getDb = (): DatabaseInstance => DatabaseClient.getInstance().getDb();
+export const getSqlite = (): SQLiteInstance => DatabaseClient.getInstance().getSqlite();
 export const initializeDatabase = (config?: Partial<DatabaseConfig>) =>
   DatabaseClient.getInstance().initialize(config);
 export const closeDatabase = () => DatabaseClient.getInstance().close();

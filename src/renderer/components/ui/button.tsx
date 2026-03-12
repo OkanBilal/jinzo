@@ -50,7 +50,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "cursor-pointer bg-primary-200/60 dark:bg-primary-800/20 hover:bg-primary-200 dark:hover:bg-primary-800/10 text-primary-700 dark:text-primary-200",
+    "cursor-pointer bg-primary-200/60 dark:bg-primary-800/20 hover:bg-primary-200 dark:hover:bg-primary-800/40 text-primary-700 dark:text-primary-200",
   secondary:
     "cursor-pointer bg-primary-950/80 dark:bg-primary-200/20 hover:bg-primary-950/90 dark:hover:bg-primary-600 text-primary-50 dark:text-primary-200",
   submit:

@@ -4,10 +4,10 @@
     "composite": true,
     "lib": ["ES2020"],
     "jsx": "preserve",
-    "outDir": ".vite/build",
     "types": ["node"]
   },
   "include": [
-    "src/preload/**/*"
+    "drizzle.config.ts",
+    "drizzle.config.runtime.ts"
   ]
 }
