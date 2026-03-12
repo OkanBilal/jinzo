@@ -17,6 +17,7 @@ import { toast } from "@/components/ui";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
 import { CredentialStep } from "../shared/credential-step";
+import { AutoSyncSection } from "../shared/auto-sync-section";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -336,6 +337,7 @@ function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
       resourceLabelPlural="projects"
       addButtonLabel="Add Project"
       revokeButtonLabel="Revoke Asana Access"
+      extraContent={<AutoSyncSection provider="asana" providerLabel="Asana" />}
       renderResourceItem={(resource) => (
         <div className="flex-1">
           <div className="flex items-center gap-2">

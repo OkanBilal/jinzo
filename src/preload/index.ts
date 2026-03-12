@@ -41,6 +41,17 @@ const api = {
       ipcRenderer.invoke("issues:update", entityId, payload),
     delete: (entityId: string) => ipcRenderer.invoke("issues:delete", entityId),
   },
+  // Signal operations (error reports, crashes, alerts, feedback)
+  signals: {
+    getAll: (options?: { source?: string; level?: string; category?: string; state?: string; projectId?: string; limit?: number }) =>
+      ipcRenderer.invoke("signals:getAll", options),
+    getById: (entityId: string) =>
+      ipcRenderer.invoke("signals:getById", entityId),
+    create: (payload: unknown) => ipcRenderer.invoke("signals:create", payload),
+    update: (entityId: string, payload: unknown) =>
+      ipcRenderer.invoke("signals:update", entityId, payload),
+    delete: (entityId: string) => ipcRenderer.invoke("signals:delete", entityId),
+  },
   // Account operations
   account: {
     get: () => ipcRenderer.invoke("account:get"),
@@ -82,6 +93,8 @@ const api = {
       ipcRenderer.invoke("connections:getGitlabProjects", connectionId),
     getTrelloBoards: (connectionId: string) =>
       ipcRenderer.invoke("connections:getTrelloBoards", connectionId),
+    getSentryProjects: (connectionId: string) =>
+      ipcRenderer.invoke("connections:getSentryProjects", connectionId),
     saveResources: (payload: {
       provider: string;
       connectionId: string;
@@ -551,6 +564,21 @@ const api = {
       ipcRenderer.on("updates:status", listener);
       return () => ipcRenderer.removeListener("updates:status", listener);
     },
+  },
+
+  // Automation operations (scheduled jobs)
+  automations: {
+    getAll: () => ipcRenderer.invoke("automations:getAll"),
+    getById: (id: string) => ipcRenderer.invoke("automations:getById", id),
+    create: (accountId: string, input: unknown) =>
+      ipcRenderer.invoke("automations:create", accountId, input),
+    update: (id: string, input: unknown) =>
+      ipcRenderer.invoke("automations:update", id, input),
+    delete: (id: string) => ipcRenderer.invoke("automations:delete", id),
+    execute: (id: string) => ipcRenderer.invoke("automations:execute", id),
+    getRunHistory: (automationId: string, limit?: number) =>
+      ipcRenderer.invoke("automations:getRunHistory", automationId, limit),
+    getAvailableActions: () => ipcRenderer.invoke("automations:getAvailableActions"),
   },
 };
 

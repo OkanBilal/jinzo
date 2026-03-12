@@ -16,6 +16,7 @@ import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
 import { toast, Button, Text, Input } from "@/components/ui";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
+import { AutoSyncSection } from "../shared/auto-sync-section";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -436,6 +437,7 @@ function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
       resourceLabelPlural="projects"
       addButtonLabel="Add Project"
       revokeButtonLabel="Revoke Jira Access"
+      extraContent={<AutoSyncSection provider="jira" providerLabel="Jira" />}
       renderResourceItem={(resource) => (
         <div className="flex-1">
           <div className="flex items-center gap-2">

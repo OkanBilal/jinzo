@@ -77,6 +77,7 @@ const PROVIDER_SECRET_FIELDS: Record<string, { required: string[]; optional?: st
   gitlab:  { required: ["token"] },
   asana:   { required: ["accessToken"] },
   trello:  { required: ["token", "apiKey"] },
+  sentry:  { required: ["token"] },
 };
 
 /**

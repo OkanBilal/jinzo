@@ -7,6 +7,7 @@ vi.mock("./connections", () => ({
   fetchAsanaFromConnectionResources: vi.fn(),
   fetchGitlabFromConnectionResources: vi.fn(),
   fetchTrelloFromConnectionResources: vi.fn(),
+  fetchSentryFromConnectionResources: vi.fn(),
 }));
 
 import { fetchAllEntities, FETCH_LIMITS } from "./sync.fetchers";
@@ -17,6 +18,7 @@ import {
   fetchAsanaFromConnectionResources,
   fetchGitlabFromConnectionResources,
   fetchTrelloFromConnectionResources,
+  fetchSentryFromConnectionResources,
 } from "./connections";
 import type { EntityInput } from "./sync.dto";
 
@@ -40,6 +42,7 @@ describe("sync.fetchers", () => {
     vi.mocked(fetchAsanaFromConnectionResources).mockResolvedValue([]);
     vi.mocked(fetchGitlabFromConnectionResources).mockResolvedValue([]);
     vi.mocked(fetchTrelloFromConnectionResources).mockResolvedValue([]);
+    vi.mocked(fetchSentryFromConnectionResources).mockResolvedValue([]);
   });
 
   describe("FETCH_LIMITS", () => {
@@ -52,11 +55,12 @@ describe("sync.fetchers", () => {
       expect(FETCH_LIMITS.JIRA_ISSUES).toBe(50);
       expect(FETCH_LIMITS.ASANA_TASKS).toBe(50);
       expect(FETCH_LIMITS.TRELLO_CARDS).toBe(50);
+      expect(FETCH_LIMITS.SENTRY_ISSUES).toBe(50);
     });
   });
 
   describe("fetchAllEntities", () => {
-    it("calls all 6 fetchers when no provider specified", async () => {
+    it("calls all 7 fetchers when no provider specified", async () => {
       const result = await fetchAllEntities();
       expect(result).toEqual([]);
       expect(fetchGitHubFromConnectionResources).toHaveBeenCalledOnce();
@@ -65,6 +69,7 @@ describe("sync.fetchers", () => {
       expect(fetchJiraFromConnectionResources).toHaveBeenCalledOnce();
       expect(fetchAsanaFromConnectionResources).toHaveBeenCalledOnce();
       expect(fetchTrelloFromConnectionResources).toHaveBeenCalledOnce();
+      expect(fetchSentryFromConnectionResources).toHaveBeenCalledOnce();
     });
 
     it("passes correct limits to github fetcher", async () => {
@@ -105,6 +110,12 @@ describe("sync.fetchers", () => {
       expect(fetchAsanaFromConnectionResources).not.toHaveBeenCalled();
       expect(fetchGitlabFromConnectionResources).not.toHaveBeenCalled();
       expect(fetchTrelloFromConnectionResources).not.toHaveBeenCalled();
+      expect(fetchSentryFromConnectionResources).not.toHaveBeenCalled();
+    });
+
+    it("passes correct limit to sentry fetcher", async () => {
+      await fetchAllEntities("sentry");
+      expect(fetchSentryFromConnectionResources).toHaveBeenCalledWith(50);
     });
 
     it("falls back to all fetchers for unknown provider", async () => {

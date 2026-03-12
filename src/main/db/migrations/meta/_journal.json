@@ -29,6 +29,20 @@
       "when": 1773227381076,
       "tag": "0003_fair_mister_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1773255445584,
+      "tag": "0004_strong_mandrill",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1773256844397,
+      "tag": "0005_past_moondragon",
+      "breakpoints": true
     }
   ]
 }

@@ -92,6 +92,11 @@ import {
   unregisterUpdatesIpc,
   updatesService,
 } from "./modules/updates";
+import {
+  registerAutomationsIpc,
+  unregisterAutomationsIpc,
+  automationsService,
+} from "./modules/automations";
 
 // ─────────────────────────────────────────────────────────────
 // Installed app detection (macOS)
@@ -318,6 +323,8 @@ async function initializeApp() {
     registerStatsIpc();
     registerUpdatesIpc();
     updatesService.initialize();
+    registerAutomationsIpc();
+    automationsService.start();
 
     // Shell utilities
     ipcMain.handle("shell:openExternal", async (_, url: string) => {
@@ -527,6 +534,8 @@ async function cleanupApp() {
     unregisterFeedbackIpc();
     unregisterStatsIpc();
     unregisterUpdatesIpc();
+    automationsService.stop();
+    unregisterAutomationsIpc();
     ipcMain.removeHandler("shell:openExternal");
     ipcMain.removeHandler("shell:openPath");
     ipcMain.removeHandler("shell:openInApp");

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 type AppItem = {
   id: string;
   displayName: string | null;
@@ -19,6 +19,7 @@ import GitLabModal from "../../components/apps/gitlab/gitlab-modal";
 import JiraModal from "../../components/apps/jira/jira-modal";
 import LinearModal from "../../components/apps/linear/linear-modal";
 import TrelloModal from "../../components/apps/trello/trello-modal";
+import SentryModal from "../../components/apps/sentry/sentry-modal";
 import { External } from "@/components/ui/icons";
 import { useRunEntitySyncMutation } from "@/lib/redux/api/syncApi";
 
@@ -27,6 +28,11 @@ interface AppsSettingsProps {
   connectedApps: string[];
   onRefresh?: () => void;
 }
+
+const CATEGORY_LABELS: Record<string, string> = {
+  "developer-tools": "Developer Tools",
+  "observability": "Monitoring", //TODO: CHANGE THIS TO SOMETHING BETTER
+};
 
 export default function AppsSettings({
   apps,
@@ -65,6 +71,17 @@ export default function AppsSettings({
 
   const connectedAppsList = apps.filter((app) => isConnected(app.id));
   const notConnectedAppsList = apps.filter((app) => !isConnected(app.id));
+
+  // Group not-connected apps by category
+  const notConnectedByCategory = useMemo(() => {
+    const grouped: Record<string, AppItem[]> = {};
+    for (const app of notConnectedAppsList) {
+      const cat = app.category || "developer-tools";
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(app);
+    }
+    return grouped;
+  }, [notConnectedAppsList]);
 
   const renderAppItem = (app: AppItem) => {
     const connected = isConnected(app.id);
@@ -121,11 +138,6 @@ export default function AppsSettings({
       </div>
       {apps.length > 0 && (
         <div className="">
-          {/* <Text variant="muted" className="mb-4">
-            Access information from your connected tools to give you more useful
-            answers.
-          </Text> */}
-
           {connectedAppsList.length > 0 && (
             <div className="mb-6 mt-2">
               <Text variant="labelSmall" className="mb-2">
@@ -139,16 +151,16 @@ export default function AppsSettings({
 
           <div className="border-b border-primary-200 dark:border-primary-800/50 mb-8" />
 
-          {notConnectedAppsList.length > 0 && (
-            <div>
-              <Text variant="labelSmall" className="mb-2 ">
-                Avaılable
+          {Object.entries(notConnectedByCategory).map(([category, categoryApps]) => (
+            <div key={category} className="mb-6">
+              <Text variant="labelSmall" className="mb-2 capitalize!">
+                {CATEGORY_LABELS[category] || category}
               </Text>
               <div className="" role="list">
-                {notConnectedAppsList.map(renderAppItem)}
+                {categoryApps.map(renderAppItem)}
               </div>
             </div>
-          )}
+          ))}
         </div>
       )}
 
@@ -191,6 +203,13 @@ export default function AppsSettings({
         open={activeModal === "trello"}
         onClose={() => setActiveModal(null)}
         isConnected={isConnected("trello")}
+        onSuccess={handleConnectionSuccess}
+      />
+
+      <SentryModal
+        open={activeModal === "sentry"}
+        onClose={() => setActiveModal(null)}
+        isConnected={isConnected("sentry")}
         onSuccess={handleConnectionSuccess}
       />
 

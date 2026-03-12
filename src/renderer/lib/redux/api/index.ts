@@ -30,6 +30,9 @@ export {
   useLazyGetSelectedAsanaProjectsQuery,
   useLazyGetSelectedGitLabProjectsQuery,
   useLazyGetSelectedTrelloBoardsQuery,
+  useLazyGetSentryProjectsQuery,
+  useGetSelectedSentryProjectsQuery,
+  useLazyGetSelectedSentryProjectsQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
   useRevokeConnectionMutation,
@@ -48,6 +51,8 @@ export type {
   SelectedAsanaProject,
   SelectedGitLabProject,
   SelectedTrelloBoard,
+  SentryProject,
+  SelectedSentryProject,
   SaveCredentialsPayload,
   SaveResourcesPayload,
 } from "./connectionsApi";
@@ -377,3 +382,17 @@ export type {
   CodeActivityStats,
   ProviderFilter,
 } from "./statsApi";
+
+export {
+  automationsApi,
+  useGetAutomationsQuery,
+  useLazyGetAutomationsQuery,
+  useCreateAutomationMutation,
+  useUpdateAutomationMutation,
+  useDeleteAutomationMutation,
+} from "./automationsApi";
+export type {
+  Automation,
+  CreateAutomationInput,
+  UpdateAutomationInput,
+} from "./automationsApi";

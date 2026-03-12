@@ -65,6 +65,56 @@ export interface UpdateIssuePayload {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Signal DTOs
+// ─────────────────────────────────────────────────────────────
+export interface CreateSignalPayload {
+  entity: CreateEntityPayload;
+  source: string;
+  level?: "fatal" | "critical" | "error" | "warning" | "info";
+  category?: "crash" | "bug" | "alert" | "feedback" | "exception" | "other";
+  state?: "open" | "resolved" | "ignored" | "regressed";
+  eventCount?: number;
+  affectedUsers?: number;
+  firstSeenAt?: Date;
+  lastSeenAt?: Date;
+  stackTrace?: string;
+  file?: string;
+  function?: string;
+  line?: number;
+  assignee?: string;
+  labels?: string[];
+  priority?: number;
+  projectId?: string;
+}
+
+export interface UpdateSignalPayload {
+  level?: "fatal" | "critical" | "error" | "warning" | "info";
+  category?: "crash" | "bug" | "alert" | "feedback" | "exception" | "other";
+  state?: "open" | "resolved" | "ignored" | "regressed";
+  eventCount?: number;
+  affectedUsers?: number;
+  lastSeenAt?: Date;
+  stackTrace?: string;
+  file?: string;
+  function?: string;
+  line?: number;
+  assignee?: string;
+  labels?: string[];
+  priority?: number;
+  projectId?: string;
+  resolvedAt?: Date | null;
+}
+
+export interface SignalQueryOptions {
+  source?: string;
+  level?: string;
+  category?: string;
+  state?: string;
+  projectId?: string;
+  limit?: number;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Query Options
 // ─────────────────────────────────────────────────────────────
 export interface EntityQueryOptions {

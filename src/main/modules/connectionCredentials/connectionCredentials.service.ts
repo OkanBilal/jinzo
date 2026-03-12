@@ -18,6 +18,7 @@ import type {
 const PROVIDER_METADATA_FIELDS: Record<string, string[]> = {
   jira: ["domain", "email"],
   gitlab: ["domain"],
+  sentry: ["organization"],
 };
 
 const PROVIDER_METADATA_DEFAULTS: Record<string, Record<string, string>> = {

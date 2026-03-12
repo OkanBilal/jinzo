@@ -7,9 +7,12 @@ import type {
   UpdateTaskPayload,
   CreateIssuePayload,
   UpdateIssuePayload,
+  CreateSignalPayload,
+  UpdateSignalPayload,
   EntityQueryOptions,
   TaskQueryOptions,
   IssueQueryOptions,
+  SignalQueryOptions,
   SearchOptions,
   ServiceResponse,
 } from "./entities.dto";
@@ -186,6 +189,60 @@ export const entitiesService = {
       return { success: true };
     } catch (error) {
       console.error("Error deleting issue:", error);
+      return { success: false, error: (error as Error).message };
+    }
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // Signal Operations
+  // ─────────────────────────────────────────────────────────────
+  async getAllSignals(options: SignalQueryOptions = {}): Promise<ServiceResponse<unknown[]>> {
+    try {
+      const items = await entitiesRepo.findAllSignals(options);
+      return { success: true, data: items };
+    } catch (error) {
+      console.error("Error fetching signals:", error);
+      return { success: false, error: (error as Error).message };
+    }
+  },
+
+  async getSignalById(entityId: string): Promise<ServiceResponse<unknown>> {
+    try {
+      const item = await entitiesRepo.findSignalById(entityId);
+      return { success: true, data: item };
+    } catch (error) {
+      console.error("Error fetching signal:", error);
+      return { success: false, error: (error as Error).message };
+    }
+  },
+
+  async createSignal(payload: CreateSignalPayload): Promise<ServiceResponse<unknown>> {
+    try {
+      const entityId = nanoid();
+      const created = await entitiesRepo.insertSignal(entityId, payload);
+      return { success: true, data: created };
+    } catch (error) {
+      console.error("Error creating signal:", error);
+      return { success: false, error: (error as Error).message };
+    }
+  },
+
+  async updateSignal(entityId: string, payload: UpdateSignalPayload): Promise<ServiceResponse<unknown>> {
+    try {
+      const updated = await entitiesRepo.updateSignal(entityId, payload);
+      return { success: true, data: updated };
+    } catch (error) {
+      console.error("Error updating signal:", error);
+      return { success: false, error: (error as Error).message };
+    }
+  },
+
+  async deleteSignal(entityId: string): Promise<ServiceResponse<void>> {
+    try {
+      await entitiesRepo.softDelete(entityId);
+      return { success: true };
+    } catch (error) {
+      console.error("Error deleting signal:", error);
       return { success: false, error: (error as Error).message };
     }
   },

@@ -135,10 +135,10 @@ describe("smoke", () => {
       }
     });
 
-    it("seeds six connections (all revoked)", async () => {
+    it("seeds seven connections (all revoked)", async () => {
       // Query connections table directly since connectionsService needs more setup
       const rows = db.query.connections.findMany().sync?.() ?? [];
-      expect(rows.length).toBe(6);
+      expect(rows.length).toBe(7);
 
       const providers = rows.map((r: { provider: string }) => r.provider);
       expect(providers).toContain("github");
@@ -147,6 +147,7 @@ describe("smoke", () => {
       expect(providers).toContain("jira");
       expect(providers).toContain("asana");
       expect(providers).toContain("trello");
+      expect(providers).toContain("sentry");
 
       for (const row of rows) {
         expect((row as { status: string }).status).toBe("revoked");

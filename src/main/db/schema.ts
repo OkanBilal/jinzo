@@ -988,3 +988,160 @@ export const issues = sqliteTable(
   ],
 );
 
+/* -----------------------------
+   SIGNALS (error reports, crashes, alerts, feedback)
+------------------------------ */
+
+export const signals = sqliteTable(
+  "signals",
+  {
+    entityId: text("entity_id")
+      .primaryKey()
+      .references(() => entities.id, { onDelete: "cascade" }),
+
+    source: text("source").notNull(), // sentry|crashlytics|slack|manual|datadog|logr ocket|...
+    level: text("level", {
+      enum: ["fatal", "critical", "error", "warning", "info"],
+    })
+      .notNull()
+      .default("error"),
+    category: text("category", {
+      enum: ["crash", "bug", "alert", "feedback", "exception", "other"],
+    })
+      .notNull()
+      .default("bug"),
+
+    state: text("state", {
+      enum: ["open", "resolved", "ignored", "regressed"],
+    })
+      .notNull()
+      .default("open"),
+
+    // Sentry/Crashlytics specific but universally useful
+    eventCount: integer("event_count").notNull().default(1),
+    affectedUsers: integer("affected_users"),
+    firstSeenAt: integer("first_seen_at", { mode: "timestamp" }),
+    lastSeenAt: integer("last_seen_at", { mode: "timestamp" }),
+
+    // Code context
+    stackTrace: text("stack_trace"),
+    file: text("file"),         // source file path
+    function: text("function"), // function/method name
+    line: integer("line"),
+
+    assignee: text("assignee"),
+    labels: text("labels"),     // JSON array
+    priority: integer("priority").notNull().default(0),
+
+    // Link to project (optional — for filtering signals by project)
+    projectId: text("project_id").references(() => projects.id, {
+      onDelete: "set null",
+    }),
+
+    resolvedAt: integer("resolved_at", { mode: "timestamp" }),
+  },
+  (t) => [
+    index("idx_signals_source").on(t.source),
+    index("idx_signals_level").on(t.level),
+    index("idx_signals_category").on(t.category),
+    index("idx_signals_state").on(t.state),
+    index("idx_signals_project").on(t.projectId),
+    index("idx_signals_last_seen").on(t.lastSeenAt),
+    check(
+      "check_signals_labels_json",
+      sql`json_valid(${t.labels}) OR ${t.labels} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
+   AUTOMATIONS (scheduled jobs)
+------------------------------ */
+
+export const automations = sqliteTable(
+  "automations",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+
+    name: text("name").notNull(),
+    kind: text("kind", {
+      enum: ["sync", "report", "cleanup", "custom"],
+    }).notNull(),
+
+    // What to run: "sync:github", "sync:all", "report:daily", etc.
+    action: text("action").notNull(),
+
+    // Simple interval in minutes (no cron complexity for a desktop app)
+    intervalMinutes: integer("interval_minutes").notNull(),
+
+    isActive: integer("is_active", { mode: "boolean" })
+      .notNull()
+      .default(true),
+
+    // Optional: filter/config for the action
+    config: text("config"), // JSON
+
+    // Tracking
+    lastRunAt: integer("last_run_at", { mode: "timestamp" }),
+    nextRunAt: integer("next_run_at", { mode: "timestamp" }),
+    lastError: text("last_error"),
+    consecutiveErrors: integer("consecutive_errors").notNull().default(0),
+
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_automations_account").on(t.accountId),
+    index("idx_automations_kind").on(t.kind),
+    index("idx_automations_active").on(t.isActive),
+    index("idx_automations_next_run").on(t.nextRunAt),
+    check(
+      "check_automations_config_json",
+      sql`json_valid(${t.config}) OR ${t.config} IS NULL`,
+    ),
+  ],
+);
+
+/* -----------------------------
+   AUTOMATION RUNS (execution log)
+------------------------------ */
+
+export const automationRuns = sqliteTable(
+  "automation_runs",
+  {
+    id: text("id").primaryKey(),
+    automationId: text("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+
+    status: text("status", {
+      enum: ["running", "success", "error"],
+    }).notNull(),
+
+    result: text("result"), // JSON — action-specific output (SyncJobResult, etc.)
+    error: text("error"),
+
+    startedAt: integer("started_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    completedAt: integer("completed_at", { mode: "timestamp" }),
+    durationMs: integer("duration_ms"),
+  },
+  (t) => [
+    index("idx_automation_runs_automation").on(t.automationId),
+    index("idx_automation_runs_status").on(t.status),
+    index("idx_automation_runs_started").on(t.startedAt),
+    check(
+      "check_automation_runs_result_json",
+      sql`json_valid(${t.result}) OR ${t.result} IS NULL`,
+    ),
+  ],
+);
+

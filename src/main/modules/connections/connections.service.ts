@@ -13,6 +13,7 @@ import type {
   AsanaProject,
   GitlabProject,
   TrelloBoard,
+  SentryProject,
   SaveResourcesPayload,
   ServiceResponse,
 } from "./connections.dto";
@@ -121,6 +122,12 @@ const RESOURCE_MAPPERS: Record<string, ResourceMapper> = {
     url: board.shortUrl,
     metadata: { id: board.id, name: board.name, shortLink: board.shortLink, desc: board.desc, closed: board.closed, organizationName: board.organizationName },
   }),
+  sentry: (project: SentryProject) => ({
+    externalId: project.slug,
+    kind: "sentry_project",
+    name: project.name,
+    metadata: { id: project.id, slug: project.slug, name: project.name, platform: project.platform, dateCreated: project.dateCreated, status: project.status, organization: project.organization },
+  }),
 };
 
 const SELECTED_RESOURCE_CONFIGS: Record<string, {
@@ -157,6 +164,11 @@ const SELECTED_RESOURCE_CONFIGS: Record<string, {
     kind: "trello_board",
     responseKey: "boards",
     formatItem: (r) => ({ id: r.id, boardId: r.externalId, name: r.name || r.externalId, metadata: parseResourceMetadata(r.metadata) }),
+  },
+  sentry: {
+    kind: "sentry_project",
+    responseKey: "projects",
+    formatItem: (r) => ({ id: r.id, slug: r.externalId, name: r.name || r.externalId, metadata: parseResourceMetadata(r.metadata) }),
   },
 };
 
@@ -262,7 +274,7 @@ export const connectionsService = {
         return { success: false, error: `Jira API error: ${response.status}` };
       }
 
-      const data = await response.json();
+      const data: any = await response.json();
       const cleanDomain = domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
       const formattedProjects: JiraProject[] = (data.values || []).map(
         (project: Record<string, unknown>) => ({
@@ -302,7 +314,7 @@ export const connectionsService = {
         return { success: false, error: `Asana API error: ${workspacesResponse.status}` };
       }
 
-      const workspacesData = await workspacesResponse.json();
+      const workspacesData: any = await workspacesResponse.json();
       const workspaces = workspacesData.data || [];
 
       if (workspaces.length === 0) return { success: true, data: { projects: [] } };
@@ -321,7 +333,7 @@ export const connectionsService = {
           continue;
         }
 
-        const data = await response.json();
+        const data: any = await response.json();
         const projects = (data.data || [])
           .filter((project: Record<string, unknown>) => !project.archived)
           .map((project: Record<string, unknown>) => {
@@ -375,7 +387,7 @@ export const connectionsService = {
         return { success: false, error: `GitLab API error: ${response.status}` };
       }
 
-      const data = await response.json();
+      const data: any = await response.json();
       const formattedProjects: GitlabProject[] = (data || []).map(
         (project: Record<string, unknown>) => ({
           id: project.id as number,
@@ -425,7 +437,7 @@ export const connectionsService = {
         return { success: false, error: `Trello API error: ${response.status}` };
       }
 
-      const data = await response.json();
+      const data: any = await response.json();
       const formattedBoards: TrelloBoard[] = (data || [])
         .filter((board: Record<string, unknown>) => !board.closed)
         .map((board: Record<string, unknown>) => ({
@@ -443,6 +455,52 @@ export const connectionsService = {
     } catch (error: any) {
       console.error("Error fetching Trello boards:", error);
       return { success: false, error: error?.message || "Failed to fetch boards" };
+    }
+  },
+
+  // Sentry
+  async getSentryProjects(connectionId: string): Promise<ServiceResponse<{ projects: SentryProject[] }>> {
+    try {
+      if (!connectionId) return { success: false, error: "connectionId is required" };
+
+      const result = await getConnectionAndSecrets(connectionId);
+      if (!result.ok) return { success: false, error: result.error };
+
+      const metadata = result.connection.metadata ? JSON.parse(result.connection.metadata) : {};
+      const organization = metadata.organization as string;
+
+      if (!organization) {
+        return { success: false, error: "Sentry organization slug is required" };
+      }
+
+      const response = await fetch(
+        `https://sentry.io/api/0/organizations/${encodeURIComponent(organization)}/projects/?per_page=100`,
+        { headers: { Authorization: `Bearer ${result.secrets.token}`, Accept: "application/json" } }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Sentry API error (${response.status}):`, errorText);
+        return { success: false, error: `Sentry API error: ${response.status}` };
+      }
+
+      const data: any = await response.json();
+      const formattedProjects: SentryProject[] = (data || []).map(
+        (project: Record<string, unknown>) => ({
+          id: String(project.id),
+          slug: project.slug as string,
+          name: project.name as string,
+          platform: (project.platform as string) || null,
+          dateCreated: (project.dateCreated as string) || "",
+          status: (project.status as string) || "active",
+          organization,
+        })
+      );
+
+      return { success: true, data: { projects: formattedProjects } };
+    } catch (error: any) {
+      console.error("Error fetching Sentry projects:", error);
+      return { success: false, error: error?.message || "Failed to fetch Sentry projects" };
     }
   },
 

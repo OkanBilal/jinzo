@@ -16,6 +16,7 @@ import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
 import { toast, Button, Text, Input } from "@/components/ui";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
+import { AutoSyncSection } from "../shared/auto-sync-section";
 import LockIcon from "@/components/ui/icons/lock";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -401,6 +402,7 @@ function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
       resourceLabelPlural="projects"
       addButtonLabel="Add Project"
       revokeButtonLabel="Revoke GitLab Access"
+      extraContent={<AutoSyncSection provider="gitlab" providerLabel="GitLab" />}
       renderResourceItem={(resource) => {
         const visibility = resource.metadata ? (typeof resource.metadata === 'string' ? JSON.parse(resource.metadata) : resource.metadata)?.visibility : null;
         return (

@@ -7,9 +7,12 @@ import type {
   UpdateTaskPayload,
   CreateIssuePayload,
   UpdateIssuePayload,
+  CreateSignalPayload,
+  UpdateSignalPayload,
   EntityQueryOptions,
   TaskQueryOptions,
   IssueQueryOptions,
+  SignalQueryOptions,
   SearchOptions,
 } from "./entities.dto";
 
@@ -36,6 +39,12 @@ const IPC_CHANNELS = {
   ISSUES_CREATE: "issues:create",
   ISSUES_UPDATE: "issues:update",
   ISSUES_DELETE: "issues:delete",
+  // Signal channels
+  SIGNALS_GET_ALL: "signals:getAll",
+  SIGNALS_GET_BY_ID: "signals:getById",
+  SIGNALS_CREATE: "signals:create",
+  SIGNALS_UPDATE: "signals:update",
+  SIGNALS_DELETE: "signals:delete",
 } as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -154,6 +163,42 @@ export function registerEntitiesHandlers(): void {
     IPC_CHANNELS.ISSUES_DELETE,
     async (_event, entityId: string) => {
       return entitiesController.deleteIssue(entityId);
+    }
+  );
+
+  // Signal handlers
+  ipcMain.handle(
+    IPC_CHANNELS.SIGNALS_GET_ALL,
+    async (_event, options: SignalQueryOptions = {}) => {
+      return entitiesController.getAllSignals(options);
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.SIGNALS_GET_BY_ID,
+    async (_event, entityId: string) => {
+      return entitiesController.getSignalById(entityId);
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.SIGNALS_CREATE,
+    async (_event, payload: CreateSignalPayload) => {
+      return entitiesController.createSignal(payload);
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.SIGNALS_UPDATE,
+    async (_event, entityId: string, payload: UpdateSignalPayload) => {
+      return entitiesController.updateSignal(entityId, payload);
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.SIGNALS_DELETE,
+    async (_event, entityId: string) => {
+      return entitiesController.deleteSignal(entityId);
     }
   );
 

@@ -18,6 +18,7 @@ import { toast } from "@/components/ui";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
 import { CredentialStep } from "../shared/credential-step";
+import { AutoSyncSection } from "../shared/auto-sync-section";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -344,6 +345,7 @@ function ManageReposStep({ onRevoke }: { onRevoke: () => void }) {
           </div>
         </div>
       )}
+      extraContent={<AutoSyncSection provider="github" providerLabel="GitHub" />}
     />
   );
 }

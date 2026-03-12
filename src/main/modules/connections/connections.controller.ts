@@ -29,6 +29,10 @@ export const connectionsController = {
     return connectionsService.getTrelloBoards(connectionId);
   },
 
+  async getSentryProjects(connectionId: string) {
+    return connectionsService.getSentryProjects(connectionId);
+  },
+
   async saveResources(payload: SaveResourcesPayload) {
     return connectionsService.saveResources(payload);
   },

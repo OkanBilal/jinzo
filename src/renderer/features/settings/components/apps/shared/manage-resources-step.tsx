@@ -18,6 +18,7 @@ interface ManageResourcesStepProps {
   addButtonLabel?: string;
   revokeButtonLabel?: string;
   renderResourceItem?: (resource: Resource) => React.ReactNode;
+  extraContent?: React.ReactNode;
 }
 
 export function ManageResourcesStep({
@@ -32,6 +33,7 @@ export function ManageResourcesStep({
   addButtonLabel = "Add Resources",
   revokeButtonLabel = "Revoke Access",
   renderResourceItem,
+  extraContent,
 }: ManageResourcesStepProps) {
   const count = resources.length;
   const label = count === 1 ? resourceLabel : resourceLabelPlural;
@@ -52,7 +54,7 @@ export function ManageResourcesStep({
         </Button>
       </div>
 
-      <div className="min-h-12 max-h-52  overflow-y-auto border border-primary-200 dark:border-primary-800 rounded-xl">
+      <div className="min-h-12 max-h-52  overflow-y-auto border border-primary-200/50 dark:border-primary-800/40 rounded-xl">
         {count === 0 ? (
           <div className="p-8 text-center ">
             <Body>No {resourceLabelPlural} connected yet.</Body>
@@ -62,7 +64,7 @@ export function ManageResourcesStep({
           resources.map((resource) => (
             <div
               key={resource.id}
-              className="flex items-center justify-between px-4 py-3 border-b border-primary-200 dark:border-primary-800 last:border-b-0"
+              className="flex items-center bg-primary dark:bg-primary-950/60 justify-between px-4 py-3 border-b border-primary-200/50 dark:border-primary-800/40 last:border-b-0"
             >
               {renderResourceItem ? (
                 renderResourceItem(resource)
@@ -75,10 +77,10 @@ export function ManageResourcesStep({
                 </div>
               )}
               <Button
-                variant="warning"
+                variant="secondary"
                 onClick={() => onRemove(resource.id)}
                 disabled={loading}
-                size="sm"
+                size="xs"
               >
                 Remove
               </Button>
@@ -86,6 +88,8 @@ export function ManageResourcesStep({
           ))
         )}
       </div>
+
+      {extraContent}
 
       {error && <ErrorText>{error}</ErrorText>}
 

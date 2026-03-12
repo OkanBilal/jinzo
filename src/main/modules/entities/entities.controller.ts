@@ -6,9 +6,12 @@ import type {
   UpdateTaskPayload,
   CreateIssuePayload,
   UpdateIssuePayload,
+  CreateSignalPayload,
+  UpdateSignalPayload,
   EntityQueryOptions,
   TaskQueryOptions,
   IssueQueryOptions,
+  SignalQueryOptions,
   SearchOptions,
 } from "./entities.dto";
 
@@ -81,6 +84,27 @@ export const entitiesController = {
 
   async deleteIssue(entityId: string) {
     return entitiesService.deleteIssue(entityId);
+  },
+
+  // Signal Operations
+  async getAllSignals(options: SignalQueryOptions = {}) {
+    return entitiesService.getAllSignals(options);
+  },
+
+  async getSignalById(entityId: string) {
+    return entitiesService.getSignalById(entityId);
+  },
+
+  async createSignal(payload: CreateSignalPayload) {
+    return entitiesService.createSignal(payload);
+  },
+
+  async updateSignal(entityId: string, payload: UpdateSignalPayload) {
+    return entitiesService.updateSignal(entityId, payload);
+  },
+
+  async deleteSignal(entityId: string) {
+    return entitiesService.deleteSignal(entityId);
   },
 
 };

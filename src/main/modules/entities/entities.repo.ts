@@ -1,6 +1,6 @@
 import { desc, eq, and, like, or, inArray, sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { entities, tasks, issues } from "../../db/schema";
+import { entities, tasks, issues, signals } from "../../db/schema";
 import { serializeLabels, serializeMetadata } from "./entities.utils";
 import type {
   CreateEntityPayload,
@@ -9,9 +9,12 @@ import type {
   UpdateTaskPayload,
   CreateIssuePayload,
   UpdateIssuePayload,
+  CreateSignalPayload,
+  UpdateSignalPayload,
   EntityQueryOptions,
   TaskQueryOptions,
   IssueQueryOptions,
+  SignalQueryOptions,
   SearchOptions,
 } from "./entities.dto";
 
@@ -316,6 +319,130 @@ export const entitiesRepo = {
     }
 
     return this.findIssueById(entityId);
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // Signal Operations
+  // ─────────────────────────────────────────────────────────────
+  async findAllSignals(options: SignalQueryOptions = {}) {
+    const db = getDb();
+    const { source, level, category, state, projectId, limit = 50 } = options;
+
+    const conditions = [eq(entities.isDeleted, false)];
+    if (source) conditions.push(eq(signals.source, source));
+    if (level) conditions.push(eq(signals.level, level as any));
+    if (category) conditions.push(eq(signals.category, category as any));
+    if (state) conditions.push(eq(signals.state, state as any));
+    if (projectId) conditions.push(eq(signals.projectId, projectId));
+
+    return db
+      .select({
+        signal: signals,
+        entity: entities,
+      })
+      .from(signals)
+      .innerJoin(entities, eq(signals.entityId, entities.id))
+      .where(and(...conditions))
+      .orderBy(
+        sql`CASE ${signals.level}
+          WHEN 'fatal' THEN 0
+          WHEN 'critical' THEN 1
+          WHEN 'error' THEN 2
+          WHEN 'warning' THEN 3
+          WHEN 'info' THEN 4
+          ELSE 5 END`,
+        desc(signals.lastSeenAt),
+      )
+      .limit(limit);
+  },
+
+  async findSignalById(entityId: string) {
+    const db = getDb();
+    const items = await db
+      .select({
+        signal: signals,
+        entity: entities,
+      })
+      .from(signals)
+      .innerJoin(entities, eq(signals.entityId, entities.id))
+      .where(eq(signals.entityId, entityId))
+      .limit(1);
+    return items[0] || null;
+  },
+
+  async insertSignal(entityId: string, payload: CreateSignalPayload) {
+    const db = getDb();
+
+    // Create entity first
+    await db.insert(entities).values({
+      id: entityId,
+      accountId: payload.entity.accountId,
+      kind: "signal",
+      connectionId: payload.entity.connectionId,
+      resourceId: payload.entity.resourceId,
+      externalId: payload.entity.externalId,
+      url: payload.entity.url,
+      title: payload.entity.title,
+      body: payload.entity.body,
+      summary: payload.entity.summary,
+      metadata: serializeMetadata(payload.entity.metadata),
+      occurredAt: payload.entity.occurredAt,
+    });
+
+    // Create signal record
+    await db.insert(signals).values({
+      entityId,
+      source: payload.source,
+      level: payload.level || "error",
+      category: payload.category || "bug",
+      state: payload.state || "open",
+      eventCount: payload.eventCount || 1,
+      affectedUsers: payload.affectedUsers,
+      firstSeenAt: payload.firstSeenAt || new Date(),
+      lastSeenAt: payload.lastSeenAt || new Date(),
+      stackTrace: payload.stackTrace,
+      file: payload.file,
+      function: payload.function,
+      line: payload.line,
+      assignee: payload.assignee,
+      labels: serializeLabels(payload.labels),
+      priority: payload.priority || 0,
+      projectId: payload.projectId,
+    });
+
+    return this.findSignalById(entityId);
+  },
+
+  async updateSignal(entityId: string, payload: UpdateSignalPayload) {
+    const db = getDb();
+    const updateData: Record<string, unknown> = {};
+
+    if (payload.level !== undefined) updateData.level = payload.level;
+    if (payload.category !== undefined) updateData.category = payload.category;
+    if (payload.state !== undefined) updateData.state = payload.state;
+    if (payload.eventCount !== undefined) updateData.eventCount = payload.eventCount;
+    if (payload.affectedUsers !== undefined) updateData.affectedUsers = payload.affectedUsers;
+    if (payload.lastSeenAt !== undefined) updateData.lastSeenAt = payload.lastSeenAt;
+    if (payload.stackTrace !== undefined) updateData.stackTrace = payload.stackTrace;
+    if (payload.file !== undefined) updateData.file = payload.file;
+    if (payload.function !== undefined) updateData.function = payload.function;
+    if (payload.line !== undefined) updateData.line = payload.line;
+    if (payload.assignee !== undefined) updateData.assignee = payload.assignee;
+    if (payload.priority !== undefined) updateData.priority = payload.priority;
+    if (payload.projectId !== undefined) updateData.projectId = payload.projectId;
+    if (payload.resolvedAt !== undefined) updateData.resolvedAt = payload.resolvedAt;
+    if (payload.labels !== undefined)
+      updateData.labels = serializeLabels(payload.labels);
+
+    if (Object.keys(updateData).length > 0) {
+      await db.update(signals).set(updateData).where(eq(signals.entityId, entityId));
+      await db
+        .update(entities)
+        .set({ updatedAt: new Date() })
+        .where(eq(entities.id, entityId));
+    }
+
+    return this.findSignalById(entityId);
   },
 
 };

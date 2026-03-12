@@ -17,6 +17,7 @@ import { toast } from "@/components/ui";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
 import { CredentialStep } from "../shared/credential-step";
+import { AutoSyncSection } from "../shared/auto-sync-section";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -355,6 +356,7 @@ function ManageTeamsStep({ onRevoke }: { onRevoke: () => void }) {
       resourceLabelPlural="teams"
       addButtonLabel="Add Team"
       revokeButtonLabel="Revoke Linear Access"
+      extraContent={<AutoSyncSection provider="linear" providerLabel="Linear" />}
       renderResourceItem={(resource) => (
         <div className="flex-1">
           <div className="flex items-center gap-2">

@@ -42,5 +42,12 @@ export const apps = [
     imageAlt: "Trello",
     category: "developer-tools",
   },
+  {
+    id: "sentry",
+    name: "Sentry",
+    imageSrc: "connections/sentry.png",
+    imageAlt: "Sentry",
+    category: "observability",
+  },
 
 ];

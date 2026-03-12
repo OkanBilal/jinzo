@@ -79,6 +79,16 @@ export interface TrelloBoard {
   url?: string;
 }
 
+export interface SentryProject {
+  id: string;
+  slug: string;
+  name: string;
+  platform: string | null;
+  dateCreated: string;
+  status: string;
+  organization: string;
+}
+
 export interface ConnectionResource {
   id: string;
   connectionId: string;

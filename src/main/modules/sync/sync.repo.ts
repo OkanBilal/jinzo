@@ -1,7 +1,7 @@
 import { eq, and, isNull, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { getDb } from "../../db/client";
-import { entities, issues } from "../../db/schema";
+import { entities, issues, signals } from "../../db/schema";
 import type { EntityInput, SyncJobStats } from "./sync.dto";
 
 const DEFAULT_ACCOUNT_ID = "default";
@@ -206,6 +206,10 @@ export const syncRepo = {
         this.upsertIssueSync(entityId, item.metadata as Record<string, unknown>);
       }
 
+      if (item.kind === "signal" && item.metadata && typeof item.metadata === "object") {
+        this.upsertSignalSync(entityId, item.metadata as Record<string, unknown>);
+      }
+
       return { status: existing ? "updated" : "inserted", entityId };
     } catch (err) {
       console.error(`❌ Error upserting entity ${item.url}:`, err);
@@ -251,6 +255,53 @@ export const syncRepo = {
       db.update(issues).set(issueValues).where(eq(issues.entityId, entityId)).run();
     } else {
       db.insert(issues).values({ entityId, ...issueValues }).run();
+    }
+  },
+
+  upsertSignalSync(entityId: string, meta: Record<string, unknown>): void {
+    const db = getDb();
+
+    const parseDate = (val: unknown): Date | null => {
+      if (!val) return null;
+      if (val instanceof Date) return val;
+      if (typeof val === "string") return new Date(val);
+      return null;
+    };
+
+    type SignalLevel = "fatal" | "critical" | "error" | "warning" | "info";
+    type SignalCategory = "crash" | "bug" | "alert" | "feedback" | "exception" | "other";
+    type SignalState = "open" | "resolved" | "ignored" | "regressed";
+
+    const signalValues = {
+      source: (meta.source as string) || "unknown",
+      level: ((meta.level as string) || "error") as SignalLevel,
+      category: ((meta.category as string) || "bug") as SignalCategory,
+      state: ((meta.state as string) || "open") as SignalState,
+      eventCount: typeof meta.eventCount === "number" ? meta.eventCount : 1,
+      affectedUsers: typeof meta.affectedUsers === "number" ? meta.affectedUsers : null,
+      firstSeenAt: parseDate(meta.firstSeenAt),
+      lastSeenAt: parseDate(meta.lastSeenAt) || new Date(),
+      stackTrace: (meta.stackTrace as string) || null,
+      file: (meta.file as string) || null,
+      function: (meta.function as string) || null,
+      line: typeof meta.line === "number" ? meta.line : null,
+      assignee: (meta.assignee as string) || null,
+      labels: Array.isArray(meta.labels) ? JSON.stringify(meta.labels) : null,
+      priority: typeof meta.priority === "number" ? meta.priority : 0,
+      projectId: (meta.projectId as string) || null,
+    };
+
+    const existing = db
+      .select({ entityId: signals.entityId })
+      .from(signals)
+      .where(eq(signals.entityId, entityId))
+      .limit(1)
+      .get();
+
+    if (existing) {
+      db.update(signals).set(signalValues).where(eq(signals.entityId, entityId)).run();
+    } else {
+      db.insert(signals).values({ entityId, ...signalValues }).run();
     }
   },
 

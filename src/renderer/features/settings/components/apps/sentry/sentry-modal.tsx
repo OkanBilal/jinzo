@@ -4,13 +4,13 @@ import { Body, Muted, WizardModal, useWizard, type WizardStep } from "@/componen
 import {
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,
-  useLazyGetTrelloBoardsQuery,
-  useLazyGetSelectedTrelloBoardsQuery,
+  useLazyGetSentryProjectsQuery,
+  useLazyGetSelectedSentryProjectsQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
   useRevokeConnectionMutation,
-  type TrelloBoard,
-  type SelectedTrelloBoard,
+  type SentryProject,
+  type SelectedSentryProject,
 } from "@/lib/redux/api";
 import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
 import { toast } from "@/components/ui";
@@ -23,20 +23,20 @@ import { AutoSyncSection } from "../shared/auto-sync-section";
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface TrelloModalProps {
+interface SentryModalProps {
   open: boolean;
   onClose: () => void;
   isConnected: boolean;
   onSuccess?: () => void;
 }
 
-interface TrelloWizardData {
-  apiKey: string;
+interface SentryWizardData {
   token: string;
+  organization: string;
   connectionId: string;
-  boards: TrelloBoard[];
-  selectedBoards: Set<string>;
-  currentBoards: SelectedTrelloBoard[];
+  projects: SentryProject[];
+  selectedProjects: Set<string>;
+  currentProjects: SelectedSentryProject[];
   isFirstConnection: boolean;
   fromManage: boolean;
 }
@@ -49,51 +49,49 @@ type StepId = "loading" | "setToken" | "add" | "manage";
 
 function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
   const { data, setData, errors, setErrors, goTo } =
-    useWizard<TrelloWizardData>();
+    useWizard<SentryWizardData>();
   const [loading, setLoading] = useState(false);
 
   const [getConnection] = useLazyGetConnectionQuery();
   const [saveCredentials] = useSaveCredentialsMutation();
-  const [getTrelloBoards] = useLazyGetTrelloBoardsQuery();
+  const [getSentryProjects] = useLazyGetSentryProjectsQuery();
 
   const handleSubmit = async () => {
-    if (!data.apiKey?.trim()) {
-      setErrors({ apiKey: "Please enter a valid API Key" });
+    if (!data.token?.trim()) {
+      setErrors({ token: "Please enter a valid auth token" });
       return;
     }
-    if (!data.token?.trim()) {
-      setErrors({ token: "Please enter a valid token" });
+    if (!data.organization?.trim()) {
+      setErrors({ organization: "Please enter your organization slug" });
       return;
     }
 
     setLoading(true);
-    setErrors({ apiKey: "", token: "" });
+    setErrors({ token: "", organization: "" });
 
     try {
       const startTime = Date.now();
-      const connectionResult = await getConnection("trello").unwrap();
+      const connectionResult = await getConnection("sentry").unwrap();
 
       if (!connectionResult.success) {
-        console.error("[Trello] Failed to get connection:", connectionResult);
         throw new Error("Failed to get connection");
       }
 
       const connId = connectionResult.connection.id;
 
       await saveCredentials({
-        provider: "trello",
+        provider: "sentry",
         connectionId: connId,
         token: data.token,
-        apiKey: data.apiKey,
+        organization: data.organization,
       }).unwrap();
 
       onSuccess?.();
 
-      const boardsResult = await getTrelloBoards(connId).unwrap();
+      const projectsResult = await getSentryProjects(connId).unwrap();
 
-      if (!boardsResult.success) {
-        console.error("[Trello] Failed to fetch boards:", boardsResult);
-        throw new Error("Failed to fetch boards");
+      if (!projectsResult.success) {
+        throw new Error("Failed to fetch Sentry projects");
       }
 
       const elapsed = Date.now() - startTime;
@@ -103,14 +101,13 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
 
       setData({
         connectionId: connId,
-        boards: boardsResult.boards,
+        projects: projectsResult.projects,
         isFirstConnection: true,
         fromManage: false,
       });
 
       goTo("add");
     } catch (err: any) {
-      console.error("[Trello] Error in credential submit:", err);
       const errorMessage =
         err?.data?.error || err?.message || "An error occurred";
       setErrors({ token: errorMessage });
@@ -121,102 +118,105 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
 
   return (
     <CredentialStep
-      description="Enter your Trello API Key and Token to connect your boards."
+      description="Enter your Sentry Auth Token and organization slug to connect your projects."
       fields={[
         {
-          id: "trello-api-key",
-          label: "API Key",
-          placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-          value: data.apiKey || "",
-          onChange: (value) => {
-            setData({ apiKey: value });
-            if (errors.apiKey) setErrors({ apiKey: "" });
-          },
-        },
-        {
-          id: "trello-token",
-          label: "Token",
-          placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          id: "sentry-token",
+          label: "Auth Token",
+          placeholder: "sntrys_xxxxxxxxxxxxxxxxxxxx",
           value: data.token || "",
           onChange: (value) => {
             setData({ token: value });
             if (errors.token) setErrors({ token: "" });
           },
         },
+        {
+          id: "sentry-org",
+          label: "Organization Slug",
+          placeholder: "my-org",
+          value: data.organization || "",
+          onChange: (value) => {
+            setData({ organization: value });
+            if (errors.organization) setErrors({ organization: "" });
+          },
+        },
       ]}
       instructions={
         <>
-          <strong>How to get your credentials:</strong>
+          <strong>How to create a token:</strong>
           <br />
-          1. Go to{" "}
+          1. Go to Sentry Settings &rarr;{" "}
           <a
-            href="https://trello.com/power-ups/admin"
+            href="https://sentry.io/settings/auth-tokens/"
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary-600 dark:text-primary-400 underline"
           >
-            Trello Power-Ups Admin
+            Auth Tokens
           </a>
           <br />
-          2. Click &quot;New&quot; to create a Power-Up, then copy your API Key
+          2. Create a new token
           <br />
-          3. Next to your API Key, click the &quot;Token&quot; link to generate a token
+          3. Select scopes: <code>project:read</code>, <code>event:read</code>,{" "}
+          <code>org:read</code>
           <br />
-          4. Authorize the app and copy the token
+          <br />
+          <strong>Organization slug:</strong> found in your Sentry URL:{" "}
+          <code>sentry.io/organizations/[slug]/</code>
         </>
       }
       onSubmit={handleSubmit}
       loading={loading}
-      error={errors.apiKey || errors.token || ""}
+      error={errors.token || errors.organization || ""}
     />
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Step: Select Boards
+// Step: Select Projects
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SelectBoardsStep({ onComplete }: { onComplete: () => void }) {
+function SelectProjectsStep({ onComplete }: { onComplete: () => void }) {
   const { data, setData, errors, setErrors, goTo } =
-    useWizard<TrelloWizardData>();
+    useWizard<SentryWizardData>();
   const [loading, setLoading] = useState(false);
 
   const [saveResources] = useSaveResourcesMutation();
-  const [getSelectedBoards] = useLazyGetSelectedTrelloBoardsQuery();
+  const [getSelectedProjects] = useLazyGetSelectedSentryProjectsQuery();
 
-  const selectedBoards = data.selectedBoards || new Set<string>();
+  const selectedProjects = data.selectedProjects || new Set<string>();
 
-  const toggleBoard = (boardId: string | number) => {
-    const id = String(boardId);
-    const next = new Set(selectedBoards);
-    if (next.has(id)) {
-      next.delete(id);
+  const toggleProject = (slug: string | number) => {
+    const key = String(slug);
+    const next = new Set(selectedProjects);
+    if (next.has(key)) {
+      next.delete(key);
     } else {
-      next.add(id);
+      next.add(key);
     }
-    setData({ selectedBoards: next });
+    setData({ selectedProjects: next });
   };
 
   const handleSave = async () => {
-    if (selectedBoards.size === 0) {
-      setErrors({ boards: "Please select at least one board" });
+    if (selectedProjects.size === 0) {
+      setErrors({ projects: "Please select at least one project" });
       return;
     }
 
     setLoading(true);
-    setErrors({ boards: "" });
+    setErrors({ projects: "" });
 
     try {
       const startTime = Date.now();
 
-      const selectedBoardObjects = data.boards.filter((board) =>
-        selectedBoards.has(board.id)
+      const selectedProjectObjects = data.projects.filter((p) =>
+        selectedProjects.has(p.slug)
       );
 
       await saveResources({
-        provider: "trello",
+        provider: "sentry",
         connectionId: data.connectionId,
-        resources: selectedBoardObjects,
+        resources: selectedProjectObjects,
       }).unwrap();
 
       const elapsed = Date.now() - startTime;
@@ -225,11 +225,11 @@ function SelectBoardsStep({ onComplete }: { onComplete: () => void }) {
       await new Promise((resolve) => setTimeout(resolve, remainingTime));
 
       if (data.fromManage) {
-        const result = await getSelectedBoards("trello").unwrap();
+        const result = await getSelectedProjects("sentry").unwrap();
         if (result.success) {
           setData({
-            currentBoards: result.boards,
-            selectedBoards: new Set(),
+            currentProjects: result.projects,
+            selectedProjects: new Set(),
           });
         }
         goTo("manage");
@@ -237,7 +237,7 @@ function SelectBoardsStep({ onComplete }: { onComplete: () => void }) {
         onComplete();
       }
     } catch (err: any) {
-      setErrors({ boards: err?.data?.error || err.message || "An error occurred" });
+      setErrors({ projects: err?.data?.error || err.message || "An error occurred" });
     } finally {
       setLoading(false);
     }
@@ -255,20 +255,22 @@ function SelectBoardsStep({ onComplete }: { onComplete: () => void }) {
 
   return (
     <SelectResourcesStep
-      resources={data.boards.map((board) => ({ ...board, id: board.id }))}
-      selectedResources={selectedBoards}
-      onToggleResource={toggleBoard}
+      resources={data.projects.map((p) => ({ ...p, id: p.slug }))}
+      selectedResources={selectedProjects}
+      onToggleResource={toggleProject}
       onSave={handleSave}
       onBack={handleBack}
       loading={loading}
-      error={errors.boards || ""}
-      title="Select the boards you want to sync cards from."
-      saveButtonLabel={`Save ${selectedBoards.size} Boards`}
-      renderResourceItem={(board) => (
+      error={errors.projects || ""}
+      title="Select the Sentry projects you want to monitor."
+      saveButtonLabel={`Save ${selectedProjects.size} Projects`}
+      renderResourceItem={(project) => (
         <div className="flex items-center gap-2">
-          <Body>{board.name}</Body>
-          {board.organizationName && (
-            <span className="text-xs text-primary-500">{board.organizationName}</span>
+          <Body>{project.name}</Body>
+          {project.platform && (
+            <span className="text-xs text-primary-500 dark:text-primary-600">
+              {project.platform}
+            </span>
           )}
         </div>
       )}
@@ -277,26 +279,26 @@ function SelectBoardsStep({ onComplete }: { onComplete: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Step: Manage Boards
+// Step: Manage Projects
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ManageBoardsStep({ onRevoke }: { onRevoke: () => void }) {
+function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
   const { data, setData, errors, setErrors, goTo } =
-    useWizard<TrelloWizardData>();
+    useWizard<SentryWizardData>();
   const [loading, setLoading] = useState(false);
 
   const [deleteResource] = useDeleteResourceMutation();
-  const [getTrelloBoards] = useLazyGetTrelloBoardsQuery();
-  const [getSelectedBoards] = useLazyGetSelectedTrelloBoardsQuery();
+  const [getSentryProjects] = useLazyGetSentryProjectsQuery();
+  const [getSelectedProjects] = useLazyGetSelectedSentryProjectsQuery();
 
-  const handleRemove = async (boardId: string) => {
+  const handleRemove = async (projectId: string) => {
     setErrors({ manage: "" });
 
     try {
-      await deleteResource(boardId).unwrap();
-      const result = await getSelectedBoards("trello").unwrap();
+      await deleteResource(projectId).unwrap();
+      const result = await getSelectedProjects("sentry").unwrap();
       if (result.success) {
-        setData({ currentBoards: result.boards });
+        setData({ currentProjects: result.projects });
       }
     } catch (err: any) {
       setErrors({ manage: err?.data?.error || err.message || "An error occurred" });
@@ -308,25 +310,25 @@ function ManageBoardsStep({ onRevoke }: { onRevoke: () => void }) {
     setErrors({ manage: "" });
 
     try {
-      const boardsResult = await getTrelloBoards(data.connectionId).unwrap();
+      const projectsResult = await getSentryProjects(data.connectionId).unwrap();
 
-      if (!boardsResult.success) {
-        throw new Error("Failed to fetch boards");
+      if (!projectsResult.success) {
+        throw new Error("Failed to fetch projects");
       }
 
-      const currentBoardIds = new Set(data.currentBoards.map((b) => b.boardId));
-      const availableBoards = boardsResult.boards.filter(
-        (board: TrelloBoard) => !currentBoardIds.has(board.id)
+      const currentSlugs = new Set(data.currentProjects.map((p) => p.slug));
+      const availableProjects = projectsResult.projects.filter(
+        (p: SentryProject) => !currentSlugs.has(p.slug)
       );
 
-      if (availableBoards.length === 0) {
-        setErrors({ manage: "All boards are already connected" });
+      if (availableProjects.length === 0) {
+        setErrors({ manage: "All projects are already connected" });
         return;
       }
 
       setData({
-        boards: availableBoards,
-        selectedBoards: new Set(),
+        projects: availableProjects,
+        selectedProjects: new Set(),
         fromManage: true,
       });
       goTo("add");
@@ -339,26 +341,25 @@ function ManageBoardsStep({ onRevoke }: { onRevoke: () => void }) {
 
   return (
     <ManageResourcesStep
-      resources={data.currentBoards.map((b) => ({
-        ...b,
-        fullName: b.name,
-      }))}
+      resources={data.currentProjects}
       onAddNew={handleAddNew}
       onRemove={handleRemove}
       onRevoke={onRevoke}
       loading={loading}
       error={errors.manage || ""}
-      resourceLabel="board"
-      resourceLabelPlural="boards"
-      addButtonLabel="Add Board"
-      revokeButtonLabel="Revoke Trello Access"
-      extraContent={<AutoSyncSection provider="trello" providerLabel="Trello" />}
+      resourceLabel="project"
+      resourceLabelPlural="projects"
+      addButtonLabel="Add Project"
+      revokeButtonLabel="Revoke Sentry Access"
+      extraContent={<AutoSyncSection provider="sentry" providerLabel="Sentry" />}
       renderResourceItem={(resource) => (
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <Body>{resource.name}</Body>
-            {resource.metadata?.organizationName && (
-              <span className="text-xs text-primary-500">{resource.metadata.organizationName}</span>
+            {resource.metadata?.platform && (
+              <span className="text-xs text-primary-500 dark:text-primary-600">
+                {resource.metadata.platform}
+              </span>
             )}
           </div>
         </div>
@@ -372,7 +373,7 @@ function ManageBoardsStep({ onRevoke }: { onRevoke: () => void }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
-  const { goTo } = useWizard<TrelloWizardData>();
+  const { goTo } = useWizard<SentryWizardData>();
 
   useEffect(() => {
     if (targetStep && targetStep !== "loading") {
@@ -383,7 +384,7 @@ function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
   return (
     <div className="flex items-center justify-center py-20">
       <div className="text-center space-y-3">
-        <Muted className="shine-text">Loading boards...</Muted>
+        <Muted className="shine-text">Loading projects...</Muted>
       </div>
     </div>
   );
@@ -393,25 +394,24 @@ function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
 // Main Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function TrelloModal({
+export default function SentryModal({
   open,
   onClose,
   isConnected,
   onSuccess,
-}: TrelloModalProps) {
+}: SentryModalProps) {
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<TrelloWizardData> };
+  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<SentryWizardData> };
   const [initState, setInitState] = useReducer(
     (_: InitState, next: InitState) => next,
     { initializing: true, targetStep: null, data: {} },
   );
 
-  const [getSelectedBoards] = useLazyGetSelectedTrelloBoardsQuery();
+  const [getSelectedProjects] = useLazyGetSelectedSentryProjectsQuery();
   const [getConnection] = useLazyGetConnectionQuery();
   const [revokeConnection, { isLoading: isRevoking }] =
     useRevokeConnectionMutation();
 
-  // Load initial data when modal opens
   useEffect(() => {
     if (!open) {
       setInitState({ initializing: true, targetStep: null, data: {} });
@@ -419,38 +419,38 @@ export default function TrelloModal({
     }
 
     const loadInitialData = async () => {
-      const baseData: Partial<TrelloWizardData> = {
-        apiKey: "",
+      const baseData: Partial<SentryWizardData> = {
         token: "",
-        boards: [],
-        selectedBoards: new Set(),
-        currentBoards: [],
+        organization: "",
+        projects: [],
+        selectedProjects: new Set(),
+        currentProjects: [],
         isFirstConnection: false,
         fromManage: false,
       };
 
       let finalStep: StepId = "setToken";
-      let finalData: Partial<TrelloWizardData> = baseData;
+      let finalData: Partial<SentryWizardData> = baseData;
 
       if (isConnected) {
         try {
           const startTime = Date.now();
-          const result = await getSelectedBoards("trello").unwrap();
+          const result = await getSelectedProjects("sentry").unwrap();
 
           if (result.success) {
             finalData = {
               ...baseData,
               connectionId: result.connectionId,
-              currentBoards: result.boards,
+              currentProjects: result.projects,
             };
             finalStep = "manage";
           } else {
-            const connResult = await getConnection("trello").unwrap();
+            const connResult = await getConnection("sentry").unwrap();
             if (connResult.success) {
               finalData = {
                 ...baseData,
                 connectionId: connResult.connection.id,
-                currentBoards: [],
+                currentProjects: [],
               };
               finalStep = "manage";
             }
@@ -463,12 +463,12 @@ export default function TrelloModal({
         } catch (err) {
           console.error("[loadInitialData] Error:", err);
           try {
-            const connResult = await getConnection("trello").unwrap();
+            const connResult = await getConnection("sentry").unwrap();
             if (connResult.success) {
               finalData = {
                 ...baseData,
                 connectionId: connResult.connection.id,
-                currentBoards: [],
+                currentProjects: [],
               };
               finalStep = "manage";
             }
@@ -482,7 +482,7 @@ export default function TrelloModal({
     };
 
     loadInitialData();
-  }, [open, isConnected, getSelectedBoards, getConnection]);
+  }, [open, isConnected, getSelectedProjects, getConnection]);
 
   const handleClose = useCallback(() => {
     setShowRevokeConfirm(false);
@@ -491,17 +491,17 @@ export default function TrelloModal({
 
   const handleRevoke = async () => {
     try {
-      await revokeConnection("trello").unwrap();
+      await revokeConnection("sentry").unwrap();
       setShowRevokeConfirm(false);
       handleClose();
     } catch (err) {
       console.error("[handleRevoke] Error:", err);
       setShowRevokeConfirm(false);
-      toast.error("Failed to revoke Trello access");
+      toast.error("Failed to revoke Sentry access");
     }
   };
 
-  const steps: WizardStep<TrelloWizardData>[] = [
+  const steps: WizardStep<SentryWizardData>[] = [
     {
       id: "loading",
       render: () => <LoadingStep targetStep={initState.targetStep} />,
@@ -512,12 +512,12 @@ export default function TrelloModal({
     },
     {
       id: "add",
-      render: () => <SelectBoardsStep onComplete={handleClose} />,
+      render: () => <SelectProjectsStep onComplete={handleClose} />,
     },
     {
       id: "manage",
       render: () => (
-        <ManageBoardsStep
+        <ManageProjectsStep
           onRevoke={() => setShowRevokeConfirm(true)}
         />
       ),
@@ -532,8 +532,8 @@ export default function TrelloModal({
         steps={steps}
         initialStep="loading"
         initialData={initState.data}
-        title="Trello"
-        icon="connections/trello.png"
+        title="Sentry"
+        icon="connections/sentry.png"
         onCancel={handleClose}
       />
 
@@ -542,8 +542,8 @@ export default function TrelloModal({
           onConfirm={handleRevoke}
           onCancel={() => setShowRevokeConfirm(false)}
           loading={isRevoking}
-          appName="Trello"
-          description="This will disconnect all boards and remove all Trello data. This action cannot be undone."
+          appName="Sentry"
+          description="This will disconnect all projects and remove all Sentry data. This action cannot be undone."
         />
       )}
     </>

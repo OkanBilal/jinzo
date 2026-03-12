@@ -69,6 +69,7 @@ export const baseApi = createApi({
     'InstalledApps',
     'Stats',
     'WorkspaceActivity',
+    'Automations',
   ],
   endpoints: () => ({}),
 });

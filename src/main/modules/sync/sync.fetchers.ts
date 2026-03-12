@@ -5,6 +5,7 @@ import {
   fetchAsanaFromConnectionResources,
   fetchGitlabFromConnectionResources,
   fetchTrelloFromConnectionResources,
+  fetchSentryFromConnectionResources,
 } from "./connections";
 import type { EntityInput } from "./sync.dto";
 
@@ -17,6 +18,7 @@ export const FETCH_LIMITS = {
   JIRA_ISSUES: 50,
   ASANA_TASKS: 50,
   TRELLO_CARDS: 50,
+  SENTRY_ISSUES: 50,
 } as const;
 
 const PROVIDER_FETCHERS: Record<string, () => Promise<EntityInput[]>> = {
@@ -34,6 +36,7 @@ const PROVIDER_FETCHERS: Record<string, () => Promise<EntityInput[]>> = {
   jira: () => fetchJiraFromConnectionResources(FETCH_LIMITS.JIRA_ISSUES),
   asana: () => fetchAsanaFromConnectionResources(FETCH_LIMITS.ASANA_TASKS),
   trello: () => fetchTrelloFromConnectionResources(FETCH_LIMITS.TRELLO_CARDS),
+  sentry: () => fetchSentryFromConnectionResources(FETCH_LIMITS.SENTRY_ISSUES),
 };
 
 export async function fetchAllEntities(provider?: string): Promise<EntityInput[]> {

@@ -115,6 +115,23 @@ export interface SelectedTrelloBoard {
   metadata: any;
 }
 
+export interface SentryProject {
+  id: string;
+  slug: string;
+  name: string;
+  platform: string | null;
+  dateCreated: string;
+  status: string;
+  organization: string;
+}
+
+export interface SelectedSentryProject {
+  id: string;
+  slug: string;
+  name: string;
+  metadata: any;
+}
+
 export interface SaveCredentialsPayload {
   provider: string;
   connectionId: string;
@@ -127,7 +144,7 @@ export interface SaveCredentialsPayload {
   apiToken?: string; // jira
   domain?: string; // jira
   email?: string; // jira
-  apiKey?: string; // trello
+  organization?: string; // sentry
 }
 
 export interface SaveResourcesPayload {
@@ -138,7 +155,7 @@ export interface SaveResourcesPayload {
 
 export const connectionsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    
+
     getConnection: builder.query<{ success: boolean; connection: Connection }, string>({
       query: (provider) => ({
         handler: 'connections:getByProvider',
@@ -203,6 +220,23 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [connectionId],
       }),
       transformResponse: (response: any) => response.success ? { success: true, boards: response.data.boards } : { success: false, boards: [] },
+    }),
+
+    getSentryProjects: builder.query<{ success: boolean; projects: SentryProject[] }, string>({
+      query: (connectionId) => ({
+        handler: 'connections:getSentryProjects',
+        args: [connectionId],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
+    }),
+
+    getSelectedSentryProjects: builder.query<{ success: boolean; projects: SelectedSentryProject[]; connectionId: string }, string>({
+      query: (provider) => ({
+        handler: 'connections:getSelectedResources',
+        args: [provider],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects, connectionId: response.data.connectionId } : { success: false, projects: [], connectionId: '' },
+      providesTags: ['Apps'],
     }),
 
     getSelectedTrelloBoards: builder.query<{ success: boolean; boards: SelectedTrelloBoard[]; connectionId: string }, string>({
@@ -323,6 +357,9 @@ export const {
   useLazyGetSelectedGitLabProjectsQuery,
   useGetSelectedTrelloBoardsQuery,
   useLazyGetSelectedTrelloBoardsQuery,
+  useLazyGetSentryProjectsQuery,
+  useGetSelectedSentryProjectsQuery,
+  useLazyGetSelectedSentryProjectsQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
   useRevokeConnectionMutation,
