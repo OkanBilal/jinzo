@@ -1,15 +1,10 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import path from 'path';
 import { copyFileSync, mkdirSync, readdirSync, existsSync, cpSync } from 'fs';
 
 // https://vitejs.dev/config
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
-
+export default defineConfig(() => {
   return {
-  define: {
-    'process.env.RESEND_API_KEY': JSON.stringify(env.RESEND_API_KEY ?? ''),
-  },
   resolve: {
     // Some libs that can run in both Web and Node.js environments are shipped with both ESM and CJS, and make use of Node.js compatible modules.
     // In order to handle these modules, Electron needs to tell Vite to build for Node.js environments.

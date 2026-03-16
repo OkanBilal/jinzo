@@ -76,7 +76,6 @@ import {
   unregisterTerminalIpc,
   destroyAllTerminals,
 } from "./modules/terminal";
-import { registerFeedbackIpc, unregisterFeedbackIpc } from "./modules/feedback";
 import { registerStatsIpc, unregisterStatsIpc } from "./modules/stats";
 import {
   createMainWindow,
@@ -319,7 +318,6 @@ async function initializeApp() {
     registerWorkspaceDiffsIpc();
     registerWorkspaceActivityIpc();
     registerImageProxyHandler();
-    registerFeedbackIpc();
     registerStatsIpc();
     registerUpdatesIpc();
     updatesService.initialize();
@@ -458,11 +456,7 @@ async function initializeApp() {
           },
           {
             label: "Send Feedback",
-            accelerator: "CmdOrCtrl+Shift+F",
-            click: () => {
-              const win = BrowserWindow.getFocusedWindow();
-              if (win) win.webContents.send("open-feedback");
-            },
+            click: () => shell.openExternal("https://github.com/OkanBilal/jinzo/issues"),
           },
         ],
       },
@@ -531,7 +525,6 @@ async function cleanupApp() {
     unregisterReviewFindingsIpc();
     unregisterWorkspaceDiffsIpc();
     unregisterWorkspaceActivityIpc();
-    unregisterFeedbackIpc();
     unregisterStatsIpc();
     unregisterUpdatesIpc();
     automationsService.stop();

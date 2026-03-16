@@ -533,15 +533,6 @@ const api = {
     openInApp: (appId: string, path: string) => ipcRenderer.invoke("shell:openInApp", appId, path),
     getInstalledApps: () => ipcRenderer.invoke("shell:getInstalledApps"),
   },
-  feedback: {
-    send: (payload: { message: string }) =>
-      ipcRenderer.invoke("feedback:send", payload),
-    onOpenFeedback: (callback: () => void) => {
-      const listener = () => callback();
-      ipcRenderer.on("open-feedback", listener);
-      return () => ipcRenderer.removeListener("open-feedback", listener);
-    },
-  },
   stats: {
     getDashboard: (filter?: string) => ipcRenderer.invoke("stats:getDashboard", filter),
   },

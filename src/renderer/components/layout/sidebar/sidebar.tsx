@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { SidebarHeader } from "./sidebar-header";
 import { SidebarFooter } from "./sidebar-footer";
 import { SidebarContent } from "./sidebar-content";
@@ -9,7 +9,6 @@ import PresetSpacesView from "./preset-spaces-view";
 import SettingsView from "./settings-view";
 import CreateSpaceMenu from "./create-space-menu";
 import HelpMenu from "./help-menu";
-import FeedbackModal from "./feedback-modal";
 import SpaceContextMenu from "./space-context-menu";
 import EditSpaceModal from "./edit-space-modal";
 import DeleteSpaceModal from "./delete-space-modal";
@@ -69,24 +68,6 @@ export default function Sidebar() {
 
   // Global listeners
   useScriptNotifications();
-
-  // Feedback modal state
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.metaKey && e.shiftKey && e.key.toLowerCase() === "f") {
-        e.preventDefault();
-        setFeedbackOpen(true);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    const unsubscribe = window.api.feedback.onOpenFeedback(() => setFeedbackOpen(true));
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      unsubscribe();
-    };
-  }, []);
 
   // Help menu state
   const [helpMenuState, setHelpMenuState] = useState<{
@@ -255,12 +236,6 @@ export default function Sidebar() {
         isOpen={helpMenuState.isOpen}
         position={helpMenuState.position}
         onClose={handleCloseHelpMenu}
-        onFeedback={() => setFeedbackOpen(true)}
-      />
-
-      <FeedbackModal
-        isOpen={feedbackOpen}
-        onClose={() => setFeedbackOpen(false)}
       />
 
       <CloneRepoModal

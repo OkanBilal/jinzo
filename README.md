@@ -30,7 +30,6 @@ Run GitHub Copilot and Claude Code agents in managed workspaces, track runs with
 git clone https://github.com/OkanBilal/jinzo.git
 cd jinzo
 npm install
-npm run db:push
 npm start
 ```
 

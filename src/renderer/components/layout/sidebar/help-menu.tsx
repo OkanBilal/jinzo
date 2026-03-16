@@ -5,10 +5,9 @@ interface HelpMenuProps {
   isOpen: boolean;
   position: { x: number; y: number };
   onClose: () => void;
-  onFeedback: () => void;
 }
 
-export default function HelpMenu({ isOpen, position, onClose, onFeedback }: HelpMenuProps) {
+export default function HelpMenu({ isOpen, position, onClose }: HelpMenuProps) {
   const adjustedPosition = {
     x: Math.max(8, Math.min(position.x - 60, window.innerWidth - 220)),
     y: Math.max(8, position.y - 115),
@@ -19,11 +18,6 @@ export default function HelpMenu({ isOpen, position, onClose, onFeedback }: Help
     onClose();
   };
 
-  const handleFeedback = () => {
-    onClose();
-    onFeedback();
-  };
-
   return (
     <DropdownMenu
       isOpen={isOpen}
@@ -32,12 +26,12 @@ export default function HelpMenu({ isOpen, position, onClose, onFeedback }: Help
       minWidth={200}
     >
       <div className="">
-        <DropdownMenuItem onClick={handleFeedback}>
+        <DropdownMenuItem
+          onClick={() => handleOpenExternal("https://github.com/OkanBilal/jinzo/issues")}
+        >
           <Chat className="size-4 shrink-0" />
           <span className="flex-1 text-left">Send feedback</span>
-          <span className="text-xs text-primary-500 dark:text-primary-400">
-            ⌘⇧F
-          </span>
+          <External className="size-3 text-primary-400" />
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => handleOpenExternal("https://docs.usejinzo.com")}
@@ -50,7 +44,7 @@ export default function HelpMenu({ isOpen, position, onClose, onFeedback }: Help
         <DropdownMenuItem
           onClick={() =>
             handleOpenExternal(
-              "https://github.com/okanbilal/jinzo/releases",
+              "https://usejinzo.com/blog?filter=changelog",
             )
           }
         >
