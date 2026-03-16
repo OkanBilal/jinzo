@@ -6,7 +6,7 @@ interface NewButtonProps {
   title: string;
   actionPrefix?: string;
   icon?: React.ReactNode;
-  dropdownItems?: { label: string; icon?: React.ReactNode; onClick: () => void }[];
+  dropdownItems?: { label: string; icon?: React.ReactNode; shortcut?: string; shortcutLabel?: string; onClick: () => void }[];
 }
 
 export default function NewButton({
@@ -45,6 +45,15 @@ export default function NewButton({
       if (e.metaKey && e.key === "n") {
         e.preventDefault();
         handleClick();
+      }
+
+      if (e.metaKey && e.shiftKey && dropdownItems) {
+        const key = e.key.toLowerCase();
+        const matched = dropdownItems.find((item) => item.shortcut === key);
+        if (matched) {
+          e.preventDefault();
+          matched.onClick();
+        }
       }
     };
 
@@ -91,7 +100,12 @@ export default function NewButton({
               }}
             >
               {item.icon}
-              <span>{item.label}</span>
+              <span className="flex-1 text-left">{item.label}</span>
+              {item.shortcutLabel && (
+                <span className="text-xs text-primary-500 dark:text-primary-400">
+                  {item.shortcutLabel}
+                </span>
+              )}
             </DropdownMenuItem>
           ))}
         </DropdownMenu>

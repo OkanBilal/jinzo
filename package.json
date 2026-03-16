@@ -11,9 +11,9 @@
     "repo": "jinzo"
   },
   "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test": "npm rebuild better-sqlite3 && vitest run",
+    "test:watch": "npm rebuild better-sqlite3 && vitest",
+    "test:coverage": "npm rebuild better-sqlite3 && vitest run --coverage",
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",

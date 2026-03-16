@@ -158,6 +158,8 @@ export default function Sidebar() {
                           icon: (
                             <Plus className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
                           ),
+                          shortcut: "o",
+                          shortcutLabel: "\u2318\u21e7O",
                           onClick: handleAddProject,
                         },
                         {
@@ -165,6 +167,8 @@ export default function Sidebar() {
                           icon: (
                             <Connect className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
                           ),
+                          shortcut: "u",
+                          shortcutLabel: "\u2318\u21e7U",
                           onClick: handleOpenCloneModal,
                         },
                       ]

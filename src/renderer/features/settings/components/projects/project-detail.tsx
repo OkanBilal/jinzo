@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useReducer } from "react";
+import { useState, useEffect, useMemo, useReducer, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Heading2, Muted, Button, toast, Alert } from "@/components/ui";
 import {
@@ -6,7 +6,7 @@ import {
   useUpdateProjectMutation,
   useRemoveProjectMutation,
 } from "@/lib/redux/api";
-import { SettingsSection, SettingsRow, SettingsDivider } from "../settings-layout";
+import { SettingsSection, SettingsRow } from "../settings-layout";
 import SpaceIconPicker from "@/components/layout/sidebar/space-icon-picker";
 import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
 import { formReducer, initialFormState } from "./project-form-reducer";
@@ -57,7 +57,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       .catch(() => {});
   }, [project?.rootPath]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (saving || !project) return;
     try {
       const iconValue = icon
@@ -83,7 +83,27 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     } catch (err: any) {
       toast.error(err?.message || "Failed to save project settings");
     }
-  };
+  }, [saving, project, icon, iconMode, defaultBranch, setupScript, runScript, archiveScript, commitInstructions, prInstructions, updateProject]);
+
+  // Auto-save when icon changes (skip initial sync from project load)
+  const iconSyncedRef = useRef(false);
+  const prevIconRef = useRef(icon);
+  const prevIconModeRef = useRef(iconMode);
+  useEffect(() => {
+    // Reset on project change so next sync is ignored
+    iconSyncedRef.current = false;
+  }, [project?.id]);
+  useEffect(() => {
+    if (prevIconRef.current === icon && prevIconModeRef.current === iconMode) return;
+    prevIconRef.current = icon;
+    prevIconModeRef.current = iconMode;
+    if (!iconSyncedRef.current) {
+      // First change after project load is the sync — skip it
+      iconSyncedRef.current = true;
+      return;
+    }
+    if (project) handleSave();
+  }, [icon, iconMode, project, handleSave]);
 
   const lastSavedLabel = useMemo(() => {
     const ts = project?.updatedAt || project?.createdAt;
@@ -109,19 +129,19 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   const setField = (field: "defaultBranch" | "setupScript" | "runScript" | "archiveScript" | "commitInstructions" | "prInstructions", value: string) =>
     dispatch({ type: "SET_FIELD", field, value });
 
-  const formatPath = (path: string) => {
-    const parts = path.split("/");
-    const last = parts.pop();
-    const prefix = parts.join("/");
-    return (
-      <span className="text-s text-primary-500 dark:text-primary-400 ">
-        {prefix && <>{prefix}/</>}
-        <span className="font-semibold text-s text-primary-900 dark:text-primary-100">
-          {last}
-        </span>
-      </span>
-    );
-  };
+  // const formatPath = (path: string) => {
+  //   const parts = path.split("/");
+  //   const last = parts.pop();
+  //   const prefix = parts.join("/");
+  //   return (
+  //     <span className="text-s text-primary-500 dark:text-primary-400 ">
+  //       {prefix && <>{prefix}/</>}
+  //       <span className="font-semibold text-s text-primary-900 dark:text-primary-100">
+  //         {last}
+  //       </span>
+  //     </span>
+  //   );
+  // };
 
   if (isLoading) {
     return (
@@ -166,7 +186,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
             onClear={() => dispatch({ type: "SET_ICON", icon: "", iconMode: "emoji" })}
           />
         </SettingsRow>
-        <SettingsDivider />
+        {/* <SettingsDivider />
         <SettingsRow
           variant="detail"
           title="Root path"
@@ -189,7 +209,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
           ) : (
             <Muted>Not configured</Muted>
           )}
-        </SettingsRow>
+        </SettingsRow> */}
       </SettingsSection>
 
       <ProjectLinkedResources
