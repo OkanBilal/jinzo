@@ -4,6 +4,10 @@ import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout
 import {
   useGetProviderByIdQuery,
   useUpdateProviderMutation,
+  useGetSpacesQuery,
+  useArchiveSpaceMutation,
+  useUnarchiveSpaceMutation,
+  useSetActiveSpaceMutation,
 } from "@/lib/redux/api";
 import { StructuredOutputsModal } from "./structured-outputs-modal";
 import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
@@ -15,6 +19,14 @@ export default function ClaudeSettings() {
     error,
   } = useGetProviderByIdQuery("claude_code");
   const [updateProvider, { isLoading: updating }] = useUpdateProviderMutation();
+
+  const { data: spaces = [] } = useGetSpacesQuery();
+  const [archiveSpace] = useArchiveSpaceMutation();
+  const [unarchiveSpace] = useUnarchiveSpaceMutation();
+  const [setActiveSpace] = useSetActiveSpaceMutation();
+  const claudeSpace = spaces.find((s) => s.slug === "claude");
+  const otherVisibleSpaces = spaces.filter((s) => s.slug !== "claude" && !s.isArchived);
+  const canHide = otherVisibleSpaces.length > 0;
 
   const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] =
     useState(false);
@@ -275,6 +287,41 @@ export default function ClaudeSettings() {
           </Button>
         </SettingsRow>
       </SettingsSection>
+
+      {claudeSpace && (
+        <SettingsSection title="Space">
+          <SettingsRow
+            title="Show in Sidebar"
+            description={
+              !canHide && !claudeSpace.isArchived
+                ? "At least one space must be visible"
+                : "Show or hide this space from the sidebar"
+            }
+          >
+            <Toggle
+              enabled={!claudeSpace.isArchived}
+              disabled={!canHide && !claudeSpace.isArchived}
+              onChange={async (visible) => {
+                try {
+                  if (visible) {
+                    await unarchiveSpace(claudeSpace.id).unwrap();
+                    toast.success("Space is now visible");
+                  } else {
+                    await archiveSpace(claudeSpace.id).unwrap();
+                    const target = otherVisibleSpaces[0];
+                    if (target) {
+                      await setActiveSpace(target.id).unwrap();
+                    }
+                    toast.success("Space hidden");
+                  }
+                } catch (err: any) {
+                  toast.error(err?.message || "Failed to update space visibility");
+                }
+              }}
+            />
+          </SettingsRow>
+        </SettingsSection>
+      )}
 
       <StructuredOutputsModal
         isOpen={isStructuredOutputsModalOpen}

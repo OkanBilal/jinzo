@@ -618,12 +618,12 @@ export function createCopilotAdapter(
         }
 
         client = new CopilotClient(options) as CopilotClientInterface;
-        
+
         try {
           await client.start();
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          
+
           if (errorMessage.includes("ENOENT")) {
             throw new Error(
               "Copilot CLI binary not found. Please ensure GitHub Copilot CLI is installed and the path is correct. " +
@@ -1583,16 +1583,15 @@ export function createCopilotAdapter(
         // Check if client has connection with sendRequest capability
         if (!copilotClient.connection) {
           logWarn("Client connection not available for listing models");
-          // Return default models as fallback
-          return getDefaultModels(config.defaultModel);
+          return [];
         }
 
         const result = await copilotClient.connection.sendRequest("models.list", {});
         const response = result as { models?: CopilotModelInfo[] };
 
         if (!response.models || !Array.isArray(response.models)) {
-          logWarn("Invalid models response, using defaults");
-          return getDefaultModels(config.defaultModel);
+          logWarn("Invalid models response");
+          return [];
         }
 
         return response.models.map((model): ModelInfo => ({
@@ -1611,61 +1610,9 @@ export function createCopilotAdapter(
           throw error;
         }
         logError("Failed to list models:", error);
-        // Return default models on error
-        return getDefaultModels(config.defaultModel);
+        return [];
       }
     },
   };
 }
 
-// ─────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────
-
-// safeJson imported from adapter.shared
-
-/**
- * Get default models for Copilot when API is unavailable
- */
-function getDefaultModels(defaultModel?: string): ModelInfo[] {
-  const models: ModelInfo[] = [
-    {
-      id: "claude-opus-4-6",
-      displayName: "Claude Opus 4.5",
-      isDefault: defaultModel === "claude-opus-4-6" || !defaultModel,
-      capabilities: {
-        streaming: true,
-        vision: true,
-        functionCalling: true,
-      },
-      contextWindow: 128000,
-    },
-        {
-      id: "claude-sonnet-4-6",
-      displayName: "Claude Sonnet 4.6",
-      isDefault: defaultModel === "claude-sonnet-4-6" || !defaultModel,
-      capabilities: {
-        streaming: true,
-        vision: true,
-        functionCalling: true,
-      },
-      contextWindow: 128000,
-    },
-            {
-      id: "claude-haiku-4-5",
-      displayName: "Claude Haiku 4.5",
-      isDefault: defaultModel === "claude-haiku-4-5" || !defaultModel,
-      capabilities: {
-        streaming: true,
-        vision: true,
-        functionCalling: true,
-      },
-      contextWindow: 128000,
-    },
-    
-    
-
-  ];
-
-  return models;
-}

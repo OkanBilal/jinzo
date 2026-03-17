@@ -103,6 +103,14 @@ export const spaceApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Spaces"],
     }),
+
+    unarchiveSpace: builder.mutation<void, string>({
+      query: (spaceId) => ({
+        handler: "space:unarchive",
+        args: [spaceId],
+      }),
+      invalidatesTags: ["Spaces"],
+    }),
   }),
   overrideExisting: false,
 });
@@ -115,4 +123,5 @@ export const {
   useUpdateSpaceMutation,
   useDeleteSpaceMutation,
   useArchiveSpaceMutation,
+  useUnarchiveSpaceMutation,
 } = spaceApi;

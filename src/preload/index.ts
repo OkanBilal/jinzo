@@ -156,6 +156,7 @@ const api = {
       ipcRenderer.invoke("space:update", spaceId, payload),
     delete: (spaceId: string) => ipcRenderer.invoke("space:delete", spaceId),
     archive: (spaceId: string) => ipcRenderer.invoke("space:archive", spaceId),
+    unarchive: (spaceId: string) => ipcRenderer.invoke("space:unarchive", spaceId),
   },
   // App settings operations
   appSettings: {

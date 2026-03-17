@@ -38,6 +38,11 @@ export function registerSpaceIpc() {
     return spaceController.archive(spaceId);
   });
 
+  // Unarchive space
+  ipcMain.handle("space:unarchive", async (_event, spaceId: string) => {
+    return spaceController.unarchive(spaceId);
+  });
+
 }
 
 export function unregisterSpaceIpc() {
@@ -47,4 +52,5 @@ export function unregisterSpaceIpc() {
   ipcMain.removeHandler("space:update");
   ipcMain.removeHandler("space:delete");
   ipcMain.removeHandler("space:archive");
+  ipcMain.removeHandler("space:unarchive");
 }

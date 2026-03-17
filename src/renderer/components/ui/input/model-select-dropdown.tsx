@@ -49,6 +49,7 @@ export function ModelSelectDropdown({
   isLoading = false,
 }: ModelSelectDropdownProps) {
   const modelList = Array.isArray(models) ? models : [];
+  const noModels = !isLoading && modelList.length === 0;
   const displayModel = formatClaudeModelName(model);
 
   useClickOutside(dropdownRef, () => {
@@ -63,17 +64,23 @@ export function ModelSelectDropdown({
         className="flex cursor-pointer items-center hover:bg-primary-200/30 dark:hover:bg-primary-600/20 transition-colors rounded-2xl"
       >
         <Button
-          tooltip="Select model"
+          tooltip={noModels ? "No models available" : "Select model"}
           tooltipPosition="top"
           type="button"
-          onClick={onToggle}
-          className="text-sm cursor-pointer text-primary-700 dark:text-primary-300 font-medium px-2 py-1.5 flex items-center gap-1.5"
+          onClick={noModels ? undefined : onToggle}
+          className={`text-sm font-medium px-2 py-1.5 flex items-center gap-1.5 ${
+            noModels
+              ? "text-primary-400 dark:text-primary-600 cursor-not-allowed"
+              : "cursor-pointer text-primary-700 dark:text-primary-300"
+          }`}
           aria-haspopup="true"
           aria-expanded={isOpen}
-          disabled={isLoading && !displayModel}
+          disabled={noModels || (isLoading && !displayModel)}
         >
           {isLoading && !displayModel ? (
             <ModelLoader />
+          ) : noModels ? (
+            <span>No models found</span>
           ) : (
             <>
               {getModelIcon(displayModel)}

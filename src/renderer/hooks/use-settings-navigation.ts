@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useActiveSpace } from "@/hooks/use-active-space";
+import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 
 export function useSettingsNavigation() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { activeSpace } = useActiveSpace();
+  const sidebarConfig = useSidebarConfig();
 
   const isOnSettings = location.pathname.startsWith("/settings");
 
@@ -25,11 +29,19 @@ export function useSettingsNavigation() {
 
   const handleCloseSettings = () => {
     setIsSettingsOpen(false);
+
+    // If previousPath belongs to a space that's now archived, go to active space's default route
     if (previousPath) {
-      navigate(previousPath);
+      const belongsToArchivedSpace =
+        activeSpace && !previousPath.startsWith(sidebarConfig.defaultRoute);
+      if (belongsToArchivedSpace) {
+        navigate(sidebarConfig.defaultRoute, { replace: true });
+      } else {
+        navigate(previousPath);
+      }
       setPreviousPath(null);
     } else {
-      navigate("/");
+      navigate(sidebarConfig.defaultRoute || "/");
     }
   };
 

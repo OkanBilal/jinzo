@@ -181,4 +181,22 @@ export const spaceService = {
       };
     }
   },
+
+  async unarchive(spaceId: string): Promise<ServiceResponse<void>> {
+    try {
+      const existing = await spaceRepo.findById(spaceId);
+      if (!existing) {
+        return { success: false, error: "Space not found" };
+      }
+
+      await spaceRepo.unarchive(spaceId);
+      return { success: true, data: undefined };
+    } catch (error) {
+      console.error("Error unarchiving space:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  },
 };

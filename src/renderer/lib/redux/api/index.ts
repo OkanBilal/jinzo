@@ -105,6 +105,7 @@ export {
   useUpdateSpaceMutation,
   useDeleteSpaceMutation,
   useArchiveSpaceMutation,
+  useUnarchiveSpaceMutation,
 } from "./spaceApi";
 export type { Space, CreateSpacePayload, UpdateSpacePayload } from "./spaceApi";
 

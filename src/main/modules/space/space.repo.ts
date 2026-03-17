@@ -81,4 +81,12 @@ export const spaceRepo = {
       .set({ isArchived: true })
       .where(eq(spaces.id, spaceId));
   },
+
+  async unarchive(spaceId: string): Promise<void> {
+    const db = getDb();
+    await db
+      .update(spaces)
+      .set({ isArchived: false })
+      .where(eq(spaces.id, spaceId));
+  },
 };

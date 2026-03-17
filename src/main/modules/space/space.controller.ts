@@ -27,4 +27,8 @@ export const spaceController = {
   async archive(spaceId: string) {
     return spaceService.archive(spaceId);
   },
+
+  async unarchive(spaceId: string) {
+    return spaceService.unarchive(spaceId);
+  },
 };

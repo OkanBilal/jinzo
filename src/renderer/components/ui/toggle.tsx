@@ -6,9 +6,10 @@ interface ToggleProps {
   onChange: (enabled: boolean) => void;
   label?: string;
   className?: string;
+  disabled?: boolean;
 }
 
-export function Toggle({ enabled, onChange, label, className }: ToggleProps) {
+export function Toggle({ enabled, onChange, label, className, disabled }: ToggleProps) {
   return (
     <div className={cn("flex items-center justify-between py-2", className)}>
       {label && (
@@ -19,9 +20,10 @@ export function Toggle({ enabled, onChange, label, className }: ToggleProps) {
         </div>
       )}
       <Button
-        onClick={() => onChange(!enabled)}
+        onClick={() => !disabled && onChange(!enabled)}
         className={cn(
           "relative inline-flex h-6 w-11 items-center rounded-full transition-all shadow-(--shadow-inset-toggle) dark:shadow-(--shadow-inset-toggle-dark)",
+          disabled && "opacity-40 cursor-not-allowed",
           enabled
             ? "bg-primary-950/50 dark:bg-primary/50"
             : "bg-primary-950/10 dark:bg-primary/10",

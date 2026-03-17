@@ -3,6 +3,10 @@ import { SettingsSection, SettingsRow } from "./settings-layout";
 import {
   useGetProviderByIdQuery,
   useUpdateProviderMutation,
+  useGetSpacesQuery,
+  useArchiveSpaceMutation,
+  useUnarchiveSpaceMutation,
+  useSetActiveSpaceMutation,
 } from "@/lib/redux/api";
 
 export default function CopilotSettings() {
@@ -12,6 +16,14 @@ export default function CopilotSettings() {
     error,
   } = useGetProviderByIdQuery("copilot_cli");
   const [updateProvider, { isLoading: updating }] = useUpdateProviderMutation();
+
+  const { data: spaces = [] } = useGetSpacesQuery();
+  const [archiveSpace] = useArchiveSpaceMutation();
+  const [unarchiveSpace] = useUnarchiveSpaceMutation();
+  const [setActiveSpace] = useSetActiveSpaceMutation();
+  const copilotSpace = spaces.find((s) => s.slug === "copilot");
+  const otherVisibleSpaces = spaces.filter((s) => s.slug !== "copilot" && !s.isArchived);
+  const canHide = otherVisibleSpaces.length > 0;
 
   const config = provider?.config ?? {};
   const permissionMode = (config as any).permissionMode ?? "default";
@@ -115,6 +127,40 @@ export default function CopilotSettings() {
           <Toggle enabled={showQuickActions} onChange={handleQuickActionsToggle} />
         </SettingsRow>
       </SettingsSection>
+      {copilotSpace && (
+        <SettingsSection title="Space">
+          <SettingsRow
+            title="Show in Sidebar"
+            description={
+              !canHide && !copilotSpace.isArchived
+                ? "At least one space must be visible"
+                : "Show or hide this space from the sidebar"
+            }
+          >
+            <Toggle
+              enabled={!copilotSpace.isArchived}
+              disabled={!canHide && !copilotSpace.isArchived}
+              onChange={async (visible) => {
+                try {
+                  if (visible) {
+                    await unarchiveSpace(copilotSpace.id).unwrap();
+                    toast.success("Space is now visible");
+                  } else {
+                    await archiveSpace(copilotSpace.id).unwrap();
+                    const target = otherVisibleSpaces[0];
+                    if (target) {
+                      await setActiveSpace(target.id).unwrap();
+                    }
+                    toast.success("Space hidden");
+                  }
+                } catch (err: any) {
+                  toast.error(err?.message || "Failed to update space visibility");
+                }
+              }}
+            />
+          </SettingsRow>
+        </SettingsSection>
+      )}
     </div>
   );
 }

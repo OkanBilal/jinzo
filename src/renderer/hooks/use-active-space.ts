@@ -3,13 +3,17 @@ import { useGetAppSettingsQuery, useGetSpacesQuery } from "@/lib/redux/api";
 
 export function useActiveSpace() {
   const { data: appSettings } = useGetAppSettingsQuery();
-  const { data: spaces = [] } = useGetSpacesQuery();
+  const { data: allSpaces = [] } = useGetSpacesQuery();
 
   const activeSpaceId = appSettings?.activeSpaceId || "";
 
+  const spaces = useMemo(() => {
+    return allSpaces.filter((s) => !s.isArchived);
+  }, [allSpaces]);
+
   const activeSpace = useMemo(() => {
-    return spaces.find((m) => m.id === activeSpaceId);
-  }, [spaces, activeSpaceId]);
+    return allSpaces.find((m) => m.id === activeSpaceId);
+  }, [allSpaces, activeSpaceId]);
 
   const spaceSlug = activeSpace?.slug;
   const isClaudeSpace = spaceSlug === "claude";
@@ -20,5 +24,6 @@ export function useActiveSpace() {
     spaceSlug,
     isClaudeSpace,
     spaces,
+    allSpaces,
   };
 }

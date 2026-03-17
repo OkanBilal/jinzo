@@ -323,7 +323,7 @@ export function WorkspaceInput({
         onStop={onStop}
         uploadedFiles={uploadedFiles}
         onUploadedFilesChange={onUploadedFilesChange ?? (() => {})}
-        disabled={!!authErrorMessage}
+        disabled={!!authErrorMessage || (!isLoadingModels && modelDisplayNames.length === 0)}
       />
     </div>
      </>
