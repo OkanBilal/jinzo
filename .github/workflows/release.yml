@@ -11,10 +11,13 @@ concurrency:
 
 jobs:
   release:
-    name: Build & Publish
+    name: Build & Publish (${{ matrix.arch }})
     runs-on: macos-latest
     permissions:
       contents: write
+    strategy:
+      matrix:
+        arch: [arm64, x64]
     steps:
       - uses: actions/checkout@v5
 
@@ -45,4 +48,4 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-forge publish --platform darwin --arch universal
+        run: npx electron-forge publish --platform darwin --arch ${{ matrix.arch }}
