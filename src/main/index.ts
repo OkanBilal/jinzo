@@ -401,7 +401,7 @@ async function initializeApp() {
                     type: "info",
                     title: "About Jinzo",
                     message: "Jinzo",
-                    detail: `Version ${app.getVersion()}\n© 2026 True Laurel Labs`,
+                    detail: `Version ${app.getVersion()}\n`,
                     icon: nativeImage.createFromPath(iconPath),
                   });
                 },
@@ -570,7 +570,7 @@ if (!app.isPackaged) {
 app.setAboutPanelOptions({
   applicationName: "Jinzo",
   applicationVersion: app.getVersion(),
-  copyright: "© 2026 True Laurel Labs",
+  copyright: "© 2026 Jinzo",
   website: "https://usejinzo.com",
 });
 
