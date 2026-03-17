@@ -6,7 +6,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell } from "e
 
 // Prevent macOS Apple Music access prompt triggered by Chromium's media session API
 app.commandLine.appendSwitch("disable-features", "HardwareMediaKeyHandling,MediaSessionService");
-import { spawn, exec, execFile } from "child_process";
+import { spawn, execFile } from "child_process";
 import { promisify } from "util";
 import * as fs from "fs";
 import * as path from "path";
@@ -100,7 +100,6 @@ import {
 // ─────────────────────────────────────────────────────────────
 // Installed app detection (macOS)
 // ─────────────────────────────────────────────────────────────
-const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 
 const KNOWN_APPS = [
@@ -234,10 +233,10 @@ async function detectInstalledApps(): Promise<DetectedApp[]> {
       const results = await Promise.allSettled(
         KNOWN_APPS.map(async (knownApp) => {
           try {
-            const { stdout } = await execAsync(
-              `mdfind "kMDItemCFBundleIdentifier == '${knownApp.bundleId}'" | head -1`,
-            );
-            const appPath = stdout.trim();
+            const { stdout } = await execFileAsync("mdfind", [
+              `kMDItemCFBundleIdentifier == '${knownApp.bundleId}'`,
+            ]);
+            const appPath = stdout.split("\n")[0]?.trim();
             if (!appPath) return null;
 
             const icon = await getAppIcon(appPath);
