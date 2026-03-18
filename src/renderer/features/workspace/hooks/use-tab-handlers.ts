@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { useAppSelector } from "@/lib/redux/hooks";
+import { useUpdateRunMutation } from "@/lib/redux/api";
 import {
   setActiveTab,
   clearSelectedFile,
@@ -18,6 +19,7 @@ interface UseTabHandlersParams {
   setActiveRunId: (id: string | null) => void;
   forkRun: (sourceRunId: string, message: string) => Promise<string | null>;
   setGoal: (goal: string) => void;
+  setRuns: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 export function useTabHandlers({
@@ -28,8 +30,10 @@ export function useTabHandlers({
   setActiveRunId,
   forkRun,
   setGoal,
+  setRuns,
 }: UseTabHandlersParams) {
   const dispatch = useDispatch();
+  const [updateRun] = useUpdateRunMutation();
   const { openIssueTabs, openNoteTabs, selectedFile } = useAppSelector(
     (state) => state.workspace,
   );
@@ -147,6 +151,16 @@ export function useTabHandlers({
     [dispatch, activeTab, getNextTab],
   );
 
+  const handleRenameRun = useCallback(
+    (runId: string, newTitle: string) => {
+      setRuns((prev: any[]) =>
+        prev.map((r) => (r.id === runId ? { ...r, title: newTitle } : r)),
+      );
+      updateRun({ id: runId, payload: { title: newTitle } });
+    },
+    [updateRun, setRuns],
+  );
+
   const handleForkRun = useCallback(
     async (sourceRunId: string, message: string) => {
       const newRunId = await forkRun(sourceRunId, message);
@@ -160,6 +174,7 @@ export function useTabHandlers({
 
   return {
     handleCloseTab,
+    handleRenameRun,
     handleNewRun,
     handleSelectNewRunTab,
     handleCloseNewRunTab,

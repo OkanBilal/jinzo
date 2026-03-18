@@ -2533,13 +2533,16 @@ export function createClaudeAdapter(
 
       // Embed the title instruction directly in the prompt so it can't be overridden
       const titlePrompt = [
-        "TASK: Generate a short title (3-5 words) for the following coding task.",
-        "RULES: Reply with ONLY the title. No quotes, no explanation, no punctuation at the end, no prefixes like 'Title:'.",
+        "Generate a concise title (2-5 words) that summarizes what the user wants.",
+        "Rules:",
+        "- Reply with ONLY the title text, nothing else",
+        "- Use natural, (e.g. \"fix login redirect\", \"add dark mode\", \"greeting message\")",
+        "- Do NOT use generic descriptions of the request type (e.g. NOT \"greeting title generation\")",
+        "- Instead, describe the actual topic or intent (e.g. \"hello greeting\" for a hello message)",
+        "- No quotes, no punctuation at the end, no prefixes",
         "",
-        `User's request: ${goal}`,
+        `User message: ${goal}`,
         contextSnippet ? `\nContext:\n${contextSnippet}` : "",
-        "",
-        "Title:",
       ].filter(Boolean).join("\n");
 
       const options = buildOptions(
@@ -2556,7 +2559,7 @@ export function createClaudeAdapter(
       options.maxTurns = 1;
       options.allowedTools = [];
       options.disallowedTools = ["*"];
-      options.systemPrompt = "You are a title generator. Output ONLY a short title (3-5 words). Never explain, never use tools, never write code.";
+      options.systemPrompt = "You generate short titles. Output ONLY the title (2-5 words, lowercase). Describe the topic, not the action of generating a title.";
 
       const query = queryFn({
         prompt: titlePrompt,

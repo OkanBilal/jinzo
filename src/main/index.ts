@@ -454,7 +454,7 @@ async function initializeApp() {
             click: () => shell.openExternal("https://docs.usejinzo.com"),
           },
           {
-            label: "Send Feedback",
+            label: "Report an Issue",
             click: () => shell.openExternal("https://github.com/OkanBilal/jinzo/issues"),
           },
         ],

@@ -1,4 +1,4 @@
-import { Chat, BookOpen, Feed, External } from "@/components/ui/icons";
+import { BookOpen, Feed, External, Bug } from "@/components/ui/icons";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
 
 interface HelpMenuProps {
@@ -29,8 +29,8 @@ export default function HelpMenu({ isOpen, position, onClose }: HelpMenuProps) {
         <DropdownMenuItem
           onClick={() => handleOpenExternal("https://github.com/OkanBilal/jinzo/issues")}
         >
-          <Chat className="size-4 shrink-0" />
-          <span className="flex-1 text-left">Send feedback</span>
+          <Bug className="size-4 shrink-0" />
+          <span className="flex-1 text-left">Report an Issue</span>
           <External className="size-3 text-primary-400" />
         </DropdownMenuItem>
         <DropdownMenuItem

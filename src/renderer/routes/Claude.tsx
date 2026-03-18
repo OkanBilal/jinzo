@@ -50,6 +50,7 @@ export default function ClaudePage() {
           onSelectEditorTab={ws.handleSelectEditorTab}
           onSelectRunTab={ws.handleSelectRunTab}
           onCloseTab={ws.handleCloseTab}
+          onRenameRun={ws.handleRenameRun}
           onNewRun={ws.handleNewRun}
           onSelectIssueTab={ws.handleSelectIssueTab}
           onCloseIssueTab={ws.handleCloseIssueTab}
@@ -64,7 +65,7 @@ export default function ClaudePage() {
     [
       ws.showEmptyState, ws.runs, ws.activeTab, ws.selectedFile,
       ws.openIssueTabs, ws.openNoteTabs,
-      ws.handleSelectEditorTab, ws.handleSelectRunTab, ws.handleCloseTab,
+      ws.handleSelectEditorTab, ws.handleSelectRunTab, ws.handleCloseTab, ws.handleRenameRun,
       ws.handleNewRun, ws.handleSelectIssueTab, ws.handleCloseIssueTab,
       ws.handleSelectNoteTab, ws.handleCloseNoteTab, ws.handleCloseEditorTab,
       ws.showNewRunTab, ws.handleSelectNewRunTab, ws.handleCloseNewRunTab,

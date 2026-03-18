@@ -107,6 +107,7 @@ export function useWorkspacePage(providerId: string) {
     checkCanResume,
     closeTab,
     selectTab,
+    setRuns,
   } = useWorkspaceRuns(workspaceId, providerId);
 
   useEffect(() => {
@@ -127,6 +128,7 @@ export function useWorkspacePage(providerId: string) {
     setActiveRunId,
     forkRun,
     setGoal,
+    setRuns,
   });
 
   const activeRunId = isRunTab(activeTab) ? activeTab : null;

@@ -390,6 +390,7 @@ export function useWorkspaceRuns(
 
   return {
     runs,
+    setRuns,
     activeRunId,
     activeRun,
     runEvents,

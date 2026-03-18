@@ -10,9 +10,9 @@ import { setPendingGoal, setPendingAutoExecute } from "@/lib/redux/slices/worksp
 import { FileIconComponent } from "./file-explorer/components/file-icon";
 import {
   Diff,
-  Sparkles,
   Commit,
   CircleDot,
+  Chat,
 } from "@/components/ui/icons";
 import { Body, Button } from "@/components/ui";
 
@@ -175,7 +175,7 @@ export function DiffSection({
           onClick={handleReviewChanges}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/60 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
         >
-          <Sparkles className="w-3.5 h-3.5" />
+          <Chat className="w-3.5 h-3.5" />
           Review Changes
         </Button>
         <Button

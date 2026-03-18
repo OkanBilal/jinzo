@@ -72,7 +72,7 @@ export function DropdownMenu({
 
   // Adjust position to keep menu on screen
   const adjustedPosition = {
-    x: Math.max(8, Math.min(position.x, window.innerWidth - minWidth - 1300 )),
+    x: Math.max(8, Math.min(position.x, window.innerWidth - minWidth - 8)),
     y: Math.max(8, Math.min(position.y, window.innerHeight - 125)),
   };
 
