@@ -133,7 +133,16 @@ module.exports = {
     {
       name: '@electron-forge/maker-dmg',
       platforms: ['darwin'],
-      config: { format: 'ULFO' },
+      config: {
+        format: 'ULFO',
+        background: 'src/renderer/public/dmg-background.png',
+        icon: 'src/renderer/public/icon.icns',
+        contents: [
+          { x: 180, y: 170, type: 'file', path: '' },
+          { x: 480, y: 170, type: 'link', path: '/Applications' },
+        ],
+        window: { size: { width: 660, height: 400 } },
+      },
     },
     {
       name: '@electron-forge/maker-deb',
