@@ -59,8 +59,7 @@ export function useTabHandlers({
   );
 
   const handleCloseTab = useCallback(
-    (runId: string, e: React.MouseEvent) => {
-      e.stopPropagation();
+    (runId: string) => {
       if (runId === activeTab) {
         dispatch(setActiveTab(getNextTab(runId)));
       }

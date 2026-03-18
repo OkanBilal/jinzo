@@ -9,7 +9,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Caption } from "@/components/ui";
 import { ArrowUp } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
-import { WorkspaceResponse } from "src/main/modules/workspaces";
+import type { Workspace as WorkspaceResponse } from "@/lib/redux/api/workspacesApi";
 import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
 import { useRouteType } from "@/hooks/use-route-type";
 import { getBaseRoutePath } from "@/lib/route-utils";

@@ -12,7 +12,7 @@ interface RunTabProps {
   isActive: boolean;
   isFirst?: boolean;
   onClick: () => void;
-  onClose: (e: React.MouseEvent) => void;
+  onClose: () => void;
   onRename: (newTitle: string) => void;
   title: string;
   variant?: "copilot" | "claude";
@@ -93,9 +93,9 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, onRename, tit
     }
   }, [handleRenameConfirm]);
 
-  const handleArchive = useCallback((e: React.MouseEvent) => {
+  const handleArchive = useCallback(() => {
     setIsDropdownOpen(false);
-    onClose(e);
+    onClose();
   }, [onClose]);
 
   const label = isRenaming ? (

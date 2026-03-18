@@ -22,7 +22,7 @@ interface WorkspaceTabsProps {
   noteTabs?: ReviewTabType[];
   onSelectEditorTab: () => void;
   onSelectRunTab: (runId: string) => void;
-  onCloseTab: (runId: string, e: React.MouseEvent) => void;
+  onCloseTab: (runId: string) => void;
   onRenameRun: (runId: string, newTitle: string) => void;
   onNewRun: () => void;
   onSelectIssueTab: (entityId: string) => void;
@@ -85,7 +85,7 @@ export function WorkspaceTabs({
             isActive={run.id === activeTab}
             isFirst={!hasSelectedFile && i === 0}
             onClick={() => onSelectRunTab(run.id)}
-            onClose={(e) => onCloseTab(run.id, e)}
+            onClose={() => onCloseTab(run.id)}
             onRename={(newTitle) => onRenameRun(run.id, newTitle)}
             title={getTabTitle(run)}
           />
