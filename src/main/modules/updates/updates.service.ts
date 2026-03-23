@@ -1,4 +1,5 @@
-import { app } from "electron";
+import { app, autoUpdater } from "electron";
+import { updateElectronApp, UpdateSourceType } from "update-electron-app";
 import type {
   UpdateState,
   ServiceResponse,
@@ -26,7 +27,6 @@ export const updatesService = {
       return;
     }
 
-    const { updateElectronApp, UpdateSourceType } = require("update-electron-app");
     updateElectronApp({
       updateSource: {
         type: UpdateSourceType.ElectronPublicUpdateService,
@@ -44,7 +44,6 @@ export const updatesService = {
     }
 
     try {
-      const { autoUpdater } = require("electron");
       autoUpdater.checkForUpdates();
       this._state = { status: "checking", info: null, progress: null, error: null };
       return { success: true, data: this._state };
@@ -63,7 +62,6 @@ export const updatesService = {
       return { success: false, error: "Cannot install updates in development mode" };
     }
 
-    const { autoUpdater } = require("electron");
     autoUpdater.quitAndInstall();
     return { success: true, data: null };
   },

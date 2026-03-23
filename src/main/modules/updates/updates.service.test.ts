@@ -4,6 +4,15 @@ vi.mock("electron", () => ({
   app: {
     isPackaged: false,
   },
+  autoUpdater: {
+    checkForUpdates: vi.fn(),
+    quitAndInstall: vi.fn(),
+  },
+}));
+
+vi.mock("update-electron-app", () => ({
+  updateElectronApp: vi.fn(),
+  UpdateSourceType: { ElectronPublicUpdateService: "ElectronPublicUpdateService" },
 }));
 
 import { updatesService } from "./updates.service";
