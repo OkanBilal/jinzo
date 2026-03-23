@@ -7,6 +7,10 @@ vi.mock("electron", () => ({
   autoUpdater: {
     checkForUpdates: vi.fn(),
     quitAndInstall: vi.fn(),
+    on: vi.fn(),
+  },
+  BrowserWindow: {
+    getAllWindows: vi.fn().mockReturnValue([]),
   },
 }));
 
