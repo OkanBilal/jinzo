@@ -100,7 +100,6 @@ module.exports = {
     extraResource: [
       'src/main/db/migrations',
       'src/renderer/public/icon.png',
-      'app-update.yml',
     ],
     ...((() => {
       const hasSigningVars = process.env.APPLE_ID && process.env.APPLE_PASSWORD && process.env.APPLE_TEAM_ID;

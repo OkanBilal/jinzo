@@ -30,7 +30,6 @@ export default defineConfig(() => {
         'vscode-jsonrpc',
         'zod',
         '@img/sharp-darwin-arm64',
-        'electron-updater',
       ],
     },
   },
@@ -50,23 +49,6 @@ export default defineConfig(() => {
           'node-pty',
           'vscode-jsonrpc',
           'zod',
-          'electron-updater',
-          // electron-updater transitive deps
-          'builder-util-runtime',
-          'fs-extra',
-          'graceful-fs',
-          'js-yaml',
-          'jsonfile',
-          'lazy-val',
-          'lodash.escaperegexp',
-          'lodash.isequal',
-          'semver',
-          'tiny-typed-emitter',
-          'universalify',
-          'argparse',
-          'debug',
-          'ms',
-          'sax',
         ];
 
         // Scoped packages need their parent @scope directory created
