@@ -92,7 +92,9 @@ export default function DropdownWrapper({
   const positionClass = position === "right" ? "right-0" : "left-0";
   const verticalClass = openUpward ? "bottom-10" : "top-8";
 
-  const hiddenClass = isOpen ? "animate-dropdown-in" : "invisible pointer-events-none";
+  const hiddenClass = isOpen
+    ? "animate-dropdown-in"
+    : "invisible pointer-events-none will-change-[transform,opacity]";
 
   const dropdown = (
     <div

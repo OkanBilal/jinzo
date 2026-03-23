@@ -121,6 +121,7 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
       nodeIntegration: false,
       sandbox: false,
       devTools: !app.isPackaged,
+      backgroundThrottling: false,
     },
     ...(process.platform === "darwin" ? {
       titleBarStyle: "hiddenInset" as const,

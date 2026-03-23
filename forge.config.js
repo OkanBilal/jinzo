@@ -8,16 +8,12 @@ module.exports = {
     packageAfterPrune: async (_forgeConfig, buildPath) => {
       const { rebuild } = require('@electron/rebuild');
       const path = require('path');
+      const fs = require('fs');
       const electronVersion = require('electron/package.json').version;
-
-      // Rebuild standard node_modules
-      console.log('Rebuilding native modules in node_modules...');
-      await rebuild({ buildPath, electronVersion, force: true });
 
       // Rebuild native modules inside .vite/build/node_modules
       // (Vite copies pre-built modules from project node_modules which target
-      // the system Node.js, not Electron)
-      const fs = require('fs');
+      // the system Node.js, not Electron — this is the only location the app loads from)
       const viteBuildPath = path.join(buildPath, '.vite', 'build');
       const vitePkgJson = path.join(viteBuildPath, 'package.json');
       fs.writeFileSync(vitePkgJson, JSON.stringify({
@@ -130,9 +126,7 @@ module.exports = {
       };
     })()),
   },
-  rebuildConfig: {
-    force: true,
-  },
+  rebuildConfig: {},
   makers: [
     {
       name: '@electron-forge/maker-squirrel',

@@ -102,7 +102,10 @@ export function DropdownMenu({
     <DropdownContext.Provider value={{ registerSubmenu, unregisterSubmenu }}>
       <div
         ref={menuRef}
-        className={cn("fixed z-(--z-dropdown) rounded-2xl overflow-hidden glass-morphism animate-dropdown-in", className)}
+        className={cn(
+          "fixed z-(--z-dropdown) rounded-2xl overflow-hidden glass-morphism animate-dropdown-in",
+          className,
+        )}
         style={{
           left: adjustedPosition.x,
           top: adjustedPosition.y,

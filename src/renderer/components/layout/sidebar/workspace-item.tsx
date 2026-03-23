@@ -350,7 +350,7 @@ export default function WorkspaceItem({
         )}
         <DropdownMenuItem onClick={handleLinkIssuesClick}>
           <Connect className="size-3.5" />
-          <span>Connect issues</span>
+          <span>Link resources</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleArchiveClick}>
           <Archive className="size-3.5" />

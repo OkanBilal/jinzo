@@ -6,6 +6,11 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell } from "e
 
 // Prevent macOS Apple Music access prompt triggered by Chromium's media session API
 app.commandLine.appendSwitch("disable-features", "HardwareMediaKeyHandling,MediaSessionService");
+
+// Enable GPU rasterization and compositing for smoother animations on first launch
+app.commandLine.appendSwitch("enable-gpu-rasterization");
+app.commandLine.appendSwitch("enable-zero-copy");
+app.commandLine.appendSwitch("ignore-gpu-blocklist");
 import { spawn, execFile } from "child_process";
 import { promisify } from "util";
 import * as fs from "fs";
@@ -222,6 +227,50 @@ async function getAppIcon(appPath: string): Promise<string | null> {
   }
 }
 
+// Directories to search for .app bundles (no Spotlight / mdfind needed)
+const APP_SEARCH_DIRS = [
+  "/Applications",
+  "/Applications/Utilities",
+  "/System/Applications",
+  "/System/Applications/Utilities",
+  path.join(app.getPath("home"), "Applications"),
+];
+
+/**
+ * Find an app by its bundle identifier without using mdfind.
+ * Walks the known application directories looking for a .app whose
+ * CFBundleIdentifier matches. This avoids the macOS
+ * "would like to access data from other apps" privacy prompt.
+ */
+async function findAppByBundleId(bundleId: string): Promise<string | null> {
+  for (const dir of APP_SEARCH_DIRS) {
+    let entries: string[];
+    try {
+      entries = fs.readdirSync(dir);
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (!entry.endsWith(".app")) continue;
+      const appPath = path.join(dir, entry);
+      const plistPath = path.join(appPath, "Contents", "Info.plist");
+      if (!fs.existsSync(plistPath)) continue;
+
+      try {
+        const { stdout } = await execFileAsync("defaults", [
+          "read",
+          path.join(appPath, "Contents", "Info"),
+          "CFBundleIdentifier",
+        ]);
+        if (stdout.trim() === bundleId) return appPath;
+      } catch {
+        // plist unreadable — skip
+      }
+    }
+  }
+  return null;
+}
+
 async function detectInstalledApps(): Promise<DetectedApp[]> {
   if (installedAppsCache && Date.now() - installedAppsCacheTime < CACHE_TTL) {
     return installedAppsCache;
@@ -233,10 +282,7 @@ async function detectInstalledApps(): Promise<DetectedApp[]> {
       const results = await Promise.allSettled(
         KNOWN_APPS.map(async (knownApp) => {
           try {
-            const { stdout } = await execFileAsync("mdfind", [
-              `kMDItemCFBundleIdentifier == '${knownApp.bundleId}'`,
-            ]);
-            const appPath = stdout.split("\n")[0]?.trim();
+            const appPath = await findAppByBundleId(knownApp.bundleId);
             if (!appPath) return null;
 
             const icon = await getAppIcon(appPath);
