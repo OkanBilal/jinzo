@@ -3,32 +3,7 @@ import { Button, DropdownWrapper } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { useGetIssuesByProjectQuery } from "@/lib/redux/api";
-import { Asana, Gitlab, Jira, Trello } from "@/components/ui/icons";
-import Github from "@/components/ui/icons/github";
-import Linear from "@/components/ui/icons/linear";
-
-function ProviderIcon({ provider }: { provider: string }) {
-  switch (provider) {
-    case "github":
-      return <Github className="w-3.5 h-3.5 shrink-0" />;
-    case "linear":
-      return <Linear className="w-3.5 h-3.5 shrink-0" />;
-    case "jira":
-      return <Jira className="w-3.5 h-3.5 shrink-0" />;
-    case "asana":
-      return <Asana className="h-5.5 w-6 scale-60 shrink-0" />;
-    case "gitlab":
-      return <Gitlab className="w-3.5 h-3.5 shrink-0" />;
-    case "trello":
-      return <Trello className="w-3.5 h-3.5 shrink-0" />;
-    default:
-      return (
-        <span className="text-xs font-medium uppercase shrink-0">
-          {provider.slice(0, 2)}
-        </span>
-      );
-  }
-}
+import { ProviderIcon } from "./provider-icon";
 
 interface IssueMentionDropdownProps {
   isOpen: boolean;
@@ -100,7 +75,7 @@ export function IssueMentionDropdown({
                 className="w-full text-left px-3 py-2 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100 first:rounded-t-xl last:rounded-b-xl"
               >
                 <div className="flex items-center gap-2">
-                  <ProviderIcon provider={item.issue.provider} />
+                  <ProviderIcon provider={item.issue.provider} className="w-3.5 h-3.5 shrink-0" fallback="text" />
                   {item.issue.number != null && (
                     <span className="text-xs shrink-0 text-primary-500 dark:text-primary-400">
                       #{item.issue.number}

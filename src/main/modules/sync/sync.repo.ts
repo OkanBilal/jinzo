@@ -128,10 +128,10 @@ export const syncRepo = {
     }
   },
 
-  async upsertEntities(
+  upsertEntities(
     items: EntityInput[],
     accountId: string = DEFAULT_ACCOUNT_ID
-  ): Promise<SyncJobStats> {
+  ): SyncJobStats {
     const db = getDb();
     const stats: SyncJobStats = { inserted: 0, updated: 0, skipped: 0, errors: 0 };
 

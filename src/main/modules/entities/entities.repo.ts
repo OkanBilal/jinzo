@@ -85,7 +85,7 @@ export const entitiesRepo = {
   async update(id: string, payload: UpdateEntityPayload) {
     const db = getDb();
     const updateData: Record<string, unknown> = {
-      updatedAt: new Date(),
+      updatedAt: sql`(unixepoch())`,
     };
 
     if (payload.title !== undefined) updateData.title = payload.title;
@@ -104,7 +104,7 @@ export const entitiesRepo = {
     const db = getDb();
     await db
       .update(entities)
-      .set({ isDeleted: true, updatedAt: new Date() })
+      .set({ isDeleted: true, updatedAt: sql`(unixepoch())` })
       .where(eq(entities.id, id));
   },
 
@@ -217,7 +217,7 @@ export const entitiesRepo = {
       await db.update(tasks).set(updateData).where(eq(tasks.entityId, entityId));
       await db
         .update(entities)
-        .set({ updatedAt: new Date() })
+        .set({ updatedAt: sql`(unixepoch())` })
         .where(eq(entities.id, entityId));
     }
 
@@ -314,7 +314,7 @@ export const entitiesRepo = {
       await db.update(issues).set(updateData).where(eq(issues.entityId, entityId));
       await db
         .update(entities)
-        .set({ updatedAt: new Date() })
+        .set({ updatedAt: sql`(unixepoch())` })
         .where(eq(entities.id, entityId));
     }
 
@@ -438,7 +438,7 @@ export const entitiesRepo = {
       await db.update(signals).set(updateData).where(eq(signals.entityId, entityId));
       await db
         .update(entities)
-        .set({ updatedAt: new Date() })
+        .set({ updatedAt: sql`(unixepoch())` })
         .where(eq(entities.id, entityId));
     }
 

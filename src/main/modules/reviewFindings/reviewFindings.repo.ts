@@ -1,5 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { getDb } from "../../db/client";
+import { safeJsonParse } from "../../db/utils";
 import { reviewFindings, reviews } from "../../db/schema";
 import type {
   CreateReviewFindingPayload,
@@ -151,7 +152,7 @@ function mapRowToResponse(
     reason: row.reason,
     suggestion: row.suggestion,
     validated: row.validated,
-    metadata: row.metadata ? JSON.parse(row.metadata) : null,
+    metadata: safeJsonParse(row.metadata),
     createdAt: row.createdAt,
   };
 }

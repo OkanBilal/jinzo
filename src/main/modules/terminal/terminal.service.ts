@@ -1,4 +1,6 @@
 import * as pty from "node-pty";
+import { existsSync } from "fs";
+import path from "path";
 
 type DataCallback = (id: string, data: string) => void;
 
@@ -30,12 +32,17 @@ export const terminalService = {
     // Kill existing instance if present
     this.destroy(id);
 
+    const resolved = path.resolve(cwd);
+    if (!existsSync(resolved)) {
+      throw new Error(`Terminal cwd does not exist: ${resolved}`);
+    }
+
     const shell = process.platform === "win32" ? "powershell.exe" : "zsh";
     const proc = pty.spawn(shell, [], {
       name: "xterm-256color",
       cols: 80,
       rows: 24,
-      cwd,
+      cwd: resolved,
       env: getSafeEnv(),
     });
 

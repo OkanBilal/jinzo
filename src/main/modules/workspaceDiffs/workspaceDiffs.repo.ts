@@ -1,5 +1,6 @@
 import { eq, desc, and } from "drizzle-orm";
 import { getDb } from "../../db/client";
+import { safeJsonParse } from "../../db/utils";
 import { workspaceDiffs } from "../../db/schema";
 import type { WorkspaceDiffResponse } from "./workspaceDiffs.dto";
 
@@ -99,8 +100,8 @@ function mapRowToResponse(
     runId: row.runId,
     baseRef: row.baseRef,
     diffText: row.diffText,
-    files: row.filesJson ? JSON.parse(row.filesJson) : null,
-    stats: row.statsJson ? JSON.parse(row.statsJson) : null,
+    files: safeJsonParse<string[]>(row.filesJson),
+    stats: safeJsonParse(row.statsJson),
     createdAt: row.createdAt,
   };
 }

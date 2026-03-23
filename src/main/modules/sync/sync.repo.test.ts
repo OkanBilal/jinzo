@@ -217,23 +217,19 @@ describe("syncRepo", () => {
         makeEntityInput({ url: "https://batch.com/2" }),
         makeEntityInput({ url: "https://batch.com/3" }),
       ];
-      // upsertEntities returns a Promise but uses sync transaction internally
-      const statsPromise = syncRepo.upsertEntities(items);
-      // Since better-sqlite3 is sync, this resolves immediately in test
-      return statsPromise.then((stats) => {
-        expect(stats.inserted).toBe(3);
-        expect(stats.updated).toBe(0);
-        expect(stats.errors).toBe(0);
-      });
+      const stats = syncRepo.upsertEntities(items);
+      expect(stats.inserted).toBe(3);
+      expect(stats.updated).toBe(0);
+      expect(stats.errors).toBe(0);
     });
 
-    it("updates existing entities in batch", async () => {
+    it("updates existing entities in batch", () => {
       createEntity(db, { id: "batch-e1", url: "https://batch.com/existing" });
       const items = [
         makeEntityInput({ url: "https://batch.com/existing", title: "Updated" }),
         makeEntityInput({ url: "https://batch.com/new" }),
       ];
-      const stats = await syncRepo.upsertEntities(items);
+      const stats = syncRepo.upsertEntities(items);
       expect(stats.inserted).toBe(1);
       expect(stats.updated).toBe(1);
     });

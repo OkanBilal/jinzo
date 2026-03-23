@@ -1,33 +1,8 @@
-import { getContextIssueColor } from "@/lib/label-colors";
 import type { FileNode } from "@/features/workspace/components/file-explorer";
 import type { ContextIssue } from "@/lib/redux/slices/workspaceSlice";
-import { Asana, Close, Gitlab, Jira, Trello } from "@/components/ui/icons";
-import Github from "@/components/ui/icons/github";
-import Linear from "@/components/ui/icons/linear";
+import { Close } from "@/components/ui/icons";
 import { Code } from "@/components/ui/icons/space";
-
-function IssueProviderIcon({ provider }: { provider: string }) {
-  switch (provider) {
-    case "github":
-      return <Github className="w-3 h-3" />;
-    case "linear":
-      return <Linear className="w-3 h-3" />;
-    case "jira":
-      return <Jira className="w-3 h-3" />;
-    case "asana":
-      return <Asana className="h-5.5 w-6 scale-60" />;
-    case "gitlab":
-      return <Gitlab className="w-3 h-3" />;
-    case "trello":
-      return <Trello className="w-3 h-3" />;
-    default:
-      return (
-        <span className="text-t font-medium uppercase">
-          {provider.slice(0, 2)}
-        </span>
-      );
-  }
-}
+import { ProviderIcon } from "./provider-icon";
 
 interface ContextChipsProps {
   contextFiles: FileNode[];
@@ -71,14 +46,14 @@ export function ContextChips({
           {contextIssues.map((issue) => (
             <div
               key={issue.entityId}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs ${getContextIssueColor(issue.labels, issue.provider)}`}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-primary-200 dark:bg-primary-500/40 text-primary-600 dark:text-primary-100`}
             >
-              <IssueProviderIcon provider={issue.provider} />
+              <ProviderIcon provider={issue.provider} className="w-3 h-3" fallback="text" />
               <span className="truncate max-w-37.5">{issue.title}</span>
               {onRemoveContextIssue && (
                 <button
                   onClick={() => onRemoveContextIssue(issue.entityId)}
-                  className="w-4 h-4 flex items-center justify-center rounded p-0.5 hover:bg-purple-500/20 dark:hover:bg-purple-500/10 transition-colors"
+                  className="w-4 h-4 flex items-center justify-center rounded p-0.5  transition-colors"
                   title="Remove from context"
                 >
                   <Close className="w-3 h-3" />

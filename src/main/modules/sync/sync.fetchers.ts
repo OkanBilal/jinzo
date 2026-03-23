@@ -40,19 +40,23 @@ const PROVIDER_FETCHERS: Record<string, () => Promise<EntityInput[]>> = {
 };
 
 export async function fetchAllEntities(provider?: string): Promise<EntityInput[]> {
-  try {
-    const fetchers =
-      provider && PROVIDER_FETCHERS[provider]
-        ? [PROVIDER_FETCHERS[provider]]
-        : Object.values(PROVIDER_FETCHERS);
+  const entries =
+    provider && PROVIDER_FETCHERS[provider]
+      ? [[provider, PROVIDER_FETCHERS[provider]] as const]
+      : Object.entries(PROVIDER_FETCHERS);
 
-    const results = await Promise.all(fetchers.map((fn) => fn()));
-    const entities = results.flat();
+  const results = await Promise.allSettled(entries.map(([, fn]) => fn()));
 
-    console.log(`📥 Fetched ${entities.length} entities from sources${provider ? ` (provider: ${provider})` : ""}`);
-    return entities;
-  } catch (error) {
-    console.error("Error fetching entities:", error);
-    throw error;
+  const entities: EntityInput[] = [];
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    if (result.status === "fulfilled") {
+      entities.push(...result.value);
+    } else {
+      console.error(`[Sync] Provider "${entries[i][0]}" failed:`, result.reason);
+    }
   }
+
+  console.log(`[Sync] Fetched ${entities.length} entities from ${entries.length} sources${provider ? ` (provider: ${provider})` : ""}`);
+  return entities;
 }

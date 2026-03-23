@@ -1,5 +1,6 @@
 import { eq, desc, and, isNull } from "drizzle-orm";
 import { getDb } from "../../db/client";
+import { safeJsonParse } from "../../db/utils";
 import { toolCalls } from "../../db/schema";
 import type {
   CreateToolCallPayload,
@@ -134,14 +135,14 @@ function mapToolCallRowToResponse(
     toolCallId: row.toolCallId ?? null,
     parentToolCallId: row.parentToolCallId ?? null,
     status: row.status,
-    input: row.input ? JSON.parse(row.input) : null,
-    output: row.output ? JSON.parse(row.output) : null,
+    input: safeJsonParse(row.input),
+    output: safeJsonParse(row.output),
     error: row.error,
     startedAt: row.startedAt,
     endedAt: row.endedAt,
     latencyMs: row.latencyMs,
     costMicros: row.costMicros,
-    metadata: row.metadata ? JSON.parse(row.metadata) : null,
+    metadata: safeJsonParse(row.metadata),
     createdAt: row.createdAt,
   };
 }

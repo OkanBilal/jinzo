@@ -12,7 +12,7 @@
   </p>
   <p>
     <b>
-      AI-powered developer workspace
+      Home for agents
     </b>
   </p>
   <p>
@@ -62,37 +62,6 @@ npm start
 
 For Copilot, you'll need [GitHub CLI](https://cli.github.com/) authenticated (`gh auth login`).
 
-## Architecture
-
-Electron 40 app — React 19 renderer, SQLite + Drizzle ORM on the main process.
-
-```
-src/
-├── main/              # Main process
-│   ├── db/            # Schema, migrations, client
-│   └── modules/       # 25+ domain modules
-│       ├── providers/ # Agent adapters (Copilot, Claude)
-│       ├── runs/      # Run tracking & tool approval
-│       ├── sync/      # Integration sync engine
-│       └── ...
-├── preload/           # IPC bridge (window.api)
-└── renderer/          # React app
-    ├── features/      # Feature modules
-    ├── lib/redux/     # RTK Query + slices
-    └── routes/
-```
-
-Each module follows **IPC → Controller → Service → Repository**. All layers are plain object literals.
-
-### Stack
-
-| | |
-|---|---|
-| **Runtime** | Electron 40, Node.js |
-| **Frontend** | React 19, Redux Toolkit, React Router, Tailwind CSS v4 |
-| **Database** | SQLite (better-sqlite3), Drizzle ORM |
-| **AI** | GitHub Copilot SDK, Claude Agent SDK |
-| **Build** | Vite, Electron Forge, TypeScript |
 
 ## Development
 

@@ -17,6 +17,11 @@ vi.mock("node-pty", () => ({
   spawn: vi.fn().mockReturnValue(mockPty),
 }));
 
+vi.mock("fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("fs")>();
+  return { ...actual, existsSync: vi.fn(() => true) };
+});
+
 import { terminalService } from "./terminal.service";
 import * as pty from "node-pty";
 

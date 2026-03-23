@@ -279,8 +279,8 @@ describe("connectionCredentialsService", () => {
     it("catches unexpected errors and returns failure", async () => {
       createConnection(db, { id: "c1", provider: "github", status: "active", metadata: "{}" });
 
-      // Spy on markTokensNotCurrent to throw an error after connection is found
-      const spy = vi.spyOn(connectionCredentialsRepo, "markTokensNotCurrent").mockRejectedValueOnce(new Error("DB exploded"));
+      // Spy on rotateToken to throw an error after connection is found
+      const spy = vi.spyOn(connectionCredentialsRepo, "rotateToken").mockImplementationOnce(() => { throw new Error("DB exploded"); });
 
       const result = await connectionCredentialsService.saveCredentials({
         provider: "github",

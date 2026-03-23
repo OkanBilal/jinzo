@@ -13,16 +13,21 @@ export function registerTerminalIpc(): void {
   ipcMain.handle(
     CHANNELS.CREATE,
     async (event, payload: { id: string; cwd: string }) => {
-      const webContents = event.sender;
-      const window = BrowserWindow.fromWebContents(webContents);
+      try {
+        const webContents = event.sender;
+        const window = BrowserWindow.fromWebContents(webContents);
 
-      terminalService.create(payload.id, payload.cwd, (id, data) => {
-        if (window && !window.isDestroyed()) {
-          webContents.send(CHANNELS.DATA, { id, data });
-        }
-      });
+        terminalService.create(payload.id, payload.cwd, (id, data) => {
+          if (window && !window.isDestroyed()) {
+            webContents.send(CHANNELS.DATA, { id, data });
+          }
+        });
 
-      return { success: true };
+        return { success: true };
+      } catch (err) {
+        console.error("[Terminal] Failed to create terminal:", err);
+        return { success: false, error: err instanceof Error ? err.message : "Failed to create terminal" };
+      }
     },
   );
 

@@ -3,9 +3,8 @@ import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/components/markdown-components";
 import type { EventGroup } from "../../utils/group-events";
 import { Code } from "@/components/ui/icons/space";
-import { Picture, Document, Jira, Gitlab, Asana, Trello } from "@/components/ui/icons";
-import Github from "@/components/ui/icons/github";
-import Linear from "@/components/ui/icons/linear";
+import { Picture, Document } from "@/components/ui/icons";
+import { ProviderIcon } from "../provider-icon";
 
 interface InfoGroupProps {
   group: EventGroup;
@@ -50,9 +49,9 @@ export function InfoGroup({ group }: InfoGroupProps) {
                 {issues.map((issue) => (
                   <div
                     key={`${issue.provider}-${issue.number ?? issue.title}`}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs ${getIssueChipColor(issue.provider)}`}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-primary-200 dark:bg-primary-500/40 text-primary-600 dark:text-primary-100`}
                   >
-                    <IssueIcon provider={issue.provider} />
+                    <ProviderIcon provider={issue.provider} className="w-3 h-3" fallback="text" />
                     <span className="truncate max-w-60">
                       {issue.number ? `#${issue.number} ` : ""}{issue.title}
                     </span>
@@ -128,34 +127,4 @@ export function InfoGroup({ group }: InfoGroupProps) {
   );
 }
 
-function IssueIcon({ provider }: { provider: string }) {
-  switch (provider) {
-    case "github":
-      return <Github className="w-3 h-3" />;
-    case "linear":
-      return <Linear className="w-3 h-3" />;
-    case "jira":
-      return <Jira className="w-3 h-3" />;
-    case "asana":
-      return <Asana className="h-5.5 w-6 scale-60" />;
-    case "gitlab":
-      return <Gitlab className="w-3 h-3" />;
-    case "trello":
-      return <Trello className="w-3 h-3" />;
-    default:
-      return <span className="text-t font-medium uppercase">{provider.slice(0, 2)}</span>;
-  }
-}
 
-function getIssueChipColor(provider: string): string {
-  switch (provider) {
-    case "github":
-      return "bg-gray-500/15 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300";
-    case "linear":
-      return "bg-indigo-500/15 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300";
-    case "jira":
-      return "bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300";
-    default:
-      return "bg-purple-500/10 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300";
-  }
-}

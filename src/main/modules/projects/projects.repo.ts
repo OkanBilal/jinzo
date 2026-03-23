@@ -1,6 +1,7 @@
 import { eq, desc, and } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
+import { safeJsonParse } from "../../db/utils";
 import { projects } from "../../db/schema";
 import type { CreateProjectPayload, UpdateProjectPayload, ProjectResponse } from "./projects.dto";
 
@@ -125,7 +126,7 @@ function mapRowToResponse(row: typeof projects.$inferSelect): ProjectResponse {
     name: row.name,
     rootPath: row.rootPath,
     workspacesPath: row.workspacesPath,
-    branches: row.branches ? JSON.parse(row.branches) : null,
+    branches: safeJsonParse<string[]>(row.branches),
     remoteOrigin: row.remoteOrigin,
     defaultBranch: row.defaultBranch,
     setupScript: row.setupScript,

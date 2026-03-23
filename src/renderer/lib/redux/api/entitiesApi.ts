@@ -171,7 +171,7 @@ export const entitiesApi = baseApi.injectEndpoints({
 
     getTaskByEntityId: builder.query<Task | null, string>({
       query: (entityId) => ({
-        handler: "tasks:getByEntityId",
+        handler: "tasks:getById",
         args: [entityId],
       }),
       transformResponse: (response: any) =>
@@ -186,8 +186,8 @@ export const entitiesApi = baseApi.injectEndpoints({
       { entityId: string; status: string }
     >({
       query: ({ entityId, status }) => ({
-        handler: "tasks:updateStatus",
-        args: [entityId, status],
+        handler: "tasks:update",
+        args: [entityId, { status }],
       }),
       transformResponse: (response: any) =>
         response.success ? response.data : null,
@@ -206,7 +206,7 @@ export const entitiesApi = baseApi.injectEndpoints({
 
     getIssueByEntityId: builder.query<Issue | null, string>({
       query: (entityId) => ({
-        handler: "issues:getByEntityId",
+        handler: "issues:getById",
         args: [entityId],
       }),
       transformResponse: (response: any) =>
@@ -221,8 +221,8 @@ export const entitiesApi = baseApi.injectEndpoints({
       { entityId: string; state: string }
     >({
       query: ({ entityId, state }) => ({
-        handler: "issues:updateState",
-        args: [entityId, state],
+        handler: "issues:update",
+        args: [entityId, { state }],
       }),
       transformResponse: (response: any) =>
         response.success ? response.data : null,

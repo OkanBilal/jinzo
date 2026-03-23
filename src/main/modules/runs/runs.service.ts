@@ -817,23 +817,28 @@ export const runsService = {
                 ? "canceled"
                 : "failed";
 
-          await runsRepo.updateRun(runId, {
-            status: finalStatus,
-            endedAt: new Date(),
-            lastError: result.status === "failed" ? result.summary : undefined,
-            stopReason: result.stopReason ?? null,
-          });
+          try {
+            await runsRepo.updateRun(runId, {
+              status: finalStatus,
+              endedAt: new Date(),
+              lastError: result.status === "failed" ? result.summary : undefined,
+              stopReason: result.stopReason ?? null,
+            });
 
-          // Persist git diff on success
-          if (finalStatus === "succeeded") {
-            await persistRunDiff(runId, workspace.id, workspace.rootPath);
-          } else {
-            runBaseRefs.delete(runId);
+            // Persist git diff on success
+            if (finalStatus === "succeeded") {
+              await persistRunDiff(runId, workspace.id, workspace.rootPath);
+            } else {
+              runBaseRefs.delete(runId);
+            }
+            await closeActiveTurn(runId, result.usage);
+          } catch (cleanupErr) {
+            console.error(`[RunsService] Cleanup failed for run ${runId}:`, cleanupErr);
+          } finally {
+            cleanupTurnState(runId);
+            sendRunNotification(runId, finalStatus);
+            releaseSleepBlocker(runId);
           }
-          await closeActiveTurn(runId, result.usage);
-          cleanupTurnState(runId);
-          sendRunNotification(runId, finalStatus);
-          releaseSleepBlocker(runId);
         })
         .catch(async (error) => {
           const errorMessage =
@@ -842,16 +847,20 @@ export const runsService = {
 
           runBaseRefs.delete(runId);
 
-          await runsRepo.updateRun(runId, {
-            status: "failed",
-            endedAt: new Date(),
-            lastError: errorMessage,
-          });
-
-          await closeActiveTurn(runId);
-          cleanupTurnState(runId);
-          sendRunNotification(runId, "failed");
-          releaseSleepBlocker(runId);
+          try {
+            await runsRepo.updateRun(runId, {
+              status: "failed",
+              endedAt: new Date(),
+              lastError: errorMessage,
+            });
+            await closeActiveTurn(runId);
+          } catch (cleanupErr) {
+            console.error(`[RunsService] Cleanup failed for run ${runId}:`, cleanupErr);
+          } finally {
+            cleanupTurnState(runId);
+            sendRunNotification(runId, "failed");
+            releaseSleepBlocker(runId);
+          }
         });
 
       // Return immediately with runId
@@ -862,6 +871,7 @@ export const runsService = {
       console.error(`[RunsService] Failed to execute run:`, errorMessage);
 
       runBaseRefs.delete(runId);
+      cleanupTurnState(runId);
       releaseSleepBlocker(runId);
 
       // Try to mark run as failed if it was created

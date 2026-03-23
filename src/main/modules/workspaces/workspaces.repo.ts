@@ -1,5 +1,6 @@
 import { eq, desc, and } from "drizzle-orm";
 import { getDb } from "../../db/client";
+import { safeJsonParse } from "../../db/utils";
 import { workspaces } from "../../db/schema";
 import type {
   CreateWorkspacePayload,
@@ -73,7 +74,7 @@ export const workspacesRepo = {
 
   async update(id: string, payload: UpdateWorkspacePayload): Promise<WorkspaceResponse | null> {
     const db = getDb();
-    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    const updateData: Record<string, unknown> = { updatedAt: sql`(unixepoch())` };
 
     if (payload.name !== undefined) updateData.name = payload.name;
     if (payload.rootPath !== undefined) updateData.rootPath = payload.rootPath;
@@ -129,7 +130,7 @@ function mapRowToResponse(row: typeof workspaces.$inferSelect): WorkspaceRespons
     rootPath: row.rootPath,
     repoUrl: row.repoUrl,
     defaultBranch: row.defaultBranch,
-    metadata: row.metadata ? JSON.parse(row.metadata) : null,
+    metadata: safeJsonParse(row.metadata),
     status: row.status as WorkspaceStatus,
     isArchived: row.isArchived,
     createdAt: row.createdAt,

@@ -64,15 +64,12 @@ export const connectionCredentialsService = {
         return { success: false, error: "Connection not found" };
       }
 
-      // Mark existing tokens as not current
-      await connectionCredentialsRepo.markTokensNotCurrent(connectionId);
-
       // Encrypt all secrets as a single JSON blob
       const tokenHash = createTokenHash(tokensForHash);
       const encryptedSecrets = encryptSecrets(secrets);
 
-      // Insert new token
-      await connectionCredentialsRepo.insertToken({
+      // Atomically rotate: mark existing tokens not current + insert new one
+      connectionCredentialsRepo.rotateToken({
         connectionId,
         accessTokenEnc: encryptedSecrets,
         refreshTokenEnc: null,
@@ -80,7 +77,6 @@ export const connectionCredentialsService = {
         expiresAt: null,
         tokenHash,
         keyVersion: 1,
-        isCurrent: true,
       });
 
       // Update connection status and metadata (non-secret fields only)

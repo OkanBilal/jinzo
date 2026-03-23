@@ -13,9 +13,7 @@ import {
   useRemoveProjectResourceMutation,
   type AvailableResource,
 } from "@/lib/redux/api";
-import Github from "@/components/ui/icons/github";
-import Linear from "@/components/ui/icons/linear";
-import { Apps, Asana, Gitlab, Jira, Trello } from "@/components/ui/icons";
+import { ResourceIcon } from "./provider-icon";
 
 interface LinkResourcesModalProps {
   projectId: string;
@@ -136,22 +134,7 @@ export function LinkResourcesModal({
 
   const renderResourceItem = (resource: AvailableResource) => {
     const selected = selectedIds.has(resource.id);
-    const icon =
-      resource.kind === "github_repo" ? (
-        <Github className="w-4 h-4 shrink-0" />
-      ) : resource.kind === "jira_project" ? (
-        <Jira className="size-5 shrink-0" />
-      ) : resource.kind === "linear_team" ? (
-        <Linear className="w-4 h-4 shrink-0" />
-      ) : resource.kind === "asana_project" ? (
-        <Asana className="h-5.5 w-6 scale-80 shrink-0" />
-      ) : resource.kind === "gitlab_project" ? (
-        <Gitlab className="w-4 h-4 shrink-0" />
-      ) : resource.kind === "trello_board" ? (
-        <Trello className="w-4 h-4 shrink-0" />
-      ) : (
-        <Apps className="w-4 h-4 shrink-0" />
-      );
+    const icon = <ResourceIcon kind={resource.kind} />;
 
     return (
       <div

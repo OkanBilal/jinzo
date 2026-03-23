@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import { connections, connectionTokens, appStates } from "../../db/schema";
 
@@ -41,6 +41,32 @@ export const connectionCredentialsRepo = {
     await db.insert(connectionTokens).values(data);
   },
 
+  /**
+   * Atomically mark all existing tokens as not current and insert a new one.
+   * Prevents race conditions where concurrent calls could create multiple current tokens.
+   */
+  rotateToken(data: {
+    connectionId: string;
+    accessTokenEnc: Buffer;
+    refreshTokenEnc: Buffer | null;
+    tokenType: string;
+    expiresAt: Date | null;
+    tokenHash: Buffer;
+    keyVersion: number;
+  }): void {
+    const db = getDb();
+    db.transaction(() => {
+      db.update(connectionTokens)
+        .set({ isCurrent: false })
+        .where(eq(connectionTokens.connectionId, data.connectionId))
+        .run();
+
+      db.insert(connectionTokens)
+        .values({ ...data, isCurrent: true })
+        .run();
+    });
+  },
+
   async updateConnectionStatus(
     connectionId: string,
     status: "active" | "revoked" | "error" | "disabled",
@@ -52,7 +78,7 @@ export const connectionCredentialsRepo = {
       .set({
         status,
         metadata,
-        updatedAt: new Date(),
+        updatedAt: sql`(unixepoch())`,
       })
       .where(eq(connections.id, connectionId))
       .run();
@@ -69,7 +95,7 @@ export const connectionCredentialsRepo = {
       .set({
         isConnected,
         connectionId,
-        updatedAt: new Date(),
+        updatedAt: sql`(unixepoch())`,
       })
       .where(eq(appStates.id, provider))
       .run();

@@ -149,22 +149,27 @@ describe("sync.fetchers", () => {
       expect(result).toEqual([]);
     });
 
-    it("re-throws when a fetcher throws", async () => {
+    it("returns empty array when a single-provider fetcher fails", async () => {
       vi.mocked(fetchGitHubFromConnectionResources).mockRejectedValue(new Error("API rate limit"));
 
-      await expect(fetchAllEntities("github")).rejects.toThrow("API rate limit");
+      const result = await fetchAllEntities("github");
+      expect(result).toEqual([]);
     });
 
-    it("re-throws when any fetcher in all-providers mode throws", async () => {
+    it("returns results from successful providers when one fails", async () => {
+      const linearEntity = mockEntity("linear-ok");
+      vi.mocked(fetchLinearFromConnectionResources).mockResolvedValue([linearEntity]);
       vi.mocked(fetchJiraFromConnectionResources).mockRejectedValue(new Error("Jira down"));
 
-      await expect(fetchAllEntities()).rejects.toThrow("Jira down");
+      const result = await fetchAllEntities();
+      expect(result).toContainEqual(linearEntity);
     });
 
-    it("re-throws non-Error values", async () => {
+    it("handles non-Error rejection values gracefully", async () => {
       vi.mocked(fetchAsanaFromConnectionResources).mockRejectedValue("string error");
 
-      await expect(fetchAllEntities("asana")).rejects.toBe("string error");
+      const result = await fetchAllEntities("asana");
+      expect(result).toEqual([]);
     });
   });
 });

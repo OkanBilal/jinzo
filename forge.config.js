@@ -102,21 +102,33 @@ module.exports = {
       'src/main/db/migrations',
       'src/renderer/public/icon.png',
     ],
-    ...(process.env.APPLE_ID && {
-      osxSign: {
-        identity: 'Developer ID Application',
-        optionsForFile: () => ({
-          hardenedRuntime: true,
-          entitlements: 'entitlements.plist',
-          'entitlements-inherit': 'entitlements.plist',
-        }),
-      },
-      osxNotarize: {
-        appleId: process.env.APPLE_ID,
-        appleIdPassword: process.env.APPLE_PASSWORD,
-        teamId: process.env.APPLE_TEAM_ID,
-      },
-    }),
+    ...((() => {
+      const hasSigningVars = process.env.APPLE_ID && process.env.APPLE_PASSWORD && process.env.APPLE_TEAM_ID;
+      const isRelease = process.env.CI || process.env.RELEASE;
+
+      if (isRelease && !hasSigningVars) {
+        throw new Error('Release build requires APPLE_ID, APPLE_PASSWORD, and APPLE_TEAM_ID for code signing');
+      }
+      if (!hasSigningVars) {
+        console.warn('⚠ Skipping code signing — APPLE_ID not set (local dev build)');
+        return {};
+      }
+      return {
+        osxSign: {
+          identity: 'Developer ID Application',
+          optionsForFile: () => ({
+            hardenedRuntime: true,
+            entitlements: 'entitlements.plist',
+            'entitlements-inherit': 'entitlements.plist',
+          }),
+        },
+        osxNotarize: {
+          appleId: process.env.APPLE_ID,
+          appleIdPassword: process.env.APPLE_PASSWORD,
+          teamId: process.env.APPLE_TEAM_ID,
+        },
+      };
+    })()),
   },
   rebuildConfig: {
     force: true,

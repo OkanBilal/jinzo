@@ -4,7 +4,6 @@ import rehypeRaw from "rehype-raw";
 import { markdownComponents } from "@/components/markdown-components";
 import type { IssueWithEntity } from "@/lib/redux/api";
 import { Heading2, Button } from "@/components/ui";
-import { getLabelColor } from "@/lib/label-colors";
 
 interface IssueTabContentProps {
   issue: IssueWithEntity;
@@ -71,7 +70,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
             {labels.map((label) => (
               <span
                 key={label}
-                className={`inline-block px-2.5 py-1 text-xs rounded-full capitalize font-medium ${getLabelColor(label)}`}
+                className={`inline-block px-2.5 py-1 text-xs rounded-full capitalize font-medium bg-primary-200 dark:bg-primary-500/40 text-primary-600 dark:text-primary-100`}
               >
                 {label}
               </span>
@@ -115,7 +114,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
                         : iss.provider === "gitlab"
                           ? "View on GitLab"
                           : iss.provider === "trello"
-                            ? "View on Trello"  
+                            ? "View on Trello"
                         : "View on Provider"}
               </Button>
             </p>

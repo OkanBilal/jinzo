@@ -1,5 +1,6 @@
 import { eq, desc, sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
+import { safeJsonParse } from "../../db/utils";
 import { reviews } from "../../db/schema";
 import type {
   CreateReviewPayload,
@@ -92,7 +93,7 @@ function mapRowToResponse(row: typeof reviews.$inferSelect): ReviewResponse {
     summary: row.summary,
     status: row.status,
     runId: row.runId,
-    metadata: row.metadata ? JSON.parse(row.metadata) : null,
+    metadata: safeJsonParse(row.metadata),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

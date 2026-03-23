@@ -29,16 +29,21 @@ vi.mock("electron", () => ({
 }));
 
 vi.mock("child_process", () => ({
-  exec: vi.fn((_cmd: string, _opts: unknown, cb: (...args: any[]) => void) => {
+  execFile: vi.fn((_shell: string, _args: string[], _opts: unknown, cb: (...args: any[]) => void) => {
     cb(null, "done", "");
   }),
 }));
+
+vi.mock("fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("fs")>();
+  return { ...actual, existsSync: vi.fn(() => true) };
+});
 
 import { workspacesService } from "./workspaces.service";
 import { workspacesRepo } from "./workspaces.repo";
 import { projectsRepo } from "../projects/projects.repo";
 import { BrowserWindow } from "electron";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 
 describe("workspacesService", () => {
   beforeEach(() => {
@@ -396,7 +401,7 @@ describe("workspacesService", () => {
         { webContents: { send: mockSend } } as any,
       ]);
 
-      vi.mocked(exec).mockImplementationOnce((_cmd: any, _opts: any, cb: any) => {
+      vi.mocked(execFile).mockImplementationOnce((_shell: any, _args: any, _opts: any, cb: any) => {
         cb(new Error("script crashed"), "", "err");
         return undefined as any;
       });
@@ -487,7 +492,7 @@ describe("workspacesService", () => {
         { webContents: { send: mockSend } } as any,
       ]);
 
-      vi.mocked(exec).mockImplementationOnce((_cmd: any, _opts: any, cb: any) => {
+      vi.mocked(execFile).mockImplementationOnce((_shell: any, _args: any, _opts: any, cb: any) => {
         cb(new Error("archive failed"), "", "err");
         return undefined as any;
       });

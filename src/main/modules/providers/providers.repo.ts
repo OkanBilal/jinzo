@@ -1,5 +1,6 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
+import { safeJsonParse } from "../../db/utils";
 import { providers } from "../../db/schema";
 import type {
   CreateProviderPayload,
@@ -72,7 +73,7 @@ export const providersRepo = {
   async update(id: string, payload: UpdateProviderPayload): Promise<ProviderResponse | null> {
     const db = getDb();
     const updateData: Record<string, unknown> = {
-      updatedAt: new Date(),
+      updatedAt: sql`(unixepoch())`,
     };
 
     if (payload.displayName !== undefined) updateData.displayName = payload.displayName;
@@ -96,7 +97,7 @@ export const providersRepo = {
     const db = getDb();
     await db
       .update(providers)
-      .set({ isEnabled, updatedAt: new Date() })
+      .set({ isEnabled, updatedAt: sql`(unixepoch())` })
       .where(eq(providers.id, id));
   },
 };
@@ -110,8 +111,8 @@ function mapRowToResponse(row: typeof providers.$inferSelect): ProviderResponse 
     kind: row.kind,
     displayName: row.displayName,
     isEnabled: row.isEnabled,
-    config: row.config ? JSON.parse(row.config) : null,
-    capabilities: row.capabilities ? JSON.parse(row.capabilities) : null,
+    config: safeJsonParse(row.config),
+    capabilities: safeJsonParse(row.capabilities),
     defaultModel: row.defaultModel,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

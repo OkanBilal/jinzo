@@ -562,15 +562,13 @@ export function WorkspaceEvents({
         )}
         {/* Top/bottom fade overlays — only shown on run content (chat), not on editor/issue/note tabs */}
         {hasRunContent && !isEditorActive && !isIssueActive && !isNoteActive && !isNewRunActive && (
-          <>
             <div
               className="absolute top-0 left-0 right-0 h-24 bg-linear-to-b from-primary to-transparent dark:from-primary-950 dark:to-transparent pointer-events-none z-(--z-base)"
             />
+                )}
             <div
               className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary to-transparent dark:from-primary-950 dark:to-transparent pointer-events-none"
             />
-          </>
-        )}
       </div>
     </div>
   );

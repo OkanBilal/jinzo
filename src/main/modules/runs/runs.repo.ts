@@ -1,5 +1,6 @@
 import { eq, desc, and, sql, asc } from "drizzle-orm";
 import { getDb } from "../../db/client";
+import { safeJsonParse } from "../../db/utils";
 import { runs, runContext, runArtifacts, toolCalls, runTurns } from "../../db/schema";
 import type {
   CreateRunPayload,
@@ -107,7 +108,7 @@ export const runsRepo = {
 
   async updateRun(id: string, payload: UpdateRunPayload): Promise<RunResponse | null> {
     const db = getDb();
-    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    const updateData: Record<string, unknown> = { updatedAt: sql`(unixepoch())` };
 
     if (payload.title !== undefined) updateData.title = payload.title;
     if (payload.goal !== undefined) updateData.goal = payload.goal;
@@ -349,8 +350,8 @@ function mapRunRowToResponse(row: typeof runs.$inferSelect): RunResponse {
     goal: row.goal,
     status: row.status,
     systemPrompt: row.systemPrompt,
-    configSnapshot: row.configSnapshot ? JSON.parse(row.configSnapshot) : null,
-    toolPolicySnapshot: row.toolPolicySnapshot ? JSON.parse(row.toolPolicySnapshot) : null,
+    configSnapshot: safeJsonParse(row.configSnapshot),
+    toolPolicySnapshot: safeJsonParse(row.toolPolicySnapshot),
     startedAt: row.startedAt,
     endedAt: row.endedAt,
     lastError: row.lastError,
@@ -371,7 +372,7 @@ function mapContextRowToResponse(row: typeof runContext.$inferSelect): RunContex
     content: row.content,
     entityId: row.entityId,
     contentHash: row.contentHash,
-    metadata: row.metadata ? JSON.parse(row.metadata) : null,
+    metadata: safeJsonParse(row.metadata),
     createdAt: row.createdAt,
   };
 }
@@ -386,7 +387,7 @@ function mapArtifactRowToResponse(row: typeof runArtifacts.$inferSelect): RunArt
     blobData: row.blobData as Buffer | null,
     entityId: row.entityId,
     contentHash: row.contentHash,
-    metadata: row.metadata ? JSON.parse(row.metadata) : null,
+    metadata: safeJsonParse(row.metadata),
     createdAt: row.createdAt,
   };
 }
@@ -408,8 +409,8 @@ function mapTurnRowToResponse(row: typeof runTurns.$inferSelect): RunTurnRespons
     cacheWriteTokens: row.cacheWriteTokens,
     costMicros: row.costMicros,
     model: row.model,
-    modelUsage: row.modelUsage ? JSON.parse(row.modelUsage) : null,
-    metadata: row.metadata ? JSON.parse(row.metadata) : null,
+    modelUsage: safeJsonParse(row.modelUsage),
+    metadata: safeJsonParse(row.metadata),
     createdAt: row.createdAt,
   };
 }
@@ -423,14 +424,14 @@ function mapToolCallRowToResponse(row: typeof toolCalls.$inferSelect): ToolCallR
     toolId: row.toolCallId,
     toolName: row.toolName,
     status: row.status,
-    input: row.input ? JSON.parse(row.input) : null,
-    output: row.output ? JSON.parse(row.output) : null,
+    input: safeJsonParse(row.input),
+    output: safeJsonParse(row.output),
     error: row.error,
     startedAt: row.startedAt,
     endedAt: row.endedAt,
     latencyMs: row.latencyMs,
     costMicros: row.costMicros,
-    metadata: row.metadata ? JSON.parse(row.metadata) : null,
+    metadata: safeJsonParse(row.metadata),
     createdAt: row.createdAt,
   };
 }

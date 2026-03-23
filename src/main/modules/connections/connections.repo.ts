@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import {
   connections,
@@ -31,7 +31,7 @@ export const connectionsRepo = {
     const db = getDb();
     await db
       .update(connections)
-      .set({ status, metadata, updatedAt: new Date() })
+      .set({ status, metadata, updatedAt: sql`(unixepoch())` })
       .where(eq(connections.id, connectionId))
       .run();
   },
@@ -223,7 +223,7 @@ export const connectionsRepo = {
     const db = getDb();
     await db
       .update(appStates)
-      .set({ isConnected, connectionId, updatedAt: new Date() })
+      .set({ isConnected, connectionId, updatedAt: sql`(unixepoch())` })
       .where(eq(appStates.id, appId))
       .run();
   },

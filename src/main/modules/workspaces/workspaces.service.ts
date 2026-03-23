@@ -1,5 +1,7 @@
 import { randomUUID } from "crypto";
-import { exec } from "child_process";
+import { execFile } from "child_process";
+import { existsSync } from "fs";
+import path from "path";
 import { BrowserWindow } from "electron";
 import { workspacesRepo } from "./workspaces.repo";
 import { projectsRepo } from "../projects/projects.repo";
@@ -14,9 +16,21 @@ import type {
 // ─────────────────────────────────────────────────────────────
 // Script Execution Helper
 // ─────────────────────────────────────────────────────────────
+function validateScriptCwd(cwd: string): void {
+  const resolved = path.resolve(cwd);
+  if (!existsSync(resolved)) {
+    throw new Error(`Script cwd does not exist: ${resolved}`);
+  }
+}
+
 function executeScript(script: string, cwd: string): Promise<{ stdout: string; stderr: string }> {
+  validateScriptCwd(cwd);
+
+  const shell = process.platform === "win32" ? "cmd" : "/bin/sh";
+  const shellArgs = process.platform === "win32" ? ["/c", script] : ["-c", script];
+
   return new Promise((resolve, reject) => {
-    exec(script, { cwd, timeout: 300_000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+    execFile(shell, shellArgs, { cwd, timeout: 300_000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
       if (error) {
         console.error(`[WorkspacesService] Script failed in ${cwd}:`, error.message);
         reject(error);

@@ -1,5 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { getDb } from "../../db/client";
+import { safeJsonParse } from "../../db/utils";
 import { workspaceActivity } from "../../db/schema";
 import type { ActivityResponse, CreateActivityPayload } from "./workspaceActivity.dto";
 
@@ -71,7 +72,7 @@ function mapRowToResponse(
     type: row.type,
     title: row.title,
     summary: row.summary,
-    metadata: row.metadata ? JSON.parse(row.metadata) : null,
+    metadata: safeJsonParse(row.metadata),
     refId: row.refId,
     createdAt: row.createdAt,
   };

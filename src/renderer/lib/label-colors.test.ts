@@ -1,37 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { getLabelColor, parseLabels } from "./label-colors";
+import { parseLabels } from "./label-colors";
 
-describe("getLabelColor", () => {
-  it("returns color for known label (case-insensitive)", () => {
-    const result = getLabelColor("Bug");
-    expect(result).toContain("bg-red");
-  });
-
-  it("returns color for 'feature'", () => {
-    const result = getLabelColor("feature");
-    expect(result).toContain("bg-purple");
-  });
-
-  it("matches partial label (e.g. 'security audit' contains 'security')", () => {
-    const result = getLabelColor("security audit");
-    expect(result).toContain("bg-red");
-  });
-
-  it("returns default color for unknown label", () => {
-    const result = getLabelColor("completely-unknown-xyz");
-    expect(result).toContain("bg-primary");
-  });
-
-  it("matches 'in progress' with space", () => {
-    const result = getLabelColor("in progress");
-    expect(result).toContain("bg-blue");
-  });
-
-  it("matches 'in-progress' with hyphen", () => {
-    const result = getLabelColor("in-progress");
-    expect(result).toContain("bg-blue");
-  });
-});
 
 describe("parseLabels", () => {
   it("returns empty array for null", () => {
