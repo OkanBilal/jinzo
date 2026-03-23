@@ -85,25 +85,21 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     }
   }, [saving, project, icon, iconMode, defaultBranch, setupScript, runScript, archiveScript, commitInstructions, prInstructions, updateProject]);
 
-  // Auto-save when icon changes (skip initial sync from project load)
+  // Auto-save when icon changes (skip initial sync from project load and mode-only switches)
   const iconSyncedRef = useRef(false);
   const prevIconRef = useRef(icon);
-  const prevIconModeRef = useRef(iconMode);
   useEffect(() => {
-    // Reset on project change so next sync is ignored
     iconSyncedRef.current = false;
   }, [project?.id]);
   useEffect(() => {
-    if (prevIconRef.current === icon && prevIconModeRef.current === iconMode) return;
+    if (prevIconRef.current === icon) return;
     prevIconRef.current = icon;
-    prevIconModeRef.current = iconMode;
     if (!iconSyncedRef.current) {
-      // First change after project load is the sync — skip it
       iconSyncedRef.current = true;
       return;
     }
     if (project) handleSave();
-  }, [icon, iconMode, project, handleSave]);
+  }, [icon, project, handleSave]);
 
   const lastSavedLabel = useMemo(() => {
     const ts = project?.updatedAt || project?.createdAt;

@@ -4,16 +4,16 @@ import { join } from "path";
 
 /**
  * Drizzle Studio configuration for RUNTIME database
- * Points to the actual database used by the running Electron app
+ * Points to the actual database used by the running  app
  */
 
 // macOS: ~/Library/Application Support/jinzo/jinzo.db
-// Linux: ~/.config/jinzo/jinzo.db  
+// Linux: ~/.config/jinzo/jinzo.db
 // Windows: %APPDATA%/jinzo/jinzo.db
 const getRuntimeDbPath = () => {
   const platform = process.platform;
   const home = homedir();
-  
+
   if (platform === "darwin") {
     return join(home, "Library", "Application Support", "jinzo", "jinzo.db");
   } else if (platform === "win32") {
@@ -27,7 +27,7 @@ export default {
   dialect: "sqlite",
   schema: "./src/main/db/schema.ts",
   out: "./src/main/db/migrations",
-  
+
   dbCredentials: {
     url: getRuntimeDbPath(),
   },

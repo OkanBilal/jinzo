@@ -160,7 +160,7 @@ export function LinkResourcesModal({
         tabIndex={0}
         onClick={() => !saving && toggleResource(resource.id)}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (!saving) toggleResource(resource.id); } }}
-        className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-all duration-150 ${
+        className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-all duration-150 dark:bg-primary-950/60 bg-primary ${
           selected
             ? ""
             : ""
@@ -213,7 +213,7 @@ export function LinkResourcesModal({
         <div className="px-6 pb-6 space-y-4">
           <div className="flex items-center gap-2"></div>
 
-          <div className="max-h-64 overflow-y-auto border border-primary-200/60 dark:border-primary-800/60 rounded-2xl ">
+          <div className="max-h-64 overflow-y-auto border border-primary-200/60 dark:border-primary-800/40 rounded-2xl ">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="flex items-center gap-2">
@@ -224,7 +224,7 @@ export function LinkResourcesModal({
               </div>
             ) : resources.length === 0 ? (
               <div className="p-8 text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-800/60 mb-3"></div>
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-800/40 mb-3"></div>
                 <BodyMedium className="text-primary-600 dark:text-primary-300">
                   No resources available
                 </BodyMedium>
@@ -233,7 +233,7 @@ export function LinkResourcesModal({
                 </Caption>
               </div>
             ) : (
-              <div className="divide-y divide-primary-200/60 dark:divide-primary-800/60">
+              <div className="divide-y divide-primary-200/60 dark:divide-primary-800/40">
                 {resources.map(renderResourceItem)}
               </div>
             )}

@@ -17,6 +17,7 @@ const CHANNELS = {
   CREATE_WORKTREE: "git:createWorktree",
   IMPORT_LOCAL_REPO: "git:importLocalRepo",
   IMPORT_LOCAL_REPO_DIRECT: "git:importLocalRepoDirect",
+  RENAME_BRANCH: "git:renameBranch",
   REMOVE_WORKTREE: "git:removeWorktree",
   GET_WORKTREES_DIR: "git:getWorktreesDir",
   CLONE_REPO: "git:cloneRepo",
@@ -69,13 +70,20 @@ export function registerGitIpc(): void {
     }
   );
 
-  ipcMain.handle(CHANNELS.IMPORT_LOCAL_REPO, async (_, sourcePath: string, projectName?: string) => {
-    return gitService.importLocalRepo(sourcePath, projectName);
+  ipcMain.handle(CHANNELS.IMPORT_LOCAL_REPO, async (_, sourcePath: string, projectName?: string, customBranchName?: string) => {
+    return gitService.importLocalRepo(sourcePath, projectName, customBranchName);
   });
 
   ipcMain.handle(CHANNELS.IMPORT_LOCAL_REPO_DIRECT, async (_, sourcePath: string) => {
     return gitService.importLocalRepoDirect(sourcePath);
   });
+
+  ipcMain.handle(
+    CHANNELS.RENAME_BRANCH,
+    async (_, rootPath: string, oldName: string, newName: string) => {
+      return gitService.renameBranch(rootPath, oldName, newName);
+    }
+  );
 
   ipcMain.handle(
     CHANNELS.REMOVE_WORKTREE,

@@ -12,7 +12,14 @@ type AppItem = {
 };
 
 type AppIconProps = { app: AppItem };
-import { Text, Heading2, BodyMedium, Body, Button, toast } from "@/components/ui";
+import {
+  Text,
+  Heading2,
+  BodyMedium,
+  Body,
+  Button,
+  toast,
+} from "@/components/ui";
 import AsanaModal from "../../components/apps/asana/asana-modal";
 import GitHubModal from "../../components/apps/github/github-modal";
 import GitLabModal from "../../components/apps/gitlab/gitlab-modal";
@@ -31,7 +38,7 @@ interface AppsSettingsProps {
 
 const CATEGORY_LABELS: Record<string, string> = {
   "developer-tools": "Developer Tools",
-  "observability": "Monitoring", //TODO: CHANGE THIS TO SOMETHING BETTER
+  observability: "Monitoring", //TODO: CHANGE THIS TO SOMETHING BETTER
 };
 
 export default function AppsSettings({
@@ -47,7 +54,7 @@ export default function AppsSettings({
       const result = await runSync().unwrap();
       if (result.success) {
         toast.success(
-          `Sync complete: ${result.inserted} added, ${result.updated} updated`
+          `Sync complete: ${result.inserted} added, ${result.updated} updated`,
         );
       } else {
         toast.error("Sync failed");
@@ -124,25 +131,28 @@ export default function AppsSettings({
 
   return (
     <div className="h-full overflow-y-auto noscrollbar">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between  mb-6">
         <Heading2>Connections</Heading2>
-        <Button
-          variant="secondary"
-          onClick={handleSync}
-          disabled={isSyncing}
-        >
-          <Text variant="button">
-            {isSyncing ? "Syncing..." : "Sync"}
-          </Text>
-        </Button>
       </div>
       {apps.length > 0 && (
         <div className="">
           {connectedAppsList.length > 0 && (
             <div className="mb-6 mt-2">
-              <Text variant="labelSmall" className="mb-2">
-                Connected
-              </Text>
+              <div className="flex justify-between items-center">
+                <Text variant="labelSmall" className="">
+                  Connected
+                </Text>
+                <Button
+                  variant="secondary"
+
+                  onClick={handleSync}
+                  disabled={isSyncing}
+                >
+                  <Text variant="button">
+                    {isSyncing ? "Syncing..." : "Sync"}
+                  </Text>
+                </Button>
+              </div>
               <div className="" role="list">
                 {connectedAppsList.map(renderAppItem)}
               </div>
@@ -151,16 +161,18 @@ export default function AppsSettings({
 
           <div className="border-b border-primary-200 dark:border-primary-800/50 mb-8" />
 
-          {Object.entries(notConnectedByCategory).map(([category, categoryApps]) => (
-            <div key={category} className="mb-6">
-              <Text variant="labelSmall" className="mb-2 capitalize!">
-                {CATEGORY_LABELS[category] || category}
-              </Text>
-              <div className="" role="list">
-                {categoryApps.map(renderAppItem)}
+          {Object.entries(notConnectedByCategory).map(
+            ([category, categoryApps]) => (
+              <div key={category} className="mb-6">
+                <Text variant="labelSmall" className="mb-2 capitalize!">
+                  {CATEGORY_LABELS[category] || category}
+                </Text>
+                <div className="" role="list">
+                  {categoryApps.map(renderAppItem)}
+                </div>
               </div>
-            </div>
-          ))}
+            ),
+          )}
         </div>
       )}
 
@@ -212,7 +224,6 @@ export default function AppsSettings({
         isConnected={isConnected("sentry")}
         onSuccess={handleConnectionSuccess}
       />
-
     </div>
   );
 }

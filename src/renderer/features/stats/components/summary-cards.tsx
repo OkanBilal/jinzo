@@ -26,7 +26,7 @@ export default function SummaryCards({ summary }: SummaryCardsProps) {
       {cards.map((card) => (
         <div
           key={card.label}
-          className="rounded-2xl border border-primary-200/60 dark:border-primary-800/40 bg-primary-50/50 dark:bg-primary-900/30 px-4 py-3.5 text-center"
+          className="rounded-3xl border border-primary-200/60 dark:border-primary-800/40 bg-primary-50/50 dark:bg-primary-900/30 px-4 py-3.5 text-center"
         >
           <Text variant="h2" className="text-xl tracking-tight">
             <NumberFlow

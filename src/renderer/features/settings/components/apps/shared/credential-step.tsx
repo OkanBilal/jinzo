@@ -6,6 +6,9 @@ interface CredentialField {
   placeholder: string;
   value: string;
   onChange: (value: string) => void;
+  type?: "text" | "password" | "email";
+  helperText?: string;
+  required?: boolean;
 }
 
 interface CredentialStepProps {
@@ -29,7 +32,7 @@ export function CredentialStep({
   submitLabel = "Continue",
   loadingLabel = "Connecting...",
 }: CredentialStepProps) {
-  const allFieldsFilled = fields.every((field) => field.value.trim());
+  const allFieldsFilled = fields.every((field) => field.required === false || field.value.trim());
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && allFieldsFilled && !loading) {
@@ -43,23 +46,26 @@ export function CredentialStep({
 
       {fields.map((field, index) => (
         <div key={field.id}>
-          <label htmlFor={field.id} className="block mb-2">
-            <Text variant="label">{field.label}</Text>
+          <label htmlFor={field.id} className="block mb-2 ml-1">
+            <Text variant="label" className="text-xs!">{field.label}</Text>
           </label>
           <Input
             id={field.id}
-            type="password"
+            type={field.type || "password"}
             value={field.value}
             onChange={(e) => field.onChange(e.target.value)}
             placeholder={field.placeholder}
             disabled={loading}
             onKeyDown={index === fields.length - 1 ? handleKeyDown : undefined}
           />
+          {field.helperText && (
+            <p className="text-xs text-primary-500 dark:text-primary-400 mt-1">{field.helperText}</p>
+          )}
         </div>
       ))}
 
       {instructions && (
-        <div className="mt-4 px-4 py-2 bg-primary dark:bg-primary-900 rounded-xl text-sm">
+        <div className="mt-4 px-2 py-2 bg-primary dark:bg-primary-900 rounded-xl text-sm">
           <Caption>{instructions}</Caption>
         </div>
       )}

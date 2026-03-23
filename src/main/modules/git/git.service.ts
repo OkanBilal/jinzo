@@ -412,7 +412,7 @@ class GitService {
    * Returns full metadata needed for workspace creation
    */
   //TOD: ADD CLONE FROM REMOTE URL LATER, FOR NOW ONLY LOCAL PATH IMPORT
-  async importLocalRepo(sourcePath: string, projectName?: string): Promise<ServiceResponse<WorktreeImportResult>> {
+  async importLocalRepo(sourcePath: string, projectName?: string, customBranchName?: string): Promise<ServiceResponse<WorktreeImportResult>> {
     try {
       const git = this.getGit(sourcePath);
 
@@ -437,8 +437,8 @@ class GitService {
         // No remotes, that's fine
       }
 
-      // 4. Generate a single name for both branch and worktree
-      const fruitName = this.generateFruitName();
+      // 4. Generate a single name for both branch and worktree (or use custom name)
+      const fruitName = customBranchName || this.generateFruitName();
       const branchName = fruitName;
       const worktreeName = fruitName;
 
@@ -596,6 +596,26 @@ class GitService {
       hash: result.commit || "",
       summary: `${result.summary.changes} changed, ${result.summary.insertions} insertions, ${result.summary.deletions} deletions`,
     };
+  }
+
+  /**
+   * Rename a local branch
+   */
+  async renameBranch(
+    rootPath: string,
+    oldName: string,
+    newName: string
+  ): Promise<ServiceResponse<string>> {
+    try {
+      const git = this.getGit(rootPath);
+      await git.raw(["branch", "-m", oldName, newName]);
+      return { success: true, data: newName };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to rename branch",
+      };
+    }
   }
 
   /**

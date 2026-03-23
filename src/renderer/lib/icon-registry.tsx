@@ -34,7 +34,6 @@ export const iconRegistry: Record<string, IconComponent> = {
   textitalic: Icons.Textitalic,
   user: Icons.User,
   vinyl: Icons.Vinyl,
-  opencode: Icons.Opencode,
   claude: Icons.Claude,
   copilot: Icons.Copilot,
 };

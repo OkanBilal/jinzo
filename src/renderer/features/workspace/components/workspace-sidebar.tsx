@@ -132,7 +132,7 @@ export function WorkspaceSidebar() {
     return (
       <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 -pb-4 rounded-xl overflow-hidden">
         <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3 text-primary-800 dark:text-primary-300">
+          <div className="flex flex-col items-center gap-3 text-primary-700 dark:text-primary-300">
             <FolderIcon className="size-10" />
             <span className="text-xs font-medium">No workspace selected</span>
           </div>

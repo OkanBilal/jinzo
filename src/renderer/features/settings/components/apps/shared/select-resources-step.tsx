@@ -21,7 +21,7 @@ function ResourceRow<T extends SelectableResource>({
   const content = renderItem(resource);
 
   return (
-    <div className="flex items-center dark:bg-primary-950/60 bg-primary  justify-between px-4 py-4 border-b border-primary-200/50 dark:border-primary-800/40 last:border-b-0">
+    <div className="flex items-center dark:bg-primary-950/60 bg-primary  justify-between px-4 py-3.5 border-b border-primary-200/50 dark:border-primary-800/40 last:border-b-0">
       <div
         role="button"
         tabIndex={0}

@@ -1,4 +1,4 @@
-import { useState, useRef, type MouseEvent, type ReactNode } from "react";
+import { useState, useRef, useEffect, type MouseEvent, type ReactNode } from "react";
 import { Muted, Button, DropdownMenu, DropdownMenuItem, DropdownMenuSub, Tooltip } from "@/components/ui";
 import {
   Trash,
@@ -9,6 +9,7 @@ import {
   Settings,
   External,
   OpenWith,
+  Edit,
 } from "@/components/ui/icons";
 import { useGetInstalledAppsQuery } from "@/lib/redux/api";
 import { useGetLatestWorkspaceDiffQuery } from "@/lib/redux/api/workspaceDiffsApi";
@@ -46,6 +47,7 @@ interface WorkspaceItemProps {
   onArchive?: () => void;
   onSettings?: () => void;
   onStatusChange?: (status: WorkspaceStatus) => void;
+  onRenameBranch?: (newBranchName: string) => void;
 }
 
 export default function WorkspaceItem({
@@ -65,12 +67,16 @@ export default function WorkspaceItem({
   onArchive,
   onSettings,
   onStatusChange,
+  onRenameBranch,
 }: WorkspaceItemProps) {
   const { data: installedApps = [] } = useGetInstalledAppsQuery();
   const { data: latestDiff } = useGetLatestWorkspaceDiffQuery(id);
   const statusConfig = getWorkspaceStatusConfig(status);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
+  const [isRenamingBranch, setIsRenamingBranch] = useState(false);
+  const [renameBranchValue, setRenameBranchValue] = useState(branch || "");
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   const insertions = latestDiff?.stats?.shortstat.match(/(\d+) insertion/)?.[1];
   const deletions = latestDiff?.stats?.shortstat.match(/(\d+) deletion/)?.[1];
@@ -112,6 +118,32 @@ export default function WorkspaceItem({
     onSettings?.();
   };
 
+  const handleRenameBranchClick = () => {
+    setIsDropdownOpen(false);
+    setRenameBranchValue(branch || "");
+    setIsRenamingBranch(true);
+  };
+
+  const handleRenameBranchConfirm = () => {
+    const trimmed = renameBranchValue.trim();
+    if (trimmed && trimmed !== branch) {
+      onRenameBranch?.(trimmed);
+    }
+    setIsRenamingBranch(false);
+  };
+
+  const handleRenameBranchCancel = () => {
+    setIsRenamingBranch(false);
+    setRenameBranchValue(branch || "");
+  };
+
+  useEffect(() => {
+    if (isRenamingBranch && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [isRenamingBranch]);
+
   return (
     <div className="relative group">
       <div
@@ -124,7 +156,7 @@ export default function WorkspaceItem({
             onClick?.();
           }
         }}
-        className={`block px-2.5 py-1.5 active:scale-99 group-hover:scale-[1.01] 
+        className={`block px-2.5 py-1.5 active:scale-99 group-hover:scale-[1.01]
           rounded-2xl transition-all duration-200 ease-out cursor-pointer ${
             isActive
               ? "bg-primary/80 dark:bg-primary/5"
@@ -167,10 +199,25 @@ export default function WorkspaceItem({
               ) : (
                 <span className="size-2.75 mr-2 flex items-center" />
               )}
-              {branch && (
+              {branch && !isRenamingBranch && (
                 <Muted className="text-xs  text-primary-900 dark:text-primary-200! truncate">
                   {branch}
                 </Muted>
+              )}
+              {isRenamingBranch && (
+                <input
+                  ref={renameInputRef}
+                  value={renameBranchValue}
+                  onChange={(e) => setRenameBranchValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === "Enter") handleRenameBranchConfirm();
+                    if (e.key === "Escape") handleRenameBranchCancel();
+                  }}
+                  onBlur={handleRenameBranchConfirm}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-xs bg-primary/20 dark:bg-primary/10 text-primary-900 dark:text-primary-200 rounded px-1 py-0.5 outline-none border border-primary/30 dark:border-primary/20 w-full max-w-35"
+                />
               )}
               {branch && updatedAt && (
                 <span className="text-primary-900 text-lg leading-6 dark:text-primary-200">
@@ -293,6 +340,12 @@ export default function WorkspaceItem({
           <DropdownMenuItem onClick={handleSettingsClick}>
             <Settings className="size-3.5" />
             <span>Project settings</span>
+          </DropdownMenuItem>
+        )}
+        {branch && onRenameBranch && (
+          <DropdownMenuItem onClick={handleRenameBranchClick}>
+            <Edit className="size-3.5" />
+            <span>Rename branch</span>
           </DropdownMenuItem>
         )}
         <DropdownMenuItem onClick={handleLinkIssuesClick}>

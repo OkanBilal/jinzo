@@ -22,7 +22,7 @@ export function Toggle({ enabled, onChange, label, className, disabled }: Toggle
       <Button
         onClick={() => !disabled && onChange(!enabled)}
         className={cn(
-          "relative inline-flex h-6 w-11 items-center rounded-full transition-all shadow-(--shadow-inset-toggle) dark:shadow-(--shadow-inset-toggle-dark)",
+          "relative inline-flex h-5 w-10 items-center rounded-full transition-all shadow-(--shadow-inset-toggle) dark:shadow-(--shadow-inset-toggle-dark)",
           disabled && "opacity-40 cursor-not-allowed",
           enabled
             ? "bg-primary-950/50 dark:bg-primary/50"
@@ -31,8 +31,8 @@ export function Toggle({ enabled, onChange, label, className, disabled }: Toggle
       >
         <span
           className={cn(
-            "inline-block h-5 w-5 transform rounded-full bg-primary shadow-sm transition-transform",
-            enabled ? "translate-x-5.5" : "translate-x-0.5",
+            "inline-block h-4.5 w-4.5 transform rounded-full bg-primary-100 shadow-sm transition-transform",
+            enabled ? "translate-x-5" : "translate-x-0.5",
           )}
         />
       </Button>

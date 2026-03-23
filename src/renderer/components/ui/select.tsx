@@ -154,7 +154,7 @@ export default function Select<T extends string = string>({
           className={`fixed z-(--z-modal)
             border border-t-0 border-primary-950/10 dark:border-primary/10
             rounded-b-xl shadow-lg overflow-hidden
-            ${isOpen ? "animate-dropdown-in" : "pointer-events-none invisible"}
+            ${isOpen ? "animate-dropdown-in" : "pointer-events-none invisible will-change-[transform,opacity]"}
             origin-top ${fixedBackgroundClass}`}
           style={{
             background: dropdownBackground,
@@ -174,7 +174,7 @@ export default function Select<T extends string = string>({
                 }}
                 className={`
                   w-full cursor-pointer text-left
-                  transition-colors px-3 py-2.5
+                  transition-colors px-3 py-2
                   text-sm flex items-center gap-2
                   ${
                     value === option.value

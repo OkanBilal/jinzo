@@ -13,9 +13,10 @@ import {
   type SelectedGitLabProject,
 } from "@/lib/redux/api";
 import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
-import { toast, Button, Text, Input } from "@/components/ui";
+import { toast } from "@/components/ui";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
+import { CredentialStep } from "../shared/credential-step";
 import { AutoSyncSection } from "../shared/auto-sync-section";
 import LockIcon from "@/components/ui/icons/lock";
 
@@ -124,86 +125,56 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
   };
 
   return (
-    <div className="px-1 py-4 space-y-6">
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <label
-            htmlFor="gitlab-domain"
-            className="block text-sm font-medium text-primary-700 dark:text-primary-300"
+    <CredentialStep
+      description="Enter your GitLab credentials to connect your projects and sync issues."
+      fields={[
+        {
+          id: "gitlab-domain",
+          label: "GitLab Domain",
+          placeholder: "gitlab.com",
+          type: "text",
+          required: false,
+          value: data.domain || "",
+          helperText: "Leave empty for gitlab.com, or enter your self-hosted domain (e.g. gitlab.yourcompany.com)",
+          onChange: (value) => {
+            setData({ domain: value });
+            if (errors.domain) setErrors({ domain: "" });
+          },
+        },
+        {
+          id: "gitlab-token",
+          label: "Personal Access Token",
+          placeholder: "glpat-xxxxxxxxxxxxxxxxxxxx",
+          value: data.token || "",
+          onChange: (value) => {
+            setData({ token: value });
+            if (errors.token) setErrors({ token: "" });
+          },
+        },
+      ]}
+      instructions={
+        <>
+          <strong>How to create a token:</strong>
+          <br />
+          1. Go to GitLab Settings → Access Tokens →{" "}
+          <a
+            href="https://gitlab.com/-/user_settings/personal_access_tokens"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-600 dark:text-primary-400 underline"
           >
-            GitLab Domain
-          </label>
-          <Input
-            id="gitlab-domain"
-            type="text"
-            placeholder="gitlab.com"
-            value={data.domain || ""}
-            onChange={(e) => {
-              setData({ domain: e.target.value });
-              if (errors.domain) setErrors({ domain: "" });
-            }}
-          />
-          <p className="text-xs text-primary-500 dark:text-primary-400">
-            Leave empty for gitlab.com, or enter your self-hosted domain (e.g. gitlab.yourcompany.com)
-          </p>
-          {errors.domain && (
-            <p className="text-sm text-red-500">{errors.domain}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label
-            htmlFor="gitlab-token"
-            className="block text-sm font-medium text-primary-700 dark:text-primary-300"
-          >
-            Personal Access Token
-          </label>
-          <Input
-            id="gitlab-token"
-            type="password"
-            placeholder="glpat-xxxxxxxxxxxxxxxxxxxx"
-            value={data.token || ""}
-            onChange={(e) => {
-              setData({ token: e.target.value });
-              if (errors.token) setErrors({ token: "" });
-            }}
-          />
-          {errors.token && (
-            <p className="text-sm text-red-500">{errors.token}</p>
-          )}
-        </div>
-      </div>
-
-      <div className="text-sm text-primary-500 dark:text-primary-400 space-y-1">
-        <strong>How to create a token:</strong>
-        <br />
-        1. Go to GitLab Settings → Access Tokens →{" "}
-        <a
-          href="https://gitlab.com/-/user_settings/personal_access_tokens"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary-600 dark:text-primary-400 underline"
-        >
-          Personal access tokens
-        </a>
-        <br />
-        2. Create a new token
-        <br />
-        3. Select scopes: <code>read_api</code>
-      </div>
-
-      <div className="flex justify-end pt-2">
-        <Button
-          variant="submit"
-          onClick={handleSubmit}
-          disabled={loading || !data.token}
-        >
-          <Text variant="button">
-            {loading ? "Connecting..." : "Continue"}
-          </Text>
-        </Button>
-      </div>
-    </div>
+            Personal access tokens
+          </a>
+          <br />
+          2. Create a new token
+          <br />
+          3. Select scopes: <code>read_api</code>
+        </>
+      }
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={errors.token || errors.domain || ""}
+    />
   );
 }
 
@@ -309,7 +280,7 @@ function SelectProjectsStep({ onComplete }: { onComplete: () => void }) {
           <Body>{project.pathWithNamespace || project.name}</Body>
           {project.visibility && (
             project.visibility === "private" ? (
-              <LockIcon className="w-3.5 h-3.5 text-primary-500" />
+              <LockIcon className="w-3 h-3 text-primary-500" />
             ) : (
               <span className="text-xs text-primary-500">{project.visibility}</span>
             )
@@ -411,7 +382,7 @@ function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
               <Body>{resource.name}</Body>
               {visibility && (
                 visibility === "private" ? (
-                  <LockIcon className="w-3.5 h-3.5 text-primary-500" />
+                  <LockIcon className="w-3 h-3 text-primary-500" />
                 ) : (
                   <span className="text-xs text-primary-500">{visibility}</span>
                 )

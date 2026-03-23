@@ -154,7 +154,7 @@ export default function Sidebar() {
                   sidebarConfig.itemType === "workspace"
                     ? [
                         {
-                          label: "Add local repository",
+                          label: "Add from local",
                           icon: (
                             <Plus className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
                           ),

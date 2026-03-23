@@ -80,7 +80,9 @@ export default function ClaudePage() {
         ? ws.activeTab === `issue:${ws.openIssueTabs[0]?.issue.entityId}`
         : ws.openNoteTabs.length > 0
           ? ws.activeTab === `note:${ws.openNoteTabs[0]?.id}`
-          : false;
+          : ws.showNewRunTab
+            ? ws.activeTab === "new-run"
+            : false;
 
   useSetMainHeader(tabBar, !ws.showEmptyState && isFirstTabActive);
 

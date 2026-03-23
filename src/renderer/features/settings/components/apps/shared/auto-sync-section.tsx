@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Body, Muted, Caption, Toggle } from "@/components/ui";
+import { Body, Caption, Toggle, Text } from "@/components/ui";
 import {
   useGetAutomationsQuery,
   useCreateAutomationMutation,
@@ -83,15 +83,15 @@ export function AutoSyncSection({
   };
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between ">
         <div>
           <Body className="text-primary-900 dark:text-primary-100">
             Auto Sync
           </Body>
-          <Muted className="text-xs">
+          <Text variant="mutedSmall" >
             Automatically sync {providerLabel} data on a schedule
-          </Muted>
+          </Text>
         </div>
         <Toggle
           enabled={isEnabled ?? false}

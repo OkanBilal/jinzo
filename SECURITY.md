@@ -10,7 +10,7 @@
 
 **Please do not open a public issue for security vulnerabilities.**
 
-Instead, email **obbalci@gmail.com** with:
+Instead, email **team@usejinzo.com** with:
 
 - Description of the vulnerability
 - Steps to reproduce

@@ -13,9 +13,10 @@ import {
   type SelectedProject,
 } from "@/lib/redux/api";
 import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
-import { toast, Button, Text, Input } from "@/components/ui";
+import { toast } from "@/components/ui";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
+import { CredentialStep } from "../shared/credential-step";
 import { AutoSyncSection } from "../shared/auto-sync-section";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -140,109 +141,65 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
   };
 
   return (
-    <div className="px-1 py-4 space-y-6">
-      {/* <Muted>
-        Enter your Jira credentials to connect your projects and sync issues.
-      </Muted> */}
-
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <label
-            htmlFor="jira-domain"
-            className="block text-sm font-medium text-primary-700 dark:text-primary-300"
+    <CredentialStep
+      description="Enter your Jira credentials to connect your projects and sync issues."
+      fields={[
+        {
+          id: "jira-domain",
+          label: "Jira Domain",
+          placeholder: "your-company.atlassian.net",
+          type: "text",
+          value: data.domain || "",
+          onChange: (value) => {
+            setData({ domain: value });
+            if (errors.domain) setErrors({ domain: "" });
+          },
+        },
+        {
+          id: "jira-email",
+          label: "Email",
+          placeholder: "you@example.com",
+          type: "email",
+          value: data.email || "",
+          onChange: (value) => {
+            setData({ email: value });
+            if (errors.email) setErrors({ email: "" });
+          },
+        },
+        {
+          id: "jira-api-token",
+          label: "API Token",
+          placeholder: "Your API token",
+          value: data.apiToken || "",
+          onChange: (value) => {
+            setData({ apiToken: value });
+            if (errors.apiToken) setErrors({ apiToken: "" });
+          },
+        },
+      ]}
+      instructions={
+        <>
+          <strong>How to create an API token:</strong>
+          <br />
+          1. Go to{" "}
+          <a
+            href="https://id.atlassian.com/manage-profile/security/api-tokens"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-600 dark:text-primary-400 underline"
           >
-            Jira Domain
-          </label>
-          <Input
-            id="jira-domain"
-            type="text"
-            placeholder="your-company.atlassian.net"
-            value={data.domain || ""}
-            onChange={(e) => {
-              setData({ domain: e.target.value });
-              if (errors.domain) setErrors({ domain: "" });
-            }}
-          />
-          {errors.domain && (
-            <p className="text-sm text-red-500">{errors.domain}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label
-            htmlFor="jira-email"
-            className="block text-sm font-medium text-primary-700 dark:text-primary-300"
-          >
-            Email
-          </label>
-          <Input
-            id="jira-email"
-            type="email"
-            placeholder="you@example.com"
-            value={data.email || ""}
-            onChange={(e) => {
-              setData({ email: e.target.value });
-              if (errors.email) setErrors({ email: "" });
-            }}
-          />
-          {errors.email && (
-            <p className="text-sm text-red-500">{errors.email}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label
-            htmlFor="jira-api-token"
-            className="block text-sm font-medium text-primary-700 dark:text-primary-300"
-          >
-            API Token
-          </label>
-          <Input
-            id="jira-api-token"
-            type="password"
-            placeholder="Your API token"
-            value={data.apiToken || ""}
-            onChange={(e) => {
-              setData({ apiToken: e.target.value });
-              if (errors.apiToken) setErrors({ apiToken: "" });
-            }}
-          />
-          {errors.apiToken && (
-            <p className="text-sm text-red-500">{errors.apiToken}</p>
-          )}
-        </div>
-      </div>
-
-      <div className="text-sm text-primary-500 dark:text-primary-400 space-y-1">
-        <strong>How to create an API token:</strong>
-        <br />
-        1. Go to{" "}
-        <a
-          href="https://id.atlassian.com/manage-profile/security/api-tokens"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary-600 dark:text-primary-400 underline"
-        >
-          Atlassian API tokens
-        </a>
-        <br />
-        2. Click &quot;Create API token&quot;
-        <br />
-        3. Give it a name and copy the token
-      </div>
-
-      <div className="flex justify-end pt-2">
-        <Button
-          variant="submit"
-          onClick={handleSubmit}
-          disabled={loading || !data.domain || !data.email || !data.apiToken}
-        >
-          <Text variant="button">
-            {loading ? "Connecting..." : "Continue"}
-          </Text>
-        </Button>
-      </div>
-    </div>
+            Atlassian API tokens
+          </a>
+          <br />
+          2. Click &quot;Create API token&quot;
+          <br />
+          3. Give it a name and copy the token
+        </>
+      }
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={errors.apiToken || errors.email || errors.domain || ""}
+    />
   );
 }
 

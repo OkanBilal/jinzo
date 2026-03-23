@@ -253,7 +253,7 @@ function SelectReposStep({ onComplete }: { onComplete: () => void }) {
         <div className="flex items-center gap-2">
           <Body>{repo.fullName}</Body>
           {repo.private && (
-            <Lock className="w-4 h-4 text-primary-500 dark:text-primary-600" />
+            <Lock className="w-3 h-3 text-primary-500 dark:text-primary-600" />
           )}
         </div>
       )}
@@ -340,7 +340,7 @@ function ManageReposStep({ onRevoke }: { onRevoke: () => void }) {
           <div className="flex items-center gap-2">
             <Body>{resource.fullName}</Body>
             {resource.metadata?.private && (
-              <Lock className="w-4 h-4 text-primary-500 dark:text-primary-600" />
+              <Lock className="w-3 h-3 text-primary-500 dark:text-primary-600" />
             )}
           </div>
         </div>

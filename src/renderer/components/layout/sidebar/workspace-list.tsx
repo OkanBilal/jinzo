@@ -17,6 +17,7 @@ import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspacesApi";
 import { useGetProjectsQuery, useUpdateWorkspaceMutation } from "@/lib/redux/api";
+import { toast } from "@/components/ui";
 import { ProjectIcon } from "./project-icon";
 import { WorkspaceGroupDropdown, type GroupingMode } from "./workspace-group-dropdown";
 
@@ -100,6 +101,7 @@ export default function WorkspacesList({
   onDeleteWorkspace,
   onArchiveWorkspace,
 }: WorkspacesListProps) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isExpanded, setIsExpanded] = useState(true);
   const [linkModalState, setLinkModalState] = useState<{
     isOpen: boolean;
@@ -176,6 +178,41 @@ export default function WorkspacesList({
       projectId: workspace.projectId,
       workspaceName: formatWorkspaceName(workspace),
     });
+  };
+
+  const handleRenameBranch = async (workspace: WorkspaceResponse, newBranchName: string) => {
+    const oldBranch = workspace.defaultBranch;
+    if (!oldBranch || !workspace.rootPath) return;
+
+    // For worktree workspaces, use the source repo path; otherwise use rootPath
+    const worktreeMeta = workspace.metadata?.worktree as Record<string, unknown> | undefined;
+    const gitPath = (worktreeMeta?.enabled && worktreeMeta?.sourcePath)
+      ? String(worktreeMeta.sourcePath)
+      : workspace.rootPath;
+
+    try {
+      const result = await window.api.git.renameBranch(gitPath, oldBranch, newBranchName);
+      if (!result.success) {
+        toast.error(result.error || "Failed to rename branch");
+        return;
+      }
+
+      // Update workspace defaultBranch and metadata (deep copy worktree to avoid frozen object)
+      const metadata = workspace.metadata ? { ...workspace.metadata } : {};
+      if (metadata.worktree && typeof metadata.worktree === "object") {
+        metadata.worktree = { ...(metadata.worktree as Record<string, unknown>), branch: newBranchName };
+      }
+
+      await updateWorkspace({
+        id: workspace.id,
+        payload: { defaultBranch: newBranchName, metadata },
+      });
+
+      toast.success(`Branch renamed to ${newBranchName}`);
+    } catch (error) {
+      console.error("Failed to rename branch:", error);
+      toast.error("Failed to rename branch");
+    }
   };
 
   const sortedWorkspaces = [...workspaces].sort((a, b) => {
@@ -279,6 +316,11 @@ export default function WorkspacesList({
         onStatusChange={(newStatus) =>
           updateWorkspace({ id: workspace.id, payload: { status: newStatus } })
         }
+        onRenameBranch={
+          workspace.defaultBranch
+            ? (newName) => handleRenameBranch(workspace, newName)
+            : undefined
+        }
         onSettings={
           workspace.projectId
             ? () =>
@@ -292,27 +334,27 @@ export default function WorkspacesList({
   return (
     <div className="pb-2">
       <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setIsExpanded(!isExpanded)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsExpanded(!isExpanded); } }}
-        className="w-full flex items-center justify-between active:scale-99 transition-all duration-200 bg-transparent hover:bg-primary/10 dark:hover:bg-primary/5 cursor-pointer px-2 py-0.5 mb-1 rounded-lg "
+        // role="button"
+        // tabIndex={0}
+        // onClick={() => setIsExpanded(!isExpanded)}
+        // onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsExpanded(!isExpanded); } }}
+        className="w-full flex items-center justify-between transition-all duration-200 bg-transparent   px-2 py-0.5 mb-1 rounded-lg "
       >
         <Caption className="text-primary-800 dark:text-primary-300! font-medium">
           Workspaces
         </Caption>
-        <div className="flex items-center gap-1">
-          <div role="presentation" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center ">
+          <div className="-mr-1" role="presentation" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <WorkspaceGroupDropdown
               grouping={grouping}
               onGroupingChange={setGrouping}
             />
           </div>
-          <ArrowUp
+          {/* <ArrowUp
             className={`w-4 h-4 text-primary-900 dark:text-primary-200 transition-transform duration-200 ${
               isExpanded ? "rotate-180" : "rotate-90"
             }`}
-          />
+          /> */}
         </div>
       </div>
 

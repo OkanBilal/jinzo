@@ -193,7 +193,7 @@ const Caption = ({
 
 const Timestamp = ({
   children,
-  className,  
+  className,
   align,
   ...props
 }: Omit<TextProps, "variant">) => (

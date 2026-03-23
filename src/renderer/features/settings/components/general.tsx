@@ -49,9 +49,9 @@ function ThemePreviewCard({
     >
       <div
         className={cn(
-          "relative w-32 h-24 rounded-xl overflow-hidden border-2 transition-all duration-200",
+          "relative w-24 h-16 rounded-xl overflow-hidden border-2 transition-all duration-200",
           isSelected
-            ? "border-blue-500 ring-2 ring-blue-500/20"
+            ? "border-blue-500 "
             : "border-primary-200 dark:border-primary-700 hover:border-primary-300 dark:hover:border-primary-600",
         )}
       >
@@ -59,7 +59,7 @@ function ThemePreviewCard({
           <div className="w-full h-full flex">
             <div className="w-1/2 h-full flex">
               <div
-                className={cn("w-5 h-full flex flex-col p-1 gap-1")}
+                className={cn("w-4 h-full flex flex-col p-1 gap-1")}
                 style={lightBgStyle}
               >
                 <div className="w-2 h-2 bg-primary-950/15 rounded-full" />
@@ -68,12 +68,12 @@ function ThemePreviewCard({
               </div>
               <div className="flex-1 h-full bg-primary-100 flex flex-col p-1.5">
                 <div className="flex-1" />
-                <div className="w-full h-3 bg-primary-80  rounded-sm border border-primary-950/10" />
+                <div className="w-full h-2 bg-primary-80  rounded-sm border border-primary-950/10" />
               </div>
             </div>
             <div className="w-1/2 h-full flex">
               <div
-                className={cn("w-5 h-full flex flex-col p-1 gap-1")}
+                className={cn("w-4 h-full flex flex-col p-1 gap-1")}
                 style={darkBgStyle}
               >
                 <div className="w-2 h-2 bg-primary/20 rounded-full" />
@@ -82,14 +82,14 @@ function ThemePreviewCard({
               </div>
               <div className="flex-1 h-full flex bg-primary-950 flex-col p-1.5">
                 <div className="flex-1" />
-                <div className="w-full h-3 bg-primary/10 rounded-sm flex items-center justify-end pr-0.5"></div>
+                <div className="w-full h-2 bg-primary/10 rounded-sm flex items-center justify-end pr-0.5"></div>
               </div>
             </div>
           </div>
         ) : (
           <div className="w-full h-full flex">
             <div
-              className={cn("w-8 h-full flex flex-col p-1.5 gap-1")}
+              className={cn("w-5 h-full flex flex-col p-1.5 gap-1")}
               style={isLight ? lightBgStyle : darkBgStyle}
             >
               <div
@@ -119,7 +119,7 @@ function ThemePreviewCard({
               <div className="flex-1" />
               <div
                 className={cn(
-                  "w-full h-4 rounded-md flex items-center px-1",
+                  "w-full h-2 rounded-sm flex items-center px-1",
                   isLight
                     ? "bg-primary/80 border border-primary-950/10"
                     : "bg-primary/10",
@@ -131,7 +131,7 @@ function ThemePreviewCard({
       </div>
       <span
         className={cn(
-          "text-sm font-medium transition-colors",
+          "text-[13px] font-medium transition-colors",
           isSelected
             ? "text-primary-900 dark:text-primary-100"
             : "text-primary-500 dark:text-primary-400 group-hover:text-primary-700 dark:group-hover:text-primary-300",
@@ -338,7 +338,7 @@ export default function GeneralSettings() {
               title="Theme"
               description="Choose your preferred color mode"
             >
-              <div className="flex gap-3">
+              <div className="flex gap-4">
                 <ThemePreviewCard
                   themeValue="light"
                   label="Light"

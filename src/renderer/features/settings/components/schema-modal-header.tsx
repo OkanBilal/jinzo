@@ -1,5 +1,5 @@
 import { Close } from "@/components/ui/icons";
-import { Heading3, Button } from "@/components/ui";
+import { Button, Text } from "@/components/ui";
 
 type Tab = "schemas" | "editor";
 
@@ -23,10 +23,10 @@ export function SchemaModalHeader({
   return (
     <div className="flex items-center justify-between p-6">
       <div className="flex items-center gap-4">
-        <Heading3>Structured outputs</Heading3>
-        <div className="relative flex items-center rounded-xl bg-primary-950/4 dark:bg-primary/6 p-0.5">
+        <Text variant="body" className="font-medium text-base!">Structured outputs</Text>
+        <div className="relative flex items-center rounded-lg bg-primary-950/4 dark:bg-primary/6 p-0.5">
           <div
-            className="absolute top-0.5 h-[calc(100%-4px)] w-[calc(50%-2px)] rounded-sm bg-primary dark:bg-primary-800 shadow-sm transition-transform duration-200 ease-out"
+            className="absolute top-0.5 h-[calc(100%-4px)] w-[calc(50%-2px)] rounded-lg bg-primary dark:bg-primary-800 shadow-sm transition-transform duration-200 ease-out"
             style={{
               transform:
                 activeTab === "schemas"
@@ -36,7 +36,7 @@ export function SchemaModalHeader({
           />
           <Button
             onClick={() => onTabChange("schemas")}
-            className={`relative z-(--z-base) px-3 py-1.5 rounded-xl text-sm transition-colors duration-200 cursor-pointer min-w-20 ${
+            className={`relative z-(--z-base) px-1 py-1 text-[13px] rounded-xl  transition-colors duration-200 cursor-pointer min-w-18 ${
               activeTab === "schemas" ? activeClass : inactiveClass
             }`}
           >
@@ -44,7 +44,7 @@ export function SchemaModalHeader({
           </Button>
           <Button
             onClick={() => onTabChange("editor")}
-            className={`relative z-(--z-base) px-3 py-1.5 rounded-xl text-sm transition-colors duration-200 cursor-pointer min-w-20 ${
+            className={`relative z-(--z-base) px-1 py-1 rounded-xl text-[13px] transition-colors duration-200 cursor-pointer min-w-18 ${
               activeTab === "editor" ? activeClass : inactiveClass
             }`}
           >

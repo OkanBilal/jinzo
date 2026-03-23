@@ -225,13 +225,13 @@ export function WizardModal<
             : undefined,
         }}
       >
-        <div className="flex items-center justify-between pl-6 pr-3 py-4">
+        <div className="flex items-center justify-between pl-4 pr-3 py-4">
           <div className="flex items-center gap-2">
             {icon && (
               <img
                 src={icon}
                 alt=""
-                className="w-10 h-10"
+                className="w-9 h-9"
                 width={256}
                 height={256}
               />

@@ -490,10 +490,15 @@ const api = {
      * Import a local git repo by creating a branch + worktree.
      * Returns full metadata needed for workspace creation.
      */
-    importLocalRepo: (sourcePath: string, projectName?: string) =>
-      ipcRenderer.invoke("git:importLocalRepo", sourcePath, projectName),
+    importLocalRepo: (sourcePath: string, projectName?: string, customBranchName?: string) =>
+      ipcRenderer.invoke("git:importLocalRepo", sourcePath, projectName, customBranchName),
     importLocalRepoDirect: (sourcePath: string) =>
       ipcRenderer.invoke("git:importLocalRepoDirect", sourcePath),
+    /**
+     * Rename a local branch
+     */
+    renameBranch: (rootPath: string, oldName: string, newName: string) =>
+      ipcRenderer.invoke("git:renameBranch", rootPath, oldName, newName),
     /**
      * Remove a worktree
      */

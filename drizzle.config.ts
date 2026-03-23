@@ -1,7 +1,7 @@
 import type { Config } from "drizzle-kit";
 
 /**
- * Drizzle CLI configuration (DESKTOP / Electron)
+ * Drizzle CLI configuration
  *
  * IMPORTANT:
  * - drizzle-kit is ONLY used at development time (generate / push / studio)
