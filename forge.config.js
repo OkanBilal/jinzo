@@ -149,9 +149,9 @@ module.exports = {
         format: 'UDZO',
         background: 'src/renderer/public/dmg-background.png',
         icon: 'src/renderer/public/icon.icns',
-        contents: [
-          { x: 180, y: 170, type: 'file', path: '' },
-          { x: 480, y: 170, type: 'link', path: '/Applications' },
+        contents: (opts) => [
+          { x: 190, y: 200, type: 'file', path: opts.appPath },
+          { x: 470, y: 200, type: 'link', path: '/Applications' },
         ],
         window: { size: { width: 660, height: 400 } },
       },
