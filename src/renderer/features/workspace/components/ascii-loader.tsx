@@ -3,18 +3,18 @@ import { useEffect, useReducer } from "react";
 const ASCII_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 const LOADER_WORDS = [
-  "Decomposing",
-  "Correlating",
-  "Tracing",
-  "Evaluating",
-  "Reframing",
-  "Projecting",
-  "Reconciling",
-  "Normalizing",
-  "Harmonizing",
-  "Distilling",
-  "Aligning",
-  "Converging",
+  "Thinking",
+  "Analyzing",
+  "Mapping",
+  "Connecting",
+  "Refining",
+  "Synthesizing",
+  "Structuring",
+  "Clarifying",
+  "Filtering",
+  "Resolving",
+  "Composing",
+  "Finalizing",
 ];
 
 type LoaderState = { frameIndex: number; word: string };

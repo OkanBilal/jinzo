@@ -17,7 +17,7 @@ jobs:
       contents: write
     strategy:
       matrix:
-        arch: [arm64, x64]
+        arch: [arm64]
     steps:
       - uses: actions/checkout@v5
 
