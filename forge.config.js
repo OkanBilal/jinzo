@@ -97,6 +97,7 @@ module.exports = {
     extraResource: [
       'src/main/db/migrations',
       'src/renderer/public/icon.png',
+      'app-update.yml',
     ],
     ...((() => {
       const hasSigningVars = process.env.APPLE_ID && process.env.APPLE_PASSWORD && process.env.APPLE_TEAM_ID;
@@ -140,7 +141,7 @@ module.exports = {
       name: '@electron-forge/maker-dmg',
       platforms: ['darwin'],
       config: {
-        format: 'ULFO',
+        format: 'UDZO',
         background: 'src/renderer/public/dmg-background.png',
         icon: 'src/renderer/public/icon.icns',
         contents: [
