@@ -88,6 +88,11 @@ export function WorkspaceInput({
     handlePlanModeToggle,
     thinkingMode,
     handleThinkingModeToggle,
+    fastMode,
+    handleFastModeToggle,
+    effortLevel,
+    handleEffortLevelChange,
+    selectedModelInfo,
   } = useProviderModels(
     activeProviderId,
     providerVariant,
@@ -253,7 +258,7 @@ export function WorkspaceInput({
           {authErrorMessage}
         </div>
       )}
-   
+
     <div
       className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism
         cursor-pointer transition-all`}
@@ -319,6 +324,12 @@ export function WorkspaceInput({
         onPlanModeToggle={handlePlanModeToggle}
         thinkingMode={thinkingMode}
         onThinkingModeToggle={handleThinkingModeToggle}
+        fastMode={fastMode}
+        onFastModeToggle={handleFastModeToggle}
+        supportsFastMode={selectedModelInfo?.supportsFastMode ?? false}
+        effortLevel={effortLevel}
+        onEffortLevelChange={handleEffortLevelChange}
+        supportedEffortLevels={selectedModelInfo?.supportedEffortLevels}
         isRunning={activeRun?.status === "running"}
         onStop={onStop}
         uploadedFiles={uploadedFiles}

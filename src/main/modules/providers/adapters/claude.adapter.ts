@@ -174,6 +174,8 @@ interface SDKOptions {
    * - { type: "disabled" }: No extended thinking
    */
   thinking?: { type: "adaptive" } | { type: "disabled" };
+  effort?: "low" | "medium" | "high" | "max";
+  settings?: Record<string, unknown>;
   promptSuggestions?: boolean;
 }
 
@@ -267,6 +269,9 @@ interface SDKModelInfo {
   value: string;
   displayName: string;
   description: string;
+  supportsFastMode?: boolean;
+  supportsEffort?: boolean;
+  supportedEffortLevels?: ('low' | 'medium' | 'high' | 'max')[];
 }
 
 interface SDKSlashCommand {
@@ -552,6 +557,16 @@ export function createClaudeAdapter(
     options.thinking = config.thinkingMode
       ? { type: "adaptive" }
       : { type: "disabled" };
+
+    // Configure effort level (only effective with thinking enabled)
+    if (config.thinkingMode && config.effortLevel) {
+      options.effort = config.effortLevel;
+    }
+
+    // Configure fast mode via settings overlay
+    if (config.fastMode) {
+      options.settings = { ...((options.settings as Record<string, unknown>) || {}), fastMode: true };
+    }
 
     // Enable prompt suggestions
     options.promptSuggestions = true;
@@ -2428,6 +2443,9 @@ export function createClaudeAdapter(
           },
           // Estimate context window based on model name
           contextWindow: sdkModel.value.includes("haiku") ? 128000 : 200000,
+          supportsFastMode: sdkModel.supportsFastMode,
+          supportsEffort: sdkModel.supportsEffort,
+          supportedEffortLevels: sdkModel.supportedEffortLevels,
         }));
 
         // Cache the result
@@ -2967,10 +2985,13 @@ function getDefaultModels(defaultModel?: string): ModelInfo[] {
         functionCalling: true,
       },
       contextWindow: 200000,
+      supportsFastMode: true,
+      supportsEffort: true,
+      supportedEffortLevels: ["low", "medium", "high"],
     },
     {
       id: "claude-opus-4-6",
-      displayName: "Claude Opus 4.5",
+      displayName: "Claude Opus 4.6",
       isDefault: defaultModel === "claude-opus-4-6",
       capabilities: {
         streaming: true,
@@ -2979,6 +3000,9 @@ function getDefaultModels(defaultModel?: string): ModelInfo[] {
         reasoning: true,
       },
       contextWindow: 200000,
+      supportsFastMode: true,
+      supportsEffort: true,
+      supportedEffortLevels: ["low", "medium", "high", "max"],
     },
     {
       id: "claude-haiku-4-5",
@@ -2990,6 +3014,9 @@ function getDefaultModels(defaultModel?: string): ModelInfo[] {
         functionCalling: true,
       },
       contextWindow: 128000,
+      supportsFastMode: false,
+      supportsEffort: true,
+      supportedEffortLevels: ["low", "medium", "high"],
     },
   ];
 

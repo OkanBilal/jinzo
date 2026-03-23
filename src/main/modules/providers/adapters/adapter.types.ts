@@ -463,6 +463,10 @@ export interface ClaudeCodeAdapterConfig {
   structuredOutputsSelectedId?: string | null;
   /** When true, enables adaptive thinking (extended reasoning) */
   thinkingMode?: boolean;
+  /** When true, enables fast mode (faster output, same model) */
+  fastMode?: boolean;
+  /** Effort level for thinking depth (requires thinkingMode) */
+  effortLevel?: "low" | "medium" | "high" | "max";
 }
 
 /**
@@ -497,6 +501,14 @@ export interface ModelInfo {
   };
   /** Context window size in tokens */
   contextWindow?: number;
+  /** Whether this model supports fast mode */
+  supportsFastMode?: boolean;
+  /** Whether this model supports effort levels */
+  supportsEffort?: boolean;
+  /** Available effort levels for this model */
+  supportedEffortLevels?: ('low' | 'medium' | 'high' | 'max')[];
+  /** Model description */
+  description?: string;
   /** Additional metadata */
   metadata?: Record<string, unknown>;
 }

@@ -60,6 +60,10 @@ export interface ModelInfo {
     reasoning?: boolean;
   };
   contextWindow?: number;
+  supportsFastMode?: boolean;
+  supportsEffort?: boolean;
+  supportedEffortLevels?: ('low' | 'medium' | 'high' | 'max')[];
+  description?: string;
   metadata?: Record<string, unknown>;
 }
 

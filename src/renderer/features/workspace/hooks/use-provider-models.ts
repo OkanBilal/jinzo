@@ -42,6 +42,8 @@ export function useProviderModels(
   const [updateProvider] = useUpdateProviderMutation();
   const planMode = !!(providerData?.config as any)?.planMode;
   const thinkingMode = !!(providerData?.config as any)?.thinkingMode;
+  const fastMode = !!(providerData?.config as any)?.fastMode;
+  const effortLevel: string = (providerData?.config as any)?.effortLevel || "";
 
   const handlePlanModeToggle = useCallback(async () => {
     if (!providerData) return;
@@ -71,6 +73,36 @@ export function useProviderModels(
     });
   }, [providerData, thinkingMode, activeProviderId, updateProvider]);
 
+  const handleFastModeToggle = useCallback(async () => {
+    if (!providerData) return;
+    const currentConfig = providerData.config ?? {};
+    await updateProvider({
+      id: activeProviderId,
+      payload: {
+        config: {
+          ...currentConfig,
+          fastMode: !fastMode,
+        },
+      },
+    });
+  }, [providerData, fastMode, activeProviderId, updateProvider]);
+
+  const handleEffortLevelChange = useCallback(async (level: string) => {
+    if (!providerData) return;
+    const currentConfig = providerData.config ?? {};
+    const enableThinking = !!level;
+    await updateProvider({
+      id: activeProviderId,
+      payload: {
+        config: {
+          ...currentConfig,
+          thinkingMode: enableThinking,
+          effortLevel: level || undefined,
+        },
+      },
+    });
+  }, [providerData, activeProviderId, updateProvider]);
+
   const { modelDisplayNames } = useMemo(() => {
     if (providerModels && providerModels.length > 0) {
       return {
@@ -95,6 +127,13 @@ export function useProviderModels(
       return model?.displayName ?? selectedModel;
     }
     return selectedModel;
+  }, [providerModels, selectedModel]);
+
+  const selectedModelInfo = useMemo(() => {
+    if (providerModels) {
+      return providerModels.find((m) => m.id === selectedModel) ?? null;
+    }
+    return null;
   }, [providerModels, selectedModel]);
 
   useEffect(() => {
@@ -134,5 +173,10 @@ export function useProviderModels(
     handlePlanModeToggle,
     thinkingMode,
     handleThinkingModeToggle,
+    fastMode,
+    handleFastModeToggle,
+    effortLevel,
+    handleEffortLevelChange,
+    selectedModelInfo,
   };
 }

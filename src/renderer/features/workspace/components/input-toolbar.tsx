@@ -8,10 +8,12 @@ import {
   FILE_TYPES,
   type UploadedFile,
   Button,
+  DropdownWrapper,
 } from "@/components/ui";
 import { Plan, Brain } from "@/components/ui/icons";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useClickOutside } from "@/hooks/use-click-outside";
+import { Bolt } from "@/components/ui/icons/space";
 
 interface InputToolbarProps {
   variant: "claude" | "copilot";
@@ -29,6 +31,14 @@ interface InputToolbarProps {
   // Thinking mode (Claude only)
   thinkingMode: boolean;
   onThinkingModeToggle: () => void;
+  // Fast mode (Claude only)
+  fastMode: boolean;
+  onFastModeToggle: () => void;
+  supportsFastMode: boolean;
+  // Effort level (Claude only)
+  effortLevel: string;
+  onEffortLevelChange: (level: string) => void;
+  supportedEffortLevels?: ("low" | "medium" | "high" | "max")[];
   // Stop run (active run is running)
   isRunning: boolean;
   onStop?: () => void;
@@ -52,6 +62,12 @@ export function InputToolbar({
   onPlanModeToggle,
   thinkingMode,
   onThinkingModeToggle,
+  fastMode,
+  onFastModeToggle,
+  supportsFastMode,
+  effortLevel,
+  onEffortLevelChange,
+  supportedEffortLevels,
   isRunning,
   onStop,
   uploadedFiles,
@@ -60,6 +76,8 @@ export function InputToolbar({
 }: InputToolbarProps) {
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [showFileDropdown, setShowFileDropdown] = useState(false);
+  const [showThinkingDropdown, setShowThinkingDropdown] = useState(false);
+  const thinkingDropdownRef = useRef<HTMLDivElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
   const fileDropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,6 +88,10 @@ export function InputToolbar({
 
   useClickOutside(fileDropdownRef, () => {
     if (showFileDropdown) setShowFileDropdown(false);
+  });
+
+  useClickOutside(thinkingDropdownRef, () => {
+    if (showThinkingDropdown) setShowThinkingDropdown(false);
   });
 
   const openFilePicker = useCallback((accept: string) => {
@@ -161,7 +183,7 @@ export function InputToolbar({
                 tooltip="Toggle Plan Mode"
                 type="button"
                 onClick={onPlanModeToggle}
-                className={`flex items-center gap-1.5 -ml-1 px-2 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5  px-2 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
                   planMode
                     ? "dark:bg-primary-200/20 bg-primary-500/30 text-primary-700 dark:text-primary-100"
                     : " text-primary-700 dark:text-primary-300 hover:bg-primary/10"
@@ -177,31 +199,122 @@ export function InputToolbar({
                 />
                 Plan
               </Button>
-              <Button
-                tooltip="Toggle Thinking Mode"
-                type="button"
-                onClick={onThinkingModeToggle}
-                className={`flex items-center px-2 py-1 -ml-px  rounded-full text-sm font-medium transition-all cursor-pointer ${
-                  thinkingMode
-                    ? "dark:bg-orange-200/10 bg-orange-300/30 text-orange-500 dark:text-orange-100"
-                    : " text-primary-700 dark:text-primary-300 hover:bg-primary/10"
-                }`}
-                title={
-                  thinkingMode  
-                    ? "Thinking on — model reasons before responding"
-                    : "Thinking off — model responds directly"
-                }
-              >
-                <Brain
-                  className={`size-3.5  font-medium ${thinkingMode ? "text-orange-500 dark:text-orange-100" : "text-primary-700 dark:text-primary-300"}`}
-                />
-                <span
-                  className={`transition-all duration-300 ${thinkingMode ? "text-orange-500 ml-1 dark:text-orange-100 opacity-100 translate-x-0" : "text-primary-900 dark:text-primary-300 opacity-0 translate-x-1"}`}
+              {supportedEffortLevels && supportedEffortLevels.length > 0 ? (
+                <div className="relative" ref={thinkingDropdownRef}>
+                  <Button
+                    tooltip="Thinking & Effort"
+                    type="button"
+                    onClick={() =>
+                      setShowThinkingDropdown(!showThinkingDropdown)
+                    }
+                    className={`flex items-center  px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer ${
+                      thinkingMode
+                        ? "dark:bg-orange-200/10 gap-1 bg-orange-300/30 text-orange-500 dark:text-orange-100"
+                        : "text-primary-700 dark:text-primary-300 hover:bg-primary/10"
+                    }`}
+                  >
+                    <Brain
+                      className={`size-4 font-medium ${thinkingMode ? "text-orange-500 dark:text-orange-100" : "text-primary-700 dark:text-primary-300"}`}
+                    />
+                    <span
+                      className={
+                        thinkingMode
+                          ? "text-orange-500 dark:text-orange-100 capitalize"
+                          : ""
+                      }
+                    >
+                      {thinkingMode ? effortLevel || "On" : ""}
+                    </span>
+                  </Button>
+                  <DropdownWrapper
+                    isOpen={showThinkingDropdown}
+                    openUpward={true}
+                    minWidth="min-w-28"
+                    useFixedBackground={true}
+                  >
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        onEffortLevelChange("");
+                        setShowThinkingDropdown(false);
+                      }}
+                      className={`w-full text-left px-3 py-2.5 text-sm cursor-pointer transition-colors first:rounded-t-xl ${
+                        !thinkingMode
+                          ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100 font-medium"
+                          : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
+                      }`}
+                    >
+                      Off
+                    </Button>
+                    {supportedEffortLevels.map((level) => (
+                      <Button
+                        key={level}
+                        type="button"
+                        onClick={() => {
+                          onEffortLevelChange(level);
+                          setShowThinkingDropdown(false);
+                        }}
+                        className={`w-full text-left px-3 py-2.5 text-sm cursor-pointer transition-colors capitalize last:rounded-b-xl ${
+                          thinkingMode && effortLevel === level
+                            ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100 font-medium"
+                            : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
+                        }`}
+                      >
+                        {level}
+                      </Button>
+                    ))}
+                  </DropdownWrapper>
+                </div>
+              ) : (
+                <Button
+                  tooltip="Toggle Thinking Mode"
+                  type="button"
+                  onClick={onThinkingModeToggle}
+                  className={`flex items-center gap-1 px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer ${
+                    thinkingMode
+                      ? "dark:bg-orange-200/10 bg-orange-300/30 text-orange-500 dark:text-orange-100"
+                      : "text-primary-700 dark:text-primary-300 hover:bg-primary/10"
+                  }`}
                 >
-                  {thinkingMode ? "Think" : ""}
-                </span>
-              </Button>
+                  <Brain
+                    className={`size-4 font-medium ${thinkingMode ? "text-orange-500 dark:text-orange-100" : "text-primary-700 dark:text-primary-300"}`}
+                  />
+                  <span
+                    className={
+                      thinkingMode ? "text-orange-500 dark:text-orange-100" : ""
+                    }
+                  >
+                    {thinkingMode ? "Think" : ""}
+                  </span>
+                </Button>
+              )}
             </>
+          )}
+          {supportsFastMode && (
+            <Button
+              tooltip="Toggle Fast Mode"
+              type="button"
+              onClick={onFastModeToggle}
+              className={`flex items-center px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer ${
+                fastMode
+                  ? "dark:bg-green-200/10 gap-1 bg-green-300/30 text-green-600 dark:text-green-200"
+                  : " text-primary-700 dark:text-primary-300 hover:bg-primary/10"
+              }`}
+              title={
+                fastMode
+                  ? "Fast mode on — faster output, same model"
+                  : "Fast mode off — standard speed"
+              }
+            >
+              <Bolt
+                className={`size-4 ${fastMode ? "text-green-600 dark:text-green-200" : "text-primary-700 dark:text-primary-300"}`}
+              />
+              <span
+                className={`transition-all duration-300 ${fastMode ? "text-green-600 dark:text-green-200 opacity-100 translate-x-0" : "opacity-0 -translate-x-1"}`}
+              >
+                {fastMode ? "Fast" : ""}
+              </span>
+            </Button>
           )}
         </div>
         <div className="flex items-center space-x-2">

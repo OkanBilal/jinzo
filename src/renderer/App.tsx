@@ -34,7 +34,7 @@ function AppContent() {
         <MainContent
           marginLeft={mainMarginLeft}
           marginRight={
-            !hideRightPanel && isrightanelOpen ? rightPanelWidth : "0.5rem"
+            !hideRightPanel && isrightanelOpen ? rightPanelWidth : "0.375rem"
           }
         >
           <ErrorBoundary level="route">

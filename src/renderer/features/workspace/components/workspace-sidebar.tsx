@@ -161,7 +161,7 @@ export function WorkspaceSidebar() {
             className={`relative z-(--z-base) flex-1 text-xs font-medium py-1 px-2 rounded-lg transition-colors ${
               sidebarTab === "files"
                 ? "text-primary-900 dark:text-primary-100"
-                : "text-primary-800 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200"
+                : "text-primary-800 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
             }`}
           >
             Files
@@ -171,7 +171,7 @@ export function WorkspaceSidebar() {
             className={`relative z-(--z-base) flex-1 text-xs font-medium py-1 px-2 rounded-lg transition-colors ${
               sidebarTab === "changes"
                 ? "text-primary-900 dark:text-primary-100"
-                : "text-primary-800 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200"
+                : "text-primary-800 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
             }`}
           >
             Changes{changedFilesCount > 0 && ` (${changedFilesCount})`}
@@ -181,7 +181,7 @@ export function WorkspaceSidebar() {
             className={`relative z-(--z-base) flex-1 text-xs font-medium py-1 px-2 rounded-lg transition-colors ${
               sidebarTab === "reviews"
                 ? "text-primary-900 dark:text-primary-100"
-                : "text-primary-800 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200"
+                : "text-primary-800 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
             }`}
           >
             Activity
