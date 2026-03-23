@@ -81,8 +81,8 @@ async function sendRunNotification(runId: string, status: string): Promise<void>
 
     const title = status === "succeeded" ? "Run Completed" : "Run Failed";
     const body = status === "succeeded"
-      ? `Run ${runId.slice(0, 8)} finished successfully`
-      : `Run ${runId.slice(0, 8)} failed`;
+      ? `Run  finished successfully`
+      : `Run  failed`;
 
     const notification = new Notification({ title, body });
     notification.on("click", () => {
