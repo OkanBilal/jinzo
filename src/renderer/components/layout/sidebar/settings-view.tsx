@@ -93,7 +93,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
               <Button
                 key={item.id}
                 onClick={() => handleSectionClick(item.id)}
-                className={`w-full cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-all flex items-center gap-3
+                className={`w-full cursor-pointer text-left px-3 py-2 rounded-xl text-sm transition-all flex items-center gap-2.5
                   ${
                     isActive
                       ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
@@ -127,7 +127,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                 <Button
                   key={item.id}
                   onClick={() => handleSectionClick(item.id)}
-                  className={`w-full cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-all flex items-center gap-3
+                  className={`w-full cursor-pointer text-left px-3 py-2 rounded-xl text-sm transition-all flex items-center gap-2.5
                     ${
                       isActive
                         ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
@@ -187,7 +187,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                     onClick={() =>
                       navigate(`/settings?section=projects&id=${project.id}`)
                     }
-                    className={`w-full cursor-pointer text-left px-3 py-2.5 rounded-xl text-sm transition-all flex items-center gap-2
+                    className={`w-full cursor-pointer text-left px-3 py-2 rounded-xl text-sm transition-all flex items-center gap-2.5
                       ${
                         isActive
                           ? "bg-primary/80 dark:bg-primary/5 text-primary-900 dark:text-primary-100"

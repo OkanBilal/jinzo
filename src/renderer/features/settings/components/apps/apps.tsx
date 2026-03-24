@@ -95,7 +95,7 @@ export default function AppsSettings({
     return (
       <div
         key={app.id}
-        className={`flex items-center justify-between py-4.5 ${connected ? "" : " last:mb-12"}`}
+        className={`flex items-center justify-between py-2.5 ${connected ? "first:mt-2" : " last:mb-12"}`}
         role="listitem"
       >
         <div className="flex items-center gap-4">
@@ -107,8 +107,8 @@ export default function AppsSettings({
             <Body
               className={
                 connected
-                  ? "text-green-600 dark:text-primary-200! mt-0.5"
-                  : "text-primary-500 dark:text-primary-500 mt-0.5"
+                  ? "text-green-600 dark:text-primary-200! text-xs"
+                  : "text-primary-500 dark:text-primary-500 text-xs"
               }
             >
               {connected ? "Connected" : "Disconnected"}
