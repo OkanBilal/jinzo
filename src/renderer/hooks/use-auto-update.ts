@@ -40,6 +40,14 @@ export function useAutoUpdate() {
   const [state, setState] = useState<UpdateState>(INITIAL_STATE);
 
   useEffect(() => {
+    // Fetch current state from main process on mount
+    window.api.updates.getStatus().then((result: any) => {
+      if (result?.success) {
+        setState(result.data);
+      }
+    });
+
+    // Listen for state changes pushed from main process
     const unsubscribe = window.api.updates.onStatusChange((data: UpdateState) => {
       setState(data);
     });
@@ -53,16 +61,9 @@ export function useAutoUpdate() {
     }
   }, []);
 
-  const download = useCallback(async () => {
-    const result = await window.api.updates.downloadUpdate();
-    if (result?.success) {
-      setState(result.data);
-    }
-  }, []);
-
   const install = useCallback(() => {
     window.api.updates.quitAndInstall();
   }, []);
 
-  return { state, check, download, install };
+  return { state, check, install };
 }

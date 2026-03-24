@@ -145,8 +145,7 @@ export default function ClaudeSettings() {
           title="Structured Output"
           description={
             <>
-              Define JSON Schemas to constrain the agent&apos;s output format. The
-              selected schema is sent to the Claude SDK as outputFormat.{" "}
+              Define JSON Schemas to constrain the agent&apos;s output format.{" "}
               <a
                 href="https://platform.claude.com/docs/en/agent-sdk/structured-outputs"
                 target="_blank"

@@ -1,21 +1,9 @@
-import React, { ButtonHTMLAttributes, forwardRef, useEffect, useState } from "react";
+import React, { ButtonHTMLAttributes, forwardRef } from "react";
 import { cn } from "../../lib/cn";
 import Tooltip, { TooltipPosition } from "./tooltip";
+import { AsciiSpinner } from "@/features/workspace/components/ascii-loader";
 
-const ASCII_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
-function AsciiSpinner() {
-  const [frameIndex, setFrameIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setFrameIndex((prev) => (prev + 1) % ASCII_FRAMES.length);
-    }, 80);
-    return () => clearInterval(interval);
-  }, []);
-
-  return <span className="font-sans text-sm">{ASCII_FRAMES[frameIndex]}</span>;
-}
 
 export type ButtonVariant =
   | "primary"
@@ -66,7 +54,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   icon: "cursor-pointer p-1 rounded-md text-primary-600 dark:text-primary-200 hover:bg-primary-200/40 dark:hover:bg-primary-900/50",
   link: "cursor-pointer text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 underline-offset-4 hover:underline ",
   subtle:
-    "cursor-pointer flex items-center gap-2 bg-primary/30 dark:bg-primary/4 hover:bg-primary/80 dark:hover:bg-primary/8 ",
+    "cursor-pointer flex items-center gap-2 bg-primary/50 dark:bg-primary/4 hover:bg-primary/80 dark:hover:bg-primary/8 ",
   frosted:
     "cursor-pointer glass-morphism-button text-primary-800 dark:text-primary-200 ",
   bare: "cursor-pointer",
@@ -129,7 +117,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {isLoading ? (
           <div className="flex items-center gap-1.5">
-            <AsciiSpinner />
+            <AsciiSpinner variant="null" />
             <span>Loading...</span>
           </div>
         ) : (

@@ -19,7 +19,7 @@ export function WorkspaceEmptyState({ workspace }: WorkspaceEmptyStateProps) {
     <div className=" flex flex-col items-center justify-center h-full">
       {isClaudeRoute ? (
         <div className="flex items-center justify-center">
-          <span className="dark:text-primary-200 text-primary-900 text-xl font-mono">
+          <span className="dark:text-primary-800 text-primary-300 text-lg font-mono tracking-wide">
             {displayText}
           </span>
         </div>
@@ -30,9 +30,9 @@ export function WorkspaceEmptyState({ workspace }: WorkspaceEmptyStateProps) {
             size={80}
             animate
           /> */}
-            <p className="text-xl text-primary-700 dark:text-primary-200 font-mono ">
-            {displayText}
-          </p>
+          <span className="dark:text-primary-800 text-primary-300 text-lg font-mono tracking-wide">
+          {displayText}
+          </span>
         </div>
       )}
     </div>

@@ -35,7 +35,7 @@ const BREATHING_FRAMES = [
   "⣿", "⠿", "⠟", "⠏", "⠇", "⠃", "⠁", "⠀",
 ];
 
-export function AsciiSpinner({ variant }: { variant?: "claude" | "copilot" }) {
+export function AsciiSpinner({ variant }: { variant?: "claude" | "copilot" | "null" }) {
   const [frameIndex, dispatch] = useReducer(
     (i: number) => (i + 1) % BREATHING_FRAMES.length,
     0,
@@ -48,7 +48,7 @@ export function AsciiSpinner({ variant }: { variant?: "claude" | "copilot" }) {
 
   return (
     <span
-      className={`font-mono text-xs leading-none ${variant === "claude" ? "text-claude" : "text-copilot"}`}
+      className={`font-mono text-xs leading-none ${variant === "claude" ? "text-claude" : variant === "copilot" ? "text-copilot" : "text-primary-900 dark:text-primary-200"}`}
     >
       {BREATHING_FRAMES[frameIndex]}
     </span>
@@ -80,7 +80,7 @@ export function AsciiLoader({
   return (
     <div className={`flex items-center gap-2 py-2 ${className || ""}`}>
       <span
-        className={`font-mono text-base ${variant === "claude" ? "text-claude" : "text-copilot"}`}
+        className={`font-mono text-base ${variant === "claude" ? "text-claude" : variant === "copilot" ? "text-copilot" : "text-primary-900 dark:text-primary-200"}`}
       >
         {ASCII_FRAMES[state.frameIndex]}
       </span>

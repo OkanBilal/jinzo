@@ -4,10 +4,21 @@ import { useDarkMode } from "../../../hooks/use-dark-mode";
 import { useActiveSpace } from "../../../hooks/use-active-space";
 import { cn } from "@/lib/cn";
 import { defaultTheme } from "@/lib/theme";
-import { useGetAppSettingsQuery, useSetShowToolCallsMutation, useSetPreventSleepDuringRunsMutation, useSetNotifyOnRunCompleteMutation, useSetNotifyOnToolApprovalMutation } from "@/lib/redux/api";
-import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
+import {
+  useGetAppSettingsQuery,
+  useSetShowToolCallsMutation,
+  useSetPreventSleepDuringRunsMutation,
+  useSetNotifyOnRunCompleteMutation,
+  useSetNotifyOnToolApprovalMutation,
+} from "@/lib/redux/api";
+import {
+  SettingsSection,
+  SettingsRow,
+  SettingsDivider,
+} from "./settings-layout";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
 import { Refresh } from "@/components/ui/icons";
+import { AsciiSpinner } from "@/features/workspace/components/ascii-loader";
 
 type ThemeValue = "light" | "dark" | "system";
 
@@ -146,12 +157,10 @@ function ThemePreviewCard({
 function UpdateButton({
   state,
   onCheck,
-  onDownload,
   onInstall,
 }: {
   state: { status: string; info: any; progress: any; error: string | null };
   onCheck: () => void;
-  onDownload: () => void;
   onInstall: () => void;
 }) {
   switch (state.status) {
@@ -162,24 +171,17 @@ function UpdateButton({
         </Button>
       );
     case "available":
-      return (
-        <Button type="button" variant="submit" size="md" onClick={onDownload}>
-          Download v{state.info?.version}
-        </Button>
-      );
     case "downloading":
       return (
-        <div className="flex items-center gap-3">
-          <div className="w-32 h-2 bg-primary-200 dark:bg-primary-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-500 rounded-full transition-all duration-300"
-              style={{ width: `${Math.round(state.progress?.percent ?? 0)}%` }}
-            />
-          </div>
-          <span className="text-xs text-primary-500 dark:text-primary-400 tabular-nums">
-            {Math.round(state.progress?.percent ?? 0)}%
-          </span>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          disabled
+          className="flex items-center gap-1"
+        >
+          <AsciiSpinner variant="null" />
+          Downloading...
+        </Button>
       );
     case "downloaded":
       return (
@@ -210,25 +212,40 @@ function UpdateButton({
     default:
       return (
         <div className="">
-        <Button className="flex" type="button" variant="primary" size="md" onClick={onCheck}>
-          <Refresh className="w-4 h-4 mr-1" />
-          Check for Updates
-        </Button>
+          <Button
+            className="flex"
+            type="button"
+            variant="primary"
+            size="md"
+            onClick={onCheck}
+          >
+            <Refresh className="w-4 h-4 mr-1" />
+            Check for Updates
+          </Button>
         </div>
       );
   }
 }
 
 const RUN_DETAIL_OPTIONS = [
-  { value: "steps_with_tool_calls", label: "Steps with tool calls", description: "Show tool calls with outputs" },
-  { value: "steps", label: "Steps", description: "Hide tool calls and outputs" },
+  {
+    value: "steps_with_tool_calls",
+    label: "Steps with tool calls",
+    description: "Show tool calls with outputs",
+  },
+  {
+    value: "steps",
+    label: "Steps",
+    description: "Hide tool calls and outputs",
+  },
 ];
 
 function RunDetailSelect() {
   const { data: settings } = useGetAppSettingsQuery();
   const [setShowToolCalls] = useSetShowToolCallsMutation();
 
-  const value = settings?.showToolCalls !== false ? "steps_with_tool_calls" : "steps";
+  const value =
+    settings?.showToolCalls !== false ? "steps_with_tool_calls" : "steps";
 
   return (
     <Select
@@ -282,7 +299,11 @@ function NotifyToolApprovalToggle() {
 export default function GeneralSettings() {
   const { theme, setTheme } = useDarkMode();
   const { activeSpace } = useActiveSpace();
-  const { state: updateState, check: checkUpdate, download: downloadUpdate, install: installUpdate } = useAutoUpdate();
+  const {
+    state: updateState,
+    check: checkUpdate,
+    install: installUpdate,
+  } = useAutoUpdate();
 
   const { lightBackground, darkBackground } = useMemo(() => {
     if (!activeSpace?.themeConfig) {
@@ -317,96 +338,93 @@ export default function GeneralSettings() {
         <Heading2>General</Heading2>
       </div>
 
-          <SettingsSection>
-            <SettingsRow
-              title="Run Detail"
-              description="Control how much detail is shown in run output"
-            >
-              <RunDetailSelect />
-            </SettingsRow>
-            <SettingsDivider />
-            <SettingsRow
-              title="Prevent Sleep"
-              description="Keep your computer awake while a run is active"
-            >
-              <PreventSleepToggle />
-            </SettingsRow>
-          </SettingsSection>
+      <SettingsSection>
+        <SettingsRow
+          title="Run Detail"
+          description="Control how much detail is shown in run output"
+        >
+          <RunDetailSelect />
+        </SettingsRow>
+        <SettingsDivider />
+        <SettingsRow
+          title="Prevent Sleep"
+          description="Keep your computer awake while a run is active"
+        >
+          <PreventSleepToggle />
+        </SettingsRow>
+      </SettingsSection>
 
-          <SettingsSection title="Appearance">
-            <SettingsRow
-              title="Theme"
-              description="Choose your preferred color mode"
-            >
-              <div className="flex gap-4">
-                <ThemePreviewCard
-                  themeValue="light"
-                  label="Light"
-                  isSelected={theme === "light"}
-                  lightBackground={lightBackground}
-                  darkBackground={darkBackground}
-                  onClick={() => {
-                    setTheme("light");
-                    toast.success("Theme changed to Light");
-                  }}
-                />
-                <ThemePreviewCard
-                  themeValue="system"
-                  label="Auto"
-                  isSelected={theme === "system"}
-                  lightBackground={lightBackground}
-                  darkBackground={darkBackground}
-                  onClick={() => {
-                    setTheme("system");
-                    toast.success("Theme changed to Auto");
-                  }}
-                />
-                <ThemePreviewCard
-                  themeValue="dark"
-                  label="Dark"
-                  isSelected={theme === "dark"}
-                  lightBackground={lightBackground}
-                  darkBackground={darkBackground}
-                  onClick={() => {
-                    setTheme("dark");
-                    toast.success("Theme changed to Dark");
-                  }}
-                />
-              </div>
-            </SettingsRow>
-          </SettingsSection>
+      <SettingsSection title="Appearance">
+        <SettingsRow
+          title="Theme"
+          description="Choose your preferred color mode"
+        >
+          <div className="flex gap-4">
+            <ThemePreviewCard
+              themeValue="light"
+              label="Light"
+              isSelected={theme === "light"}
+              lightBackground={lightBackground}
+              darkBackground={darkBackground}
+              onClick={() => {
+                setTheme("light");
+                toast.success("Theme changed to Light");
+              }}
+            />
+            <ThemePreviewCard
+              themeValue="system"
+              label="Auto"
+              isSelected={theme === "system"}
+              lightBackground={lightBackground}
+              darkBackground={darkBackground}
+              onClick={() => {
+                setTheme("system");
+                toast.success("Theme changed to Auto");
+              }}
+            />
+            <ThemePreviewCard
+              themeValue="dark"
+              label="Dark"
+              isSelected={theme === "dark"}
+              lightBackground={lightBackground}
+              darkBackground={darkBackground}
+              onClick={() => {
+                setTheme("dark");
+                toast.success("Theme changed to Dark");
+              }}
+            />
+          </div>
+        </SettingsRow>
+      </SettingsSection>
 
-          <SettingsSection title="Notifications">
-            <SettingsRow
-              title="Run Complete"
-              description="Get notified when a run finishes"
-            >
-              <NotifyRunCompleteToggle />
-            </SettingsRow>
-            <SettingsDivider />
-            <SettingsRow
-              title="Tool Approval"
-              description="Get notified when a tool needs your approval"
-            >
-              <NotifyToolApprovalToggle />
-            </SettingsRow>
-          </SettingsSection>
+      <SettingsSection title="Notifications">
+        <SettingsRow
+          title="Run Complete"
+          description="Get notified when a run finishes"
+        >
+          <NotifyRunCompleteToggle />
+        </SettingsRow>
+        <SettingsDivider />
+        <SettingsRow
+          title="Tool Approval"
+          description="Get notified when a tool needs your approval"
+        >
+          <NotifyToolApprovalToggle />
+        </SettingsRow>
+      </SettingsSection>
 
-          <SettingsSection title="Software Updates">
-            <SettingsRow
-              title="Version"
-              description={`Current version: v${__APP_VERSION__ ?? "1.0.0"}`}
-            >
-              <UpdateButton
-                state={updateState}
-                onCheck={checkUpdate}
-                onDownload={downloadUpdate}
-                onInstall={installUpdate}
-              />
-            </SettingsRow>
-          </SettingsSection>
+      <SettingsSection title="Software Updates">
+        <SettingsRow
+          title="Version"
+          description={`Current version: v${__APP_VERSION__ ?? "1.0.0"}`}
+        >
+          <UpdateButton
+            state={updateState}
+            onCheck={checkUpdate}
+            onInstall={installUpdate}
+          />
+        </SettingsRow>
+      </SettingsSection>
     </div>
   );
 }
-
-

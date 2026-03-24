@@ -27,16 +27,7 @@ export const updatesService = {
       return;
     }
 
-    updateElectronApp({
-      updateSource: {
-        type: UpdateSourceType.ElectronPublicUpdateService,
-        repo: "OkanBilal/jinzo",
-      },
-      updateInterval: "1 hour",
-      notifyUser: true,
-    });
-
-    // Listen for autoUpdater events to push state to renderer
+    // Register event listeners to push state to renderer
     autoUpdater.on("checking-for-update", () => {
       this._updateState({ status: "checking", info: null, progress: null, error: null });
     });
@@ -49,22 +40,34 @@ export const updatesService = {
       this._updateState({ status: "not-available", info: null, progress: null, error: null });
     });
 
-    autoUpdater.on("update-downloaded", (_event: any, releaseNotes: string, releaseName: string) => {
+    autoUpdater.on("update-downloaded", (_event: any, _releaseNotes: string, releaseName: string) => {
       this._updateState({
         status: "downloaded",
-        info: { version: releaseName || "", releaseNotes: releaseNotes || undefined },
+        info: { version: releaseName || "new version" },
         progress: null,
         error: null,
       });
     });
 
     autoUpdater.on("error", (err: Error) => {
+      // "command is disabled" means updater is already busy — not a real error
+      if (err.message?.includes("command is disabled")) return;
+
       this._updateState({
         status: "error",
         info: this._state.info,
         progress: null,
         error: err.message,
       });
+    });
+
+    updateElectronApp({
+      updateSource: {
+        type: UpdateSourceType.ElectronPublicUpdateService,
+        repo: "OkanBilal/jinzo",
+      },
+      updateInterval: "1 hour",
+      notifyUser: false,
     });
   },
 
@@ -78,12 +81,17 @@ export const updatesService = {
       autoUpdater.checkForUpdates();
       return { success: true, data: this._state };
     } catch (err: any) {
-      return { success: false, error: err.message || "Failed to check for updates" };
+      this._updateState({
+        status: "error",
+        info: null,
+        progress: null,
+        error: err.message || "Failed to check for updates",
+      });
+      return { success: true, data: this._state };
     }
   },
 
   async downloadUpdate(): Promise<ServiceResponse<UpdateState>> {
-    // update-electron-app handles download automatically
     return { success: true, data: this._state };
   },
 
