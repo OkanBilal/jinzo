@@ -2,13 +2,14 @@ import { Fragment, RefObject, useMemo, useState, useCallback } from "react";
 import { ToolCallGroup, InfoGroup, groupEvents, type EventGroup } from "./tools/tool-call-group";
 import { EditorContent } from "./editor-content";
 import { IssueTabContent } from "./issue-tab-content";
+import { SignalTabContent } from "./signal-tab-content";
 import { NoteTabContent } from "./note-tab-content";
 import { WorkspaceEmptyState } from "./workspace-empty-state";
 import type { Run, RunEvent, Workspace } from "../types";
-import type { IssueWithEntity, RunTurn, ModelUsageEntry } from "@/lib/redux/api";
+import type { IssueWithEntity, SignalWithEntity, RunTurn, ModelUsageEntry } from "@/lib/redux/api";
 
 const EMPTY_TURNS: RunTurn[] = [];
-import { isIssueTab, getIssueEntityId, isNoteTab, getNoteId, isNewRunTab } from "../utils/repo-utils";
+import { isIssueTab, getIssueEntityId, isSignalTab, getSignalEntityId, isNoteTab, getNoteId, isNewRunTab } from "../utils/repo-utils";
 import { AsciiLoader } from "./ascii-loader";
 import type { ToolApprovalRequest } from "../hooks/use-tool-approval";
 import { ToolApprovalDialog } from "./tools/tool-approval-dialog";
@@ -385,6 +386,7 @@ interface WorkspaceEventsProps {
   currentWorkspace: Workspace | null;
   eventsEndRef: RefObject<HTMLDivElement>;
   issueTabs: IssueWithEntity[];
+  signalTabs?: SignalWithEntity[];
   turns?: RunTurn[];
   variant?: "copilot" | "claude";
   pendingApproval?: ToolApprovalRequest;
@@ -400,6 +402,7 @@ export function WorkspaceEvents({
   currentWorkspace,
   eventsEndRef,
   issueTabs,
+  signalTabs = [],
   turns = EMPTY_TURNS,
   variant = "copilot",
   pendingApproval,
@@ -409,14 +412,18 @@ export function WorkspaceEvents({
 }: WorkspaceEventsProps) {
   const isEditorActive = activeTab === "editor";
   const isIssueActive = isIssueTab(activeTab);
+  const isSignalActive = isSignalTab(activeTab);
   const isNoteActive = isNoteTab(activeTab);
   const isNewRunActive = isNewRunTab(activeTab);
   const activeIssue = isIssueActive
     ? issueTabs.find((t) => t.issue.entityId === getIssueEntityId(activeTab))
     : null;
+  const activeSignal = isSignalActive
+    ? signalTabs.find((t) => t.signal.entityId === getSignalEntityId(activeTab))
+    : null;
   const activeNoteId = isNoteActive ? getNoteId(activeTab) : null;
   const hasRunContent =
-    !isEditorActive && !isIssueActive && !isNoteActive && !isNewRunActive && currentEvents.length > 0;
+    !isEditorActive && !isIssueActive && !isSignalActive && !isNoteActive && !isNewRunActive && currentEvents.length > 0;
 
   // Check if current run is still running
   const activeRun = runs.find((r) => r.id === activeTab);
@@ -494,6 +501,8 @@ export function WorkspaceEvents({
           <EditorContent className="h-full" />
         ) : isIssueActive && activeIssue ? (
           <IssueTabContent issue={activeIssue} />
+        ) : isSignalActive && activeSignal ? (
+          <SignalTabContent signal={activeSignal} />
         ) : isNoteActive && activeNoteId ? (
           <NoteTabContent reviewId={activeNoteId} />
         ) : hasRunContent ? (

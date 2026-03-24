@@ -46,6 +46,8 @@ export interface WorkRunRequest {
   attachments?: FileAttachment[];
   /** Structured context issues passed from the UI */
   contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
+  /** Structured context signals (error reports) passed from the UI */
+  contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
   /** Structured context files passed from the UI */
   contextFiles?: Array<{ path: string }>;
   /**
@@ -229,6 +231,8 @@ export interface WorkRunContinueRequest {
   attachments?: FileAttachment[];
   /** Structured context issues to inject into this follow-up */
   contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
+  /** Structured context signals (error reports) to inject into this follow-up */
+  contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
   /** Structured context files to inject into this follow-up */
   contextFiles?: Array<{ path: string }>;
   /**

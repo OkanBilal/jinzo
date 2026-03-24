@@ -260,6 +260,8 @@ export interface StartRunPayload {
   attachments?: FileAttachment[];
   /** Structured context issues (displayed as chips in the UI) */
   contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
+  /** Structured context signals (error reports, displayed as chips in the UI) */
+  contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
   /** Structured context files (displayed as chips in the UI, injected into LLM prompt by adapter) */
   contextFiles?: Array<{ path: string }>;
 }
@@ -281,6 +283,8 @@ export interface ContinueRunPayload {
   attachments?: FileAttachment[];
   /** Structured context issues to inject into this follow-up */
   contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
+  /** Structured context signals (error reports) to inject into this follow-up */
+  contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
   /** Structured context files to inject into this follow-up */
   contextFiles?: Array<{ path: string }>;
 }

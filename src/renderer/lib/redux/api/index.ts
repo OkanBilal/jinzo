@@ -385,6 +385,16 @@ export type {
 } from "./statsApi";
 
 export {
+  signalsApi,
+  useGetSignalsByProjectQuery,
+} from "./signalsApi";
+export type {
+  SignalRecord,
+  SignalWithEntity,
+  SignalQueryOptions,
+} from "./signalsApi";
+
+export {
   automationsApi,
   useGetAutomationsQuery,
   useLazyGetAutomationsQuery,

@@ -283,6 +283,7 @@ const api = {
       toolPolicySnapshot?: Record<string, unknown>;
       attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>;
       contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
+      contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
       contextFiles?: Array<{ path: string }>;
     }) => ipcRenderer.invoke("runs:execute", payload),
     abort: (runId: string) => ipcRenderer.invoke("runs:abort", runId),
@@ -301,6 +302,7 @@ const api = {
       }>;
       attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>;
       contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
+      contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
       contextFiles?: Array<{ path: string }>;
     }) => ipcRenderer.invoke("runs:continue", payload),
     canResume: (runId: string) => ipcRenderer.invoke("runs:canResume", runId),

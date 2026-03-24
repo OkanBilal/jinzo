@@ -1254,6 +1254,7 @@ export function createClaudeAdapter(
 
     return appendPromptSections(prompt, {
       contextIssues: request.contextIssues,
+      contextSignals: request.contextSignals,
       contextFiles: request.contextFiles,
       attachments: request.attachments,
       runId: request.runId,
@@ -1321,6 +1322,7 @@ export function createClaudeAdapter(
         await emitUserPromptArtifact(onEvent, request.goal, {
           attachments: request.attachments,
           contextIssues: request.contextIssues,
+          contextSignals: request.contextSignals,
           contextFiles: request.contextFiles,
         });
 
@@ -1678,6 +1680,7 @@ export function createClaudeAdapter(
 
         prompt = appendPromptSections(prompt, {
           contextIssues: request.contextIssues,
+          contextSignals: request.contextSignals,
           contextFiles: request.contextFiles,
           attachments: request.attachments,
           runId,
@@ -1688,6 +1691,7 @@ export function createClaudeAdapter(
         await emitUserPromptArtifact(onEvent, message, {
           attachments: request.attachments,
           contextIssues: request.contextIssues,
+          contextSignals: request.contextSignals,
           contextFiles: request.contextFiles,
         });
 

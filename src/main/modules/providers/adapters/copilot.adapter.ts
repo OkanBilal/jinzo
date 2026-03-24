@@ -869,6 +869,7 @@ export function createCopilotAdapter(
 
     return appendPromptSections(prompt, {
       contextIssues: request.contextIssues,
+      contextSignals: request.contextSignals,
       contextFiles: request.contextFiles,
       attachments: request.attachments,
       runId: request.runId,
@@ -1011,6 +1012,7 @@ export function createCopilotAdapter(
         await emitUserPromptArtifact(onEvent, request.goal, {
           attachments: request.attachments,
           contextIssues: request.contextIssues,
+          contextSignals: request.contextSignals,
           contextFiles: request.contextFiles,
         });
 
@@ -1263,6 +1265,7 @@ export function createCopilotAdapter(
 
         prompt = appendPromptSections(prompt, {
           contextIssues: request.contextIssues,
+          contextSignals: request.contextSignals,
           contextFiles: request.contextFiles,
           attachments: request.attachments,
           runId,
@@ -1273,6 +1276,7 @@ export function createCopilotAdapter(
         await emitUserPromptArtifact(onEvent, message, {
           attachments: request.attachments,
           contextIssues: request.contextIssues,
+          contextSignals: request.contextSignals,
           contextFiles: request.contextFiles,
         });
 

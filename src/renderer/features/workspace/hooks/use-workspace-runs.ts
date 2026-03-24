@@ -8,6 +8,7 @@ import { mapArtifactToEvent, mapToolCallToEvent } from "../utils/run-event-mappe
 
 type Attachments = Array<{ name: string; type: string; data: string; mimeType: string }>;
 type ContextIssue = { provider: string; number?: number | null; title: string; body?: string | null };
+type ContextSignal = { source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number };
 type ContextFile = { fullPath: string; displayName?: string };
 
 export function useWorkspaceRuns(
@@ -247,6 +248,7 @@ export function useWorkspaceRuns(
       attachments?: Attachments,
       contextIssues?: ContextIssue[],
       contextFiles?: ContextFile[],
+      contextSignals?: ContextSignal[],
     ) => {
       if (!goal.trim() || !selectedWorkspace || !selectedProvider) {
         toast.error("Please fill in all required fields");
@@ -264,6 +266,7 @@ export function useWorkspaceRuns(
           attachments,
           contextIssues: contextIssues?.map(i => ({ provider: i.provider, number: i.number, title: i.title, body: i.body })),
           contextFiles: contextFiles?.map(f => ({ path: f.fullPath })),
+          contextSignals: contextSignals?.map(s => ({ source: s.source, level: s.level, category: s.category, title: s.title, body: s.body, stackTrace: s.stackTrace, eventCount: s.eventCount })),
         });
 
         if (!result.success) {
@@ -282,6 +285,7 @@ export function useWorkspaceRuns(
     attachments?: Attachments,
     contextIssues?: ContextIssue[],
     contextFiles?: ContextFile[],
+    contextSignals?: ContextSignal[],
   ) => {
     if (!message.trim()) {
       setError("Please enter a message");
@@ -296,6 +300,7 @@ export function useWorkspaceRuns(
         attachments,
         contextIssues: contextIssues?.map(i => ({ provider: i.provider, number: i.number, title: i.title, body: i.body })),
         contextFiles: contextFiles?.map(f => ({ path: f.fullPath })),
+        contextSignals: contextSignals?.map(s => ({ source: s.source, level: s.level, category: s.category, title: s.title, body: s.body, stackTrace: s.stackTrace, eventCount: s.eventCount })),
       });
 
       if (!result.success) {

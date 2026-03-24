@@ -2,10 +2,11 @@ import { Plus, CopilotStatic } from "@/components/ui/icons";
 import { RunTab, getTabTitle } from "./run-tab";
 import { EditorTab } from "./editor-tab";
 import { IssueTab } from "./issue-tab";
+import { SignalTab } from "./signal-tab";
 import { NoteTab } from "./note-tab";
 import { BaseTab } from "./base-tab";
 import type { Run } from "../types";
-import type { IssueWithEntity } from "@/lib/redux/api";
+import type { IssueWithEntity, SignalWithEntity } from "@/lib/redux/api";
 import type { ReviewTab as ReviewTabType } from "@/lib/redux/slices/workspaceSlice";
 import { useRef } from "react";
 import { Button } from "@/components/ui";
@@ -19,6 +20,7 @@ interface WorkspaceTabsProps {
   hasSelectedFile?: boolean;
   fileName?: string;
   issueTabs: IssueWithEntity[];
+  signalTabs?: SignalWithEntity[];
   noteTabs?: ReviewTabType[];
   onSelectEditorTab: () => void;
   onSelectRunTab: (runId: string) => void;
@@ -27,6 +29,8 @@ interface WorkspaceTabsProps {
   onNewRun: () => void;
   onSelectIssueTab: (entityId: string) => void;
   onCloseIssueTab: (entityId: string, e: React.MouseEvent) => void;
+  onSelectSignalTab?: (entityId: string) => void;
+  onCloseSignalTab?: (entityId: string, e: React.MouseEvent) => void;
   onSelectNoteTab?: (noteId: string) => void;
   onCloseNoteTab?: (noteId: string, e: React.MouseEvent) => void;
   onCloseEditorTab?: (e: React.MouseEvent) => void;
@@ -42,6 +46,7 @@ export function WorkspaceTabs({
   hasSelectedFile,
   fileName,
   issueTabs,
+  signalTabs = [],
   variant,
   noteTabs = EMPTY_NOTE_TABS,
   onSelectEditorTab,
@@ -51,6 +56,8 @@ export function WorkspaceTabs({
   onNewRun,
   onSelectIssueTab,
   onCloseIssueTab,
+  onSelectSignalTab,
+  onCloseSignalTab,
   onSelectNoteTab,
   onCloseNoteTab,
   onCloseEditorTab,
@@ -105,6 +112,20 @@ export function WorkspaceTabs({
           );
         })}
 
+        {signalTabs.map((signal, i) => {
+          const tabId = `signal:${signal.signal.entityId}`;
+          return (
+            <SignalTab
+              key={tabId}
+              signal={signal}
+              isActive={activeTab === tabId}
+              isFirst={!hasSelectedFile && runs.length === 0 && issueTabs.length === 0 && i === 0}
+              onClick={() => onSelectSignalTab?.(signal.signal.entityId)}
+              onClose={(e) => onCloseSignalTab?.(signal.signal.entityId, e)}
+            />
+          );
+        })}
+
         {noteTabs.map((note, i) => {
           const tabId = `note:${note.id}`;
           return (
@@ -112,7 +133,7 @@ export function WorkspaceTabs({
               key={tabId}
               review={note}
               isActive={activeTab === tabId}
-              isFirst={!hasSelectedFile && runs.length === 0 && issueTabs.length === 0 && i === 0}
+              isFirst={!hasSelectedFile && runs.length === 0 && issueTabs.length === 0 && signalTabs.length === 0 && i === 0}
               onClick={() => onSelectNoteTab?.(note.id)}
               onClose={(e) => onCloseNoteTab?.(note.id, e)}
             />

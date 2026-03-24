@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { FileNode, FileContentResponse } from "@/features/workspace/components/file-explorer";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
+import type { SignalWithEntity } from "@/lib/redux/api/signalsApi";
 
 export interface ReviewTab {
   id: string;
@@ -17,6 +18,17 @@ export interface ContextIssue {
   labels: string | null;
 }
 
+export interface ContextSignal {
+  entityId: string;
+  title: string;
+  body: string | null;
+  source: string;
+  level: string;
+  category: string;
+  stackTrace: string | null;
+  eventCount: number;
+}
+
 export interface WorkspaceState {
   activeWorkspaceId: string | null;
   selectedModelByProvider: Record<string, string>;
@@ -29,7 +41,9 @@ export interface WorkspaceState {
   activeTab: "editor" | string;
   contextFiles: FileNode[];
   contextIssues: ContextIssue[];
+  contextSignals: ContextSignal[];
   openIssueTabs: IssueWithEntity[];
+  openSignalTabs: SignalWithEntity[];
   openNoteTabs: ReviewTab[];
   pendingGoal: string | null;
   pendingAutoExecute: boolean;
@@ -47,7 +61,9 @@ const initialState: WorkspaceState = {
   activeTab: "editor",
   contextFiles: [],
   contextIssues: [],
+  contextSignals: [],
   openIssueTabs: [],
+  openSignalTabs: [],
   openNoteTabs: [],
   pendingGoal: null,
   pendingAutoExecute: false,
@@ -119,6 +135,17 @@ const workspaceSlice = createSlice({
     clearContextIssues: (state) => {
       state.contextIssues = [];
     },
+    addContextSignal: (state, action: PayloadAction<ContextSignal>) => {
+      if (!state.contextSignals.some(s => s.entityId === action.payload.entityId)) {
+        state.contextSignals.push(action.payload);
+      }
+    },
+    removeContextSignal: (state, action: PayloadAction<string>) => {
+      state.contextSignals = state.contextSignals.filter(s => s.entityId !== action.payload);
+    },
+    clearContextSignals: (state) => {
+      state.contextSignals = [];
+    },
     openIssueTab: (state, action: PayloadAction<IssueWithEntity>) => {
       const entityId = action.payload.issue.entityId;
       if (!state.openIssueTabs.some((t) => t.issue.entityId === entityId)) {
@@ -137,6 +164,25 @@ const workspaceSlice = createSlice({
     },
     clearIssueTabs: (state) => {
       state.openIssueTabs = [];
+    },
+    openSignalTab: (state, action: PayloadAction<SignalWithEntity>) => {
+      const entityId = action.payload.signal.entityId;
+      if (!state.openSignalTabs.some((t) => t.signal.entityId === entityId)) {
+        state.openSignalTabs.push(action.payload);
+      }
+      state.activeTab = `signal:${entityId}`;
+    },
+    closeSignalTab: (state, action: PayloadAction<string>) => {
+      const entityId = action.payload;
+      state.openSignalTabs = state.openSignalTabs.filter(
+        (t) => t.signal.entityId !== entityId,
+      );
+      if (state.activeTab === `signal:${entityId}`) {
+        state.activeTab = "editor";
+      }
+    },
+    clearSignalTabs: (state) => {
+      state.openSignalTabs = [];
     },
     openNoteTab: (state, action: PayloadAction<ReviewTab>) => {
       if (!state.openNoteTabs.some((t) => t.id === action.payload.id)) {
@@ -192,9 +238,15 @@ export const {
   addContextIssue,
   removeContextIssue,
   clearContextIssues,
+  addContextSignal,
+  removeContextSignal,
+  clearContextSignals,
   openIssueTab,
   closeIssueTab,
   clearIssueTabs,
+  openSignalTab,
+  closeSignalTab,
+  clearSignalTabs,
   openNoteTab,
   closeNoteTab,
   clearNoteTabs,

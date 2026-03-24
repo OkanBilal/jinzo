@@ -9,7 +9,10 @@ import {
   clearContextFiles,
   removeContextIssue,
   clearContextIssues,
+  removeContextSignal,
+  clearContextSignals,
   clearIssueTabs,
+  clearSignalTabs,
   clearNoteTabs,
   setActiveWorkspaceId,
   clearPendingGoal,
@@ -41,8 +44,14 @@ export function useWorkspacePage(providerId: string) {
   const contextIssues = useSelector(
     (state: RootState) => state.workspace.contextIssues,
   );
+  const contextSignals = useSelector(
+    (state: RootState) => state.workspace.contextSignals,
+  );
   const openIssueTabs = useSelector(
     (state: RootState) => state.workspace.openIssueTabs,
+  );
+  const openSignalTabs = useSelector(
+    (state: RootState) => state.workspace.openSignalTabs,
   );
   const openNoteTabs = useSelector(
     (state: RootState) => state.workspace.openNoteTabs,
@@ -77,7 +86,9 @@ export function useWorkspacePage(providerId: string) {
     dispatch(clearSelectedFile());
     dispatch(clearContextFiles());
     dispatch(clearContextIssues());
+    dispatch(clearContextSignals());
     dispatch(clearIssueTabs());
+    dispatch(clearSignalTabs());
     dispatch(clearNoteTabs());
     dispatch(setActiveTab("editor"));
   }, [workspaceId, dispatch]);
@@ -156,6 +167,7 @@ export function useWorkspacePage(providerId: string) {
     setUploadedFiles([]);
     dispatch(clearContextFiles());
     dispatch(clearContextIssues());
+    dispatch(clearContextSignals());
   }, [dispatch]);
 
   const handleExecute = useCallback(async () => {
@@ -169,7 +181,7 @@ export function useWorkspacePage(providerId: string) {
       : undefined;
 
     if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
-      const success = (await continueRun(activeRunId, goal, attachments, contextIssues, contextFiles)) ?? false;
+      const success = (await continueRun(activeRunId, goal, attachments, contextIssues, contextFiles, contextSignals)) ?? false;
       if (success) clearInputState();
     } else {
       const newRunId = await executeRun(
@@ -180,6 +192,7 @@ export function useWorkspacePage(providerId: string) {
         attachments,
         contextIssues,
         contextFiles,
+        contextSignals,
       );
       if (newRunId) {
         clearInputState();
@@ -191,6 +204,7 @@ export function useWorkspacePage(providerId: string) {
     uploadedFiles,
     contextFiles,
     contextIssues,
+    contextSignals,
     workspaceId,
     selectedWorkspace,
     selectedModel,
@@ -239,12 +253,20 @@ export function useWorkspacePage(providerId: string) {
     [dispatch],
   );
 
+  const handleRemoveContextSignal = useCallback(
+    (entityId: string) => {
+      dispatch(removeContextSignal(entityId));
+    },
+    [dispatch],
+  );
+
   const showNewRunTab = isNewRunTab(activeTab);
 
   const showEmptyState =
     runs.length === 0 &&
     !selectedFile &&
     openIssueTabs.length === 0 &&
+    openSignalTabs.length === 0 &&
     openNoteTabs.length === 0 &&
     !showNewRunTab;
 
@@ -263,7 +285,9 @@ export function useWorkspacePage(providerId: string) {
     selectedFile,
     contextFiles,
     contextIssues,
+    contextSignals,
     openIssueTabs,
+    openSignalTabs,
     openNoteTabs,
     runs,
     activeRun,
@@ -281,6 +305,7 @@ export function useWorkspacePage(providerId: string) {
     handleExecute,
     handleRemoveContextFile,
     handleRemoveContextIssue,
+    handleRemoveContextSignal,
     setAutoExecute,
     ...tabHandlers,
   };

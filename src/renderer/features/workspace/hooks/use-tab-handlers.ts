@@ -6,6 +6,7 @@ import {
   setActiveTab,
   clearSelectedFile,
   closeIssueTab,
+  closeSignalTab,
   closeNoteTab,
   openNewRunTab,
   closeNewRunTab,
@@ -34,7 +35,7 @@ export function useTabHandlers({
 }: UseTabHandlersParams) {
   const dispatch = useDispatch();
   const [updateRun] = useUpdateRunMutation();
-  const { openIssueTabs, openNoteTabs, selectedFile } = useAppSelector(
+  const { openIssueTabs, openSignalTabs, openNoteTabs, selectedFile } = useAppSelector(
     (state) => state.workspace,
   );
 
@@ -48,6 +49,10 @@ export function useTabHandlers({
         const id = `issue:${t.issue.entityId}`;
         if (id !== closingTabId) return id;
       }
+      for (const t of openSignalTabs) {
+        const id = `signal:${t.signal.entityId}`;
+        if (id !== closingTabId) return id;
+      }
       for (const t of openNoteTabs) {
         const id = `note:${t.id}`;
         if (id !== closingTabId) return id;
@@ -55,7 +60,7 @@ export function useTabHandlers({
       if (selectedFile && closingTabId !== "editor") return "editor";
       return "editor";
     },
-    [runs, openIssueTabs, openNoteTabs, selectedFile],
+    [runs, openIssueTabs, openSignalTabs, openNoteTabs, selectedFile],
   );
 
   const handleCloseTab = useCallback(
@@ -116,6 +121,25 @@ export function useTabHandlers({
         dispatch(setActiveTab(getNextTab(closingId)));
       }
       dispatch(closeIssueTab(entityId));
+    },
+    [dispatch, activeTab, getNextTab],
+  );
+
+  const handleSelectSignalTab = useCallback(
+    (entityId: string) => {
+      dispatch(setActiveTab(`signal:${entityId}`));
+    },
+    [dispatch],
+  );
+
+  const handleCloseSignalTab = useCallback(
+    (entityId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      const closingId = `signal:${entityId}`;
+      if (activeTab === closingId) {
+        dispatch(setActiveTab(getNextTab(closingId)));
+      }
+      dispatch(closeSignalTab(entityId));
     },
     [dispatch, activeTab, getNextTab],
   );
@@ -181,6 +205,8 @@ export function useTabHandlers({
     handleSelectRunTab,
     handleSelectIssueTab,
     handleCloseIssueTab,
+    handleSelectSignalTab,
+    handleCloseSignalTab,
     handleSelectNoteTab,
     handleCloseNoteTab,
     handleCloseEditorTab,

@@ -70,6 +70,7 @@ export const baseApi = createApi({
     'Stats',
     'WorkspaceActivity',
     'Automations',
+    'ProjectSignals',
   ],
   endpoints: () => ({}),
 });

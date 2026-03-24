@@ -21,6 +21,11 @@ export function InfoGroup({ group }: InfoGroupProps) {
       number?: number | null;
       title: string;
     }>;
+    const signals = (event.metadata?.signals ?? []) as Array<{
+      source: string;
+      level: string;
+      title: string;
+    }>;
     const files = ((event.metadata?.files ?? []) as Array<{ path: string }>).map((f) => {
       const lastSlash = f.path.lastIndexOf("/");
       const fileName = f.path.substring(lastSlash + 1);
@@ -44,7 +49,7 @@ export function InfoGroup({ group }: InfoGroupProps) {
                 <p className="text-sm whitespace-pre-wrap">{message}</p>
               </div>
             </div>
-            {(files.length > 0 || attachments.length > 0 || issues.length > 0) && (
+            {(files.length > 0 || attachments.length > 0 || issues.length > 0 || signals.length > 0) && (
               <div className="flex flex-wrap gap-1.5 justify-end">
                 {issues.map((issue) => (
                   <div
@@ -54,6 +59,17 @@ export function InfoGroup({ group }: InfoGroupProps) {
                     <ProviderIcon provider={issue.provider} className="w-3 h-3" fallback="text" />
                     <span className="truncate max-w-60">
                       {issue.number ? `#${issue.number} ` : ""}{issue.title}
+                    </span>
+                  </div>
+                ))}
+                {signals.map((signal) => (
+                  <div
+                    key={`${signal.source}-${signal.title}`}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-primary-200 dark:bg-primary-500/40 text-primary-600 dark:text-primary-100"
+                  >
+                    <ProviderIcon provider={signal.source} className="w-3 h-3" fallback="text" />
+                    <span className="truncate max-w-60">
+                      {signal.title}
                     </span>
                   </div>
                 ))}

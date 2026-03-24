@@ -787,6 +787,7 @@ export const runsService = {
           toolPolicy: payload.toolPolicySnapshot,
           attachments: payload.attachments,
           contextIssues: payload.contextIssues,
+          contextSignals: payload.contextSignals,
           contextFiles: payload.contextFiles,
         },
         async (event: WorkRunEvent) => {
@@ -1239,6 +1240,7 @@ export const runsService = {
           context: additionalContext as any,
           attachments: payload.attachments,
           contextIssues: payload.contextIssues,
+          contextSignals: payload.contextSignals,
           contextFiles: payload.contextFiles,
         },
         async (event) => {

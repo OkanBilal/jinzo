@@ -3,7 +3,7 @@ import { useDispatch } from "react-redux";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
 import type { FileNode } from "@/features/workspace/components/file-explorer";
-import type { ContextIssue } from "@/lib/redux/slices/workspaceSlice";
+import type { ContextIssue, ContextSignal } from "@/lib/redux/slices/workspaceSlice";
 import { addContextFile, addContextIssue } from "@/lib/redux/slices/workspaceSlice";
 import type { UploadedFile } from "@/components/ui";
 import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
@@ -18,6 +18,7 @@ import { useProviderModels } from "../hooks/use-provider-models";
 
 const EMPTY_CONTEXT_FILES: FileNode[] = [];
 const EMPTY_CONTEXT_ISSUES: ContextIssue[] = [];
+const EMPTY_CONTEXT_SIGNALS: ContextSignal[] = [];
 const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
 
 interface WorkspaceInputProps {
@@ -34,6 +35,8 @@ interface WorkspaceInputProps {
   onRemoveContextFile?: (filePath: string) => void;
   contextIssues?: ContextIssue[];
   onRemoveContextIssue?: (entityId: string) => void;
+  contextSignals?: ContextSignal[];
+  onRemoveContextSignal?: (entityId: string) => void;
   workspacePath?: string;
   projectId?: string;
   uploadedFiles?: UploadedFile[];
@@ -55,6 +58,8 @@ export function WorkspaceInput({
   onRemoveContextFile,
   contextIssues = EMPTY_CONTEXT_ISSUES,
   onRemoveContextIssue,
+  contextSignals = EMPTY_CONTEXT_SIGNALS,
+  onRemoveContextSignal,
   workspacePath,
   projectId,
   uploadedFiles = EMPTY_UPLOADED_FILES,
@@ -266,8 +271,10 @@ export function WorkspaceInput({
       <ContextChips
         contextFiles={contextFiles}
         contextIssues={contextIssues}
+        contextSignals={contextSignals}
         onRemoveContextFile={onRemoveContextFile}
         onRemoveContextIssue={onRemoveContextIssue}
+        onRemoveContextSignal={onRemoveContextSignal}
       />
       <div className="relative">
         <InputForm

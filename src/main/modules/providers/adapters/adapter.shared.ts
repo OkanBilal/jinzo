@@ -257,6 +257,32 @@ export function formatIssuesSection(
 }
 
 /**
+ * Format context signals into a section string.
+ */
+export function formatSignalsSection(
+  signals: Array<{
+    source: string;
+    level: string;
+    category: string;
+    title: string;
+    body?: string | null;
+    stackTrace?: string | null;
+    eventCount?: number;
+  }>,
+  includeBody = true,
+): string {
+  return signals
+    .map((s) => {
+      const label = `[${s.source.toUpperCase()} ${s.level.toUpperCase()}] ${s.title}${s.eventCount && s.eventCount > 1 ? ` (${s.eventCount}x)` : ""}`;
+      const parts = [label];
+      if (includeBody && s.body) parts.push(s.body);
+      if (includeBody && s.stackTrace) parts.push(`Stack trace:\n${s.stackTrace}`);
+      return parts.join("\n");
+    })
+    .join("\n\n---\n\n");
+}
+
+/**
  * Format context files into a section string.
  */
 export function formatFilesSection(
@@ -277,6 +303,15 @@ export function appendPromptSections(
       title: string;
       body?: string | null;
     }>;
+    contextSignals?: Array<{
+      source: string;
+      level: string;
+      category: string;
+      title: string;
+      body?: string | null;
+      stackTrace?: string | null;
+      eventCount?: number;
+    }>;
     contextFiles?: Array<{ path: string }>;
     attachments?: FileAttachment[];
     runId?: string;
@@ -291,6 +326,14 @@ export function appendPromptSections(
       options.includeIssueBody ?? true,
     );
     result = `${result}\n\n---\n\nContext issues:\n${issuesList}`;
+  }
+
+  if (options.contextSignals && options.contextSignals.length > 0) {
+    const signalsList = formatSignalsSection(
+      options.contextSignals,
+      options.includeIssueBody ?? true,
+    );
+    result = `${result}\n\n---\n\nContext signals (error reports):\n${signalsList}`;
   }
 
   if (options.contextFiles && options.contextFiles.length > 0) {
@@ -330,6 +373,15 @@ export async function emitUserPromptArtifact(
       title: string;
       body?: string | null;
     }>;
+    contextSignals?: Array<{
+      source: string;
+      level: string;
+      category: string;
+      title: string;
+      body?: string | null;
+      stackTrace?: string | null;
+      eventCount?: number;
+    }>;
     contextFiles?: Array<{ path: string }>;
   },
 ): Promise<void> {
@@ -345,6 +397,7 @@ export async function emitUserPromptArtifact(
         mimeType: a.mimeType,
       })),
       issues: options?.contextIssues,
+      signals: options?.contextSignals,
       files: options?.contextFiles,
     },
   });

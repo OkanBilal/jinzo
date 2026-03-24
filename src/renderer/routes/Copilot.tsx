@@ -38,6 +38,7 @@ export default function CopilotPage() {
           hasSelectedFile={!!ws.selectedFile}
           fileName={ws.selectedFile?.name}
           issueTabs={ws.openIssueTabs}
+          signalTabs={ws.openSignalTabs}
           noteTabs={ws.openNoteTabs}
           onSelectEditorTab={ws.handleSelectEditorTab}
           onSelectRunTab={ws.handleSelectRunTab}
@@ -46,6 +47,8 @@ export default function CopilotPage() {
           onNewRun={ws.handleNewRun}
           onSelectIssueTab={ws.handleSelectIssueTab}
           onCloseIssueTab={ws.handleCloseIssueTab}
+          onSelectSignalTab={ws.handleSelectSignalTab}
+          onCloseSignalTab={ws.handleCloseSignalTab}
           onSelectNoteTab={ws.handleSelectNoteTab}
           onCloseNoteTab={ws.handleCloseNoteTab}
           onCloseEditorTab={ws.handleCloseEditorTab}
@@ -56,9 +59,10 @@ export default function CopilotPage() {
       ),
     [
       ws.showEmptyState, ws.runs, ws.activeTab, ws.selectedFile,
-      ws.openIssueTabs, ws.openNoteTabs,
+      ws.openIssueTabs, ws.openSignalTabs, ws.openNoteTabs,
       ws.handleSelectEditorTab, ws.handleSelectRunTab, ws.handleCloseTab, ws.handleRenameRun,
       ws.handleNewRun, ws.handleSelectIssueTab, ws.handleCloseIssueTab,
+      ws.handleSelectSignalTab, ws.handleCloseSignalTab,
       ws.handleSelectNoteTab, ws.handleCloseNoteTab, ws.handleCloseEditorTab,
       ws.showNewRunTab, ws.handleSelectNewRunTab, ws.handleCloseNewRunTab,
     ],
@@ -70,11 +74,13 @@ export default function CopilotPage() {
       ? ws.activeTab === ws.runs[0]?.id
       : ws.openIssueTabs.length > 0
         ? ws.activeTab === `issue:${ws.openIssueTabs[0]?.issue.entityId}`
-        : ws.openNoteTabs.length > 0
-          ? ws.activeTab === `note:${ws.openNoteTabs[0]?.id}`
-          : ws.showNewRunTab
-            ? ws.activeTab === "new-run"
-            : false;
+        : ws.openSignalTabs.length > 0
+          ? ws.activeTab === `signal:${ws.openSignalTabs[0]?.signal.entityId}`
+          : ws.openNoteTabs.length > 0
+            ? ws.activeTab === `note:${ws.openNoteTabs[0]?.id}`
+            : ws.showNewRunTab
+              ? ws.activeTab === "new-run"
+              : false;
 
   useSetMainHeader(tabBar, !ws.showEmptyState && isFirstTabActive);
 
@@ -91,6 +97,7 @@ export default function CopilotPage() {
             currentWorkspace={ws.currentWorkspace}
             eventsEndRef={ws.eventsEndRef as React.RefObject<HTMLDivElement>}
             issueTabs={ws.openIssueTabs}
+            signalTabs={ws.openSignalTabs}
             turns={ws.currentTurns}
             pendingApproval={currentApproval}
             onApprovalRespond={respondToolApproval}
@@ -116,6 +123,8 @@ export default function CopilotPage() {
         onRemoveContextFile={ws.handleRemoveContextFile}
         contextIssues={ws.contextIssues}
         onRemoveContextIssue={ws.handleRemoveContextIssue}
+        contextSignals={ws.contextSignals}
+        onRemoveContextSignal={ws.handleRemoveContextSignal}
         workspacePath={ws.currentWorkspace?.rootPath}
         projectId={ws.currentWorkspace?.projectId ?? undefined}
         uploadedFiles={ws.uploadedFiles}

@@ -8,18 +8,20 @@ import {
   useGetWorkspaceByIdQuery,
   useGetLatestWorkspaceDiffQuery,
 } from "@/lib/redux/api";
-import type { ProjectIssue } from "@/lib/redux/api";
+import type { ProjectIssue, SignalWithEntity } from "@/lib/redux/api";
 import {
   setSelectedFile,
   setActiveTab,
   setSelectedFileContent,
   addContextFile,
   addContextIssue,
+  addContextSignal,
   openIssueTab,
+  openSignalTab,
 } from "@/lib/redux/slices/workspaceSlice";
 import type { RootState } from "@/lib/redux";
 import { FolderIcon } from "@/components/ui/icons/file-icons";
-import { IssuesSection } from "@/features/workspace/components/issues-section";
+import { TrackerSection } from "@/features/workspace/components/tracker-section";
 import { TerminalSection } from "@/features/workspace/components/terminal-section";
 import { DiffSection } from "@/features/workspace/components/diff-section";
 import { ActivitySection } from "@/features/workspace/components/activity-section";
@@ -79,6 +81,12 @@ export function WorkspaceSidebar() {
     },
     [dispatch],
   );
+  const handleSelectSignal = useCallback(
+    (signal: SignalWithEntity) => {
+      dispatch(openSignalTab(signal));
+    },
+    [dispatch],
+  );
   const handleAddIssueToContext = useCallback(
     (issue: ProjectIssue) => {
       dispatch(
@@ -89,6 +97,23 @@ export function WorkspaceSidebar() {
           provider: issue.issue.provider,
           number: issue.issue.number,
           labels: issue.issue.labels,
+        }),
+      );
+    },
+    [dispatch],
+  );
+  const handleAddSignalToContext = useCallback(
+    (signal: SignalWithEntity) => {
+      dispatch(
+        addContextSignal({
+          entityId: signal.signal.entityId,
+          title: signal.entity.title || "Untitled signal",
+          body: signal.entity.body,
+          source: signal.signal.source,
+          level: signal.signal.level,
+          category: signal.signal.category,
+          stackTrace: signal.signal.stackTrace,
+          eventCount: signal.signal.eventCount,
         }),
       );
     },
@@ -204,11 +229,13 @@ export function WorkspaceSidebar() {
             />
           </div>
 
-          <IssuesSection
+          <TrackerSection
             projectId={workspace?.projectId ?? undefined}
             activeIssueEntityId={activeIssueEntityId}
             onSelectIssue={handleSelectIssue}
-            onAddToContext={handleAddIssueToContext}
+            onAddIssueToContext={handleAddIssueToContext}
+            onSelectSignal={handleSelectSignal}
+            onAddSignalToContext={handleAddSignalToContext}
           />
           <TerminalSection
             variant={spaceSlug}
