@@ -186,7 +186,7 @@ function UpdateButton({
     case "downloaded":
       return (
         <Button type="button" variant="submit" size="md" onClick={onInstall}>
-          Restart &amp; Install
+          Restart &amp; Update
         </Button>
       );
     case "error":
