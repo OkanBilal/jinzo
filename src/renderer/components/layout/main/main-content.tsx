@@ -18,9 +18,9 @@ export function MainContent({
   // must be sharp so it connects seamlessly with the active tab above it.
   const contentRounding = header
     ? firstTabActive
-      ? "rounded-2xl rounded-tl-none"
-      : "rounded-2xl"
-    : "rounded-2xl";
+      ? "rounded-xl rounded-tl-none"
+      : "rounded-xl"
+    : "rounded-xl";
 
   return (
     <main

@@ -9,12 +9,16 @@ interface RightPanelProps {
   isOpen: boolean;
   onToggle: (open: boolean) => void;
   width?: string;
+  terminalOpen?: boolean;
+  onTerminalToggle?: () => void;
 }
 
 export default function RightPanel({
   isOpen,
   onToggle,
   width = "0rem",
+  terminalOpen,
+  onTerminalToggle,
 }: RightPanelProps) {
   const [animationState, dispatch] = useReducer(
     (_: AnimationState, next: AnimationState) => next,
@@ -45,7 +49,7 @@ export default function RightPanel({
 
   return (
     <>
-      <ToggleButton isOpen={isOpen} onClick={handleToggle} />
+      <ToggleButton isOpen={isOpen} onClick={handleToggle} terminalOpen={terminalOpen} onTerminalToggle={onTerminalToggle} />
       <Panel
         isVisible={isVisible}
         isAnimatedIn={isAnimatedIn}

@@ -25,7 +25,7 @@ export default function ChartCard({
   return (
     <div
       className={cn(
-        "rounded-3xl border border-primary-200/60 dark:border-primary-800/40 bg-primary-50/50 dark:bg-primary-900/30 p-4",
+        "rounded-3xl border border-primary-200/60 dark:border-primary-800/20 bg-primary-50/50 dark:bg-primary-900/30 p-4",
         className,
       )}
     >

@@ -114,7 +114,7 @@ export default function Select<T extends string = string>({
           w-full pl-3 pr-2.5 py-2.5
           min-w-50
           bg-primary-950/2 dark:bg-primary/4
-          border border-primary-950/10 dark:border-primary/10
+          border border-primary-950/10 dark:border-primary/5
           text-primary-900 dark:text-primary
           text-sm focus:outline-none cursor-pointer
           flex items-center justify-between

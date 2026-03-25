@@ -265,7 +265,7 @@ export function WorkspaceInput({
       )}
 
     <div
-      className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism
+      className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-[20px] glass-morphism
         cursor-pointer transition-all`}
     >
       <ContextChips

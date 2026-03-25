@@ -11,6 +11,7 @@ export interface DailyActivity {
   date: string;
   claude: number;
   copilot: number;
+  codex: number;
   other: number;
 }
 
@@ -76,7 +77,7 @@ export interface DashboardData {
   codeActivity: CodeActivityStats;
 }
 
-export type ProviderFilter = "all" | "claude_code" | "copilot_cli";
+export type ProviderFilter = "all" | "claude_code" | "copilot_cli" | "codex";
 
 export const statsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({

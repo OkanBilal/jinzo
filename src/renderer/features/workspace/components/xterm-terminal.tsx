@@ -48,16 +48,13 @@ const baseThemeColors = {
   },
 };
 
-const variantBackgrounds: Record<string, { dark: string; light: string }> = {
-  claude: { dark: "#141415", light: "#fcc7b6" },
-  copilot: { dark: "#11131A", light: "#c8ddf1" },
-};
+
 
 const getTheme = (variant: string | undefined, isDark: boolean): ITheme => {
-  const backgrounds = variant ? variantBackgrounds[variant] ?? variantBackgrounds.claude : variantBackgrounds.claude;
+  const backgrounds = isDark ? "#0c0c0c" : "#ffffff"
   const colors = isDark ? baseThemeColors.dark : baseThemeColors.light;
   return {
-    background: isDark ? backgrounds.dark : backgrounds.light,
+    background: backgrounds,
     ...colors,
   };
 };

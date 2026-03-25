@@ -3,18 +3,21 @@ import {
   WorkspaceEmptyState,
   WorkspaceEvents,
   WorkspaceInput,
-  WorkspaceQuickActions,
   WorkspaceTabs,
+  TerminalSection,
+  WorkspaceQuickActions,
 } from "@/features/workspace/components";
 import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
 import { useAbortRunMutation } from "@/lib/redux/api";
 import { useSetMainHeader } from "@/hooks/use-main-header";
+import { useBottomTerminal } from "@/hooks/use-bottom-terminal";
 
 const CODEX_PROVIDER_ID = "codex";
 
 export default function CodexPage() {
   const ws = useWorkspacePage(CODEX_PROVIDER_ID);
   const [abortRun] = useAbortRunMutation();
+  const bottomTerminal = useBottomTerminal();
 
   const { pendingApprovals, respond: respondToolApproval } = useToolApproval();
 
@@ -110,6 +113,7 @@ export default function CodexPage() {
         projectId={ws.currentWorkspace?.projectId ?? undefined}
         providerId={CODEX_PROVIDER_ID}
       />
+
       <WorkspaceInput
         goal={ws.goal}
         onGoalChange={ws.setGoal}
@@ -132,6 +136,14 @@ export default function CodexPage() {
         onUploadedFilesChange={ws.setUploadedFiles}
         onStop={handleStop}
       />
+      {ws.currentWorkspace && (
+        <TerminalSection
+          workspaceId={ws.currentWorkspace.id}
+          rootPath={ws.currentWorkspace.rootPath}
+          isOpen={bottomTerminal.isOpen}
+          onClose={bottomTerminal.close}
+        />
+      )}
     </div>
   );
 }

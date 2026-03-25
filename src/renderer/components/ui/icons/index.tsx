@@ -102,3 +102,7 @@ export { default as Bot } from "./bot";
 export { default as Test } from "./test";
 export { default as Bug } from "./bug";
 export { default as Sentry } from "./sentry";
+export { default as Selected } from "./selected";
+export { default as Tools } from "./tools";
+
+

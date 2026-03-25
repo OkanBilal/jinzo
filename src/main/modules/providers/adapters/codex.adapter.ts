@@ -24,6 +24,7 @@ import {
   formatContextSection,
   appendPromptSections,
   emitUserPromptArtifact,
+  saveAttachments,
 } from "./adapter.shared";
 
 // ─────────────────────────────────────────────────────────────
@@ -82,8 +83,8 @@ interface StreamedTurn {
 
 interface CodexThread {
   id: string | null;
-  run(input: string, options?: TurnOptions): Promise<{ items: ThreadItem[]; finalResponse: string; usage: Usage | null }>;
-  runStreamed(input: string, options?: TurnOptions): Promise<StreamedTurn>;
+  run(input: string | Array<{ type: string; text?: string; path?: string }>, options?: TurnOptions): Promise<{ items: ThreadItem[]; finalResponse: string; usage: Usage | null }>;
+  runStreamed(input: string | Array<{ type: string; text?: string; path?: string }>, options?: TurnOptions): Promise<StreamedTurn>;
 }
 
 interface CodexClient {
@@ -502,10 +503,14 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     return events;
   }
 
+  /** SDK input type: string or array of text/image items */
+  type CodexInput = string | Array<{ type: "text"; text: string } | { type: "local_image"; path: string }>;
+
   /**
-   * Build the prompt with context
+   * Build SDK input with context. Returns string when no images,
+   * or UserInput[] when image attachments are present.
    */
-  function buildPrompt(request: WorkRunRequest): string {
+  function buildInput(request: WorkRunRequest): CodexInput {
     const workspaceInfo = `Working directory: ${request.workspace.rootPath}`;
     let prompt: string;
 
@@ -516,13 +521,41 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       prompt = `${workspaceInfo}\n\nGoal: ${request.goal}`;
     }
 
-    return appendPromptSections(prompt, {
+    // Append text-based sections (issues, signals, files, document attachments)
+    prompt = appendPromptSections(prompt, {
       contextIssues: request.contextIssues,
       contextSignals: request.contextSignals,
       contextFiles: request.contextFiles,
-      attachments: request.attachments,
+      // Don't pass attachments here — we handle images natively below
       runId: request.runId,
     });
+
+    // Extract image paths from attachments
+    if (request.attachments && request.attachments.length > 0) {
+      const { savedPaths, inlineTexts } = saveAttachments(request.attachments, request.runId);
+
+      // Append inline text documents to prompt
+      if (inlineTexts.length > 0) {
+        prompt = `${prompt}\n\n---\n\nAttached documents:\n${inlineTexts.join("\n\n")}`;
+      }
+
+      // If we have saved image files, return UserInput[] format
+      const imagePaths = savedPaths.filter((p) => {
+        const ext = p.toLowerCase();
+        return ext.endsWith(".png") || ext.endsWith(".jpg") || ext.endsWith(".jpeg") ||
+               ext.endsWith(".gif") || ext.endsWith(".webp") || ext.endsWith(".bmp");
+      });
+
+      if (imagePaths.length > 0) {
+        const input: CodexInput = [{ type: "text", text: prompt }];
+        for (const imgPath of imagePaths) {
+          input.push({ type: "local_image", path: imgPath });
+        }
+        return input;
+      }
+    }
+
+    return prompt;
   }
 
   /**
@@ -603,7 +636,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           contextFiles: request.contextFiles,
         });
 
-        const prompt = buildPrompt(request);
+        const prompt = buildInput(request);
 
         // Resolve structured output schema if configured
         const selectedSchemaId = (config as any).structuredOutputsSelectedId as string | undefined;
@@ -693,13 +726,34 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           contextFiles: request.contextFiles,
         });
 
-        const prompt = appendPromptSections(message, {
+        // Build input with image support for continue
+        let continueInput: CodexInput = appendPromptSections(message, {
           contextIssues: request.contextIssues,
           contextSignals: request.contextSignals,
           contextFiles: request.contextFiles,
-          attachments: request.attachments,
           runId: request.runId,
         });
+
+        if (request.attachments && request.attachments.length > 0) {
+          const { savedPaths, inlineTexts } = saveAttachments(request.attachments, request.runId);
+          if (inlineTexts.length > 0) {
+            continueInput = `${continueInput}\n\n---\n\nAttached documents:\n${inlineTexts.join("\n\n")}`;
+          }
+          const imagePaths = savedPaths.filter((p) => {
+            const ext = p.toLowerCase();
+            return ext.endsWith(".png") || ext.endsWith(".jpg") || ext.endsWith(".jpeg") ||
+                   ext.endsWith(".gif") || ext.endsWith(".webp") || ext.endsWith(".bmp");
+          });
+          if (imagePaths.length > 0) {
+            const arr: Array<{ type: "text"; text: string } | { type: "local_image"; path: string }> = [
+              { type: "text", text: continueInput as string },
+            ];
+            for (const imgPath of imagePaths) {
+              arr.push({ type: "local_image", path: imgPath });
+            }
+            continueInput = arr;
+          }
+        }
 
         // Resolve structured output schema if configured
         const selectedSchemaId = (config as any).structuredOutputsSelectedId as string | undefined;
@@ -707,7 +761,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           ? ((config as any).structuredOutputs as Record<string, { schema: Record<string, unknown> }> | undefined)?.[selectedSchemaId]?.schema
           : undefined;
 
-        const streamed = await thread.runStreamed(prompt, { signal: abortController.signal, outputSchema });
+        const streamed = await thread.runStreamed(continueInput, { signal: abortController.signal, outputSchema });
 
         const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error(`Codex continuation timed out after ${timeout}ms`)), timeout),
@@ -768,7 +822,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
     async listModels(): Promise<ModelInfo[]> {
       // Codex SDK doesn't expose a model listing API.
-      // These are the known models from OpenAI Codex documentation.
+      // These models were verified by testing against the Codex CLI with ChatGPT auth.
       const codexEffortLevels: ("minimal" | "low" | "medium" | "high" | "xhigh")[] = [
         "minimal", "low", "medium", "high", "xhigh",
       ];
@@ -781,7 +835,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           capabilities: { streaming: true, functionCalling: true, reasoning: true },
           supportsEffort: true,
           supportedEffortLevels: codexEffortLevels,
-          description: "Flagship model — strongest reasoning, tool use, and agentic workflows",
+          description: "Flagship model — strongest reasoning and agentic workflows",
         },
         {
           id: "gpt-5.4-mini",
@@ -789,7 +843,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           capabilities: { streaming: true, functionCalling: true, reasoning: true },
           supportsEffort: true,
           supportedEffortLevels: codexEffortLevels,
-          description: "Fast mini model for responsive coding and subagents",
+          description: "Fast mini model for responsive coding",
         },
         {
           id: "gpt-5.3-codex",
@@ -797,15 +851,39 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           capabilities: { streaming: true, functionCalling: true, reasoning: true },
           supportsEffort: true,
           supportedEffortLevels: codexEffortLevels,
-          description: "Industry-leading coding model for complex software engineering",
+          description: "Optimized for complex software engineering",
         },
         {
-          id: "gpt-5.3-codex-spark",
-          displayName: "GPT-5.3 Codex Spark",
+          id: "gpt-5.2-codex",
+          displayName: "GPT-5.2 Codex",
           capabilities: { streaming: true, functionCalling: true, reasoning: true },
           supportsEffort: true,
           supportedEffortLevels: codexEffortLevels,
-          description: "Research preview — near-instant, real-time coding iteration (Pro only)",
+          description: "Code-focused model",
+        },
+        {
+          id: "gpt-5.2",
+          displayName: "GPT-5.2",
+          capabilities: { streaming: true, functionCalling: true, reasoning: true },
+          supportsEffort: true,
+          supportedEffortLevels: codexEffortLevels,
+          description: "General-purpose model",
+        },
+        {
+          id: "gpt-5.1-codex-max",
+          displayName: "GPT-5.1 Codex Max",
+          capabilities: { streaming: true, functionCalling: true, reasoning: true },
+          supportsEffort: true,
+          supportedEffortLevels: codexEffortLevels,
+          description: "Extended reasoning code model",
+        },
+        {
+          id: "gpt-5.1-codex-mini",
+          displayName: "GPT-5.1 Codex Mini",
+          capabilities: { streaming: true, functionCalling: true, reasoning: true },
+          supportsEffort: true,
+          supportedEffortLevels: codexEffortLevels,
+          description: "Lightweight code-focused model",
         },
       ];
 

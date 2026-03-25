@@ -22,7 +22,7 @@ import {
 import type { RootState } from "@/lib/redux";
 import { FolderIcon } from "@/components/ui/icons/file-icons";
 import { TrackerSection } from "@/features/workspace/components/tracker-section";
-import { TerminalSection } from "@/features/workspace/components/terminal-section";
+
 import { DiffSection } from "@/features/workspace/components/diff-section";
 import { ActivitySection } from "@/features/workspace/components/activity-section";
 import {
@@ -36,7 +36,7 @@ type SidebarTab = "files" | "changes" | "reviews";
 
 export function WorkspaceSidebar() {
   const dispatch = useDispatch();
-  const { activeSpaceId, spaceSlug } = useActiveSpace();
+  const { activeSpaceId } = useActiveSpace();
   const workspaceId = useSelector(
     (state: RootState) => state.workspace.activeWorkspaceId,
   );
@@ -236,11 +236,6 @@ export function WorkspaceSidebar() {
             onAddIssueToContext={handleAddIssueToContext}
             onSelectSignal={handleSelectSignal}
             onAddSignalToContext={handleAddSignalToContext}
-          />
-          <TerminalSection
-            variant={spaceSlug}
-            workspaceId={workspaceId}
-            rootPath={rootPath}
           />
         </>
       ) : sidebarTab === "changes" ? (

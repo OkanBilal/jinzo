@@ -107,7 +107,7 @@ export function ModelSelectDropdown({
                   onModelChange(m);
                   onToggle();
                 }}
-                className={`w-full text-left px-3 py-2.5 cursor-pointer text-sm transition-colors flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl ${
+                className={`w-full text-left px-2.5 py-2 cursor-pointer text-sm transition-colors flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl ${
                   model === m ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-300 font-medium" : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
                 }`}
               >

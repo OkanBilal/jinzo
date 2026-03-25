@@ -18,7 +18,7 @@ export function WorkspaceQuickActions({
   if ((provider?.config as any)?.showQuickActions === false) return null;
 
   return (
-    <div className="flex flex-wrap gap-2 justify-center max-w-200 mx-auto mb-4">
+    <div className="flex flex-wrap gap-3 justify-center max-w-200 mx-auto mb-2">
       <QuickActionButton
         icon={<Task className="size-3.5" />}
         label="Fix TODOs in code"

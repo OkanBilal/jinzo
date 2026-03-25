@@ -83,7 +83,7 @@ export function safeJson(value: unknown): string {
 // File attachments
 // ─────────────────────────────────────────────────────────────
 
-function saveAttachments(
+export function saveAttachments(
   attachments: FileAttachment[],
   runId: string,
 ): { savedPaths: string[]; inlineTexts: string[] } {

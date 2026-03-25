@@ -5,16 +5,19 @@ import {
   WorkspaceInput,
   WorkspaceQuickActions,
   WorkspaceTabs,
+  TerminalSection,
 } from "@/features/workspace/components";
 import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
 import { useAbortRunMutation } from "@/lib/redux/api";
 import { useSetMainHeader } from "@/hooks/use-main-header";
+import { useBottomTerminal } from "@/hooks/use-bottom-terminal";
 
 const CLAUDE_PROVIDER_ID = "claude_code";
 
 export default function ClaudePage() {
   const ws = useWorkspacePage(CLAUDE_PROVIDER_ID);
   const [abortRun] = useAbortRunMutation();
+  const bottomTerminal = useBottomTerminal();
 
   const { pendingApprovals, respond: respondToolApproval } = useToolApproval();
 
@@ -142,6 +145,14 @@ export default function ClaudePage() {
         onUploadedFilesChange={ws.setUploadedFiles}
         onStop={handleStop}
       />
+      {ws.currentWorkspace && (
+        <TerminalSection
+          workspaceId={ws.currentWorkspace.id}
+          rootPath={ws.currentWorkspace.rootPath}
+          isOpen={bottomTerminal.isOpen}
+          onClose={bottomTerminal.close}
+        />
+      )}
     </div>
   );
 }

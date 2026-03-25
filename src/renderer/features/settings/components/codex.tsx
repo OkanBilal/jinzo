@@ -15,7 +15,7 @@ import type { StructuredOutputEntry } from "../../../../main/modules/providers/a
 const SANDBOX_OPTIONS = [
   { value: "read-only", label: "Read Only", description: "Agent cannot modify files" },
   { value: "workspace-write", label: "Workspace Write", description: "Write within workspace only" },
-  { value: "danger-full-access", label: "Full Access", description: "No restrictions — use with caution" },
+  { value: "danger-full-access", label: "Full Access", description: "No restrictions" },
 ];
 
 export default function CodexSettings() {
@@ -41,6 +41,7 @@ export default function CodexSettings() {
   const networkAccessEnabled = (config as any).networkAccessEnabled ?? true;
   const webSearchMode = (config as any).webSearchMode ?? "live";
   const skipGitRepoCheck = (config as any).skipGitRepoCheck ?? false;
+  const showQuickActions = (config as any).showQuickActions !== false;
 
   const structuredOutputs = ((config as any).structuredOutputs ?? {}) as Record<
     string,
@@ -162,6 +163,21 @@ export default function CodexSettings() {
               Edit
             </Button>
           </div>
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection title="Workspace">
+        <SettingsRow
+          title="Quick Actions"
+          description="Show quick action buttons in workspace"
+        >
+          <Toggle
+            enabled={showQuickActions}
+            onChange={(enabled) => {
+              updateConfig({ showQuickActions: enabled });
+              toast.success(enabled ? "Quick actions enabled" : "Quick actions hidden");
+            }}
+          />
         </SettingsRow>
       </SettingsSection>
 

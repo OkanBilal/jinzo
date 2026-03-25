@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback, createContext, useContext, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
+import { ArrowUp, Selected } from "./icons";
 
 // Context to let parent DropdownMenu know about submenu portals
 const DropdownContext = createContext<{
@@ -193,14 +194,14 @@ export function DropdownMenuSub({
         onMouseEnter={handleTriggerEnter}
         onMouseLeave={handleTriggerLeave}
         className={cn(
-          "w-full flex items-center gap-2 px-3 py-2 text-s cursor-pointer",
+          "w-full flex items-center gap-2 px-3 py-1.75 text-s cursor-pointer",
           "text-primary-800 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-50",
           "hover:bg-primary-100/80 dark:hover:bg-primary/5 transition-colors",
           className,
         )}
       >
         {label}
-        <span className="ml-auto text-primary-500 dark:text-primary-400 text-xs">›</span>
+        <ArrowUp className="rotate-90 size-3 ml-auto"/>
       </div>
       {isOpen &&
         createPortal(
@@ -229,6 +230,7 @@ interface DropdownMenuItemProps {
   variant?: "default" | "danger";
   className?: string;
   disabled?: boolean;
+  selected?: boolean;
 }
 
 export function DropdownMenuItem({
@@ -237,6 +239,7 @@ export function DropdownMenuItem({
   variant = "default",
   className = "",
   disabled = false,
+  selected,
 }: DropdownMenuItemProps) {
   const variantClasses = {
     default: "text-primary-800 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-50",
@@ -248,13 +251,17 @@ export function DropdownMenuItem({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "w-full flex items-center gap-2.5 px-3 py-2 text-s",
+        "w-full flex items-center gap-2 px-3 py-1.75 text-s",
         "hover:bg-primary-100/80 dark:hover:bg-primary/5 transition-colors",
         disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
         variantClasses[variant],
         className,
       )}
     >
+      {selected !== undefined && (
+        <Selected className={`" size-3 " ${selected ? "opacity-100": "opacity-0"} `} />
+
+      )}
       {children}
     </button>
   );

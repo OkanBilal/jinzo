@@ -113,7 +113,7 @@ describe("smoke", () => {
       const result = await providersService.getAll();
       expect(result.success).toBe(true);
       if (!result.success) return;
-      expect(result.data!.length).toBe(2);
+      expect(result.data!.length).toBe(3);
     });
 
     it("seeds app states for all integrations", async () => {

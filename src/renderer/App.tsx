@@ -9,6 +9,8 @@ import {
 } from "./components/layout/main";
 import { useLayoutConfig } from "./hooks/use-layout-config";
 import { shouldHideRightPanel } from "./lib/layout";
+import { useBottomTerminal, BottomTerminalProvider } from "./hooks/use-bottom-terminal";
+import { useWorkspaceVariant } from "./hooks/use-workspace-variant";
 import { ReduxProvider } from "./providers/redux-provider";
 import { Toaster } from "./components/ui/toast/Toaster";
 import { useAppSelector } from "./lib/redux/hooks";
@@ -21,6 +23,9 @@ function AppContent() {
   const { mainMarginLeft, rightPanelWidth } = useLayoutConfig();
   const location = useLocation();
   const hideRightPanel = shouldHideRightPanel(location.pathname);
+  const variant = useWorkspaceVariant();
+  const bottomTerminal = useBottomTerminal();
+  const showTerminalToggle = variant !== "default";
   const onboardingCompleted = useAppSelector(
     (state) => state.appSettings.onboardingCompleted,
   );
@@ -46,6 +51,8 @@ function AppContent() {
             isOpen={isrightanelOpen}
             onToggle={setIsRightPanelOpen}
             width={rightPanelWidth}
+            terminalOpen={showTerminalToggle ? bottomTerminal.isOpen : undefined}
+            onTerminalToggle={showTerminalToggle ? bottomTerminal.toggle : undefined}
           />
         )}
       </MainLayout>
@@ -59,7 +66,9 @@ export default function App() {
       <ReduxProvider>
         <Router>
           <MainHeaderProvider>
-            <AppContent />
+            <BottomTerminalProvider>
+              <AppContent />
+            </BottomTerminalProvider>
           </MainHeaderProvider>
         </Router>
       </ReduxProvider>

@@ -12,7 +12,7 @@ export function SettingsSection({
           {title}
         </h3>
       )}
-      <div className="rounded-3xl bg-primary-100/60 dark:bg-primary-900/40 border border-primary-200/50 dark:border-primary-800/40 px-5">
+      <div className="rounded-3xl bg-primary-100/60 dark:bg-primary-900/40 border border-primary-200/50 dark:border-primary-800/20 px-5">
         {children}
       </div>
     </div>
@@ -67,6 +67,6 @@ export function SettingsRow({
 
 export function SettingsDivider() {
   return (
-    <div className="border-b border-primary-200/60 dark:border-primary-800/40" />
+    <div className="border-b border-primary-200/60 dark:border-primary-800/20" />
   );
 }

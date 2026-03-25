@@ -5,16 +5,19 @@ import {
   WorkspaceInput,
   WorkspaceQuickActions,
   WorkspaceTabs,
+  TerminalSection,
 } from "@/features/workspace/components";
 import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
 import { useAbortRunMutation } from "@/lib/redux/api";
 import { useSetMainHeader } from "@/hooks/use-main-header";
+import { useBottomTerminal } from "@/hooks/use-bottom-terminal";
 
 const COPILOT_CLI_PROVIDER_ID = "copilot_cli";
 
 export default function CopilotPage() {
   const ws = useWorkspacePage(COPILOT_CLI_PROVIDER_ID);
   const [abortRun] = useAbortRunMutation();
+  const bottomTerminal = useBottomTerminal();
 
   const { pendingApprovals, respond: respondToolApproval } = useToolApproval();
 
@@ -132,6 +135,14 @@ export default function CopilotPage() {
         onUploadedFilesChange={ws.setUploadedFiles}
         onStop={handleStop}
       />
+      {ws.currentWorkspace && (
+        <TerminalSection
+          workspaceId={ws.currentWorkspace.id}
+          rootPath={ws.currentWorkspace.rootPath}
+          isOpen={bottomTerminal.isOpen}
+          onClose={bottomTerminal.close}
+        />
+      )}
     </div>
   );
 }

@@ -14,6 +14,7 @@ const TABS: { id: ProviderFilter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "claude_code", label: "Claude" },
   { id: "copilot_cli", label: "Copilot" },
+  { id: "codex", label: "Codex" },
 ];
 
 export default function DashboardPage() {
@@ -49,10 +50,10 @@ export default function DashboardPage() {
           <div className="h-6 w-32 bg-primary-200 dark:bg-primary-800 rounded" />
           <div className="grid grid-cols-4 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-20 bg-primary-200/50 dark:bg-primary-800/30 rounded-lg" />
+              <div key={i} className="h-20 bg-primary-200/50 dark:bg-primary-800/20 rounded-lg" />
             ))}
           </div>
-          <div className="h-56 bg-primary-200/50 dark:bg-primary-800/30 rounded-lg" />
+          <div className="h-56 bg-primary-200/50 dark:bg-primary-800/20 rounded-lg" />
         </div>
       </div>
     );
@@ -72,7 +73,7 @@ export default function DashboardPage() {
         <Heading2 className="font-medium!">Dashboard</Heading2>
         <div
           ref={containerRef}
-          className="relative flex rounded-lg bg-primary-100/60 dark:bg-primary-800/30 p-0.5"
+          className="relative flex rounded-lg bg-primary-100/60 dark:bg-primary-800/20 p-0.5"
         >
           <div
             className="absolute top-0.5 bg-primary dark:bg-primary/10 rounded-lg shadow-sm transition-all duration-300 ease-in-out"
