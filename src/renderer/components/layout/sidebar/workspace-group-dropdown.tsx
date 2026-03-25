@@ -35,8 +35,6 @@ export function WorkspaceGroupDropdown({
     setIsOpen(false);
   };
 
-  const activeClass = "bg-primary-100/80 dark:bg-primary/5 font-medium";
-
   return (
     <>
       <Button
@@ -59,25 +57,16 @@ export function WorkspaceGroupDropdown({
         isOpen={isOpen}
         position={position}
         onClose={() => setIsOpen(false)}
-        minWidth={160}
+        minWidth={140}
       >
-        <DropdownMenuItem
-          onClick={() => handleSelect("none")}
-          className={grouping === "none" ? activeClass : ""}
-        >
+        <DropdownMenuItem onClick={() => handleSelect("none")} selected={grouping === "none"}>
           Default
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => handleSelect("status")}
-          className={grouping === "status" ? activeClass : ""}
-        >
-          Group by status
+        <DropdownMenuItem onClick={() => handleSelect("status")} selected={grouping === "status"}>
+          By status
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => handleSelect("project")}
-          className={grouping === "project" ? activeClass : ""}
-        >
-          Group by project
+        <DropdownMenuItem onClick={() => handleSelect("project")} selected={grouping === "project"}>
+          By project
         </DropdownMenuItem>
       </DropdownMenu>
     </>

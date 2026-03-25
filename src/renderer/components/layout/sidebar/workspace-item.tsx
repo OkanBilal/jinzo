@@ -157,7 +157,7 @@ export default function WorkspaceItem({
           }
         }}
         className={`block px-2.5 py-1.5 active:scale-99 group-hover:scale-[1.01]
-          rounded-2xl transition-all duration-200 ease-out cursor-pointer ${
+          rounded-xl transition-all duration-200 ease-out cursor-pointer ${
             isActive
               ? "bg-primary/80 dark:bg-primary/5"
               : "bg-transparent group-hover:bg-primary/40 dark:group-hover:bg-primary/5"

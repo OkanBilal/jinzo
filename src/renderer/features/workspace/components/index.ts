@@ -15,3 +15,4 @@ export { WorkspaceTabs } from "./workspace-tabs";
 export { WorkspaceEvents } from "./workspace-events";
 export { WorkspaceInput } from "./workspace-input";
 export { WorkspaceQuickActions } from "./workspace-quick-actions";
+export { TerminalSection } from "./terminal-section";

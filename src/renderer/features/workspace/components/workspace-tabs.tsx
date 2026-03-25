@@ -1,4 +1,4 @@
-import { Plus, CopilotStatic } from "@/components/ui/icons";
+import { Plus, CopilotStatic, Gpt } from "@/components/ui/icons";
 import { RunTab, getTabTitle } from "./run-tab";
 import { EditorTab } from "./editor-tab";
 import { IssueTab } from "./issue-tab";
@@ -37,7 +37,7 @@ interface WorkspaceTabsProps {
   showNewRunTab?: boolean;
   onSelectNewRunTab?: () => void;
   onCloseNewRunTab?: (e: React.MouseEvent) => void;
-  variant?: "claude" | "copilot";
+  variant?: "claude" | "copilot" | "codex";
 }
 
 export function WorkspaceTabs({
@@ -119,7 +119,12 @@ export function WorkspaceTabs({
               key={tabId}
               signal={signal}
               isActive={activeTab === tabId}
-              isFirst={!hasSelectedFile && runs.length === 0 && issueTabs.length === 0 && i === 0}
+              isFirst={
+                !hasSelectedFile &&
+                runs.length === 0 &&
+                issueTabs.length === 0 &&
+                i === 0
+              }
               onClick={() => onSelectSignalTab?.(signal.signal.entityId)}
               onClose={(e) => onCloseSignalTab?.(signal.signal.entityId, e)}
             />
@@ -133,7 +138,13 @@ export function WorkspaceTabs({
               key={tabId}
               review={note}
               isActive={activeTab === tabId}
-              isFirst={!hasSelectedFile && runs.length === 0 && issueTabs.length === 0 && signalTabs.length === 0 && i === 0}
+              isFirst={
+                !hasSelectedFile &&
+                runs.length === 0 &&
+                issueTabs.length === 0 &&
+                signalTabs.length === 0 &&
+                i === 0
+              }
               onClick={() => onSelectNoteTab?.(note.id)}
               onClose={(e) => onCloseNoteTab?.(note.id, e)}
             />
@@ -161,20 +172,37 @@ export function WorkspaceTabs({
   );
 }
 
-function NewRunTab({ isActive, variant, onClick, onClose }: {
+function NewRunTab({
+  isActive,
+  variant,
+  onClick,
+  onClose,
+}: {
   isActive: boolean;
-  variant: "copilot" | "claude";
+  variant: "copilot" | "claude" | "codex";
   onClick: () => void;
   onClose: (e: React.MouseEvent) => void;
 }) {
+  const className = `size-4 ${
+    isActive
+      ? "text-primary-900 dark:text-primary-200"
+      : "text-primary-900 dark:text-primary-200 group-hover:text-primary-900 dark:group-hover:text-primary-200"
+  }`;
+
   return (
     <BaseTab
       isActive={isActive}
       onClick={onClick}
       onClose={onClose}
-      icon={ variant === "claude" ? <Claude className="text-[#D97453]" /> : 
-      <CopilotStatic className={`size-4 ${isActive ? "text-primary-900 dark:text-primary-200" :
-        "text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200"}`} /> }
+      icon={
+        variant === "claude" ? (
+          <Claude className="text-[#D97453]" />
+        ) : variant === "copilot" ? (
+          <CopilotStatic className={className} />
+        ) : (
+          <Gpt className={className} />
+        )
+      }
       label="New Run"
     />
   );

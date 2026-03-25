@@ -360,6 +360,40 @@ export interface WorkRunAdapter {
 }
 
 /**
+ * Configuration for OpenAI Codex adapter
+ */
+export interface CodexAdapterConfig {
+  /** Path to codex CLI binary (defaults to "codex" from PATH) */
+  binary?: string;
+  /** Optional API key. If omitted, the Codex CLI uses cached auth from ~/.codex/auth.json (via `codex` login or `codex login --device-auth`), or OPENAI_API_KEY / CODEX_API_KEY env vars */
+  apiKey?: string;
+  /** Default model to use (e.g., "gpt-5.4", "gpt-5.4-mini") */
+  defaultModel?: string;
+  /** Timeout in milliseconds */
+  timeout?: number;
+  /** Permission mode for tool access */
+  permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
+  /** Approval policy passed to Codex CLI (no interactive hooks — CLI handles internally) */
+  approvalMode?: "untrusted" | "on-request" | "on-failure" | "never";
+  /** Sandbox mode for file/network isolation */
+  sandboxMode?: "read-only" | "workspace-write" | "danger-full-access";
+  /** Model reasoning effort level */
+  modelReasoningEffort?: "minimal" | "low" | "medium" | "high" | "xhigh";
+  /** Enable network access within sandbox_workspace_write mode */
+  networkAccessEnabled?: boolean;
+  /** Web search mode */
+  webSearchMode?: "disabled" | "cached" | "live";
+  /** Skip git repo check for non-git directories */
+  skipGitRepoCheck?: boolean;
+  /** Additional directories the agent can access */
+  additionalDirectories?: string[];
+  /** Base URL override for OpenAI API */
+  baseUrl?: string;
+  /** Additional Codex CLI config overrides (passed as --config key=value) */
+  config?: Record<string, unknown>;
+}
+
+/**
  * Configuration for Copilot adapter stored in providers.config
  */
 export interface CopilotAdapterConfig {
@@ -510,7 +544,7 @@ export interface ModelInfo {
   /** Whether this model supports effort levels */
   supportsEffort?: boolean;
   /** Available effort levels for this model */
-  supportedEffortLevels?: ('low' | 'medium' | 'high' | 'max')[];
+  supportedEffortLevels?: ('minimal' | 'low' | 'medium' | 'high' | 'max' | 'xhigh')[];
   /** Model description */
   description?: string;
   /** Additional metadata */

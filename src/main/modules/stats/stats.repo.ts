@@ -97,13 +97,15 @@ export const statsRepo = {
     const dayMap = new Map<string, DailyActivity>();
     for (const row of rows) {
       if (!dayMap.has(row.date)) {
-        dayMap.set(row.date, { date: row.date, claude: 0, copilot: 0, other: 0 });
+        dayMap.set(row.date, { date: row.date, claude: 0, copilot: 0, codex: 0, other: 0 });
       }
       const day = dayMap.get(row.date)!;
       if (row.provider_id === "claude_code") {
         day.claude += row.count;
       } else if (row.provider_id === "copilot_cli") {
         day.copilot += row.count;
+      } else if (row.provider_id === "codex") {
+        day.codex += row.count;
       } else {
         day.other += row.count;
       }

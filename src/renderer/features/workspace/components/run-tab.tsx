@@ -1,4 +1,4 @@
-import { Archive, CopilotStatic, Option, Edit } from "@/components/ui/icons";
+import { Archive, CopilotStatic, Option, Edit, Gpt } from "@/components/ui/icons";
 import type { Run } from "../types";
 import { Claude } from "@/components/ui/icons/space";
 import { AnimatedTitle } from "@/components/ui";
@@ -15,7 +15,7 @@ interface RunTabProps {
   onClose: () => void;
   onRename: (newTitle: string) => void;
   title: string;
-  variant?: "copilot" | "claude";
+  variant?: "copilot" | "claude" | "codex";
 }
 
 function VariantIcon({ variant, isActive }: { variant: string; isActive: boolean }) {
@@ -27,6 +27,7 @@ function VariantIcon({ variant, isActive }: { variant: string; isActive: boolean
 
   if (variant === "claude") return <Claude className="text-claude" />;
   if (variant === "copilot") return <CopilotStatic className={className} />;
+  if (variant === "codex") return <Gpt className={className} />;
   return null;
 }
 
@@ -35,7 +36,7 @@ function TabIcon({ run, variant, isActive }: { run: Run; variant: string; isActi
   return (
     <span className="flex items-center justify-center size-3.5 shrink-0">
       {isRunning ? (
-        <AsciiSpinner variant={variant as "claude" | "copilot"} />
+        <AsciiSpinner variant={variant as "claude" | "copilot" | "codex"} />
       ) : (
         <VariantIcon variant={variant} isActive={isActive} />
       )}

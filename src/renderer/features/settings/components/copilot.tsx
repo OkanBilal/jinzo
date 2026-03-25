@@ -28,7 +28,6 @@ export default function CopilotSettings() {
   const config = provider?.config ?? {};
   const permissionMode = (config as any).permissionMode ?? "default";
   const isBypassing = permissionMode === "bypassPermissions";
-  const showQuickActions = (config as any).showQuickActions !== false;
 
   const handlePermissionToggle = async (enabled: boolean) => {
     if (!provider || updating) return;
@@ -55,26 +54,6 @@ export default function CopilotSettings() {
     }
   };
 
-  const handleQuickActionsToggle = async (enabled: boolean) => {
-    if (!provider || updating) return;
-
-    try {
-      await updateProvider({
-        id: "copilot_cli",
-        payload: {
-          config: {
-            ...config,
-            showQuickActions: enabled,
-          },
-        },
-      }).unwrap();
-      toast.success(
-        enabled ? "Quick actions enabled" : "Quick actions hidden",
-      );
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to update quick actions setting");
-    }
-  };
 
   if (isLoading) {
     return (
@@ -119,14 +98,6 @@ export default function CopilotSettings() {
         </SettingsRow>
       </SettingsSection>
 
-      <SettingsSection title="Workspace">
-        <SettingsRow
-          title="Quick Actions"
-          description="Show quick action buttons in workspace"
-        >
-          <Toggle enabled={showQuickActions} onChange={handleQuickActionsToggle} />
-        </SettingsRow>
-      </SettingsSection>
       {copilotSpace && (
         <SettingsSection title="Space">
           <SettingsRow

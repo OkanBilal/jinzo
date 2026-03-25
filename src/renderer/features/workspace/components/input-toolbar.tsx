@@ -9,14 +9,15 @@ import {
   type UploadedFile,
   Button,
   DropdownWrapper,
+  Body,
 } from "@/components/ui";
-import { Plan, Brain } from "@/components/ui/icons";
+import { Plan, Brain, Picture, Close } from "@/components/ui/icons";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { Bolt } from "@/components/ui/icons/space";
 
 interface InputToolbarProps {
-  variant: "claude" | "copilot";
+  variant: "claude" | "copilot" | "codex";
   isLoading: boolean;
   onSubmit: () => void;
   onGoalChange: (value: string) => void;
@@ -38,7 +39,7 @@ interface InputToolbarProps {
   // Effort level (Claude only)
   effortLevel: string;
   onEffortLevelChange: (level: string) => void;
-  supportedEffortLevels?: ("low" | "medium" | "high" | "max")[];
+  supportedEffortLevels?: ("minimal" | "low" | "medium" | "high" | "max" | "xhigh")[];
   // Stop run (active run is running)
   isRunning: boolean;
   onStop?: () => void;
@@ -146,19 +147,54 @@ export function InputToolbar({
   );
 
   return (
-    <div className="flex items-start space-x-2 px-4">
+    <div className="flex items-start space-x-2 px-3">
       <div className="flex items-center justify-between w-full">
         <div className="flex items-center relative gap-1">
-          <FileUploadDropdown
-            isOpen={showFileDropdown}
-            onToggle={() => setShowFileDropdown(!showFileDropdown)}
-            onImageUpload={handleImageUpload}
-            onDocumentUpload={handleDocumentUpload}
-            dropdownRef={fileDropdownRef}
-            openUpward={true}
-            uploadedFiles={uploadedFiles}
-            onRemoveFile={handleRemoveFile}
-          />
+          {variant === "codex" ? (
+            <div className="relative flex items-center gap-2" ref={fileDropdownRef}>
+              <Button
+                type="button"
+                tooltip="Upload image"
+                tooltipPosition="top"
+                onClick={handleImageUpload}
+                className="p-1.5 hover:bg-primary-200/30 dark:hover:bg-primary-300/20 rounded-full transition-colors cursor-pointer"
+                aria-label="Upload image"
+              >
+                <Picture className="dark:text-primary-300 size-4 text-primary-700" />
+              </Button>
+              {uploadedFiles.map((uploadedFile, index) => (
+                <div key={`${uploadedFile.file.name}-${uploadedFile.file.size}`} className="relative group">
+                  <div className="flex items-center gap-2 bg-primary-100 dark:bg-primary-800 rounded-2xl px-1.5 py-1 mr-1">
+                    <div className="relative w-5 h-5 rounded overflow-hidden">
+                      <img src={uploadedFile.preview} alt={uploadedFile.file.name} className="w-full h-full object-cover" />
+                      <Button
+                        type="button"
+                        onClick={() => handleRemoveFile(index)}
+                        className="absolute cursor-pointer inset-0 bg-primary-950/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label="Remove image"
+                      >
+                        <Close className="w-4 h-4 text-primary-600 dark:text-primary-300" />
+                      </Button>
+                    </div>
+                    <span className="text-primary-700 dark:text-primary-200 text-xs max-w-25 truncate">
+                      {uploadedFile.file.name}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <FileUploadDropdown
+              isOpen={showFileDropdown}
+              onToggle={() => setShowFileDropdown(!showFileDropdown)}
+              onImageUpload={handleImageUpload}
+              onDocumentUpload={handleDocumentUpload}
+              dropdownRef={fileDropdownRef}
+              openUpward={true}
+              uploadedFiles={uploadedFiles}
+              onRemoveFile={handleRemoveFile}
+            />
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -177,8 +213,9 @@ export function InputToolbar({
             openUpward={true}
             isLoading={isLoadingModels}
           />
-          {variant === "claude" && (
+          {(variant === "claude" || variant === "codex") && (
             <>
+              {variant === "claude" && (
               <Button
                 tooltip="Toggle Plan Mode"
                 type="button"
@@ -199,6 +236,7 @@ export function InputToolbar({
                 />
                 Plan
               </Button>
+              )}
               {supportedEffortLevels && supportedEffortLevels.length > 0 ? (
                 <div className="relative" ref={thinkingDropdownRef}>
                   <Button
@@ -229,16 +267,17 @@ export function InputToolbar({
                   <DropdownWrapper
                     isOpen={showThinkingDropdown}
                     openUpward={true}
-                    minWidth="min-w-28"
+                    minWidth="min-w-32"
                     useFixedBackground={true}
                   >
+                    {variant !== "codex" && (
                     <Button
                       type="button"
                       onClick={() => {
                         onEffortLevelChange("");
                         setShowThinkingDropdown(false);
                       }}
-                      className={`w-full text-left px-3 py-2.5 text-sm cursor-pointer transition-colors first:rounded-t-xl ${
+                      className={`w-full text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-xl ${
                         !thinkingMode
                           ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100 font-medium"
                           : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
@@ -246,6 +285,7 @@ export function InputToolbar({
                     >
                       Off
                     </Button>
+                    )}
                     {supportedEffortLevels.map((level) => (
                       <Button
                         key={level}
@@ -254,18 +294,19 @@ export function InputToolbar({
                           onEffortLevelChange(level);
                           setShowThinkingDropdown(false);
                         }}
-                        className={`w-full text-left px-3 py-2.5 text-sm cursor-pointer transition-colors capitalize last:rounded-b-xl ${
+                        className={`w-full flex items-center gap-1.5 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors capitalize last:rounded-b-xl ${
                           thinkingMode && effortLevel === level
                             ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100 font-medium"
                             : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
                         }`}
                       >
+                        <Brain className="size-3" />
                         {level}
                       </Button>
                     ))}
                   </DropdownWrapper>
                 </div>
-              ) : (
+              ) : variant === "claude" ? (
                 <Button
                   tooltip="Toggle Thinking Mode"
                   type="button"
@@ -287,7 +328,7 @@ export function InputToolbar({
                     {thinkingMode ? "Think" : ""}
                   </span>
                 </Button>
-              )}
+              ) : null}
             </>
           )}
           {supportsFastMode && (
@@ -297,7 +338,7 @@ export function InputToolbar({
               onClick={onFastModeToggle}
               className={`flex items-center px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer ${
                 fastMode
-                  ? "dark:bg-green-200/10 gap-1 bg-green-300/30 text-green-600 dark:text-green-200"
+                  ? "dark:bg-red-300/10 gap-1 bg-red-300/30 text-red-600 dark:text-red-300"
                   : " text-primary-700 dark:text-primary-300 hover:bg-primary/10"
               }`}
               title={
@@ -307,17 +348,30 @@ export function InputToolbar({
               }
             >
               <Bolt
-                className={`size-4 ${fastMode ? "text-green-600 dark:text-green-200" : "text-primary-700 dark:text-primary-300"}`}
+                className={`size-4 transition-colors ${fastMode ? "text-red-600 dark:text-red-300" : "text-primary-700 dark:text-primary-300"}`}
+                style={{ transitionDelay: fastMode ? "0ms" : "200ms", transitionDuration: "150ms" }}
               />
-              <span
-                className={`transition-all duration-300 ${fastMode ? "text-green-600 dark:text-green-200 opacity-100 translate-x-0" : "opacity-0 -translate-x-1"}`}
-              >
-                {fastMode ? "Fast" : ""}
+              <span className="flex overflow-hidden">
+                {"Fast".split("").map((char, i) => (
+                  <span
+                    key={i}
+                    className="inline-block text-red-600 dark:text-red-300"
+                    style={{
+                      transition: "opacity 150ms, transform 150ms, max-width 150ms",
+                      transitionDelay: fastMode ? `${i * 40}ms` : `${(3 - i) * 40}ms`,
+                      opacity: fastMode ? 1 : 0,
+                      transform: fastMode ? "translateX(0)" : "translateX(4px)",
+                      maxWidth: fastMode ? "1ch" : "0px",
+                    }}
+                  >
+                    {char}
+                  </span>
+                ))}
               </span>
             </Button>
           )}
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center ">
           <SendButton
             loading={isLoading || isRunning}
             onSubmit={onSubmit}

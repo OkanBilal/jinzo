@@ -141,7 +141,7 @@ export default function Sidebar() {
                 onClick={handleNewClick}
                 icon={
                   sidebarConfig.itemType === "workspace" ? (
-                    <Plus className="w-4 h-4 text-primary-900 dark:text-primary-100" />
+                    <Plus className="size-3.5 text-primary-900 dark:text-primary-100" />
                   ) : (
                     <Edit className="w-4 h-4 text-primary-900 dark:text-primary-100" />
                   )

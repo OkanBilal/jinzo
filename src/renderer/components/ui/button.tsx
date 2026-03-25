@@ -40,9 +40,9 @@ const variantStyles: Record<ButtonVariant, string> = {
   primary:
     "cursor-pointer bg-primary-200/60 dark:bg-primary-800/20 hover:bg-primary-200 dark:hover:bg-primary-800/40 text-primary-700 dark:text-primary-200",
   secondary:
-    "cursor-pointer bg-primary-950/80 dark:bg-primary-200/20 hover:bg-primary-950/90 dark:hover:bg-primary-600 text-primary-50 dark:text-primary-200",
+    "cursor-pointer bg-primary-500/80 dark:bg-primary-200/20 hover:bg-primary-600/80 dark:hover:bg-primary-600 text-primary dark:text-primary-200",
   submit:
-    "cursor-pointer bg-accent hover:bg-accent-hover text-primary disabled:bg-accent-hover/50",
+    "cursor-pointer bg-blue-500 hover:bg-blue-600 text-primary disabled:bg-blue-600/50",
   ghost:
     "cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900",
   danger:
@@ -63,8 +63,8 @@ const variantStyles: Record<ButtonVariant, string> = {
 const sizeStyles: Record<ButtonSize, string> = {
   xxs: "px-0 py-1 text-xs",
   xs: "px-3 py-1.5 text-xs rounded-lg",
-  sm: "px-3 py-2 text-s rounded-xl",
-  md: "px-3 py-2 text-s rounded-[14px]",
+  sm: "px-3 py-1.75 text-s rounded-lg",
+  md: "px-3 py-2 text-s rounded-[12px]",
   lg: "px-3 py-2.5 text-base rounded-xl",
 };
 

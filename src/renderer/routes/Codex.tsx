@@ -11,10 +11,10 @@ import { useAbortRunMutation } from "@/lib/redux/api";
 import { useSetMainHeader } from "@/hooks/use-main-header";
 import { useBottomTerminal } from "@/hooks/use-bottom-terminal";
 
-const CLAUDE_PROVIDER_ID = "claude_code";
+const CODEX_PROVIDER_ID = "codex";
 
-export default function ClaudePage() {
-  const ws = useWorkspacePage(CLAUDE_PROVIDER_ID);
+export default function CodexPage() {
+  const ws = useWorkspacePage(CODEX_PROVIDER_ID);
   const [abortRun] = useAbortRunMutation();
   const bottomTerminal = useBottomTerminal();
 
@@ -30,19 +30,11 @@ export default function ClaudePage() {
     }
   }, [ws.activeRunId, abortRun]);
 
-  const handleSuggestionSelect = useCallback(
-    (suggestion: string) => {
-      ws.setGoal(suggestion);
-      ws.setAutoExecute(true);
-    },
-    [ws],
-  );
-
   const tabBar = useMemo(
     () =>
       ws.showEmptyState ? null : (
         <WorkspaceTabs
-          variant="claude"
+          variant="codex"
           runs={ws.runs}
           activeTab={ws.activeTab}
           hasSelectedFile={!!ws.selectedFile}
@@ -108,15 +100,14 @@ export default function ClaudePage() {
             eventsEndRef={ws.eventsEndRef as React.RefObject<HTMLDivElement>}
             issueTabs={ws.openIssueTabs}
             signalTabs={ws.openSignalTabs}
+            variant="codex"
             turns={ws.currentTurns}
-            variant="claude"
             pendingApproval={currentApproval}
             onApprovalRespond={respondToolApproval}
-            onForkRun={ws.handleForkRun}
-            onSuggestionSelect={handleSuggestionSelect}
           />
         )}
       </div>
+
       <WorkspaceInput
         goal={ws.goal}
         onGoalChange={ws.setGoal}
@@ -124,7 +115,7 @@ export default function ClaudePage() {
         isLoading={ws.isLoading}
         activeRun={ws.activeRun}
         canResume={ws.canResume ?? false}
-        providerId={CLAUDE_PROVIDER_ID}
+        providerId={CODEX_PROVIDER_ID}
         selectedModel={ws.selectedModel}
         onModelChange={ws.handleModelChange}
         contextFiles={ws.contextFiles}

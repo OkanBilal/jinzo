@@ -36,6 +36,7 @@ export const iconRegistry: Record<string, IconComponent> = {
   vinyl: Icons.Vinyl,
   claude: Icons.Claude,
   copilot: Icons.Copilot,
+  codex: Icons.Gpt,
 };
 
 export const availableIcons = Object.entries(iconRegistry).map(

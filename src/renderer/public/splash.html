@@ -29,113 +29,155 @@
       background: rgba(4, 4, 4, 0.7);
     }
 
-    .logo {
-      width: 96px;
-      height: 96px;
-      margin-bottom: 24px;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    .app-name {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 28px;
-      font-weight: 600;
-      color: #ffffff;
-      letter-spacing: 0.5px;
-      margin-bottom: 32px;
-    }
-
-    .ascii-loader {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 0;
-      margin-top: 24px;
-    }
-
-    .spinner {
-      font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
-      font-size: 16px;
-      color: #4a9bf0;
-    }
-
-    .loader-word {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 14px;
-      background: linear-gradient(90deg, #a09d95 0%, #ffffff 50%, #a09d95 100%);
-      background-size: 200% 100%;
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: shine 2s ease-in-out infinite;
-    }
-
-    @keyframes shine {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
+    canvas {
+      display: block;
     }
 
     @media (prefers-color-scheme: light) {
       .splash-container {
         background: rgba(250, 250, 250, 0.7);
       }
-
-      .app-name {
-        color: #1a1a1a;
-      }
-
-      .loader-word {
-        background: linear-gradient(90deg, #666 0%, #1a1a1a 50%, #666 100%);
-        background-size: 200% 100%;
-        -webkit-background-clip: text;
-        background-clip: text;
-        -webkit-text-fill-color: transparent;
-        animation: shine 2s ease-in-out infinite;
-      }
-    }
-
-    @keyframes pulse {
-      0%, 100% {
-        transform: scale(1);
-        opacity: 1;
-      }
-      50% {
-        transform: scale(1.05);
-        opacity: 0.9;
-      }
     }
   </style>
 </head>
 <body>
   <div class="splash-container">
-    <img class="logo" src="icon.png" alt="Jinzo" />
-    <div class="ascii-loader">
-      <span class="spinner">⠋</span>
-      <span class="loader-word">Brewing...</span>
-    </div>
+    <canvas id="particleCanvas" width="280" height="200"></canvas>
   </div>
 
   <script>
-    const ASCII_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-    const LOADER_WORDS = [
-      'Brewing', 'Steeping', 'Blooming', 'Infusing', 'Settling',
-      'Pouring', 'Warming', 'Stirring', 'Slow-thinking', 'Daydreaming',
-      'Wandering', 'Drift-sorting', 'Quieting'
-    ];
+    // --- Particle logo ---
+    const JINZO_PATH = "M87.547 110.607 240 24.579v314.616c0 8.521-2.18 17.697-6.541 27.529-4.025 9.832-9.392 19.008-16.101 27.529-6.373 8.193-13.417 14.42-21.132 18.68L87.547 474.382c-11.74 6.554-21.97 7.374-30.692 2.458-8.72-4.916-13.081-13.929-13.081-27.038v-117.98l43.773-24.58v117.981l108.679-61.448V49.159c0 8.52-2.012 17.697-6.037 27.529-4.025 9.831-9.392 19.008-16.101 27.529-6.709 8.193-13.92 14.419-21.635 18.68l-64.906 36.869v-49.159Zm108.679-61.448v314.616l-43.773-24.58V24.579l43.773 24.58Zm0 314.616L87.547 425.223l-43.773-24.579 108.679-61.449 43.773 24.58ZM240 24.579 87.547 110.607l-43.773-24.58L196.226 0 240 24.58ZM87.547 110.607v49.159l-43.773-24.579v-49.16l43.773 24.58Zm0 196.635-43.773 24.58L0 307.242l43.774-24.579 43.773 24.579Zm-43.773 24.58v117.98c0 13.109 4.36 22.122 13.081 27.038l-43.773-24.58C4.36 447.345 0 438.332 0 425.223V307.242l43.774 24.58Z";
+    const JINZO_VIEWBOX = "0 0 240 480";
 
-    const spinner = document.querySelector('.spinner');
-    const loaderWord = document.querySelector('.loader-word');
-    let frameIndex = 0;
+    const LOGO_SIZE = 120;
+    const PARTICLE_GAP = 2;
+    const PARTICLE_SIZE = 1;
+    const IDLE_AMPLITUDE = 1;
+    const IDLE_SPEED = 0.05;
+    const RETURN_SPEED = 0.08;
+    const FRICTION = 0.82;
+    const MOUSE_RADIUS = 30;
+    const MOUSE_FORCE = 3;
 
-    setInterval(() => {
-      frameIndex = (frameIndex + 1) % ASCII_FRAMES.length;
-      spinner.textContent = ASCII_FRAMES[frameIndex];
-    }, 80);
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const PARTICLE_COLOR = isDark ? [135, 133, 128] : [100, 100, 100];
 
-    setInterval(() => {
-      const randomWord = LOADER_WORDS[Math.floor(Math.random() * LOADER_WORDS.length)];
-      loaderWord.textContent = randomWord + '...';
-    }, 3000);
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const displayW = 280;
+    const displayH = 200;
+    canvas.width = displayW * dpr;
+    canvas.height = displayH * dpr;
+    canvas.style.width = displayW + 'px';
+    canvas.style.height = displayH + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    function renderLogoOffscreen() {
+      const off = document.createElement('canvas');
+      off.width = LOGO_SIZE;
+      off.height = LOGO_SIZE;
+      const c = off.getContext('2d');
+
+      const parts = JINZO_VIEWBOX.split(' ').map(Number);
+      const vx = parts[0], vy = parts[1], vw = parts[2], vh = parts[3];
+      const scale = LOGO_SIZE / Math.max(vw, vh);
+
+      c.save();
+      c.translate(-vx * scale, -vy * scale);
+      c.scale(scale, scale);
+      c.fillStyle = '#000';
+      c.fill(new Path2D(JINZO_PATH));
+      c.restore();
+      return off;
+    }
+
+    function samplePixels(srcCanvas, gap) {
+      const c = srcCanvas.getContext('2d');
+      const imgData = c.getImageData(0, 0, srcCanvas.width, srcCanvas.height);
+      const pts = [];
+      for (let y = 0; y < srcCanvas.height; y += gap) {
+        for (let x = 0; x < srcCanvas.width; x += gap) {
+          const i = (y * srcCanvas.width + x) * 4;
+          if (imgData.data[i + 3] > 128) pts.push({ x, y });
+        }
+      }
+      return pts;
+    }
+
+    const logoCanvas = renderLogoOffscreen();
+    const logoPixels = samplePixels(logoCanvas, PARTICLE_GAP);
+
+    const offsetX = (displayW - LOGO_SIZE) / 2;
+    const offsetY = (displayH - LOGO_SIZE) / 2;
+
+    const particles = logoPixels.map(p => ({
+      x: p.x + offsetX,
+      y: p.y + offsetY,
+      homeX: p.x + offsetX,
+      homeY: p.y + offsetY,
+      vx: 0,
+      vy: 0,
+      phase: Math.random() * Math.PI * 2,
+      freq: 0.8 + Math.random() * 0.4
+    }));
+
+    const mouse = { x: 0, y: 0, present: false };
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+    });
+    canvas.addEventListener('mouseenter', () => { mouse.present = true; });
+    canvas.addEventListener('mouseleave', () => { mouse.present = false; });
+
+    let t = 0;
+    const r = PARTICLE_COLOR[0], g = PARTICLE_COLOR[1], b = PARTICLE_COLOR[2];
+
+    function animate() {
+      ctx.clearRect(0, 0, displayW, displayH);
+      t += IDLE_SPEED;
+
+      for (const p of particles) {
+        const idleX = Math.sin(t * p.freq + p.phase) * IDLE_AMPLITUDE;
+        const idleY = Math.cos(t * p.freq * 0.7 + p.phase + 1) * IDLE_AMPLITUDE * 0.6;
+
+        if (mouse.present) {
+          const dx = p.x - mouse.x;
+          const dy = p.y - mouse.y;
+          const distSq = dx * dx + dy * dy;
+          const radiusSq = MOUSE_RADIUS * MOUSE_RADIUS;
+
+          if (distSq < radiusSq && distSq > 0.1) {
+            const dist = Math.sqrt(distSq);
+            const tt = 1 - dist / MOUSE_RADIUS;
+            const strength = tt * tt * tt;
+            p.vx += (dx / dist) * strength * MOUSE_FORCE;
+            p.vy += (dy / dist) * strength * MOUSE_FORCE;
+          }
+        }
+
+        p.vx += (p.homeX + idleX - p.x) * RETURN_SPEED;
+        p.vy += (p.homeY + idleY - p.y) * RETURN_SPEED;
+        p.vx *= FRICTION;
+        p.vy *= FRICTION;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        const dx2 = p.x - p.homeX;
+        const dy2 = p.y - p.homeY;
+        const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+        const alpha = Math.max(0.3, 1 - dist2 * 0.03);
+
+        ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+        ctx.fillRect(p.x - PARTICLE_SIZE * 0.5, p.y - PARTICLE_SIZE * 0.5, PARTICLE_SIZE, PARTICLE_SIZE);
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
   </script>
 </body>
 </html>

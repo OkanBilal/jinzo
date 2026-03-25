@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUp, Apps } from "@/components/ui/icons";
+import { ArrowUp } from "@/components/ui/icons";
 import { groupConsecutiveToolCalls, getToolType } from "../../utils/group-tool-calls";
 import { ToolSubGroupAccordion } from "./tool-sub-group-accordion";
 import type { EventGroup } from "../../utils/group-events";
@@ -7,7 +7,7 @@ import type { EventGroup } from "../../utils/group-events";
 interface ToolCallGroupProps {
   group: EventGroup;
   defaultExpanded?: boolean;
-  variant?: "copilot" | "claude";
+  variant?: "copilot" | "claude" | "codex";
 }
 
 export function ToolCallGroup({
@@ -29,13 +29,14 @@ export function ToolCallGroup({
     <div>
       <button
         onClick={() => setExpandedOverride(!isExpanded)}
-        className="w-full flex items-center gap-1 py-1 cursor-pointer"
+        className="w-full flex items-center gap-0.5 group py-0.5 cursor-pointer"
       >
         <ArrowUp
-          className={`size-3.5 dark:text-primary-200 text-primary-800 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          className={`size-3.5 dark:text-primary-200 text-primary-800 transition-all group-hover:text-primary-950 group-hover:dark:text-primary
+             duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
-        <div className="flex items-center gap-2 group transition-all duration-200">
-          <Apps className="size-4 dark:text-primary-200 text-primary-700 group-hover:text-primary-950 group-hover:dark:text-primary" />
+        <div className="flex items-center gap-1  transition-all duration-200">
+          {/* <Tools className="size-3.5 rotate-90 dark:text-primary-200 text-primary-700 group-hover:text-primary-950 group-hover:dark:text-primary" /> */}
           <span className="text-sm font-medium text-primary-700 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary">
             {toolCount} tool call{toolCount !== 1 ? "s" : ""}
           </span>
@@ -44,7 +45,7 @@ export function ToolCallGroup({
             {moreCount})
           </span>
         </div>
-{/* 
+{/*
         {group.isRunning && (
           <span className="ml-auto flex items-center gap-1.5 text-xs dark:text-primary-200 text-primary-700">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />

@@ -5,6 +5,7 @@ import Copilot from "@/routes/Copilot";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import ClaudePage from "@/routes/Claude";
+import CodexPage from "@/routes/Codex";
 
 function DefaultRoute() {
   const { activeSpace } = useActiveSpace();
@@ -28,7 +29,8 @@ export function MainRoutes() {
       <Route path="/settings" element={<Settings />} />
       <Route path="/copilot" element={<Copilot />} />
       <Route path="/copilot/:workspaceId" element={<Copilot />} />
-
+      <Route path="/codex" element={<CodexPage />} />
+      <Route path="/codex/:workspaceId" element={<CodexPage />} />
     </Routes>
   );
 }

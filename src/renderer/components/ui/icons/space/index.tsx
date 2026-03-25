@@ -32,3 +32,4 @@ export { default as User } from "./user";
 export { default as Vinyl } from "./vinyl";
 export { default as Claude } from "./claude";
 export { default as Copilot } from "./copilot";
+export { default as Gpt } from "./gpt";

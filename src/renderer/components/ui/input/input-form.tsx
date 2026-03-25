@@ -58,7 +58,7 @@ export const InputForm = forwardRef<HTMLTextAreaElement, InputFormProps>(
             }
           }}
           placeholder={placeholder}
-          className="rounded-3xl w-full pl-6 pr-20 py-4 placeholder:text-[15px] outline-none resize-none overflow-hidden
+          className="rounded-2xl w-full pl-5 pr-20 pt-4 pb-6 placeholder:text-[15px] outline-none resize-none overflow-hidden
           dark:text-primary-200 text-primary-700 placeholder:text-primary-500 dark:placeholder:text-primary-500"
         />
         <kbd className="absolute cursor-default right-4 top-4 px-1.5 py-0.5 text-xxs font-sans text-primary-400 dark:text-primary-300 ">

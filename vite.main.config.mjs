@@ -27,6 +27,7 @@ export default defineConfig(() => {
         '@github/copilot-sdk',
         '@github/copilot',
         '@github/copilot-darwin-arm64',
+        '@openai/codex-sdk',
         'vscode-jsonrpc',
         'zod',
         '@img/sharp-darwin-arm64',
@@ -57,6 +58,7 @@ export default defineConfig(() => {
           '@github/copilot-sdk',
           '@github/copilot',
           '@github/copilot-darwin-arm64',
+          '@openai/codex-sdk',
           '@img/sharp-darwin-arm64',
         ];
 

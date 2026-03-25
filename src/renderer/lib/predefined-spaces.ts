@@ -75,4 +75,21 @@ export const predefinedSpaces: PredefinedSpace[] = [
       rightPanel: { width: "22rem", component: "workspace" },
     },
   },
+  {
+    id: "codex",
+    name: "Codex",
+    icon: "icon:code",
+    theme: theme("#a3d9a5", "#0d1117"),
+    systemPrompt: "",
+    uiConfig: {
+      sidebar: {
+        width: "19rem",
+        title: "Workspace",
+        itemType: "workspace",
+        defaultRoute: "/codex",
+      },
+      main: { margin: "19rem" },
+      rightPanel: { width: "22rem", component: "workspace" },
+    },
+  },
 ];

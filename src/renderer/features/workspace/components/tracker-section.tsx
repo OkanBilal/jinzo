@@ -107,7 +107,7 @@ export function TrackerSection({
   const totalCount = issues.length + signals.length;
 
   return (
-    <div className="shrink-0 px-3">
+    <div className="shrink-0 px-3 pb-2">
       {/* Header */}
       <Button
         variant="subtle"

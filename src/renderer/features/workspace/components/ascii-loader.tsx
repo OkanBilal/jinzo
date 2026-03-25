@@ -23,19 +23,43 @@ type LoaderAction = { type: "tick" } | { type: "newWord" };
 function loaderReducer(state: LoaderState, action: LoaderAction): LoaderState {
   switch (action.type) {
     case "tick":
-      return { ...state, frameIndex: (state.frameIndex + 1) % ASCII_FRAMES.length };
+      return {
+        ...state,
+        frameIndex: (state.frameIndex + 1) % ASCII_FRAMES.length,
+      };
     case "newWord":
-      return { ...state, word: LOADER_WORDS[Math.floor(Math.random() * LOADER_WORDS.length)] };
+      return {
+        ...state,
+        word: LOADER_WORDS[Math.floor(Math.random() * LOADER_WORDS.length)],
+      };
   }
 }
 
 // Braille dots ordered by fill density: empty → full → empty (breathing cycle)
 const BREATHING_FRAMES = [
-  "⠀", "⠁", "⠃", "⠇", "⠏", "⠟", "⠿", "⣿",
-  "⣿", "⠿", "⠟", "⠏", "⠇", "⠃", "⠁", "⠀",
+  "⠀",
+  "⠁",
+  "⠃",
+  "⠇",
+  "⠏",
+  "⠟",
+  "⠿",
+  "⣿",
+  "⣿",
+  "⠿",
+  "⠟",
+  "⠏",
+  "⠇",
+  "⠃",
+  "⠁",
+  "⠀",
 ];
 
-export function AsciiSpinner({ variant }: { variant?: "claude" | "copilot" | "null" }) {
+export function AsciiSpinner({
+  variant,
+}: {
+  variant?: "claude" | "copilot" | "codex" | "null";
+}) {
   const [frameIndex, dispatch] = useReducer(
     (i: number) => (i + 1) % BREATHING_FRAMES.length,
     0,
@@ -48,7 +72,7 @@ export function AsciiSpinner({ variant }: { variant?: "claude" | "copilot" | "nu
 
   return (
     <span
-      className={`font-mono text-xs leading-none ${variant === "claude" ? "text-claude" : variant === "copilot" ? "text-copilot" : "text-primary-900 dark:text-primary-200"}`}
+      className={`font-mono text-xs leading-none ${variant === "claude" ? "text-claude" : variant === "copilot" ? "text-copilot" : variant === "codex" ? "text-codex" : "text-primary-900 dark:text-primary-200"}`}
     >
       {BREATHING_FRAMES[frameIndex]}
     </span>
@@ -60,7 +84,7 @@ export function AsciiLoader({
   variant,
 }: {
   className?: string;
-  variant?: "claude" | "copilot";
+  variant?: "claude" | "copilot" | "codex";
 }) {
   const [state, dispatch] = useReducer(loaderReducer, undefined, () => ({
     frameIndex: 0,
@@ -80,7 +104,7 @@ export function AsciiLoader({
   return (
     <div className={`flex items-center gap-2 py-2 ${className || ""}`}>
       <span
-        className={`font-mono text-base ${variant === "claude" ? "text-claude" : variant === "copilot" ? "text-copilot" : "text-primary-900 dark:text-primary-200"}`}
+        className={`font-mono text-base ${variant === "claude" ? "text-claude" : variant === "copilot" ? "text-copilot" : variant === "codex" ? "text-codex" : "text-primary-900 dark:text-primary-200"}`}
       >
         {ASCII_FRAMES[state.frameIndex]}
       </span>

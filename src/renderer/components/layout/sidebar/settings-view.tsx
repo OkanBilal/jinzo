@@ -8,6 +8,7 @@ import {
   CopilotStatic,
   Branch,
   Chart,
+  Gpt,
 } from "@/components/ui/icons";
 type SettingsSection =
   | "general"
@@ -53,7 +54,7 @@ const menuItems: Array<MenuItem> = [
 const providerItems: Array<MenuItem> = [
   { id: "claude", label: "Claude", icon: Claude },
   { id: "copilot", label: "Copilot", icon: CopilotStatic },
-  // { id: "codex", label: "Codex", icon: Gpt }
+  { id: "codex", label: "Codex", icon: Gpt },
 ];
 
 export default function SettingsView({ onClose }: SettingsViewProps) {
