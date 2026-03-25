@@ -3,7 +3,6 @@ import {
   WorkspaceEmptyState,
   WorkspaceEvents,
   WorkspaceInput,
-  WorkspaceQuickActions,
   WorkspaceTabs,
   TerminalSection,
 } from "@/features/workspace/components";
@@ -108,11 +107,7 @@ export default function CopilotPage() {
           />
         )}
       </div>
-      <WorkspaceQuickActions
-        onSetGoal={ws.setGoal}
-        projectId={ws.currentWorkspace?.projectId ?? undefined}
-        providerId={COPILOT_CLI_PROVIDER_ID}
-      />
+
       <WorkspaceInput
         goal={ws.goal}
         onGoalChange={ws.setGoal}

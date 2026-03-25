@@ -41,7 +41,6 @@ export default function CodexSettings() {
   const networkAccessEnabled = (config as any).networkAccessEnabled ?? true;
   const webSearchMode = (config as any).webSearchMode ?? "live";
   const skipGitRepoCheck = (config as any).skipGitRepoCheck ?? false;
-  const showQuickActions = (config as any).showQuickActions !== false;
 
   const structuredOutputs = ((config as any).structuredOutputs ?? {}) as Record<
     string,
@@ -166,20 +165,6 @@ export default function CodexSettings() {
         </SettingsRow>
       </SettingsSection>
 
-      <SettingsSection title="Workspace">
-        <SettingsRow
-          title="Quick Actions"
-          description="Show quick action buttons in workspace"
-        >
-          <Toggle
-            enabled={showQuickActions}
-            onChange={(enabled) => {
-              updateConfig({ showQuickActions: enabled });
-              toast.success(enabled ? "Quick actions enabled" : "Quick actions hidden");
-            }}
-          />
-        </SettingsRow>
-      </SettingsSection>
 
       {codexSpace && (
         <SettingsSection title="Space">

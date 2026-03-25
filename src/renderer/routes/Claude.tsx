@@ -3,7 +3,6 @@ import {
   WorkspaceEmptyState,
   WorkspaceEvents,
   WorkspaceInput,
-  WorkspaceQuickActions,
   WorkspaceTabs,
   TerminalSection,
 } from "@/features/workspace/components";
@@ -118,11 +117,6 @@ export default function ClaudePage() {
           />
         )}
       </div>
-      <WorkspaceQuickActions
-        onSetGoal={ws.setGoal}
-        projectId={ws.currentWorkspace?.projectId ?? undefined}
-        providerId={CLAUDE_PROVIDER_ID}
-      />
       <WorkspaceInput
         goal={ws.goal}
         onGoalChange={ws.setGoal}

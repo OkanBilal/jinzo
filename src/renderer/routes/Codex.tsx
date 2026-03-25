@@ -5,7 +5,6 @@ import {
   WorkspaceInput,
   WorkspaceTabs,
   TerminalSection,
-  WorkspaceQuickActions,
 } from "@/features/workspace/components";
 import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
 import { useAbortRunMutation } from "@/lib/redux/api";
@@ -108,11 +107,6 @@ export default function CodexPage() {
           />
         )}
       </div>
-      <WorkspaceQuickActions
-        onSetGoal={ws.setGoal}
-        projectId={ws.currentWorkspace?.projectId ?? undefined}
-        providerId={CODEX_PROVIDER_ID}
-      />
 
       <WorkspaceInput
         goal={ws.goal}
