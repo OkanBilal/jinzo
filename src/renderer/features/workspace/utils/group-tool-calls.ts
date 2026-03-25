@@ -39,11 +39,13 @@ export function getToolType(content: string): string {
     return "Shell";
   if (lower === "edit" || lower.includes("edit")) return "Edit";
   if (lower === "write" || lower.includes("write")) return "Write";
+  if (lower === "websearch" || lower === "web_search") return "WebSearch";
   if (lower === "search" || lower === "find") return "Search";
   if (lower === "glob") return "Glob";
   if (lower === "grep") return "Grep";
   if (lower === "report_intent") return "Report Intent";
   if (lower === "toolsearch") return "ToolSearch";
+  if (lower === "delete") return "Delete";
 
   return toolName;
 }

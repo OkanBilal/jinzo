@@ -16,7 +16,7 @@ import { useClickOutside } from "@/hooks/use-click-outside";
 import { Bolt } from "@/components/ui/icons/space";
 
 interface InputToolbarProps {
-  variant: "claude" | "copilot";
+  variant: "claude" | "copilot" | "codex";
   isLoading: boolean;
   onSubmit: () => void;
   onGoalChange: (value: string) => void;
@@ -38,7 +38,7 @@ interface InputToolbarProps {
   // Effort level (Claude only)
   effortLevel: string;
   onEffortLevelChange: (level: string) => void;
-  supportedEffortLevels?: ("low" | "medium" | "high" | "max")[];
+  supportedEffortLevels?: ("minimal" | "low" | "medium" | "high" | "max" | "xhigh")[];
   // Stop run (active run is running)
   isRunning: boolean;
   onStop?: () => void;
@@ -177,8 +177,9 @@ export function InputToolbar({
             openUpward={true}
             isLoading={isLoadingModels}
           />
-          {variant === "claude" && (
+          {(variant === "claude" || variant === "codex") && (
             <>
+              {variant === "claude" && (
               <Button
                 tooltip="Toggle Plan Mode"
                 type="button"
@@ -199,6 +200,7 @@ export function InputToolbar({
                 />
                 Plan
               </Button>
+              )}
               {supportedEffortLevels && supportedEffortLevels.length > 0 ? (
                 <div className="relative" ref={thinkingDropdownRef}>
                   <Button
@@ -232,6 +234,7 @@ export function InputToolbar({
                     minWidth="min-w-28"
                     useFixedBackground={true}
                   >
+                    {variant !== "codex" && (
                     <Button
                       type="button"
                       onClick={() => {
@@ -246,6 +249,7 @@ export function InputToolbar({
                     >
                       Off
                     </Button>
+                    )}
                     {supportedEffortLevels.map((level) => (
                       <Button
                         key={level}
@@ -265,7 +269,7 @@ export function InputToolbar({
                     ))}
                   </DropdownWrapper>
                 </div>
-              ) : (
+              ) : variant === "claude" ? (
                 <Button
                   tooltip="Toggle Thinking Mode"
                   type="button"
@@ -287,7 +291,7 @@ export function InputToolbar({
                     {thinkingMode ? "Think" : ""}
                   </span>
                 </Button>
-              )}
+              ) : null}
             </>
           )}
           {supportsFastMode && (

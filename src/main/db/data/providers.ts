@@ -43,4 +43,28 @@ export const seedProviders: CreateProviderPayload[] = [
       notes: "Claude Code adapter using Anthropic SDK",
     },
   },
+
+  {
+    id: "codex",
+    kind: "agent_runtime",
+    displayName: "OpenAI Codex (CLI/SDK)",
+    isEnabled: true,
+    defaultModel: "gpt-5.4",
+    config: {
+      timeout: 600000,
+      approvalMode: "on-failure",
+      sandboxMode: "workspace-write",
+      permissionMode: "default",
+      networkAccessEnabled: true,
+      webSearchMode: "live",
+    },
+    capabilities: {
+      mode: ["run"],
+      tools: true,
+      streaming: true,
+      workspaceAware: true,
+      artifacts: ["patch", "file", "log", "command_result"],
+      notes: "OpenAI Codex adapter using @openai/codex-sdk",
+    },
+  },
 ];

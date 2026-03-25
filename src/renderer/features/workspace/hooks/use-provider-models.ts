@@ -12,7 +12,7 @@ import type { RootState } from "@/lib/redux";
 
 export function useProviderModels(
   activeProviderId: string,
-  variant: "claude" | "copilot",
+  variant: "claude" | "copilot" | "codex",
   externalSelectedModel?: string,
   externalOnModelChange?: (model: string) => void,
   workspacePath?: string,
@@ -37,13 +37,17 @@ export function useProviderModels(
     );
 
   const { data: providerData } = useGetProviderByIdQuery(activeProviderId, {
-    skip: variant !== "claude",
+    skip: variant !== "claude" && variant !== "codex",
   });
   const [updateProvider] = useUpdateProviderMutation();
   const planMode = !!(providerData?.config as any)?.planMode;
-  const thinkingMode = !!(providerData?.config as any)?.thinkingMode;
+  const thinkingMode = variant === "codex"
+    ? !!(providerData?.config as any)?.modelReasoningEffort
+    : !!(providerData?.config as any)?.thinkingMode;
   const fastMode = !!(providerData?.config as any)?.fastMode;
-  const effortLevel: string = (providerData?.config as any)?.effortLevel || "";
+  const effortLevel: string = variant === "codex"
+    ? (providerData?.config as any)?.modelReasoningEffort || ""
+    : (providerData?.config as any)?.effortLevel || "";
 
   const handlePlanModeToggle = useCallback(async () => {
     if (!providerData) return;
@@ -90,18 +94,32 @@ export function useProviderModels(
   const handleEffortLevelChange = useCallback(async (level: string) => {
     if (!providerData) return;
     const currentConfig = providerData.config ?? {};
-    const enableThinking = !!level;
-    await updateProvider({
-      id: activeProviderId,
-      payload: {
-        config: {
-          ...currentConfig,
-          thinkingMode: enableThinking,
-          effortLevel: level || undefined,
+    if (variant === "codex") {
+      // Codex uses modelReasoningEffort in its config
+      await updateProvider({
+        id: activeProviderId,
+        payload: {
+          config: {
+            ...currentConfig,
+            modelReasoningEffort: level || undefined,
+          },
         },
-      },
-    });
-  }, [providerData, activeProviderId, updateProvider]);
+      });
+    } else {
+      // Claude uses thinkingMode + effortLevel
+      const enableThinking = !!level;
+      await updateProvider({
+        id: activeProviderId,
+        payload: {
+          config: {
+            ...currentConfig,
+            thinkingMode: enableThinking,
+            effortLevel: level || undefined,
+          },
+        },
+      });
+    }
+  }, [providerData, activeProviderId, updateProvider, variant]);
 
   const { modelDisplayNames } = useMemo(() => {
     if (providerModels && providerModels.length > 0) {

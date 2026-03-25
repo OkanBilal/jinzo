@@ -10,10 +10,10 @@ import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
 import { useAbortRunMutation } from "@/lib/redux/api";
 import { useSetMainHeader } from "@/hooks/use-main-header";
 
-const COPILOT_CLI_PROVIDER_ID = "copilot_cli";
+const CODEX_PROVIDER_ID = "codex";
 
-export default function CopilotPage() {
-  const ws = useWorkspacePage(COPILOT_CLI_PROVIDER_ID);
+export default function CodexPage() {
+  const ws = useWorkspacePage(CODEX_PROVIDER_ID);
   const [abortRun] = useAbortRunMutation();
 
   const { pendingApprovals, respond: respondToolApproval } = useToolApproval();
@@ -32,7 +32,7 @@ export default function CopilotPage() {
     () =>
       ws.showEmptyState ? null : (
         <WorkspaceTabs
-          variant="copilot"
+          variant="codex"
           runs={ws.runs}
           activeTab={ws.activeTab}
           hasSelectedFile={!!ws.selectedFile}
@@ -98,7 +98,7 @@ export default function CopilotPage() {
             eventsEndRef={ws.eventsEndRef as React.RefObject<HTMLDivElement>}
             issueTabs={ws.openIssueTabs}
             signalTabs={ws.openSignalTabs}
-            variant="copilot"
+            variant="codex"
             turns={ws.currentTurns}
             pendingApproval={currentApproval}
             onApprovalRespond={respondToolApproval}
@@ -108,7 +108,7 @@ export default function CopilotPage() {
       <WorkspaceQuickActions
         onSetGoal={ws.setGoal}
         projectId={ws.currentWorkspace?.projectId ?? undefined}
-        providerId={COPILOT_CLI_PROVIDER_ID}
+        providerId={CODEX_PROVIDER_ID}
       />
       <WorkspaceInput
         goal={ws.goal}
@@ -117,7 +117,7 @@ export default function CopilotPage() {
         isLoading={ws.isLoading}
         activeRun={ws.activeRun}
         canResume={ws.canResume ?? false}
-        providerId={COPILOT_CLI_PROVIDER_ID}
+        providerId={CODEX_PROVIDER_ID}
         selectedModel={ws.selectedModel}
         onModelChange={ws.handleModelChange}
         contextFiles={ws.contextFiles}

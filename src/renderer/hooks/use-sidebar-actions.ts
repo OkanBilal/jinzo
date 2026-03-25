@@ -215,7 +215,7 @@ export function useSidebarActions() {
 
         toast.success("Workspace added");
         const basePath = getBaseRoutePath(
-          routeType === "claude" ? "claude" : "copilot",
+          routeType === "claude" ? "claude" : routeType === "copilot" ? "copilot" : "codex",
         );
         navigate(`${basePath}/${workspaceId}`);
       }
@@ -351,7 +351,7 @@ export function useSidebarActions() {
       toast.success("Repository cloned and workspace created");
       setIsCloneModalOpen(false);
       const basePath = getBaseRoutePath(
-        routeType === "claude" ? "claude" : "copilot",
+        routeType === "claude" ? "claude" : routeType === "copilot" ? "copilot" : "codex",
       );
       navigate(`${basePath}/${workspaceId}`);
     } catch (error) {

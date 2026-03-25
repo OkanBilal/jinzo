@@ -388,7 +388,7 @@ interface WorkspaceEventsProps {
   issueTabs: IssueWithEntity[];
   signalTabs?: SignalWithEntity[];
   turns?: RunTurn[];
-  variant?: "copilot" | "claude";
+  variant?: "copilot" | "claude" | "codex";
   pendingApproval?: ToolApprovalRequest;
   onApprovalRespond?: (requestId: string, approved: boolean, answer?: string) => void;
   onForkRun?: (sourceRunId: string, message: string) => Promise<string | null>;

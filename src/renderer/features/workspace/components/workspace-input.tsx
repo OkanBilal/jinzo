@@ -73,10 +73,10 @@ export function WorkspaceInput({
   const dispatch = useDispatch();
 
   const variant = useWorkspaceVariant();
-  const providerVariant: "claude" | "copilot" =
-    variant === "claude" ? "claude" : "copilot";
+  const providerVariant: "claude" | "copilot" | "codex" =
+    variant === "claude" ? "claude" : variant === "codex" ? "codex" : "copilot";
   const defaultProviderId =
-    providerVariant === "claude" ? "claude_code" : "copilot_cli";
+    providerVariant === "claude" ? "claude_code" : providerVariant === "codex" ? "codex" : "copilot_cli";
   const activeProviderId = providerId ?? defaultProviderId;
 
   const {

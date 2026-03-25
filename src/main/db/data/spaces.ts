@@ -61,4 +61,26 @@ export const seedSpaces: SeedSpace[] = [
     },
     sortOrder: 1,
   },
+  {
+    id: "codex",
+    name: "Codex",
+    slug: "codex",
+    icon: "icon:codex",
+    systemPrompt: "",
+    themeConfig: {
+      lightBackground: "#d5dde5",
+      darkBackground: "#0d1117bf",
+    },
+    uiConfig: {
+      sidebar: {
+        width: "19rem",
+        title: "Repository",
+        itemType: "workspace",
+        defaultRoute: "/codex",
+      },
+      main: { margin: "19rem" },
+      rightPanel: { width: "22rem", component: "workspace" },
+    },
+    sortOrder: 2,
+  },
 ];

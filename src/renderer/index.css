@@ -110,13 +110,12 @@ html:not(.app-ready) *::after {
   --color-primary-900: #141414;
   --color-primary-950: #0c0c0c;
 
-  /* Semantic status colors */
-  --color-accent: #009EFF;
-  --color-accent-hover: #007ACC;
+
   --color-danger: #ff4436;
   --color-danger-hover: #e33221;
   --color-claude: #D97757;
-  --color-copilot: #4361c2;
+  --color-copilot: #8534F3;
+  --color-codex: #0169CC;
 
   /* Z-index layers */
   --z-base: 10;
