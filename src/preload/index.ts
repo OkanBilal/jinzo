@@ -294,6 +294,7 @@ const api = {
       runId: string;
       accountId: string;
       message: string;
+      model?: string;
       additionalContext?: Array<{
         kind: "file" | "diff" | "selection" | "note";
         ref?: string;

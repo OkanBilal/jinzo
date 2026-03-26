@@ -54,7 +54,6 @@ export interface RecentSession {
   goal: string | null;
   status: string;
   providerId: string;
-  model: string | null;
   projectName: string | null;
   durationMs: number | null;
   totalCostUsd: number | null;

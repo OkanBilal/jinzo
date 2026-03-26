@@ -714,6 +714,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         const sandboxMode = config.sandboxMode ?? "workspace-write";
 
         const thread = client.resumeThread(threadId, {
+          model: request.model || config.defaultModel || undefined,
           workingDirectory: request.workspace.rootPath,
           approvalPolicy,
           sandboxMode,

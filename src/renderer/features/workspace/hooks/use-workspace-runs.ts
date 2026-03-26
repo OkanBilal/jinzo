@@ -286,6 +286,7 @@ export function useWorkspaceRuns(
     contextIssues?: ContextIssue[],
     contextFiles?: ContextFile[],
     contextSignals?: ContextSignal[],
+    model?: string,
   ) => {
     if (!message.trim()) {
       setError("Please enter a message");
@@ -297,6 +298,7 @@ export function useWorkspaceRuns(
         runId,
         accountId,
         message: message.trim(),
+        model: model || undefined,
         attachments,
         contextIssues: contextIssues?.map(i => ({ provider: i.provider, number: i.number, title: i.title, body: i.body })),
         contextFiles: contextFiles?.map(f => ({ path: f.fullPath })),

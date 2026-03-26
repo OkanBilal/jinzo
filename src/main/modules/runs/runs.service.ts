@@ -1237,6 +1237,7 @@ export const runsService = {
             ? { id: workspace.id, rootPath: workspace.rootPath }
             : { id: "", rootPath: process.cwd() },
           message,
+          model: payload.model,
           context: additionalContext as any,
           attachments: payload.attachments,
           contextIssues: payload.contextIssues,

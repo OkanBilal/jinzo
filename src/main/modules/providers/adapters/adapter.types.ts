@@ -228,6 +228,8 @@ export interface WorkRunContinueRequest {
   };
   /** The follow-up message/goal */
   message: string;
+  /** Model to use for this continuation (overrides provider default) */
+  model?: string | null;
   /** Additional context to add */
   context?: WorkRunContextItem[];
   /** File attachments (images/documents) to include in the prompt */
@@ -266,6 +268,8 @@ export interface WorkRunForkRequest {
   };
   /** The message/goal for the forked session */
   message: string;
+  /** Model to use for this fork (overrides provider default) */
+  model?: string | null;
   /** Additional context to add */
   context?: WorkRunContextItem[];
   /** File attachments (images/documents) to include in the prompt */

@@ -1683,7 +1683,7 @@ export function createClaudeAdapter(
         }
 
         const options = buildOptions(
-          getModel(config.defaultModel),
+          getModel(request.model ?? config.defaultModel),
           request.workspace.rootPath,
           abortController,
           sessionId, // Resume with session ID
@@ -2005,7 +2005,7 @@ export function createClaudeAdapter(
         }
 
         const options = buildOptions(
-          getModel(config.defaultModel),
+          getModel(request.model ?? config.defaultModel),
           request.workspace.rootPath,
           abortController,
           sourceSessionId,

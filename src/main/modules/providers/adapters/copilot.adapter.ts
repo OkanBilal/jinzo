@@ -1370,7 +1370,9 @@ export function createCopilotAdapter(
         const workspaceId = request.workspace.id ?? null;
         const resumeReasoningEffort = (config as any).modelReasoningEffort as ReasoningEffort | undefined;
         const resumeHomedir = os.homedir();
+        const resumeModel = request.model || config.defaultModel;
         const resumeConfig: Omit<SessionConfig, 'sessionId'> = {
+          ...(resumeModel && { model: resumeModel }),
           tools: buildJinzoTools(workspaceId, request.workspace.rootPath, runId),
           onPermissionRequest: permissionMode === "bypassPermissions"
             ? approveAllPermissions

@@ -181,7 +181,7 @@ export function useWorkspacePage(providerId: string) {
       : undefined;
 
     if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
-      const success = (await continueRun(activeRunId, goal, attachments, contextIssues, contextFiles, contextSignals)) ?? false;
+      const success = (await continueRun(activeRunId, goal, attachments, contextIssues, contextFiles, contextSignals, selectedModel)) ?? false;
       if (success) clearInputState();
     } else {
       const newRunId = await executeRun(
@@ -225,7 +225,7 @@ export function useWorkspacePage(providerId: string) {
       if (!workspaceId) return;
       const run = async () => {
         if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
-          const success = (await continueRun(activeRunId, goal)) ?? false;
+          const success = (await continueRun(activeRunId, goal, undefined, undefined, undefined, undefined, selectedModel)) ?? false;
           if (success) clearInputState();
         } else {
           const newRunId = await executeRun(goal, selectedWorkspace, providerId, selectedModel);

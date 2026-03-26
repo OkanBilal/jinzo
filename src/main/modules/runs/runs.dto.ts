@@ -277,6 +277,8 @@ export interface ContinueRunPayload {
   accountId: string;
   /** The follow-up message to send */
   message: string;
+  /** Model to use for this continuation (overrides provider default) */
+  model?: string | null;
   /** Additional context to add */
   additionalContext?: StartRunContextItem[];
   /** File attachments (images/documents) serialized as base64 for IPC */
