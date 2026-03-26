@@ -132,7 +132,7 @@ export default function AppsSettings({
           <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100 mb-3">
             Available
           </h3>
-          <div className="grid grid-cols-3 gap-4 pb-12">
+          <div className="grid grid-cols-2 gap-4 pb-12">
             {notConnectedFiltered.map((app) => (
               <AppCard
                 key={app.id}

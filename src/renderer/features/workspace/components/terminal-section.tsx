@@ -1,5 +1,5 @@
 import { Close, Bash } from "@/components/ui/icons";
-import { Button, Caption } from "@/components/ui";
+import { Body, Button } from "@/components/ui";
 import { XtermTerminal } from "./xterm-terminal";
 
 interface TerminalSectionProps {
@@ -23,11 +23,11 @@ export function TerminalSection({
       style={{ height: isOpen ? "15.5rem" : "0px" }}
     >
       <div className="flex items-center justify-between px-3 py-1.5">
-        <div className="flex items-center gap-1.5">
-          <Bash className="size-3 text-primary-500 dark:text-primary-400" />
-          <Caption className="text-primary-600 dark:text-primary-400! font-medium text-xs">
+        <div className="flex items-center gap-2">
+          <Bash className="size-3 text-primary-500 dark:text-primary-300" />
+          <Body className="text-primary-600 dark:text-primary-200! font-medium text-[13px]">
             Terminal
-          </Caption>
+          </Body>
         </div>
         {onClose && (
           <Button
@@ -36,7 +36,7 @@ export function TerminalSection({
             onClick={onClose}
             className="p-0.5 rounded text-primary-500 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-100 transition-colors cursor-pointer"
           >
-            <Close className="size-3" />
+            <Close className="size-4" />
           </Button>
         )}
       </div>

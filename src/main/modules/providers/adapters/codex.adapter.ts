@@ -689,18 +689,23 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         break;
 
       default:
-        // Ignore all streaming deltas and internal notifications
+        // Ignore all streaming deltas, internal lifecycle, and noisy notifications
         if (
-          !method.startsWith("thread/") &&
-          !method.startsWith("turn/") &&
-          !method.startsWith("account/") &&
-          !method.includes("Delta") &&
-          !method.includes("delta") &&
-          !method.includes("progress") &&
-          !method.includes("terminalInteraction")
+          method.startsWith("thread/") ||
+          method.startsWith("turn/") ||
+          method.startsWith("account/") ||
+          method.startsWith("skills/") ||
+          method.startsWith("config/") ||
+          method.startsWith("plugin/") ||
+          method.includes("Delta") ||
+          method.includes("delta") ||
+          method.includes("progress") ||
+          method.includes("terminalInteraction") ||
+          method.includes("guardian")
         ) {
-          events.push({ type: "log", message: `[codex:${method}] ${safeJson(p)}`, level: "info", ts });
+          break;
         }
+        events.push({ type: "log", message: `[codex:${method}] ${safeJson(p)}`, level: "info", ts });
         break;
     }
 
@@ -1338,9 +1343,18 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             const effortOptions = m.supportedReasoningEfforts as Array<{ reasoningEffort: string }> | undefined;
             const effortLevels = effortOptions?.map((e) => e.reasoningEffort) as ("low" | "medium" | "high" | "xhigh")[] | undefined;
 
+            const rawName = (m.displayName as string) || (m.id as string);
+            // Format display name: "gpt-5.4" → "GPT-5.4", "gpt-5.1-codex-mini" → "GPT-5.1 Codex Mini"
+            const displayName = rawName
+              .replace(/^gpt-/i, "GPT-")
+              .replace(/-codex/i, " Codex")
+              .replace(/-mini$/i, " Mini")
+              .replace(/-max$/i, " Max")
+              .replace(/-spark$/i, " Spark");
+
             return {
               id: m.id as string,
-              displayName: (m.displayName as string) || (m.id as string),
+              displayName,
               isDefault: (m.isDefault as boolean) || (m.id as string) === config.defaultModel,
               description: m.description as string | undefined,
               capabilities: {
@@ -1390,6 +1404,36 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       } catch (error) {
         logError("Failed to get rate limits:", error);
         return null;
+      }
+    },
+
+    async listSkills(): Promise<import("./adapter.types").SkillInfo[]> {
+      try {
+        if (!appServer?.isRunning) return [];
+        const result = await appServer.sendRequest("skills/list", {}) as Record<string, unknown>;
+        const entries = result?.data as Array<Record<string, unknown>> | undefined;
+        if (!entries || !Array.isArray(entries)) return [];
+
+        const skills: import("./adapter.types").SkillInfo[] = [];
+        for (const entry of entries) {
+          const entrySkills = entry.skills as Array<Record<string, unknown>> | undefined;
+          if (!entrySkills) continue;
+          for (const s of entrySkills) {
+            if (!s.enabled) continue;
+            const iface = s.interface as Record<string, unknown> | undefined;
+            skills.push({
+              name: s.name as string,
+              description: (iface?.shortDescription as string) || (s.shortDescription as string) || (s.description as string) || "",
+              source: (s.scope === "user" ? "user" : s.scope === "repo" ? "project" : undefined) as "user" | "project" | undefined,
+              path: s.path as string | undefined,
+              userInvokable: true,
+            });
+          }
+        }
+        return skills;
+      } catch (error) {
+        logError("Failed to list skills:", error);
+        return [];
       }
     },
 

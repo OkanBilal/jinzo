@@ -33,7 +33,7 @@ export function useProviderModels(
   const { data: providerSkills = [], isLoading: isLoadingSkills } =
     useGetProviderSkillsQuery(
       { id: activeProviderId, workspacePath },
-      { skip: !activeProviderId || variant !== "claude" },
+      { skip: !activeProviderId || (variant !== "claude" && variant !== "codex") },
     );
 
   const { data: providerData } = useGetProviderByIdQuery(activeProviderId, {

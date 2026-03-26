@@ -15,6 +15,7 @@ import {
   clearSignalTabs,
   clearNoteTabs,
   setActiveWorkspaceId,
+  setActiveWorkspaceForProvider,
   clearPendingGoal,
 } from "@/lib/redux/slices/workspaceSlice";
 import { isRunTab, isNewRunTab } from "@/features/workspace/utils/repo-utils";
@@ -76,11 +77,14 @@ export function useWorkspacePage(providerId: string) {
   );
 
   const { workspaceId, selectedWorkspace, currentWorkspace } =
-    useWorkspaceData();
+    useWorkspaceData(providerId);
 
   useEffect(() => {
     dispatch(setActiveWorkspaceId(workspaceId ?? null));
-  }, [workspaceId, dispatch]);
+    if (workspaceId) {
+      dispatch(setActiveWorkspaceForProvider({ providerId, workspaceId }));
+    }
+  }, [workspaceId, providerId, dispatch]);
 
   useEffect(() => {
     dispatch(clearSelectedFile());

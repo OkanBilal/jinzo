@@ -31,6 +31,7 @@ export interface ContextSignal {
 
 export interface WorkspaceState {
   activeWorkspaceId: string | null;
+  activeWorkspaceIdByProvider: Record<string, string>;
   selectedModelByProvider: Record<string, string>;
   selectedProviderId: string;
   thinkingEnabled: boolean;
@@ -51,6 +52,7 @@ export interface WorkspaceState {
 
 const initialState: WorkspaceState = {
   activeWorkspaceId: null,
+  activeWorkspaceIdByProvider: {},
   selectedModelByProvider: {},
   selectedProviderId: "claude_code",
   thinkingEnabled: false,
@@ -75,6 +77,9 @@ const workspaceSlice = createSlice({
   reducers: {
     setActiveWorkspaceId: (state, action: PayloadAction<string | null>) => {
       state.activeWorkspaceId = action.payload;
+    },
+    setActiveWorkspaceForProvider: (state, action: PayloadAction<{ providerId: string; workspaceId: string }>) => {
+      state.activeWorkspaceIdByProvider[action.payload.providerId] = action.payload.workspaceId;
     },
     setWorkspaceModel: (state, action: PayloadAction<{ providerId: string; model: string }>) => {
       state.selectedModelByProvider[action.payload.providerId] = action.payload.model;
@@ -223,6 +228,7 @@ const workspaceSlice = createSlice({
 
 export const {
   setActiveWorkspaceId,
+  setActiveWorkspaceForProvider,
   setWorkspaceModel,
   setWorkspaceProvider,
   setWorkspaceThinkingEnabled,

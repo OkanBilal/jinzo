@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { Caption } from "@/components/ui";
 import { ArrowUp } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
@@ -13,6 +14,7 @@ import type { Workspace as WorkspaceResponse } from "@/lib/redux/api/workspacesA
 import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
 import { useRouteType } from "@/hooks/use-route-type";
 import { getBaseRoutePath } from "@/lib/route-utils";
+import type { RootState } from "@/lib/redux";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspacesApi";
@@ -112,6 +114,9 @@ export default function WorkspacesList({
   const location = useLocation();
   const routeType = useRouteType();
   const [updateWorkspace] = useUpdateWorkspaceMutation();
+  const activeWorkspaceId = useSelector(
+    (state: RootState) => state.workspace.activeWorkspaceId,
+  );
 
   // Grouping state
   const [grouping, setGrouping] = useState<GroupingMode>(() => {
@@ -288,7 +293,8 @@ export default function WorkspacesList({
   const groups = grouping !== "none" ? computeGroups() : [];
 
   const renderWorkspaceItem = (workspace: WorkspaceResponse) => {
-    const isActive = location.pathname === `${basePath}/${workspace.id}`;
+    const isActive = location.pathname === `${basePath}/${workspace.id}` ||
+      (location.pathname === basePath && activeWorkspaceId === workspace.id);
     const projectData = workspace.projectId
       ? projectDataMap.get(workspace.projectId)
       : undefined;

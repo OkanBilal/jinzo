@@ -218,7 +218,7 @@ export function InputToolbar({
   );
 
   return (
-    <div className="flex items-start space-x-2 px-3">
+    <div className="flex items-start space-x-2 px-3 pt-6">
       <div className="flex items-center justify-between w-full">
         <div className="flex items-center relative gap-1">
           {variant === "codex" ? (
