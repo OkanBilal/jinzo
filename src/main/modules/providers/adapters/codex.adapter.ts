@@ -11,6 +11,7 @@ import type {
   WorkRunAdapter,
   WorkRunRequest,
   WorkRunContinueRequest,
+  WorkRunForkRequest,
   WorkRunResult,
   WorkRunUsage,
   WorkRunEventHandler,
@@ -1261,6 +1262,112 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         logError("continueRun failed:", msg);
+        await onEvent({ type: "status", status: "failed", error: msg, ts: Date.now() });
+        flushUsage(runId);
+        return { status: "failed", summary: msg };
+      } finally {
+        activeRuns.delete(runId);
+        cancelPendingRequests(runId);
+      }
+    },
+
+    async forkRun(
+      request: WorkRunForkRequest,
+      onEvent: WorkRunEventHandler,
+    ): Promise<WorkRunResult> {
+      const { runId, sourceRunId, message } = request;
+      const resolvedModel = request.model || config.defaultModel || undefined;
+      const timeout = config.timeout ?? 600000;
+      const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
+
+      try {
+        await onEvent({ type: "status", status: "running", ts: Date.now() });
+        logInfo(`Forking session from run ${sourceRunId} into new run ${runId}`);
+
+        const server = await ensureServer();
+
+        // Resolve source thread ID
+        let sourceThreadId = sessionIdMap.get(sourceRunId);
+        if (!sourceThreadId) {
+          const sourceRun = await runsRepo.findRunById(sourceRunId);
+          if (sourceRun?.sessionId) {
+            sourceThreadId = sourceRun.sessionId;
+            sessionIdMap.set(sourceRunId, sourceThreadId);
+          }
+        }
+        if (!sourceThreadId) {
+          throw new Error(`No session found for source run ${sourceRunId}. Cannot fork.`);
+        }
+
+        const approvalPolicy = config.approvalMode ?? mapPermissionMode(config.permissionMode);
+        const sandbox = mapSandboxMode(config.sandboxMode);
+
+        // 1. Fork thread via thread/fork
+        const forkResult = await server.sendRequest("thread/fork", {
+          threadId: sourceThreadId,
+          cwd: request.workspace.rootPath,
+          approvalPolicy,
+          sandbox,
+          ...(resolvedModel ? { model: resolvedModel } : {}),
+        }) as Record<string, unknown>;
+
+        const forkedThread = forkResult?.thread as Record<string, unknown> | undefined;
+        const forkedThreadId = (forkedThread?.id ?? forkResult?.threadId) as string | undefined;
+
+        if (!forkedThreadId) {
+          throw new Error("thread/fork did not return a new thread ID");
+        }
+
+        sessionIdMap.set(runId, forkedThreadId);
+        runsRepo.updateRun(runId, { sessionId: forkedThreadId }).catch((err) =>
+          logError("Failed to persist forked session ID:", err),
+        );
+
+        activeRuns.set(runId, {
+          threadId: forkedThreadId,
+          turnId: null,
+          aborted: false,
+          currentMessageItemId: null,
+          agentMessageBuffer: "",
+          pendingFlush: [],
+        });
+
+        // Emit user prompt artifact
+        await emitUserPromptArtifact(onEvent, message, {
+          attachments: request.attachments,
+        });
+
+        // 2. Start turn on the forked thread
+        const turnInput = buildContinueTurnInput(message, {
+          runId,
+          message,
+          workspace: request.workspace,
+          attachments: request.attachments,
+        } as WorkRunContinueRequest);
+
+        await server.sendRequest("turn/start", {
+          threadId: forkedThreadId,
+          input: turnInput,
+          ...(resolvedModel ? { model: resolvedModel } : {}),
+          ...(config.modelReasoningEffort ? { effort: config.modelReasoningEffort } : {}),
+        });
+
+        // 3. Wait for turn completion
+        const result = await waitForTurnCompletion(server, runId, resolvedModel, onEvent, collectedArtifacts, timeout);
+
+        const usage = flushUsage(runId);
+
+        await onEvent({ type: "status", status: result.status, error: result.error, ts: Date.now() });
+
+        return {
+          status: result.status,
+          summary: result.error,
+          artifacts: collectedArtifacts,
+          usage,
+        };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        logError("forkRun failed:", msg);
         await onEvent({ type: "status", status: "failed", error: msg, ts: Date.now() });
         flushUsage(runId);
         return { status: "failed", summary: msg };

@@ -104,6 +104,7 @@ export default function CodexPage() {
             turns={ws.currentTurns}
             pendingApproval={currentApproval}
             onApprovalRespond={respondToolApproval}
+            onForkRun={ws.handleForkRun}
           />
         )}
       </div>
