@@ -233,7 +233,12 @@ interface SessionEvent {
 interface CopilotSession {
   send(options: {
     prompt: string;
-    attachments?: Array<{ type: string; path: string }>;
+    attachments?: Array<
+      | { type: "file"; path: string; displayName?: string }
+      | { type: "directory"; path: string; displayName?: string }
+      | { type: "selection"; filePath: string; displayName: string; selection?: { start: { line: number; character: number }; end: { line: number; character: number } }; text?: string }
+      | { type: "blob"; data: string; mimeType: string; displayName?: string }
+    >;
   }): Promise<string>;
   sendAndWait(
     options: { prompt: string },
@@ -241,7 +246,16 @@ interface CopilotSession {
   ): Promise<SessionEvent | undefined>;
   on(handler: (event: SessionEvent) => void): () => void;
   abort(): Promise<void>;
+  /** Disconnect session, release in-memory resources. Disk state preserved for resume. */
+  disconnect(): Promise<void>;
+  /** @deprecated Use disconnect() instead */
   destroy(): Promise<void>;
+  /** Change the model mid-session */
+  setModel(model: string, options?: { reasoningEffort?: ReasoningEffort }): Promise<void>;
+  /** Retrieve full session event history */
+  getMessages(): Promise<SessionEvent[]>;
+  /** Log a message to session timeline */
+  log(message: string, options?: { level?: "info" | "warning" | "error"; ephemeral?: boolean }): Promise<void>;
 }
 
 interface CopilotModelInfo {
@@ -263,18 +277,47 @@ interface CopilotModelInfo {
   defaultReasoningEffort?: ReasoningEffort;
 }
 
+interface SessionMetadata {
+  sessionId: string;
+  startTime: Date;
+  modifiedTime: Date;
+  summary?: string;
+  isRemote: boolean;
+  context?: {
+    cwd: string;
+    gitRoot?: string;
+    repository?: string;
+    branch?: string;
+  };
+}
+
+interface GetAuthStatusResponse {
+  isAuthenticated: boolean;
+  authType?: "user" | "env" | "gh-cli" | "hmac" | "api-key" | "token";
+  host?: string;
+  login?: string;
+  statusMessage?: string;
+}
+
+type ConnectionState = "disconnected" | "connecting" | "connected" | "error";
+
 interface CopilotClientInterface {
   start(): Promise<void>;
   stop(): Promise<Error[]>;
   forceStop(): Promise<void>;
-  createSession(config?: SessionConfig): Promise<CopilotSession>;
+  createSession(config: SessionConfig): Promise<CopilotSession>;
   resumeSession(sessionId: string, config: Omit<SessionConfig, 'sessionId'>): Promise<CopilotSession>;
-  listSessions(): Promise<Array<{ sessionId: string }>>;
+  listSessions(filter?: { cwd?: string; repository?: string }): Promise<SessionMetadata[]>;
   deleteSession(sessionId: string): Promise<void>;
-  ping(message?: string): Promise<{ message: string; timestamp: number }>;
-  connection?: {
-    sendRequest(method: string, params: Record<string, unknown>): Promise<unknown>;
-  };
+  ping(message?: string): Promise<{ message: string; timestamp: number; protocolVersion?: number }>;
+  /** List available models — proper SDK API (replaces connection.sendRequest hack) */
+  listModels(): Promise<CopilotModelInfo[]>;
+  /** Get current authentication status */
+  getAuthStatus(): Promise<GetAuthStatusResponse>;
+  /** Get current connection state */
+  getState(): ConnectionState;
+  /** Get last updated session ID */
+  getLastSessionId(): Promise<string | undefined>;
 }
 
 // Active run tracking for abort support
@@ -1293,9 +1336,9 @@ export function createCopilotAdapter(
 
         if (session) {
           try {
-            await session.destroy();
+            await session.disconnect();
           } catch (err) {
-            logError("Error destroying session:", err);
+            logError("Error disconnecting session:", err);
           }
         }
       }
@@ -1564,10 +1607,10 @@ export function createCopilotAdapter(
 
         if (session) {
           try {
-            // Destroy keeps session state persisted on disk
-            await session.destroy();
+            // Disconnect keeps session state persisted on disk
+            await session.disconnect();
           } catch (err) {
-            logError("Error destroying session:", err);
+            logError("Error disconnecting session:", err);
           }
         }
       }
@@ -1627,11 +1670,11 @@ export function createCopilotAdapter(
           }
         }
         try {
-          await state.session.destroy();
+          await state.session.disconnect();
         } catch (err) {
-          // Ignore destroy errors during shutdown
+          // Ignore disconnect errors during shutdown
           if (!(err instanceof Error && err.message.includes("ERR_STREAM_DESTROYED"))) {
-            logError(`Error destroying session ${runId}:`, err);
+            logError(`Error disconnecting session ${runId}:`, err);
           }
         }
       }
@@ -1726,7 +1769,7 @@ export function createCopilotAdapter(
         return title.slice(0, 50);
       } finally {
         try {
-          await session.destroy();
+          await session.disconnect();
         } catch {
           // Ignore cleanup errors
         }
@@ -1737,21 +1780,14 @@ export function createCopilotAdapter(
       try {
         const copilotClient = await ensureClient();
 
-        // Check if client has connection with sendRequest capability
-        if (!copilotClient.connection) {
-          logWarn("Client connection not available for listing models");
-          return [];
-        }
+        const models = await copilotClient.listModels();
 
-        const result = await copilotClient.connection.sendRequest("models.list", {});
-        const response = result as { models?: CopilotModelInfo[] };
-
-        if (!response.models || !Array.isArray(response.models)) {
+        if (!models || !Array.isArray(models)) {
           logWarn("Invalid models response");
           return [];
         }
 
-        return response.models.map((model): ModelInfo => ({
+        return models.map((model): ModelInfo => ({
           id: model.id,
           displayName: model.name || model.id,
           isDefault: model.id === config.defaultModel,
