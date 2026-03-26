@@ -3,6 +3,8 @@
 // Implements WorkRunAdapter using GitHub Copilot SDK
 // ─────────────────────────────────────────────────────────────
 
+import path from "node:path";
+import os from "node:os";
 import type {
   WorkRunAdapter,
   WorkRunRequest,
@@ -48,18 +50,49 @@ import {
  * to allow the code to compile without the actual SDK installed.
  */
 
-// Types inferred from Copilot SDK documentation
+// Types inferred from Copilot SDK (@github/copilot-sdk 0.2)
 interface CopilotClientOptions {
+  /** Path to the CLI executable or JavaScript entry point */
   cliPath?: string;
+  /** Extra arguments to pass to the CLI executable */
   cliArgs?: string[];
+  /** URL of an existing Copilot CLI server to connect to over TCP */
   cliUrl?: string;
+  /** Working directory for the CLI process */
   cwd?: string;
+  /** Port for the CLI server (TCP mode only) */
   port?: number;
+  /** Use stdio transport instead of TCP (default: true) */
   useStdio?: boolean;
-  logLevel?: "debug" | "info" | "error" | "none" | "warning" | "all";
+  /** SDK is running as a child process of the Copilot CLI server */
+  isChildProcess?: boolean;
+  /** Log level for the CLI server */
+  logLevel?: "none" | "error" | "warning" | "info" | "debug" | "all";
+  /** Auto-start the CLI server on first use (default: true) */
   autoStart?: boolean;
+  /** @deprecated This option has no effect and will be removed */
   autoRestart?: boolean;
+  /** Environment variables to pass to the CLI process */
   env?: Record<string, string | undefined>;
+  /** GitHub token for authentication — takes priority over other auth methods */
+  githubToken?: string;
+  /** Whether to use stored OAuth tokens or gh CLI auth (default: true) */
+  useLoggedInUser?: boolean;
+  // TODO: expose in config UI — custom model list callback for BYOK mode
+  /** Custom handler for listing available models (BYOK mode) */
+  onListModels?: () => Promise<unknown[]> | unknown[];
+  // TODO: expose in config UI — OpenTelemetry configuration
+  /** OpenTelemetry configuration for the CLI process */
+  telemetry?: {
+    otlpEndpoint?: string;
+    filePath?: string;
+    exporterType?: string;
+    sourceName?: string;
+    captureContent?: boolean;
+  };
+  // TODO: expose in config UI — distributed tracing
+  /** W3C Trace Context provider for distributed trace propagation */
+  onGetTraceContext?: () => { traceparent?: string; tracestate?: string } | Promise<{ traceparent?: string; tracestate?: string }>;
 }
 
 interface CopilotTool {
@@ -67,16 +100,79 @@ interface CopilotTool {
   description?: string;
   parameters?: Record<string, unknown>;
   handler: (args: any, invocation: { sessionId: string; toolCallId: string; toolName: string; arguments: unknown }) => Promise<unknown> | unknown;
+  /** When true, indicates this tool overrides a built-in tool of the same name */
+  overridesBuiltInTool?: boolean;
+  /** When true, the tool can execute without a permission prompt */
+  skipPermission?: boolean;
+}
+
+type ReasoningEffort = "low" | "medium" | "high" | "xhigh";
+
+interface CustomAgentConfig {
+  /** Unique name of the custom agent */
+  name: string;
+  /** Display name for UI purposes */
+  displayName?: string;
+  /** Description of what the agent does */
+  description?: string;
+  /** List of tool names the agent can use (null = all tools) */
+  tools?: string[] | null;
+  /** The prompt content for the agent */
+  prompt: string;
+  /** MCP servers specific to this agent */
+  mcpServers?: Record<string, MCPServerConfig>;
+  /** Whether the agent should be available for model inference (default: true) */
+  infer?: boolean;
+}
+
+// TODO: load user MCP servers from config and pass to session (like Claude adapter)
+interface MCPServerConfig {
+  type?: "local" | "stdio" | "http" | "sse";
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  cwd?: string;
+  url?: string;
+  headers?: Record<string, string>;
+  tools: string[];
+  timeout?: number;
 }
 
 interface SessionConfig {
   sessionId?: string;
   model?: string;
+  /** Reasoning effort level for models that support it */
+  reasoningEffort?: ReasoningEffort;
   systemMessage?: { content: string } | { mode: "append"; content?: string } | { mode: "replace"; content: string };
   streaming?: boolean;
   cwd?: string;
   workingDirectory?: string;
   tools?: CopilotTool[];
+  /** MCP server configurations — keys are server names */
+  mcpServers?: Record<string, MCPServerConfig>;
+  /** Custom agent configurations for the session */
+  customAgents?: CustomAgentConfig[];
+  /** Name of the custom agent to activate when the session starts */
+  agent?: string;
+  /** Directories to load skills from */
+  skillDirectories?: string[];
+  /** List of skill names to disable */
+  disabledSkills?: string[];
+  // TODO: expose in config UI — auto-compaction thresholds for long sessions
+  /** Infinite session config for automatic context compaction */
+  infiniteSessions?: {
+    /** Whether infinite sessions are enabled (default: true) */
+    enabled?: boolean;
+    /** Context utilization (0.0-1.0) at which background compaction starts (default: 0.80) */
+    backgroundCompactionThreshold?: number;
+    /** Context utilization (0.0-1.0) at which session blocks until compaction completes (default: 0.95) */
+    bufferExhaustionThreshold?: number;
+  };
+  // TODO: use SDK-level tool filtering instead of hook-based ALLOWED_TOOLS_SET checks
+  /** Tool whitelist — only these tools will be available. Takes precedence over excludedTools. */
+  availableTools?: string[];
+  /** Tool blacklist — these tools are disabled. Ignored if availableTools is set. */
+  excludedTools?: string[];
   onPermissionRequest: (
     request: { kind: string; toolCallId?: string; [key: string]: any },
     invocation: { sessionId: string },
@@ -85,11 +181,37 @@ interface SessionConfig {
     request: { question: string; choices?: string[]; allowFreeform?: boolean },
     invocation: { sessionId: string },
   ) => Promise<{ answer: string; wasFreeform: boolean }> | { answer: string; wasFreeform: boolean };
+  // TODO: wire up remaining hooks — currently only onPreToolUse is used
   hooks?: {
     onPreToolUse?: (
       input: { toolName: string; toolArgs: unknown; timestamp: number; cwd: string },
       invocation: { sessionId: string },
     ) => Promise<{ permissionDecision?: "allow" | "deny" | "ask"; permissionDecisionReason?: string; modifiedArgs?: unknown } | void> | { permissionDecision?: "allow" | "deny" | "ask"; permissionDecisionReason?: string; modifiedArgs?: unknown } | void;
+    /** Called after a tool is executed — capture/modify output */
+    onPostToolUse?: (
+      input: { toolName: string; toolArgs: unknown; toolResult: { textResultForLlm: string; resultType: string; error?: string }; timestamp: number; cwd: string },
+      invocation: { sessionId: string },
+    ) => Promise<{ modifiedResult?: unknown; additionalContext?: string; suppressOutput?: boolean } | void> | void;
+    /** Called when the user submits a prompt — modify prompt or add context */
+    onUserPromptSubmitted?: (
+      input: { prompt: string; timestamp: number; cwd: string },
+      invocation: { sessionId: string },
+    ) => Promise<{ modifiedPrompt?: string; additionalContext?: string } | void> | void;
+    /** Called when a session starts */
+    onSessionStart?: (
+      input: { source: "startup" | "resume" | "new"; initialPrompt?: string; timestamp: number; cwd: string },
+      invocation: { sessionId: string },
+    ) => Promise<{ additionalContext?: string; modifiedConfig?: Record<string, unknown> } | void> | void;
+    /** Called when a session ends — cleanup, summary */
+    onSessionEnd?: (
+      input: { reason: "complete" | "error" | "abort" | "timeout" | "user_exit"; finalMessage?: string; error?: string; timestamp: number; cwd: string },
+      invocation: { sessionId: string },
+    ) => Promise<{ sessionSummary?: string; cleanupActions?: string[] } | void> | void;
+    /** Called when an error occurs — retry/skip/abort */
+    onErrorOccurred?: (
+      input: { error: string; errorContext: "model_call" | "tool_execution" | "system" | "user_input"; recoverable: boolean; timestamp: number; cwd: string },
+      invocation: { sessionId: string },
+    ) => Promise<{ errorHandling?: "retry" | "skip" | "abort"; retryCount?: number; userNotification?: string } | void> | void;
   };
 }
 
@@ -125,16 +247,20 @@ interface CopilotSession {
 interface CopilotModelInfo {
   id: string;
   name?: string;
-  version?: string;
-  isDefault?: boolean;
   capabilities?: {
-    streaming?: boolean;
-    vision?: boolean;
-    functionCalling?: boolean;
-    reasoning?: boolean;
+    supports?: {
+      vision?: boolean;
+      reasoningEffort?: boolean;
+    };
+    limits?: {
+      max_prompt_tokens?: number;
+      max_context_window_tokens?: number;
+    };
   };
-  contextWindow?: number;
-  metadata?: Record<string, unknown>;
+  policy?: { state?: string };
+  billing?: { multiplier?: number };
+  supportedReasoningEfforts?: ReasoningEffort[];
+  defaultReasoningEffort?: ReasoningEffort;
 }
 
 interface CopilotClientInterface {
@@ -599,7 +725,6 @@ export function createCopilotAdapter(
 
         const options: CopilotClientOptions = {
           autoStart: true,
-          autoRestart: config.autoRestart ?? true,
           logLevel: config.logLevel ?? "info",
         } satisfies CopilotClientOptions;
 
@@ -924,6 +1049,20 @@ export function createCopilotAdapter(
           sessionConfig.model = model || config.defaultModel;
         }
 
+        // Set reasoning effort from config (if model supports it)
+        const reasoningEffort = (config as any).modelReasoningEffort as ReasoningEffort | undefined;
+        if (reasoningEffort) {
+          sessionConfig.reasoningEffort = reasoningEffort;
+        }
+
+        // Default skill directories: ~/.claude/skills, ~/.copilot/skills, {workspace}/.github/skills
+        const homedir = os.homedir();
+        sessionConfig.skillDirectories = [
+          path.join(homedir, ".claude", "skills"),
+          path.join(homedir, ".copilot", "skills"),
+          path.join(request.workspace.rootPath, ".github", "skills"),
+        ];
+
         // Inject Jinzo tools for workspace reviews
         const workspaceId = request.workspace.id ?? null;
         sessionConfig.tools = buildJinzoTools(workspaceId, request.workspace.rootPath, runId);
@@ -1186,6 +1325,8 @@ export function createCopilotAdapter(
         // Resume the existing session with permission handlers
         const permissionMode = config.permissionMode || "default";
         const workspaceId = request.workspace.id ?? null;
+        const resumeReasoningEffort = (config as any).modelReasoningEffort as ReasoningEffort | undefined;
+        const resumeHomedir = os.homedir();
         const resumeConfig: Omit<SessionConfig, 'sessionId'> = {
           tools: buildJinzoTools(workspaceId, request.workspace.rootPath, runId),
           onPermissionRequest: permissionMode === "bypassPermissions"
@@ -1195,6 +1336,12 @@ export function createCopilotAdapter(
             hooks: { onPreToolUse: buildPreToolUseHook(runId) },
             onUserInputRequest: buildUserInputHandler(runId),
           }),
+          ...(resumeReasoningEffort && { reasoningEffort: resumeReasoningEffort }),
+          skillDirectories: [
+            path.join(resumeHomedir, ".claude", "skills"),
+            path.join(resumeHomedir, ".copilot", "skills"),
+            path.join(request.workspace.rootPath, ".github", "skills"),
+          ],
         };
         session = await copilotClient.resumeSession(runId, resumeConfig);
         activeRuns.set(runId, { session, aborted: false });
@@ -1607,11 +1754,13 @@ export function createCopilotAdapter(
         return response.models.map((model): ModelInfo => ({
           id: model.id,
           displayName: model.name || model.id,
-          version: model.version,
-          isDefault: model.isDefault || model.id === config.defaultModel,
-          capabilities: model.capabilities,
-          contextWindow: model.contextWindow,
-          metadata: model.metadata,
+          isDefault: model.id === config.defaultModel,
+          capabilities: {
+            vision: model.capabilities?.supports?.vision,
+          },
+          contextWindow: model.capabilities?.limits?.max_context_window_tokens,
+          supportsEffort: model.capabilities?.supports?.reasoningEffort ?? false,
+          supportedEffortLevels: model.supportedReasoningEfforts,
         }));
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);

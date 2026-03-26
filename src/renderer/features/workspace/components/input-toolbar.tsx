@@ -294,7 +294,7 @@ export function InputToolbar({
             openUpward={true}
             isLoading={isLoadingModels}
           />
-          {(variant === "claude" || variant === "codex") && (
+          {(variant === "claude" || variant === "copilot" || variant === "codex") && (
             <>
               {variant === "claude" && (
                 <div className="relative" ref={permissionDropdownRef}>

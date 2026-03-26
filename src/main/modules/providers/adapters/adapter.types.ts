@@ -410,14 +410,16 @@ export interface CopilotAdapterConfig {
   cliUrl?: string;
   /** Log level for the SDK */
   logLevel?: "debug" | "info" | "warning" | "error" | "none" | "all";
-  /** Whether to auto-restart on crash */
-  autoRestart?: boolean;
   /** Default model to use */
   defaultModel?: string;
   /** Timeout in milliseconds for operations */
   timeout?: number;
   /** Whether to start the CLI process automatically */
   autoStart?: boolean;
+  /** GitHub token for authentication — takes priority over other auth methods */
+  githubToken?: string;
+  /** Whether to use stored OAuth tokens or gh CLI auth (default: true) */
+  useLoggedInUser?: boolean;
   /** Permission mode for tool access */
   permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
 }

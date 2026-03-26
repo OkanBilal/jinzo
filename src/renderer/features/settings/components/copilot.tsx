@@ -1,5 +1,5 @@
-import { Heading2, Muted, Toggle, toast } from "@/components/ui";
-import { SettingsSection, SettingsRow } from "./settings-layout";
+import { Heading2, Muted, Toggle, Button, toast } from "@/components/ui";
+import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import {
   useGetProviderByIdQuery,
   useUpdateProviderMutation,
@@ -28,6 +28,12 @@ export default function CopilotSettings() {
   const config = provider?.config ?? {};
   const permissionMode = (config as any).permissionMode ?? "default";
   const isBypassing = permissionMode === "bypassPermissions";
+
+  const openPath = (targetPath: string) => {
+    window.api.shell.openPath(targetPath);
+  };
+
+  const homedir = window.api.platform.homedir;
 
   const handlePermissionToggle = async (enabled: boolean) => {
     if (!provider || updating) return;
@@ -95,6 +101,45 @@ export default function CopilotSettings() {
           }
         >
           <Toggle enabled={isBypassing} onChange={handlePermissionToggle} />
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection title="Extensions">
+        <SettingsRow
+          title="Agents"
+          description={
+            <>
+              Define custom agents as markdown files in ~/.copilot/agents/ (user)
+              or .github/agents/ (project).
+            </>
+          }
+        >
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => openPath(`${homedir}/.copilot/agents`)}
+          >
+            Open Folder
+          </Button>
+        </SettingsRow>
+        <SettingsDivider />
+        <SettingsRow
+          title="Skills"
+          description={
+            <>
+              SKILL.md files that extend Copilot&apos;s capabilities. Copilot
+              reads from ~/.claude/skills/ (shared with Claude), ~/.copilot/skills/
+              (user), and .github/skills/ (project).
+            </>
+          }
+        >
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => openPath(`${homedir}/.copilot/skills`)}
+          >
+            Open Folder
+          </Button>
         </SettingsRow>
       </SettingsSection>
 

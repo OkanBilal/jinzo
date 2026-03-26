@@ -41,11 +41,11 @@ export function useProviderModels(
   });
   const [updateProvider] = useUpdateProviderMutation();
   const permissionMode: string = (providerData?.config as any)?.permissionMode ?? "default";
-  const thinkingMode = variant === "codex"
+  const thinkingMode = variant === "codex" || variant === "copilot"
     ? !!(providerData?.config as any)?.modelReasoningEffort
     : !!(providerData?.config as any)?.thinkingMode;
   const fastMode = !!(providerData?.config as any)?.fastMode;
-  const effortLevel: string = variant === "codex"
+  const effortLevel: string = variant === "codex" || variant === "copilot"
     ? (providerData?.config as any)?.modelReasoningEffort || ""
     : (providerData?.config as any)?.effortLevel || "";
 
@@ -94,8 +94,8 @@ export function useProviderModels(
   const handleEffortLevelChange = useCallback(async (level: string) => {
     if (!providerData) return;
     const currentConfig = providerData.config ?? {};
-    if (variant === "codex") {
-      // Codex uses modelReasoningEffort in its config
+    if (variant === "codex" || variant === "copilot") {
+      // Codex/Copilot use modelReasoningEffort in their config
       await updateProvider({
         id: activeProviderId,
         payload: {
