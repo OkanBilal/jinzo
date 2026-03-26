@@ -87,7 +87,13 @@ interface SDKAgentDefinition {
   description: string;
   prompt: string;
   tools?: string[];
-  model?: "sonnet" | "opus" | "haiku" | "inherit";
+  disallowedTools?: string[];
+  model?: string;
+  mcpServers?: (string | Record<string, unknown>)[];
+  skills?: string[];
+  initialPrompt?: string;
+  maxTurns?: number;
+  criticalSystemReminder_EXPERIMENTAL?: string;
 }
 
 /**
@@ -136,7 +142,7 @@ interface SDKOptions {
   env?: Record<string, string | undefined>;
   allowedTools?: string[];
   disallowedTools?: string[];
-  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan";
+  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk";
   cwd?: string;
   resume?: string;
   forkSession?: boolean;
@@ -215,33 +221,50 @@ interface SDKModelUsage {
   outputTokens: number;
   cacheReadInputTokens: number;
   cacheCreationInputTokens: number;
+  webSearchRequests: number;
+  contextWindow: number;
+  maxOutputTokens: number;
 }
 
-interface SDKResultMessage {
+interface SDKPermissionDenial {
+  tool_name: string;
+  tool_use_id: string;
+  tool_input: Record<string, unknown>;
+}
+
+type FastModeState = "off" | "cooldown" | "on";
+
+interface SDKResultBase {
   type: "result";
+  uuid: string;
+  session_id: string;
+  duration_ms: number;
+  duration_api_ms: number;
+  is_error: boolean;
+  num_turns: number;
+  total_cost_usd: number;
+  stop_reason: string | null;
+  modelUsage: Record<string, SDKModelUsage>;
+  permission_denials: SDKPermissionDenial[];
+  fast_mode_state?: FastModeState;
+}
+
+interface SDKResultSuccess extends SDKResultBase {
+  subtype: "success";
+  result: string;
+  structured_output?: unknown;
+}
+
+interface SDKResultError extends SDKResultBase {
   subtype:
-    | "success"
     | "error_during_execution"
     | "error_max_turns"
     | "error_max_budget_usd"
     | "error_max_structured_output_retries";
-  uuid: string;
-  session_id: string;
-  duration_ms: number;
-  is_error: boolean;
-  num_turns: number;
-  result?: string;
-  total_cost_usd: number;
-  errors?: string[];
-  stop_reason?:
-    | "end_turn"
-    | "max_tokens"
-    | "stop_sequence"
-    | "refusal"
-    | "tool_use"
-    | null;
-  modelUsage?: Record<string, SDKModelUsage>;
+  errors: string[];
 }
+
+type SDKResultMessage = SDKResultSuccess | SDKResultError;
 
 interface SDKSystemMessage {
   type: "system";
@@ -252,6 +275,15 @@ interface SDKSystemMessage {
   cwd?: string;
   tools?: string[];
   permissionMode?: string;
+  // TODO: expose in UI — session metadata from init message
+  agents?: string[];
+  apiKeySource?: string;
+  betas?: string[];
+  claude_code_version?: string;
+  mcp_servers?: { name: string; status: string }[];
+  slash_commands?: string[];
+  output_style?: string;
+  skills?: string[];
 }
 
 type SDKMessage =
@@ -272,6 +304,10 @@ interface SDKModelInfo {
   supportsFastMode?: boolean;
   supportsEffort?: boolean;
   supportedEffortLevels?: ('low' | 'medium' | 'high' | 'max')[];
+  // TODO: expose in UI — model supports auto mode selection
+  supportsAutoMode?: boolean;
+  // TODO: expose in UI — model supports adaptive thinking (Claude decides when to think)
+  supportsAdaptiveThinking?: boolean;
 }
 
 interface SDKSlashCommand {
@@ -480,11 +516,7 @@ export function createClaudeAdapter(
     delete cleanEnv.ANTHROPIC_API_KEY;
     delete cleanEnv.ANTHROPIC_AUTH_TOKEN;
 
-    // Determine permission mode: planMode overrides permissionMode when enabled
-    // Options: "default" | "acceptEdits" | "bypassPermissions" | "plan"
-    const permissionMode = config.planMode
-      ? "plan"
-      : config.permissionMode || "default";
+    const permissionMode = config.permissionMode || "default";
 
     // Setting sources for settings: default to both user and project if not specified
     const settingSources = config.settingSources ?? ["user", "project", "local"];
@@ -744,7 +776,13 @@ export function createClaudeAdapter(
         description: agentDef.description,
         prompt: agentDef.prompt,
         tools: agentDef.tools,
+        disallowedTools: agentDef.disallowedTools,
         model: agentDef.model,
+        mcpServers: agentDef.mcpServers,
+        skills: agentDef.skills,
+        initialPrompt: agentDef.initialPrompt,
+        maxTurns: agentDef.maxTurns,
+        criticalSystemReminder_EXPERIMENTAL: agentDef.criticalSystemReminder_EXPERIMENTAL,
       };
     }
 
@@ -1122,7 +1160,7 @@ export function createClaudeAdapter(
 
         // Emit result content only when no assistant message was streamed
         // (e.g. slash command output like /cost, /compact)
-        if (resultMsg.result && !context?.hasAssistantContent) {
+        if (resultMsg.subtype === "success" && resultMsg.result && !context?.hasAssistantContent) {
           events.push({
             type: "artifact",
             kind: "report",
@@ -1144,7 +1182,7 @@ export function createClaudeAdapter(
         }
 
         // Only emit errors here, not the content (to avoid duplication)
-        if (resultMsg.is_error && resultMsg.errors) {
+        if (resultMsg.subtype !== "success" && resultMsg.is_error) {
           events.push({
             type: "log",
             message: `[error] ${resultMsg.errors.join(", ")}`,
@@ -1271,14 +1309,7 @@ export function createClaudeAdapter(
 
       const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
       const abortController = new AbortController();
-      let lastStopReason:
-        | "end_turn"
-        | "max_tokens"
-        | "stop_sequence"
-        | "refusal"
-        | "tool_use"
-        | null
-        | undefined;
+      let lastStopReason: string | null | undefined;
       let lastUsage: WorkRunUsage | undefined;
 
       try {
@@ -1618,14 +1649,7 @@ export function createClaudeAdapter(
 
       const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
       const abortController = new AbortController();
-      let lastStopReason:
-        | "end_turn"
-        | "max_tokens"
-        | "stop_sequence"
-        | "refusal"
-        | "tool_use"
-        | null
-        | undefined;
+      let lastStopReason: string | null | undefined;
       let lastUsage: WorkRunUsage | undefined;
 
       try {
@@ -1948,14 +1972,7 @@ export function createClaudeAdapter(
 
       const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
       const abortController = new AbortController();
-      let lastStopReason:
-        | "end_turn"
-        | "max_tokens"
-        | "stop_sequence"
-        | "refusal"
-        | "tool_use"
-        | null
-        | undefined;
+      let lastStopReason: string | null | undefined;
       let lastUsage: WorkRunUsage | undefined;
 
       try {

@@ -562,7 +562,13 @@ export function createCopilotAdapter(
     clientInitPromise = (async () => {
       try {
         // Dynamic import to avoid compile-time dependency
-        const CopilotSDK = await import("@github/copilot-sdk").catch(
+        // Use new Function to prevent Vite from transforming import() to require() in CJS output
+        // This is necessary because @github/copilot-sdk is ESM-only (no "require" export condition)
+        const dynamicImport = new Function(
+          "specifier",
+          "return import(specifier)",
+        );
+        const CopilotSDK = await dynamicImport("@github/copilot-sdk").catch(
           () => null,
         );
 

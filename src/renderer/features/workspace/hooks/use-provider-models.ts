@@ -40,7 +40,7 @@ export function useProviderModels(
     skip: variant !== "claude" && variant !== "codex",
   });
   const [updateProvider] = useUpdateProviderMutation();
-  const planMode = !!(providerData?.config as any)?.planMode;
+  const permissionMode: string = (providerData?.config as any)?.permissionMode ?? "default";
   const thinkingMode = variant === "codex"
     ? !!(providerData?.config as any)?.modelReasoningEffort
     : !!(providerData?.config as any)?.thinkingMode;
@@ -49,7 +49,7 @@ export function useProviderModels(
     ? (providerData?.config as any)?.modelReasoningEffort || ""
     : (providerData?.config as any)?.effortLevel || "";
 
-  const handlePlanModeToggle = useCallback(async () => {
+  const handlePermissionModeChange = useCallback(async (mode: string) => {
     if (!providerData) return;
     const currentConfig = providerData.config ?? {};
     await updateProvider({
@@ -57,11 +57,11 @@ export function useProviderModels(
       payload: {
         config: {
           ...currentConfig,
-          planMode: !planMode,
+          permissionMode: mode,
         },
       },
     });
-  }, [providerData, planMode, activeProviderId, updateProvider]);
+  }, [providerData, activeProviderId, updateProvider]);
 
   const handleThinkingModeToggle = useCallback(async () => {
     if (!providerData) return;
@@ -187,8 +187,8 @@ export function useProviderModels(
     providerSkills,
     isLoadingSkills,
     modelsError,
-    planMode,
-    handlePlanModeToggle,
+    permissionMode,
+    handlePermissionModeChange,
     thinkingMode,
     handleThinkingModeToggle,
     fastMode,

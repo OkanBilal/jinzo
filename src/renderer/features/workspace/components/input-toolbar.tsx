@@ -11,10 +11,68 @@ import {
   DropdownWrapper,
   Body,
 } from "@/components/ui";
-import { Plan, Brain, Picture, Close } from "@/components/ui/icons";
+import {
+  Plan,
+  Brain,
+  Picture,
+  Close,
+  Lock,
+  Edit,
+  Question,
+  DontAsk,
+  Unlock,
+} from "@/components/ui/icons";
+import Security from "@/components/ui/icons/security";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { Bolt } from "@/components/ui/icons/space";
+
+const TOOLBAR_PERMISSION_MODES = [
+  {
+    value: "default",
+    label: "Ask permissions",
+    description: "Always ask before making changes",
+  },
+  {
+    value: "acceptEdits",
+    label: "Auto accept edits",
+    description: "Automatically accept all file edits",
+  },
+  {
+    value: "plan",
+    label: "Plan mode",
+    description: "Create a plan before making changes",
+  },
+] as const;
+
+const PERMISSION_MODE_LABELS: Record<string, string> = {
+  default: "Ask",
+  acceptEdits: "Edit",
+  plan: "Plan",
+  bypassPermissions: "Bypass",
+  dontAsk: "Don't Ask",
+};
+
+function PermissionModeIcon({
+  mode,
+  className,
+}: {
+  mode: string;
+  className?: string;
+}) {
+  switch (mode) {
+    case "acceptEdits":
+      return <Edit className={className} />;
+    case "plan":
+      return <Plan className={className} />;
+    case "bypassPermissions":
+      return <Unlock className={className} />;
+    case "dontAsk":
+      return <DontAsk className={className} />;
+    default:
+      return <Lock className={className} />;
+  }
+}
 
 interface InputToolbarProps {
   variant: "claude" | "copilot" | "codex";
@@ -26,9 +84,9 @@ interface InputToolbarProps {
   modelDisplayNames: string[];
   onModelChange: (displayName: string) => void;
   isLoadingModels: boolean;
-  // Plan mode (Claude only)
-  planMode: boolean;
-  onPlanModeToggle: () => void;
+  // Permission mode (Claude only)
+  permissionMode: string;
+  onPermissionModeChange: (mode: string) => void;
   // Thinking mode (Claude only)
   thinkingMode: boolean;
   onThinkingModeToggle: () => void;
@@ -39,7 +97,14 @@ interface InputToolbarProps {
   // Effort level (Claude only)
   effortLevel: string;
   onEffortLevelChange: (level: string) => void;
-  supportedEffortLevels?: ("minimal" | "low" | "medium" | "high" | "max" | "xhigh")[];
+  supportedEffortLevels?: (
+    | "minimal"
+    | "low"
+    | "medium"
+    | "high"
+    | "max"
+    | "xhigh"
+  )[];
   // Stop run (active run is running)
   isRunning: boolean;
   onStop?: () => void;
@@ -59,8 +124,8 @@ export function InputToolbar({
   modelDisplayNames,
   onModelChange,
   isLoadingModels,
-  planMode,
-  onPlanModeToggle,
+  permissionMode,
+  onPermissionModeChange,
   thinkingMode,
   onThinkingModeToggle,
   fastMode,
@@ -78,7 +143,9 @@ export function InputToolbar({
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [showFileDropdown, setShowFileDropdown] = useState(false);
   const [showThinkingDropdown, setShowThinkingDropdown] = useState(false);
+  const [showPermissionDropdown, setShowPermissionDropdown] = useState(false);
   const thinkingDropdownRef = useRef<HTMLDivElement>(null);
+  const permissionDropdownRef = useRef<HTMLDivElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
   const fileDropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -93,6 +160,10 @@ export function InputToolbar({
 
   useClickOutside(thinkingDropdownRef, () => {
     if (showThinkingDropdown) setShowThinkingDropdown(false);
+  });
+
+  useClickOutside(permissionDropdownRef, () => {
+    if (showPermissionDropdown) setShowPermissionDropdown(false);
   });
 
   const openFilePicker = useCallback((accept: string) => {
@@ -151,7 +222,10 @@ export function InputToolbar({
       <div className="flex items-center justify-between w-full">
         <div className="flex items-center relative gap-1">
           {variant === "codex" ? (
-            <div className="relative flex items-center gap-2" ref={fileDropdownRef}>
+            <div
+              className="relative flex items-center gap-2"
+              ref={fileDropdownRef}
+            >
               <Button
                 type="button"
                 tooltip="Upload image"
@@ -163,10 +237,17 @@ export function InputToolbar({
                 <Picture className="dark:text-primary-300 size-4 text-primary-700" />
               </Button>
               {uploadedFiles.map((uploadedFile, index) => (
-                <div key={`${uploadedFile.file.name}-${uploadedFile.file.size}`} className="relative group">
+                <div
+                  key={`${uploadedFile.file.name}-${uploadedFile.file.size}`}
+                  className="relative group"
+                >
                   <div className="flex items-center gap-2 bg-primary-100 dark:bg-primary-800 rounded-2xl px-1.5 py-1 mr-1">
                     <div className="relative w-5 h-5 rounded overflow-hidden">
-                      <img src={uploadedFile.preview} alt={uploadedFile.file.name} className="w-full h-full object-cover" />
+                      <img
+                        src={uploadedFile.preview}
+                        alt={uploadedFile.file.name}
+                        className="w-full h-full object-cover"
+                      />
                       <Button
                         type="button"
                         onClick={() => handleRemoveFile(index)}
@@ -216,26 +297,61 @@ export function InputToolbar({
           {(variant === "claude" || variant === "codex") && (
             <>
               {variant === "claude" && (
-              <Button
-                tooltip="Toggle Plan Mode"
-                type="button"
-                onClick={onPlanModeToggle}
-                className={`flex items-center gap-1.5  px-2 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
-                  planMode
-                    ? "dark:bg-primary-200/20 bg-primary-500/30 text-primary-700 dark:text-primary-100"
-                    : " text-primary-700 dark:text-primary-300 hover:bg-primary/10"
-                }`}
-                title={
-                  planMode
-                    ? "Plan mode on — agent will plan before acting"
-                    : "Plan mode off — agent acts directly"
-                }
-              >
-                <Plan
-                  className={`size-3.5 font-medium ${planMode ? "text-primary-700 dark:text-primary-100" : "text-primary-700 dark:text-primary-300"}`}
-                />
-                Plan
-              </Button>
+                <div className="relative" ref={permissionDropdownRef}>
+                  <Button
+                    tooltip="Permission Mode"
+                    type="button"
+                    onClick={() =>
+                      setShowPermissionDropdown(!showPermissionDropdown)
+                    }
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                      permissionMode !== "default"
+                        ? "dark:bg-primary-200/20 bg-primary-500/30 text-primary-700 dark:text-primary-100"
+                        : "text-primary-700 dark:text-primary-300 hover:bg-primary/10"
+                    }`}
+                  >
+                    <PermissionModeIcon
+                      mode={permissionMode}
+                      className="size-3.5"
+                    />
+                    {PERMISSION_MODE_LABELS[permissionMode] ?? "Ask"}
+                  </Button>
+                  <DropdownWrapper
+                    isOpen={showPermissionDropdown}
+                    openUpward={true}
+                    minWidth="min-w-60"
+                    useFixedBackground={true}
+                  >
+                    {TOOLBAR_PERMISSION_MODES.map((mode) => (
+                      <Button
+                        key={mode.value}
+                        type="button"
+                        onClick={() => {
+                          onPermissionModeChange(mode.value);
+                          setShowPermissionDropdown(false);
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 cursor-pointer transition-colors flex items-center gap-2.5 first:rounded-t-xl last:rounded-b-xl ${
+                          permissionMode === mode.value
+                            ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100"
+                            : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
+                        }`}
+                      >
+                        <PermissionModeIcon
+                          mode={mode.value}
+                          className="size-3 shrink-0"
+                        />
+                        <div className="flex flex-col flex-1 min-w-0">
+                          <Body className="text-[13px] font-medium tracking-tight mb-0.5">
+                            {mode.label}
+                          </Body>
+                          <span className="text-xs text-primary-400 dark:text-primary-500 tracking-tighter">
+                            {mode.description}
+                          </span>
+                        </div>
+                      </Button>
+                    ))}
+                  </DropdownWrapper>
+                </div>
               )}
               {supportedEffortLevels && supportedEffortLevels.length > 0 ? (
                 <div className="relative" ref={thinkingDropdownRef}>
@@ -271,20 +387,20 @@ export function InputToolbar({
                     useFixedBackground={true}
                   >
                     {variant !== "codex" && (
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        onEffortLevelChange("");
-                        setShowThinkingDropdown(false);
-                      }}
-                      className={`w-full text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-xl ${
-                        !thinkingMode
-                          ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100 font-medium"
-                          : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
-                      }`}
-                    >
-                      Off
-                    </Button>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          onEffortLevelChange("");
+                          setShowThinkingDropdown(false);
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-xl ${
+                          !thinkingMode
+                            ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100 font-medium"
+                            : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
+                        }`}
+                      >
+                        Off
+                      </Button>
                     )}
                     {supportedEffortLevels.map((level) => (
                       <Button
@@ -349,7 +465,10 @@ export function InputToolbar({
             >
               <Bolt
                 className={`size-4 transition-colors ${fastMode ? "text-red-600 dark:text-red-300" : "text-primary-700 dark:text-primary-300"}`}
-                style={{ transitionDelay: fastMode ? "0ms" : "200ms", transitionDuration: "150ms" }}
+                style={{
+                  transitionDelay: fastMode ? "0ms" : "200ms",
+                  transitionDuration: "150ms",
+                }}
               />
               <span className="flex overflow-hidden">
                 {"Fast".split("").map((char, i) => (
@@ -357,8 +476,11 @@ export function InputToolbar({
                     key={i}
                     className="inline-block text-red-600 dark:text-red-300"
                     style={{
-                      transition: "opacity 150ms, transform 150ms, max-width 150ms",
-                      transitionDelay: fastMode ? `${i * 40}ms` : `${(3 - i) * 40}ms`,
+                      transition:
+                        "opacity 150ms, transform 150ms, max-width 150ms",
+                      transitionDelay: fastMode
+                        ? `${i * 40}ms`
+                        : `${(3 - i) * 40}ms`,
                       opacity: fastMode ? 1 : 0,
                       transform: fastMode ? "translateX(0)" : "translateX(4px)",
                       maxWidth: fastMode ? "1ch" : "0px",

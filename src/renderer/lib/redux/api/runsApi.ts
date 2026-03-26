@@ -124,6 +124,9 @@ export interface ModelUsageEntry {
   outputTokens: number;
   cacheReadInputTokens: number;
   cacheCreationInputTokens: number;
+  webSearchRequests?: number;
+  contextWindow?: number;
+  maxOutputTokens?: number;
 }
 
 export interface RunTurn {

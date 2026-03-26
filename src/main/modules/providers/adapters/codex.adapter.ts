@@ -189,7 +189,15 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
     clientInitPromise = (async () => {
       try {
-        const CodexSDK = await import("@openai/codex-sdk").catch(() => null);
+        // Use new Function to prevent Vite from transforming import() to require() in CJS output
+        // This is necessary because @openai/codex-sdk is ESM-only (no "require" export condition)
+        const dynamicImport = new Function(
+          "specifier",
+          "return import(specifier)",
+        );
+        const CodexSDK = await dynamicImport("@openai/codex-sdk").catch(
+          () => null,
+        );
 
         if (!CodexSDK) {
           throw new Error(

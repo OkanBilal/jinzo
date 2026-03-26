@@ -169,7 +169,7 @@ export interface WorkRunArtifactSummary {
  * Stop reason indicating why the model stopped generating.
  * Maps to Claude Agent SDK's ResultMessage.stop_reason field.
  */
-export type StopReason = "end_turn" | "max_tokens" | "stop_sequence" | "refusal" | "tool_use" | null;
+export type StopReason = string | null;
 
 /**
  * Per-model token/cost breakdown from SDK modelUsage
@@ -180,6 +180,9 @@ export interface ModelUsageEntry {
   outputTokens: number;
   cacheReadInputTokens: number;
   cacheCreationInputTokens: number;
+  webSearchRequests?: number;
+  contextWindow?: number;
+  maxOutputTokens?: number;
 }
 
 /**
@@ -432,9 +435,7 @@ export interface ClaudeCodeAdapterConfig {
   /** Timeout in milliseconds */
   timeout?: number;
   /** Permission mode for tool access */
-  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan";
-  /** When true, overrides permissionMode to "plan" for the next run */
-  planMode?: boolean;
+  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk";
   /**
    * Setting sources for loading skills and other filesystem settings.
    * - "user": Load from ~/.claude/skills/
@@ -547,6 +548,10 @@ export interface ModelInfo {
   supportedEffortLevels?: ('minimal' | 'low' | 'medium' | 'high' | 'max' | 'xhigh')[];
   /** Model description */
   description?: string;
+  // TODO: expose in UI — model supports auto mode selection
+  supportsAutoMode?: boolean;
+  // TODO: expose in UI — model supports adaptive thinking (Claude decides when to think)
+  supportsAdaptiveThinking?: boolean;
   /** Additional metadata */
   metadata?: Record<string, unknown>;
 }
@@ -667,16 +672,29 @@ export interface AgentDefinition {
    */
   tools?: string[];
 
+  /** Array of tool names to explicitly disallow for this agent */
+  disallowedTools?: string[];
+
   /**
    * Model to use for this subagent.
    * If omitted, uses the same model as the parent agent.
-   *
-   * - "sonnet": Good balance of capability and speed
-   * - "opus": Most capable, use for complex analysis
-   * - "haiku": Fastest, use for simple tasks
-   * - "inherit": Use parent's model (same as omitting)
    */
   model?: AgentModelOption;
+
+  /** MCP server configurations specific to this subagent */
+  mcpServers?: (string | Record<string, unknown>)[];
+
+  /** Array of skill names to preload into the agent context */
+  skills?: string[];
+
+  /** Auto-submitted as the first user turn when this agent starts. Slash commands are processed. */
+  initialPrompt?: string;
+
+  /** Maximum number of agentic turns (API round-trips) before stopping */
+  maxTurns?: number;
+
+  /** Experimental: Critical reminder added to system prompt */
+  criticalSystemReminder_EXPERIMENTAL?: string;
 }
 
 /**
@@ -707,6 +725,7 @@ export type AgentsConfig = Record<string, AgentDefinition>;
 
 /**
  * Hook event names supported by the Claude Agent SDK
+ * TODO:
  */
 export type HookEventName =
   | "PreToolUse"
@@ -714,13 +733,27 @@ export type HookEventName =
   | "PostToolUseFailure"
   | "UserPromptSubmit"
   | "Stop"
+  | "StopFailure"
   | "SubagentStart"
   | "SubagentStop"
   | "PreCompact"
+  | "PostCompact"
   | "PermissionRequest"
   | "SessionStart"
   | "SessionEnd"
-  | "Notification";
+  | "Notification"
+  | "Setup"
+  | "TeammateIdle"
+  | "TaskCreated"
+  | "TaskCompleted"
+  | "Elicitation"
+  | "ElicitationResult"
+  | "ConfigChange"
+  | "WorktreeCreate"
+  | "WorktreeRemove"
+  | "InstructionsLoaded"
+  | "CwdChanged"
+  | "FileChanged";
 
 /**
  * Base input fields common to all hook callbacks

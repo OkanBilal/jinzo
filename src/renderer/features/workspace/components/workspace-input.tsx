@@ -89,8 +89,8 @@ export function WorkspaceInput({
     providerSkills,
     isLoadingSkills,
     modelsError,
-    planMode,
-    handlePlanModeToggle,
+    permissionMode,
+    handlePermissionModeChange,
     thinkingMode,
     handleThinkingModeToggle,
     fastMode,
@@ -327,8 +327,8 @@ export function WorkspaceInput({
         modelDisplayNames={modelDisplayNames}
         onModelChange={handleModelChange}
         isLoadingModels={isLoadingModels}
-        planMode={planMode}
-        onPlanModeToggle={handlePlanModeToggle}
+        permissionMode={permissionMode}
+        onPermissionModeChange={handlePermissionModeChange}
         thinkingMode={thinkingMode}
         onThinkingModeToggle={handleThinkingModeToggle}
         fastMode={fastMode}
