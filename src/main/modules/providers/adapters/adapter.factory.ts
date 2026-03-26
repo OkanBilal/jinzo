@@ -224,3 +224,14 @@ export async function listSkillsForProvider(
 
   return adapter.listSkills(workspacePath);
 }
+
+/**
+ * Get rate limit info for a provider
+ */
+export async function getRateLimitsForProvider(
+  provider: ProviderResponse,
+): Promise<import("./adapter.types").RateLimitInfo | null> {
+  const adapter = createWorkAdapter(provider);
+  if (!adapter.getRateLimits) return null;
+  return adapter.getRateLimits();
+}

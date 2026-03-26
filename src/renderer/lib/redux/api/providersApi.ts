@@ -1,5 +1,18 @@
 import { baseApi } from "./baseApi";
 
+export interface RateLimitWindow {
+  usedPercent: number;
+  windowDurationMins?: number;
+  resetsAt?: number;
+}
+
+export interface RateLimitInfo {
+  planType?: string;
+  primary?: RateLimitWindow;
+  secondary?: RateLimitWindow;
+  credits?: { hasCredits: boolean; balance?: string; unlimited: boolean };
+}
+
 export type ProviderKind = "llm_runtime" | "agent_runtime";
 
 export interface ProviderConfig {
@@ -241,6 +254,21 @@ export const providersApi = baseApi.injectEndpoints({
         { type: "ProviderSkills", id: `${id}:${workspacePath ?? ""}` },
       ],
     }),
+
+    getProviderRateLimits: builder.query<RateLimitInfo | null, string>({
+      query: (id) => ({
+        handler: "providers:getRateLimits",
+        args: [id],
+      }),
+      transformResponse: (response: {
+        success: boolean;
+        data: RateLimitInfo | null;
+        error?: string;
+      }) => {
+        if (!response.success) return null;
+        return response.data;
+      },
+    }),
   }),
 });
 
@@ -264,4 +292,5 @@ export const {
   useLazyGetProviderCommandsQuery,
   useGetProviderSkillsQuery,
   useLazyGetProviderSkillsQuery,
+  useGetProviderRateLimitsQuery,
 } = providersApi;

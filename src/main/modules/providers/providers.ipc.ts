@@ -18,6 +18,7 @@ const CHANNELS = {
   GET_MODELS: "providers:getModels",
   GET_COMMANDS: "providers:getCommands",
   GET_SKILLS: "providers:getSkills",
+  GET_RATE_LIMITS: "providers:getRateLimits",
 } as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -70,6 +71,10 @@ export function registerProvidersIpc(): void {
 
   ipcMain.handle(CHANNELS.GET_SKILLS, async (_, id: string, workspacePath?: string) => {
     return providersController.getSkills(id, workspacePath);
+  });
+
+  ipcMain.handle(CHANNELS.GET_RATE_LIMITS, async (_, id: string) => {
+    return providersController.getRateLimits(id);
   });
 }
 

@@ -8,9 +8,39 @@ import {
   useArchiveSpaceMutation,
   useUnarchiveSpaceMutation,
   useSetActiveSpaceMutation,
+  useGetProviderRateLimitsQuery,
 } from "@/lib/redux/api";
 import { StructuredOutputsModal } from "./structured-outputs-modal";
 import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
+
+function RateLimitBar({ label, usedPercent, resetsAt }: { label: string; usedPercent: number; resetsAt?: number }) {
+  const remaining = 100 - usedPercent;
+  const resetTime = resetsAt
+    ? new Date(resetsAt * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : null;
+
+  const barColor = remaining > 50
+    ? "bg-emerald-500"
+    : remaining > 20
+      ? "bg-amber-500"
+      : "bg-red-500";
+
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-sm text-primary-600 dark:text-primary-300 w-14 shrink-0">{label}</span>
+      <div className="flex-1 h-2 rounded-full bg-primary-200/50 dark:bg-primary-700/30 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+          style={{ width: `${remaining}%` }}
+        />
+      </div>
+      <span className="text-sm text-primary-500 dark:text-primary-400 w-10 text-right">{remaining}%</span>
+      {resetTime && (
+        <span className="text-xs text-primary-400 dark:text-primary-500 w-16 text-right">{resetTime}</span>
+      )}
+    </div>
+  );
+}
 
 const SANDBOX_OPTIONS = [
   { value: "read-only", label: "Read Only", description: "Agent cannot modify files" },
@@ -25,6 +55,9 @@ export default function CodexSettings() {
     error,
   } = useGetProviderByIdQuery("codex");
   const [updateProvider, { isLoading: updating }] = useUpdateProviderMutation();
+  const { data: rateLimits } = useGetProviderRateLimitsQuery("codex", {
+    pollingInterval: 60000, // refresh every 60s
+  });
 
   const { data: spaces = [] } = useGetSpacesQuery();
   const [archiveSpace] = useArchiveSpaceMutation();
@@ -165,6 +198,32 @@ export default function CodexSettings() {
         </SettingsRow>
       </SettingsSection>
 
+
+      {rateLimits && (rateLimits.primary || rateLimits.secondary) && (
+        <SettingsSection title="Rate Limits">
+          <div className="px-4 py-3 space-y-3">
+            {rateLimits.primary && (
+              <RateLimitBar
+                label="5h"
+                usedPercent={rateLimits.primary.usedPercent}
+                resetsAt={rateLimits.primary.resetsAt}
+              />
+            )}
+            {rateLimits.secondary && (
+              <RateLimitBar
+                label="Weekly"
+                usedPercent={rateLimits.secondary.usedPercent}
+                resetsAt={rateLimits.secondary.resetsAt}
+              />
+            )}
+            {rateLimits.planType && (
+              <div className="text-xs text-primary-400 dark:text-primary-500">
+                Plan: {rateLimits.planType}
+              </div>
+            )}
+          </div>
+        </SettingsSection>
+      )}
 
       {codexSpace && (
         <SettingsSection title="Space">

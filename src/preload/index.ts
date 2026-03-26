@@ -203,6 +203,7 @@ const api = {
     getModels: (id: string) => ipcRenderer.invoke("providers:getModels", id),
     getCommands: (id: string) => ipcRenderer.invoke("providers:getCommands", id),
     getSkills: (id: string, workspacePath?: string) => ipcRenderer.invoke("providers:getSkills", id, workspacePath),
+    getRateLimits: (id: string) => ipcRenderer.invoke("providers:getRateLimits", id),
   },
   // Tool calls operations
   toolCalls: {
@@ -333,6 +334,12 @@ const api = {
       approved: boolean;
       answer?: string;
     }) => ipcRenderer.invoke("runs:toolApprovalResponse", response),
+    // Streaming events (ephemeral — pushed from main, not persisted)
+    onStreamingEvent: (callback: (data: { runId: string; event: { type: string; kind: string; content?: string; metadata?: Record<string, unknown>; streamId?: string }; ts: number }) => void) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on("runs:ephemeralEvent", listener);
+      return () => ipcRenderer.removeListener("runs:ephemeralEvent", listener);
+    },
   },
   // Reviews operations
   reviews: {

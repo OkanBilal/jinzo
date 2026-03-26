@@ -153,6 +153,7 @@ export {
   useDeleteProviderMutation,
   useEnableProviderMutation,
   useDisableProviderMutation,
+  useGetProviderRateLimitsQuery,
 } from "./providersApi";
 export type {
   Provider,
@@ -161,6 +162,7 @@ export type {
   ProviderCapabilities,
   CreateProviderPayload,
   UpdateProviderPayload,
+  RateLimitInfo,
 } from "./providersApi";
 
 export {

@@ -651,3 +651,20 @@ input[type="range"].slider {
 .dark .shooting-star-border:hover .spark-backdrop {
   background: var(--color-primary-900);
 }
+
+/* ── Streaming text blur-in animation ── */
+@keyframes stream-blur-in {
+  from { filter: blur(4px); opacity: 0.4; }
+  to { filter: blur(0); opacity: 1; }
+}
+
+.streaming-text > * {
+  display: inline;
+  animation: fresh-blur-in 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.streaming-text > *:last-child {
+  display: inline;
+  animation: fresh-blur-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+

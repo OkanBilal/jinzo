@@ -5,6 +5,7 @@ import { toast } from "@/components/ui";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { runsApi, workspacesApi, reviewsApi, reviewFindingsApi, workspaceDiffsApi } from "@/lib/redux/api";
 import { mapArtifactToEvent, mapToolCallToEvent } from "../utils/run-event-mappers";
+import { useStreamingEvents } from "./use-streaming-events";
 
 type Attachments = Array<{ name: string; type: string; data: string; mimeType: string }>;
 type ContextIssue = { provider: string; number?: number | null; title: string; body?: string | null };
@@ -21,6 +22,7 @@ export function useWorkspaceRuns(
   const [runTurns, setRunTurns] = useState<Record<string, RunTurn[]>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { streamingEvents, clearAllStreams } = useStreamingEvents(activeRunId);
   const dispatch = useAppDispatch();
 
   const eventsEndRef = useRef<HTMLDivElement>(null);
@@ -158,6 +160,7 @@ export function useWorkspaceRuns(
         clearInterval(pollingRef.current);
         pollingRef.current = null;
       }
+      clearAllStreams();
       return;
     }
 
@@ -229,10 +232,34 @@ export function useWorkspaceRuns(
   }, [activeRunId, runs, loadRunDetails]);
 
   // Auto-scroll to bottom
-  const currentEvents = useMemo(
-    () => (activeRunId ? runEvents[activeRunId] || [] : []),
-    [activeRunId, runEvents],
-  );
+  const currentEvents = useMemo(() => {
+    const dbEvents = activeRunId ? runEvents[activeRunId] || [] : [];
+    if (streamingEvents.length === 0) return dbEvents;
+
+    // Check if DB already has the streamed content (turn completed, artifact persisted)
+    // If so, skip streaming events to avoid duplicates
+    const dbArtifactContents = new Set(
+      dbEvents
+        .filter((e) => e.type === "artifact" && e.metadata?.kind === "report")
+        .map((e) => e.content.trim()),
+    );
+
+    const activeStreams = streamingEvents.filter(
+      (se) => !dbArtifactContents.has(se.content.trim()),
+    );
+
+    if (activeStreams.length === 0) return dbEvents;
+
+    const streamRunEvents: RunEvent[] = activeStreams.map((se) => ({
+      id: se.id,
+      type: "artifact" as const,
+      content: se.content,
+      timestamp: new Date(se.timestamp),
+      metadata: { kind: "report", streaming: true, streamId: se.streamId },
+    }));
+
+    return [...dbEvents, ...streamRunEvents];
+  }, [activeRunId, runEvents, streamingEvents]);
   useEffect(() => {
     eventsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [currentEvents]);

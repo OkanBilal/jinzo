@@ -56,4 +56,8 @@ export const providersController = {
   async getSkills(id: string, workspacePath?: string) {
     return providersService.getSkills(id, workspacePath);
   },
+
+  async getRateLimits(id: string) {
+    return providersService.getRateLimits(id);
+  },
 };

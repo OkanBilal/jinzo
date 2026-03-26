@@ -912,6 +912,12 @@ export const runsService = {
             ts: event.ts,
           },
         });
+
+        // Auto-generated title from provider (e.g. Codex CLI thread/name/updated)
+        const threadTitle = (event.metadata as Record<string, unknown> | undefined)?.threadTitle as string | undefined;
+        if (threadTitle) {
+          await runsRepo.updateRun(runId, { title: threadTitle });
+        }
         break;
       }
 
@@ -987,6 +993,17 @@ export const runsService = {
 
 
       case "artifact": {
+        // Ephemeral events: push to renderer only, skip DB
+        if (event.ephemeral) {
+          const payload = { runId, event: { type: event.type, kind: event.kind, content: event.content, metadata: event.metadata, streamId: event.streamId }, ts: Date.now() };
+          for (const win of BrowserWindow.getAllWindows()) {
+            if (!win.isDestroyed()) {
+              win.webContents.send("runs:ephemeralEvent", payload);
+            }
+          }
+          break;
+        }
+
         await runsRepo.insertArtifact({
           runId,
           kind: event.kind as

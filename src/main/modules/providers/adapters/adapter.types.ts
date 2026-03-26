@@ -99,6 +99,10 @@ export interface WorkRunArtifactEvent {
   path?: string;
   content?: string;
   metadata?: Record<string, unknown>;
+  /** When true, pushed to renderer but NOT persisted to DB */
+  ephemeral?: boolean;
+  /** Identifies the streaming source — renderer uses this to accumulate deltas */
+  streamId?: string;
 }
 
 /**
@@ -364,6 +368,31 @@ export interface WorkRunAdapter {
    * @returns Promise resolving to a short title string (3-6 words)
    */
   generateTitle?(goal: string, context?: WorkRunContextItem[]): Promise<string>;
+
+  /**
+   * Get current rate limit information from the provider.
+   * @returns Promise resolving to rate limit data, or null if not supported
+   */
+  getRateLimits?(): Promise<RateLimitInfo | null>;
+}
+
+/**
+ * Rate limit information from a provider
+ */
+export interface RateLimitInfo {
+  planType?: string;
+  primary?: RateLimitWindow;
+  secondary?: RateLimitWindow;
+  credits?: { hasCredits: boolean; balance?: string; unlimited: boolean };
+}
+
+export interface RateLimitWindow {
+  /** Percentage used (0-100) */
+  usedPercent: number;
+  /** Window duration in minutes */
+  windowDurationMins?: number;
+  /** Unix timestamp when the window resets */
+  resetsAt?: number;
 }
 
 /**

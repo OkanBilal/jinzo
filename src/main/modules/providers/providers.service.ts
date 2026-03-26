@@ -5,7 +5,8 @@ import type {
   ProviderResponse,
   ServiceResponse,
 } from "./providers.dto";
-import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo } from "./adapters";
+import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, getRateLimitsForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo } from "./adapters";
+import type { RateLimitInfo } from "./adapters/adapter.types";
 
 // ─────────────────────────────────────────────────────────────
 // Providers Service
@@ -179,6 +180,23 @@ export const providersService = {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to get skills"
+      };
+    }
+  },
+
+  async getRateLimits(id: string): Promise<ServiceResponse<RateLimitInfo | null>> {
+    try {
+      const provider = await providersRepo.findById(id);
+      if (!provider) return { success: false, error: "Provider not found" };
+      if (!provider.isEnabled) return { success: false, error: "Provider is not enabled" };
+
+      const rateLimits = await getRateLimitsForProvider(provider);
+      return { success: true, data: rateLimits };
+    } catch (error) {
+      console.error(`[ProvidersService] Failed to get rate limits for provider ${id}:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get rate limits",
       };
     }
   },

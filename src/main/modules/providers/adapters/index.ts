@@ -71,6 +71,7 @@ export {
   listModelsForProvider,
   listCommandsForProvider,
   listSkillsForProvider,
+  getRateLimitsForProvider,
   SUPPORTED_WORK_PROVIDERS,
   type SupportedWorkProvider,
 } from "./adapter.factory";
