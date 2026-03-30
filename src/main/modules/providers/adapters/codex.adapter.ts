@@ -13,6 +13,7 @@ import type {
   WorkRunRequest,
   WorkRunContinueRequest,
   WorkRunForkRequest,
+  WorkRunReviewRequest,
   WorkRunResult,
   WorkRunUsage,
   WorkRunEventHandler,
@@ -30,6 +31,9 @@ import {
   requestToolApproval,
 } from "../../runs/user-input-broker";
 import { runsRepo } from "../../runs/runs.repo";
+import { reviewsRepo } from "../../reviews/reviews.repo";
+import { reviewFindingsRepo } from "../../reviewFindings/reviewFindings.repo";
+import { workspaceActivityService } from "../../workspaceActivity/workspaceActivity.service";
 import {
   createLogger,
   safeJson,
@@ -96,16 +100,79 @@ interface Usage {
 // Approval mode mapping
 // ─────────────────────────────────────────────────────────────
 
-function mapPermissionMode(mode?: string): "untrusted" | "on-request" | "on-failure" | "never" {
-  switch (mode) {
-    case "bypassPermissions": return "never";
-    case "acceptEdits": return "on-failure";
-    default: return "on-failure";
-  }
-}
-
 function mapSandboxMode(mode?: string): "read-only" | "workspace-write" | "danger-full-access" {
   return (mode as "read-only" | "workspace-write" | "danger-full-access") ?? "workspace-write";
+}
+
+// ─────────────────────────────────────────────────────────────
+// Codex review text parser
+// ─────────────────────────────────────────────────────────────
+
+interface ParsedReviewFinding {
+  severity: "critical" | "warning" | "info";
+  title: string;
+  file: string;
+  lineStart?: number;
+  lineEnd?: number;
+  message: string;
+  reason: string;
+}
+
+const PRIORITY_MAP: Record<string, "critical" | "warning" | "info"> = {
+  P1: "critical",
+  P2: "warning",
+  P3: "info",
+};
+
+/**
+ * Parse Codex review/start output into structured findings.
+ *
+ * Format:
+ *   - [P1] Title — /path/to/file.ts:50-51
+ *     Description text spanning one or more lines...
+ */
+function parseCodexReviewFindings(reviewText: string): ParsedReviewFinding[] {
+  try {
+    if (!reviewText || typeof reviewText !== "string") return [];
+
+    const findings: ParsedReviewFinding[] = [];
+
+    // Split on finding headers: "- [P1]", "- [P2]", "- [P3]"
+    const blocks = reviewText.split(/\n(?=- \[P[123]\] )/);
+
+    for (const block of blocks) {
+      try {
+        // Match: - [P1] Title — file/path:lineStart-lineEnd
+        const headerMatch = block.match(
+          /^- \[(P[123])]\s+(.+?)\s+[—-]+\s+(.+?)(?::(\d+)(?:-(\d+))?)?\s*\n([\s\S]*)/,
+        );
+        if (!headerMatch) continue;
+
+        const [, priority, title, filePath, lineStartStr, lineEndStr, body] = headerMatch;
+        if (!title || !filePath) continue;
+
+        const severity = PRIORITY_MAP[priority] ?? "info";
+        const description = (body ?? "").replace(/^ {2}/gm, "").trim();
+
+        findings.push({
+          severity,
+          title: title.trim(),
+          file: filePath.trim(),
+          lineStart: lineStartStr ? parseInt(lineStartStr, 10) : undefined,
+          lineEnd: lineEndStr ? parseInt(lineEndStr, 10) : undefined,
+          message: title.trim(),
+          reason: description || title.trim(),
+        });
+      } catch {
+        // Skip malformed finding block
+      }
+    }
+
+    return findings;
+  } catch {
+    // If parsing fails entirely, return empty — review text still shows as report artifact
+    return [];
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -126,6 +193,9 @@ const activeRuns = new Map<string, {
 
 // Session ID mapping: runId → threadId (for resume support)
 const sessionIdMap = new Map<string, string>();
+
+// Track saved review item IDs to prevent duplicate persistence
+const savedReviewItems = new Set<string>();
 
 const { info: logInfo, error: logError, warn: logWarn } = createLogger("[CodexAdapter]");
 
@@ -733,7 +803,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
         const item = (p?.item ?? p) as ThreadItem | undefined;
         if (item?.type) {
-          events.push(...mapThreadItem(item, method, ts));
+          events.push(...mapThreadItem(item, method, ts, runId));
         }
         break;
       }
@@ -852,7 +922,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
    * Map Codex ThreadItem to WorkRunEvents.
    * Matches the app-server's item schema (same structure as SDK ThreadItem).
    */
-  function mapThreadItem(item: ThreadItem, eventMethod: string, ts: number): WorkRunEvent[] {
+  function mapThreadItem(item: ThreadItem, eventMethod: string, ts: number, runId?: string): WorkRunEvent[] {
     const events: WorkRunEvent[] = [];
     const phase = eventMethod.endsWith("/started") ? "start" :
                   eventMethod.endsWith("/completed") ? "complete" : "update";
@@ -876,8 +946,8 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       case "command_execution":
       case "commandExecution": {
         const command = typeof item.command === "string" ? item.command : safeJson(item.command);
-        const exitCode = item.exit_code as number | undefined;
-        const output = typeof item.aggregated_output === "string" ? item.aggregated_output : undefined;
+        const exitCode = (item.exitCode ?? item.exit_code) as number | undefined;
+        const output = typeof (item.aggregatedOutput ?? item.aggregated_output) === "string" ? (item.aggregatedOutput ?? item.aggregated_output) as string : undefined;
         const status = item.status as string | undefined;
 
         if (phase === "start") {
@@ -886,7 +956,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             toolName: "Bash",
             input: { command },
             startedAt: ts,
-            metadata: { phase: "start", itemId: item.id, codexItemType: "command_execution" },
+            metadata: { phase: "start", toolCallId: item.id, itemId: item.id, codexItemType: "command_execution" },
           });
         } else if (phase === "complete") {
           events.push({
@@ -896,7 +966,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             output: output ?? `exit code: ${exitCode ?? "unknown"}`,
             error: status === "failed" ? `Command failed with exit code ${exitCode}` : undefined,
             endedAt: ts,
-            metadata: { phase: "complete", itemId: item.id, exitCode, codexItemType: "command_execution" },
+            metadata: { phase: "complete", toolCallId: item.id, itemId: item.id, exitCode, codexItemType: "command_execution" },
           });
         }
         break;
@@ -915,7 +985,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
               toolName,
               input: { path: change.path },
               startedAt: ts,
-              metadata: { phase: "start", itemId: `${item.id}-${change.path}`, changeType: change.kind, codexItemType: "file_change" },
+              metadata: { phase: "start", toolCallId: `${item.id}-${change.path}`, itemId: `${item.id}-${change.path}`, changeType: change.kind, codexItemType: "file_change" },
             });
             events.push({
               type: "tool_call",
@@ -924,7 +994,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
               output: `File ${change.kind}: ${change.path}`,
               error: patchStatus === "failed" ? "Patch failed" : undefined,
               endedAt: ts,
-              metadata: { phase: "complete", itemId: `${item.id}-${change.path}`, changeType: change.kind, codexItemType: "file_change" },
+              metadata: { phase: "complete", toolCallId: `${item.id}-${change.path}`, itemId: `${item.id}-${change.path}`, changeType: change.kind, codexItemType: "file_change" },
             });
           }
         }
@@ -946,7 +1016,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             toolName,
             input: args,
             startedAt: ts,
-            metadata: { phase: "start", itemId: item.id, codexItemType: "mcp_tool_call" },
+            metadata: { phase: "start", toolCallId: item.id, itemId: item.id, codexItemType: "mcp_tool_call" },
           });
         } else if (phase === "complete") {
           events.push({
@@ -956,7 +1026,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             output: result,
             error,
             endedAt: ts,
-            metadata: { phase: "complete", itemId: item.id, codexItemType: "mcp_tool_call" },
+            metadata: { phase: "complete", toolCallId: item.id, itemId: item.id, codexItemType: "mcp_tool_call" },
           });
         }
         break;
@@ -971,7 +1041,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             toolName: "WebSearch",
             input: { query },
             startedAt: ts,
-            metadata: { phase: "start", itemId: item.id, codexItemType: "web_search" },
+            metadata: { phase: "start", toolCallId: item.id, itemId: item.id, codexItemType: "web_search" },
           });
           events.push({
             type: "tool_call",
@@ -979,7 +1049,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             input: { query },
             output: `Searched: ${query}`,
             endedAt: ts,
-            metadata: { phase: "complete", itemId: item.id, codexItemType: "web_search" },
+            metadata: { phase: "complete", toolCallId: item.id, itemId: item.id, codexItemType: "web_search" },
           });
         }
         break;
@@ -992,6 +1062,89 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           if (todos) {
             const summary = todos.map((t) => `${t.completed ? "[x]" : "[ ]"} ${t.text}`).join("\n");
             events.push({ type: "log", message: `[todo]\n${summary}`, level: "info", ts, metadata: { itemId: item.id } });
+          }
+        }
+        break;
+      }
+
+      case "enteredReviewMode": {
+        if (phase === "start") {
+          const label = typeof item.label === "string" ? item.label : "started";
+          events.push({ type: "log", message: `Review: ${label}`, level: "info", ts, metadata: { itemId: item.id, codexItemType: "enteredReviewMode" } });
+        }
+        break;
+      }
+
+      case "exitedReviewMode": {
+        const reviewText = typeof item.review === "string" ? item.review : typeof item.text === "string" ? item.text : null;
+        if (reviewText && phase === "complete") {
+          events.push({
+            type: "artifact",
+            kind: "report",
+            content: reviewText,
+            metadata: { source: "codex_review_mode", itemId: item.id },
+          });
+
+          // Persist findings to DB (fire-and-forget, deduplicated by item ID)
+          if (runId && !savedReviewItems.has(item.id)) {
+            savedReviewItems.add(item.id);
+            const parsedFindings = parseCodexReviewFindings(reviewText);
+            if (parsedFindings.length > 0) {
+              (async () => {
+                try {
+                  const run = await runsRepo.findRunById(runId);
+                  if (!run?.workspaceId) return;
+
+                  // Extract summary: full review text (intro + findings are separate DB records)
+                  const summary = reviewText;
+
+                  // Create review record
+                  const reviewId = await reviewsRepo.insert({
+                    workspaceId: run.workspaceId,
+                    title: "Code Review",
+                    summary,
+                    runId,
+                  });
+
+                  // Create findings
+                  const findingPayloads = parsedFindings.map((f) => ({
+                    reviewId,
+                    severity: f.severity as any,
+                    file: f.file,
+                    lineStart: f.lineStart,
+                    lineEnd: f.lineEnd,
+                    message: f.message,
+                    reason: f.reason,
+                  }));
+                  await reviewFindingsRepo.insertMany(findingPayloads);
+
+                  // Log activity
+                  workspaceActivityService.log({
+                    workspaceId: run.workspaceId,
+                    type: "review",
+                    title: "Code Review",
+                    summary,
+                    refId: reviewId,
+                  });
+                  workspaceActivityService.log({
+                    workspaceId: run.workspaceId,
+                    type: "finding",
+                    title: `${parsedFindings.length} finding(s) saved`,
+                    refId: reviewId,
+                    metadata: {
+                      count: parsedFindings.length,
+                      critical: parsedFindings.filter((f) => f.severity === "critical").length,
+                      warning: parsedFindings.filter((f) => f.severity === "warning").length,
+                      info: parsedFindings.filter((f) => f.severity === "info").length,
+                    },
+                  });
+
+                  logInfo(`Saved review ${reviewId} with ${parsedFindings.length} finding(s) for run ${runId}`);
+                } catch (err) {
+                  logError("Failed to persist review findings:", err);
+                }
+              })();
+            }
           }
         }
         break;
@@ -1339,7 +1492,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
         const server = await ensureServer();
 
-        const approvalPolicy = config.approvalMode ?? mapPermissionMode(config.permissionMode);
+        const approvalPolicy = config.approvalMode ?? "on-failure";
         const sandbox = mapSandboxMode(config.sandboxMode);
 
         // Start thread (cwd passed per-thread, not per-server)
@@ -1440,7 +1593,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           throw new Error(`No session found for run ${runId}. Cannot resume.`);
         }
 
-        const approvalPolicy = config.approvalMode ?? mapPermissionMode(config.permissionMode);
+        const approvalPolicy = config.approvalMode ?? "on-failure";
         const sandbox = mapSandboxMode(config.sandboxMode);
 
         // 1. Resume thread
@@ -1544,7 +1697,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           throw new Error(`No session found for source run ${sourceRunId}. Cannot fork.`);
         }
 
-        const approvalPolicy = config.approvalMode ?? mapPermissionMode(config.permissionMode);
+        const approvalPolicy = config.approvalMode ?? "on-failure";
         const sandbox = mapSandboxMode(config.sandboxMode);
 
         // 1. Fork thread via thread/fork
@@ -1613,6 +1766,114 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         logError("forkRun failed:", msg);
+        await onEvent({ type: "status", status: "failed", error: msg, ts: Date.now() });
+        flushUsage(runId);
+        return { status: "failed", summary: msg };
+      } finally {
+        activeRuns.delete(runId);
+        cancelPendingRequests(runId);
+      }
+    },
+
+    async reviewRun(
+      request: WorkRunReviewRequest,
+      onEvent: WorkRunEventHandler,
+    ): Promise<WorkRunResult> {
+      const { runId } = request;
+      const resolvedModel = request.model || config.defaultModel || undefined;
+      const timeout = config.timeout ?? 600000;
+      const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
+
+      try {
+        await onEvent({ type: "status", status: "running", ts: Date.now() });
+
+        const server = await ensureServer();
+
+        const approvalPolicy = config.approvalMode ?? "on-failure";
+        const sandbox = mapSandboxMode(config.sandboxMode);
+
+        // 1. Start thread
+        const networkAccess = config.networkAccessEnabled !== false;
+        const threadStartParams: Record<string, unknown> = {
+          cwd: request.workspace.rootPath,
+          approvalPolicy,
+          sandbox,
+          ...(resolvedModel ? { model: resolvedModel } : {}),
+          config: {
+            ...(networkAccess ? { sandbox_network_access: true } : {}),
+          },
+        };
+
+        logInfo(`Starting review thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
+        const threadResult = await server.sendRequest("thread/start", threadStartParams) as Record<string, unknown>;
+        const thread = threadResult?.thread as Record<string, unknown> | undefined;
+        const threadId = (thread?.id ?? threadResult?.threadId) as string | undefined;
+
+        if (threadId) {
+          sessionIdMap.set(runId, threadId);
+          runsRepo.updateRun(runId, { sessionId: threadId }).catch((err) =>
+            logError("Failed to persist session ID:", err),
+          );
+        }
+
+        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [] });
+
+        // Emit review user-prompt artifact
+        const targetLabel =
+          request.target.type === "uncommittedChanges" ? "Review uncommitted changes" :
+          request.target.type === "baseBranch" ? `Changes vs ${request.target.branch ?? "base branch"}` :
+          request.target.type === "commit" ? `Commit ${request.target.sha?.substring(0, 7) ?? ""}${request.target.title ? ` — ${request.target.title}` : ""}` :
+          "Code Changes";
+        await onEvent({
+          type: "artifact",
+          kind: "user-prompt",
+          content: `${targetLabel}`,
+          metadata: {
+            source: "user",
+            isReview: true,
+            reviewTarget: request.target.type,
+            delivery: request.delivery ?? "inline",
+          },
+        });
+
+        // 2. Build review target
+        const target: Record<string, unknown> = { type: request.target.type };
+        if (request.target.type === "baseBranch" && request.target.branch) {
+          target.branch = request.target.branch;
+        } else if (request.target.type === "commit") {
+          if (request.target.sha) target.sha = request.target.sha;
+          if (request.target.title) target.title = request.target.title;
+        } else if (request.target.type === "custom" && request.target.instructions) {
+          target.instructions = request.target.instructions;
+        }
+
+        // 3. Start review (uses review/start instead of turn/start)
+        const reviewStartParams: Record<string, unknown> = {
+          threadId: threadId ?? "",
+          target,
+          ...(request.delivery ? { delivery: request.delivery } : {}),
+          ...(resolvedModel ? { model: resolvedModel } : {}),
+        };
+
+        logInfo(`Starting review: target=${request.target.type}, delivery=${request.delivery ?? "inline"}`);
+        await server.sendRequest("review/start", reviewStartParams);
+
+        // 4. Wait for turn completion (review emits standard turn lifecycle events)
+        const result = await waitForTurnCompletion(server, runId, resolvedModel, onEvent, collectedArtifacts, timeout);
+
+        const usage = flushUsage(runId);
+
+        await onEvent({ type: "status", status: result.status, error: result.error, ts: Date.now() });
+
+        return {
+          status: result.status,
+          summary: result.error,
+          artifacts: collectedArtifacts,
+          usage,
+        };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        logError("reviewRun failed:", msg);
         await onEvent({ type: "status", status: "failed", error: msg, ts: Date.now() });
         flushUsage(runId);
         return { status: "failed", summary: msg };

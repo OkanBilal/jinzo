@@ -18,8 +18,10 @@ const BAR_COLORS = [
 ];
 
 export default function ToolUsageChart({ data }: ToolUsageChartProps) {
-  const items = data.slice(0, 10);
+  const MAX_BARS = 10;
+  const items = data.slice(0, MAX_BARS);
   const maxCount = Math.max(...items.map((d) => d.count), 1);
+  const padCount = MAX_BARS - items.length;
 
   return (
     <ChartCard
@@ -31,37 +33,48 @@ export default function ToolUsageChart({ data }: ToolUsageChartProps) {
       <BarChart
         height={150}
         gap="gap-1.5"
-        bars={items.map((d, i) => ({
-          key: d.toolName,
-          hoverLabel: `${d.toolName}: ${d.count}`,
-          topLabel: (
-            <Text variant="caption" className="text-[10px] tabular-nums">
-              {d.count}
-            </Text>
-          ),
-          segments: [
-            {
-              percent: Math.max((d.count / maxCount) * 100, 3),
-              color: BAR_COLORS[i % BAR_COLORS.length],
-            },
-          ],
-        }))}
+        bars={[
+          ...items.map((d, i) => ({
+            key: d.toolName,
+            hoverLabel: `${d.toolName}: ${d.count}`,
+            topLabel: (
+              <Text variant="caption" className="text-[10px] tabular-nums">
+                {d.count}
+              </Text>
+            ),
+            segments: [
+              {
+                percent: Math.max((d.count / maxCount) * 100, 3),
+                color: BAR_COLORS[i % BAR_COLORS.length],
+              },
+            ],
+          })),
+          ...Array.from({ length: padCount }, (_, i) => ({
+            key: `_pad_${i}`,
+            segments: [] as { percent: number; color: string }[],
+          })),
+        ]}
       />
       <BarLabels
         gap="gap-1.5"
-        labels={items.map((d) => ({
-          key: d.toolName,
-          content: (
-            <Text
-              variant="mutedSmall"
-              className="text-[8px] truncate block max-w-full"
-              as="span"
-              
-            >
-              {d.toolName}
-            </Text>
-          ),
-        }))}
+        labels={[
+          ...items.map((d) => ({
+            key: d.toolName,
+            content: (
+              <Text
+                variant="mutedSmall"
+                className="text-[8px] truncate block max-w-full"
+                as="span"
+              >
+                {d.toolName}
+              </Text>
+            ),
+          })),
+          ...Array.from({ length: padCount }, (_, i) => ({
+            key: `_pad_${i}`,
+            content: null as unknown as React.ReactNode,
+          })),
+        ]}
       />
     </ChartCard>
   );

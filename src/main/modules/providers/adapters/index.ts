@@ -9,6 +9,8 @@ export type {
   WorkRunRequest,
   WorkRunContinueRequest,
   WorkRunForkRequest,
+  WorkRunReviewTarget,
+  WorkRunReviewRequest,
   WorkRunLogEvent,
   WorkRunToolCallEvent,
   WorkRunArtifactEvent,

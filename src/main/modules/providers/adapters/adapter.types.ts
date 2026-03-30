@@ -285,6 +285,37 @@ export interface WorkRunForkRequest {
 }
 
 /**
+ * Target scope for a native code review
+ */
+export interface WorkRunReviewTarget {
+  type: "uncommittedChanges" | "baseBranch" | "commit" | "custom";
+  /** Branch name for baseBranch target */
+  branch?: string;
+  /** Commit SHA for commit target */
+  sha?: string;
+  /** Commit title for commit target */
+  title?: string;
+  /** Free-form instructions for custom target */
+  instructions?: string;
+}
+
+/**
+ * Request to start a native code review run
+ */
+export interface WorkRunReviewRequest {
+  runId: string;
+  accountId: string;
+  workspace: {
+    id: string;
+    rootPath: string;
+  };
+  target: WorkRunReviewTarget;
+  /** inline = review on same thread (default), detached = fork new review thread */
+  delivery?: "inline" | "detached";
+  model?: string | null;
+}
+
+/**
  * Interface that all work run adapters must implement
  */
 export interface WorkRunAdapter {
@@ -314,6 +345,15 @@ export interface WorkRunAdapter {
    * @returns Promise resolving to the final result when the forked run completes
    */
   forkRun?(request: WorkRunForkRequest, onEvent: WorkRunEventHandler): Promise<WorkRunResult>;
+
+  /**
+   * Start a native code review run using the provider's built-in review mode.
+   * Falls back to startRun with a review goal if not implemented.
+   * @param request - The review configuration with target scope
+   * @param onEvent - Callback invoked for each event during the review
+   * @returns Promise resolving to the final result when the review completes
+   */
+  reviewRun?(request: WorkRunReviewRequest, onEvent: WorkRunEventHandler): Promise<WorkRunResult>;
 
   /**
    * Abort a currently running work run.

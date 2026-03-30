@@ -4,6 +4,7 @@ import DropdownWrapper from "../dropdown-wrapper";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { getModelIcon } from "@/lib/model-icons";
 import { ModelLoader } from "./model-loader";
+import { ArrowUp } from "../icons";
 
 interface ModelSelectDropdownProps {
   model: string;
@@ -25,13 +26,13 @@ function formatClaudeModelName(model: string): string {
     lowerModel === "default" ||
     lowerModel === "opus"
   ) {
-    return "Claude Opus 4.6";
+    return "Opus 4.6";
   }
   if (lowerModel === "sonnet") {
-    return "Claude Sonnet 4.6";
+    return "Sonnet 4.6";
   }
   if (lowerModel === "haiku") {
-    return "Claude Haiku 4.5";
+    return "Haiku 4.5";
   }
 
   return model;
@@ -60,9 +61,7 @@ export function ModelSelectDropdown({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <div
-        className="flex cursor-pointer items-center hover:bg-primary-200/30 dark:hover:bg-primary-600/20 transition-colors rounded-2xl"
-      >
+      <div className="flex cursor-pointer items-center hover:bg-primary-200/30 animate-blur-reveal dark:hover:bg-primary-600/20 transition-colors rounded-2xl">
         <Button
           tooltip={noModels ? "No models available" : "Select model"}
           tooltipPosition="top"
@@ -85,6 +84,7 @@ export function ModelSelectDropdown({
             <>
               {getModelIcon(displayModel)}
               {displayModel}
+              <ArrowUp className={`size-3.5 rotate-180 `} />
             </>
           )}
         </Button>
@@ -93,10 +93,10 @@ export function ModelSelectDropdown({
       <DropdownWrapper
         isOpen={isOpen}
         openUpward={openUpward}
-        minWidth="min-w-52"
+        minWidth="min-w-48"
         useFixedBackground={true}
       >
-        <div className="max-h-80 overflow-auto noscrollbar">
+        <div className="max-h-80 overflow-auto noscrollbar ">
           {modelList.map((m) => {
             const displayName = formatClaudeModelName(m);
             return (
@@ -108,7 +108,9 @@ export function ModelSelectDropdown({
                   onToggle();
                 }}
                 className={`w-full text-left px-2.5 py-2 cursor-pointer text-sm transition-colors flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl ${
-                  model === m ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-300 font-medium" : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
+                  model === m
+                    ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-300 font-medium"
+                    : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
                 }`}
               >
                 {getModelIcon(displayName)}

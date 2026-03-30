@@ -17,6 +17,7 @@ import {
   setActiveWorkspaceId,
   setActiveWorkspaceForProvider,
   clearPendingGoal,
+  clearPendingReviewTarget,
 } from "@/lib/redux/slices/workspaceSlice";
 import { isRunTab, isNewRunTab } from "@/features/workspace/utils/repo-utils";
 import type { RootState } from "@/lib/redux";
@@ -62,6 +63,9 @@ export function useWorkspacePage(providerId: string) {
   );
   const pendingAutoExecute = useSelector(
     (state: RootState) => state.workspace.pendingAutoExecute,
+  );
+  const pendingReviewTarget = useSelector(
+    (state: RootState) => state.workspace.pendingReviewTarget,
   );
 
   const [goal, setGoal] = useState("");
@@ -119,11 +123,26 @@ export function useWorkspacePage(providerId: string) {
     executeRun,
     continueRun,
     forkRun,
+    executeReview,
     checkCanResume,
     closeTab,
     selectTab,
     setRuns,
   } = useWorkspaceRuns(workspaceId, providerId);
+
+  // Handle pending review target (native code review)
+  useEffect(() => {
+    if (!pendingReviewTarget || !workspaceId || !selectedWorkspace) return;
+    dispatch(clearPendingReviewTarget());
+
+    const run = async () => {
+      const newRunId = await executeReview(selectedWorkspace, providerId, pendingReviewTarget, selectedModel);
+      if (newRunId) {
+        dispatch(setActiveTab(newRunId));
+      }
+    };
+    run();
+  }, [pendingReviewTarget, workspaceId, selectedWorkspace, providerId, selectedModel, executeReview, dispatch]);
 
   useEffect(() => {
     if (runs.length > 0 && !selectedFile && activeTab === "editor") {

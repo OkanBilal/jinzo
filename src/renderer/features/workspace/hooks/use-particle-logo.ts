@@ -25,15 +25,15 @@ export interface ParticleLogoOptions {
 }
 
 const DEFAULTS = {
-  logoSize: 120,
+  logoSize: 80,
   particleGap: 2,
   mouseRadius: 30,
-  mouseForce: 3,
+  mouseForce: 4,
   returnSpeed: 0.08,
-  friction: 0.82,
+  friction: 0.6,
   particleSize: 1,
-  idleAmplitude: 1,
-  idleSpeed: 0.05,
+  idleAmplitude: 0.5,
+  idleSpeed: 0.25,
 };
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -105,25 +105,41 @@ function renderLogoToCanvas(
 
 function renderTextToCanvas(
   text: string,
-  maxWidth: number
+  maxWidth: number,
+  fontWeight: number | string = 300,
+  letterSpacing: number = 1 
 ): HTMLCanvasElement {
   const offscreen = document.createElement("canvas");
   const ctx = offscreen.getContext("2d")!;
 
   const fontSize = 24;
-  const fontFamily = `-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol`;
-  ctx.font = `200 ${fontSize}px ${fontFamily}`;
-  const metrics = ctx.measureText(text);
-  const textWidth = Math.min(metrics.width, maxWidth);
+  const fontFamily = `-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
+
+  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+
+  let totalWidth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const charWidth = ctx.measureText(text[i]).width;
+    totalWidth += charWidth;
+    if (i < text.length - 1) totalWidth += letterSpacing;
+  }
+
+  const textWidth = Math.min(totalWidth, maxWidth);
   const textHeight = fontSize;
 
   offscreen.width = Math.ceil(textWidth) + 4;
   offscreen.height = Math.ceil(textHeight) + 4;
 
-  ctx.font = `200 ${fontSize}px ${fontFamily}`;
+  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
   ctx.fillStyle = "#000";
   ctx.textBaseline = "top";
-  ctx.fillText(text, 2, 2);
+
+  let x = 2;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    ctx.fillText(char, x, 3);
+    x += ctx.measureText(char).width + letterSpacing;
+  }
 
   return offscreen;
 }
@@ -175,7 +191,7 @@ export function useParticleLogo(
         const textPixels = samplePixels(textCanvas, 1);
 
         const textOffsetX = (canvasW - textCanvas.width) / 2;
-        const textOffsetY = logoOffsetY + logoSize + 30;
+        const textOffsetY = logoOffsetY + logoSize + 24;
 
         for (const p of textPixels) {
           const x = p.x + textOffsetX;

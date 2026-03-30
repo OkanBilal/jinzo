@@ -318,6 +318,29 @@ export interface ForkRunResponse {
   sourceRunId: string;
 }
 
+/** Review target scope for native code review */
+export interface ReviewTarget {
+  type: "uncommittedChanges" | "baseBranch" | "commit" | "custom";
+  branch?: string;
+  sha?: string;
+  title?: string;
+  instructions?: string;
+}
+
+/** Payload for starting a native code review run */
+export interface ReviewRunPayload {
+  accountId: string;
+  workspaceId: string;
+  spaceId?: string;
+  providerId: string;
+  target: ReviewTarget;
+  delivery?: "inline" | "detached";
+  model?: string;
+  systemPrompt?: string;
+  configSnapshot?: Record<string, unknown>;
+  toolPolicySnapshot?: Record<string, unknown>;
+}
+
 /** Full run details with related data */
 export interface RunDetailsResponse {
   run: RunResponse;

@@ -1,4 +1,4 @@
-import { Archive, CopilotStatic, Option, Edit, Gpt } from "@/components/ui/icons";
+import { Archive, CopilotStatic, Option, Edit, Codex } from "@/components/ui/icons";
 import type { Run } from "../types";
 import { Claude } from "@/components/ui/icons/space";
 import { AnimatedTitle } from "@/components/ui";
@@ -27,7 +27,7 @@ function VariantIcon({ variant, isActive }: { variant: string; isActive: boolean
 
   if (variant === "claude") return <Claude className="text-claude" />;
   if (variant === "copilot") return <CopilotStatic className={className} />;
-  if (variant === "codex") return <Gpt className={className} />;
+  if (variant === "codex") return <Codex className={className} />;
   return null;
 }
 

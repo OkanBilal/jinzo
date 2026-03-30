@@ -39,28 +39,7 @@ export const seedSpaces: SeedSpace[] = [
     },
     sortOrder: 0,
   },
-  {
-    id: "copilot",
-    name: "Copilot",
-    slug: "copilot",
-    icon: "icon:copilot",
-    systemPrompt: "",
-    themeConfig: {
-      lightBackground: "#f0e9fab0",
-      darkBackground: "#15111abf",
-    },
-    uiConfig: {
-      sidebar: {
-        width: "19rem",
-        title: "Repository",
-        itemType: "workspace",
-        defaultRoute: "/copilot",
-      },
-      main: { margin: "19rem" },
-      rightPanel: { width: "22rem", component: "workspace" },
-    },
-    sortOrder: 1,
-  },
+
   {
     id: "codex",
     name: "Codex",
@@ -77,6 +56,28 @@ export const seedSpaces: SeedSpace[] = [
         title: "Repository",
         itemType: "workspace",
         defaultRoute: "/codex",
+      },
+      main: { margin: "19rem" },
+      rightPanel: { width: "22rem", component: "workspace" },
+    },
+    sortOrder: 1,
+  },
+    {
+    id: "copilot",
+    name: "Copilot",
+    slug: "copilot",
+    icon: "icon:copilot",
+    systemPrompt: "",
+    themeConfig: {
+      lightBackground: "#f0e9fab0",
+      darkBackground: "#15111abf",
+    },
+    uiConfig: {
+      sidebar: {
+        width: "19rem",
+        title: "Repository",
+        itemType: "workspace",
+        defaultRoute: "/copilot",
       },
       main: { margin: "19rem" },
       rightPanel: { width: "22rem", component: "workspace" },

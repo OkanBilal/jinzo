@@ -325,6 +325,24 @@ const api = {
       }>;
       attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>;
     }) => ipcRenderer.invoke("runs:fork", payload),
+    executeReview: (payload: {
+      accountId: string;
+      workspaceId: string;
+      spaceId?: string;
+      providerId: string;
+      target: {
+        type: "uncommittedChanges" | "baseBranch" | "commit" | "custom";
+        branch?: string;
+        sha?: string;
+        title?: string;
+        instructions?: string;
+      };
+      delivery?: "inline" | "detached";
+      model?: string;
+      systemPrompt?: string;
+      configSnapshot?: Record<string, unknown>;
+      toolPolicySnapshot?: Record<string, unknown>;
+    }) => ipcRenderer.invoke("runs:executeReview", payload),
     deleteSession: (runId: string) =>
       ipcRenderer.invoke("runs:deleteSession", runId),
     // Interactive tool approval

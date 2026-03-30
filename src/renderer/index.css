@@ -303,7 +303,7 @@ html:not(.app-ready) *::after {
 
 
 @keyframes blur-reveal {
-  from { filter: blur(12px); opacity: 0; }
+  from { filter: blur(2px); opacity: 0.4; }
   to { filter: blur(0); opacity: 1; }
 }
 
@@ -573,7 +573,7 @@ input[type="range"].slider {
 }
 
 .animate-blur-reveal {
-  animation: blur-reveal 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: blur-reveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .fade-in {

@@ -88,7 +88,7 @@ export default function CopilotSettings() {
         <Heading2 className="font-medium!">Copilot</Heading2>
       </div>
 
-      <SettingsSection  title="Configurations">
+      <SettingsSection  title="Configuration">
         <SettingsRow
           title="Bypass Permissions"
           description={

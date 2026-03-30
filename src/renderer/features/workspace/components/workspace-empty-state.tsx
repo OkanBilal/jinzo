@@ -12,9 +12,9 @@ export function WorkspaceEmptyState({ workspace }: WorkspaceEmptyStateProps) {
   return (
     <div className="relative flex flex-col items-center justify-center h-full pb-6">
       <ParticleLogoCanvas
-        className="w-[500px] h-[280px]"
+        className="w-125 h-70"
         routeType={routeType}
-        text="Let's build something!"
+        text=""
       />
     </div>
   );

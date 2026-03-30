@@ -48,6 +48,13 @@ export interface WorkspaceState {
   openNoteTabs: ReviewTab[];
   pendingGoal: string | null;
   pendingAutoExecute: boolean;
+  pendingReviewTarget: {
+    type: "uncommittedChanges" | "baseBranch" | "commit" | "custom";
+    branch?: string;
+    sha?: string;
+    title?: string;
+    instructions?: string;
+  } | null;
 }
 
 const initialState: WorkspaceState = {
@@ -69,6 +76,7 @@ const initialState: WorkspaceState = {
   openNoteTabs: [],
   pendingGoal: null,
   pendingAutoExecute: false,
+  pendingReviewTarget: null,
 };
 
 const workspaceSlice = createSlice({
@@ -223,6 +231,12 @@ const workspaceSlice = createSlice({
       state.pendingGoal = null;
       state.pendingAutoExecute = false;
     },
+    setPendingReviewTarget: (state, action: PayloadAction<WorkspaceState["pendingReviewTarget"]>) => {
+      state.pendingReviewTarget = action.payload;
+    },
+    clearPendingReviewTarget: (state) => {
+      state.pendingReviewTarget = null;
+    },
   },
 });
 
@@ -261,6 +275,8 @@ export const {
   setPendingGoal,
   setPendingAutoExecute,
   clearPendingGoal,
+  setPendingReviewTarget,
+  clearPendingReviewTarget,
 } = workspaceSlice.actions;
 
 export default workspaceSlice.reducer;

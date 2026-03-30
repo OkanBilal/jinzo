@@ -225,7 +225,7 @@ function AppCard({
           size="sm"
           variant={connected ? "primary" : "secondary"}
           onClick={onAction}
-          className="rounded-[12px]!"
+          className="rounded-xl!"
         >
           {connected ? "Manage" : "Connect"}
         </Button>

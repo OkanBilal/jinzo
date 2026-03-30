@@ -207,7 +207,7 @@ export function useWorkspaceRuns(
                   toast.error(lastError, { duration: 5000 });
                 }
               } else if (result.data.status === "canceled") {
-                toast("Run canceled");
+                toast.error("Run canceled");
               }
 
               dispatch(runsApi.util.invalidateTags(["Runs", "WorkspaceDiffs"]));
@@ -372,6 +372,43 @@ export function useWorkspaceRuns(
     [runOperation, registerNewRun],
   );
 
+  const executeReview = useCallback(
+    async (
+      selectedWorkspace: string,
+      selectedProvider: string,
+      target: {
+        type: "uncommittedChanges" | "baseBranch" | "commit" | "custom";
+        branch?: string;
+        sha?: string;
+        title?: string;
+        instructions?: string;
+      },
+      model?: string,
+    ): Promise<string | null> => {
+      if (!selectedWorkspace || !selectedProvider) {
+        toast.error("Please select a workspace and provider");
+        return null;
+      }
+
+      return runOperation(async (accountId) => {
+        const result = await window.api.runs.executeReview({
+          accountId,
+          workspaceId: selectedWorkspace,
+          providerId: selectedProvider,
+          target,
+          model: model || undefined,
+        });
+
+        if (!result.success) {
+          throw new Error(result.error || "Failed to start review");
+        }
+
+        return registerNewRun(result.data.runId);
+      }, null, "Failed to execute review");
+    },
+    [runOperation, registerNewRun],
+  );
+
   const checkCanResume = useCallback(
     async (runId: string): Promise<boolean> => {
       try {
@@ -437,6 +474,7 @@ export function useWorkspaceRuns(
     executeRun,
     continueRun,
     forkRun,
+    executeReview,
     checkCanResume,
     closeTab,
     selectTab,

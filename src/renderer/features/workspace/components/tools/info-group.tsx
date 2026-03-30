@@ -3,7 +3,7 @@ import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/components/markdown-components";
 import type { EventGroup } from "../../utils/group-events";
 import { Code } from "@/components/ui/icons/space";
-import { Picture, Document } from "@/components/ui/icons";
+import { Picture, Document, Codex } from "@/components/ui/icons";
 import { ProviderIcon } from "../provider-icon";
 
 interface InfoGroupProps {
@@ -16,6 +16,7 @@ export function InfoGroup({ group }: InfoGroupProps) {
 
   if (event.type === "artifact" && event.metadata?.kind === "user-prompt") {
     const message = (event.content ?? "").trim();
+    const isReview = event.metadata?.isReview === true;
     const issues = (event.metadata?.issues ?? []) as Array<{
       provider: string;
       number?: number | null;
@@ -39,6 +40,34 @@ export function InfoGroup({ group }: InfoGroupProps) {
       type: "image" | "document";
       mimeType: string;
     }>;
+
+    if (isReview) {
+      const reviewTarget = event.metadata?.reviewTarget as string | undefined;
+      const targetLabel =
+        reviewTarget === "uncommittedChanges" ? "Uncommitted Changes" :
+        reviewTarget === "baseBranch" ? "Branch Diff" :
+        reviewTarget === "commit" ? "Commit" : "Code";
+
+      return (
+        <div className="w-full overflow-hidden">
+          <div className="w-full py-2 flex justify-end">
+            <div className="flex flex-col items-end gap-2 max-w-[80%]">
+              <div className="px-4 py-2 rounded-2xl bg-blue-50 dark:bg-blue-500/8 border border-blue-200/60 dark:border-blue-500/15">
+                <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+                  <Codex className="size-3.5 shrink-0" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-blue-600 dark:text-blue-300/70">{targetLabel}</span>
+                  </div>
+                </div>
+                {message && (
+                  <p className="text-xs text-blue-900 dark:text-blue-100 mt-1.5">{message}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="w-full overflow-hidden">

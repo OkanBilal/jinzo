@@ -164,16 +164,19 @@ export function useProviderModels(
 
   // Clamp effort level when switching to a model that doesn't support the current level
   useEffect(() => {
-    if (!effortLevel || !selectedModelInfo) return;
+    if (!selectedModelInfo) return;
     const supported = selectedModelInfo.supportedEffortLevels;
     if (!supported || supported.length === 0) {
       // Model has no effort levels — clear it
-      handleEffortLevelChange("");
-    } else if (!supported.includes(effortLevel as any)) {
+      if (effortLevel) handleEffortLevelChange("");
+    } else if (thinkingMode && !effortLevel) {
+      // Thinking is on but no effort level set — pick the highest supported
+      handleEffortLevelChange(supported[supported.length - 1]);
+    } else if (effortLevel && !supported.includes(effortLevel as any)) {
       // Pick the highest supported level as fallback
       handleEffortLevelChange(supported[supported.length - 1]);
     }
-  }, [selectedModelInfo, effortLevel, handleEffortLevelChange]);
+  }, [selectedModelInfo, effortLevel, thinkingMode, handleEffortLevelChange]);
 
   const handleModelChange = useCallback(
     (displayName: string) => {

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   SendButton,
   DictationButton,
@@ -22,6 +22,7 @@ import {
   DontAsk,
   Unlock,
   Danger,
+  ArrowUp,
 } from "@/components/ui/icons";
 import Security from "@/components/ui/icons/security";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
@@ -221,10 +222,10 @@ export function InputToolbar({
   return (
     <div className="flex items-start space-x-2 px-3 pt-6">
       <div className="flex items-center justify-between w-full">
-        <div className="flex items-center relative gap-1">
+        <div className={`flex items-center relative ml-1 gap-0.5`}>
           {variant === "codex" ? (
             <div
-              className="relative flex items-center gap-2"
+              className="relative flex items-center gap-2 animate-blur-reveal"
               ref={fileDropdownRef}
             >
               <Button
@@ -240,7 +241,7 @@ export function InputToolbar({
               {uploadedFiles.map((uploadedFile, index) => (
                 <div
                   key={`${uploadedFile.file.name}-${uploadedFile.file.size}`}
-                  className="relative group"
+                  className="relative group "
                 >
                   <div className="flex items-center gap-2 bg-primary-100 dark:bg-primary-800 rounded-2xl px-1.5 py-1 mr-1">
                     <div className="relative w-5 h-5 rounded overflow-hidden">
@@ -297,19 +298,113 @@ export function InputToolbar({
           />
           {(variant === "claude" || variant === "copilot" || variant === "codex") && (
             <>
-              {variant === "claude" && (
-                <div className="relative" ref={permissionDropdownRef}>
+              {supportedEffortLevels && supportedEffortLevels.length > 0 ? (
+                <div className="relative animate-blur-reveal" ref={thinkingDropdownRef}>
+                  <Button
+                    tooltip="Thinking & Effort"
+                    type="button"
+                    onClick={() =>
+                      setShowThinkingDropdown(!showThinkingDropdown)
+                    }
+                    className={`flex items-center hover:bg-primary-200/30 dark:hover:bg-primary-600/20 px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer ${
+                      thinkingMode
+                        ? " gap-1  text-primary-400 dark:text-primary-300"
+                        : "text-primary-400 dark:text-primary-300 hover:bg-primary/10"
+                    }`}
+                  >
+
+                    <span
+                      className={
+                        thinkingMode
+                          ? "text-primary-700 dark:text-primary-300 capitalize tracking-tight"
+                          : ""
+                      }
+                    >
+                      {thinkingMode ? (effortLevel === "xhigh" ? "Extra High" : effortLevel) || "On" : "Off"}
+                    </span>
+                    <ArrowUp
+                      className={`size-3.5 ml-0.5 rotate-180 ${thinkingMode ? "text-primary-700 dark:text-primary-300" : "text-primary-400 dark:text-primary-300"}`}
+                    />
+                  </Button>
+                  <DropdownWrapper
+                    isOpen={showThinkingDropdown}
+                    openUpward={true}
+                    minWidth="min-w-32"
+                    useFixedBackground={true}
+                  >
+                    {variant !== "codex" && (
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          onEffortLevelChange("");
+                          setShowThinkingDropdown(false);
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-xl ${
+                          !thinkingMode
+                            ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100 font-medium"
+                            : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
+                        }`}
+                      >
+                        Off
+                      </Button>
+                    )}
+                    {supportedEffortLevels.map((level) => (
+                      <Button
+                        key={level}
+                        type="button"
+                        onClick={() => {
+                          onEffortLevelChange(level);
+                          setShowThinkingDropdown(false);
+                        }}
+                        className={`w-full flex items-center gap-1.5 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors capitalize last:rounded-b-xl ${
+                          thinkingMode && effortLevel === level
+                            ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-100 "
+                            : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
+                        }`}
+                      >
+                        <Brain className="size-3" />
+                        {level === "xhigh" ? "Extra High" : level}
+                      </Button>
+                    ))}
+                  </DropdownWrapper>
+                </div>
+              ) : variant === "claude" ? (
+                <Button
+                  tooltip="Toggle Thinking Mode"
+                  type="button"
+                  onClick={onThinkingModeToggle}
+                  className={`flex items-center gap-1 px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer animate-blur-reveal ${
+                    thinkingMode
+                      ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-100"
+                      : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
+                  }`}
+                >
+                  <Brain
+                    className={`size-4  ${thinkingMode ? "text-primary-700 dark:text-primary-100" : "text-primary-400 dark:text-primary-300"}`}
+                  />
+                  <span
+                    className={
+                      thinkingMode ? "text-primary-700 dark:text-primary-100" : "text-primary-400 dark:text-primary-300"
+                    }
+                  >
+                    {thinkingMode ? "On" : "Off"}
+
+                  </span>
+                </Button>
+              ) : null}
+                            {variant === "claude" && (
+                <div className="relative mx-0.5" ref={permissionDropdownRef}>
                   <Button
                     tooltip="Permission Mode"
                     type="button"
                     onClick={() =>
                       setShowPermissionDropdown(!showPermissionDropdown)
                     }
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-sm  transition-all cursor-pointer animate-blur-reveal ${
                       permissionMode === "bypassPermissions"
                         ? "dark:bg-yellow-200/10 bg-yellow-400/30 text-yellow-600 dark:text-yellow-300"
                         : permissionMode !== "default"
-                          ? "dark:bg-primary-200/20 bg-primary-500/30 text-primary-700 dark:text-primary-100"
+                          ? "dark:bg-primary/8 bg-primary-300/30 text-primary-700 dark:text-primary-100"
                           : "text-primary-700 dark:text-primary-300 hover:bg-primary/10"
                     }`}
                   >
@@ -318,6 +413,7 @@ export function InputToolbar({
                       className="size-3.5"
                     />
                     {PERMISSION_MODE_LABELS[permissionMode] ?? "Ask"}
+                      <ArrowUp className={`size-3.5 rotate-180 `} />
                   </Button>
                   <DropdownWrapper
                     isOpen={showPermissionDropdown}
@@ -356,98 +452,6 @@ export function InputToolbar({
                   </DropdownWrapper>
                 </div>
               )}
-              {supportedEffortLevels && supportedEffortLevels.length > 0 ? (
-                <div className="relative" ref={thinkingDropdownRef}>
-                  <Button
-                    tooltip="Thinking & Effort"
-                    type="button"
-                    onClick={() =>
-                      setShowThinkingDropdown(!showThinkingDropdown)
-                    }
-                    className={`flex items-center  px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer ${
-                      thinkingMode
-                        ? "dark:bg-orange-100/10 gap-1 bg-orange-300/30 text-orange-400 dark:text-orange-100"
-                        : "text-primary-700 dark:text-primary-300 hover:bg-primary/10"
-                    }`}
-                  >
-                    <Brain
-                      className={`size-4 font-medium ${thinkingMode ? "text-orange-400 dark:text-orange-100" : "text-primary-700 dark:text-primary-300"}`}
-                    />
-                    <span
-                      className={
-                        thinkingMode
-                          ? "text-orange-400 dark:text-orange-100 capitalize"
-                          : ""
-                      }
-                    >
-                      {thinkingMode ? effortLevel || "On" : ""}
-                    </span>
-                  </Button>
-                  <DropdownWrapper
-                    isOpen={showThinkingDropdown}
-                    openUpward={true}
-                    minWidth="min-w-32"
-                    useFixedBackground={true}
-                  >
-                    {variant !== "codex" && (
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          onEffortLevelChange("");
-                          setShowThinkingDropdown(false);
-                        }}
-                        className={`w-full text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-xl ${
-                          !thinkingMode
-                            ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100 font-medium"
-                            : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
-                        }`}
-                      >
-                        Off
-                      </Button>
-                    )}
-                    {supportedEffortLevels.map((level) => (
-                      <Button
-                        key={level}
-                        type="button"
-                        onClick={() => {
-                          onEffortLevelChange(level);
-                          setShowThinkingDropdown(false);
-                        }}
-                        className={`w-full flex items-center gap-1.5 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors capitalize last:rounded-b-xl ${
-                          thinkingMode && effortLevel === level
-                            ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100 font-medium"
-                            : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
-                        }`}
-                      >
-                        <Brain className="size-3" />
-                        {level === "xhigh" ? "Extra High" : level}
-                      </Button>
-                    ))}
-                  </DropdownWrapper>
-                </div>
-              ) : variant === "claude" ? (
-                <Button
-                  tooltip="Toggle Thinking Mode"
-                  type="button"
-                  onClick={onThinkingModeToggle}
-                  className={`flex items-center gap-1 px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer ${
-                    thinkingMode
-                      ? "dark:bg-orange-200/10 bg-orange-300/30 text-orange-400 dark:text-orange-100"
-                      : "text-primary-700 dark:text-primary-300 hover:bg-primary/10"
-                  }`}
-                >
-                  <Brain
-                    className={`size-4  ${thinkingMode ? "text-orange-400 dark:text-orange-100" : "text-primary-700 dark:text-primary-300"}`}
-                  />
-                  <span
-                    className={
-                      thinkingMode ? "text-orange-400 dark:text-orange-100" : ""
-                    }
-                  >
-                    {thinkingMode ? "Think" : ""}
-                  </span>
-                </Button>
-              ) : null}
             </>
           )}
           {supportsFastMode && (
@@ -457,7 +461,7 @@ export function InputToolbar({
               onClick={onFastModeToggle}
               className={`flex items-center pl-2 pr-2.5 py-1 -ml-px rounded-full text-sm transition-all cursor-pointer ${
                 fastMode
-                  ? "dark:bg-red-400/10 gap-1 bg-red-300/30 text-red-600 dark:text-red-400"
+                  ? "dark:bg-orange-200/10 gap-1 bg-orange-300/30 text-orange-400 dark:text-orange-200"
                   : " text-primary-700 dark:text-primary-300 hover:bg-primary/10"
               }`}
               title={
@@ -468,7 +472,7 @@ export function InputToolbar({
             >
               <Bolt
                 animated={fastMode}
-                className={`size-4 transition-colors ${fastMode ? "text-red-600 dark:text-red-400" : "text-primary-700 dark:text-primary-300"}`}
+                className={`size-4 transition-colors ${fastMode ? "text-orange-400 dark:text-orange-200" : "text-primary-700 dark:text-primary-300"}`}
                 style={{
                   transitionDelay: fastMode ? "0ms" : "200ms",
                   transitionDuration: "150ms",
@@ -478,7 +482,7 @@ export function InputToolbar({
                 {"Fast".split("").map((char, i) => (
                   <span
                     key={i}
-                    className="inline-block text-red-600 dark:text-red-400"
+                    className="inline-block text-orange-400 dark:text-orange-200"
                     style={{
                       transition:
                         "opacity 150ms, transform 150ms, max-width 150ms",

@@ -1,4 +1,4 @@
-import { Plus, CopilotStatic, Gpt } from "@/components/ui/icons";
+import { Plus, CopilotStatic, Codex } from "@/components/ui/icons";
 import { RunTab, getTabTitle } from "./run-tab";
 import { EditorTab } from "./editor-tab";
 import { IssueTab } from "./issue-tab";
@@ -84,20 +84,6 @@ export function WorkspaceTabs({
           />
         )}
 
-        {runs.slice(0, 8).map((run, i) => (
-          <RunTab
-            variant={variant}
-            key={run.id}
-            run={run}
-            isActive={run.id === activeTab}
-            isFirst={!hasSelectedFile && i === 0}
-            onClick={() => onSelectRunTab(run.id)}
-            onClose={() => onCloseTab(run.id)}
-            onRename={(newTitle) => onRenameRun(run.id, newTitle)}
-            title={getTabTitle(run)}
-          />
-        ))}
-
         {issueTabs.map((issue, i) => {
           const tabId = `issue:${issue.issue.entityId}`;
           return (
@@ -105,7 +91,7 @@ export function WorkspaceTabs({
               key={tabId}
               issue={issue}
               isActive={activeTab === tabId}
-              isFirst={!hasSelectedFile && runs.length === 0 && i === 0}
+              isFirst={!hasSelectedFile && i === 0}
               onClick={() => onSelectIssueTab(issue.issue.entityId)}
               onClose={(e) => onCloseIssueTab(issue.issue.entityId, e)}
             />
@@ -121,7 +107,6 @@ export function WorkspaceTabs({
               isActive={activeTab === tabId}
               isFirst={
                 !hasSelectedFile &&
-                runs.length === 0 &&
                 issueTabs.length === 0 &&
                 i === 0
               }
@@ -140,7 +125,6 @@ export function WorkspaceTabs({
               isActive={activeTab === tabId}
               isFirst={
                 !hasSelectedFile &&
-                runs.length === 0 &&
                 issueTabs.length === 0 &&
                 signalTabs.length === 0 &&
                 i === 0
@@ -150,6 +134,20 @@ export function WorkspaceTabs({
             />
           );
         })}
+
+        {runs.slice(0, 8).map((run, i) => (
+          <RunTab
+            variant={variant}
+            key={run.id}
+            run={run}
+            isActive={run.id === activeTab}
+            isFirst={!hasSelectedFile && issueTabs.length === 0 && signalTabs.length === 0 && noteTabs.length === 0 && i === 0}
+            onClick={() => onSelectRunTab(run.id)}
+            onClose={() => onCloseTab(run.id)}
+            onRename={(newTitle) => onRenameRun(run.id, newTitle)}
+            title={getTabTitle(run)}
+          />
+        ))}
         {showNewRunTab && (
           <div className="animate-slide-in-left">
             <NewRunTab
@@ -200,7 +198,7 @@ function NewRunTab({
         ) : variant === "copilot" ? (
           <CopilotStatic className={className} />
         ) : (
-          <Gpt className={className} />
+          <Codex className={className} />
         )
       }
       label="New Run"

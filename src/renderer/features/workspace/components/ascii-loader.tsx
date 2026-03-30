@@ -6,7 +6,6 @@ const LOADER_WORDS = [
   "Analyzing",
   "Mapping",
   "Connecting",
-  "Refining",
   "Synthesizing",
   "Structuring",
   "Clarifying",
@@ -91,7 +90,7 @@ export function AsciiLoader({
 
   useEffect(() => {
     const frameInterval = setInterval(() => dispatch({ type: "tick" }), 80);
-    const wordInterval = setInterval(() => dispatch({ type: "newWord" }), 3000);
+    const wordInterval = setInterval(() => dispatch({ type: "newWord" }), 4000);
 
     return () => {
       clearInterval(frameInterval);

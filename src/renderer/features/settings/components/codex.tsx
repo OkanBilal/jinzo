@@ -73,6 +73,29 @@ function RateLimitRow({
   );
 }
 
+const APPROVAL_OPTIONS = [
+  {
+    value: "on-failure",
+    label: "On Failure",
+    description: "Ask only when a command fails",
+  },
+  {
+    value: "on-request",
+    label: "On Request",
+    description: "Ask when escalation is requested",
+  },
+  {
+    value: "untrusted",
+    label: "Untrusted",
+    description: "Always ask before taking action",
+  },
+  {
+    value: "never",
+    label: "Never",
+    description: "Run without asking for approval",
+  },
+];
+
 const SANDBOX_OPTIONS = [
   {
     value: "read-only",
@@ -114,6 +137,7 @@ export default function CodexSettings() {
     useState(false);
 
   const config = provider?.config ?? {};
+  const approvalMode = (config as any).approvalMode ?? "on-failure";
   const sandboxMode = (config as any).sandboxMode ?? "workspace-write";
   const networkAccessEnabled = (config as any).networkAccessEnabled ?? true;
   const webSearchMode = (config as any).webSearchMode ?? "live";
@@ -207,7 +231,7 @@ export default function CodexSettings() {
         )}
       </SettingsSection>
 
-      <SettingsSection title="Configurations">
+      <SettingsSection title="Configuration">
 
         {/*
         TODO:
@@ -224,6 +248,23 @@ export default function CodexSettings() {
           </Button>
         </SettingsRow>
         <SettingsDivider />*/}
+        <SettingsRow
+          title="Approval Policy"
+          description="Choose when Codex asks for approval"
+        >
+          <Select
+            value={approvalMode}
+            options={APPROVAL_OPTIONS}
+            onChange={(value) => {
+              updateConfig({ approvalMode: value });
+              const label =
+                APPROVAL_OPTIONS.find((o) => o.value === value)?.label ?? value;
+              toast.success(`Approval: ${label}`);
+            }}
+            useFixedBackground
+          />
+        </SettingsRow>
+        <SettingsDivider />
         <SettingsRow
           title="Sandbox Mode"
           description="Controls file and network isolation for the agent"

@@ -41,6 +41,7 @@ function AppContent() {
           marginRight={
             !hideRightPanel && isrightanelOpen ? rightPanelWidth : "0.375rem"
           }
+          hasRightPanel={!hideRightPanel && !isrightanelOpen}
         >
           <ErrorBoundary level="route">
             <MainRoutes />

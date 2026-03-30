@@ -6,13 +6,15 @@ import {
   type WorkspaceDiff,
   type FindingSeverity,
 } from "@/lib/redux/api";
-import { setPendingGoal, setPendingAutoExecute } from "@/lib/redux/slices/workspaceSlice";
+import { setPendingGoal, setPendingAutoExecute, setPendingReviewTarget } from "@/lib/redux/slices/workspaceSlice";
+import { useRouteType } from "@/hooks/use-route-type";
 import { FileIconComponent } from "./file-explorer/components/file-icon";
 import {
   Diff,
   Commit,
   CircleDot,
   Chat,
+  Codex,
 } from "@/components/ui/icons";
 import { Body, Button } from "@/components/ui";
 
@@ -84,6 +86,7 @@ export function DiffSection({
   onSelectDiffFile,
 }: DiffSectionProps) {
   const dispatch = useDispatch();
+  const routeType = useRouteType();
   const [selectedDiffFile, setSelectedDiffFile] = useState<string | null>(null);
 
   // Fetch the latest workspace diff directly
@@ -135,6 +138,23 @@ export function DiffSection({
     return map;
   }, [allFindings, diffFiles]);
 
+  const handleReviewChanges = () => {
+    // Use native review/start for Codex provider
+    if (routeType === "codex") {
+      dispatch(setPendingReviewTarget({ type: "uncommittedChanges" }));
+      return;
+    }
+
+    // Fallback: generic goal for Claude/Copilot
+    dispatch(setPendingGoal("review code changes in this workspace"));
+    dispatch(setPendingAutoExecute(true));
+  };
+
+  const handleCommitChanges = () => {
+    dispatch(setPendingGoal("Use the CommitChanges tool to commit the changes."));
+    dispatch(setPendingAutoExecute(true));
+  };
+
   if (isFetching) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -157,15 +177,6 @@ export function DiffSection({
       </div>
     );
   }
-  const handleReviewChanges = () => {
-    dispatch(setPendingGoal("review code changes in this workspace"));
-    dispatch(setPendingAutoExecute(true));
-  };
-
-  const handleCommitChanges = () => {
-    dispatch(setPendingGoal("Use the CommitChanges tool to commit the changes."));
-    dispatch(setPendingAutoExecute(true));
-  };
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -175,7 +186,7 @@ export function DiffSection({
           onClick={handleReviewChanges}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/60 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
         >
-          <Chat className="w-3.5 h-3.5" />
+          {routeType === "codex" ? <Codex className="w-3.5 h-3.5" /> : <Chat className="w-3.5 h-3.5" />}
           Review Changes
         </Button>
         <Button

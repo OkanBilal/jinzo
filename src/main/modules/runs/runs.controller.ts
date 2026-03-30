@@ -8,6 +8,7 @@ import type {
   StartRunPayload,
   ContinueRunPayload,
   ForkRunPayload,
+  ReviewRunPayload,
 } from "./runs.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -60,6 +61,9 @@ export const runsController = {
 
   // Fork Run (branch session into new run)
   forkRun: (payload: ForkRunPayload) => runsService.forkRun(payload),
+
+  // Execute Review (native code review)
+  executeReview: (payload: ReviewRunPayload) => runsService.executeReview(payload),
 
   // Check if run can be resumed
   canResumeRun: (runId: string) => runsService.canResumeRun(runId),

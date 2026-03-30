@@ -102,7 +102,7 @@ export default function ClaudeSettings() {
         <Heading2 className="font-medium!">Claude</Heading2>
       </div>
 
-      <SettingsSection  title="Configurations">
+      <SettingsSection  title="Configuration">
         <SettingsRow
           title="Permission Mode"
           description="Controls how the agent handles tool permissions during runs."
