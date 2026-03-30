@@ -60,4 +60,24 @@ export const providersController = {
   async getRateLimits(id: string) {
     return providersService.getRateLimits(id);
   },
+
+  async getAccountInfo(id: string) {
+    return providersService.getAccountInfo(id);
+  },
+
+  async getPlugins(id: string) {
+    return providersService.getPlugins(id);
+  },
+
+  async readPlugin(id: string, pluginName: string, marketplacePath: string) {
+    return providersService.readPlugin(id, pluginName, marketplacePath);
+  },
+
+  async installPlugin(id: string, pluginId: string) {
+    return providersService.installPlugin(id, pluginId);
+  },
+
+  async uninstallPlugin(id: string, pluginId: string) {
+    return providersService.uninstallPlugin(id, pluginId);
+  },
 };

@@ -8,6 +8,7 @@ import LinearModal from "../../components/apps/linear/linear-modal";
 import TrelloModal from "../../components/apps/trello/trello-modal";
 import SentryModal from "../../components/apps/sentry/sentry-modal";
 import { useRunEntitySyncMutation } from "@/lib/redux/api/syncApi";
+import { AsciiSpinner } from "@/features/workspace/components/ascii-loader";
 
 type AppItem = {
   id: string;
@@ -82,10 +83,9 @@ export default function AppsSettings({
       <div className="flex items-center justify-between mb-6">
         <Heading2>Connections</Heading2>
         {connectedCount > 0 && (
-          <Button variant="secondary" onClick={handleSync} disabled={isSyncing}>
-            <Text variant="button">
-              {isSyncing ? "Syncing..." : "Sync All"}
-            </Text>
+          <Button variant="secondary" onClick={handleSync} disabled={isSyncing} className="gap-1 flex items-center" >
+            {isSyncing ? <AsciiSpinner variant="null" /> : null}
+             <Text variant="button" > {isSyncing ? "Syncing..." : "Sync All"}</Text>
           </Button>
         )}
       </div>
@@ -113,7 +113,7 @@ export default function AppsSettings({
           <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100 mb-3">
             Connected
           </h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             {connectedFiltered.map((app) => (
               <AppCard
                 key={app.id}
@@ -132,7 +132,7 @@ export default function AppsSettings({
           <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100 mb-3">
             Available
           </h3>
-          <div className="grid grid-cols-2 gap-4 pb-12">
+          <div className="grid grid-cols-2 gap-6 pb-12">
             {notConnectedFiltered.map((app) => (
               <AppCard
                 key={app.id}
@@ -202,7 +202,7 @@ function AppCard({
   onAction: () => void;
 }) {
   return (
-    <div className="rounded-3xl bg-primary-100/60 dark:bg-primary-900/40 border border-primary-200/50 dark:border-primary-800/20 p-4 flex flex-col justify-between">
+    <div className="rounded-3xl glass-morphism  p-4 flex flex-col justify-between">
       <div className="flex items-start justify-between mb-6">
         <div className="flex items-center gap-2 min-w-0">
           <AppIcon app={app} />

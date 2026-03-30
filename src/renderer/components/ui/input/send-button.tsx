@@ -17,10 +17,10 @@ export function SendButton({ loading, onSubmit, onStop, disabled = false }: Send
         type="button"
         tooltip="Stop run"
         onClick={onStop}
-        className="metallic-button relative"
+        className="p-1 bg-primary-500 dark:bg-primary-300 rounded-full relative"
         aria-label="Stop run"
       >
-        <Stop className="w-5 h-5 text-primary-900" />
+        <Stop className="w-5 h-5 text-primary dark:text-primary-800" />
       </Button>
     );
   }
@@ -32,7 +32,7 @@ export function SendButton({ loading, onSubmit, onStop, disabled = false }: Send
       onClick={() => {
         if (!isDisabled) onSubmit();
       }}
-      className={`metallic-button relative ${
+      className={` p-1 bg-primary-500 dark:bg-primary-300 rounded-full relative ${
         isDisabled ? "opacity-70 cursor-not-allowed" : ""
       }`}
       aria-label={loading ? "Submitting..." : "Send prompt"}
@@ -44,7 +44,7 @@ export function SendButton({ loading, onSubmit, onStop, disabled = false }: Send
         </span>
       )}
       <ChevronUp
-        className={`w-5 h-5 text-primary-900 transition-opacity ${
+        className={`w-5 h-5 text-primary dark:text-primary-800 transition-opacity ${
           loading ? "opacity-0" : "opacity-100"
         }`}
       />

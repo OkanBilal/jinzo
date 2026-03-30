@@ -178,7 +178,7 @@ export default function Select<T extends string = string>({
                   text-sm flex items-center gap-2
                   ${
                     value === option.value
-                      ? "bg-primary-950/5 dark:bg-primary/8 text-primary-900 dark:text-primary font-medium"
+                      ? "bg-primary-950/5 dark:bg-primary/8 text-primary-900 dark:text-primary "
                       : "hover:bg-primary-950/3 dark:hover:bg-primary/5 text-primary-900 dark:text-primary"
                   }
                 `}

@@ -19,6 +19,11 @@ const CHANNELS = {
   GET_COMMANDS: "providers:getCommands",
   GET_SKILLS: "providers:getSkills",
   GET_RATE_LIMITS: "providers:getRateLimits",
+  GET_ACCOUNT_INFO: "providers:getAccountInfo",
+  GET_PLUGINS: "providers:getPlugins",
+  READ_PLUGIN: "providers:readPlugin",
+  INSTALL_PLUGIN: "providers:installPlugin",
+  UNINSTALL_PLUGIN: "providers:uninstallPlugin",
 } as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -75,6 +80,26 @@ export function registerProvidersIpc(): void {
 
   ipcMain.handle(CHANNELS.GET_RATE_LIMITS, async (_, id: string) => {
     return providersController.getRateLimits(id);
+  });
+
+  ipcMain.handle(CHANNELS.GET_ACCOUNT_INFO, async (_, id: string) => {
+    return providersController.getAccountInfo(id);
+  });
+
+  ipcMain.handle(CHANNELS.GET_PLUGINS, async (_, id: string) => {
+    return providersController.getPlugins(id);
+  });
+
+  ipcMain.handle(CHANNELS.READ_PLUGIN, async (_, id: string, pluginName: string, marketplacePath: string) => {
+    return providersController.readPlugin(id, pluginName, marketplacePath);
+  });
+
+  ipcMain.handle(CHANNELS.INSTALL_PLUGIN, async (_, id: string, pluginId: string) => {
+    return providersController.installPlugin(id, pluginId);
+  });
+
+  ipcMain.handle(CHANNELS.UNINSTALL_PLUGIN, async (_, id: string, pluginId: string) => {
+    return providersController.uninstallPlugin(id, pluginId);
   });
 }
 

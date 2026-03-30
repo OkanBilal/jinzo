@@ -88,7 +88,7 @@ export default function CopilotSettings() {
         <Heading2 className="font-medium!">Copilot</Heading2>
       </div>
 
-      <SettingsSection>
+      <SettingsSection  title="Configurations">
         <SettingsRow
           title="Bypass Permissions"
           description={
@@ -104,7 +104,7 @@ export default function CopilotSettings() {
         </SettingsRow>
       </SettingsSection>
 
-      <SettingsSection title="Extensions">
+      <SettingsSection title="Capabilities">
         <SettingsRow
           title="Agents"
           description={
@@ -144,13 +144,13 @@ export default function CopilotSettings() {
       </SettingsSection>
 
       {copilotSpace && (
-        <SettingsSection title="Space">
+        <SettingsSection title="Visibility">
           <SettingsRow
-            title="Show in Sidebar"
+            title="Show in Selector"
             description={
               !canHide && !copilotSpace.isArchived
-                ? "At least one space must be visible"
-                : "Show or hide this space from the sidebar"
+                ? "At least one agent must be active"
+                : "Show or hide this agent from the selector"
             }
           >
             <Toggle

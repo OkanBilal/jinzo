@@ -47,7 +47,7 @@ export const availableIcons = Object.entries(iconRegistry).map(
 );
 
 export function parseIcon(iconString: string | null | undefined): {
-  type: "emoji" | "icon" | "copilot-animate" | "claude-animate";
+  type: "emoji" | "icon" | "copilot-animate" | "claude-animate" | "codex-animate";
   value: string | IconComponent;
 } {
   if (!iconString) {
@@ -63,6 +63,9 @@ export function parseIcon(iconString: string | null | undefined): {
       }
       if (iconName === "claude") {
         return { type: "claude-animate", value: IconComponent };
+      }
+      if (iconName === "codex") {
+        return { type: "codex-animate", value: IconComponent };
       }
       return { type: "icon", value: IconComponent };
     }
@@ -80,6 +83,9 @@ export function parseIcon(iconString: string | null | undefined): {
     }
     if (lowerIcon === "claude") {
       return { type: "claude-animate", value: iconRegistry[lowerIcon] };
+    }
+    if (lowerIcon === "codex") {
+      return { type: "codex-animate", value: iconRegistry[lowerIcon] };
     }
     return { type: "icon", value: iconRegistry[lowerIcon] };
   }

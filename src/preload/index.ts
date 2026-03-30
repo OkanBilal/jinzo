@@ -204,6 +204,11 @@ const api = {
     getCommands: (id: string) => ipcRenderer.invoke("providers:getCommands", id),
     getSkills: (id: string, workspacePath?: string) => ipcRenderer.invoke("providers:getSkills", id, workspacePath),
     getRateLimits: (id: string) => ipcRenderer.invoke("providers:getRateLimits", id),
+    getAccountInfo: (id: string) => ipcRenderer.invoke("providers:getAccountInfo", id),
+    getPlugins: (id: string) => ipcRenderer.invoke("providers:getPlugins", id),
+    readPlugin: (id: string, pluginName: string, marketplacePath: string) => ipcRenderer.invoke("providers:readPlugin", id, pluginName, marketplacePath),
+    installPlugin: (id: string, pluginId: string) => ipcRenderer.invoke("providers:installPlugin", id, pluginId),
+    uninstallPlugin: (id: string, pluginId: string) => ipcRenderer.invoke("providers:uninstallPlugin", id, pluginId),
   },
   // Tool calls operations
   toolCalls: {

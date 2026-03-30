@@ -221,7 +221,6 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
           tooltip={"Close settings"}
           variant="subtle"
           tooltipPosition="top-right"
-          tooltipShortcut="Esc"
           size="lg"
           onClick={onClose}
           fullWidth

@@ -5,7 +5,7 @@ import type {
   ProviderResponse,
   ServiceResponse,
 } from "./providers.dto";
-import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, getRateLimitsForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo } from "./adapters";
+import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, getAccountInfoForProvider, listPluginsForProvider, readPluginForProvider, installPluginForProvider, uninstallPluginForProvider, getRateLimitsForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo, type PluginListResponse, type PluginDetail, type CodexAccountInfo } from "./adapters";
 import type { RateLimitInfo } from "./adapters/adapter.types";
 
 // ─────────────────────────────────────────────────────────────
@@ -198,6 +198,71 @@ export const providersService = {
         success: false,
         error: error instanceof Error ? error.message : "Failed to get rate limits",
       };
+    }
+  },
+
+  async getAccountInfo(id: string): Promise<ServiceResponse<CodexAccountInfo>> {
+    try {
+      const provider = await providersRepo.findById(id);
+      if (!provider) return { success: false, error: "Provider not found" };
+      if (!provider.isEnabled) return { success: false, error: "Provider is not enabled" };
+      const info = await getAccountInfoForProvider(provider);
+      return { success: true, data: info };
+    } catch (error) {
+      console.error(`[ProvidersService] Failed to get account info for ${id}:`, error);
+      return { success: false, error: error instanceof Error ? error.message : "Failed to get account info" };
+    }
+  },
+
+  async getPlugins(id: string): Promise<ServiceResponse<PluginListResponse>> {
+    try {
+      const provider = await providersRepo.findById(id);
+      if (!provider) return { success: false, error: "Provider not found" };
+      if (!provider.isEnabled) return { success: false, error: "Provider is not enabled" };
+      const plugins = await listPluginsForProvider(provider);
+      return { success: true, data: plugins };
+    } catch (error) {
+      console.error(`[ProvidersService] Failed to get plugins for provider ${id}:`, error);
+      return { success: false, error: error instanceof Error ? error.message : "Failed to get plugins" };
+    }
+  },
+
+  async readPlugin(id: string, pluginName: string, marketplacePath: string): Promise<ServiceResponse<PluginDetail>> {
+    try {
+      const provider = await providersRepo.findById(id);
+      if (!provider) return { success: false, error: "Provider not found" };
+      if (!provider.isEnabled) return { success: false, error: "Provider is not enabled" };
+      const detail = await readPluginForProvider(provider, pluginName, marketplacePath);
+      return { success: true, data: detail };
+    } catch (error) {
+      console.error(`[ProvidersService] Failed to read plugin ${pluginName}:`, error);
+      return { success: false, error: error instanceof Error ? error.message : "Failed to read plugin" };
+    }
+  },
+
+  async installPlugin(id: string, pluginId: string): Promise<ServiceResponse<void>> {
+    try {
+      const provider = await providersRepo.findById(id);
+      if (!provider) return { success: false, error: "Provider not found" };
+      if (!provider.isEnabled) return { success: false, error: "Provider is not enabled" };
+      await installPluginForProvider(provider, pluginId);
+      return { success: true, data: undefined };
+    } catch (error) {
+      console.error(`[ProvidersService] Failed to install plugin ${pluginId}:`, error);
+      return { success: false, error: error instanceof Error ? error.message : "Failed to install plugin" };
+    }
+  },
+
+  async uninstallPlugin(id: string, pluginId: string): Promise<ServiceResponse<void>> {
+    try {
+      const provider = await providersRepo.findById(id);
+      if (!provider) return { success: false, error: "Provider not found" };
+      if (!provider.isEnabled) return { success: false, error: "Provider is not enabled" };
+      await uninstallPluginForProvider(provider, pluginId);
+      return { success: true, data: undefined };
+    } catch (error) {
+      console.error(`[ProvidersService] Failed to uninstall plugin ${pluginId}:`, error);
+      return { success: false, error: error instanceof Error ? error.message : "Failed to uninstall plugin" };
     }
   },
 };

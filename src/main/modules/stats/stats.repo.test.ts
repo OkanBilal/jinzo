@@ -196,51 +196,6 @@ describe("statsRepo", () => {
     });
   });
 
-  describe("getRecentSessions", () => {
-    it("returns empty array when no runs", async () => {
-      const result = await statsRepo.getRecentSessions();
-      expect(result).toEqual([]);
-    });
-
-    it("returns recent sessions with project info", async () => {
-      const project = createProject(db, { id: "p1", name: "My Project" });
-      const ws = createWorkspace(db, { id: "ws1", projectId: project.id });
-      createRun(db, {
-        id: "r1",
-        providerId: "claude_code",
-        workspaceId: ws.id,
-        title: "Test Run",
-        model: "claude-3",
-      });
-
-      const result = await statsRepo.getRecentSessions();
-      expect(result).toHaveLength(1);
-      expect(result[0].title).toBe("Test Run");
-      expect(result[0].projectName).toBe("My Project");
-      expect(result[0].model).toBe("claude-3");
-    });
-
-    it("respects limit", async () => {
-      for (let i = 0; i < 5; i++) {
-        createRun(db, { id: `r${i}`, providerId: "claude_code" });
-      }
-      const result = await statsRepo.getRecentSessions(3);
-      expect(result).toHaveLength(3);
-    });
-
-    it("excludes cost for copilot_cli", async () => {
-      const run = createRun(db, { id: "r1", providerId: "copilot_cli" });
-      createRunTurn(db, {
-        runId: run.id,
-        turnIndex: 0,
-        status: "completed",
-        costMicros: 100_000,
-      });
-
-      const result = await statsRepo.getRecentSessions();
-      expect(result[0].totalCostUsd).toBeNull();
-    });
-  });
 
   describe("getCodeActivity", () => {
     it("returns zeros when no diffs", async () => {

@@ -167,7 +167,7 @@ function SessionTimeBar({
   const hasUsage = turn && (turn.inputTokens || turn.outputTokens || turn.cacheReadTokens || turn.cacheWriteTokens || turn.costMicros);
 
   return (
-    <div className="flex items-center gap-2 text-s text-primary-500 dark:text-primary-400 pl-4 -mt-1">
+    <div className="flex items-center gap-2 text-s text-primary-700 dark:text-primary-400 pl-4 -mt-1">
       {hasUsage ? (
         <Tooltip
           content={<UsageTooltipContent turn={turn} />}
@@ -561,6 +561,7 @@ export function WorkspaceEvents({
                 <ToolApprovalDialog
                   request={pendingApproval}
                   onRespond={onApprovalRespond}
+                  variant={variant}
                 />
               )}
               <div ref={eventsEndRef} />

@@ -54,7 +54,7 @@ export function ParticleLogoCanvas({ className, routeType, text }: ParticleLogoC
   useParticleLogo(canvasRef, {
     svgPaths,
     svgViewBox,
-    color: "#878580",
+    color: "#606060",
     text,
     renderMode,
     strokeWidth: 2,

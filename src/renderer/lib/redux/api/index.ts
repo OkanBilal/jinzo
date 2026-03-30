@@ -153,6 +153,11 @@ export {
   useDeleteProviderMutation,
   useEnableProviderMutation,
   useDisableProviderMutation,
+  useGetProviderAccountInfoQuery,
+  useGetProviderPluginsQuery,
+  useReadProviderPluginQuery,
+  useInstallProviderPluginMutation,
+  useUninstallProviderPluginMutation,
   useGetProviderRateLimitsQuery,
 } from "./providersApi";
 export type {
@@ -163,6 +168,14 @@ export type {
   CreateProviderPayload,
   UpdateProviderPayload,
   RateLimitInfo,
+  PluginInfo,
+  PluginInterfaceInfo,
+  PluginListResponse,
+  CodexAccountInfo,
+  MarketplaceInfo,
+  PluginDetailResponse,
+  PluginSkillSummary,
+  PluginAppSummary,
 } from "./providersApi";
 
 export {

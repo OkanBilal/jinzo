@@ -6,12 +6,12 @@ interface ClaudeIconProps extends SVGProps<SVGSVGElement> {
   animate?: boolean;
 }
 
-const SvgComponent = ({ size, animate = false, ...props }: ClaudeIconProps) => (
+const SvgComponent = ({ size, animate = false, className, ...props }: ClaudeIconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size ?? "1em"}
     height={size ?? "1em"}
-    className={animate ? "animate-claude-pulse" : ""}
+    className={`${className || ""} ${animate ? "animate-claude-pulse" : ""}`}
     style={{
       flex: "none",
       lineHeight: 1,

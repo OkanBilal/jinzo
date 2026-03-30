@@ -102,12 +102,13 @@ export default function ClaudeSettings() {
         <Heading2 className="font-medium!">Claude</Heading2>
       </div>
 
-      <SettingsSection>
+      <SettingsSection  title="Configurations">
         <SettingsRow
           title="Permission Mode"
           description="Controls how the agent handles tool permissions during runs."
         >
           <Select
+          useFixedBackground={true}
             value={permissionMode}
             options={SETTINGS_PERMISSION_MODES}
             onChange={handlePermissionModeChange}
@@ -146,7 +147,7 @@ export default function ClaudeSettings() {
       </SettingsSection>
 
 
-      <SettingsSection title="Extensions">
+      <SettingsSection title="Capabilities">
         <SettingsRow
           title="MCP Servers"
           description={
@@ -253,13 +254,13 @@ export default function ClaudeSettings() {
       </SettingsSection>
 
       {claudeSpace && (
-        <SettingsSection title="Space">
+        <SettingsSection title="Visibility">
           <SettingsRow
-            title="Show in Sidebar"
+            title="Show in Selector"
             description={
               !canHide && !claudeSpace.isArchived
-                ? "At least one space must be visible"
-                : "Show or hide this space from the sidebar"
+                ? "At least one agent must be active"
+                : "Show or hide this agent from the selector"
             }
           >
             <Toggle

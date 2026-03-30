@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { ProviderResponse } from "../providers.dto";
-import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, ModelInfo, CommandInfo, SkillInfo } from "./adapter.types";
+import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, CodexAccountInfo } from "./adapter.types";
 import { createCopilotAdapter } from "./copilot.adapter";
 import { createClaudeAdapter } from "./claude.adapter";
 import { createCodexAdapter } from "./codex.adapter";
@@ -228,6 +228,46 @@ export async function listSkillsForProvider(
 /**
  * Get rate limit info for a provider
  */
+export async function getAccountInfoForProvider(provider: ProviderResponse): Promise<CodexAccountInfo> {
+  const adapter = createWorkAdapter(provider);
+  if (!adapter.getAccountInfo) {
+    return { account: null, requiresOpenaiAuth: false };
+  }
+  return adapter.getAccountInfo();
+}
+
+export async function listPluginsForProvider(provider: ProviderResponse): Promise<PluginListResponse> {
+  const adapter = createWorkAdapter(provider);
+  if (!adapter.listPlugins) {
+    return { marketplaces: [], marketplaceLoadErrors: [], remoteSyncError: null, featuredPluginIds: [] };
+  }
+  return adapter.listPlugins();
+}
+
+export async function readPluginForProvider(provider: ProviderResponse, pluginName: string, marketplacePath: string): Promise<PluginDetail> {
+  const adapter = createWorkAdapter(provider);
+  if (!adapter.readPlugin) {
+    throw new Error(`Provider "${provider.displayName}" does not support reading plugin details.`);
+  }
+  return adapter.readPlugin(pluginName, marketplacePath);
+}
+
+export async function installPluginForProvider(provider: ProviderResponse, pluginId: string): Promise<void> {
+  const adapter = createWorkAdapter(provider);
+  if (!adapter.installPlugin) {
+    throw new Error(`Provider "${provider.displayName}" does not support plugin installation.`);
+  }
+  return adapter.installPlugin(pluginId);
+}
+
+export async function uninstallPluginForProvider(provider: ProviderResponse, pluginId: string): Promise<void> {
+  const adapter = createWorkAdapter(provider);
+  if (!adapter.uninstallPlugin) {
+    throw new Error(`Provider "${provider.displayName}" does not support plugin uninstallation.`);
+  }
+  return adapter.uninstallPlugin(pluginId);
+}
+
 export async function getRateLimitsForProvider(
   provider: ProviderResponse,
 ): Promise<import("./adapter.types").RateLimitInfo | null> {

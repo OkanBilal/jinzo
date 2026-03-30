@@ -47,7 +47,7 @@ function loadState(projectId: string | undefined): {
   } catch {
     // ignore
   }
-  return { expanded: true, filter: "all" };
+  return { expanded: false, filter: "all" };
 }
 
 const filters: { value: TrackerFilter; label: string }[] = [

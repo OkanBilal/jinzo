@@ -105,7 +105,4 @@ export { default as Sentry } from "./sentry";
 export { default as Selected } from "./selected";
 export { default as Tools } from "./tools";
 export { default as DontAsk } from "./dontask";
-
-
-
-
+export { default as Danger } from "./danger";

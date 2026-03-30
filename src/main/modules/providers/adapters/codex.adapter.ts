@@ -4,7 +4,8 @@
 // ─────────────────────────────────────────────────────────────
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { createInterface, type Interface as ReadlineInterface } from "node:readline";
+import { type Interface as ReadlineInterface } from "node:readline";
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type {
@@ -18,9 +19,15 @@ import type {
   WorkRunEvent,
   CodexAdapterConfig,
   ModelInfo,
+  PluginListResponse,
+  PluginInfo,
+  PluginDetail,
+  MarketplaceInfo,
+  CodexAccountInfo,
 } from "./adapter.types";
 import {
   cancelPendingRequests,
+  requestToolApproval,
 } from "../../runs/user-input-broker";
 import { runsRepo } from "../../runs/runs.repo";
 import {
@@ -142,6 +149,7 @@ class CodexAppServer {
   private serverRequestHandler: ((id: number | string, method: string, params: unknown) => void) | null = null;
   private onClose: (() => void) | null = null;
   private stderrBuffer = "";
+  private jsonBuffer = "";
 
   async start(binaryPath: string, cwd: string, env?: Record<string, string>): Promise<void> {
     if (this.child) return;
@@ -162,10 +170,12 @@ class CodexAppServer {
       throw new Error("Failed to get stdio pipes from codex app-server");
     }
 
-    this.output = createInterface({ input: this.child.stdout });
-
-    this.output.on("line", (line) => {
-      this.handleLine(line);
+    // Use raw data handler instead of readline to handle JSON messages
+    // that contain literal newlines in string values (e.g. plugin descriptions).
+    // We buffer incoming data and try to parse complete JSON objects.
+    this.child.stdout.on("data", (chunk: Buffer) => {
+      this.jsonBuffer += chunk.toString();
+      this.drainJsonBuffer();
     });
 
     this.child.stderr?.on("data", (data: Buffer) => {
@@ -307,16 +317,109 @@ class CodexAppServer {
     }
   }
 
+  /**
+   * Drain the JSON buffer: try to extract complete JSON objects.
+   * The app-server sends newline-delimited JSON, but some JSON values
+   * contain literal newlines (e.g. plugin long descriptions), so we
+   * can't rely on line boundaries. Instead, we try parsing progressively
+   * larger chunks until we get valid JSON.
+   */
+  private drainJsonBuffer(): void {
+    while (this.jsonBuffer.length > 0) {
+      // Skip leading whitespace/newlines
+      const trimStart = this.jsonBuffer.search(/\S/);
+      if (trimStart === -1) {
+        this.jsonBuffer = "";
+        return;
+      }
+      if (trimStart > 0) {
+        this.jsonBuffer = this.jsonBuffer.slice(trimStart);
+      }
+
+      // Must start with '{' for a JSON object
+      if (this.jsonBuffer[0] !== "{") {
+        // Skip to next '{' — might be garbage/log output
+        const nextBrace = this.jsonBuffer.indexOf("{", 1);
+        if (nextBrace === -1) {
+          this.jsonBuffer = "";
+          return;
+        }
+        this.jsonBuffer = this.jsonBuffer.slice(nextBrace);
+        continue;
+      }
+
+      // Try to parse from the start. Use a brace-depth counter for efficiency.
+      let depth = 0;
+      let inString = false;
+      let escaped = false;
+      let endIdx = -1;
+
+      for (let i = 0; i < this.jsonBuffer.length; i++) {
+        const ch = this.jsonBuffer[i];
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch === "\\") {
+          if (inString) escaped = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = !inString;
+          continue;
+        }
+        if (inString) continue;
+        if (ch === "{") depth++;
+        else if (ch === "}") {
+          depth--;
+          if (depth === 0) {
+            endIdx = i;
+            break;
+          }
+        }
+      }
+
+      if (endIdx === -1) {
+        // Incomplete JSON — wait for more data
+        return;
+      }
+
+      const jsonStr = this.jsonBuffer.slice(0, endIdx + 1);
+      this.jsonBuffer = this.jsonBuffer.slice(endIdx + 1);
+
+      this.handleLine(jsonStr);
+    }
+  }
+
   private cleanup(): void {
     this.output?.close();
     this.output = null;
     this.child = null;
+    this.jsonBuffer = "";
   }
 }
 
 // ─────────────────────────────────────────────────────────────
 // Adapter factory
 // ─────────────────────────────────────────────────────────────
+
+/** Convert a local file path to a data URL. Returns undefined if the file doesn't exist. */
+function fileToDataUrl(filePath: string | undefined | null): string | undefined {
+  if (!filePath) return undefined;
+  try {
+    const data = fs.readFileSync(filePath);
+    const ext = path.extname(filePath).toLowerCase().slice(1);
+    const mime = ext === "svg" ? "image/svg+xml"
+      : ext === "png" ? "image/png"
+      : ext === "jpg" || ext === "jpeg" ? "image/jpeg"
+      : ext === "gif" ? "image/gif"
+      : ext === "webp" ? "image/webp"
+      : "application/octet-stream";
+    return `data:${mime};base64,${data.toString("base64")}`;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Creates a Codex adapter using `codex app-server` JSON-RPC protocol.
@@ -328,6 +431,9 @@ class CodexAppServer {
  */
 export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
   let appServer: CodexAppServer | null = null;
+
+  // Marketplace path cache: marketplace name → path
+  const marketplacePathCache = new Map<string, string>();
 
   // Usage accumulation per run
   const usageAccumulator = new Map<string, {
@@ -426,8 +532,15 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     const candidates = [
       path.join(homedir, ".codex", "bin", "codex"),
       "/usr/local/bin/codex",
+      // nvm-managed global installs
+      ...(() => {
+        try {
+          const nvmDir = process.env.NVM_DIR || path.join(homedir, ".nvm");
+          const nodeVersions = fs.readdirSync(path.join(nvmDir, "versions", "node"));
+          return nodeVersions.map((v: string) => path.join(nvmDir, "versions", "node", v, "bin", "codex"));
+        } catch { return []; }
+      })(),
     ];
-    const fs = require("node:fs");
     for (const c of candidates) {
       try {
         fs.accessSync(c, fs.constants.X_OK);
@@ -452,10 +565,32 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
     const binaryPath = findCodexBinary();
     const spawnCwd = cwd ?? os.homedir();
-    logInfo(`Starting app-server: ${binaryPath} app-server (cwd: ${spawnCwd})`);
+    logInfo(`Starting app-server: ${binaryPath} app-server (cwd: ${spawnCwd}, HOME=${process.env.HOME}, homedir=${os.homedir()})`);
 
     const server = new CodexAppServer();
     const env: Record<string, string> = {};
+
+    // Ensure HOME is set correctly for packaged app
+    env.HOME = os.homedir();
+
+    // Extend PATH with nvm and common bin dirs for packaged app
+    const homedir = os.homedir();
+    const extraPaths = [
+      path.dirname(binaryPath),
+      path.join(homedir, ".nvm", "versions", "node"),
+      "/usr/local/bin",
+      "/opt/homebrew/bin",
+    ];
+    // Find active node version bin dir
+    try {
+      const nvmDir = process.env.NVM_DIR || path.join(homedir, ".nvm");
+      const nodeVersions = fs.readdirSync(path.join(nvmDir, "versions", "node"));
+      for (const v of nodeVersions) {
+        extraPaths.push(path.join(nvmDir, "versions", "node", v, "bin"));
+      }
+    } catch { /* no nvm */ }
+    env.PATH = [...extraPaths, process.env.PATH || ""].join(":");
+
     if (config.apiKey) {
       env.OPENAI_API_KEY = config.apiKey;
     } else if (process.env.OPENAI_API_KEY) {
@@ -464,7 +599,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       env.CODEX_API_KEY = process.env.CODEX_API_KEY;
     }
 
-    await server.start(binaryPath, spawnCwd, Object.keys(env).length > 0 ? env : undefined);
+    await server.start(binaryPath, spawnCwd, env);
     appServer = server;
 
     server.setOnClose(() => {
@@ -478,7 +613,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       clientInfo: {
         name: "jinzo",
         title: "Jinzo Desktop",
-        version: "0.1.0",
+        version: "1.0.0",
       },
       capabilities: {
         experimentalApi: true,
@@ -1062,15 +1197,121 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         }
       };
 
-      // Handle approval requests (auto-approve for bypassPermissions)
-      const handleServerRequest = (id: number | string, _method: string, _params: unknown) => {
-        const permissionMode = config.permissionMode || "default";
-        if (permissionMode === "bypassPermissions") {
-          server.respondToRequest(id, { decision: "approved" });
-        } else {
-          // For non-bypass mode, auto-approve for now
-          // TODO: wire up interactive approval broker
-          server.respondToRequest(id, { decision: "approved" });
+      // Handle server requests — approval, user input, auth tokens
+      const handleServerRequest = async (id: number | string, method: string, params: unknown) => {
+        const p = params as Record<string, unknown> | undefined;
+        switch (method) {
+          // Approval requests — auto-approve or broker
+          case "item/commandExecution/requestApproval":
+          case "item/fileRead/requestApproval":
+          case "item/fileChange/requestApproval":
+          case "item/permissions/requestApproval": {
+            const permissionMode = config.permissionMode || "default";
+            if (permissionMode === "bypassPermissions") {
+              server.respondToRequest(id, { decision: "accept" });
+            } else {
+              // Route through approval broker for interactive UI
+              const toolName = method.includes("command") ? "Bash" :
+                              method.includes("fileRead") ? "Read" :
+                              method.includes("fileChange") ? "Edit" : "Permission";
+              const command = (p?.command as string) ?? (p?.path as string) ?? (p?.reason as string) ?? "";
+              try {
+                const result = await requestToolApproval({
+                  requestId: String(id),
+                  runId,
+                  toolName,
+                  toolInput: { command },
+                  kind: "tool_approval",
+                  timestamp: Date.now(),
+                });
+                const decision = !result.approved ? "decline"
+                  : result.answer === "acceptForSession" ? "acceptForSession"
+                  : "accept";
+                server.respondToRequest(id, { decision });
+              } catch {
+                server.respondToRequest(id, { decision: "decline" });
+              }
+            }
+            break;
+          }
+
+          // User input requests — OAuth flows, MCP elicitations
+          case "item/tool/requestUserInput": {
+            const questions = p?.questions as Array<Record<string, unknown>> | undefined;
+            if (questions && questions.length > 0) {
+              // Build question text for the UI
+              const questionTexts = questions.map((q) => {
+                const text = (q.text as string) ?? (q.description as string) ?? "";
+                const options = q.options as Array<Record<string, unknown>> | undefined;
+                if (options && options.length > 0) {
+                  return `${text}\nOptions: ${options.map(o => o.label ?? o.description ?? "").join(", ")}`;
+                }
+                return text;
+              });
+
+              try {
+                const result = await requestToolApproval({
+                  requestId: String(id),
+                  runId,
+                  toolName: "UserInput",
+                  kind: "ask_user",
+                  question: questionTexts.join("\n\n"),
+                  timestamp: Date.now(),
+                });
+
+                // Build answers in the format Codex expects
+                const answers: Record<string, { answers: string[] }> = {};
+                for (const q of questions) {
+                  const qId = (q.id as string) ?? (q.questionId as string);
+                  if (qId) {
+                    if (result.approved) {
+                      // If user provided an answer, use it; otherwise pick first option
+                      const userAnswer = result.answer || "";
+                      const options = q.options as Array<Record<string, unknown>> | undefined;
+                      const firstOption = options?.[0]?.label as string ?? options?.[0]?.description as string ?? "";
+                      answers[qId] = { answers: [userAnswer || firstOption || "yes"] };
+                    } else {
+                      answers[qId] = { answers: [] };
+                    }
+                  }
+                }
+                server.respondToRequest(id, { answers });
+              } catch {
+                // Timeout/error — send empty answers
+                const answers: Record<string, { answers: string[] }> = {};
+                for (const q of questions) {
+                  const qId = (q.id as string) ?? (q.questionId as string);
+                  if (qId) answers[qId] = { answers: [] };
+                }
+                server.respondToRequest(id, { answers });
+              }
+            } else {
+              server.respondToRequest(id, { answers: {} });
+            }
+            break;
+          }
+
+          // Auth token refresh — the server asks the client to supply fresh tokens.
+          // We can't supply them directly, but responding with an empty result
+          // allows the server to fall back to its own refresh flow (via auth.json).
+          case "account/chatgptAuthTokens/refresh": {
+            logInfo("Auth token refresh requested by app-server");
+            server.respondToRequest(id, {});
+            break;
+          }
+
+          // Dynamic tool calls — not supported
+          case "item/tool/call": {
+            server.respondToRequestError(id, -32601, "Dynamic tool calls not supported");
+            break;
+          }
+
+          // Unknown — error
+          default: {
+            logWarn(`Unsupported server request: ${method}`);
+            server.respondToRequestError(id, -32601, `Unsupported server request: ${method}`);
+            break;
+          }
         }
       };
 
@@ -1101,12 +1342,16 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         const approvalPolicy = config.approvalMode ?? mapPermissionMode(config.permissionMode);
         const sandbox = mapSandboxMode(config.sandboxMode);
 
-        // 1. Start thread (cwd passed per-thread, not per-server)
+        // Start thread (cwd passed per-thread, not per-server)
+        const networkAccess = config.networkAccessEnabled !== false;
         const threadStartParams: Record<string, unknown> = {
           cwd: request.workspace.rootPath,
           approvalPolicy,
           sandbox,
           ...(resolvedModel ? { model: resolvedModel } : {}),
+          config: {
+            ...(networkAccess ? { sandbox_network_access: true } : {}),
+          },
         };
 
         logInfo(`Starting thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
@@ -1479,6 +1724,20 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       }
     },
 
+    async getAccountInfo(): Promise<import("./adapter.types").CodexAccountInfo> {
+      try {
+        const server = await ensureServer();
+        const result = await server.sendRequest("account/read", {}) as Record<string, unknown>;
+        return {
+          account: result.account as CodexAccountInfo["account"],
+          requiresOpenaiAuth: (result.requiresOpenaiAuth as boolean) ?? false,
+        };
+      } catch (error) {
+        logError("Failed to read account:", error);
+        return { account: null, requiresOpenaiAuth: true };
+      }
+    },
+
     async getRateLimits(): Promise<import("./adapter.types").RateLimitInfo | null> {
       try {
         if (!appServer?.isRunning) return null;
@@ -1516,27 +1775,29 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
     async listSkills(): Promise<import("./adapter.types").SkillInfo[]> {
       try {
-        if (!appServer?.isRunning) return [];
-        const result = await appServer.sendRequest("skills/list", {}) as Record<string, unknown>;
+        const server = await ensureServer();
+        const result = await server.sendRequest("skills/list", { forceReload: true }) as Record<string, unknown>;
         const entries = result?.data as Array<Record<string, unknown>> | undefined;
-        if (!entries || !Array.isArray(entries)) return [];
 
         const skills: import("./adapter.types").SkillInfo[] = [];
-        for (const entry of entries) {
-          const entrySkills = entry.skills as Array<Record<string, unknown>> | undefined;
-          if (!entrySkills) continue;
-          for (const s of entrySkills) {
-            if (!s.enabled) continue;
-            const iface = s.interface as Record<string, unknown> | undefined;
-            skills.push({
-              name: s.name as string,
-              description: (iface?.shortDescription as string) || (s.shortDescription as string) || (s.description as string) || "",
-              source: (s.scope === "user" ? "user" : s.scope === "repo" ? "project" : undefined) as "user" | "project" | undefined,
-              path: s.path as string | undefined,
-              userInvokable: true,
-            });
+        if (entries && Array.isArray(entries)) {
+          for (const entry of entries) {
+            const entrySkills = entry.skills as Array<Record<string, unknown>> | undefined;
+            if (!entrySkills) continue;
+            for (const s of entrySkills) {
+              if (!s.enabled) continue;
+              const iface = s.interface as Record<string, unknown> | undefined;
+              skills.push({
+                name: s.name as string,
+                description: (iface?.shortDescription as string) || (s.shortDescription as string) || (s.description as string) || "",
+                source: (s.scope === "user" ? "user" : s.scope === "repo" ? "project" : undefined) as "user" | "project" | undefined,
+                path: s.path as string | undefined,
+                userInvokable: true,
+              });
+            }
           }
         }
+
         return skills;
       } catch (error) {
         logError("Failed to list skills:", error);
@@ -1545,10 +1806,178 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     },
 
     async generateTitle(goal: string): Promise<string> {
-      // Title generation is not done via app-server to avoid notification handler conflicts
-      // with startRun running in parallel. The goal text serves as the title.
-      // TODO: implement async title generation after run completes (via thread/setName)
       return goal.slice(0, 50);
+    },
+
+    async listPlugins(): Promise<PluginListResponse> {
+      try {
+        const server = await ensureServer();
+
+        const result = await server.sendRequest("plugin/list", {}, 30000) as Record<string, unknown>;
+
+        const rawMarketplaces = result?.marketplaces as Array<Record<string, unknown>> | undefined;
+        if (!rawMarketplaces || !Array.isArray(rawMarketplaces)) {
+          return { marketplaces: [], marketplaceLoadErrors: [], remoteSyncError: null, featuredPluginIds: [] };
+        }
+
+        const marketplaces: MarketplaceInfo[] = rawMarketplaces.map((mp) => {
+          const rawPlugins = mp.plugins as Array<Record<string, unknown>> | undefined;
+          const plugins: PluginInfo[] = (rawPlugins ?? []).map((p) => ({
+            id: p.id as string,
+            name: p.name as string,
+            source: (p.source as { type: string; path: string }) ?? { type: "local", path: "" },
+            installed: (p.installed as boolean) ?? false,
+            enabled: (p.enabled as boolean) ?? false,
+            installPolicy: (p.installPolicy as PluginInfo["installPolicy"]) ?? "AVAILABLE",
+            authPolicy: (p.authPolicy as PluginInfo["authPolicy"]) ?? "ON_INSTALL",
+            interface: p.interface ? {
+              displayName: (p.interface as any).displayName ?? undefined,
+              shortDescription: (p.interface as any).shortDescription ?? undefined,
+              longDescription: (p.interface as any).longDescription ?? undefined,
+              developerName: (p.interface as any).developerName ?? undefined,
+              category: (p.interface as any).category ?? undefined,
+              capabilities: (p.interface as any).capabilities ?? [],
+              websiteUrl: (p.interface as any).websiteUrl ?? undefined,
+              defaultPrompt: (p.interface as any).defaultPrompt ?? undefined,
+              brandColor: (p.interface as any).brandColor ?? undefined,
+              composerIcon: fileToDataUrl((p.interface as any).composerIcon),
+              logo: fileToDataUrl((p.interface as any).logo),
+              screenshots: ((p.interface as any).screenshots ?? []).map((s: string) => fileToDataUrl(s)).filter(Boolean) as string[],
+              privacyPolicyUrl: (p.interface as any).privacyPolicyUrl ?? undefined,
+              termsOfServiceUrl: (p.interface as any).termsOfServiceUrl ?? undefined,
+            } : null,
+          }));
+
+          return {
+            name: mp.name as string,
+            path: mp.path as string,
+            interface: mp.interface as { displayName?: string } | null,
+            plugins,
+          };
+        });
+
+        // Cache marketplace paths for install/uninstall
+        for (const mp of marketplaces) {
+          marketplacePathCache.set(mp.name, mp.path);
+        }
+
+        return {
+          marketplaces,
+          marketplaceLoadErrors: (result.marketplaceLoadErrors as any[]) ?? [],
+          remoteSyncError: (result.remoteSyncError as string) ?? null,
+          featuredPluginIds: (result.featuredPluginIds as string[]) ?? [],
+        };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        logError("Failed to list plugins:", msg);
+        // If the endpoint doesn't exist, return empty gracefully
+        if (/method not found|unknown method|not supported/i.test(msg)) {
+          logWarn("plugin/list not supported by this Codex version");
+        }
+        return { marketplaces: [], marketplaceLoadErrors: [], remoteSyncError: msg, featuredPluginIds: [] };
+      }
+    },
+
+    async readPlugin(pluginName: string, marketplacePath: string): Promise<PluginDetail> {
+      const server = await ensureServer();
+      const result = await server.sendRequest("plugin/read", { pluginName, marketplacePath }, 15000) as Record<string, unknown>;
+      const p = result?.plugin as Record<string, unknown>;
+      if (!p) throw new Error("plugin/read returned no plugin data");
+
+      const summary = p.summary as Record<string, unknown>;
+      const iface = summary?.interface as Record<string, unknown> | undefined;
+      const skills = (p.skills as Array<Record<string, unknown>>) ?? [];
+      const apps = (p.apps as Array<Record<string, unknown>>) ?? [];
+
+      return {
+        marketplaceName: p.marketplaceName as string,
+        marketplacePath: p.marketplacePath as string,
+        summary: {
+          id: summary.id as string,
+          name: summary.name as string,
+          source: (summary.source as { type: string; path: string }) ?? { type: "local", path: "" },
+          installed: (summary.installed as boolean) ?? false,
+          enabled: (summary.enabled as boolean) ?? false,
+          installPolicy: (summary.installPolicy as PluginInfo["installPolicy"]) ?? "AVAILABLE",
+          authPolicy: (summary.authPolicy as PluginInfo["authPolicy"]) ?? "ON_INSTALL",
+          interface: iface ? {
+            displayName: iface.displayName as string | undefined,
+            shortDescription: iface.shortDescription as string | undefined,
+            longDescription: iface.longDescription as string | undefined,
+            developerName: iface.developerName as string | undefined,
+            category: iface.category as string | undefined,
+            capabilities: (iface.capabilities as string[]) ?? [],
+            websiteUrl: iface.websiteUrl as string | undefined,
+            defaultPrompt: iface.defaultPrompt as string[] | undefined,
+            brandColor: iface.brandColor as string | undefined,
+            composerIcon: fileToDataUrl(iface.composerIcon as string | undefined),
+            logo: fileToDataUrl(iface.logo as string | undefined),
+            screenshots: ((iface.screenshots as string[]) ?? []).map((s) => fileToDataUrl(s)).filter(Boolean) as string[],
+            privacyPolicyUrl: iface.privacyPolicyUrl as string | undefined,
+            termsOfServiceUrl: iface.termsOfServiceUrl as string | undefined,
+          } : null,
+        },
+        description: (p.description as string) ?? null,
+        skills: skills.map((s) => {
+          const sIface = s.interface as Record<string, unknown> | undefined;
+          return {
+            name: s.name as string,
+            displayName: (sIface?.displayName as string | undefined) ?? undefined,
+            path: s.path as string | undefined,
+            description: (sIface?.longDescription as string | undefined) ?? (s.description as string | undefined),
+            shortDescription: (sIface?.shortDescription as string | undefined) ?? (s.shortDescription as string | undefined),
+            enabled: (s.enabled as boolean) ?? false,
+          };
+        }),
+        apps: apps.map((a) => ({
+          id: a.id as string,
+          name: a.name as string,
+          needsAuth: (a.needsAuth as boolean) ?? false,
+          description: a.description as string | undefined,
+          installUrl: a.installUrl as string | undefined,
+          isAccessible: a.isAccessible as boolean | undefined,
+          isEnabled: a.isEnabled as boolean | undefined,
+        })),
+        mcpServers: (p.mcpServers as string[]) ?? [],
+      };
+    },
+
+    async installPlugin(pluginId: string): Promise<void> {
+      const server = await ensureServer();
+      // pluginId format: "name@marketplace" e.g. "github@openai-curated"
+      const atIdx = pluginId.lastIndexOf("@");
+      const marketplaceName = atIdx !== -1 ? pluginId.slice(atIdx + 1) : "";
+      const marketplacePath = marketplacePathCache.get(marketplaceName);
+      if (!marketplacePath) {
+        throw new Error(`Marketplace path not found for "${marketplaceName}". Try browsing plugins first.`);
+      }
+      const pluginName = atIdx !== -1 ? pluginId.slice(0, atIdx) : pluginId;
+      await server.sendRequest("plugin/install", { pluginName, marketplacePath });
+
+      // Enable the plugin after install via config
+      try {
+        await server.sendRequest("config/value/write", {
+          keyPath: `plugins.${pluginId}.enabled`,
+          value: true,
+          mergeStrategy: "replace",
+        });
+      } catch (err) {
+        logWarn("Failed to auto-enable plugin via config:", err);
+      }
+
+      logInfo(`Plugin installed and enabled: ${pluginId}`);
+    },
+
+    async uninstallPlugin(pluginId: string): Promise<void> {
+      const server = await ensureServer();
+      const atIdx = pluginId.lastIndexOf("@");
+      const marketplaceName = atIdx !== -1 ? pluginId.slice(atIdx + 1) : "";
+      const marketplacePath = marketplacePathCache.get(marketplaceName);
+      if (!marketplacePath) {
+        throw new Error(`Marketplace path not found for "${marketplaceName}". Try browsing plugins first.`);
+      }
+      await server.sendRequest("plugin/uninstall", { pluginId, marketplacePath });
+      logInfo(`Plugin uninstalled: ${pluginId}`);
     },
   };
 }

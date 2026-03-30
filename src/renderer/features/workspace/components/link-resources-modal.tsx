@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   BodyMedium,
   Caption,
@@ -14,6 +15,7 @@ import {
   type AvailableResource,
 } from "@/lib/redux/api";
 import { ResourceIcon } from "./provider-icon";
+import { Connect } from "@/components/ui/icons";
 
 interface LinkResourcesModalProps {
   projectId: string;
@@ -27,6 +29,13 @@ export function LinkResourcesModal({
   isOpen,
   onClose,
 }: LinkResourcesModalProps) {
+  const navigate = useNavigate();
+
+  const goToApps = useCallback(() => {
+    onClose();
+    navigate("/settings?section=apps");
+  }, [navigate, onClose]);
+
   const {
     data: resources = [],
     isLoading,
@@ -206,13 +215,21 @@ export function LinkResourcesModal({
                 </div>
               </div>
             ) : resources.length === 0 ? (
-              <div className="p-8 text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-800/40 mb-3"></div>
+              <div className="p-8 text-center flex flex-col items-center">
+                <Connect className="size-6 mb-3 text-primary-400 dark:text-primary-700" />
                 <BodyMedium className="text-primary-600 dark:text-primary-300">
                   No resources available
                 </BodyMedium>
                 <Caption className="text-primary-400 dark:text-primary-500 mt-1 block">
-                  Connect apps in settings first
+                  Connect apps in{" "}
+                  <button
+                    type="button"
+                    onClick={goToApps}
+                    className="underline dark:hover:text-primary-300 hover:text-primary-600 transition-colors cursor-pointer"
+                  >
+                    settings
+                  </button>{" "}
+                  first
                 </Caption>
               </div>
             ) : (

@@ -374,6 +374,34 @@ export interface WorkRunAdapter {
    * @returns Promise resolving to rate limit data, or null if not supported
    */
   getRateLimits?(): Promise<RateLimitInfo | null>;
+
+  /**
+   * Read account info from the provider.
+   */
+  getAccountInfo?(): Promise<CodexAccountInfo>;
+
+  /**
+   * List available plugins from the provider's marketplace.
+   * @returns Promise resolving to plugin marketplace data
+   */
+  listPlugins?(): Promise<PluginListResponse>;
+
+  /**
+   * Read detailed plugin info including skills, apps, and MCP servers.
+   */
+  readPlugin?(pluginName: string, marketplacePath: string): Promise<PluginDetail>;
+
+  /**
+   * Install a plugin by ID.
+   * @param pluginId - The plugin ID to install
+   */
+  installPlugin?(pluginId: string): Promise<void>;
+
+  /**
+   * Uninstall a plugin by ID.
+   * @param pluginId - The plugin ID to uninstall
+   */
+  uninstallPlugin?(pluginId: string): Promise<void>;
 }
 
 /**
@@ -1098,3 +1126,89 @@ export interface HookMatcher {
 export type HooksConfig = {
   [K in HookEventName]?: HookMatcher[];
 };
+
+// ── Account Types ──
+
+export interface CodexAccountInfo {
+  account: {
+    type: "apiKey";
+  } | {
+    type: "chatgpt";
+    email: string;
+    planType: string;
+  } | null;
+  requiresOpenaiAuth: boolean;
+}
+
+// ── Plugin Marketplace Types ──
+
+export interface PluginInterface {
+  displayName?: string;
+  shortDescription?: string;
+  longDescription?: string;
+  developerName?: string;
+  category?: string;
+  capabilities: string[];
+  websiteUrl?: string;
+  defaultPrompt?: string[];
+  brandColor?: string;
+  composerIcon?: string;
+  logo?: string;
+  screenshots: string[];
+  privacyPolicyUrl?: string;
+  termsOfServiceUrl?: string;
+}
+
+export interface PluginInfo {
+  id: string;
+  name: string;
+  source: { type: string; path: string };
+  installed: boolean;
+  enabled: boolean;
+  installPolicy: "NOT_AVAILABLE" | "AVAILABLE" | "INSTALLED_BY_DEFAULT";
+  authPolicy: "ON_INSTALL" | "ON_USE";
+  interface: PluginInterface | null;
+}
+
+export interface MarketplaceInfo {
+  name: string;
+  path: string;
+  interface: { displayName?: string } | null;
+  plugins: PluginInfo[];
+}
+
+export interface PluginListResponse {
+  marketplaces: MarketplaceInfo[];
+  marketplaceLoadErrors: Array<{ marketplacePath: string; message: string }>;
+  remoteSyncError: string | null;
+  featuredPluginIds: string[];
+}
+
+export interface PluginSkillSummary {
+  name: string;
+  displayName?: string;
+  path?: string;
+  description?: string;
+  shortDescription?: string;
+  enabled: boolean;
+}
+
+export interface PluginAppSummary {
+  id: string;
+  name: string;
+  needsAuth: boolean;
+  description?: string;
+  installUrl?: string;
+  isAccessible?: boolean;
+  isEnabled?: boolean;
+}
+
+export interface PluginDetail {
+  marketplaceName: string;
+  marketplacePath: string;
+  summary: PluginInfo;
+  description: string | null;
+  skills: PluginSkillSummary[];
+  apps: PluginAppSummary[];
+  mcpServers: string[];
+}

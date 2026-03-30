@@ -2,40 +2,34 @@
 @import "tailwindcss";
 
 @font-face {
-  font-family: 'Space Mono';
+  font-family: 'Geist Mono';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/space-mono-regular.woff2') format('woff2');
+  src: url('/fonts/GeistMono-Medium.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Space Mono';
+  font-family: 'Geist Mono';
   font-style: italic;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/space-mono-italic.woff2') format('woff2');
+  src: url('/fonts/GeistMono-MediumItalic.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Space Mono';
+  font-family: 'Geist Mono';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('/fonts/space-mono-bold.woff2') format('woff2');
+  src: url('/fonts/GeistMono-Bold.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Space Mono';
+  font-family: 'Geist Mono';
   font-style: italic;
   font-weight: 700;
   font-display: swap;
-  src: url('/fonts/space-mono-bold-italic.woff2') format('woff2');
+  src: url('/fonts/GeistMono-BoldItalic.woff2') format('woff2');
 }
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('/fonts/geist-variable.woff2') format('woff2');
-}
+
 
 
 
@@ -99,7 +93,6 @@ html:not(.app-ready) *::after {
   --color-primary: #ffffff;
   --color-primary-50: #efeeee;
   --color-primary-100: #f7f7f6;
-  --color-primary-150: #dad8ce;
   --color-primary-200: #d3d3d3;
   --color-primary-300: #b5b5b5;
   --color-primary-400: #a09d95;
@@ -140,11 +133,9 @@ html:not(.app-ready) *::after {
   --shadow-inset-subtle-dark: inset 0 0.5px 0 rgba(255, 255, 255, 0.03);
   --shadow-inset-toggle: inset 0 0.5px 2px rgba(0, 0, 0, 0.1);
   --shadow-inset-toggle-dark: inset 0 0.5px 2px rgba(0, 0, 0, 0.3);
+  --font-sans: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
 
-  --font-sans: 'Geist', system-ui, -apple-system, BlinkMacSystemFont,
-    'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
-    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-  --font-mono: 'Space Mono', monospace;
+  --font-mono: 'Geist Mono', monospace;
 
 }
 
@@ -336,7 +327,7 @@ html:not(.app-ready) *::after {
   to { transform: translateY(calc(-100% + var(--frame-height, 32px))); }
 }
 .cm-editor, .cm-editor * {
-  font-family: 'Space Mono', ui-monospace, monospace !important;
+  font-family: 'Geist Mono', ui-monospace, monospace !important;
 }
 
 .animate-slide-in {
@@ -371,6 +362,15 @@ html:not(.app-ready) *::after {
   animation: claudePulse 2s ease-in-out infinite;
 }
 
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 2s linear infinite;
+}
+
 @keyframes wizardModalIn {
   0% {
     opacity: 0;
@@ -402,7 +402,7 @@ html:not(.app-ready) *::after {
     var(--color-primary-500) 5%,
     var(--color-primary-50) 10%,
     var(--color-primary-200) 30%,
-    var(--color-primary-150) 50%,
+    var(--color-primary-200) 50%,
     var(--color-primary-200) 70%,
     var(--color-primary-50) 80%,
     var(--color-primary-500) 95%

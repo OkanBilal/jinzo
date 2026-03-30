@@ -1,6 +1,17 @@
 import { useState } from "react";
-import { Heading2, Muted, Toggle, Button, toast, Select } from "@/components/ui";
-import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
+import {
+  Heading2,
+  Muted,
+  Toggle,
+  Button,
+  toast,
+  Select,
+} from "@/components/ui";
+import {
+  SettingsSection,
+  SettingsRow,
+  SettingsDivider,
+} from "./settings-layout";
 import {
   useGetProviderByIdQuery,
   useUpdateProviderMutation,
@@ -9,65 +20,98 @@ import {
   useUnarchiveSpaceMutation,
   useSetActiveSpaceMutation,
   useGetProviderRateLimitsQuery,
+  useGetProviderAccountInfoQuery,
 } from "@/lib/redux/api";
 import { StructuredOutputsModal } from "./structured-outputs-modal";
 import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
 
-function RateLimitBar({ label, usedPercent, resetsAt }: { label: string; usedPercent: number; resetsAt?: number }) {
-  const remaining = 100 - usedPercent;
-  const resetTime = resetsAt
-    ? new Date(resetsAt * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    : null;
+function formatResetDate(resetsAt: number): string {
+  const date = new Date(resetsAt * 1000);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  if (isToday) {
+    return `Resets ${date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+  }
+  return `Resets ${date.toLocaleDateString([], { month: "short", day: "numeric" })}`;
+}
 
-  const barColor = remaining > 50
-    ? "bg-emerald-500"
-    : remaining > 20
-      ? "bg-amber-500"
-      : "bg-red-500";
+function RateLimitRow({
+  label,
+  usedPercent,
+  resetsAt,
+}: {
+  label: string;
+  usedPercent: number;
+  resetsAt?: number;
+}) {
+  const remaining = 100 - usedPercent;
 
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-sm text-primary-600 dark:text-primary-300 w-14 shrink-0">{label}</span>
-      <div className="flex-1 h-2 rounded-full bg-primary-200/50 dark:bg-primary-700/30 overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-          style={{ width: `${remaining}%` }}
-        />
+    <div className="flex items-center justify-between  py-3">
+      <div className="flex flex-col gap-0.5">
+        <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
+          {label}
+        </span>
+        {resetsAt && (
+          <span className="text-xs text-primary-400 dark:text-primary-500">
+            {formatResetDate(resetsAt)}
+          </span>
+        )}
       </div>
-      <span className="text-sm text-primary-500 dark:text-primary-400 w-10 text-right">{remaining}%</span>
-      {resetTime && (
-        <span className="text-xs text-primary-400 dark:text-primary-500 w-16 text-right">{resetTime}</span>
-      )}
+      <div className="flex items-center gap-3">
+        <div className="w-28 h-1.5 rounded-full bg-primary-200/50 dark:bg-primary-700/30 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-primary-800 dark:bg-primary-200 transition-all duration-500"
+            style={{ width: `${remaining}%` }}
+          />
+        </div>
+        <span className="text-sm text-primary-500 dark:text-primary-400 w-16 text-right">
+          {remaining}% left
+        </span>
+      </div>
     </div>
   );
 }
 
 const SANDBOX_OPTIONS = [
-  { value: "read-only", label: "Read Only", description: "Agent cannot modify files" },
-  { value: "workspace-write", label: "Workspace Write", description: "Write within workspace only" },
-  { value: "danger-full-access", label: "Full Access", description: "No restrictions" },
+  {
+    value: "read-only",
+    label: "Read Only",
+    description: "Agent cannot modify files",
+  },
+  {
+    value: "workspace-write",
+    label: "Workspace Write",
+    description: "Write within workspace only",
+  },
+  {
+    value: "danger-full-access",
+    label: "Full Access",
+    description: "No restrictions",
+  },
 ];
 
 export default function CodexSettings() {
-  const {
-    data: provider,
-    isLoading,
-    error,
-  } = useGetProviderByIdQuery("codex");
+  const { data: provider, isLoading, error } = useGetProviderByIdQuery("codex");
   const [updateProvider, { isLoading: updating }] = useUpdateProviderMutation();
-  const { data: rateLimits } = useGetProviderRateLimitsQuery("codex", {
-    pollingInterval: 60000, // refresh every 60s
+  const { data: rateLimits, isLoading: isLoadingRateLimits } = useGetProviderRateLimitsQuery("codex", {
+    pollingInterval: 60000,
   });
+  const { data: accountInfo, isLoading: isLoadingAccount } = useGetProviderAccountInfoQuery("codex");
 
   const { data: spaces = [] } = useGetSpacesQuery();
   const [archiveSpace] = useArchiveSpaceMutation();
   const [unarchiveSpace] = useUnarchiveSpaceMutation();
   const [setActiveSpace] = useSetActiveSpaceMutation();
   const codexSpace = spaces.find((s) => s.slug === "codex");
-  const otherVisibleSpaces = spaces.filter((s) => s.slug !== "codex" && !s.isArchived);
+  const otherVisibleSpaces = spaces.filter(
+    (s) => s.slug !== "codex" && !s.isArchived,
+  );
   const canHide = otherVisibleSpaces.length > 0;
 
-  const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] = useState(false);
+  // const [, setSearchParams] = useSearchParams();
+  const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] =
+    useState(false);
 
   const config = provider?.config ?? {};
   const sandboxMode = (config as any).sandboxMode ?? "workspace-write";
@@ -117,13 +161,69 @@ export default function CodexSettings() {
     );
   }
 
+  const account = accountInfo?.account;
+  const planLabel =
+    account?.type === "chatgpt"
+      ? account.planType.charAt(0).toUpperCase() + account.planType.slice(1)
+      : account?.type === "apiKey"
+        ? "API Key"
+        : null;
+
   return (
     <div className="bg-primary dark:bg-primary-950">
       <div className="mb-8">
         <Heading2 className="font-medium!">Codex</Heading2>
       </div>
 
-      <SettingsSection>
+      {/* Account info */}
+      <SettingsSection title="Account">
+        {isLoadingAccount ? (
+          <div className="flex items-center justify-between  py-4">
+            <div className="flex flex-col gap-1.5">
+              <div className="h-4 w-40 rounded bg-primary-200/50 dark:bg-primary-700/30 animate-pulse" />
+              <div className="h-3 w-24 rounded bg-primary-200/30 dark:bg-primary-700/20 animate-pulse" />
+            </div>
+            <div className="h-4 w-12 rounded bg-primary-200/50 dark:bg-primary-700/30 animate-pulse" />
+          </div>
+        ) : account?.type === "chatgpt" ? (
+          <SettingsRow title={account.email} description={account.type}>
+            <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
+              {planLabel}
+            </span>
+          </SettingsRow>
+        ) : account?.type === "apiKey" ? (
+          <SettingsRow
+            title="Authentication"
+            description="Connected via API key"
+          >
+            <span className="text-sm text-primary-500 dark:text-primary-400">
+              API Key
+            </span>
+          </SettingsRow>
+        ) : (
+          <SettingsRow title="Not signed in" description="Sign in to Codex to view account details">
+            <span className="text-xs text-primary-400 dark:text-primary-500">No account</span>
+          </SettingsRow>
+        )}
+      </SettingsSection>
+
+      <SettingsSection title="Configurations">
+
+        {/*
+        TODO:
+        <SettingsRow
+          title="Plugins"
+          description="Browse and manage Codex plugins"
+        >
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setSearchParams({ section: "codex-plugins" })}
+          >
+            Browse
+          </Button>
+        </SettingsRow>
+        <SettingsDivider />*/}
         <SettingsRow
           title="Sandbox Mode"
           description="Controls file and network isolation for the agent"
@@ -133,7 +233,8 @@ export default function CodexSettings() {
             options={SANDBOX_OPTIONS}
             onChange={(value) => {
               updateConfig({ sandboxMode: value });
-              const label = SANDBOX_OPTIONS.find((o) => o.value === value)?.label ?? value;
+              const label =
+                SANDBOX_OPTIONS.find((o) => o.value === value)?.label ?? value;
               toast.success(`Sandbox: ${label}`);
             }}
             useFixedBackground
@@ -148,7 +249,9 @@ export default function CodexSettings() {
             enabled={networkAccessEnabled}
             onChange={(enabled) => {
               updateConfig({ networkAccessEnabled: enabled });
-              toast.success(enabled ? "Network access enabled" : "Network access disabled");
+              toast.success(
+                enabled ? "Network access enabled" : "Network access disabled",
+              );
             }}
           />
         </SettingsRow>
@@ -161,7 +264,9 @@ export default function CodexSettings() {
             enabled={webSearchMode === "live"}
             onChange={(enabled) => {
               updateConfig({ webSearchMode: enabled ? "live" : "disabled" });
-              toast.success(enabled ? "Web search enabled" : "Web search disabled");
+              toast.success(
+                enabled ? "Web search enabled" : "Web search disabled",
+              );
             }}
           />
         </SettingsRow>
@@ -174,7 +279,9 @@ export default function CodexSettings() {
             enabled={skipGitRepoCheck}
             onChange={(enabled) => {
               updateConfig({ skipGitRepoCheck: enabled });
-              toast.success(enabled ? "Git check skipped" : "Git check required");
+              toast.success(
+                enabled ? "Git check skipped" : "Git check required",
+              );
             }}
           />
         </SettingsRow>
@@ -197,42 +304,55 @@ export default function CodexSettings() {
           </div>
         </SettingsRow>
       </SettingsSection>
-
-
-      {rateLimits && (rateLimits.primary || rateLimits.secondary) && (
-        <SettingsSection title="Rate Limits">
-          <div className="px-4 py-3 space-y-3">
+      {/* Rate limits */}
+      <SettingsSection title="Usage">
+        {isLoadingRateLimits ? (
+          <div className="divide-y divide-primary-200/50 dark:divide-primary-800/20">
+            {[0, 1].map((i) => (
+              <div key={i} className="flex items-center justify-between py-4">
+                <div className="flex flex-col gap-1.5">
+                  <div className="h-3 w-36 rounded bg-primary-200/50 dark:bg-primary-700/30 animate-pulse" />
+                  <div className="h-3 w-24 rounded bg-primary-200/30 dark:bg-primary-700/20 animate-pulse" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-28 h-1.5 rounded-full bg-primary-200/50 dark:bg-primary-700/30" />
+                  <div className="h-4 w-16 rounded bg-primary-200/50 dark:bg-primary-700/30 animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : rateLimits && (rateLimits.primary || rateLimits.secondary) ? (
+          <div className="divide-y divide-primary-200/50 dark:divide-primary-800/20">
             {rateLimits.primary && (
-              <RateLimitBar
-                label="5h"
+              <RateLimitRow
+                label="5 hour usage limit"
                 usedPercent={rateLimits.primary.usedPercent}
                 resetsAt={rateLimits.primary.resetsAt}
               />
             )}
             {rateLimits.secondary && (
-              <RateLimitBar
-                label="Weekly"
+              <RateLimitRow
+                label="Weekly usage limit"
                 usedPercent={rateLimits.secondary.usedPercent}
                 resetsAt={rateLimits.secondary.resetsAt}
               />
             )}
-            {rateLimits.planType && (
-              <div className="text-xs text-primary-400 dark:text-primary-500">
-                Plan: {rateLimits.planType}
-              </div>
-            )}
           </div>
-        </SettingsSection>
-      )}
+        ) : (
+          <div className="px-4 py-3">
+            <span className="text-sm text-primary-400 dark:text-primary-500">No usage data available</span>
+          </div>
+        )}
+      </SettingsSection>
 
       {codexSpace && (
-        <SettingsSection title="Space">
+        <SettingsSection title="Visibility">
           <SettingsRow
-            title="Show in Sidebar"
+            title="Show in Selector"
             description={
               !canHide && !codexSpace.isArchived
-                ? "At least one space must be visible"
-                : "Show or hide this space from the sidebar"
+                ? "At least one agent must be active"
+                : "Show or hide this agent from the selector"
             }
           >
             <Toggle
@@ -252,7 +372,9 @@ export default function CodexSettings() {
                     toast.success("Space hidden");
                   }
                 } catch (err: any) {
-                  toast.error(err?.message || "Failed to update space visibility");
+                  toast.error(
+                    err?.message || "Failed to update space visibility",
+                  );
                 }
               }}
             />

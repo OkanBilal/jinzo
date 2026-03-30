@@ -21,6 +21,7 @@ import {
   Question,
   DontAsk,
   Unlock,
+  Danger,
 } from "@/components/ui/icons";
 import Security from "@/components/ui/icons/security";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
@@ -66,7 +67,7 @@ function PermissionModeIcon({
     case "plan":
       return <Plan className={className} />;
     case "bypassPermissions":
-      return <Unlock className={className} />;
+      return <Danger className={className} />;
     case "dontAsk":
       return <DontAsk className={className} />;
     default:
@@ -305,9 +306,11 @@ export function InputToolbar({
                       setShowPermissionDropdown(!showPermissionDropdown)
                     }
                     className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
-                      permissionMode !== "default"
-                        ? "dark:bg-primary-200/20 bg-primary-500/30 text-primary-700 dark:text-primary-100"
-                        : "text-primary-700 dark:text-primary-300 hover:bg-primary/10"
+                      permissionMode === "bypassPermissions"
+                        ? "dark:bg-yellow-200/10 bg-yellow-400/30 text-yellow-600 dark:text-yellow-300"
+                        : permissionMode !== "default"
+                          ? "dark:bg-primary-200/20 bg-primary-500/30 text-primary-700 dark:text-primary-100"
+                          : "text-primary-700 dark:text-primary-300 hover:bg-primary/10"
                     }`}
                   >
                     <PermissionModeIcon
@@ -341,7 +344,7 @@ export function InputToolbar({
                           className="size-3 shrink-0"
                         />
                         <div className="flex flex-col flex-1 min-w-0">
-                          <Body className="text-[13px] font-medium tracking-tight mb-0.5">
+                          <Body className="text-[13px] tracking-tight mb-0.5">
                             {mode.label}
                           </Body>
                           <span className="text-xs text-primary-400 dark:text-primary-500 tracking-tighter">
@@ -363,17 +366,17 @@ export function InputToolbar({
                     }
                     className={`flex items-center  px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer ${
                       thinkingMode
-                        ? "dark:bg-orange-200/10 gap-1 bg-orange-300/30 text-orange-500 dark:text-orange-100"
+                        ? "dark:bg-orange-100/10 gap-1 bg-orange-300/30 text-orange-400 dark:text-orange-100"
                         : "text-primary-700 dark:text-primary-300 hover:bg-primary/10"
                     }`}
                   >
                     <Brain
-                      className={`size-4 font-medium ${thinkingMode ? "text-orange-500 dark:text-orange-100" : "text-primary-700 dark:text-primary-300"}`}
+                      className={`size-4 font-medium ${thinkingMode ? "text-orange-400 dark:text-orange-100" : "text-primary-700 dark:text-primary-300"}`}
                     />
                     <span
                       className={
                         thinkingMode
-                          ? "text-orange-500 dark:text-orange-100 capitalize"
+                          ? "text-orange-400 dark:text-orange-100 capitalize"
                           : ""
                       }
                     >
@@ -417,7 +420,7 @@ export function InputToolbar({
                         }`}
                       >
                         <Brain className="size-3" />
-                        {level}
+                        {level === "xhigh" ? "Extra High" : level}
                       </Button>
                     ))}
                   </DropdownWrapper>
@@ -429,16 +432,16 @@ export function InputToolbar({
                   onClick={onThinkingModeToggle}
                   className={`flex items-center gap-1 px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer ${
                     thinkingMode
-                      ? "dark:bg-orange-200/10 bg-orange-300/30 text-orange-500 dark:text-orange-100"
+                      ? "dark:bg-orange-200/10 bg-orange-300/30 text-orange-400 dark:text-orange-100"
                       : "text-primary-700 dark:text-primary-300 hover:bg-primary/10"
                   }`}
                 >
                   <Brain
-                    className={`size-4 font-medium ${thinkingMode ? "text-orange-500 dark:text-orange-100" : "text-primary-700 dark:text-primary-300"}`}
+                    className={`size-4  ${thinkingMode ? "text-orange-400 dark:text-orange-100" : "text-primary-700 dark:text-primary-300"}`}
                   />
                   <span
                     className={
-                      thinkingMode ? "text-orange-500 dark:text-orange-100" : ""
+                      thinkingMode ? "text-orange-400 dark:text-orange-100" : ""
                     }
                   >
                     {thinkingMode ? "Think" : ""}
@@ -452,9 +455,9 @@ export function InputToolbar({
               tooltip="Toggle Fast Mode"
               type="button"
               onClick={onFastModeToggle}
-              className={`flex items-center px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer ${
+              className={`flex items-center pl-2 pr-2.5 py-1 -ml-px rounded-full text-sm transition-all cursor-pointer ${
                 fastMode
-                  ? "dark:bg-red-300/10 gap-1 bg-red-300/30 text-red-600 dark:text-red-300"
+                  ? "dark:bg-red-400/10 gap-1 bg-red-300/30 text-red-600 dark:text-red-400"
                   : " text-primary-700 dark:text-primary-300 hover:bg-primary/10"
               }`}
               title={
@@ -464,7 +467,8 @@ export function InputToolbar({
               }
             >
               <Bolt
-                className={`size-4 transition-colors ${fastMode ? "text-red-600 dark:text-red-300" : "text-primary-700 dark:text-primary-300"}`}
+                animated={fastMode}
+                className={`size-4 transition-colors ${fastMode ? "text-red-600 dark:text-red-400" : "text-primary-700 dark:text-primary-300"}`}
                 style={{
                   transitionDelay: fastMode ? "0ms" : "200ms",
                   transitionDuration: "150ms",
@@ -474,7 +478,7 @@ export function InputToolbar({
                 {"Fast".split("").map((char, i) => (
                   <span
                     key={i}
-                    className="inline-block text-red-600 dark:text-red-300"
+                    className="inline-block text-red-600 dark:text-red-400"
                     style={{
                       transition:
                         "opacity 150ms, transform 150ms, max-width 150ms",

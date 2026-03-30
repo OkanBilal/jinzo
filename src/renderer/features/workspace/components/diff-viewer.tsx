@@ -159,7 +159,7 @@ export function DiffViewer({
     <div className={`h-full overflow-auto ${className}`}>
       <PatchDiff
         patch={diffText}
-         style={{ "--diffs-font-size": "12px", "--diffs-font-family": "'Space Mono', monospace" } as React.CSSProperties}
+         style={{ "--diffs-font-size": "12px", "--diffs-font-family": "'Geist Mono', monospace" } as React.CSSProperties}
         options={{
           theme: isDarkMode ? "pierre-dark" : "pierre-light",
           themeType: isDarkMode ? "dark" : "light",

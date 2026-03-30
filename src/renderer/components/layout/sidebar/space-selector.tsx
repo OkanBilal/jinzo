@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Space } from "@/lib/redux/api";
 import { parseIcon } from "@/lib/icon-registry";
 import { Copilot, Claude } from "@/components/ui/icons/space";
+import Gpt from "@/components/ui/icons/gpt";
 import { Button } from "@/components/ui";
 
 interface SpaceSelectorProps {
@@ -35,7 +36,8 @@ function SpaceSelector({
             // }}
             onMouseEnter={() => setHoveredSpaceId(space.id)}
             onMouseLeave={() => setHoveredSpaceId(null)}
-            className={`shrink-0 flex items-center justify-center size-8 hover:bg-primary-100/30 hover:scale-101 rounded-xl transition-all duration-200 ease-out active:scale-99 p-1 font-medium cursor-pointer ${
+            className={`shrink-0 flex items-center justify-center size-8 hover:bg-primary/60 dark:hover:bg-primary/20
+              hover:scale-101 rounded-xl transition-all duration-200 ease-out active:scale-99 p-1 font-medium cursor-pointer ${
               isActive
                 ? "text-primary-900 dark:text-primary"
                 : "text-primary-800 dark:text-primary opacity-60"
@@ -51,6 +53,10 @@ function SpaceSelector({
               <Copilot className="text-primary-800 dark:text-primary" animate={isHovered} />
             ) : icon.type === "claude-animate" ? (
               <Claude className="text-primary-800 dark:text-primary" animate={isHovered} />
+            ) : icon.type === "codex-animate" ? (
+              <Gpt
+                className={`size-4 text-primary-800 dark:text-primary transition-transform duration-500 ease-in-out ${isHovered ? "animate-spin-slow" : ""}`}
+              />
             ) : (
               <icon.value className="size-4" />
             )}

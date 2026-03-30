@@ -110,8 +110,8 @@ function renderTextToCanvas(
   const offscreen = document.createElement("canvas");
   const ctx = offscreen.getContext("2d")!;
 
-  const fontSize = 18;
-  const fontFamily = `Space Mono, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif`;
+  const fontSize = 24;
+  const fontFamily = `-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol`;
   ctx.font = `200 ${fontSize}px ${fontFamily}`;
   const metrics = ctx.measureText(text);
   const textWidth = Math.min(metrics.width, maxWidth);

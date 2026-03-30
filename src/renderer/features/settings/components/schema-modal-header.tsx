@@ -24,9 +24,9 @@ export function SchemaModalHeader({
     <div className="flex items-center justify-between p-6">
       <div className="flex items-center gap-4">
         <Text variant="body" className="font-medium text-base!">Structured outputs</Text>
-        <div className="relative flex items-center rounded-lg bg-primary-950/4 dark:bg-primary/6 p-0.5">
+        <div className="relative flex items-center rounded-[10px] glass-morphism bg-primary-950/4 dark:bg-primary/6 px-0.5">
           <div
-            className="absolute top-0.5 h-[calc(100%-4px)] w-[calc(50%-2px)] rounded-lg bg-primary dark:bg-primary-800 shadow-sm transition-transform duration-200 ease-out"
+            className="absolute top-0.5 h-[calc(100%-3.5px)] w-[calc(50%-2px)] rounded-[9px] bg-primary-200/20 dark:bg-primary/8 shadow-sm transition-transform duration-200 ease-out"
             style={{
               transform:
                 activeTab === "schemas"
