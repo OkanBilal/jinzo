@@ -12,7 +12,7 @@ export function SettingsSection({
           {title}
         </h3>
       )}
-      <div className="rounded-3xl bg-primary-100/60 dark:bg-primary-900/40 border border-primary-200/50 dark:border-primary-800/20 px-5">
+      <div className="rounded-3xl glass-morphism px-5 py-1">
         {children}
       </div>
     </div>
@@ -55,7 +55,7 @@ export function SettingsRow({
           {title}
         </h3>
         {description && (
-          <p className="text-[13px] text-primary-500 dark:text-primary-500 mt-1">
+          <p className="text-[13px] text-primary-500 dark:text-primary-500 mt-1 ">
             {description}
           </p>
         )}

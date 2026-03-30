@@ -28,7 +28,7 @@
 
 ---
 
-Jinzo - _Japanese for "artificial" (人造)_ - is a desktop app for running AI coding agents in managed workspaces. It wraps **GitHub Copilot** and **Claude Code** SDKs, tracks every run with full observability, and syncs issues from the tools you already use — all from one place.
+Jinzo - _Japanese for "artificial" (人造)_ - is a desktop app for running AI coding agents in managed workspaces. It wraps **GitHub Copilot**, **Claude Code**, and **OpenAI Codex** SDKs, tracks every run with full observability, and syncs issues from the tools you already use — all from one place.
 
 ```
 npm install
@@ -37,12 +37,13 @@ npm start
 
 ## Features
 
-- **Multi-Agent** - Run GitHub Copilot and Claude Code side by side with session resumption, tool approval, and usage tracking
+- **Multi-Agent** - Run GitHub Copilot, Claude Code, and OpenAI Codex side by side with session resumption, tool approval, and usage tracking
 - **Workspaces** - Git-backed workspaces with status tracking (backlog → done), worktree isolation, diffs per run, and code reviews
-- **Integrations** - Sync issues from GitHub, GitLab, Linear, Jira, Asana, and Trello
+- **Integrations** - Sync issues from GitHub, GitLab, Linear, Jira, Asana, Trello, and Sentry
 - **Spaces** - Custom profiles with system prompts, model selection, themes, and per-agent UI configuration
 - **Structured Output** - Define JSON schemas to constrain agent output format via Claude SDK's `outputFormat`
 - **MCP Support** - Connect external tools via Model Context Protocol; auto-loads `.mcp.json` from project root
+- **Stats Dashboard** - Usage analytics and run statistics per provider
 - **Built-in Tools** - Terminal emulator, file explorer, git operations, and workspace activity log
 
 ## Quick Start
@@ -56,11 +57,12 @@ npm install
 npm start
 ```
 
-1. Open **Settings** and configure a provider (Copilot or Claude)
+1. Open **Settings** and configure a provider (Copilot, Claude, or Codex)
 2. Add a local git repository as a workspace
-3. Open the Copilot or Claude view and start an agent run
+3. Open the Copilot, Claude, or Codex view and start an agent run
 
 For Copilot, you'll need [GitHub CLI](https://cli.github.com/) authenticated (`gh auth login`).
+For Codex, you'll need [Codex CLI](https://github.com/openai/codex) authenticated (`codex auth login`).
 
 
 ## Development

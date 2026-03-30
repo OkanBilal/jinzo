@@ -43,14 +43,14 @@ export function SidebarFooter({
       style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
     >
       <div className="flex items-center justify-between gap-3"
-      
+
               style={{
           animation: `slide-from-bottom 0.2s ease-out 0.1s both`,
         }}>
         <div>
           <Button
             onClick={onSettingsClick}
-            className="shrink-0 flex items-center justify-center transition-transform duration-300 cursor-pointer hover:rotate-90"
+            className="shrink-0 flex items-center justify-center transition-transform duration-300 cursor-pointer"
             aria-label="Settings"
             title="Settings"
             tooltipShortcut="⌘S"
@@ -77,7 +77,7 @@ export function SidebarFooter({
             aria-label="Help & Resources"
             title="Help & Resources"
           >
-            <Question className="size-4.5 text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
+            <Question className="size-4.5 -mt-1 text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
           </Button>
         </div>
       </div>

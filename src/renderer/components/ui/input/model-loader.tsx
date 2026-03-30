@@ -54,7 +54,7 @@ export function ModelLoader() {
         {ASCII_FRAMES[state.frameIndex]}
       </span>
       <span className="shine-text text-sm">
-        {MODEL_LOADER_WORDS[state.wordIndex]}...
+        Loading models...
       </span>
     </span>
   );

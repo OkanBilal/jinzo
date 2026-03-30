@@ -9,8 +9,8 @@ export const seedController = {
     return seedService.seedAccounts();
   },
 
-  async seedApps(): Promise<ServiceResponse> {
-    return seedService.seedApps();
+  async seedConnectionStates(): Promise<ServiceResponse> {
+    return seedService.seedConnectionStates();
   },
 
   async seedConnections(): Promise<ServiceResponse> {

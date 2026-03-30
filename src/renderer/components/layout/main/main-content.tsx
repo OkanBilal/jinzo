@@ -5,12 +5,14 @@ interface MainContentProps {
   children: ReactNode;
   marginLeft: string;
   marginRight: string;
+  hasRightPanel?: boolean;
 }
 
 export function MainContent({
   children,
   marginLeft,
   marginRight,
+  hasRightPanel,
 }: MainContentProps) {
   const { header, firstTabActive } = useMainHeader();
 
@@ -32,7 +34,7 @@ export function MainContent({
       }}
     >
       {header && (
-        <div className="shrink-0">{header}</div>
+        <div className={`shrink-0 ${hasRightPanel ? "max-w-[calc(100%-70px)]" : ""}`}>{header}</div>
       )}
       <div
         className={`flex-1 min-h-0 bg-primary dark:bg-primary-950 overflow-hidden ${contentRounding}`}

@@ -38,7 +38,7 @@ export function FileUploadDropdown({
   const [hoveredFileIndex, setHoveredFileIndex] = useState<number | null>(null);
 
   return (
-    <div className="relative flex items-center gap-2" ref={dropdownRef}>
+    <div className="relative flex items-center gap-2 animate-blur-reveal" ref={dropdownRef}>
       <Button
         type="button"
         tooltip="Upload file or photo"

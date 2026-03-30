@@ -11,16 +11,6 @@ const PROVIDER_COLORS: Record<string, string> = {
   copilot_cli: "#3010B3",
 };
 
-const MODEL_LABELS: Record<string, string> = {
-  default: "Opus 4.6",
-  sonnet: "Sonnet 4.6",
-  haiku: "Haiku 4.5",
-};
-
-function displayModel(model: string | null): string | null {
-  if (!model) return null;
-  return MODEL_LABELS[model] ?? model;
-}
 
 function formatCost(usd: number | null): string {
   if (usd === null || usd === 0) return "";
@@ -64,11 +54,6 @@ export default function RecentSessionsList({ sessions }: RecentSessionsListProps
                 {s.projectName && (
                   <span className="text-primary-400 dark:text-primary-500 truncate">
                     {s.projectName}
-                  </span>
-                )}
-                {displayModel(s.model) && (
-                  <span className="text-primary-400 dark:text-primary-500">
-                    {displayModel(s.model)}
                   </span>
                 )}
               </div>

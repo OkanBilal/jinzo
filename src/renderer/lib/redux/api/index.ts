@@ -1,11 +1,11 @@
 export { baseApi } from "./baseApi";
 
 export {
-  appsApi,
-  useGetAppsQuery,
-  useUpdateAppConnectionMutation,
-} from "./appsApi";
-export type { AppState, UpdateAppConnectionPayload } from "./appsApi";
+  connectionStatesApi,
+  useGetConnectionStatesQuery,
+  useUpdateConnectionStatesMutation,
+} from "./connectionStates";
+export type { ConnectionStates, UpdateConnectionStatesPayload } from "./connectionStates";
 
 export {
   accountApi,
@@ -153,6 +153,12 @@ export {
   useDeleteProviderMutation,
   useEnableProviderMutation,
   useDisableProviderMutation,
+  useGetProviderAccountInfoQuery,
+  useGetProviderPluginsQuery,
+  useReadProviderPluginQuery,
+  useInstallProviderPluginMutation,
+  useUninstallProviderPluginMutation,
+  useGetProviderRateLimitsQuery,
 } from "./providersApi";
 export type {
   Provider,
@@ -161,6 +167,15 @@ export type {
   ProviderCapabilities,
   CreateProviderPayload,
   UpdateProviderPayload,
+  RateLimitInfo,
+  PluginInfo,
+  PluginInterfaceInfo,
+  PluginListResponse,
+  CodexAccountInfo,
+  MarketplaceInfo,
+  PluginDetailResponse,
+  PluginSkillSummary,
+  PluginAppSummary,
 } from "./providersApi";
 
 export {
@@ -259,6 +274,7 @@ export {
   useRemoveRunArtifactMutation,
   useGetRunTurnsQuery,
   useLazyGetRunTurnsQuery,
+  useExecuteReviewMutation,
 } from "./runsApi";
 export type {
   Run,

@@ -191,8 +191,10 @@ function UpdateButton({
       );
     case "error":
       return (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-red-500">{state.error}</span>
+        <div className="flex flex-col items-end gap-2 max-w-sm">
+          <span className="text-xs text-red-400 dark:text-red-400/80 leading-relaxed text-right line-clamp-2">
+            {state.error}
+          </span>
           <Button type="button" variant="ghost" size="md" onClick={onCheck}>
             Retry
           </Button>
@@ -338,7 +340,7 @@ export default function GeneralSettings() {
         <Heading2>General</Heading2>
       </div>
 
-      <SettingsSection>
+      <SettingsSection title="Run">
         <SettingsRow
           title="Run Detail"
           description="Control how much detail is shown in run output"

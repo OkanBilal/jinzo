@@ -277,6 +277,8 @@ export interface ContinueRunPayload {
   accountId: string;
   /** The follow-up message to send */
   message: string;
+  /** Model to use for this continuation (overrides provider default) */
+  model?: string | null;
   /** Additional context to add */
   additionalContext?: StartRunContextItem[];
   /** File attachments (images/documents) serialized as base64 for IPC */
@@ -314,6 +316,29 @@ export interface ForkRunResponse {
   runId: string;
   /** The source run that was forked from */
   sourceRunId: string;
+}
+
+/** Review target scope for native code review */
+export interface ReviewTarget {
+  type: "uncommittedChanges" | "baseBranch" | "commit" | "custom";
+  branch?: string;
+  sha?: string;
+  title?: string;
+  instructions?: string;
+}
+
+/** Payload for starting a native code review run */
+export interface ReviewRunPayload {
+  accountId: string;
+  workspaceId: string;
+  spaceId?: string;
+  providerId: string;
+  target: ReviewTarget;
+  delivery?: "inline" | "detached";
+  model?: string;
+  systemPrompt?: string;
+  configSnapshot?: Record<string, unknown>;
+  toolPolicySnapshot?: Record<string, unknown>;
 }
 
 /** Full run details with related data */

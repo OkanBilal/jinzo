@@ -3,18 +3,15 @@ import { useEffect, useReducer } from "react";
 const ASCII_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 const LOADER_WORDS = [
-  "Thinking",
   "Analyzing",
   "Mapping",
   "Connecting",
-  "Refining",
   "Synthesizing",
   "Structuring",
   "Clarifying",
   "Filtering",
   "Resolving",
   "Composing",
-  "Finalizing",
 ];
 
 type LoaderState = { frameIndex: number; word: string };
@@ -93,7 +90,7 @@ export function AsciiLoader({
 
   useEffect(() => {
     const frameInterval = setInterval(() => dispatch({ type: "tick" }), 80);
-    const wordInterval = setInterval(() => dispatch({ type: "newWord" }), 3000);
+    const wordInterval = setInterval(() => dispatch({ type: "newWord" }), 4000);
 
     return () => {
       clearInterval(frameInterval);

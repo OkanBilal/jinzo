@@ -67,7 +67,7 @@ export const markdownComponents: Components = {
     const isInline = !className;
     if (isInline) {
       return (
-        <code className="px-1.5 py-0.5 rounded text-primary-900 dark:text-primary-100 text-sm font-sans transition-all duration-150 ease-out">
+        <code className="px-1 py-0.5 rounded text-primary-900 dark:text-primary-100 text-[0.9em] bg-primary-200/40 dark:bg-primary/4  font-mono transition-all duration-150 ease-out">
           {children}
         </code>
       );

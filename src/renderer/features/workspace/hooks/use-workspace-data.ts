@@ -1,15 +1,21 @@
 import { useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
   useGetWorkspacesQuery,
   useGetWorkspaceByIdQuery,
 } from "@/lib/redux/api/workspacesApi";
 import { useGetProvidersByKindQuery } from "@/lib/redux/api/providersApi";
+import type { RootState } from "@/lib/redux";
 
 const EMPTY_PROVIDERS: never[] = [];
 
-export function useWorkspaceData() {
+export function useWorkspaceData(providerId?: string) {
   const { workspaceId } = useParams<{ workspaceId?: string }>();
+
+  const savedWorkspaceIdByProvider = useSelector(
+    (state: RootState) => state.workspace.activeWorkspaceIdByProvider,
+  );
 
   const [userSelectedProvider, setSelectedProvider] =
     useState<string | null>(null);
@@ -24,18 +30,28 @@ export function useWorkspaceData() {
     [allProviders],
   );
 
-  const { data: fetchedWorkspace } = useGetWorkspaceByIdQuery(workspaceId!, {
-    skip: !workspaceId,
+  // Resolve effective workspace ID: URL param > saved per-provider > first workspace
+  const effectiveWorkspaceId = useMemo(() => {
+    if (workspaceId) return workspaceId;
+    if (providerId) {
+      const saved = savedWorkspaceIdByProvider[providerId];
+      if (saved && workspaces.some((w) => w.id === saved)) return saved;
+    }
+    return workspaces.length > 0 ? workspaces[0].id : undefined;
+  }, [workspaceId, providerId, savedWorkspaceIdByProvider, workspaces]);
+
+  const { data: fetchedWorkspace } = useGetWorkspaceByIdQuery(effectiveWorkspaceId!, {
+    skip: !effectiveWorkspaceId,
   });
 
   const currentWorkspace = useMemo(() => {
-    if (workspaceId) {
+    if (effectiveWorkspaceId) {
       return (
-        workspaces.find((w) => w.id === workspaceId) ?? fetchedWorkspace ?? null
+        workspaces.find((w) => w.id === effectiveWorkspaceId) ?? fetchedWorkspace ?? null
       );
     }
-    return workspaces.length > 0 ? workspaces[0] : null;
-  }, [workspaceId, workspaces, fetchedWorkspace]);
+    return null;
+  }, [effectiveWorkspaceId, workspaces, fetchedWorkspace]);
 
   const selectedProvider = useMemo(() => {
     if (userSelectedProvider) return userSelectedProvider;
@@ -44,13 +60,11 @@ export function useWorkspaceData() {
   }, [userSelectedProvider, providers]);
 
   const selectedWorkspace = useMemo(() => {
-    if (workspaceId) return workspaceId;
-    if (workspaces.length > 0) return workspaces[0].id;
-    return "";
-  }, [workspaceId, workspaces]);
+    return effectiveWorkspaceId ?? "";
+  }, [effectiveWorkspaceId]);
 
   return {
-    workspaceId,
+    workspaceId: effectiveWorkspaceId,
     workspaces,
     providers,
     selectedWorkspace,

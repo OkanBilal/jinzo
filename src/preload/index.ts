@@ -57,13 +57,13 @@ const api = {
     get: () => ipcRenderer.invoke("account:get"),
     update: (payload: unknown) => ipcRenderer.invoke("account:update", payload),
   },
-  // Apps operations
-  apps: {
-    getAll: () => ipcRenderer.invoke("apps:getAll"),
+  // ConnectionStates operations
+  connectionStates: {
+    getAll: () => ipcRenderer.invoke("connectionStates:getAll"),
     updateById: (
       id: string,
       payload: { isConnected: boolean; connectionId?: string | null },
-    ) => ipcRenderer.invoke("apps:updateById", id, payload),
+    ) => ipcRenderer.invoke("connectionStates:updateById", id, payload),
   },
   // Sync operations
   sync: {
@@ -143,7 +143,7 @@ const api = {
   },
   // Seed operations
   seed: {
-    apps: () => ipcRenderer.invoke("seed:apps"),
+    connectionStates: () => ipcRenderer.invoke("seed:connectionStates"),
     connections: () => ipcRenderer.invoke("seed:connections"),
     all: () => ipcRenderer.invoke("seed:all"),
   },
@@ -203,6 +203,12 @@ const api = {
     getModels: (id: string) => ipcRenderer.invoke("providers:getModels", id),
     getCommands: (id: string) => ipcRenderer.invoke("providers:getCommands", id),
     getSkills: (id: string, workspacePath?: string) => ipcRenderer.invoke("providers:getSkills", id, workspacePath),
+    getRateLimits: (id: string) => ipcRenderer.invoke("providers:getRateLimits", id),
+    getAccountInfo: (id: string) => ipcRenderer.invoke("providers:getAccountInfo", id),
+    getPlugins: (id: string) => ipcRenderer.invoke("providers:getPlugins", id),
+    readPlugin: (id: string, pluginName: string, marketplacePath: string) => ipcRenderer.invoke("providers:readPlugin", id, pluginName, marketplacePath),
+    installPlugin: (id: string, pluginId: string) => ipcRenderer.invoke("providers:installPlugin", id, pluginId),
+    uninstallPlugin: (id: string, pluginId: string) => ipcRenderer.invoke("providers:uninstallPlugin", id, pluginId),
   },
   // Tool calls operations
   toolCalls: {
@@ -294,6 +300,7 @@ const api = {
       runId: string;
       accountId: string;
       message: string;
+      model?: string;
       additionalContext?: Array<{
         kind: "file" | "diff" | "selection" | "note";
         ref?: string;
@@ -318,6 +325,24 @@ const api = {
       }>;
       attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>;
     }) => ipcRenderer.invoke("runs:fork", payload),
+    executeReview: (payload: {
+      accountId: string;
+      workspaceId: string;
+      spaceId?: string;
+      providerId: string;
+      target: {
+        type: "uncommittedChanges" | "baseBranch" | "commit" | "custom";
+        branch?: string;
+        sha?: string;
+        title?: string;
+        instructions?: string;
+      };
+      delivery?: "inline" | "detached";
+      model?: string;
+      systemPrompt?: string;
+      configSnapshot?: Record<string, unknown>;
+      toolPolicySnapshot?: Record<string, unknown>;
+    }) => ipcRenderer.invoke("runs:executeReview", payload),
     deleteSession: (runId: string) =>
       ipcRenderer.invoke("runs:deleteSession", runId),
     // Interactive tool approval
@@ -332,6 +357,12 @@ const api = {
       approved: boolean;
       answer?: string;
     }) => ipcRenderer.invoke("runs:toolApprovalResponse", response),
+    // Streaming events (ephemeral — pushed from main, not persisted)
+    onStreamingEvent: (callback: (data: { runId: string; event: { type: string; kind: string; content?: string; metadata?: Record<string, unknown>; streamId?: string }; ts: number }) => void) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on("runs:ephemeralEvent", listener);
+      return () => ipcRenderer.removeListener("runs:ephemeralEvent", listener);
+    },
   },
   // Reviews operations
   reviews: {

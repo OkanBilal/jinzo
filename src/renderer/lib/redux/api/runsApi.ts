@@ -124,6 +124,9 @@ export interface ModelUsageEntry {
   outputTokens: number;
   cacheReadInputTokens: number;
   cacheCreationInputTokens: number;
+  webSearchRequests?: number;
+  contextWindow?: number;
+  maxOutputTokens?: number;
 }
 
 export interface RunTurn {
@@ -377,6 +380,36 @@ export const runsApi = baseApi.injectEndpoints({
     }),
 
 
+    executeReview: builder.mutation<
+      { runId: string },
+      {
+        accountId: string;
+        workspaceId: string;
+        spaceId?: string;
+        providerId: string;
+        target: {
+          type: "uncommittedChanges" | "baseBranch" | "commit" | "custom";
+          branch?: string;
+          sha?: string;
+          title?: string;
+          instructions?: string;
+        };
+        delivery?: "inline" | "detached";
+        model?: string;
+        systemPrompt?: string;
+        configSnapshot?: Record<string, unknown>;
+        toolPolicySnapshot?: Record<string, unknown>;
+      }
+    >({
+      query: (payload) => ({
+        handler: "runs:executeReview",
+        args: [payload],
+      }),
+      transformResponse: (response: { success: boolean; data: { runId: string } }) =>
+        response.data,
+      invalidatesTags: ["Runs"],
+    }),
+
     getRunTurns: builder.query<RunTurn[], string>({
       query: (runId) => ({
         handler: "runTurns:getByRun",
@@ -422,4 +455,5 @@ export const {
   useRemoveRunArtifactMutation,
   useGetRunTurnsQuery,
   useLazyGetRunTurnsQuery,
+  useExecuteReviewMutation,
 } = runsApi;

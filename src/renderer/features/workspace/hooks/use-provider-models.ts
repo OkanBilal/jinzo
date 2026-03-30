@@ -33,23 +33,23 @@ export function useProviderModels(
   const { data: providerSkills = [], isLoading: isLoadingSkills } =
     useGetProviderSkillsQuery(
       { id: activeProviderId, workspacePath },
-      { skip: !activeProviderId || variant !== "claude" },
+      { skip: !activeProviderId || (variant !== "claude" && variant !== "codex") },
     );
 
   const { data: providerData } = useGetProviderByIdQuery(activeProviderId, {
     skip: variant !== "claude" && variant !== "codex",
   });
   const [updateProvider] = useUpdateProviderMutation();
-  const planMode = !!(providerData?.config as any)?.planMode;
-  const thinkingMode = variant === "codex"
+  const permissionMode: string = (providerData?.config as any)?.permissionMode ?? "default";
+  const thinkingMode = variant === "codex" || variant === "copilot"
     ? !!(providerData?.config as any)?.modelReasoningEffort
     : !!(providerData?.config as any)?.thinkingMode;
   const fastMode = !!(providerData?.config as any)?.fastMode;
-  const effortLevel: string = variant === "codex"
+  const effortLevel: string = variant === "codex" || variant === "copilot"
     ? (providerData?.config as any)?.modelReasoningEffort || ""
     : (providerData?.config as any)?.effortLevel || "";
 
-  const handlePlanModeToggle = useCallback(async () => {
+  const handlePermissionModeChange = useCallback(async (mode: string) => {
     if (!providerData) return;
     const currentConfig = providerData.config ?? {};
     await updateProvider({
@@ -57,11 +57,11 @@ export function useProviderModels(
       payload: {
         config: {
           ...currentConfig,
-          planMode: !planMode,
+          permissionMode: mode,
         },
       },
     });
-  }, [providerData, planMode, activeProviderId, updateProvider]);
+  }, [providerData, activeProviderId, updateProvider]);
 
   const handleThinkingModeToggle = useCallback(async () => {
     if (!providerData) return;
@@ -94,8 +94,8 @@ export function useProviderModels(
   const handleEffortLevelChange = useCallback(async (level: string) => {
     if (!providerData) return;
     const currentConfig = providerData.config ?? {};
-    if (variant === "codex") {
-      // Codex uses modelReasoningEffort in its config
+    if (variant === "codex" || variant === "copilot") {
+      // Codex/Copilot use modelReasoningEffort in their config
       await updateProvider({
         id: activeProviderId,
         payload: {
@@ -162,6 +162,22 @@ export function useProviderModels(
     }
   }, [providerModels, selectedModel, setSelectedModel]);
 
+  // Clamp effort level when switching to a model that doesn't support the current level
+  useEffect(() => {
+    if (!selectedModelInfo) return;
+    const supported = selectedModelInfo.supportedEffortLevels;
+    if (!supported || supported.length === 0) {
+      // Model has no effort levels — clear it
+      if (effortLevel) handleEffortLevelChange("");
+    } else if (thinkingMode && !effortLevel) {
+      // Thinking is on but no effort level set — pick the highest supported
+      handleEffortLevelChange(supported[supported.length - 1]);
+    } else if (effortLevel && !supported.includes(effortLevel as any)) {
+      // Pick the highest supported level as fallback
+      handleEffortLevelChange(supported[supported.length - 1]);
+    }
+  }, [selectedModelInfo, effortLevel, thinkingMode, handleEffortLevelChange]);
+
   const handleModelChange = useCallback(
     (displayName: string) => {
       if (providerModels) {
@@ -187,8 +203,8 @@ export function useProviderModels(
     providerSkills,
     isLoadingSkills,
     modelsError,
-    planMode,
-    handlePlanModeToggle,
+    permissionMode,
+    handlePermissionModeChange,
     thinkingMode,
     handleThinkingModeToggle,
     fastMode,

@@ -260,7 +260,6 @@ export const statsRepo = {
       goal: string | null;
       status: string;
       provider_id: string;
-      model: string | null;
       project_name: string | null;
       duration_ms: number | null;
       cost_micros: number | null;
@@ -272,7 +271,6 @@ export const statsRepo = {
         r.goal,
         r.status,
         r.provider_id,
-        r.model,
         p.name AS project_name,
         tc.duration_ms,
         tc.cost_micros,
@@ -299,7 +297,6 @@ export const statsRepo = {
       goal: r.goal,
       status: r.status,
       providerId: r.provider_id,
-      model: r.model,
       projectName: r.project_name,
       durationMs: r.duration_ms,
       totalCostUsd: r.provider_id === "copilot_cli" ? null : r.cost_micros != null ? r.cost_micros / 1_000_000 : null,

@@ -57,7 +57,7 @@ export default function CloneRepoModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-(--z-overlay) flex items-center justify-center bg-primary-950/55"
+      className="fixed inset-0 z-(--z-modal-critical) flex items-center justify-center bg-primary-950/55"
       role="presentation"
       onClick={onClose}
     >
@@ -116,7 +116,7 @@ export default function CloneRepoModal({
 
         <div className="flex gap-3 mt-5">
           <Button
-            className="flex-1 rounded-full! font-semibold"
+            className="flex-1"
             variant="secondary"
             size="md"
             onClick={onClose}
@@ -125,7 +125,7 @@ export default function CloneRepoModal({
             Cancel
           </Button>
           <Button
-            className="flex-1 rounded-full! font-semibold"
+            className="flex-1 "
             variant="primary"
             size="md"
             onClick={handleSubmit}

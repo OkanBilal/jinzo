@@ -44,13 +44,13 @@ Jinzo is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM). C
 
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
-- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.account`, `api.apps`, `api.sync`, `api.connectionCredentials`, `api.connections`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.providers`, `api.tools`, `api.toolCalls`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.feedback`, `api.stats`, `api.app`, `api.updates`
+- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.account`, `api.connectionStates`, `api.sync`, `api.connectionCredentials`, `api.connections`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.providers`, `api.tools`, `api.toolCalls`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.feedback`, `api.stats`, `api.app`, `api.updates`
 - After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
 - React app with Redux Toolkit, React Router (HashRouter), `@/` alias → `src/renderer/`
-- Routes: `/` (Home — redirects to `/copilot`), `/settings` (Settings), `/copilot` and `/copilot/:workspaceId` (Copilot — GitHub Copilot agent), `/claude` and `/claude/:workspaceId` (Claude Code agent)
-- Copilot and Claude routes share the same workspace UI but use different provider IDs (`copilot_cli` vs `claude_code`)
+- Routes: `/` (Home — redirects to `/copilot`), `/settings` (Settings), `/copilot` and `/copilot/:workspaceId` (Copilot — GitHub Copilot agent), `/claude` and `/claude/:workspaceId` (Claude Code agent), `/codex` and `/codex/:workspaceId` (OpenAI Codex agent)
+- Copilot, Claude, and Codex routes share the same workspace UI but use different provider IDs (`copilot_cli` vs `claude_code` vs `codex`)
 
 ### Module Architecture (`src/main/modules/`)
 
@@ -68,7 +68,7 @@ Each domain module follows a layered pattern (see `src/main/modules/account/` as
 
 **Critical**: All layers are **plain object literals**, never classes. No DI — repos call `getDb()` inline.
 
-All modules: `account`, `appSettings`, `apps`, `connectionCredentials`, `connections`, `entities`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `space`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
+All modules: `account`, `appSettings`, `connectionStates`, `connectionCredentials`, `connections`, `entities`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `space`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
 
 ### IPC Convention
 
@@ -106,7 +106,7 @@ Core tables:
 - `workspaceResources` - Pivot table linking workspaces to connectionResources
 - `entities` - Unified canonical content (tasks, issues, etc.)
 - `connections` / `connectionResources` / `connectionTokens` / `connectionSyncState` - External service connections, encrypted tokens, sync cursors
-- `appStates` - App integration states (GitHub, GitLab, Linear, Jira, Asana, Trello, Notion — tracks isConnected, features, config)
+- `connectionStates` - Connection integration states (GitHub, GitLab, Linear, Jira, Asana, Trello, Notion — tracks isConnected, features, config)
 - `spaces` - User-defined UI/prompt configurations with theme/UI config JSON
 - `runs` / `runContext` / `runArtifacts` / `runTurns` - Terminal/code-writing flow (agent runs with session resumption via sessionId, turn tracking)
 - `tools` / `toolCalls` - Tool registry (local, provider_builtin) and invocation tracking with nested tool call support (parentToolCallId)
@@ -146,6 +146,7 @@ Domain-specific views on entities:
 - `adapter.factory.ts` — Factory creates the correct adapter by provider type
 - `claude.adapter.ts` — Claude Code CLI via `@anthropic-ai/claude-agent-sdk`
 - `copilot.adapter.ts` — GitHub Copilot CLI via `@github/copilot-sdk`
+- `codex.adapter.ts` — OpenAI Codex CLI
 - Event-driven architecture with typed events (log, tool_call, command, artifact, status)
 - Hook system for pre/post tool execution, subagent/teammate coordination
 - Pre-approved tool list (Bash, Read, Glob, Grep, etc.) with interactive approval for others
@@ -187,7 +188,7 @@ Domain-specific views on entities:
 - Tool call tracking with nested call support (parentToolCallId)
 
 **Seed Module** (`src/main/modules/seed/`)
-- Database seeding for initial setup (apps, connections, providers, spaces, accounts)
+- Database seeding for initial setup (connectionStates, connections, providers, spaces, accounts)
 
 **Image Proxy** (`src/main/modules/imageProxy/`)
 - Protocol handler for enhanced image loading in the renderer
@@ -216,7 +217,44 @@ Domain-specific views on entities:
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`
 - **Feature dirs**: `onboarding`, `settings`, `stats`, `workspace`
 - **Routing**: HashRouter — routes defined in `src/renderer/routes/`
+- **Settings Routing**: `/settings?section={sectionName}` — query parameter controls active tab (general, connections, claude, copilot, codex, codex-plugins, projects, git, dashboard, etc.)
 - **Styling**: Tailwind CSS v4 (PostCSS-based)
+
+### Icon System
+
+**Space Icons** (`src/renderer/components/ui/icons/space/`)
+- Icon registry: `src/renderer/lib/icon-registry.tsx` — maps icon names to components
+- `parseIcon()` returns typed icons: `emoji`, `icon`, `copilot-animate`, `claude-animate`, `codex-animate`
+- Animated icon types get special hover behavior in `space-selector.tsx`:
+  - `copilot-animate` — sprite-based frame animation via `data-animation-state`
+  - `claude-animate` — geometric arm animation (individual `<line>` elements with `scaleX` CSS animations)
+  - `codex-animate` — spin animation via `animate-spin-slow` CSS class
+- SVG icons support custom props: `Bolt` has `animated?: boolean` (flame effects + gradient fill), `Claude` has `animate?: boolean` (arm retract/extend)
+- To add a new animated space icon: add a type to `parseIcon()` return union, handle in both `icon:` prefix and bare name lookups, add rendering case in `space-selector.tsx`
+
+**App Icon Generation** (macOS)
+```bash
+# From src/renderer/public/ — regenerate iconset from icon.png (must be 1024x1024+)
+sips -z 16 16 icon.png --out icon.iconset/icon_16x16.png
+sips -z 32 32 icon.png --out icon.iconset/icon_16x16@2x.png
+sips -z 32 32 icon.png --out icon.iconset/icon_32x32.png
+sips -z 64 64 icon.png --out icon.iconset/icon_32x32@2x.png
+sips -z 128 128 icon.png --out icon.iconset/icon_128x128.png
+sips -z 256 256 icon.png --out icon.iconset/icon_128x128@2x.png
+sips -z 256 256 icon.png --out icon.iconset/icon_256x256.png
+sips -z 512 512 icon.png --out icon.iconset/icon_256x256@2x.png
+sips -z 512 512 icon.png --out icon.iconset/icon_512x512.png
+sips -z 1024 1024 icon.png --out icon.iconset/icon_512x512@2x.png
+iconutil -c icns icon.iconset -o icon.icns
+```
+
+### Input Toolbar (`src/renderer/features/workspace/components/input-toolbar.tsx`)
+
+- Shared toolbar across claude/copilot/codex variants, feature-gated by `variant` prop
+- **Permission modes**: `default`, `acceptEdits`, `plan`, `bypassPermissions`, `dontAsk` — each has distinct icon and color (bypassPermissions uses yellow)
+- **Effort levels**: `minimal`, `low`, `medium`, `high`, `max`, `xhigh` — display `xhigh` as "Extra High" in UI
+- **Fast mode**: Gradient-styled button (orange→yellow) with animated Bolt icon (SVG gradient fill + flame elements)
+- **Thinking mode**: Orange-themed toggle with Brain icon, effort level dropdown
 
 ### Code Style
 
@@ -228,7 +266,7 @@ Domain-specific views on entities:
 ### Connections (External Services)
 
 Each connection type has:
-- Modal in `src/renderer/features/settings/components/apps/`
+- Modal in `src/renderer/features/settings/components/connections/`
 - Fetcher in `src/main/modules/sync/connections/`
 - IPC handlers for credentials and resource management
 

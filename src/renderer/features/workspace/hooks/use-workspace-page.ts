@@ -15,7 +15,9 @@ import {
   clearSignalTabs,
   clearNoteTabs,
   setActiveWorkspaceId,
+  setActiveWorkspaceForProvider,
   clearPendingGoal,
+  clearPendingReviewTarget,
 } from "@/lib/redux/slices/workspaceSlice";
 import { isRunTab, isNewRunTab } from "@/features/workspace/utils/repo-utils";
 import type { RootState } from "@/lib/redux";
@@ -62,6 +64,9 @@ export function useWorkspacePage(providerId: string) {
   const pendingAutoExecute = useSelector(
     (state: RootState) => state.workspace.pendingAutoExecute,
   );
+  const pendingReviewTarget = useSelector(
+    (state: RootState) => state.workspace.pendingReviewTarget,
+  );
 
   const [goal, setGoal] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -76,11 +81,14 @@ export function useWorkspacePage(providerId: string) {
   );
 
   const { workspaceId, selectedWorkspace, currentWorkspace } =
-    useWorkspaceData();
+    useWorkspaceData(providerId);
 
   useEffect(() => {
     dispatch(setActiveWorkspaceId(workspaceId ?? null));
-  }, [workspaceId, dispatch]);
+    if (workspaceId) {
+      dispatch(setActiveWorkspaceForProvider({ providerId, workspaceId }));
+    }
+  }, [workspaceId, providerId, dispatch]);
 
   useEffect(() => {
     dispatch(clearSelectedFile());
@@ -115,11 +123,26 @@ export function useWorkspacePage(providerId: string) {
     executeRun,
     continueRun,
     forkRun,
+    executeReview,
     checkCanResume,
     closeTab,
     selectTab,
     setRuns,
   } = useWorkspaceRuns(workspaceId, providerId);
+
+  // Handle pending review target (native code review)
+  useEffect(() => {
+    if (!pendingReviewTarget || !workspaceId || !selectedWorkspace) return;
+    dispatch(clearPendingReviewTarget());
+
+    const run = async () => {
+      const newRunId = await executeReview(selectedWorkspace, providerId, pendingReviewTarget, selectedModel);
+      if (newRunId) {
+        dispatch(setActiveTab(newRunId));
+      }
+    };
+    run();
+  }, [pendingReviewTarget, workspaceId, selectedWorkspace, providerId, selectedModel, executeReview, dispatch]);
 
   useEffect(() => {
     if (runs.length > 0 && !selectedFile && activeTab === "editor") {
@@ -181,7 +204,7 @@ export function useWorkspacePage(providerId: string) {
       : undefined;
 
     if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
-      const success = (await continueRun(activeRunId, goal, attachments, contextIssues, contextFiles, contextSignals)) ?? false;
+      const success = (await continueRun(activeRunId, goal, attachments, contextIssues, contextFiles, contextSignals, selectedModel)) ?? false;
       if (success) clearInputState();
     } else {
       const newRunId = await executeRun(
@@ -225,7 +248,7 @@ export function useWorkspacePage(providerId: string) {
       if (!workspaceId) return;
       const run = async () => {
         if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
-          const success = (await continueRun(activeRunId, goal)) ?? false;
+          const success = (await continueRun(activeRunId, goal, undefined, undefined, undefined, undefined, selectedModel)) ?? false;
           if (success) clearInputState();
         } else {
           const newRunId = await executeRun(goal, selectedWorkspace, providerId, selectedModel);

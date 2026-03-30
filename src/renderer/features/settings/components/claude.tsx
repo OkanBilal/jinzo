@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Heading2, Muted, Toggle, Button, toast } from "@/components/ui";
+import { Heading2, Muted, Toggle, Button, toast, Select } from "@/components/ui";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import {
   useGetProviderByIdQuery,
@@ -11,6 +11,14 @@ import {
 } from "@/lib/redux/api";
 import { StructuredOutputsModal } from "./structured-outputs-modal";
 import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
+
+const SETTINGS_PERMISSION_MODES = [
+  { value: "default", label: "Ask permissions", description: "Always ask before making changes" },
+  { value: "acceptEdits", label: "Auto accept edits", description: "Automatically accept all file edits" },
+  { value: "plan", label: "Plan mode", description: "Create a plan before making changes" },
+  { value: "bypassPermissions", label: "Bypass permissions", description: "Accepts all permissions" },
+  { value: "dontAsk", label: "Don't ask", description: "Deny unapproved tools silently" },
+];
 
 export default function ClaudeSettings() {
   const {
@@ -33,7 +41,6 @@ export default function ClaudeSettings() {
 
   const config = provider?.config ?? {};
   const permissionMode = (config as any).permissionMode ?? "bypassPermissions";
-  const isBypassing = permissionMode === "bypassPermissions";
 
   const structuredOutputs = ((config as any).structuredOutputs ?? {}) as Record<
     string,
@@ -45,28 +52,18 @@ export default function ClaudeSettings() {
     ? (structuredOutputs[structuredOutputsSelectedId]?.name ?? "Off")
     : "Off";
 
-
-
-  const handlePermissionToggle = async (enabled: boolean) => {
+  const handlePermissionModeChange = async (mode: string) => {
     if (!provider || updating) return;
-
-    const newMode = enabled ? "bypassPermissions" : "default";
-
     try {
       await updateProvider({
         id: "claude_code",
         payload: {
           config: {
             ...config,
-            permissionMode: newMode,
+            permissionMode: mode,
           },
         },
       }).unwrap();
-      toast.success(
-        enabled
-          ? "Permission bypass enabled"
-          : "Permission bypass disabled — tools will require approval",
-      );
     } catch (err: any) {
       toast.error(err?.message || "Failed to update permission mode");
     }
@@ -105,20 +102,17 @@ export default function ClaudeSettings() {
         <Heading2 className="font-medium!">Claude</Heading2>
       </div>
 
-      <SettingsSection>
+      <SettingsSection  title="Configuration">
         <SettingsRow
-          title="Bypass Permissions"
-          description={
-            <>
-
-              <span className="text-amber-700 dark:text-amber-600 font-medium ">
-                Enabling this gives the agent full control over file operations
-                and terminal commands.
-              </span>
-            </>
-          }
+          title="Permission Mode"
+          description="Controls how the agent handles tool permissions during runs."
         >
-          <Toggle enabled={isBypassing} onChange={handlePermissionToggle} />
+          <Select
+          useFixedBackground={true}
+            value={permissionMode}
+            options={SETTINGS_PERMISSION_MODES}
+            onChange={handlePermissionModeChange}
+          />
         </SettingsRow>
         <SettingsDivider />
         <SettingsRow
@@ -153,7 +147,7 @@ export default function ClaudeSettings() {
       </SettingsSection>
 
 
-      <SettingsSection title="Extensions">
+      <SettingsSection title="Capabilities">
         <SettingsRow
           title="MCP Servers"
           description={
@@ -260,13 +254,13 @@ export default function ClaudeSettings() {
       </SettingsSection>
 
       {claudeSpace && (
-        <SettingsSection title="Space">
+        <SettingsSection title="Visibility">
           <SettingsRow
-            title="Show in Sidebar"
+            title="Show in Selector"
             description={
               !canHide && !claudeSpace.isArchived
-                ? "At least one space must be visible"
-                : "Show or hide this space from the sidebar"
+                ? "At least one agent must be active"
+                : "Show or hide this agent from the selector"
             }
           >
             <Toggle

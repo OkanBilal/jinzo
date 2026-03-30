@@ -89,8 +89,8 @@ export function WorkspaceInput({
     providerSkills,
     isLoadingSkills,
     modelsError,
-    planMode,
-    handlePlanModeToggle,
+    permissionMode,
+    handlePermissionModeChange,
     thinkingMode,
     handleThinkingModeToggle,
     fastMode,
@@ -265,7 +265,7 @@ export function WorkspaceInput({
       )}
 
     <div
-      className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-[20px] glass-morphism
+      className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism
         cursor-pointer transition-all`}
     >
       <ContextChips
@@ -327,8 +327,8 @@ export function WorkspaceInput({
         modelDisplayNames={modelDisplayNames}
         onModelChange={handleModelChange}
         isLoadingModels={isLoadingModels}
-        planMode={planMode}
-        onPlanModeToggle={handlePlanModeToggle}
+        permissionMode={permissionMode}
+        onPermissionModeChange={handlePermissionModeChange}
         thinkingMode={thinkingMode}
         onThinkingModeToggle={handleThinkingModeToggle}
         fastMode={fastMode}

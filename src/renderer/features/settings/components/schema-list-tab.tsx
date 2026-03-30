@@ -8,7 +8,7 @@ function RadioDot({ active }: { active: boolean }) {
     <span
       className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 ${
         active
-          ? "border-primary-900 dark:border-primary-300 bg-primary-900 dark:bg-primary-600"
+          ? "border-primary-500 dark:border-primary-300 bg-primary-400 dark:bg-primary-600"
           : "border-primary-400 dark:border-primary-600"
       }`}
     />
@@ -61,7 +61,7 @@ export function SchemaListTab({
             onClick={() => onSelectSchema(null)}
             className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left text-sm transition-colors cursor-pointer ${
               selectedId === null
-                ? "bg-primary-950/8 dark:bg-primary/12 text-primary-900 dark:text-primary-100"
+                ? "bg-primary-950/8 dark:bg-primary/8 text-primary-900 dark:text-primary-100"
                 : "text-primary-600 dark:text-primary-400 hover:bg-primary-950/4 dark:hover:bg-primary/6"
             }`}
           >
@@ -74,7 +74,7 @@ export function SchemaListTab({
               key={entry.id}
               className={`group flex items-center h-10 gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-colors ${
                 selectedId === entry.id
-                  ? "bg-primary-950/8 dark:bg-primary/12 text-primary-900 dark:text-primary-100"
+                  ? "bg-primary-950/8 dark:bg-primary/8 text-primary-900 dark:text-primary-100"
                   : "text-primary-600 dark:text-primary-400 hover:bg-primary-950/4 dark:hover:bg-primary/6"
               }`}
             >
@@ -117,13 +117,14 @@ export function SchemaListTab({
                 >
                   <Duplicate className="size-4" />
                 </Button>
-                <button
+                <Button
+                 tooltip="Delete Schema"
                   onClick={() => onRequestDelete(entry.id)}
                   className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-colors cursor-pointer"
                   title="Delete"
                 >
                   <Trash className="size-4" />
-                </button>
+                </Button>
               </div>
             </div>
           ))}

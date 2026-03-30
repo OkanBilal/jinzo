@@ -635,7 +635,7 @@ export const connectionsService = {
       await connectionsRepo.markTokensNotCurrent(connection.id);
       await connectionsRepo.deleteEntitiesByConnectionId(connection.id);
       await connectionsRepo.deleteResourcesByConnectionId(connection.id);
-      await connectionsRepo.updateAppState(provider, false, null);
+      await connectionsRepo.updateConnectionState(provider, false, null);
 
       return { success: true, data: undefined };
     } catch (error) {

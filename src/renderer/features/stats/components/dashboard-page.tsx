@@ -73,14 +73,14 @@ export default function DashboardPage() {
         <Heading2 className="font-medium!">Dashboard</Heading2>
         <div
           ref={containerRef}
-          className="relative flex rounded-lg bg-primary-100/60 dark:bg-primary-800/20 p-0.5"
+          className="relative flex rounded-xl glass-morphism bg-primary-100/60  dark:bg-primary-800/20 p-0.5"
         >
           <div
-            className="absolute top-0.5 bg-primary dark:bg-primary/10 rounded-lg shadow-sm transition-all duration-300 ease-in-out"
+            className="absolute top-0.75 bg-primary dark:bg-primary/8  rounded-lg shadow-sm transition-all duration-300 ease-in-out"
             style={{
               left: indicator.left,
               width: indicator.width,
-              height: "calc(100% - 4px)",
+              height: "calc(100% - 5.5px)",
             }}
           />
           {TABS.map((tab) => (
@@ -90,7 +90,7 @@ export default function DashboardPage() {
                 if (el) tabRefs.current.set(tab.id, el);
               }}
               onClick={() => setFilter(tab.id)}
-              className={`relative z-(--z-base) flex-1 text-center px-3 py-1 text-xs font-medium rounded-lg transition-colors duration-300 cursor-pointer ${
+              className={`relative z-(--z-base) flex-1 text-center px-3 py-1 text-xs font-medium rounded-xl transition-colors duration-300 cursor-pointer ${
                 filter === tab.id
                   ? "text-primary-900 dark:text-primary-100"
                   : "text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
@@ -104,19 +104,19 @@ export default function DashboardPage() {
 
       <SummaryCards summary={data.summary} />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ActivityChart data={data.dailyActivity} />
         <HourHeatmap data={data.hourDistribution} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <CostByModelChart data={data.costByModel} />
         <ToolUsageChart data={data.toolUsage} />
       </div>
 
       {/* <CodeActivityStats data={data.codeActivity} /> */}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <SuccessRateChart data={data.statusBreakdown} />
         <div className="relative">
           <div className="absolute inset-0">

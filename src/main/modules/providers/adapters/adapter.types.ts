@@ -99,6 +99,10 @@ export interface WorkRunArtifactEvent {
   path?: string;
   content?: string;
   metadata?: Record<string, unknown>;
+  /** When true, pushed to renderer but NOT persisted to DB */
+  ephemeral?: boolean;
+  /** Identifies the streaming source — renderer uses this to accumulate deltas */
+  streamId?: string;
 }
 
 /**
@@ -169,7 +173,7 @@ export interface WorkRunArtifactSummary {
  * Stop reason indicating why the model stopped generating.
  * Maps to Claude Agent SDK's ResultMessage.stop_reason field.
  */
-export type StopReason = "end_turn" | "max_tokens" | "stop_sequence" | "refusal" | "tool_use" | null;
+export type StopReason = string | null;
 
 /**
  * Per-model token/cost breakdown from SDK modelUsage
@@ -180,6 +184,9 @@ export interface ModelUsageEntry {
   outputTokens: number;
   cacheReadInputTokens: number;
   cacheCreationInputTokens: number;
+  webSearchRequests?: number;
+  contextWindow?: number;
+  maxOutputTokens?: number;
 }
 
 /**
@@ -225,6 +232,8 @@ export interface WorkRunContinueRequest {
   };
   /** The follow-up message/goal */
   message: string;
+  /** Model to use for this continuation (overrides provider default) */
+  model?: string | null;
   /** Additional context to add */
   context?: WorkRunContextItem[];
   /** File attachments (images/documents) to include in the prompt */
@@ -263,6 +272,8 @@ export interface WorkRunForkRequest {
   };
   /** The message/goal for the forked session */
   message: string;
+  /** Model to use for this fork (overrides provider default) */
+  model?: string | null;
   /** Additional context to add */
   context?: WorkRunContextItem[];
   /** File attachments (images/documents) to include in the prompt */
@@ -271,6 +282,37 @@ export interface WorkRunForkRequest {
   hooks?: HooksConfig;
   /** Per-run subagents configuration */
   agents?: AgentsConfig;
+}
+
+/**
+ * Target scope for a native code review
+ */
+export interface WorkRunReviewTarget {
+  type: "uncommittedChanges" | "baseBranch" | "commit" | "custom";
+  /** Branch name for baseBranch target */
+  branch?: string;
+  /** Commit SHA for commit target */
+  sha?: string;
+  /** Commit title for commit target */
+  title?: string;
+  /** Free-form instructions for custom target */
+  instructions?: string;
+}
+
+/**
+ * Request to start a native code review run
+ */
+export interface WorkRunReviewRequest {
+  runId: string;
+  accountId: string;
+  workspace: {
+    id: string;
+    rootPath: string;
+  };
+  target: WorkRunReviewTarget;
+  /** inline = review on same thread (default), detached = fork new review thread */
+  delivery?: "inline" | "detached";
+  model?: string | null;
 }
 
 /**
@@ -303,6 +345,15 @@ export interface WorkRunAdapter {
    * @returns Promise resolving to the final result when the forked run completes
    */
   forkRun?(request: WorkRunForkRequest, onEvent: WorkRunEventHandler): Promise<WorkRunResult>;
+
+  /**
+   * Start a native code review run using the provider's built-in review mode.
+   * Falls back to startRun with a review goal if not implemented.
+   * @param request - The review configuration with target scope
+   * @param onEvent - Callback invoked for each event during the review
+   * @returns Promise resolving to the final result when the review completes
+   */
+  reviewRun?(request: WorkRunReviewRequest, onEvent: WorkRunEventHandler): Promise<WorkRunResult>;
 
   /**
    * Abort a currently running work run.
@@ -357,6 +408,59 @@ export interface WorkRunAdapter {
    * @returns Promise resolving to a short title string (3-6 words)
    */
   generateTitle?(goal: string, context?: WorkRunContextItem[]): Promise<string>;
+
+  /**
+   * Get current rate limit information from the provider.
+   * @returns Promise resolving to rate limit data, or null if not supported
+   */
+  getRateLimits?(): Promise<RateLimitInfo | null>;
+
+  /**
+   * Read account info from the provider.
+   */
+  getAccountInfo?(): Promise<CodexAccountInfo>;
+
+  /**
+   * List available plugins from the provider's marketplace.
+   * @returns Promise resolving to plugin marketplace data
+   */
+  listPlugins?(): Promise<PluginListResponse>;
+
+  /**
+   * Read detailed plugin info including skills, apps, and MCP servers.
+   */
+  readPlugin?(pluginName: string, marketplacePath: string): Promise<PluginDetail>;
+
+  /**
+   * Install a plugin by ID.
+   * @param pluginId - The plugin ID to install
+   */
+  installPlugin?(pluginId: string): Promise<void>;
+
+  /**
+   * Uninstall a plugin by ID.
+   * @param pluginId - The plugin ID to uninstall
+   */
+  uninstallPlugin?(pluginId: string): Promise<void>;
+}
+
+/**
+ * Rate limit information from a provider
+ */
+export interface RateLimitInfo {
+  planType?: string;
+  primary?: RateLimitWindow;
+  secondary?: RateLimitWindow;
+  credits?: { hasCredits: boolean; balance?: string; unlimited: boolean };
+}
+
+export interface RateLimitWindow {
+  /** Percentage used (0-100) */
+  usedPercent: number;
+  /** Window duration in minutes */
+  windowDurationMins?: number;
+  /** Unix timestamp when the window resets */
+  resetsAt?: number;
 }
 
 /**
@@ -385,6 +489,8 @@ export interface CodexAdapterConfig {
   webSearchMode?: "disabled" | "cached" | "live";
   /** Skip git repo check for non-git directories */
   skipGitRepoCheck?: boolean;
+  /** Thread personality — controls the agent's conversational style */
+  personality?: "friendly" | "pragmatic" | "none";
   /** Additional directories the agent can access */
   additionalDirectories?: string[];
   /** Base URL override for OpenAI API */
@@ -407,14 +513,16 @@ export interface CopilotAdapterConfig {
   cliUrl?: string;
   /** Log level for the SDK */
   logLevel?: "debug" | "info" | "warning" | "error" | "none" | "all";
-  /** Whether to auto-restart on crash */
-  autoRestart?: boolean;
   /** Default model to use */
   defaultModel?: string;
   /** Timeout in milliseconds for operations */
   timeout?: number;
   /** Whether to start the CLI process automatically */
   autoStart?: boolean;
+  /** GitHub token for authentication — takes priority over other auth methods */
+  githubToken?: string;
+  /** Whether to use stored OAuth tokens or gh CLI auth (default: true) */
+  useLoggedInUser?: boolean;
   /** Permission mode for tool access */
   permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
 }
@@ -432,9 +540,7 @@ export interface ClaudeCodeAdapterConfig {
   /** Timeout in milliseconds */
   timeout?: number;
   /** Permission mode for tool access */
-  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan";
-  /** When true, overrides permissionMode to "plan" for the next run */
-  planMode?: boolean;
+  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk";
   /**
    * Setting sources for loading skills and other filesystem settings.
    * - "user": Load from ~/.claude/skills/
@@ -547,6 +653,10 @@ export interface ModelInfo {
   supportedEffortLevels?: ('minimal' | 'low' | 'medium' | 'high' | 'max' | 'xhigh')[];
   /** Model description */
   description?: string;
+  // TODO: expose in UI — model supports auto mode selection
+  supportsAutoMode?: boolean;
+  // TODO: expose in UI — model supports adaptive thinking (Claude decides when to think)
+  supportsAdaptiveThinking?: boolean;
   /** Additional metadata */
   metadata?: Record<string, unknown>;
 }
@@ -667,16 +777,29 @@ export interface AgentDefinition {
    */
   tools?: string[];
 
+  /** Array of tool names to explicitly disallow for this agent */
+  disallowedTools?: string[];
+
   /**
    * Model to use for this subagent.
    * If omitted, uses the same model as the parent agent.
-   *
-   * - "sonnet": Good balance of capability and speed
-   * - "opus": Most capable, use for complex analysis
-   * - "haiku": Fastest, use for simple tasks
-   * - "inherit": Use parent's model (same as omitting)
    */
   model?: AgentModelOption;
+
+  /** MCP server configurations specific to this subagent */
+  mcpServers?: (string | Record<string, unknown>)[];
+
+  /** Array of skill names to preload into the agent context */
+  skills?: string[];
+
+  /** Auto-submitted as the first user turn when this agent starts. Slash commands are processed. */
+  initialPrompt?: string;
+
+  /** Maximum number of agentic turns (API round-trips) before stopping */
+  maxTurns?: number;
+
+  /** Experimental: Critical reminder added to system prompt */
+  criticalSystemReminder_EXPERIMENTAL?: string;
 }
 
 /**
@@ -707,6 +830,7 @@ export type AgentsConfig = Record<string, AgentDefinition>;
 
 /**
  * Hook event names supported by the Claude Agent SDK
+ * TODO:
  */
 export type HookEventName =
   | "PreToolUse"
@@ -714,13 +838,27 @@ export type HookEventName =
   | "PostToolUseFailure"
   | "UserPromptSubmit"
   | "Stop"
+  | "StopFailure"
   | "SubagentStart"
   | "SubagentStop"
   | "PreCompact"
+  | "PostCompact"
   | "PermissionRequest"
   | "SessionStart"
   | "SessionEnd"
-  | "Notification";
+  | "Notification"
+  | "Setup"
+  | "TeammateIdle"
+  | "TaskCreated"
+  | "TaskCompleted"
+  | "Elicitation"
+  | "ElicitationResult"
+  | "ConfigChange"
+  | "WorktreeCreate"
+  | "WorktreeRemove"
+  | "InstructionsLoaded"
+  | "CwdChanged"
+  | "FileChanged";
 
 /**
  * Base input fields common to all hook callbacks
@@ -1030,3 +1168,89 @@ export interface HookMatcher {
 export type HooksConfig = {
   [K in HookEventName]?: HookMatcher[];
 };
+
+// ── Account Types ──
+
+export interface CodexAccountInfo {
+  account: {
+    type: "apiKey";
+  } | {
+    type: "chatgpt";
+    email: string;
+    planType: string;
+  } | null;
+  requiresOpenaiAuth: boolean;
+}
+
+// ── Plugin Marketplace Types ──
+
+export interface PluginInterface {
+  displayName?: string;
+  shortDescription?: string;
+  longDescription?: string;
+  developerName?: string;
+  category?: string;
+  capabilities: string[];
+  websiteUrl?: string;
+  defaultPrompt?: string[];
+  brandColor?: string;
+  composerIcon?: string;
+  logo?: string;
+  screenshots: string[];
+  privacyPolicyUrl?: string;
+  termsOfServiceUrl?: string;
+}
+
+export interface PluginInfo {
+  id: string;
+  name: string;
+  source: { type: string; path: string };
+  installed: boolean;
+  enabled: boolean;
+  installPolicy: "NOT_AVAILABLE" | "AVAILABLE" | "INSTALLED_BY_DEFAULT";
+  authPolicy: "ON_INSTALL" | "ON_USE";
+  interface: PluginInterface | null;
+}
+
+export interface MarketplaceInfo {
+  name: string;
+  path: string;
+  interface: { displayName?: string } | null;
+  plugins: PluginInfo[];
+}
+
+export interface PluginListResponse {
+  marketplaces: MarketplaceInfo[];
+  marketplaceLoadErrors: Array<{ marketplacePath: string; message: string }>;
+  remoteSyncError: string | null;
+  featuredPluginIds: string[];
+}
+
+export interface PluginSkillSummary {
+  name: string;
+  displayName?: string;
+  path?: string;
+  description?: string;
+  shortDescription?: string;
+  enabled: boolean;
+}
+
+export interface PluginAppSummary {
+  id: string;
+  name: string;
+  needsAuth: boolean;
+  description?: string;
+  installUrl?: string;
+  isAccessible?: boolean;
+  isEnabled?: boolean;
+}
+
+export interface PluginDetail {
+  marketplaceName: string;
+  marketplacePath: string;
+  summary: PluginInfo;
+  description: string | null;
+  skills: PluginSkillSummary[];
+  apps: PluginAppSummary[];
+  mcpServers: string[];
+}

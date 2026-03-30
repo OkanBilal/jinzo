@@ -7,17 +7,23 @@ import { ToolInputPreview } from "./tool-input-preview";
 interface ToolApprovalDialogProps {
   request: ToolApprovalRequest;
   onRespond: (requestId: string, approved: boolean, answer?: string) => void;
+  variant?: "copilot" | "claude" | "codex";
 }
 
 export function ToolApprovalDialog({
   request,
   onRespond,
+  variant,
 }: ToolApprovalDialogProps) {
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [freeText, setFreeText] = useState("");
 
   const handleAllow = useCallback(() => {
     onRespond(request.requestId, true);
+  }, [request.requestId, onRespond]);
+
+  const handleAllowForSession = useCallback(() => {
+    onRespond(request.requestId, true, "acceptForSession");
   }, [request.requestId, onRespond]);
 
   const handleDeny = useCallback(() => {
@@ -150,6 +156,16 @@ export function ToolApprovalDialog({
               >
                 Allow
               </Button>
+              {variant === "codex" && (
+                <Button
+                  variant="primary"
+                  size="xs"
+                  className="min-w-16 opacity-80"
+                  onClick={handleAllowForSession}
+                >
+                  Allow for Session
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="xs"

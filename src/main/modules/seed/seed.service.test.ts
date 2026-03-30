@@ -3,8 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("../../db/queries/seed-accounts", () => ({
   seedAccountsData: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("../../db/queries/seed-apps", () => ({
-  seedApps: vi.fn().mockResolvedValue(undefined),
+vi.mock("../../db/queries/seed-connectionStates", () => ({
+  seedConnectionStates: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../db/queries/seed-connections", () => ({
   seedConnections: vi.fn().mockResolvedValue(undefined),
@@ -18,7 +18,7 @@ vi.mock("../../db/queries/seed-spaces", () => ({
 
 import { seedService } from "./seed.service";
 import { seedAccountsData } from "../../db/queries/seed-accounts";
-import { seedApps } from "../../db/queries/seed-apps";
+import { seedConnectionStates } from "../../db/queries/seed-connectionStates";
 import { seedConnections } from "../../db/queries/seed-connections";
 import { seedProvidersData } from "../../db/queries/seed-providers";
 import { seedSpacesData } from "../../db/queries/seed-spaces";
@@ -42,16 +42,16 @@ describe("seedService", () => {
     });
   });
 
-  describe("seedApps", () => {
+  describe("seedConnectionStates", () => {
     it("returns success when seeding succeeds", async () => {
-      const result = await seedService.seedApps();
-      expect(result).toEqual({ success: true, message: "Apps seeded successfully" });
-      expect(seedApps).toHaveBeenCalledOnce();
+      const result = await seedService.seedConnectionStates();
+      expect(result).toEqual({ success: true, message: "Connections States seeded successfully" });
+      expect(seedConnectionStates).toHaveBeenCalledOnce();
     });
 
     it("returns error when seeding fails", async () => {
-      vi.mocked(seedApps).mockRejectedValueOnce(new Error("fail"));
-      const result = await seedService.seedApps();
+      vi.mocked(seedConnectionStates).mockRejectedValueOnce(new Error("fail"));
+      const result = await seedService.seedConnectionStates();
       expect(result).toEqual({ success: false, error: "fail" });
     });
   });
@@ -59,7 +59,7 @@ describe("seedService", () => {
   describe("seedConnections", () => {
     it("returns success when seeding succeeds", async () => {
       const result = await seedService.seedConnections();
-      expect(result).toEqual({ success: true, message: "Connections seeded successfully" });
+      expect(result).toEqual({ success: true, message: "Connections States seeded successfully" });
       expect(seedConnections).toHaveBeenCalledOnce();
     });
 
@@ -103,7 +103,7 @@ describe("seedService", () => {
       const result = await seedService.seedAll();
       expect(result).toEqual({ success: true, message: "All data seeded successfully" });
       expect(seedAccountsData).toHaveBeenCalledOnce();
-      expect(seedApps).toHaveBeenCalledOnce();
+      expect(seedConnectionStates).toHaveBeenCalledOnce();
       expect(seedConnections).toHaveBeenCalledOnce();
       expect(seedProvidersData).toHaveBeenCalledOnce();
       expect(seedSpacesData).toHaveBeenCalledOnce();

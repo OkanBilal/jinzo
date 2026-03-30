@@ -14,7 +14,7 @@ type SettingsSection =
   | "general"
   | "notifications"
   | "personalization"
-  | "apps"
+  | "connections"
   | "schedules"
   | "data"
   | "security"
@@ -44,7 +44,7 @@ const menuItems: Array<MenuItem> = [
   { id: "general", label: "General", icon: General },
   // { id: "personalization", label: "Personalization", icon: Personalize },
   { id: "git", label: "Git", icon: Branch },
-  { id: "apps", label: "Connections", icon: Apps },
+  { id: "connections", label: "Connections", icon: Apps },
   { id: "dashboard", label: "Dashboard", icon: Chart },
   // { id: "notifications", label: "Notifications", icon: Bell },
   // { id: "schedules", label: "Schedules", icon: Calendar },
@@ -221,7 +221,6 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
           tooltip={"Close settings"}
           variant="subtle"
           tooltipPosition="top-right"
-          tooltipShortcut="Esc"
           size="lg"
           onClick={onClose}
           fullWidth

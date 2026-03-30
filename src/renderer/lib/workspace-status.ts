@@ -2,8 +2,8 @@ import type { WorkspaceStatus } from "@/lib/redux/api/workspacesApi";
 
 interface WorkspaceStatusConfig {
   label: string;
-  color: string; 
-  iconColor: string; 
+  color: string;
+  iconColor: string;
 }
 
 const statusConfig: Record<WorkspaceStatus, WorkspaceStatusConfig> = {
@@ -19,7 +19,7 @@ const statusConfig: Record<WorkspaceStatus, WorkspaceStatusConfig> = {
   },
   in_progress: {
     label: "In Progress",
-    color: "text-orange-600 dark:text-amber-400",
+    color: "text-amber-600 dark:text-amber-400",
     iconColor: "text-amber-500 dark:text-amber-400",
   },
   in_review: {
@@ -29,8 +29,8 @@ const statusConfig: Record<WorkspaceStatus, WorkspaceStatusConfig> = {
   },
   done: {
     label: "Done",
-    color: "text-indigo-500 dark:text-indigo-500",
-    iconColor: "text-indigo-500 dark:text-indigo-500",
+    color: "text-blue-500 dark:text-blue-500",
+    iconColor: "text-blue-500 dark:text-blue-500",
   },
   canceled: {
     label: "Canceled",

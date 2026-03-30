@@ -4,7 +4,7 @@ import {
   projects,
   workspaces,
   appSettings,
-  appStates,
+  connectionStates,
   workspaceActivity,
   workspaceDiffs,
   spaces,
@@ -117,15 +117,15 @@ export function createSpace(
   return data;
 }
 
-export function createAppState(
+export function createConnectionState(
   db: DatabaseInstance,
-  overrides: Partial<typeof appStates.$inferInsert> = {},
+  overrides: Partial<typeof connectionStates.$inferInsert> = {},
 ) {
   const data = {
-    id: overrides.id ?? `app-${randomUUID().slice(0, 8)}`,
+    id: overrides.id ?? `connection-${randomUUID().slice(0, 8)}`,
     ...overrides,
   };
-  db.insert(appStates).values(data).onConflictDoNothing().run();
+  db.insert(connectionStates).values(data).onConflictDoNothing().run();
   return data;
 }
 

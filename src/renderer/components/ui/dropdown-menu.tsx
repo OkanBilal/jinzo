@@ -196,7 +196,7 @@ export function DropdownMenuSub({
         className={cn(
           "w-full flex items-center gap-2 px-3 py-1.75 text-s cursor-pointer",
           "text-primary-800 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-50",
-          "hover:bg-primary-100/80 dark:hover:bg-primary/5 transition-colors",
+          "hover:bg-primary-200/40 dark:hover:bg-primary/5 transition-colors",
           className,
         )}
       >
@@ -252,7 +252,7 @@ export function DropdownMenuItem({
       disabled={disabled}
       className={cn(
         "w-full flex items-center gap-2 px-3 py-1.75 text-s",
-        "hover:bg-primary-100/80 dark:hover:bg-primary/5 transition-colors",
+        "hover:bg-primary-200/40 dark:hover:bg-primary/5 transition-colors",
         disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
         variantClasses[variant],
         className,

@@ -6,7 +6,7 @@ import { seedController } from "./seed.controller";
 // ─────────────────────────────────────────────────────────────
 export function registerSeedIpc() {
   ipcMain.handle("seed:accounts", () => seedController.seedAccounts());
-  ipcMain.handle("seed:apps", () => seedController.seedApps());
+  ipcMain.handle("seed:connectionStates", () => seedController.seedConnectionStates());
   ipcMain.handle("seed:connections", () => seedController.seedConnections());
   ipcMain.handle("seed:providers", () => seedController.seedProviders());
   ipcMain.handle("seed:spaces", () => seedController.seedSpaces());
@@ -16,7 +16,7 @@ export function registerSeedIpc() {
 
 export function unregisterSeedIpc() {
   ipcMain.removeHandler("seed:accounts");
-  ipcMain.removeHandler("seed:apps");
+  ipcMain.removeHandler("seed:connectionStates");
   ipcMain.removeHandler("seed:connections");
   ipcMain.removeHandler("seed:providers");
   ipcMain.removeHandler("seed:spaces");

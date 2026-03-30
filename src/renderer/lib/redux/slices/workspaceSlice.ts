@@ -31,6 +31,7 @@ export interface ContextSignal {
 
 export interface WorkspaceState {
   activeWorkspaceId: string | null;
+  activeWorkspaceIdByProvider: Record<string, string>;
   selectedModelByProvider: Record<string, string>;
   selectedProviderId: string;
   thinkingEnabled: boolean;
@@ -47,10 +48,18 @@ export interface WorkspaceState {
   openNoteTabs: ReviewTab[];
   pendingGoal: string | null;
   pendingAutoExecute: boolean;
+  pendingReviewTarget: {
+    type: "uncommittedChanges" | "baseBranch" | "commit" | "custom";
+    branch?: string;
+    sha?: string;
+    title?: string;
+    instructions?: string;
+  } | null;
 }
 
 const initialState: WorkspaceState = {
   activeWorkspaceId: null,
+  activeWorkspaceIdByProvider: {},
   selectedModelByProvider: {},
   selectedProviderId: "claude_code",
   thinkingEnabled: false,
@@ -67,6 +76,7 @@ const initialState: WorkspaceState = {
   openNoteTabs: [],
   pendingGoal: null,
   pendingAutoExecute: false,
+  pendingReviewTarget: null,
 };
 
 const workspaceSlice = createSlice({
@@ -75,6 +85,9 @@ const workspaceSlice = createSlice({
   reducers: {
     setActiveWorkspaceId: (state, action: PayloadAction<string | null>) => {
       state.activeWorkspaceId = action.payload;
+    },
+    setActiveWorkspaceForProvider: (state, action: PayloadAction<{ providerId: string; workspaceId: string }>) => {
+      state.activeWorkspaceIdByProvider[action.payload.providerId] = action.payload.workspaceId;
     },
     setWorkspaceModel: (state, action: PayloadAction<{ providerId: string; model: string }>) => {
       state.selectedModelByProvider[action.payload.providerId] = action.payload.model;
@@ -218,11 +231,18 @@ const workspaceSlice = createSlice({
       state.pendingGoal = null;
       state.pendingAutoExecute = false;
     },
+    setPendingReviewTarget: (state, action: PayloadAction<WorkspaceState["pendingReviewTarget"]>) => {
+      state.pendingReviewTarget = action.payload;
+    },
+    clearPendingReviewTarget: (state) => {
+      state.pendingReviewTarget = null;
+    },
   },
 });
 
 export const {
   setActiveWorkspaceId,
+  setActiveWorkspaceForProvider,
   setWorkspaceModel,
   setWorkspaceProvider,
   setWorkspaceThinkingEnabled,
@@ -255,6 +275,8 @@ export const {
   setPendingGoal,
   setPendingAutoExecute,
   clearPendingGoal,
+  setPendingReviewTarget,
+  clearPendingReviewTarget,
 } = workspaceSlice.actions;
 
 export default workspaceSlice.reducer;

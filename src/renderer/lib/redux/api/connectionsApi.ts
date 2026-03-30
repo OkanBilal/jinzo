@@ -162,7 +162,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [provider],
       }),
       transformResponse: (response: any) => response.success ? { success: true, connection: response.data.connection } : { success: false, connection: null as any },
-      providesTags: ['Apps'],
+      providesTags: ['ConnectionStates'],
     }),
 
     saveCredentials: builder.mutation<{ success: boolean }, SaveCredentialsPayload>({
@@ -171,7 +171,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [body],
       }),
       transformResponse: (response: any) => ({ success: response.success }),
-      invalidatesTags: ['Apps'],
+      invalidatesTags: ['ConnectionStates'],
     }),
 
     getGitHubRepos: builder.query<{ success: boolean; repos: GitHubRepo[] }, string>({
@@ -236,7 +236,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [provider],
       }),
       transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects, connectionId: response.data.connectionId } : { success: false, projects: [], connectionId: '' },
-      providesTags: ['Apps'],
+      providesTags: ['ConnectionStates'],
     }),
 
     getSelectedTrelloBoards: builder.query<{ success: boolean; boards: SelectedTrelloBoard[]; connectionId: string }, string>({
@@ -245,7 +245,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [provider],
       }),
       transformResponse: (response: any) => response.success ? { success: true, boards: response.data.boards, connectionId: response.data.connectionId } : { success: false, boards: [], connectionId: '' },
-      providesTags: ['Apps'],
+      providesTags: ['ConnectionStates'],
     }),
 
     getSelectedGitLabProjects: builder.query<{ success: boolean; projects: SelectedGitLabProject[]; connectionId: string }, string>({
@@ -254,7 +254,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [provider],
       }),
       transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects, connectionId: response.data.connectionId } : { success: false, projects: [], connectionId: '' },
-      providesTags: ['Apps'],
+      providesTags: ['ConnectionStates'],
     }),
 
     getSelectedAsanaProjects: builder.query<{ success: boolean; projects: SelectedAsanaProject[]; connectionId: string }, string>({
@@ -263,7 +263,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [provider],
       }),
       transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects, connectionId: response.data.connectionId } : { success: false, projects: [], connectionId: '' },
-      providesTags: ['Apps'],
+      providesTags: ['ConnectionStates'],
     }),
 
     getSelectedProjects: builder.query<{ success: boolean; projects: SelectedProject[]; connectionId: string }, string>({
@@ -272,7 +272,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [provider],
       }),
       transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects, connectionId: response.data.connectionId } : { success: false, projects: [], connectionId: '' },
-      providesTags: ['Apps'],
+      providesTags: ['ConnectionStates'],
     }),
 
     getSelectedTeams: builder.query<{ success: boolean; teams: SelectedTeam[]; connectionId: string }, string>({
@@ -281,7 +281,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [provider],
       }),
       transformResponse: (response: any) => response.success ? { success: true, teams: response.data.teams, connectionId: response.data.connectionId } : { success: false, teams: [], connectionId: '' },
-      providesTags: ['Apps'],
+      providesTags: ['ConnectionStates'],
     }),
 
     getSelectedRepos: builder.query<{ success: boolean; repos: SelectedRepo[]; connectionId: string }, string>({
@@ -290,7 +290,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [provider],
       }),
       transformResponse: (response: any) => response.success ? { success: true, repos: response.data.repos, connectionId: response.data.connectionId } : { success: false, repos: [], connectionId: '' },
-      providesTags: ['Apps'],
+      providesTags: ['ConnectionStates'],
     }),
 
     saveResources: builder.mutation<{ success: boolean }, SaveResourcesPayload>({
@@ -299,7 +299,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [body],
       }),
       transformResponse: (response: any) => ({ success: response.success }),
-      invalidatesTags: ['Apps'],
+      invalidatesTags: ['ConnectionStates'],
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
@@ -320,7 +320,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [resourceId],
       }),
       transformResponse: (response: any) => ({ success: response.success }),
-      invalidatesTags: ['Apps'],
+      invalidatesTags: ['ConnectionStates'],
     }),
 
     revokeConnection: builder.mutation<{ success: boolean }, string>({
@@ -329,7 +329,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [provider],
       }),
       transformResponse: (response: any) => ({ success: response.success }),
-      invalidatesTags: ['Apps'],
+      invalidatesTags: ['ConnectionStates'],
     }),
   }),
   overrideExisting: false,

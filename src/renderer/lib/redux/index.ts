@@ -26,6 +26,7 @@ const workspacePersistConfig = {
     "selectedModelByProvider",
     "selectedProviderId",
     "thinkingEnabled",
+    "activeWorkspaceIdByProvider",
   ],
 };
 

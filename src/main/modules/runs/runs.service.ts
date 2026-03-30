@@ -33,6 +33,7 @@ import type {
   ContinueRunResponse,
   ForkRunPayload,
   ForkRunResponse,
+  ReviewRunPayload,
   RunDetailsResponse,
   RunTurnResponse,
 } from "./runs.dto";
@@ -198,6 +199,25 @@ async function startNewTurn(runId: string, promptContent?: string): Promise<void
 function cleanupTurnState(runId: string): void {
   activeTurnIds.delete(runId);
   turnCounters.delete(runId);
+}
+
+async function closePendingToolCalls(
+  pendingToolCalls: Map<string, number>,
+  finalStatus: "done" | "error",
+): Promise<void> {
+  if (pendingToolCalls.size === 0) return;
+  const now = new Date();
+  for (const [callKey, toolCallId] of pendingToolCalls) {
+    try {
+      await runsRepo.updateToolCall(toolCallId, {
+        status: finalStatus,
+        endedAt: now,
+      });
+    } catch (err) {
+      console.error(`[RunsService] Failed to close orphaned tool call ${callKey}:`, err);
+    }
+  }
+  pendingToolCalls.clear();
 }
 
 /**
@@ -833,6 +853,8 @@ export const runsService = {
               runBaseRefs.delete(runId);
             }
             await closeActiveTurn(runId, result.usage);
+            // Close any orphaned "running" tool calls
+            await closePendingToolCalls(pendingToolCalls, finalStatus === "succeeded" ? "done" : "error");
           } catch (cleanupErr) {
             console.error(`[RunsService] Cleanup failed for run ${runId}:`, cleanupErr);
           } finally {
@@ -855,6 +877,8 @@ export const runsService = {
               lastError: errorMessage,
             });
             await closeActiveTurn(runId);
+            // Close any orphaned "running" tool calls
+            await closePendingToolCalls(pendingToolCalls, "error");
           } catch (cleanupErr) {
             console.error(`[RunsService] Cleanup failed for run ${runId}:`, cleanupErr);
           } finally {
@@ -890,6 +914,136 @@ export const runsService = {
     }
   },
 
+  // ─────────────────────────────────────────────────────────────
+  // Execute Review (native code review via review/start)
+  // ─────────────────────────────────────────────────────────────
+  async executeReview(
+    payload: ReviewRunPayload,
+  ): Promise<ServiceResponse<StartRunResponse>> {
+    const runId = generateRunId();
+
+    try {
+      // 1. Load provider
+      const provider = await providersRepo.findById(payload.providerId);
+      if (!provider) {
+        return { success: false, error: `Provider "${payload.providerId}" not found` };
+      }
+      if (!provider.isEnabled) {
+        return { success: false, error: `Provider "${provider.displayName}" is not enabled` };
+      }
+      if (provider.kind !== "agent_runtime") {
+        return { success: false, error: `Provider "${provider.displayName}" is not an agent runtime` };
+      }
+
+      // 2. Load workspace
+      const workspace = await workspacesRepo.findById(payload.workspaceId);
+      if (!workspace) {
+        return { success: false, error: `Workspace "${payload.workspaceId}" not found` };
+      }
+
+      // Transition workspace to in_review
+      await workspacesRepo.update(payload.workspaceId, { status: "in_review" });
+
+      // 3. Create run record
+      const goalDescription = `Review ${payload.target.type === "uncommittedChanges" ? "uncommitted changes" : payload.target.type === "baseBranch" ? `changes vs ${payload.target.branch ?? "base branch"}` : payload.target.type === "commit" ? `commit ${payload.target.sha ?? ""}` : "code changes"}`;
+
+      const createPayload: CreateRunPayload = {
+        id: runId,
+        accountId: payload.accountId,
+        workspaceId: payload.workspaceId,
+        spaceId: payload.spaceId,
+        providerId: payload.providerId,
+        model: payload.model,
+        goal: goalDescription,
+        status: "running",
+        systemPrompt: payload.systemPrompt,
+        configSnapshot: payload.configSnapshot,
+        toolPolicySnapshot: payload.toolPolicySnapshot,
+      };
+
+      await runsRepo.insertRun(createPayload);
+      await runsRepo.updateRun(runId, { startedAt: new Date() });
+
+      // Capture git HEAD sha at run start
+      await captureBaseRef(runId, workspace.rootPath);
+
+      // 4. Create adapter
+      const adapter = createWorkAdapter(provider);
+
+      // Track tool calls
+      const pendingToolCalls = new Map<string, number>();
+
+      // 5. Create initial turn
+      await createInitialTurn(runId, goalDescription);
+
+      // 6. Acquire sleep blocker
+      await acquireSleepBlocker(runId);
+
+      // 7. Check if adapter supports native review
+      if (!adapter.reviewRun) {
+        // Fallback: use startRun with a review goal text
+        const runPromise = adapter.startRun(
+          {
+            runId,
+            accountId: payload.accountId,
+            workspace: { id: workspace.id, rootPath: workspace.rootPath },
+            goal: "review code changes in this workspace",
+            model: payload.model,
+            systemPrompt: payload.systemPrompt,
+          },
+          async (event: WorkRunEvent) => {
+            try {
+              await this.handleRunEvent(runId, payload.accountId, payload.providerId, event, pendingToolCalls);
+            } catch (err) {
+              console.error(`[RunsService] Error handling event for review run ${runId}:`, err);
+            }
+          },
+        );
+
+        this._handleRunCompletion(runPromise, runId, workspace, pendingToolCalls);
+        return { success: true, data: { runId } };
+      }
+
+      // 8. Start native review
+      const runPromise = adapter.reviewRun(
+        {
+          runId,
+          accountId: payload.accountId,
+          workspace: { id: workspace.id, rootPath: workspace.rootPath },
+          target: payload.target,
+          delivery: payload.delivery,
+          model: payload.model,
+        },
+        async (event: WorkRunEvent) => {
+          try {
+            await this.handleRunEvent(runId, payload.accountId, payload.providerId, event, pendingToolCalls);
+          } catch (err) {
+            console.error(`[RunsService] Error handling event for review run ${runId}:`, err);
+          }
+        },
+      );
+
+      this._handleRunCompletion(runPromise, runId, workspace, pendingToolCalls);
+
+      return { success: true, data: { runId } };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`[RunsService] Failed to execute review run:`, errorMessage);
+
+      runBaseRefs.delete(runId);
+      cleanupTurnState(runId);
+      releaseSleepBlocker(runId);
+
+      try {
+        await runsRepo.updateRun(runId, { status: "failed", endedAt: new Date(), lastError: errorMessage });
+      } catch {
+        // Ignore cleanup errors
+      }
+
+      return { success: false, error: errorMessage };
+    }
+  },
+
   /**
    * Handle events emitted during a run
    */
@@ -912,6 +1066,12 @@ export const runsService = {
             ts: event.ts,
           },
         });
+
+        // Auto-generated title from provider (e.g. Codex CLI thread/name/updated)
+        const threadTitle = (event.metadata as Record<string, unknown> | undefined)?.threadTitle as string | undefined;
+        if (threadTitle) {
+          await runsRepo.updateRun(runId, { title: threadTitle });
+        }
         break;
       }
 
@@ -987,6 +1147,17 @@ export const runsService = {
 
 
       case "artifact": {
+        // Ephemeral events: push to renderer only, skip DB
+        if (event.ephemeral) {
+          const payload = { runId, event: { type: event.type, kind: event.kind, content: event.content, metadata: event.metadata, streamId: event.streamId }, ts: Date.now() };
+          for (const win of BrowserWindow.getAllWindows()) {
+            if (!win.isDestroyed()) {
+              win.webContents.send("runs:ephemeralEvent", payload);
+            }
+          }
+          break;
+        }
+
         await runsRepo.insertArtifact({
           runId,
           kind: event.kind as
@@ -1237,6 +1408,7 @@ export const runsService = {
             ? { id: workspace.id, rootPath: workspace.rootPath }
             : { id: "", rootPath: process.cwd() },
           message,
+          model: payload.model,
           context: additionalContext as any,
           attachments: payload.attachments,
           contextIssues: payload.contextIssues,
@@ -1290,6 +1462,7 @@ export const runsService = {
           );
 
           await closeActiveTurn(runId, result.usage);
+          await closePendingToolCalls(pendingToolCalls, finalStatus === "succeeded" ? "done" : "error");
           cleanupTurnState(runId);
           sendRunNotification(runId, finalStatus);
           releaseSleepBlocker(runId);
@@ -1311,6 +1484,7 @@ export const runsService = {
           });
 
           await closeActiveTurn(runId);
+          await closePendingToolCalls(pendingToolCalls, "error");
           cleanupTurnState(runId);
           sendRunNotification(runId, "failed");
           releaseSleepBlocker(runId);
@@ -1501,6 +1675,7 @@ export const runsService = {
           );
 
           await closeActiveTurn(newRunId, result.usage);
+          await closePendingToolCalls(pendingToolCalls, finalStatus === "succeeded" ? "done" : "error");
           cleanupTurnState(newRunId);
           sendRunNotification(newRunId, finalStatus);
           releaseSleepBlocker(newRunId);
@@ -1522,6 +1697,7 @@ export const runsService = {
           });
 
           await closeActiveTurn(newRunId);
+          await closePendingToolCalls(pendingToolCalls, "error");
           cleanupTurnState(newRunId);
           sendRunNotification(newRunId, "failed");
           releaseSleepBlocker(newRunId);
@@ -1596,6 +1772,73 @@ export const runsService = {
       );
       return { success: false, error: "Failed to delete session" };
     }
+  },
+
+  /** @internal Shared background completion handler for run/review promises */
+  _handleRunCompletion(
+    runPromise: Promise<import("../providers/adapters/adapter.types").WorkRunResult>,
+    runId: string,
+    workspace: { id: string; rootPath: string },
+    pendingToolCalls?: Map<string, number>,
+  ): void {
+    runPromise
+      .then(async (result) => {
+        const finalStatus: RunStatus =
+          result.status === "succeeded"
+            ? "succeeded"
+            : result.status === "canceled"
+              ? "canceled"
+              : "failed";
+
+        try {
+          await runsRepo.updateRun(runId, {
+            status: finalStatus,
+            endedAt: new Date(),
+            lastError: result.status === "failed" ? result.summary : undefined,
+            stopReason: result.stopReason ?? null,
+          });
+
+          if (finalStatus === "succeeded") {
+            await persistRunDiff(runId, workspace.id, workspace.rootPath);
+          } else {
+            runBaseRefs.delete(runId);
+          }
+          await closeActiveTurn(runId, result.usage);
+          if (pendingToolCalls) {
+            await closePendingToolCalls(pendingToolCalls, finalStatus === "succeeded" ? "done" : "error");
+          }
+        } catch (cleanupErr) {
+          console.error(`[RunsService] Cleanup failed for run ${runId}:`, cleanupErr);
+        } finally {
+          cleanupTurnState(runId);
+          sendRunNotification(runId, finalStatus);
+          releaseSleepBlocker(runId);
+        }
+      })
+      .catch(async (error) => {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[RunsService] Run ${runId} failed:`, errorMessage);
+
+        runBaseRefs.delete(runId);
+
+        try {
+          await runsRepo.updateRun(runId, {
+            status: "failed",
+            endedAt: new Date(),
+            lastError: errorMessage,
+          });
+          await closeActiveTurn(runId);
+          if (pendingToolCalls) {
+            await closePendingToolCalls(pendingToolCalls, "error");
+          }
+        } catch (cleanupErr) {
+          console.error(`[RunsService] Cleanup failed for run ${runId}:`, cleanupErr);
+        } finally {
+          cleanupTurnState(runId);
+          sendRunNotification(runId, "failed");
+          releaseSleepBlocker(runId);
+        }
+      });
   },
 };
 

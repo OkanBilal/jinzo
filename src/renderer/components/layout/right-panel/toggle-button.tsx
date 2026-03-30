@@ -24,21 +24,23 @@ export function ToggleButton({ isOpen, onClick, terminalOpen, onTerminalToggle }
             }
             onTerminalToggle();
           }}
-          className={`rounded-full! p-1! transition-all duration-300 ease-out ${
+          className={` p-1.25! transition-all duration-300 ease-out
+             rounded-lg cursor-pointer text-primary-900 dark:text-primary-300 hover:bg-primary-100/80 dark:hover:bg-primary/10
+            ${
             terminalOpen
-              ? "text-primary-900 dark:text-primary!"
-              : "text-primary-700 dark:text-primary-300!"
+              ? " bg-primary-100/80 dark:bg-primary/10"
+              : ""
           }`}
           aria-label={terminalOpen ? "Close terminal" : "Open terminal"}
         >
-          <Bash className="size-4.25" />
+          <Bash className="size-4" />
         </Button>
       )}
       <Button
         tooltip={isOpen ? "Close right panel" : "Open right panel"}
         tooltipPosition="left"
         onClick={onClick}
-        className="rounded-full! p-1! text-primary-700 dark:text-primary-300! transition-all duration-300 ease-out"
+        className="rounded-lg cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 p-1! text-primary-900 dark:text-primary-300! transition-all duration-300 ease-out"
         aria-label={isOpen ? "Close right panel" : "Open right panel"}
       >
         {isOpen ? (
