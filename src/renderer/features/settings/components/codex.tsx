@@ -96,6 +96,24 @@ const APPROVAL_OPTIONS = [
   },
 ];
 
+const PERSONALITY_OPTIONS = [
+  {
+    value: "none",
+    label: "None",
+    description: "No personality injected",
+  },
+  {
+    value: "friendly",
+    label: "Friendly",
+    description: "Warm and conversational tone",
+  },
+  {
+    value: "pragmatic",
+    label: "Pragmatic",
+    description: "Direct and practical tone",
+  },
+];
+
 const SANDBOX_OPTIONS = [
   {
     value: "read-only",
@@ -142,6 +160,7 @@ export default function CodexSettings() {
   const networkAccessEnabled = (config as any).networkAccessEnabled ?? true;
   const webSearchMode = (config as any).webSearchMode ?? "live";
   const skipGitRepoCheck = (config as any).skipGitRepoCheck ?? false;
+  const personality = (config as any).personality ?? "none";
 
   const structuredOutputs = ((config as any).structuredOutputs ?? {}) as Record<
     string,
@@ -294,6 +313,23 @@ export default function CodexSettings() {
                 enabled ? "Network access enabled" : "Network access disabled",
               );
             }}
+          />
+        </SettingsRow>
+                <SettingsDivider />
+        <SettingsRow
+          title="Personality"
+          description="Controls the agent's conversational style"
+        >
+          <Select
+            value={personality}
+            options={PERSONALITY_OPTIONS}
+            onChange={(value) => {
+              updateConfig({ personality: value });
+              const label =
+                PERSONALITY_OPTIONS.find((o) => o.value === value)?.label ?? value;
+              toast.success(`Personality: ${label}`);
+            }}
+            useFixedBackground
           />
         </SettingsRow>
         <SettingsDivider />

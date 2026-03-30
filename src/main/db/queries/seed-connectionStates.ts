@@ -1,11 +1,11 @@
-import { apps } from "../data/apps";
-import { appStates } from "../schema";
+import { connectionStatesData } from "../data/connectionStates";
+import { connectionStates } from "../schema";
 import { getDb } from "../client";
 
-export async function seedApps(): Promise<void> {
+export async function seedConnectionStates(): Promise<void> {
   const db = getDb();
 
-  for (const app of apps) {
+  for (const app of connectionStatesData) {
     const appData = {
       id: app.id,
       isConnected: false,
@@ -13,19 +13,19 @@ export async function seedApps(): Promise<void> {
       displayName: app.name,
       iconPath: app.imageSrc,
       category: app.category,
-      sortOrder: apps.indexOf(app),
+      sortOrder: connectionStatesData.indexOf(app),
       enabledFeatures: JSON.stringify([]),
       config: JSON.stringify({}),
     };
 
     // drizzle-orm/better-sqlite3 is synchronous
-    db.insert(appStates).values(appData).onConflictDoNothing().run?.();
+    db.insert(connectionStates).values(appData).onConflictDoNothing().run?.();
   }
 }
 
 // Optional: allow running this file directly in dev
-if (process.argv[1]?.includes("seed-apps")) {
-  seedApps()
+if (process.argv[1]?.includes("seed-connectionStates")) {
+  seedConnectionStates()
     .then(() => {
       console.log("\nSeeding completed successfully!");
     })

@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { connections, connectionTokens, appStates } from "../../db/schema";
+import { connections, connectionTokens, connectionStates } from "../../db/schema";
 
 // ─────────────────────────────────────────────────────────────
 // Connection Credentials Repository
@@ -84,20 +84,20 @@ export const connectionCredentialsRepo = {
       .run();
   },
 
-  async updateAppState(
+  async updateConnectionState(
     provider: string,
     connectionId: string,
     isConnected: boolean
   ): Promise<void> {
     const db = getDb();
     await db
-      .update(appStates)
+      .update(connectionStates)
       .set({
         isConnected,
         connectionId,
         updatedAt: sql`(unixepoch())`,
       })
-      .where(eq(appStates.id, provider))
+      .where(eq(connectionStates.id, provider))
       .run();
   },
 

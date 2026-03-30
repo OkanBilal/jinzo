@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1772728897199,
-      "tag": "0000_volatile_lifeguard",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1772747690198,
-      "tag": "0001_fluffy_zarda",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1772748289530,
-      "tag": "0002_open_silver_samurai",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1773227381076,
-      "tag": "0003_fair_mister_sinister",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1773255445584,
-      "tag": "0004_strong_mandrill",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1773256844397,
-      "tag": "0005_past_moondragon",
+      "when": 1774909465169,
+      "tag": "0000_shocking_roughhouse",
       "breakpoints": true
     }
   ]

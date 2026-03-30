@@ -57,6 +57,7 @@ export const seedProviders: CreateProviderPayload[] = [
       permissionMode: "default",
       networkAccessEnabled: true,
       webSearchMode: "live",
+      personality: "none",
     },
     capabilities: {
       mode: ["run"],

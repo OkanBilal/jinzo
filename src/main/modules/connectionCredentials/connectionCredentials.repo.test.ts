@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
-import { createConnection, createAppState } from "../../../test/factories";
+import { createConnection, createConnectionState } from "../../../test/factories";
 import type { DatabaseInstance } from "../../db/types";
 import type Database from "better-sqlite3";
 
@@ -131,17 +131,17 @@ describe("connectionCredentialsRepo", () => {
   });
 
   // ─────────────────────────────────────────────────────────────
-  // App state
+  // Connection state
   // ─────────────────────────────────────────────────────────────
-  describe("updateAppState", () => {
-    it("updates app state", async () => {
+  describe("updateConnectionState", () => {
+    it("updates connection state", async () => {
       createConnection(db, { id: "c1", provider: "github" });
-      createAppState(db, { id: "github", isConnected: false });
+      createConnectionState(db, { id: "github", isConnected: false });
 
-      await connectionCredentialsRepo.updateAppState("github", "c1", true);
+      await connectionCredentialsRepo.updateConnectionState("github", "c1", true);
 
       // Verify via raw query
-      const row = _sqlite.prepare("SELECT * FROM app_states WHERE id = 'github'").get() as any;
+      const row = _sqlite.prepare("SELECT * FROM connection_states WHERE id = 'github'").get() as any;
       expect(row.is_connected).toBe(1);
       expect(row.connection_id).toBe("c1");
     });

@@ -102,8 +102,8 @@ export const connectionCredentialsService = {
         JSON.stringify(updatedMetadata)
       );
 
-      // Update app state
-      await connectionCredentialsRepo.updateAppState(provider, connectionId, true);
+      // Update connection state
+      await connectionCredentialsRepo.updateConnectionState(provider, connectionId, true);
 
       return {
         success: true,

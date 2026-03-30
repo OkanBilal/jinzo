@@ -26,13 +26,72 @@ CREATE TABLE `app_settings` (
 	`notify_on_tool_approval` integer DEFAULT true NOT NULL,
 	`commit_instructions` text DEFAULT '' NOT NULL,
 	`pr_instructions` text DEFAULT '' NOT NULL,
+	`seed_version` integer DEFAULT 0 NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`active_space_id`) REFERENCES `spaces`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
-CREATE TABLE `app_states` (
+CREATE TABLE `automation_runs` (
+	`id` text PRIMARY KEY NOT NULL,
+	`automation_id` text NOT NULL,
+	`status` text NOT NULL,
+	`result` text,
+	`error` text,
+	`started_at` integer DEFAULT (unixepoch()) NOT NULL,
+	`completed_at` integer,
+	`duration_ms` integer,
+	FOREIGN KEY (`automation_id`) REFERENCES `automations`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "check_automation_runs_result_json" CHECK(json_valid("automation_runs"."result") OR "automation_runs"."result" IS NULL)
+);
+--> statement-breakpoint
+CREATE INDEX `idx_automation_runs_automation` ON `automation_runs` (`automation_id`);--> statement-breakpoint
+CREATE INDEX `idx_automation_runs_status` ON `automation_runs` (`status`);--> statement-breakpoint
+CREATE INDEX `idx_automation_runs_started` ON `automation_runs` (`started_at`);--> statement-breakpoint
+CREATE TABLE `automations` (
+	`id` text PRIMARY KEY NOT NULL,
+	`account_id` text NOT NULL,
+	`name` text NOT NULL,
+	`kind` text NOT NULL,
+	`action` text NOT NULL,
+	`interval_minutes` integer NOT NULL,
+	`is_active` integer DEFAULT true NOT NULL,
+	`config` text,
+	`last_run_at` integer,
+	`next_run_at` integer,
+	`last_error` text,
+	`consecutive_errors` integer DEFAULT 0 NOT NULL,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
+	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "check_automations_config_json" CHECK(json_valid("automations"."config") OR "automations"."config" IS NULL)
+);
+--> statement-breakpoint
+CREATE INDEX `idx_automations_account` ON `automations` (`account_id`);--> statement-breakpoint
+CREATE INDEX `idx_automations_kind` ON `automations` (`kind`);--> statement-breakpoint
+CREATE INDEX `idx_automations_active` ON `automations` (`is_active`);--> statement-breakpoint
+CREATE INDEX `idx_automations_next_run` ON `automations` (`next_run_at`);--> statement-breakpoint
+CREATE TABLE `connection_resources` (
+	`id` text PRIMARY KEY NOT NULL,
+	`connection_id` text NOT NULL,
+	`external_id` text NOT NULL,
+	`kind` text NOT NULL,
+	`name` text,
+	`url` text,
+	`selected` integer DEFAULT true NOT NULL,
+	`metadata` text,
+	`last_seen_at` integer,
+	FOREIGN KEY (`connection_id`) REFERENCES `connections`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "check_resources_metadata_json" CHECK(json_valid("connection_resources"."metadata") OR "connection_resources"."metadata" IS NULL)
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `uniq_resources_conn_ext` ON `connection_resources` (`connection_id`,`external_id`);--> statement-breakpoint
+CREATE INDEX `idx_resources_kind` ON `connection_resources` (`kind`);--> statement-breakpoint
+CREATE INDEX `idx_resources_selected` ON `connection_resources` (`selected`);--> statement-breakpoint
+CREATE INDEX `idx_resources_conn` ON `connection_resources` (`connection_id`);--> statement-breakpoint
+CREATE INDEX `idx_resources_last_seen` ON `connection_resources` (`last_seen_at`);--> statement-breakpoint
+CREATE TABLE `connection_states` (
 	`id` text PRIMARY KEY NOT NULL,
 	`is_connected` integer DEFAULT false NOT NULL,
 	`connection_id` text,
@@ -45,51 +104,14 @@ CREATE TABLE `app_states` (
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
 	FOREIGN KEY (`connection_id`) REFERENCES `connections`(`id`) ON UPDATE no action ON DELETE set null,
-	CONSTRAINT "check_enabled_features_json" CHECK(json_valid("app_states"."enabled_features") OR "app_states"."enabled_features" IS NULL),
-	CONSTRAINT "check_config_json" CHECK(json_valid("app_states"."config") OR "app_states"."config" IS NULL)
+	CONSTRAINT "check_enabled_features_json" CHECK(json_valid("connection_states"."enabled_features") OR "connection_states"."enabled_features" IS NULL),
+	CONSTRAINT "check_config_json" CHECK(json_valid("connection_states"."config") OR "connection_states"."config" IS NULL)
 );
 --> statement-breakpoint
-CREATE INDEX `idx_app_states_connected` ON `app_states` (`is_connected`);--> statement-breakpoint
-CREATE INDEX `idx_app_states_sort` ON `app_states` (`sort_order`);--> statement-breakpoint
-CREATE INDEX `idx_app_states_updated_at` ON `app_states` (`updated_at`);--> statement-breakpoint
-CREATE INDEX `idx_app_states_created_at` ON `app_states` (`created_at`);--> statement-breakpoint
-CREATE TABLE `connection_resources` (
-	`id` text PRIMARY KEY NOT NULL,
-	`connection_id` text NOT NULL,
-	`external_id` text NOT NULL,
-	`kind` text NOT NULL,
-	`name` text,
-	`url` text,
-	`selected` integer DEFAULT true NOT NULL,
-	`metadata` text,
-	`last_seen_at` integer,
-	`last_ingest_at` integer,
-	FOREIGN KEY (`connection_id`) REFERENCES `connections`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "check_resources_metadata_json" CHECK(json_valid("connection_resources"."metadata") OR "connection_resources"."metadata" IS NULL)
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `uniq_resources_conn_ext` ON `connection_resources` (`connection_id`,`external_id`);--> statement-breakpoint
-CREATE INDEX `idx_resources_kind` ON `connection_resources` (`kind`);--> statement-breakpoint
-CREATE INDEX `idx_resources_selected` ON `connection_resources` (`selected`);--> statement-breakpoint
-CREATE INDEX `idx_resources_conn` ON `connection_resources` (`connection_id`);--> statement-breakpoint
-CREATE INDEX `idx_resources_last_ingest` ON `connection_resources` (`last_ingest_at`);--> statement-breakpoint
-CREATE INDEX `idx_resources_last_seen` ON `connection_resources` (`last_seen_at`);--> statement-breakpoint
-CREATE TABLE `connection_sync_state` (
-	`connection_id` text PRIMARY KEY NOT NULL,
-	`cursor` text,
-	`last_sync_at` integer,
-	`last_success_at` integer,
-	`last_error_at` integer,
-	`last_error` text,
-	`backoff_until` integer,
-	`etag` text,
-	FOREIGN KEY (`connection_id`) REFERENCES `connections`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "check_sync_cursor_json" CHECK(json_valid("connection_sync_state"."cursor") OR "connection_sync_state"."cursor" IS NULL)
-);
---> statement-breakpoint
-CREATE INDEX `idx_sync_state_last_sync` ON `connection_sync_state` (`last_sync_at`);--> statement-breakpoint
-CREATE INDEX `idx_sync_state_last_success` ON `connection_sync_state` (`last_success_at`);--> statement-breakpoint
-CREATE INDEX `idx_sync_state_backoff_until` ON `connection_sync_state` (`backoff_until`);--> statement-breakpoint
+CREATE INDEX `idx_connection_states_connected` ON `connection_states` (`is_connected`);--> statement-breakpoint
+CREATE INDEX `idx_connection_states_sort` ON `connection_states` (`sort_order`);--> statement-breakpoint
+CREATE INDEX `idx_connection_states_updated_at` ON `connection_states` (`updated_at`);--> statement-breakpoint
+CREATE INDEX `idx_connection_states_created_at` ON `connection_states` (`created_at`);--> statement-breakpoint
 CREATE TABLE `connection_tokens` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`connection_id` text NOT NULL,
@@ -115,6 +137,7 @@ CREATE TABLE `connections` (
 	`provider` text NOT NULL,
 	`type` text NOT NULL,
 	`display_name` text,
+	`description` text,
 	`status` text DEFAULT 'active' NOT NULL,
 	`scopes` text,
 	`metadata` text,
@@ -366,6 +389,36 @@ CREATE INDEX `idx_runs_provider` ON `runs` (`provider_id`);--> statement-breakpo
 CREATE INDEX `idx_runs_workspace` ON `runs` (`workspace_id`);--> statement-breakpoint
 CREATE INDEX `idx_runs_space` ON `runs` (`space_id`);--> statement-breakpoint
 CREATE INDEX `idx_runs_updated` ON `runs` (`updated_at`);--> statement-breakpoint
+CREATE TABLE `signals` (
+	`entity_id` text PRIMARY KEY NOT NULL,
+	`source` text NOT NULL,
+	`level` text DEFAULT 'error' NOT NULL,
+	`category` text DEFAULT 'bug' NOT NULL,
+	`state` text DEFAULT 'open' NOT NULL,
+	`event_count` integer DEFAULT 1 NOT NULL,
+	`affected_users` integer,
+	`first_seen_at` integer,
+	`last_seen_at` integer,
+	`stack_trace` text,
+	`file` text,
+	`function` text,
+	`line` integer,
+	`assignee` text,
+	`labels` text,
+	`priority` integer DEFAULT 0 NOT NULL,
+	`project_id` text,
+	`resolved_at` integer,
+	FOREIGN KEY (`entity_id`) REFERENCES `entities`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE set null,
+	CONSTRAINT "check_signals_labels_json" CHECK(json_valid("signals"."labels") OR "signals"."labels" IS NULL)
+);
+--> statement-breakpoint
+CREATE INDEX `idx_signals_source` ON `signals` (`source`);--> statement-breakpoint
+CREATE INDEX `idx_signals_level` ON `signals` (`level`);--> statement-breakpoint
+CREATE INDEX `idx_signals_category` ON `signals` (`category`);--> statement-breakpoint
+CREATE INDEX `idx_signals_state` ON `signals` (`state`);--> statement-breakpoint
+CREATE INDEX `idx_signals_project` ON `signals` (`project_id`);--> statement-breakpoint
+CREATE INDEX `idx_signals_last_seen` ON `signals` (`last_seen_at`);--> statement-breakpoint
 CREATE TABLE `spaces` (
 	`id` text PRIMARY KEY NOT NULL,
 	`account_id` text NOT NULL,

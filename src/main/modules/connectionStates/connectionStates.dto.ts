@@ -1,14 +1,14 @@
-import type { appStates } from "../../db/schema";
+import type { connectionStates } from "../../db/schema";
 
 // ─────────────────────────────────────────────────────────────
 // Database Record
 // ─────────────────────────────────────────────────────────────
-export type AppRecord = typeof appStates.$inferSelect;
+export type ConnectionStatesRecord = typeof connectionStates.$inferSelect;
 
 // ─────────────────────────────────────────────────────────────
 // Request DTOs
 // ─────────────────────────────────────────────────────────────
-export interface UpdateAppRequest {
+export interface UpdateConnectionStatesRequest {
   isConnected: boolean;
   connectionId?: string | null;
 }
@@ -16,7 +16,7 @@ export interface UpdateAppRequest {
 // ─────────────────────────────────────────────────────────────
 // Response DTOs
 // ─────────────────────────────────────────────────────────────
-export interface AppResponse {
+export interface ConnectionStatesResponse {
   id: string;
   displayName: string | null;
   iconPath: string | null;

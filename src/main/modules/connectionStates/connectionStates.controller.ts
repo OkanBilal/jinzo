@@ -1,15 +1,15 @@
-import { appsService } from "./apps.service";
-import type { AppResponse, ServiceResponse } from "./apps.dto";
+import { connectionStatesService } from "./connectionStates.service";
+import type { ConnectionStatesResponse, ServiceResponse } from "./connectionStates.dto";
 
 // ─────────────────────────────────────────────────────────────
 // Controller - Maps IPC requests to service calls
 // ─────────────────────────────────────────────────────────────
-export const appsController = {
-  async getAll(): Promise<ServiceResponse<AppResponse[]>> {
-    return appsService.getAll();
+export const ConnectionStatesController = {
+  async getAll(): Promise<ServiceResponse<ConnectionStatesResponse[]>> {
+    return connectionStatesService.getAll();
   },
 
   async updateById(id: unknown, payload: unknown): Promise<ServiceResponse<null>> {
-    return appsService.updateById(id, payload);
+    return connectionStatesService.updateById(id, payload);
   },
 };

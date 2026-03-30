@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import {
-  useGetAppsQuery,
+  useGetConnectionStatesQuery,
   useGetAccountQuery,
   useGetWorkspacesQuery,
 } from "@/lib/redux/api";
@@ -15,7 +15,7 @@ interface UseSidebarDataOptions {
 export function useSidebarData({ searchQuery, sidebarConfig }: UseSidebarDataOptions) {
   // Data queries
   const { data: account } = useGetAccountQuery();
-  const { data: apps = [], refetch: refetchApps } = useGetAppsQuery();
+  const { data: connections = [], refetch: refetchConnections } = useGetConnectionStatesQuery();
 
   // Workspaces for workspace mode
   const { data: workspaces = [], isLoading: isLoadingWorkspaces } =
@@ -23,9 +23,9 @@ export function useSidebarData({ searchQuery, sidebarConfig }: UseSidebarDataOpt
       skip: sidebarConfig.itemType !== "workspace",
     });
 
-  const connectedApps = useMemo(() => {
-    return apps.filter((app) => app.isConnected).map((app) => app.id);
-  }, [apps]);
+  const connectedConnections = useMemo(() => {
+    return connections.filter((connection) => connection.isConnected).map((connection) => connection.id);
+  }, [connections]);
 
   // Filtered workspaces
   const filteredWorkspaces = useMemo(() => {
@@ -41,16 +41,16 @@ export function useSidebarData({ searchQuery, sidebarConfig }: UseSidebarDataOpt
     });
   }, [workspaces, searchQuery]);
 
-  const handleRefreshApps = async () => {
-    await refetchApps();
+  const handleRefreshConnections = async () => {
+    await refetchConnections();
   };
 
   return {
     account,
     workspaces: filteredWorkspaces,
-    apps,
-    connectedApps,
+    connections,
+    connectedConnections,
     isLoadingWorkspaces,
-    handleRefreshApps,
+    handleRefreshConnections,
   };
 }

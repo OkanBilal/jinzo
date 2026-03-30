@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
-import { createConnection, createAppState } from "../../../test/factories";
+import { createConnection, createConnectionState } from "../../../test/factories";
 import type { DatabaseInstance } from "../../db/types";
 import type Database from "better-sqlite3";
 
@@ -82,7 +82,7 @@ describe("connectionCredentialsService", () => {
 
     it("saves github credentials successfully", async () => {
       createConnection(db, { id: "c1", provider: "github", status: "active", metadata: "{}" });
-      createAppState(db, { id: "github", isConnected: false });
+      createConnectionState(db, { id: "github", isConnected: false });
 
       const result = await connectionCredentialsService.saveCredentials({
         provider: "github",
@@ -100,7 +100,7 @@ describe("connectionCredentialsService", () => {
 
     it("saves linear credentials successfully", async () => {
       createConnection(db, { id: "c2", provider: "linear", status: "active", metadata: "{}" });
-      createAppState(db, { id: "linear", isConnected: false });
+      createConnectionState(db, { id: "linear", isConnected: false });
 
       const result = await connectionCredentialsService.saveCredentials({
         provider: "linear",
@@ -112,7 +112,7 @@ describe("connectionCredentialsService", () => {
 
     it("saves jira credentials with metadata fields", async () => {
       createConnection(db, { id: "c3", provider: "jira", status: "active", metadata: "{}" });
-      createAppState(db, { id: "jira", isConnected: false });
+      createConnectionState(db, { id: "jira", isConnected: false });
 
       const result = await connectionCredentialsService.saveCredentials({
         provider: "jira",
@@ -132,7 +132,7 @@ describe("connectionCredentialsService", () => {
 
     it("marks old tokens as not current when saving new ones", async () => {
       createConnection(db, { id: "c1", provider: "github", status: "active", metadata: "{}" });
-      createAppState(db, { id: "github", isConnected: false });
+      createConnectionState(db, { id: "github", isConnected: false });
 
       // Save first token
       await connectionCredentialsService.saveCredentials({
@@ -156,7 +156,7 @@ describe("connectionCredentialsService", () => {
 
     it("saves trello credentials (multiple required fields)", async () => {
       createConnection(db, { id: "c4", provider: "trello", status: "active", metadata: "{}" });
-      createAppState(db, { id: "trello", isConnected: false });
+      createConnectionState(db, { id: "trello", isConnected: false });
 
       const result = await connectionCredentialsService.saveCredentials({
         provider: "trello",
@@ -182,7 +182,7 @@ describe("connectionCredentialsService", () => {
 
     it("saves gitlab credentials with default domain metadata", async () => {
       createConnection(db, { id: "c5", provider: "gitlab", status: "active", metadata: "{}" });
-      createAppState(db, { id: "gitlab", isConnected: false });
+      createConnectionState(db, { id: "gitlab", isConnected: false });
 
       const result = await connectionCredentialsService.saveCredentials({
         provider: "gitlab",
@@ -199,7 +199,7 @@ describe("connectionCredentialsService", () => {
 
     it("saves gitlab credentials with custom domain metadata", async () => {
       createConnection(db, { id: "c6", provider: "gitlab", status: "active", metadata: "{}" });
-      createAppState(db, { id: "gitlab", isConnected: false });
+      createConnectionState(db, { id: "gitlab", isConnected: false });
 
       const result = await connectionCredentialsService.saveCredentials({
         provider: "gitlab",
@@ -216,7 +216,7 @@ describe("connectionCredentialsService", () => {
 
     it("saves asana credentials successfully", async () => {
       createConnection(db, { id: "c7", provider: "asana", status: "active", metadata: "{}" });
-      createAppState(db, { id: "asana", isConnected: false });
+      createConnectionState(db, { id: "asana", isConnected: false });
 
       const result = await connectionCredentialsService.saveCredentials({
         provider: "asana",
@@ -233,7 +233,7 @@ describe("connectionCredentialsService", () => {
         status: "active",
         metadata: JSON.stringify({ existingField: "keep_me" }),
       });
-      createAppState(db, { id: "jira", isConnected: false });
+      createConnectionState(db, { id: "jira", isConnected: false });
 
       const result = await connectionCredentialsService.saveCredentials({
         provider: "jira",
@@ -260,7 +260,7 @@ describe("connectionCredentialsService", () => {
         status: "active",
         metadata: JSON.stringify({ domain: "existing.atlassian.net", email: "old@co.com" }),
       });
-      createAppState(db, { id: "jira", isConnected: false });
+      createConnectionState(db, { id: "jira", isConnected: false });
 
       const result = await connectionCredentialsService.saveCredentials({
         provider: "jira",
@@ -323,7 +323,7 @@ describe("connectionCredentialsService", () => {
 
     it("returns hasCredentials true when tokens exist", async () => {
       createConnection(db, { id: "c1", provider: "github", status: "active", metadata: "{}" });
-      createAppState(db, { id: "github", isConnected: false });
+      createConnectionState(db, { id: "github", isConnected: false });
 
       // Save credentials to create a token
       await connectionCredentialsService.saveCredentials({

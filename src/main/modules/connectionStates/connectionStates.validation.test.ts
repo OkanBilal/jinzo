@@ -1,25 +1,25 @@
 import { describe, it, expect } from "vitest";
-import { validateAppId, validateUpdatePayload } from "./apps.validation";
+import { validateConnectionId, validateUpdatePayload } from "./connectionStates.validation";
 
-describe("validateAppId", () => {
+describe("validateConnectionId", () => {
   it("returns null for a valid string", () => {
-    expect(validateAppId("github")).toBeNull();
+    expect(validateConnectionId("github")).toBeNull();
   });
 
   it("returns error for empty string", () => {
-    expect(validateAppId("")).toBe("Invalid app ID");
+    expect(validateConnectionId("")).toBe("Invalid connection ID");
   });
 
   it("returns error for null", () => {
-    expect(validateAppId(null)).toBe("Invalid app ID");
+    expect(validateConnectionId(null)).toBe("Invalid connection ID");
   });
 
   it("returns error for undefined", () => {
-    expect(validateAppId(undefined)).toBe("Invalid app ID");
+    expect(validateConnectionId(undefined)).toBe("Invalid connection ID");
   });
 
   it("returns error for number", () => {
-    expect(validateAppId(42)).toBe("Invalid app ID");
+    expect(validateConnectionId(42)).toBe("Invalid connection ID");
   });
 });
 

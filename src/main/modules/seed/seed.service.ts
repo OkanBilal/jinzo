@@ -1,5 +1,5 @@
 import { seedAccountsData } from "../../db/queries/seed-accounts";
-import { seedApps } from "../../db/queries/seed-apps";
+import { seedConnectionStates } from "../../db/queries/seed-connectionStates";
 import { seedConnections } from "../../db/queries/seed-connections";
 import { seedProvidersData } from "../../db/queries/seed-providers";
 import { seedSpacesData } from "../../db/queries/seed-spaces";
@@ -22,12 +22,12 @@ export const seedService = {
     }
   },
 
-  async seedApps(): Promise<ServiceResponse> {
+  async seedConnectionStates(): Promise<ServiceResponse> {
     try {
-      await seedApps();
-      return { success: true, message: "Apps seeded successfully" };
+      await seedConnectionStates();
+      return { success: true, message: "Connections States seeded successfully" };
     } catch (error) {
-      console.error("Error seeding apps:", error);
+      console.error("Error seeding connection states:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -38,7 +38,7 @@ export const seedService = {
   async seedConnections(): Promise<ServiceResponse> {
     try {
       await seedConnections();
-      return { success: true, message: "Connections seeded successfully" };
+      return { success: true, message: "Connections States seeded successfully" };
     } catch (error) {
       console.error("Error seeding connections:", error);
       return {
@@ -78,7 +78,7 @@ export const seedService = {
   async seedAll(): Promise<ServiceResponse> {
     try {
       await seedAccountsData(); // MUST be first
-      await seedApps();
+      await seedConnectionStates();
       await seedConnections();
       await seedProvidersData();
       await seedSpacesData();

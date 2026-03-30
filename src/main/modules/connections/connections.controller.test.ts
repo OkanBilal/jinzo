@@ -3,7 +3,7 @@ import { createTestDb } from "../../../test/setup-db";
 import {
   createConnection,
   createConnectionResource,
-  createAppState,
+  createConnectionState,
 } from "../../../test/factories";
 import type { DatabaseInstance } from "../../db/types";
 import type Database from "better-sqlite3";
@@ -227,7 +227,7 @@ describe("connectionsController", () => {
   describe("revoke", () => {
     it("revokes an existing connection", async () => {
       createConnection(db, { id: "conn-gh", provider: "github", type: "oauth" });
-      createAppState(db, { id: "github", isConnected: true, connectionId: "conn-gh" });
+      createConnectionState(db, { id: "github", isConnected: true, connectionId: "conn-gh" });
 
       const res = await connectionsController.revoke("github");
       expect(res.success).toBe(true);
@@ -251,7 +251,7 @@ describe("connectionsController", () => {
 
     it("cleans up resources on revoke", async () => {
       createConnection(db, { id: "conn-gh", provider: "github", type: "oauth" });
-      createAppState(db, { id: "github", isConnected: true, connectionId: "conn-gh" });
+      createConnectionState(db, { id: "github", isConnected: true, connectionId: "conn-gh" });
       createConnectionResource(db, {
         id: "conn-gh:repo-1",
         connectionId: "conn-gh",

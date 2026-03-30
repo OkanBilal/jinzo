@@ -1,19 +1,19 @@
-import type { UpdateAppRequest } from "./apps.dto";
+import type { UpdateConnectionStatesRequest } from "./connectionStates.dto";
 
 // ─────────────────────────────────────────────────────────────
 // Validation Result
 // ─────────────────────────────────────────────────────────────
 export interface ValidationResult {
-  data: UpdateAppRequest | null;
+  data: UpdateConnectionStatesRequest | null;
   error: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────
 // Validators
 // ─────────────────────────────────────────────────────────────
-export function validateAppId(id: unknown): string | null {
+export function validateConnectionId(id: unknown): string | null {
   if (!id || typeof id !== "string") {
-    return "Invalid app ID";
+    return "Invalid connection ID";
   }
   return null;
 }

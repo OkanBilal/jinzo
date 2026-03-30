@@ -4,7 +4,7 @@ import {
   connections,
   connectionTokens,
   connectionResources,
-  appStates,
+  connectionStates,
   entities,
 } from "../../db/schema";
 
@@ -209,36 +209,36 @@ export const connectionsRepo = {
       .run();
   },
 
-  // App state queries
-  async findAppState(appId: string) {
+  // Connection state queries
+  async findConnectionState(appId: string) {
     const db = getDb();
-    return db.select().from(appStates).where(eq(appStates.id, appId)).get();
+    return db.select().from(connectionStates).where(eq(connectionStates.id, appId)).get();
   },
 
-  async updateAppState(
+  async updateConnectionState(
     appId: string,
     isConnected: boolean,
     connectionId: string | null
   ): Promise<void> {
     const db = getDb();
     await db
-      .update(appStates)
+      .update(connectionStates)
       .set({ isConnected, connectionId, updatedAt: sql`(unixepoch())` })
-      .where(eq(appStates.id, appId))
+      .where(eq(connectionStates.id, appId))
       .run();
   },
 
-  async upsertAppState(
+  async upsertConnectionState(
     appId: string,
     isConnected: boolean,
     connectionId: string | null
   ): Promise<void> {
     const db = getDb();
     await db
-      .insert(appStates)
+      .insert(connectionStates)
       .values({ id: appId, isConnected, connectionId })
       .onConflictDoUpdate({
-        target: appStates.id,
+        target: connectionStates.id,
         set: { isConnected, connectionId },
       })
       .run();

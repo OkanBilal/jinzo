@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
-import { createAppState } from "../../../test/factories";
+import { createConnectionState } from "../../../test/factories";
 import type { DatabaseInstance } from "../../db/types";
 import type Database from "better-sqlite3";
 
@@ -12,9 +12,9 @@ vi.mock("../../db/client", () => ({
   getDb: () => db,
 }));
 
-import { appsController } from "./apps.controller";
+import { ConnectionStatesController } from "./connectionStates.controller";
 
-describe("appsController", () => {
+describe("ConnectionStatesController", () => {
   beforeEach(() => {
     ({ db, sqlite: _sqlite, cleanup } = createTestDb());
   });
@@ -24,19 +24,19 @@ describe("appsController", () => {
   });
 
   describe("getAll", () => {
-    it("returns empty array when no apps exist", async () => {
-      const result = await appsController.getAll();
+    it("returns empty array when no connections exist", async () => {
+      const result = await ConnectionStatesController.getAll();
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data).toEqual([]);
       }
     });
 
-    it("returns all app states", async () => {
-      createAppState(db, { id: "github", displayName: "GitHub" });
-      createAppState(db, { id: "linear", displayName: "Linear" });
+    it("returns all connection states", async () => {
+      createConnectionState(db, { id: "github", displayName: "GitHub" });
+      createConnectionState(db, { id: "linear", displayName: "Linear" });
 
-      const result = await appsController.getAll();
+      const result = await ConnectionStatesController.getAll();
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data).toHaveLength(2);
@@ -45,22 +45,22 @@ describe("appsController", () => {
   });
 
   describe("updateById", () => {
-    it("updates an existing app state", async () => {
-      createAppState(db, { id: "github", isConnected: false });
+    it("updates an existing connection state", async () => {
+      createConnectionState(db, { id: "github", isConnected: false });
 
-      const result = await appsController.updateById("github", {
+      const result = await ConnectionStatesController.updateById("github", {
         isConnected: true,
       });
       expect(result.success).toBe(true);
     });
 
     it("returns error for invalid id", async () => {
-      const result = await appsController.updateById(null, { isConnected: true });
+      const result = await ConnectionStatesController.updateById(null, { isConnected: true });
       expect(result.success).toBe(false);
     });
 
     it("returns error for invalid payload", async () => {
-      const result = await appsController.updateById("github", null);
+      const result = await ConnectionStatesController.updateById("github", null);
       expect(result.success).toBe(false);
     });
   });

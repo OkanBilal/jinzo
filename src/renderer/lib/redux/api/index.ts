@@ -1,11 +1,11 @@
 export { baseApi } from "./baseApi";
 
 export {
-  appsApi,
-  useGetAppsQuery,
-  useUpdateAppConnectionMutation,
-} from "./appsApi";
-export type { AppState, UpdateAppConnectionPayload } from "./appsApi";
+  connectionStatesApi,
+  useGetConnectionStatesQuery,
+  useUpdateConnectionStatesMutation,
+} from "./connectionStates";
+export type { ConnectionStates, UpdateConnectionStatesPayload } from "./connectionStates";
 
 export {
   accountApi,

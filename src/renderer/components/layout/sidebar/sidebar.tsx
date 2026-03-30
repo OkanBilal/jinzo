@@ -91,7 +91,7 @@ export default function Sidebar() {
     account,
     workspaces,
     isLoadingWorkspaces,
-    handleRefreshApps,
+    handleRefreshConnections,
   } = useSidebarData({ searchQuery, sidebarConfig });
 
   const {
@@ -108,8 +108,8 @@ export default function Sidebar() {
   const deleteWorkspace = useDeleteWorkspace();
   const archiveWorkspace = useArchiveWorkspace();
 
-  // Suppress unused variable warning for handleRefreshApps
-  void handleRefreshApps;
+  // Suppress unused variable warning for handleRefreshConnections
+  void handleRefreshConnections;
 
   return (
     <>

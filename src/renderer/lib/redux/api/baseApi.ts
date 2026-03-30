@@ -41,7 +41,7 @@ export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: ipcBaseQuery(),
   tagTypes: [
-    'Apps',
+    'ConnectionStates',
     'Entity',
     'Task',
     'Issue',

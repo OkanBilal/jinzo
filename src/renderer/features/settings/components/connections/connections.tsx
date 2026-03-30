@@ -1,16 +1,16 @@
 import { useState, useMemo } from "react";
 import { Text, Heading2, Button, toast } from "@/components/ui";
-import AsanaModal from "../../components/apps/asana/asana-modal";
-import GitHubModal from "../../components/apps/github/github-modal";
-import GitLabModal from "../../components/apps/gitlab/gitlab-modal";
-import JiraModal from "../../components/apps/jira/jira-modal";
-import LinearModal from "../../components/apps/linear/linear-modal";
-import TrelloModal from "../../components/apps/trello/trello-modal";
-import SentryModal from "../../components/apps/sentry/sentry-modal";
+import AsanaModal from "./asana/asana-modal";
+import GitHubModal from "./github/github-modal";
+import GitLabModal from "./gitlab/gitlab-modal";
+import JiraModal from "./jira/jira-modal";
+import LinearModal from "./linear/linear-modal";
+import TrelloModal from "./trello/trello-modal";
+import SentryModal from "./sentry/sentry-modal";
 import { useRunEntitySyncMutation } from "@/lib/redux/api/syncApi";
 import { AsciiSpinner } from "@/features/workspace/components/ascii-loader";
 
-type AppItem = {
+type ConnectionItem = {
   id: string;
   displayName: string | null;
   iconPath: string | null;
@@ -22,9 +22,9 @@ type AppItem = {
   config: string | null;
 };
 
-interface AppsSettingsProps {
-  apps: AppItem[];
-  connectedApps: string[];
+interface ConnectionsSettingsProps {
+  connections: ConnectionItem[];
+  connectedConnections: string[];
   onRefresh?: () => void;
 }
 
@@ -37,11 +37,11 @@ const FILTER_TABS: { id: CategoryFilter; label: string }[] = [
   { id: "monitoring", label: "Monitoring" },
 ];
 
-export default function AppsSettings({
-  apps,
-  connectedApps,
+export default function ConnectionsSettings({
+  connections,
+  connectedConnections,
   onRefresh,
-}: AppsSettingsProps) {
+}: ConnectionsSettingsProps) {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [filter, setFilter] = useState<CategoryFilter>("all");
   const [runSync, { isLoading: isSyncing }] = useRunEntitySyncMutation();
@@ -61,22 +61,22 @@ export default function AppsSettings({
     }
   };
 
-  const isConnected = (appId: string) => connectedApps.includes(appId);
+  const isConnected = (appId: string) => connectedConnections.includes(appId);
 
   const handleConnectionSuccess = () => {
     onRefresh?.();
   };
 
-  const filteredApps = useMemo(() => {
-    if (filter === "all") return apps;
-    return apps.filter((app) => (app.category || "developement") === filter);
-  }, [apps, filter]);
+  const filteredConnections = useMemo(() => {
+    if (filter === "all") return connections;
+    return connections.filter((connection) => (connection.category || "developement") === filter);
+  }, [connections, filter]);
 
-  const connectedFiltered = filteredApps.filter((app) => isConnected(app.id));
-  const notConnectedFiltered = filteredApps.filter(
-    (app) => !isConnected(app.id),
+  const connectedFiltered = filteredConnections.filter((connection) => isConnected(connection.id));
+  const notConnectedFiltered = filteredConnections.filter(
+    (connection) => !isConnected(connection.id),
   );
-  const connectedCount = apps.filter((app) => isConnected(app.id)).length;
+  const connectedCount = connections.filter((connection) => isConnected(connection.id)).length;
 
   return (
     <div className="h-full overflow-y-auto noscrollbar">
@@ -114,12 +114,12 @@ export default function AppsSettings({
             Connected
           </h3>
           <div className="grid grid-cols-2 gap-6">
-            {connectedFiltered.map((app) => (
-              <AppCard
-                key={app.id}
-                app={app}
+            {connectedFiltered.map((connection) => (
+              <ConnectionCard
+                key={connection.id}
+                connection={connection}
                 connected
-                onAction={() => setActiveModal(app.id)}
+                onAction={() => setActiveModal(connection.id)}
               />
             ))}
           </div>
@@ -133,12 +133,12 @@ export default function AppsSettings({
             Available
           </h3>
           <div className="grid grid-cols-2 gap-6 pb-12">
-            {notConnectedFiltered.map((app) => (
-              <AppCard
-                key={app.id}
-                app={app}
+            {notConnectedFiltered.map((connection) => (
+              <ConnectionCard
+                key={connection.id}
+                connection={connection}
                 connected={false}
-                onAction={() => setActiveModal(app.id)}
+                onAction={() => setActiveModal(connection.id)}
               />
             ))}
           </div>
@@ -192,12 +192,12 @@ export default function AppsSettings({
   );
 }
 
-function AppCard({
-  app,
+function ConnectionCard({
+  connection,
   connected,
   onAction,
 }: {
-  app: AppItem;
+  connection: ConnectionItem;
   connected: boolean;
   onAction: () => void;
 }) {
@@ -205,9 +205,9 @@ function AppCard({
     <div className="rounded-3xl glass-morphism  p-4 flex flex-col justify-between">
       <div className="flex items-start justify-between mb-6">
         <div className="flex items-center gap-2 min-w-0">
-          <AppIcon app={app} />
+          <ConnectionIcon connection={connection} />
           <span className="text-sm font-medium text-primary-900 dark:text-primary-100 truncate">
-            {app.displayName}
+            {connection.displayName}
           </span>
         </div>
         <span
@@ -234,12 +234,12 @@ function AppCard({
   );
 }
 
-function AppIcon({ app }: { app: AppItem }) {
-  if (app.iconPath) {
+function ConnectionIcon({ connection }: { connection: ConnectionItem }) {
+  if (connection.iconPath) {
     return (
       <img
-        src={app.iconPath}
-        alt={app.id}
+        src={connection.iconPath}
+        alt={connection.id}
         width={32}
         height={32}
         className="size-8 rounded-lg object-cover"
@@ -253,7 +253,7 @@ function AppIcon({ app }: { app: AppItem }) {
         variant="h3"
         className="text-primary-800 dark:text-primary-200 text-sm"
       >
-        {app.displayName?.charAt(0)}
+        {connection.displayName?.charAt(0)}
       </Text>
     </div>
   );

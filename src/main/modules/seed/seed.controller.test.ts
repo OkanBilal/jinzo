@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("./seed.service", () => ({
   seedService: {
     seedAccounts: vi.fn().mockResolvedValue({ success: true, message: "ok" }),
-    seedApps: vi.fn().mockResolvedValue({ success: true, message: "ok" }),
+    seedConnectionStates: vi.fn().mockResolvedValue({ success: true, message: "ok" }),
     seedConnections: vi.fn().mockResolvedValue({ success: true, message: "ok" }),
     seedProviders: vi.fn().mockResolvedValue({ success: true, message: "ok" }),
     seedSpaces: vi.fn().mockResolvedValue({ success: true, message: "ok" }),
@@ -25,9 +25,9 @@ describe("seedController", () => {
     expect(result).toEqual({ success: true, message: "ok" });
   });
 
-  it("seedApps delegates to seedService.seedApps", async () => {
-    const result = await seedController.seedApps();
-    expect(seedService.seedApps).toHaveBeenCalledOnce();
+  it("seedConnectionStates delegates to seedService.seedConnectionStates", async () => {
+    const result = await seedController.seedConnectionStates();
+    expect(seedService.seedConnectionStates).toHaveBeenCalledOnce();
     expect(result).toEqual({ success: true, message: "ok" });
   });
 

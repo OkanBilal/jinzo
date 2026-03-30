@@ -685,6 +685,7 @@ export const connections = sqliteTable(
     provider: text("provider").notNull(), // github|linear|notion|gmail|rss|...
     type: text("type").notNull(), // oauth|api_key|local|...
     displayName: text("display_name"),
+    description: text("description"),
     status: text("status", {
       enum: ["active", "revoked", "error", "disabled"],
     })
@@ -777,11 +778,11 @@ export const connectionResources = sqliteTable(
 );
 
 /* -----------------------------
-   SPACES / APP STATE
+   SPACES / CONNECTION STATE
 ------------------------------ */
 
-export const appStates = sqliteTable(
-  "app_states",
+export const connectionStates = sqliteTable(
+  "connection_states",
   {
     id: text("id").primaryKey(), // "github" | "notion" | "raindrop" | ...
     isConnected: integer("is_connected", { mode: "boolean" })
@@ -805,10 +806,10 @@ export const appStates = sqliteTable(
   },
 
   (t) => [
-    index("idx_app_states_connected").on(t.isConnected),
-    index("idx_app_states_sort").on(t.sortOrder),
-    index("idx_app_states_updated_at").on(t.updatedAt),
-    index("idx_app_states_created_at").on(t.createdAt),
+    index("idx_connection_states_connected").on(t.isConnected),
+    index("idx_connection_states_sort").on(t.sortOrder),
+    index("idx_connection_states_updated_at").on(t.updatedAt),
+    index("idx_connection_states_created_at").on(t.createdAt),
     check(
       "check_enabled_features_json",
       sql`json_valid(${t.enabledFeatures}) OR ${t.enabledFeatures} IS NULL`,

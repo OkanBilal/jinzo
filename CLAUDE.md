@@ -44,7 +44,7 @@ Jinzo is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM). C
 
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
-- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.account`, `api.apps`, `api.sync`, `api.connectionCredentials`, `api.connections`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.providers`, `api.tools`, `api.toolCalls`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.feedback`, `api.stats`, `api.app`, `api.updates`
+- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.account`, `api.connectionStates`, `api.sync`, `api.connectionCredentials`, `api.connections`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.providers`, `api.tools`, `api.toolCalls`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.feedback`, `api.stats`, `api.app`, `api.updates`
 - After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
@@ -68,7 +68,7 @@ Each domain module follows a layered pattern (see `src/main/modules/account/` as
 
 **Critical**: All layers are **plain object literals**, never classes. No DI — repos call `getDb()` inline.
 
-All modules: `account`, `appSettings`, `apps`, `connectionCredentials`, `connections`, `entities`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `space`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
+All modules: `account`, `appSettings`, `connectionStates`, `connectionCredentials`, `connections`, `entities`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `space`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
 
 ### IPC Convention
 
@@ -106,7 +106,7 @@ Core tables:
 - `workspaceResources` - Pivot table linking workspaces to connectionResources
 - `entities` - Unified canonical content (tasks, issues, etc.)
 - `connections` / `connectionResources` / `connectionTokens` / `connectionSyncState` - External service connections, encrypted tokens, sync cursors
-- `appStates` - App integration states (GitHub, GitLab, Linear, Jira, Asana, Trello, Notion — tracks isConnected, features, config)
+- `connectionStates` - Connection integration states (GitHub, GitLab, Linear, Jira, Asana, Trello, Notion — tracks isConnected, features, config)
 - `spaces` - User-defined UI/prompt configurations with theme/UI config JSON
 - `runs` / `runContext` / `runArtifacts` / `runTurns` - Terminal/code-writing flow (agent runs with session resumption via sessionId, turn tracking)
 - `tools` / `toolCalls` - Tool registry (local, provider_builtin) and invocation tracking with nested tool call support (parentToolCallId)
@@ -188,7 +188,7 @@ Domain-specific views on entities:
 - Tool call tracking with nested call support (parentToolCallId)
 
 **Seed Module** (`src/main/modules/seed/`)
-- Database seeding for initial setup (apps, connections, providers, spaces, accounts)
+- Database seeding for initial setup (connectionStates, connections, providers, spaces, accounts)
 
 **Image Proxy** (`src/main/modules/imageProxy/`)
 - Protocol handler for enhanced image loading in the renderer
@@ -217,7 +217,7 @@ Domain-specific views on entities:
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`
 - **Feature dirs**: `onboarding`, `settings`, `stats`, `workspace`
 - **Routing**: HashRouter — routes defined in `src/renderer/routes/`
-- **Settings Routing**: `/settings?section={sectionName}` — query parameter controls active tab (general, apps, claude, copilot, codex, codex-plugins, projects, git, dashboard, etc.)
+- **Settings Routing**: `/settings?section={sectionName}` — query parameter controls active tab (general, connections, claude, copilot, codex, codex-plugins, projects, git, dashboard, etc.)
 - **Styling**: Tailwind CSS v4 (PostCSS-based)
 
 ### Icon System
@@ -266,7 +266,7 @@ iconutil -c icns icon.iconset -o icon.icns
 ### Connections (External Services)
 
 Each connection type has:
-- Modal in `src/renderer/features/settings/components/apps/`
+- Modal in `src/renderer/features/settings/components/connections/`
 - Fetcher in `src/main/modules/sync/connections/`
 - IPC handlers for credentials and resource management
 

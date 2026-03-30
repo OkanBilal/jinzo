@@ -3,7 +3,7 @@ import { createTestDb } from "../../../test/setup-db";
 import {
   createConnection,
   createConnectionResource,
-  createAppState,
+  createConnectionState,
 } from "../../../test/factories";
 import type { DatabaseInstance } from "../../db/types";
 import type Database from "better-sqlite3";
@@ -321,7 +321,7 @@ describe("connectionsService", () => {
 
     it("revokes connection and cleans up", async () => {
       createConnection(db, { id: "c1", provider: "github", status: "active", metadata: "{}" });
-      createAppState(db, { id: "github", isConnected: true, connectionId: "c1" });
+      createConnectionState(db, { id: "github", isConnected: true, connectionId: "c1" });
       createConnectionResource(db, {
         connectionId: "c1",
         externalId: "e1",
@@ -341,9 +341,9 @@ describe("connectionsService", () => {
       const resources = await connectionsRepo.findResourcesByConnectionId("c1");
       expect(resources).toHaveLength(0);
 
-      // App state should be disconnected
-      const appState = await connectionsRepo.findAppState("github");
-      expect(appState!.isConnected).toBe(false);
+      // Connection state should be disconnected
+      const connectionState = await connectionsRepo.findConnectionState("github");
+      expect(connectionState!.isConnected).toBe(false);
     });
   });
 

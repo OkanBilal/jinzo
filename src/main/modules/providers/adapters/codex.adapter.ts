@@ -1494,6 +1494,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
         const approvalPolicy = config.approvalMode ?? "on-failure";
         const sandbox = mapSandboxMode(config.sandboxMode);
+        const personality = config.personality ?? "none";
 
         // Start thread (cwd passed per-thread, not per-server)
         const networkAccess = config.networkAccessEnabled !== false;
@@ -1501,6 +1502,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           cwd: request.workspace.rootPath,
           approvalPolicy,
           sandbox,
+          personality,
           ...(resolvedModel ? { model: resolvedModel } : {}),
           config: {
             ...(networkAccess ? { sandbox_network_access: true } : {}),
@@ -1595,6 +1597,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
         const approvalPolicy = config.approvalMode ?? "on-failure";
         const sandbox = mapSandboxMode(config.sandboxMode);
+        const personality = config.personality ?? "none";
 
         // 1. Resume thread
         try {
@@ -1603,6 +1606,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             cwd: request.workspace.rootPath,
             approvalPolicy,
             sandbox,
+            personality,
             ...(resolvedModel ? { model: resolvedModel } : {}),
           });
         } catch (resumeError) {
@@ -1614,6 +1618,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
               cwd: request.workspace.rootPath,
               approvalPolicy,
               sandbox,
+              personality,
               ...(resolvedModel ? { model: resolvedModel } : {}),
             }) as Record<string, unknown>;
             const newThreadId = (threadResult?.thread as Record<string, unknown>)?.id as string ??
@@ -1699,6 +1704,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
         const approvalPolicy = config.approvalMode ?? "on-failure";
         const sandbox = mapSandboxMode(config.sandboxMode);
+        const personality = config.personality ?? "none";
 
         // 1. Fork thread via thread/fork
         const forkResult = await server.sendRequest("thread/fork", {
@@ -1706,6 +1712,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           cwd: request.workspace.rootPath,
           approvalPolicy,
           sandbox,
+          personality,
           ...(resolvedModel ? { model: resolvedModel } : {}),
         }) as Record<string, unknown>;
 
@@ -1791,6 +1798,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
         const approvalPolicy = config.approvalMode ?? "on-failure";
         const sandbox = mapSandboxMode(config.sandboxMode);
+        const personality = config.personality ?? "none";
 
         // 1. Start thread
         const networkAccess = config.networkAccessEnabled !== false;
@@ -1798,6 +1806,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           cwd: request.workspace.rootPath,
           approvalPolicy,
           sandbox,
+          personality,
           ...(resolvedModel ? { model: resolvedModel } : {}),
           config: {
             ...(networkAccess ? { sandbox_network_access: true } : {}),

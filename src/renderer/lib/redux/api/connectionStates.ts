@@ -1,6 +1,6 @@
 import { baseApi } from './baseApi';
 
-export interface AppState {
+export interface ConnectionStates {
   id: string;
   displayName: string;
   iconPath: string;
@@ -12,37 +12,37 @@ export interface AppState {
   config: string | null;
 }
 
-export interface UpdateAppConnectionPayload {
+export interface UpdateConnectionStatesPayload {
   isConnected: boolean;
   connectionId?: string | null;
 }
 
-export const appsApi = baseApi.injectEndpoints({
+export const connectionStatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
 
-    getApps: builder.query<AppState[], void>({
+    getConnectionStates: builder.query<ConnectionStates[], void>({
       query: () => ({
-        handler: 'apps:getAll',
+        handler: 'connectionStates:getAll',
       }),
       transformResponse: (response: any) => response.success ? response.data : [],
-      providesTags: ['Apps'],
+      providesTags: ['ConnectionStates'],
     }),
 
-    updateAppConnection: builder.mutation<
+    updateConnectionStates: builder.mutation<
       { success: boolean },
-      { id: string } & UpdateAppConnectionPayload
+      { id: string } & UpdateConnectionStatesPayload
     >({
       query: ({ id, ...body }) => ({
-        handler: 'apps:updateById',
+        handler: 'connectionStates:updateById',
         args: [id, body],
       }),
-      invalidatesTags: ['Apps'],
+      invalidatesTags: ['ConnectionStates'],
     }),
   }),
   overrideExisting: false,
 });
 
 export const {
-  useGetAppsQuery,
-  useUpdateAppConnectionMutation,
-} = appsApi;
+  useGetConnectionStatesQuery,
+  useUpdateConnectionStatesMutation,
+} = connectionStatesApi;

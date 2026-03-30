@@ -17,7 +17,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { initializeDatabase, closeDatabase } from "./db/client";
 import { registerAccountIpc, unregisterAccountIpc } from "./modules/account";
-import { registerAppsIpc, unregisterAppsIpc } from "./modules/apps";
+import { registerConnectionStatesIpc, unregisterConnectionStatesIpc } from "./modules/connectionStates";
 import { registerSyncIpc, unregisterSyncIpc } from "./modules/sync";
 import {
   registerEntitiesHandlers,
@@ -341,7 +341,7 @@ async function initializeApp() {
 
     // Register IPC handlers
     registerAccountIpc();
-    registerAppsIpc();
+    registerConnectionStatesIpc();
     registerSyncIpc();
     registerEntitiesHandlers();
     registerConnectionCredentialsIpc();
@@ -549,7 +549,7 @@ async function cleanupApp() {
 
     // Unregister IPC handlers
     unregisterAccountIpc();
-    unregisterAppsIpc();
+    unregisterConnectionStatesIpc();
     unregisterAppSettingsIpc();
     unregisterSyncIpc();
     unregisterSeedIpc();

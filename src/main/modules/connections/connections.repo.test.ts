@@ -3,7 +3,7 @@ import { createTestDb } from "../../../test/setup-db";
 import {
   createConnection,
   createConnectionResource,
-  createAppState,
+  createConnectionState,
 } from "../../../test/factories";
 import type { DatabaseInstance } from "../../db/types";
 import type Database from "better-sqlite3";
@@ -277,43 +277,43 @@ describe("connectionsRepo", () => {
   });
 
   // ─────────────────────────────────────────────────────────────
-  // App State queries
+  // Connection State queries
   // ─────────────────────────────────────────────────────────────
-  describe("findAppState", () => {
+  describe("findConnectionState", () => {
     it("returns undefined when not found", async () => {
-      const result = await connectionsRepo.findAppState("nonexistent");
+      const result = await connectionsRepo.findConnectionState("nonexistent");
       expect(result).toBeUndefined();
     });
 
-    it("returns app state", async () => {
-      createAppState(db, { id: "github", isConnected: true });
+    it("returns connection states", async () => {
+      createConnectionState(db, { id: "github", isConnected: true });
 
-      const result = await connectionsRepo.findAppState("github");
+      const result = await connectionsRepo.findConnectionState("github");
       expect(result).toBeDefined();
       expect(result!.isConnected).toBe(true);
     });
   });
 
-  describe("updateAppState", () => {
-    it("updates app state", async () => {
+  describe("updateConnectionStates", () => {
+    it("updates connection state", async () => {
       createConnection(db, { id: "c1", provider: "github" });
-      createAppState(db, { id: "github", isConnected: true, connectionId: "c1" });
+      createConnectionState(db, { id: "github", isConnected: true, connectionId: "c1" });
 
-      await connectionsRepo.updateAppState("github", false, null);
+      await connectionsRepo.updateConnectionState("github", false, null);
 
-      const result = await connectionsRepo.findAppState("github");
+      const result = await connectionsRepo.findConnectionState("github");
       expect(result!.isConnected).toBe(false);
       expect(result!.connectionId).toBeNull();
     });
   });
 
-  describe("upsertAppState", () => {
+  describe("upsertConnectionState", () => {
     it("inserts when not existing", async () => {
       createConnection(db, { id: "c2", provider: "linear" });
 
-      await connectionsRepo.upsertAppState("linear", true, "c2");
+      await connectionsRepo.upsertConnectionState("linear", true, "c2");
 
-      const result = await connectionsRepo.findAppState("linear");
+      const result = await connectionsRepo.findConnectionState("linear");
       expect(result).toBeDefined();
       expect(result!.isConnected).toBe(true);
       expect(result!.connectionId).toBe("c2");
@@ -321,11 +321,11 @@ describe("connectionsRepo", () => {
 
     it("updates when already existing", async () => {
       createConnection(db, { id: "c1", provider: "github" });
-      createAppState(db, { id: "github", isConnected: false });
+      createConnectionState(db, { id: "github", isConnected: false });
 
-      await connectionsRepo.upsertAppState("github", true, "c1");
+      await connectionsRepo.updateConnectionState("github", true, "c1");
 
-      const result = await connectionsRepo.findAppState("github");
+      const result = await connectionsRepo.findConnectionState("github");
       expect(result!.isConnected).toBe(true);
       expect(result!.connectionId).toBe("c1");
     });

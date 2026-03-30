@@ -29,7 +29,7 @@ export const syncApi = baseApi.injectEndpoints({
       }),
       transformResponse: (response: { success: boolean; data: SyncResult }) =>
         response.data,
-      invalidatesTags: ["Entity", "Feed", "ProjectIssues"],
+      invalidatesTags: ["Entity", "ProjectIssues"],
     }),
   }),
   overrideExisting: false,

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
-import { createAppState, createConnection } from "../../../test/factories";
+import { createConnectionState, createConnection } from "../../../test/factories";
 import type { DatabaseInstance } from "../../db/types";
 import type Database from "better-sqlite3";
 
@@ -12,9 +12,9 @@ vi.mock("../../db/client", () => ({
   getDb: () => db,
 }));
 
-import { appsRepo } from "./apps.repo";
+import { connectionStatesRepo } from "./connectionStates.repo";
 
-describe("appsRepo", () => {
+describe("connectionStatesRepo", () => {
   beforeEach(() => {
     ({ db, sqlite: _sqlite, cleanup } = createTestDb());
   });
@@ -24,16 +24,16 @@ describe("appsRepo", () => {
   });
 
   describe("findAll", () => {
-    it("returns empty array when no apps", async () => {
-      const result = await appsRepo.findAll();
+    it("returns empty array when no connection states", async () => {
+      const result = await connectionStatesRepo.findAll();
       expect(result).toEqual([]);
     });
 
-    it("returns all apps ordered by sortOrder desc", async () => {
-      createAppState(db, { id: "github", displayName: "GitHub", sortOrder: 1 });
-      createAppState(db, { id: "linear", displayName: "Linear", sortOrder: 2 });
+    it("returns all connection states ordered by sortOrder desc", async () => {
+      createConnectionState(db, { id: "github", displayName: "GitHub", sortOrder: 1 });
+      createConnectionState(db, { id: "linear", displayName: "Linear", sortOrder: 2 });
 
-      const result = await appsRepo.findAll();
+      const result = await connectionStatesRepo.findAll();
       expect(result).toHaveLength(2);
       expect(result[0].id).toBe("linear");
       expect(result[1].id).toBe("github");
@@ -43,29 +43,29 @@ describe("appsRepo", () => {
   describe("updateById", () => {
     it("updates isConnected and connectionId", async () => {
       createConnection(db, { id: "conn-1" });
-      createAppState(db, { id: "github", isConnected: false });
+      createConnectionState(db, { id: "github", isConnected: false });
 
-      await appsRepo.updateById("github", {
+      await connectionStatesRepo.updateById("github", {
         isConnected: true,
         connectionId: "conn-1",
       });
 
-      const apps = await appsRepo.findAll();
-      const github = apps.find((a) => a.id === "github");
+      const connectionStates = await connectionStatesRepo.findAll();
+      const github = connectionStates.find((a) => a.id === "github");
       expect(github!.isConnected).toBe(true);
       expect(github!.connectionId).toBe("conn-1");
     });
 
     it("sets connectionId to null when not provided", async () => {
       createConnection(db, { id: "old-conn" });
-      createAppState(db, { id: "github", connectionId: "old-conn" });
+      createConnectionState(db, { id: "github", connectionId: "old-conn" });
 
-      await appsRepo.updateById("github", {
+      await connectionStatesRepo.updateById("github", {
         isConnected: false,
       });
 
-      const apps = await appsRepo.findAll();
-      const github = apps.find((a) => a.id === "github");
+      const connectionStates = await connectionStatesRepo.findAll();
+      const github = connectionStates.find((a) => a.id === "github");
       expect(github!.connectionId).toBeNull();
     });
   });

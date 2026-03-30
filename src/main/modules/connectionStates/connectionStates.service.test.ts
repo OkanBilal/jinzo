@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
-import { createAppState, createConnection } from "../../../test/factories";
+import { createConnectionState, createConnection } from "../../../test/factories";
 import type { DatabaseInstance } from "../../db/types";
 import type Database from "better-sqlite3";
 
@@ -12,10 +12,10 @@ vi.mock("../../db/client", () => ({
   getDb: () => db,
 }));
 
-import { appsService } from "./apps.service";
-import { appsRepo } from "./apps.repo";
+import { connectionStatesService } from "./connectionStates.service";
+import { connectionStatesRepo } from "./connectionStates.repo";
 
-describe("appsService", () => {
+describe("connectionStatesService", () => {
   beforeEach(() => {
     ({ db, sqlite: _sqlite, cleanup } = createTestDb());
   });
@@ -29,28 +29,28 @@ describe("appsService", () => {
   // getAll
   // ─────────────────────────────────────────────────────────────
   describe("getAll", () => {
-    it("returns empty list when no apps", async () => {
-      const result = await appsService.getAll();
+    it("returns empty list when no connection", async () => {
+      const result = await connectionStatesService.getAll();
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data).toEqual([]);
       }
     });
 
-    it("returns all apps", async () => {
-      createAppState(db, { id: "github", displayName: "GitHub" });
-      createAppState(db, { id: "linear", displayName: "Linear" });
+    it("returns all connections", async () => {
+      createConnectionState(db, { id: "github", displayName: "GitHub" });
+      createConnectionState(db, { id: "linear", displayName: "Linear" });
 
-      const result = await appsService.getAll();
+      const result = await connectionStatesService.getAll();
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data).toHaveLength(2);
       }
     });
 
-    it("returns apps with correct fields", async () => {
+    it("returns connections with correct fields", async () => {
       createConnection(db, { id: "conn-gh" });
-      createAppState(db, {
+      createConnectionState(db, {
         id: "github",
         displayName: "GitHub",
         iconPath: "/icons/github.svg",
@@ -60,27 +60,27 @@ describe("appsService", () => {
         sortOrder: 10,
       });
 
-      const result = await appsService.getAll();
+      const result = await connectionStatesService.getAll();
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data).toHaveLength(1);
-        const app = result.data[0];
-        expect(app.id).toBe("github");
-        expect(app.displayName).toBe("GitHub");
-        expect(app.iconPath).toBe("/icons/github.svg");
-        expect(app.isConnected).toBe(true);
-        expect(app.connectionId).toBe("conn-gh");
-        expect(app.category).toBe("vcs");
-        expect(app.sortOrder).toBe(10);
+        const connection = result.data[0];
+        expect(connection.id).toBe("github");
+        expect(connection.displayName).toBe("GitHub");
+        expect(connection.iconPath).toBe("/icons/github.svg");
+        expect(connection.isConnected).toBe(true);
+        expect(connection.connectionId).toBe("conn-gh");
+        expect(connection.category).toBe("vcs");
+        expect(connection.sortOrder).toBe(10);
       }
     });
 
-    it("returns apps ordered by sortOrder descending", async () => {
-      createAppState(db, { id: "low", displayName: "Low", sortOrder: 1 });
-      createAppState(db, { id: "high", displayName: "High", sortOrder: 100 });
-      createAppState(db, { id: "mid", displayName: "Mid", sortOrder: 50 });
+    it("returns connections ordered by sortOrder descending", async () => {
+      createConnectionState(db, { id: "low", displayName: "Low", sortOrder: 1 });
+      createConnectionState(db, { id: "high", displayName: "High", sortOrder: 100 });
+      createConnectionState(db, { id: "mid", displayName: "Mid", sortOrder: 50 });
 
-      const result = await appsService.getAll();
+      const result = await connectionStatesService.getAll();
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data[0].id).toBe("high");
@@ -89,17 +89,17 @@ describe("appsService", () => {
       }
     });
 
-    it("returns apps with default field values", async () => {
-      createAppState(db, { id: "minimal" });
+    it("returns connection with default field values", async () => {
+      createConnectionState(db, { id: "minimal" });
 
-      const result = await appsService.getAll();
+      const result = await connectionStatesService.getAll();
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data).toHaveLength(1);
-        const app = result.data[0];
-        expect(app.id).toBe("minimal");
-        expect(app.isConnected).toBe(false);
-        expect(app.connectionId).toBeNull();
+        const connection = result.data[0];
+        expect(connection.id).toBe("minimal");
+        expect(connection.isConnected).toBe(false);
+        expect(connection.connectionId).toBeNull();
       }
     });
   });
@@ -108,11 +108,11 @@ describe("appsService", () => {
   // updateById
   // ─────────────────────────────────────────────────────────────
   describe("updateById", () => {
-    it("updates an app successfully", async () => {
+    it("updates an connection successfully", async () => {
       createConnection(db, { id: "conn-1" });
-      createAppState(db, { id: "github", isConnected: false });
+      createConnectionState(db, { id: "github", isConnected: false });
 
-      const result = await appsService.updateById("github", {
+      const result = await connectionStatesService.updateById("github", {
         isConnected: true,
         connectionId: "conn-1",
       });
@@ -121,61 +121,61 @@ describe("appsService", () => {
 
     it("persists the update in the database", async () => {
       createConnection(db, { id: "conn-123" });
-      createAppState(db, { id: "github", isConnected: false });
+      createConnectionState(db, { id: "github", isConnected: false });
 
-      await appsService.updateById("github", {
+      await connectionStatesService.updateById("github", {
         isConnected: true,
         connectionId: "conn-123",
       });
 
-      const allResult = await appsService.getAll();
+      const allResult = await connectionStatesService.getAll();
       expect(allResult.success).toBe(true);
       if (allResult.success) {
-        const app = allResult.data.find((a) => a.id === "github");
-        expect(app).toBeDefined();
-        expect(app!.isConnected).toBe(true);
-        expect(app!.connectionId).toBe("conn-123");
+        const connection = allResult.data.find((a) => a.id === "github");
+        expect(connection).toBeDefined();
+        expect(connection!.isConnected).toBe(true);
+        expect(connection!.connectionId).toBe("conn-123");
       }
     });
 
-    it("disconnects an app by setting isConnected to false", async () => {
+    it("disconnects an connection by setting isConnected to false", async () => {
       createConnection(db, { id: "conn-1" });
-      createAppState(db, { id: "github", isConnected: true, connectionId: "conn-1" });
+      createConnectionState(db, { id: "github", isConnected: true, connectionId: "conn-1" });
 
-      await appsService.updateById("github", {
+      await connectionStatesService.updateById("github", {
         isConnected: false,
       });
 
-      const allResult = await appsService.getAll();
+      const allResult = await connectionStatesService.getAll();
       expect(allResult.success).toBe(true);
       if (allResult.success) {
-        const app = allResult.data.find((a) => a.id === "github");
-        expect(app!.isConnected).toBe(false);
-        expect(app!.connectionId).toBeNull();
+        const connection = allResult.data.find((a) => a.id === "github");
+        expect(connection!.isConnected).toBe(false);
+        expect(connection!.connectionId).toBeNull();
       }
     });
 
     it("clears connectionId when not provided", async () => {
       createConnection(db, { id: "conn-1" });
-      createAppState(db, { id: "github", isConnected: true, connectionId: "conn-1" });
+      createConnectionState(db, { id: "github", isConnected: true, connectionId: "conn-1" });
 
-      await appsService.updateById("github", {
+      await connectionStatesService.updateById("github", {
         isConnected: true,
       });
 
-      const allResult = await appsService.getAll();
+      const allResult = await connectionStatesService.getAll();
       expect(allResult.success).toBe(true);
       if (allResult.success) {
-        const app = allResult.data.find((a) => a.id === "github");
+        const connection = allResult.data.find((a) => a.id === "github");
         // connectionId should be null when not provided (repo uses `data.connectionId || null`)
-        expect(app!.connectionId).toBeNull();
+        expect(connection!.connectionId).toBeNull();
       }
     });
 
     it("returns success: true with data: null", async () => {
-      createAppState(db, { id: "github" });
+      createConnectionState(db, { id: "github" });
 
-      const result = await appsService.updateById("github", { isConnected: true });
+      const result = await connectionStatesService.updateById("github", { isConnected: true });
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data).toBeNull();
@@ -184,40 +184,40 @@ describe("appsService", () => {
 
     // ── Validation: id ──────────────────────────────────────────
     it("rejects invalid id (empty string)", async () => {
-      const result = await appsService.updateById("", { isConnected: true });
+      const result = await connectionStatesService.updateById("", { isConnected: true });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toBe("Invalid app ID");
+        expect(result.error).toBe("Invalid connection ID");
       }
     });
 
     it("rejects non-string id (number)", async () => {
-      const result = await appsService.updateById(42, { isConnected: true });
+      const result = await connectionStatesService.updateById(42, { isConnected: true });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toBe("Invalid app ID");
+        expect(result.error).toBe("Invalid connection ID");
       }
     });
 
     it("rejects null id", async () => {
-      const result = await appsService.updateById(null, { isConnected: true });
+      const result = await connectionStatesService.updateById(null, { isConnected: true });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toBe("Invalid app ID");
+        expect(result.error).toBe("Invalid connection ID");
       }
     });
 
     it("rejects undefined id", async () => {
-      const result = await appsService.updateById(undefined, { isConnected: true });
+      const result = await connectionStatesService.updateById(undefined, { isConnected: true });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toBe("Invalid app ID");
+        expect(result.error).toBe("Invalid connection ID");
       }
     });
 
     // ── Validation: payload ─────────────────────────────────────
     it("rejects null payload", async () => {
-      const result = await appsService.updateById("github", null);
+      const result = await connectionStatesService.updateById("github", null);
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error).toBe("Invalid payload");
@@ -225,12 +225,12 @@ describe("appsService", () => {
     });
 
     it("rejects undefined payload", async () => {
-      const result = await appsService.updateById("github", undefined);
+      const result = await connectionStatesService.updateById("github", undefined);
       expect(result.success).toBe(false);
     });
 
     it("rejects non-object payload (string)", async () => {
-      const result = await appsService.updateById("github", "bad");
+      const result = await connectionStatesService.updateById("github", "bad");
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error).toBe("Invalid payload");
@@ -238,12 +238,12 @@ describe("appsService", () => {
     });
 
     it("rejects non-object payload (number)", async () => {
-      const result = await appsService.updateById("github", 123);
+      const result = await connectionStatesService.updateById("github", 123);
       expect(result.success).toBe(false);
     });
 
     it("rejects payload with non-boolean isConnected", async () => {
-      const result = await appsService.updateById("github", {
+      const result = await connectionStatesService.updateById("github", {
         isConnected: "yes",
       });
       expect(result.success).toBe(false);
@@ -253,7 +253,7 @@ describe("appsService", () => {
     });
 
     it("rejects payload missing isConnected", async () => {
-      const result = await appsService.updateById("github", {
+      const result = await connectionStatesService.updateById("github", {
         connectionId: "conn-1",
       });
       expect(result.success).toBe(false);
@@ -263,9 +263,9 @@ describe("appsService", () => {
     });
 
     it("accepts payload with non-string connectionId (normalizes to null)", async () => {
-      createAppState(db, { id: "github" });
+      createConnectionState(db, { id: "github" });
 
-      const result = await appsService.updateById("github", {
+      const result = await connectionStatesService.updateById("github", {
         isConnected: true,
         connectionId: 123,
       });
@@ -279,20 +279,20 @@ describe("appsService", () => {
   // ─────────────────────────────────────────────────────────────
   describe("error handling", () => {
     it("getAll returns error on repo failure", async () => {
-      vi.spyOn(appsRepo, "findAll").mockRejectedValueOnce(new Error("db crash"));
-      const result = await appsService.getAll();
+      vi.spyOn(connectionStatesRepo, "findAll").mockRejectedValueOnce(new Error("db crash"));
+      const result = await connectionStatesService.getAll();
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toBe("Failed to fetch apps");
+        expect(result.error).toBe("Failed to fetch connnectionStates");
       }
     });
 
     it("updateById returns error on repo failure", async () => {
-      vi.spyOn(appsRepo, "updateById").mockRejectedValueOnce(new Error("db crash"));
-      const result = await appsService.updateById("github", { isConnected: true });
+      vi.spyOn(connectionStatesRepo, "updateById").mockRejectedValueOnce(new Error("db crash"));
+      const result = await connectionStatesService.updateById("github", { isConnected: true });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toBe("Failed to update app state");
+        expect(result.error).toBe("Failed to update connection state");
       }
     });
   });

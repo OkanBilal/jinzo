@@ -489,6 +489,8 @@ export interface CodexAdapterConfig {
   webSearchMode?: "disabled" | "cached" | "live";
   /** Skip git repo check for non-git directories */
   skipGitRepoCheck?: boolean;
+  /** Thread personality — controls the agent's conversational style */
+  personality?: "friendly" | "pragmatic" | "none";
   /** Additional directories the agent can access */
   additionalDirectories?: string[];
   /** Base URL override for OpenAI API */

@@ -8,11 +8,11 @@
 
 import { sql } from "drizzle-orm";
 import { eq } from "drizzle-orm";
-import { accounts, appStates, connections, providers, spaces, appSettings } from "../schema";
+import { accounts, connectionStates, connections, providers, spaces, appSettings } from "../schema";
 import { seedAccounts } from "../data/accounts";
 import { seedProviders } from "../data/providers";
 import { seedSpaces } from "../data/spaces";
-import { apps } from "../data/apps";
+import { connectionStatesData } from "../data/connectionStates";
 import type { DatabaseInstance } from "../types";
 
 export async function run(db: DatabaseInstance): Promise<void> {
@@ -21,9 +21,9 @@ export async function run(db: DatabaseInstance): Promise<void> {
     db.insert(accounts).values(account).onConflictDoNothing().run?.();
   }
 
-  // 2. App states
-  for (const app of apps) {
-    db.insert(appStates)
+  // 2. Connection states
+  for (const app of connectionStatesData) {
+    db.insert(connectionStates)
       .values({
         id: app.id,
         isConnected: false,
@@ -31,7 +31,7 @@ export async function run(db: DatabaseInstance): Promise<void> {
         displayName: app.name,
         iconPath: app.imageSrc,
         category: app.category,
-        sortOrder: apps.indexOf(app),
+        sortOrder: connectionStatesData.indexOf(app),
         enabledFeatures: JSON.stringify([]),
         config: JSON.stringify({}),
       })

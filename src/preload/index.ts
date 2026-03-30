@@ -57,13 +57,13 @@ const api = {
     get: () => ipcRenderer.invoke("account:get"),
     update: (payload: unknown) => ipcRenderer.invoke("account:update", payload),
   },
-  // Apps operations
-  apps: {
-    getAll: () => ipcRenderer.invoke("apps:getAll"),
+  // ConnectionStates operations
+  connectionStates: {
+    getAll: () => ipcRenderer.invoke("connectionStates:getAll"),
     updateById: (
       id: string,
       payload: { isConnected: boolean; connectionId?: string | null },
-    ) => ipcRenderer.invoke("apps:updateById", id, payload),
+    ) => ipcRenderer.invoke("connectionStates:updateById", id, payload),
   },
   // Sync operations
   sync: {
@@ -143,7 +143,7 @@ const api = {
   },
   // Seed operations
   seed: {
-    apps: () => ipcRenderer.invoke("seed:apps"),
+    connectionStates: () => ipcRenderer.invoke("seed:connectionStates"),
     connections: () => ipcRenderer.invoke("seed:connections"),
     all: () => ipcRenderer.invoke("seed:all"),
   },

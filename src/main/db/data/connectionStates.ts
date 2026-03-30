@@ -1,4 +1,4 @@
-export const apps = [
+export const connectionStatesData = [
   {
     id: "github",
     name: "GitHub",

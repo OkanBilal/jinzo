@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import AppsSettings from "@/features/settings/components/apps/apps";
+import ConnectionsSettings from "@/features/settings/components/connections/connections";
 import GeneralSettings from "@/features/settings/components/general";
 import NotificationsSettings from "@/features/settings/components/notifications";
 import PersonalizationSettings from "@/features/settings/components/personalization";
 import SchedulesSettings from "@/features/settings/components/schedules";
 import SecuritySettings from "@/features/settings/components/security";
-import { useGetAppsQuery } from "@/lib/redux/api";
+import { useGetConnectionStatesQuery } from "@/lib/redux/api";
 type SettingsSection =
   | "general"
   | "notifications"
   | "personalization"
-  | "apps"
+  | "connections"
   | "schedules"
   | "data"
   | "security"
@@ -39,10 +39,10 @@ export default function SettingsPage() {
     sectionParam || "general",
   );
 
-  const { data: apps = [], refetch: refetchApps } = useGetAppsQuery();
-  const connectedApps = apps
-    .filter((app) => app.isConnected)
-    .map((app) => app.id);
+  const { data: connections = [], refetch: refetchConnections } = useGetConnectionStatesQuery();
+  const connectedConnections = connections
+    .filter((connection) => connection.isConnected)
+    .map((connection) => connection.id);
 
   const [prevSectionParam, setPrevSectionParam] = useState(sectionParam);
   if (sectionParam !== prevSectionParam) {
@@ -53,7 +53,7 @@ export default function SettingsPage() {
   }
 
   const handleRefresh = async () => {
-    await refetchApps();
+    await refetchConnections();
   };
 
   let content: React.ReactNode;
@@ -67,11 +67,11 @@ export default function SettingsPage() {
     case "personalization":
       content = <PersonalizationSettings />;
       break;
-    case "apps":
+    case "connections":
       content = (
-        <AppsSettings
-          apps={apps}
-          connectedApps={connectedApps}
+        <ConnectionsSettings
+          connections={connections}
+          connectedConnections={connectedConnections}
           onRefresh={handleRefresh}
         />
       );

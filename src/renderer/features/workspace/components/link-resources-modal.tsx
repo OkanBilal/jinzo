@@ -33,7 +33,7 @@ export function LinkResourcesModal({
 
   const goToApps = useCallback(() => {
     onClose();
-    navigate("/settings?section=apps");
+    navigate("/settings?section=connections");
   }, [navigate, onClose]);
 
   const {

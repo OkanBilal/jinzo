@@ -1,1 +1,0 @@
-DROP TABLE `connection_sync_state`;

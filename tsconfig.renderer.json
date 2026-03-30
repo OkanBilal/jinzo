@@ -4,9 +4,8 @@
     "composite": true,
     "outDir": ".vite/renderer",
     "types": ["vite/client"],
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/renderer/*"]
+      "@/*": ["./src/renderer/*"]
     }
   },
   "include": [
