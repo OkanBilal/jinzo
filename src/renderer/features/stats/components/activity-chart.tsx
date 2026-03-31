@@ -48,10 +48,10 @@ export default function ActivityChart({ data }: ActivityChartProps) {
           key: i,
           hoverLabel: d.total > 0 ? `${d.total} runs` : undefined,
           segments: [
-            { percent: (d.other / maxTotal) * 100, color: "#6366F1" },
-            { percent: (d.codex / maxTotal) * 100, color: "#0169CC" },
-            { percent: (d.copilot / maxTotal) * 100, color: "#3010B3" },
-            { percent: (d.claude / maxTotal) * 100, color: "#D97757" },
+            { percent: (d.other / maxTotal) * 100, color: "var(--color-primary-500)" },
+            { percent: (d.codex / maxTotal) * 100, color: "var(--color-codex)" },
+            { percent: (d.copilot / maxTotal) * 100, color: "var(--color-copilot)" },
+            { percent: (d.claude / maxTotal) * 100, color: "var(--color-claude)" },
           ],
         }))}
       />

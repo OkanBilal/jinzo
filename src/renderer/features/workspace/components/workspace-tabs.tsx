@@ -194,7 +194,7 @@ function NewRunTab({
       onClose={onClose}
       icon={
         variant === "claude" ? (
-          <Claude className="text-[#D97453]" />
+          <Claude className="text-claude" />
         ) : variant === "copilot" ? (
           <CopilotStatic className={className} />
         ) : (

@@ -7,10 +7,10 @@ interface SuccessRateChartProps {
 }
 
 const STATUS_COLORS = {
-  succeeded: "#22C55E",
-  failed: "#f44336",
-  canceled: "#9CA3AF",
-  other: "#F59E0B",
+  succeeded: "var(--color-success)",
+  failed: "var(--color-danger)",
+  canceled: "var(--color-primary-400)",
+  other: "var(--color-warning)",
 };
 
 function padTo7(days: StatusBreakdown["days"]) {

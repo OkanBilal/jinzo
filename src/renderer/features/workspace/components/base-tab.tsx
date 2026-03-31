@@ -47,7 +47,7 @@ export function BaseTab({
         className={`absolute inset-0 rounded-t-2xl transition-opacity duration-150 ease-out hidden dark:block ${isActive ? "opacity-100" : "opacity-0"}`}
         style={{
           backgroundColor: COLORS.dark,
-          boxShadow: "inset 0 1px 0 #ffffff34",
+          boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--color-primary) 20%, transparent)",
         }}
       />
 
