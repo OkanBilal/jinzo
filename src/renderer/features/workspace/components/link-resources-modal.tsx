@@ -152,7 +152,7 @@ export function LinkResourcesModal({
         tabIndex={0}
         onClick={() => !saving && toggleResource(resource.id)}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (!saving) toggleResource(resource.id); } }}
-        className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-all duration-150 dark:bg-primary-950/60 bg-primary ${
+        className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-all duration-150 dark:bg-primary-950/50 bg-primary ${
           selected
             ? ""
             : ""
@@ -185,7 +185,7 @@ export function LinkResourcesModal({
   return (
     <div className="fixed inset-0 z-(--z-overlay) flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-primary-950/40" role="presentation" onClick={handleCancel} />
+      <div className="absolute inset-0 bg-primary-950/50" role="presentation" onClick={handleCancel} />
 
       {/* Modal */}
       <div

@@ -303,13 +303,14 @@ export const connectionsApi = baseApi.injectEndpoints({
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
-          const syncResult = dispatch(syncApi.endpoints.runEntitySync.initiate(arg.provider));
-          const { data } = await syncResult;
-          if (data) {
-            toast.success(`Synced ${data.total} items`);
-          }
+          const syncPromise = dispatch(syncApi.endpoints.runEntitySync.initiate(arg.provider)).unwrap();
+          toast.promise(syncPromise, {
+            loading: "Syncing...",
+            success: (data) => `Synced ${data.total} items`,
+            error: "Sync failed",
+          });
         } catch {
-          toast.error("Sync failed");
+          // save itself failed — no sync needed
         }
       },
     }),

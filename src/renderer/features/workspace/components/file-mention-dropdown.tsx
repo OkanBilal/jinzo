@@ -161,7 +161,7 @@ export function FileMentionDropdown({
                     });
                   }
                 }}
-                className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100 first:rounded-t-xl last:rounded-b-xl"
+                className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 first:rounded-t-xl last:rounded-b-xl"
               >
                 <div className="flex items-center gap-2">
                   <FileIconComponent

@@ -88,8 +88,8 @@ function ThemePreviewCard({
                 style={darkBgStyle}
               >
                 <div className="w-2 h-2 bg-primary/20 rounded-full" />
-                <div className="w-full h-1 bg-primary/15 rounded-full mt-1" />
-                <div className="w-2/3 h-1 bg-primary/15 rounded-full" />
+                <div className="w-full h-1 bg-primary/10 rounded-full mt-1" />
+                <div className="w-2/3 h-1 bg-primary/10 rounded-full" />
               </div>
               <div className="flex-1 h-full flex bg-primary-950 flex-col p-1.5">
                 <div className="flex-1" />
@@ -113,13 +113,13 @@ function ThemePreviewCard({
                 <div
                   className={cn(
                     "w-full h-1 rounded-full",
-                    isLight ? "bg-primary-950/10" : "bg-primary/15",
+                    isLight ? "bg-primary-950/10" : "bg-primary/10",
                   )}
                 />
                 <div
                   className={cn(
                     "w-4/5 h-1 rounded-full",
-                    isLight ? "bg-primary-950/10" : "bg-primary/15",
+                    isLight ? "bg-primary-950/10" : "bg-primary/10",
                   )}
                 />
               </div>
@@ -142,7 +142,7 @@ function ThemePreviewCard({
       </div>
       <span
         className={cn(
-          "text-[13px] font-medium transition-colors",
+          "text-s font-medium transition-colors",
           isSelected
             ? "text-primary-900 dark:text-primary-100"
             : "text-primary-500 dark:text-primary-400 group-hover:text-primary-700 dark:group-hover:text-primary-300",
@@ -191,8 +191,8 @@ function UpdateButton({
       );
     case "error":
       return (
-        <div className="flex flex-col items-end gap-2 max-w-sm">
-          <span className="text-xs text-red-400 dark:text-red-400/80 leading-relaxed text-right line-clamp-2">
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-red-400 dark:text-red-400/80 leading-relaxed text-right line-clamp-2 max-w-48">
             {state.error}
           </span>
           <Button type="button" variant="ghost" size="md" onClick={onCheck}>

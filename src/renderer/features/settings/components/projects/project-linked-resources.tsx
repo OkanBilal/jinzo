@@ -49,10 +49,10 @@ export function ProjectLinkedResources({ projectId, onManageClick }: ProjectLink
                 </div>
                 <button
                   type="button"
-                  className="shrink-0 p-1.5 rounded-full hover:bg-primary-200/60 dark:hover:bg-primary-800/60 transition-colors cursor-pointer"
+                  className="shrink-0 rounded-lg cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 p-1! text-primary-900 dark:text-primary-300! transition-all duration-300 ease-out"
                   onClick={() => handleRemove(r.resourceId)}
                 >
-                  <Close className="w-3 h-3 text-primary-400  transition-colors" />
+                  <Close className="w-4 h-4" />
                 </button>
               </div>
             </div>

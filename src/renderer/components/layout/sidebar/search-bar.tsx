@@ -31,10 +31,10 @@ export default function SearchBar({
             placeholder="Search"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full h-9 bg-primary-950/2 dark:bg-primary/4 border-none  
-                        rounded-xl pl-10 pr-10 text-sm text-primary-900 dark:text-primary-100 
-                        placeholder:text-primary-900/90 dark:placeholder:text-primary/35 
-                        transition-all duration-200 focus:outline-none focus:bg-primary-950/8 dark:focus:bg-primary/8 "
+            className="w-full h-9 bg-primary-950/5 dark:bg-primary/5 border-none
+                        rounded-xl pl-10 pr-10 text-sm text-primary-900 dark:text-primary-100
+                        placeholder:text-primary-900 dark:placeholder:text-primary/35
+                        transition-all duration-200 focus:outline-none focus:bg-primary-950/10 dark:focus:bg-primary/10 "
           />
           <Button
             tooltip="Clear search"

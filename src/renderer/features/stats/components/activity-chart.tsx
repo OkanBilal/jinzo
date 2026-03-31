@@ -59,7 +59,7 @@ export default function ActivityChart({ data }: ActivityChartProps) {
         labels={chartData.map((_, i) => ({
           key: i,
           content: [1, 5, 10, 15, 20, 25].includes(i + 1) ? (
-            <span className="text-[9px] text-primary-400 dark:text-primary-500">
+            <span className="text-xt text-primary-400 dark:text-primary-500">
               {i + 1}
             </span>
           ) : null,

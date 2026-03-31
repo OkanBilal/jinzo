@@ -126,7 +126,7 @@ export function FileUploadDropdown({
             type="button"
             onClick={onClick}
             role="menuitem"
-            className="flex w-full text-left text-sm first:rounded-t-xl text-primary-900 dark:text-primary-200 last:rounded-b-xl items-center px-3 py-2.5 hover:bg-primary-200/30 dark:hover:bg-primary-600/20 cursor-pointer"
+            className="flex w-full text-left text-sm first:rounded-t-xl text-primary-900 dark:text-primary-200 last:rounded-b-xl items-center px-3 py-2.5 hover:bg-primary-200/30 dark:hover:bg-primary-800 cursor-pointer"
           >
             <Icon className="mr-2 size-3.5" />
             {label}

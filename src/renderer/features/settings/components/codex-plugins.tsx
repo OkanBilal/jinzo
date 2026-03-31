@@ -93,7 +93,7 @@ function PluginCard({
 
   return (
     <div
-      className="rounded-2xl bg-primary-100/60 dark:bg-primary-900/40 border border-primary-200/50 dark:border-primary-800/20 px-4 py-3 cursor-pointer hover:bg-primary-200/60 dark:hover:bg-primary/4 transition-colors flex items-center gap-3"
+      className="rounded-2xl bg-primary-100/50 dark:bg-primary-900 border border-primary-200/50 dark:border-primary-800/20 px-4 py-3 cursor-pointer hover:bg-primary-200/60 dark:hover:bg-primary/5 transition-colors flex items-center gap-3"
       onClick={onSelect}
       role="button"
       tabIndex={0}

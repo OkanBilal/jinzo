@@ -53,6 +53,8 @@ html:not(.app-ready) *::after {
 }
 
 @theme inline {
+  --text-xt: 0.5625rem;
+  --text-xt--line-height: calc(1.25 / 0.5625);
   --text-t: 0.625rem;
   --text-t--line-height: calc(1 / 0.625);
   --text-xxs: 0.6875rem;
@@ -99,7 +101,7 @@ html:not(.app-ready) *::after {
   --color-primary-500: #878580;
   --color-primary-600: #6f6e69;
   --color-primary-700: #575653;
-  --color-primary-800: #403e3c;
+  --color-primary-800: #262625;
   --color-primary-900: #141414;
   --color-primary-950: #0c0c0c;
 

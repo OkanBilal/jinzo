@@ -184,14 +184,14 @@ export function DiffSection({
       <div className="shrink-0 flex items-center gap-2 mb-2">
         <Button
           onClick={handleReviewChanges}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/60 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/50 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
         >
           {routeType === "codex" ? <Codex className="w-3.5 h-3.5" /> : <Chat className="w-3.5 h-3.5" />}
           Review Changes
         </Button>
         <Button
           onClick={handleCommitChanges}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/60 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/50 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
         >
           <Commit className="w-3.5 h-3.5" />
           Commit Changes

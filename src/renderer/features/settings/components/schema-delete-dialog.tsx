@@ -12,7 +12,7 @@ export function SchemaDeleteDialog({
   onConfirm,
 }: SchemaDeleteDialogProps) {
   return (
-    <div className="absolute inset-0 z-(--z-overlay) flex items-center justify-center rounded-3xl backdrop-blur-xs bg-primary-950/40">
+    <div className="absolute inset-0 z-(--z-overlay) flex items-center justify-center rounded-3xl backdrop-blur-xs bg-primary-950/50">
       <div className="glass-morphism min-w-md rounded-3xl px-6 py-10 space-y-3 animate-dropdown-in ">
         <Body className="font-medium">Delete schema?</Body>
         <Muted className="text-sm mb-6">

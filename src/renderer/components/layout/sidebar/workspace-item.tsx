@@ -324,7 +324,7 @@ export default function WorkspaceItem({
                   onStatusChange?.(s);
                 }}
                 className={
-                  s === status ? "bg-primary-950/8 dark:bg-primary/10" : ""
+                  s === status ? "bg-primary-950/10 dark:bg-primary/10" : ""
                 }
               >
                 <WorkspaceStatusIcon

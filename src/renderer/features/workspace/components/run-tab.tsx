@@ -49,6 +49,7 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, onRename, tit
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
+  const [dropdownOrigin, setDropdownOrigin] = useState<"top-left" | "top-right">("top-left");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -64,8 +65,11 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, onRename, tit
 
     const el = (e.target as HTMLElement).closest("button") ?? (e.currentTarget as HTMLElement);
     const rect = el.getBoundingClientRect();
+    const menuWidth = 140; // matches minWidth
+    const isRight = rect.right + menuWidth > window.innerWidth - 8;
+    setDropdownOrigin(isRight ? "top-right" : "top-left");
     setDropdownPosition({
-      x: rect.left,
+      x: isRight ? rect.right - menuWidth : rect.left,
       y: rect.bottom + 4,
     });
     setIsDropdownOpen((prev) => !prev);
@@ -130,6 +134,7 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, onRename, tit
         position={dropdownPosition}
         onClose={() => setIsDropdownOpen(false)}
         minWidth={140}
+        origin={dropdownOrigin}
       >
         <DropdownMenuItem onClick={handleRenameStart}>
           <Edit className="size-3.5" />

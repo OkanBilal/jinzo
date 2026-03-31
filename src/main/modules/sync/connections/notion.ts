@@ -210,7 +210,7 @@ export async function fetchNotionDatabaseItems(
       return [];
     }
 
-    const data = await res.json();
+    const data = (await res.json()) as any;
     const results: any[] = Array.isArray(data?.results) ? data.results : [];
 
     return results
@@ -244,7 +244,7 @@ export async function fetchNotionBookmarkBlocks(
       return [];
     }
 
-    const data = await res.json();
+    const data = (await res.json()) as any;
     const results: any[] = Array.isArray(data?.results) ? data.results : [];
 
     const items: EntityInput[] = [];

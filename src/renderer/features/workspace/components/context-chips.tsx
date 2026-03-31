@@ -32,7 +32,7 @@ export function ContextChips({
           {contextFiles.map((file) => (
             <div
               key={file.fullPath}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 dark:bg-primary/8 text-xs text-primary-700 dark:text-primary-300"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-200 dark:bg-primary/10 text-xs text-primary-700 dark:text-primary-300"
             >
               <Code className="w-3 h-3" />
               <span className="truncate max-w-37.5">{file.name}</span>
@@ -50,7 +50,7 @@ export function ContextChips({
           {contextIssues.map((issue) => (
             <div
               key={issue.entityId}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-primary-200 dark:bg-primary-500/40 text-primary-600 dark:text-primary-100`}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-100`}
             >
               <ProviderIcon provider={issue.provider} className="w-3 h-3" fallback="text" />
               <span className="truncate max-w-37.5">{issue.title}</span>
@@ -68,7 +68,7 @@ export function ContextChips({
           {contextSignals.map((signal) => (
             <div
               key={signal.entityId}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-primary-200 dark:bg-primary-500/40 text-primary-600 dark:text-primary-100"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-100"
             >
               <ProviderIcon provider={signal.source} className="w-3 h-3" fallback="text" />
               <span className="truncate max-w-37.5">{signal.title}</span>

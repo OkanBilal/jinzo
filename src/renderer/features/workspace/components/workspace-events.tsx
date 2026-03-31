@@ -49,7 +49,7 @@ function formatCost(micros: number): string {
 function ModelUsageBlock({ modelName, usage }: { modelName: string; usage: ModelUsageEntry }) {
   return (
     <div className="space-y-0.5">
-      <div className="text-[11px] opacity-70 flex justify-between gap-4">
+      <div className="text-xxs opacity-70 flex justify-between gap-4">
         <span>{modelName}</span>
         <span>${usage.costUSD.toFixed(4)}</span>
       </div>
@@ -97,7 +97,7 @@ function UsageTooltipContent({ turn }: { turn: RunTurn }) {
       ) : (
         <>
           {turn.model && (
-            <div className="text-[11px] opacity-70 mb-1">{turn.model}</div>
+            <div className="text-xxs opacity-70 mb-1">{turn.model}</div>
           )}
           <div className="border-t border-current/15 pt-1 space-y-0.5">
             {turn.inputTokens != null && (

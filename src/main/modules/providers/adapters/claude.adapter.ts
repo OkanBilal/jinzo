@@ -1305,7 +1305,7 @@ export function createClaudeAdapter(
       onEvent: WorkRunEventHandler,
     ): Promise<WorkRunResult> {
       const { runId, model } = request;
-      const timeout = config.timeout ?? 600000; // 10 minutes default
+      const timeout = config.timeout ?? 6000000; 
 
       const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
       const abortController = new AbortController();
@@ -1645,7 +1645,7 @@ export function createClaudeAdapter(
       onEvent: WorkRunEventHandler,
     ): Promise<WorkRunResult> {
       const { runId, message } = request;
-      const timeout = config.timeout ?? 600000;
+      const timeout = config.timeout ?? 6000000;
 
       const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
       const abortController = new AbortController();
@@ -1968,7 +1968,7 @@ export function createClaudeAdapter(
       onEvent: WorkRunEventHandler,
     ): Promise<WorkRunResult> {
       const { runId, sourceRunId, message } = request;
-      const timeout = config.timeout ?? 600000;
+      const timeout = config.timeout ?? 6000000;
 
       const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
       const abortController = new AbortController();

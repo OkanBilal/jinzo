@@ -115,7 +115,7 @@ export async function fetchGitlabIssues(
       return [];
     }
 
-    const issues = await response.json();
+    const issues = (await response.json()) as any;
 
     return issues.map((issue: any): EntityInput => {
       const labels = extractLabels(issue.labels);
@@ -180,7 +180,7 @@ export async function fetchGitlabMergeRequests(
       return [];
     }
 
-    const mergeRequests = await response.json();
+    const mergeRequests = (await response.json()) as any;
 
     return mergeRequests.map((mr: any): EntityInput => {
       const labels = extractLabels(mr.labels);

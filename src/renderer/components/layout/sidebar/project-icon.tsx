@@ -28,7 +28,7 @@ export function ProjectIcon({
   }
   const initial = (projectName?.[0] ?? "P").toUpperCase();
   return (
-    <div className="size-4 rounded-md flex items-center justify-center text-t font-medium text-primary-950 dark:text-primary-200 border border-primary-950/40 dark:border-primary/10">
+    <div className="size-4 rounded-md flex items-center justify-center text-t font-medium text-primary-950 dark:text-primary-200 border border-primary-950/50 dark:border-primary/10">
       {initial}
     </div>
   );

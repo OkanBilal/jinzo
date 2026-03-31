@@ -88,7 +88,7 @@ export default function SuccessRateChart({ data }: SuccessRateChartProps) {
         labels={paddedDays.map((day, i) => ({
           key: day.date || i,
           content: (
-            <span className="text-[10px] text-primary-400 dark:text-primary-500">
+            <span className="text-t text-primary-400 dark:text-primary-500">
               {day.dayLabel}
             </span>
           ),

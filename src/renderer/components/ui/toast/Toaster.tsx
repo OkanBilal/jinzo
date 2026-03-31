@@ -9,6 +9,7 @@ import { toastStore, toast as toastApi } from "./toast";
 import type { ToastItemProps, ToastType } from "./types";
 import { Button } from "../button";
 import { Error, Success } from "../icons";
+import { AsciiSpinner } from "@/features/workspace/components/ascii-loader";
 
 function getDefaultIcon(type: ToastType) {
   switch (type) {
@@ -16,6 +17,8 @@ function getDefaultIcon(type: ToastType) {
       return <Success />;
     case "error":
       return <Error />;
+    case "loading":
+      return <AsciiSpinner />;
     default:
       return null;
   }

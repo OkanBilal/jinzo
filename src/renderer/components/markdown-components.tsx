@@ -46,7 +46,7 @@ export const markdownComponents: Components = {
     <thead className="bg-primary-50 dark:bg-primary/10 transition-all duration-150 ease-out">{children}</thead>
   ),
   tbody: ({ children }) => (
-    <tbody className="bg-primary dark:bg-primary/3 transition-all duration-150 ease-out">{children}</tbody>
+    <tbody className="bg-primary dark:bg-primary/5 transition-all duration-150 ease-out">{children}</tbody>
   ),
   tr: ({ children }) => (
     <tr className="border-b border-primary-200 dark:border-primary-700 hover:bg-primary-200/20 dark:hover:bg-primary/5 transition-all duration-150 ease-out">
@@ -67,7 +67,7 @@ export const markdownComponents: Components = {
     const isInline = !className;
     if (isInline) {
       return (
-        <code className="px-1 py-0.5 rounded text-primary-900 dark:text-primary-100 text-[0.9em] bg-primary-200/40 dark:bg-primary/4  font-mono transition-all duration-150 ease-out">
+        <code className="px-1 py-0.5 rounded text-primary-900 dark:text-primary-100 text-[0.9em] bg-primary-200/40 dark:bg-primary/5  font-mono transition-all duration-150 ease-out">
           {children}
         </code>
       );
@@ -79,7 +79,7 @@ export const markdownComponents: Components = {
     );
   },
   pre: ({ children }) => (
-    <pre className="my-2 rounded-xl overflow-hidden bg-primary-50 dark:bg-primary/8 transition-all duration-150 ease-out">{children}</pre>
+    <pre className="my-2 rounded-xl overflow-hidden bg-primary-50 dark:bg-primary/10 transition-all duration-150 ease-out">{children}</pre>
   ),
   a: ({ href, children }) => (
     <button

@@ -18,7 +18,7 @@ export function QuickActionButton({
     <Button
       variant="bare"
       onClick={onClick}
-      className="active:scale-99 hover:scale-101 px-3 py-1.5 cursor-pointer text-[13px] duration-200 transition-all rounded-xl
+      className="active:scale-99 hover:scale-101 px-3 py-1.5 cursor-pointer text-s duration-200 transition-all rounded-xl
       text-primary-900 dark:text-primary flex items-center gap-2 glass-morphism opacity-80"
     >
       {icon && <span>{icon}</span>}

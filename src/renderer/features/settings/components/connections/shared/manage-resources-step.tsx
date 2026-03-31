@@ -48,7 +48,7 @@ export function ManageResourcesStep({
           variant="primary"
           onClick={onAddNew}
           disabled={loading}
-          size="sm"
+          size="md"
         >
           {addButtonLabel}
         </Button>
@@ -64,7 +64,7 @@ export function ManageResourcesStep({
           resources.map((resource) => (
             <div
               key={resource.id}
-              className="flex items-center bg-primary dark:bg-primary-950/60 justify-between px-4 py-2.5 border-b border-primary-200/50 dark:border-primary-800/40 last:border-b-0"
+              className="flex items-center bg-primary dark:bg-primary-950/50 justify-between px-4 py-2.5 border-b border-primary-200/50 dark:border-primary-800/40 last:border-b-0"
             >
               {renderResourceItem ? (
                 renderResourceItem(resource)

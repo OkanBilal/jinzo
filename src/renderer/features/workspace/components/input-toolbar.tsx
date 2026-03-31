@@ -306,7 +306,7 @@ export function InputToolbar({
                     onClick={() =>
                       setShowThinkingDropdown(!showThinkingDropdown)
                     }
-                    className={`flex items-center hover:bg-primary-200/30 dark:hover:bg-primary-600/20 px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer ${
+                    className={`flex items-center hover:bg-primary-200/30 dark:hover:bg-primary-800 px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer ${
                       thinkingMode
                         ? " gap-1  text-primary-400 dark:text-primary-300"
                         : "text-primary-400 dark:text-primary-300 hover:bg-primary/10"
@@ -342,7 +342,7 @@ export function InputToolbar({
                         className={`w-full text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-xl ${
                           !thinkingMode
                             ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100 font-medium"
-                            : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
+                            : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
                         }`}
                       >
                         Off
@@ -359,7 +359,7 @@ export function InputToolbar({
                         className={`w-full flex items-center gap-1.5 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors capitalize last:rounded-b-xl ${
                           thinkingMode && effortLevel === level
                             ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-100 "
-                            : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
+                            : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
                         }`}
                       >
                         <Brain className="size-3" />
@@ -376,7 +376,7 @@ export function InputToolbar({
                   className={`flex items-center gap-1 px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer animate-blur-reveal ${
                     thinkingMode
                       ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-100"
-                      : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
+                      : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
                   }`}
                 >
                   <Brain
@@ -404,7 +404,7 @@ export function InputToolbar({
                       permissionMode === "bypassPermissions"
                         ? "dark:bg-yellow-200/10 bg-yellow-400/30 text-yellow-600 dark:text-yellow-300"
                         : permissionMode !== "default"
-                          ? "dark:bg-primary/8 bg-primary-300/30 text-primary-700 dark:text-primary-100"
+                          ? "dark:bg-primary-800 bg-primary-300/30 text-primary-700 dark:text-primary-100"
                           : "text-primary-700 dark:text-primary-300 hover:bg-primary/10"
                     }`}
                   >
@@ -432,7 +432,7 @@ export function InputToolbar({
                         className={`w-full text-left px-2.5 py-1.5 cursor-pointer transition-colors flex items-center gap-2.5 first:rounded-t-xl last:rounded-b-xl ${
                           permissionMode === mode.value
                             ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100"
-                            : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
+                            : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
                         }`}
                       >
                         <PermissionModeIcon
@@ -440,7 +440,7 @@ export function InputToolbar({
                           className="size-3 shrink-0"
                         />
                         <div className="flex flex-col flex-1 min-w-0">
-                          <Body className="text-[13px] tracking-tight mb-0.5">
+                          <Body className="text-s tracking-tight mb-0.5">
                             {mode.label}
                           </Body>
                           <span className="text-xs text-primary-400 dark:text-primary-500 tracking-tighter">

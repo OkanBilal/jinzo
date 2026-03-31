@@ -67,11 +67,11 @@ export function SignalListItem({
         </span>
 
         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-          <span className="inline-block capitalize px-1.5 py-0 text-xxs font-medium rounded-full bg-primary-200 dark:bg-primary-500/40 text-primary-600 dark:text-primary-100">
+          <span className="inline-block capitalize px-1.5 py-0 text-xxs font-medium rounded-full bg-primary-200 dark:bg-primary-600 text-primary-600 dark:text-primary-100">
             {levelLabels[sig.level] ?? sig.level}
           </span>
           {sig.eventCount > 1 && (
-            <span className="inline-block px-1.5 py-0 text-xxs font-medium rounded-full bg-primary-200 dark:bg-primary-500/40 text-primary-600 dark:text-primary-100 tabular-nums">
+            <span className="inline-block px-1.5 py-0 text-xxs font-medium rounded-full bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-100 tabular-nums">
               {sig.eventCount}x
             </span>
           )}

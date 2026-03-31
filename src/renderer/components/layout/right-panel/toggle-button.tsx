@@ -40,7 +40,7 @@ export function ToggleButton({ isOpen, onClick, terminalOpen, onTerminalToggle }
         tooltip={isOpen ? "Close right panel" : "Open right panel"}
         tooltipPosition="left"
         onClick={onClick}
-        className="rounded-lg cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 p-1! text-primary-900 dark:text-primary-300! transition-all duration-300 ease-out"
+        className="rounded-lg cursor-pointer hover:bg-primary-100 dark:hover:bg-primary/10 p-1! text-primary-900 dark:text-primary-300! transition-all duration-300 ease-out"
         aria-label={isOpen ? "Close right panel" : "Open right panel"}
       >
         {isOpen ? (

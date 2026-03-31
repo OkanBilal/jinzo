@@ -43,7 +43,7 @@ export function McpDisplay({ displayName, params }: McpDisplayProps) {
         className="w-full flex items-center gap-2 py-0.5 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans cursor-pointer"
       >
         <ArrowUp
-          className={`size-3 text-primary-500 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          className={`size-3 text-primary-800  dark:text-primary-300 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
         <span className="dark:text-primary-300 text-primary-700">{icon}</span>
         <span className="dark:text-primary-300 text-primary-700 font-medium">
@@ -57,7 +57,7 @@ export function McpDisplay({ displayName, params }: McpDisplayProps) {
           {paramKeys.map((key) => (
             <div key={key}>
               <span className="text-xs font-medium text-primary-500">{key}</span>
-              <div className="noscrollbar text-sm text-primary-700 dark:text-primary-300 whitespace-pre-wrap bg-primary-50 dark:bg-primary/3 rounded p-2 max-h-48 overflow-y-auto">
+              <div className="noscrollbar text-sm text-primary-700 dark:text-primary-300 whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded p-2 max-h-48 overflow-y-auto">
                 {formatValue(params[key])}
               </div>
             </div>

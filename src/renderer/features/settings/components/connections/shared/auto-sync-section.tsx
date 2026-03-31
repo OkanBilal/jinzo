@@ -114,7 +114,7 @@ export function AutoSyncSection({
                       ? "bg-primary-100 dark:bg-primary-900 text-primary-400 dark:text-primary-600 cursor-not-allowed opacity-50"
                       : interval === opt.value
                         ? "bg-primary-900 dark:bg-primary-200 text-primary dark:text-primary-900 cursor-pointer"
-                        : "bg-primary dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800 cursor-pointer"
+                        : "bg-primary dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800 cursor-pointer"
                   }`}
                 >
                   {opt.label}

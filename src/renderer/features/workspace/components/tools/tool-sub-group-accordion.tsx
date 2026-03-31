@@ -24,7 +24,7 @@ export function ToolSubGroupAccordion({ subGroup }: ToolSubGroupAccordionProps) 
         className="w-full flex items-center gap-2 py-0.5 px-2 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans cursor-pointer"
       >
         <ArrowUp
-          className={`size-3 text-primary-700 dark:text-primary-200 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          className={`size-3 text-primary-800  dark:text-primary-300 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
         <span className="dark:text-primary-300 shrink-0">{icon}</span>
         <span className="dark:text-primary-300 font-medium shrink-0">

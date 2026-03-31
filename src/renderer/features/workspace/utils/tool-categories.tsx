@@ -21,6 +21,7 @@ import {
   Mcp,
   Jinzo,
   Sparkles,
+  Delete,
 } from "@/components/ui/icons";
 
 export const TOOL_CATEGORIES: Record<
@@ -94,6 +95,10 @@ export const TOOL_CATEGORIES: Record<
   websearch: {
     category: "Search",
     icon: <Web className="size-4" />,
+  },
+  delete: {
+    category: "File",
+    icon: <Delete className="size-3.5" />,
   },
   webfetch: {
     category: "Search",

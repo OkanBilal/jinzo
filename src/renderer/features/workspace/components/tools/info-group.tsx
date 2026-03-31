@@ -73,7 +73,7 @@ export function InfoGroup({ group }: InfoGroupProps) {
       <div className="w-full overflow-hidden">
         <div className="w-full py-2 flex justify-end">
           <div className="flex flex-col items-end gap-2 max-w-[80%]">
-            <div className="px-4 py-2.5 rounded-2xl bg-primary-50 dark:bg-primary/3 ">
+            <div className="px-4 py-2.5 rounded-2xl bg-primary-50 dark:bg-primary/5 ">
               <div className="text-primary-950 dark:text-primary-50">
                 <p className="text-sm whitespace-pre-wrap">{message}</p>
               </div>
@@ -83,7 +83,7 @@ export function InfoGroup({ group }: InfoGroupProps) {
                 {issues.map((issue) => (
                   <div
                     key={`${issue.provider}-${issue.number ?? issue.title}`}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-primary-200 dark:bg-primary-500/40 text-primary-600 dark:text-primary-100`}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-100`}
                   >
                     <ProviderIcon provider={issue.provider} className="w-3 h-3" fallback="text" />
                     <span className="truncate max-w-60">
@@ -94,7 +94,7 @@ export function InfoGroup({ group }: InfoGroupProps) {
                 {signals.map((signal) => (
                   <div
                     key={`${signal.source}-${signal.title}`}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-primary-200 dark:bg-primary-500/40 text-primary-600 dark:text-primary-100"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-100"
                   >
                     <ProviderIcon provider={signal.source} className="w-3 h-3" fallback="text" />
                     <span className="truncate max-w-60">

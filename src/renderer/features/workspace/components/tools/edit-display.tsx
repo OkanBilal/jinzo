@@ -33,9 +33,9 @@ export function EditDisplay({ params, output, isCompact = false }: { params: Edi
         className={`w-full flex items-center gap-2 py-0.5 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans ${hasDiff ? "cursor-pointer" : "cursor-default"}`}
       >
         {hasDiff && (
-          <ArrowUp
-            className={`size-3 text-primary-500 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-          />
+        <ArrowUp
+          className={`size-3 text-primary-800  dark:text-primary-300 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+        />
         )}
         {!isCompact && <Edit className="size-4 dark:text-primary-300 text-primary-700" />}
         {!isCompact && (
@@ -57,7 +57,7 @@ export function EditDisplay({ params, output, isCompact = false }: { params: Edi
 
       {isExpanded && hasDiff && (
         <div className="mt-2 ml-5 border-l border-primary-200/50 dark:border-primary-700/30 pl-3">
-          <div className="noscrollbar text-xs leading-relaxed font-mono bg-primary-50 dark:bg-primary/3 rounded-xl p-3 max-h-80 overflow-y-auto">
+          <div className="noscrollbar text-xs leading-relaxed font-mono bg-primary-50 dark:bg-primary/5 rounded-xl p-3 max-h-80 overflow-y-auto">
             {patchLines.map((line, lineNum) => (
               <div
                 key={`${lineNum}:${line.type}`}

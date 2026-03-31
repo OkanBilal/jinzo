@@ -118,7 +118,7 @@ export function SignalTabContent({ signal }: SignalTabContentProps) {
         {sig.stackTrace && (
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-primary-700 dark:text-primary-300">Stack Trace</h3>
-            <pre className="text-xs font-mono bg-primary-50 dark:bg-primary-900/50 p-4 rounded-xl overflow-x-auto text-primary-700 dark:text-primary-300 whitespace-pre-wrap">
+            <pre className="text-xs font-mono bg-primary-50 dark:bg-primary-800 p-4 rounded-xl overflow-x-auto text-primary-700 dark:text-primary-300 whitespace-pre-wrap">
               {sig.stackTrace}
             </pre>
           </div>

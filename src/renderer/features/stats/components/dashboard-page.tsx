@@ -73,10 +73,10 @@ export default function DashboardPage() {
         <Heading2 className="font-medium!">Dashboard</Heading2>
         <div
           ref={containerRef}
-          className="relative flex rounded-xl glass-morphism bg-primary-100/60  dark:bg-primary-800/20 p-0.5"
+          className="relative flex rounded-xl glass-morphism bg-primary-100/50  dark:bg-primary-800/20 p-0.5"
         >
           <div
-            className="absolute top-0.75 bg-primary dark:bg-primary/8  rounded-lg shadow-sm transition-all duration-300 ease-in-out"
+            className="absolute top-0.75 bg-primary dark:bg-primary/10  rounded-lg shadow-sm transition-all duration-300 ease-in-out"
             style={{
               left: indicator.left,
               width: indicator.width,

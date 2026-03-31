@@ -19,9 +19,9 @@ export function ToolSearchDisplay({ params, output, isCompact = false }: { param
         className={`w-full flex items-center gap-2 py-0.5 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans ${hasMatches ? "cursor-pointer" : "cursor-default"}`}
       >
         {hasMatches && (
-          <ArrowUp
-            className={`size-3 text-primary-500 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-          />
+        <ArrowUp
+          className={`size-3 text-primary-800  dark:text-primary-300 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+        />
         )}
         {!isCompact && <Search className="size-4 dark:text-primary-300 text-primary-700" />}
         {!isCompact && (
@@ -42,7 +42,7 @@ export function ToolSearchDisplay({ params, output, isCompact = false }: { param
 
       {isExpanded && hasMatches && (
         <div className="mt-2 ml-5 space-y-1 border-l border-primary-200/50 dark:border-primary-700/30 pl-3">
-          <div className="noscrollbar text-s font-sans text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary/3 rounded p-2 max-h-48 overflow-y-auto">
+          <div className="noscrollbar text-s font-sans text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary/5 rounded p-2 max-h-48 overflow-y-auto">
             {matches.map((m) => (
               <div key={m} className="truncate">{m}</div>
             ))}

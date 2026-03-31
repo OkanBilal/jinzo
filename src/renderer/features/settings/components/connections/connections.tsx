@@ -46,19 +46,16 @@ export default function ConnectionsSettings({
   const [filter, setFilter] = useState<CategoryFilter>("all");
   const [runSync, { isLoading: isSyncing }] = useRunEntitySyncMutation();
 
-  const handleSync = async () => {
-    try {
-      const result = await runSync().unwrap();
-      if (result.success) {
-        toast.success(
-          `Sync complete: ${result.inserted} added, ${result.updated} updated`,
-        );
-      } else {
-        toast.error("Sync failed");
-      }
-    } catch {
-      toast.error("Sync failed");
-    }
+  const handleSync = () => {
+    const syncPromise = runSync().unwrap().then((result) => {
+      if (!result.success) throw new Error("Sync failed");
+      return result;
+    });
+    toast.promise(syncPromise, {
+      loading: "Syncing...",
+      success: (data) => `Synced ${data.total} items`,
+      error: "Sync failed",
+    });
   };
 
   const isConnected = (appId: string) => connectedConnections.includes(appId);
@@ -203,29 +200,26 @@ function ConnectionCard({
 }) {
   return (
     <div className="rounded-3xl glass-morphism  p-4 flex flex-col justify-between">
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-10">
         <div className="flex items-center gap-2 min-w-0">
           <ConnectionIcon connection={connection} />
           <span className="text-sm font-medium text-primary-900 dark:text-primary-100 truncate">
             {connection.displayName}
           </span>
         </div>
-        <span
-          className={`text-[11px] px-2 py-0.5 rounded-full shrink-0 ml-2 ${
-            connected
-              ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-              : "bg-primary-200/60 dark:bg-primary-800/20 text-primary-500 dark:text-primary-400"
-          }`}
-        >
-          {connected ? "Connected" : "Not connected"}
-        </span>
+
       </div>
-      <div className="flex items-center justify-end">
+      <div className="flex items-end justify-between">
+        {connection.config ? (
+          <span className="text-xs px-1 text-primary-400 dark:text-primary-300 leading-tight">
+            {(() => { try { const c = JSON.parse(connection.config); return c.description ?? ""; } catch { return ""; } })()}
+          </span>
+        ) : <span />}
         <Button
           size="sm"
           variant={connected ? "primary" : "secondary"}
           onClick={onAction}
-          className="rounded-xl!"
+          className="rounded-xl! shrink-0"
         >
           {connected ? "Manage" : "Connect"}
         </Button>

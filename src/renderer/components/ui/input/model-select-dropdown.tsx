@@ -61,7 +61,7 @@ export function ModelSelectDropdown({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <div className="flex cursor-pointer items-center hover:bg-primary-200/30 animate-blur-reveal dark:hover:bg-primary-600/20 transition-colors rounded-2xl">
+      <div className="flex cursor-pointer items-center hover:bg-primary-200/30 animate-blur-reveal dark:hover:bg-primary-800 transition-colors rounded-2xl">
         <Button
           tooltip={noModels ? "No models available" : "Select model"}
           tooltipPosition="top"
@@ -110,7 +110,7 @@ export function ModelSelectDropdown({
                 className={`w-full text-left px-2.5 py-2 cursor-pointer text-sm transition-colors flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl ${
                   model === m
                     ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-300 font-medium"
-                    : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
+                    : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
                 }`}
               >
                 {getModelIcon(displayName)}

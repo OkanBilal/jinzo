@@ -40,7 +40,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   primary:
     "cursor-pointer bg-primary-200/60 dark:bg-primary-800/20 hover:bg-primary-200 dark:hover:bg-primary-800/40 text-primary-700 dark:text-primary-200",
   secondary:
-    "cursor-pointer bg-primary-500/80 dark:bg-primary-200/20 hover:bg-primary-600/80 dark:hover:bg-primary-600 text-primary dark:text-primary-200",
+    "cursor-pointer bg-primary-500 dark:bg-primary-200/20 hover:bg-primary-700 dark:hover:bg-primary-600 text-primary dark:text-primary-200",
   submit:
     "cursor-pointer bg-blue-500 hover:bg-blue-600 text-primary disabled:bg-blue-600/50",
   ghost:
@@ -51,10 +51,10 @@ const variantStyles: Record<ButtonVariant, string> = {
     "cursor-pointer bg-primary-200/60 text-primary-600 dark:bg-primary-700/80 dark:text-primary-200 hover:bg-primary-300/60 dark:hover:bg-primary-800/80",
   success:
     "cursor-pointer bg-green-950 text-green-600 dark:bg-green-950 dark:text-green-500 hover:bg-green-900 dark:hover:bg-green-900",
-  icon: "cursor-pointer p-1 rounded-md text-primary-600 dark:text-primary-200 hover:bg-primary-200/40 dark:hover:bg-primary-900/50",
+  icon: "cursor-pointer p-1 rounded-md text-primary-600 dark:text-primary-200 hover:bg-primary-200/40 dark:hover:bg-primary-700",
   link: "cursor-pointer text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 underline-offset-4 hover:underline ",
   subtle:
-    "cursor-pointer flex items-center gap-2 bg-primary/50 dark:bg-primary/4 hover:bg-primary/80 dark:hover:bg-primary/8 ",
+    "cursor-pointer flex items-center gap-2 bg-primary/50 dark:bg-primary/5 hover:bg-primary/80 dark:hover:bg-primary/10 ",
   frosted:
     "cursor-pointer glass-morphism-button text-primary-800 dark:text-primary-200 ",
   bare: "cursor-pointer",
@@ -69,7 +69,7 @@ const sizeStyles: Record<ButtonSize, string> = {
 };
 
 const baseStyles =
-  " items-center active:scale-99 hover:scale-[1.01]  duration-200 transition-[color,background-color,border-color,box-shadow,transform] justify-center font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
+  " items-center active:scale-99 hover:scale-[1.01] duration-200 transition-[color,background-color,border-color,box-shadow,transform] justify-center font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (

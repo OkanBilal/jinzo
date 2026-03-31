@@ -63,20 +63,20 @@ export function Slider({
       <div
         ref={containerRef}
         className="relative
-          w-full px-3 py-4 
+          w-full px-3 py-4
           overflow-hidden
           min-w-50 rounded-xl
-          bg-primary-950/2 dark:bg-primary/4 
+          bg-primary-950/5 dark:bg-primary/4
           border border-primary-950/10 dark:border-primary/10
-          text-primary-900 dark:text-primary 
-          text-sm focus:outline-none cursor-pointer 
-          flex items-center justify-between 
+          text-primary-900 dark:text-primary
+          text-sm focus:outline-none cursor-pointer
+          flex items-center justify-between
           transition-all
           shadow-(--shadow-inset-subtle) dark:shadow-(--shadow-inset-subtle-dark)
         "
       >
         <div
-          className={`absolute inset-y-0 left-0 rounded-lg bg-primary-950/12 dark:bg-primary/8 ${isDragging ? "" : "transition-[width] duration-150 ease-out"}`}
+          className={`absolute inset-y-0 left-0 rounded-lg bg-primary-950/12 dark:bg-primary/10 ${isDragging ? "" : "transition-[width] duration-150 ease-out"}`}
           style={{ width: `${percentage}%` }}
         >
           {/* Vertical line inside percentage bar */}

@@ -26,9 +26,9 @@ export function CommitDisplay({
         className={`w-full flex items-center gap-2 py-0.5 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans ${hasContent ? "cursor-pointer" : "cursor-default"}`}
       >
         {hasContent && (
-          <ArrowUp
-            className={`size-3 text-primary-500 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-          />
+        <ArrowUp
+          className={`size-3 text-primary-800  dark:text-primary-300 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+        />
         )}
         {!isCompact && <Jinzo className="w-2 h-4 dark:text-primary-300 text-primary-700" />}
         {!isCompact && (
@@ -58,7 +58,7 @@ export function CommitDisplay({
             </div>
           )}
           {params.message && (
-            <p className="text-s text-primary-600 dark:text-primary-400 whitespace-pre-wrap bg-primary-50 dark:bg-primary/3 rounded p-2">
+            <p className="text-s text-primary-600 dark:text-primary-400 whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded p-2">
               {params.message}
             </p>
           )}

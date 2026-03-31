@@ -2,6 +2,7 @@ export const connectionStatesData = [
   {
     id: "github",
     name: "GitHub",
+    description: "Repos, issues, and pull requests",
     imageSrc: "connections/github.png",
     imageAlt: "GitHub",
     highlighted: true,
@@ -10,6 +11,7 @@ export const connectionStatesData = [
   {
     id: "jira",
     name: "Jira",
+    description: "Projects, boards, and issues",
     imageSrc: "connections/jira.png",
     imageAlt: "Jira",
     category: "planning",
@@ -17,6 +19,7 @@ export const connectionStatesData = [
   {
     id: "asana",
     name: "Asana",
+    description: "Tasks, projects, and portfolios",
     imageSrc: "connections/asana.png",
     imageAlt: "Asana",
     category: "planning",
@@ -24,6 +27,7 @@ export const connectionStatesData = [
   {
     id: "linear",
     name: "Linear",
+    description: "Issues, cycles, and roadmaps",
     imageSrc: "connections/linear.png",
     imageAlt: "Linear",
     category: "planning",
@@ -31,6 +35,7 @@ export const connectionStatesData = [
   {
     id: "gitlab",
     name: "GitLab",
+    description: "Repos, merge requests, and issues",
     imageSrc: "connections/gitlab.png",
     imageAlt: "GitLab",
     category: "development",
@@ -38,6 +43,7 @@ export const connectionStatesData = [
   {
     id: "trello",
     name: "Trello",
+    description: "Boards, lists, and cards",
     imageSrc: "connections/trello.png",
     imageAlt: "Trello",
     category: "planning",
@@ -45,9 +51,9 @@ export const connectionStatesData = [
   {
     id: "sentry",
     name: "Sentry",
+    description: "Errors, alerts, and performance",
     imageSrc: "connections/sentry.png",
     imageAlt: "Sentry",
     category: "monitoring",
   },
-
 ];

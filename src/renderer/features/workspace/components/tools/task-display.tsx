@@ -30,7 +30,7 @@ export function TaskDisplay({ params }: { params: TaskParams }) {
         <div className="mt-2 ml-5 space-y-2 border-l border-primary-200/50 dark:border-primary-700/30 pl-3">
           {params.prompt && (
             <div>
-              <div className="noscrollbar text-sm text-primary-700 dark:text-primary-300 whitespace-pre-wrap bg-primary-50 dark:bg-primary/3 rounded p-2 max-h-48 overflow-y-auto">
+              <div className="noscrollbar text-sm text-primary-700 dark:text-primary-300 whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded p-2 max-h-48 overflow-y-auto">
                 {params.prompt}
               </div>
             </div>

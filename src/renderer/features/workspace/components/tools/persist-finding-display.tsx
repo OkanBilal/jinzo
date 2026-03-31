@@ -86,7 +86,7 @@ export function PersistFindingDisplay({
       {isExpanded && hasFindings && (
         <div className="mt-2 ml-5 border-l border-primary-200/50 dark:border-primary-700/30 pl-3 space-y-2">
           {findings.map((f) => (
-            <div key={`${f.file ?? ""}:${f.lineStart ?? ""}:${f.severity ?? ""}`} className="bg-primary-50 dark:bg-primary/3 rounded p-2 space-y-1">
+            <div key={`${f.file ?? ""}:${f.lineStart ?? ""}:${f.severity ?? ""}`} className="bg-primary-50 dark:bg-primary/5 rounded p-2 space-y-1">
               <div className="flex items-center gap-2 text-xs">
                 {f.severity && (
                   <span className={`px-1.5 py-0.5 rounded font-medium ${SEVERITY_STYLES[f.severity] ?? "bg-primary-500/10 text-primary-400"}`}>

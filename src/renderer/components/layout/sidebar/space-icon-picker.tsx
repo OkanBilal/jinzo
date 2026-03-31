@@ -66,7 +66,7 @@ export default function SpaceIconPicker({
         onClick={onToggle}
         className={`
           w-full px-3 py-3
-          bg-primary-950/5 dark:bg-primary/4 border border-primary-950/10 dark:border-primary/10
+          bg-primary-950/5 dark:bg-primary/5 border border-primary-950/10 dark:border-primary/10
           text-primary-800 dark:text-primary
           text-sm focus:outline-none cursor-pointer
           flex items-center justify-between
@@ -74,7 +74,7 @@ export default function SpaceIconPicker({
           ${
             isOpen
               ? "rounded-t-xl shadow-lg"
-              : "rounded-xl hover:bg-primary-950/8 dark:hover:bg-primary/6"
+              : "rounded-xl hover:bg-primary-950/10 dark:hover:bg-primary/5"
           }
         `}
       >
@@ -100,7 +100,7 @@ export default function SpaceIconPicker({
                 }}
                 className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/icon:opacity-100 transition-opacity cursor-pointer"
               >
-                <Close className="size-3 text-primary-500 dark:text-primary-400" />
+                <Close className="size-4 text-primary-500 dark:text-primary-400" />
               </span>
             </span>
           ) : (
@@ -152,7 +152,7 @@ export default function SpaceIconPicker({
               >
                 <EmojiPicker.Search
                   placeholder="Search emoji..."
-                  className="w-full mb-2 px-2 py-1.5 dark:placeholder:text-primary-200 placeholder:text-primary-700 bg-primary-950/5 dark:bg-primary/10 rounded-xl text-sm outline-none focus:bg-primary-950/8 dark:focus:bg-primary/15 border border-primary-950/10 dark:border-primary/10"
+                  className="w-full mb-2 px-2 py-1.5 dark:placeholder:text-primary-200 placeholder:text-primary-700 bg-primary-950/5 dark:bg-primary/10 rounded-xl text-sm outline-none focus:bg-primary-950/10 dark:focus:bg-primary/10 border border-primary-950/10 dark:border-primary/10"
                 />
                 <EmojiPicker.Viewport className="h-64 overflow-y-auto w-full noscrollbar">
                   <EmojiPicker.Loading>
@@ -184,7 +184,7 @@ export default function SpaceIconPicker({
                       ),
                       Emoji: ({ emoji, ...props }) => (
                         <Button
-                          className="flex size-8 items-center justify-center rounded-md text-lg hover:bg-primary-950/5 dark:hover:bg-primary/10 data-active:bg-primary-950/8 dark:data-active:bg-primary/15"
+                          className="flex size-8 items-center justify-center rounded-md text-lg hover:bg-primary-950/5 dark:hover:bg-primary/10 data-active:bg-primary-950/10 dark:data-active:bg-primary/10"
                           {...props}
                         >
                           {emoji.emoji}
@@ -204,7 +204,7 @@ export default function SpaceIconPicker({
                     className={`flex items-center justify-center size-8 rounded-lg transition-colors cursor-pointer ${
                       icon === name
                         ? "bg-primary-950/15 dark:bg-primary/20 text-primary-700 dark:text-primary"
-                        : "hover:bg-primary-950/8 dark:hover:bg-primary/10 text-primary-700 dark:text-primary-200"
+                        : "hover:bg-primary-950/10 dark:hover:bg-primary/10 text-primary-700 dark:text-primary-200"
                     }`}
                     title={name}
                   >

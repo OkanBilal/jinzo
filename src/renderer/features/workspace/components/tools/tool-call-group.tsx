@@ -32,8 +32,7 @@ export function ToolCallGroup({
         className="w-full flex items-center gap-0.5 group py-0.5 cursor-pointer"
       >
         <ArrowUp
-          className={`size-3.5 dark:text-primary-200 text-primary-800 transition-all group-hover:text-primary-950 group-hover:dark:text-primary
-             duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          className={`size-3 text-primary-800  dark:text-primary-300 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
         <div className="flex items-center gap-1  transition-all duration-200">
           {/* <Tools className="size-3.5 rotate-90 dark:text-primary-200 text-primary-700 group-hover:text-primary-950 group-hover:dark:text-primary" /> */}

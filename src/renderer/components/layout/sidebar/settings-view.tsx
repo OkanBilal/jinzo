@@ -53,8 +53,9 @@ const menuItems: Array<MenuItem> = [
 
 const providerItems: Array<MenuItem> = [
   { id: "claude", label: "Claude", icon: Claude },
-  { id: "copilot", label: "Copilot", icon: CopilotStatic },
   { id: "codex", label: "Codex", icon: Gpt },
+  { id: "copilot", label: "Copilot", icon: CopilotStatic },
+
 ];
 
 export default function SettingsView({ onClose }: SettingsViewProps) {
@@ -198,7 +199,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                   >
                     <div
                       className={`w-5 h-5 rounded-lg flex items-center justify-center text-t font-medium text-primary-950 dark:text-primary-200
-                        shrink-0 ${!parsed ? "border border-primary-950/40 dark:border-primary/10" : ""}`}
+                        shrink-0 ${!parsed ? "border border-primary-950/50 dark:border-primary/10" : ""}`}
                     >
                       {iconContent}
                     </div>

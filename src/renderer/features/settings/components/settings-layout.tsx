@@ -38,7 +38,7 @@ export function SettingsRow({
             {title}
           </h3>
           {description && (
-            <p className="text-[13px] text-primary-500 dark:text-primary-500 mt-1">
+            <p className="text-s text-primary-500 dark:text-primary-500 mt-1">
               {description}
             </p>
           )}
@@ -55,7 +55,7 @@ export function SettingsRow({
           {title}
         </h3>
         {description && (
-          <p className="text-[13px] text-primary-500 dark:text-primary-500 mt-1 ">
+          <p className="text-s text-primary-500 dark:text-primary-500 mt-1 ">
             {description}
           </p>
         )}
