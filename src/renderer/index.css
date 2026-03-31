@@ -108,6 +108,8 @@ html:not(.app-ready) *::after {
 
   --color-danger: #ff4436;
   --color-danger-hover: #e33221;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
   --color-claude: #D97757;
   --color-copilot: #8534F3;
   --color-codex: #0169CC;

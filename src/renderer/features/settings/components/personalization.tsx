@@ -195,7 +195,7 @@ function PersonalizationForm({ initialValues, lastSavedAt, saving, loading, onSu
                 onChange={handleChange("avatarUrl")}
                 disabled={saving}
                 placeholder="https://cdn.example.com/me.png"
-                className="min-w-80!"
+                className="min-w-80"
               />
             </SettingsRow>
             <SettingsDivider />
@@ -205,7 +205,7 @@ function PersonalizationForm({ initialValues, lastSavedAt, saving, loading, onSu
             >
               <Textarea
                 id="bio"
-                className="resize-none w-80! h-16"
+                className="resize-none w-80 h-16"
                 value={form.bio}
                 onChange={handleChange("bio")}
                 disabled={saving}

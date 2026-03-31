@@ -81,7 +81,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
       }}
     >
       <div className="flex flex-col items-start pt-16 pb-2 px-4">
-        <Body className="text-left text-base! text-primary-900 dark:text-primary font-medium ">
+        <Body className="text-left text-base text-primary-900 dark:text-primary font-medium ">
           Settings
         </Body>
       </div>
@@ -220,16 +220,16 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
       >
         <Button
           tooltip={"Close settings"}
-          variant="subtle"
+          variant="bare"
           tooltipPosition="top-right"
           size="lg"
           onClick={onClose}
           fullWidth
-          className="justify-start cursor-pointer pt-1!  hover:scale-100! bg-transparent! transition-transform duration-200"
+          className="justify-start flex items-center cursor-pointer px-2 pb-2 gap-1 hover:scale-100 bg-transparent dark:bg-transparent transition-transform duration-200"
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
           <ChevronUp className="size-4 rotate-270 text-primary-900 dark:text-primary-400" />
-          <Body className="text-primary-900 text-s! dark:text-primary-100  font-medium">
+          <Body className="text-primary-900 text-s dark:text-primary-100  font-medium">
             Return
           </Body>
           {/* <Caption className="ml-auto text-s! text-primary-900 dark:text-primary-400">

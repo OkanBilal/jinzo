@@ -215,7 +215,7 @@ export default function CodexSettings() {
   return (
     <div className="bg-primary dark:bg-primary-950">
       <div className="mb-8">
-        <Heading2 className="font-medium!">Codex</Heading2>
+        <Heading2>Codex</Heading2>
       </div>
 
       {/* Account info */}

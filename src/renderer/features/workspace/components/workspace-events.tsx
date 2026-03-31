@@ -172,7 +172,7 @@ function SessionTimeBar({
         <Tooltip
           content={<UsageTooltipContent turn={turn} />}
           position="top-right"
-          className="whitespace-normal! max-w-none!"
+          className="whitespace-normal max-w-none"
         >
           <span className="cursor-default">{formatElapsed(info.elapsed)}</span>
         </Tooltip>

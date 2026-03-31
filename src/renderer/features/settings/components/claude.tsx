@@ -99,7 +99,7 @@ export default function ClaudeSettings() {
   return (
     <div className="bg-primary dark:bg-primary-950">
       <div className="mb-8">
-        <Heading2 className="font-medium!">Claude</Heading2>
+        <Heading2>Claude</Heading2>
       </div>
 
       <SettingsSection  title="Configuration">

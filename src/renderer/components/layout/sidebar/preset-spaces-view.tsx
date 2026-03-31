@@ -124,7 +124,7 @@ export default function PresetSpacesView({
       style={{ animation: "slide-fade-down 300ms ease-in-out" }}
     >
       <div className="flex flex-col items-center pt-12 px-3">
-        <Body className="text-center text-base! text-primary-800 dark:text-primary">
+        <Body className="text-center text-base text-primary-800 dark:text-primary">
           Preset Spaces
         </Body>
       </div>

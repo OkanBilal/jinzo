@@ -114,12 +114,12 @@ export function Slider({
       {(minLabel || maxLabel) && (
         <div className="flex justify-between">
           {minLabel && (
-            <Caption className="text-primary-900! dark:text-primary-200! font-medium text-xs">
+            <Caption className="text-primary-900 dark:text-primary-200 font-medium text-xs">
               {minLabel}
             </Caption>
           )}
           {maxLabel && (
-            <Caption className="text-primary-900! dark:text-primary-200! font-medium text-xs">
+            <Caption className="text-primary-900 dark:text-primary-200 font-medium text-xs">
               {maxLabel}
             </Caption>
           )}

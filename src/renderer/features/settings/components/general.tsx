@@ -79,7 +79,7 @@ function ThemePreviewCard({
               </div>
               <div className="flex-1 h-full bg-primary-100 flex flex-col p-1.5">
                 <div className="flex-1" />
-                <div className="w-full h-2 bg-primary-80  rounded-sm border border-primary-950/10" />
+                <div className="w-full h-2 bg-primary  rounded-sm border border-primary-950/10" />
               </div>
             </div>
             <div className="w-1/2 h-full flex">

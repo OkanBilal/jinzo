@@ -138,7 +138,7 @@ export default function Select<T extends string = string>({
           </span>
         </div>
         <Caption
-          className="text-primary-900 dark:text-primary-200!
+          className="text-primary-900 dark:text-primary-200
                 absolute right-8 top-1/2 -translate-y-1/2 text-xs"
         >
           {title}

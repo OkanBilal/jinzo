@@ -219,7 +219,7 @@ function ConnectionCard({
           size="sm"
           variant={connected ? "primary" : "secondary"}
           onClick={onAction}
-          className="rounded-xl! shrink-0"
+          className="rounded-xl shrink-0"
         >
           {connected ? "Manage" : "Connect"}
         </Button>

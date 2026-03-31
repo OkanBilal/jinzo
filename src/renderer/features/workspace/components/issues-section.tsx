@@ -64,11 +64,11 @@ export function IssuesSection({
         <ArrowUp
           className={`w-3 h-3 transform text-primary-900 dark:text-primary transition-transform ${expanded ? "rotate-180" : "rotate-90"}`}
         />
-        <Caption className="text-primary-900 dark:text-primary-200! font-medium">
+        <Caption className="text-primary-900 dark:text-primary-200 font-medium">
           Issues
         </Caption>
         {issueCount > 0 ? (
-          <span className="text-t text-primary-800 dark:text-primary-200! ml-auto mr-1 tabular-nums">
+          <span className="text-t text-primary-800 dark:text-primary-200 ml-auto mr-1 tabular-nums">
             {issueCount}
           </span>
         ) : (

@@ -25,7 +25,7 @@ export function TerminalSection({
       <div className="flex items-center justify-between px-3 py-1.5">
         <div className="flex items-center gap-2">
           <Bash className="size-3 text-primary-500 dark:text-primary-300" />
-          <Body className="text-primary-600 dark:text-primary-200! font-medium text-s">
+          <Body className="text-primary-600 dark:text-primary-200 font-medium text-s">
             Terminal
           </Body>
         </div>
@@ -34,7 +34,7 @@ export function TerminalSection({
             tooltip="Close terminal"
             tooltipPosition="top-left"
             onClick={onClose}
-            className="rounded-lg cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 p-1! text-primary-900 dark:text-primary-300! transition-all duration-300 ease-out"
+            className="rounded-lg cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 p-1 text-primary-900 dark:text-primary-300 transition-all duration-300 ease-out"
           >
             <Close className="size-4" />
           </Button>

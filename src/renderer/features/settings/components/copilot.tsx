@@ -85,7 +85,7 @@ export default function CopilotSettings() {
   return (
     <div className="bg-primary dark:bg-primary-950">
       <div className="mb-8">
-        <Heading2 className="font-medium!">Copilot</Heading2>
+        <Heading2>Copilot</Heading2>
       </div>
 
       <SettingsSection  title="Configuration">

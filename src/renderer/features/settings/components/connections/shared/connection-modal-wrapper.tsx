@@ -38,7 +38,7 @@ export function ConnectionModalWrapper({
           </div>
           <Button
             onClick={onClose}
-            className=" flex items-center justify-center rounded-lg cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 p-1! text-primary-900 dark:text-primary-300! transition-all duration-300 ease-out"
+            className="flex items-center justify-center rounded-lg cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 p-1 text-primary-900 dark:text-primary-300 transition-all duration-300 ease-out"
           >
             <Close className="w-4 h-4" />
           </Button>

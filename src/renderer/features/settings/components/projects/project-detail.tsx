@@ -142,7 +142,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   if (isLoading) {
     return (
       <div>
-        <Heading2 className="mb-2 font-medium!">Project</Heading2>
+        <Heading2 className="mb-2">Project</Heading2>
         <Muted>Loading...</Muted>
       </div>
     );
@@ -151,7 +151,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   if (!project) {
     return (
       <div>
-        <Heading2 className="mb-2 font-medium!">Project</Heading2>
+        <Heading2 className="mb-2">Project</Heading2>
         <Muted>Project not found.</Muted>
       </div>
     );
@@ -160,7 +160,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   return (
     <div className="bg-primary dark:bg-primary-950 pb-16">
       <div className="mb-8">
-        <Heading2 className="font-medium!">{project.name}</Heading2>
+        <Heading2>{project.name}</Heading2>
       </div>
 
       <SettingsSection>

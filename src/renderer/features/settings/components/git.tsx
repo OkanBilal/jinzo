@@ -67,7 +67,7 @@ export default function GitSettings() {
   return (
     <div className="bg-primary dark:bg-primary-950">
       <div className="mb-8">
-        <Heading2 className="font-medium!">Git</Heading2>
+        <Heading2>Git</Heading2>
       </div>
 
       <SettingsSection>

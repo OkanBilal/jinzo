@@ -91,7 +91,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-2 px-4 text-center">
           <Note className="w-4 h-4 dark:text-primary-300 text-primary-700" />
-          <Body className="text-xxs font-medium text-primary-700! dark:text-primary-300!">
+          <Body className="text-xxs font-medium text-primary-700 dark:text-primary-300">
             No activity yet.
           </Body>
         </div>

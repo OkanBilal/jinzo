@@ -70,7 +70,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-8">
-        <Heading2 className="font-medium!">Dashboard</Heading2>
+        <Heading2>Dashboard</Heading2>
         <div
           ref={containerRef}
           className="relative flex rounded-xl glass-morphism bg-primary-100/50  dark:bg-primary-800/20 p-0.5"
