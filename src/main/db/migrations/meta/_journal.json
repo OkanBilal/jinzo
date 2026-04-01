@@ -8,6 +8,13 @@
       "when": 1774909465169,
       "tag": "0000_shocking_roughhouse",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1775062842101,
+      "tag": "0001_rare_bushwacker",
+      "breakpoints": true
     }
   ]
 }

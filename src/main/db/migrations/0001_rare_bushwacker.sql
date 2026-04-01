@@ -1,0 +1,1 @@
+ALTER TABLE `review_findings` ADD `is_approved` integer DEFAULT false NOT NULL;

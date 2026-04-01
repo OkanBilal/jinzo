@@ -550,6 +550,9 @@ export const reviewFindings = sqliteTable(
     validated: integer("validated", { mode: "boolean" })
       .notNull()
       .default(false),
+    isApproved: integer("is_approved", { mode: "boolean" })
+      .notNull()
+      .default(false),
     metadata: text("metadata"),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()

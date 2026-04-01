@@ -116,6 +116,7 @@ export const reviewFindingsRepo = {
     if (payload.suggestion !== undefined)
       updateData.suggestion = payload.suggestion;
     if (payload.validated !== undefined) updateData.validated = payload.validated;
+    if (payload.isApproved !== undefined) updateData.isApproved = payload.isApproved;
     if (payload.metadata !== undefined)
       updateData.metadata =
         payload.metadata !== null ? JSON.stringify(payload.metadata) : null;
@@ -152,6 +153,7 @@ function mapRowToResponse(
     reason: row.reason,
     suggestion: row.suggestion,
     validated: row.validated,
+    isApproved: row.isApproved,
     metadata: safeJsonParse(row.metadata),
     createdAt: row.createdAt,
   };
