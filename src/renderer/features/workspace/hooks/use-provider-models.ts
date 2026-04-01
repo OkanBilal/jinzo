@@ -37,7 +37,7 @@ export function useProviderModels(
     );
 
   const { data: providerData } = useGetProviderByIdQuery(activeProviderId, {
-    skip: variant !== "claude" && variant !== "codex",
+    skip: variant !== "claude" && variant !== "codex" && variant !== "copilot",
   });
   const [updateProvider] = useUpdateProviderMutation();
   const permissionMode: string = (providerData?.config as any)?.permissionMode ?? "default";

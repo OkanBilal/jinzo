@@ -205,7 +205,7 @@ export function LinkResourcesModal({
         <div className="px-6 pb-6 space-y-4">
           <div className="flex items-center gap-2"></div>
 
-          <div className="max-h-64 overflow-y-auto border border-primary-200/60 dark:border-primary-800/40 rounded-2xl ">
+          <div className="max-h-64 overflow-y-auto border border-primary-200/60 bg-primary dark:bg-primary-950 dark:border-primary-800/40 rounded-2xl ">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="flex items-center gap-2">

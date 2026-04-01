@@ -48,7 +48,7 @@ export function CheckPackageDisplay({
         {!isCompact && <Jinzo className="size-3.5 dark:text-primary-300 text-primary-700" />}
         {!isCompact && (
           <span className="dark:text-primary-300 text-primary-700 font-medium">
-            Guard
+            CheckPackage
           </span>
         )}
         {blockedCount > 0 && (

@@ -29,13 +29,13 @@ interface ConnectionsSettingsProps {
   onRefresh?: () => void;
 }
 
-type CategoryFilter = "all" | "development" | "planning" | "monitoring";
+type CategoryFilter = "all" | "issues" | "monitoring" | "security";
 
 const FILTER_TABS: { id: CategoryFilter; label: string }[] = [
   { id: "all", label: "All" },
-  { id: "planning", label: "Planning" },
-  { id: "development", label: "Development" },
+  { id: "issues", label: "Issues" },
   { id: "monitoring", label: "Monitoring" },
+  { id: "security", label: "Security" },
 ];
 
 export default function ConnectionsSettings({
