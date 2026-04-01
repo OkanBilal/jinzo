@@ -146,12 +146,12 @@ export function DiffSection({
     }
 
     // Fallback: generic goal for Claude/Copilot
-    dispatch(setPendingGoal("review code changes in this workspace"));
+    dispatch(setPendingGoal("Review code changes in this workspace"));
     dispatch(setPendingAutoExecute(true));
   };
 
   const handleCommitChanges = () => {
-    dispatch(setPendingGoal("Use the CommitChanges tool to commit the changes."));
+    dispatch(setPendingGoal("Commit changes in this workspace."));
     dispatch(setPendingAutoExecute(true));
   };
 

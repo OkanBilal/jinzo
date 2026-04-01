@@ -18,8 +18,16 @@ export function getToolType(content: string): string {
     if (lower.includes("savereview")) return "SaveReview";
     if (lower.includes("savefinding")) return "SaveFinding";
     if (lower.includes("commitchanges")) return "Commit";
+    if (lower.includes("createpr")) return "CreatePR";
+    if (lower.includes("checkpackage")) return "CheckPackage";
     return "Jinzo";
   }
+    if (lower.includes("commitchanges"))
+    return "Commit";
+  if (lower.includes("createpr"))
+    return "CreatePR";
+  if (lower.includes("checkpackage"))
+    return "CheckPackage";
   if (lower.startsWith("mcp__linear__") || lower.includes("__linear__"))
     return "Linear";
   if (lower.startsWith("mcp__notion__") || lower.includes("__notion__"))

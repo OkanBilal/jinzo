@@ -108,7 +108,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="h-full max-w-240 mx-auto px-2 py-16 overflow-y-auto noscrollbar bg-primary dark:bg-primary-950">
+    <div className="h-full max-w-240 mx-auto px-2 pt-16 overflow-y-auto noscrollbar bg-primary dark:bg-primary-950">
       {content}
     </div>
   );

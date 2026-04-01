@@ -56,4 +56,12 @@ export const connectionStatesData = [
     imageAlt: "Sentry",
     category: "monitoring",
   },
+  {
+    id: "socketdev",
+    name: "Socket",
+    description: "Supply chain security and package health",
+    imageSrc: "connections/socketdev.png",
+    imageAlt: "Socket.dev",
+    category: "monitoring",
+  },
 ];

@@ -101,6 +101,11 @@ import {
   unregisterAutomationsIpc,
   automationsService,
 } from "./modules/automations";
+import {
+  registerGuardsIpc,
+  unregisterGuardsIpc,
+  shutdownAllGuardAdapters,
+} from "./modules/guards";
 
 // ─────────────────────────────────────────────────────────────
 // Installed app detection (macOS)
@@ -367,6 +372,7 @@ async function initializeApp() {
     registerUpdatesIpc();
     updatesService.initialize();
     registerAutomationsIpc();
+    registerGuardsIpc();
     automationsService.start();
 
     // Shell utilities
@@ -574,6 +580,8 @@ async function cleanupApp() {
     unregisterUpdatesIpc();
     automationsService.stop();
     unregisterAutomationsIpc();
+    unregisterGuardsIpc();
+    await shutdownAllGuardAdapters();
     ipcMain.removeHandler("shell:openExternal");
     ipcMain.removeHandler("shell:openPath");
     ipcMain.removeHandler("shell:openInApp");

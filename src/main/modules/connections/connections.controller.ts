@@ -33,6 +33,10 @@ export const connectionsController = {
     return connectionsService.getSentryProjects(connectionId);
   },
 
+  async getSocketDevOrganizations(connectionId: string) {
+    return connectionsService.getSocketDevOrganizations(connectionId);
+  },
+
   async saveResources(payload: SaveResourcesPayload) {
     return connectionsService.saveResources(payload);
   },

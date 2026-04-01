@@ -10,6 +10,8 @@ import { McpDisplay } from "./mcp-display";
 import { GetDiffDisplay, type GetDiffParams } from "./get-diff-display";
 import { PersistReviewDisplay, type PersistReviewParams } from "./persist-review-display";
 import { CommitDisplay, type CommitParams } from "./commit-display";
+import { PRDisplay, type PRParams } from "./pr-display";
+import { CheckPackageDisplay, type CheckPackageParams } from "./check-package-display";
 import { PersistFindingDisplay, type PersistFindingParams } from "./persist-finding-display";
 import { AgentDisplay, type AgentParams } from "./agent-display";
 import { IntentDisplay, type IntentParams } from "./intent-display";
@@ -263,6 +265,32 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
         ? (params as CommitParams)
         : {};
     return <CommitDisplay params={commitParams} isCompact={isCompact} />;
+  }
+
+  // Show PRDisplay for Jinzo CreatePR tool calls
+  if (displayName === "CreatePR") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const prParams: PRParams = metadataInput
+      ? (metadataInput as PRParams)
+      : params
+        ? (params as PRParams)
+        : {};
+    return <PRDisplay params={prParams} isCompact={isCompact} />;
+  }
+
+  // Show CheckPackageDisplay for Jinzo CheckPackage tool calls
+  if (displayName === "CheckPackage") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const checkParams: CheckPackageParams = metadataInput
+      ? (metadataInput as CheckPackageParams)
+      : params
+        ? (params as CheckPackageParams)
+        : {};
+    return <CheckPackageDisplay params={checkParams} output={event.metadata?.output} isCompact={isCompact} />;
   }
 
   // Show McpDisplay for MCP tool calls with expandable params

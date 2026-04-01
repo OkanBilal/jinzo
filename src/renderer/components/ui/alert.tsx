@@ -40,7 +40,7 @@ export default function Alert({
         <Body className="text-primary-900 dark:text-primary-100 font-semibold mb-3 ">
           {title}
         </Body>
-        <Text className="text-primary-700 text-2xl dark:text-primary-400 ">
+        <Text className="text-primary-700 text-sm dark:text-primary-400 ">
           {description}
         </Text>
         <div className="flex gap-3 mt-4">

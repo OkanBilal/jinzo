@@ -109,3 +109,4 @@ export { default as Danger } from "./danger";
 export { default as Codex } from "./codex";
 export { default as CodexColor } from "./codex-color";
 export { default as Delete } from "./delete";
+export { default as SocketDev } from "./socketdev";

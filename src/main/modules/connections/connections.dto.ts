@@ -89,6 +89,13 @@ export interface SentryProject {
   organization: string;
 }
 
+export interface SocketDevOrganization {
+  id: string;
+  slug: string;
+  name: string;
+  plan: string | null;
+}
+
 export interface ConnectionResource {
   id: string;
   connectionId: string;

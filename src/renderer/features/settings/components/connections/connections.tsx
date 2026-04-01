@@ -7,6 +7,7 @@ import JiraModal from "./jira/jira-modal";
 import LinearModal from "./linear/linear-modal";
 import TrelloModal from "./trello/trello-modal";
 import SentryModal from "./sentry/sentry-modal";
+import SocketDevModal from "./socketdev/socketdev-modal";
 import { useRunEntitySyncMutation } from "@/lib/redux/api/syncApi";
 import { AsciiSpinner } from "@/features/workspace/components/ascii-loader";
 
@@ -76,7 +77,7 @@ export default function ConnectionsSettings({
   const connectedCount = connections.filter((connection) => isConnected(connection.id)).length;
 
   return (
-    <div className="h-full overflow-y-auto noscrollbar">
+    <div className="  noscrollbar">
       <div className="flex items-center justify-between mb-6">
         <Heading2>Connections</Heading2>
         {connectedCount > 0 && (
@@ -183,6 +184,12 @@ export default function ConnectionsSettings({
         open={activeModal === "sentry"}
         onClose={() => setActiveModal(null)}
         isConnected={isConnected("sentry")}
+        onSuccess={handleConnectionSuccess}
+      />
+      <SocketDevModal
+        open={activeModal === "socketdev"}
+        onClose={() => setActiveModal(null)}
+        isConnected={isConnected("socketdev")}
         onSuccess={handleConnectionSuccess}
       />
     </div>

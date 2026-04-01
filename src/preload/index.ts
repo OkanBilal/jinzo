@@ -95,6 +95,8 @@ const api = {
       ipcRenderer.invoke("connections:getTrelloBoards", connectionId),
     getSentryProjects: (connectionId: string) =>
       ipcRenderer.invoke("connections:getSentryProjects", connectionId),
+    getSocketDevOrganizations: (connectionId: string) =>
+      ipcRenderer.invoke("connections:getSocketDevOrganizations", connectionId),
     saveResources: (payload: {
       provider: string;
       connectionId: string;
@@ -109,6 +111,18 @@ const api = {
       ipcRenderer.invoke("connections:getByProvider", provider),
     getSelectedResources: (provider: string) =>
       ipcRenderer.invoke("connections:getSelectedResources", provider),
+  },
+  // Guards operations (dependency security)
+  guards: {
+    getActiveGuard: () => ipcRenderer.invoke("guards:getActiveGuard"),
+    checkPackage: (pkg: { name: string; version?: string; ecosystem: string }) =>
+      ipcRenderer.invoke("guards:checkPackage", pkg),
+    checkPackages: (pkgs: Array<{ name: string; version?: string; ecosystem: string }>) =>
+      ipcRenderer.invoke("guards:checkPackages", pkgs),
+    getPackageScore: (pkg: { name: string; version?: string; ecosystem: string }) =>
+      ipcRenderer.invoke("guards:getPackageScore", pkg),
+    scanWorkspace: (workspaceId: string, rootPath: string) =>
+      ipcRenderer.invoke("guards:scanWorkspace", workspaceId, rootPath),
   },
   // Projects operations
   projects: {

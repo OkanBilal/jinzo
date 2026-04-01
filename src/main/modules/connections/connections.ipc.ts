@@ -13,6 +13,7 @@ const IPC_CHANNELS = {
   GET_GITLAB_PROJECTS: "connections:getGitlabProjects",
   GET_TRELLO_BOARDS: "connections:getTrelloBoards",
   GET_SENTRY_PROJECTS: "connections:getSentryProjects",
+  GET_SOCKETDEV_ORGS: "connections:getSocketDevOrganizations",
   SAVE_RESOURCES: "connections:saveResources",
   REMOVE_RESOURCE: "connections:removeResource",
   GET_BY_PROVIDER: "connections:getByProvider",
@@ -71,6 +72,13 @@ export function registerConnectionsHandlers(): void {
     IPC_CHANNELS.GET_SENTRY_PROJECTS,
     async (_event, connectionId: string) => {
       return connectionsController.getSentryProjects(connectionId);
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GET_SOCKETDEV_ORGS,
+    async (_event, connectionId: string) => {
+      return connectionsController.getSocketDevOrganizations(connectionId);
     }
   );
 

@@ -46,6 +46,7 @@ import {
   handleCommitChanges,
   handleCreatePR,
 } from "./jinzo-tools.core";
+import { guardsService } from "../../guards/guards.service";
 
 /**
  * NOTE: This adapter uses @anthropic-ai/claude-agent-sdk package.
@@ -447,7 +448,7 @@ export function createClaudeAdapter(
    * When using CLI (subscription mode), we strip ANTHROPIC_API_KEY from env
    * to avoid unexpected API billing when user has CLI login session.
    */
-  function buildOptions(
+  async function buildOptions(
     model: string,
     workspacePath?: string,
     abortController?: AbortController,
@@ -458,7 +459,7 @@ export function createClaudeAdapter(
     workspaceId?: string,
     forkSession?: boolean,
     onEvent?: WorkRunEventHandler,
-  ): SDKOptions {
+  ): Promise<SDKOptions> {
     // Find the Claude CLI binary
     let binaryPath: string | null = null;
 
@@ -614,6 +615,20 @@ export function createClaudeAdapter(
         options.hooks.PreToolUse = [];
       }
       options.hooks.PreToolUse.push(approvalHook);
+    }
+
+    // Inject dependency guard hook (checks packages before install)
+    {
+      const guardHook = await guardsService.buildClaudeGuardHook();
+      if (guardHook) {
+        if (!options.hooks) {
+          options.hooks = {};
+        }
+        if (!options.hooks.PreToolUse) {
+          options.hooks.PreToolUse = [];
+        }
+        options.hooks.PreToolUse.push(guardHook);
+      }
     }
 
     // Inject PostToolUse hook to capture tool output
@@ -1327,7 +1342,7 @@ export function createClaudeAdapter(
           throw new Error("Claude SDK not properly initialized");
         }
 
-        const options = buildOptions(
+        const options = await buildOptions(
           getModel(model),
           request.workspace.rootPath,
           abortController,
@@ -1682,7 +1697,7 @@ export function createClaudeAdapter(
           );
         }
 
-        const options = buildOptions(
+        const options = await buildOptions(
           getModel(request.model ?? config.defaultModel),
           request.workspace.rootPath,
           abortController,
@@ -2004,7 +2019,7 @@ export function createClaudeAdapter(
           );
         }
 
-        const options = buildOptions(
+        const options = await buildOptions(
           getModel(request.model ?? config.defaultModel),
           request.workspace.rootPath,
           abortController,
@@ -2584,7 +2599,7 @@ export function createClaudeAdapter(
         contextSnippet ? `\nContext:\n${contextSnippet}` : "",
       ].filter(Boolean).join("\n");
 
-      const options = buildOptions(
+      const options = await buildOptions(
         "claude-haiku-4-5-20251001", // Use haiku for fast, cheap title generation
         undefined, // no workspace path needed
         undefined, // no abort controller

@@ -40,6 +40,7 @@ import {
   handleCommitChanges,
   handleCreatePR,
 } from "./jinzo-tools.core";
+import { guardsService } from "../../guards/guards.service";
 
 /**
  * NOTE: This adapter is designed for the @github/copilot-sdk package.
@@ -386,6 +387,15 @@ function buildPreToolUseHook(runId: string) {
     // Auto-allow MCP tools (mcp__ prefix)
     if (input.toolName.startsWith("mcp__")) {
       return { permissionDecision: "allow" };
+    }
+
+    // Dependency guard check — intercept package install commands
+    const guardHook = await guardsService.buildCopilotGuardHook();
+    if (guardHook) {
+      const guardResult = await guardHook(input);
+      if (guardResult?.permissionDecision === "deny") {
+        return guardResult;
+      }
     }
 
     // Interactive approval for unknown tools

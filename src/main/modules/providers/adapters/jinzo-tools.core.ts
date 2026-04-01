@@ -47,6 +47,8 @@ export const TOOL_DESCRIPTIONS = {
     "Stage and commit changes in the workspace git repository. If the project has commitInstructions configured, the tool will return them on the first call (when message is not provided) so you can follow them before committing.",
   CreatePR:
     "Create a GitHub pull request for the current branch using the GitHub CLI (gh). Requires gh to be installed and authenticated. Push the branch before calling this tool. If the project has prInstructions configured, the tool will return them on the first call (when body is not provided) so you can follow them before creating the PR.",
+  CheckPackage:
+    "IMPORTANT: You MUST call this tool BEFORE running any package install command (npm install, pip install, cargo add, etc.). Checks packages against a dependency security service and returns safety scores, risk levels, and alerts. If any package is blocked, do NOT install it — inform the user instead.",
 } as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -407,8 +409,17 @@ export async function handleCreatePR(
       };
     }
 
+    // Detect current branch to pass --head explicitly.
+    // In worktrees, upstream tracking may not be set even after push,
+    // so gh can't infer the head branch automatically.
+    const branchResult = await gitService.getCurrentBranch(ctx.rootPath);
+    const currentBranch = branchResult.success ? branchResult.data : null;
+
     const ghArgs = ["pr", "create", "--title", args.title];
 
+    if (currentBranch) {
+      ghArgs.push("--head", currentBranch);
+    }
     if (args.body) {
       ghArgs.push("--body", args.body);
     }
@@ -487,4 +498,64 @@ function normalizeGitUrl(url: string): string {
     .replace(/\.git$/, "")
     .replace(/\/$/, "")
     .toLowerCase();
+}
+
+// ─────────────────────────────────────────────────────────────
+// CheckPackage handler
+// ─────────────────────────────────────────────────────────────
+
+export async function handleCheckPackage(
+  args: {
+    packages: Array<{ name: string; version?: string; ecosystem?: string }>;
+  },
+  _ctx: JinzoToolContext,
+) {
+  const { guardsService } = await import("../../guards/guards.service");
+
+  if (!args.packages || args.packages.length === 0) {
+    return {
+      content: [{ type: "text" as const, text: "No packages provided to check." }],
+      isError: true,
+    };
+  }
+
+  const pkgs = args.packages.map((p) => ({
+    name: p.name,
+    version: p.version,
+    ecosystem: (p.ecosystem || "npm") as any,
+  }));
+
+  const result = await guardsService.checkPackages(pkgs);
+  if (!result.success || !result.data) {
+    return {
+      content: [{ type: "text" as const, text: `Guard check failed: ${result.error || "unknown error"}` }],
+      isError: true,
+    };
+  }
+
+  const lines: string[] = [];
+  let hasBlocked = false;
+
+  for (const r of result.data) {
+    const status = r.allowed ? "✅ ALLOWED" : "❌ BLOCKED";
+    if (!r.allowed) hasBlocked = true;
+
+    const scorePart = r.score
+      ? ` | score: ${(r.score.overallScore * 100).toFixed(0)}/100 (quality=${r.score.categories.quality ?? "-"}, vulnerability=${r.score.categories.vulnerability ?? "-"}, supplyChain=${r.score.categories.supplyChain ?? "-"})`
+      : "";
+    const alertPart = r.alerts.length > 0
+      ? ` | alerts: ${r.alerts.map((a) => `${a.severity}: ${a.title}`).join(", ")}`
+      : "";
+    const reasonPart = r.reason ? ` | ${r.reason}` : "";
+
+    lines.push(`${status} ${r.package.name}${scorePart}${alertPart}${reasonPart}`);
+  }
+
+  if (hasBlocked) {
+    lines.push("\n⚠️ One or more packages were BLOCKED. Do NOT install blocked packages. Inform the user about the security risks.");
+  }
+
+  return {
+    content: [{ type: "text" as const, text: lines.join("\n") }],
+  };
 }

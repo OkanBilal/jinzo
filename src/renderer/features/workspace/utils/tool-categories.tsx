@@ -44,9 +44,21 @@ export const TOOL_CATEGORIES: Record<
     category: "Review",
     icon: <Jinzo className="w-2 h-4  " />,
   },
-    savefinding: {
+  savefinding: {
     category: "Review",
     icon: <Jinzo className="w-2 h-4  " />,
+  },
+  commit: {
+    category: "Git",
+    icon: <Jinzo className="w-2 h-4" />,
+  },
+  createpr: {
+    category: "Git",
+    icon: <Jinzo className="size-3.5" />,
+  },
+  checkpackage: {
+    category: "Guard",
+    icon: <Jinzo className="size-3.5" />,
   },
   figma: {
     category: "Design",

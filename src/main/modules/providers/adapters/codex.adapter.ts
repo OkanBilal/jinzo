@@ -43,6 +43,14 @@ import {
   emitUserPromptArtifact,
   saveAttachments,
 } from "./adapter.shared";
+import type { JinzoToolContext } from "./jinzo-tools.core";
+import {
+  TOOL_DESCRIPTIONS,
+  handleCommitChanges,
+  handleCreatePR,
+  handleCheckPackage,
+} from "./jinzo-tools.core";
+import { guardsService } from "../../guards/guards.service";
 
 // ─────────────────────────────────────────────────────────────
 // JSON-RPC Types
@@ -176,6 +184,86 @@ function parseCodexReviewFindings(reviewText: string): ParsedReviewFinding[] {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Jinzo Dynamic Tools (registered per-thread via dynamicTools)
+// ─────────────────────────────────────────────────────────────
+
+const JINZO_DYNAMIC_TOOLS = [
+  {
+    name: "CommitChanges",
+    description: TOOL_DESCRIPTIONS.CommitChanges,
+    inputSchema: {
+      type: "object",
+      properties: {
+        message: { type: "string", description: "The commit message" },
+        files: { type: "array", items: { type: "string" }, description: "Specific files to stage. If omitted, stages all changes (git add -A)" },
+      },
+      required: ["message"],
+    },
+  },
+  {
+    name: "CreatePR",
+    description: TOOL_DESCRIPTIONS.CreatePR,
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "The pull request title" },
+        body: { type: "string", description: "The pull request body/description" },
+        base: { type: "string", description: "The base branch to merge into (defaults to the repo default branch)" },
+        draft: { type: "boolean", description: "Create as a draft pull request" },
+        labels: { type: "array", items: { type: "string" }, description: "Labels to add to the pull request" },
+      },
+      required: ["title"],
+    },
+  },
+  {
+    name: "CheckPackage",
+    description: TOOL_DESCRIPTIONS.CheckPackage,
+    inputSchema: {
+      type: "object",
+      properties: {
+        packages: {
+          type: "array",
+          description: "Packages to check",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Package name (e.g. 'axios', '@types/node')" },
+              version: { type: "string", description: "Optional version" },
+              ecosystem: { type: "string", enum: ["npm", "pypi", "cargo", "go", "maven", "rubygems"], description: "Package ecosystem (defaults to npm)" },
+            },
+            required: ["name"],
+          },
+        },
+      },
+      required: ["packages"],
+    },
+  },
+];
+
+/**
+ * Dispatch a dynamic tool call to the appropriate jinzo handler.
+ * Returns the MCP-style result ({ content, isError? }).
+ */
+async function dispatchJinzoTool(
+  toolName: string,
+  args: Record<string, unknown>,
+  ctx: JinzoToolContext,
+): Promise<{ content: Array<{ type: "text"; text: string }>; isError?: boolean }> {
+  switch (toolName) {
+    case "CommitChanges":
+      return handleCommitChanges(args as any, ctx);
+    case "CreatePR":
+      return handleCreatePR(args as any, ctx);
+    case "CheckPackage":
+      return handleCheckPackage(args as any, ctx);
+    default:
+      return { content: [{ type: "text", text: `Unknown jinzo tool: ${toolName}` }], isError: true };
+  }
+}
+
+const JINZO_TOOL_NAMES = new Set(JINZO_DYNAMIC_TOOLS.map((t) => t.name));
+
+// ─────────────────────────────────────────────────────────────
 // Active run tracking
 // ─────────────────────────────────────────────────────────────
 
@@ -189,6 +277,8 @@ const activeRuns = new Map<string, {
   agentMessageBuffer: string;
   /** Pending events to emit (flushed message artifacts) */
   pendingFlush: WorkRunEvent[];
+  /** Workspace context for jinzo dynamic tools */
+  jinzoCtx: JinzoToolContext;
 }>();
 
 // Session ID mapping: runId → threadId (for resume support)
@@ -1055,6 +1145,35 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         break;
       }
 
+      case "dynamic_tool_call":
+      case "dynamicToolCall": {
+        const tool = typeof item.tool === "string" ? item.tool : "unknown";
+        const args = (typeof item.arguments === "string" ? safeJson(item.arguments) : item.arguments) as Record<string, unknown> | undefined;
+        const result = item.result as unknown;
+        const status = item.status as string | undefined;
+
+        if (phase === "start") {
+          events.push({
+            type: "tool_call",
+            toolName: tool,
+            input: args,
+            startedAt: ts,
+            metadata: { phase: "start", toolCallId: item.id, itemId: item.id, codexItemType: "dynamic_tool_call" },
+          });
+        } else if (phase === "complete") {
+          events.push({
+            type: "tool_call",
+            toolName: tool,
+            input: args,
+            output: result,
+            error: status === "failed" ? `Dynamic tool call failed` : undefined,
+            endedAt: ts,
+            metadata: { phase: "complete", toolCallId: item.id, itemId: item.id, codexItemType: "dynamic_tool_call" },
+          });
+        }
+        break;
+      }
+
       case "todo_list":
       case "todoList": {
         if (phase === "complete") {
@@ -1174,15 +1293,17 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     | { type: "localImage"; path: string }
   >;
 
+  const JINZO_TOOL_INSTRUCTION = "IMPORTANT: Never commit changes using shell commands (git add, git commit). If the user asks you to commit, always use the CommitChanges tool to stage and commit changes. Similarly, never create pull requests using shell commands (gh pr create). Always use the CreatePR tool instead.";
+
   function buildTurnInput(request: WorkRunRequest): TurnInput {
     const workspaceInfo = `Working directory: ${request.workspace.rootPath}`;
     let prompt: string;
 
     if (request.context && request.context.length > 0) {
       const contextParts = formatContextSection(request.context);
-      prompt = `${workspaceInfo}\n\nContext:\n${contextParts}\n\n---\n\nGoal: ${request.goal}`;
+      prompt = `${workspaceInfo}\n\nContext:\n${contextParts}\n\n---\n\n${JINZO_TOOL_INSTRUCTION}\n\nGoal: ${request.goal}`;
     } else {
-      prompt = `${workspaceInfo}\n\nGoal: ${request.goal}`;
+      prompt = `${workspaceInfo}\n\n${JINZO_TOOL_INSTRUCTION}\n\nGoal: ${request.goal}`;
     }
 
     prompt = appendPromptSections(prompt, {
@@ -1359,6 +1480,16 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           case "item/fileRead/requestApproval":
           case "item/fileChange/requestApproval":
           case "item/permissions/requestApproval": {
+            // Dependency guard check — intercept install commands before approval
+            if (method === "item/commandExecution/requestApproval") {
+              const cmd = (p?.command as string) || "";
+              const guardResult = await guardsService.checkCommand(cmd);
+              if (guardResult.blocked) {
+                server.respondToRequest(id, { decision: "decline" });
+                break;
+              }
+            }
+
             const permissionMode = config.permissionMode || "default";
             if (permissionMode === "bypassPermissions") {
               server.respondToRequest(id, { decision: "accept" });
@@ -1453,9 +1584,46 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             break;
           }
 
-          // Dynamic tool calls — not supported
+          // Dynamic tool calls — dispatch jinzo tools
           case "item/tool/call": {
-            server.respondToRequestError(id, -32601, "Dynamic tool calls not supported");
+            const toolParams = params as Record<string, unknown> | undefined;
+            const toolName = toolParams?.tool as string | undefined;
+            const toolArgs = (typeof toolParams?.arguments === "string"
+              ? safeJson(toolParams.arguments)
+              : toolParams?.arguments ?? {}) as Record<string, unknown>;
+            const toolThreadId = toolParams?.threadId as string | undefined;
+
+            if (toolName && JINZO_TOOL_NAMES.has(toolName)) {
+              // Find the JinzoToolContext from the active run that owns this thread
+              let ctx: JinzoToolContext = { workspaceId: null, rootPath: null, runId: null };
+              for (const [, run] of activeRuns) {
+                if (run.threadId === toolThreadId) {
+                  ctx = run.jinzoCtx;
+                  break;
+                }
+              }
+
+              try {
+                const result = await dispatchJinzoTool(toolName, toolArgs, ctx);
+                const contentItems = result.content.map((c) => ({
+                  type: "inputText" as const,
+                  text: c.text,
+                }));
+                server.respondToRequest(id, {
+                  contentItems,
+                  success: !result.isError,
+                });
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                logError(`Jinzo tool ${toolName} failed:`, msg);
+                server.respondToRequest(id, {
+                  contentItems: [{ type: "inputText", text: `Error: ${msg}` }],
+                  success: false,
+                });
+              }
+            } else {
+              server.respondToRequestError(id, -32601, `Unknown dynamic tool: ${toolName ?? "undefined"}`);
+            }
             break;
           }
 
@@ -1507,6 +1675,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           config: {
             ...(networkAccess ? { sandbox_network_access: true } : {}),
           },
+          dynamicTools: JINZO_DYNAMIC_TOOLS,
         };
 
         logInfo(`Starting thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
@@ -1522,7 +1691,8 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           );
         }
 
-        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [] });
+        const jinzoCtx: JinzoToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
+        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], jinzoCtx });
 
         // Emit user prompt artifact
         await emitUserPromptArtifact(onEvent, request.goal, {
@@ -1620,6 +1790,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
               sandbox,
               personality,
               ...(resolvedModel ? { model: resolvedModel } : {}),
+              dynamicTools: JINZO_DYNAMIC_TOOLS,
             }) as Record<string, unknown>;
             const newThreadId = (threadResult?.thread as Record<string, unknown>)?.id as string ??
                                threadResult?.threadId as string;
@@ -1629,7 +1800,8 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           }
         }
 
-        activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [] });
+        const jinzoCtxContinue: JinzoToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
+        activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], jinzoCtx: jinzoCtxContinue });
 
         await emitUserPromptArtifact(onEvent, message, {
           attachments: request.attachments,
@@ -1728,6 +1900,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           logError("Failed to persist forked session ID:", err),
         );
 
+        const jinzoCtxFork: JinzoToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
         activeRuns.set(runId, {
           threadId: forkedThreadId,
           turnId: null,
@@ -1735,6 +1908,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           currentMessageItemId: null,
           agentMessageBuffer: "",
           pendingFlush: [],
+          jinzoCtx: jinzoCtxFork,
         });
 
         // Emit user prompt artifact
@@ -1811,6 +1985,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           config: {
             ...(networkAccess ? { sandbox_network_access: true } : {}),
           },
+          dynamicTools: JINZO_DYNAMIC_TOOLS,
         };
 
         logInfo(`Starting review thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
@@ -1825,7 +2000,8 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           );
         }
 
-        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [] });
+        const jinzoCtxReview: JinzoToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
+        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], jinzoCtx: jinzoCtxReview });
 
         // Emit review user-prompt artifact
         const targetLabel =

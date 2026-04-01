@@ -14,6 +14,7 @@ import type {
   GitlabProject,
   TrelloBoard,
   SentryProject,
+  SocketDevOrganization,
   SaveResourcesPayload,
   ServiceResponse,
 } from "./connections.dto";
@@ -128,6 +129,12 @@ const RESOURCE_MAPPERS: Record<string, ResourceMapper> = {
     name: project.name,
     metadata: { id: project.id, slug: project.slug, name: project.name, platform: project.platform, dateCreated: project.dateCreated, status: project.status, organization: project.organization },
   }),
+  socketdev: (org: SocketDevOrganization) => ({
+    externalId: org.slug,
+    kind: "socketdev_org",
+    name: org.name,
+    metadata: { id: org.id, slug: org.slug, name: org.name, plan: org.plan },
+  }),
 };
 
 const SELECTED_RESOURCE_CONFIGS: Record<string, {
@@ -168,6 +175,11 @@ const SELECTED_RESOURCE_CONFIGS: Record<string, {
   sentry: {
     kind: "sentry_project",
     responseKey: "projects",
+    formatItem: (r) => ({ id: r.id, slug: r.externalId, name: r.name || r.externalId, metadata: parseResourceMetadata(r.metadata) }),
+  },
+  socketdev: {
+    kind: "socketdev_org",
+    responseKey: "organizations",
     formatItem: (r) => ({ id: r.id, slug: r.externalId, name: r.name || r.externalId, metadata: parseResourceMetadata(r.metadata) }),
   },
 };
@@ -501,6 +513,43 @@ export const connectionsService = {
     } catch (error: any) {
       console.error("Error fetching Sentry projects:", error);
       return { success: false, error: error?.message || "Failed to fetch Sentry projects" };
+    }
+  },
+
+  // Socket.dev
+  async getSocketDevOrganizations(connectionId: string): Promise<ServiceResponse<{ organizations: SocketDevOrganization[] }>> {
+    try {
+      if (!connectionId) return { success: false, error: "connectionId is required" };
+
+      const result = await getConnectionAndSecrets(connectionId);
+      if (!result.ok) return { success: false, error: result.error };
+
+      const response = await fetch(
+        "https://api.socket.dev/v0/organizations",
+        { headers: { Authorization: `Bearer ${result.secrets.apiToken}`, Accept: "application/json" } }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Socket.dev API error (${response.status}):`, errorText);
+        return { success: false, error: `Socket.dev API error: ${response.status}` };
+      }
+
+      const data: any = await response.json();
+      const orgs = data?.organizations ?? data?.data ?? [];
+      const formattedOrgs: SocketDevOrganization[] = (Array.isArray(orgs) ? orgs : Object.entries(orgs).map(([slug, org]: [string, any]) => ({ id: org.id || slug, slug, name: org.name || slug, plan: org.plan || null }))).map(
+        (org: Record<string, unknown>) => ({
+          id: String(org.id || org.slug),
+          slug: (org.slug as string) || String(org.id),
+          name: (org.name as string) || (org.slug as string) || String(org.id),
+          plan: (org.plan as string) || null,
+        })
+      );
+
+      return { success: true, data: { organizations: formattedOrgs } };
+    } catch (error: any) {
+      console.error("Error fetching Socket.dev organizations:", error);
+      return { success: false, error: error?.message || "Failed to fetch Socket.dev organizations" };
     }
   },
 

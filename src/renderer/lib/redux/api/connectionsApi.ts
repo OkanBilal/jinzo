@@ -132,6 +132,20 @@ export interface SelectedSentryProject {
   metadata: any;
 }
 
+export interface SocketDevOrganization {
+  id: string;
+  slug: string;
+  name: string;
+  plan: string | null;
+}
+
+export interface SelectedSocketDevOrganization {
+  id: string;
+  slug: string;
+  name: string;
+  metadata: any;
+}
+
 export interface SaveCredentialsPayload {
   provider: string;
   connectionId: string;
@@ -236,6 +250,23 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [provider],
       }),
       transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects, connectionId: response.data.connectionId } : { success: false, projects: [], connectionId: '' },
+      providesTags: ['ConnectionStates'],
+    }),
+
+    getSocketDevOrganizations: builder.query<{ success: boolean; organizations: SocketDevOrganization[] }, string>({
+      query: (connectionId) => ({
+        handler: 'connections:getSocketDevOrganizations',
+        args: [connectionId],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, organizations: response.data.organizations } : { success: false, organizations: [] },
+    }),
+
+    getSelectedSocketDevOrganizations: builder.query<{ success: boolean; organizations: SelectedSocketDevOrganization[]; connectionId: string }, string>({
+      query: (provider) => ({
+        handler: 'connections:getSelectedResources',
+        args: [provider],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, organizations: response.data.organizations, connectionId: response.data.connectionId } : { success: false, organizations: [], connectionId: '' },
       providesTags: ['ConnectionStates'],
     }),
 
@@ -361,6 +392,9 @@ export const {
   useLazyGetSentryProjectsQuery,
   useGetSelectedSentryProjectsQuery,
   useLazyGetSelectedSentryProjectsQuery,
+  useLazyGetSocketDevOrganizationsQuery,
+  useGetSelectedSocketDevOrganizationsQuery,
+  useLazyGetSelectedSocketDevOrganizationsQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
   useRevokeConnectionMutation,

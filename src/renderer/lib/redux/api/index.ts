@@ -33,6 +33,9 @@ export {
   useLazyGetSentryProjectsQuery,
   useGetSelectedSentryProjectsQuery,
   useLazyGetSelectedSentryProjectsQuery,
+  useLazyGetSocketDevOrganizationsQuery,
+  useGetSelectedSocketDevOrganizationsQuery,
+  useLazyGetSelectedSocketDevOrganizationsQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
   useRevokeConnectionMutation,
@@ -53,6 +56,8 @@ export type {
   SelectedTrelloBoard,
   SentryProject,
   SelectedSentryProject,
+  SocketDevOrganization,
+  SelectedSocketDevOrganization,
   SaveCredentialsPayload,
   SaveResourcesPayload,
 } from "./connectionsApi";
@@ -409,6 +414,25 @@ export type {
   SignalWithEntity,
   SignalQueryOptions,
 } from "./signalsApi";
+
+export {
+  guardsApi,
+  useGetActiveGuardQuery,
+  useCheckPackageMutation,
+  useCheckPackagesMutation,
+  useGetPackageScoreQuery,
+  useLazyGetPackageScoreQuery,
+  useScanWorkspaceMutation,
+} from "./guardsApi";
+export type {
+  PackageIdentifier,
+  PackageAlert,
+  PackageScore,
+  PackageCheckResult,
+  ManifestScanResult,
+  ScanSummary,
+  ActiveGuardInfo,
+} from "./guardsApi";
 
 export {
   automationsApi,
