@@ -34,7 +34,7 @@ export function MainContent({
       }}
     >
       {header && (
-        <div className={`shrink-0 ${hasRightPanel ? "max-w-[calc(100%-70px)]" : ""}`}>{header}</div>
+        <div className={`shrink-0 ${hasRightPanel ? "max-w-[calc(100%-160px)]" : ""}`}>{header}</div>
       )}
       <div
         className={`flex-1 min-h-0 bg-primary dark:bg-primary-950 overflow-hidden ${contentRounding}`}

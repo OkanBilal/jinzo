@@ -134,6 +134,19 @@ export const reviewFindingsRepo = {
     const db = getDb();
     await db.delete(reviewFindings).where(eq(reviewFindings.id, id));
   },
+
+  async removeByWorkspace(workspaceId: string): Promise<void> {
+    const db = getDb();
+    const rows = await db
+      .select({ id: reviewFindings.id })
+      .from(reviewFindings)
+      .innerJoin(reviews, eq(reviewFindings.reviewId, reviews.id))
+      .where(eq(reviews.workspaceId, workspaceId));
+    if (rows.length > 0) {
+      const { inArray } = await import("drizzle-orm");
+      await db.delete(reviewFindings).where(inArray(reviewFindings.id, rows.map((r) => r.id)));
+    }
+  },
 };
 
 // ─────────────────────────────────────────────────────────────

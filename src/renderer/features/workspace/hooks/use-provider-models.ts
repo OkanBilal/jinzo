@@ -12,7 +12,7 @@ import type { RootState } from "@/lib/redux";
 
 export function useProviderModels(
   activeProviderId: string,
-  variant: "claude" | "copilot" | "codex",
+  variant: "claude" | "copilot" | "codex" | "cursor",
   externalSelectedModel?: string,
   externalOnModelChange?: (model: string) => void,
   workspacePath?: string,
@@ -24,7 +24,7 @@ export function useProviderModels(
       state.workspace.selectedModelByProvider[activeProviderId],
   );
 
-  const { data: providerModels, isLoading: isLoadingModels, error: modelsError } =
+  const { data: providerModels, isLoading: isLoadingModels, error: modelsError, refetch: refetchModels } =
     useGetProviderModelsQuery(activeProviderId, { skip: !activeProviderId });
 
   const { data: providerCommands = [], isLoading: isLoadingCommands } =
@@ -37,10 +37,14 @@ export function useProviderModels(
     );
 
   const { data: providerData } = useGetProviderByIdQuery(activeProviderId, {
-    skip: variant !== "claude" && variant !== "codex" && variant !== "copilot",
+    skip: variant !== "claude" && variant !== "codex" && variant !== "copilot" && variant !== "cursor",
   });
   const [updateProvider] = useUpdateProviderMutation();
-  const permissionMode: string = (providerData?.config as any)?.permissionMode ?? "default";
+  const permissionMode: string = variant === "cursor"
+    ? (providerData?.config as any)?.mode ?? "agent"
+    : variant === "codex"
+      ? (providerData?.config as any)?.sandboxMode ?? "workspace-write"
+      : (providerData?.config as any)?.permissionMode ?? "default";
   const thinkingMode = variant === "codex" || variant === "copilot"
     ? !!(providerData?.config as any)?.modelReasoningEffort
     : !!(providerData?.config as any)?.thinkingMode;
@@ -52,16 +56,17 @@ export function useProviderModels(
   const handlePermissionModeChange = useCallback(async (mode: string) => {
     if (!providerData) return;
     const currentConfig = providerData.config ?? {};
+    const configKey = variant === "cursor" ? "mode" : variant === "codex" ? "sandboxMode" : "permissionMode";
     await updateProvider({
       id: activeProviderId,
       payload: {
         config: {
           ...currentConfig,
-          permissionMode: mode,
+          [configKey]: mode,
         },
       },
     });
-  }, [providerData, activeProviderId, updateProvider]);
+  }, [providerData, activeProviderId, variant, updateProvider]);
 
   const handleThinkingModeToggle = useCallback(async () => {
     if (!providerData) return;
@@ -144,7 +149,7 @@ export function useProviderModels(
       const model = providerModels.find((m) => m.id === selectedModel);
       return model?.displayName ?? selectedModel;
     }
-    return selectedModel;
+    return "";
   }, [providerModels, selectedModel]);
 
   const selectedModelInfo = useMemo(() => {
@@ -203,6 +208,7 @@ export function useProviderModels(
     providerSkills,
     isLoadingSkills,
     modelsError,
+    refetchModels,
     permissionMode,
     handlePermissionModeChange,
     thinkingMode,

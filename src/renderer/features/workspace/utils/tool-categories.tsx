@@ -22,6 +22,7 @@ import {
   Jinzo,
   Sparkles,
   Delete,
+  Grep,
 } from "@/components/ui/icons";
 
 export const TOOL_CATEGORIES: Record<
@@ -98,7 +99,7 @@ export const TOOL_CATEGORIES: Record<
   },
   grep: {
     category: "Search",
-    icon: <Search className="size-3.5" />,
+    icon: <Grep className="size-3.5" />,
   },
   glob: {
     category: "File",
@@ -191,6 +192,10 @@ export const TOOL_CATEGORIES: Record<
   git_diff: {
     category: "Git",
     icon: <Branch className="size-4" />,
+  },
+  web_fetch: {
+    category: "Search",
+    icon: <Web className="size-4" />,
   },
 };
 

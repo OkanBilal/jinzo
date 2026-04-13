@@ -12,7 +12,7 @@ export function getToolType(content: string): string {
     colonIdx > 0 ? content.substring(0, colonIdx).trim() : content;
   const lower = toolName.toLowerCase();
 
-  // MCP tools: check for mcp__provider__ pattern first
+  // Jinzo tools: MCP prefix (mcp__jinzo__*) or direct name from bridge
   if (lower.startsWith("mcp__jinzo__") || lower.includes("__jinzo__")) {
     if (lower.includes("getworkspacediff")) return "GetDiff";
     if (lower.includes("savereview")) return "SaveReview";
@@ -22,18 +22,12 @@ export function getToolType(content: string): string {
     if (lower.includes("checkpackage")) return "CheckPackage";
     return "Jinzo";
   }
-    if (lower.includes("commitchanges"))
-    return "Commit";
-  if (lower.includes("createpr"))
-    return "CreatePR";
-  if (lower.includes("checkpackage"))
-    return "CheckPackage";
-  if (lower.startsWith("mcp__linear__") || lower.includes("__linear__"))
-    return "Linear";
-  if (lower.startsWith("mcp__notion__") || lower.includes("__notion__"))
-    return "Notion";
-  if (lower.startsWith("mcp__figma-remote-mcp__") || lower.includes("__figma-remote-mcp__"))
-    return "Figma";
+  if (lower === "getworkspacediff") return "GetDiff";
+  if (lower === "savereview") return "SaveReview";
+  if (lower === "savefinding" || lower === "savefindings") return "SaveFinding";
+  if (lower.includes("commitchanges")) return "Commit";
+  if (lower.includes("createpr")) return "CreatePR";
+  if (lower.includes("checkpackage")) return "CheckPackage";
 
   if (lower === "todowrite") return "TodoWrite";
   if (lower === "task") return "Task";
@@ -48,6 +42,7 @@ export function getToolType(content: string): string {
   if (lower === "edit" || lower.includes("edit")) return "Edit";
   if (lower === "write" || lower.includes("write")) return "Write";
   if (lower === "websearch" || lower === "web_search") return "WebSearch";
+  if (lower === "webfetch" || lower === "web_fetch") return "WebFetch";
   if (lower === "search" || lower === "find") return "Search";
   if (lower === "glob") return "Glob";
   if (lower === "grep") return "Grep";

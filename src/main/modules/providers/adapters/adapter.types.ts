@@ -614,6 +614,26 @@ export interface ClaudeCodeAdapterConfig {
 }
 
 /**
+ * Configuration for Cursor adapter (ACP protocol)
+ */
+export interface CursorAdapterConfig {
+  /** Path to cursor CLI binary (defaults to "cursor" from PATH) */
+  binary?: string;
+  /** Optional API key. If omitted, uses cached auth from `cursor login` or CURSOR_API_KEY env var */
+  apiKey?: string;
+  /** Default model to use (e.g., "gpt-5.2", "claude-4-sonnet-thinking") */
+  defaultModel?: string;
+  /** Timeout in milliseconds */
+  timeout?: number;
+  /** Agent mode: "agent" (default), "plan", or "ask" */
+  mode?: "agent" | "plan" | "ask";
+  /** Enable sandbox for file/network isolation */
+  sandboxEnabled?: boolean;
+  /** Enable cloud execution */
+  cloudEnabled?: boolean;
+}
+
+/**
  * A persisted JSON Schema entry for structured output
  */
 export interface StructuredOutputEntry {

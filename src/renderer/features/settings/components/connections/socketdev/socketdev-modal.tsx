@@ -87,6 +87,10 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
         throw new Error("Failed to fetch organizations");
       }
 
+      if (!orgsResult.success) {
+        throw new Error("Failed to fetch organizations");
+      }
+
       const elapsed = Date.now() - startTime;
       const remainingTime = Math.max(0, 800 - elapsed);
       await new Promise((resolve) => setTimeout(resolve, remainingTime));

@@ -114,13 +114,13 @@ type Renderer = (input: Record<string, unknown>) => React.ReactNode;
 const RENDERERS: Record<string, Renderer> = {
   Bash: (input) => (
     <>
-      {input.description && (
+      {!!input.description && (
         <div className="text-primary-400 dark:text-primary-500 italic">
           {str(input.description)}
         </div>
       )}
       <CodeBlock>{str(input.command, 1200)}</CodeBlock>
-      {input.timeout && (
+      {!!input.timeout && (
         <div className="text-primary-500 text-xxs">
           timeout: {String(input.timeout)}ms
         </div>
@@ -133,7 +133,7 @@ const RENDERERS: Record<string, Renderer> = {
       <div>
         <Label>file</Label> <Mono>{str(input.file_path)}</Mono>
       </div>
-      {(input.offset || input.limit) && (
+      {!!(input.offset || input.limit) && (
         <div className="text-primary-500 text-xxs">
           {input.offset ? `from line ${input.offset}` : ""}
           {input.offset && input.limit ? ", " : ""}
@@ -148,7 +148,7 @@ const RENDERERS: Record<string, Renderer> = {
       <div className="px-1 pb-1">
         <Label>file</Label> <Mono>{str(input.file_path)}</Mono>
       </div>
-      {input.content && (
+      {!!input.content && (
         <div className="bg-primary-50 dark:bg-primary/5 rounded-lg">
           <DiffView newStr={str(input.content, 600)} />
         </div>
@@ -176,12 +176,12 @@ const RENDERERS: Record<string, Renderer> = {
         <Label>pattern</Label>{" "}
         <Mono>{str(input.pattern)}</Mono>
       </div>
-      {input.path && (
+      {!!input.path && (
         <div>
           <Label>path</Label> <Mono>{str(input.path)}</Mono>
         </div>
       )}
-      {input.glob && (
+      {!!input.glob && (
         <div>
           <Label>glob</Label> <Mono>{str(input.glob)}</Mono>
         </div>
@@ -195,7 +195,7 @@ const RENDERERS: Record<string, Renderer> = {
         <Label>pattern</Label>{" "}
         <Mono>{str(input.pattern)}</Mono>
       </div>
-      {input.path && (
+      {!!input.path && (
         <div>
           <Label>path</Label> <Mono>{str(input.path)}</Mono>
         </div>
@@ -208,7 +208,7 @@ const RENDERERS: Record<string, Renderer> = {
       <div>
         <Label>url</Label> <Mono>{str(input.url)}</Mono>
       </div>
-      {input.prompt && (
+      {!!input.prompt && (
         <div className="text-primary-400 dark:text-primary-500 italic mt-1">
           {str(input.prompt)}
         </div>
@@ -225,7 +225,7 @@ const RENDERERS: Record<string, Renderer> = {
 
   Task: (input) => (
     <>
-      {input.subagent_type && (
+      {!!input.subagent_type && (
         <div>
           <Label>agent</Label>{" "}
           <span className="text-primary-300 dark:text-primary-400">
@@ -233,12 +233,32 @@ const RENDERERS: Record<string, Renderer> = {
           </span>
         </div>
       )}
-      {input.description && (
+      {!!input.description && (
         <div className="text-primary-400 dark:text-primary-500 italic">
           {str(input.description)}
         </div>
       )}
     </>
+  ),
+
+   Plan: (input) => (
+    <div className="px-3 py-2 space-y-1">
+      {!!input.name && (
+        <div className="text-primary-200 dark:text-primary-300 font-medium text-sm">
+          {str(input.name)}
+        </div>
+      )}
+      {!!input.overview && (
+        <div className="text-primary-400 dark:text-primary-500 italic">
+          {str(input.overview, 500)}
+        </div>
+      )}
+      {!!input.plan && (
+        <pre className="text-primary-300 dark:text-primary-400 whitespace-pre-wrap wrap-break-word leading-relaxed mt-1">
+          {str(input.plan, 2000)}
+        </pre>
+      )}
+    </div>
   ),
 
   AskUser: (input) => (
@@ -258,7 +278,7 @@ const RENDERERS: Record<string, Renderer> = {
       <div>
         <Label>notebook</Label> <Mono>{str(input.notebook_path)}</Mono>
       </div>
-      {input.edit_mode && (
+      {!!input.edit_mode && (
         <div>
           <Label>mode</Label>{" "}
           <span className="text-primary-300 dark:text-primary-400">
@@ -266,7 +286,7 @@ const RENDERERS: Record<string, Renderer> = {
           </span>
         </div>
       )}
-      {input.new_source && (
+      {!!input.new_source && (
         <CodeBlock>{str(input.new_source, 400)}</CodeBlock>
       )}
     </>
@@ -278,7 +298,7 @@ const RENDERERS: Record<string, Renderer> = {
       <div className="px-1 pb-1">
         <Label>file</Label> <Mono>{filePath(input)}</Mono>
       </div>
-      {input.diff && (
+      {!!input.diff && (
         <div className="bg-primary-50 dark:bg-primary/5 rounded-lg">
           <DiffView diff={String(input.diff)} />
         </div>
@@ -288,7 +308,7 @@ const RENDERERS: Record<string, Renderer> = {
 
   "[permission:shell]": (input) => (
     <>
-      {input.cwd && (
+      {!!input.cwd && (
         <div className="px-3 pt-2">
           <Label>cwd</Label> <Mono>{str(input.cwd)}</Mono>
         </div>

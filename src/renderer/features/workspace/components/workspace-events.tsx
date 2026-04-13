@@ -1,5 +1,6 @@
 import { Fragment, RefObject, useMemo, useState, useCallback } from "react";
 import { ToolCallGroup, InfoGroup, groupEvents, type EventGroup } from "./tools/tool-call-group";
+import { PlanDisplay } from "./tools/plan-display";
 import { EditorContent } from "./editor-content";
 import { IssueTabContent } from "./issue-tab-content";
 import { SignalTabContent } from "./signal-tab-content";
@@ -388,11 +389,12 @@ interface WorkspaceEventsProps {
   issueTabs: IssueWithEntity[];
   signalTabs?: SignalWithEntity[];
   turns?: RunTurn[];
-  variant?: "copilot" | "claude" | "codex";
+  variant?: "copilot" | "claude" | "codex" | "cursor";
   pendingApproval?: ToolApprovalRequest;
   onApprovalRespond?: (requestId: string, approved: boolean, answer?: string) => void;
   onForkRun?: (sourceRunId: string, message: string) => Promise<string | null>;
   onSuggestionSelect?: (suggestion: string) => void;
+  onApplyPlan?: () => void;
 }
 
 export function WorkspaceEvents({
@@ -409,6 +411,7 @@ export function WorkspaceEvents({
   onApprovalRespond,
   onForkRun,
   onSuggestionSelect,
+  onApplyPlan,
 }: WorkspaceEventsProps) {
   const isEditorActive = activeTab === "editor";
   const isIssueActive = isIssueTab(activeTab);
@@ -482,6 +485,15 @@ export function WorkspaceEvents({
     return last;
   }, [eventGroups]);
 
+  // Latest thinking text from cursor agent_thought_chunk events
+  const latestThinking = useMemo(() => {
+    const reversed = [...currentEvents].reverse();
+    const last = reversed.find(
+      (e) => e.type === "log" && e.content.startsWith("[thinking] "),
+    );
+    return last ? last.content.slice("[thinking] ".length) : undefined;
+  }, [currentEvents]);
+
   // Fork handler: forks from the current run with a default prompt
   const handleFork = useCallback(
     (_responseContent: string) => {
@@ -539,11 +551,21 @@ export function WorkspaceEvents({
                         ) : null}
                       </>
                     ) : group.type === "tool_calls" ? (
-                      <ToolCallGroup
-                        group={group}
-                        defaultExpanded={index === eventGroups.length - 1}
-                        variant={variant}
-                      />
+                      // Standalone plan groups render PlanDisplay directly
+                      group.events.length === 1 && (() => {
+                        const c = group.events[0].content;
+                        const ci = c.indexOf(":");
+                        const n = (ci !== -1 ? c.substring(0, ci).trim() : c).toLowerCase();
+                        return n === "plan" || n === "create plan" || n === "exitplanmode";
+                      })() ? (
+                        <PlanDisplay event={group.events[0]} onApplyPlan={onApplyPlan} />
+                      ) : (
+                        <ToolCallGroup
+                          group={group}
+                          defaultExpanded={index === eventGroups.length - 1}
+                          variant={variant}
+                        />
+                      )
                     ) : (
                       <InfoGroup group={group} />
                     )}
@@ -556,7 +578,7 @@ export function WorkspaceEvents({
                   </Fragment>
                 );
               })}
-              {isRunning && <AsciiLoader variant={variant} />}
+              {isRunning && <AsciiLoader variant={variant} thinkingText={latestThinking} />}
               {isRunning && pendingApproval && onApprovalRespond && (
                 <ToolApprovalDialog
                   request={pendingApproval}

@@ -87,11 +87,16 @@ export function useTabHandlers({
     (e: React.MouseEvent) => {
       e.stopPropagation();
       if (activeTab === "new-run") {
-        dispatch(setActiveTab(getNextTab("new-run")));
+        const nextTab = getNextTab("new-run");
+        dispatch(setActiveTab(nextTab));
+        // If switching to a run tab, also load its content
+        if (nextTab !== "editor" && !nextTab.startsWith("issue:") && !nextTab.startsWith("signal:") && !nextTab.startsWith("note:")) {
+          selectTab(nextTab);
+        }
       }
       dispatch(closeNewRunTab());
     },
-    [dispatch, activeTab, getNextTab],
+    [dispatch, activeTab, getNextTab, selectTab],
   );
 
   const handleSelectEditorTab = useCallback(() => {

@@ -63,6 +63,7 @@ export const DEFAULT_ALLOWED_TOOLS = [
   "mcp__jinzo__SaveFindings",
   "mcp__jinzo__CommitChanges",
   "mcp__jinzo__CreatePR",
+  "mcp__jinzo__CheckPackage",
 ];
 
 export const ALLOWED_TOOLS_SET = new Set(DEFAULT_ALLOWED_TOOLS);

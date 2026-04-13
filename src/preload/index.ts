@@ -416,6 +416,8 @@ const api = {
       ipcRenderer.invoke("workspaceDiffs:getLatest", workspaceId),
     getByRun: (runId: string) =>
       ipcRenderer.invoke("workspaceDiffs:getByRun", runId),
+    deleteLatest: (workspaceId: string) =>
+      ipcRenderer.invoke("workspaceDiffs:deleteLatest", workspaceId),
   },
   // Workspace activity operations
   workspaceActivity: {
@@ -560,6 +562,11 @@ const api = {
      */
     cloneRepo: (url: string, targetPath: string) =>
       ipcRenderer.invoke("git:cloneRepo", url, targetPath),
+    /**
+     * Hard-reset working tree to a given ref and clean untracked files
+     */
+    resetHard: (rootPath: string, ref: string) =>
+      ipcRenderer.invoke("git:resetHard", rootPath, ref),
   },
   // Terminal operations
   terminal: {

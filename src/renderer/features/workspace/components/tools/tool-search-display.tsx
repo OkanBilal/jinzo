@@ -6,7 +6,7 @@ export interface ToolSearchParams {
   max_results?: number;
 }
 
-export function ToolSearchDisplay({ params, output, isCompact = false }: { params: ToolSearchParams; output?: unknown; isCompact?: boolean }) {
+export function ToolSearchDisplay({ output, isCompact = false }: { params: ToolSearchParams; output?: unknown; isCompact?: boolean }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const { matches, total } = parseToolSearchOutput(output);
@@ -29,9 +29,7 @@ export function ToolSearchDisplay({ params, output, isCompact = false }: { param
             ToolSearch
           </span>
         )}
-        <code className="text-primary-500 font-sans text-xs truncate">
-          {params.query || "?"}
-        </code>
+
         {matches.length > 0 && (
           <span className="text-primary-400 text-xs dark:text-primary-500">
             {matches.length} match{matches.length !== 1 ? "es" : ""}

@@ -5,9 +5,10 @@ import {
   WorkspaceInput,
   WorkspaceTabs,
   TerminalSection,
+  DiffSummaryBar,
 } from "@/features/workspace/components";
 import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
-import { useAbortRunMutation } from "@/lib/redux/api";
+import { useAbortRunMutation, useGetProviderByIdQuery, useUpdateProviderMutation } from "@/lib/redux/api";
 import { useSetMainHeader } from "@/hooks/use-main-header";
 import { useBottomTerminal } from "@/hooks/use-bottom-terminal";
 
@@ -16,6 +17,8 @@ const CLAUDE_PROVIDER_ID = "claude_code";
 export default function ClaudePage() {
   const ws = useWorkspacePage(CLAUDE_PROVIDER_ID);
   const [abortRun] = useAbortRunMutation();
+  const { data: providerData } = useGetProviderByIdQuery(CLAUDE_PROVIDER_ID);
+  const [updateProvider] = useUpdateProviderMutation();
   const bottomTerminal = useBottomTerminal();
 
   const { pendingApprovals, respond: respondToolApproval } = useToolApproval();
@@ -37,6 +40,21 @@ export default function ClaudePage() {
     },
     [ws],
   );
+
+  const handleApplyPlan = useCallback(async () => {
+    // Switch from plan mode to acceptEdits so the agent can execute
+    if (providerData) {
+      const currentConfig = providerData.config ?? {};
+      if ((currentConfig as any).permissionMode === "plan") {
+        await updateProvider({
+          id: CLAUDE_PROVIDER_ID,
+          payload: { config: { ...currentConfig, permissionMode: "acceptEdits" } },
+        });
+      }
+    }
+    ws.setGoal("Execute the plan above.");
+    ws.setAutoExecute(true);
+  }, [ws, providerData, updateProvider]);
 
   const tabBar = useMemo(
     () =>
@@ -114,9 +132,18 @@ export default function ClaudePage() {
             onApprovalRespond={respondToolApproval}
             onForkRun={ws.handleForkRun}
             onSuggestionSelect={handleSuggestionSelect}
+            onApplyPlan={handleApplyPlan}
           />
         )}
       </div>
+      {ws.currentWorkspace && (
+        <DiffSummaryBar
+          workspaceId={ws.currentWorkspace.id}
+          rootPath={ws.currentWorkspace.rootPath}
+          isRunning={ws.isLoading}
+          lastCompletedRunId={ws.activeRun?.status !== "running" ? ws.activeRunId : null}
+        />
+      )}
       <WorkspaceInput
         goal={ws.goal}
         onGoalChange={ws.setGoal}

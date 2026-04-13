@@ -57,6 +57,21 @@ export const workspaceDiffsService = {
     }
   },
 
+  async deleteLatest(
+    workspaceId: string,
+  ): Promise<ServiceResponse<void>> {
+    try {
+      await workspaceDiffsRepo.deleteLatestByWorkspace(workspaceId);
+      return { success: true };
+    } catch (error) {
+      console.error(
+        `[WorkspaceDiffsService] Failed to delete latest diff for workspace ${workspaceId}:`,
+        error,
+      );
+      return { success: false, error: "Failed to delete latest workspace diff" };
+    }
+  },
+
   async createDiff(payload: {
     id: string;
     workspaceId: string;

@@ -43,6 +43,9 @@ export { InputForm } from "./input/input-form";
 export { FileUploadDropdown, FILE_TYPES } from "./input/file-upload-dropdown";
 export type { UploadedFile } from "./input/file-upload-dropdown";
 export { ModelSelectDropdown } from "./input/model-select-dropdown";
+export { EffortLevelDropdown } from "./input/effort-level-dropdown";
+export { FastModeButton } from "./input/fast-mode-button";
+export { PermissionModeDropdown } from "./input/permission-mode-dropdown";
 
 // Select (custom dropdown)
 export { default as Select } from "./select";

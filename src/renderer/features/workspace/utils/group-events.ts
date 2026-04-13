@@ -28,7 +28,21 @@ export function groupEvents(events: RunEvent[]): EventGroup[] {
 
   for (const event of events) {
     if (event.type === "tool_call") {
-      currentToolGroup.push(event);
+      // Plan/ExitPlanMode tool calls render standalone, never inside a group
+      const colonIdx = event.content.indexOf(":");
+      const name = (colonIdx !== -1 ? event.content.substring(0, colonIdx).trim() : event.content).toLowerCase();
+      if (name === "plan" || name === "exitplanmode" || name === "create plan") {
+        flushToolGroup();
+        groups.push({
+          id: `plan-${event.id}`,
+          type: "tool_calls",
+          events: [event],
+          startTime: event.timestamp,
+          endTime: event.timestamp,
+        });
+      } else {
+        currentToolGroup.push(event);
+      }
     } else if (event.type === "artifact") {
       flushToolGroup();
       const isUserPrompt = event.metadata?.kind === "user-prompt";

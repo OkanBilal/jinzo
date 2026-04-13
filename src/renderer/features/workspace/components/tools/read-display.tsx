@@ -39,7 +39,7 @@ export function ReadDisplay({ params, output, isCompact = false }: { params: Rea
           </span>
         )}
         <code className="text-primary-500 font-mono text-xs truncate">
-          {shortPath(params.file_path || params.path || "?")}
+          {shortPath(params.file_path || params.path || (((params as any)._title && ((params as any)._title.includes("/") || (params as any)._title.includes("."))) ? (params as any)._title : "") || "")}
         </code>
       </button>
 

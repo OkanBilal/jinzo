@@ -23,6 +23,7 @@ type SettingsSection =
   | "projects"
   | "codex"
   | "codex-plugins"
+  | "cursor"
   | "dashboard";
 import ClaudeSettings from "@/features/settings/components/claude";
 import CopilotSettings from "@/features/settings/components/copilot";
@@ -30,6 +31,7 @@ import GitSettings from "@/features/settings/components/git";
 import ProjectsSettings from "@/features/settings/components/projects";
 import CodexSettings from "@/features/settings/components/codex";
 import CodexPlugins from "@/features/settings/components/codex-plugins";
+import CursorSettings from "@/features/settings/components/cursor";
 import DashboardPage from "@/features/stats/components/dashboard-page";
 
 export default function SettingsPage() {
@@ -93,6 +95,9 @@ export default function SettingsPage() {
       break;
     case "codex-plugins":
       content = <CodexPlugins />;
+      break;
+    case "cursor":
+      content = <CursorSettings />;
       break;
     case "git":
       content = <GitSettings />;

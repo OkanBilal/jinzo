@@ -4,6 +4,7 @@ export type RouteType =
   | "claude"
   | "copilot"
   | "codex"
+  | "cursor"
   | "settings"
   | "home"
   | "unknown";
@@ -12,6 +13,7 @@ const ROUTE_PATTERNS = {
   claude: "/claude/:id?",
   copilot: "/copilot/:id?",
   codex: "/codex/:id?",
+  cursor: "/cursor/:id?",
   settings: "/settings",
   home: "/",
 } as const;
@@ -24,6 +26,7 @@ export function getRouteType(pathname: string): RouteType {
   if (matchPath(ROUTE_PATTERNS.claude, pathname)) return "claude";
   if (matchPath(ROUTE_PATTERNS.copilot, pathname)) return "copilot";
   if (matchPath(ROUTE_PATTERNS.codex, pathname)) return "codex";
+  if (matchPath(ROUTE_PATTERNS.cursor, pathname)) return "cursor";
 
   return "unknown";
 }
@@ -36,6 +39,8 @@ export function getBaseRoutePath(routeType: RouteType): string {
       return "/copilot";
     case "codex":
       return "/codex";
+    case "cursor":
+      return "/cursor";
     case "settings":
       return "/settings";
     case "home":

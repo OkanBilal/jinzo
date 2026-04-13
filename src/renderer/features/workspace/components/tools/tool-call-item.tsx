@@ -4,15 +4,15 @@ import { parseToolContent } from "../../utils/parse-tool-content";
 import { getToolType } from "../../utils/group-tool-calls";
 import { TodoListDisplay, type TodoItem } from "./todo-list-display";
 import { TaskDisplay, type TaskParams } from "./task-display";
-import { ExitPlanDisplay, type ExitPlanParams } from "./exit-plan-display";
+import { PlanDisplay } from "./plan-display";
 import { WriteDisplay, type WriteParams } from "./write-display";
 import { McpDisplay } from "./mcp-display";
 import { GetDiffDisplay, type GetDiffParams } from "./get-diff-display";
-import { PersistReviewDisplay, type PersistReviewParams } from "./persist-review-display";
+import { SaveReviewDisplay, type SaveReviewParams } from "./save-review-display";
 import { CommitDisplay, type CommitParams } from "./commit-display";
 import { PRDisplay, type PRParams } from "./pr-display";
 import { CheckPackageDisplay, type CheckPackageParams } from "./check-package-display";
-import { PersistFindingDisplay, type PersistFindingParams } from "./persist-finding-display";
+import { SaveFindingDisplay, type SaveFindingParams } from "./save-finding-display";
 import { AgentDisplay, type AgentParams } from "./agent-display";
 import { IntentDisplay, type IntentParams } from "./intent-display";
 import { BashDisplay, type BashParams } from "./bash-display";
@@ -23,6 +23,8 @@ import { EditDisplay, type EditParams } from "./edit-display";
 import { ViewDisplay, type ViewParams } from "./view-display";
 import { ToolSearchDisplay, type ToolSearchParams } from "./tool-search-display";
 import { SkillDisplay, type SkillParams } from "./skill-display";
+import { AskUserQuestionDisplay, type AskUserQuestionParams } from "./ask-user-question-display";
+import { WebFetchDisplay, type WebFetchParams } from "./web-fetch-display";
 
 interface ToolCallItemProps {
   event: RunEvent;
@@ -45,17 +47,14 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     }
   }
 
-  // Show ExitPlanDisplay for ExitPlanMode tool calls
+  // Show PlanDisplay for Plan / Create Plan tool calls
+  if (toolName.toLowerCase() === "plan" || toolName.toLowerCase() === "create plan") {
+    return <PlanDisplay event={event} />;
+  }
+
+  // Show PlanDisplay for ExitPlanMode tool calls
   if (toolName.toLowerCase() === "exitplanmode") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const planParams: ExitPlanParams = metadataInput
-      ? (metadataInput as ExitPlanParams)
-      : params
-        ? (params as ExitPlanParams)
-        : { plan: summary };
-    return <ExitPlanDisplay params={planParams} />;
+    return <PlanDisplay event={event} />;
   }
 
   // Show TaskDisplay for task tool calls - prefer metadata.input over parsed content
@@ -215,6 +214,32 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     return <SkillDisplay params={skillParams} isCompact={isCompact} />;
   }
 
+  // Show AskUserQuestionDisplay for interactive question tool calls
+  if (toolName.toLowerCase() === "askuserquestion") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const askParams: AskUserQuestionParams = metadataInput
+      ? (metadataInput as AskUserQuestionParams)
+      : params
+        ? (params as AskUserQuestionParams)
+        : { question: summary };
+    return <AskUserQuestionDisplay params={askParams} output={event.metadata?.output} isCompact={isCompact} />;
+  }
+
+  // Show WebFetchDisplay for web fetch tool calls
+  if (toolName.toLowerCase() === "webfetch" || toolName.toLowerCase() === "web_fetch") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const fetchParams: WebFetchParams = metadataInput
+      ? (metadataInput as WebFetchParams)
+      : params
+        ? (params as WebFetchParams)
+        : { url: summary };
+    return <WebFetchDisplay params={fetchParams} output={event.metadata?.output} isCompact={isCompact} />;
+  }
+
   // Show GetDiffDisplay for Jinzo GetDiff tool calls
   if (displayName === "GetDiff") {
     const metadataInput = event.metadata?.input as
@@ -233,12 +258,12 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
       | undefined;
-    const reviewParams: PersistReviewParams = metadataInput
-      ? (metadataInput as PersistReviewParams)
+    const reviewParams: SaveReviewParams = metadataInput
+      ? (metadataInput as SaveReviewParams)
       : params
-        ? (params as PersistReviewParams)
+        ? (params as SaveReviewParams)
         : {};
-    return <PersistReviewDisplay params={reviewParams} isCompact={isCompact} />;
+    return <SaveReviewDisplay params={reviewParams} isCompact={isCompact} />;
   }
 
   // Show PersistFindingDisplay for Jinzo SaveFinding/SaveFindings tool calls
@@ -246,12 +271,12 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
       | undefined;
-    const findingParams: PersistFindingParams = metadataInput
-      ? (metadataInput as PersistFindingParams)
+    const findingParams: SaveFindingParams = metadataInput
+      ? (metadataInput as SaveFindingParams)
       : params
-        ? (params as PersistFindingParams)
+        ? (params as SaveFindingParams)
         : {};
-    return <PersistFindingDisplay params={findingParams} isCompact={isCompact} />;
+    return <SaveFindingDisplay params={findingParams} isCompact={isCompact} />;
   }
 
   // Show CommitDisplay for Jinzo CommitChanges tool calls

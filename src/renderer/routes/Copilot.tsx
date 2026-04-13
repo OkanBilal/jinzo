@@ -5,9 +5,10 @@ import {
   WorkspaceInput,
   WorkspaceTabs,
   TerminalSection,
+  DiffSummaryBar,
 } from "@/features/workspace/components";
 import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
-import { useAbortRunMutation } from "@/lib/redux/api";
+import { useAbortRunMutation, useGetProviderByIdQuery, useUpdateProviderMutation } from "@/lib/redux/api";
 import { useSetMainHeader } from "@/hooks/use-main-header";
 import { useBottomTerminal } from "@/hooks/use-bottom-terminal";
 
@@ -16,6 +17,8 @@ const COPILOT_CLI_PROVIDER_ID = "copilot_cli";
 export default function CopilotPage() {
   const ws = useWorkspacePage(COPILOT_CLI_PROVIDER_ID);
   const [abortRun] = useAbortRunMutation();
+  const { data: providerData } = useGetProviderByIdQuery(COPILOT_CLI_PROVIDER_ID);
+  const [updateProvider] = useUpdateProviderMutation();
   const bottomTerminal = useBottomTerminal();
 
   const { pendingApprovals, respond: respondToolApproval } = useToolApproval();
@@ -23,6 +26,20 @@ export default function CopilotPage() {
   const currentApproval = ws.activeRunId
     ? pendingApprovals.find((a) => a.runId === ws.activeRunId)
     : undefined;
+
+  const handleApplyPlan = useCallback(async () => {
+    if (providerData) {
+      const currentConfig = providerData.config ?? {};
+      if ((currentConfig as any).permissionMode === "plan") {
+        await updateProvider({
+          id: COPILOT_CLI_PROVIDER_ID,
+          payload: { config: { ...currentConfig, permissionMode: "acceptEdits" } },
+        });
+      }
+    }
+    ws.setGoal("Execute the plan above.");
+    ws.setAutoExecute(true);
+  }, [ws, providerData, updateProvider]);
 
   const handleStop = useCallback(() => {
     if (ws.activeRunId) {
@@ -104,10 +121,19 @@ export default function CopilotPage() {
             turns={ws.currentTurns}
             pendingApproval={currentApproval}
             onApprovalRespond={respondToolApproval}
+            onApplyPlan={handleApplyPlan}
           />
         )}
       </div>
 
+      {ws.currentWorkspace && (
+        <DiffSummaryBar
+          workspaceId={ws.currentWorkspace.id}
+          rootPath={ws.currentWorkspace.rootPath}
+          isRunning={ws.isLoading}
+          lastCompletedRunId={ws.activeRun?.status !== "running" ? ws.activeRunId : null}
+        />
+      )}
       <WorkspaceInput
         goal={ws.goal}
         onGoalChange={ws.setGoal}

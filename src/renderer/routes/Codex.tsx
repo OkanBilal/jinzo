@@ -5,9 +5,10 @@ import {
   WorkspaceInput,
   WorkspaceTabs,
   TerminalSection,
+  DiffSummaryBar,
 } from "@/features/workspace/components";
 import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
-import { useAbortRunMutation } from "@/lib/redux/api";
+import { useAbortRunMutation, useGetProviderByIdQuery, useUpdateProviderMutation } from "@/lib/redux/api";
 import { useSetMainHeader } from "@/hooks/use-main-header";
 import { useBottomTerminal } from "@/hooks/use-bottom-terminal";
 
@@ -16,6 +17,8 @@ const CODEX_PROVIDER_ID = "codex";
 export default function CodexPage() {
   const ws = useWorkspacePage(CODEX_PROVIDER_ID);
   const [abortRun] = useAbortRunMutation();
+  const { data: providerData } = useGetProviderByIdQuery(CODEX_PROVIDER_ID);
+  const [updateProvider] = useUpdateProviderMutation();
   const bottomTerminal = useBottomTerminal();
 
   const { pendingApprovals, respond: respondToolApproval } = useToolApproval();
@@ -23,6 +26,20 @@ export default function CodexPage() {
   const currentApproval = ws.activeRunId
     ? pendingApprovals.find((a) => a.runId === ws.activeRunId)
     : undefined;
+
+  const handleApplyPlan = useCallback(async () => {
+    if (providerData) {
+      const currentConfig = providerData.config ?? {};
+      if ((currentConfig as any).sandboxMode === "plan") {
+        await updateProvider({
+          id: CODEX_PROVIDER_ID,
+          payload: { config: { ...currentConfig, sandboxMode: "workspace-write" } },
+        });
+      }
+    }
+    ws.setGoal("Execute the plan above.");
+    ws.setAutoExecute(true);
+  }, [ws, providerData, updateProvider]);
 
   const handleStop = useCallback(() => {
     if (ws.activeRunId) {
@@ -105,10 +122,19 @@ export default function CodexPage() {
             pendingApproval={currentApproval}
             onApprovalRespond={respondToolApproval}
             onForkRun={ws.handleForkRun}
+            onApplyPlan={handleApplyPlan}
           />
         )}
       </div>
 
+      {ws.currentWorkspace && (
+        <DiffSummaryBar
+          workspaceId={ws.currentWorkspace.id}
+          rootPath={ws.currentWorkspace.rootPath}
+          isRunning={ws.isLoading}
+          lastCompletedRunId={ws.activeRun?.status !== "running" ? ws.activeRunId : null}
+        />
+      )}
       <WorkspaceInput
         goal={ws.goal}
         onGoalChange={ws.setGoal}

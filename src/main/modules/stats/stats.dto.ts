@@ -14,6 +14,7 @@ export interface DailyActivity {
   claude: number;
   copilot: number;
   codex: number;
+  cursor: number;
   other: number;
 }
 
@@ -67,7 +68,7 @@ export interface CodeActivityStats {
   totalFilesChanged: number;
 }
 
-export type ProviderFilter = "all" | "claude_code" | "copilot_cli" | "codex";
+export type ProviderFilter = "all" | "claude_code" | "copilot_cli" | "codex" | "cursor";
 
 export interface DashboardData {
   summary: DashboardSummary;

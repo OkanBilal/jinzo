@@ -1,6 +1,7 @@
 import { Close, RightPanelOpen, Bash } from "@/components/ui/icons";
 import { Button, toast } from "@/components/ui";
 import { useAppSelector } from "@/lib/redux/hooks";
+import { GitActionsDropdown } from "./git-actions-dropdown";
 
 interface ToggleButtonProps {
   isOpen: boolean;
@@ -13,6 +14,9 @@ export function ToggleButton({ isOpen, onClick, terminalOpen, onTerminalToggle }
   const activeWorkspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId);
   return (
     <div className="fixed z-(--z-panel-toggle) flex items-center gap-2 top-2.75 right-3.25">
+      <GitActionsDropdown />
+      {/* Separator */}
+      <div className="h-4 w-px bg-primary-300/40 dark:bg-primary-700/40" />
       {onTerminalToggle && (
         <Button
           tooltip={terminalOpen ? "Close terminal" : "Open terminal"}

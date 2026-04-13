@@ -73,11 +73,11 @@ export function SidebarFooter({
             tooltip="Help & Resources"
             tooltipPosition="top"
             onClick={onHelpClick}
-            className=" cursor-pointer transition-transform duration-300"
+            className=" cursor-pointer transition-transform duration-300 "
             aria-label="Help & Resources"
             title="Help & Resources"
           >
-            <Question className="size-4.5 -mt-1 text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
+            <Question className="size-4.5 mt-1 text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100 transition-colors duration-300" />
           </Button>
         </div>
       </div>

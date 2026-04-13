@@ -272,8 +272,12 @@ export const guardsService = {
         return;
       }
 
-      const args = input.toolArgs as Record<string, unknown> | null;
-      const command = (args?.command as string) || (args?.input as string) || "";
+      let args = input.toolArgs as Record<string, unknown> | string | null;
+      if (typeof args === "string") {
+        try { args = JSON.parse(args); } catch { return; }
+      }
+      const argsObj = args as Record<string, unknown> | null;
+      const command = (argsObj?.command as string) || (argsObj?.input as string) || "";
       if (!command) return;
 
       const parsed = parseInstallCommand(command);

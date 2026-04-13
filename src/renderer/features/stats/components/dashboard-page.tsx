@@ -15,6 +15,7 @@ const TABS: { id: ProviderFilter; label: string }[] = [
   { id: "claude_code", label: "Claude" },
   { id: "copilot_cli", label: "Copilot" },
   { id: "codex", label: "Codex" },
+  { id: "cursor", label: "Cursor" },
 ];
 
 export default function DashboardPage() {

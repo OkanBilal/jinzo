@@ -7,7 +7,7 @@ import type { EventGroup } from "../../utils/group-events";
 interface ToolCallGroupProps {
   group: EventGroup;
   defaultExpanded?: boolean;
-  variant?: "copilot" | "claude" | "codex";
+  variant?: "copilot" | "claude" | "codex" | "cursor";
 }
 
 export function ToolCallGroup({

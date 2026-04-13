@@ -294,6 +294,10 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
       shortstat = mergeUntrackedIntoShortstat(shortstat, untrackedFiles.length, untrackedInsertions);
     }
 
+    // Remove the latest diff for this workspace so we always reflect the current state
+    // (covers both continuations of the same run and new runs replacing old ones)
+    await workspaceDiffsRepo.deleteLatestByWorkspace(workspaceId);
+
     // Skip if no files changed
     if (files.length === 0) {
       console.log(`[RunsService] No changes since ${baseRef} for run ${runId}, skipping diff persist`);
@@ -839,6 +843,15 @@ export const runsService = {
                 : "failed";
 
           try {
+            // Persist git diff BEFORE updating status so that when the
+            // renderer polls and sees the status change it can immediately
+            // fetch the diff without a race condition.
+            if (finalStatus === "succeeded") {
+              await persistRunDiff(runId, workspace.id, workspace.rootPath);
+            } else {
+              runBaseRefs.delete(runId);
+            }
+
             await runsRepo.updateRun(runId, {
               status: finalStatus,
               endedAt: new Date(),
@@ -846,12 +859,6 @@ export const runsService = {
               stopReason: result.stopReason ?? null,
             });
 
-            // Persist git diff on success
-            if (finalStatus === "succeeded") {
-              await persistRunDiff(runId, workspace.id, workspace.rootPath);
-            } else {
-              runBaseRefs.delete(runId);
-            }
             await closeActiveTurn(runId, result.usage);
             // Close any orphaned "running" tool calls
             await closePendingToolCalls(pendingToolCalls, finalStatus === "succeeded" ? "done" : "error");
@@ -1443,19 +1450,21 @@ export const runsService = {
                 ? "canceled"
                 : "failed";
 
+          // Persist git diff BEFORE updating status so that when the
+          // renderer polls and sees the status change it can immediately
+          // fetch the diff without a race condition.
+          if (finalStatus === "succeeded" && workspace) {
+            await persistRunDiff(runId, workspace.id, workspace.rootPath);
+          } else {
+            runBaseRefs.delete(runId);
+          }
+
           await runsRepo.updateRun(runId, {
             status: finalStatus,
             endedAt: new Date(),
             lastError: result.status === "failed" ? result.summary : undefined,
             stopReason: result.stopReason ?? null,
           });
-
-          // Persist git diff on success
-          if (finalStatus === "succeeded" && workspace) {
-            await persistRunDiff(runId, workspace.id, workspace.rootPath);
-          } else {
-            runBaseRefs.delete(runId);
-          }
 
           console.log(
             `[RunsService] Continued run ${runId} completed with status: ${finalStatus}`,
@@ -1656,19 +1665,21 @@ export const runsService = {
                 ? "canceled"
                 : "failed";
 
+          // Persist git diff BEFORE updating status so that when the
+          // renderer polls and sees the status change it can immediately
+          // fetch the diff without a race condition.
+          if (finalStatus === "succeeded" && workspace) {
+            await persistRunDiff(newRunId, workspace.id, workspace.rootPath);
+          } else {
+            runBaseRefs.delete(newRunId);
+          }
+
           await runsRepo.updateRun(newRunId, {
             status: finalStatus,
             endedAt: new Date(),
             lastError: result.status === "failed" ? result.summary : undefined,
             stopReason: result.stopReason ?? null,
           });
-
-          // Persist git diff on success
-          if (finalStatus === "succeeded" && workspace) {
-            await persistRunDiff(newRunId, workspace.id, workspace.rootPath);
-          } else {
-            runBaseRefs.delete(newRunId);
-          }
 
           console.log(
             `[RunsService] Forked run ${newRunId} (from ${sourceRunId}) completed with status: ${finalStatus}`,
@@ -1791,6 +1802,15 @@ export const runsService = {
               : "failed";
 
         try {
+          // Persist git diff BEFORE updating status so that when the
+          // renderer polls and sees the status change it can immediately
+          // fetch the diff without a race condition.
+          if (finalStatus === "succeeded") {
+            await persistRunDiff(runId, workspace.id, workspace.rootPath);
+          } else {
+            runBaseRefs.delete(runId);
+          }
+
           await runsRepo.updateRun(runId, {
             status: finalStatus,
             endedAt: new Date(),
@@ -1798,11 +1818,6 @@ export const runsService = {
             stopReason: result.stopReason ?? null,
           });
 
-          if (finalStatus === "succeeded") {
-            await persistRunDiff(runId, workspace.id, workspace.rootPath);
-          } else {
-            runBaseRefs.delete(runId);
-          }
           await closeActiveTurn(runId, result.usage);
           if (pendingToolCalls) {
             await closePendingToolCalls(pendingToolCalls, finalStatus === "succeeded" ? "done" : "error");

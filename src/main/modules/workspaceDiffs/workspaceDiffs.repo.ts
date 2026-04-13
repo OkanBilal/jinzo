@@ -72,6 +72,24 @@ export const workspaceDiffsRepo = {
     await db.delete(workspaceDiffs).where(eq(workspaceDiffs.workspaceId, workspaceId));
   },
 
+  async deleteByRun(runId: string): Promise<void> {
+    const db = getDb();
+    await db.delete(workspaceDiffs).where(eq(workspaceDiffs.runId, runId));
+  },
+
+  async deleteLatestByWorkspace(workspaceId: string): Promise<void> {
+    const db = getDb();
+    const rows = await db
+      .select({ id: workspaceDiffs.id })
+      .from(workspaceDiffs)
+      .where(eq(workspaceDiffs.workspaceId, workspaceId))
+      .orderBy(desc(workspaceDiffs.createdAt))
+      .limit(1);
+    if (rows[0]) {
+      await db.delete(workspaceDiffs).where(eq(workspaceDiffs.id, rows[0].id));
+    }
+  },
+
   async findByWorkspaceAndBaseRef(
     workspaceId: string,
     baseRef: string,

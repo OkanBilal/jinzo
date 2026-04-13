@@ -4,16 +4,17 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { ProviderResponse } from "../providers.dto";
-import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, CodexAccountInfo } from "./adapter.types";
+import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, CursorAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, CodexAccountInfo } from "./adapter.types";
 import { createCopilotAdapter } from "./copilot.adapter";
 import { createClaudeAdapter } from "./claude.adapter";
 import { createCodexAdapter } from "./codex.adapter";
+import { createCursorAdapter } from "./cursor.adapter";
 import { findCopilotCliPath } from "../providers.utils";
 
 /**
  * Known provider IDs that support work runs
  */
-export const SUPPORTED_WORK_PROVIDERS = ["copilot_cli", "claude_code", "codex"] as const;
+export const SUPPORTED_WORK_PROVIDERS = ["copilot_cli", "claude_code", "codex", "cursor"] as const;
 export type SupportedWorkProvider = (typeof SUPPORTED_WORK_PROVIDERS)[number];
 
 /**
@@ -93,6 +94,15 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
         defaultModel: provider.defaultModel ?? undefined,
       };
       adapter = createCodexAdapter(config);
+      break;
+    }
+
+    case "cursor": {
+      const config: CursorAdapterConfig = {
+        ...(provider.config as CursorAdapterConfig | null),
+        defaultModel: provider.defaultModel ?? undefined,
+      };
+      adapter = createCursorAdapter(config);
       break;
     }
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ArrowUp, Jinzo } from "@/components/ui/icons";
 
-export interface PersistReviewParams {
+export interface SaveReviewParams {
   title?: string;
   summary?: string;
   status?: string;
@@ -9,18 +9,12 @@ export interface PersistReviewParams {
   metadata?: Record<string, unknown>;
 }
 
-const STATUS_STYLES: Record<string, string> = {
-  open: "bg-blue-500/10 text-blue-400",
-  in_review: "bg-yellow-500/10 text-yellow-400",
-  approved: "bg-green-500/10 text-green-400",
-  rejected: "bg-red-500/10 text-red-400",
-};
 
-export function PersistReviewDisplay({
+export function SaveReviewDisplay({
   params,
   isCompact = false,
 }: {
-  params: PersistReviewParams;
+  params: SaveReviewParams;
   isCompact?: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -43,13 +37,7 @@ export function PersistReviewDisplay({
             Review
           </span>
         )}
-        {params.status && (
-          <span
-            className={`text-xs px-1.5 py-0.5 rounded font-medium ${STATUS_STYLES[params.status] ?? "bg-primary-500/10 text-primary-400"}`}
-          >
-            {params.status}
-          </span>
-        )}
+
         <span className="text-primary-500 truncate font-medium">
           {params.title || "Untitled review"}
         </span>

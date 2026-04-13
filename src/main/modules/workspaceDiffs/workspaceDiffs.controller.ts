@@ -10,4 +10,6 @@ export const workspaceDiffsController = {
     workspaceDiffsService.getLatest(workspaceId),
   getByRun: (runId: string) =>
     workspaceDiffsService.getByRun(runId),
+  deleteLatest: (workspaceId: string) =>
+    workspaceDiffsService.deleteLatest(workspaceId),
 };

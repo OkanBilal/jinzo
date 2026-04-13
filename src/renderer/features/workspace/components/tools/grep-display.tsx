@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUp, Search } from "@/components/ui/icons";
+import { ArrowUp, Grep } from "@/components/ui/icons";
 
 export interface GrepParams {
   pattern?: string;
@@ -26,7 +26,7 @@ export function GrepDisplay({ params, output, isCompact = false }: { params: Gre
           className={`size-3 text-primary-800  dark:text-primary-300 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
         )}
-        {!isCompact && <Search className="size-4 dark:text-primary-300 text-primary-700" />}
+        {!isCompact && <Grep className="size-4 dark:text-primary-300 text-primary-700" />}
         {!isCompact && (
           <span className="dark:text-primary-300 text-primary-700 font-medium">
             Grep

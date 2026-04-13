@@ -11,7 +11,7 @@ interface Finding {
   suggestion?: string;
 }
 
-export interface PersistFindingParams {
+export interface SaveFindingParams {
   // Single finding
   reviewId?: string;
   severity?: string;
@@ -31,11 +31,11 @@ const SEVERITY_STYLES: Record<string, string> = {
   info: "bg-blue-500/10 text-blue-400",
 };
 
-export function PersistFindingDisplay({
+export function SaveFindingDisplay({
   params,
   isCompact = false,
 }: {
-  params: PersistFindingParams;
+  params: SaveFindingParams;
   isCompact?: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);

@@ -9,6 +9,7 @@ import {
   Branch,
   Chart,
   Codex,
+  Cursor,
 } from "@/components/ui/icons";
 type SettingsSection =
   | "general"
@@ -25,6 +26,7 @@ type SettingsSection =
   | "git"
   | "projects"
   | "codex"
+  | "cursor"
   | "dashboard";
 import { Claude } from "@/components/ui/icons/space";
 import { useGetProjectsQuery } from "@/lib/redux/api";
@@ -55,7 +57,7 @@ const providerItems: Array<MenuItem> = [
   { id: "claude", label: "Claude", icon: Claude },
   { id: "codex", label: "Codex", icon: Codex },
   { id: "copilot", label: "Copilot", icon: CopilotStatic },
-
+  { id: "cursor", label: "Cursor", icon: Cursor },
 ];
 
 export default function SettingsView({ onClose }: SettingsViewProps) {

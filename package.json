@@ -104,6 +104,7 @@
     "@anthropic-ai/sdk": "^0.80.0",
     "@github/copilot-sdk": "^0.2.0",
     "@linear/sdk": "^80.0.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@number-flow/react": "^0.6.0",
     "@octokit/rest": "^22.0.1",
     "@openai/codex-sdk": "^0.116.0",

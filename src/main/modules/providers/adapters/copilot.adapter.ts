@@ -330,7 +330,7 @@ const activeRuns = new Map<
 // Pre-approved tools imported from adapter.shared (ALLOWED_TOOLS_SET)
 // Copilot also auto-allows these additional lowercase/copilot-specific tool names
 const COPILOT_EXTRA_ALLOWED = new Set([
-  "bash", "read", "glob", "grep", "report_intent", "view", "permission:read",
+  "bash", "read", "glob", "grep", "report_intent", "view", "permission:read", "web_fetch", "permission:url",
 ]);
 
 function isCopilotToolAllowed(toolName: string): boolean {
@@ -379,6 +379,15 @@ function buildPreToolUseHook(runId: string) {
   return async (
     input: { toolName: string; toolArgs: unknown; timestamp: number; cwd: string },
   ): Promise<{ permissionDecision?: "allow" | "deny" | "ask"; permissionDecisionReason?: string; modifiedArgs?: unknown } | void> => {
+    // Dependency guard check — must run before auto-allow so install commands get checked
+    const guardHook = await guardsService.buildCopilotGuardHook();
+    if (guardHook) {
+      const guardResult = await guardHook(input);
+      if (guardResult?.permissionDecision === "deny") {
+        return guardResult;
+      }
+    }
+
     // Auto-allow pre-approved tools
     if (isCopilotToolAllowed(input.toolName)) {
       return { permissionDecision: "allow" };
@@ -387,15 +396,6 @@ function buildPreToolUseHook(runId: string) {
     // Auto-allow MCP tools (mcp__ prefix)
     if (input.toolName.startsWith("mcp__")) {
       return { permissionDecision: "allow" };
-    }
-
-    // Dependency guard check — intercept package install commands
-    const guardHook = await guardsService.buildCopilotGuardHook();
-    if (guardHook) {
-      const guardResult = await guardHook(input);
-      if (guardResult?.permissionDecision === "deny") {
-        return guardResult;
-      }
     }
 
     // Interactive approval for unknown tools

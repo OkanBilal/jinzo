@@ -7,7 +7,7 @@ import { ToolInputPreview } from "./tool-input-preview";
 interface ToolApprovalDialogProps {
   request: ToolApprovalRequest;
   onRespond: (requestId: string, approved: boolean, answer?: string) => void;
-  variant?: "copilot" | "claude" | "codex";
+  variant?: "copilot" | "claude" | "codex" | "cursor";
 }
 
 export function ToolApprovalDialog({
@@ -62,9 +62,9 @@ export function ToolApprovalDialog({
       <div className="mx-auto max-w-210 px-4 mb-4">
         <div className="rounded-xl  border border-primary-200/20 dark:border-primary-700/30 bg-primary-50/50 dark:bg-primary/5 p-4 space-y-3">
           <div className="flex items-start gap-2">
-            <Question className="size-4 text-primary-400 mt-0.5 shrink-0" />
+            <Question className="size-4 dark:text-primary-400 text-primary-600 mt-0.5 shrink-0" />
             <div className="space-y-3 flex-1 min-w-0">
-              <p className="text-sm text-primary-200 dark:text-primary-300 font-medium">
+              <p className="text-xs text-primary-600 dark:text-primary-400 ">
                 {request.question || "Claude is asking a question"}
               </p>
 
@@ -74,15 +74,15 @@ export function ToolApprovalDialog({
                     <button
                       key={opt.label}
                       onClick={() => toggleOption(opt.label)}
-                      className={`w-full text-left px-3 py-2 rounded-md text-xs transition-colors border ${
+                      className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors border ${
                         selectedOptions.includes(opt.label)
-                          ? "border-primary-400 bg-primary-300 text-primary-200"
-                          : "border-primary-200/10 dark:border-primary-700/20 hover:border-primary-400 text-primary-300 dark:text-primary-400"
+                          ? " bg-primary-200 dark:bg-primary-800 text-primary-500 dark:text-primary-400"
+                          : "border-primary-400/20 dark:border-primary-700/20 hover:bg-primary-300/20 dark:hover:bg-primary-600/30 cursor-pointer duration-200 transition-all text-primary-500 dark:text-primary-400"
                       }`}
                     >
                       <span className="font-medium">{opt.label}</span>
                       {opt.description && (
-                        <span className="ml-1.5 text-primary-400 dark:text-primary-500">
+                        <span className="ml-1.5 text-primary-400 dark:text-primary-300">
                           {opt.description}
                         </span>
                       )}
@@ -100,11 +100,11 @@ export function ToolApprovalDialog({
                     if (e.key === "Enter") handleSubmitAnswer();
                   }}
                   placeholder="Type a custom answer..."
-                  className="flex-1 bg-primary-100/50 dark:bg-primary-800/30 border border-primary-200/20 dark:border-primary-700/30 rounded-md px-3 py-1.5 text-xs text-primary-200 dark:text-primary-300 placeholder:text-primary-400 dark:placeholder:text-primary-500 focus:outline-none focus:border-primary-400"
+                  className="flex-1 bg-primary-200/50 rounded-lg dark:bg-primary-700/30 hover:bg-primary-100/50 dark:hover:bg-primary-600/30 cursor-pointer duration-200 transition-all px-3 py-1.5 text-xs text-primary-200 dark:text-primary-300 placeholder:text-primary-400 dark:placeholder:text-primary-500 focus:outline-none focus:border-primary-400"
                 />
                 <Button
                   variant="primary"
-                  size="sm"
+                  size="xs"
                   className="min-w-16"
                   onClick={handleSubmitAnswer}
                   disabled={selectedOptions.length === 0 && !freeText.trim()}
@@ -113,7 +113,7 @@ export function ToolApprovalDialog({
                 </Button>
                 <Button
                   variant="secondary"
-                  size="sm"
+                  size="xs"
                   className="min-w-16"
                   onClick={handleDeny}
                 >
@@ -156,7 +156,7 @@ export function ToolApprovalDialog({
               >
                 Allow
               </Button>
-              {variant === "codex" && (
+              {(variant === "codex" || variant === "cursor") && (
                 <Button
                   variant="primary"
                   size="xs"

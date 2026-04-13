@@ -1,4 +1,4 @@
-import { Plus, CopilotStatic, Codex } from "@/components/ui/icons";
+import { Plus, CopilotStatic, Codex, Cursor } from "@/components/ui/icons";
 import { RunTab, getTabTitle } from "./run-tab";
 import { EditorTab } from "./editor-tab";
 import { IssueTab } from "./issue-tab";
@@ -37,7 +37,7 @@ interface WorkspaceTabsProps {
   showNewRunTab?: boolean;
   onSelectNewRunTab?: () => void;
   onCloseNewRunTab?: (e: React.MouseEvent) => void;
-  variant?: "claude" | "copilot" | "codex";
+  variant?: "claude" | "copilot" | "codex" | "cursor";
 }
 
 export function WorkspaceTabs({
@@ -177,7 +177,7 @@ function NewRunTab({
   onClose,
 }: {
   isActive: boolean;
-  variant: "copilot" | "claude" | "codex";
+  variant: "copilot" | "claude" | "codex" | "cursor";
   onClick: () => void;
   onClose: (e: React.MouseEvent) => void;
 }) {
@@ -197,6 +197,8 @@ function NewRunTab({
           <Claude className="text-claude" />
         ) : variant === "copilot" ? (
           <CopilotStatic className={className} />
+        ) : variant === "cursor" ? (
+          <Cursor className={className} />
         ) : (
           <Codex className={className} />
         )

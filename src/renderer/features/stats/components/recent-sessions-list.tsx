@@ -10,6 +10,7 @@ const PROVIDER_COLORS: Record<string, string> = {
   claude_code: "var(--color-claude)",
   copilot_cli: "var(--color-copilot)",
   codex: "var(--color-codex)",
+  cursor: "var(--color-cursor)",
 };
 
 

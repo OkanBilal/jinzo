@@ -313,6 +313,11 @@ export async function handleCommitChanges(
       updateRunBaseRef(ctx.runId, newHead);
     }
 
+    // Clear review findings for this workspace — committed code is accepted
+    if (ctx.workspaceId) {
+      await reviewFindingsRepo.removeByWorkspace(ctx.workspaceId);
+    }
+
     if (ctx.workspaceId) {
       workspaceActivityService.log({
         workspaceId: ctx.workspaceId,
