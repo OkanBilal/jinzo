@@ -280,7 +280,7 @@ export function DiffSection({
                 setSelectedDiffFile(filePath);
                 onSelectDiffFile(filePath, segment || diff?.diffText || "");
               }}
-              className={`w-full active:scale-99  flex items-center gap-2 px-2 py-1 rounded-xl duration-200 text-left transition-all animate-slide-in ${
+              className={`w-full flex items-center gap-2 px-2 py-1 rounded-xl duration-200 text-left transition-all animate-slide-in ${
                 isSelected
                   ? "bg-primary/80 dark:bg-primary/5"
                   : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
@@ -335,7 +335,7 @@ export function DiffSection({
             <Button
               key={`finding-${filePath}`}
               onClick={() => handleSelectFindingOnlyFile(filePath)}
-              className={`w-full active:scale-99 flex items-center gap-2 px-2 py-1 rounded-xl duration-200 text-left transition-all animate-slide-in ${
+              className={`w-full flex items-center gap-2 px-2 py-1 rounded-xl duration-200 text-left transition-all animate-slide-in ${
                 isSelected
                   ? "bg-primary/80 dark:bg-primary/5"
                   : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"

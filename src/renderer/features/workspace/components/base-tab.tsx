@@ -1,4 +1,5 @@
 import { Close } from "@/components/ui/icons";
+import { useAppSelector } from "@/lib/redux/hooks";
 
 interface BaseTabProps {
   isActive: boolean;
@@ -24,6 +25,7 @@ export function BaseTab({
   onClose,
   closeIcon,
 }: BaseTabProps) {
+  const sidebarCollapsed = useAppSelector((state) => state.appSettings.sidebarCollapsed);
 
   return (
     <div
@@ -36,7 +38,7 @@ export function BaseTab({
           onClick();
         }
       }}
-      className="group relative flex items-center gap-2 pl-3.5 pr-6 py-2 cursor-pointer w-44 min-h-10"
+      className="group relative flex items-center gap-2 pl-3.5 pr-6 py-1.5 cursor-pointer w-44 min-h-10"
     >
       {/* Active background layer — always rendered, opacity transitions */}
       <div
@@ -52,18 +54,16 @@ export function BaseTab({
       />
 
       {/* Inverted corners — always rendered, opacity transitions */}
-      {!isFirst && (
-        <InvertedCorner side="left" visible={isActive} />
-      )}
+      <InvertedCorner side="left" visible={isActive && (!isFirst || sidebarCollapsed)} />
       <InvertedCorner side="right" visible={isActive} />
 
       {/* Content */}
-      <span className={`relative flex items-center justify-center size-4.5 -mb-1 shrink-0 transition-colors duration-150 ${
+      <span className={`relative flex items-center justify-center size-4.5 shrink-0 transition-colors duration-150 ${
         isActive ? "text-primary-900 dark:text-primary-200" : "text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200"
       }`}>
         {icon}
       </span>
-      <span className={`relative min-w-0 flex-1 truncate transition-colors duration-150 ${
+      <span className={`relative min-w-0 flex-1 mb-1 truncate transition-colors duration-150 ${
         isActive ? "text-primary-900 dark:text-primary-200" : "text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200"
       }`}>
         {typeof label === "string" ? (

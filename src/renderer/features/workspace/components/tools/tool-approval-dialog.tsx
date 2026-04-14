@@ -156,7 +156,7 @@ export function ToolApprovalDialog({
               >
                 Allow
               </Button>
-              {(variant === "codex" || variant === "cursor") && (
+              {(variant === "codex") && (
                 <Button
                   variant="primary"
                   size="xs"

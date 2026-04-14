@@ -59,7 +59,7 @@ export function GitActionsDropdown() {
       <button
         ref={triggerRef}
         onClick={handleToggle}
-        className="flex items-center gap-1.5 px-2.5 py-1.25 rounded-lg cursor-pointer text-primary-900 dark:text-primary-300 hover:bg-primary-100/80 dark:hover:bg-primary/10 transition-all duration-300 ease-out"
+        className="flex items-center gap-1 px-1.5 py-1.25 rounded-lg cursor-pointer text-primary-700 dark:text-primary-500 hover:bg-primary-100/80 dark:hover:bg-primary/10 transition-all duration-300 ease-out"
       >
         <Branch className="size-3.5" />
         <span className="text-xs font-medium">Git</span>
@@ -75,7 +75,7 @@ export function GitActionsDropdown() {
         minWidth={160}
         origin="top-right"
       >
-        <div className="px-3 py-1.5 text-xs font-medium text-primary-500 dark:text-primary-400">
+        <div className="px-3 py-1.5 text-xs font-medium text-primary-700 dark:text-primary-500">
           Git actions
         </div>
         <DropdownMenuItem onClick={handleCommit} disabled={!hasDiff}>

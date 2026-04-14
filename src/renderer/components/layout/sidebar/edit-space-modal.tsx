@@ -302,7 +302,7 @@ export default function EditSpaceModal({
             onClick={handleSave}
             disabled={isLoading}
             className="w-full py-2.5 px-4 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer disabled:opacity-50
-              disabled:cursor-not-allowed brightness-120 hover:scale-[1.01] active:scale-99 text-primary-800 dark:text-primary"
+              disabled:cursor-not-allowed brightness-120 text-primary-800 dark:text-primary"
             style={{ background: currentVariant.preview }}
           >
             {isLoading ? "Saving..." : "Save Changes"}

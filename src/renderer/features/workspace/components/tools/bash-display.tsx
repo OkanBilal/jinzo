@@ -57,15 +57,28 @@ function parseStdout(output: unknown): string | null {
     try {
       parsed = JSON.parse(parsed);
     } catch {
-      return (parsed as string) || null;
+      return parsed ? stripAnsi(parsed as string) : null;
     }
   }
 
   if (typeof parsed === "object" && parsed !== null) {
     const obj = parsed as Record<string, unknown>;
-    if (typeof obj.stdout === "string" && obj.stdout) return obj.stdout;
-    if (typeof obj.content === "string" && obj.content) return obj.content;
+    if (typeof obj.stdout === "string" && obj.stdout) return stripAnsi(obj.stdout);
+    if (typeof obj.content === "string" && obj.content) return stripAnsi(obj.content);
   }
 
-  return null;
+  return typeof parsed === "string" ? stripAnsi(parsed) : null;
+}
+
+// eslint-disable-next-line no-control-regex
+const ANSI_REGEX = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
+
+function stripAnsi(input: string): string {
+  return input
+    .replace(ANSI_REGEX, "")
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }

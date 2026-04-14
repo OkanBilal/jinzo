@@ -25,8 +25,7 @@ export function ClaudeSetupStep() {
       <Text variant="h2">Claude Setup</Text>
       <Text variant="muted">
         Jinzo uses Claude CLI to power its AI coding agent. Make sure you
-        have the CLI installed and authenticated before using the Claude
-        workspace.
+        have the CLI installed and authenticated before using the Claude.
       </Text>
 
       <div className="space-y-3 rounded-2xl bg-primary-100/50 dark:bg-primary-900 py-4 ">

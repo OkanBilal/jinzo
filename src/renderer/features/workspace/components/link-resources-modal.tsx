@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   BodyMedium,
@@ -182,7 +183,7 @@ export function LinkResourcesModal({
     );
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-(--z-overlay) flex items-center justify-center p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-primary-950/50" role="presentation" onClick={handleCancel} />
@@ -274,6 +275,7 @@ export function LinkResourcesModal({
           to { opacity: 1; }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }

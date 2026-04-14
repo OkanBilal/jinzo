@@ -45,6 +45,10 @@ export function groupEvents(events: RunEvent[]): EventGroup[] {
       }
     } else if (event.type === "artifact") {
       flushToolGroup();
+      // Cursor agent thought stream — UI-only (e.g. loader), not a chat bubble
+      if (event.metadata?.kind === "thinking") {
+        continue;
+      }
       const isUserPrompt = event.metadata?.kind === "user-prompt";
       const isPromptSuggestion = event.metadata?.kind === "prompt_suggestion";
 

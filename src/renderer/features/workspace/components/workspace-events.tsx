@@ -485,9 +485,13 @@ export function WorkspaceEvents({
     return last;
   }, [eventGroups]);
 
-  // Latest thinking text from cursor agent_thought_chunk events
+  // Latest thinking: ephemeral Cursor stream (cursor-think-*) or legacy persisted [thinking] logs
   const latestThinking = useMemo(() => {
     const reversed = [...currentEvents].reverse();
+    const streamed = reversed.find(
+      (e) => e.type === "artifact" && e.metadata?.kind === "thinking" && e.content.trim(),
+    );
+    if (streamed) return streamed.content;
     const last = reversed.find(
       (e) => e.type === "log" && e.content.startsWith("[thinking] "),
     );

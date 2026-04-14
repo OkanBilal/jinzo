@@ -46,7 +46,7 @@ export function SignalListItem({
           handleClick(e as any);
         }
       }}
-      className={`w-full text-left px-1 py-1.5 rounded-xl cursor-pointer transition-all duration-200 ease-out flex items-center gap-2 group hover:scale-[1.01] active:scale-99 ${
+      className={`w-full text-left px-1 py-1.5 rounded-xl cursor-pointer transition-all duration-200 ease-out flex items-center gap-2 group ${
         isActive
           ? "bg-primary/80 dark:bg-primary/5"
           : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"

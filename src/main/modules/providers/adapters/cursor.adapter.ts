@@ -77,6 +77,8 @@ interface RunState {
   sessionId: string | null;
   aborted: boolean;
   agentMessageBuffer: string;
+  /** Accumulated Cursor agent_thought_chunk text — streamed ephemerally only (not persisted). */
+  agentThoughtBuffer: string;
   currentStreamId: string | null;
   pendingFlush: WorkRunEvent[];
 }
@@ -138,8 +140,14 @@ class CursorAcpServer {
       }
     });
 
-    this.child.on("close", (code) => {
-      logInfo(`ACP process exited with code ${code}`);
+    this.child.on("close", (code, signal) => {
+      const tail = this.stderrBuffer.trim();
+      logInfo(`ACP process exited code=${code} signal=${signal ?? "none"}${tail ? ` stderr:\n${tail}` : " (no stderr)"}`);
+      for (const [, pending] of this.pendingRequests) {
+        clearTimeout(pending.timer);
+        pending.reject(new Error(`ACP server exited (code=${code}, signal=${signal ?? "none"})`));
+      }
+      this.pendingRequests.clear();
       this.cleanup();
       this.onClose?.();
     });
@@ -699,7 +707,18 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
         const content = update.content as Record<string, unknown> | undefined;
         const text = content?.text as string | undefined;
         if (text) {
-          events.push({ type: "log", message: `[thinking] ${text}`, level: "info", ts });
+          const runState = activeRuns.get(runId);
+          if (runState) {
+            runState.agentThoughtBuffer += text;
+            events.push({
+              type: "artifact",
+              kind: "report",
+              content: runState.agentThoughtBuffer,
+              metadata: { source: "agent_thought_streaming" },
+              ephemeral: true,
+              streamId: `cursor-think-${runId}`,
+            });
+          }
         }
         break;
       }
@@ -733,6 +752,17 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
         const { toolName, input: normalizedInput } = normalizeToolCall(kind, title, rawInput, locations);
 
         if (status === "pending" || status === "in_progress") {
+          if (rsToolCall) {
+            rsToolCall.agentThoughtBuffer = "";
+            events.push({
+              type: "artifact",
+              kind: "report",
+              content: "",
+              metadata: { source: "agent_thought_streaming" },
+              ephemeral: true,
+              streamId: `cursor-think-${runId}`,
+            });
+          }
           events.push({
             type: "tool_call",
             toolName,
@@ -1037,14 +1067,23 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
           // renders with Apply/Dismiss buttons. The session/update "plan" notification
           // may not always fire, so this is the canonical source.
           if (content) {
+            const planToolCallId = (p?.toolCallId as string | undefined) ?? `cursor-plan-${Date.now()}`;
+            const startedAt = Date.now();
+            await onEvent({
+              type: "tool_call",
+              toolName: "Plan",
+              input: { plan: content },
+              startedAt,
+              metadata: { phase: "start", toolCallId: planToolCallId, isProject, cursorExtension: "create_plan" },
+            });
             await onEvent({
               type: "tool_call",
               toolName: "Plan",
               input: { plan: content },
               output: { planStatus: "pending" },
-              startedAt: Date.now(),
+              startedAt,
               endedAt: Date.now(),
-              metadata: { phase: "complete", isProject, cursorExtension: "create_plan" },
+              metadata: { phase: "complete", toolCallId: planToolCallId, isProject, cursorExtension: "create_plan" },
             });
           }
 
@@ -1176,6 +1215,7 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
           sessionId: sessionId ?? null,
           aborted: false,
           agentMessageBuffer: "",
+          agentThoughtBuffer: "",
           currentStreamId: null,
           pendingFlush: [],
         });
@@ -1217,6 +1257,17 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
           collectedArtifacts.push({ kind: "report" });
           runState.agentMessageBuffer = "";
         }
+        if (runState) {
+          runState.agentThoughtBuffer = "";
+          await onEvent({
+            type: "artifact",
+            kind: "report",
+            content: "",
+            metadata: { source: "agent_thought_streaming" },
+            ephemeral: true,
+            streamId: `cursor-think-${runId}`,
+          });
+        }
 
         const usage = flushUsage(runId);
         const status = stopReason === "cancelled" ? "canceled"
@@ -1250,16 +1301,17 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
       request: WorkRunContinueRequest,
       onEvent: WorkRunEventHandler,
     ): Promise<WorkRunResult> {
-      const { runId, message } = request;
+      const { runId, message, model: continueModel } = request;
+      const resolvedContinueModel = continueModel || config.defaultModel || undefined;
       const timeout = config.timeout ?? 600000;
       const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
 
       try {
         await onEvent({ type: "status", status: "running", ts: Date.now() });
 
-        const server = await ensureServer();
-
-        // Ensure Jinzo MCP server is running for tool access
+        // MCP must be ensured before ACP so the first-run restart path
+        // (ensureMcpServer stops ACP if it was started without MCP config)
+        // doesn't invalidate the server handle we're about to use.
         const jinzoCtx: JinzoToolContext = {
           workspaceId: request.workspace.id,
           rootPath: request.workspace.rootPath,
@@ -1267,6 +1319,8 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
         };
         const jinzoMcp = await ensureMcpServer(jinzoCtx);
         const mcpServersConfig = jinzoMcp ? [jinzoMcp.mcpConfig] : [];
+
+        const server = await ensureServer();
 
         let sessionId = sessionIdMap.get(runId);
         if (!sessionId) {
@@ -1306,10 +1360,35 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
           }
         }
 
+        // Re-apply model + agent mode after load — session keeps prior ACP settings otherwise,
+        // so toolbar changes mid-run only affected startRun, not continueRun.
+        if (resolvedContinueModel && sessionId) {
+          try {
+            await server.sendRequest("session/set_config_option", {
+              sessionId,
+              configId: "model",
+              value: resolvedContinueModel,
+            });
+          } catch {
+            logWarn(`Failed to set model to ${resolvedContinueModel} on resume, using session default`);
+          }
+        }
+        if (sessionId && config.mode) {
+          try {
+            await server.sendRequest("session/set_mode", {
+              sessionId,
+              modeId: config.mode,
+            });
+          } catch {
+            logWarn(`Failed to set mode to ${config.mode} on resume`);
+          }
+        }
+
         activeRuns.set(runId, {
           sessionId,
           aborted: false,
           agentMessageBuffer: "",
+          agentThoughtBuffer: "",
           currentStreamId: null,
           pendingFlush: [],
         });
@@ -1366,6 +1445,17 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
           });
           collectedArtifacts.push({ kind: "report" });
           runState.agentMessageBuffer = "";
+        }
+        if (runState) {
+          runState.agentThoughtBuffer = "";
+          await onEvent({
+            type: "artifact",
+            kind: "report",
+            content: "",
+            metadata: { source: "agent_thought_streaming" },
+            ephemeral: true,
+            streamId: `cursor-think-${runId}`,
+          });
         }
 
         const usage = flushUsage(runId);

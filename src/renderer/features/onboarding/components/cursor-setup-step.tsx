@@ -15,42 +15,44 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export function CopilotSetupStep() {
+export function CursorSetupStep() {
   const { goNext, goBack } = useWizard();
+
+  const installCmd = "curl https://cursor.com/install -fsS | bash";
+  const loginCmd = "agent";
 
   return (
     <div className="space-y-4">
-      <Text variant="h2">GitHub Copilot Setup</Text>
+      <Text variant="h2">Cursor Setup</Text>
       <Text variant="muted">
-        Jinzo can use GitHub Copilot as an coding agent. You need an
-        active Copilot subscription and the GitHub CLI authenticated.
+        Jinzo can use Cursor Agent CLI as an AI coding agent. Install the CLI
+        and authenticate before using the Cursor.
       </Text>
 
       <div className="space-y-3 rounded-2xl bg-primary-100/50 dark:bg-primary-900 py-4">
-        <Text variant="label">Check authentication:</Text>
-        <div className="flex items-center rounded-lg bg-primary-200/60 dark:bg-primary-800/40 px-3 mt-2 py-2">
+        <Text variant="label">Install & authenticate:</Text>
+        <div className="flex items-center mt-2 rounded-lg bg-primary-200/60 dark:bg-primary-800/40 px-3 py-2">
           <code className="flex-1 text-sm font-mono text-primary-800 dark:text-primary-200">
-            gh auth status
+            {installCmd}
           </code>
-          <CopyButton text="gh auth status" />
+          <CopyButton text={installCmd} />
         </div>
-        <Text variant="label">If not authenticated:</Text>
-        <div className="flex items-center rounded-lg bg-primary-200/60 dark:bg-primary-800/40 px-3 mt-2 py-2">
+        <div className="flex items-center mt-2 rounded-lg bg-primary-200/60 dark:bg-primary-800/40 px-3 py-2">
           <code className="flex-1 text-sm font-mono text-primary-800 dark:text-primary-200">
-            gh auth login
+            {loginCmd}
           </code>
-          <CopyButton text="gh auth login" />
+          <CopyButton text={loginCmd} />
         </div>
       </div>
 
       <Text variant="mutedSmall">
-        Requires an active{" "}
+        Need help?{" "}
         <button
           type="button"
-          onClick={() => window.api.shell.openExternal("https://github.com/features/copilot")}
+          onClick={() => window.api.shell.openExternal("https://docs.cursor.com/en/cli/overview")}
           className="text-primary-600 dark:text-primary-400 underline cursor-pointer"
         >
-          GitHub Copilot subscription
+          Cursor CLI Setup Guide
         </button>
       </Text>
 

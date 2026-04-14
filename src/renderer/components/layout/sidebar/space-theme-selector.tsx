@@ -50,7 +50,7 @@ export default function SpaceThemeSelector({
                   ${
                     !showGradients && selectedColorIndex === index
                       ? "ring-2 ring-primary-200 scale-105"
-                      : "hover:scale-101"
+                      : ""
                   }
                 `}
                 style={{ background: variant.preview }}
@@ -92,7 +92,7 @@ export default function SpaceThemeSelector({
                   ${
                     showGradients && selectedColorIndex === index
                       ? "ring-2 ring-primary-200 scale-105"
-                      : "hover:scale-101"
+                      : ""
                   }
                 `}
                 style={{ background: variant.preview }}

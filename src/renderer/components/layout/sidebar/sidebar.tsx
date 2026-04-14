@@ -27,7 +27,11 @@ import { useActiveSpace } from "@/hooks/use-active-space";
 import { useScriptNotifications } from "@/hooks/use-script-notifications";
 import { UpdateBanner } from "./update-banner";
 
-export default function Sidebar() {
+interface SidebarProps {
+  collapsed?: boolean;
+}
+
+export default function Sidebar({ collapsed }: SidebarProps) {
   const sidebarConfig = useSidebarConfig();
   const { spaces, activeSpaceId } = useActiveSpace();
 
@@ -115,7 +119,11 @@ export default function Sidebar() {
     <>
       <aside
         className="fixed top-0 bottom-0 left-0 z-(--z-sidebar) transition-all duration-300"
-        style={{ width: sidebarConfig.width }}
+        style={{
+          width: sidebarConfig.width,
+          transform: collapsed ? "translateX(-100%)" : "translateX(0)",
+          opacity: collapsed ? 0 : 1,
+        }}
         role="complementary"
         aria-label="Workspace sidebar"
       >

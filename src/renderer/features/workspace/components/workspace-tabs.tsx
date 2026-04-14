@@ -11,6 +11,7 @@ import type { ReviewTab as ReviewTabType } from "@/lib/redux/slices/workspaceSli
 import { useRef } from "react";
 import { Button } from "@/components/ui";
 import { Claude } from "@/components/ui/icons/space";
+import { useAppSelector } from "@/lib/redux/hooks";
 
 const EMPTY_NOTE_TABS: ReviewTabType[] = [];
 
@@ -66,12 +67,14 @@ export function WorkspaceTabs({
   onCloseNewRunTab,
 }: WorkspaceTabsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const sidebarCollapsed = useAppSelector((state) => state.appSettings.sidebarCollapsed);
 
   return (
     <div className="flex items-end">
       <div
         ref={containerRef}
         className="relative flex-1 flex items-end overflow-x-auto noscrollbar"
+        style={{ paddingLeft: sidebarCollapsed ? "0.75rem" : undefined }}
       >
         {hasSelectedFile && (
           <EditorTab
@@ -160,7 +163,7 @@ export function WorkspaceTabs({
         )}
         <Button
           onClick={onNewRun}
-          className="p-2.5 text-primary-900 ml-0.5 mb-0.5 mr-8 dark:text-primary-200  hover:text-primary-950 dark:hover:text-primary-300 hover:bg-primary/30 dark:hover:bg-primary/5  rounded-xl cursor-pointer transition-colors"
+          className="p-2.5 text-primary-900 ml-0.5 mr-8 dark:text-primary-200  hover:text-primary-950 dark:hover:text-primary-300 hover:bg-primary/30 dark:hover:bg-primary/5  rounded-xl cursor-pointer transition-colors"
           title="New run"
         >
           <Plus className="size-4" />

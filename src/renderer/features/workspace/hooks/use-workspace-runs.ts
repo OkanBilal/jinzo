@@ -255,7 +255,11 @@ export function useWorkspaceRuns(
       type: "artifact" as const,
       content: se.content,
       timestamp: new Date(se.timestamp),
-      metadata: { kind: "report", streaming: true, streamId: se.streamId },
+      metadata: {
+        kind: se.streamId.startsWith("cursor-think-") ? "thinking" : "report",
+        streaming: true,
+        streamId: se.streamId,
+      },
     }));
 
     return [...dbEvents, ...streamRunEvents];

@@ -13,7 +13,9 @@ import { useBottomTerminal, BottomTerminalProvider } from "./hooks/use-bottom-te
 import { useWorkspaceVariant } from "./hooks/use-workspace-variant";
 import { ReduxProvider } from "./providers/redux-provider";
 import { Toaster } from "./components/ui/toast/Toaster";
-import { useAppSelector } from "./lib/redux/hooks";
+import { useAppSelector, useAppDispatch } from "./lib/redux/hooks";
+import { setSidebarCollapsed } from "./lib/redux/slices/appSettingsSlice";
+import { SidebarToggleButton } from "./components/layout/sidebar/sidebar-toggle-button";
 import { OnboardingModal } from "./features/onboarding/components/onboarding-modal";
 import { ErrorBoundary } from "./components/ui/error-boundary";
 import { MainHeaderProvider } from "./hooks/use-main-header";
@@ -26,6 +28,10 @@ function AppContent() {
   const variant = useWorkspaceVariant();
   const bottomTerminal = useBottomTerminal();
   const showTerminalToggle = variant !== "default";
+  const dispatch = useAppDispatch();
+  const sidebarCollapsed = useAppSelector(
+    (state) => state.appSettings.sidebarCollapsed,
+  );
   const onboardingCompleted = useAppSelector(
     (state) => state.appSettings.onboardingCompleted,
   );
@@ -35,13 +41,18 @@ function AppContent() {
       <Toaster />
       {!onboardingCompleted && <OnboardingModal open={true} />}
       <MainLayout>
-        <Sidebar />
+        <SidebarToggleButton
+          isOpen={!sidebarCollapsed}
+          onClick={() => dispatch(setSidebarCollapsed(!sidebarCollapsed))}
+        />
+        <Sidebar collapsed={sidebarCollapsed} />
         <MainContent
-          marginLeft={mainMarginLeft}
+          marginLeft={sidebarCollapsed ? "0.375rem" : mainMarginLeft}
           marginRight={
             !hideRightPanel && isrightanelOpen ? rightPanelWidth : "0.375rem"
           }
           hasRightPanel={!hideRightPanel && !isrightanelOpen}
+          sidebarCollapsed={sidebarCollapsed}
         >
           <ErrorBoundary level="route">
             <MainRoutes />

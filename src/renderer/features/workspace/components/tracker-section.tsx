@@ -115,7 +115,7 @@ export function TrackerSection({
         onClick={() =>
           setState((prev) => ({ ...prev, expanded: !prev.expanded }))
         }
-        className="w-full flex items-center active:scale-none hover:scale-none"
+        className="w-full flex items-center "
       >
         <ArrowUp
           className={`w-3 h-3 transform text-primary-900 dark:text-primary transition-transform ${

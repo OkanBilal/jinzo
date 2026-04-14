@@ -3,17 +3,24 @@ import { ArrowUp, Grep } from "@/components/ui/icons";
 
 export interface GrepParams {
   pattern?: string;
+  query?: string;
+  regex?: string;
   path?: string;
   output_mode?: string;
   glob?: string;
   type?: string;
+  include_pattern?: string;
+  exclude_pattern?: string;
 }
 
 export function GrepDisplay({ params, output, isCompact = false }: { params: GrepParams; output?: unknown; isCompact?: boolean }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const { content, numFiles, numLines } = parseGrepOutput(output);
+  const { content, numFiles, numLines, totalMatches, truncated } = parseGrepOutput(output);
   const hasContent = !!content;
+  const showLines = numLines > 0 && (totalMatches <= 0 || numLines !== totalMatches);
+  const hasStats =
+    numFiles > 0 || showLines || totalMatches > 0 || truncated;
 
   return (
     <div className="px-2">
@@ -28,16 +35,21 @@ export function GrepDisplay({ params, output, isCompact = false }: { params: Gre
         )}
         {!isCompact && <Grep className="size-4 dark:text-primary-300 text-primary-700" />}
         {!isCompact && (
-          <span className="dark:text-primary-300 text-primary-700 font-medium">
+          <span className="dark:text-primary-300 text-primary-700 font-medium -mr-1">
             Grep
           </span>
         )}
         <code className="text-primary-500 font-mono text-xs truncate">
-          {params.pattern || "?"}
+          {params.pattern || params.query || params.regex || ""}
         </code>
-        {(numFiles > 0 || numLines > 0) && (
+        {hasStats && (
           <span className="text-primary-400 dark:text-primary-500">
-            ({numLines} lines{numFiles > 0 ? `, ${numFiles} files` : ""})
+            ({[
+              totalMatches > 0 ? `${totalMatches} matches` : null,
+              showLines ? `${numLines} lines` : null,
+              numFiles > 0 ? `${numFiles} files` : null,
+              truncated ? "truncated" : null,
+            ].filter(Boolean).join(", ")})
           </span>
         )}
       </button>
@@ -53,23 +65,43 @@ export function GrepDisplay({ params, output, isCompact = false }: { params: Gre
   );
 }
 
-function parseGrepOutput(output: unknown): { content: string | null; numFiles: number; numLines: number } {
-  if (!output) return { content: null, numFiles: 0, numLines: 0 };
+function parseGrepOutput(output: unknown): {
+  content: string | null;
+  numFiles: number;
+  numLines: number;
+  totalMatches: number;
+  truncated: boolean;
+} {
+  const empty = { content: null, numFiles: 0, numLines: 0, totalMatches: 0, truncated: false };
+  if (!output) return empty;
 
   let parsed = output;
   if (typeof parsed === "string") {
     try {
       parsed = JSON.parse(parsed);
     } catch {
-      return { content: parsed as string, numFiles: 0, numLines: (parsed as string).split("\n").length };
+      return {
+        content: parsed as string,
+        numFiles: 0,
+        numLines: (parsed as string).split("\n").length,
+        totalMatches: 0,
+        truncated: false,
+      };
     }
   }
 
   if (typeof parsed === "object" && parsed !== null) {
     const obj = parsed as Record<string, unknown>;
     const content = typeof obj.content === "string" ? obj.content : null;
-    const numFiles = typeof obj.numFiles === "number" ? obj.numFiles : 0;
+    const numFiles =
+      typeof obj.numFiles === "number"
+        ? obj.numFiles
+        : typeof obj.totalFiles === "number"
+          ? obj.totalFiles
+          : 0;
     const numLines = typeof obj.numLines === "number" ? obj.numLines : 0;
+    const totalMatches = typeof obj.totalMatches === "number" ? obj.totalMatches : 0;
+    const truncated = obj.truncated === true;
     const filenames = Array.isArray(obj.filenames) ? obj.filenames as string[] : [];
 
     // If mode is files_with_matches and we have filenames, show them as content
@@ -78,13 +110,15 @@ function parseGrepOutput(output: unknown): { content: string | null; numFiles: n
         content: filenames.map(f => shortPath(f)).join("\n"),
         numFiles: filenames.length,
         numLines,
+        totalMatches,
+        truncated,
       };
     }
 
-    return { content, numFiles: numFiles || filenames.length, numLines };
+    return { content, numFiles: numFiles || filenames.length, numLines, totalMatches, truncated };
   }
 
-  return { content: null, numFiles: 0, numLines: 0 };
+  return empty;
 }
 
 function shortPath(fullPath: string): string {

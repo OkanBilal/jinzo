@@ -604,6 +604,13 @@ const api = {
       ipcRenderer.on("app:flushAndQuit", listener);
       return () => ipcRenderer.removeListener("app:flushAndQuit", listener);
     },
+    onFullscreenChange: (callback: (isFullscreen: boolean) => void) => {
+      const listener = (_: any, isFullscreen: boolean) => callback(isFullscreen);
+      ipcRenderer.on("app:fullscreenChange", listener);
+      return () => {
+        ipcRenderer.removeListener("app:fullscreenChange", listener);
+      };
+    },
   },
   updates: {
     checkForUpdates: () => ipcRenderer.invoke("updates:check"),

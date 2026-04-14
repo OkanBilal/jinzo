@@ -1,5 +1,5 @@
 import { RefObject } from "react";
-import { Plan, Lock, Edit, DontAsk, Danger, ArrowUp, Bot } from "../icons";
+import { Plan, Lock, Edit, DontAsk, Danger, ArrowUp, Infinite } from "../icons";
 import DropdownWrapper from "../dropdown-wrapper";
 import { Button } from "../button";
 import { Body } from "../text";
@@ -87,7 +87,7 @@ function PermissionModeIcon({
     case "dontAsk":
       return <DontAsk className={className} />;
     case "agent":
-      return <Bot className={className} />;
+      return <Infinite className={className} />;
     case "read-only":
       return <Lock className={className} />;
     case "workspace-write":
@@ -169,7 +169,7 @@ export function PermissionModeDropdown({
               onPermissionModeChange(mode.value);
               onToggle();
             }}
-            className={`w-full text-left px-2.5 py-1.5 cursor-pointer transition-colors flex items-center gap-2.5 first:rounded-t-xl last:rounded-b-xl ${
+            className={`w-full text-left px-2.5 py-1 cursor-pointer transition-colors flex items-center gap-2.5 first:rounded-t-xl last:rounded-b-xl ${
               permissionMode === mode.value
                 ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100"
                 : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
@@ -181,7 +181,7 @@ export function PermissionModeDropdown({
             />
             <div className="flex flex-col flex-1 min-w-0">
               <Body className="text-s tracking-tight mb-0.5">{mode.label}</Body>
-              <span className="text-xs text-primary-400 dark:text-primary-500 tracking-tighter">
+              <span className="text-xs text-primary-400 dark:text-primary-500 tracking-tight">
                 {mode.description}
               </span>
             </div>

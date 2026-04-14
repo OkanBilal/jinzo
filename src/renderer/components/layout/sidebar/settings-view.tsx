@@ -44,13 +44,9 @@ type MenuItem = {
 
 const menuItems: Array<MenuItem> = [
   { id: "general", label: "General", icon: General },
-  // { id: "personalization", label: "Personalization", icon: Personalize },
   { id: "git", label: "Git", icon: Branch },
   { id: "connections", label: "Connections", icon: Apps },
   { id: "dashboard", label: "Dashboard", icon: Chart },
-  // { id: "notifications", label: "Notifications", icon: Bell },
-  // { id: "schedules", label: "Schedules", icon: Calendar },
-  // { id: "security", label: "Security", icon: Security },
 ];
 
 const providerItems: Array<MenuItem> = [
@@ -82,8 +78,8 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
         animation: "slide-fade-down 300ms ease-in-out",
       }}
     >
-      <div className="flex flex-col items-start pt-16 pb-2 px-4">
-        <Body className="text-left text-base text-primary-900 dark:text-primary font-medium ">
+      <div className="flex flex-col items-start pt-16 pb-1 px-4">
+        <Body className="text-left text-sm text-primary-900 dark:text-primary font-medium ">
           Settings
         </Body>
       </div>
@@ -97,18 +93,18 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
               <Button
                 key={item.id}
                 onClick={() => handleSectionClick(item.id)}
-                className={`w-full cursor-pointer text-left px-3 py-2 rounded-xl text-sm transition-all flex items-center gap-2.5
+                className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm transition-all flex items-center gap-2
                   ${
                     isActive
                       ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
                       : "text-primary-900 dark:text-primary-200 bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
                   }
-                  hover:scale-[1.01] active:scale-99`}
+                  `}
               >
                 {IconComponent ? (
-                  <IconComponent className={`size-4 `} />
+                  <IconComponent className={`size-3.75 `} />
                 ) : (
-                  <div className="w-4.5 h-4.5 rounded bg-primary-300 dark:bg-primary-700" />
+                  <div className="size-4 rounded bg-primary-300 dark:bg-primary-700" />
                 )}
                 <span className="font-medium">{item.label}</span>
               </Button>
@@ -131,18 +127,18 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                 <Button
                   key={item.id}
                   onClick={() => handleSectionClick(item.id)}
-                  className={`w-full cursor-pointer text-left px-3 py-2 rounded-xl text-sm transition-all flex items-center gap-2.5
+                  className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm transition-all flex items-center gap-2
                     ${
                       isActive
                         ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
                         : "text-primary-900 dark:text-primary-200 bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
                     }
-                    hover:scale-[1.01] active:scale-99`}
+                    `}
                 >
                   {IconComponent ? (
-                    <IconComponent className={`size-4 `} />
+                    <IconComponent className={`size-3.75 `} />
                   ) : (
-                    <div className="w-4.5 h-4.5 rounded bg-primary-300 dark:bg-primary-700" />
+                    <div className="size-3.75 rounded bg-primary-300 dark:bg-primary-700" />
                   )}
                   <span className="font-medium">{item.label}</span>
                 </Button>
@@ -191,16 +187,16 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                     onClick={() =>
                       navigate(`/settings?section=projects&id=${project.id}`)
                     }
-                    className={`w-full cursor-pointer text-left px-3 py-2 rounded-xl text-sm transition-all flex items-center gap-2.5
+                    className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm transition-all flex items-center gap-2
                       ${
                         isActive
                           ? "bg-primary/80 dark:bg-primary/5 text-primary-900 dark:text-primary-100"
                           : "text-primary-900 dark:text-primary-200 bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
                       }
-                      hover:scale-[1.01] active:scale-99`}
+                      `}
                   >
                     <div
-                      className={`w-5 h-5 rounded-lg flex items-center justify-center text-t font-medium text-primary-950 dark:text-primary-200
+                      className={`size-4.5 rounded-md flex items-center justify-center text-t font-medium text-primary-950 dark:text-primary-200
                         shrink-0 ${!parsed ? "border border-primary-950/50 dark:border-primary/10" : ""}`}
                     >
                       {iconContent}
@@ -227,16 +223,13 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
           size="lg"
           onClick={onClose}
           fullWidth
-          className="justify-start flex items-center cursor-pointer px-2 pb-2 gap-1 hover:scale-100 bg-transparent dark:bg-transparent transition-transform duration-200"
+          className="justify-start flex items-center cursor-pointer px-2 pb-2 gap-1 bg-transparent dark:bg-transparent transition-transform duration-200"
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
-          <ChevronUp className="size-4 rotate-270 text-primary-900 dark:text-primary-400" />
-          <Body className="text-primary-900 text-s dark:text-primary-100  font-medium">
+          <ChevronUp className="size-4 rotate-270 text-primary-900 dark:text-primary-200" />
+          <Body className="text-primary-900 text-s dark:text-primary-200  font-medium">
             Return
           </Body>
-          {/* <Caption className="ml-auto text-s! text-primary-900 dark:text-primary-400">
-            Esc
-          </Caption> */}
         </Button>
       </div>
     </div>

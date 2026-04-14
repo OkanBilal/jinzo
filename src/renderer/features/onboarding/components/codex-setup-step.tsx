@@ -23,7 +23,7 @@ export function CodexSetupStep() {
       <Text variant="h2">Codex Setup</Text>
       <Text variant="muted">
         Jinzo can use OpenAI Codex CLI as an AI coding agent. Make sure you have
-        the CLI installed and authenticated before using the Codex workspace.
+        the CLI installed and authenticated before using the Codex.
       </Text>
 
       <div className="space-y-3 rounded-2xl bg-primary-100/50 dark:bg-primary-900 py-4">

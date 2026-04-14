@@ -185,6 +185,13 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
     mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   }
 
+  mainWindow.on("enter-full-screen", () => {
+    mainWindow?.webContents.send("app:fullscreenChange", true);
+  });
+  mainWindow.on("leave-full-screen", () => {
+    mainWindow?.webContents.send("app:fullscreenChange", false);
+  });
+
   mainWindow.on("closed", () => {
     mainWindow = null;
   });

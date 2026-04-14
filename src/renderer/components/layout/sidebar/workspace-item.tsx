@@ -156,15 +156,15 @@ export default function WorkspaceItem({
             onClick?.();
           }
         }}
-        className={`block px-2.5 py-1.5 active:scale-99 group-hover:scale-[1.01]
+        className={`block px-2.5 py-1.5
           rounded-xl transition-all duration-200 ease-out cursor-pointer ${
             isActive
-              ? "bg-primary/80 dark:bg-primary/5"
+              ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/8"
               : "bg-transparent group-hover:bg-primary/40 dark:group-hover:bg-primary/5"
           }`}
       >
         <div className="flex flex-col ">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="flex items-center gap-1 min-w-0 flex-1">
             {grouping !== "project" && (
               <span className="shrink-0 ">
                 {projectIcon ?? (

@@ -72,7 +72,7 @@ export default function NewButton({
         size="md"
         onClick={handleClick}
         fullWidth
-        className="justify-start cursor-pointer  hover:scale-101 transition-transform duration-200 "
+        className="justify-start cursor-pointer transition-transform duration-200 "
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         {icon}
