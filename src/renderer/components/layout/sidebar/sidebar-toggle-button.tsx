@@ -30,9 +30,9 @@ export function SidebarToggleButton({ isOpen, onClick }: SidebarToggleButtonProp
         aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
       >
         {isOpen ? (
-          <Toggle  className="size-4.25 rotate-180 " />
+          <Toggle  className="size-4 text-primary-800 dark:text-primary-100" />
         ) : (
-          <ToggleClose  className="size-4.25 rotate-180" />
+          <ToggleClose  className="size-4 text-primary-700 dark:text-primary-500" />
         )}
       </Button>
     </div>

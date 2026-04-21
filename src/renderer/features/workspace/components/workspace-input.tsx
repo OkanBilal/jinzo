@@ -3,7 +3,7 @@ import { useDispatch } from "react-redux";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
 import type { FileNode } from "@/features/workspace/components/file-explorer";
-import type { ContextIssue, ContextSignal } from "@/lib/redux/slices/workspaceSlice";
+import type { ContextIssue, ContextSignal, ContextBrowserSelection } from "@/lib/redux/slices/workspaceSlice";
 import { addContextFile, addContextIssue } from "@/lib/redux/slices/workspaceSlice";
 import type { UploadedFile } from "@/components/ui";
 import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
@@ -19,6 +19,7 @@ import { useProviderModels } from "../hooks/use-provider-models";
 const EMPTY_CONTEXT_FILES: FileNode[] = [];
 const EMPTY_CONTEXT_ISSUES: ContextIssue[] = [];
 const EMPTY_CONTEXT_SIGNALS: ContextSignal[] = [];
+const EMPTY_CONTEXT_BROWSER: ContextBrowserSelection[] = [];
 const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
 
 interface WorkspaceInputProps {
@@ -37,6 +38,8 @@ interface WorkspaceInputProps {
   onRemoveContextIssue?: (entityId: string) => void;
   contextSignals?: ContextSignal[];
   onRemoveContextSignal?: (entityId: string) => void;
+  contextBrowserSelections?: ContextBrowserSelection[];
+  onRemoveContextBrowserSelection?: (id: string) => void;
   workspacePath?: string;
   projectId?: string;
   uploadedFiles?: UploadedFile[];
@@ -60,6 +63,8 @@ export function WorkspaceInput({
   onRemoveContextIssue,
   contextSignals = EMPTY_CONTEXT_SIGNALS,
   onRemoveContextSignal,
+  contextBrowserSelections = EMPTY_CONTEXT_BROWSER,
+  onRemoveContextBrowserSelection,
   workspacePath,
   projectId,
   uploadedFiles = EMPTY_UPLOADED_FILES,
@@ -282,9 +287,11 @@ export function WorkspaceInput({
         contextFiles={contextFiles}
         contextIssues={contextIssues}
         contextSignals={contextSignals}
+        contextBrowserSelections={contextBrowserSelections}
         onRemoveContextFile={onRemoveContextFile}
         onRemoveContextIssue={onRemoveContextIssue}
         onRemoveContextSignal={onRemoveContextSignal}
+        onRemoveContextBrowserSelection={onRemoveContextBrowserSelection}
       />
       <div className="relative">
         <InputForm

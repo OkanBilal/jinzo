@@ -1,10 +1,44 @@
+import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/components/markdown-components";
 import type { EventGroup } from "../../utils/group-events";
 import { Code } from "@/components/ui/icons/space";
-import { Picture, Document, Codex } from "@/components/ui/icons";
+import { Picture, Document, Codex, Close } from "@/components/ui/icons";
 import { ProviderIcon } from "../provider-icon";
+
+function ImagePreviewModal({ name, dataUrl, onClose }: { name: string; dataUrl: string; onClose: () => void }) {
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={overlayRef}
+      className="fixed inset-0 z-9999 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+    >
+      <div className="relative flex flex-col glass-morphism rounded-xl shadow-2xl max-w-xl w-full mx-4 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary-200 dark:border-primary-800">
+          <span className="text-xs font-mono text-primary-600 dark:text-primary-400 truncate">{name}</span>
+          <button
+            onClick={onClose}
+            className="ml-3 shrink-0 p-1 rounded-md hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
+          >
+            <Close className="w-3.5 h-3.5 text-primary-500" />
+          </button>
+        </div>
+        <div className="bg-primary-100 dark:bg-primary-900 flex items-center justify-center p-2">
+          <img src={dataUrl} alt={name} className="max-h-[70vh] max-w-full object-contain rounded" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface InfoGroupProps {
   group: EventGroup;
@@ -12,6 +46,7 @@ interface InfoGroupProps {
 
 export function InfoGroup({ group }: InfoGroupProps) {
   const event = group.events[0];
+  const [previewAtt, setPreviewAtt] = useState<{ name: string; dataUrl: string } | null>(null);
   if (!event) return null;
 
   if (event.type === "artifact" && event.metadata?.kind === "user-prompt") {
@@ -39,6 +74,7 @@ export function InfoGroup({ group }: InfoGroupProps) {
       name: string;
       type: "image" | "document";
       mimeType: string;
+      dataUrl?: string;
     }>;
 
     if (isReview) {
@@ -78,6 +114,13 @@ export function InfoGroup({ group }: InfoGroupProps) {
                 <p className="text-sm whitespace-pre-wrap">{message}</p>
               </div>
             </div>
+            {previewAtt && (
+              <ImagePreviewModal
+                name={previewAtt.name}
+                dataUrl={previewAtt.dataUrl}
+                onClose={() => setPreviewAtt(null)}
+              />
+            )}
             {(files.length > 0 || attachments.length > 0 || issues.length > 0 || signals.length > 0) && (
               <div className="flex flex-wrap gap-1.5 justify-end">
                 {issues.map((issue) => (
@@ -114,22 +157,40 @@ export function InfoGroup({ group }: InfoGroupProps) {
                     </span>
                   </div>
                 ))}
-                {attachments.map((att) => (
-                  <div
-                    key={att.name}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-50 dark:bg-primary-700/15 text-xs"
-                    title={att.name}
-                  >
-                    {att.type === "image" ? (
-                      <Picture className="size-3 dark:text-primary-200 text-primary-700" />
-                    ) : (
-                      <Document className="size-3 dark:text-primary-200 text-primary-700" />
-                    )}
-                    <span className="text-primary-700 dark:text-primary-200">
-                      {att.name}
-                    </span>
-                  </div>
-                ))}
+                {attachments.map((att) =>
+                  att.type === "image" && att.dataUrl ? (
+                    <button
+                      key={att.name}
+                      onClick={() => setPreviewAtt({ name: att.name, dataUrl: att.dataUrl! })}
+                      className="flex items-center gap-1.5 pl-2 pr-2 py-1 rounded-xl bg-primary-50 dark:bg-primary-700/15 text-xs hover:bg-primary-100 dark:hover:bg-primary-700/30 transition-colors cursor-pointer"
+                      title={`Click to preview · ${att.name}`}
+                    >
+                      <img
+                        src={att.dataUrl}
+                        alt={att.name}
+                        className="h-6 w-6 rounded-lg object-cover  border border-primary-200/60 dark:border-primary-700/40"
+                      />
+                      <span className="text-primary-700 dark:text-primary-200 truncate max-w-40">
+                        {att.name}
+                      </span>
+                    </button>
+                  ) : (
+                    <div
+                      key={att.name}
+                      className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-50 dark:bg-primary-700/15 text-xs"
+                      title={att.name}
+                    >
+                      {att.type === "image" ? (
+                        <Picture className="size-3 dark:text-primary-200 text-primary-700" />
+                      ) : (
+                        <Document className="size-3 dark:text-primary-200 text-primary-700" />
+                      )}
+                      <span className="text-primary-700 dark:text-primary-200">
+                        {att.name}
+                      </span>
+                    </div>
+                  )
+                )}
               </div>
             )}
           </div>

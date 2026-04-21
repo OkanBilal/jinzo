@@ -396,6 +396,9 @@ export async function emitUserPromptArtifact(
         name: a.name,
         type: a.type,
         mimeType: a.mimeType,
+        ...(a.type === "image" && a.data
+          ? { dataUrl: `data:${a.mimeType};base64,${a.data}` }
+          : {}),
       })),
       issues: options?.contextIssues,
       signals: options?.contextSignals,

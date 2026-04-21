@@ -7,6 +7,7 @@ interface MainContentProps {
   marginRight: string;
   hasRightPanel?: boolean;
   sidebarCollapsed?: boolean;
+  browserOpen?: boolean;
 }
 
 export function MainContent({
@@ -15,6 +16,7 @@ export function MainContent({
   marginRight,
   hasRightPanel,
   sidebarCollapsed,
+  browserOpen,
 }: MainContentProps) {
   const { header, firstTabActive } = useMainHeader();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -28,11 +30,12 @@ export function MainContent({
   // When header exists and the first tab is active, the content's top-left corner
   // must be sharp so it connects seamlessly with the active tab above it.
   // Exception: when sidebar is collapsed, always round top-left since there's no sidebar edge.
+  const rightRounding = browserOpen ? "rounded-tr-none rounded-br-none" : "";
   const contentRounding = header
     ? firstTabActive && !sidebarCollapsed
-      ? "rounded-xl rounded-tl-none"
-      : "rounded-xl"
-    : "rounded-xl";
+      ? `rounded-xl rounded-tl-none ${rightRounding}`
+      : `rounded-xl ${rightRounding}`
+    : `rounded-xl ${rightRounding}`;
 
   return (
     <main
@@ -45,7 +48,7 @@ export function MainContent({
     >
       {header && (
         <div
-          className={`shrink-0 transition-all duration-300 ease-out ${hasRightPanel ? "max-w-[calc(100%-160px)]" : ""}`}
+          className={`shrink-0 transition-all duration-300 ease-out ${hasRightPanel ? "max-w-[calc(100%-170px)]" : browserOpen ? "max-w-[calc(100%-180px)]" : ""}`}
           style={{ paddingLeft: headerPaddingLeft }}
         >
           {header}

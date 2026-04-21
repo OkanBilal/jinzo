@@ -8,8 +8,10 @@ import {
   DiffSummaryBar,
 } from "@/features/workspace/components";
 import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
+import { isFirstWorkspaceTabActive } from "@/features/workspace/utils/is-first-workspace-tab-active";
 import { useAbortRunMutation, useGetProviderByIdQuery, useUpdateProviderMutation } from "@/lib/redux/api";
 import { useSetMainHeader } from "@/hooks/use-main-header";
+import { useWorkspaceRouteTopRounding } from "@/hooks/use-workspace-route-top-rounding";
 import { useBottomTerminal } from "@/hooks/use-bottom-terminal";
 
 const CLAUDE_PROVIDER_ID = "claude_code";
@@ -96,24 +98,22 @@ export default function ClaudePage() {
     ],
   );
 
-  const isFirstTabActive = ws.selectedFile
-    ? ws.activeTab === "editor"
-    : ws.runs.length > 0
-      ? ws.activeTab === ws.runs[0]?.id
-      : ws.openIssueTabs.length > 0
-        ? ws.activeTab === `issue:${ws.openIssueTabs[0]?.issue.entityId}`
-        : ws.openSignalTabs.length > 0
-          ? ws.activeTab === `signal:${ws.openSignalTabs[0]?.signal.entityId}`
-          : ws.openNoteTabs.length > 0
-            ? ws.activeTab === `note:${ws.openNoteTabs[0]?.id}`
-            : ws.showNewRunTab
-              ? ws.activeTab === "new-run"
-              : false;
+  const isFirstTabActive = isFirstWorkspaceTabActive({
+    selectedFile: ws.selectedFile,
+    activeTab: ws.activeTab,
+    openIssueTabs: ws.openIssueTabs,
+    openSignalTabs: ws.openSignalTabs,
+    openNoteTabs: ws.openNoteTabs,
+    runs: ws.runs,
+    showNewRunTab: ws.showNewRunTab,
+  });
 
   useSetMainHeader(tabBar, !ws.showEmptyState && isFirstTabActive);
 
+  const routeTopRounding = useWorkspaceRouteTopRounding();
+
   return (
-    <div className="flex flex-col h-full dark:bg-primary-950 rounded-t-2xl overflow-hidden">
+    <div className={`flex flex-col h-full dark:bg-primary-950 ${routeTopRounding} overflow-hidden`}>
       <div className="flex-1 overflow-hidden noscrollbar">
         {ws.showEmptyState ? (
           <WorkspaceEmptyState workspace={ws.currentWorkspace} />
@@ -160,6 +160,8 @@ export default function ClaudePage() {
         onRemoveContextIssue={ws.handleRemoveContextIssue}
         contextSignals={ws.contextSignals}
         onRemoveContextSignal={ws.handleRemoveContextSignal}
+        contextBrowserSelections={ws.contextBrowserSelections}
+        onRemoveContextBrowserSelection={ws.handleRemoveContextBrowserSelection}
         workspacePath={ws.currentWorkspace?.rootPath}
         projectId={ws.currentWorkspace?.projectId ?? undefined}
         uploadedFiles={ws.uploadedFiles}

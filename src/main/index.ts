@@ -106,6 +106,11 @@ import {
   unregisterGuardsIpc,
   shutdownAllGuardAdapters,
 } from "./modules/guards";
+import {
+  registerBrowserIpc,
+  unregisterBrowserIpc,
+  browserService,
+} from "./modules/browser";
 
 // ─────────────────────────────────────────────────────────────
 // Installed app detection (macOS)
@@ -431,6 +436,7 @@ async function initializeApp() {
     updatesService.initialize();
     registerAutomationsIpc();
     registerGuardsIpc();
+    registerBrowserIpc();
     automationsService.start();
 
     // Shell utilities
@@ -663,6 +669,8 @@ async function cleanupApp() {
     unregisterAutomationsIpc();
     unregisterGuardsIpc();
     await shutdownAllGuardAdapters();
+    try { browserService.destroy(); } catch { /* ignore */ }
+    unregisterBrowserIpc();
     ipcMain.removeHandler("shell:openExternal");
     ipcMain.removeHandler("shell:openPath");
     ipcMain.removeHandler("shell:openInApp");

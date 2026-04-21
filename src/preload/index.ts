@@ -628,6 +628,50 @@ const api = {
     },
   },
 
+  // Embedded browser panel operations
+  browser: {
+    attach: (bounds: { x: number; y: number; width: number; height: number }) =>
+      ipcRenderer.invoke("browser:attach", bounds),
+    detach: () => ipcRenderer.invoke("browser:detach"),
+    destroy: () => ipcRenderer.invoke("browser:destroy"),
+    setBounds: (bounds: { x: number; y: number; width: number; height: number }) =>
+      ipcRenderer.invoke("browser:setBounds", bounds),
+    setVisible: (visible: boolean) =>
+      ipcRenderer.invoke("browser:setVisible", visible),
+    navigate: (url: string) => ipcRenderer.invoke("browser:navigate", url),
+    back: () => ipcRenderer.invoke("browser:back"),
+    forward: () => ipcRenderer.invoke("browser:forward"),
+    reload: () => ipcRenderer.invoke("browser:reload"),
+    stop: () => ipcRenderer.invoke("browser:stop"),
+    setSelectMode: (enabled: boolean) =>
+      ipcRenderer.invoke("browser:setSelectMode", enabled),
+    getNavState: () => ipcRenderer.invoke("browser:getNavState"),
+    onNavState: (
+      callback: (state: {
+        url: string;
+        title: string;
+        canGoBack: boolean;
+        canGoForward: boolean;
+        isLoading: boolean;
+      }) => void,
+    ) => {
+      const listener = (_: any, state: any) => callback(state);
+      ipcRenderer.on("browser:navState", listener);
+      return () => ipcRenderer.removeListener("browser:navState", listener);
+    },
+    onSelectModeChanged: (callback: (data: { enabled: boolean }) => void) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on("browser:selectModeChanged", listener);
+      return () =>
+        ipcRenderer.removeListener("browser:selectModeChanged", listener);
+    },
+    onSelection: (callback: (selection: any) => void) => {
+      const listener = (_: any, selection: any) => callback(selection);
+      ipcRenderer.on("browser:selection", listener);
+      return () => ipcRenderer.removeListener("browser:selection", listener);
+    },
+  },
+
   // Automation operations (scheduled jobs)
   automations: {
     getAll: () => ipcRenderer.invoke("automations:getAll"),

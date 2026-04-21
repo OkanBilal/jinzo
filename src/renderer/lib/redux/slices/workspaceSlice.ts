@@ -29,6 +29,32 @@ export interface ContextSignal {
   eventCount: number;
 }
 
+export interface ContextBrowserSelection {
+  id: string;
+  url: string;
+  title: string;
+  selector: string;
+  tagName: string;
+  text: string;
+  outerHTML: string;
+  styles: Record<string, string>;
+  rect: { x: number; y: number; width: number; height: number };
+  pageRect: { x: number; y: number; width: number; height: number };
+  scroll: { x: number; y: number };
+  viewport: { width: number; height: number };
+  devicePixelRatio: number;
+  componentName?: string;
+  sourceFile?: string;
+  timestamp: string;
+  screenshotPath?: string;
+  screenshotDataUrl?: string;
+  screenshotBase64?: string;
+  surroundingScreenshotPath?: string;
+  surroundingScreenshotDataUrl?: string;
+  surroundingScreenshotBase64?: string;
+  screenshotMimeType: string;
+}
+
 export interface WorkspaceState {
   activeWorkspaceId: string | null;
   activeWorkspaceIdByProvider: Record<string, string>;
@@ -43,6 +69,7 @@ export interface WorkspaceState {
   contextFiles: FileNode[];
   contextIssues: ContextIssue[];
   contextSignals: ContextSignal[];
+  contextBrowserSelections: ContextBrowserSelection[];
   openIssueTabs: IssueWithEntity[];
   openSignalTabs: SignalWithEntity[];
   openNoteTabs: ReviewTab[];
@@ -71,6 +98,7 @@ const initialState: WorkspaceState = {
   contextFiles: [],
   contextIssues: [],
   contextSignals: [],
+  contextBrowserSelections: [],
   openIssueTabs: [],
   openSignalTabs: [],
   openNoteTabs: [],
@@ -158,6 +186,19 @@ const workspaceSlice = createSlice({
     },
     clearContextSignals: (state) => {
       state.contextSignals = [];
+    },
+    addContextBrowserSelection: (state, action: PayloadAction<ContextBrowserSelection>) => {
+      if (!state.contextBrowserSelections.some(b => b.id === action.payload.id)) {
+        state.contextBrowserSelections.push(action.payload);
+      }
+    },
+    removeContextBrowserSelection: (state, action: PayloadAction<string>) => {
+      state.contextBrowserSelections = state.contextBrowserSelections.filter(
+        b => b.id !== action.payload,
+      );
+    },
+    clearContextBrowserSelections: (state) => {
+      state.contextBrowserSelections = [];
     },
     openIssueTab: (state, action: PayloadAction<IssueWithEntity>) => {
       const entityId = action.payload.issue.entityId;
@@ -261,6 +302,9 @@ export const {
   addContextSignal,
   removeContextSignal,
   clearContextSignals,
+  addContextBrowserSelection,
+  removeContextBrowserSelection,
+  clearContextBrowserSelections,
   openIssueTab,
   closeIssueTab,
   clearIssueTabs,

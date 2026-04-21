@@ -11,6 +11,8 @@ import {
   clearContextIssues,
   removeContextSignal,
   clearContextSignals,
+  removeContextBrowserSelection,
+  clearContextBrowserSelections,
   clearIssueTabs,
   clearSignalTabs,
   clearNoteTabs,
@@ -48,6 +50,9 @@ export function useWorkspacePage(providerId: string) {
   );
   const contextSignals = useSelector(
     (state: RootState) => state.workspace.contextSignals,
+  );
+  const contextBrowserSelections = useSelector(
+    (state: RootState) => state.workspace.contextBrowserSelections,
   );
   const openIssueTabs = useSelector(
     (state: RootState) => state.workspace.openIssueTabs,
@@ -95,6 +100,7 @@ export function useWorkspacePage(providerId: string) {
     dispatch(clearContextFiles());
     dispatch(clearContextIssues());
     dispatch(clearContextSignals());
+    dispatch(clearContextBrowserSelections());
     dispatch(clearIssueTabs());
     dispatch(clearSignalTabs());
     dispatch(clearNoteTabs());
@@ -191,6 +197,7 @@ export function useWorkspacePage(providerId: string) {
     dispatch(clearContextFiles());
     dispatch(clearContextIssues());
     dispatch(clearContextSignals());
+    dispatch(clearContextBrowserSelections());
   }, [dispatch]);
 
   const handleExecute = useCallback(async () => {
@@ -204,7 +211,7 @@ export function useWorkspacePage(providerId: string) {
       : undefined;
 
     if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
-      const success = (await continueRun(activeRunId, goal, attachments, contextIssues, contextFiles, contextSignals, selectedModel)) ?? false;
+      const success = (await continueRun(activeRunId, goal, attachments, contextIssues, contextFiles, contextSignals, selectedModel, contextBrowserSelections)) ?? false;
       if (success) clearInputState();
     } else {
       const newRunId = await executeRun(
@@ -216,6 +223,7 @@ export function useWorkspacePage(providerId: string) {
         contextIssues,
         contextFiles,
         contextSignals,
+        contextBrowserSelections,
       );
       if (newRunId) {
         clearInputState();
@@ -228,6 +236,7 @@ export function useWorkspacePage(providerId: string) {
     contextFiles,
     contextIssues,
     contextSignals,
+    contextBrowserSelections,
     workspaceId,
     selectedWorkspace,
     selectedModel,
@@ -283,6 +292,13 @@ export function useWorkspacePage(providerId: string) {
     [dispatch],
   );
 
+  const handleRemoveContextBrowserSelection = useCallback(
+    (id: string) => {
+      dispatch(removeContextBrowserSelection(id));
+    },
+    [dispatch],
+  );
+
   const showNewRunTab = isNewRunTab(activeTab);
 
   const showEmptyState =
@@ -309,6 +325,7 @@ export function useWorkspacePage(providerId: string) {
     contextFiles,
     contextIssues,
     contextSignals,
+    contextBrowserSelections,
     openIssueTabs,
     openSignalTabs,
     openNoteTabs,
@@ -329,6 +346,7 @@ export function useWorkspacePage(providerId: string) {
     handleRemoveContextFile,
     handleRemoveContextIssue,
     handleRemoveContextSignal,
+    handleRemoveContextBrowserSelection,
     setAutoExecute,
     ...tabHandlers,
   };
