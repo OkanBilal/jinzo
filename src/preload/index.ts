@@ -187,6 +187,8 @@ const api = {
       ipcRenderer.invoke("appSettings:setNotifyOnRunComplete", enabled),
     setNotifyOnToolApproval: (enabled: boolean) =>
       ipcRenderer.invoke("appSettings:setNotifyOnToolApproval", enabled),
+    setShowMenuBarIcon: (enabled: boolean) =>
+      ipcRenderer.invoke("appSettings:setShowMenuBarIcon", enabled),
     setCommitInstructions: (instructions: string) =>
       ipcRenderer.invoke("appSettings:setCommitInstructions", instructions),
     setPrInstructions: (instructions: string) =>
@@ -599,6 +601,8 @@ const api = {
   app: {
     setUnsavedChanges: (hasChanges: boolean) =>
       ipcRenderer.invoke("app:setUnsavedChanges", hasChanges),
+    setMenuBarIconVisible: (visible: boolean) =>
+      ipcRenderer.invoke("app:setMenuBarIconVisible", visible),
     onFlushAndQuit: (callback: () => void) => {
       const listener = () => callback();
       ipcRenderer.on("app:flushAndQuit", listener);

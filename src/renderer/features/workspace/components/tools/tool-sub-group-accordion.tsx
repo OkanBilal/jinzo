@@ -36,7 +36,7 @@ export function ToolSubGroupAccordion({ subGroup }: ToolSubGroupAccordionProps) 
       </button>
 
       {isExpanded && (
-        <div className="ml-4 border-l border-primary-200/50 dark:border-primary-700/30 pl-2 space-y-0.5">
+        <div className="ml-3 border-l border-primary-200/50 dark:border-primary-700/30  space-y-0.5">
           {subGroup.events.map((event) => (
             <ToolCallItem key={event.id} event={event} isCompact={true} />
           ))}

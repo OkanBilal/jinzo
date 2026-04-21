@@ -158,7 +158,7 @@ export function DiffViewer({
   const [fileLines, setFileLines] = useState<string[] | null>(null);
 
   const findingLineNumbers = useMemo(
-    () => fileFindings.filter((f) => f.lineStart != null && f.lineStart >= 1).map((f) => f.lineStart as number),
+    () => fileFindings.map((f) => (f.lineStart != null && f.lineStart >= 1 ? f.lineStart : 1)),
     [fileFindings],
   );
 
@@ -190,10 +190,10 @@ export function DiffViewer({
 
     const byLine = new Map<number, Finding[]>();
     for (const f of fileFindings) {
-      if (f.lineStart == null || f.lineStart < 1) continue;
-      const arr = byLine.get(f.lineStart) ?? [];
+      const line = f.lineStart != null && f.lineStart >= 1 ? f.lineStart : 1;
+      const arr = byLine.get(line) ?? [];
       arr.push(f);
-      byLine.set(f.lineStart, arr);
+      byLine.set(line, arr);
     }
 
     const annotations: DiffLineAnnotation<FindingMeta>[] = [];

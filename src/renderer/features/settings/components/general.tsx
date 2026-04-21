@@ -10,6 +10,7 @@ import {
   useSetPreventSleepDuringRunsMutation,
   useSetNotifyOnRunCompleteMutation,
   useSetNotifyOnToolApprovalMutation,
+  useSetShowMenuBarIconMutation,
 } from "@/lib/redux/api";
 import {
   SettingsSection,
@@ -286,6 +287,21 @@ function NotifyRunCompleteToggle() {
   );
 }
 
+function MenuBarIconToggle() {
+  const { data: settings } = useGetAppSettingsQuery();
+  const [setShowMenuBarIcon] = useSetShowMenuBarIconMutation();
+
+  return (
+    <Toggle
+      enabled={settings?.showMenuBarIcon ?? true}
+      onChange={async (val) => {
+        await setShowMenuBarIcon(val);
+        await window.api.app.setMenuBarIconVisible(val);
+      }}
+    />
+  );
+}
+
 function NotifyToolApprovalToggle() {
   const { data: settings } = useGetAppSettingsQuery();
   const [setNotifyOnToolApproval] = useSetNotifyOnToolApprovalMutation();
@@ -396,6 +412,15 @@ export default function GeneralSettings() {
               }}
             />
           </div>
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection title="Menu Bar">
+        <SettingsRow
+          title="Menu Bar Icon"
+          description="Show the Jinzo icon in the system menu bar"
+        >
+          <MenuBarIconToggle />
         </SettingsRow>
       </SettingsSection>
 

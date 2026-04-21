@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowUp } from "@/components/ui/icons";
-import { groupConsecutiveToolCalls, getToolType } from "../../utils/group-tool-calls";
+import { groupConsecutiveToolCalls } from "../../utils/group-tool-calls";
 import { ToolSubGroupAccordion } from "./tool-sub-group-accordion";
 import type { EventGroup } from "../../utils/group-events";
 
@@ -17,11 +17,20 @@ export function ToolCallGroup({
   const [expandedOverride, setExpandedOverride] = useState<boolean | null>(null);
   const isExpanded = expandedOverride ?? defaultExpanded;
 
-  const toolCount = group.events.length;
+  const subGroups = groupConsecutiveToolCalls(group.events);
+  const toolCount = subGroups.reduce((acc, sg) => acc + sg.events.length, 0);
 
-  const toolTypes = new Set(
-    group.events.map((e) => getToolType(e.content)),
-  );
+  // Single tool call: skip the outer group wrapper entirely and render the
+  // item directly (ToolSubGroupAccordion already collapses 1-event subgroups).
+  if (toolCount === 1 && subGroups.length === 1) {
+    return (
+      <div>
+        <ToolSubGroupAccordion subGroup={subGroups[0]} />
+      </div>
+    );
+  }
+
+  const toolTypes = new Set(subGroups.map((sg) => sg.toolType));
   const toolSummary = Array.from(toolTypes).slice(0, 3).join(", ");
   const moreCount = toolTypes.size > 3 ? ` +${toolTypes.size - 3}` : "";
 
@@ -55,7 +64,7 @@ export function ToolCallGroup({
 
       {isExpanded && (
         <div className="space-y-1 max-h-160 overflow-y-auto  ">
-          {groupConsecutiveToolCalls(group.events).map((subGroup) => (
+          {subGroups.map((subGroup) => (
             <ToolSubGroupAccordion key={subGroup.id} subGroup={subGroup} />
           ))}
         </div>

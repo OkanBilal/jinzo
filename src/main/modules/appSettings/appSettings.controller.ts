@@ -33,6 +33,10 @@ export const appSettingsController = {
     return appSettingsService.setNotifyOnToolApproval(enabled);
   },
 
+  async setShowMenuBarIcon(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+    return appSettingsService.setShowMenuBarIcon(enabled);
+  },
+
   async setCommitInstructions(instructions: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
     return appSettingsService.setCommitInstructions(instructions);
   },

@@ -110,6 +110,19 @@ export const appSettingsRepo = {
     return this.findById(id);
   },
 
+  async updateShowMenuBarIcon(id: string, enabled: boolean): Promise<AppSettingsRecord | null> {
+    const db = getDb();
+    await db
+      .update(appSettings)
+      .set({
+        showMenuBarIcon: enabled,
+        updatedAt: sql`(unixepoch())`,
+      })
+      .where(eq(appSettings.id, id));
+
+    return this.findById(id);
+  },
+
   async updateCommitInstructions(id: string, instructions: string): Promise<AppSettingsRecord | null> {
     const db = getDb();
     await db

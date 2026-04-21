@@ -43,16 +43,18 @@ export function WorkspaceSidebar() {
 
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
 
-
   // Get workspace data from the selected workspace ID
   const { data: workspace } = useGetWorkspaceByIdQuery(workspaceId || "", {
     skip: !workspaceId,
   });
 
   // Get diff data to show changed files count
-  const { currentData: diff } = useGetLatestWorkspaceDiffQuery(workspaceId || "", {
-    skip: !workspaceId,
-  });
+  const { currentData: diff } = useGetLatestWorkspaceDiffQuery(
+    workspaceId || "",
+    {
+      skip: !workspaceId,
+    },
+  );
 
   const changedFilesCount = diff?.files?.length ?? 0;
   const rootPath = workspace?.rootPath;
@@ -176,9 +178,9 @@ export function WorkspaceSidebar() {
           <div
             className={`absolute top-0.5 bottom-0.5 rounded-lg dark:bg-primary/10 bg-primary  transition-transform duration-200 ease-out`}
             style={{
-              width: "calc((100% - 0.75rem) / 3)",
+              width: "calc((100% - 0.75rem) / 2)",
               left: "0.125rem",
-              transform: `translateX(calc(${tabIndex} * (100% + 0.25rem)))`,
+              transform: `translateX(calc(${tabIndex} * (100% + 0.5rem)))`,
             }}
           />
           <Button
@@ -200,16 +202,6 @@ export function WorkspaceSidebar() {
             }`}
           >
             Changes{changedFilesCount > 0 && ` (${changedFilesCount})`}
-          </Button>
-          <Button
-            onClick={() => setSidebarTab("reviews")}
-            className={`relative z-(--z-base) flex-1 text-xs font-medium py-1 px-2  transition-colors ${
-              sidebarTab === "reviews"
-                ? "text-primary-900 dark:text-primary-100"
-                : "text-primary-800 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
-            }`}
-          >
-            Activity
           </Button>
         </div>
       </div>
@@ -247,9 +239,7 @@ export function WorkspaceSidebar() {
             onSelectDiffFile={handleSelectDiffFile}
           />
         </div>
-      ) : (
-        <ActivitySection workspaceId={workspaceId} />
-      )}
+      ) : null}
     </div>
   );
 }

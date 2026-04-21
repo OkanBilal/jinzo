@@ -15,6 +15,13 @@
       "when": 1775062842101,
       "tag": "0001_rare_bushwacker",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1776232159228,
+      "tag": "0002_shocking_fabian_cortez",
+      "breakpoints": true
     }
   ]
 }

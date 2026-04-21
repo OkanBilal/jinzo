@@ -124,6 +124,7 @@ export {
   useSetPreventSleepDuringRunsMutation,
   useSetNotifyOnRunCompleteMutation,
   useSetNotifyOnToolApprovalMutation,
+  useSetShowMenuBarIconMutation,
   useSetCommitInstructionsMutation,
   useSetPrInstructionsMutation,
 } from "./appSettingsApi";

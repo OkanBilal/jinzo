@@ -793,17 +793,28 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
         const { toolName, input: normalizedInput } = normalizeToolCall(kind, title, rawInput, locations);
 
         if (status === "completed" || status === "failed") {
+          // Extract diff block (ACP sends edit results as content: [{type:"diff", path, oldText, newText}])
+          const diffBlock = content?.find((c) => c.type === "diff");
+          if (diffBlock) {
+            if (typeof diffBlock.path === "string") normalizedInput.file_path = diffBlock.path;
+            if (typeof diffBlock.oldText === "string") normalizedInput.old_string = diffBlock.oldText;
+            if (typeof diffBlock.newText === "string") normalizedInput.new_string = diffBlock.newText;
+          }
+
           // Extract output: try content blocks → rawOutput.content string → rawOutput itself
           let outputText: unknown;
           if (content && content.length > 0) {
-            outputText = content
+            const textParts = content
               .filter((c) => c.type === "text")
-              .map((c) => c.text as string)
-              .join("\n");
-          } else if (rawOutput && typeof rawOutput === "object" && (rawOutput as any).content) {
-            outputText = (rawOutput as any).content;
-          } else {
-            outputText = rawOutput;
+              .map((c) => c.text as string);
+            outputText = textParts.length > 0 ? textParts.join("\n") : diffBlock ? "" : undefined;
+          }
+          if (outputText === undefined) {
+            if (rawOutput && typeof rawOutput === "object" && (rawOutput as any).content) {
+              outputText = (rawOutput as any).content;
+            } else {
+              outputText = rawOutput;
+            }
           }
 
           events.push({

@@ -2,9 +2,8 @@ if (process.platform === "win32") {
   if (require("electron-squirrel-startup")) process.exit(0);
 }
 
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell, Tray } from "electron";
 
-// Prevent macOS Apple Music access prompt triggered by Chromium's media session API
 app.commandLine.appendSwitch("disable-features", "HardwareMediaKeyHandling,MediaSessionService");
 
 // Enable GPU rasterization and compositing for smoother animations on first launch
@@ -36,6 +35,7 @@ import { registerSpaceIpc, unregisterSpaceIpc } from "./modules/space";
 import {
   registerAppSettingsIpc,
   unregisterAppSettingsIpc,
+  appSettingsService,
 } from "./modules/appSettings";
 import {
   registerProvidersIpc,
@@ -176,6 +176,7 @@ interface DetectedApp {
 let isShuttingDown = false;
 let hasUnsavedChanges = false;
 let quitConfirmed = false;
+let tray: Tray | null = null;
 let installedAppsCache: DetectedApp[] | null = null;
 let installedAppsCacheTime = 0;
 let detectInFlight: Promise<DetectedApp[]> | null = null;
@@ -322,6 +323,63 @@ async function detectInstalledApps(): Promise<DetectedApp[]> {
   })();
 
   return detectInFlight;
+}
+
+function resolveTrayIconPath(): string {
+  if (!app.isPackaged) {
+    return path.join(app.getAppPath(), "src/renderer/public/menu-iconTemplate.png");
+  }
+  const packed = path.join(process.resourcesPath, "menu-iconTemplate.png");
+  if (fs.existsSync(packed)) return packed;
+  return path.join(app.getAppPath(), ".vite/renderer/menu-iconTemplate.png");
+}
+
+function focusMainWindow() {
+  const win = BrowserWindow.getAllWindows()[0];
+  if (!win) {
+    createMainWindow({ show: true });
+    return;
+  }
+  if (win.isMinimized()) win.restore();
+  if (!win.isVisible()) win.show();
+  win.focus();
+}
+
+function destroyTray() {
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
+}
+
+function createTray() {
+  if (tray) return;
+
+  const sourceImage = nativeImage.createFromPath(resolveTrayIconPath());
+  // macOS menu bar expects ~22px; Windows/Linux accept larger
+  const trayImage =
+    process.platform === "darwin"
+      ? sourceImage.resize({ width: 16, height: 16 })
+      : sourceImage.resize({ width: 16, height: 16 });
+
+  // NOTE: For a proper monochrome macOS menu bar icon, replace icon.png
+  // with a black+transparent template PNG and call trayImage.setTemplateImage(true).
+  // Using the colored app icon for now.
+
+  tray = new Tray(trayImage);
+  tray.setToolTip("Jinzo");
+
+  const contextMenu = Menu.buildFromTemplate([
+    { label: "Show Jinzo", click: () => focusMainWindow() },
+    {
+      label: "Check for Updates…",
+      click: () => updatesService.checkForUpdates(),
+    },
+    { type: "separator" },
+    { label: "Quit Jinzo", role: "quit" },
+  ]);
+  tray.setContextMenu(contextMenu);
+  tray.on("click", () => focusMainWindow());
 }
 
 /**
@@ -516,6 +574,24 @@ async function initializeApp() {
     ];
     Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 
+    // Create menu bar (tray) icon — respects user preference
+    try {
+      const settings = await appSettingsService.ensureSettings();
+      if (settings.showMenuBarIcon) createTray();
+    } catch (err) {
+      console.warn("Failed to read menu bar icon preference, defaulting to shown:", err);
+      createTray();
+    }
+
+    // IPC: toggle menu bar icon visibility at runtime
+    ipcMain.handle("app:setMenuBarIconVisible", (_, visible: boolean) => {
+      if (visible) {
+        createTray();
+      } else {
+        destroyTray();
+      }
+    });
+
     // Create main window (hidden until ready)
     createMainWindow({
       show: false,
@@ -545,6 +621,9 @@ async function initializeApp() {
 async function cleanupApp() {
   try {
     console.log("Cleaning up application...");
+
+    // Destroy tray
+    destroyTray();
 
     // Destroy all terminal PTY instances
     destroyAllTerminals();
@@ -589,6 +668,7 @@ async function cleanupApp() {
     ipcMain.removeHandler("shell:openInApp");
     ipcMain.removeHandler("shell:getInstalledApps");
     ipcMain.removeHandler("app:setUnsavedChanges");
+    ipcMain.removeHandler("app:setMenuBarIconVisible");
 
     // Close database
     await closeDatabase();
