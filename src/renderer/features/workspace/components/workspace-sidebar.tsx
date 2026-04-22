@@ -6,7 +6,7 @@ import {
 } from "@/features/workspace/components/file-explorer";
 import {
   useGetWorkspaceByIdQuery,
-  useGetLatestWorkspaceDiffQuery,
+  useGetLatestWorkspaceDiffSummaryQuery,
 } from "@/lib/redux/api";
 import type { ProjectIssue, SignalWithEntity } from "@/lib/redux/api";
 import {
@@ -24,7 +24,6 @@ import { FolderIcon } from "@/components/ui/icons/file-icons";
 import { TrackerSection } from "@/features/workspace/components/tracker-section";
 
 import { DiffSection } from "@/features/workspace/components/diff-section";
-import { ActivitySection } from "@/features/workspace/components/activity-section";
 import {
   isIssueTab,
   getIssueEntityId,
@@ -48,8 +47,8 @@ export function WorkspaceSidebar() {
     skip: !workspaceId,
   });
 
-  // Get diff data to show changed files count
-  const { currentData: diff } = useGetLatestWorkspaceDiffQuery(
+  // Get diff summary (no diffText) to show changed files count
+  const { currentData: diff } = useGetLatestWorkspaceDiffSummaryQuery(
     workspaceId || "",
     {
       skip: !workspaceId,

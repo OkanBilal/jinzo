@@ -15,6 +15,7 @@ const CHANNELS = {
   STOP: "browser:stop",
   SET_SELECT_MODE: "browser:setSelectMode",
   GET_NAV_STATE: "browser:getNavState",
+  DELETE_CAPTURE: "browser:deleteCapture",
 } as const;
 
 function validBounds(input: unknown): BrowserBounds | null {
@@ -58,6 +59,12 @@ export function registerBrowserIpc(): void {
     return browserController.setSelectMode(Boolean(enabled));
   });
   ipcMain.handle(CHANNELS.GET_NAV_STATE, async () => browserController.getNavState());
+  ipcMain.handle(CHANNELS.DELETE_CAPTURE, async (_, captureName: unknown) => {
+    if (typeof captureName !== "string") {
+      return { success: false, error: "captureName must be a string" };
+    }
+    return browserController.deleteCapture(captureName);
+  });
 }
 
 export function unregisterBrowserIpc(): void {

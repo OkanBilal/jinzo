@@ -303,7 +303,7 @@ const api = {
       }>;
       configSnapshot?: Record<string, unknown>;
       toolPolicySnapshot?: Record<string, unknown>;
-      attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>;
+      attachments?: Array<{ name: string; type: string; data?: string; sourcePath?: string; mimeType: string }>;
       contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
       contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
       contextFiles?: Array<{ path: string }>;
@@ -323,7 +323,7 @@ const api = {
         content?: string;
         metadata?: Record<string, unknown>;
       }>;
-      attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>;
+      attachments?: Array<{ name: string; type: string; data?: string; sourcePath?: string; mimeType: string }>;
       contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
       contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
       contextFiles?: Array<{ path: string }>;
@@ -339,7 +339,7 @@ const api = {
         content?: string;
         metadata?: Record<string, unknown>;
       }>;
-      attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>;
+      attachments?: Array<{ name: string; type: string; data?: string; sourcePath?: string; mimeType: string }>;
     }) => ipcRenderer.invoke("runs:fork", payload),
     executeReview: (payload: {
       accountId: string;
@@ -416,6 +416,8 @@ const api = {
       ipcRenderer.invoke("workspaceDiffs:getByWorkspace", workspaceId, limit),
     getLatest: (workspaceId: string) =>
       ipcRenderer.invoke("workspaceDiffs:getLatest", workspaceId),
+    getLatestSummary: (workspaceId: string) =>
+      ipcRenderer.invoke("workspaceDiffs:getLatestSummary", workspaceId),
     getByRun: (runId: string) =>
       ipcRenderer.invoke("workspaceDiffs:getByRun", runId),
     deleteLatest: (workspaceId: string) =>
@@ -646,6 +648,9 @@ const api = {
     setSelectMode: (enabled: boolean) =>
       ipcRenderer.invoke("browser:setSelectMode", enabled),
     getNavState: () => ipcRenderer.invoke("browser:getNavState"),
+    /** Remove a browser capture PNG from userData/browser-captures. Pass the basename only. */
+    deleteCapture: (captureName: string) =>
+      ipcRenderer.invoke("browser:deleteCapture", captureName),
     onNavState: (
       callback: (state: {
         url: string;

@@ -1,4 +1,4 @@
-import { fetchAllEntities } from "./sync.fetchers";
+import { fetchEntitiesByProvider } from "./sync.fetchers";
 import { syncRepo } from "./sync.repo";
 import type { SyncJobResult, SyncJobStats, ServiceResponse } from "./sync.dto";
 
@@ -65,18 +65,35 @@ export const syncService = {
     const startTime = Date.now();
 
     try {
-      const entities = await fetchAllEntities(provider);
+      const totalStats: SyncJobStats = {
+        inserted: 0,
+        updated: 0,
+        skipped: 0,
+        errors: 0,
+      };
+      let totalEntities = 0;
 
-      if (entities.length === 0) {
+      // Fetch + upsert provider-by-provider so we never hold every provider's
+      // payload in memory simultaneously. Each batch is released as soon as
+      // the transaction finishes.
+      for await (const batch of fetchEntitiesByProvider(provider)) {
+        if (batch.entities.length === 0) continue;
+        const stats = syncRepo.upsertEntities(batch.entities);
+        totalStats.inserted += stats.inserted;
+        totalStats.updated += stats.updated;
+        totalStats.skipped += stats.skipped;
+        totalStats.errors += stats.errors;
+        totalEntities += batch.entities.length;
+      }
+
+      if (totalEntities === 0) {
         console.warn("⚠️  No entities fetched from sources");
         const result = createEmptyResult(Date.now() - startTime);
         return { success: true, data: result };
       }
 
-      const stats = await syncRepo.upsertEntities(entities);
-
       const duration = Date.now() - startTime;
-      const result = createSuccessResult(stats, entities.length, duration);
+      const result = createSuccessResult(totalStats, totalEntities, duration);
 
       return { success: true, data: result };
     } catch (err) {

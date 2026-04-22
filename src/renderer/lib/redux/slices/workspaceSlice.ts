@@ -36,6 +36,7 @@ export interface ContextBrowserSelection {
   selector: string;
   tagName: string;
   text: string;
+  /** Truncated by main (~2KB) — full HTML is intentionally not kept in memory. */
   outerHTML: string;
   styles: Record<string, string>;
   rect: { x: number; y: number; width: number; height: number };
@@ -46,12 +47,12 @@ export interface ContextBrowserSelection {
   componentName?: string;
   sourceFile?: string;
   timestamp: string;
+  /** Absolute path to the PNG on disk (main-process userData/browser-captures). */
   screenshotPath?: string;
-  screenshotDataUrl?: string;
-  screenshotBase64?: string;
+  /** Basename used for `jinzo-capture://<name>` in `<img src>`. */
+  screenshotCaptureName?: string;
   surroundingScreenshotPath?: string;
-  surroundingScreenshotDataUrl?: string;
-  surroundingScreenshotBase64?: string;
+  surroundingScreenshotCaptureName?: string;
   screenshotMimeType: string;
 }
 
@@ -112,9 +113,24 @@ const workspaceSlice = createSlice({
   initialState,
   reducers: {
     setActiveWorkspaceId: (state, action: PayloadAction<string | null>) => {
+      // Switching workspaces invalidates any cached file content — drop it so
+      // large text buffers (multi-MB source files) don't linger in Redux.
+      if (state.activeWorkspaceId !== action.payload) {
+        state.selectedFile = null;
+        state.selectedFileContent = null;
+        state.fileContentError = null;
+        state.isLoadingFileContent = false;
+      }
       state.activeWorkspaceId = action.payload;
     },
     setActiveWorkspaceForProvider: (state, action: PayloadAction<{ providerId: string; workspaceId: string }>) => {
+      const prev = state.activeWorkspaceIdByProvider[action.payload.providerId];
+      if (prev !== action.payload.workspaceId) {
+        state.selectedFile = null;
+        state.selectedFileContent = null;
+        state.fileContentError = null;
+        state.isLoadingFileContent = false;
+      }
       state.activeWorkspaceIdByProvider[action.payload.providerId] = action.payload.workspaceId;
     },
     setWorkspaceModel: (state, action: PayloadAction<{ providerId: string; model: string }>) => {

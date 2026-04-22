@@ -1660,6 +1660,8 @@ export function createCopilotAdapter(
           logError("Error aborting session:", err);
         }
       }
+      usageAccumulator.delete(runId);
+      toolCallIndex.delete(runId);
     },
 
     async shutdown(): Promise<void> {
@@ -1692,6 +1694,7 @@ export function createCopilotAdapter(
       }
       activeRuns.clear();
       toolCallIndex.clear();
+      usageAccumulator.clear();
 
       if (client) {
         try {

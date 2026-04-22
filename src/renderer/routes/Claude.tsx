@@ -23,7 +23,7 @@ export default function ClaudePage() {
   const [updateProvider] = useUpdateProviderMutation();
   const bottomTerminal = useBottomTerminal();
 
-  const { pendingApprovals, respond: respondToolApproval } = useToolApproval();
+  const { pendingApprovals, respond: respondToolApproval } = useToolApproval(ws.runs);
 
   const currentApproval = ws.activeRunId
     ? pendingApprovals.find((a) => a.runId === ws.activeRunId)

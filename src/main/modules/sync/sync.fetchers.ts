@@ -60,3 +60,26 @@ export async function fetchAllEntities(provider?: string): Promise<EntityInput[]
   console.log(`[Sync] Fetched ${entities.length} entities from ${entries.length} sources${provider ? ` (provider: ${provider})` : ""}`);
   return entities;
 }
+
+/**
+ * Fetch entities provider-by-provider and yield each batch as soon as it's
+ * available. Callers can persist each batch and release it from memory before
+ * the next provider starts, avoiding a single giant in-memory array.
+ */
+export async function* fetchEntitiesByProvider(
+  provider?: string,
+): AsyncGenerator<{ provider: string; entities: EntityInput[] }> {
+  const entries =
+    provider && PROVIDER_FETCHERS[provider]
+      ? [[provider, PROVIDER_FETCHERS[provider]] as const]
+      : Object.entries(PROVIDER_FETCHERS);
+
+  for (const [name, fn] of entries) {
+    try {
+      const entities = await fn();
+      yield { provider: name, entities };
+    } catch (err) {
+      console.error(`[Sync] Provider "${name}" failed:`, err);
+    }
+  }
+}

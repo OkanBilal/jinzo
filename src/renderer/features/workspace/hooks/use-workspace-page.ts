@@ -294,9 +294,20 @@ export function useWorkspacePage(providerId: string) {
 
   const handleRemoveContextBrowserSelection = useCallback(
     (id: string) => {
+      const sel = contextBrowserSelections.find((s) => s.id === id);
       dispatch(removeContextBrowserSelection(id));
+      // Free the on-disk capture immediately to keep userData/browser-captures bounded.
+      const api = (window as any).api?.browser;
+      if (api?.deleteCapture) {
+        if (sel?.screenshotCaptureName) {
+          api.deleteCapture(sel.screenshotCaptureName).catch(() => {});
+        }
+        if (sel?.surroundingScreenshotCaptureName) {
+          api.deleteCapture(sel.surroundingScreenshotCaptureName).catch(() => {});
+        }
+      }
     },
-    [dispatch],
+    [dispatch, contextBrowserSelections],
   );
 
   const showNewRunTab = isNewRunTab(activeTab);

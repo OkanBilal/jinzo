@@ -28,6 +28,12 @@ const BLANK_URL = "about:blank";
 const SURROUND_PADDING = 80;
 /** Match panel `rounded-*-xl` (~12px) so WebContentsView fills bounds without square overflow. */
 const VIEW_BORDER_RADIUS_PX = 0;
+/** Max bytes kept in the browser-captures cache directory before LRU eviction kicks in. */
+const CAPTURE_CACHE_MAX_BYTES = 100 * 1024 * 1024;
+/** Trim outerHTML payloads at this size — anything longer is not useful as context. */
+const OUTER_HTML_MAX_CHARS = 2048;
+/** Idle time before the hidden WebContentsView is parked at about:blank to free page memory. */
+const IDLE_PARK_MS = 2 * 60 * 1000;
 
 function normalizeUrl(raw: string): string {
   const trimmed = (raw || "").trim();
@@ -63,6 +69,61 @@ function cacheDir(): string {
   return dir;
 }
 
+/** Best-effort LRU: when captures dir exceeds the byte budget, delete oldest-first. */
+function pruneCaptureCache() {
+  try {
+    const dir = cacheDir();
+    const entries = fs
+      .readdirSync(dir)
+      .map((name) => {
+        const full = path.join(dir, name);
+        try {
+          const st = fs.statSync(full);
+          if (!st.isFile()) return null;
+          return { full, mtime: st.mtimeMs, size: st.size };
+        } catch {
+          return null;
+        }
+      })
+      .filter((e): e is { full: string; mtime: number; size: number } => e !== null);
+
+    let total = entries.reduce((sum, e) => sum + e.size, 0);
+    if (total <= CAPTURE_CACHE_MAX_BYTES) return;
+
+    entries.sort((a, b) => a.mtime - b.mtime);
+    for (const e of entries) {
+      if (total <= CAPTURE_CACHE_MAX_BYTES) break;
+      try {
+        fs.unlinkSync(e.full);
+        total -= e.size;
+      } catch {
+        // ignore unlink failures
+      }
+    }
+  } catch {
+    // ignore prune failures — best-effort only
+  }
+}
+
+function safeUnlink(filePath: string) {
+  try {
+    fs.unlinkSync(filePath);
+  } catch {
+    // ignore
+  }
+}
+
+function truncate(str: string | undefined, max: number): string | undefined {
+  if (typeof str !== "string") return str;
+  if (str.length <= max) return str;
+  return str.slice(0, max);
+}
+
+function captureBasename(filePath: string | undefined): string | undefined {
+  if (!filePath) return undefined;
+  return path.basename(filePath);
+}
+
 // ─────────────────────────────────────────────────────────────
 // Browser Service — singleton WebContentsView owned by main
 // ─────────────────────────────────────────────────────────────
@@ -72,6 +133,7 @@ export const browserService = {
   bounds: null as BrowserBounds | null,
   visible: false,
   selectMode: false,
+  idleParkTimer: null as NodeJS.Timeout | null,
 
   _findHost(): BrowserWindow | null {
     return (
@@ -193,6 +255,9 @@ export const browserService = {
     const element = await this._capture(elementRect, `element-${id}`);
     const surrounding = await this._capture(surroundingRect, `surround-${id}`);
 
+    // LRU prune after writing new captures so the dir never drifts unbounded.
+    pruneCaptureCache();
+
     const result: BrowserSelectionResult = {
       id,
       type: "browser_selection",
@@ -201,7 +266,7 @@ export const browserService = {
       selector: payload.selector,
       tagName: payload.tagName,
       text: payload.text,
-      outerHTML: payload.outerHTML,
+      outerHTML: truncate(payload.outerHTML, OUTER_HTML_MAX_CHARS) ?? "",
       styles: payload.styles,
       rect: payload.rect,
       pageRect: payload.pageRect,
@@ -212,11 +277,9 @@ export const browserService = {
       sourceFile: payload.sourceFile,
       timestamp: payload.timestamp,
       screenshotPath: element?.filePath,
-      screenshotDataUrl: element?.dataUrl,
-      screenshotBase64: element?.base64,
+      screenshotCaptureName: captureBasename(element?.filePath),
       surroundingScreenshotPath: surrounding?.filePath,
-      surroundingScreenshotDataUrl: surrounding?.dataUrl,
-      surroundingScreenshotBase64: surrounding?.base64,
+      surroundingScreenshotCaptureName: captureBasename(surrounding?.filePath),
       screenshotMimeType: "image/png",
     };
 
@@ -247,7 +310,7 @@ export const browserService = {
   async _capture(
     rect: Rectangle,
     prefix: string,
-  ): Promise<{ filePath: string; dataUrl: string; base64: string } | undefined> {
+  ): Promise<{ filePath: string } | undefined> {
     const view = this.view;
     if (!view || view.webContents.isDestroyed()) return undefined;
     try {
@@ -256,8 +319,7 @@ export const browserService = {
       const buffer = img.toPNG();
       const filePath = path.join(cacheDir(), `${prefix}-${Date.now()}.png`);
       fs.writeFileSync(filePath, buffer);
-      const base64 = buffer.toString("base64");
-      return { filePath, dataUrl: `data:image/png;base64,${base64}`, base64 };
+      return { filePath };
     } catch (err) {
       console.warn("[browser] capturePage failed:", err);
       return undefined;
@@ -265,6 +327,31 @@ export const browserService = {
   },
 
   // ─────────────── Public API ───────────────
+
+  _clearIdleParkTimer() {
+    if (this.idleParkTimer) {
+      clearTimeout(this.idleParkTimer);
+      this.idleParkTimer = null;
+    }
+  },
+
+  _scheduleIdlePark() {
+    this._clearIdleParkTimer();
+    this.idleParkTimer = setTimeout(() => {
+      this.idleParkTimer = null;
+      const wc = this.view?.webContents;
+      if (!wc || wc.isDestroyed()) return;
+      // Don't park if the panel has become visible again during the timer.
+      if (this.visible) return;
+      try {
+        if (wc.getURL() !== BLANK_URL) {
+          wc.loadURL(BLANK_URL).catch(() => {});
+        }
+      } catch {
+        // ignore
+      }
+    }, IDLE_PARK_MS);
+  },
 
   async attach(bounds: BrowserBounds): Promise<ServiceResponse<BrowserNavState>> {
     const host = this._findHost();
@@ -278,6 +365,7 @@ export const browserService = {
     }
     this.setBounds(bounds);
     this.visible = true;
+    this._clearIdleParkTimer();
 
     const wc = view.webContents;
     const current = wc.getURL();
@@ -307,10 +395,12 @@ export const browserService = {
     }
     this.visible = false;
     if (this.selectMode) this.setSelectMode(false);
+    this._scheduleIdlePark();
     return { success: true, data: null };
   },
 
   destroy(): ServiceResponse<null> {
+    this._clearIdleParkTimer();
     this.detach();
     if (this.view && !this.view.webContents.isDestroyed()) {
       try {
@@ -323,6 +413,23 @@ export const browserService = {
     this.host = null;
     this.bounds = null;
     this.selectMode = false;
+    return { success: true, data: null };
+  },
+
+  deleteCapture(captureName: string): ServiceResponse<null> {
+    if (!captureName || typeof captureName !== "string") {
+      return { success: false, error: "captureName required" };
+    }
+    if (captureName.includes("/") || captureName.includes("\\") || captureName.includes("..")) {
+      return { success: false, error: "Invalid capture name" };
+    }
+    const base = cacheDir();
+    const target = path.resolve(path.join(base, captureName));
+    const resolvedBase = path.resolve(base);
+    if (!target.startsWith(resolvedBase + path.sep)) {
+      return { success: false, error: "Path escape denied" };
+    }
+    safeUnlink(target);
     return { success: true, data: null };
   },
 
@@ -354,6 +461,11 @@ export const browserService = {
       if (!visible) this.setBounds({ x: 0, y: 0, width: 0, height: 0 });
     }
     this.visible = visible;
+    if (visible) {
+      this._clearIdleParkTimer();
+    } else {
+      this._scheduleIdlePark();
+    }
     return { success: true, data: null };
   },
 

@@ -121,7 +121,10 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
       nodeIntegration: false,
       sandbox: false,
       devTools: !app.isPackaged,
-      backgroundThrottling: false,
+      // Throttle timers/rAF when the window is hidden/occluded — saves
+      // significant CPU and GPU when the user switches away. Streaming IPC
+      // events still arrive via `webContents.send` regardless of throttling.
+      backgroundThrottling: true,
     },
     ...(process.platform === "darwin" ? {
       titleBarStyle: "hiddenInset" as const,

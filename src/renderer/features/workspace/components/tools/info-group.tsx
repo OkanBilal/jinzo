@@ -75,6 +75,8 @@ export function InfoGroup({ group }: InfoGroupProps) {
       type: "image" | "document";
       mimeType: string;
       dataUrl?: string;
+      captureName?: string;
+      sourcePath?: string;
     }>;
 
     if (isReview) {
@@ -157,16 +159,19 @@ export function InfoGroup({ group }: InfoGroupProps) {
                     </span>
                   </div>
                 ))}
-                {attachments.map((att) =>
-                  att.type === "image" && att.dataUrl ? (
+                {attachments.map((att) => {
+                  const imgSrc =
+                    att.dataUrl ||
+                    (att.captureName ? `jinzo-capture://cap/${att.captureName}` : undefined);
+                  return att.type === "image" && imgSrc ? (
                     <button
                       key={att.name}
-                      onClick={() => setPreviewAtt({ name: att.name, dataUrl: att.dataUrl! })}
+                      onClick={() => setPreviewAtt({ name: att.name, dataUrl: imgSrc })}
                       className="flex items-center gap-1.5 pl-2 pr-2 py-1 rounded-xl bg-primary-50 dark:bg-primary-700/15 text-xs hover:bg-primary-100 dark:hover:bg-primary-700/30 transition-colors cursor-pointer"
                       title={`Click to preview · ${att.name}`}
                     >
                       <img
-                        src={att.dataUrl}
+                        src={imgSrc}
                         alt={att.name}
                         className="h-6 w-6 rounded-lg object-cover  border border-primary-200/60 dark:border-primary-700/40"
                       />
@@ -189,8 +194,8 @@ export function InfoGroup({ group }: InfoGroupProps) {
                         {att.name}
                       </span>
                     </div>
-                  )
-                )}
+                  );
+                })}
               </div>
             )}
           </div>

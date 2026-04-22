@@ -23,7 +23,10 @@ export interface WorkRunContextItem {
 export interface FileAttachment {
   name: string;
   type: "image" | "document";
-  data: string;
+  /** Base64-encoded data — optional when `sourcePath` is provided. */
+  data?: string;
+  /** Absolute path to an existing on-disk file. Preferred over `data` to avoid base64 in memory. */
+  sourcePath?: string;
   mimeType: string;
 }
 

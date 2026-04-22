@@ -336,6 +336,15 @@ class CodexAppServer {
     this.child.stdout.on("data", (chunk: Buffer) => {
       this.jsonBuffer += chunk.toString();
       this.drainJsonBuffer();
+      // Guard: if we've accumulated >32MB without a parseable message we're
+      // almost certainly stuck on malformed output. Reset to avoid unbounded
+      // memory growth.
+      if (this.jsonBuffer.length > 32 * 1024 * 1024) {
+        logError(
+          `jsonBuffer exceeded 32MB (${this.jsonBuffer.length} bytes), resetting`,
+        );
+        this.jsonBuffer = "";
+      }
     });
 
     this.child.stderr?.on("data", (data: Buffer) => {

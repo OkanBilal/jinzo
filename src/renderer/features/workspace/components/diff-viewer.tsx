@@ -155,7 +155,16 @@ export function DiffViewer({
     return allFindings.filter((f) => pathsMatch(normalizePath(f.file), target) && !f.isApproved);
   }, [allFindings, filePath]);
 
-  const [fileLines, setFileLines] = useState<string[] | null>(null);
+  // Keep the buffered source text keyed to the filePath it came from. Reading
+  // at render time with `cache.path !== filePath` makes the previous file's
+  // multi-MB split-lines array drop out automatically when the target
+  // changes — no effect-setState churn and no stale retention.
+  const [fileLinesCache, setFileLinesCache] = useState<{
+    path: string | null;
+    lines: string[] | null;
+  }>({ path: null, lines: null });
+  const fileLines =
+    filePath && fileLinesCache.path === filePath ? fileLinesCache.lines : null;
 
   const findingLineNumbers = useMemo(
     () => fileFindings.map((f) => (f.lineStart != null && f.lineStart >= 1 ? f.lineStart : 1)),
@@ -170,7 +179,10 @@ export function DiffViewer({
       .readFileText({ filePath: `${workspace.rootPath}/${filePath}`, workspaceRoot: workspace.rootPath })
       .then((result: ServiceResponse<FileContentResponse>) => {
         if (!cancelled && result.success && result.data && !result.data.isBinary) {
-          setFileLines(result.data.content.split("\n"));
+          setFileLinesCache({
+            path: filePath,
+            lines: result.data.content.split("\n"),
+          });
         }
       })
       .catch(() => {});

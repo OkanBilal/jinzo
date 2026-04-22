@@ -131,6 +131,13 @@ class CursorAcpServer {
     this.child.stdout.on("data", (chunk: Buffer) => {
       this.jsonBuffer += chunk.toString();
       this.drainJsonBuffer();
+      // Guard: cap unbounded buffer growth on malformed output.
+      if (this.jsonBuffer.length > 32 * 1024 * 1024) {
+        logError(
+          `jsonBuffer exceeded 32MB (${this.jsonBuffer.length} bytes), resetting`,
+        );
+        this.jsonBuffer = "";
+      }
     });
 
     this.child.stderr?.on("data", (data: Buffer) => {

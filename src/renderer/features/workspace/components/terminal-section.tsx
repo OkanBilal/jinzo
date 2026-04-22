@@ -40,12 +40,14 @@ export function TerminalSection({
           </Button>
         )}
       </div>
-      <div className="h-52">
-        <XtermTerminal
-          id={terminalId}
-          rootPath={rootPath}
-        />
-      </div>
+      {isOpen && (
+        <div className="h-52">
+          <XtermTerminal
+            id={terminalId}
+            rootPath={rootPath}
+          />
+        </div>
+      )}
     </div>
   );
 }

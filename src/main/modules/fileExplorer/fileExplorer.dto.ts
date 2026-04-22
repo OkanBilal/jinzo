@@ -71,6 +71,17 @@ export interface ReadFileTextOptions {
 // Max file size constant (2MB)
 export const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024;
 
+// Max total nodes (files + directories) emitted by a recursive readDirectory
+// call. Protects RAM on gigantic trees — callers that need more should fall
+// back to listDir for lazy loading.
+export const MAX_READ_DIRECTORY_NODES = 20_000;
+
+// Default depth cap when caller does not pass a depth. The UI relies on
+// `listDir` (one level) + on-demand expansion, so a small default keeps the
+// initial payload tiny for callers that still reach for the recursive API.
+// Deeper trees must opt in explicitly via the `depth` option.
+export const DEFAULT_READ_DIRECTORY_DEPTH = 2;
+
 // Default patterns to exclude (common IDE/build artifacts)
 // NOTE: Do NOT add source folders like "main", "renderer", "preload", "src" here
 export const DEFAULT_EXCLUDE_PATTERNS = [

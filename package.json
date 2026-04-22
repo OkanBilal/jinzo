@@ -14,7 +14,7 @@
     "test": "npm rebuild better-sqlite3 && vitest run",
     "test:watch": "npm rebuild better-sqlite3 && vitest",
     "test:coverage": "npm rebuild better-sqlite3 && vitest run --coverage",
-    "start": "electron-forge start",
+    "start": "ulimit -n 65536 && electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",

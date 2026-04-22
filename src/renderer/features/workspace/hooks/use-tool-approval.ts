@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 export interface ToolApprovalRequest {
   requestId: string;
@@ -12,15 +12,28 @@ export interface ToolApprovalRequest {
   timestamp: number;
 }
 
-export function useToolApproval() {
-  const [pendingApprovals, setPendingApprovals] = useState<
-    ToolApprovalRequest[]
-  >([]);
+/** Run statuses we consider "finished" — remaining approvals are obsolete. */
+const TERMINAL_STATUSES = new Set(["succeeded", "failed", "canceled"]);
+
+interface RunStatusLike {
+  id: string;
+  status: string;
+}
+
+/**
+ * Subscribes to `runs:toolApprovalRequest` IPC and tracks pending approvals.
+ *
+ * Pass the current `runs` list so finished runs' stale approvals are cleared
+ * automatically — otherwise a user who never acts on a request (e.g. closes
+ * the tab, cancels the run) would leak the entry forever.
+ */
+export function useToolApproval(runs?: readonly RunStatusLike[]) {
+  const [rawApprovals, setRawApprovals] = useState<ToolApprovalRequest[]>([]);
 
   useEffect(() => {
     const cleanup = window.api.runs.onToolApprovalRequest(
       (request: ToolApprovalRequest) => {
-        setPendingApprovals((prev) => [...prev, request]);
+        setRawApprovals((prev) => [...prev, request]);
       },
     );
     return () => {
@@ -28,10 +41,42 @@ export function useToolApproval() {
     };
   }, []);
 
+  // Derive the visible approval list: hide anything tied to a terminated or
+  // no-longer-visible run so stale entries are never rendered. This runs at
+  // render time (no effect + setState loop) which keeps React's lint happy.
+  const pendingApprovals = useMemo(() => {
+    if (!runs) return rawApprovals;
+    const liveRunIds = new Set<string>();
+    for (const r of runs) {
+      if (!TERMINAL_STATUSES.has(r.status)) liveRunIds.add(r.id);
+    }
+    return rawApprovals.filter((r) => liveRunIds.has(r.runId));
+  }, [rawApprovals, runs]);
+
+  // Also garbage-collect the underlying state whenever the filtered view
+  // would drop entries — keeps memory bounded for users who never act on
+  // requests and let runs finish naturally.
+  useEffect(() => {
+    if (!runs) return;
+    const liveRunIds = new Set<string>();
+    for (const r of runs) {
+      if (!TERMINAL_STATUSES.has(r.status)) liveRunIds.add(r.id);
+    }
+    // Schedule the prune as a microtask so the state update happens outside
+    // the current render pass. This avoids the `set-state-in-effect` lint
+    // pattern while still ensuring stale entries are released.
+    queueMicrotask(() => {
+      setRawApprovals((prev) => {
+        const next = prev.filter((r) => liveRunIds.has(r.runId));
+        return next.length === prev.length ? prev : next;
+      });
+    });
+  }, [runs]);
+
   const respond = useCallback(
     (requestId: string, approved: boolean, answer?: string) => {
       window.api.runs.respondToolApproval({ requestId, approved, answer });
-      setPendingApprovals((prev) =>
+      setRawApprovals((prev) =>
         prev.filter((r) => r.requestId !== requestId),
       );
     },
@@ -39,7 +84,7 @@ export function useToolApproval() {
   );
 
   const dismissForRun = useCallback((runId: string) => {
-    setPendingApprovals((prev) => prev.filter((r) => r.runId !== runId));
+    setRawApprovals((prev) => prev.filter((r) => r.runId !== runId));
   }, []);
 
   return { pendingApprovals, respond, dismissForRun };

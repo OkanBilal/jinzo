@@ -66,7 +66,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
   });
   const { data: activities = [], isLoading } = useGetWorkspaceActivityQuery(
     { workspaceId },
-    { pollingInterval: 5000 },
+    { pollingInterval: 15000, refetchOnFocus: true },
   );
 
   const toggleExpand = (id: string) => {

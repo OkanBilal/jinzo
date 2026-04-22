@@ -33,6 +33,7 @@ export const workspaceActivityApi = baseApi.injectEndpoints({
         args: [workspaceId, limit],
       }),
       transformResponse: (response: any) => response?.data ?? [],
+      keepUnusedDataFor: 30,
       providesTags: (_result, _error, { workspaceId }) => [
         { type: "WorkspaceActivity", id: workspaceId },
       ],

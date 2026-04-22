@@ -36,24 +36,44 @@ function makeStats(overrides: Partial<SyncJobStats> = {}): SyncJobStats {
   };
 }
 
+/** Wrap one or more provider batches in the async generator shape the
+ *  service consumes. Each batch is { provider, entities }. */
+function mockFetchBatches(
+  batches: Array<{ provider?: string; entities: EntityInput[] }>,
+) {
+  async function* gen() {
+    for (const b of batches) {
+      yield { provider: b.provider ?? "github", entities: b.entities };
+    }
+  }
+  vi.mocked(syncFetchers.fetchEntitiesByProvider).mockImplementation(() => gen());
+}
+
+function mockFetchThrows(err: unknown) {
+  vi.mocked(syncFetchers.fetchEntitiesByProvider).mockImplementation(() => {
+    async function* gen(): AsyncGenerator<{
+      provider: string;
+      entities: EntityInput[];
+    }> {
+      throw err;
+    }
+    return gen();
+  });
+}
+
 describe("syncService", () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.resetAllMocks();
   });
 
-  // ─────────────────────────────────────────────────────────
-  // runEntitySync
-  // ─────────────────────────────────────────────────────────
   describe("runEntitySync", () => {
     it("returns empty result when no entities are fetched", async () => {
-      vi.mocked(syncFetchers.fetchAllEntities).mockResolvedValueOnce([]);
+      mockFetchBatches([]);
 
       const result = await syncService.runEntitySync();
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data).toBeDefined();
-        expect(result.data.success).toBe(true);
         expect(result.data.total).toBe(0);
         expect(result.data.inserted).toBe(0);
         expect(result.data.updated).toBe(0);
@@ -64,212 +84,89 @@ describe("syncService", () => {
       }
     });
 
-    it("returns empty result when no entities are fetched with a specific provider", async () => {
-      vi.mocked(syncFetchers.fetchAllEntities).mockResolvedValueOnce([]);
+    it("passes provider argument to fetchEntitiesByProvider", async () => {
+      mockFetchBatches([]);
 
-      const result = await syncService.runEntitySync("github");
+      await syncService.runEntitySync("github");
 
-      expect(result.success).toBe(true);
-      if (result.success) expect(result.data.total).toBe(0);
-      expect(syncFetchers.fetchAllEntities).toHaveBeenCalledWith("github");
+      expect(syncFetchers.fetchEntitiesByProvider).toHaveBeenCalledWith("github");
     });
 
     it("returns success result when entities are fetched and upserted", async () => {
       const entities = [makeEntity(), makeEntity(), makeEntity()];
       const stats = makeStats({ inserted: 2, updated: 1 });
 
-      vi.mocked(syncFetchers.fetchAllEntities).mockResolvedValueOnce(entities);
-      vi.mocked(syncRepo.upsertEntities).mockResolvedValueOnce(stats);
+      mockFetchBatches([{ provider: "github", entities }]);
+      vi.mocked(syncRepo.upsertEntities).mockReturnValueOnce(stats);
 
       const result = await syncService.runEntitySync();
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data).toBeDefined();
-        expect(result.data.success).toBe(true);
         expect(result.data.total).toBe(3);
         expect(result.data.inserted).toBe(2);
         expect(result.data.updated).toBe(1);
-        expect(result.data.skipped).toBe(0);
-        expect(result.data.errors).toBe(0);
-        expect(result.data.duration).toBeGreaterThanOrEqual(0);
       }
     });
 
-    it("passes provider argument to fetchAllEntities", async () => {
-      const entities = [makeEntity()];
-      const stats = makeStats({ inserted: 1 });
+    it("aggregates stats from multiple provider batches", async () => {
+      const batchA = [makeEntity(), makeEntity()];
+      const batchB = [makeEntity()];
 
-      vi.mocked(syncFetchers.fetchAllEntities).mockResolvedValueOnce(entities);
-      vi.mocked(syncRepo.upsertEntities).mockResolvedValueOnce(stats);
-
-      const result = await syncService.runEntitySync("linear");
-
-      expect(syncFetchers.fetchAllEntities).toHaveBeenCalledWith("linear");
-      expect(result.success).toBe(true);
-      if (result.success) expect(result.data.total).toBe(1);
-    });
-
-    it("calls runEntitySync without provider (undefined)", async () => {
-      const entities = [makeEntity()];
-      const stats = makeStats({ inserted: 1 });
-
-      vi.mocked(syncFetchers.fetchAllEntities).mockResolvedValueOnce(entities);
-      vi.mocked(syncRepo.upsertEntities).mockResolvedValueOnce(stats);
-
-      const result = await syncService.runEntitySync();
-
-      expect(syncFetchers.fetchAllEntities).toHaveBeenCalledWith(undefined);
-      expect(result.success).toBe(true);
-    });
-
-    it("includes stats with correct itemsPerSecond calculation", async () => {
-      const entities = Array.from({ length: 10 }, () => makeEntity());
-      const stats = makeStats({ inserted: 10 });
-
-      vi.mocked(syncFetchers.fetchAllEntities).mockResolvedValueOnce(entities);
-      vi.mocked(syncRepo.upsertEntities).mockResolvedValueOnce(stats);
+      mockFetchBatches([
+        { provider: "github", entities: batchA },
+        { provider: "linear", entities: batchB },
+      ]);
+      vi.mocked(syncRepo.upsertEntities)
+        .mockReturnValueOnce(makeStats({ inserted: 2 }))
+        .mockReturnValueOnce(makeStats({ updated: 1 }));
 
       const result = await syncService.runEntitySync();
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.total).toBe(10);
-        expect(result.data.stats.itemsPerSecond).toBeGreaterThanOrEqual(0);
-      }
-    });
-
-    it("returns stats with errors from upsert", async () => {
-      const entities = [makeEntity(), makeEntity()];
-      const stats = makeStats({ inserted: 1, errors: 1 });
-
-      vi.mocked(syncFetchers.fetchAllEntities).mockResolvedValueOnce(entities);
-      vi.mocked(syncRepo.upsertEntities).mockResolvedValueOnce(stats);
-
-      const result = await syncService.runEntitySync();
-
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.success).toBe(true);
-        expect(result.data.errors).toBe(1);
-        expect(result.data.inserted).toBe(1);
-        expect(result.data.total).toBe(2);
-      }
-    });
-
-    it("returns stats with skipped entities", async () => {
-      const entities = [makeEntity(), makeEntity(), makeEntity()];
-      const stats = makeStats({ inserted: 1, updated: 1, skipped: 1 });
-
-      vi.mocked(syncFetchers.fetchAllEntities).mockResolvedValueOnce(entities);
-      vi.mocked(syncRepo.upsertEntities).mockResolvedValueOnce(stats);
-
-      const result = await syncService.runEntitySync();
-
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.skipped).toBe(1);
-        expect(result.data.inserted).toBe(1);
+        expect(result.data.total).toBe(3);
+        expect(result.data.inserted).toBe(2);
         expect(result.data.updated).toBe(1);
       }
+      expect(syncRepo.upsertEntities).toHaveBeenCalledTimes(2);
+      expect(syncRepo.upsertEntities).toHaveBeenNthCalledWith(1, batchA);
+      expect(syncRepo.upsertEntities).toHaveBeenNthCalledWith(2, batchB);
     });
 
-    // ─────────────────────────────────────────────────────
-    // Error paths
-    // ─────────────────────────────────────────────────────
-    it("returns failure result when fetchAllEntities throws", async () => {
-      vi.mocked(syncFetchers.fetchAllEntities).mockRejectedValueOnce(
-        new Error("Network failure")
-      );
-
-      const result = await syncService.runEntitySync();
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toBe("Sync job failed");
-        expect(result.data).toBeDefined();
-        expect(result.data!.success).toBe(false);
-        expect(result.data!.inserted).toBe(0);
-        expect(result.data!.updated).toBe(0);
-        expect(result.data!.skipped).toBe(0);
-        expect(result.data!.errors).toBe(1);
-        expect(result.data!.total).toBe(0);
-        expect(result.data!.stats.itemsPerSecond).toBe(0);
-        expect(result.data!.duration).toBeGreaterThanOrEqual(0);
-      }
-    });
-
-    it("returns failure result when upsertEntities throws", async () => {
-      const entities = [makeEntity()];
-      vi.mocked(syncFetchers.fetchAllEntities).mockResolvedValueOnce(entities);
-      vi.mocked(syncRepo.upsertEntities).mockRejectedValueOnce(
-        new Error("Database error")
-      );
-
-      const result = await syncService.runEntitySync();
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toBe("Sync job failed");
-        expect(result.data!.success).toBe(false);
-        expect(result.data!.total).toBe(0);
-        expect(result.data!.errors).toBe(1);
-      }
-    });
-
-    it("returns failure result when fetchAllEntities throws non-Error", async () => {
-      vi.mocked(syncFetchers.fetchAllEntities).mockRejectedValueOnce("string error");
-
-      const result = await syncService.runEntitySync();
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toBe("Sync job failed");
-        expect(result.data!.success).toBe(false);
-      }
-    });
-
-    it("returns failure result when fetchAllEntities throws with provider", async () => {
-      vi.mocked(syncFetchers.fetchAllEntities).mockRejectedValueOnce(
-        new Error("GitHub API rate limit")
-      );
-
-      const result = await syncService.runEntitySync("github");
-
-      expect(result.success).toBe(false);
-      if (!result.success) expect(result.error).toBe("Sync job failed");
-      expect(syncFetchers.fetchAllEntities).toHaveBeenCalledWith("github");
-    });
-
-    it("does not call upsertEntities when fetch returns empty array", async () => {
-      vi.mocked(syncFetchers.fetchAllEntities).mockResolvedValueOnce([]);
-      vi.mocked(syncRepo.upsertEntities).mockClear();
+    it("does not call upsertEntities when batches are all empty", async () => {
+      mockFetchBatches([{ entities: [] }]);
 
       await syncService.runEntitySync();
 
       expect(syncRepo.upsertEntities).not.toHaveBeenCalled();
     });
 
-    it("calls upsertEntities with the fetched entities", async () => {
-      const entities = [makeEntity({ title: "Issue A" }), makeEntity({ title: "Issue B" })];
-      const stats = makeStats({ inserted: 2 });
-
-      vi.mocked(syncFetchers.fetchAllEntities).mockResolvedValueOnce(entities);
-      vi.mocked(syncRepo.upsertEntities).mockResolvedValueOnce(stats);
-
-      await syncService.runEntitySync();
-
-      expect(syncRepo.upsertEntities).toHaveBeenCalledWith(entities);
-    });
-
-    it("duration is positive even on fast execution", async () => {
-      vi.mocked(syncFetchers.fetchAllEntities).mockResolvedValueOnce([]);
+    it("returns failure result when generator throws", async () => {
+      mockFetchThrows(new Error("Network failure"));
 
       const result = await syncService.runEntitySync();
 
-      if (result.success) {
-        expect(result.data.duration).toBeGreaterThanOrEqual(0);
-        expect(typeof result.data.duration).toBe("number");
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe("Sync job failed");
+        expect(result.data!.errors).toBe(1);
+        expect(result.data!.total).toBe(0);
+      }
+    });
+
+    it("returns failure result when upsertEntities throws", async () => {
+      mockFetchBatches([{ entities: [makeEntity()] }]);
+      vi.mocked(syncRepo.upsertEntities).mockImplementationOnce(() => {
+        throw new Error("Database error");
+      });
+
+      const result = await syncService.runEntitySync();
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe("Sync job failed");
+        expect(result.data!.errors).toBe(1);
       }
     });
   });

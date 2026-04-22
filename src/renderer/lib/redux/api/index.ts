@@ -304,10 +304,15 @@ export {
   workspaceDiffsApi,
   useGetLatestWorkspaceDiffQuery,
   useLazyGetLatestWorkspaceDiffQuery,
+  useGetLatestWorkspaceDiffSummaryQuery,
+  useLazyGetLatestWorkspaceDiffSummaryQuery,
   useGetWorkspaceDiffsQuery,
   useLazyGetWorkspaceDiffsQuery,
 } from "./workspaceDiffsApi";
-export type { WorkspaceDiff } from "./workspaceDiffsApi";
+export type {
+  WorkspaceDiff,
+  WorkspaceDiffSummary,
+} from "./workspaceDiffsApi";
 
 export {
   reviewsApi,

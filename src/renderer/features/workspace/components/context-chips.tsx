@@ -45,8 +45,12 @@ function BrowserSelectionPreview({
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  const surroundImg = sel.surroundingScreenshotDataUrl;
-  const elementImg = sel.screenshotDataUrl;
+  const surroundImg = sel.surroundingScreenshotCaptureName
+    ? `jinzo-capture://cap/${sel.surroundingScreenshotCaptureName}`
+    : undefined;
+  const elementImg = sel.screenshotCaptureName
+    ? `jinzo-capture://cap/${sel.screenshotCaptureName}`
+    : undefined;
   const summary = sel.componentName || `${sel.tagName}${sel.selector ? ` · ${sel.selector.split(" > ").slice(-1)[0]}` : ""}`;
 
   return (
@@ -213,7 +217,9 @@ export function ContextChips({
               </div>
             ))}
             {contextBrowserSelections.map((sel) => {
-              const thumb = sel.screenshotDataUrl || sel.surroundingScreenshotDataUrl;
+              const thumbName =
+                sel.screenshotCaptureName || sel.surroundingScreenshotCaptureName;
+              const thumb = thumbName ? `jinzo-capture://cap/${thumbName}` : undefined;
               const summary =
                 sel.componentName ||
                 sel.tagName +

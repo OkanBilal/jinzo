@@ -143,11 +143,20 @@ class DatabaseClient {
     // Enable foreign keys
     this.sqlite.pragma("foreign_keys = ON");
 
-    // Performance optimizations
+    // Performance / memory tuning. Values chosen to balance throughput with
+    // a small Electron main-process memory footprint.
+    //   - cache_size: negative value = KiB (-32000 ≈ 32 MB per connection).
+    //     Previous value was 64 MB; 32 MB is still enough for our workloads
+    //     while cutting the committed page cache in half.
+    //   - mmap_size: capped at 128 MB (was 256 MB). This is address-space,
+    //     not committed RAM, but smaller mmap reduces resident pages on
+    //     machines under memory pressure.
+    //   - temp_store: MEMORY keeps temp tables off disk for speed.
+    //   - synchronous: NORMAL is the safe default with WAL.
     this.sqlite.pragma("synchronous = NORMAL");
-    this.sqlite.pragma("cache_size = -64000"); // 64MB cache
+    this.sqlite.pragma("cache_size = -32000"); // 32MB cache
     this.sqlite.pragma("temp_store = MEMORY");
-    this.sqlite.pragma("mmap_size = 268435456"); // 256MB
+    this.sqlite.pragma("mmap_size = 134217728"); // 128MB
   }
 
   /**

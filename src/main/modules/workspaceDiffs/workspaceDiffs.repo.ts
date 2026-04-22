@@ -57,6 +57,37 @@ export const workspaceDiffsRepo = {
     return rows[0] ? mapRowToResponse(rows[0]) : null;
   },
 
+  async findLatestSummaryByWorkspace(
+    workspaceId: string,
+  ): Promise<Omit<WorkspaceDiffResponse, "diffText"> | null> {
+    const db = getDb();
+    const rows = await db
+      .select({
+        id: workspaceDiffs.id,
+        workspaceId: workspaceDiffs.workspaceId,
+        runId: workspaceDiffs.runId,
+        baseRef: workspaceDiffs.baseRef,
+        filesJson: workspaceDiffs.filesJson,
+        statsJson: workspaceDiffs.statsJson,
+        createdAt: workspaceDiffs.createdAt,
+      })
+      .from(workspaceDiffs)
+      .where(eq(workspaceDiffs.workspaceId, workspaceId))
+      .orderBy(desc(workspaceDiffs.createdAt))
+      .limit(1);
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      id: row.id,
+      workspaceId: row.workspaceId,
+      runId: row.runId,
+      baseRef: row.baseRef,
+      files: safeJsonParse<string[]>(row.filesJson),
+      stats: safeJsonParse(row.statsJson),
+      createdAt: row.createdAt,
+    };
+  },
+
   async findByRun(runId: string): Promise<WorkspaceDiffResponse | null> {
     const db = getDb();
     const rows = await db

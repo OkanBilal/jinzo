@@ -220,14 +220,21 @@ export interface RunTurnResponse {
 // File Attachment Types
 // ─────────────────────────────────────────────────────────────
 
-/** A file attachment serialized for IPC transport (base64-encoded data) */
+/** A file attachment serialized for IPC transport.
+ *
+ * Memory optimization: prefer `sourcePath` over inline base64 `data` whenever the
+ * attachment already lives on disk (e.g. browser captures). Providing `sourcePath`
+ * lets the adapter copy the file byte-for-byte instead of roundtripping base64
+ * through IPC and Redux. Provide `data` only for in-memory payloads. */
 export interface FileAttachment {
   /** Original file name */
   name: string;
   /** Attachment category */
   type: "image" | "document";
-  /** Base64-encoded file data */
-  data: string;
+  /** Base64-encoded file data — optional when `sourcePath` is set. */
+  data?: string;
+  /** Absolute path to an existing file on disk. Read directly by the adapter. */
+  sourcePath?: string;
   /** MIME type (e.g. "image/png", "application/pdf") */
   mimeType: string;
 }

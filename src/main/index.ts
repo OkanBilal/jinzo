@@ -4,7 +4,21 @@ if (process.platform === "win32") {
 
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell, Tray } from "electron";
 
-app.commandLine.appendSwitch("disable-features", "HardwareMediaKeyHandling,MediaSessionService");
+// Disable background Chromium features we never use. `CalculateNativeWinOcclusion`
+// in particular can cause steady CPU churn on Windows when the window is hidden.
+app.commandLine.appendSwitch(
+  "disable-features",
+  "HardwareMediaKeyHandling,MediaSessionService,CalculateNativeWinOcclusion",
+);
+
+// NOTE: Previously we capped V8 old-space at 512 MB here via `js-flags`. That
+// switch propagates to *every* V8 isolate in the Electron process tree —
+// including the main process that hosts the Vite dev-server (via
+// @electron-forge/plugin-vite). Under that cap V8 thrashed on GC during Vite
+// pre-transform, which in turn dragged out concurrent fs.open calls and
+// tripped macOS's system-wide file-table limit ("ENFILE: file table
+// overflow") during dev starts. The observed memory win was marginal vs. the
+// startup fragility, so we leave V8 at its defaults.
 
 // Enable GPU rasterization and compositing for smoother animations on first launch
 app.commandLine.appendSwitch("enable-gpu-rasterization");
@@ -188,8 +202,35 @@ let detectInFlight: Promise<DetectedApp[]> | null = null;
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 const ALLOWED_EXTERNAL_PROTOCOLS = new Set(["https:", "http:", "mailto:"]);
 
-async function getAppIcon(appPath: string): Promise<string | null> {
+function appIconsDir(): string {
+  const dir = path.join(app.getPath("userData"), "app-icons");
   try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch {
+    /* already exists or permission issue — handled downstream */
+  }
+  return dir;
+}
+
+/**
+ * Extract the `.icns` for `appPath` and persist a 64×64 PNG to
+ * `userData/app-icons/<id>.png`. Returns a `jinzo-appicon://icon/<id>.png` URL
+ * the renderer can drop into `<img src>` without any base64 buffering.
+ *
+ * If the PNG already exists and is non-empty we skip the `sips` call —
+ * `detectInstalledApps` runs on a 1h cache but the disk copy survives
+ * restarts, so this is nearly free on subsequent launches.
+ */
+async function getAppIcon(
+  appPath: string,
+  id: string,
+): Promise<string | null> {
+  try {
+    const outPath = path.join(appIconsDir(), `${id}.png`);
+    if (fs.existsSync(outPath) && fs.statSync(outPath).size > 0) {
+      return `jinzo-appicon://icon/${id}.png`;
+    }
+
     // Read CFBundleIconFile from Info.plist
     const { stdout: iconName } = await execFileAsync("defaults", [
       "read",
@@ -203,11 +244,6 @@ async function getAppIcon(appPath: string): Promise<string | null> {
     const icnsPath = path.join(appPath, "Contents", "Resources", iconFile);
     if (!fs.existsSync(icnsPath)) return null;
 
-    // Convert .icns to PNG via sips (writes to temp file)
-    const tmpPng = path.join(
-      app.getPath("temp"),
-      `jinzo-icon-${Date.now()}-${Math.random().toString(36).slice(2)}.png`,
-    );
     await execFileAsync("sips", [
       "-s",
       "format",
@@ -217,22 +253,13 @@ async function getAppIcon(appPath: string): Promise<string | null> {
       "64",
       icnsPath,
       "--out",
-      tmpPng,
+      outPath,
     ]);
 
-    let pngBuffer: Buffer;
-    try {
-      pngBuffer = fs.readFileSync(tmpPng);
-    } finally {
-      try {
-        fs.unlinkSync(tmpPng);
-      } catch {
-        /* ignore */
-      }
+    if (!fs.existsSync(outPath) || fs.statSync(outPath).size === 0) {
+      return null;
     }
-
-    if (pngBuffer.length === 0) return null;
-    return `data:image/png;base64,${pngBuffer.toString("base64")}`;
+    return `jinzo-appicon://icon/${id}.png`;
   } catch {
     return null;
   }
@@ -296,7 +323,7 @@ async function detectInstalledApps(): Promise<DetectedApp[]> {
             const appPath = await findAppByBundleId(knownApp.bundleId);
             if (!appPath) return null;
 
-            const icon = await getAppIcon(appPath);
+            const icon = await getAppIcon(appPath, knownApp.id);
 
             return {
               id: knownApp.id,

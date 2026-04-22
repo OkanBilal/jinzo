@@ -14,4 +14,5 @@ export const browserController = {
   stop: () => browserService.stop(),
   setSelectMode: (enabled: boolean) => browserService.setSelectMode(enabled),
   getNavState: () => browserService.getNavState(),
+  deleteCapture: (captureName: string) => browserService.deleteCapture(captureName),
 };

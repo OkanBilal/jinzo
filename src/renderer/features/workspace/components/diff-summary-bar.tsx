@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, lazy, Suspense } from "react";
 import { useDispatch } from "react-redux";
 import {
   useGetLatestWorkspaceDiffQuery,
@@ -8,7 +8,12 @@ import {
 import { ArrowUp, Close } from "@/components/ui/icons";
 import { Button, toast } from "@/components/ui";
 import { FileIconComponent } from "./file-explorer/components/file-icon";
-import { DiffViewer } from "./diff-viewer";
+
+// DiffViewer pulls in `@pierre/diffs` (~hundreds of KB + heavy syntax parser).
+// Defer the bundle until the summary bar is actually opened + a file picked.
+const DiffViewer = lazy(() =>
+  import("./diff-viewer").then((m) => ({ default: m.DiffViewer })),
+);
 
 interface DiffSummaryBarProps {
   workspaceId: string;
@@ -80,15 +85,17 @@ export function DiffSummaryBar({
   });
 
   const stats = getTotalStats(diff);
+  // Only parse the (potentially large) diff text when the bar is actually
+  // expanded — collapsed state just needs the top-level counts.
   const perFileStats = useMemo(
-    () => (diff?.diffText ? parsePerFileStats(diff.diffText) : {}),
-    [diff?.diffText],
+    () => (isExpanded && diff?.diffText ? parsePerFileStats(diff.diffText) : {}),
+    [isExpanded, diff?.diffText],
   );
 
   const selectedFileDiff = useMemo(() => {
-    if (!renderedFile || !diff?.diffText) return "";
+    if (!isExpanded || !renderedFile || !diff?.diffText) return "";
     return parseFileDiffSegment(renderedFile, diff.diffText);
-  }, [renderedFile, diff?.diffText]);
+  }, [isExpanded, renderedFile, diff?.diffText]);
 
   const handleFileClick = useCallback((filePath: string) => {
     setSelectedFile((prev) => (prev === filePath ? null : filePath));
@@ -247,12 +254,18 @@ export function DiffSummaryBar({
                 </button>
               </div>
               <div className="max-h-80 overflow-auto">
-                {renderedFile && selectedFileDiff && (
-                  <DiffViewer
-                    diffText={selectedFileDiff}
-                    workspaceId={workspaceId}
-                    filePath={renderedFile}
-                  />
+                {/* Only mount DiffViewer when the bar is actually open AND a
+                    file is selected. Previously it stayed mounted during the
+                    collapse animation, keeping the `@pierre/diffs` parser and
+                    findings subscription alive for every completed run. */}
+                {isExpanded && renderedFile && selectedFileDiff && (
+                  <Suspense fallback={null}>
+                    <DiffViewer
+                      diffText={selectedFileDiff}
+                      workspaceId={workspaceId}
+                      filePath={renderedFile}
+                    />
+                  </Suspense>
                 )}
               </div>
             </div>

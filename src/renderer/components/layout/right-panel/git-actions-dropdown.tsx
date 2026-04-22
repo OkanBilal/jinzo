@@ -3,7 +3,7 @@ import { Commit, PullRequest, ArrowUp, Branch } from "@/components/ui/icons";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
 import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks";
 import {
-  useGetLatestWorkspaceDiffQuery,
+  useGetLatestWorkspaceDiffSummaryQuery,
   useGetWorkspaceActivityQuery,
 } from "@/lib/redux/api";
 import {
@@ -21,13 +21,14 @@ export function GitActionsDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
 
-  const { data: diff } = useGetLatestWorkspaceDiffQuery(activeWorkspaceId!, {
-    skip: !activeWorkspaceId,
-  });
+  const { data: diff } = useGetLatestWorkspaceDiffSummaryQuery(
+    activeWorkspaceId!,
+    { skip: !activeWorkspaceId },
+  );
 
   const { data: activities = [] } = useGetWorkspaceActivityQuery(
     { workspaceId: activeWorkspaceId! },
-    { skip: !activeWorkspaceId, pollingInterval: 5000 },
+    { skip: !activeWorkspaceId, pollingInterval: 15000 },
   );
 
   const hasDiff = Boolean(diff?.files?.length);
