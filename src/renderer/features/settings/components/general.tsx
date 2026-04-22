@@ -418,7 +418,7 @@ export default function GeneralSettings() {
       <SettingsSection title="Menu Bar">
         <SettingsRow
           title="Menu Bar Icon"
-          description="Show the Jinzo icon in the system menu bar"
+          description="Show the Mains icon in the system menu bar"
         >
           <MenuBarIconToggle />
         </SettingsRow>

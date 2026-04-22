@@ -175,7 +175,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
                         )}
                       </>
                     ) : activity.type === "finding" && (activity.metadata as any)?.count ? (
-                      <>Jinzo added {(activity.metadata as any).count} finding{(activity.metadata as any).count === 1 ? "" : "s"}</>
+                      <>Mains added {(activity.metadata as any).count} finding{(activity.metadata as any).count === 1 ? "" : "s"}</>
                     ) : (
                       activity.title
                     )}

@@ -3,7 +3,7 @@
 // structural context on click, then emits it via console.log with a sentinel
 // prefix that the main process parses.
 
-export const INSPECTOR_SENTINEL = "[[JINZO_BROWSER_SELECTION_V1]]";
+export const INSPECTOR_SENTINEL = "[[MAINS_BROWSER_SELECTION_V1]]";
 
 /**
  * Returns the IIFE source that, when executeJavaScript'd into a page,
@@ -15,7 +15,7 @@ export const INSPECTOR_SENTINEL = "[[JINZO_BROWSER_SELECTION_V1]]";
 export function buildInspectorScript(enable: boolean): string {
   return `(function() {
   var SENTINEL = ${JSON.stringify(INSPECTOR_SENTINEL)};
-  var STATE_KEY = "__jinzoInspectorState__";
+  var STATE_KEY = "__mainsInspectorState__";
   var state = window[STATE_KEY];
 
   function teardown() {
@@ -25,7 +25,7 @@ export function buildInspectorScript(enable: boolean): string {
       if (state.label && state.label.parentNode) state.label.parentNode.removeChild(state.label);
       if (state.styleTag && state.styleTag.parentNode) state.styleTag.parentNode.removeChild(state.styleTag);
     } catch (_) {}
-    try { document.documentElement.removeAttribute("data-jinzo-inspect"); } catch (_) {}
+    try { document.documentElement.removeAttribute("data-mains-inspect"); } catch (_) {}
     try {
       document.removeEventListener("mousemove", state.onMove, true);
       document.removeEventListener("click", state.onClick, true);
@@ -42,15 +42,15 @@ export function buildInspectorScript(enable: boolean): string {
   teardown();
 
   var style = document.createElement("style");
-  style.setAttribute("data-jinzo-inspector", "1");
+  style.setAttribute("data-mains-inspector", "1");
   style.textContent = [
-    "html[data-jinzo-inspect] *, html[data-jinzo-inspect] *::before, html[data-jinzo-inspect] *::after { cursor: crosshair !important; }",
-    "html[data-jinzo-inspect] { -webkit-user-select: none !important; user-select: none !important; }"
+    "html[data-mains-inspect] *, html[data-mains-inspect] *::before, html[data-mains-inspect] *::after { cursor: crosshair !important; }",
+    "html[data-mains-inspect] { -webkit-user-select: none !important; user-select: none !important; }"
   ].join("\\n");
   (document.head || document.documentElement).appendChild(style);
 
   var overlay = document.createElement("div");
-  overlay.setAttribute("data-jinzo-inspector-overlay", "1");
+  overlay.setAttribute("data-mains-inspector-overlay", "1");
   overlay.style.cssText = [
     "position:fixed",
     "pointer-events:none",
@@ -89,10 +89,10 @@ export function buildInspectorScript(enable: boolean): string {
   ].join(";");
   document.documentElement.appendChild(label);
 
-  document.documentElement.setAttribute("data-jinzo-inspect", "1");
+  document.documentElement.setAttribute("data-mains-inspect", "1");
 
   function isOwnElement(el) {
-    return el === overlay || el === label || (el && el.closest && (el.closest("[data-jinzo-inspector-overlay]") || el.closest("[data-jinzo-inspector]") || el.closest("[data-jinzo-selection-marker]")));
+    return el === overlay || el === label || (el && el.closest && (el.closest("[data-mains-inspector-overlay]") || el.closest("[data-mains-inspector]") || el.closest("[data-mains-selection-marker]")));
   }
 
   function cssEscape(s) {
@@ -199,7 +199,7 @@ export function buildInspectorScript(enable: boolean): string {
 
   function placeMarker(el, rect) {
     var marker = document.createElement("div");
-    marker.setAttribute("data-jinzo-selection-marker", "1");
+    marker.setAttribute("data-mains-selection-marker", "1");
     var pageTop = rect.top + window.scrollY;
     var pageLeft = rect.left + window.scrollX;
     marker.style.cssText = [

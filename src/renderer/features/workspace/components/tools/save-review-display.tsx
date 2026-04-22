@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUp, Jinzo } from "@/components/ui/icons";
+import { ArrowUp, Mains } from "@/components/ui/icons";
 
 export interface SaveReviewParams {
   title?: string;
@@ -31,7 +31,7 @@ export function SaveReviewDisplay({
           className={`size-3 text-primary-800  dark:text-primary-300 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
         )}
-        {!isCompact && <Jinzo className="w-2 h-4 dark:text-primary-300 text-primary-700" />}
+        {!isCompact && <Mains className="w-2 h-4 dark:text-primary-300 text-primary-700" />}
         {!isCompact && (
           <span className="dark:text-primary-300 text-primary-700 font-medium">
             Review

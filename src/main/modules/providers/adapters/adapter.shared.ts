@@ -57,13 +57,13 @@ export const DEFAULT_ALLOWED_TOOLS = [
   "NotebookEdit",
   "Skill",
   "Agent",
-  "mcp__jinzo__GetWorkspaceDiff",
-  "mcp__jinzo__SaveReview",
-  "mcp__jinzo__SaveFinding",
-  "mcp__jinzo__SaveFindings",
-  "mcp__jinzo__CommitChanges",
-  "mcp__jinzo__CreatePR",
-  "mcp__jinzo__CheckPackage",
+  "mcp__mains__GetWorkspaceDiff",
+  "mcp__mains__SaveReview",
+  "mcp__mains__SaveFinding",
+  "mcp__mains__SaveFindings",
+  "mcp__mains__CommitChanges",
+  "mcp__mains__CreatePR",
+  "mcp__mains__CheckPackage",
 ];
 
 export const ALLOWED_TOOLS_SET = new Set(DEFAULT_ALLOWED_TOOLS);
@@ -88,7 +88,7 @@ export function saveAttachments(
   attachments: FileAttachment[],
   runId: string,
 ): { savedPaths: string[]; inlineTexts: string[] } {
-  const uploadDir = path.join(os.tmpdir(), "jinzo-uploads", runId);
+  const uploadDir = path.join(os.tmpdir(), "mains-uploads", runId);
   fs.mkdirSync(uploadDir, { recursive: true });
 
   const savedPaths: string[] = [];

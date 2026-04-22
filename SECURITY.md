@@ -10,7 +10,7 @@
 
 **Please do not open a public issue for security vulnerabilities.**
 
-Instead, email **team@usejinzo.com** with:
+Instead, email **team@mains.dev** with:
 
 - Description of the vulnerability
 - Steps to reproduce

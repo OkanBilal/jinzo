@@ -7,7 +7,7 @@ import { fileExplorerService } from "./fileExplorer.service";
 let tmpDir: string;
 
 async function makeTmpDir(): Promise<string> {
-  return fs.mkdtemp(path.join(os.tmpdir(), "jinzo-fe-test-"));
+  return fs.mkdtemp(path.join(os.tmpdir(), "mains-fe-test-"));
 }
 
 describe("fileExplorerService", () => {

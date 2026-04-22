@@ -162,7 +162,7 @@ export function InfoGroup({ group }: InfoGroupProps) {
                 {attachments.map((att) => {
                   const imgSrc =
                     att.dataUrl ||
-                    (att.captureName ? `jinzo-capture://cap/${att.captureName}` : undefined);
+                    (att.captureName ? `mains-capture://cap/${att.captureName}` : undefined);
                   return att.type === "image" && imgSrc ? (
                     <button
                       key={att.name}

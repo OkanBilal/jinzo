@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
-// Jinzo MCP Stdio Server + IPC Bridge
+// Mains MCP Stdio Server + IPC Bridge
 //
-// Exposes Jinzo tools (CommitChanges, CreatePR, etc.) as a
+// Exposes Mains tools (CommitChanges, CreatePR, etc.) as a
 // stdio-based MCP server that Cursor can discover and spawn.
 //
 // Architecture:
@@ -11,7 +11,7 @@
 //                         Bridge (main Electron process)
 //                                 │
 //                                 ▼
-//                         jinzo-tools.core.ts handlers
+//                         mains-tools.core.ts handlers
 //
 // The server writes a `.cursor/mcp.json` config in the workspace
 // directory so Cursor discovers the tools automatically. It also
@@ -24,7 +24,7 @@ import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import { execSync } from "node:child_process";
-import type { JinzoToolContext } from "./jinzo-tools.core";
+import type { MainsToolContext } from "./mains-tools.core";
 import type { WorkRunEventHandler } from "./adapter.types";
 import {
   TOOL_DESCRIPTIONS,
@@ -35,7 +35,7 @@ import {
   handleCommitChanges,
   handleCreatePR,
   handleCheckPackage,
-} from "./jinzo-tools.core";
+} from "./mains-tools.core";
 
 // ─────────────────────────────────────────────────────────────
 // Tool definitions (JSON Schema format for the MCP script)
@@ -172,7 +172,7 @@ const TOOL_DEFINITIONS = [
 function buildMcpScript(toolDefs: typeof TOOL_DEFINITIONS): string {
   return `"use strict";
 const net = require("net");
-const SOCKET_PATH = process.env.JINZO_IPC_SOCKET;
+const SOCKET_PATH = process.env.MAINS_IPC_SOCKET;
 const TOOLS = ${JSON.stringify(toolDefs, null, 2)};
 
 // ── Stdio JSON-RPC transport ──
@@ -237,7 +237,7 @@ async function handleMessage(raw) {
       sendResponse(id, {
         protocolVersion: "2024-11-05",
         capabilities: { tools: {} },
-        serverInfo: { name: "jinzo", version: "1.0.0" },
+        serverInfo: { name: "mains", version: "1.0.0" },
       });
       break;
 
@@ -270,18 +270,18 @@ async function handleMessage(raw) {
   }
 }
 
-process.stderr.write("[jinzo-mcp] Server started, socket: " + SOCKET_PATH + "\\n");
+process.stderr.write("[mains-mcp] Server started, socket: " + SOCKET_PATH + "\\n");
 `;
 }
 
 // ─────────────────────────────────────────────────────────────
-// Dispatch tool calls to jinzo-tools.core handlers
+// Dispatch tool calls to mains-tools.core handlers
 // ─────────────────────────────────────────────────────────────
 
 async function dispatchTool(
   toolName: string,
   args: Record<string, unknown>,
-  ctx: JinzoToolContext,
+  ctx: MainsToolContext,
 ): Promise<{ content: Array<{ type: "text"; text: string }>; isError?: boolean }> {
   switch (toolName) {
     case "GetWorkspaceDiff":
@@ -391,7 +391,7 @@ function findNodeBinary(): NodeBinaryInfo {
 // Public API
 // ─────────────────────────────────────────────────────────────
 
-export class JinzoMcpStdioServer {
+export class MainsMcpStdioServer {
   private socketServer: net.Server | null = null;
   private socketPath: string;
   private scriptPath: string;
@@ -401,11 +401,11 @@ export class JinzoMcpStdioServer {
   /** Tracks original content for each .cursor/mcp.json we modified */
   private mcpJsonBackups = new Map<string, string | null>();
 
-  constructor(private ctx: JinzoToolContext) {
+  constructor(private ctx: MainsToolContext) {
     const id = crypto.randomUUID().slice(0, 8);
     const tmpDir = os.tmpdir();
-    this.socketPath = path.join(tmpDir, `jinzo-mcp-${id}.sock`);
-    this.scriptPath = path.join(tmpDir, `jinzo-mcp-${id}.cjs`);
+    this.socketPath = path.join(tmpDir, `mains-mcp-${id}.sock`);
+    this.scriptPath = path.join(tmpDir, `mains-mcp-${id}.cjs`);
     this.nodeInfo = findNodeBinary();
     this.workspacePath = ctx.rootPath;
   }
@@ -442,7 +442,7 @@ export class JinzoMcpStdioServer {
           toolName: req.tool,
           input: req.args,
           startedAt,
-          metadata: { phase: "start", source: "jinzo-mcp" },
+          metadata: { phase: "start", source: "mains-mcp" },
         });
 
         dispatchTool(req.tool, req.args, ctx)
@@ -457,7 +457,7 @@ export class JinzoMcpStdioServer {
               error: result.isError ? outputText : undefined,
               startedAt,
               endedAt: Date.now(),
-              metadata: { phase: "complete", source: "jinzo-mcp" },
+              metadata: { phase: "complete", source: "mains-mcp" },
             });
             conn.end(JSON.stringify({ id: req.id, content: result.content, isError: result.isError }) + "\n");
           })
@@ -470,7 +470,7 @@ export class JinzoMcpStdioServer {
               error: msg,
               startedAt,
               endedAt: Date.now(),
-              metadata: { phase: "complete", source: "jinzo-mcp" },
+              metadata: { phase: "complete", source: "mains-mcp" },
             });
             conn.end(JSON.stringify({ id: req.id, content: [{ type: "text", text: `Error: ${msg}` }], isError: true }) + "\n");
           });
@@ -527,13 +527,13 @@ export class JinzoMcpStdioServer {
     env: Array<{ name: string; value: string }>;
   } {
     const envEntries: Array<{ name: string; value: string }> = [
-      { name: "JINZO_IPC_SOCKET", value: this.socketPath },
+      { name: "MAINS_IPC_SOCKET", value: this.socketPath },
     ];
     for (const [k, v] of Object.entries(this.nodeInfo.extraEnv)) {
       envEntries.push({ name: k, value: v });
     }
     return {
-      name: "jinzo",
+      name: "mains",
       command: this.nodeInfo.command,
       args: [this.scriptPath],
       env: envEntries,
@@ -563,13 +563,13 @@ export class JinzoMcpStdioServer {
       try { config = JSON.parse(original); } catch { config = {}; }
     }
 
-    // Add jinzo MCP server entry
+    // Add mains MCP server entry
     if (!config.mcpServers) config.mcpServers = {};
-    config.mcpServers["jinzo"] = {
+    config.mcpServers["mains"] = {
       command: this.nodeInfo.command,
       args: [this.scriptPath],
       env: {
-        JINZO_IPC_SOCKET: this.socketPath,
+        MAINS_IPC_SOCKET: this.socketPath,
         ...this.nodeInfo.extraEnv,
       },
     };
@@ -578,7 +578,7 @@ export class JinzoMcpStdioServer {
       fs.mkdirSync(cursorDir, { recursive: true });
       fs.writeFileSync(mcpJsonPath, JSON.stringify(config, null, 2), "utf8");
     } catch (err) {
-      console.error(`[JinzoMcpServer] Failed to write ${mcpJsonPath}:`, err);
+      console.error(`[MainsMcpServer] Failed to write ${mcpJsonPath}:`, err);
     }
   }
 
@@ -595,7 +595,7 @@ export class JinzoMcpStdioServer {
           try {
             const current = JSON.parse(fs.readFileSync(mcpJsonPath, "utf8"));
             if (current.mcpServers) {
-              delete current.mcpServers["jinzo"];
+              delete current.mcpServers["mains"];
               if (Object.keys(current.mcpServers).length === 0 && Object.keys(current).length === 1) {
                 fs.unlinkSync(mcpJsonPath);
               } else {

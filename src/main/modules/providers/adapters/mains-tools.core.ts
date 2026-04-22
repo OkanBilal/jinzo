@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
-// Jinzo MCP Tools — Shared handler logic
+// Mains MCP Tools — Shared handler logic
 //
-// Both Claude and Copilot adapters expose the same five jinzo tools.
+// Both Claude and Copilot adapters expose the same five mains tools.
 // This module holds the handler implementations and descriptions;
 // each adapter wraps them into its SDK-specific format.
 // ─────────────────────────────────────────────────────────────
@@ -24,7 +24,7 @@ const execFileAsync = promisify(execFile);
 /**
  * Context values captured at run start and threaded through every handler.
  */
-export interface JinzoToolContext {
+export interface MainsToolContext {
   workspaceId: string | null;
   rootPath: string | null;
   runId: string | null;
@@ -57,7 +57,7 @@ export const TOOL_DESCRIPTIONS = {
 
 export async function handleGetWorkspaceDiff(
   args: { runId?: string },
-  ctx: JinzoToolContext,
+  ctx: MainsToolContext,
 ) {
   if (!ctx.workspaceId && !args.runId) {
     return {
@@ -91,7 +91,7 @@ export async function handleSaveReview(
     status?: string;
     metadata?: Record<string, unknown>;
   },
-  ctx: JinzoToolContext,
+  ctx: MainsToolContext,
 ) {
   const reviewId = await reviewsRepo.insert({
     workspaceId: ctx.workspaceId ?? undefined,
@@ -129,7 +129,7 @@ export async function handleSaveFinding(
     suggestion?: string;
     metadata?: Record<string, unknown>;
   },
-  ctx: JinzoToolContext,
+  ctx: MainsToolContext,
 ) {
   const findingId = await reviewFindingsRepo.insert({
     reviewId: args.reviewId,
@@ -180,7 +180,7 @@ export async function handleSaveFindings(
       metadata?: Record<string, unknown>;
     }>;
   },
-  ctx: JinzoToolContext,
+  ctx: MainsToolContext,
 ) {
   const findingIds = await reviewFindingsRepo.insertMany(
     args.findings.map((f) => ({
@@ -222,7 +222,7 @@ export async function handleSaveFindings(
 
 export async function handleCommitChanges(
   args: { message?: string; files?: string[] },
-  ctx: JinzoToolContext,
+  ctx: MainsToolContext,
 ) {
   if (!ctx.rootPath) {
     return {
@@ -354,7 +354,7 @@ export async function handleCreatePR(
     draft?: boolean;
     labels?: string[];
   },
-  ctx: JinzoToolContext,
+  ctx: MainsToolContext,
 ) {
   if (!ctx.rootPath) {
     return {
@@ -513,7 +513,7 @@ export async function handleCheckPackage(
   args: {
     packages: Array<{ name: string; version?: string; ecosystem?: string }>;
   },
-  _ctx: JinzoToolContext,
+  _ctx: MainsToolContext,
 ) {
   const { guardsService } = await import("../../guards/guards.service");
 

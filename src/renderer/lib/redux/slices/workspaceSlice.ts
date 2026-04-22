@@ -49,7 +49,7 @@ export interface ContextBrowserSelection {
   timestamp: string;
   /** Absolute path to the PNG on disk (main-process userData/browser-captures). */
   screenshotPath?: string;
-  /** Basename used for `jinzo-capture://<name>` in `<img src>`. */
+  /** Basename used for `mains-capture://<name>` in `<img src>`. */
   screenshotCaptureName?: string;
   surroundingScreenshotPath?: string;
   surroundingScreenshotCaptureName?: string;

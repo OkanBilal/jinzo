@@ -43,13 +43,13 @@ import {
   emitUserPromptArtifact,
   saveAttachments,
 } from "./adapter.shared";
-import type { JinzoToolContext } from "./jinzo-tools.core";
+import type { MainsToolContext } from "./mains-tools.core";
 import {
   TOOL_DESCRIPTIONS,
   handleCommitChanges,
   handleCreatePR,
   handleCheckPackage,
-} from "./jinzo-tools.core";
+} from "./mains-tools.core";
 import { guardsService } from "../../guards/guards.service";
 
 // ─────────────────────────────────────────────────────────────
@@ -184,10 +184,10 @@ function parseCodexReviewFindings(reviewText: string): ParsedReviewFinding[] {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Jinzo Dynamic Tools (registered per-thread via dynamicTools)
+// Mains Dynamic Tools (registered per-thread via dynamicTools)
 // ─────────────────────────────────────────────────────────────
 
-const JINZO_DYNAMIC_TOOLS = [
+const MAINS_DYNAMIC_TOOLS = [
   {
     name: "CommitChanges",
     description: TOOL_DESCRIPTIONS.CommitChanges,
@@ -241,13 +241,13 @@ const JINZO_DYNAMIC_TOOLS = [
 ];
 
 /**
- * Dispatch a dynamic tool call to the appropriate jinzo handler.
+ * Dispatch a dynamic tool call to the appropriate mains handler.
  * Returns the MCP-style result ({ content, isError? }).
  */
-async function dispatchJinzoTool(
+async function dispatchMainsTool(
   toolName: string,
   args: Record<string, unknown>,
-  ctx: JinzoToolContext,
+  ctx: MainsToolContext,
 ): Promise<{ content: Array<{ type: "text"; text: string }>; isError?: boolean }> {
   switch (toolName) {
     case "CommitChanges":
@@ -257,11 +257,11 @@ async function dispatchJinzoTool(
     case "CheckPackage":
       return handleCheckPackage(args as any, ctx);
     default:
-      return { content: [{ type: "text", text: `Unknown jinzo tool: ${toolName}` }], isError: true };
+      return { content: [{ type: "text", text: `Unknown mains tool: ${toolName}` }], isError: true };
   }
 }
 
-const JINZO_TOOL_NAMES = new Set(JINZO_DYNAMIC_TOOLS.map((t) => t.name));
+const MAINS_TOOL_NAMES = new Set(MAINS_DYNAMIC_TOOLS.map((t) => t.name));
 
 // ─────────────────────────────────────────────────────────────
 // Active run tracking
@@ -277,8 +277,8 @@ const activeRuns = new Map<string, {
   agentMessageBuffer: string;
   /** Pending events to emit (flushed message artifacts) */
   pendingFlush: WorkRunEvent[];
-  /** Workspace context for jinzo dynamic tools */
-  jinzoCtx: JinzoToolContext;
+  /** Workspace context for mains dynamic tools */
+  mainsCtx: MainsToolContext;
 }>();
 
 // Session ID mapping: runId → threadId (for resume support)
@@ -780,8 +780,8 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     // Handshake: initialize → initialized (required before any other RPC)
     await server.sendRequest("initialize", {
       clientInfo: {
-        name: "jinzo",
-        title: "Jinzo Desktop",
+        name: "mains",
+        title: "Mains Desktop",
         version: "1.0.0",
       },
       capabilities: {
@@ -1302,7 +1302,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     | { type: "localImage"; path: string }
   >;
 
-  const JINZO_TOOL_INSTRUCTION = "IMPORTANT: Never commit changes using shell commands (git add, git commit). If the user asks you to commit, always use the CommitChanges tool to stage and commit changes. Similarly, never create pull requests using shell commands (gh pr create). Always use the CreatePR tool instead.";
+  const MAINS_TOOL_INSTRUCTION = "IMPORTANT: Never commit changes using shell commands (git add, git commit). If the user asks you to commit, always use the CommitChanges tool to stage and commit changes. Similarly, never create pull requests using shell commands (gh pr create). Always use the CreatePR tool instead.";
 
   function buildTurnInput(request: WorkRunRequest): TurnInput {
     const workspaceInfo = `Working directory: ${request.workspace.rootPath}`;
@@ -1310,9 +1310,9 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
     if (request.context && request.context.length > 0) {
       const contextParts = formatContextSection(request.context);
-      prompt = `${workspaceInfo}\n\nContext:\n${contextParts}\n\n---\n\n${JINZO_TOOL_INSTRUCTION}\n\nGoal: ${request.goal}`;
+      prompt = `${workspaceInfo}\n\nContext:\n${contextParts}\n\n---\n\n${MAINS_TOOL_INSTRUCTION}\n\nGoal: ${request.goal}`;
     } else {
-      prompt = `${workspaceInfo}\n\n${JINZO_TOOL_INSTRUCTION}\n\nGoal: ${request.goal}`;
+      prompt = `${workspaceInfo}\n\n${MAINS_TOOL_INSTRUCTION}\n\nGoal: ${request.goal}`;
     }
 
     prompt = appendPromptSections(prompt, {
@@ -1593,7 +1593,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             break;
           }
 
-          // Dynamic tool calls — dispatch jinzo tools
+          // Dynamic tool calls — dispatch mains tools
           case "item/tool/call": {
             const toolParams = params as Record<string, unknown> | undefined;
             const toolName = toolParams?.tool as string | undefined;
@@ -1602,18 +1602,18 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
               : toolParams?.arguments ?? {}) as Record<string, unknown>;
             const toolThreadId = toolParams?.threadId as string | undefined;
 
-            if (toolName && JINZO_TOOL_NAMES.has(toolName)) {
-              // Find the JinzoToolContext from the active run that owns this thread
-              let ctx: JinzoToolContext = { workspaceId: null, rootPath: null, runId: null };
+            if (toolName && MAINS_TOOL_NAMES.has(toolName)) {
+              // Find the MainsToolContext from the active run that owns this thread
+              let ctx: MainsToolContext = { workspaceId: null, rootPath: null, runId: null };
               for (const [, run] of activeRuns) {
                 if (run.threadId === toolThreadId) {
-                  ctx = run.jinzoCtx;
+                  ctx = run.mainsCtx;
                   break;
                 }
               }
 
               try {
-                const result = await dispatchJinzoTool(toolName, toolArgs, ctx);
+                const result = await dispatchMainsTool(toolName, toolArgs, ctx);
                 const contentItems = result.content.map((c) => ({
                   type: "inputText" as const,
                   text: c.text,
@@ -1624,7 +1624,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
                 });
               } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err);
-                logError(`Jinzo tool ${toolName} failed:`, msg);
+                logError(`Mains tool ${toolName} failed:`, msg);
                 server.respondToRequest(id, {
                   contentItems: [{ type: "inputText", text: `Error: ${msg}` }],
                   success: false,
@@ -1684,7 +1684,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           config: {
             ...(networkAccess ? { sandbox_network_access: true } : {}),
           },
-          dynamicTools: JINZO_DYNAMIC_TOOLS,
+          dynamicTools: MAINS_DYNAMIC_TOOLS,
         };
 
         logInfo(`Starting thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
@@ -1700,8 +1700,8 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           );
         }
 
-        const jinzoCtx: JinzoToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], jinzoCtx });
+        const mainsCtx: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
+        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx });
 
         // Emit user prompt artifact
         await emitUserPromptArtifact(onEvent, request.goal, {
@@ -1799,7 +1799,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
               sandbox,
               personality,
               ...(resolvedModel ? { model: resolvedModel } : {}),
-              dynamicTools: JINZO_DYNAMIC_TOOLS,
+              dynamicTools: MAINS_DYNAMIC_TOOLS,
             }) as Record<string, unknown>;
             const newThreadId = (threadResult?.thread as Record<string, unknown>)?.id as string ??
                                threadResult?.threadId as string;
@@ -1809,8 +1809,8 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           }
         }
 
-        const jinzoCtxContinue: JinzoToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], jinzoCtx: jinzoCtxContinue });
+        const mainsCtxContinue: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
+        activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxContinue });
 
         await emitUserPromptArtifact(onEvent, message, {
           attachments: request.attachments,
@@ -1909,7 +1909,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           logError("Failed to persist forked session ID:", err),
         );
 
-        const jinzoCtxFork: JinzoToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
+        const mainsCtxFork: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
         activeRuns.set(runId, {
           threadId: forkedThreadId,
           turnId: null,
@@ -1917,7 +1917,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           currentMessageItemId: null,
           agentMessageBuffer: "",
           pendingFlush: [],
-          jinzoCtx: jinzoCtxFork,
+          mainsCtx: mainsCtxFork,
         });
 
         // Emit user prompt artifact
@@ -1994,7 +1994,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           config: {
             ...(networkAccess ? { sandbox_network_access: true } : {}),
           },
-          dynamicTools: JINZO_DYNAMIC_TOOLS,
+          dynamicTools: MAINS_DYNAMIC_TOOLS,
         };
 
         logInfo(`Starting review thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
@@ -2009,8 +2009,8 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           );
         }
 
-        const jinzoCtxReview: JinzoToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], jinzoCtx: jinzoCtxReview });
+        const mainsCtxReview: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
+        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxReview });
 
         // Emit review user-prompt artifact
         const targetLabel =

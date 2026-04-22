@@ -1,6 +1,6 @@
-# Copilot Instructions — Jinzo
+# Copilot Instructions — Mains
 
-Jinzo is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM, sqlite-vec for vector search). CommonJS package with ESM Vite configs (`.mjs`).
+Mains is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM, sqlite-vec for vector search). CommonJS package with ESM Vite configs (`.mjs`).
 
 ## Build & Test
 
@@ -9,7 +9,7 @@ npm start              # Dev server (full restart needed for preload changes)
 npm run lint           # ESLint on src/
 npm run lint:fix       # Auto-fix
 npm run db:generate    # Generate Drizzle migrations from schema changes
-npm run db:push        # Push schema to dev DB (.data/jinzo.db)
+npm run db:push        # Push schema to dev DB (.data/mains.db)
 npm run db:studio      # Open Drizzle Studio (dev database)
 npm run db:studio:runtime  # Open Drizzle Studio (runtime database)
 npm run db:clean:dev   # Reset dev database
@@ -81,6 +81,6 @@ All IPC responses use `ServiceResponse<T>` envelope: `{ success: true, data }` o
 ## Gotchas
 
 - Preload changes require full dev server restart
-- Dual DB paths: `.data/jinzo.db` (dev) vs `~/Library/Application Support/jinzo/jinzo.db` (packaged)
+- Dual DB paths: `.data/mains.db` (dev) vs `~/Library/Application Support/mains/mains.db` (packaged)
 - sqlite-vec native extension loaded at runtime for vector search
 - Migration `.sql` files are copied into the build via Vite plugin and bundled as `extraResource`

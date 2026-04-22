@@ -214,7 +214,7 @@ function appIconsDir(): string {
 
 /**
  * Extract the `.icns` for `appPath` and persist a 64×64 PNG to
- * `userData/app-icons/<id>.png`. Returns a `jinzo-appicon://icon/<id>.png` URL
+ * `userData/app-icons/<id>.png`. Returns a `mains-appicon://icon/<id>.png` URL
  * the renderer can drop into `<img src>` without any base64 buffering.
  *
  * If the PNG already exists and is non-empty we skip the `sips` call —
@@ -228,7 +228,7 @@ async function getAppIcon(
   try {
     const outPath = path.join(appIconsDir(), `${id}.png`);
     if (fs.existsSync(outPath) && fs.statSync(outPath).size > 0) {
-      return `jinzo-appicon://icon/${id}.png`;
+      return `mains-appicon://icon/${id}.png`;
     }
 
     // Read CFBundleIconFile from Info.plist
@@ -259,7 +259,7 @@ async function getAppIcon(
     if (!fs.existsSync(outPath) || fs.statSync(outPath).size === 0) {
       return null;
     }
-    return `jinzo-appicon://icon/${id}.png`;
+    return `mains-appicon://icon/${id}.png`;
   } catch {
     return null;
   }
@@ -399,16 +399,16 @@ function createTray() {
   // Using the colored app icon for now.
 
   tray = new Tray(trayImage);
-  tray.setToolTip("Jinzo");
+  tray.setToolTip("Mains");
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: "Show Jinzo", click: () => focusMainWindow() },
+    { label: "Show Mains", click: () => focusMainWindow() },
     {
       label: "Check for Updates…",
       click: () => updatesService.checkForUpdates(),
     },
     { type: "separator" },
-    { label: "Quit Jinzo", role: "quit" },
+    { label: "Quit Mains", role: "quit" },
   ]);
   tray.setContextMenu(contextMenu);
   tray.on("click", () => focusMainWindow());
@@ -533,7 +533,7 @@ async function initializeApp() {
             label: app.name,
             submenu: [
               {
-                label: "About Jinzo",
+                label: "About Mains",
                 click: () => {
                   const iconPath = !app.isPackaged
                     ? path.join(app.getAppPath(), "src/renderer/public/icon.png")
@@ -542,8 +542,8 @@ async function initializeApp() {
                       : path.join(app.getAppPath(), ".vite/renderer/icon.png");
                   dialog.showMessageBox({
                     type: "info",
-                    title: "About Jinzo",
-                    message: "Jinzo",
+                    title: "About Mains",
+                    message: "Mains",
                     detail: `Version ${app.getVersion()}\n`,
                     icon: nativeImage.createFromPath(iconPath),
                   });
@@ -596,11 +596,11 @@ async function initializeApp() {
         submenu: [
           {
             label: "Documentation",
-            click: () => shell.openExternal("https://docs.usejinzo.com"),
+            click: () => shell.openExternal("https://docs.mains.dev"),
           },
           {
             label: "Report an Issue",
-            click: () => shell.openExternal("https://github.com/OkanBilal/jinzo/issues"),
+            click: () => shell.openExternal("https://github.com/OkanBilal/mains/issues"),
           },
         ],
       },
@@ -732,17 +732,17 @@ if (!gotTheLock) {
   });
 }
 
-// Ensure app name is "jinzo" even in dev (Electron Forge defaults to "Electron")
+// Ensure app name is "mains" even in dev (Electron Forge defaults to "Electron")
 if (!app.isPackaged) {
-  app.setName("jinzo");
+  app.setName("mains");
 }
 
 // Custom About panel
 app.setAboutPanelOptions({
-  applicationName: "Jinzo",
+  applicationName: "Mains",
   applicationVersion: app.getVersion(),
-  copyright: "© 2026 Jinzo",
-  website: "https://usejinzo.com",
+  copyright: "© 2026 Mains",
+  website: "https://mains.dev",
 });
 
 // Register custom protocol scheme (must be before app.ready)

@@ -113,7 +113,7 @@ export const markdownComponents: Components = {
   img: ({ src, alt }) => {
     const proxiedSrc =
       src && src.startsWith("https://")
-        ? `jinzo-img://proxy?url=${encodeURIComponent(src)}`
+        ? `mains-img://proxy?url=${encodeURIComponent(src)}`
         : src;
     return (
       <img

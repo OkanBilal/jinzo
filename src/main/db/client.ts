@@ -412,11 +412,11 @@ class DatabaseClient {
    */
   private getDefaultDatabasePath(): string {
     if (app && !app.isPackaged) {
-      return path.join(process.cwd(), ".data", "jinzo.db");
+      return path.join(process.cwd(), ".data", "mains.db");
     }
     const userDataPath =
       app?.getPath("userData") || path.join(process.cwd(), ".data");
-    return path.join(userDataPath, "jinzo.db");
+    return path.join(userDataPath, "mains.db");
   }
 
   /**

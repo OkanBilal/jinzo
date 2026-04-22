@@ -30,8 +30,8 @@ import {
   saveAttachments,
   formatContextSection,
 } from "./adapter.shared";
-import { JinzoMcpStdioServer } from "./jinzo-mcp-server";
-import type { JinzoToolContext } from "./jinzo-tools.core";
+import { MainsMcpStdioServer } from "./mains-mcp-server";
+import type { MainsToolContext } from "./mains-tools.core";
 
 // ─────────────────────────────────────────────────────────────
 // JSON-RPC Types
@@ -352,20 +352,20 @@ class CursorAcpServer {
 
 export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter {
   let acpServer: CursorAcpServer | null = null;
-  let mcpServer: JinzoMcpStdioServer | null = null;
+  let mcpServer: MainsMcpStdioServer | null = null;
   let mcpConfigured = false;
 
   /**
    * Set up the MCP server (bridge + config file).
    * If ACP is already running, restart it so it picks up the new MCP config.
    */
-  async function ensureMcpServer(ctx: JinzoToolContext): Promise<typeof mcpServer> {
+  async function ensureMcpServer(ctx: MainsToolContext): Promise<typeof mcpServer> {
     if (mcpServer?.isRunning) {
       await mcpServer.stop();
     }
-    mcpServer = new JinzoMcpStdioServer(ctx);
+    mcpServer = new MainsMcpStdioServer(ctx);
     await mcpServer.start();
-    logInfo(`Jinzo MCP stdio bridge started`);
+    logInfo(`Mains MCP stdio bridge started`);
 
     // If ACP was started before MCP was configured, restart it
     // so it discovers the .cursor/mcp.json on initialization.
@@ -484,8 +484,8 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
     const initResult = await server.sendRequest("initialize", {
       protocolVersion: 1,
       clientInfo: {
-        name: "jinzo",
-        title: "Jinzo Desktop",
+        name: "mains",
+        title: "Mains Desktop",
         version: "1.0.0",
       },
       clientCapabilities: {
@@ -583,9 +583,9 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
       }
       default: {
         if (firstPath) input.file_path = firstPath;
-        // Clean up MCP tool names: "jinzo-CommitChanges: CommitChanges" → "CommitChanges"
+        // Clean up MCP tool names: "mains-CommitChanges: CommitChanges" → "CommitChanges"
         let name = title ?? kind ?? "Tool";
-        const mcpMatch = name.match(/^jinzo[-_](\w+)(?::\s*\w+)?$/i);
+        const mcpMatch = name.match(/^mains[-_](\w+)(?::\s*\w+)?$/i);
         if (mcpMatch) {
           name = mcpMatch[1];
           delete input._title;
@@ -754,7 +754,7 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
         if (kind === "create_plan" || kind === "plan" || /create\s*plan/i.test(title ?? "")) break;
 
         // Skip MCP tool_call events — the bridge emits proper events with real tool names
-        if (kind === "mcp_tool_call" || /mcp/i.test(kind ?? "") || /mcp/i.test(title ?? "") || /^jinzo[-_]/i.test(title ?? "")) break;
+        if (kind === "mcp_tool_call" || /mcp/i.test(kind ?? "") || /mcp/i.test(title ?? "") || /^mains[-_]/i.test(title ?? "")) break;
 
         const { toolName, input: normalizedInput } = normalizeToolCall(kind, title, rawInput, locations);
 
@@ -795,7 +795,7 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
         if (kind === "create_plan" || kind === "plan" || /create\s*plan/i.test(title ?? "")) break;
 
         // Skip MCP tool_call updates — the bridge emits proper events with real tool names
-        if (kind === "mcp_tool_call" || /mcp/i.test(kind ?? "") || /mcp/i.test(title ?? "") || /^jinzo[-_]/i.test(title ?? "")) break;
+        if (kind === "mcp_tool_call" || /mcp/i.test(kind ?? "") || /mcp/i.test(title ?? "") || /^mains[-_]/i.test(title ?? "")) break;
 
         const { toolName, input: normalizedInput } = normalizeToolCall(kind, title, rawInput, locations);
 
@@ -946,8 +946,8 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
           const acpTitle = toolCall?.title as string | undefined;
           const acpLocations = toolCall?.locations as Array<{ path?: string }> | undefined;
 
-          // Auto-approve Jinzo MCP tools (CommitChanges, CreatePR, etc.)
-          if (acpTitle && /^jinzo[-_]/i.test(acpTitle)) {
+          // Auto-approve Mains MCP tools (CommitChanges, CreatePR, etc.)
+          if (acpTitle && /^mains[-_]/i.test(acpTitle)) {
             server.respondToRequest(id, { outcome: { outcome: "selected", optionId: allowAlwaysId } });
             break;
           }
@@ -1144,8 +1144,8 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
       runId: request.runId,
     });
 
-    // Instruct the agent to use Jinzo MCP tools instead of Bash for commits/PRs
-    prompt += "\n\nIMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the jinzo MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the jinzo MCP server instead. Before running any package install command (npm install, pip install, cargo add, etc.), you MUST call the CheckPackage tool first to verify package safety.";
+    // Instruct the agent to use Mains MCP tools instead of Bash for commits/PRs
+    prompt += "\n\nIMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the mains MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the mains MCP server instead. Before running any package install command (npm install, pip install, cargo add, etc.), you MUST call the CheckPackage tool first to verify package safety.";
 
     // Handle attachments
     if (request.attachments && request.attachments.length > 0) {
@@ -1180,12 +1180,12 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
 
         // Set up MCP FIRST so .cursor/mcp.json exists before ACP starts.
         // If ACP was already running, ensureMcpServer() restarts it.
-        const jinzoCtx: JinzoToolContext = {
+        const mainsCtx: MainsToolContext = {
           workspaceId: request.workspace.id,
           rootPath: request.workspace.rootPath,
           runId,
         };
-        const jinzoMcp = await ensureMcpServer(jinzoCtx);
+        const mainsMcp = await ensureMcpServer(mainsCtx);
 
         const server = await ensureServer();
 
@@ -1193,7 +1193,7 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
         logInfo(`Creating session (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
         const sessionResult = await server.sendRequest("session/new", {
           cwd: request.workspace.rootPath,
-          mcpServers: jinzoMcp ? [jinzoMcp.mcpConfig] : [],
+          mcpServers: mainsMcp ? [mainsMcp.mcpConfig] : [],
         }) as Record<string, unknown>;
         const sessionId = sessionResult?.sessionId as string | undefined;
 
@@ -1330,13 +1330,13 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
         // MCP must be ensured before ACP so the first-run restart path
         // (ensureMcpServer stops ACP if it was started without MCP config)
         // doesn't invalidate the server handle we're about to use.
-        const jinzoCtx: JinzoToolContext = {
+        const mainsCtx: MainsToolContext = {
           workspaceId: request.workspace.id,
           rootPath: request.workspace.rootPath,
           runId,
         };
-        const jinzoMcp = await ensureMcpServer(jinzoCtx);
-        const mcpServersConfig = jinzoMcp ? [jinzoMcp.mcpConfig] : [];
+        const mainsMcp = await ensureMcpServer(mainsCtx);
+        const mcpServersConfig = mainsMcp ? [mainsMcp.mcpConfig] : [];
 
         const server = await ensureServer();
 

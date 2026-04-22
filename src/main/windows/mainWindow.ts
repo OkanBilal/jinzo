@@ -111,7 +111,7 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
       ? { x: saved.x, y: saved.y }
       : {}),
     minWidth: 800,
-    title: "Jinzo",
+    title: "Mains",
     minHeight: 600,
     icon: iconPath,
     show: false, // Always create hidden, control visibility via ready-to-show

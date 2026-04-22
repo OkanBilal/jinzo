@@ -22,7 +22,7 @@ export function CopilotSetupStep() {
     <div className="space-y-4">
       <Text variant="h2">GitHub Copilot Setup</Text>
       <Text variant="muted">
-        Jinzo can use GitHub Copilot as an coding agent. You need an
+        Mains can use GitHub Copilot as an coding agent. You need an
         active Copilot subscription and the GitHub CLI authenticated.
       </Text>
 

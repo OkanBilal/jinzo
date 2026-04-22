@@ -5,7 +5,7 @@ body:
   - type: description
     attributes:
       value: |
-        Have an idea for Jinzo? We'd love to hear it.
+        Have an idea for Mains? We'd love to hear it.
 
   - type: textarea
     id: problem

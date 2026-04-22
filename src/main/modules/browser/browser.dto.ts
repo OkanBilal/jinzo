@@ -46,11 +46,11 @@ export interface BrowserSelectionPayload {
 export interface BrowserSelectionResult extends BrowserSelectionPayload {
   /** Absolute path of the element screenshot on disk. */
   screenshotPath?: string;
-  /** Basename used to resolve the capture via the `jinzo-capture://` scheme in the renderer. */
+  /** Basename used to resolve the capture via the `mains-capture://` scheme in the renderer. */
   screenshotCaptureName?: string;
   /** Absolute path of the surrounding-context screenshot on disk. */
   surroundingScreenshotPath?: string;
-  /** Basename used to resolve the surrounding capture via the `jinzo-capture://` scheme. */
+  /** Basename used to resolve the surrounding capture via the `mains-capture://` scheme. */
   surroundingScreenshotCaptureName?: string;
   screenshotMimeType: string;
 }

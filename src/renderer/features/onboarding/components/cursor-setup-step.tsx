@@ -25,7 +25,7 @@ export function CursorSetupStep() {
     <div className="space-y-4">
       <Text variant="h2">Cursor Setup</Text>
       <Text variant="muted">
-        Jinzo can use Cursor Agent CLI as an AI coding agent. Install the CLI
+        Mains can use Cursor Agent CLI as an AI coding agent. Install the CLI
         and authenticate before using the Cursor.
       </Text>
 

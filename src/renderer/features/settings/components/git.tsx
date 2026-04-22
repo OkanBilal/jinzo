@@ -73,7 +73,7 @@ export default function GitSettings() {
       <SettingsSection>
         <SettingsRow
           title="Worktrees"
-          description="Work in an isolated copy of your repo, so you can work on multiple tasks at the same time. When disabled, Jinzo uses the active branch directly."
+          description="Work in an isolated copy of your repo, so you can work on multiple tasks at the same time. When disabled, Mains uses the active branch directly."
         >
           <Toggle enabled={enableWorktrees} onChange={handleWorktreeToggle} />
         </SettingsRow>

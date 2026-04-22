@@ -20,7 +20,7 @@ export function SidebarToggleButton({ isOpen, onClick }: SidebarToggleButtonProp
       style={{ left: isFullscreen  ? "0.75rem" : "5.5rem" }}
     >
       {/* {isFullscreen  && (
-        <Jinzo className="size-3.5 text-primary-500 dark:text-primary-500" />
+        <Mains className="size-3.5 text-primary-500 dark:text-primary-500" />
       )} */}
       <Button
         tooltip={isOpen ? "Close sidebar" : "Open sidebar"}

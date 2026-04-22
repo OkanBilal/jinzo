@@ -60,7 +60,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Jinzo Version
+      label: Mains Version
       description: Found in Settings or package.json
       placeholder: "0.1.0"
     validations:

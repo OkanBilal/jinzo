@@ -1,13 +1,13 @@
 <div align="center">
   <br />
-  <a href="https://github.com/OkanBilal/jinzo">
-    <img src="src/renderer/public/icon.png" width="100" alt="Jinzo" />
+  <a href="https://github.com/OkanBilal/mains">
+    <img src="src/renderer/public/icon.png" width="100" alt="Mains" />
   </a>
   <br />
   <br />
   <p>
     <h3>
-      <b>Jinzo</b>
+      <b>Mains</b>
     </h3>
   </p>
   <p>
@@ -28,7 +28,7 @@
 
 ---
 
-Jinzo - _Japanese for "artificial" (人造)_ - is a desktop app for running AI coding agents in managed workspaces. It wraps the **GitHub Copilot** and **Claude Code** SDKs and the **OpenAI Codex** app server, tracks every run with full observability, and syncs issues from the tools you already use — all from one place.
+Mains is a desktop app for running AI coding agents in managed workspaces. It wraps the **GitHub Copilot** and **Claude Code** SDKs and the **OpenAI Codex** app server, tracks every run with full observability, and syncs issues from the tools you already use — all from one place.
 
 ```
 npm install
@@ -71,8 +71,8 @@ npm start
 **Prerequisites:** [Node.js](https://nodejs.org/) 18+, Git
 
 ```bash
-git clone https://github.com/OkanBilal/jinzo.git
-cd jinzo
+git clone https://github.com/OkanBilal/mains.git
+cd mains
 npm install
 npm start
 ```

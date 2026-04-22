@@ -36,7 +36,7 @@ import {
   appendPromptSections,
   emitUserPromptArtifact,
 } from "./adapter.shared";
-import type { JinzoToolContext } from "./jinzo-tools.core";
+import type { MainsToolContext } from "./mains-tools.core";
 import {
   TOOL_DESCRIPTIONS,
   handleGetWorkspaceDiff,
@@ -45,7 +45,7 @@ import {
   handleSaveFindings,
   handleCommitChanges,
   handleCreatePR,
-} from "./jinzo-tools.core";
+} from "./mains-tools.core";
 import { guardsService } from "../../guards/guards.service";
 
 /**
@@ -529,11 +529,11 @@ export function createClaudeAdapter(
       workspacePath,
     );
 
-    // Inject the jinzo MCP server as an in-process SDK server
+    // Inject the mains MCP server as an in-process SDK server
     // Uses Drizzle ORM repos directly — no subprocess or sqlite3 CLI needed
-    if (!mcpServers["jinzo"] && createSdkMcpServerFn && toolFn) {
-      mcpServers["jinzo"] = buildJinzoMcpServer(workspaceId ?? null, workspacePath ?? null, runId ?? null);
-      logInfo("Injected jinzo MCP server (in-process)");
+    if (!mcpServers["mains"] && createSdkMcpServerFn && toolFn) {
+      mcpServers["mains"] = buildMainsMcpServer(workspaceId ?? null, workspacePath ?? null, runId ?? null);
+      logInfo("Injected mains MCP server (in-process)");
     }
 
     const options: SDKOptions = {
@@ -649,21 +649,21 @@ export function createClaudeAdapter(
     options.systemPrompt = {
       type: "preset",
       preset: "claude_code",
-      append: "IMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the jinzo MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the jinzo MCP server instead.",
+      append: "IMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the mains MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the mains MCP server instead.",
     };
 
     return options;
   }
 
   /**
-   * Build an in-process MCP server for jinzo tools using createSdkMcpServer.
-   * Handlers are shared from jinzo-tools.core.ts — only the SDK wrapper lives here.
+   * Build an in-process MCP server for mains tools using createSdkMcpServer.
+   * Handlers are shared from mains-tools.core.ts — only the SDK wrapper lives here.
    */
-  function buildJinzoMcpServer(workspaceId: string | null, rootPath: string | null, runId: string | null): any {
-    const ctx: JinzoToolContext = { workspaceId, rootPath, runId };
+  function buildMainsMcpServer(workspaceId: string | null, rootPath: string | null, runId: string | null): any {
+    const ctx: MainsToolContext = { workspaceId, rootPath, runId };
 
     return createSdkMcpServerFn!({
-      name: "jinzo",
+      name: "mains",
       version: "1.0.0",
       tools: [
         toolFn!(

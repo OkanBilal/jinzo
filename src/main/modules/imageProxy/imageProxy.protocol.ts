@@ -63,13 +63,13 @@ function enforceMaxBytes(
 }
 
 /**
- * Register the jinzo-img scheme as privileged.
+ * Register the mains-img scheme as privileged.
  * MUST be called BEFORE app.ready.
  */
 export function registerImageProxyScheme() {
   protocol.registerSchemesAsPrivileged([
     {
-      scheme: "jinzo-img",
+      scheme: "mains-img",
       privileges: {
         standard: true,
         secure: true,
@@ -78,7 +78,7 @@ export function registerImageProxyScheme() {
       },
     },
     {
-      scheme: "jinzo-capture",
+      scheme: "mains-capture",
       privileges: {
         standard: true,
         secure: true,
@@ -87,7 +87,7 @@ export function registerImageProxyScheme() {
       },
     },
     {
-      scheme: "jinzo-appicon",
+      scheme: "mains-appicon",
       privileges: {
         standard: true,
         secure: true,
@@ -124,20 +124,20 @@ function serveLocalPng(baseDir: string, rawName: string): Response {
 }
 
 /**
- * Register the protocol handler for jinzo-img:// URLs.
+ * Register the protocol handler for mains-img:// URLs.
  * Must be called AFTER app.ready (inside initializeApp).
  */
 export function registerImageProxyHandler() {
   // Serve browser capture PNGs from userData/browser-captures with path safety.
-  protocol.handle("jinzo-capture", async (request) => {
+  protocol.handle("mains-capture", async (request) => {
     try {
       const requestUrl = new URL(request.url);
-      // jinzo-capture://<host-ignored>/<filename>
+      // mains-capture://<host-ignored>/<filename>
       const raw = decodeURIComponent(requestUrl.pathname.replace(/^\/+/, ""));
       const baseDir = path.join(app.getPath("userData"), "browser-captures");
       return serveLocalPng(baseDir, raw);
     } catch (error) {
-      console.error("[jinzo-capture] handler error:", error);
+      console.error("[mains-capture] handler error:", error);
       return new Response("Capture proxy error", { status: 500 });
     }
   });
@@ -145,20 +145,20 @@ export function registerImageProxyHandler() {
   // Serve cached application icons from userData/app-icons. The main process
   // writes `${id}.png` for each detected installed app during
   // `detectInstalledApps()` and the renderer references them via
-  // `jinzo-appicon://icon/<id>.png` — no base64 blobs in memory.
-  protocol.handle("jinzo-appicon", async (request) => {
+  // `mains-appicon://icon/<id>.png` — no base64 blobs in memory.
+  protocol.handle("mains-appicon", async (request) => {
     try {
       const requestUrl = new URL(request.url);
       const raw = decodeURIComponent(requestUrl.pathname.replace(/^\/+/, ""));
       const baseDir = path.join(app.getPath("userData"), "app-icons");
       return serveLocalPng(baseDir, raw);
     } catch (error) {
-      console.error("[jinzo-appicon] handler error:", error);
+      console.error("[mains-appicon] handler error:", error);
       return new Response("App icon error", { status: 500 });
     }
   });
 
-  protocol.handle("jinzo-img", async (request) => {
+    protocol.handle("mains-img", async (request) => {
     try {
       const requestUrl = new URL(request.url);
       const originalUrl = requestUrl.searchParams.get("url");

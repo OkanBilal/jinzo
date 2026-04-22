@@ -19,7 +19,7 @@ import {
   Notion,
   Figma,
   Mcp,
-  Jinzo,
+  Mains,
   Sparkles,
   Delete,
   Grep,
@@ -29,37 +29,37 @@ export const TOOL_CATEGORIES: Record<
   string,
   { category: string; icon: React.ReactNode }
 > = {
-  jinzo: {
+  mains: {
     category: "Review",
-    icon: <Jinzo className="w-2 h-4 " />,
+    icon: <Mains className="w-2 h-4 " />,
   },
   getdiff: {
     category: "Review",
-    icon: <Jinzo className="w-2 h-4 " />,
+    icon: <Mains className="w-2 h-4 " />,
   },
   savereview: {
     category: "Review",
-    icon: <Jinzo className="w-2 h-4" />,
+    icon: <Mains className="w-2 h-4" />,
   },
   savefindings: {
     category: "Review",
-    icon: <Jinzo className="w-2 h-4  " />,
+    icon: <Mains className="w-2 h-4  " />,
   },
   savefinding: {
     category: "Review",
-    icon: <Jinzo className="w-2 h-4  " />,
+    icon: <Mains className="w-2 h-4  " />,
   },
   commit: {
     category: "Git",
-    icon: <Jinzo className="w-2 h-4" />,
+    icon: <Mains className="w-2 h-4" />,
   },
   createpr: {
     category: "Git",
-    icon: <Jinzo className="size-3.5" />,
+    icon: <Mains className="size-3.5" />,
   },
   checkpackage: {
     category: "Guard",
-    icon: <Jinzo className="size-3.5" />,
+    icon: <Mains className="size-3.5" />,
   },
   figma: {
     category: "Design",
@@ -215,6 +215,6 @@ export function getToolInfo(toolName: string): {
 
   return {
     category: "Tool",
-    icon: <Jinzo className=" size-4" />,
+    icon: <Mains className=" size-4" />,
   };
 }

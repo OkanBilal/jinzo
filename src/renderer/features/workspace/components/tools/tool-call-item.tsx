@@ -240,7 +240,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     return <WebFetchDisplay params={fetchParams} output={event.metadata?.output} isCompact={isCompact} />;
   }
 
-  // Show GetDiffDisplay for Jinzo GetDiff tool calls
+  // Show GetDiffDisplay for Mains GetDiff tool calls
   if (displayName === "GetDiff") {
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
@@ -253,7 +253,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     return <GetDiffDisplay params={diffParams} output={event.metadata?.output} isCompact={isCompact} />;
   }
 
-  // Show PersistReviewDisplay for Jinzo SaveReview tool calls
+  // Show PersistReviewDisplay for Mains SaveReview tool calls
   if (displayName === "SaveReview") {
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
@@ -266,7 +266,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     return <SaveReviewDisplay params={reviewParams} isCompact={isCompact} />;
   }
 
-  // Show PersistFindingDisplay for Jinzo SaveFinding/SaveFindings tool calls
+  // Show PersistFindingDisplay for Mains SaveFinding/SaveFindings tool calls
   if (displayName === "SaveFinding") {
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
@@ -279,7 +279,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     return <SaveFindingDisplay params={findingParams} isCompact={isCompact} />;
   }
 
-  // Show CommitDisplay for Jinzo CommitChanges tool calls
+  // Show CommitDisplay for Mains CommitChanges tool calls
   if (displayName === "Commit") {
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
@@ -292,7 +292,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     return <CommitDisplay params={commitParams} isCompact={isCompact} />;
   }
 
-  // Show PRDisplay for Jinzo CreatePR tool calls
+  // Show PRDisplay for Mains CreatePR tool calls
   if (displayName === "CreatePR") {
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
@@ -305,7 +305,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     return <PRDisplay params={prParams} isCompact={isCompact} />;
   }
 
-  // Show CheckPackageDisplay for Jinzo CheckPackage tool calls
+  // Show CheckPackageDisplay for Mains CheckPackage tool calls
   if (displayName === "CheckPackage") {
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
@@ -321,7 +321,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   // Show McpDisplay for MCP tool calls with expandable params
   if (
     displayName.endsWith("Mcp") ||
-    displayName === "Jinzo" ||
+    displayName === "Mains" ||
     displayName === "Linear" ||
     displayName === "Notion" ||
     displayName === "Figma"

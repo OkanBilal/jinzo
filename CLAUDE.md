@@ -14,7 +14,7 @@ npm run db:push         # Push schema to dev database
 npm run db:studio       # Open Drizzle Studio (dev database)
 npm run db:studio:runtime  # Open Drizzle Studio (runtime database)
 npm run db:clean:dev    # Reset dev database
-npm run db:clean:runtime  # Reset runtime database (~/Library/Application Support/jinzo/)
+npm run db:clean:runtime  # Reset runtime database (~/Library/Application Support/mains/)
 npm run db:clean:all    # Reset both databases
 
 # Linting
@@ -33,7 +33,7 @@ npm run hard-reset      # Full reset (reset + nuke node_modules + reinstall)
 
 ## Architecture Overview
 
-Jinzo is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM). CommonJS package with ESM Vite configs (`.mjs`).
+Mains is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM). CommonJS package with ESM Vite configs (`.mjs`).
 
 ### Process Boundaries
 
@@ -204,8 +204,8 @@ Domain-specific views on entities:
 
 ### Configuration
 
-- `drizzle.config.ts` - Drizzle Kit config (dev database: `.data/jinzo.db`)
-- `drizzle.config.runtime.ts` - Runtime database config (`~/Library/Application Support/jinzo/jinzo.db`)
+- `drizzle.config.ts` - Drizzle Kit config (dev database: `.data/mains.db`)
+- `drizzle.config.runtime.ts` - Runtime database config (`~/Library/Application Support/mains/mains.db`)
 - Migration `.sql` files are copied into the build via Vite plugin and bundled as `extraResource`
 
 ### Frontend Conventions
@@ -297,4 +297,4 @@ To add a new provider's secrets: add an entry to `PROVIDER_SECRET_FIELDS`. Non-s
 
 - **Preload changes not taking effect**: Restart the dev server completely; changes to `src/preload/index.ts` require a full restart
 - **Database locked errors**: Close all app instances, then `npm run db:clean:dev && npm run db:push`
-- **Dual DB paths**: `.data/jinzo.db` (dev) vs `~/Library/Application Support/jinzo/jinzo.db` (packaged)
+- **Dual DB paths**: `.data/mains.db` (dev) vs `~/Library/Application Support/mains/mains.db` (packaged)

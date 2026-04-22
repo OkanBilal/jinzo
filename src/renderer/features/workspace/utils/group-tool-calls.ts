@@ -79,15 +79,15 @@ export function getToolType(content: string): string {
     colonIdx > 0 ? content.substring(0, colonIdx).trim() : content;
   const lower = toolName.toLowerCase();
 
-  // Jinzo tools: MCP prefix (mcp__jinzo__*) or direct name from bridge
-  if (lower.startsWith("mcp__jinzo__") || lower.includes("__jinzo__")) {
+  // Mains tools: MCP prefix (mcp__mains__*) or direct name from bridge
+  if (lower.startsWith("mcp__mains__") || lower.includes("__mains__")) {
     if (lower.includes("getworkspacediff")) return "GetDiff";
     if (lower.includes("savereview")) return "SaveReview";
     if (lower.includes("savefinding")) return "SaveFinding";
     if (lower.includes("commitchanges")) return "Commit";
     if (lower.includes("createpr")) return "CreatePR";
     if (lower.includes("checkpackage")) return "CheckPackage";
-    return "Jinzo";
+    return "Mains";
   }
   if (lower === "getworkspacediff") return "GetDiff";
   if (lower === "savereview") return "SaveReview";

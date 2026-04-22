@@ -1,14 +1,14 @@
 {
-  "name": "jinzo",
+  "name": "mains",
   "type": "commonjs",
-  "productName": "jinzo",
+  "productName": "mains",
   "version": "0.1.13",
   "description": "AI-powered developer workspace",
   "main": ".vite/build/main.js",
   "publish": {
     "provider": "github",
     "owner": "OkanBilal",
-    "repo": "jinzo"
+    "repo": "mains"
   },
   "scripts": {
     "test": "npm rebuild better-sqlite3 && vitest run",
@@ -22,8 +22,8 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:studio:runtime": "drizzle-kit studio --config drizzle.config.runtime.ts",
-    "db:clean:dev": "rm -f .data/jinzo.db .data/jinzo.db-shm .data/jinzo.db-wal .data/jinzo.db.pre-migration-backup*",
-    "db:clean:runtime": "rm -f ~/Library/Application\\ Support/jinzo/jinzo.db ~/Library/Application\\ Support/jinzo/jinzo.db-shm ~/Library/Application\\ Support/jinzo/jinzo.db-wal && echo 'Runtime database cleaned. Restart the app to recreate.'",
+    "db:clean:dev": "rm -f .data/mains.db .data/mains.db-shm .data/mains.db-wal .data/mains.db.pre-migration-backup*",
+    "db:clean:runtime": "rm -f ~/Library/Application\\ Support/mains/mains.db ~/Library/Application\\ Support/mains/mains.db-shm ~/Library/Application\\ Support/mains/mains.db-wal && echo 'Runtime database cleaned. Restart the app to recreate.'",
     "db:clean:all": "npm run db:clean:dev && npm run db:clean:runtime",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
@@ -50,11 +50,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/OkanBilal/jinzo.git"
+    "url": "https://github.com/OkanBilal/mains.git"
   },
-  "homepage": "https://github.com/OkanBilal/jinzo#readme",
+  "homepage": "https://github.com/OkanBilal/mains#readme",
   "bugs": {
-    "url": "https://github.com/OkanBilal/jinzo/issues"
+    "url": "https://github.com/OkanBilal/mains/issues"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -63,7 +63,7 @@
     "publish": {
       "provider": "github",
       "owner": "OkanBilal",
-      "repo": "jinzo"
+      "repo": "mains"
     }
   },
   "devDependencies": {

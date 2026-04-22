@@ -30,7 +30,7 @@ import {
   appendPromptSections,
   emitUserPromptArtifact,
 } from "./adapter.shared";
-import type { JinzoToolContext } from "./jinzo-tools.core";
+import type { MainsToolContext } from "./mains-tools.core";
 import {
   TOOL_DESCRIPTIONS,
   handleGetWorkspaceDiff,
@@ -39,7 +39,7 @@ import {
   handleSaveFindings,
   handleCommitChanges,
   handleCreatePR,
-} from "./jinzo-tools.core";
+} from "./mains-tools.core";
 import { guardsService } from "../../guards/guards.service";
 
 /**
@@ -355,7 +355,7 @@ function buildPermissionHandler(runId: string) {
       return { kind: "approved" };
     }
 
-    if (request.kind === "custom-tool" && typeof request.toolName === "string" && request.toolName.startsWith("mcp__jinzo__")) {
+    if (request.kind === "custom-tool" && typeof request.toolName === "string" && request.toolName.startsWith("mcp__mains__")) {
       return { kind: "approved" };
     }
 
@@ -548,11 +548,11 @@ export function createCopilotAdapter(
   }
 
   /**
-   * Build Jinzo custom tools for Copilot SDK sessions.
-   * Handlers are shared from jinzo-tools.core.ts — only the Copilot wrapper lives here.
+   * Build Mains custom tools for Copilot SDK sessions.
+   * Handlers are shared from mains-tools.core.ts — only the Copilot wrapper lives here.
    */
-  function buildJinzoTools(workspaceId: string | null, rootPath: string | null = null, runId: string | null = null): CopilotTool[] {
-    const ctx: JinzoToolContext = { workspaceId, rootPath, runId };
+  function buildMainsTools(workspaceId: string | null, rootPath: string | null = null, runId: string | null = null): CopilotTool[] {
+    const ctx: MainsToolContext = { workspaceId, rootPath, runId };
 
     // Copilot tool handlers return plain strings, so we unwrap the MCP-style response
     const unwrap = async (result: { content: Array<{ text: string }>; isError?: boolean }) => {
@@ -562,7 +562,7 @@ export function createCopilotAdapter(
 
     return [
       {
-        name: "mcp__jinzo__GetWorkspaceDiff",
+        name: "mcp__mains__GetWorkspaceDiff",
         description: TOOL_DESCRIPTIONS.GetWorkspaceDiff,
         parameters: {
           type: "object",
@@ -573,7 +573,7 @@ export function createCopilotAdapter(
         handler: async (args: { runId?: string }) => unwrap(await handleGetWorkspaceDiff(args, ctx)),
       },
       {
-        name: "mcp__jinzo__SaveReview",
+        name: "mcp__mains__SaveReview",
         description: TOOL_DESCRIPTIONS.SaveReview,
         parameters: {
           type: "object",
@@ -589,7 +589,7 @@ export function createCopilotAdapter(
           unwrap(await handleSaveReview(args, ctx)),
       },
       {
-        name: "mcp__jinzo__SaveFinding",
+        name: "mcp__mains__SaveFinding",
         description: TOOL_DESCRIPTIONS.SaveFinding,
         parameters: {
           type: "object",
@@ -613,7 +613,7 @@ export function createCopilotAdapter(
         }) => unwrap(await handleSaveFinding(args, ctx)),
       },
       {
-        name: "mcp__jinzo__SaveFindings",
+        name: "mcp__mains__SaveFindings",
         description: TOOL_DESCRIPTIONS.SaveFindings,
         parameters: {
           type: "object",
@@ -649,7 +649,7 @@ export function createCopilotAdapter(
         }) => unwrap(await handleSaveFindings(args, ctx)),
       },
       {
-        name: "mcp__jinzo__CommitChanges",
+        name: "mcp__mains__CommitChanges",
         description: TOOL_DESCRIPTIONS.CommitChanges,
         parameters: {
           type: "object",
@@ -666,7 +666,7 @@ export function createCopilotAdapter(
           unwrap(await handleCommitChanges(args, ctx)),
       },
       {
-        name: "mcp__jinzo__CreatePR",
+        name: "mcp__mains__CreatePR",
         description: TOOL_DESCRIPTIONS.CreatePR,
         parameters: {
           type: "object",
@@ -1116,13 +1116,13 @@ export function createCopilotAdapter(
           path.join(request.workspace.rootPath, ".github", "skills"),
         ];
 
-        // Inject Jinzo tools for workspace reviews
+        // Inject Mains tools for workspace reviews
         const workspaceId = request.workspace.id ?? null;
-        sessionConfig.tools = buildJinzoTools(workspaceId, request.workspace.rootPath, runId);
+        sessionConfig.tools = buildMainsTools(workspaceId, request.workspace.rootPath, runId);
 
         // Build system message with explicit workspace context
         //TODO: CHECK
-        const commitInstruction = "\nIMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the jinzo MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the jinzo MCP server instead.";
+        const commitInstruction = "\nIMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the mains MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the mains MCP server instead.";
         const workspaceContext = `You are working in the directory: ${request.workspace.rootPath}\nAll file operations should be relative to this workspace root.`;
         if (systemPrompt) {
           sessionConfig.systemMessage = { content: `${workspaceContext}\n\n${systemPrompt}${commitInstruction}` };
@@ -1383,7 +1383,7 @@ export function createCopilotAdapter(
         const resumeModel = request.model || config.defaultModel;
         const resumeConfig: Omit<SessionConfig, 'sessionId'> = {
           ...(resumeModel && { model: resumeModel }),
-          tools: buildJinzoTools(workspaceId, request.workspace.rootPath, runId),
+          tools: buildMainsTools(workspaceId, request.workspace.rootPath, runId),
           onPermissionRequest: permissionMode === "bypassPermissions"
             ? approveAllPermissions
             : buildPermissionHandler(runId),
