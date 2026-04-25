@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useBrowserPanel } from "@/hooks/use-browser-panel";
 import ConnectionsSettings from "@/features/settings/components/connections/connections";
 import GeneralSettings from "@/features/settings/components/general";
 import NotificationsSettings from "@/features/settings/components/notifications";
@@ -40,6 +41,12 @@ export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SettingsSection>(
     sectionParam || "general",
   );
+
+  const { close: closeBrowserPanel } = useBrowserPanel();
+
+  useEffect(() => {
+    closeBrowserPanel();
+  }, [closeBrowserPanel]);
 
   const { data: connections = [], refetch: refetchConnections } = useGetConnectionStatesQuery();
   const connectedConnections = connections

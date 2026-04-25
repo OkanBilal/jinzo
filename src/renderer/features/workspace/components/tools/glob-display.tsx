@@ -13,38 +13,42 @@ export function GlobDisplay({ params, output, isCompact = false }: { params: Glo
   const hasFiles = filenames.length > 0;
 
   return (
-    <div className="px-2">
+    <div className="">
       <button
         onClick={() => hasFiles && setIsExpanded(!isExpanded)}
-        className={`w-full flex items-center gap-2 py-0.5 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans ${hasFiles ? "cursor-pointer" : "cursor-default"}`}
+        className={`group w-full flex items-center gap-1 py-1 text-primary-400 dark:text-primary-500 text-s font-sans ${hasFiles ? "cursor-pointer" : "cursor-default"}`}
       >
-        {hasFiles && (
-        <ArrowUp
-          className={`size-3 text-primary-800  dark:text-primary-300 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-        />
-        )}
-        {!isCompact && <Glob className="size-4 dark:text-primary-300 text-primary-700" />}
+        {!isCompact && <Glob className="size-4 text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary" />}
         {!isCompact && (
-          <span className="dark:text-primary-300 text-primary-700 font-medium">
+          <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
             Glob
           </span>
         )}
-        <code className="text-primary-500 font-mono text-xs">
+        {numFiles > 0 && (
+          <span className="text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+            {numFiles} files
+          </span>
+        )}
+        <code className="text-primary-400 dark:text-primary-500 font-mono text-xs truncate group-hover:text-primary-950 group-hover:dark:text-primary">
           {params.pattern || "?"}
         </code>
-        {numFiles > 0 && (
-          <span className="text-primary-400 dark:text-primary-500">
-            ({numFiles} files)
-          </span>
+        {hasFiles && (
+          <ArrowUp
+            className={`size-3.5 shrink-0 text-primary-400 dark:text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          />
         )}
       </button>
 
-      {isExpanded && hasFiles && (
-        <div className="mt-2 ml-5 space-y-1 border-l border-primary-200/50 dark:border-primary-700/30 pl-3">
-          <div className="noscrollbar text-s font-mono text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary/5 rounded p-2 max-h-48 overflow-y-auto">
-            {filenames.map((f) => (
-              <div key={f} className="truncate">{shortPath(f)}</div>
-            ))}
+      {hasFiles && (
+        <div className={`grid transition-all duration-200 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+          <div className="min-h-0 overflow-hidden">
+            <div className="">
+              <div className="noscrollbar text-xs font-mono text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+                {filenames.map((f) => (
+                  <div key={f} className="truncate">{shortPath(f)}</div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}

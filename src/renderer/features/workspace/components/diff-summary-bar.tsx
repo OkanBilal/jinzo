@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, lazy, Suspense } from "react";
+import { useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { useDispatch } from "react-redux";
 import {
   useGetLatestWorkspaceDiffQuery,
@@ -76,9 +76,8 @@ export function DiffSummaryBar({
   const [isUndoing, setIsUndoing] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   // Keep the last selected file rendered during collapse animation
-  const lastSelectedFileRef = useRef<string | null>(null);
-  if (selectedFile) lastSelectedFileRef.current = selectedFile;
-  const renderedFile = selectedFile ?? lastSelectedFileRef.current;
+  const [lastSelectedFile, setLastSelectedFile] = useState<string | null>(null);
+  const renderedFile = selectedFile ?? lastSelectedFile;
 
   const { data: diff } = useGetLatestWorkspaceDiffQuery(workspaceId, {
     skip: !workspaceId || isRunning,
@@ -89,15 +88,16 @@ export function DiffSummaryBar({
   // expanded — collapsed state just needs the top-level counts.
   const perFileStats = useMemo(
     () => (isExpanded && diff?.diffText ? parsePerFileStats(diff.diffText) : {}),
-    [isExpanded, diff?.diffText],
+    [isExpanded, diff],
   );
 
   const selectedFileDiff = useMemo(() => {
     if (!isExpanded || !renderedFile || !diff?.diffText) return "";
     return parseFileDiffSegment(renderedFile, diff.diffText);
-  }, [isExpanded, renderedFile, diff?.diffText]);
+  }, [isExpanded, renderedFile, diff]);
 
   const handleFileClick = useCallback((filePath: string) => {
+    setLastSelectedFile(filePath);
     setSelectedFile((prev) => (prev === filePath ? null : filePath));
   }, []);
 

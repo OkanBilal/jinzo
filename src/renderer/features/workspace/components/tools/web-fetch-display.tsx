@@ -13,32 +13,36 @@ export function WebFetchDisplay({ params, output, isCompact = false }: { params:
   const hasContent = !!content;
 
   return (
-    <div className="px-2">
+    <div className="">
       <button
         onClick={() => hasContent && setIsExpanded(!isExpanded)}
-        className={`w-full flex items-center gap-2 py-0.5 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans ${hasContent ? "cursor-pointer" : "cursor-default"}`}
+        className={`group w-full flex items-center gap-1 py-1 text-primary-400 dark:text-primary-500 text-s font-sans ${hasContent ? "cursor-pointer" : "cursor-default"}`}
       >
-        {hasContent && (
-        <ArrowUp
-          className={`size-3 text-primary-800  dark:text-primary-300 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-        />
-        )}
-        {!isCompact && <Web className="size-4 dark:text-primary-300 text-primary-700" />}
+        {!isCompact && <Web className="size-4 text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary" />}
         {!isCompact && (
-          <span className="dark:text-primary-300 text-primary-700 font-medium">
+          <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
             WebFetch
           </span>
         )}
-        <code className="text-primary-500 font-mono text-xs truncate">
+        <code className="text-primary-400 dark:text-primary-500 font-mono text-xs truncate group-hover:text-primary-950 group-hover:dark:text-primary">
           {truncateUrl(params.url || "")}
         </code>
+        {hasContent && (
+          <ArrowUp
+            className={`size-3.5 shrink-0 text-primary-400 dark:text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          />
+        )}
       </button>
 
-      {isExpanded && hasContent && (
-        <div className="mt-2 ml-5 space-y-1 border-l border-primary-200/50 dark:border-primary-700/30 pl-3">
-          <pre className="noscrollbar text-s font-mono text-primary-600 dark:text-primary-400 whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded p-2 max-h-48 overflow-y-auto">
-            {content}
-          </pre>
+      {hasContent && (
+        <div className={`grid transition-all duration-200 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+          <div className="min-h-0 overflow-hidden">
+            <div className=" ">
+              <pre className="noscrollbar text-s font-mono text-primary-600 dark:text-primary-400 whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+                {content}
+              </pre>
+            </div>
+          </div>
         </div>
       )}
     </div>

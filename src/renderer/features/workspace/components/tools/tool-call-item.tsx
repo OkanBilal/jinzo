@@ -68,7 +68,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
       : params
         ? (params as TaskParams)
         : { description: summary };
-    return <TaskDisplay params={taskParams} />;
+    return <TaskDisplay params={taskParams} isCompact={isCompact} />;
   }
 
   // Show AgentDisplay for agent tool calls
@@ -81,7 +81,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
       : params
         ? (params as AgentParams)
         : { description: summary };
-    return <AgentDisplay params={agentParams} />;
+    return <AgentDisplay params={agentParams} isCompact={isCompact} />;
   }
 
   // Show EditDisplay for edit tool calls
@@ -185,7 +185,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
       : params
         ? (params as IntentParams)
         : { intent: summary };
-    return <IntentDisplay params={intentParams} />;
+    return <IntentDisplay params={intentParams} isCompact={isCompact} />;
   }
 
   // Show ToolSearchDisplay for ToolSearch tool calls

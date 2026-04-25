@@ -55,19 +55,14 @@ export function SaveFindingDisplay({
   const info = findings.filter(f => f.severity === "info").length;
 
   return (
-    <div className="px-2">
+    <div className="">
       <button
         onClick={() => hasFindings && setIsExpanded(!isExpanded)}
-        className={`w-full flex items-center gap-2 py-0.5 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans ${hasFindings ? "cursor-pointer" : "cursor-default"}`}
+        className={`group w-full flex items-center gap-1 py-1 text-primary-400 dark:text-primary-500 text-s font-sans ${hasFindings ? "cursor-pointer" : "cursor-default"}`}
       >
-        {hasFindings && (
-          <ArrowUp
-            className={`size-3 text-primary-500 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-          />
-        )}
-        {!isCompact && <Mains className="w-2 h-4 dark:text-primary-300 text-primary-700" />}
+        {!isCompact && <Mains className="w-2 h-4 text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary" />}
         {!isCompact && (
-          <span className="dark:text-primary-300 text-primary-700 font-medium">
+          <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
             {findings.length === 1 ? "Finding" : "Findings"}
           </span>
         )}
@@ -77,37 +72,46 @@ export function SaveFindingDisplay({
           {info > 0 && <span className="text-blue-400">{info} info</span>}
         </span>
         {findings.length === 1 && findings[0].file && (
-          <span className="text-primary-500 truncate text-xs font-mono">
+          <span className="text-primary-400 dark:text-primary-500 truncate text-xs font-mono group-hover:text-primary-950 group-hover:dark:text-primary">
             {shortName(findings[0].file)}
           </span>
         )}
+        {hasFindings && (
+          <ArrowUp
+            className={`size-3.5 shrink-0 text-primary-400 dark:text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          />
+        )}
       </button>
 
-      {isExpanded && hasFindings && (
-        <div className="mt-2 ml-5 border-l border-primary-200/50 dark:border-primary-700/30 pl-3 space-y-2">
-          {findings.map((f) => (
-            <div key={`${f.file ?? ""}:${f.lineStart ?? ""}:${f.severity ?? ""}`} className="bg-primary-50 dark:bg-primary/5 rounded p-2 space-y-1">
-              <div className="flex items-center gap-2 text-xs">
-                {f.severity && (
-                  <span className={`px-1.5 py-0.5 rounded font-medium ${SEVERITY_STYLES[f.severity] ?? "bg-primary-500/10 text-primary-400"}`}>
-                    {f.severity}
-                  </span>
-                )}
-                {f.file && (
-                  <span className="font-mono text-primary-500">
-                    {shortName(f.file)}
-                    {f.lineStart != null && `:${f.lineStart}${f.lineEnd != null && f.lineEnd !== f.lineStart ? `-${f.lineEnd}` : ""}`}
-                  </span>
-                )}
-              </div>
-              {f.message && (
-                <p className="text-s text-primary-600 dark:text-primary-400">{f.message}</p>
-              )}
-              {f.suggestion && (
-                <p className="text-xs text-green-500 dark:text-green-400 italic">{f.suggestion}</p>
-              )}
+      {hasFindings && (
+        <div className={`grid transition-all duration-200 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+          <div className="min-h-0 overflow-hidden">
+            <div className="space-y-2">
+              {findings.map((f) => (
+                <div key={`${f.file ?? ""}:${f.lineStart ?? ""}:${f.severity ?? ""}`} className="bg-primary-50 dark:bg-primary/5 rounded-md p-2 space-y-1">
+                  <div className="flex items-center gap-2 text-xs">
+                    {f.severity && (
+                      <span className={`px-1.5 py-0.5 rounded font-medium ${SEVERITY_STYLES[f.severity] ?? "bg-primary-500/10 text-primary-400"}`}>
+                        {f.severity}
+                      </span>
+                    )}
+                    {f.file && (
+                      <span className="font-mono text-primary-500">
+                        {shortName(f.file)}
+                        {f.lineStart != null && `:${f.lineStart}${f.lineEnd != null && f.lineEnd !== f.lineStart ? `-${f.lineEnd}` : ""}`}
+                      </span>
+                    )}
+                  </div>
+                  {f.message && (
+                    <p className="text-s text-primary-600 dark:text-primary-400">{f.message}</p>
+                  )}
+                  {f.suggestion && (
+                    <p className="text-xs text-green-500 dark:text-green-400 italic">{f.suggestion}</p>
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       )}
     </div>

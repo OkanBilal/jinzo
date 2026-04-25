@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ArrowUp, Edit } from "@/components/ui/icons";
+import { PatchDiff } from "@pierre/diffs/react";
 
 export interface WriteParams {
   file_path?: string;
@@ -9,38 +10,36 @@ export interface WriteParams {
 
 export function WriteDisplay({ params }: { params: WriteParams }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const isDarkMode = document.documentElement.classList.contains("dark");
 
   const filePath = params.file_path ?? "";
   const content = params.content ?? "";
   const fileName = filePath.split("/").pop() || filePath;
   const lineCount = content ? content.split("\n").length : 0;
+  const hasDiff = !!content;
 
-  const dirPath = useMemo(() => {
-    if (!filePath) return "";
-    const parts = filePath.split("/");
-    if (parts.length <= 1) return "";
-    // Show last 3 directory segments max
-    const dirParts = parts.slice(0, -1);
-    if (dirParts.length > 3) {
-      return "…/" + dirParts.slice(-3).join("/");
-    }
-    return dirParts.join("/");
-  }, [filePath]);
+  const unifiedDiff = useMemo(() => {
+    if (!content) return "";
+    const lines = content.split("\n");
+    return [
+      `--- /dev/null`,
+      `+++ b/${fileName}`,
+      `@@ -0,0 +1,${lines.length} @@`,
+      ...lines.map((l) => `+${l}`),
+    ].join("\n");
+  }, [content, fileName]);
 
   return (
-    <div className="px-2">
+    <div className="">
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-2 py-0.5 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans cursor-pointer"
+        onClick={() => hasDiff && setIsExpanded(!isExpanded)}
+        className={`group w-full flex items-center gap-1 py-1 text-primary-400 dark:text-primary-500 text-s font-sans ${hasDiff ? "cursor-pointer" : "cursor-default"}`}
       >
-        <ArrowUp
-          className={`size-3 text-primary-800  dark:text-primary-300 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-        />
-        <Edit className="size-4 dark:text-primary-300 text-primary-700" />
-        <span className="dark:text-primary-300 text-primary-700 font-medium">
+        <Edit className="size-3.5 text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary" />
+        <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
           Write
         </span>
-        <span className="text-primary-700 dark:text-primary-200 font-medium truncate">
+        <span className="text-primary-400 dark:text-primary-500 font-medium truncate group-hover:text-primary-950 group-hover:dark:text-primary">
           {fileName}
         </span>
         {lineCount > 0 && (
@@ -48,25 +47,31 @@ export function WriteDisplay({ params }: { params: WriteParams }) {
             +{lineCount}
           </span>
         )}
-
+        {hasDiff && (
+          <ArrowUp
+            className={`size-3.5 shrink-0 text-primary-400 dark:text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          />
+        )}
       </button>
 
-      {isExpanded && (
-        <div className="mt-2 ml-5 space-y-1 border-l border-primary-200/50 dark:border-primary-700/30 pl-3">
-          {dirPath && (
-            <div className="text-xs text-primary-500 dark:text-primary-400 font-mono truncate px-1">
-              {dirPath}
+      {unifiedDiff && (
+        <div className={`grid transition-all duration-200 rounded-md border border-primary-200/50 dark:border-primary-700/30 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+          <div className="min-h-0 overflow-hidden">
+            <div className=" max-h-80 overflow-y-auto noscrollbar p-0.5">
+              <PatchDiff
+                patch={unifiedDiff}
+                style={{ "--diffs-font-size": "12px", "--diffs-font-family": "'Geist Mono', monospace" } as React.CSSProperties}
+                options={{
+                  theme: isDarkMode ? "pierre-dark" : "pierre-light",
+                  themeType: isDarkMode ? "dark" : "light",
+                  diffStyle: "unified",
+                  overflow: "wrap",
+                  disableFileHeader: true,
+                  unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper], [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"}); background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
+                }}
+              />
             </div>
-          )}
-          {content && (
-            <div className="noscrollbar text-xs leading-relaxed font-mono bg-primary-50 dark:bg-primary/5 rounded-xl p-3 max-h-80 overflow-y-auto">
-              {content.split("\n").map((line, lineNum) => (
-                <div key={lineNum} className="text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30">
-                  +{line}
-                </div>
-              ))}
-            </div>
-          )}
+          </div>
         </div>
       )}
     </div>

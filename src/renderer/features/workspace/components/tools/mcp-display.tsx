@@ -31,37 +31,44 @@ export function McpDisplay({ displayName, params }: McpDisplayProps) {
   const { icon } = getToolInfo(displayName);
 
   const paramKeys = params ? Object.keys(params) : [];
+  const hasParams = !!params && paramKeys.length > 0;
   const summary =
     paramKeys.length > 0
       ? `{${paramKeys.join(", ")}} (${JSON.stringify(params).length} chars)`
       : "No params";
 
   return (
-    <div className="px-2">
+    <div className="">
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-2 py-0.5 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans cursor-pointer"
+        onClick={() => hasParams && setIsExpanded(!isExpanded)}
+        className={`group w-full flex items-center gap-1 py-1 text-primary-400 dark:text-primary-500 text-s font-sans ${hasParams ? "cursor-pointer" : "cursor-default"}`}
       >
-        <ArrowUp
-          className={`size-3 text-primary-800  dark:text-primary-300 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-        />
-        <span className="dark:text-primary-300 text-primary-700">{icon}</span>
-        <span className="dark:text-primary-300 text-primary-700 font-medium">
+        <span className="text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">{icon}</span>
+        <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
           {displayName}
         </span>
-        <span className="text-primary-500 truncate">{summary}</span>
+        <span className="text-primary-400 dark:text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">{summary}</span>
+        {hasParams && (
+          <ArrowUp
+            className={`size-3.5 shrink-0 text-primary-400 dark:text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          />
+        )}
       </button>
 
-      {isExpanded && params && paramKeys.length > 0 && (
-        <div className="mt-2 ml-5 space-y-1.5 border-l border-primary-200/50 dark:border-primary-700/30 pl-3">
-          {paramKeys.map((key) => (
-            <div key={key}>
-              <span className="text-xs font-medium text-primary-500">{key}</span>
-              <div className="noscrollbar text-sm text-primary-700 dark:text-primary-300 whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded p-2 max-h-48 overflow-y-auto">
-                {formatValue(params[key])}
-              </div>
+      {hasParams && (
+        <div className={`grid transition-all duration-200 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+          <div className="min-h-0 overflow-hidden">
+            <div className="space-y-1.5">
+              {paramKeys.map((key) => (
+                <div key={key}>
+                  <span className="text-xs font-medium text-primary-500">{key}</span>
+                  <div className="noscrollbar text-sm text-primary-700 dark:text-primary-300 whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+                    {formatValue(params[key])}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       )}
     </div>

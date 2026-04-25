@@ -213,7 +213,7 @@ export default function CodexSettings() {
         : null;
 
   return (
-    <div className="bg-primary dark:bg-primary-950">
+    <div className="bg-primary dark:bg-primary-950 pb-16">
       <div className="mb-8">
         <Heading2>Codex</Heading2>
       </div>

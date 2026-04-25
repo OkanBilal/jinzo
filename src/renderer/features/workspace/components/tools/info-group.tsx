@@ -203,9 +203,9 @@ export function InfoGroup({ group }: InfoGroupProps) {
       </div>
     );
   }
-
+  //TODO: Show SDK user messages
   if (event.type === "log" && event.metadata?.level === "sdk-user") {
-    return <div className="overflow-hidden" />;
+    return <div className="display-none" />;
   }
 
   if (event.type === "artifact") {
@@ -214,10 +214,7 @@ export function InfoGroup({ group }: InfoGroupProps) {
 
     return (
       <div className="overflow-hidden">
-        <div className="px-4 py-2">
-          <div className="flex items-center gap-2 mb-2" />
           <div className="prose prose-sm dark:prose-invert max-w-none relative">
-            <div className="size-1.5 dark:bg-primary bg-primary-950 rounded-full absolute top-2 -left-4" />
             <div className={isStreaming ? "streaming-text" : undefined}>
               <ReactMarkdown
                 components={markdownComponents}
@@ -226,7 +223,6 @@ export function InfoGroup({ group }: InfoGroupProps) {
                 {content}
               </ReactMarkdown>
             </div>
-          </div>
         </div>
       </div>
     );

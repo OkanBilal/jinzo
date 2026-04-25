@@ -18,30 +18,32 @@ export function ToolSubGroupAccordion({ subGroup }: ToolSubGroupAccordionProps) 
   }
 
   return (
-    <div className="rounded overflow-hidden">
+    <div className="">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-2 py-0.5 px-2 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans cursor-pointer"
+        className="group w-full flex items-center gap-1 py-1 text-primary-400 dark:text-primary-500 text-s font-sans cursor-pointer"
       >
-        <ArrowUp
-          className={`size-3 text-primary-800  dark:text-primary-300 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-        />
-        <span className="dark:text-primary-300 shrink-0">{icon}</span>
-        <span className="dark:text-primary-300 font-medium shrink-0">
+        <span className="text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary shrink-0">{icon}</span>
+        <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary shrink-0">
           {subGroup.toolType}
         </span>
-        <span className="text-primary-400 text-xs">
+        <span className="text-primary-400 dark:text-primary-500 text-xs group-hover:text-primary-950 group-hover:dark:text-primary">
           ({subGroup.events.length})
         </span>
+        <ArrowUp
+          className={`size-3.5 shrink-0 text-primary-400 dark:text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+        />
       </button>
 
-      {isExpanded && (
-        <div className="ml-3 border-l border-primary-200/50 dark:border-primary-700/30  space-y-0.5">
-          {subGroup.events.map((event) => (
-            <ToolCallItem key={event.id} event={event} isCompact={true} />
-          ))}
+      <div className={`grid transition-all duration-200 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+        <div className="min-h-0 overflow-hidden">
+          <div className="space-y-0.5">
+            {subGroup.events.map((event) => (
+              <ToolCallItem key={event.id} event={event} isCompact={true} />
+            ))}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

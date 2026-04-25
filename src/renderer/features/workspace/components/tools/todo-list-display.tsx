@@ -13,17 +13,14 @@ export function TodoListDisplay({ todos }: { todos: TodoItem[] }) {
   const inProgressItem = todos.find((t) => t.status === "in_progress");
 
   return (
-    <div className="py-1 px-2">
+    <div className="">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-2 py-0.5 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans cursor-pointer"
+        className="group w-full flex items-center gap-1 py-1 text-primary-400 dark:text-primary-500 text-s font-sans cursor-pointer"
       >
-        <ArrowUp
-          className={`size-3 text-primary-800  dark:text-primary-300 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-        />
-        <Check className="size-3.5 text-primary-300" />
-        <span className="text-primary-300 font-medium">Todo</span>
-        <span className="text-primary-500">
+        <Check className="size-3.5 text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary" />
+        <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">Todo</span>
+        <span className="text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
           {completedCount}/{todos.length} completed
         </span>
         {inProgressItem && (
@@ -31,41 +28,46 @@ export function TodoListDisplay({ todos }: { todos: TodoItem[] }) {
             • {inProgressItem.content}
           </span>
         )}
+        <ArrowUp
+          className={`size-3.5 shrink-0 text-primary-400 dark:text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+        />
       </button>
 
-      {isExpanded && (
-        <div className="mt-2 ml-5 space-y-1 border-l border-primary-200/50 dark:border-primary-700/30 pl-3">
-          {todos.map((todo) => (
-            <div key={todo.content} className="flex items-start gap-2 text-s">
-              <div
-                className={`mt-0.5 size-4 rounded flex items-center justify-center shrink-0 ${
-                  todo.status === "completed"
-                    ? "bg-green-500/20 text-green-500"
-                    : todo.status === "in_progress"
-                      ? "bg-amber-500/20 text-amber-500"
-                      : "bg-primary-200 dark:bg-primary-700 text-primary-400"
-                }`}
-              >
-                {todo.status === "completed" && <Check className="size-3" />}
-                {todo.status === "in_progress" && (
-                  <div className="size-2 rounded-full bg-amber-500 animate-pulse" />
-                )}
+      <div className={`grid transition-all duration-200 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+        <div className="min-h-0 overflow-hidden">
+          <div className="space-y-1">
+            {todos.map((todo) => (
+              <div key={todo.content} className="flex items-start gap-2 text-s">
+                <div
+                  className={`mt-0.5 size-4 rounded flex items-center justify-center shrink-0 ${
+                    todo.status === "completed"
+                      ? "bg-green-500/20 text-green-500"
+                      : todo.status === "in_progress"
+                        ? "bg-amber-500/20 text-amber-500"
+                        : "bg-primary-200 dark:bg-primary-700 text-primary-400"
+                  }`}
+                >
+                  {todo.status === "completed" && <Check className="size-3" />}
+                  {todo.status === "in_progress" && (
+                    <div className="size-2 rounded-full bg-amber-500 animate-pulse" />
+                  )}
+                </div>
+                <span
+                  className={`${
+                    todo.status === "completed"
+                      ? "text-primary-400 line-through"
+                      : todo.status === "in_progress"
+                        ? "text-primary-700 dark:text-primary-200"
+                        : "text-primary-500"
+                  }`}
+                >
+                  {todo.content}
+                </span>
               </div>
-              <span
-                className={`${
-                  todo.status === "completed"
-                    ? "text-primary-400 line-through"
-                    : todo.status === "in_progress"
-                      ? "text-primary-700 dark:text-primary-200"
-                      : "text-primary-500"
-                }`}
-              >
-                {todo.content}
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

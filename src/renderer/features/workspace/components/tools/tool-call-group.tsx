@@ -38,21 +38,21 @@ export function ToolCallGroup({
     <div>
       <button
         onClick={() => setExpandedOverride(!isExpanded)}
-        className="w-full flex items-center gap-0.5 group py-0.5 cursor-pointer"
+        className="group w-full flex items-center gap-1  text-primary-400 dark:text-primary-500 text-s font-sans cursor-pointer"
       >
-        <ArrowUp
-          className={`size-3 text-primary-800  dark:text-primary-300 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-        />
-        <div className="flex items-center gap-1  transition-all duration-200">
+        <div className="flex items-center gap-1 transition-all duration-200">
           {/* <Tools className="size-3.5 rotate-90 dark:text-primary-200 text-primary-700 group-hover:text-primary-950 group-hover:dark:text-primary" /> */}
-          <span className="text-sm font-medium text-primary-700 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
             {toolCount} tool call{toolCount !== 1 ? "s" : ""}
           </span>
-          <span className="text-xs dark:text-primary-400 text-primary-700 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className="text-xs text-primary-400 dark:text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
             ({toolSummary}
             {moreCount})
           </span>
         </div>
+        <ArrowUp
+          className={`size-3.5 shrink-0 text-primary-400 dark:text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+        />
 {/*
         {group.isRunning && (
           <span className="ml-auto flex items-center gap-1.5 text-xs dark:text-primary-200 text-primary-700">
@@ -62,13 +62,15 @@ export function ToolCallGroup({
         )} */}
       </button>
 
-      {isExpanded && (
-        <div className="space-y-1 max-h-160 overflow-y-auto  ">
-          {subGroups.map((subGroup) => (
-            <ToolSubGroupAccordion key={subGroup.id} subGroup={subGroup} />
-          ))}
+      <div className={`grid transition-all duration-200 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+        <div className="min-h-0 overflow-hidden">
+          <div className="space-y-0.5 max-h-160 overflow-y-auto">
+            {subGroups.map((subGroup) => (
+              <ToolSubGroupAccordion key={subGroup.id} subGroup={subGroup} />
+            ))}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
