@@ -543,7 +543,7 @@ export interface ClaudeCodeAdapterConfig {
   /** Timeout in milliseconds */
   timeout?: number;
   /** Permission mode for tool access */
-  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk";
+  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk" | "auto";
   /**
    * Setting sources for loading skills and other filesystem settings.
    * - "user": Load from ~/.claude/skills/

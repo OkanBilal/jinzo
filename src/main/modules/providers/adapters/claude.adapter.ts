@@ -143,7 +143,7 @@ interface SDKOptions {
   env?: Record<string, string | undefined>;
   allowedTools?: string[];
   disallowedTools?: string[];
-  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk";
+  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk" | "auto";
   cwd?: string;
   resume?: string;
   forkSession?: boolean;

@@ -11,6 +11,7 @@ import type { StructuredOutputEntry } from "../../../../main/modules/providers/a
 
 const SETTINGS_PERMISSION_MODES = [
   { value: "default", label: "Ask permissions", description: "Always ask before making changes" },
+  { value: "auto", label: "Auto", description: "Claude Code picks when to prompt vs allow, based on risk" },
   { value: "acceptEdits", label: "Auto accept edits", description: "Automatically accept all file edits" },
   { value: "plan", label: "Plan mode", description: "Create a plan before making changes" },
   { value: "bypassPermissions", label: "Bypass permissions", description: "Accepts all permissions" },

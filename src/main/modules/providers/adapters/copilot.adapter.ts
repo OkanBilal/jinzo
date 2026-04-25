@@ -51,7 +51,7 @@ import { guardsService } from "../../guards/guards.service";
  * to allow the code to compile without the actual SDK installed.
  */
 
-// Types inferred from Copilot SDK (@github/copilot-sdk 0.2)
+// Types inferred from Copilot SDK (@github/copilot-sdk 0.3)
 interface CopilotClientOptions {
   /** Path to the CLI executable or JavaScript entry point */
   cliPath?: string;
@@ -76,7 +76,7 @@ interface CopilotClientOptions {
   /** Environment variables to pass to the CLI process */
   env?: Record<string, string | undefined>;
   /** GitHub token for authentication — takes priority over other auth methods */
-  githubToken?: string;
+  gitHubToken?: string;
   /** Whether to use stored OAuth tokens or gh CLI auth (default: true) */
   useLoggedInUser?: boolean;
   // TODO: expose in config UI — custom model list callback for BYOK mode
@@ -128,7 +128,7 @@ interface CustomAgentConfig {
 
 // TODO: load user MCP servers from config and pass to session (like Claude adapter)
 interface MCPServerConfig {
-  type?: "local" | "stdio" | "http" | "sse";
+  type?: "stdio" | "http" | "sse";
   command?: string;
   args?: string[];
   env?: Record<string, string>;
@@ -346,7 +346,7 @@ function approveAllPermissions(): { kind: string } {
   return { kind: "approved" };
 }
 
-/** Build operation-level permission handler (shell/write/read/mcp/url/custom-tool) */
+/** Build operation-level permission handler (shell/write/read/mcp/url/custom-tool/memory/hook) */
 function buildPermissionHandler(runId: string) {
   return async (
     request: { kind: string; toolCallId?: string; [key: string]: any },

@@ -100,9 +100,9 @@
     "vitest": "^4.1.1"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.84",
-    "@anthropic-ai/sdk": "^0.80.0",
-    "@github/copilot-sdk": "^0.2.0",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.119",
+    "@anthropic-ai/sdk": "^0.81.0",
+    "@github/copilot-sdk": "^0.3.0",
     "@linear/sdk": "^80.0.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@number-flow/react": "^0.6.0",

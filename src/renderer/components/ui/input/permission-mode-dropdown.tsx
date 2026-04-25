@@ -11,6 +11,11 @@ const PERMISSION_MODES = [
     description: "Always ask before making changes",
   },
   {
+    value: "auto",
+    label: "Auto",
+    description: "Agent decides when to prompt or allow",
+  },
+  {
     value: "acceptEdits",
     label: "Auto accept edits",
     description: "Automatically accept all file edits",
@@ -26,6 +31,7 @@ const PERMISSION_MODE_LABELS: Record<string, string> = {
   default: "Ask",
   acceptEdits: "Edit",
   plan: "Plan",
+  auto: "Auto",
   bypassPermissions: "Bypass",
   dontAsk: "Don't Ask",
 };
@@ -82,6 +88,8 @@ function PermissionModeIcon({
       return <Edit className={className} />;
     case "plan":
       return <Plan className={className} />;
+    case "auto":
+      return <Infinite className={className} />;
     case "bypassPermissions":
       return <Danger className={className} />;
     case "dontAsk":
