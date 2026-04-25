@@ -8,7 +8,7 @@ import {
 import type {
   FileContentResponse,
   ServiceResponse,
-} from "@/features/workspace/components/file-explorer";
+} from "@/features/workspace/types/file-explorer";
 
 interface SelectedFile {
   type: string;

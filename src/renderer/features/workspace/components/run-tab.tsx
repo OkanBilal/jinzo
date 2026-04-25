@@ -3,7 +3,7 @@ import type { Run } from "../types";
 import { Claude } from "@/components/ui/icons/space";
 import { AnimatedTitle } from "@/components/ui";
 import { BaseTab } from "./base-tab";
-import { AsciiSpinner } from "./ascii-loader";
+import { AsciiSpinner } from "@/components/ui/ascii-spinner";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
 import { useState, useRef, useCallback, useEffect } from "react";
 

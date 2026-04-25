@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import type { FileNode } from "@/features/workspace/components/file-explorer";
+import type { FileNode } from "@/features/workspace/types/file-explorer";
 import type {
   ContextIssue,
   ContextSignal,

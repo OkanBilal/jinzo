@@ -1,14 +1,11 @@
 import { useState } from "react";
-import { Heading2, Muted, Toggle, Button, toast, Select } from "@/components/ui";
+import { Button, Select } from "@/components/ui";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import {
-  useGetProviderByIdQuery,
-  useUpdateProviderMutation,
-  useGetSpacesQuery,
-  useArchiveSpaceMutation,
-  useUnarchiveSpaceMutation,
-  useSetActiveSpaceMutation,
-} from "@/lib/redux/api";
+  ProviderSettingsLayout,
+  ProviderVisibilitySection,
+  useProviderSettings,
+} from "./provider-settings-shared";
 import { StructuredOutputsModal } from "./structured-outputs-modal";
 import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
 
@@ -22,24 +19,20 @@ const SETTINGS_PERMISSION_MODES = [
 
 export default function ClaudeSettings() {
   const {
-    data: provider,
+    provider,
     isLoading,
     error,
-  } = useGetProviderByIdQuery("claude_code");
-  const [updateProvider, { isLoading: updating }] = useUpdateProviderMutation();
-
-  const { data: spaces = [] } = useGetSpacesQuery();
-  const [archiveSpace] = useArchiveSpaceMutation();
-  const [unarchiveSpace] = useUnarchiveSpaceMutation();
-  const [setActiveSpace] = useSetActiveSpaceMutation();
-  const claudeSpace = spaces.find((s) => s.slug === "claude");
-  const otherVisibleSpaces = spaces.filter((s) => s.slug !== "claude" && !s.isArchived);
-  const canHide = otherVisibleSpaces.length > 0;
+    updating,
+    config,
+    space,
+    canHide,
+    updateConfig,
+    setSpaceVisible,
+  } = useProviderSettings("claude_code", "claude");
 
   const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] =
     useState(false);
 
-  const config = provider?.config ?? {};
   const permissionMode = (config as any).permissionMode ?? "bypassPermissions";
 
   const structuredOutputs = ((config as any).structuredOutputs ?? {}) as Record<
@@ -54,19 +47,7 @@ export default function ClaudeSettings() {
 
   const handlePermissionModeChange = async (mode: string) => {
     if (!provider || updating) return;
-    try {
-      await updateProvider({
-        id: "claude_code",
-        payload: {
-          config: {
-            ...config,
-            permissionMode: mode,
-          },
-        },
-      }).unwrap();
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to update permission mode");
-    }
+    await updateConfig({ permissionMode: mode });
   };
 
   const openPath = (targetPath: string) => {
@@ -75,33 +56,13 @@ export default function ClaudeSettings() {
 
   const homedir = window.api.platform.homedir;
 
-  if (isLoading) {
-    return (
-      <div>
-        <Heading2 className="mb-2">Claude</Heading2>
-        <Muted>Loading...</Muted>
-      </div>
-    );
-  }
-
-  if (error || !provider) {
-    return (
-      <div>
-        <Heading2 className="mb-2">Claude</Heading2>
-        <Muted>
-          Claude provider not found. Make sure it is configured in the
-          database.
-        </Muted>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-primary dark:bg-primary-950">
-      <div className="mb-8">
-        <Heading2>Claude</Heading2>
-      </div>
-
+    <ProviderSettingsLayout
+      title="Claude"
+      provider={provider}
+      isLoading={isLoading}
+      error={error}
+    >
       <SettingsSection  title="Configuration">
         <SettingsRow
           title="Permission Mode"
@@ -253,47 +214,18 @@ export default function ClaudeSettings() {
         </SettingsRow>
       </SettingsSection>
 
-      {claudeSpace && (
-        <SettingsSection title="Visibility">
-          <SettingsRow
-            title="Show in Selector"
-            description={
-              !canHide && !claudeSpace.isArchived
-                ? "At least one agent must be active"
-                : "Show or hide this agent from the selector"
-            }
-          >
-            <Toggle
-              enabled={!claudeSpace.isArchived}
-              disabled={!canHide && !claudeSpace.isArchived}
-              onChange={async (visible) => {
-                try {
-                  if (visible) {
-                    await unarchiveSpace(claudeSpace.id).unwrap();
-                    toast.success("Space is now visible");
-                  } else {
-                    await archiveSpace(claudeSpace.id).unwrap();
-                    const target = otherVisibleSpaces[0];
-                    if (target) {
-                      await setActiveSpace(target.id).unwrap();
-                    }
-                    toast.success("Space hidden");
-                  }
-                } catch (err: any) {
-                  toast.error(err?.message || "Failed to update space visibility");
-                }
-              }}
-            />
-          </SettingsRow>
-        </SettingsSection>
-      )}
+      <ProviderVisibilitySection
+        space={space}
+        canHide={canHide}
+        onVisibleChange={setSpaceVisible}
+      />
 
       <StructuredOutputsModal
         isOpen={isStructuredOutputsModalOpen}
         onClose={() => setIsStructuredOutputsModalOpen(false)}
         providerId="claude_code"
       />
-    </div>
+    </ProviderSettingsLayout>
   );
 }
 

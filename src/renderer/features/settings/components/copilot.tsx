@@ -1,31 +1,23 @@
-import { Heading2, Muted, Toggle, Button, toast } from "@/components/ui";
+import { Toggle, Button, toast } from "@/components/ui";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import {
-  useGetProviderByIdQuery,
-  useUpdateProviderMutation,
-  useGetSpacesQuery,
-  useArchiveSpaceMutation,
-  useUnarchiveSpaceMutation,
-  useSetActiveSpaceMutation,
-} from "@/lib/redux/api";
+  ProviderSettingsLayout,
+  ProviderVisibilitySection,
+  useProviderSettings,
+} from "./provider-settings-shared";
 
 export default function CopilotSettings() {
   const {
-    data: provider,
+    provider,
     isLoading,
     error,
-  } = useGetProviderByIdQuery("copilot_cli");
-  const [updateProvider, { isLoading: updating }] = useUpdateProviderMutation();
-
-  const { data: spaces = [] } = useGetSpacesQuery();
-  const [archiveSpace] = useArchiveSpaceMutation();
-  const [unarchiveSpace] = useUnarchiveSpaceMutation();
-  const [setActiveSpace] = useSetActiveSpaceMutation();
-  const copilotSpace = spaces.find((s) => s.slug === "copilot");
-  const otherVisibleSpaces = spaces.filter((s) => s.slug !== "copilot" && !s.isArchived);
-  const canHide = otherVisibleSpaces.length > 0;
-
-  const config = provider?.config ?? {};
+    updating,
+    config,
+    space,
+    canHide,
+    updateConfig,
+    setSpaceVisible,
+  } = useProviderSettings("copilot_cli", "copilot");
   const permissionMode = (config as any).permissionMode ?? "default";
   const isBypassing = permissionMode === "bypassPermissions";
 
@@ -40,54 +32,22 @@ export default function CopilotSettings() {
 
     const newMode = enabled ? "bypassPermissions" : "default";
 
-    try {
-      await updateProvider({
-        id: "copilot_cli",
-        payload: {
-          config: {
-            ...config,
-            permissionMode: newMode,
-          },
-        },
-      }).unwrap();
+    if (await updateConfig({ permissionMode: newMode })) {
       toast.success(
         enabled
           ? "Permission bypass enabled"
           : "Permission bypass disabled — tools will require approval",
       );
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to update permission mode");
     }
   };
 
-
-  if (isLoading) {
-    return (
-      <div>
-        <Heading2 className="mb-2">Copilot</Heading2>
-        <Muted>Loading...</Muted>
-      </div>
-    );
-  }
-
-  if (error || !provider) {
-    return (
-      <div>
-        <Heading2 className="mb-2">Copilot</Heading2>
-        <Muted>
-          Copilot provider not found. Make sure it is configured in the
-          database.
-        </Muted>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-primary dark:bg-primary-950">
-      <div className="mb-8">
-        <Heading2>Copilot</Heading2>
-      </div>
-
+    <ProviderSettingsLayout
+      title="Copilot"
+      provider={provider}
+      isLoading={isLoading}
+      error={error}
+    >
       <SettingsSection  title="Configuration">
         <SettingsRow
           title="Bypass Permissions"
@@ -143,40 +103,11 @@ export default function CopilotSettings() {
         </SettingsRow>
       </SettingsSection>
 
-      {copilotSpace && (
-        <SettingsSection title="Visibility">
-          <SettingsRow
-            title="Show in Selector"
-            description={
-              !canHide && !copilotSpace.isArchived
-                ? "At least one agent must be active"
-                : "Show or hide this agent from the selector"
-            }
-          >
-            <Toggle
-              enabled={!copilotSpace.isArchived}
-              disabled={!canHide && !copilotSpace.isArchived}
-              onChange={async (visible) => {
-                try {
-                  if (visible) {
-                    await unarchiveSpace(copilotSpace.id).unwrap();
-                    toast.success("Space is now visible");
-                  } else {
-                    await archiveSpace(copilotSpace.id).unwrap();
-                    const target = otherVisibleSpaces[0];
-                    if (target) {
-                      await setActiveSpace(target.id).unwrap();
-                    }
-                    toast.success("Space hidden");
-                  }
-                } catch (err: any) {
-                  toast.error(err?.message || "Failed to update space visibility");
-                }
-              }}
-            />
-          </SettingsRow>
-        </SettingsSection>
-      )}
-    </div>
+      <ProviderVisibilitySection
+        space={space}
+        canHide={canHide}
+        onVisibleChange={setSpaceVisible}
+      />
+    </ProviderSettingsLayout>
   );
 }

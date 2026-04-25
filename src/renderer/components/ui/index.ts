@@ -76,6 +76,10 @@ export { default as DropdownWrapper } from "./dropdown-wrapper";
 // Animated Title
 export { AnimatedTitle } from "./animated-title";
 
+// Loading
+export { AsciiSpinner } from "./ascii-spinner";
+export type { AsciiSpinnerVariant } from "./ascii-spinner";
+
 // Error Boundary
 export { ErrorBoundary } from "./error-boundary";
 

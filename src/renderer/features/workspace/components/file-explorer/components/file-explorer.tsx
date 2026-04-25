@@ -1,5 +1,5 @@
 import { memo, useState, useCallback, useEffect, useReducer } from "react";
-import type { FileNode, DirEntry, ServiceResponse } from "../types";
+import type { FileNode, DirEntry, ServiceResponse } from "@/features/workspace/types/file-explorer";
 import { FileTreeNode } from "./file-tree-node";
 import { Label } from "@/components/ui";
 

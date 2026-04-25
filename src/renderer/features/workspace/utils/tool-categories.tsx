@@ -31,27 +31,27 @@ export const TOOL_CATEGORIES: Record<
 > = {
   mains: {
     category: "Review",
-    icon: <Mains className="w-2 h-4 " />,
+    icon: <Mains className="size-3.5 " />,
   },
   getdiff: {
     category: "Review",
-    icon: <Mains className="w-2 h-4 " />,
+    icon: <Mains className="size-3.5 " />,
   },
   savereview: {
     category: "Review",
-    icon: <Mains className="w-2 h-4" />,
+    icon: <Mains className="size-3.5" />,
   },
   savefindings: {
     category: "Review",
-    icon: <Mains className="w-2 h-4  " />,
+    icon: <Mains className="size-3.5  " />,
   },
   savefinding: {
     category: "Review",
-    icon: <Mains className="w-2 h-4  " />,
+    icon: <Mains className="size-3.5  " />,
   },
   commit: {
     category: "Git",
-    icon: <Mains className="w-2 h-4" />,
+    icon: <Mains className="size-3.5" />,
   },
   createpr: {
     category: "Git",

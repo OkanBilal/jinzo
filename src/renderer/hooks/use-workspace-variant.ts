@@ -1,6 +1,6 @@
 import { useLocation } from "react-router-dom";
-
-type WorkspaceVariant = "claude" | "copilot" | "codex" | "cursor" | "default";
+import { useMemo } from "react";
+import { getWorkspaceVariant, type WorkspaceVariant } from "@/lib/route-utils";
 
 /**
  * Hook to determine the workspace variant based on the current route
@@ -9,21 +9,5 @@ type WorkspaceVariant = "claude" | "copilot" | "codex" | "cursor" | "default";
 export function useWorkspaceVariant(): WorkspaceVariant {
   const location = useLocation();
 
-  if (location.pathname.startsWith("/claude")) {
-    return "claude";
-  }
-
-  if (location.pathname.startsWith("/copilot")) {
-    return "copilot";
-  }
-
-  if (location.pathname.startsWith("/codex")) {
-    return "codex";
-  }
-
-  if (location.pathname.startsWith("/cursor")) {
-    return "cursor";
-  }
-
-  return "default";
+  return useMemo(() => getWorkspaceVariant(location.pathname), [location.pathname]);
 }

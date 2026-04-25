@@ -2,8 +2,7 @@ import { RefObject, useEffect, useMemo, useReducer } from "react";
 import { Button, DropdownWrapper } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
-import type { DirEntry } from "@/features/workspace/components/file-explorer/types";
-import type { FileNode } from "@/features/workspace/components/file-explorer/types";
+import type { DirEntry, FileNode } from "@/features/workspace/types/file-explorer";
 
 interface FetchState {
   entries: DirEntry[];

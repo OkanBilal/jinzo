@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Text, Heading2, Button, toast } from "@/components/ui";
+import { Text, Button, toast } from "@/components/ui";
+import { SettingsPageShell } from "../settings-layout";
 import AsanaModal from "./asana/asana-modal";
 import GitHubModal from "./github/github-modal";
 import GitLabModal from "./gitlab/gitlab-modal";
@@ -9,25 +10,11 @@ import TrelloModal from "./trello/trello-modal";
 import SentryModal from "./sentry/sentry-modal";
 import SocketDevModal from "./socketdev/socketdev-modal";
 import { useRunEntitySyncMutation } from "@/lib/redux/api/syncApi";
-import { AsciiSpinner } from "@/features/workspace/components/ascii-loader";
+import { useGetConnectionStatesQuery } from "@/lib/redux/api";
+import type { ConnectionStates } from "@/lib/redux/api/connectionStates";
+import { AsciiSpinner } from "@/components/ui/ascii-spinner";
 
-type ConnectionItem = {
-  id: string;
-  displayName: string | null;
-  iconPath: string | null;
-  isConnected: boolean;
-  connectionId: string | null;
-  category: string | null;
-  sortOrder: number;
-  enabledFeatures: string | null;
-  config: string | null;
-};
-
-interface ConnectionsSettingsProps {
-  connections: ConnectionItem[];
-  connectedConnections: string[];
-  onRefresh?: () => void;
-}
+type ConnectionItem = ConnectionStates;
 
 type CategoryFilter = "all" | "issues" | "monitoring" | "security";
 
@@ -38,14 +25,40 @@ const FILTER_TABS: { id: CategoryFilter; label: string }[] = [
   { id: "security", label: "Security" },
 ];
 
-export default function ConnectionsSettings({
-  connections,
-  connectedConnections,
-  onRefresh,
-}: ConnectionsSettingsProps) {
+type ConnectionModalProps = {
+  open: boolean;
+  onClose: () => void;
+  isConnected: boolean;
+  onSuccess: () => void;
+};
+
+const CONNECTION_MODALS: Array<{
+  id: string;
+  Component: React.ComponentType<ConnectionModalProps>;
+}> = [
+  { id: "github", Component: GitHubModal },
+  { id: "gitlab", Component: GitLabModal },
+  { id: "jira", Component: JiraModal },
+  { id: "asana", Component: AsanaModal },
+  { id: "linear", Component: LinearModal },
+  { id: "trello", Component: TrelloModal },
+  { id: "sentry", Component: SentryModal },
+  { id: "socketdev", Component: SocketDevModal },
+];
+
+export default function ConnectionsSettings() {
+  const { data: connections = [], refetch } = useGetConnectionStatesQuery();
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [filter, setFilter] = useState<CategoryFilter>("all");
   const [runSync, { isLoading: isSyncing }] = useRunEntitySyncMutation();
+
+  const connectedConnections = useMemo(
+    () =>
+      connections
+        .filter((connection) => connection.isConnected)
+        .map((connection) => connection.id),
+    [connections],
+  );
 
   const handleSync = () => {
     const syncPromise = runSync().unwrap().then((result) => {
@@ -62,12 +75,12 @@ export default function ConnectionsSettings({
   const isConnected = (appId: string) => connectedConnections.includes(appId);
 
   const handleConnectionSuccess = () => {
-    onRefresh?.();
+    refetch();
   };
 
   const filteredConnections = useMemo(() => {
     if (filter === "all") return connections;
-    return connections.filter((connection) => (connection.category || "developement") === filter);
+    return connections.filter((connection) => (connection.category || "development") === filter);
   }, [connections, filter]);
 
   const connectedFiltered = filteredConnections.filter((connection) => isConnected(connection.id));
@@ -76,18 +89,21 @@ export default function ConnectionsSettings({
   );
   const connectedCount = connections.filter((connection) => isConnected(connection.id)).length;
 
-  return (
-    <div className="  noscrollbar">
-      <div className="flex items-center justify-between mb-6">
-        <Heading2>Connections</Heading2>
-        {connectedCount > 0 && (
-          <Button variant="secondary" onClick={handleSync} disabled={isSyncing} className="gap-1 flex items-center" >
-            {isSyncing ? <AsciiSpinner variant="null" /> : null}
-             <Text variant="button" > {isSyncing ? "Syncing..." : "Sync All"}</Text>
-          </Button>
-        )}
-      </div>
+  const headerActions =
+    connectedCount > 0 ? (
+      <Button
+        variant="secondary"
+        onClick={handleSync}
+        disabled={isSyncing}
+        className="gap-1 flex items-center"
+      >
+        {isSyncing ? <AsciiSpinner variant="null" /> : null}
+        <Text variant="button">{isSyncing ? "Syncing..." : "Sync All"}</Text>
+      </Button>
+    ) : null;
 
+  return (
+    <SettingsPageShell title="Connections" headerActions={headerActions}>
       {/* Category filter tabs */}
       <div className="flex gap-1 mb-6">
         {FILTER_TABS.map((tab) => (
@@ -143,56 +159,39 @@ export default function ConnectionsSettings({
         </div>
       )}
 
-      {/* Modals */}
-      <GitHubModal
-        open={activeModal === "github"}
+      <ConnectionModalHost
+        activeModal={activeModal}
+        isConnected={isConnected}
         onClose={() => setActiveModal(null)}
-        isConnected={isConnected("github")}
         onSuccess={handleConnectionSuccess}
       />
-      <GitLabModal
-        open={activeModal === "gitlab"}
-        onClose={() => setActiveModal(null)}
-        isConnected={isConnected("gitlab")}
-        onSuccess={handleConnectionSuccess}
-      />
-      <JiraModal
-        open={activeModal === "jira"}
-        onClose={() => setActiveModal(null)}
-        isConnected={isConnected("jira")}
-        onSuccess={handleConnectionSuccess}
-      />
-      <AsanaModal
-        open={activeModal === "asana"}
-        onClose={() => setActiveModal(null)}
-        isConnected={isConnected("asana")}
-        onSuccess={handleConnectionSuccess}
-      />
-      <LinearModal
-        open={activeModal === "linear"}
-        onClose={() => setActiveModal(null)}
-        isConnected={isConnected("linear")}
-        onSuccess={handleConnectionSuccess}
-      />
-      <TrelloModal
-        open={activeModal === "trello"}
-        onClose={() => setActiveModal(null)}
-        isConnected={isConnected("trello")}
-        onSuccess={handleConnectionSuccess}
-      />
-      <SentryModal
-        open={activeModal === "sentry"}
-        onClose={() => setActiveModal(null)}
-        isConnected={isConnected("sentry")}
-        onSuccess={handleConnectionSuccess}
-      />
-      <SocketDevModal
-        open={activeModal === "socketdev"}
-        onClose={() => setActiveModal(null)}
-        isConnected={isConnected("socketdev")}
-        onSuccess={handleConnectionSuccess}
-      />
-    </div>
+    </SettingsPageShell>
+  );
+}
+
+function ConnectionModalHost({
+  activeModal,
+  isConnected,
+  onClose,
+  onSuccess,
+}: {
+  activeModal: string | null;
+  isConnected: (appId: string) => boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  return (
+    <>
+      {CONNECTION_MODALS.map(({ id, Component }) => (
+        <Component
+          key={id}
+          open={activeModal === id}
+          onClose={onClose}
+          isConnected={isConnected(id)}
+          onSuccess={onSuccess}
+        />
+      ))}
+    </>
   );
 }
 

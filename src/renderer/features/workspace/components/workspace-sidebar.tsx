@@ -1,9 +1,7 @@
 import { useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  FileExplorer,
-  type FileNode,
-} from "@/features/workspace/components/file-explorer";
+import { FileExplorer } from "@/features/workspace/components/file-explorer";
+import type { FileNode } from "@/features/workspace/types/file-explorer";
 import {
   useGetWorkspaceByIdQuery,
   useGetLatestWorkspaceDiffSummaryQuery,

@@ -11,7 +11,7 @@ function useNavigateAwayIfViewing() {
   const routeType = useRouteType();
 
   return (workspaceId: string) => {
-    const basePath = getBaseRoutePath(routeType === "claude" ? "claude" : routeType === "copilot" ? "copilot" : "codex");
+    const basePath = getBaseRoutePath(routeType);
     if (location.pathname === `${basePath}/${workspaceId}`) {
       navigate("/");
     }

@@ -9,7 +9,7 @@ import {
 import { setPendingGoal, setPendingAutoExecute } from "@/lib/redux/slices/workspaceSlice";
 import { expandDiffForFindings } from "../utils/expand-diff";
 import { normalizePath, pathsMatch } from "../utils/path-utils";
-import type { FileContentResponse, ServiceResponse } from "@/features/workspace/components/file-explorer";
+import type { FileContentResponse, ServiceResponse } from "@/features/workspace/types/file-explorer";
 
 interface Finding {
   id: string;

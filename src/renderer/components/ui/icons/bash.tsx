@@ -9,12 +9,19 @@ const SvgComponent = (props: SVGProps<SVGSVGElement>) => (
     viewBox="0 0 24 24"
     {...props}
   >
+    <path stroke="currentColor" strokeLinecap="round" strokeWidth={2} d="M13 15h3" />
     <path
       stroke="currentColor"
       strokeLinecap="round"
       strokeLinejoin="round"
-      strokeWidth={2}
-      d="M4 6h16m-4 10h-3m-5-4 2 2-2 2m-5 .8V7.2c0-1.12 0-1.68.218-2.108.192-.377.497-.682.874-.874C4.52 4 5.08 4 6.2 4h11.6c1.12 0 1.68 0 2.107.218.377.192.683.497.875.874.218.427.218.987.218 2.105v9.606c0 1.118 0 1.677-.218 2.104a2.003 2.003 0 0 1-.875.875c-.427.218-.986.218-2.104.218H6.197c-1.118 0-1.678 0-2.105-.218a2.001 2.001 0 0 1-.874-.875C3 18.48 3 17.92 3 16.8Z"
+      strokeWidth={1.5}
+      d="m8 15 2.5-2.5v0a.707.707 0 0 0 0-1v0L8 9"
+    />
+    <path
+      stroke="currentColor"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="M3 8c0-1.886 0-2.828.586-3.414C4.172 4 5.114 4 7 4h10c1.886 0 2.828 0 3.414.586C21 5.172 21 6.114 21 8v8c0 1.886 0 2.828-.586 3.414C19.828 20 18.886 20 17 20H7c-1.886 0-2.828 0-3.414-.586C3 18.828 3 17.886 3 16V8Z"
     />
   </svg>
 )

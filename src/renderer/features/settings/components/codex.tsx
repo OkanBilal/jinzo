@@ -1,7 +1,5 @@
 import { useState } from "react";
 import {
-  Heading2,
-  Muted,
   Toggle,
   Button,
   toast,
@@ -13,17 +11,16 @@ import {
   SettingsDivider,
 } from "./settings-layout";
 import {
-  useGetProviderByIdQuery,
-  useUpdateProviderMutation,
-  useGetSpacesQuery,
-  useArchiveSpaceMutation,
-  useUnarchiveSpaceMutation,
-  useSetActiveSpaceMutation,
   useGetProviderRateLimitsQuery,
   useGetProviderAccountInfoQuery,
 } from "@/lib/redux/api";
 import { StructuredOutputsModal } from "./structured-outputs-modal";
 import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
+import {
+  ProviderSettingsLayout,
+  ProviderVisibilitySection,
+  useProviderSettings,
+} from "./provider-settings-shared";
 
 function formatResetDate(resetsAt: number): string {
   const date = new Date(resetsAt * 1000);
@@ -133,28 +130,25 @@ const SANDBOX_OPTIONS = [
 ];
 
 export default function CodexSettings() {
-  const { data: provider, isLoading, error } = useGetProviderByIdQuery("codex");
-  const [updateProvider, { isLoading: updating }] = useUpdateProviderMutation();
+  const {
+    provider,
+    isLoading,
+    error,
+    config,
+    space,
+    canHide,
+    updateConfig,
+    setSpaceVisible,
+  } = useProviderSettings("codex", "codex");
   const { data: rateLimits, isLoading: isLoadingRateLimits } = useGetProviderRateLimitsQuery("codex", {
     pollingInterval: 60000,
   });
   const { data: accountInfo, isLoading: isLoadingAccount } = useGetProviderAccountInfoQuery("codex");
 
-  const { data: spaces = [] } = useGetSpacesQuery();
-  const [archiveSpace] = useArchiveSpaceMutation();
-  const [unarchiveSpace] = useUnarchiveSpaceMutation();
-  const [setActiveSpace] = useSetActiveSpaceMutation();
-  const codexSpace = spaces.find((s) => s.slug === "codex");
-  const otherVisibleSpaces = spaces.filter(
-    (s) => s.slug !== "codex" && !s.isArchived,
-  );
-  const canHide = otherVisibleSpaces.length > 0;
-
   // const [, setSearchParams] = useSearchParams();
   const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] =
     useState(false);
 
-  const config = provider?.config ?? {};
   const approvalMode = (config as any).approvalMode ?? "on-failure";
   const sandboxMode = (config as any).sandboxMode ?? "workspace-write";
   const networkAccessEnabled = (config as any).networkAccessEnabled ?? true;
@@ -172,38 +166,6 @@ export default function CodexSettings() {
     ? (structuredOutputs[structuredOutputsSelectedId]?.name ?? "Off")
     : "Off";
 
-  const updateConfig = async (patch: Record<string, unknown>) => {
-    if (!provider || updating) return;
-    try {
-      await updateProvider({
-        id: "codex",
-        payload: { config: { ...config, ...patch } },
-      }).unwrap();
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to update setting");
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div>
-        <Heading2 className="mb-2">Codex</Heading2>
-        <Muted>Loading...</Muted>
-      </div>
-    );
-  }
-
-  if (error || !provider) {
-    return (
-      <div>
-        <Heading2 className="mb-2">Codex</Heading2>
-        <Muted>
-          Codex provider not found. Make sure it is configured in the database.
-        </Muted>
-      </div>
-    );
-  }
-
   const account = accountInfo?.account;
   const planLabel =
     account?.type === "chatgpt"
@@ -213,11 +175,13 @@ export default function CodexSettings() {
         : null;
 
   return (
-    <div className="bg-primary dark:bg-primary-950 pb-16">
-      <div className="mb-8">
-        <Heading2>Codex</Heading2>
-      </div>
-
+    <ProviderSettingsLayout
+      title="Codex"
+      provider={provider}
+      isLoading={isLoading}
+      error={error}
+      className="pb-16"
+    >
       {/* Account info */}
       <SettingsSection title="Account">
         {isLoadingAccount ? (
@@ -422,48 +386,17 @@ export default function CodexSettings() {
         )}
       </SettingsSection>
 
-      {codexSpace && (
-        <SettingsSection title="Visibility">
-          <SettingsRow
-            title="Show in Selector"
-            description={
-              !canHide && !codexSpace.isArchived
-                ? "At least one agent must be active"
-                : "Show or hide this agent from the selector"
-            }
-          >
-            <Toggle
-              enabled={!codexSpace.isArchived}
-              disabled={!canHide && !codexSpace.isArchived}
-              onChange={async (visible) => {
-                try {
-                  if (visible) {
-                    await unarchiveSpace(codexSpace.id).unwrap();
-                    toast.success("Space is now visible");
-                  } else {
-                    await archiveSpace(codexSpace.id).unwrap();
-                    const target = otherVisibleSpaces[0];
-                    if (target) {
-                      await setActiveSpace(target.id).unwrap();
-                    }
-                    toast.success("Space hidden");
-                  }
-                } catch (err: any) {
-                  toast.error(
-                    err?.message || "Failed to update space visibility",
-                  );
-                }
-              }}
-            />
-          </SettingsRow>
-        </SettingsSection>
-      )}
+      <ProviderVisibilitySection
+        space={space}
+        canHide={canHide}
+        onVisibleChange={setSpaceVisible}
+      />
 
       <StructuredOutputsModal
         isOpen={isStructuredOutputsModalOpen}
         onClose={() => setIsStructuredOutputsModalOpen(false)}
         providerId="codex"
       />
-    </div>
+    </ProviderSettingsLayout>
   );
 }

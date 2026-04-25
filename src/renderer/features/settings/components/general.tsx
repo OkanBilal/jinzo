@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Button, Heading2, Select, Toggle, toast } from "@/components/ui";
+import { Button, Select, Toggle, toast } from "@/components/ui";
 import { useDarkMode } from "../../../hooks/use-dark-mode";
 import { useActiveSpace } from "../../../hooks/use-active-space";
 import { cn } from "@/lib/cn";
@@ -13,13 +13,14 @@ import {
   useSetShowMenuBarIconMutation,
 } from "@/lib/redux/api";
 import {
+  SettingsPageShell,
   SettingsSection,
   SettingsRow,
   SettingsDivider,
 } from "./settings-layout";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
 import { Refresh } from "@/components/ui/icons";
-import { AsciiSpinner } from "@/features/workspace/components/ascii-loader";
+import { AsciiSpinner } from "@/components/ui/ascii-spinner";
 
 type ThemeValue = "light" | "dark" | "system";
 
@@ -322,9 +323,10 @@ export default function GeneralSettings() {
     check: checkUpdate,
     install: installUpdate,
   } = useAutoUpdate();
+  const activeSpaceThemeConfig = activeSpace?.themeConfig;
 
   const { lightBackground, darkBackground } = useMemo(() => {
-    if (!activeSpace?.themeConfig) {
+    if (!activeSpaceThemeConfig) {
       return {
         lightBackground: defaultTheme.lightBackground.replace(
           /[0-9a-f]{2}$/i,
@@ -337,7 +339,7 @@ export default function GeneralSettings() {
       };
     }
     try {
-      const config = JSON.parse(activeSpace.themeConfig);
+      const config = JSON.parse(activeSpaceThemeConfig);
       return {
         lightBackground: config.lightBackground || "#f5f3ee",
         darkBackground: config.darkBackground || "#1a1a1a",
@@ -348,14 +350,10 @@ export default function GeneralSettings() {
         darkBackground: "#1a1a1a",
       };
     }
-  }, [activeSpace?.themeConfig]);
+  }, [activeSpaceThemeConfig]);
 
   return (
-    <div className="bg-primary dark:bg-primary-950">
-      <div className="mb-8">
-        <Heading2>General</Heading2>
-      </div>
-
+    <SettingsPageShell title="General">
       <SettingsSection title="Run">
         <SettingsRow
           title="Run Detail"
@@ -452,6 +450,6 @@ export default function GeneralSettings() {
           />
         </SettingsRow>
       </SettingsSection>
-    </div>
+    </SettingsPageShell>
   );
 }

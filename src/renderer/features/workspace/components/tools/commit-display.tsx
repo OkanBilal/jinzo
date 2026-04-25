@@ -25,7 +25,7 @@ export function CommitDisplay({
         onClick={() => hasContent && setIsExpanded(!isExpanded)}
         className={`group w-full flex items-center gap-1 py-1 text-primary-400 dark:text-primary-500 text-s font-sans ${hasContent ? "cursor-pointer" : "cursor-default"}`}
       >
-        {!isCompact && <Mains className="w-2 h-4 text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary" />}
+        {!isCompact && <Mains className="size-3.5 text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary" />}
         {!isCompact && (
           <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
             Commit

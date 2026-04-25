@@ -31,16 +31,28 @@ interface ToolCallItemProps {
   isCompact?: boolean;
 }
 
+function getToolParams<T>(
+  metadataInput: Record<string, unknown> | undefined,
+  params: Record<string, unknown> | null,
+  fallback: T,
+): T {
+  return metadataInput
+    ? (metadataInput as T)
+    : params
+      ? (params as T)
+      : fallback;
+}
+
 export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   const { toolName, params, summary } = parseToolContent(event.content);
+  const toolNameLower = toolName.toLowerCase();
+  const metadataInput = event.metadata?.input as
+    | Record<string, unknown>
+    | undefined;
   const displayName = getToolType(event.content);
   const { icon } = getToolInfo(displayName);
 
-  if (toolName.toLowerCase() === "todowrite") {
-    // First try to get todos from metadata (raw input from hook)
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
+  if (toolNameLower === "todowrite") {
     const todos = metadataInput?.todos ?? params?.todos;
     if (todos && Array.isArray(todos)) {
       return <TodoListDisplay todos={todos as TodoItem[]} />;
@@ -48,52 +60,36 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   }
 
   // Show PlanDisplay for Plan / Create Plan tool calls
-  if (toolName.toLowerCase() === "plan" || toolName.toLowerCase() === "create plan") {
+  if (toolNameLower === "plan" || toolNameLower === "create plan") {
     return <PlanDisplay event={event} />;
   }
 
   // Show PlanDisplay for ExitPlanMode tool calls
-  if (toolName.toLowerCase() === "exitplanmode") {
+  if (toolNameLower === "exitplanmode") {
     return <PlanDisplay event={event} />;
   }
 
   // Show TaskDisplay for task tool calls - prefer metadata.input over parsed content
-  if (toolName.toLowerCase() === "task") {
-    // First try to get params from metadata (raw input from hook)
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const taskParams: TaskParams = metadataInput
-      ? (metadataInput as TaskParams)
-      : params
-        ? (params as TaskParams)
-        : { description: summary };
+  if (toolNameLower === "task") {
+    const taskParams = getToolParams<TaskParams>(metadataInput, params, {
+      description: summary,
+    });
     return <TaskDisplay params={taskParams} isCompact={isCompact} />;
   }
 
   // Show AgentDisplay for agent tool calls
-  if (toolName.toLowerCase() === "agent") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const agentParams: AgentParams = metadataInput
-      ? (metadataInput as AgentParams)
-      : params
-        ? (params as AgentParams)
-        : { description: summary };
+  if (toolNameLower === "agent") {
+    const agentParams = getToolParams<AgentParams>(metadataInput, params, {
+      description: summary,
+    });
     return <AgentDisplay params={agentParams} isCompact={isCompact} />;
   }
 
   // Show EditDisplay for edit tool calls
-  if (toolName.toLowerCase() === "edit" || toolName.toLowerCase() === "replace") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const editParams: EditParams = metadataInput
-      ? (metadataInput as EditParams)
-      : params
-        ? (params as EditParams)
-        : { file_path: summary };
+  if (toolNameLower === "edit" || toolNameLower === "replace") {
+    const editParams = getToolParams<EditParams>(metadataInput, params, {
+      file_path: summary,
+    });
     return <EditDisplay params={editParams} output={event.metadata?.output} isCompact={isCompact} />;
   }
 

@@ -18,7 +18,7 @@ export function ToolSearchDisplay({ output, isCompact = false }: { params: ToolS
         onClick={() => hasMatches && setIsExpanded(!isExpanded)}
         className={`group w-full flex items-center gap-1 py-1 text-primary-400 dark:text-primary-500 text-s font-sans ${hasMatches ? "cursor-pointer" : "cursor-default"}`}
       >
-        {!isCompact && <Search className="size-4 text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary" />}
+        {!isCompact && <Search className="size-3.5 text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary" />}
         {!isCompact && (
           <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
             ToolSearch

@@ -1,4 +1,5 @@
 import { useEffect, useReducer } from "react";
+export { AsciiSpinner } from "@/components/ui/ascii-spinner";
 
 const ASCII_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
@@ -41,50 +42,6 @@ function stripMarkdown(text: string): string {
     .replace(/_(.+?)_/g, "$1")         // _italic_
     .replace(/`(.+?)`/g, "$1")         // `code`
     .replace(/^#+\s*/gm, "");          // # headings
-}
-
-// Braille dots ordered by fill density: empty → full → empty (breathing cycle)
-const BREATHING_FRAMES = [
-  "⠀",
-  "⠁",
-  "⠃",
-  "⠇",
-  "⠏",
-  "⠟",
-  "⠿",
-  "⣿",
-  "⣿",
-  "⠿",
-  "⠟",
-  "⠏",
-  "⠇",
-  "⠃",
-  "⠁",
-  "⠀",
-];
-
-export function AsciiSpinner({
-  variant,
-}: {
-  variant?: "claude" | "copilot" | "codex" | "cursor" | "null";
-}) {
-  const [frameIndex, dispatch] = useReducer(
-    (i: number) => (i + 1) % BREATHING_FRAMES.length,
-    0,
-  );
-
-  useEffect(() => {
-    const id = setInterval(dispatch, 120);
-    return () => clearInterval(id);
-  }, []);
-
-  return (
-    <span
-      className={`font-mono text-xs leading-none ${variant === "claude" ? "text-claude" : variant === "copilot" ? "text-copilot" : variant === "codex" ? "text-codex" : variant === "cursor" ? "text-cursor" : "text-primary-900 dark:text-primary-200"}`}
-    >
-      {BREATHING_FRAMES[frameIndex]}
-    </span>
-  );
 }
 
 export function AsciiLoader({

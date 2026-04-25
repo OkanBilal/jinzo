@@ -1,60 +1,19 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Body, Button } from "@/components/ui";
-import {
-  Apps,
-//  Personalize,
-  General,
-  ChevronUp,
-  CopilotStatic,
-  Branch,
-  Chart,
-  Codex,
-  Cursor,
-} from "@/components/ui/icons";
-type SettingsSection =
-  | "general"
-  | "notifications"
-  | "personalization"
-  | "connections"
-  | "schedules"
-  | "data"
-  | "security"
-  | "parental"
-  | "account"
-  | "claude"
-  | "copilot"
-  | "git"
-  | "projects"
-  | "codex"
-  | "cursor"
-  | "dashboard";
-import { Claude } from "@/components/ui/icons/space";
+import { ChevronUp } from "@/components/ui/icons";
 import { useGetProjectsQuery } from "@/lib/redux/api";
 import { parseIcon, type IconComponent } from "@/lib/icon-registry";
+import {
+  getSettingsRouteId,
+  isSettingsNavItemActive,
+  SETTINGS_MAIN_NAV_ITEMS,
+  SETTINGS_PROVIDER_NAV_ITEMS,
+  type SettingsRouteId,
+} from "@/features/settings/settings-sections";
 
 interface SettingsViewProps {
   onClose: () => void;
 }
-
-type MenuItem = {
-  id: SettingsSection;
-  label: string;
-  icon: React.ElementType | null;
-};
-
-const menuItems: Array<MenuItem> = [
-  { id: "general", label: "General", icon: General },
-  { id: "git", label: "Git", icon: Branch },
-  { id: "connections", label: "Connections", icon: Apps },
-  { id: "dashboard", label: "Dashboard", icon: Chart },
-];
-
-const providerItems: Array<MenuItem> = [
-  { id: "claude", label: "Claude", icon: Claude },
-  { id: "codex", label: "Codex", icon: Codex },
-  { id: "copilot", label: "Copilot", icon: CopilotStatic },
-  { id: "cursor", label: "Cursor", icon: Cursor },
-];
 
 export default function SettingsView({ onClose }: SettingsViewProps) {
   const navigate = useNavigate();
@@ -62,12 +21,12 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
 
   const isOnSettingsPage = location.pathname === "/settings";
   const searchParams = new URLSearchParams(location.search);
-  const activeSection = searchParams.get("section") as SettingsSection | null;
+  const activeSection = getSettingsRouteId(searchParams.get("section"));
   const activeId = searchParams.get("id");
 
   const { data: projects = [] } = useGetProjectsQuery();
 
-  const handleSectionClick = (sectionId: SettingsSection) => {
+  const handleSectionClick = (sectionId: SettingsRouteId) => {
     navigate(`/settings?section=${sectionId}`);
   };
 
@@ -86,9 +45,9 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
 
       <div className="flex-1 px-3 mb-1 overflow-y-auto noscrollbar">
         <nav className="space-y-0.5">
-          {menuItems.map((item) => {
+          {SETTINGS_MAIN_NAV_ITEMS.map((item) => {
             const IconComponent = item.icon;
-            const isActive = isOnSettingsPage && activeSection === item.id;
+            const isActive = isOnSettingsPage && isSettingsNavItemActive(item, activeSection);
             return (
               <Button
                 key={item.id}
@@ -120,9 +79,9 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
             </span>
           </div>
           <div className="space-y-0.5">
-            {providerItems.map((item) => {
+            {SETTINGS_PROVIDER_NAV_ITEMS.map((item) => {
               const IconComponent = item.icon;
-              const isActive = isOnSettingsPage && activeSection === item.id;
+              const isActive = isOnSettingsPage && isSettingsNavItemActive(item, activeSection);
               return (
                 <Button
                   key={item.id}

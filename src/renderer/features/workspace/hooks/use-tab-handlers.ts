@@ -1,6 +1,5 @@
 import { useCallback } from "react";
-import { useDispatch } from "react-redux";
-import { useAppSelector } from "@/lib/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { useUpdateRunMutation } from "@/lib/redux/api";
 import {
   setActiveTab,
@@ -33,7 +32,7 @@ export function useTabHandlers({
   setGoal,
   setRuns,
 }: UseTabHandlersParams) {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const [updateRun] = useUpdateRunMutation();
   const { openIssueTabs, openSignalTabs, openNoteTabs, selectedFile } = useAppSelector(
     (state) => state.workspace,

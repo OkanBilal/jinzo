@@ -9,6 +9,13 @@ export type RouteType =
   | "home"
   | "unknown";
 
+export type WorkspaceRouteType = Extract<
+  RouteType,
+  "claude" | "copilot" | "codex" | "cursor"
+>;
+
+export type WorkspaceVariant = WorkspaceRouteType | "default";
+
 const ROUTE_PATTERNS = {
   claude: "/claude/:id?",
   copilot: "/copilot/:id?",
@@ -29,6 +36,15 @@ export function getRouteType(pathname: string): RouteType {
   if (matchPath(ROUTE_PATTERNS.cursor, pathname)) return "cursor";
 
   return "unknown";
+}
+
+export function isWorkspaceRouteType(routeType: RouteType): routeType is WorkspaceRouteType {
+  return routeType === "claude" || routeType === "copilot" || routeType === "codex" || routeType === "cursor";
+}
+
+export function getWorkspaceVariant(pathname: string): WorkspaceVariant {
+  const routeType = getRouteType(pathname);
+  return isWorkspaceRouteType(routeType) ? routeType : "default";
 }
 
 export function getBaseRoutePath(routeType: RouteType): string {

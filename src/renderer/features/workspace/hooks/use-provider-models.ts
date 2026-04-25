@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useCallback } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import {
   useGetProviderModelsQuery,
   useGetProviderCommandsQuery,
@@ -8,7 +7,7 @@ import {
   useUpdateProviderMutation,
 } from "@/lib/redux/api/providersApi";
 import { setWorkspaceModel } from "@/lib/redux/slices/workspaceSlice";
-import type { RootState } from "@/lib/redux";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 
 export function useProviderModels(
   activeProviderId: string,
@@ -17,10 +16,10 @@ export function useProviderModels(
   externalOnModelChange?: (model: string) => void,
   workspacePath?: string,
 ) {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
-  const persistedModel = useSelector(
-    (state: RootState) =>
+  const persistedModel = useAppSelector(
+    (state) =>
       state.workspace.selectedModelByProvider[activeProviderId],
   );
 

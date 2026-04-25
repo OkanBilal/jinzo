@@ -2,7 +2,7 @@ import { useReducer, useRef, useEffect, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
-import type { FileNode } from "@/features/workspace/components/file-explorer";
+import type { FileNode } from "@/features/workspace/types/file-explorer";
 import type { ContextIssue, ContextSignal, ContextBrowserSelection } from "@/lib/redux/slices/workspaceSlice";
 import { addContextFile, addContextIssue } from "@/lib/redux/slices/workspaceSlice";
 import type { UploadedFile } from "@/components/ui";

@@ -1,46 +1,17 @@
-import { useState, useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useBrowserPanel } from "@/hooks/use-browser-panel";
-import ConnectionsSettings from "@/features/settings/components/connections/connections";
-import GeneralSettings from "@/features/settings/components/general";
-import NotificationsSettings from "@/features/settings/components/notifications";
-import PersonalizationSettings from "@/features/settings/components/personalization";
-import SchedulesSettings from "@/features/settings/components/schedules";
-import SecuritySettings from "@/features/settings/components/security";
-import { useGetConnectionStatesQuery } from "@/lib/redux/api";
-type SettingsSection =
-  | "general"
-  | "notifications"
-  | "personalization"
-  | "connections"
-  | "schedules"
-  | "data"
-  | "security"
-  | "parental"
-  | "account"
-  | "claude"
-  | "copilot"
-  | "git"
-  | "projects"
-  | "codex"
-  | "codex-plugins"
-  | "cursor"
-  | "dashboard";
-import ClaudeSettings from "@/features/settings/components/claude";
-import CopilotSettings from "@/features/settings/components/copilot";
-import GitSettings from "@/features/settings/components/git";
-import ProjectsSettings from "@/features/settings/components/projects";
-import CodexSettings from "@/features/settings/components/codex";
-import CodexPlugins from "@/features/settings/components/codex-plugins";
-import CursorSettings from "@/features/settings/components/cursor";
-import DashboardPage from "@/features/stats/components/dashboard-page";
+import {
+  getSettingsRouteId,
+  getSettingsSection,
+} from "@/features/settings/settings-sections";
+import { SettingsPageShell } from "@/features/settings/components/settings-layout";
 
 export default function SettingsPage() {
   const [searchParams] = useSearchParams();
-  const sectionParam = searchParams.get("section") as SettingsSection | null;
-  const [activeSection, setActiveSection] = useState<SettingsSection>(
-    sectionParam || "general",
-  );
+  const activeSection = getSettingsRouteId(searchParams.get("section"));
+  const section = getSettingsSection(activeSection);
+  const { Component } = section;
 
   const { close: closeBrowserPanel } = useBrowserPanel();
 
@@ -48,80 +19,14 @@ export default function SettingsPage() {
     closeBrowserPanel();
   }, [closeBrowserPanel]);
 
-  const { data: connections = [], refetch: refetchConnections } = useGetConnectionStatesQuery();
-  const connectedConnections = connections
-    .filter((connection) => connection.isConnected)
-    .map((connection) => connection.id);
-
-  const [prevSectionParam, setPrevSectionParam] = useState(sectionParam);
-  if (sectionParam !== prevSectionParam) {
-    setPrevSectionParam(sectionParam);
-    if (sectionParam) {
-      setActiveSection(sectionParam);
-    }
-  }
-
-  const handleRefresh = async () => {
-    await refetchConnections();
-  };
-
-  let content: React.ReactNode;
-  switch (activeSection) {
-    case "general":
-      content = <GeneralSettings />;
-      break;
-    case "notifications":
-      content = <NotificationsSettings />;
-      break;
-    case "personalization":
-      content = <PersonalizationSettings />;
-      break;
-    case "connections":
-      content = (
-        <ConnectionsSettings
-          connections={connections}
-          connectedConnections={connectedConnections}
-          onRefresh={handleRefresh}
-        />
-      );
-      break;
-    case "schedules":
-      content = <SchedulesSettings />;
-      break;
-    case "security":
-      content = <SecuritySettings />;
-      break;
-    case "claude":
-      content = <ClaudeSettings />;
-      break;
-    case "copilot":
-      content = <CopilotSettings />;
-      break;
-    case "codex":
-      content = <CodexSettings />;
-      break;
-    case "codex-plugins":
-      content = <CodexPlugins />;
-      break;
-    case "cursor":
-      content = <CursorSettings />;
-      break;
-    case "git":
-      content = <GitSettings />;
-      break;
-    case "projects":
-      content = <ProjectsSettings />;
-      break;
-    case "dashboard":
-      content = <DashboardPage />;
-      break;
-    default:
-      content = <GeneralSettings />;
-  }
-
   return (
     <div className="h-full max-w-240 mx-auto px-2 pt-16 overflow-y-auto noscrollbar bg-primary dark:bg-primary-950">
-      {content}
+      <Suspense
+        key={section.id}
+        fallback={<SettingsPageShell title={section.label} isLoading />}
+      >
+        <Component />
+      </Suspense>
     </div>
   );
 }

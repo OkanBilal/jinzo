@@ -1,7 +1,7 @@
 import React, { ButtonHTMLAttributes, forwardRef } from "react";
 import { cn } from "../../lib/cn";
 import Tooltip, { TooltipPosition } from "./tooltip";
-import { AsciiSpinner } from "@/features/workspace/components/ascii-loader";
+import { AsciiSpinner } from "./ascii-spinner";
 
 
 
