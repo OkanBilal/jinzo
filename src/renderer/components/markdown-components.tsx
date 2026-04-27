@@ -25,17 +25,19 @@ export const markdownComponents: Components = {
     </p>
   ),
   ul: ({ children }) => (
-    <ul className="list-disc text-sm list-inside font-sans mb-2 space-y-1 text-primary-800 dark:text-primary transition-all duration-150 ease-out">
+    <ul className="list-disc list-outside pl-4 text-sm font-sans mb-2 space-y-1 text-primary-800 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </ul>
   ),
   ol: ({ children }) => (
-    <ol className="list-decimal text-sm list-inside font-sans mb-2 space-y-1 text-primary-800 dark:text-primary transition-all duration-150 ease-out">
+    <ol className="list-decimal list-outside pl-4 text-sm font-sans mb-2 space-y-1 text-primary-800 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </ol>
   ),
   li: ({ children }) => (
-    <li className="ml-2 font-sans text-sm text-primary-800 dark:text-primary transition-all duration-150 ease-out">{children}</li>
+    <li className="font-sans text-sm text-primary-800 dark:text-primary transition-all duration-150 ease-out [&>p]:my-0 [&>p:not(:last-child)]:mb-1">
+      {children}
+    </li>
   ),
   table: ({ children }) => (
     <div className="overflow-x-auto my-4 rounded-lg border border-primary-300 dark:border-primary-700 transition-all duration-150 ease-out">

@@ -35,13 +35,12 @@ export function ToolCallGroup({
   const moreCount = toolTypes.size > 3 ? ` +${toolTypes.size - 3}` : "";
 
   return (
-    <div>
+    <div className="mb-2">
       <button
         onClick={() => setExpandedOverride(!isExpanded)}
         className="group w-full flex items-center gap-1 mb-1 text-s font-sans cursor-pointer"
       >
         <div className="flex items-center gap-1 transition-all duration-200">
-          {/* <Tools className="size-3.5 rotate-90 dark:text-primary-200 text-primary-700 group-hover:text-primary-950 group-hover:dark:text-primary" /> */}
           <span className="text-primary-500  group-hover:text-primary-950 group-hover:dark:text-primary">
             {toolCount} tool call{toolCount !== 1 ? "s" : ""}
           </span>
