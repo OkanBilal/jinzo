@@ -20,7 +20,7 @@ export default function SpaceContextMenu({
   onClose,
 }: SpaceContextMenuProps) {
   if (!space) return null;
-  const isSystemSpace = space.slug === "claude" || space.slug === "copilot" || space.slug === "codex";
+  const isSystemSpace = space.slug === "claude" || space.slug === "copilot" || space.slug === "codex" || space.slug === "cursor";
 
   return (
     <DropdownMenu isOpen={isOpen} position={position} onClose={onClose}>

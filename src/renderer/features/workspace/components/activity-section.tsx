@@ -66,7 +66,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
   });
   const { data: activities = [], isLoading } = useGetWorkspaceActivityQuery(
     { workspaceId },
-    { pollingInterval: 5000 },
+    { pollingInterval: 15000, refetchOnFocus: true },
   );
 
   const toggleExpand = (id: string) => {
@@ -91,7 +91,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-2 px-4 text-center">
           <Note className="w-4 h-4 dark:text-primary-300 text-primary-700" />
-          <Body className="text-xxs font-medium text-primary-700! dark:text-primary-300!">
+          <Body className="text-xxs font-medium text-primary-700 dark:text-primary-300">
             No activity yet.
           </Body>
         </div>
@@ -112,7 +112,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
           dispatch(setPendingGoal(goal));
           dispatch(setPendingAutoExecute(true));
         }}
-        className="shrink-0 flex items-center justify-center gap-1.5 mb-2 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/60 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200"
+        className="shrink-0 flex items-center justify-center gap-1.5 mb-2 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/50 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200"
       >
         <PullRequest className="w-3.5 h-3.5" />
         Create PR
@@ -175,7 +175,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
                         )}
                       </>
                     ) : activity.type === "finding" && (activity.metadata as any)?.count ? (
-                      <>Jinzo added {(activity.metadata as any).count} finding{(activity.metadata as any).count === 1 ? "" : "s"}</>
+                      <>Mains added {(activity.metadata as any).count} finding{(activity.metadata as any).count === 1 ? "" : "s"}</>
                     ) : (
                       activity.title
                     )}

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Button, Heading2, Select, Toggle, toast } from "@/components/ui";
+import { Button, Select, Toggle, toast } from "@/components/ui";
 import { useDarkMode } from "../../../hooks/use-dark-mode";
 import { useActiveSpace } from "../../../hooks/use-active-space";
 import { cn } from "@/lib/cn";
@@ -10,15 +10,17 @@ import {
   useSetPreventSleepDuringRunsMutation,
   useSetNotifyOnRunCompleteMutation,
   useSetNotifyOnToolApprovalMutation,
+  useSetShowMenuBarIconMutation,
 } from "@/lib/redux/api";
 import {
+  SettingsPageShell,
   SettingsSection,
   SettingsRow,
   SettingsDivider,
 } from "./settings-layout";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
 import { Refresh } from "@/components/ui/icons";
-import { AsciiSpinner } from "@/features/workspace/components/ascii-loader";
+import { AsciiSpinner } from "@/components/ui/ascii-spinner";
 
 type ThemeValue = "light" | "dark" | "system";
 
@@ -55,7 +57,7 @@ function ThemePreviewCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center gap-2 cursor-pointer group active:scale-99 hover:scale-101 duration-200 transition-all",
+        "flex flex-col items-center gap-2 cursor-pointer group duration-200 transition-all",
       )}
     >
       <div
@@ -79,7 +81,7 @@ function ThemePreviewCard({
               </div>
               <div className="flex-1 h-full bg-primary-100 flex flex-col p-1.5">
                 <div className="flex-1" />
-                <div className="w-full h-2 bg-primary-80  rounded-sm border border-primary-950/10" />
+                <div className="w-full h-2 bg-primary  rounded-sm border border-primary-950/10" />
               </div>
             </div>
             <div className="w-1/2 h-full flex">
@@ -88,8 +90,8 @@ function ThemePreviewCard({
                 style={darkBgStyle}
               >
                 <div className="w-2 h-2 bg-primary/20 rounded-full" />
-                <div className="w-full h-1 bg-primary/15 rounded-full mt-1" />
-                <div className="w-2/3 h-1 bg-primary/15 rounded-full" />
+                <div className="w-full h-1 bg-primary/10 rounded-full mt-1" />
+                <div className="w-2/3 h-1 bg-primary/10 rounded-full" />
               </div>
               <div className="flex-1 h-full flex bg-primary-950 flex-col p-1.5">
                 <div className="flex-1" />
@@ -113,13 +115,13 @@ function ThemePreviewCard({
                 <div
                   className={cn(
                     "w-full h-1 rounded-full",
-                    isLight ? "bg-primary-950/10" : "bg-primary/15",
+                    isLight ? "bg-primary-950/10" : "bg-primary/10",
                   )}
                 />
                 <div
                   className={cn(
                     "w-4/5 h-1 rounded-full",
-                    isLight ? "bg-primary-950/10" : "bg-primary/15",
+                    isLight ? "bg-primary-950/10" : "bg-primary/10",
                   )}
                 />
               </div>
@@ -142,7 +144,7 @@ function ThemePreviewCard({
       </div>
       <span
         className={cn(
-          "text-[13px] font-medium transition-colors",
+          "text-s font-medium transition-colors",
           isSelected
             ? "text-primary-900 dark:text-primary-100"
             : "text-primary-500 dark:text-primary-400 group-hover:text-primary-700 dark:group-hover:text-primary-300",
@@ -191,8 +193,8 @@ function UpdateButton({
       );
     case "error":
       return (
-        <div className="flex flex-col items-end gap-2 max-w-sm">
-          <span className="text-xs text-red-400 dark:text-red-400/80 leading-relaxed text-right line-clamp-2">
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-red-400 dark:text-red-400/80 leading-relaxed text-right line-clamp-2 max-w-48">
             {state.error}
           </span>
           <Button type="button" variant="ghost" size="md" onClick={onCheck}>
@@ -286,6 +288,21 @@ function NotifyRunCompleteToggle() {
   );
 }
 
+function MenuBarIconToggle() {
+  const { data: settings } = useGetAppSettingsQuery();
+  const [setShowMenuBarIcon] = useSetShowMenuBarIconMutation();
+
+  return (
+    <Toggle
+      enabled={settings?.showMenuBarIcon ?? true}
+      onChange={async (val) => {
+        await setShowMenuBarIcon(val);
+        await window.api.app.setMenuBarIconVisible(val);
+      }}
+    />
+  );
+}
+
 function NotifyToolApprovalToggle() {
   const { data: settings } = useGetAppSettingsQuery();
   const [setNotifyOnToolApproval] = useSetNotifyOnToolApprovalMutation();
@@ -306,9 +323,10 @@ export default function GeneralSettings() {
     check: checkUpdate,
     install: installUpdate,
   } = useAutoUpdate();
+  const activeSpaceThemeConfig = activeSpace?.themeConfig;
 
   const { lightBackground, darkBackground } = useMemo(() => {
-    if (!activeSpace?.themeConfig) {
+    if (!activeSpaceThemeConfig) {
       return {
         lightBackground: defaultTheme.lightBackground.replace(
           /[0-9a-f]{2}$/i,
@@ -321,7 +339,7 @@ export default function GeneralSettings() {
       };
     }
     try {
-      const config = JSON.parse(activeSpace.themeConfig);
+      const config = JSON.parse(activeSpaceThemeConfig);
       return {
         lightBackground: config.lightBackground || "#f5f3ee",
         darkBackground: config.darkBackground || "#1a1a1a",
@@ -332,14 +350,10 @@ export default function GeneralSettings() {
         darkBackground: "#1a1a1a",
       };
     }
-  }, [activeSpace?.themeConfig]);
+  }, [activeSpaceThemeConfig]);
 
   return (
-    <div className="bg-primary dark:bg-primary-950">
-      <div className="mb-8">
-        <Heading2>General</Heading2>
-      </div>
-
+    <SettingsPageShell title="General">
       <SettingsSection title="Run">
         <SettingsRow
           title="Run Detail"
@@ -399,6 +413,15 @@ export default function GeneralSettings() {
         </SettingsRow>
       </SettingsSection>
 
+      <SettingsSection title="Menu Bar">
+        <SettingsRow
+          title="Menu Bar Icon"
+          description="Show the Mains icon in the system menu bar"
+        >
+          <MenuBarIconToggle />
+        </SettingsRow>
+      </SettingsSection>
+
       <SettingsSection title="Notifications">
         <SettingsRow
           title="Run Complete"
@@ -427,6 +450,6 @@ export default function GeneralSettings() {
           />
         </SettingsRow>
       </SettingsSection>
-    </div>
+    </SettingsPageShell>
   );
 }

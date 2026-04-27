@@ -113,7 +113,7 @@ describe("smoke", () => {
       const result = await providersService.getAll();
       expect(result.success).toBe(true);
       if (!result.success) return;
-      expect(result.data!.length).toBe(3);
+      expect(result.data!.length).toBe(4);
     });
 
     it("seeds connection states for all integrations", async () => {
@@ -138,7 +138,7 @@ describe("smoke", () => {
     it("seeds seven connections (all revoked)", async () => {
       // Query connections table directly since connectionsService needs more setup
       const rows = db.query.connections.findMany().sync?.() ?? [];
-      expect(rows.length).toBe(7);
+      expect(rows.length).toBe(8);
 
       const providers = rows.map((r: { provider: string }) => r.provider);
       expect(providers).toContain("github");

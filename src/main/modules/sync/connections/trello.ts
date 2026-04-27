@@ -146,7 +146,7 @@ export async function fetchTrelloBoards(
       throw new Error(`Trello API error: ${response.status}`);
     }
 
-    const boards: TrelloBoardInfo[] = await response.json();
+    const boards = (await response.json()) as TrelloBoardInfo[];
     return boards.filter((b) => !b.closed);
   } catch (error) {
     console.error("Failed to fetch Trello boards:", error);
@@ -171,7 +171,7 @@ async function fetchBoardLists(
 
     if (!response.ok) return new Map();
 
-    const lists: TrelloList[] = await response.json();
+    const lists = (await response.json()) as TrelloList[];
     const listMap = new Map<string, string>();
     for (const list of lists) {
       listMap.set(list.id, list.name);
@@ -228,7 +228,7 @@ export async function fetchTrelloCards(
       return [];
     }
 
-    const cards: TrelloCard[] = await response.json();
+    const cards = (await response.json()) as TrelloCard[];
 
     return cards.map((card): EntityInput => {
       const labelNames = (card.labels || []).map((l) => l.name).filter(Boolean);

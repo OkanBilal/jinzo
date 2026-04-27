@@ -70,7 +70,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
             {labels.map((label) => (
               <span
                 key={label}
-                className={`inline-block px-2.5 py-1 text-xs rounded-full capitalize font-medium bg-primary-200 dark:bg-primary-500/40 text-primary-600 dark:text-primary-100`}
+                className={`inline-block px-2.5 py-1 text-xs rounded-full capitalize font-medium bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-100`}
               >
                 {label}
               </span>
@@ -90,7 +90,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
               </ReactMarkdown>
             </div>
           ) : (
-            <p className="text-sm text-primary-400 dark:text-primary-500 italic">
+            <p className="text-sm text-primary-400 dark:text-primary-500">
               Details not synced yet or no description provided.
             </p>
           )}

@@ -4,13 +4,15 @@ import { parseToolContent } from "../../utils/parse-tool-content";
 import { getToolType } from "../../utils/group-tool-calls";
 import { TodoListDisplay, type TodoItem } from "./todo-list-display";
 import { TaskDisplay, type TaskParams } from "./task-display";
-import { ExitPlanDisplay, type ExitPlanParams } from "./exit-plan-display";
+import { PlanDisplay } from "./plan-display";
 import { WriteDisplay, type WriteParams } from "./write-display";
 import { McpDisplay } from "./mcp-display";
 import { GetDiffDisplay, type GetDiffParams } from "./get-diff-display";
-import { PersistReviewDisplay, type PersistReviewParams } from "./persist-review-display";
+import { SaveReviewDisplay, type SaveReviewParams } from "./save-review-display";
 import { CommitDisplay, type CommitParams } from "./commit-display";
-import { PersistFindingDisplay, type PersistFindingParams } from "./persist-finding-display";
+import { PRDisplay, type PRParams } from "./pr-display";
+import { CheckPackageDisplay, type CheckPackageParams } from "./check-package-display";
+import { SaveFindingDisplay, type SaveFindingParams } from "./save-finding-display";
 import { AgentDisplay, type AgentParams } from "./agent-display";
 import { IntentDisplay, type IntentParams } from "./intent-display";
 import { BashDisplay, type BashParams } from "./bash-display";
@@ -18,81 +20,124 @@ import { GlobDisplay, type GlobParams } from "./glob-display";
 import { ReadDisplay, type ReadParams } from "./read-display";
 import { GrepDisplay, type GrepParams } from "./grep-display";
 import { EditDisplay, type EditParams } from "./edit-display";
+import { DeleteDisplay, type DeleteParams } from "./delete-display";
 import { ViewDisplay, type ViewParams } from "./view-display";
 import { ToolSearchDisplay, type ToolSearchParams } from "./tool-search-display";
 import { SkillDisplay, type SkillParams } from "./skill-display";
+import { AskUserQuestionDisplay, type AskUserQuestionParams } from "./ask-user-question-display";
+import { WebFetchDisplay, type WebFetchParams } from "./web-fetch-display";
 
 interface ToolCallItemProps {
   event: RunEvent;
   isCompact?: boolean;
 }
 
+function getToolParams<T>(
+  metadataInput: Record<string, unknown> | undefined,
+  params: Record<string, unknown> | null,
+  fallback: T,
+): T {
+  return metadataInput
+    ? (metadataInput as T)
+    : params
+      ? (params as T)
+      : fallback;
+}
+
+function hasMeaningfulOutput(value: unknown): boolean {
+  if (value === undefined || value === null) {
+    return false;
+  }
+  if (typeof value === "string") {
+    return value.trim().length > 0;
+  }
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  if (typeof value === "object") {
+    return Object.keys(value as Record<string, unknown>).length > 0;
+  }
+  return true;
+}
+
 export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   const { toolName, params, summary } = parseToolContent(event.content);
+  const toolNameLower = toolName.toLowerCase();
+  const metadataInput = event.metadata?.input as
+    | Record<string, unknown>
+    | undefined;
   const displayName = getToolType(event.content);
   const { icon } = getToolInfo(displayName);
 
-  if (toolName.toLowerCase() === "todowrite") {
-    // First try to get todos from metadata (raw input from hook)
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
+  const hasParamsOrInput =
+    (params !== null && Object.keys(params).length > 0) ||
+    (metadataInput !== undefined && Object.keys(metadataInput).length > 0);
+  const hasSummary = Boolean(summary?.trim());
+  const isEmptyTool =
+    !hasParamsOrInput &&
+    !hasSummary &&
+    !hasMeaningfulOutput(event.metadata?.output);
+  const emptyLabel = "No input or output";
+
+  if (isEmptyTool) {
+    if (isCompact) {
+      return (
+        <div className="flex items-center gap-1 px-1 text-s font-sans">
+          <span className="text-primary-500/60 shrink-0">{emptyLabel}</span>
+        </div>
+      );
+    }
+    return (
+      <div className=" ">
+        <div className="flex items-center gap-1 text-s font-sans">
+          <span className="text-primary-500/60 group-hover:text-primary-900 group-hover:dark:text-primary-200">{icon}</span>
+          <span className="text-primary-500/60 group-hover:text-primary-900 group-hover:dark:text-primary-200 font-medium">
+            {displayName}
+          </span>
+          <span className="text-primary-500/60 italic truncate">{emptyLabel}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (toolNameLower === "todowrite") {
     const todos = metadataInput?.todos ?? params?.todos;
     if (todos && Array.isArray(todos)) {
       return <TodoListDisplay todos={todos as TodoItem[]} />;
     }
   }
 
-  // Show ExitPlanDisplay for ExitPlanMode tool calls
-  if (toolName.toLowerCase() === "exitplanmode") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const planParams: ExitPlanParams = metadataInput
-      ? (metadataInput as ExitPlanParams)
-      : params
-        ? (params as ExitPlanParams)
-        : { plan: summary };
-    return <ExitPlanDisplay params={planParams} />;
+  // Show PlanDisplay for Plan / Create Plan tool calls
+  if (toolNameLower === "plan" || toolNameLower === "create plan") {
+    return <PlanDisplay event={event} />;
+  }
+
+  // Show PlanDisplay for ExitPlanMode tool calls
+  if (toolNameLower === "exitplanmode") {
+    return <PlanDisplay event={event} />;
   }
 
   // Show TaskDisplay for task tool calls - prefer metadata.input over parsed content
-  if (toolName.toLowerCase() === "task") {
-    // First try to get params from metadata (raw input from hook)
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const taskParams: TaskParams = metadataInput
-      ? (metadataInput as TaskParams)
-      : params
-        ? (params as TaskParams)
-        : { description: summary };
-    return <TaskDisplay params={taskParams} />;
+  if (toolNameLower === "task") {
+    const taskParams = getToolParams<TaskParams>(metadataInput, params, {
+      description: summary,
+    });
+    return <TaskDisplay params={taskParams} isCompact={isCompact} />;
   }
 
   // Show AgentDisplay for agent tool calls
-  if (toolName.toLowerCase() === "agent") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const agentParams: AgentParams = metadataInput
-      ? (metadataInput as AgentParams)
-      : params
-        ? (params as AgentParams)
-        : { description: summary };
-    return <AgentDisplay params={agentParams} />;
+  if (toolNameLower === "agent") {
+    const agentParams = getToolParams<AgentParams>(metadataInput, params, {
+      description: summary,
+    });
+    return <AgentDisplay params={agentParams} isCompact={isCompact} />;
   }
 
   // Show EditDisplay for edit tool calls
-  if (toolName.toLowerCase() === "edit" || toolName.toLowerCase() === "replace") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const editParams: EditParams = metadataInput
-      ? (metadataInput as EditParams)
-      : params
-        ? (params as EditParams)
-        : { file_path: summary };
+  if (toolNameLower === "edit" || toolNameLower === "replace") {
+    const editParams = getToolParams<EditParams>(metadataInput, params, {
+      file_path: summary,
+    });
     return <EditDisplay params={editParams} output={event.metadata?.output} isCompact={isCompact} />;
   }
 
@@ -106,7 +151,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
       : params
         ? (params as WriteParams)
         : { file_path: summary };
-    return <WriteDisplay params={writeParams} />;
+    return <WriteDisplay params={writeParams} output={event.metadata?.output} />;
   }
 
   // Show BashDisplay for bash/shell tool calls
@@ -161,6 +206,20 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     return <ReadDisplay params={readParams} output={event.metadata?.output} isCompact={isCompact} />;
   }
 
+  // Show DeleteDisplay for delete file tool calls (e.g. Cursor ACP)
+  if (toolNameLower === "delete") {
+    const deleteParams = getToolParams<DeleteParams>(metadataInput, params, {
+      file_path: summary,
+    });
+    return (
+      <DeleteDisplay
+        params={deleteParams}
+        output={event.metadata?.output}
+        isCompact={isCompact}
+      />
+    );
+  }
+
   // Show ViewDisplay for Copilot view tool calls
   if (toolName.toLowerCase() === "view") {
     const metadataInput = event.metadata?.input as
@@ -184,7 +243,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
       : params
         ? (params as IntentParams)
         : { intent: summary };
-    return <IntentDisplay params={intentParams} />;
+    return <IntentDisplay params={intentParams} isCompact={isCompact} />;
   }
 
   // Show ToolSearchDisplay for ToolSearch tool calls
@@ -213,7 +272,44 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     return <SkillDisplay params={skillParams} isCompact={isCompact} />;
   }
 
-  // Show GetDiffDisplay for Jinzo GetDiff tool calls
+  // Show AskUserQuestionDisplay for interactive question tool calls
+  // Claude: AskUserQuestion — Copilot/Codex SDK: ask_user
+  if (
+    toolNameLower === "askuserquestion" ||
+    toolNameLower === "ask_user" ||
+    toolNameLower === "askuser"
+  ) {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const askParams: AskUserQuestionParams = metadataInput
+      ? (metadataInput as AskUserQuestionParams)
+      : params
+        ? (params as AskUserQuestionParams)
+        : { question: summary };
+    return <AskUserQuestionDisplay params={askParams} output={event.metadata?.output} isCompact={isCompact} />;
+  }
+
+  // Show WebFetchDisplay for web fetch (Copilot) and WebSearch (Codex: input.query, output "Searched: ...")
+  if (
+    toolName.toLowerCase() === "webfetch" ||
+    toolName.toLowerCase() === "web_fetch" ||
+    toolName.toLowerCase() === "websearch"
+  ) {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const fetchParams: WebFetchParams = metadataInput
+      ? (metadataInput as WebFetchParams)
+      : params
+        ? (params as WebFetchParams)
+        : toolName.toLowerCase() === "websearch"
+          ? { query: summary }
+          : { url: summary };
+    return <WebFetchDisplay params={fetchParams} output={event.metadata?.output} isCompact={isCompact} />;
+  }
+
+  // Show GetDiffDisplay for Mains GetDiff tool calls
   if (displayName === "GetDiff") {
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
@@ -226,33 +322,33 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     return <GetDiffDisplay params={diffParams} output={event.metadata?.output} isCompact={isCompact} />;
   }
 
-  // Show PersistReviewDisplay for Jinzo SaveReview tool calls
+  // Show PersistReviewDisplay for Mains SaveReview tool calls
   if (displayName === "SaveReview") {
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
       | undefined;
-    const reviewParams: PersistReviewParams = metadataInput
-      ? (metadataInput as PersistReviewParams)
+    const reviewParams: SaveReviewParams = metadataInput
+      ? (metadataInput as SaveReviewParams)
       : params
-        ? (params as PersistReviewParams)
+        ? (params as SaveReviewParams)
         : {};
-    return <PersistReviewDisplay params={reviewParams} isCompact={isCompact} />;
+    return <SaveReviewDisplay params={reviewParams} isCompact={isCompact} />;
   }
 
-  // Show PersistFindingDisplay for Jinzo SaveFinding/SaveFindings tool calls
+  // Show PersistFindingDisplay for Mains SaveFinding/SaveFindings tool calls
   if (displayName === "SaveFinding") {
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
       | undefined;
-    const findingParams: PersistFindingParams = metadataInput
-      ? (metadataInput as PersistFindingParams)
+    const findingParams: SaveFindingParams = metadataInput
+      ? (metadataInput as SaveFindingParams)
       : params
-        ? (params as PersistFindingParams)
+        ? (params as SaveFindingParams)
         : {};
-    return <PersistFindingDisplay params={findingParams} isCompact={isCompact} />;
+    return <SaveFindingDisplay params={findingParams} isCompact={isCompact} />;
   }
 
-  // Show CommitDisplay for Jinzo CommitChanges tool calls
+  // Show CommitDisplay for Mains CommitChanges tool calls
   if (displayName === "Commit") {
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
@@ -265,10 +361,36 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     return <CommitDisplay params={commitParams} isCompact={isCompact} />;
   }
 
+  // Show PRDisplay for Mains CreatePR tool calls
+  if (displayName === "CreatePR") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const prParams: PRParams = metadataInput
+      ? (metadataInput as PRParams)
+      : params
+        ? (params as PRParams)
+        : {};
+    return <PRDisplay params={prParams} isCompact={isCompact} />;
+  }
+
+  // Show CheckPackageDisplay for Mains CheckPackage tool calls
+  if (displayName === "CheckPackage") {
+    const metadataInput = event.metadata?.input as
+      | Record<string, unknown>
+      | undefined;
+    const checkParams: CheckPackageParams = metadataInput
+      ? (metadataInput as CheckPackageParams)
+      : params
+        ? (params as CheckPackageParams)
+        : {};
+    return <CheckPackageDisplay params={checkParams} output={event.metadata?.output} isCompact={isCompact} />;
+  }
+
   // Show McpDisplay for MCP tool calls with expandable params
   if (
     displayName.endsWith("Mcp") ||
-    displayName === "Jinzo" ||
+    displayName === "Mains" ||
     displayName === "Linear" ||
     displayName === "Notion" ||
     displayName === "Figma"
@@ -291,8 +413,8 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   return (
     <div className="py-0.5 px-2 hover:bg-primary-50 dark:hover:bg-primary/5 rounded">
       <div className="flex items-center gap-2 text-s font-sans">
-        <span className="dark:text-primary-300">{icon}</span>
-        <span className="dark:text-primary-300 font-medium">{displayName}</span>
+        <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">{icon}</span>
+        <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary font-medium">{displayName}</span>
         <span className="text-primary-500 truncate">{summary}</span>
       </div>
     </div>

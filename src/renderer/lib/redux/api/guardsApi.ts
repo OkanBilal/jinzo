@@ -1,0 +1,119 @@
+import { baseApi } from "./baseApi";
+
+export interface PackageIdentifier {
+  name: string;
+  version?: string;
+  ecosystem: string;
+}
+
+export interface PackageAlert {
+  type: string;
+  severity: "critical" | "high" | "medium" | "low";
+  title: string;
+  description?: string;
+  url?: string;
+}
+
+export interface PackageScore {
+  package: PackageIdentifier;
+  overallScore: number;
+  riskLevel: "critical" | "high" | "medium" | "low" | "none";
+  categories: {
+    quality?: number;
+    maintenance?: number;
+    vulnerability?: number;
+    license?: number;
+    supplyChain?: number;
+  };
+  alerts: PackageAlert[];
+}
+
+export interface PackageCheckResult {
+  allowed: boolean;
+  package: PackageIdentifier;
+  score?: PackageScore;
+  reason?: string;
+  alerts: PackageAlert[];
+}
+
+export interface ScanSummary {
+  total: number;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  safe: number;
+}
+
+export interface ManifestScanResult {
+  ecosystem: string;
+  manifestPath: string;
+  packages: PackageScore[];
+  summary: ScanSummary;
+  scannedAt: number;
+}
+
+export interface ActiveGuardInfo {
+  id: string;
+  displayName: string;
+}
+
+export const guardsApi = baseApi.injectEndpoints({
+  endpoints: (builder) => ({
+    getActiveGuard: builder.query<ActiveGuardInfo | null, void>({
+      query: () => ({
+        handler: "guards:getActiveGuard",
+      }),
+      transformResponse: (response: any) =>
+        response?.success ? response.data : null,
+    }),
+
+    checkPackage: builder.mutation<PackageCheckResult, PackageIdentifier>({
+      query: (pkg) => ({
+        handler: "guards:checkPackage",
+        args: [pkg],
+      }),
+      transformResponse: (response: any) =>
+        response?.success ? response.data : null,
+    }),
+
+    checkPackages: builder.mutation<PackageCheckResult[], PackageIdentifier[]>({
+      query: (pkgs) => ({
+        handler: "guards:checkPackages",
+        args: [pkgs],
+      }),
+      transformResponse: (response: any) =>
+        response?.success ? response.data : [],
+    }),
+
+    getPackageScore: builder.query<PackageScore, PackageIdentifier>({
+      query: (pkg) => ({
+        handler: "guards:getPackageScore",
+        args: [pkg],
+      }),
+      transformResponse: (response: any) =>
+        response?.success ? response.data : null,
+    }),
+
+    scanWorkspace: builder.mutation<
+      ManifestScanResult[],
+      { workspaceId: string; rootPath: string }
+    >({
+      query: ({ workspaceId, rootPath }) => ({
+        handler: "guards:scanWorkspace",
+        args: [workspaceId, rootPath],
+      }),
+      transformResponse: (response: any) =>
+        response?.success ? response.data : [],
+    }),
+  }),
+});
+
+export const {
+  useGetActiveGuardQuery,
+  useCheckPackageMutation,
+  useCheckPackagesMutation,
+  useGetPackageScoreQuery,
+  useLazyGetPackageScoreQuery,
+  useScanWorkspaceMutation,
+} = guardsApi;

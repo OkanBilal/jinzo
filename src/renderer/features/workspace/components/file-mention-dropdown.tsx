@@ -2,8 +2,7 @@ import { RefObject, useEffect, useMemo, useReducer } from "react";
 import { Button, DropdownWrapper } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
-import type { DirEntry } from "@/features/workspace/components/file-explorer/types";
-import type { FileNode } from "@/features/workspace/components/file-explorer/types";
+import type { DirEntry, FileNode } from "@/features/workspace/types/file-explorer";
 
 interface FetchState {
   entries: DirEntry[];
@@ -161,7 +160,7 @@ export function FileMentionDropdown({
                     });
                   }
                 }}
-                className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100 first:rounded-t-xl last:rounded-b-xl"
+                className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 first:rounded-t-xl last:rounded-b-xl"
               >
                 <div className="flex items-center gap-2">
                   <FileIconComponent

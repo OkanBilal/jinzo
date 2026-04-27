@@ -7,10 +7,143 @@ import { runsApi, workspacesApi, reviewsApi, reviewFindingsApi, workspaceDiffsAp
 import { mapArtifactToEvent, mapToolCallToEvent } from "../utils/run-event-mappers";
 import { useStreamingEvents } from "./use-streaming-events";
 
-type Attachments = Array<{ name: string; type: string; data: string; mimeType: string }>;
+type Attachments = Array<{
+  name: string;
+  type: string;
+  data?: string;
+  sourcePath?: string;
+  mimeType: string;
+}>;
 type ContextIssue = { provider: string; number?: number | null; title: string; body?: string | null };
 type ContextSignal = { source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number };
 type ContextFile = { fullPath: string; displayName?: string };
+type BrowserContextSelection = {
+  id: string;
+  url: string;
+  title: string;
+  selector: string;
+  tagName: string;
+  text: string;
+  outerHTML: string;
+  styles: Record<string, string>;
+  rect: { x: number; y: number; width: number; height: number };
+  pageRect: { x: number; y: number; width: number; height: number };
+  componentName?: string;
+  sourceFile?: string;
+  timestamp: string;
+  /** Absolute path to the element screenshot on disk. */
+  screenshotPath?: string;
+  /** Absolute path to the surrounding-context screenshot on disk. */
+  surroundingScreenshotPath?: string;
+  screenshotMimeType: string;
+};
+
+type InitialContextItem = {
+  kind: "file" | "diff" | "selection" | "note";
+  ref?: string;
+  content?: string;
+  metadata?: Record<string, unknown>;
+};
+
+/** Build attachments + initialContext from browser selections. Screenshots go as image attachments; structural data goes as "selection" context items. */
+function browserSelectionsToPayload(
+  selections: BrowserContextSelection[] | undefined,
+): { attachments: Attachments; initialContext: InitialContextItem[] } {
+  const attachments: Attachments = [];
+  const initialContext: InitialContextItem[] = [];
+  if (!selections?.length) return { attachments, initialContext };
+
+  for (const sel of selections) {
+    const host = (() => {
+      try { return new URL(sel.url).hostname; } catch { return "page"; }
+    })();
+    const slug = (sel.componentName || sel.tagName || "element").replace(/[^a-z0-9_-]+/gi, "-").toLowerCase();
+
+    if (sel.screenshotPath) {
+      attachments.push({
+        name: `browser-${host}-${slug}-${sel.id.slice(0, 6)}.png`,
+        type: "image",
+        sourcePath: sel.screenshotPath,
+        mimeType: sel.screenshotMimeType || "image/png",
+      });
+    }
+    if (sel.surroundingScreenshotPath) {
+      attachments.push({
+        name: `browser-${host}-${slug}-${sel.id.slice(0, 6)}-context.png`,
+        type: "image",
+        sourcePath: sel.surroundingScreenshotPath,
+        mimeType: sel.screenshotMimeType || "image/png",
+      });
+    }
+
+    const content = [
+      `Browser selection: ${sel.componentName ? `<${sel.componentName}>` : sel.tagName}`,
+      `URL: ${sel.url}`,
+      sel.title ? `Page title: ${sel.title}` : null,
+      `Selector: ${sel.selector}`,
+      sel.sourceFile ? `Source file: ${sel.sourceFile}` : null,
+      sel.text ? `Visible text: ${sel.text}` : null,
+      sel.outerHTML ? `HTML: ${sel.outerHTML}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    initialContext.push({
+      kind: "selection",
+      ref: sel.url,
+      content,
+      metadata: {
+        source: "browser",
+        id: sel.id,
+        url: sel.url,
+        title: sel.title,
+        selector: sel.selector,
+        tagName: sel.tagName,
+        styles: sel.styles,
+        rect: sel.rect,
+        pageRect: sel.pageRect,
+        componentName: sel.componentName,
+        sourceFile: sel.sourceFile,
+        timestamp: sel.timestamp,
+      },
+    });
+  }
+  return { attachments, initialContext };
+}
+
+/**
+ * Keep events/turns in memory only for the N most recently viewed runs.
+ * Older run payloads are dropped from local state — they'll be re-fetched
+ * from the DB the next time the user opens that tab.
+ */
+const MAX_RETAINED_RUNS = 4;
+
+/**
+ * Hard cap on the per-run event list. A runaway agent can easily emit tens of
+ * thousands of artifacts; we only need enough history to render, so we drop
+ * the oldest entries once we exceed this threshold.
+ */
+const MAX_EVENTS_PER_RUN = 5000;
+
+/**
+ * Evict entries in `map` so that only the `allowedIds` remain. Returns a new
+ * object only if something changed so React can skip re-renders.
+ */
+function pruneRunMap<T>(
+  map: Record<string, T>,
+  allowedIds: Set<string>,
+): Record<string, T> {
+  let changed = false;
+  const next: Record<string, T> = {};
+  for (const [key, value] of Object.entries(map)) {
+    if (allowedIds.has(key)) {
+      next[key] = value;
+    } else {
+      changed = true;
+    }
+  }
+  return changed ? next : map;
+}
 
 export function useWorkspaceRuns(
   workspaceId: string | undefined,
@@ -28,6 +161,18 @@ export function useWorkspaceRuns(
   const eventsEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const lastCommitCountRef = useRef<number>(0);
+  /** LRU of recently-viewed run IDs (most recent last). */
+  const recentRunIdsRef = useRef<string[]>([]);
+
+  /** Mark `runId` as recently used and return the updated whitelist (size ≤ MAX). */
+  const touchRun = useCallback((runId: string): Set<string> => {
+    const list = recentRunIdsRef.current;
+    const existing = list.indexOf(runId);
+    if (existing !== -1) list.splice(existing, 1);
+    list.push(runId);
+    while (list.length > MAX_RETAINED_RUNS) list.shift();
+    return new Set(list);
+  }, []);
 
   // --- Internal helpers ---
 
@@ -36,6 +181,7 @@ export function useWorkspaceRuns(
     setActiveRunId(null);
     setRunEvents({});
     setRunTurns({});
+    recentRunIdsRef.current = [];
   }, []);
 
   /** Wraps async run operations with loading state, account fetch, and error handling */
@@ -66,15 +212,20 @@ export function useWorkspaceRuns(
   const registerNewRun = useCallback(async (runId: string): Promise<string | null> => {
     const runResult = await window.api.runs.getById(runId);
     if (runResult.success && runResult.data) {
+      const newId = runResult.data.id;
       setRuns((prev) => [runResult.data, ...prev]);
-      setActiveRunId(runResult.data.id);
+      setActiveRunId(newId);
       dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
       lastCommitCountRef.current = 0;
-      setRunEvents((prev) => ({ ...prev, [runResult.data.id]: [] }));
-      return runResult.data.id;
+      const allowed = touchRun(newId);
+      setRunEvents((prev) =>
+        pruneRunMap({ ...prev, [newId]: [] }, allowed),
+      );
+      setRunTurns((prev) => pruneRunMap(prev, allowed));
+      return newId;
     }
     return null;
-  }, [dispatch]);
+  }, [dispatch, touchRun]);
 
   // --- Data loading ---
 
@@ -109,10 +260,22 @@ export function useWorkspaceRuns(
       }
 
       events.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-      setRunEvents((prev) => ({ ...prev, [runId]: events }));
+      // Cap event list per run — unbounded histories dominate renderer RAM.
+      const cappedEvents =
+        events.length > MAX_EVENTS_PER_RUN
+          ? events.slice(events.length - MAX_EVENTS_PER_RUN)
+          : events;
+      const allowed = touchRun(runId);
+      setRunEvents((prev) =>
+        pruneRunMap({ ...prev, [runId]: cappedEvents }, allowed),
+      );
 
       if (turnsRes.success && turnsRes.data) {
-        setRunTurns((prev) => ({ ...prev, [runId]: turnsRes.data }));
+        setRunTurns((prev) =>
+          pruneRunMap({ ...prev, [runId]: turnsRes.data }, allowed),
+        );
+      } else {
+        setRunTurns((prev) => pruneRunMap(prev, allowed));
       }
     } catch (err) {
       console.error("Failed to load run details:", err);
@@ -146,16 +309,26 @@ export function useWorkspaceRuns(
   // --- Effects ---
 
   useEffect(() => {
-    clearState();
-    if (workspaceId) {
-      loadWorkspaceRuns(workspaceId);
-    }
+    void (async () => {
+      clearState();
+      if (workspaceId) {
+        await loadWorkspaceRuns(workspaceId);
+      }
+    })();
   }, [workspaceId, loadWorkspaceRuns, clearState]);
+
+  // Derive the active run's status once per render so the poll effect below
+  // only rebinds its interval when the status actually flips (running →
+  // succeeded/failed/…). Depending on the full `runs` array would tear the
+  // interval down on every poll tick.
+  const activeRunStatus = useMemo(
+    () => runs.find((r) => r.id === activeRunId)?.status,
+    [runs, activeRunId],
+  );
 
   // Poll for updates when active run is running
   useEffect(() => {
-    const activeRun = runs.find((r) => r.id === activeRunId);
-    if (!activeRun || activeRun.status !== "running") {
+    if (activeRunStatus !== "running") {
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
         pollingRef.current = null;
@@ -220,7 +393,7 @@ export function useWorkspaceRuns(
       } catch (err) {
         console.error("Polling error:", err);
       }
-    }, 500);
+    }, 1500);
 
     return () => {
       if (pollingRef.current) {
@@ -229,7 +402,7 @@ export function useWorkspaceRuns(
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeRunId, runs, loadRunDetails]);
+  }, [activeRunId, activeRunStatus, loadRunDetails]);
 
   // Auto-scroll to bottom
   const currentEvents = useMemo(() => {
@@ -255,7 +428,11 @@ export function useWorkspaceRuns(
       type: "artifact" as const,
       content: se.content,
       timestamp: new Date(se.timestamp),
-      metadata: { kind: "report", streaming: true, streamId: se.streamId },
+      metadata: {
+        kind: se.streamId.startsWith("cursor-think-") ? "thinking" : "report",
+        streaming: true,
+        streamId: se.streamId,
+      },
     }));
 
     return [...dbEvents, ...streamRunEvents];
@@ -276,11 +453,18 @@ export function useWorkspaceRuns(
       contextIssues?: ContextIssue[],
       contextFiles?: ContextFile[],
       contextSignals?: ContextSignal[],
+      contextBrowserSelections?: BrowserContextSelection[],
     ) => {
       if (!goal.trim() || !selectedWorkspace || !selectedProvider) {
         toast.error("Please fill in all required fields");
         return null;
       }
+
+      const browserPayload = browserSelectionsToPayload(contextBrowserSelections);
+      const mergedAttachments =
+        browserPayload.attachments.length > 0 || attachments?.length
+          ? [...(attachments ?? []), ...browserPayload.attachments]
+          : undefined;
 
       return runOperation(async (accountId) => {
         const result = await window.api.runs.execute({
@@ -289,8 +473,8 @@ export function useWorkspaceRuns(
           providerId: selectedProvider,
           goal: goal.trim(),
           model: model || undefined,
-          initialContext: [],
-          attachments,
+          initialContext: browserPayload.initialContext,
+          attachments: mergedAttachments,
           contextIssues: contextIssues?.map(i => ({ provider: i.provider, number: i.number, title: i.title, body: i.body })),
           contextFiles: contextFiles?.map(f => ({ path: f.fullPath })),
           contextSignals: contextSignals?.map(s => ({ source: s.source, level: s.level, category: s.category, title: s.title, body: s.body, stackTrace: s.stackTrace, eventCount: s.eventCount })),
@@ -314,11 +498,18 @@ export function useWorkspaceRuns(
     contextFiles?: ContextFile[],
     contextSignals?: ContextSignal[],
     model?: string,
+    contextBrowserSelections?: BrowserContextSelection[],
   ) => {
     if (!message.trim()) {
       setError("Please enter a message");
       return false;
     }
+
+    const browserPayload = browserSelectionsToPayload(contextBrowserSelections);
+    const mergedAttachments =
+      browserPayload.attachments.length > 0 || attachments?.length
+        ? [...(attachments ?? []), ...browserPayload.attachments]
+        : undefined;
 
     return runOperation(async (accountId) => {
       const result = await window.api.runs.continue({
@@ -326,7 +517,8 @@ export function useWorkspaceRuns(
         accountId,
         message: message.trim(),
         model: model || undefined,
-        attachments,
+        attachments: mergedAttachments,
+        additionalContext: browserPayload.initialContext,
         contextIssues: contextIssues?.map(i => ({ provider: i.provider, number: i.number, title: i.title, body: i.body })),
         contextFiles: contextFiles?.map(f => ({ path: f.fullPath })),
         contextSignals: contextSignals?.map(s => ({ source: s.source, level: s.level, category: s.category, title: s.title, body: s.body, stackTrace: s.stackTrace, eventCount: s.eventCount })),
@@ -439,6 +631,22 @@ export function useWorkspaceRuns(
         }
         return newRuns;
       });
+      // Drop from LRU so the eviction whitelist no longer protects this run.
+      recentRunIdsRef.current = recentRunIdsRef.current.filter(
+        (id) => id !== runId,
+      );
+      setRunEvents((prev) => {
+        if (!(runId in prev)) return prev;
+        const next = { ...prev };
+        delete next[runId];
+        return next;
+      });
+      setRunTurns((prev) => {
+        if (!(runId in prev)) return prev;
+        const next = { ...prev };
+        delete next[runId];
+        return next;
+      });
     },
     [activeRunId, loadRunDetails],
   );
@@ -448,9 +656,15 @@ export function useWorkspaceRuns(
       setActiveRunId(runId);
       if (!runEvents[runId]) {
         loadRunDetails(runId);
+      } else {
+        // Already in memory — bump its LRU position and re-prune in case
+        // another tab push crowded the whitelist since.
+        const allowed = touchRun(runId);
+        setRunEvents((prev) => pruneRunMap(prev, allowed));
+        setRunTurns((prev) => pruneRunMap(prev, allowed));
       }
     },
-    [runEvents, loadRunDetails],
+    [runEvents, loadRunDetails, touchRun],
   );
 
   const activeRun = runs.find((r) => r.id === activeRunId);

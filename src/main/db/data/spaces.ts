@@ -84,4 +84,26 @@ export const seedSpaces: SeedSpace[] = [
     },
     sortOrder: 2,
   },
+  {
+    id: "cursor",
+    name: "Cursor",
+    slug: "cursor",
+    icon: "icon:cursor",
+    systemPrompt: "",
+    themeConfig: {
+      lightBackground: "#cfced2a6",
+      darkBackground: "#0f0e14bf",
+    },
+    uiConfig: {
+      sidebar: {
+        width: "19rem",
+        title: "Repository",
+        itemType: "workspace",
+        defaultRoute: "/cursor",
+      },
+      main: { margin: "19rem" },
+      rightPanel: { width: "22rem", component: "workspace" },
+    },
+    sortOrder: 3,
+  },
 ];

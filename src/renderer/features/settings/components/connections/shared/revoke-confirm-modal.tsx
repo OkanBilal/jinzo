@@ -20,7 +20,7 @@ export function RevokeConfirmModal({
 
   return createPortal(
     <div className="fixed inset-0 z-(--z-modal-critical) flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-primary-950/60" role="presentation" onClick={onCancel} />
+      <div className="absolute inset-0 bg-primary-950/50" role="presentation" onClick={onCancel} />
       <div className="relative w-full max-w-md glass-morphism rounded-2xl overflow-hidden">
         <div className="p-6">
           <Text variant="h3" className="mb-3">

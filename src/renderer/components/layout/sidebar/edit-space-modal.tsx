@@ -245,10 +245,10 @@ export default function EditSpaceModal({
               value={name}
               onChange={(e) => updateState({ name: e.target.value })}
               placeholder="Space name..."
-              className="w-full px-3 py-2 border-0! shadow-none!
-                bg-primary-950/10! dark:bg-primary/4
-                dark:placeholder:text-primary-100!
-                placeholder:text-primary-700!
+              className="w-full px-3 py-2 border-0 shadow-none
+                bg-primary-950/10 dark:bg-primary/4
+                dark:placeholder:text-primary-100
+                placeholder:text-primary-700
                 text-primary-800 dark:text-primary
                 text-sm focus:outline-none
                 flex items-center justify-between
@@ -302,7 +302,7 @@ export default function EditSpaceModal({
             onClick={handleSave}
             disabled={isLoading}
             className="w-full py-2.5 px-4 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer disabled:opacity-50
-              disabled:cursor-not-allowed brightness-120 hover:scale-[1.01] active:scale-99 text-primary-800 dark:text-primary"
+              disabled:cursor-not-allowed brightness-120 text-primary-800 dark:text-primary"
             style={{ background: currentVariant.preview }}
           >
             {isLoading ? "Saving..." : "Save Changes"}

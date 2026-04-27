@@ -7,7 +7,7 @@ import type { Config } from "drizzle-kit";
  * - drizzle-kit is ONLY used at development time (generate / push / studio)
  * - The `dbCredentials.url` here is NOT the runtime DB
  * - Runtime DB path is resolved inside Electron main process via:
- *     app.getPath("userData") + "/jinzo.db"
+ *     app.getPath("userData") + "/mains.db"
  */
 
 const isCI = Boolean(process.env.CI);
@@ -23,7 +23,7 @@ export default {
 
   // CLI-only database (never shipped to users)
   dbCredentials: {
-    url: isCI ? ":memory:" : "./.data/jinzo.db",
+    url: isCI ? ":memory:" : "./.data/mains.db",
   },
 
   // Optional: safer defaults

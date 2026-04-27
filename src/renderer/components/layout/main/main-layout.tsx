@@ -14,7 +14,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div
-      className="app-root flex flex-col h-screen antialiased"
+      className="app-root flex flex-col h-screen"
       style={{
         ...backgroundStyle,
         transition:

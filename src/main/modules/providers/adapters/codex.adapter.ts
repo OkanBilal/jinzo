@@ -43,6 +43,14 @@ import {
   emitUserPromptArtifact,
   saveAttachments,
 } from "./adapter.shared";
+import type { MainsToolContext } from "./mains-tools.core";
+import {
+  TOOL_DESCRIPTIONS,
+  handleCommitChanges,
+  handleCreatePR,
+  handleCheckPackage,
+} from "./mains-tools.core";
+import { guardsService } from "../../guards/guards.service";
 
 // ─────────────────────────────────────────────────────────────
 // JSON-RPC Types
@@ -176,6 +184,86 @@ function parseCodexReviewFindings(reviewText: string): ParsedReviewFinding[] {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Mains Dynamic Tools (registered per-thread via dynamicTools)
+// ─────────────────────────────────────────────────────────────
+
+const MAINS_DYNAMIC_TOOLS = [
+  {
+    name: "CommitChanges",
+    description: TOOL_DESCRIPTIONS.CommitChanges,
+    inputSchema: {
+      type: "object",
+      properties: {
+        message: { type: "string", description: "The commit message" },
+        files: { type: "array", items: { type: "string" }, description: "Specific files to stage. If omitted, stages all changes (git add -A)" },
+      },
+      required: ["message"],
+    },
+  },
+  {
+    name: "CreatePR",
+    description: TOOL_DESCRIPTIONS.CreatePR,
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "The pull request title" },
+        body: { type: "string", description: "The pull request body/description" },
+        base: { type: "string", description: "The base branch to merge into (defaults to the repo default branch)" },
+        draft: { type: "boolean", description: "Create as a draft pull request" },
+        labels: { type: "array", items: { type: "string" }, description: "Labels to add to the pull request" },
+      },
+      required: ["title"],
+    },
+  },
+  {
+    name: "CheckPackage",
+    description: TOOL_DESCRIPTIONS.CheckPackage,
+    inputSchema: {
+      type: "object",
+      properties: {
+        packages: {
+          type: "array",
+          description: "Packages to check",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Package name (e.g. 'axios', '@types/node')" },
+              version: { type: "string", description: "Optional version" },
+              ecosystem: { type: "string", enum: ["npm", "pypi", "cargo", "go", "maven", "rubygems"], description: "Package ecosystem (defaults to npm)" },
+            },
+            required: ["name"],
+          },
+        },
+      },
+      required: ["packages"],
+    },
+  },
+];
+
+/**
+ * Dispatch a dynamic tool call to the appropriate mains handler.
+ * Returns the MCP-style result ({ content, isError? }).
+ */
+async function dispatchMainsTool(
+  toolName: string,
+  args: Record<string, unknown>,
+  ctx: MainsToolContext,
+): Promise<{ content: Array<{ type: "text"; text: string }>; isError?: boolean }> {
+  switch (toolName) {
+    case "CommitChanges":
+      return handleCommitChanges(args as any, ctx);
+    case "CreatePR":
+      return handleCreatePR(args as any, ctx);
+    case "CheckPackage":
+      return handleCheckPackage(args as any, ctx);
+    default:
+      return { content: [{ type: "text", text: `Unknown mains tool: ${toolName}` }], isError: true };
+  }
+}
+
+const MAINS_TOOL_NAMES = new Set(MAINS_DYNAMIC_TOOLS.map((t) => t.name));
+
+// ─────────────────────────────────────────────────────────────
 // Active run tracking
 // ─────────────────────────────────────────────────────────────
 
@@ -189,6 +277,12 @@ const activeRuns = new Map<string, {
   agentMessageBuffer: string;
   /** Pending events to emit (flushed message artifacts) */
   pendingFlush: WorkRunEvent[];
+  /** Workspace context for mains dynamic tools */
+  mainsCtx: MainsToolContext;
+  /** Accumulated file change diff content per itemId (from output/delta events) */
+  fileChangeBuffers: Map<string, string>;
+  /** Shell stdout/stderr chunks per command_execution itemId (Codex streams here; completed item often omits aggregatedOutput) */
+  commandOutputBuffers: Map<string, string>;
 }>();
 
 // Session ID mapping: runId → threadId (for resume support)
@@ -246,6 +340,15 @@ class CodexAppServer {
     this.child.stdout.on("data", (chunk: Buffer) => {
       this.jsonBuffer += chunk.toString();
       this.drainJsonBuffer();
+      // Guard: if we've accumulated >32MB without a parseable message we're
+      // almost certainly stuck on malformed output. Reset to avoid unbounded
+      // memory growth.
+      if (this.jsonBuffer.length > 32 * 1024 * 1024) {
+        logError(
+          `jsonBuffer exceeded 32MB (${this.jsonBuffer.length} bytes), resetting`,
+        );
+        this.jsonBuffer = "";
+      }
     });
 
     this.child.stderr?.on("data", (data: Buffer) => {
@@ -681,8 +784,8 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     // Handshake: initialize → initialized (required before any other RPC)
     await server.sendRequest("initialize", {
       clientInfo: {
-        name: "jinzo",
-        title: "Jinzo Desktop",
+        name: "mains",
+        title: "Mains Desktop",
         version: "1.0.0",
       },
       capabilities: {
@@ -719,6 +822,82 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
   // ─────────────────────────────────────────────────────────────
   // Event mapping: app-server notifications → WorkRunEvent
   // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Resolve the thread item id for streamed output chunks.
+   * Canonical Codex notification: `item/commandExecution/outputDelta` with
+   * `CommandExecutionOutputDeltaNotification` JSON fields `threadId`, `turnId`, `itemId`, `delta`
+   * (camelCase on the wire — see `codex-rs/app-server-protocol` v2).
+   * Docs: https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md#events
+   * (`item.id` from `item/started` matches delta `itemId`.)
+   * Also accepts snake_case / nested `item` for tolerance.
+   */
+  function resolveStreamOutputItemId(p: Record<string, unknown> | undefined): string | undefined {
+    if (!p) return undefined;
+    const cand =
+      (typeof p.itemId === "string" && p.itemId) ||
+      (typeof p.item_id === "string" && p.item_id) ||
+      (typeof p.threadItemId === "string" && p.threadItemId) ||
+      (typeof p.thread_item_id === "string" && p.thread_item_id) ||
+      (typeof (p as { commandExecutionId?: string }).commandExecutionId === "string" &&
+        (p as { commandExecutionId: string }).commandExecutionId) ||
+      (typeof (p as { command_execution_id?: string }).command_execution_id === "string" &&
+        (p as { command_execution_id: string }).command_execution_id);
+    if (cand) return cand;
+    const item = p.item as ThreadItem | undefined;
+    return item?.id && typeof item.id === "string" ? item.id : undefined;
+  }
+
+  function notificationOutputDeltaText(p: Record<string, unknown> | undefined): string | undefined {
+    if (!p) return undefined;
+    const raw = p.delta ?? p.content ?? p.text ?? p.output ?? p.stdout;
+    if (typeof raw === "string" && raw.length) return raw;
+    if (raw && typeof raw === "object" && "text" in raw && typeof (raw as { text: unknown }).text === "string") {
+      const t = (raw as { text: string }).text;
+      return t.length ? t : undefined;
+    }
+    return undefined;
+  }
+
+  /** Shell / file-read output: aggregatedOutput plus alternate Codex shapes */
+  function extractThreadItemStreamedText(item: ThreadItem): string | undefined {
+    const tryStr = (v: unknown): string | undefined =>
+      typeof v === "string" && v.trim() ? v : undefined;
+
+    const direct =
+      tryStr(item.aggregatedOutput) ??
+      tryStr(item.aggregated_output) ??
+      tryStr(item.output) ??
+      tryStr(item.stdout) ??
+      tryStr(item.stderr);
+    if (direct) return direct;
+
+    const nestedKeys = ["result", "commandOutput", "command_output"] as const;
+    for (const k of nestedKeys) {
+      const v = item[k];
+      if (typeof v === "string" && v.trim()) return v;
+      if (v && typeof v === "object") {
+        const o = v as Record<string, unknown>;
+        const inner =
+          tryStr(o.text) ??
+          tryStr(o.content) ??
+          tryStr(o.stdout) ??
+          tryStr(o.output) ??
+          tryStr(o.aggregatedOutput) ??
+          tryStr(o.aggregated_output);
+        if (inner) return inner;
+      }
+    }
+    return undefined;
+  }
+
+  function appendCommandOutputBuffer(runId: string, itemId: string | undefined, delta: string | undefined): void {
+    if (!delta || !itemId) return;
+    const runState = activeRuns.get(runId);
+    if (!runState) return;
+    const cur = runState.commandOutputBuffers.get(itemId) ?? "";
+    runState.commandOutputBuffers.set(itemId, cur + delta);
+  }
 
   function mapNotification(method: string, params: unknown, runId: string, model?: string): WorkRunEvent[] {
     const ts = Date.now();
@@ -845,12 +1024,42 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         break;
       }
 
-      // Other streaming deltas — ignore (reasoning summaries, command output, etc.)
+      // Accumulate file change diff output per itemId
+      case "item/fileChange/output/delta":
+      case "item/fileChange/outputDelta": {
+        const delta = notificationOutputDeltaText(p) ?? ((p?.delta ?? p?.content) as string | undefined);
+        const itemId = resolveStreamOutputItemId(p) ?? (p?.itemId as string | undefined);
+        if (delta && itemId) {
+          const runState = activeRuns.get(runId);
+          if (runState) {
+            const current = runState.fileChangeBuffers.get(itemId) ?? "";
+            runState.fileChangeBuffers.set(itemId, current + delta);
+          }
+        }
+        break;
+      }
+
+      // commandExecution stdout/stderr: README + protocol use `item/commandExecution/outputDelta` with plain `delta` string.
+      // (`command/exec/outputDelta` is separate: base64 chunks keyed by processId, not thread item id — not handled here.)
+      // Extra case labels are defensive aliases; ThreadItem reads in Codex are normally `type: commandExecution` (e.g. cat/rg).
       case "item/commandExecution/output/delta":
       case "item/commandExecution/outputDelta":
+      case "item/command_execution/output/delta":
+      case "item/command_execution/outputDelta":
+      case "item/fileRead/output/delta":
+      case "item/fileRead/outputDelta":
+      case "item/file_read/output/delta":
+      case "item/file_read/outputDelta":
+      case "item/shell/output/delta":
+      case "item/shell/outputDelta": {
+        const delta = notificationOutputDeltaText(p);
+        const itemId = resolveStreamOutputItemId(p);
+        appendCommandOutputBuffer(runId, itemId, delta);
+        break;
+      }
+
+      // Other streaming deltas — ignore (reasoning summaries, command output, etc.)
       case "item/commandExecution/terminalInteraction":
-      case "item/fileChange/output/delta":
-      case "item/fileChange/outputDelta":
       case "item/reasoning/delta":
       case "item/reasoning/summaryPartAdded":
       case "item/reasoning/summaryTextDelta":
@@ -918,11 +1127,293 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     return events;
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // Codex command_execution → Read / Grep / Glob / Bash (UI tool rows)
+  // ─────────────────────────────────────────────────────────────
+
+  function unquoteOuterShellArg(s: string): string {
+    const t = s.trim();
+    if (t.length >= 2) {
+      const a = t[0];
+      const b = t[t.length - 1];
+      if ((a === "'" && b === "'") || (a === '"' && b === '"')) return t.slice(1, -1);
+    }
+    return t;
+  }
+
+  /** Strip nested `zsh -lc '…'` / `bash -c "…"` wrappers Codex often uses. */
+  function unwrapNestedShellCommand(raw: string): string {
+    const marker = /\s-(?:lc|c)\s+/i;
+    let s = raw.trim();
+    for (let d = 0; d < 4; d++) {
+      const idx = s.search(marker);
+      if (idx === -1) break;
+      const inner = s.slice(idx).replace(/^\s*-\w*c\s+/i, "").trim();
+      const next = unquoteOuterShellArg(inner);
+      if (!next || next === s) break;
+      s = next;
+    }
+    return s.trim();
+  }
+
+  function tokenizeShell(cmd: string): string[] {
+    const out: string[] = [];
+    let cur = "";
+    let quote: "'" | '"' | null = null;
+    for (let i = 0; i < cmd.length; i++) {
+      const ch = cmd[i];
+      if (quote) {
+        if (ch === "\\" && quote === '"') {
+          cur += ch;
+          if (i + 1 < cmd.length) cur += cmd[++i];
+          continue;
+        }
+        if (ch === quote) {
+          out.push(cur);
+          cur = "";
+          quote = null;
+        } else {
+          cur += ch;
+        }
+        continue;
+      }
+      if (ch === "'" || ch === '"') {
+        if (cur.trim()) {
+          out.push(cur.trim());
+          cur = "";
+        }
+        quote = ch;
+        continue;
+      }
+      if (/\s/.test(ch)) {
+        if (cur.trim()) {
+          out.push(cur.trim());
+          cur = "";
+        }
+        continue;
+      }
+      cur += ch;
+    }
+    if (cur.trim()) out.push(cur.trim());
+    return out;
+  }
+
+  function stripQuotesToken(t: string): string {
+    return unquoteOuterShellArg(t);
+  }
+
+  function extractReadFilePath(inner: string): string | null {
+    const matches = [...inner.matchAll(/'([^']*)'|"([^"]*)"/g)];
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const p = (matches[i][1] || matches[i][2] || "").trim();
+      if (!p) continue;
+      if (/^\d+(?:,\d+)?p?$/.test(p)) continue;
+      if (p.startsWith("$")) continue;
+      if (
+        p.includes("/") ||
+        /\.[a-zA-Z0-9]{1,12}$/.test(p) ||
+        /^[\w.-]+\.(tsx?|jsx?|jsonc?|md|css|html|vue|svelte)$/i.test(p)
+      ) {
+        return p;
+      }
+    }
+    const tok = tokenizeShell(inner);
+    const bin = stripQuotesToken(tok[0] || "")
+      .toLowerCase()
+      .replace(/^.*\//, "");
+    if (!["cat", "sed", "head", "tail", "less", "more"].includes(bin)) return null;
+    for (let j = tok.length - 1; j >= 1; j--) {
+      const last = stripQuotesToken(tok[j]);
+      if (last.startsWith("-")) continue;
+      if (/^\d+$/.test(last)) continue;
+      if (last.includes("/") || /\.[a-zA-Z]{2,10}$/i.test(last)) return last;
+    }
+    return null;
+  }
+
+  function extractRgPatternAndPath(inner: string): { pattern?: string; path?: string } {
+    const tokens = tokenizeShell(inner);
+    if (!tokens.length) return {};
+    const bin = stripQuotesToken(tokens[0]).replace(/^.*\//, "");
+    if (bin !== "rg" && bin !== "ripgrep") return {};
+    let i = 1;
+    let pattern: string | undefined;
+    while (i < tokens.length) {
+      const t = stripQuotesToken(tokens[i]);
+      if (!t.startsWith("-")) break;
+      if (t === "-e" || t === "--regexp") {
+        i++;
+        if (i < tokens.length) pattern = stripQuotesToken(tokens[i]);
+        i++;
+        continue;
+      }
+      if (t === "--glob" || t === "-g" || t === "-t" || t === "--type") {
+        i += 2;
+        continue;
+      }
+      i++;
+    }
+    if (i < tokens.length && !pattern) {
+      pattern = stripQuotesToken(tokens[i]);
+      i++;
+    }
+    let path: string | undefined;
+    if (i < tokens.length) path = stripQuotesToken(tokens[i]);
+    return { pattern, path };
+  }
+
+  function extractRgGlobPattern(inner: string): string {
+    const tokens = tokenizeShell(inner);
+    const bin = stripQuotesToken(tokens[0] || "").replace(/^.*\//, "");
+    if (bin !== "rg" && bin !== "ripgrep") return "**/*";
+    const pos: string[] = [];
+    let i = 1;
+    while (i < tokens.length) {
+      const t = stripQuotesToken(tokens[i]);
+      if (!t.startsWith("-")) {
+        pos.push(t);
+        i++;
+        continue;
+      }
+      if (t === "--glob" || t === "-g" || t === "-t" || t === "--type" || t === "-e" || t === "--regexp") {
+        i += 2;
+        continue;
+      }
+      i++;
+    }
+    const roots = pos.filter((p) => p !== "rg" && p !== "ripgrep");
+    return roots.length ? roots[roots.length - 1] : "**/*";
+  }
+
+  function extractGrepClassicPatternPath(inner: string): { pattern?: string; path?: string } {
+    const tokens = tokenizeShell(inner);
+    let i = 0;
+    const bin = stripQuotesToken(tokens[0] || "").replace(/^.*\//, "");
+    if (bin !== "grep") return {};
+    i = 1;
+    let pattern: string | undefined;
+    while (i < tokens.length) {
+      const t = stripQuotesToken(tokens[i]);
+      if (!t.startsWith("-")) break;
+      if (t === "-e") {
+        i++;
+        if (i < tokens.length) pattern = stripQuotesToken(tokens[i++]);
+        continue;
+      }
+      if (t === "-f" || t === "--file") {
+        i += 2;
+        continue;
+      }
+      i++;
+    }
+    if (!pattern && i < tokens.length) pattern = stripQuotesToken(tokens[i++]);
+    const path = i < tokens.length ? stripQuotesToken(tokens[i]) : undefined;
+    return { pattern, path };
+  }
+
+  function extractFindNamePattern(inner: string): string {
+    const m = inner.match(/-name\s+(['"])((?:\\.|(?!\1).)*)\1/);
+    if (m) return m[2].replace(/\\\./g, ".");
+    if (/\s-name\s+/i.test(inner)) return "*";
+    return "**/*";
+  }
+
+  function classifyCodexShellCommand(rawCommand: string): { toolName: string; input: Record<string, unknown> } {
+    const inner = unwrapNestedShellCommand(rawCommand);
+    const lower = inner.toLowerCase();
+
+    if (/^\s*(cat|sed|head|tail|less|more)\s/i.test(inner)) {
+      const filePath = extractReadFilePath(inner);
+      if (filePath) return { toolName: "Read", input: { file_path: filePath } };
+    }
+
+    if (/^\s*find\s/.test(lower)) {
+      return { toolName: "Glob", input: { pattern: extractFindNamePattern(inner) } };
+    }
+
+    if (/\brg\b/.test(lower) || /\bripgrep\b/.test(lower)) {
+      const filesOnly =
+        /\s--files\b/.test(lower) &&
+        !/\s--files-with-matches\b/.test(lower);
+      if (filesOnly) {
+        return { toolName: "Glob", input: { pattern: extractRgGlobPattern(inner) } };
+      }
+      const { pattern, path } = extractRgPatternAndPath(inner);
+      if (pattern || path) {
+        return {
+          toolName: "Grep",
+          input: {
+            ...(pattern ? { pattern } : {}),
+            ...(path ? { path } : {}),
+          },
+        };
+      }
+    }
+
+    if (/\bgrep\b/.test(lower) && !/\brg\b/.test(lower)) {
+      const { pattern, path } = extractGrepClassicPatternPath(inner);
+      if (pattern) {
+        return {
+          toolName: "Grep",
+          input: {
+            pattern,
+            ...(path ? { path } : {}),
+          },
+        };
+      }
+    }
+
+    if (/^\s*git\s+grep\s/.test(lower)) {
+      const tokens = tokenizeShell(inner);
+      let i = 0;
+      if (stripQuotesToken(tokens[0] || "").replace(/^.*\//, "") === "git") i = 1;
+      if (stripQuotesToken(tokens[i] || "") === "grep") i++;
+      while (i < tokens.length) {
+        const t = stripQuotesToken(tokens[i]);
+        if (!t.startsWith("-")) break;
+        i++;
+      }
+      let pattern: string | undefined;
+      if (i < tokens.length) pattern = stripQuotesToken(tokens[i++]);
+      const gpath = i < tokens.length ? stripQuotesToken(tokens[i]) : undefined;
+      if (pattern) {
+        return {
+          toolName: "Grep",
+          input: {
+            pattern,
+            ...(gpath ? { path: gpath } : {}),
+          },
+        };
+      }
+    }
+
+    return { toolName: "Bash", input: { command: rawCommand } };
+  }
+
+  function logCodexToolCall(
+    phase: "start" | "complete",
+    runId: string,
+    toolName: string,
+    meta: {
+      toolCallId?: string;
+      codexItemType?: string;
+      hasError?: boolean;
+    },
+  ): void {
+    const tag = phase === "start" ? "tool_call:start" : "tool_call:complete";
+    logInfo(tag, {
+      runId,
+      source: "codex",
+      toolName,
+      ...meta,
+    });
+  }
+
   /**
    * Map Codex ThreadItem to WorkRunEvents.
    * Matches the app-server's item schema (same structure as SDK ThreadItem).
    */
-  function mapThreadItem(item: ThreadItem, eventMethod: string, ts: number, runId?: string): WorkRunEvent[] {
+  function mapThreadItem(item: ThreadItem, eventMethod: string, ts: number, runId: string): WorkRunEvent[] {
     const events: WorkRunEvent[] = [];
     const phase = eventMethod.endsWith("/started") ? "start" :
                   eventMethod.endsWith("/completed") ? "complete" : "update";
@@ -947,26 +1438,141 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       case "commandExecution": {
         const command = typeof item.command === "string" ? item.command : safeJson(item.command);
         const exitCode = (item.exitCode ?? item.exit_code) as number | undefined;
-        const output = typeof (item.aggregatedOutput ?? item.aggregated_output) === "string" ? (item.aggregatedOutput ?? item.aggregated_output) as string : undefined;
         const status = item.status as string | undefined;
 
+        // item/updated may carry aggregatedOutput before/without a rich item/completed payload
+        if (phase === "update" && runId) {
+          const snap = extractThreadItemStreamedText(item);
+          if (snap?.trim()) {
+            const rs = activeRuns.get(runId);
+            if (rs) rs.commandOutputBuffers.set(item.id, snap);
+          }
+          break;
+        }
+
+        const { toolName, input } = classifyCodexShellCommand(command);
+        const cmdMeta = {
+          toolCallId: item.id,
+          itemId: item.id,
+          codexItemType: "command_execution" as const,
+          shellCommand: command,
+        };
+
         if (phase === "start") {
+          logCodexToolCall("start", runId, toolName, {
+            toolCallId: item.id,
+            codexItemType: "command_execution",
+          });
           events.push({
             type: "tool_call",
-            toolName: "Bash",
-            input: { command },
+            toolName,
+            input,
             startedAt: ts,
-            metadata: { phase: "start", toolCallId: item.id, itemId: item.id, codexItemType: "command_execution" },
+            metadata: { phase: "start", ...cmdMeta },
           });
         } else if (phase === "complete") {
+          const fromItem = extractThreadItemStreamedText(item);
+          const runStateCmd = runId ? activeRuns.get(runId) : undefined;
+          const buffered = runStateCmd?.commandOutputBuffers.get(item.id);
+          if (runStateCmd && buffered !== undefined) runStateCmd.commandOutputBuffers.delete(item.id);
+
+          const trimmedItem = fromItem?.trim() ?? "";
+          const trimmedBuf = buffered?.trim() ?? "";
+          let mergedOut: string | undefined;
+          if (trimmedItem && trimmedBuf) {
+            mergedOut = trimmedItem.length >= trimmedBuf.length ? trimmedItem : trimmedBuf;
+          } else {
+            mergedOut = trimmedItem || trimmedBuf || undefined;
+          }
+
+          const cmdFailed = status === "failed";
+          logCodexToolCall("complete", runId, toolName, {
+            toolCallId: item.id,
+            codexItemType: "command_execution",
+            hasError: cmdFailed,
+          });
           events.push({
             type: "tool_call",
-            toolName: "Bash",
-            input: { command },
-            output: output ?? `exit code: ${exitCode ?? "unknown"}`,
-            error: status === "failed" ? `Command failed with exit code ${exitCode}` : undefined,
+            toolName,
+            input,
+            output: mergedOut?.trim() ? mergedOut : `exit code: ${exitCode ?? "unknown"}`,
+            error: cmdFailed ? `Command failed with exit code ${exitCode}` : undefined,
             endedAt: ts,
-            metadata: { phase: "complete", toolCallId: item.id, itemId: item.id, exitCode, codexItemType: "command_execution" },
+            metadata: { phase: "complete", ...cmdMeta, exitCode },
+          });
+        }
+        break;
+      }
+
+      case "file_read":
+      case "fileRead": {
+        const filePath =
+          (typeof item.path === "string" && item.path) ||
+          (typeof item.filePath === "string" && item.filePath) ||
+          (typeof item.file_path === "string" && item.file_path) ||
+          "";
+        const readStatus = item.status as string | undefined;
+
+        if (phase === "update" && runId) {
+          const snap =
+            extractThreadItemStreamedText(item) ??
+            (typeof item.content === "string" && item.content.trim() ? item.content : undefined);
+          if (snap?.trim()) {
+            const rs = activeRuns.get(runId);
+            if (rs) rs.commandOutputBuffers.set(item.id, snap);
+          }
+          break;
+        }
+
+        const readMeta = {
+          toolCallId: item.id,
+          itemId: item.id,
+          codexItemType: "file_read" as const,
+        };
+
+        if (phase === "start") {
+          logCodexToolCall("start", runId, "Read", {
+            toolCallId: item.id,
+            codexItemType: "file_read",
+          });
+          events.push({
+            type: "tool_call",
+            toolName: "Read",
+            input: { file_path: filePath },
+            startedAt: ts,
+            metadata: { phase: "start", ...readMeta },
+          });
+        } else if (phase === "complete") {
+          const fromItem =
+            extractThreadItemStreamedText(item) ??
+            (typeof item.content === "string" && item.content.trim() ? item.content : undefined);
+          const runStateRead = runId ? activeRuns.get(runId) : undefined;
+          const buffered = runStateRead?.commandOutputBuffers.get(item.id);
+          if (runStateRead && buffered !== undefined) runStateRead.commandOutputBuffers.delete(item.id);
+
+          const trimmedItem = fromItem?.trim() ?? "";
+          const trimmedBuf = buffered?.trim() ?? "";
+          let mergedOut: string | undefined;
+          if (trimmedItem && trimmedBuf) {
+            mergedOut = trimmedItem.length >= trimmedBuf.length ? trimmedItem : trimmedBuf;
+          } else {
+            mergedOut = trimmedItem || trimmedBuf || undefined;
+          }
+
+          const readFailed = readStatus === "failed";
+          logCodexToolCall("complete", runId, "Read", {
+            toolCallId: item.id,
+            codexItemType: "file_read",
+            hasError: readFailed,
+          });
+          events.push({
+            type: "tool_call",
+            toolName: "Read",
+            input: { file_path: filePath },
+            output: mergedOut?.trim() ? mergedOut : undefined,
+            error: readFailed ? "File read failed" : undefined,
+            endedAt: ts,
+            metadata: { phase: "complete", ...readMeta },
           });
         }
         break;
@@ -974,27 +1580,49 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
       case "file_change":
       case "fileChange": {
-        const changes = item.changes as Array<{ path: string; kind: string }> | undefined;
+        const changes = item.changes as Array<{ path: string; kind: string; patch?: string; unifiedDiff?: string; diff?: string }> | undefined;
         const patchStatus = item.status as string | undefined;
+        // Item-level patch (some versions of Codex put it here)
+        const itemPatch = (item.patch ?? item.unifiedDiff ?? item.diff) as string | undefined;
 
         if (phase === "complete" && changes && changes.length > 0) {
+          // Retrieve accumulated diff from delta events, then clean up
+          const runState = runId ? activeRuns.get(runId) : undefined;
+          const bufferedDiff = runState?.fileChangeBuffers.get(item.id);
+          if (runState) runState.fileChangeBuffers.delete(item.id);
+
           for (const change of changes) {
-            const toolName = change.kind === "delete" ? "Delete" : change.kind === "add" ? "Write" : "Edit";
-            events.push({
-              type: "tool_call",
-              toolName,
-              input: { path: change.path },
-              startedAt: ts,
-              metadata: { phase: "start", toolCallId: `${item.id}-${change.path}`, itemId: `${item.id}-${change.path}`, changeType: change.kind, codexItemType: "file_change" },
+            const toolName = change.kind === "delete" ? "Delete" : (change.kind === "add" || change.kind === "create") ? "Write" : "Edit";
+            // Prefer per-change patch → accumulated delta buffer → item-level patch
+            const diffContent = change.patch ?? change.unifiedDiff ?? change.diff
+              ?? (changes.length === 1 ? (bufferedDiff ?? itemPatch) : bufferedDiff);
+
+            const fcId = `${item.id}-${change.path}`;
+            logCodexToolCall("start", runId, toolName, {
+              toolCallId: fcId,
+              codexItemType: "file_change",
             });
             events.push({
               type: "tool_call",
               toolName,
               input: { path: change.path },
-              output: `File ${change.kind}: ${change.path}`,
-              error: patchStatus === "failed" ? "Patch failed" : undefined,
+              startedAt: ts,
+              metadata: { phase: "start", toolCallId: fcId, itemId: fcId, changeType: change.kind, codexItemType: "file_change" },
+            });
+            const patchErr = patchStatus === "failed";
+            logCodexToolCall("complete", runId, toolName, {
+              toolCallId: fcId,
+              codexItemType: "file_change",
+              hasError: patchErr,
+            });
+            events.push({
+              type: "tool_call",
+              toolName,
+              input: { path: change.path },
+              output: diffContent ? { detailedContent: diffContent } : `File ${change.kind}: ${change.path}`,
+              error: patchErr ? "Patch failed" : undefined,
               endedAt: ts,
-              metadata: { phase: "complete", toolCallId: `${item.id}-${change.path}`, itemId: `${item.id}-${change.path}`, changeType: change.kind, codexItemType: "file_change" },
+              metadata: { phase: "complete", toolCallId: fcId, itemId: fcId, changeType: change.kind, codexItemType: "file_change" },
             });
           }
         }
@@ -1011,6 +1639,10 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         const error = (item.error as { message?: string } | undefined)?.message;
 
         if (phase === "start") {
+          logCodexToolCall("start", runId, toolName, {
+            toolCallId: item.id,
+            codexItemType: "mcp_tool_call",
+          });
           events.push({
             type: "tool_call",
             toolName,
@@ -1019,6 +1651,11 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             metadata: { phase: "start", toolCallId: item.id, itemId: item.id, codexItemType: "mcp_tool_call" },
           });
         } else if (phase === "complete") {
+          logCodexToolCall("complete", runId, toolName, {
+            toolCallId: item.id,
+            codexItemType: "mcp_tool_call",
+            hasError: Boolean(error),
+          });
           events.push({
             type: "tool_call",
             toolName,
@@ -1036,12 +1673,21 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       case "webSearch": {
         const query = typeof item.query === "string" ? item.query : "";
         if (phase === "complete" && query) {
+          logCodexToolCall("start", runId, "WebSearch", {
+            toolCallId: item.id,
+            codexItemType: "web_search",
+          });
           events.push({
             type: "tool_call",
             toolName: "WebSearch",
             input: { query },
             startedAt: ts,
             metadata: { phase: "start", toolCallId: item.id, itemId: item.id, codexItemType: "web_search" },
+          });
+          logCodexToolCall("complete", runId, "WebSearch", {
+            toolCallId: item.id,
+            codexItemType: "web_search",
+            hasError: false,
           });
           events.push({
             type: "tool_call",
@@ -1050,6 +1696,45 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             output: `Searched: ${query}`,
             endedAt: ts,
             metadata: { phase: "complete", toolCallId: item.id, itemId: item.id, codexItemType: "web_search" },
+          });
+        }
+        break;
+      }
+
+      case "dynamic_tool_call":
+      case "dynamicToolCall": {
+        const tool = typeof item.tool === "string" ? item.tool : "unknown";
+        const args = (typeof item.arguments === "string" ? safeJson(item.arguments) : item.arguments) as Record<string, unknown> | undefined;
+        const result = item.result as unknown;
+        const status = item.status as string | undefined;
+
+        if (phase === "start") {
+          logCodexToolCall("start", runId, tool, {
+            toolCallId: item.id,
+            codexItemType: "dynamic_tool_call",
+          });
+          events.push({
+            type: "tool_call",
+            toolName: tool,
+            input: args,
+            startedAt: ts,
+            metadata: { phase: "start", toolCallId: item.id, itemId: item.id, codexItemType: "dynamic_tool_call" },
+          });
+        } else if (phase === "complete") {
+          const dynFailed = status === "failed";
+          logCodexToolCall("complete", runId, tool, {
+            toolCallId: item.id,
+            codexItemType: "dynamic_tool_call",
+            hasError: dynFailed,
+          });
+          events.push({
+            type: "tool_call",
+            toolName: tool,
+            input: args,
+            output: result,
+            error: dynFailed ? `Dynamic tool call failed` : undefined,
+            endedAt: ts,
+            metadata: { phase: "complete", toolCallId: item.id, itemId: item.id, codexItemType: "dynamic_tool_call" },
           });
         }
         break;
@@ -1174,15 +1859,17 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     | { type: "localImage"; path: string }
   >;
 
+  const MAINS_TOOL_INSTRUCTION = "IMPORTANT: Never commit changes using shell commands (git add, git commit). If the user asks you to commit, always use the CommitChanges tool to stage and commit changes. Similarly, never create pull requests using shell commands (gh pr create). Always use the CreatePR tool instead.";
+
   function buildTurnInput(request: WorkRunRequest): TurnInput {
     const workspaceInfo = `Working directory: ${request.workspace.rootPath}`;
     let prompt: string;
 
     if (request.context && request.context.length > 0) {
       const contextParts = formatContextSection(request.context);
-      prompt = `${workspaceInfo}\n\nContext:\n${contextParts}\n\n---\n\nGoal: ${request.goal}`;
+      prompt = `${workspaceInfo}\n\nContext:\n${contextParts}\n\n---\n\n${MAINS_TOOL_INSTRUCTION}\n\nGoal: ${request.goal}`;
     } else {
-      prompt = `${workspaceInfo}\n\nGoal: ${request.goal}`;
+      prompt = `${workspaceInfo}\n\n${MAINS_TOOL_INSTRUCTION}\n\nGoal: ${request.goal}`;
     }
 
     prompt = appendPromptSections(prompt, {
@@ -1359,6 +2046,16 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           case "item/fileRead/requestApproval":
           case "item/fileChange/requestApproval":
           case "item/permissions/requestApproval": {
+            // Dependency guard check — intercept install commands before approval
+            if (method === "item/commandExecution/requestApproval") {
+              const cmd = (p?.command as string) || "";
+              const guardResult = await guardsService.checkCommand(cmd);
+              if (guardResult.blocked) {
+                server.respondToRequest(id, { decision: "decline" });
+                break;
+              }
+            }
+
             const permissionMode = config.permissionMode || "default";
             if (permissionMode === "bypassPermissions") {
               server.respondToRequest(id, { decision: "accept" });
@@ -1453,9 +2150,46 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             break;
           }
 
-          // Dynamic tool calls — not supported
+          // Dynamic tool calls — dispatch mains tools
           case "item/tool/call": {
-            server.respondToRequestError(id, -32601, "Dynamic tool calls not supported");
+            const toolParams = params as Record<string, unknown> | undefined;
+            const toolName = toolParams?.tool as string | undefined;
+            const toolArgs = (typeof toolParams?.arguments === "string"
+              ? safeJson(toolParams.arguments)
+              : toolParams?.arguments ?? {}) as Record<string, unknown>;
+            const toolThreadId = toolParams?.threadId as string | undefined;
+
+            if (toolName && MAINS_TOOL_NAMES.has(toolName)) {
+              // Find the MainsToolContext from the active run that owns this thread
+              let ctx: MainsToolContext = { workspaceId: null, rootPath: null, runId: null };
+              for (const [, run] of activeRuns) {
+                if (run.threadId === toolThreadId) {
+                  ctx = run.mainsCtx;
+                  break;
+                }
+              }
+
+              try {
+                const result = await dispatchMainsTool(toolName, toolArgs, ctx);
+                const contentItems = result.content.map((c) => ({
+                  type: "inputText" as const,
+                  text: c.text,
+                }));
+                server.respondToRequest(id, {
+                  contentItems,
+                  success: !result.isError,
+                });
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                logError(`Mains tool ${toolName} failed:`, msg);
+                server.respondToRequest(id, {
+                  contentItems: [{ type: "inputText", text: `Error: ${msg}` }],
+                  success: false,
+                });
+              }
+            } else {
+              server.respondToRequestError(id, -32601, `Unknown dynamic tool: ${toolName ?? "undefined"}`);
+            }
             break;
           }
 
@@ -1507,6 +2241,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           config: {
             ...(networkAccess ? { sandbox_network_access: true } : {}),
           },
+          dynamicTools: MAINS_DYNAMIC_TOOLS,
         };
 
         logInfo(`Starting thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
@@ -1522,7 +2257,8 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           );
         }
 
-        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [] });
+        const mainsCtx: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
+        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx, fileChangeBuffers: new Map(), commandOutputBuffers: new Map() });
 
         // Emit user prompt artifact
         await emitUserPromptArtifact(onEvent, request.goal, {
@@ -1620,16 +2356,18 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
               sandbox,
               personality,
               ...(resolvedModel ? { model: resolvedModel } : {}),
+              dynamicTools: MAINS_DYNAMIC_TOOLS,
             }) as Record<string, unknown>;
             const newThreadId = (threadResult?.thread as Record<string, unknown>)?.id as string ??
-                               threadResult?.threadId as string;
+                            threadResult?.threadId as string;
             if (newThreadId) sessionIdMap.set(runId, newThreadId);
           } else {
             throw resumeError;
           }
         }
 
-        activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [] });
+        const mainsCtxContinue: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
+        activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxContinue, fileChangeBuffers: new Map(), commandOutputBuffers: new Map() });
 
         await emitUserPromptArtifact(onEvent, message, {
           attachments: request.attachments,
@@ -1728,6 +2466,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           logError("Failed to persist forked session ID:", err),
         );
 
+        const mainsCtxFork: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
         activeRuns.set(runId, {
           threadId: forkedThreadId,
           turnId: null,
@@ -1735,6 +2474,9 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           currentMessageItemId: null,
           agentMessageBuffer: "",
           pendingFlush: [],
+          mainsCtx: mainsCtxFork,
+          fileChangeBuffers: new Map(),
+          commandOutputBuffers: new Map(),
         });
 
         // Emit user prompt artifact
@@ -1811,6 +2553,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           config: {
             ...(networkAccess ? { sandbox_network_access: true } : {}),
           },
+          dynamicTools: MAINS_DYNAMIC_TOOLS,
         };
 
         logInfo(`Starting review thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
@@ -1825,7 +2568,8 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           );
         }
 
-        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [] });
+        const mainsCtxReview: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
+        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxReview, fileChangeBuffers: new Map(), commandOutputBuffers: new Map() });
 
         // Emit review user-prompt artifact
         const targetLabel =

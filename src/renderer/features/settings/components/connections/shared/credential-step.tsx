@@ -47,7 +47,7 @@ export function CredentialStep({
       {fields.map((field, index) => (
         <div key={field.id}>
           <label htmlFor={field.id} className="block mb-2 ml-1">
-            <Text variant="label" className="text-xs!">{field.label}</Text>
+            <Text variant="label" className="text-xs">{field.label}</Text>
           </label>
           <Input
             id={field.id}

@@ -61,8 +61,8 @@ export function SchemaListTab({
             onClick={() => onSelectSchema(null)}
             className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left text-sm transition-colors cursor-pointer ${
               selectedId === null
-                ? "bg-primary-950/8 dark:bg-primary/8 text-primary-900 dark:text-primary-100"
-                : "text-primary-600 dark:text-primary-400 hover:bg-primary-950/4 dark:hover:bg-primary/6"
+                ? "bg-primary-950/10 dark:bg-primary/10 text-primary-900 dark:text-primary-100"
+                : "text-primary-600 dark:text-primary-400 hover:bg-primary-950/5 dark:hover:bg-primary/5"
             }`}
           >
             <RadioDot active={selectedId === null} />
@@ -74,8 +74,8 @@ export function SchemaListTab({
               key={entry.id}
               className={`group flex items-center h-10 gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-colors ${
                 selectedId === entry.id
-                  ? "bg-primary-950/8 dark:bg-primary/8 text-primary-900 dark:text-primary-100"
-                  : "text-primary-600 dark:text-primary-400 hover:bg-primary-950/4 dark:hover:bg-primary/6"
+                  ? "bg-primary-950/10 dark:bg-primary/10 text-primary-900 dark:text-primary-100"
+                  : "text-primary-600 dark:text-primary-400 hover:bg-primary-950/5 dark:hover:bg-primary/5"
               }`}
             >
               <button

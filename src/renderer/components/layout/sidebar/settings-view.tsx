@@ -1,61 +1,19 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Body, Button } from "@/components/ui";
-import {
-  Apps,
-//  Personalize,
-  General,
-  ChevronUp,
-  CopilotStatic,
-  Branch,
-  Chart,
-  Gpt,
-} from "@/components/ui/icons";
-type SettingsSection =
-  | "general"
-  | "notifications"
-  | "personalization"
-  | "connections"
-  | "schedules"
-  | "data"
-  | "security"
-  | "parental"
-  | "account"
-  | "claude"
-  | "copilot"
-  | "git"
-  | "projects"
-  | "codex"
-  | "dashboard";
-import { Claude } from "@/components/ui/icons/space";
+import { ChevronUp } from "@/components/ui/icons";
 import { useGetProjectsQuery } from "@/lib/redux/api";
 import { parseIcon, type IconComponent } from "@/lib/icon-registry";
+import {
+  getSettingsRouteId,
+  isSettingsNavItemActive,
+  SETTINGS_MAIN_NAV_ITEMS,
+  SETTINGS_PROVIDER_NAV_ITEMS,
+  type SettingsRouteId,
+} from "@/features/settings/settings-sections";
 
 interface SettingsViewProps {
   onClose: () => void;
 }
-
-type MenuItem = {
-  id: SettingsSection;
-  label: string;
-  icon: React.ElementType | null;
-};
-
-const menuItems: Array<MenuItem> = [
-  { id: "general", label: "General", icon: General },
-  // { id: "personalization", label: "Personalization", icon: Personalize },
-  { id: "git", label: "Git", icon: Branch },
-  { id: "connections", label: "Connections", icon: Apps },
-  { id: "dashboard", label: "Dashboard", icon: Chart },
-  // { id: "notifications", label: "Notifications", icon: Bell },
-  // { id: "schedules", label: "Schedules", icon: Calendar },
-  // { id: "security", label: "Security", icon: Security },
-];
-
-const providerItems: Array<MenuItem> = [
-  { id: "claude", label: "Claude", icon: Claude },
-  { id: "copilot", label: "Copilot", icon: CopilotStatic },
-  { id: "codex", label: "Codex", icon: Gpt },
-];
 
 export default function SettingsView({ onClose }: SettingsViewProps) {
   const navigate = useNavigate();
@@ -63,12 +21,12 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
 
   const isOnSettingsPage = location.pathname === "/settings";
   const searchParams = new URLSearchParams(location.search);
-  const activeSection = searchParams.get("section") as SettingsSection | null;
+  const activeSection = getSettingsRouteId(searchParams.get("section"));
   const activeId = searchParams.get("id");
 
   const { data: projects = [] } = useGetProjectsQuery();
 
-  const handleSectionClick = (sectionId: SettingsSection) => {
+  const handleSectionClick = (sectionId: SettingsRouteId) => {
     navigate(`/settings?section=${sectionId}`);
   };
 
@@ -79,33 +37,33 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
         animation: "slide-fade-down 300ms ease-in-out",
       }}
     >
-      <div className="flex flex-col items-start pt-16 pb-2 px-4">
-        <Body className="text-left text-base! text-primary-900 dark:text-primary font-medium ">
+      <div className="flex flex-col items-start pt-16 pb-1 px-4">
+        <Body className="text-left text-sm text-primary-900 dark:text-primary font-medium ">
           Settings
         </Body>
       </div>
 
       <div className="flex-1 px-3 mb-1 overflow-y-auto noscrollbar">
         <nav className="space-y-0.5">
-          {menuItems.map((item) => {
+          {SETTINGS_MAIN_NAV_ITEMS.map((item) => {
             const IconComponent = item.icon;
-            const isActive = isOnSettingsPage && activeSection === item.id;
+            const isActive = isOnSettingsPage && isSettingsNavItemActive(item, activeSection);
             return (
               <Button
                 key={item.id}
                 onClick={() => handleSectionClick(item.id)}
-                className={`w-full cursor-pointer text-left px-3 py-2 rounded-xl text-sm transition-all flex items-center gap-2.5
+                className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm transition-all flex items-center gap-2
                   ${
                     isActive
                       ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
                       : "text-primary-900 dark:text-primary-200 bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
                   }
-                  hover:scale-[1.01] active:scale-99`}
+                  `}
               >
                 {IconComponent ? (
-                  <IconComponent className={`size-4 `} />
+                  <IconComponent className={`size-3.75 `} />
                 ) : (
-                  <div className="w-4.5 h-4.5 rounded bg-primary-300 dark:bg-primary-700" />
+                  <div className="size-4 rounded bg-primary-300 dark:bg-primary-700" />
                 )}
                 <span className="font-medium">{item.label}</span>
               </Button>
@@ -121,25 +79,25 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
             </span>
           </div>
           <div className="space-y-0.5">
-            {providerItems.map((item) => {
+            {SETTINGS_PROVIDER_NAV_ITEMS.map((item) => {
               const IconComponent = item.icon;
-              const isActive = isOnSettingsPage && activeSection === item.id;
+              const isActive = isOnSettingsPage && isSettingsNavItemActive(item, activeSection);
               return (
                 <Button
                   key={item.id}
                   onClick={() => handleSectionClick(item.id)}
-                  className={`w-full cursor-pointer text-left px-3 py-2 rounded-xl text-sm transition-all flex items-center gap-2.5
+                  className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm transition-all flex items-center gap-2
                     ${
                       isActive
                         ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
                         : "text-primary-900 dark:text-primary-200 bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
                     }
-                    hover:scale-[1.01] active:scale-99`}
+                    `}
                 >
                   {IconComponent ? (
-                    <IconComponent className={`size-4 `} />
+                    <IconComponent className={`size-3.75 `} />
                   ) : (
-                    <div className="w-4.5 h-4.5 rounded bg-primary-300 dark:bg-primary-700" />
+                    <div className="size-3.75 rounded bg-primary-300 dark:bg-primary-700" />
                   )}
                   <span className="font-medium">{item.label}</span>
                 </Button>
@@ -188,17 +146,17 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                     onClick={() =>
                       navigate(`/settings?section=projects&id=${project.id}`)
                     }
-                    className={`w-full cursor-pointer text-left px-3 py-2 rounded-xl text-sm transition-all flex items-center gap-2.5
+                    className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm transition-all flex items-center gap-2
                       ${
                         isActive
                           ? "bg-primary/80 dark:bg-primary/5 text-primary-900 dark:text-primary-100"
                           : "text-primary-900 dark:text-primary-200 bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
                       }
-                      hover:scale-[1.01] active:scale-99`}
+                      `}
                   >
                     <div
-                      className={`w-5 h-5 rounded-lg flex items-center justify-center text-t font-medium text-primary-950 dark:text-primary-200
-                        shrink-0 ${!parsed ? "border border-primary-950/40 dark:border-primary/10" : ""}`}
+                      className={`size-4.5 rounded-md flex items-center justify-center text-t font-medium text-primary-950 dark:text-primary-200
+                        shrink-0 ${!parsed ? "border border-primary-950/50 dark:border-primary/10" : ""}`}
                     >
                       {iconContent}
                     </div>
@@ -219,21 +177,18 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
       >
         <Button
           tooltip={"Close settings"}
-          variant="subtle"
+          variant="bare"
           tooltipPosition="top-right"
           size="lg"
           onClick={onClose}
           fullWidth
-          className="justify-start cursor-pointer pt-1!  hover:scale-100! bg-transparent! transition-transform duration-200"
+          className="justify-start flex items-center cursor-pointer px-2 pb-2 gap-1 bg-transparent dark:bg-transparent transition-transform duration-200"
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
-          <ChevronUp className="size-4 rotate-270 text-primary-900 dark:text-primary-400" />
-          <Body className="text-primary-900 text-s! dark:text-primary-100  font-medium">
+          <ChevronUp className="size-4 rotate-270 text-primary-900 dark:text-primary-200" />
+          <Body className="text-primary-900 text-s dark:text-primary-200  font-medium">
             Return
           </Body>
-          {/* <Caption className="ml-auto text-s! text-primary-900 dark:text-primary-400">
-            Esc
-          </Caption> */}
         </Button>
       </div>
     </div>

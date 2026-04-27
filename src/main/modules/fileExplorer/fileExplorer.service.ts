@@ -10,7 +10,12 @@ import type {
   DirEntry,
   ListDirOptions,
 } from "./fileExplorer.dto";
-import { DEFAULT_EXCLUDE_PATTERNS, MAX_FILE_SIZE_BYTES } from "./fileExplorer.dto";
+import {
+  DEFAULT_EXCLUDE_PATTERNS,
+  MAX_FILE_SIZE_BYTES,
+  MAX_READ_DIRECTORY_NODES,
+  DEFAULT_READ_DIRECTORY_DEPTH,
+} from "./fileExplorer.dto";
 
 
 // ─────────────────────────────────────────────────────────────
@@ -56,13 +61,20 @@ async function readDirectoryRecursive(
     currentDepth: number;
     includeHidden: boolean;
     excludePatterns: string[];
+    maxNodes: number;
   },
-  stats: { files: number; directories: number }
+  stats: { files: number; directories: number; truncated: boolean }
 ): Promise<FileNode[]> {
-  const { depth, currentDepth, includeHidden, excludePatterns } = options;
+  const { depth, currentDepth, includeHidden, excludePatterns, maxNodes } =
+    options;
 
   // Check depth limit
   if (depth !== -1 && currentDepth >= depth) {
+    return [];
+  }
+
+  if (stats.files + stats.directories >= maxNodes) {
+    stats.truncated = true;
     return [];
   }
 
@@ -78,6 +90,10 @@ async function readDirectoryRecursive(
     });
 
     for (const entry of sortedEntries) {
+      if (stats.files + stats.directories >= maxNodes) {
+        stats.truncated = true;
+        break;
+      }
       const name = entry.name;
       const fullPath = path.join(dirPath, name);
 
@@ -142,7 +158,8 @@ export const fileExplorerService = {
   ): Promise<ServiceResponse<FileTreeResponse>> {
     const {
       rootPath,
-      depth = -1, // -1 means infinite depth
+      // Undefined in callers => apply safe default depth cap.
+      depth = DEFAULT_READ_DIRECTORY_DEPTH,
       includeHidden = false,
       excludePatterns = DEFAULT_EXCLUDE_PATTERNS,
     } = options;
@@ -154,7 +171,7 @@ export const fileExplorerService = {
         return { success: false, error: "Path is not a directory" };
       }
 
-      const stats = { files: 0, directories: 0 };
+      const stats = { files: 0, directories: 0, truncated: false };
       const rootName = path.basename(rootPath);
 
       const children = await readDirectoryRecursive(
@@ -164,9 +181,16 @@ export const fileExplorerService = {
           currentDepth: 0,
           includeHidden,
           excludePatterns,
+          maxNodes: MAX_READ_DIRECTORY_NODES,
         },
         stats
       );
+
+      if (stats.truncated) {
+        console.warn(
+          `[FileExplorer] readDirectory truncated at ${MAX_READ_DIRECTORY_NODES} nodes for ${rootPath}`,
+        );
+      }
 
       const root: FileNode = {
         name: rootName,

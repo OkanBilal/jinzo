@@ -1,9 +1,9 @@
-import { Archive, CopilotStatic, Option, Edit, Codex } from "@/components/ui/icons";
+import { Archive, CopilotStatic, Option, Edit, Codex, Cursor } from "@/components/ui/icons";
 import type { Run } from "../types";
 import { Claude } from "@/components/ui/icons/space";
 import { AnimatedTitle } from "@/components/ui";
 import { BaseTab } from "./base-tab";
-import { AsciiSpinner } from "./ascii-loader";
+import { AsciiSpinner } from "@/components/ui/ascii-spinner";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
 import { useState, useRef, useCallback, useEffect } from "react";
 
@@ -15,7 +15,7 @@ interface RunTabProps {
   onClose: () => void;
   onRename: (newTitle: string) => void;
   title: string;
-  variant?: "copilot" | "claude" | "codex";
+  variant?: "copilot" | "claude" | "codex" | "cursor";
 }
 
 function VariantIcon({ variant, isActive }: { variant: string; isActive: boolean }) {
@@ -28,6 +28,7 @@ function VariantIcon({ variant, isActive }: { variant: string; isActive: boolean
   if (variant === "claude") return <Claude className="text-claude" />;
   if (variant === "copilot") return <CopilotStatic className={className} />;
   if (variant === "codex") return <Codex className={className} />;
+  if (variant === "cursor") return <Cursor className={className} />;
   return null;
 }
 
@@ -36,7 +37,7 @@ function TabIcon({ run, variant, isActive }: { run: Run; variant: string; isActi
   return (
     <span className="flex items-center justify-center size-3.5 shrink-0">
       {isRunning ? (
-        <AsciiSpinner variant={variant as "claude" | "copilot" | "codex"} />
+        <AsciiSpinner variant={variant as "claude" | "copilot" | "codex" | "cursor"} />
       ) : (
         <VariantIcon variant={variant} isActive={isActive} />
       )}
@@ -49,6 +50,7 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, onRename, tit
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
+  const [dropdownOrigin, setDropdownOrigin] = useState<"top-left" | "top-right">("top-left");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -64,8 +66,11 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, onRename, tit
 
     const el = (e.target as HTMLElement).closest("button") ?? (e.currentTarget as HTMLElement);
     const rect = el.getBoundingClientRect();
+    const menuWidth = 140; // matches minWidth
+    const isRight = rect.right + menuWidth > window.innerWidth - 8;
+    setDropdownOrigin(isRight ? "top-right" : "top-left");
     setDropdownPosition({
-      x: rect.left,
+      x: isRight ? rect.right - menuWidth : rect.left,
       y: rect.bottom + 4,
     });
     setIsDropdownOpen((prev) => !prev);
@@ -130,6 +135,7 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, onRename, tit
         position={dropdownPosition}
         onClose={() => setIsDropdownOpen(false)}
         minWidth={140}
+        origin={dropdownOrigin}
       >
         <DropdownMenuItem onClick={handleRenameStart}>
           <Edit className="size-3.5" />

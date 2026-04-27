@@ -36,7 +36,7 @@ import {
   appendPromptSections,
   emitUserPromptArtifact,
 } from "./adapter.shared";
-import type { JinzoToolContext } from "./jinzo-tools.core";
+import type { MainsToolContext } from "./mains-tools.core";
 import {
   TOOL_DESCRIPTIONS,
   handleGetWorkspaceDiff,
@@ -45,7 +45,8 @@ import {
   handleSaveFindings,
   handleCommitChanges,
   handleCreatePR,
-} from "./jinzo-tools.core";
+} from "./mains-tools.core";
+import { guardsService } from "../../guards/guards.service";
 
 /**
  * NOTE: This adapter uses @anthropic-ai/claude-agent-sdk package.
@@ -142,7 +143,7 @@ interface SDKOptions {
   env?: Record<string, string | undefined>;
   allowedTools?: string[];
   disallowedTools?: string[];
-  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk";
+  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk" | "auto";
   cwd?: string;
   resume?: string;
   forkSession?: boolean;
@@ -447,7 +448,7 @@ export function createClaudeAdapter(
    * When using CLI (subscription mode), we strip ANTHROPIC_API_KEY from env
    * to avoid unexpected API billing when user has CLI login session.
    */
-  function buildOptions(
+  async function buildOptions(
     model: string,
     workspacePath?: string,
     abortController?: AbortController,
@@ -458,7 +459,7 @@ export function createClaudeAdapter(
     workspaceId?: string,
     forkSession?: boolean,
     onEvent?: WorkRunEventHandler,
-  ): SDKOptions {
+  ): Promise<SDKOptions> {
     // Find the Claude CLI binary
     let binaryPath: string | null = null;
 
@@ -528,11 +529,11 @@ export function createClaudeAdapter(
       workspacePath,
     );
 
-    // Inject the jinzo MCP server as an in-process SDK server
+    // Inject the mains MCP server as an in-process SDK server
     // Uses Drizzle ORM repos directly — no subprocess or sqlite3 CLI needed
-    if (!mcpServers["jinzo"] && createSdkMcpServerFn && toolFn) {
-      mcpServers["jinzo"] = buildJinzoMcpServer(workspaceId ?? null, workspacePath ?? null, runId ?? null);
-      logInfo("Injected jinzo MCP server (in-process)");
+    if (!mcpServers["mains"] && createSdkMcpServerFn && toolFn) {
+      mcpServers["mains"] = buildMainsMcpServer(workspaceId ?? null, workspacePath ?? null, runId ?? null);
+      logInfo("Injected mains MCP server (in-process)");
     }
 
     const options: SDKOptions = {
@@ -616,6 +617,20 @@ export function createClaudeAdapter(
       options.hooks.PreToolUse.push(approvalHook);
     }
 
+    // Inject dependency guard hook (checks packages before install)
+    {
+      const guardHook = await guardsService.buildClaudeGuardHook();
+      if (guardHook) {
+        if (!options.hooks) {
+          options.hooks = {};
+        }
+        if (!options.hooks.PreToolUse) {
+          options.hooks.PreToolUse = [];
+        }
+        options.hooks.PreToolUse.push(guardHook);
+      }
+    }
+
     // Inject PostToolUse hook to capture tool output
     // Always inject (even in bypass mode) since this is for data capture, not approval
     if (runId && onEvent) {
@@ -634,21 +649,21 @@ export function createClaudeAdapter(
     options.systemPrompt = {
       type: "preset",
       preset: "claude_code",
-      append: "IMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the jinzo MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the jinzo MCP server instead.",
+      append: "IMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the mains MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the mains MCP server instead.",
     };
 
     return options;
   }
 
   /**
-   * Build an in-process MCP server for jinzo tools using createSdkMcpServer.
-   * Handlers are shared from jinzo-tools.core.ts — only the SDK wrapper lives here.
+   * Build an in-process MCP server for mains tools using createSdkMcpServer.
+   * Handlers are shared from mains-tools.core.ts — only the SDK wrapper lives here.
    */
-  function buildJinzoMcpServer(workspaceId: string | null, rootPath: string | null, runId: string | null): any {
-    const ctx: JinzoToolContext = { workspaceId, rootPath, runId };
+  function buildMainsMcpServer(workspaceId: string | null, rootPath: string | null, runId: string | null): any {
+    const ctx: MainsToolContext = { workspaceId, rootPath, runId };
 
     return createSdkMcpServerFn!({
-      name: "jinzo",
+      name: "mains",
       version: "1.0.0",
       tools: [
         toolFn!(
@@ -1305,7 +1320,7 @@ export function createClaudeAdapter(
       onEvent: WorkRunEventHandler,
     ): Promise<WorkRunResult> {
       const { runId, model } = request;
-      const timeout = config.timeout ?? 600000; // 10 minutes default
+      const timeout = config.timeout ?? 6000000; 
 
       const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
       const abortController = new AbortController();
@@ -1327,7 +1342,7 @@ export function createClaudeAdapter(
           throw new Error("Claude SDK not properly initialized");
         }
 
-        const options = buildOptions(
+        const options = await buildOptions(
           getModel(model),
           request.workspace.rootPath,
           abortController,
@@ -1645,7 +1660,7 @@ export function createClaudeAdapter(
       onEvent: WorkRunEventHandler,
     ): Promise<WorkRunResult> {
       const { runId, message } = request;
-      const timeout = config.timeout ?? 600000;
+      const timeout = config.timeout ?? 6000000;
 
       const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
       const abortController = new AbortController();
@@ -1682,7 +1697,7 @@ export function createClaudeAdapter(
           );
         }
 
-        const options = buildOptions(
+        const options = await buildOptions(
           getModel(request.model ?? config.defaultModel),
           request.workspace.rootPath,
           abortController,
@@ -1968,7 +1983,7 @@ export function createClaudeAdapter(
       onEvent: WorkRunEventHandler,
     ): Promise<WorkRunResult> {
       const { runId, sourceRunId, message } = request;
-      const timeout = config.timeout ?? 600000;
+      const timeout = config.timeout ?? 6000000;
 
       const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
       const abortController = new AbortController();
@@ -2004,7 +2019,7 @@ export function createClaudeAdapter(
           );
         }
 
-        const options = buildOptions(
+        const options = await buildOptions(
           getModel(request.model ?? config.defaultModel),
           request.workspace.rootPath,
           abortController,
@@ -2584,7 +2599,7 @@ export function createClaudeAdapter(
         contextSnippet ? `\nContext:\n${contextSnippet}` : "",
       ].filter(Boolean).join("\n");
 
-      const options = buildOptions(
+      const options = await buildOptions(
         "claude-haiku-4-5-20251001", // Use haiku for fast, cheap title generation
         undefined, // no workspace path needed
         undefined, // no abort controller

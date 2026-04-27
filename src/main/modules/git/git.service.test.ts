@@ -557,7 +557,7 @@ describe("GitService", () => {
   describe("getWorktreesDir", () => {
     it("returns worktrees directory path", () => {
       const dir = gitService.getWorktreesDir();
-      // electron mock returns /tmp/jinzo-test/userData
+      // electron mock returns /tmp/mains-test/userData
       expect(dir).toContain("worktrees");
       expect(typeof dir).toBe("string");
     });

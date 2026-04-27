@@ -26,9 +26,15 @@ const CODEX_PATHS = [
 
 const CODEX_VIEWBOX = "0 0 12 12";
 
+const CURSOR_PATHS = [
+  "M22.106 5.68 12.5.135a.998.998 0 0 0-.998 0L1.893 5.68a.84.84 0 0 0-.419.726v11.186c0 .3.16.577.42.727l9.607 5.547a.999.999 0 0 0 .998 0l9.608-5.547a.84.84 0 0 0 .42-.727V6.407a.84.84 0 0 0-.42-.726zm-.603 1.176L12.228 22.92c-.063.108-.228.064-.228-.061V12.34a.59.59 0 0 0-.295-.51l-9.11-5.26c-.107-.062-.063-.228.062-.228h18.55c.264 0 .428.286.296.514z",
+];
+
+const CURSOR_VIEWBOX = "0 0 24 24";
+
 interface ParticleLogoCanvasProps {
   className?: string;
-  routeType: "claude" | "copilot" | string;
+  routeType: "claude" | "copilot" | "codex" | "cursor" | string;
   text?: string;
 }
 
@@ -36,21 +42,24 @@ export function ParticleLogoCanvas({ className, routeType, text }: ParticleLogoC
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reducedMotion = usePrefersReducedMotion();
 
-  const isCodex = routeType === "codex";
-  const isCopilot = routeType === "copilot";
-
   let svgPaths = CLAUDE_PATHS;
   let svgViewBox = CLAUDE_VIEWBOX;
   let renderMode: "fill" | "stroke" = "fill";
+  let strokeWidth = 2;
 
-  if (isCopilot) {
+  if (routeType === "copilot") {
     svgPaths = COPILOT_PATHS;
     svgViewBox = COPILOT_VIEWBOX;
     renderMode = "stroke";
-  } else if (isCodex) {
+  } else if (routeType === "codex") {
     svgPaths = CODEX_PATHS;
     svgViewBox = CODEX_VIEWBOX;
     renderMode = "stroke";
+    strokeWidth = 0.75;
+  } else if (routeType === "cursor") {
+    svgPaths = CURSOR_PATHS;
+    svgViewBox = CURSOR_VIEWBOX;
+    renderMode = "fill";
   }
 
   useParticleLogo(canvasRef, {
@@ -59,7 +68,7 @@ export function ParticleLogoCanvas({ className, routeType, text }: ParticleLogoC
     color: "#404040",
     text,
     renderMode,
-    strokeWidth: isCodex ? 0.75 : 2,
+    strokeWidth,
     enabled: !reducedMotion,
   });
 

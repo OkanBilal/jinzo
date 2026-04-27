@@ -40,6 +40,11 @@ const ipcBaseQuery = (): BaseQueryFn<
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: ipcBaseQuery(),
+  // Drop unused cache entries after 60s by default to keep RAM bounded.
+  // Individual endpoints can override this if they need longer retention.
+  keepUnusedDataFor: 60,
+  refetchOnFocus: true,
+  refetchOnReconnect: true,
   tagTypes: [
     'ConnectionStates',
     'Entity',

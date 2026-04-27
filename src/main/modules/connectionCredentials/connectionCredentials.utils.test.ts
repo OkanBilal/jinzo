@@ -8,7 +8,7 @@ vi.mock("electron", () => ({
   },
   app: {
     getPath: () => "/tmp",
-    getName: () => "jinzo",
+    getName: () => "mains",
     getVersion: () => "0.0.0",
   },
 }));

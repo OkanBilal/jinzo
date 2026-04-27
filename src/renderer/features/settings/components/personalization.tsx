@@ -1,8 +1,13 @@
 import { useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { toast, Button, Input, Textarea, Heading2 } from "@/components/ui";
+import { toast, Button, Input, Textarea } from "@/components/ui";
 import { useGetAccountQuery, useUpdateAccountMutation } from "@/lib/redux/api";
-import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
+import {
+  SettingsPageShell,
+  SettingsSection,
+  SettingsRow,
+  SettingsDivider,
+} from "./settings-layout";
 
 interface PersonalizationFormValues {
   displayName: string;
@@ -41,37 +46,26 @@ export default function PersonalizationSettings() {
   const { data: account, isLoading: loading, error: queryError, refetch } = useGetAccountQuery();
   const [updateAccount, { isLoading: saving }] = useUpdateAccountMutation();
 
-  const error = queryError ? 'Unable to load personalization details' : null;
   const lastSavedAt = account?.updatedAt || account?.createdAt || null;
 
   return (
-    <div className="bg-primary dark:bg-primary-950">
-      <div className="mb-8">
-        <Heading2>Personalization</Heading2>
-      </div>
-
-      {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50/60 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200 mb-6">
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="rounded-xl border border-primary-200/60 dark:border-primary-900 bg-primary/50 dark:bg-primary-950/30 p-6 text-sm text-primary-600 dark:text-primary-200">
-          Loading personalization...
-        </div>
-      ) : (
-        <PersonalizationForm
-          key={account?.id}
-          initialValues={formFromAccount(account)}
-          lastSavedAt={lastSavedAt}
-          saving={saving}
-          loading={loading}
-          onSubmit={updateAccount}
-          onRefresh={refetch}
-        />
-      )}
-    </div>
+    <SettingsPageShell
+      title="Personalization"
+      isLoading={loading}
+      loadingMessage="Loading personalization..."
+      error={queryError || undefined}
+      errorMessage="Unable to load personalization details"
+    >
+      <PersonalizationForm
+        key={account?.id}
+        initialValues={formFromAccount(account)}
+        lastSavedAt={lastSavedAt}
+        saving={saving}
+        loading={loading}
+        onSubmit={updateAccount}
+        onRefresh={refetch}
+      />
+    </SettingsPageShell>
   );
 }
 
@@ -195,7 +189,7 @@ function PersonalizationForm({ initialValues, lastSavedAt, saving, loading, onSu
                 onChange={handleChange("avatarUrl")}
                 disabled={saving}
                 placeholder="https://cdn.example.com/me.png"
-                className="min-w-80!"
+                className="min-w-80"
               />
             </SettingsRow>
             <SettingsDivider />
@@ -205,7 +199,7 @@ function PersonalizationForm({ initialValues, lastSavedAt, saving, loading, onSu
             >
               <Textarea
                 id="bio"
-                className="resize-none w-80! h-16"
+                className="resize-none w-80 h-16"
                 value={form.bio}
                 onChange={handleChange("bio")}
                 disabled={saving}

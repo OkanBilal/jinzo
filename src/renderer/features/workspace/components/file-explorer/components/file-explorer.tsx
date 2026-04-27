@@ -1,5 +1,5 @@
 import { memo, useState, useCallback, useEffect, useReducer } from "react";
-import type { FileNode, DirEntry, ServiceResponse } from "../types";
+import type { FileNode, DirEntry, ServiceResponse } from "@/features/workspace/types/file-explorer";
 import { FileTreeNode } from "./file-tree-node";
 import { Label } from "@/components/ui";
 
@@ -164,7 +164,7 @@ export const FileExplorer = memo(function FileExplorer({
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
         <div className="flex flex-col items-center gap-2 ">
-          <Label className="text-sm shine-text te ">Loading...</Label>
+          <Label className="text-xs shine-text ">Loading...</Label>
         </div>
       </div>
     );

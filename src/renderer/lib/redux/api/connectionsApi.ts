@@ -132,6 +132,20 @@ export interface SelectedSentryProject {
   metadata: any;
 }
 
+export interface SocketDevOrganization {
+  id: string;
+  slug: string;
+  name: string;
+  plan: string | null;
+}
+
+export interface SelectedSocketDevOrganization {
+  id: string;
+  slug: string;
+  name: string;
+  metadata: any;
+}
+
 export interface SaveCredentialsPayload {
   provider: string;
   connectionId: string;
@@ -239,6 +253,23 @@ export const connectionsApi = baseApi.injectEndpoints({
       providesTags: ['ConnectionStates'],
     }),
 
+    getSocketDevOrganizations: builder.query<{ success: boolean; organizations: SocketDevOrganization[] }, string>({
+      query: (connectionId) => ({
+        handler: 'connections:getSocketDevOrganizations',
+        args: [connectionId],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, organizations: response.data.organizations } : { success: false, organizations: [] },
+    }),
+
+    getSelectedSocketDevOrganizations: builder.query<{ success: boolean; organizations: SelectedSocketDevOrganization[]; connectionId: string }, string>({
+      query: (provider) => ({
+        handler: 'connections:getSelectedResources',
+        args: [provider],
+      }),
+      transformResponse: (response: any) => response.success ? { success: true, organizations: response.data.organizations, connectionId: response.data.connectionId } : { success: false, organizations: [], connectionId: '' },
+      providesTags: ['ConnectionStates'],
+    }),
+
     getSelectedTrelloBoards: builder.query<{ success: boolean; boards: SelectedTrelloBoard[]; connectionId: string }, string>({
       query: (provider) => ({
         handler: 'connections:getSelectedResources',
@@ -303,13 +334,14 @@ export const connectionsApi = baseApi.injectEndpoints({
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
-          const syncResult = dispatch(syncApi.endpoints.runEntitySync.initiate(arg.provider));
-          const { data } = await syncResult;
-          if (data) {
-            toast.success(`Synced ${data.total} items`);
-          }
+          const syncPromise = dispatch(syncApi.endpoints.runEntitySync.initiate(arg.provider)).unwrap();
+          toast.promise(syncPromise, {
+            loading: "Syncing...",
+            success: (data) => `Synced ${data.total} items`,
+            error: "Sync failed",
+          });
         } catch {
-          toast.error("Sync failed");
+          // save itself failed — no sync needed
         }
       },
     }),
@@ -360,6 +392,9 @@ export const {
   useLazyGetSentryProjectsQuery,
   useGetSelectedSentryProjectsQuery,
   useLazyGetSelectedSentryProjectsQuery,
+  useLazyGetSocketDevOrganizationsQuery,
+  useGetSelectedSocketDevOrganizationsQuery,
+  useLazyGetSelectedSocketDevOrganizationsQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
   useRevokeConnectionMutation,

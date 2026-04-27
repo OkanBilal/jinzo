@@ -6,6 +6,7 @@ import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import ClaudePage from "@/routes/Claude";
 import CodexPage from "@/routes/Codex";
+import CursorPage from "@/routes/Cursor";
 
 function DefaultRoute() {
   const { activeSpace } = useActiveSpace();
@@ -31,6 +32,8 @@ export function MainRoutes() {
       <Route path="/copilot/:workspaceId" element={<Copilot />} />
       <Route path="/codex" element={<CodexPage />} />
       <Route path="/codex/:workspaceId" element={<CodexPage />} />
+      <Route path="/cursor" element={<CursorPage />} />
+      <Route path="/cursor/:workspaceId" element={<CursorPage />} />
     </Routes>
   );
 }

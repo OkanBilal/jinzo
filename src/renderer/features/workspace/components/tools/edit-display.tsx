@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ArrowUp, Edit } from "@/components/ui/icons";
+import { PatchDiff } from "@pierre/diffs/react";
 
 export interface EditParams {
   // Claude params
@@ -18,61 +19,93 @@ interface DiffLine {
   text: string;
 }
 
-export function EditDisplay({ params, output, isCompact = false }: { params: EditParams; output?: unknown; isCompact?: boolean }) {
+export function EditDisplay({
+  params,
+  output,
+  isCompact = false,
+}: {
+  params: EditParams;
+  output?: unknown;
+  isCompact?: boolean;
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const isDarkMode = document.documentElement.classList.contains("dark");
 
   const filePath = params.file_path ?? params.path ?? "";
   const fileName = filePath.split("/").pop() || filePath;
-  const { lines: patchLines, added, removed } = useMemo(() => parsePatch(output, params), [output, params]);
+  const {
+    lines: patchLines,
+    added,
+    removed,
+  } = useMemo(() => parsePatch(output, params), [output, params]);
   const hasDiff = patchLines.length > 0;
 
+  const unifiedDiff = useMemo(() => {
+    if (!hasDiff) return "";
+    return buildUnifiedDiff(patchLines, fileName);
+  }, [patchLines, hasDiff, fileName]);
+
   return (
-    <div className="px-2">
+    <div className="">
       <button
         onClick={() => hasDiff && setIsExpanded(!isExpanded)}
-        className={`w-full flex items-center gap-2 py-0.5 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans ${hasDiff ? "cursor-pointer" : "cursor-default"}`}
+        className={`group w-full flex items-center gap-1 py-0.5 text-s font-sans ${hasDiff ? "cursor-pointer" : "cursor-default"}`}
       >
-        {hasDiff && (
-          <ArrowUp
-            className={`size-3 text-primary-500 transition-all duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-          />
-        )}
-        {!isCompact && <Edit className="size-4 dark:text-primary-300 text-primary-700" />}
         {!isCompact && (
-          <span className="dark:text-primary-300 text-primary-700 font-medium">
-            Edit
+          <Edit className="size-3.5 text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary" />
+        )}
+        {!isCompact && (
+          <span className="text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
+            Edited
           </span>
         )}
-        <span className="text-primary-700 dark:text-primary-200 font-medium truncate">
+        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
           {fileName}
         </span>
         {(added > 0 || removed > 0) && (
-          <span className="text-primary-500 text-xs shrink-0">
-            {added > 0 && <span className="text-green-600 dark:text-green-400">+{added}</span>}
+          <span className="text-primary-500 text-xs shrink-0 group-hover:text-primary-950 group-hover:dark:text-primary">
+            {added > 0 && (
+              <span className="text-green-600 dark:text-green-400">
+                +{added}
+              </span>
+            )}
             {added > 0 && removed > 0 && " "}
-            {removed > 0 && <span className="text-red-500 dark:text-red-400">-{removed}</span>}
+            {removed > 0 && (
+              <span className="text-red-500 dark:text-red-400">-{removed}</span>
+            )}
           </span>
+        )}
+        {hasDiff && (
+          <ArrowUp
+            className={`size-3.5 shrink-0 text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          />
         )}
       </button>
 
-      {isExpanded && hasDiff && (
-        <div className="mt-2 ml-5 border-l border-primary-200/50 dark:border-primary-700/30 pl-3">
-          <div className="noscrollbar text-xs leading-relaxed font-mono bg-primary-50 dark:bg-primary/3 rounded-xl p-3 max-h-80 overflow-y-auto">
-            {patchLines.map((line, lineNum) => (
-              <div
-                key={`${lineNum}:${line.type}`}
-                className={
-                  line.type === "add"
-                    ? "text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30"
-                    : line.type === "remove"
-                      ? "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30"
-                      : "text-primary-600 dark:text-primary-400"
+      {hasDiff && (
+        <div
+          className={`grid transition-all duration-200 rounded-md border border-primary-200/50 dark:border-primary-700/30 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className=" max-h-80 overflow-y-auto noscrollbar p-0.25">
+              <PatchDiff
+                patch={unifiedDiff}
+                style={
+                  {
+                    "--diffs-font-size": "12px",
+                    "--diffs-font-family": "'Geist Mono', monospace",
+                  } as React.CSSProperties
                 }
-              >
-                {line.type === "add" ? "+" : line.type === "remove" ? "-" : " "}
-                {line.text}
-              </div>
-            ))}
+                options={{
+                  theme: isDarkMode ? "pierre-dark" : "pierre-light",
+                  themeType: isDarkMode ? "dark" : "light",
+                  diffStyle: "unified",
+                  overflow: "wrap",
+                  disableFileHeader: true,
+                  unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper], [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"}); background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
+                }}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -80,7 +113,28 @@ export function EditDisplay({ params, output, isCompact = false }: { params: Edi
   );
 }
 
-function parsePatch(output: unknown, params: EditParams): { lines: DiffLine[]; added: number; removed: number } {
+function buildUnifiedDiff(lines: DiffLine[], fileName: string): string {
+  const oldCount = lines.filter((l) => l.type !== "add").length;
+  const newCount = lines.filter((l) => l.type !== "remove").length;
+  const hunkLines = lines.map((l) =>
+    l.type === "add"
+      ? `+${l.text}`
+      : l.type === "remove"
+        ? `-${l.text}`
+        : ` ${l.text}`,
+  );
+  return [
+    `--- a/${fileName}`,
+    `+++ b/${fileName}`,
+    `@@ -1,${oldCount} +1,${newCount} @@`,
+    ...hunkLines,
+  ].join("\n");
+}
+
+function parsePatch(
+  output: unknown,
+  params: EditParams,
+): { lines: DiffLine[]; added: number; removed: number } {
   // Try structuredPatch from output first (Claude)
   const patch = extractPatchLines(output);
   if (patch.length > 0) {
@@ -113,7 +167,11 @@ function extractPatchLines(output: unknown): string[] {
 
   let parsed = output;
   if (typeof parsed === "string") {
-    try { parsed = JSON.parse(parsed); } catch { return []; }
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return [];
+    }
   }
 
   if (typeof parsed === "object" && parsed !== null) {
@@ -122,7 +180,11 @@ function extractPatchLines(output: unknown): string[] {
     if (Array.isArray(sp)) {
       const allLines: string[] = [];
       for (const hunk of sp) {
-        if (typeof hunk === "object" && hunk !== null && Array.isArray((hunk as any).lines)) {
+        if (
+          typeof hunk === "object" &&
+          hunk !== null &&
+          Array.isArray((hunk as any).lines)
+        ) {
           allLines.push(...(hunk as any).lines);
         }
       }
@@ -138,27 +200,54 @@ function extractUnifiedDiff(output: unknown): string[] {
 
   let parsed = output;
   if (typeof parsed === "string") {
-    try { parsed = JSON.parse(parsed); } catch { return []; }
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return [];
+    }
   }
 
   if (typeof parsed === "object" && parsed !== null) {
     const obj = parsed as Record<string, unknown>;
     if (typeof obj.detailedContent === "string") {
-      // Parse unified diff — skip header lines (---, +++, @@) and keep +/-/context lines
-      return obj.detailedContent
-        .split("\n")
-        .filter((l) => {
-          if (l.startsWith("diff ") || l.startsWith("index ") || l.startsWith("--- ") || l.startsWith("+++ ") || l.startsWith("@@")) return false;
-          if (l === "") return false;
-          return true;
-        });
+      const content = obj.detailedContent;
+
+      // If it doesn't look like a unified diff, treat all lines as additions (new file)
+      const isUnifiedDiff =
+        content.startsWith("--- ") ||
+        content.startsWith("diff ") ||
+        content.startsWith("@@");
+      if (!isUnifiedDiff) {
+        return content
+          .split("\n")
+          .filter((l) => l !== "")
+          .map((l) => `+${l}`);
+      }
+
+      // Standard unified diff — skip headers, keep +/-/context lines
+      return content.split("\n").filter((l) => {
+        if (
+          l.startsWith("diff ") ||
+          l.startsWith("index ") ||
+          l.startsWith("--- ") ||
+          l.startsWith("+++ ") ||
+          l.startsWith("@@")
+        )
+          return false;
+        if (l === "") return false;
+        return true;
+      });
     }
   }
 
   return [];
 }
 
-function parsePatchLines(raw: string[]): { lines: DiffLine[]; added: number; removed: number } {
+function parsePatchLines(raw: string[]): {
+  lines: DiffLine[];
+  added: number;
+  removed: number;
+} {
   const lines: DiffLine[] = [];
   let added = 0;
   let removed = 0;

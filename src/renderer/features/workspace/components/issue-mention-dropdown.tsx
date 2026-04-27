@@ -72,7 +72,7 @@ export function IssueMentionDropdown({
                 key={item.issue.entityId}
                 type="button"
                 onClick={() => onSelectIssue(item)}
-                className="w-full text-left px-3 py-2 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100 first:rounded-t-xl last:rounded-b-xl"
+                className="w-full text-left px-3 py-2 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 first:rounded-t-xl last:rounded-b-xl"
               >
                 <div className="flex items-center gap-2">
                   <ProviderIcon provider={item.issue.provider} className="w-3.5 h-3.5 shrink-0" fallback="text" />

@@ -11,6 +11,8 @@ export interface WorkspaceDiff {
   createdAt: number;
 }
 
+export type WorkspaceDiffSummary = Omit<WorkspaceDiff, "diffText">;
+
 export const workspaceDiffsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getLatestWorkspaceDiff: builder.query<WorkspaceDiff | null, string>({
@@ -18,6 +20,23 @@ export const workspaceDiffsApi = baseApi.injectEndpoints({
         const result = await window.api.workspaceDiffs.getLatest(workspaceId);
         return { data: result.success ? (result.data ?? null) : null };
       },
+      // Diff text can be huge; drop it quickly when no subscribers remain.
+      keepUnusedDataFor: 15,
+      providesTags: (_result, _error, workspaceId) => [
+        { type: "WorkspaceDiffs", id: workspaceId },
+      ],
+    }),
+
+    getLatestWorkspaceDiffSummary: builder.query<
+      WorkspaceDiffSummary | null,
+      string
+    >({
+      queryFn: async (workspaceId) => {
+        const result =
+          await window.api.workspaceDiffs.getLatestSummary(workspaceId);
+        return { data: result.success ? (result.data ?? null) : null };
+      },
+      keepUnusedDataFor: 60,
       providesTags: (_result, _error, workspaceId) => [
         { type: "WorkspaceDiffs", id: workspaceId },
       ],
@@ -35,6 +54,7 @@ export const workspaceDiffsApi = baseApi.injectEndpoints({
         success: boolean;
         data: WorkspaceDiff[];
       }) => response.data,
+      keepUnusedDataFor: 15,
       providesTags: (_result, _error, { workspaceId }) => [
         { type: "WorkspaceDiffs", id: workspaceId },
       ],
@@ -45,6 +65,8 @@ export const workspaceDiffsApi = baseApi.injectEndpoints({
 export const {
   useGetLatestWorkspaceDiffQuery,
   useLazyGetLatestWorkspaceDiffQuery,
+  useGetLatestWorkspaceDiffSummaryQuery,
+  useLazyGetLatestWorkspaceDiffSummaryQuery,
   useGetWorkspaceDiffsQuery,
   useLazyGetWorkspaceDiffsQuery,
 } = workspaceDiffsApi;

@@ -15,7 +15,7 @@ export async function seedConnectionStates(): Promise<void> {
       category: app.category,
       sortOrder: connectionStatesData.indexOf(app),
       enabledFeatures: JSON.stringify([]),
-      config: JSON.stringify({}),
+      config: JSON.stringify({ description: app.description ?? "" }),
     };
 
     // drizzle-orm/better-sqlite3 is synchronous

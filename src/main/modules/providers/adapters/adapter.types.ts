@@ -23,7 +23,10 @@ export interface WorkRunContextItem {
 export interface FileAttachment {
   name: string;
   type: "image" | "document";
-  data: string;
+  /** Base64-encoded data — optional when `sourcePath` is provided. */
+  data?: string;
+  /** Absolute path to an existing on-disk file. Preferred over `data` to avoid base64 in memory. */
+  sourcePath?: string;
   mimeType: string;
 }
 
@@ -540,7 +543,7 @@ export interface ClaudeCodeAdapterConfig {
   /** Timeout in milliseconds */
   timeout?: number;
   /** Permission mode for tool access */
-  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk";
+  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk" | "auto";
   /**
    * Setting sources for loading skills and other filesystem settings.
    * - "user": Load from ~/.claude/skills/
@@ -611,6 +614,26 @@ export interface ClaudeCodeAdapterConfig {
   fastMode?: boolean;
   /** Effort level for thinking depth (requires thinkingMode) */
   effortLevel?: "low" | "medium" | "high" | "max";
+}
+
+/**
+ * Configuration for Cursor adapter (ACP protocol)
+ */
+export interface CursorAdapterConfig {
+  /** Path to cursor CLI binary (defaults to "cursor" from PATH) */
+  binary?: string;
+  /** Optional API key. If omitted, uses cached auth from `cursor login` or CURSOR_API_KEY env var */
+  apiKey?: string;
+  /** Default model to use (e.g., "gpt-5.2", "claude-4-sonnet-thinking") */
+  defaultModel?: string;
+  /** Timeout in milliseconds */
+  timeout?: number;
+  /** Agent mode: "agent" (default), "plan", or "ask" */
+  mode?: "agent" | "plan" | "ask";
+  /** Enable sandbox for file/network isolation */
+  sandboxEnabled?: boolean;
+  /** Enable cloud execution */
+  cloudEnabled?: boolean;
 }
 
 /**

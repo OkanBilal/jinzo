@@ -1,4 +1,6 @@
-import { protocol, net } from "electron";
+import { app, protocol, net } from "electron";
+import * as fs from "fs";
+import * as path from "path";
 import { imageProxyService } from "./imageProxy.service";
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -12,13 +14,80 @@ function checkContentLength(response: Response): Response | null {
 }
 
 /**
- * Register the jinzo-img scheme as privileged.
+ * Wrap `body` in a pass-through stream that aborts once cumulative bytes
+ * exceed `maxBytes`. `Content-Length` alone is insufficient — servers can omit
+ * it (chunked transfer) and a hostile/misconfigured host could feed us an
+ * arbitrarily large payload that gets buffered into renderer memory.
+ */
+function enforceMaxBytes(
+  body: ReadableStream<Uint8Array> | null,
+  maxBytes: number,
+): ReadableStream<Uint8Array> | null {
+  if (!body) return body;
+
+  let total = 0;
+  const reader = body.getReader();
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) {
+          controller.close();
+          return;
+        }
+        total += value.byteLength;
+        if (total > maxBytes) {
+          // Cancel upstream and surface a stream error so the fetch caller
+          // (and the renderer `<img>` tag) fails fast without buffering more.
+          try {
+            await reader.cancel("image too large");
+          } catch {
+            /* ignore */
+          }
+          controller.error(
+            new Error(`image exceeds ${maxBytes} bytes (aborted at ${total})`),
+          );
+          return;
+        }
+        controller.enqueue(value);
+      } catch (err) {
+        controller.error(err);
+      }
+    },
+    cancel(reason) {
+      reader.cancel(reason).catch(() => {
+        /* ignore */
+      });
+    },
+  });
+}
+
+/**
+ * Register the mains-img scheme as privileged.
  * MUST be called BEFORE app.ready.
  */
 export function registerImageProxyScheme() {
   protocol.registerSchemesAsPrivileged([
     {
-      scheme: "jinzo-img",
+      scheme: "mains-img",
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        corsEnabled: true,
+      },
+    },
+    {
+      scheme: "mains-capture",
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        corsEnabled: true,
+      },
+    },
+    {
+      scheme: "mains-appicon",
       privileges: {
         standard: true,
         secure: true,
@@ -29,12 +98,67 @@ export function registerImageProxyScheme() {
   ]);
 }
 
+/** Shared helper to read a single PNG from a sandboxed directory. Prevents
+ * path traversal by rejecting any name containing slashes or `..`. */
+function serveLocalPng(baseDir: string, rawName: string): Response {
+  if (!rawName || rawName.includes("..") || rawName.includes("/") || rawName.includes("\\")) {
+    return new Response("Invalid filename", { status: 400 });
+  }
+  const filePath = path.join(baseDir, rawName);
+  const resolved = path.resolve(filePath);
+  const resolvedBase = path.resolve(baseDir);
+  if (!resolved.startsWith(resolvedBase + path.sep)) {
+    return new Response("Path escape denied", { status: 400 });
+  }
+  if (!fs.existsSync(resolved)) {
+    return new Response("Not found", { status: 404 });
+  }
+  const data = fs.readFileSync(resolved);
+  return new Response(data, {
+    status: 200,
+    headers: {
+      "Content-Type": "image/png",
+      "Cache-Control": "private, max-age=3600",
+    },
+  });
+}
+
 /**
- * Register the protocol handler for jinzo-img:// URLs.
+ * Register the protocol handler for mains-img:// URLs.
  * Must be called AFTER app.ready (inside initializeApp).
  */
 export function registerImageProxyHandler() {
-  protocol.handle("jinzo-img", async (request) => {
+  // Serve browser capture PNGs from userData/browser-captures with path safety.
+  protocol.handle("mains-capture", async (request) => {
+    try {
+      const requestUrl = new URL(request.url);
+      // mains-capture://<host-ignored>/<filename>
+      const raw = decodeURIComponent(requestUrl.pathname.replace(/^\/+/, ""));
+      const baseDir = path.join(app.getPath("userData"), "browser-captures");
+      return serveLocalPng(baseDir, raw);
+    } catch (error) {
+      console.error("[mains-capture] handler error:", error);
+      return new Response("Capture proxy error", { status: 500 });
+    }
+  });
+
+  // Serve cached application icons from userData/app-icons. The main process
+  // writes `${id}.png` for each detected installed app during
+  // `detectInstalledApps()` and the renderer references them via
+  // `mains-appicon://icon/<id>.png` — no base64 blobs in memory.
+  protocol.handle("mains-appicon", async (request) => {
+    try {
+      const requestUrl = new URL(request.url);
+      const raw = decodeURIComponent(requestUrl.pathname.replace(/^\/+/, ""));
+      const baseDir = path.join(app.getPath("userData"), "app-icons");
+      return serveLocalPng(baseDir, raw);
+    } catch (error) {
+      console.error("[mains-appicon] handler error:", error);
+      return new Response("App icon error", { status: 500 });
+    }
+  });
+
+    protocol.handle("mains-img", async (request) => {
     try {
       const requestUrl = new URL(request.url);
       const originalUrl = requestUrl.searchParams.get("url");
@@ -68,15 +192,18 @@ export function registerImageProxyHandler() {
           const tooLarge = checkContentLength(response);
           if (tooLarge) return tooLarge;
 
-          return new Response(response.body, {
-            status: response.status,
-            headers: {
-              "Content-Type":
-                response.headers.get("content-type") ||
-                "application/octet-stream",
-              "Cache-Control": "private, max-age=3600",
+          return new Response(
+            enforceMaxBytes(response.body, MAX_IMAGE_SIZE),
+            {
+              status: response.status,
+              headers: {
+                "Content-Type":
+                  response.headers.get("content-type") ||
+                  "application/octet-stream",
+                "Cache-Control": "private, max-age=3600",
+              },
             },
-          });
+          );
         }
       }
 
@@ -85,7 +212,7 @@ export function registerImageProxyHandler() {
       const tooLarge = checkContentLength(response);
       if (tooLarge) return tooLarge;
 
-      return new Response(response.body, {
+      return new Response(enforceMaxBytes(response.body, MAX_IMAGE_SIZE), {
         status: response.status,
         headers: {
           "Content-Type":

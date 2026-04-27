@@ -16,7 +16,13 @@ const spacePersistConfig = {
 const appSettingsPersistConfig = {
   key: "appSettings",
   storage,
-  whitelist: ["isDarkMode", "sidebarCollapsed", "onboardingCompleted"],
+  whitelist: [
+    "isDarkMode",
+    "sidebarCollapsed",
+    "rightPanelOpen",
+    "browserPanelOpen",
+    "onboardingCompleted",
+  ],
 };
 
 const workspacePersistConfig = {

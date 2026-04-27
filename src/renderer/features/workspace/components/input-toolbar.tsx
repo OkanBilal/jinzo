@@ -5,79 +5,18 @@ import {
   DictationButton,
   ModelSelectDropdown,
   FileUploadDropdown,
+  EffortLevelDropdown,
+  FastModeButton,
+  PermissionModeDropdown,
   FILE_TYPES,
   type UploadedFile,
   Button,
-  DropdownWrapper,
-  Body,
 } from "@/components/ui";
-import {
-  Plan,
-  Brain,
-  Picture,
-  Close,
-  Lock,
-  Edit,
-  Question,
-  DontAsk,
-  Unlock,
-  Danger,
-  ArrowUp,
-} from "@/components/ui/icons";
-import Security from "@/components/ui/icons/security";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { Bolt } from "@/components/ui/icons/space";
-
-const TOOLBAR_PERMISSION_MODES = [
-  {
-    value: "default",
-    label: "Ask permissions",
-    description: "Always ask before making changes",
-  },
-  {
-    value: "acceptEdits",
-    label: "Auto accept edits",
-    description: "Automatically accept all file edits",
-  },
-  {
-    value: "plan",
-    label: "Plan mode",
-    description: "Create a plan before making changes",
-  },
-] as const;
-
-const PERMISSION_MODE_LABELS: Record<string, string> = {
-  default: "Ask",
-  acceptEdits: "Edit",
-  plan: "Plan",
-  bypassPermissions: "Bypass",
-  dontAsk: "Don't Ask",
-};
-
-function PermissionModeIcon({
-  mode,
-  className,
-}: {
-  mode: string;
-  className?: string;
-}) {
-  switch (mode) {
-    case "acceptEdits":
-      return <Edit className={className} />;
-    case "plan":
-      return <Plan className={className} />;
-    case "bypassPermissions":
-      return <Danger className={className} />;
-    case "dontAsk":
-      return <DontAsk className={className} />;
-    default:
-      return <Lock className={className} />;
-  }
-}
 
 interface InputToolbarProps {
-  variant: "claude" | "copilot" | "codex";
+  variant: "claude" | "copilot" | "codex" | "cursor";
   isLoading: boolean;
   onSubmit: () => void;
   onGoalChange: (value: string) => void;
@@ -223,51 +162,7 @@ export function InputToolbar({
     <div className="flex items-start space-x-2 px-3 pt-6">
       <div className="flex items-center justify-between w-full">
         <div className={`flex items-center relative ml-1 gap-0.5`}>
-          {variant === "codex" ? (
-            <div
-              className="relative flex items-center gap-2 animate-blur-reveal"
-              ref={fileDropdownRef}
-            >
-              <Button
-                type="button"
-                tooltip="Upload image"
-                tooltipPosition="top"
-                onClick={handleImageUpload}
-                className="p-1.5 hover:bg-primary-200/30 dark:hover:bg-primary-300/20 rounded-full transition-colors cursor-pointer"
-                aria-label="Upload image"
-              >
-                <Picture className="dark:text-primary-300 size-4 text-primary-700" />
-              </Button>
-              {uploadedFiles.map((uploadedFile, index) => (
-                <div
-                  key={`${uploadedFile.file.name}-${uploadedFile.file.size}`}
-                  className="relative group "
-                >
-                  <div className="flex items-center gap-2 bg-primary-100 dark:bg-primary-800 rounded-2xl px-1.5 py-1 mr-1">
-                    <div className="relative w-5 h-5 rounded overflow-hidden">
-                      <img
-                        src={uploadedFile.preview}
-                        alt={uploadedFile.file.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <Button
-                        type="button"
-                        onClick={() => handleRemoveFile(index)}
-                        className="absolute cursor-pointer inset-0 bg-primary-950/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        aria-label="Remove image"
-                      >
-                        <Close className="w-4 h-4 text-primary-600 dark:text-primary-300" />
-                      </Button>
-                    </div>
-                    <span className="text-primary-700 dark:text-primary-200 text-xs max-w-25 truncate">
-                      {uploadedFile.file.name}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <FileUploadDropdown
+          <FileUploadDropdown
               isOpen={showFileDropdown}
               onToggle={() => setShowFileDropdown(!showFileDropdown)}
               onImageUpload={handleImageUpload}
@@ -276,8 +171,8 @@ export function InputToolbar({
               openUpward={true}
               uploadedFiles={uploadedFiles}
               onRemoveFile={handleRemoveFile}
+              variant={variant}
             />
-          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -295,210 +190,35 @@ export function InputToolbar({
             dropdownRef={modelDropdownRef}
             openUpward={true}
             isLoading={isLoadingModels}
+            variant={variant}
           />
-          {(variant === "claude" || variant === "copilot" || variant === "codex") && (
+          {(variant === "claude" || variant === "copilot" || variant === "codex" || variant === "cursor") && (
             <>
-              {supportedEffortLevels && supportedEffortLevels.length > 0 ? (
-                <div className="relative animate-blur-reveal" ref={thinkingDropdownRef}>
-                  <Button
-                    tooltip="Thinking & Effort"
-                    type="button"
-                    onClick={() =>
-                      setShowThinkingDropdown(!showThinkingDropdown)
-                    }
-                    className={`flex items-center hover:bg-primary-200/30 dark:hover:bg-primary-600/20 px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer ${
-                      thinkingMode
-                        ? " gap-1  text-primary-400 dark:text-primary-300"
-                        : "text-primary-400 dark:text-primary-300 hover:bg-primary/10"
-                    }`}
-                  >
-
-                    <span
-                      className={
-                        thinkingMode
-                          ? "text-primary-700 dark:text-primary-300 capitalize tracking-tight"
-                          : ""
-                      }
-                    >
-                      {thinkingMode ? (effortLevel === "xhigh" ? "Extra High" : effortLevel) || "On" : "Off"}
-                    </span>
-                    <ArrowUp
-                      className={`size-3.5 ml-0.5 rotate-180 ${thinkingMode ? "text-primary-700 dark:text-primary-300" : "text-primary-400 dark:text-primary-300"}`}
-                    />
-                  </Button>
-                  <DropdownWrapper
-                    isOpen={showThinkingDropdown}
-                    openUpward={true}
-                    minWidth="min-w-32"
-                    useFixedBackground={true}
-                  >
-                    {variant !== "codex" && (
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          onEffortLevelChange("");
-                          setShowThinkingDropdown(false);
-                        }}
-                        className={`w-full text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-xl ${
-                          !thinkingMode
-                            ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100 font-medium"
-                            : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
-                        }`}
-                      >
-                        Off
-                      </Button>
-                    )}
-                    {supportedEffortLevels.map((level) => (
-                      <Button
-                        key={level}
-                        type="button"
-                        onClick={() => {
-                          onEffortLevelChange(level);
-                          setShowThinkingDropdown(false);
-                        }}
-                        className={`w-full flex items-center gap-1.5 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors capitalize last:rounded-b-xl ${
-                          thinkingMode && effortLevel === level
-                            ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-100 "
-                            : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
-                        }`}
-                      >
-                        <Brain className="size-3" />
-                        {level === "xhigh" ? "Extra High" : level}
-                      </Button>
-                    ))}
-                  </DropdownWrapper>
-                </div>
-              ) : variant === "claude" ? (
-                <Button
-                  tooltip="Toggle Thinking Mode"
-                  type="button"
-                  onClick={onThinkingModeToggle}
-                  className={`flex items-center gap-1 px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer animate-blur-reveal ${
-                    thinkingMode
-                      ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-100"
-                      : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
-                  }`}
-                >
-                  <Brain
-                    className={`size-4  ${thinkingMode ? "text-primary-700 dark:text-primary-100" : "text-primary-400 dark:text-primary-300"}`}
-                  />
-                  <span
-                    className={
-                      thinkingMode ? "text-primary-700 dark:text-primary-100" : "text-primary-400 dark:text-primary-300"
-                    }
-                  >
-                    {thinkingMode ? "On" : "Off"}
-
-                  </span>
-                </Button>
-              ) : null}
-                            {variant === "claude" && (
-                <div className="relative mx-0.5" ref={permissionDropdownRef}>
-                  <Button
-                    tooltip="Permission Mode"
-                    type="button"
-                    onClick={() =>
-                      setShowPermissionDropdown(!showPermissionDropdown)
-                    }
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-sm  transition-all cursor-pointer animate-blur-reveal ${
-                      permissionMode === "bypassPermissions"
-                        ? "dark:bg-yellow-200/10 bg-yellow-400/30 text-yellow-600 dark:text-yellow-300"
-                        : permissionMode !== "default"
-                          ? "dark:bg-primary/8 bg-primary-300/30 text-primary-700 dark:text-primary-100"
-                          : "text-primary-700 dark:text-primary-300 hover:bg-primary/10"
-                    }`}
-                  >
-                    <PermissionModeIcon
-                      mode={permissionMode}
-                      className="size-3.5"
-                    />
-                    {PERMISSION_MODE_LABELS[permissionMode] ?? "Ask"}
-                      <ArrowUp className={`size-3.5 rotate-180 `} />
-                  </Button>
-                  <DropdownWrapper
-                    isOpen={showPermissionDropdown}
-                    openUpward={true}
-                    minWidth="min-w-60"
-                    useFixedBackground={true}
-                  >
-                    {TOOLBAR_PERMISSION_MODES.map((mode) => (
-                      <Button
-                        key={mode.value}
-                        type="button"
-                        onClick={() => {
-                          onPermissionModeChange(mode.value);
-                          setShowPermissionDropdown(false);
-                        }}
-                        className={`w-full text-left px-2.5 py-1.5 cursor-pointer transition-colors flex items-center gap-2.5 first:rounded-t-xl last:rounded-b-xl ${
-                          permissionMode === mode.value
-                            ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100"
-                            : "hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-300"
-                        }`}
-                      >
-                        <PermissionModeIcon
-                          mode={mode.value}
-                          className="size-3 shrink-0"
-                        />
-                        <div className="flex flex-col flex-1 min-w-0">
-                          <Body className="text-[13px] tracking-tight mb-0.5">
-                            {mode.label}
-                          </Body>
-                          <span className="text-xs text-primary-400 dark:text-primary-500 tracking-tighter">
-                            {mode.description}
-                          </span>
-                        </div>
-                      </Button>
-                    ))}
-                  </DropdownWrapper>
-                </div>
+              <EffortLevelDropdown
+                variant={variant}
+                thinkingMode={thinkingMode}
+                effortLevel={effortLevel}
+                onEffortLevelChange={onEffortLevelChange}
+                onThinkingModeToggle={onThinkingModeToggle}
+                supportedEffortLevels={supportedEffortLevels}
+                isOpen={showThinkingDropdown}
+                onToggle={() => setShowThinkingDropdown(!showThinkingDropdown)}
+                dropdownRef={thinkingDropdownRef}
+              />
+                            {(variant === "claude" || variant === "cursor" || variant === "codex") && (
+                <PermissionModeDropdown
+                  permissionMode={permissionMode}
+                  onPermissionModeChange={onPermissionModeChange}
+                  isOpen={showPermissionDropdown}
+                  onToggle={() => setShowPermissionDropdown(!showPermissionDropdown)}
+                  dropdownRef={permissionDropdownRef}
+                  variant={variant}
+                />
               )}
             </>
           )}
           {supportsFastMode && (
-            <Button
-              tooltip="Toggle Fast Mode"
-              type="button"
-              onClick={onFastModeToggle}
-              className={`flex items-center pl-2 pr-2.5 py-1 -ml-px rounded-full text-sm transition-all cursor-pointer ${
-                fastMode
-                  ? "dark:bg-orange-200/10 gap-1 bg-orange-300/30 text-orange-400 dark:text-orange-200"
-                  : " text-primary-700 dark:text-primary-300 hover:bg-primary/10"
-              }`}
-              title={
-                fastMode
-                  ? "Fast mode on — faster output, same model"
-                  : "Fast mode off — standard speed"
-              }
-            >
-              <Bolt
-                animated={fastMode}
-                className={`size-4 transition-colors ${fastMode ? "text-orange-400 dark:text-orange-200" : "text-primary-700 dark:text-primary-300"}`}
-                style={{
-                  transitionDelay: fastMode ? "0ms" : "200ms",
-                  transitionDuration: "150ms",
-                }}
-              />
-              <span className="flex overflow-hidden">
-                {"Fast".split("").map((char, i) => (
-                  <span
-                    key={i}
-                    className="inline-block text-orange-400 dark:text-orange-200"
-                    style={{
-                      transition:
-                        "opacity 150ms, transform 150ms, max-width 150ms",
-                      transitionDelay: fastMode
-                        ? `${i * 40}ms`
-                        : `${(3 - i) * 40}ms`,
-                      opacity: fastMode ? 1 : 0,
-                      transform: fastMode ? "translateX(0)" : "translateX(4px)",
-                      maxWidth: fastMode ? "1ch" : "0px",
-                    }}
-                  >
-                    {char}
-                  </span>
-                ))}
-              </span>
-            </Button>
+            <FastModeButton fastMode={fastMode} onToggle={onFastModeToggle} />
           )}
         </div>
         <div className="flex items-center ">

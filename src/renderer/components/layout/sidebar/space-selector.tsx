@@ -3,7 +3,7 @@ import { Space } from "@/lib/redux/api";
 import { parseIcon } from "@/lib/icon-registry";
 import { Copilot, Claude } from "@/components/ui/icons/space";
 import { Button } from "@/components/ui";
-import { Codex } from "@/components/ui/icons";
+import { Codex, Cursor } from "@/components/ui/icons";
 
 interface SpaceSelectorProps {
   spaces: Space[];
@@ -37,7 +37,7 @@ function SpaceSelector({
             onMouseEnter={() => setHoveredSpaceId(space.id)}
             onMouseLeave={() => setHoveredSpaceId(null)}
             className={`shrink-0 flex items-center justify-center size-8 hover:bg-primary/60 dark:hover:bg-primary/20
-              hover:scale-101 rounded-xl transition-all duration-200 ease-out active:scale-99 font-medium cursor-pointer ${
+               rounded-xl transition-all duration-200 ease-out font-medium cursor-pointer ${
               isActive
                 ? "text-primary-900 dark:text-primary"
                 : "text-primary-900 dark:text-primary opacity-60"
@@ -56,6 +56,11 @@ function SpaceSelector({
             ) : icon.type === "codex-animate" ? (
               <Codex
                 className={`size-4 text-primary-800 dark:text-primary`}
+              />
+            ) : icon.type === "cursor-animate" ? (
+              <Cursor
+                className="size-4 text-primary-800 dark:text-primary"
+                animate={isHovered}
               />
             ) : (
               <icon.value className="size-4" />

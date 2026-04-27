@@ -214,9 +214,7 @@ export function useSidebarActions() {
         }
 
         toast.success("Workspace added");
-        const basePath = getBaseRoutePath(
-          routeType === "claude" ? "claude" : routeType === "copilot" ? "copilot" : "codex",
-        );
+        const basePath = getBaseRoutePath(routeType === "settings" || routeType === "home" || routeType === "unknown" ? "codex" : routeType);
         navigate(`${basePath}/${workspaceId}`);
       }
     } catch (error) {
@@ -350,9 +348,7 @@ export function useSidebarActions() {
 
       toast.success("Repository cloned and workspace created");
       setIsCloneModalOpen(false);
-      const basePath = getBaseRoutePath(
-        routeType === "claude" ? "claude" : routeType === "copilot" ? "copilot" : "codex",
-      );
+      const basePath = getBaseRoutePath(routeType === "settings" || routeType === "home" || routeType === "unknown" ? "codex" : routeType);
       navigate(`${basePath}/${workspaceId}`);
     } catch (error) {
       console.error("Failed to clone repository:", error);

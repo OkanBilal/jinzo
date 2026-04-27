@@ -9,6 +9,23 @@ export interface EventGroup {
   isRunning?: boolean;
 }
 
+/** Tool events rendered as PlanDisplay — same name rules as `groupEvents` standalone plan groups. */
+function toolEventPlanName(event: { type: string; content: string }): string | null {
+  if (event.type !== "tool_call") return null;
+  const colonIdx = event.content.indexOf(":");
+  return (colonIdx !== -1 ? event.content.substring(0, colonIdx).trim() : event.content).toLowerCase();
+}
+
+function isPlanToolEvent(event: { type: string; content: string }): boolean {
+  const n = toolEventPlanName(event);
+  return n === "plan" || n === "exitplanmode" || n === "create plan";
+}
+
+export function isPlanToolCallGroup(group: EventGroup): boolean {
+  if (group.type !== "tool_calls") return false;
+  return group.events.some((ev) => isPlanToolEvent(ev));
+}
+
 export function groupEvents(events: RunEvent[]): EventGroup[] {
   const groups: EventGroup[] = [];
   let currentToolGroup: RunEvent[] = [];
@@ -28,9 +45,25 @@ export function groupEvents(events: RunEvent[]): EventGroup[] {
 
   for (const event of events) {
     if (event.type === "tool_call") {
-      currentToolGroup.push(event);
+      // Plan/ExitPlanMode tool calls render standalone, never inside a group
+      if (isPlanToolEvent(event)) {
+        flushToolGroup();
+        groups.push({
+          id: `plan-${event.id}`,
+          type: "tool_calls",
+          events: [event],
+          startTime: event.timestamp,
+          endTime: event.timestamp,
+        });
+      } else {
+        currentToolGroup.push(event);
+      }
     } else if (event.type === "artifact") {
       flushToolGroup();
+      // Cursor agent thought stream — UI-only (e.g. loader), not a chat bubble
+      if (event.metadata?.kind === "thinking") {
+        continue;
+      }
       const isUserPrompt = event.metadata?.kind === "user-prompt";
       const isPromptSuggestion = event.metadata?.kind === "prompt_suggestion";
 

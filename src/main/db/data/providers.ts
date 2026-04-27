@@ -10,7 +10,7 @@ export const seedProviders: CreateProviderPayload[] = [
     defaultModel: "claude-opus-4-6",
     config: {
       transport: "stdio" as const,
-      timeout: 600000, 
+      timeout: 600000,
       logLevel: "info" as const,
       autoRestart: false,
     },
@@ -66,6 +66,26 @@ export const seedProviders: CreateProviderPayload[] = [
       workspaceAware: true,
       artifacts: ["patch", "file", "log", "command_result"],
       notes: "OpenAI Codex adapter using @openai/codex-sdk",
+    },
+  },
+
+  {
+    id: "cursor",
+    kind: "agent_runtime",
+    displayName: "Cursor (ACP/CLI)",
+    isEnabled: true,
+    defaultModel: "composer-2",
+    config: {
+      timeout: 600000,
+      mode: "agent",
+    },
+    capabilities: {
+      mode: ["run"],
+      tools: true,
+      streaming: true,
+      workspaceAware: true,
+      artifacts: ["patch", "file", "log", "command_result"],
+      notes: "Cursor adapter using ACP (Agent Client Protocol) over JSON-RPC",
     },
   },
 ];

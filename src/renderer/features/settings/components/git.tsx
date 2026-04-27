@@ -1,6 +1,11 @@
 import { useState } from "react";
-import { Heading2, Muted, Toggle, Textarea, toast } from "@/components/ui";
-import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
+import { Toggle, Textarea, toast } from "@/components/ui";
+import {
+  SettingsPageShell,
+  SettingsSection,
+  SettingsRow,
+  SettingsDivider,
+} from "./settings-layout";
 import {
   useGetAppSettingsQuery,
   useSetEnableWorktreesMutation,
@@ -55,25 +60,12 @@ export default function GitSettings() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div>
-        <Heading2 className="mb-2">Git</Heading2>
-        <Muted>Loading...</Muted>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-primary dark:bg-primary-950">
-      <div className="mb-8">
-        <Heading2 className="font-medium!">Git</Heading2>
-      </div>
-
+    <SettingsPageShell title="Git" isLoading={isLoading}>
       <SettingsSection>
         <SettingsRow
           title="Worktrees"
-          description="Work in an isolated copy of your repo, so you can work on multiple tasks at the same time. When disabled, Jinzo uses the active branch directly."
+          description="Work in an isolated copy of your repo, so you can work on multiple tasks at the same time. When disabled, Mains uses the active branch directly."
         >
           <Toggle enabled={enableWorktrees} onChange={handleWorktreeToggle} />
         </SettingsRow>
@@ -112,7 +104,7 @@ export default function GitSettings() {
           />
         </SettingsRow>
       </SettingsSection>
-    </div>
+    </SettingsPageShell>
   );
 }
 

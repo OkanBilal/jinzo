@@ -1,30 +1,36 @@
 import { useEffect, useMemo, useCallback } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import {
   useGetProviderModelsQuery,
   useGetProviderCommandsQuery,
   useGetProviderSkillsQuery,
   useGetProviderByIdQuery,
   useUpdateProviderMutation,
+  type ModelInfo,
 } from "@/lib/redux/api/providersApi";
 import { setWorkspaceModel } from "@/lib/redux/slices/workspaceSlice";
-import type { RootState } from "@/lib/redux";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
+
+function getModelPrettyName(model: ModelInfo, variant: string): string {
+  if (variant !== "claude" || !model.description) return model.displayName;
+  const firstPart = model.description.split("·")[0].trim();
+  return firstPart.replace(/ with 1M context$/, " [1M]");
+}
 
 export function useProviderModels(
   activeProviderId: string,
-  variant: "claude" | "copilot" | "codex",
+  variant: "claude" | "copilot" | "codex" | "cursor",
   externalSelectedModel?: string,
   externalOnModelChange?: (model: string) => void,
   workspacePath?: string,
 ) {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
-  const persistedModel = useSelector(
-    (state: RootState) =>
+  const persistedModel = useAppSelector(
+    (state) =>
       state.workspace.selectedModelByProvider[activeProviderId],
   );
 
-  const { data: providerModels, isLoading: isLoadingModels, error: modelsError } =
+  const { data: providerModels, isLoading: isLoadingModels, error: modelsError, refetch: refetchModels } =
     useGetProviderModelsQuery(activeProviderId, { skip: !activeProviderId });
 
   const { data: providerCommands = [], isLoading: isLoadingCommands } =
@@ -37,10 +43,14 @@ export function useProviderModels(
     );
 
   const { data: providerData } = useGetProviderByIdQuery(activeProviderId, {
-    skip: variant !== "claude" && variant !== "codex",
+    skip: variant !== "claude" && variant !== "codex" && variant !== "copilot" && variant !== "cursor",
   });
   const [updateProvider] = useUpdateProviderMutation();
-  const permissionMode: string = (providerData?.config as any)?.permissionMode ?? "default";
+  const permissionMode: string = variant === "cursor"
+    ? (providerData?.config as any)?.mode ?? "agent"
+    : variant === "codex"
+      ? (providerData?.config as any)?.sandboxMode ?? "workspace-write"
+      : (providerData?.config as any)?.permissionMode ?? "default";
   const thinkingMode = variant === "codex" || variant === "copilot"
     ? !!(providerData?.config as any)?.modelReasoningEffort
     : !!(providerData?.config as any)?.thinkingMode;
@@ -52,16 +62,17 @@ export function useProviderModels(
   const handlePermissionModeChange = useCallback(async (mode: string) => {
     if (!providerData) return;
     const currentConfig = providerData.config ?? {};
+    const configKey = variant === "cursor" ? "mode" : variant === "codex" ? "sandboxMode" : "permissionMode";
     await updateProvider({
       id: activeProviderId,
       payload: {
         config: {
           ...currentConfig,
-          permissionMode: mode,
+          [configKey]: mode,
         },
       },
     });
-  }, [providerData, activeProviderId, updateProvider]);
+  }, [providerData, activeProviderId, variant, updateProvider]);
 
   const handleThinkingModeToggle = useCallback(async () => {
     if (!providerData) return;
@@ -121,14 +132,10 @@ export function useProviderModels(
     }
   }, [providerData, activeProviderId, updateProvider, variant]);
 
-  const { modelDisplayNames } = useMemo(() => {
-    if (providerModels && providerModels.length > 0) {
-      return {
-        modelDisplayNames: providerModels.map((m) => m.displayName),
-      };
-    }
-    return { modelDisplayNames: [] };
-  }, [providerModels]);
+  const modelDisplayNames = useMemo(
+    () => (providerModels ?? []).map((m) => getModelPrettyName(m, variant)),
+    [providerModels, variant],
+  );
 
   const selectedModel = externalSelectedModel ?? persistedModel ?? "";
   const setSelectedModel = useCallback(
@@ -142,10 +149,10 @@ export function useProviderModels(
   const selectedModelDisplayName = useMemo(() => {
     if (providerModels) {
       const model = providerModels.find((m) => m.id === selectedModel);
-      return model?.displayName ?? selectedModel;
+      return model ? getModelPrettyName(model, variant) : selectedModel;
     }
-    return selectedModel;
-  }, [providerModels, selectedModel]);
+    return "";
+  }, [providerModels, selectedModel, variant]);
 
   const selectedModelInfo = useMemo(() => {
     if (providerModels) {
@@ -179,17 +186,17 @@ export function useProviderModels(
   }, [selectedModelInfo, effortLevel, thinkingMode, handleEffortLevelChange]);
 
   const handleModelChange = useCallback(
-    (displayName: string) => {
+    (prettyName: string) => {
       if (providerModels) {
-        const model = providerModels.find((m) => m.displayName === displayName);
+        const model = providerModels.find((m) => getModelPrettyName(m, variant) === prettyName);
         if (model) {
           setSelectedModel(model.id);
           return;
         }
       }
-      setSelectedModel(displayName);
+      setSelectedModel(prettyName);
     },
-    [providerModels, setSelectedModel],
+    [providerModels, setSelectedModel, variant],
   );
 
   return {
@@ -203,6 +210,7 @@ export function useProviderModels(
     providerSkills,
     isLoadingSkills,
     modelsError,
+    refetchModels,
     permissionMode,
     handlePermissionModeChange,
     thinkingMode,

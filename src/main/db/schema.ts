@@ -69,6 +69,10 @@ export const appSettings = sqliteTable("app_settings", {
     .notNull()
     .default(true),
 
+  showMenuBarIcon: integer("show_menu_bar_icon", { mode: "boolean" })
+    .notNull()
+    .default(true),
+
   commitInstructions: text("commit_instructions").notNull().default(""),
   prInstructions: text("pr_instructions").notNull().default(""),
 
@@ -548,6 +552,9 @@ export const reviewFindings = sqliteTable(
     reason: text("reason").notNull(),
     suggestion: text("suggestion"),
     validated: integer("validated", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    isApproved: integer("is_approved", { mode: "boolean" })
       .notNull()
       .default(false),
     metadata: text("metadata"),

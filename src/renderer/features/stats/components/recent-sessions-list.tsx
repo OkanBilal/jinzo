@@ -7,8 +7,10 @@ interface RecentSessionsListProps {
 }
 
 const PROVIDER_COLORS: Record<string, string> = {
-  claude_code: "#D97757",
-  copilot_cli: "#3010B3",
+  claude_code: "var(--color-claude)",
+  copilot_cli: "var(--color-copilot)",
+  codex: "var(--color-codex)",
+  cursor: "var(--color-cursor)",
 };
 
 
@@ -44,7 +46,7 @@ export default function RecentSessionsList({ sessions }: RecentSessionsListProps
           >
             <div
               className="w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: PROVIDER_COLORS[s.providerId] ?? "#6366F1" }}
+              style={{ backgroundColor: PROVIDER_COLORS[s.providerId] ?? "var(--color-primary-500)" }}
             />
             <div className="flex-1 min-w-0">
               <p className="text-primary-800 dark:text-primary-200 truncate">

@@ -9,6 +9,7 @@ export interface AppSettings {
   preventSleepDuringRuns: boolean;
   notifyOnRunComplete: boolean;
   notifyOnToolApproval: boolean;
+  showMenuBarIcon: boolean;
   commitInstructions: string;
   prInstructions: string;
   createdAt: number;
@@ -86,6 +87,16 @@ export const appSettingsApi = baseApi.injectEndpoints({
       invalidatesTags: ["AppSettings"],
     }),
 
+    setShowMenuBarIcon: builder.mutation<AppSettings, boolean>({
+      query: (enabled) => ({
+        handler: "appSettings:setShowMenuBarIcon",
+        args: [enabled],
+      }),
+      transformResponse: (response: { success: boolean; data: AppSettings }) =>
+        response.data,
+      invalidatesTags: ["AppSettings"],
+    }),
+
     setCommitInstructions: builder.mutation<AppSettings, string>({
       query: (instructions) => ({
         handler: "appSettings:setCommitInstructions",
@@ -118,6 +129,7 @@ export const {
   useSetPreventSleepDuringRunsMutation,
   useSetNotifyOnRunCompleteMutation,
   useSetNotifyOnToolApprovalMutation,
+  useSetShowMenuBarIconMutation,
   useSetCommitInstructionsMutation,
   useSetPrInstructionsMutation,
 } = appSettingsApi;

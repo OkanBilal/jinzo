@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   BodyMedium,
@@ -57,7 +58,7 @@ export function LinkResourcesModal({
       const linkedIds = new Set(
         resources.filter((r) => r.isLinked).map((r) => r.id),
       );
-      setSelectedIds(linkedIds);
+      queueMicrotask(() => setSelectedIds(linkedIds));
     }
   }, [isOpen, resources]);
 
@@ -152,7 +153,7 @@ export function LinkResourcesModal({
         tabIndex={0}
         onClick={() => !saving && toggleResource(resource.id)}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (!saving) toggleResource(resource.id); } }}
-        className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-all duration-150 dark:bg-primary-950/60 bg-primary ${
+        className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-all duration-150 dark:bg-primary-950/50 bg-primary ${
           selected
             ? ""
             : ""
@@ -182,10 +183,10 @@ export function LinkResourcesModal({
     );
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-(--z-overlay) flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-primary-950/40" role="presentation" onClick={handleCancel} />
+      <div className="absolute inset-0 bg-primary-950/50" role="presentation" onClick={handleCancel} />
 
       {/* Modal */}
       <div
@@ -205,7 +206,7 @@ export function LinkResourcesModal({
         <div className="px-6 pb-6 space-y-4">
           <div className="flex items-center gap-2"></div>
 
-          <div className="max-h-64 overflow-y-auto border border-primary-200/60 dark:border-primary-800/40 rounded-2xl ">
+          <div className="max-h-64 overflow-y-auto border border-primary-200/60 bg-primary dark:bg-primary-950 dark:border-primary-800/40 rounded-2xl ">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="flex items-center gap-2">
@@ -274,6 +275,7 @@ export function LinkResourcesModal({
           to { opacity: 1; }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -36,7 +36,7 @@ describe("seedApstates", () => {
     expect(row).toBeDefined();
     expect(row!.displayName).toBe("GitHub");
     expect(row!.isConnected).toBe(false);
-    expect(row!.category).toBe("development");
+    expect(row!.category).toBe("issues");
   });
 
   it("sets sortOrder based on array index", async () => {

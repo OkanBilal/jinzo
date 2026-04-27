@@ -80,10 +80,10 @@ export default function DropdownWrapper({
     } catch {
       return getDefaultDropdownBackground(darkMode);
     }
-  }, [useFixedBackground, activeSpace?.themeConfig, darkMode]);
+  }, [useFixedBackground, activeSpace, darkMode]);
 
   const fixedBackgroundClass = useFixedBackground
-    ? "bg-linear-to-b from-primary/90 to-primary-50/80 dark:from-primary-900/95 dark:to-primary-900/80"
+    ? "bg-linear-to-b from-primary/90 to-primary-50/80 dark:from-primary-900 dark:to-primary-800"
     : "";
 
   // Portal mode: wait for coords before rendering

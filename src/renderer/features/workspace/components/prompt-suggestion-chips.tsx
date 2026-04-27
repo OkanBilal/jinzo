@@ -24,8 +24,8 @@ export function PromptSuggestionChips({
           transition={{ duration: 0.4, ease: "easeOut" }}
           onClick={() => !disabled && onSelect(suggestion)}
           disabled={disabled}
-          className="shooting-star-border group rounded-2xl max-w-[80%] 
-            active:scale-99 cursor-pointer 
+          className="shooting-star-border group rounded-2xl max-w-[80%]
+            cursor-pointer
             disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <span className="spark" />
@@ -44,7 +44,7 @@ export function PromptSuggestionChips({
         suggestion
         </m.span>
       </div>
-      
+
     </LazyMotion>
   );
 }

@@ -50,7 +50,7 @@ export default function HourHeatmap({ data }: HourHeatmapProps) {
         labels={full.map((d) => ({
           key: d.hour,
           content: LABEL_HOURS.includes(d.hour) ? (
-            <span className="text-[9px] text-primary-400 dark:text-primary-500">
+            <span className="text-xt text-primary-400 dark:text-primary-500">
               {d.hour}
             </span>
           ) : null,

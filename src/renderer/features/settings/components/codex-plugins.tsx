@@ -66,7 +66,7 @@ function PluginLogo({
   return (
     <div
       className={`${sizeClass} ${roundedClass} flex items-center justify-center font-semibold ${textSize} text-white shrink-0`}
-      style={{ backgroundColor: brandColor || "#6b7280" }}
+      style={{ backgroundColor: brandColor || "var(--color-primary-500)" }}
     >
       {name.charAt(0).toUpperCase()}
     </div>
@@ -93,7 +93,7 @@ function PluginCard({
 
   return (
     <div
-      className="rounded-2xl bg-primary-100/60 dark:bg-primary-900/40 border border-primary-200/50 dark:border-primary-800/20 px-4 py-3 cursor-pointer hover:bg-primary-200/60 dark:hover:bg-primary/4 transition-colors flex items-center gap-3"
+      className="rounded-2xl bg-primary-100/50 dark:bg-primary-900 border border-primary-200/50 dark:border-primary-800/20 px-4 py-3 cursor-pointer hover:bg-primary-200/60 dark:hover:bg-primary/5 transition-colors flex items-center gap-3"
       onClick={onSelect}
       role="button"
       tabIndex={0}
@@ -175,7 +175,7 @@ function PluginDetail({
         <PluginLogo plugin={plugin} size="lg" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-4">
-            <Heading2 className="font-medium!">{name}</Heading2>
+            <Heading2>{name}</Heading2>
             <Button
               onClick={plugin.installed ? onUninstall : onInstall}
               disabled={isInstalling || plugin.installPolicy === "NOT_AVAILABLE"}
@@ -221,7 +221,7 @@ function PluginDetail({
       {/* Includes (skills, apps, MCP servers) */}
       {hasIncludes && (
         <div className="mb-8">
-          <Heading3 className="mb-3 font-medium!">Includes</Heading3>
+          <Heading3 className="mb-3">Includes</Heading3>
           <div className="rounded-xl border border-primary-200/60 dark:border-primary-800/20 divide-y divide-primary-200/60 dark:divide-primary-800/20">
             {detail.apps.map((app) => (
               <div key={app.id} className="flex items-center gap-3 px-4 py-3">
@@ -250,7 +250,7 @@ function PluginDetail({
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="shrink-0 rounded-lg!"
+                    className="shrink-0 rounded-lg"
                     onClick={() => window.api.shell.openExternal(app.installUrl!)}
                   >
                     Connect
@@ -294,7 +294,7 @@ function PluginDetail({
       {/* Capabilities */}
       {iface?.capabilities && iface.capabilities.length > 0 && (
         <div className="mb-8">
-          <Heading3 className="mb-3 font-medium!">Capabilities</Heading3>
+          <Heading3 className="mb-3">Capabilities</Heading3>
           <div className="flex flex-wrap gap-2">
             {iface.capabilities.map((cap) => (
               <span
@@ -311,7 +311,7 @@ function PluginDetail({
       {/* Starter prompts */}
       {iface?.defaultPrompt && iface.defaultPrompt.length > 0 && (
         <div className="mb-8">
-          <Heading3 className="mb-3 font-medium!">Starter Prompts</Heading3>
+          <Heading3 className="mb-3">Starter Prompts</Heading3>
           <div className="space-y-2">
             {iface.defaultPrompt.map((prompt, i) => (
               <PromptRow key={i} prompt={prompt} />
@@ -321,7 +321,7 @@ function PluginDetail({
       )}
 
       {/* Information table */}
-      <Heading3 className="mb-3 font-medium!">Information</Heading3>
+      <Heading3 className="mb-3">Information</Heading3>
       <div className="rounded-xl border border-primary-200/60 dark:border-primary-800/20 divide-y divide-primary-200/60 dark:divide-primary-800/20">
         {iface?.category && (
           <InfoRow label="Category" value={iface.category} />
@@ -577,7 +577,7 @@ export default function CodexPlugins() {
   if (isLoading) {
     return (
       <div>
-        <Heading2 className="mb-2 font-medium!">Plugins</Heading2>
+        <Heading2 className="mb-2">Plugins</Heading2>
         <Muted>Loading plugins... This may take a moment on first load.</Muted>
       </div>
     );
@@ -589,7 +589,7 @@ export default function CodexPlugins() {
                    "data" in (error as any) ? String((error as any).data) : "Unknown error";
     return (
       <div>
-        <Heading2 className="mb-2 font-medium!">Plugins</Heading2>
+        <Heading2 className="mb-2">Plugins</Heading2>
         <Muted>Failed to load plugins: {errMsg}</Muted>
       </div>
     );
@@ -616,7 +616,7 @@ export default function CodexPlugins() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <Heading2 className="font-medium!">Plugins</Heading2>
+        <Heading2>Plugins</Heading2>
       </div>
 
       {/* Category filter + search */}

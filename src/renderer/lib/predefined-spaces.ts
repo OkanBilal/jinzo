@@ -45,7 +45,7 @@ export const predefinedSpaces: PredefinedSpace[] = [
     id: "claude",
     name: "Claude",
     icon: "icon:claude",
-    theme: theme("#fcc7b6", "#141415"),
+    theme: theme("#f2dbcfa6", "#0e0d0dbf"),
     systemPrompt: "",
     uiConfig: {
       sidebar: {
@@ -62,7 +62,7 @@ export const predefinedSpaces: PredefinedSpace[] = [
     id: "copilot",
     name: "Copilot",
     icon: "icon:copilot",
-    theme: theme("#c8ddf1", "#11131a"),
+    theme: theme("#f0e9fab0", "#15111abf"),
     systemPrompt: "",
     uiConfig: {
       sidebar: {
@@ -79,7 +79,7 @@ export const predefinedSpaces: PredefinedSpace[] = [
     id: "codex",
     name: "Codex",
     icon: "icon:code",
-    theme: theme("#a3d9a5", "#0d1117"),
+    theme: theme("#dcecfaa1", "#0c0c0cbd"),
     systemPrompt: "",
     uiConfig: {
       sidebar: {
@@ -92,4 +92,22 @@ export const predefinedSpaces: PredefinedSpace[] = [
       rightPanel: { width: "22rem", component: "workspace" },
     },
   },
+  {
+    id: "cursor",
+    name: "Cursor",
+    icon: "icon:cursor",
+    theme: theme("#cfced2a6", "#0f0e14bf"),
+    systemPrompt: "",
+    uiConfig: {
+      sidebar: {
+        width: "19rem",
+        title: "Workspace",
+        itemType: "workspace",
+        defaultRoute: "/cursor",
+      },
+      main: { margin: "19rem" },
+      rightPanel: { width: "22rem", component: "workspace" },
+    },
+  },
 ];
+

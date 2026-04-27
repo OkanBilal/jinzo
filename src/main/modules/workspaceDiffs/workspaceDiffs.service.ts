@@ -1,5 +1,9 @@
 import { workspaceDiffsRepo } from "./workspaceDiffs.repo";
-import type { WorkspaceDiffResponse, ServiceResponse } from "./workspaceDiffs.dto";
+import type {
+  WorkspaceDiffResponse,
+  WorkspaceDiffSummaryResponse,
+  ServiceResponse,
+} from "./workspaceDiffs.dto";
 
 // ─────────────────────────────────────────────────────────────
 // Workspace Diffs Service
@@ -39,6 +43,28 @@ export const workspaceDiffsService = {
     }
   },
 
+  async getLatestSummary(
+    workspaceId: string,
+  ): Promise<ServiceResponse<WorkspaceDiffSummaryResponse>> {
+    try {
+      const diff =
+        await workspaceDiffsRepo.findLatestSummaryByWorkspace(workspaceId);
+      if (!diff) {
+        return { success: false, error: "No diff found for this workspace" };
+      }
+      return { success: true, data: diff };
+    } catch (error) {
+      console.error(
+        `[WorkspaceDiffsService] Failed to get latest diff summary for workspace ${workspaceId}:`,
+        error,
+      );
+      return {
+        success: false,
+        error: "Failed to get latest workspace diff summary",
+      };
+    }
+  },
+
   async getByRun(
     runId: string,
   ): Promise<ServiceResponse<WorkspaceDiffResponse>> {
@@ -54,6 +80,21 @@ export const workspaceDiffsService = {
         error,
       );
       return { success: false, error: "Failed to get run diff" };
+    }
+  },
+
+  async deleteLatest(
+    workspaceId: string,
+  ): Promise<ServiceResponse<void>> {
+    try {
+      await workspaceDiffsRepo.deleteLatestByWorkspace(workspaceId);
+      return { success: true };
+    } catch (error) {
+      console.error(
+        `[WorkspaceDiffsService] Failed to delete latest diff for workspace ${workspaceId}:`,
+        error,
+      );
+      return { success: false, error: "Failed to delete latest workspace diff" };
     }
   },
 

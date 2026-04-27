@@ -7,19 +7,19 @@ import { join } from "path";
  * Points to the actual database used by the running  app
  */
 
-// macOS: ~/Library/Application Support/jinzo/jinzo.db
-// Linux: ~/.config/jinzo/jinzo.db
-// Windows: %APPDATA%/jinzo/jinzo.db
+// macOS: ~/Library/Application Support/mains/mains.db
+// Linux: ~/.config/mains/mains.db
+// Windows: %APPDATA%/mains/mains.db
 const getRuntimeDbPath = () => {
   const platform = process.platform;
   const home = homedir();
 
   if (platform === "darwin") {
-    return join(home, "Library", "Application Support", "jinzo", "jinzo.db");
+    return join(home, "Library", "Application Support", "mains", "mains.db");
   } else if (platform === "win32") {
-    return join(home, "AppData", "Roaming", "jinzo", "jinzo.db");
+    return join(home, "AppData", "Roaming", "mains", "mains.db");
   } else {
-    return join(home, ".config", "jinzo", "jinzo.db");
+    return join(home, ".config", "mains", "mains.db");
   }
 };
 

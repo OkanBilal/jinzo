@@ -33,7 +33,7 @@ export async function run(db: DatabaseInstance): Promise<void> {
         category: app.category,
         sortOrder: connectionStatesData.indexOf(app),
         enabledFeatures: JSON.stringify([]),
-        config: JSON.stringify({}),
+        config: JSON.stringify({ description: app.description ?? "" }),
       })
       .onConflictDoNothing()
       .run?.();
@@ -48,6 +48,7 @@ export async function run(db: DatabaseInstance): Promise<void> {
     { provider: "asana", displayName: "Asana" },
     { provider: "trello", displayName: "Trello" },
     { provider: "sentry", displayName: "Sentry" },
+    { provider: "socketdev", displayName: "Socket" },
   ];
 
   for (const cp of connectionProviders) {

@@ -163,7 +163,7 @@ export async function fetchAsanaWorkspaces(
       throw new Error(`Asana API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as any;
     return data.data || [];
   } catch (error) {
     console.error("Failed to fetch Asana workspaces:", error);
@@ -196,7 +196,7 @@ export async function fetchAsanaProjects(
       throw new Error(`Asana API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as any;
     return (data.data || []).filter((p: AsanaProjectInfo) => !p.archived);
   } catch (error) {
     console.error("Failed to fetch Asana projects:", error);
@@ -266,7 +266,7 @@ export async function fetchAsanaTasks(
       return [];
     }
 
-    const data: AsanaTasksResponse = await response.json();
+    const data = (await response.json()) as AsanaTasksResponse;
 
     return data.data.map((task): EntityInput => {
       const workspaceGid = task.workspace?.gid || "";

@@ -25,7 +25,7 @@ export function WelcomeStep() {
       {/* Right — Content */}
       <div className="flex-1 space-y-4 mb-12">
         <h1 className="text-3xl font-serif tracking-tight text-primary-900 dark:text-primary-100 leading-tight">
-          Welcome to Jinzo
+          Welcome to Mains
           <br />
           
         </h1>

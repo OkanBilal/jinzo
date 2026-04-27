@@ -11,6 +11,8 @@ import {
   clearContextIssues,
   removeContextSignal,
   clearContextSignals,
+  removeContextBrowserSelection,
+  clearContextBrowserSelections,
   clearIssueTabs,
   clearSignalTabs,
   clearNoteTabs,
@@ -48,6 +50,9 @@ export function useWorkspacePage(providerId: string) {
   );
   const contextSignals = useSelector(
     (state: RootState) => state.workspace.contextSignals,
+  );
+  const contextBrowserSelections = useSelector(
+    (state: RootState) => state.workspace.contextBrowserSelections,
   );
   const openIssueTabs = useSelector(
     (state: RootState) => state.workspace.openIssueTabs,
@@ -95,6 +100,7 @@ export function useWorkspacePage(providerId: string) {
     dispatch(clearContextFiles());
     dispatch(clearContextIssues());
     dispatch(clearContextSignals());
+    dispatch(clearContextBrowserSelections());
     dispatch(clearIssueTabs());
     dispatch(clearSignalTabs());
     dispatch(clearNoteTabs());
@@ -103,13 +109,14 @@ export function useWorkspacePage(providerId: string) {
 
   // Sync pendingGoal from Redux to local state
   useEffect(() => {
-    if (pendingGoal) {
-      setGoal(pendingGoal);
-      if (pendingAutoExecute) {
-        setAutoExecute(true);
-      }
-      dispatch(clearPendingGoal());
-    }
+    if (!pendingGoal) return;
+    const nextGoal = pendingGoal;
+    const runAuto = pendingAutoExecute;
+    dispatch(clearPendingGoal());
+    queueMicrotask(() => {
+      setGoal(nextGoal);
+      if (runAuto) setAutoExecute(true);
+    });
   }, [pendingGoal, pendingAutoExecute, dispatch]);
 
   const {
@@ -191,6 +198,7 @@ export function useWorkspacePage(providerId: string) {
     dispatch(clearContextFiles());
     dispatch(clearContextIssues());
     dispatch(clearContextSignals());
+    dispatch(clearContextBrowserSelections());
   }, [dispatch]);
 
   const handleExecute = useCallback(async () => {
@@ -204,7 +212,7 @@ export function useWorkspacePage(providerId: string) {
       : undefined;
 
     if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
-      const success = (await continueRun(activeRunId, goal, attachments, contextIssues, contextFiles, contextSignals, selectedModel)) ?? false;
+      const success = (await continueRun(activeRunId, goal, attachments, contextIssues, contextFiles, contextSignals, selectedModel, contextBrowserSelections)) ?? false;
       if (success) clearInputState();
     } else {
       const newRunId = await executeRun(
@@ -216,6 +224,7 @@ export function useWorkspacePage(providerId: string) {
         contextIssues,
         contextFiles,
         contextSignals,
+        contextBrowserSelections,
       );
       if (newRunId) {
         clearInputState();
@@ -228,6 +237,7 @@ export function useWorkspacePage(providerId: string) {
     contextFiles,
     contextIssues,
     contextSignals,
+    contextBrowserSelections,
     workspaceId,
     selectedWorkspace,
     selectedModel,
@@ -244,7 +254,7 @@ export function useWorkspacePage(providerId: string) {
   // Auto-execute when pendingAutoExecute was set (e.g. "Review Changes" button, suggestion chips)
   useEffect(() => {
     if (autoExecute && goal) {
-      setAutoExecute(false);
+      queueMicrotask(() => setAutoExecute(false));
       if (!workspaceId) return;
       const run = async () => {
         if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
@@ -283,6 +293,24 @@ export function useWorkspacePage(providerId: string) {
     [dispatch],
   );
 
+  const handleRemoveContextBrowserSelection = useCallback(
+    (id: string) => {
+      const sel = contextBrowserSelections.find((s) => s.id === id);
+      dispatch(removeContextBrowserSelection(id));
+      // Free the on-disk capture immediately to keep userData/browser-captures bounded.
+      const api = (window as any).api?.browser;
+      if (api?.deleteCapture) {
+        if (sel?.screenshotCaptureName) {
+          api.deleteCapture(sel.screenshotCaptureName).catch(() => {});
+        }
+        if (sel?.surroundingScreenshotCaptureName) {
+          api.deleteCapture(sel.surroundingScreenshotCaptureName).catch(() => {});
+        }
+      }
+    },
+    [dispatch, contextBrowserSelections],
+  );
+
   const showNewRunTab = isNewRunTab(activeTab);
 
   const showEmptyState =
@@ -309,6 +337,7 @@ export function useWorkspacePage(providerId: string) {
     contextFiles,
     contextIssues,
     contextSignals,
+    contextBrowserSelections,
     openIssueTabs,
     openSignalTabs,
     openNoteTabs,
@@ -329,6 +358,7 @@ export function useWorkspacePage(providerId: string) {
     handleRemoveContextFile,
     handleRemoveContextIssue,
     handleRemoveContextSignal,
+    handleRemoveContextBrowserSelection,
     setAutoExecute,
     ...tabHandlers,
   };

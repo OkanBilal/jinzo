@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
 import { Button } from "@/components/ui";
 import { Close } from "@/components/ui/icons";
-import { AsciiSpinner } from "@/features/workspace/components/ascii-loader";
+import { AsciiSpinner } from "@/components/ui/ascii-spinner";
 
 export function UpdateBanner() {
   const { state, install } = useAutoUpdate();
@@ -19,7 +19,7 @@ export function UpdateBanner() {
   }
 
   return (
-    <div className="mx-3 mb-2 rounded-xl bg-primary-100/80 dark:bg-primary/4 border border-primary-200/60 dark:border-primary/8 overflow-hidden animate-in slide-in-from-bottom-2 duration-300">
+    <div className="mx-3 mb-2 rounded-xl bg-primary-100/80 dark:bg-primary/5 border border-primary-200/60 dark:border-primary/10 overflow-hidden animate-in slide-in-from-bottom-2 duration-300">
       <div className="px-3 py-2.5 space-y-2">
         <div className="flex items-center justify-between">
           <div />
@@ -39,7 +39,7 @@ export function UpdateBanner() {
           <button
             type="button"
             onClick={() => setDismissed(true)}
-            className="p-0.5 rounded-md hover:bg-primary-200/50 dark:hover:bg-primary/15 transition-colors text-primary-500 dark:text-primary-400 cursor-pointer"
+            className="p-0.5 rounded-md hover:bg-primary-200/50 dark:hover:bg-primary/10 transition-colors text-primary-500 dark:text-primary-400 cursor-pointer"
           >
             <Close className="size-3" />
           </button>

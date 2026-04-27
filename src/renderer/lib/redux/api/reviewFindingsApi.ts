@@ -13,6 +13,7 @@ export interface ReviewFinding {
   reason: string;
   suggestion: string | null;
   validated: boolean;
+  isApproved: boolean;
   metadata: Record<string, unknown> | null;
   createdAt: number;
 }
@@ -28,6 +29,7 @@ export interface CreateReviewFindingPayload {
   reason: string;
   suggestion?: string;
   validated?: boolean;
+  isApproved?: boolean;
   metadata?: Record<string, unknown>;
 }
 
@@ -40,6 +42,7 @@ export interface UpdateReviewFindingPayload {
   reason?: string;
   suggestion?: string | null;
   validated?: boolean;
+  isApproved?: boolean;
   metadata?: Record<string, unknown> | null;
 }
 

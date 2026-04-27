@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import type { FileNode, FileContentResponse } from "@/features/workspace/components/file-explorer";
+import type { FileNode, FileContentResponse } from "@/features/workspace/types/file-explorer";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import type { SignalWithEntity } from "@/lib/redux/api/signalsApi";
 
@@ -29,6 +29,33 @@ export interface ContextSignal {
   eventCount: number;
 }
 
+export interface ContextBrowserSelection {
+  id: string;
+  url: string;
+  title: string;
+  selector: string;
+  tagName: string;
+  text: string;
+  /** Truncated by main (~2KB) — full HTML is intentionally not kept in memory. */
+  outerHTML: string;
+  styles: Record<string, string>;
+  rect: { x: number; y: number; width: number; height: number };
+  pageRect: { x: number; y: number; width: number; height: number };
+  scroll: { x: number; y: number };
+  viewport: { width: number; height: number };
+  devicePixelRatio: number;
+  componentName?: string;
+  sourceFile?: string;
+  timestamp: string;
+  /** Absolute path to the PNG on disk (main-process userData/browser-captures). */
+  screenshotPath?: string;
+  /** Basename used for `mains-capture://<name>` in `<img src>`. */
+  screenshotCaptureName?: string;
+  surroundingScreenshotPath?: string;
+  surroundingScreenshotCaptureName?: string;
+  screenshotMimeType: string;
+}
+
 export interface WorkspaceState {
   activeWorkspaceId: string | null;
   activeWorkspaceIdByProvider: Record<string, string>;
@@ -43,6 +70,7 @@ export interface WorkspaceState {
   contextFiles: FileNode[];
   contextIssues: ContextIssue[];
   contextSignals: ContextSignal[];
+  contextBrowserSelections: ContextBrowserSelection[];
   openIssueTabs: IssueWithEntity[];
   openSignalTabs: SignalWithEntity[];
   openNoteTabs: ReviewTab[];
@@ -71,6 +99,7 @@ const initialState: WorkspaceState = {
   contextFiles: [],
   contextIssues: [],
   contextSignals: [],
+  contextBrowserSelections: [],
   openIssueTabs: [],
   openSignalTabs: [],
   openNoteTabs: [],
@@ -84,9 +113,24 @@ const workspaceSlice = createSlice({
   initialState,
   reducers: {
     setActiveWorkspaceId: (state, action: PayloadAction<string | null>) => {
+      // Switching workspaces invalidates any cached file content — drop it so
+      // large text buffers (multi-MB source files) don't linger in Redux.
+      if (state.activeWorkspaceId !== action.payload) {
+        state.selectedFile = null;
+        state.selectedFileContent = null;
+        state.fileContentError = null;
+        state.isLoadingFileContent = false;
+      }
       state.activeWorkspaceId = action.payload;
     },
     setActiveWorkspaceForProvider: (state, action: PayloadAction<{ providerId: string; workspaceId: string }>) => {
+      const prev = state.activeWorkspaceIdByProvider[action.payload.providerId];
+      if (prev !== action.payload.workspaceId) {
+        state.selectedFile = null;
+        state.selectedFileContent = null;
+        state.fileContentError = null;
+        state.isLoadingFileContent = false;
+      }
       state.activeWorkspaceIdByProvider[action.payload.providerId] = action.payload.workspaceId;
     },
     setWorkspaceModel: (state, action: PayloadAction<{ providerId: string; model: string }>) => {
@@ -158,6 +202,19 @@ const workspaceSlice = createSlice({
     },
     clearContextSignals: (state) => {
       state.contextSignals = [];
+    },
+    addContextBrowserSelection: (state, action: PayloadAction<ContextBrowserSelection>) => {
+      if (!state.contextBrowserSelections.some(b => b.id === action.payload.id)) {
+        state.contextBrowserSelections.push(action.payload);
+      }
+    },
+    removeContextBrowserSelection: (state, action: PayloadAction<string>) => {
+      state.contextBrowserSelections = state.contextBrowserSelections.filter(
+        b => b.id !== action.payload,
+      );
+    },
+    clearContextBrowserSelections: (state) => {
+      state.contextBrowserSelections = [];
     },
     openIssueTab: (state, action: PayloadAction<IssueWithEntity>) => {
       const entityId = action.payload.issue.entityId;
@@ -261,6 +318,9 @@ export const {
   addContextSignal,
   removeContextSignal,
   clearContextSignals,
+  addContextBrowserSelection,
+  removeContextBrowserSelection,
+  clearContextBrowserSelections,
   openIssueTab,
   closeIssueTab,
   clearIssueTabs,

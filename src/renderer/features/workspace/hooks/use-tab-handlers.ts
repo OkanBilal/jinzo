@@ -1,6 +1,5 @@
 import { useCallback } from "react";
-import { useDispatch } from "react-redux";
-import { useAppSelector } from "@/lib/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { useUpdateRunMutation } from "@/lib/redux/api";
 import {
   setActiveTab,
@@ -33,7 +32,7 @@ export function useTabHandlers({
   setGoal,
   setRuns,
 }: UseTabHandlersParams) {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const [updateRun] = useUpdateRunMutation();
   const { openIssueTabs, openSignalTabs, openNoteTabs, selectedFile } = useAppSelector(
     (state) => state.workspace,
@@ -87,11 +86,16 @@ export function useTabHandlers({
     (e: React.MouseEvent) => {
       e.stopPropagation();
       if (activeTab === "new-run") {
-        dispatch(setActiveTab(getNextTab("new-run")));
+        const nextTab = getNextTab("new-run");
+        dispatch(setActiveTab(nextTab));
+        // If switching to a run tab, also load its content
+        if (nextTab !== "editor" && !nextTab.startsWith("issue:") && !nextTab.startsWith("signal:") && !nextTab.startsWith("note:")) {
+          selectTab(nextTab);
+        }
       }
       dispatch(closeNewRunTab());
     },
-    [dispatch, activeTab, getNextTab],
+    [dispatch, activeTab, getNextTab, selectTab],
   );
 
   const handleSelectEditorTab = useCallback(() => {

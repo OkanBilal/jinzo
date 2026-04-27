@@ -35,8 +35,8 @@ export function CodeViewer({
           overflow: "scroll",
           disableFileHeader: true,
           unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper],
-          [data-line], [data-column-number], [data-code] { --diffs-bg: ${isDarkMode ? "#0c0c0c" : "#ffffff"};
-          background-color: ${isDarkMode ? "#0c0c0c" : "#ffffff"}; }`,
+          [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"});
+          background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
         }}
       />
     </div>

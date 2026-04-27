@@ -95,6 +95,8 @@ const api = {
       ipcRenderer.invoke("connections:getTrelloBoards", connectionId),
     getSentryProjects: (connectionId: string) =>
       ipcRenderer.invoke("connections:getSentryProjects", connectionId),
+    getSocketDevOrganizations: (connectionId: string) =>
+      ipcRenderer.invoke("connections:getSocketDevOrganizations", connectionId),
     saveResources: (payload: {
       provider: string;
       connectionId: string;
@@ -109,6 +111,18 @@ const api = {
       ipcRenderer.invoke("connections:getByProvider", provider),
     getSelectedResources: (provider: string) =>
       ipcRenderer.invoke("connections:getSelectedResources", provider),
+  },
+  // Guards operations (dependency security)
+  guards: {
+    getActiveGuard: () => ipcRenderer.invoke("guards:getActiveGuard"),
+    checkPackage: (pkg: { name: string; version?: string; ecosystem: string }) =>
+      ipcRenderer.invoke("guards:checkPackage", pkg),
+    checkPackages: (pkgs: Array<{ name: string; version?: string; ecosystem: string }>) =>
+      ipcRenderer.invoke("guards:checkPackages", pkgs),
+    getPackageScore: (pkg: { name: string; version?: string; ecosystem: string }) =>
+      ipcRenderer.invoke("guards:getPackageScore", pkg),
+    scanWorkspace: (workspaceId: string, rootPath: string) =>
+      ipcRenderer.invoke("guards:scanWorkspace", workspaceId, rootPath),
   },
   // Projects operations
   projects: {
@@ -173,6 +187,8 @@ const api = {
       ipcRenderer.invoke("appSettings:setNotifyOnRunComplete", enabled),
     setNotifyOnToolApproval: (enabled: boolean) =>
       ipcRenderer.invoke("appSettings:setNotifyOnToolApproval", enabled),
+    setShowMenuBarIcon: (enabled: boolean) =>
+      ipcRenderer.invoke("appSettings:setShowMenuBarIcon", enabled),
     setCommitInstructions: (instructions: string) =>
       ipcRenderer.invoke("appSettings:setCommitInstructions", instructions),
     setPrInstructions: (instructions: string) =>
@@ -287,7 +303,7 @@ const api = {
       }>;
       configSnapshot?: Record<string, unknown>;
       toolPolicySnapshot?: Record<string, unknown>;
-      attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>;
+      attachments?: Array<{ name: string; type: string; data?: string; sourcePath?: string; mimeType: string }>;
       contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
       contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
       contextFiles?: Array<{ path: string }>;
@@ -307,7 +323,7 @@ const api = {
         content?: string;
         metadata?: Record<string, unknown>;
       }>;
-      attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>;
+      attachments?: Array<{ name: string; type: string; data?: string; sourcePath?: string; mimeType: string }>;
       contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
       contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
       contextFiles?: Array<{ path: string }>;
@@ -323,7 +339,7 @@ const api = {
         content?: string;
         metadata?: Record<string, unknown>;
       }>;
-      attachments?: Array<{ name: string; type: string; data: string; mimeType: string }>;
+      attachments?: Array<{ name: string; type: string; data?: string; sourcePath?: string; mimeType: string }>;
     }) => ipcRenderer.invoke("runs:fork", payload),
     executeReview: (payload: {
       accountId: string;
@@ -400,8 +416,12 @@ const api = {
       ipcRenderer.invoke("workspaceDiffs:getByWorkspace", workspaceId, limit),
     getLatest: (workspaceId: string) =>
       ipcRenderer.invoke("workspaceDiffs:getLatest", workspaceId),
+    getLatestSummary: (workspaceId: string) =>
+      ipcRenderer.invoke("workspaceDiffs:getLatestSummary", workspaceId),
     getByRun: (runId: string) =>
       ipcRenderer.invoke("workspaceDiffs:getByRun", runId),
+    deleteLatest: (workspaceId: string) =>
+      ipcRenderer.invoke("workspaceDiffs:deleteLatest", workspaceId),
   },
   // Workspace activity operations
   workspaceActivity: {
@@ -546,6 +566,11 @@ const api = {
      */
     cloneRepo: (url: string, targetPath: string) =>
       ipcRenderer.invoke("git:cloneRepo", url, targetPath),
+    /**
+     * Hard-reset working tree to a given ref and clean untracked files
+     */
+    resetHard: (rootPath: string, ref: string) =>
+      ipcRenderer.invoke("git:resetHard", rootPath, ref),
   },
   // Terminal operations
   terminal: {
@@ -578,10 +603,19 @@ const api = {
   app: {
     setUnsavedChanges: (hasChanges: boolean) =>
       ipcRenderer.invoke("app:setUnsavedChanges", hasChanges),
+    setMenuBarIconVisible: (visible: boolean) =>
+      ipcRenderer.invoke("app:setMenuBarIconVisible", visible),
     onFlushAndQuit: (callback: () => void) => {
       const listener = () => callback();
       ipcRenderer.on("app:flushAndQuit", listener);
       return () => ipcRenderer.removeListener("app:flushAndQuit", listener);
+    },
+    onFullscreenChange: (callback: (isFullscreen: boolean) => void) => {
+      const listener = (_: any, isFullscreen: boolean) => callback(isFullscreen);
+      ipcRenderer.on("app:fullscreenChange", listener);
+      return () => {
+        ipcRenderer.removeListener("app:fullscreenChange", listener);
+      };
     },
   },
   updates: {
@@ -593,6 +627,53 @@ const api = {
       const listener = (_: any, data: any) => callback(data);
       ipcRenderer.on("updates:status", listener);
       return () => ipcRenderer.removeListener("updates:status", listener);
+    },
+  },
+
+  // Embedded browser panel operations
+  browser: {
+    attach: (bounds: { x: number; y: number; width: number; height: number }) =>
+      ipcRenderer.invoke("browser:attach", bounds),
+    detach: () => ipcRenderer.invoke("browser:detach"),
+    destroy: () => ipcRenderer.invoke("browser:destroy"),
+    setBounds: (bounds: { x: number; y: number; width: number; height: number }) =>
+      ipcRenderer.invoke("browser:setBounds", bounds),
+    setVisible: (visible: boolean) =>
+      ipcRenderer.invoke("browser:setVisible", visible),
+    navigate: (url: string) => ipcRenderer.invoke("browser:navigate", url),
+    back: () => ipcRenderer.invoke("browser:back"),
+    forward: () => ipcRenderer.invoke("browser:forward"),
+    reload: () => ipcRenderer.invoke("browser:reload"),
+    stop: () => ipcRenderer.invoke("browser:stop"),
+    setSelectMode: (enabled: boolean) =>
+      ipcRenderer.invoke("browser:setSelectMode", enabled),
+    getNavState: () => ipcRenderer.invoke("browser:getNavState"),
+    /** Remove a browser capture PNG from userData/browser-captures. Pass the basename only. */
+    deleteCapture: (captureName: string) =>
+      ipcRenderer.invoke("browser:deleteCapture", captureName),
+    onNavState: (
+      callback: (state: {
+        url: string;
+        title: string;
+        canGoBack: boolean;
+        canGoForward: boolean;
+        isLoading: boolean;
+      }) => void,
+    ) => {
+      const listener = (_: any, state: any) => callback(state);
+      ipcRenderer.on("browser:navState", listener);
+      return () => ipcRenderer.removeListener("browser:navState", listener);
+    },
+    onSelectModeChanged: (callback: (data: { enabled: boolean }) => void) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on("browser:selectModeChanged", listener);
+      return () =>
+        ipcRenderer.removeListener("browser:selectModeChanged", listener);
+    },
+    onSelection: (callback: (selection: any) => void) => {
+      const listener = (_: any, selection: any) => callback(selection);
+      ipcRenderer.on("browser:selection", listener);
+      return () => ipcRenderer.removeListener("browser:selection", listener);
     },
   },
 

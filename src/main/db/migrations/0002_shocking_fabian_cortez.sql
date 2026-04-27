@@ -1,0 +1,1 @@
+ALTER TABLE `app_settings` ADD `show_menu_bar_icon` integer DEFAULT true NOT NULL;

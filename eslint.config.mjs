@@ -54,7 +54,7 @@ export default tseslint.config(
     },
   },
 
-  // Main process (Electron main) config
+  // Main process config
   {
     files: ['src/main/**/*.{ts,tsx}'],
     languageOptions: {

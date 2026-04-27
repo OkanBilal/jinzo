@@ -27,14 +27,14 @@ export default function HelpMenu({ isOpen, position, onClose }: HelpMenuProps) {
     >
       <div className="">
         <DropdownMenuItem
-          onClick={() => handleOpenExternal("https://github.com/OkanBilal/jinzo/issues")}
+          onClick={() => handleOpenExternal("https://github.com/OkanBilal/mains/issues")}
         >
           <Bug className="size-4 shrink-0" />
           <span className="flex-1 text-left">Report an Issue</span>
           <External className="size-3 text-primary-400" />
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => handleOpenExternal("https://docs.usejinzo.com")}
+          onClick={() => handleOpenExternal("https://docs.mains.dev")}
         >
           <BookOpen className="size-4 shrink-0" />
           <span className="flex-1 text-left">Docs</span>
@@ -44,7 +44,7 @@ export default function HelpMenu({ isOpen, position, onClose }: HelpMenuProps) {
         <DropdownMenuItem
           onClick={() =>
             handleOpenExternal(
-              "https://usejinzo.com/blog?filter=changelog",
+              "https://mains.dev/blog?filter=changelog",
             )
           }
         >

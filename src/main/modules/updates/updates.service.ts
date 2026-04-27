@@ -64,7 +64,7 @@ export const updatesService = {
     updateElectronApp({
       updateSource: {
         type: UpdateSourceType.ElectronPublicUpdateService,
-        repo: "OkanBilal/jinzo",
+        repo: "OkanBilal/mains",
       },
       updateInterval: "1 hour",
       notifyUser: false,

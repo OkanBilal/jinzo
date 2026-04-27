@@ -218,7 +218,7 @@ export async function fetchJiraProjects(
       throw new Error(`Jira API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as any;
     return data.values || [];
   } catch (error) {
     console.error("Failed to fetch Jira projects:", error);
@@ -286,7 +286,7 @@ export async function fetchJiraIssues(
       return [];
     }
 
-    const data: JiraSearchResponse = await response.json();
+    const data = (await response.json()) as JiraSearchResponse;
 
     return data.issues.map((issue): EntityInput => {
       // Extract description text (may be ADF or plain string)

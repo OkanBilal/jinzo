@@ -6,7 +6,7 @@ import type { ParsedCredentials } from "./connectionCredentials.dto";
 // ─────────────────────────────────────────────────────────────
 // AES-256-GCM Fallback (when safeStorage is unavailable)
 // ─────────────────────────────────────────────────────────────
-const FALLBACK_SALT = Buffer.from("jinzo-credential-encryption-salt");
+const FALLBACK_SALT = Buffer.from("mains-credential-encryption-salt");
 const FALLBACK_IV_LENGTH = 16;
 const FALLBACK_AUTH_TAG_LENGTH = 16;
 
@@ -123,6 +123,7 @@ const PROVIDER_SECRET_FIELDS: Record<string, { required: string[]; optional?: st
   asana:   { required: ["accessToken"] },
   trello:  { required: ["token", "apiKey"] },
   sentry:  { required: ["token"] },
+  socketdev: { required: ["apiToken"] },
 };
 
 /**

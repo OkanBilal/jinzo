@@ -53,6 +53,8 @@ html:not(.app-ready) *::after {
 }
 
 @theme inline {
+  --text-xt: 0.5625rem;
+  --text-xt--line-height: calc(1.25 / 0.5625);
   --text-t: 0.625rem;
   --text-t--line-height: calc(1 / 0.625);
   --text-xxs: 0.6875rem;
@@ -99,16 +101,19 @@ html:not(.app-ready) *::after {
   --color-primary-500: #878580;
   --color-primary-600: #6f6e69;
   --color-primary-700: #575653;
-  --color-primary-800: #403e3c;
+  --color-primary-800: #262625;
   --color-primary-900: #141414;
   --color-primary-950: #0c0c0c;
 
 
   --color-danger: #ff4436;
   --color-danger-hover: #e33221;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
   --color-claude: #D97757;
   --color-copilot: #8534F3;
   --color-codex: #0169CC;
+  --color-cursor: #727272;
 
   /* Z-index layers */
   --z-base: 10;
@@ -145,6 +150,12 @@ html:not(.app-ready) *::after {
 
 * {
   user-select: none;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 @keyframes blink {
@@ -369,6 +380,15 @@ html:not(.app-ready) *::after {
 
 .animate-spin-slow {
   animation: spinSlow 2s linear infinite;
+}
+
+@keyframes rotate3dY {
+  0% { transform: rotate3d(1, 1, 0, 0deg); }
+  100% { transform: rotate3d(1, 1, 0, 360deg); }
+}
+
+.animate-rotate-3d {
+  animation: rotate3dY 1.8s cubic-bezier(0.37, 0, 0.63, 1) infinite;
 }
 
 @keyframes wizardModalIn {

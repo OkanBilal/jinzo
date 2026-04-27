@@ -33,7 +33,7 @@ vi.mock("electron", () => ({
   app: {
     isReady: () => true,
     whenReady: () => Promise.resolve(),
-    getPath: (name: string) => `/tmp/jinzo-test/${name}`,
+    getPath: (name: string) => `/tmp/mains-test/${name}`,
     isPackaged: false,
   },
   safeStorage: {

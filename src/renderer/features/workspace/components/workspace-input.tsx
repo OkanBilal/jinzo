@@ -2,8 +2,8 @@ import { useReducer, useRef, useEffect, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
-import type { FileNode } from "@/features/workspace/components/file-explorer";
-import type { ContextIssue, ContextSignal } from "@/lib/redux/slices/workspaceSlice";
+import type { FileNode } from "@/features/workspace/types/file-explorer";
+import type { ContextIssue, ContextSignal, ContextBrowserSelection } from "@/lib/redux/slices/workspaceSlice";
 import { addContextFile, addContextIssue } from "@/lib/redux/slices/workspaceSlice";
 import type { UploadedFile } from "@/components/ui";
 import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
@@ -19,6 +19,7 @@ import { useProviderModels } from "../hooks/use-provider-models";
 const EMPTY_CONTEXT_FILES: FileNode[] = [];
 const EMPTY_CONTEXT_ISSUES: ContextIssue[] = [];
 const EMPTY_CONTEXT_SIGNALS: ContextSignal[] = [];
+const EMPTY_CONTEXT_BROWSER: ContextBrowserSelection[] = [];
 const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
 
 interface WorkspaceInputProps {
@@ -37,6 +38,8 @@ interface WorkspaceInputProps {
   onRemoveContextIssue?: (entityId: string) => void;
   contextSignals?: ContextSignal[];
   onRemoveContextSignal?: (entityId: string) => void;
+  contextBrowserSelections?: ContextBrowserSelection[];
+  onRemoveContextBrowserSelection?: (id: string) => void;
   workspacePath?: string;
   projectId?: string;
   uploadedFiles?: UploadedFile[];
@@ -60,6 +63,8 @@ export function WorkspaceInput({
   onRemoveContextIssue,
   contextSignals = EMPTY_CONTEXT_SIGNALS,
   onRemoveContextSignal,
+  contextBrowserSelections = EMPTY_CONTEXT_BROWSER,
+  onRemoveContextBrowserSelection,
   workspacePath,
   projectId,
   uploadedFiles = EMPTY_UPLOADED_FILES,
@@ -73,10 +78,10 @@ export function WorkspaceInput({
   const dispatch = useDispatch();
 
   const variant = useWorkspaceVariant();
-  const providerVariant: "claude" | "copilot" | "codex" =
-    variant === "claude" ? "claude" : variant === "codex" ? "codex" : "copilot";
+  const providerVariant: "claude" | "copilot" | "codex" | "cursor" =
+    variant === "claude" ? "claude" : variant === "codex" ? "codex" : variant === "cursor" ? "cursor" : "copilot";
   const defaultProviderId =
-    providerVariant === "claude" ? "claude_code" : providerVariant === "codex" ? "codex" : "copilot_cli";
+    providerVariant === "claude" ? "claude_code" : providerVariant === "codex" ? "codex" : providerVariant === "cursor" ? "cursor" : "copilot_cli";
   const activeProviderId = providerId ?? defaultProviderId;
 
   const {
@@ -89,6 +94,7 @@ export function WorkspaceInput({
     providerSkills,
     isLoadingSkills,
     modelsError,
+    refetchModels,
     permissionMode,
     handlePermissionModeChange,
     thinkingMode,
@@ -250,7 +256,7 @@ export function WorkspaceInput({
         : typeof modelsError === "object" && "error" in modelsError
           ? String((modelsError as any).error)
           : null;
-    if (msg && /not authenticated|gh auth login/i.test(msg)) return msg;
+    if (msg && /not authenticated|gh auth login|cursor login/i.test(msg)) return msg;
     return null;
   })();
 
@@ -258,9 +264,18 @@ export function WorkspaceInput({
   return (
     <>
           {authErrorMessage && (
-        <div className="w-200 mx-auto mb-2 px-3 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/10 text-yellow-200/80 text-xs">
-          <span className="font-medium">Auth required:</span>{" "}
-          {authErrorMessage}
+        <div className="w-200 mx-auto mb-2 px-3 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/10 text-yellow-200/80 text-xs flex items-center justify-between">
+          <span>
+            <span className="font-medium">Auth required:</span>{" "}
+            {authErrorMessage}
+          </span>
+          <button
+            type="button"
+            onClick={() => refetchModels()}
+            className="ml-3 shrink-0 px-2 py-0.5 rounded-md bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-200 transition-colors cursor-pointer"
+          >
+            Check Auth
+          </button>
         </div>
       )}
 
@@ -272,9 +287,11 @@ export function WorkspaceInput({
         contextFiles={contextFiles}
         contextIssues={contextIssues}
         contextSignals={contextSignals}
+        contextBrowserSelections={contextBrowserSelections}
         onRemoveContextFile={onRemoveContextFile}
         onRemoveContextIssue={onRemoveContextIssue}
         onRemoveContextSignal={onRemoveContextSignal}
+        onRemoveContextBrowserSelection={onRemoveContextBrowserSelection}
       />
       <div className="relative">
         <InputForm

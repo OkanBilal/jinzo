@@ -1,4 +1,5 @@
 import { Close } from "@/components/ui/icons";
+import { useAppSelector } from "@/lib/redux/hooks";
 
 interface BaseTabProps {
   isActive: boolean;
@@ -24,6 +25,7 @@ export function BaseTab({
   onClose,
   closeIcon,
 }: BaseTabProps) {
+  const sidebarCollapsed = useAppSelector((state) => state.appSettings.sidebarCollapsed);
 
   return (
     <div
@@ -36,7 +38,7 @@ export function BaseTab({
           onClick();
         }
       }}
-      className="group relative flex items-center gap-2 pl-3.5 pr-6 py-2 cursor-pointer w-44 min-h-10"
+      className="group relative flex items-center gap-2 pl-3.5 pr-6 py-1.5 cursor-pointer w-44 min-h-10"
     >
       {/* Active background layer — always rendered, opacity transitions */}
       <div
@@ -47,23 +49,21 @@ export function BaseTab({
         className={`absolute inset-0 rounded-t-2xl transition-opacity duration-150 ease-out hidden dark:block ${isActive ? "opacity-100" : "opacity-0"}`}
         style={{
           backgroundColor: COLORS.dark,
-          boxShadow: "inset 0 1px 0 #ffffff34",
+          boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--color-primary) 20%, transparent)",
         }}
       />
 
       {/* Inverted corners — always rendered, opacity transitions */}
-      {!isFirst && (
-        <InvertedCorner side="left" visible={isActive} />
-      )}
+      <InvertedCorner side="left" visible={isActive && (!isFirst || sidebarCollapsed)} />
       <InvertedCorner side="right" visible={isActive} />
 
       {/* Content */}
-      <span className={`relative flex items-center justify-center size-4.5 -mb-1 shrink-0 transition-colors duration-150 ${
+      <span className={`relative flex items-center justify-center size-4.5 shrink-0 transition-colors duration-150 ${
         isActive ? "text-primary-900 dark:text-primary-200" : "text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200"
       }`}>
         {icon}
       </span>
-      <span className={`relative min-w-0 flex-1 truncate transition-colors duration-150 ${
+      <span className={`relative min-w-0 flex-1 mb-1 truncate transition-colors duration-150 ${
         isActive ? "text-primary-900 dark:text-primary-200" : "text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200"
       }`}>
         {typeof label === "string" ? (
@@ -127,7 +127,7 @@ function CloseOverlay({
       )}
       <button
         onClick={onClose}
-        className="relative z-(--z-base) p-1 hover:bg-primary/3 cursor-pointer rounded transition-all pointer-events-auto"
+        className="relative z-(--z-base) p-1 hover:bg-primary/5 cursor-pointer rounded transition-all pointer-events-auto"
       >
         {closeIcon || <Close className="size-3.25 text-primary-900 dark:text-primary hover:text-primary-900 dark:hover:text-primary-200" />}
       </button>

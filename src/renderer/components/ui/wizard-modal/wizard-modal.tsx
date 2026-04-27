@@ -208,7 +208,7 @@ export function WizardModal<
   return createPortal(
     <div className="fixed inset-0 z-(--z-modal) flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 dark:bg-primary-950/60 bg-primary/50 backdrop-blur-xs "
+        className="absolute inset-0 dark:bg-primary-950/50 bg-primary/50 backdrop-blur-xs "
         onClick={() => !isSubmitting && close()}
         aria-hidden="true"
       />
@@ -244,7 +244,7 @@ export function WizardModal<
             onClick={() => !isSubmitting && close()}
             disabled={isSubmitting}
             aria-label="Close modal"
-            className="p-2 flex cursor-pointer items-center justify-center rounded-full text-primary-600 dark:text-primary-400 hover:bg-primary-200/60 dark:hover:bg-primary/8 transition-colors"
+        className="rounded-lg cursor-pointer hover:bg-primary-100 dark:hover:bg-primary/10 p-1 text-primary-900 dark:text-primary-300 transition-all duration-300 ease-out"
           >
             <Close className="w-4 h-4" />
           </Button>

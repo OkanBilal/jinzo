@@ -60,7 +60,7 @@ export function IssueListItem({
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(e as any); } }}
-      className={`w-full text-left px-1 py-1.5  rounded-xl cursor-pointer transition-all duration-200 ease-out flex items-center gap-2 group hover:scale-[1.01] active:scale-99 ${
+      className={`w-full text-left px-1 py-1.5  rounded-xl cursor-pointer transition-all duration-200 ease-out flex items-center gap-2 group ${
         isActive
           ? "bg-primary/80 dark:bg-primary/5"
           : "bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
@@ -80,7 +80,7 @@ export function IssueListItem({
             {labels.map((label) => (
               <span
                 key={label}
-                className={`inline-block capitalize px-1.5 py-0 text-xxs font-medium rounded-full bg-primary-200 dark:bg-primary-500/40 text-primary-600 dark:text-primary-100`}
+                className={`inline-block capitalize px-1.5 py-0 text-xxs font-medium rounded-full bg-primary-200 dark:bg-primary-600 text-primary-600 dark:text-primary-100`}
               >
                 {label}
               </span>

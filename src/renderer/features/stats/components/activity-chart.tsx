@@ -12,8 +12,9 @@ function padTo30(data: DailyActivity[]) {
     claude: d.claude,
     copilot: d.copilot,
     codex: d.codex,
+    cursor: d.cursor,
     other: d.other,
-    total: d.claude + d.copilot + d.codex + d.other,
+    total: d.claude + d.copilot + d.codex + d.cursor + d.other,
   }));
   const padding = 30 - filled.length;
   if (padding > 0) {
@@ -21,6 +22,7 @@ function padTo30(data: DailyActivity[]) {
       claude: 0,
       copilot: 0,
       codex: 0,
+      cursor: 0,
       other: 0,
       total: 0,
     }));
@@ -30,7 +32,7 @@ function padTo30(data: DailyActivity[]) {
 }
 
 export default function ActivityChart({ data }: ActivityChartProps) {
-  const isEmpty = data.length === 0 || data.every(d => d.claude + d.copilot + d.codex + d.other === 0);
+  const isEmpty = data.length === 0 || data.every(d => d.claude + d.copilot + d.codex + d.cursor + d.other === 0);
   const chartData = padTo30(data);
   const maxTotal = Math.max(...chartData.map((d) => d.total), 1);
 
@@ -48,10 +50,11 @@ export default function ActivityChart({ data }: ActivityChartProps) {
           key: i,
           hoverLabel: d.total > 0 ? `${d.total} runs` : undefined,
           segments: [
-            { percent: (d.other / maxTotal) * 100, color: "#6366F1" },
-            { percent: (d.codex / maxTotal) * 100, color: "#0169CC" },
-            { percent: (d.copilot / maxTotal) * 100, color: "#3010B3" },
-            { percent: (d.claude / maxTotal) * 100, color: "#D97757" },
+            { percent: (d.other / maxTotal) * 100, color: "var(--color-primary-500)" },
+            { percent: (d.cursor / maxTotal) * 100, color: "var(--color-cursor)" },
+            { percent: (d.codex / maxTotal) * 100, color: "var(--color-codex)" },
+            { percent: (d.copilot / maxTotal) * 100, color: "var(--color-copilot)" },
+            { percent: (d.claude / maxTotal) * 100, color: "var(--color-claude)" },
           ],
         }))}
       />
@@ -59,7 +62,7 @@ export default function ActivityChart({ data }: ActivityChartProps) {
         labels={chartData.map((_, i) => ({
           key: i,
           content: [1, 5, 10, 15, 20, 25].includes(i + 1) ? (
-            <span className="text-[9px] text-primary-400 dark:text-primary-500">
+            <span className="text-xt text-primary-400 dark:text-primary-500">
               {i + 1}
             </span>
           ) : null,

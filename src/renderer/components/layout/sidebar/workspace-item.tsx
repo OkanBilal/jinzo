@@ -12,7 +12,7 @@ import {
   Edit,
 } from "@/components/ui/icons";
 import { useGetInstalledAppsQuery } from "@/lib/redux/api";
-import { useGetLatestWorkspaceDiffQuery } from "@/lib/redux/api/workspaceDiffsApi";
+import { useGetLatestWorkspaceDiffSummaryQuery } from "@/lib/redux/api/workspaceDiffsApi";
 import { formatDate } from "@/lib/format-date";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
@@ -70,7 +70,7 @@ export default function WorkspaceItem({
   onRenameBranch,
 }: WorkspaceItemProps) {
   const { data: installedApps = [] } = useGetInstalledAppsQuery();
-  const { data: latestDiff } = useGetLatestWorkspaceDiffQuery(id);
+  const { data: latestDiff } = useGetLatestWorkspaceDiffSummaryQuery(id);
   const statusConfig = getWorkspaceStatusConfig(status);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
@@ -156,15 +156,15 @@ export default function WorkspaceItem({
             onClick?.();
           }
         }}
-        className={`block px-2.5 py-1.5 active:scale-99 group-hover:scale-[1.01]
+        className={`block px-2.5 py-1.5
           rounded-xl transition-all duration-200 ease-out cursor-pointer ${
             isActive
-              ? "bg-primary/80 dark:bg-primary/5"
+              ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/8"
               : "bg-transparent group-hover:bg-primary/40 dark:group-hover:bg-primary/5"
           }`}
       >
         <div className="flex flex-col ">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="flex items-center gap-1 min-w-0 flex-1">
             {grouping !== "project" && (
               <span className="shrink-0 ">
                 {projectIcon ?? (
@@ -200,7 +200,7 @@ export default function WorkspaceItem({
                 <span className="size-2.75 mr-2 flex items-center" />
               )}
               {branch && !isRenamingBranch && (
-                <Muted className="text-xs  text-primary-900 dark:text-primary-200! truncate">
+                <Muted className="text-xs  text-primary-900 dark:text-primary-200 truncate">
                   {branch}
                 </Muted>
               )}
@@ -225,7 +225,7 @@ export default function WorkspaceItem({
                 </span>
               )}
               {updatedAt && (
-                <Muted className="text-xs text-primary-900! dark:text-primary-200! truncate">
+                <Muted className="text-xs text-primary-900 dark:text-primary-200 truncate">
                   {formatDate(new Date(updatedAt).toISOString())}
                 </Muted>
               )}
@@ -324,7 +324,7 @@ export default function WorkspaceItem({
                   onStatusChange?.(s);
                 }}
                 className={
-                  s === status ? "bg-primary-950/8 dark:bg-primary/10" : ""
+                  s === status ? "bg-primary-950/10 dark:bg-primary/10" : ""
                 }
               >
                 <WorkspaceStatusIcon

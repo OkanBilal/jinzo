@@ -16,3 +16,5 @@ export { WorkspaceEvents } from "./workspace-events";
 export { WorkspaceInput } from "./workspace-input";
 export { WorkspaceQuickActions } from "./workspace-quick-actions";
 export { TerminalSection } from "./terminal-section";
+export { DiffSummaryBar } from "./diff-summary-bar";
+export { BrowserPanel } from "./browser-panel";

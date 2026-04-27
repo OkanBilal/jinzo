@@ -89,9 +89,9 @@ module.exports = {
     },
   },
   packagerConfig: {
-    name: 'Jinzo',
-    executableName: 'jinzo',
-    appBundleId: 'build.jinzo.app', // TODO: change this to your own bundle ID
+    name: 'Mains',
+    executableName: 'mains',
+    appBundleId: 'build.mains.app', // TODO: change this to your own bundle ID
     asar: {
       unpack: '{**/*.node,**/copilot,**/spawn-helper,**/rg,**/*.wasm}',
       unpackDir: '.vite/build/node_modules/{node-pty,@github/copilot-darwin-arm64,@github/copilot/prebuilds,@github/copilot/ripgrep,@anthropic-ai/claude-agent-sdk/vendor}',
@@ -168,7 +168,7 @@ module.exports = {
     {
       name: '@electron-forge/publisher-github',
       config: {
-        repository: { owner: 'OkanBilal', name: 'jinzo' },
+        repository: { owner: 'OkanBilal', name: 'mains' },
         prerelease: false,
         draft: true,
       },

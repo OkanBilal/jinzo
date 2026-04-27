@@ -1,7 +1,5 @@
 import { lazy, Suspense } from "react";
-import { useSelector } from "react-redux";
-import type { RootState } from "@/lib/redux";
-import type { WorkspaceState } from "@/lib/redux/slices/workspaceSlice";
+import { useAppSelector } from "@/lib/redux/hooks";
 
 const CodeViewer = lazy(() =>
   import("./code-viewer").then((m) => ({ default: m.CodeViewer })),
@@ -15,11 +13,11 @@ interface EditorContentProps {
 }
 
 export function EditorContent({ className = "" }: EditorContentProps) {
-  const activeWorkspaceId = useSelector((state: RootState) => (state.workspace as WorkspaceState).activeWorkspaceId);
-  const selectedFile = useSelector((state: RootState) => state.workspace.selectedFile);
-  const selectedFileContent = useSelector((state: RootState) => state.workspace.selectedFileContent);
-  const isLoadingFileContent = useSelector((state: RootState) => state.workspace.isLoadingFileContent);
-  const fileContentError = useSelector((state: RootState) => state.workspace.fileContentError);
+  const activeWorkspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId);
+  const selectedFile = useAppSelector((state) => state.workspace.selectedFile);
+  const selectedFileContent = useAppSelector((state) => state.workspace.selectedFileContent);
+  const isLoadingFileContent = useAppSelector((state) => state.workspace.isLoadingFileContent);
+  const fileContentError = useAppSelector((state) => state.workspace.fileContentError);
 
   // Format file size for display
   const formatFileSize = (bytes: number): string => {

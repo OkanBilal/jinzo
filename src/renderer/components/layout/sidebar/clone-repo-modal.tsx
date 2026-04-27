@@ -106,7 +106,7 @@ export default function CloneRepoModal({
                 variant="secondary"
                 size="sm"
                 onClick={handleBrowse}
-                className="shrink-0 rounded-xl!"
+                className="shrink-0 rounded-xl"
               >
                 Browse
               </Button>

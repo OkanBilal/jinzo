@@ -1,13 +1,13 @@
 <div align="center">
   <br />
-  <a href="https://github.com/OkanBilal/jinzo">
-    <img src="src/renderer/public/icon.png" width="100" alt="Jinzo" />
+  <a href="https://github.com/OkanBilal/mains">
+    <img src="src/renderer/public/icon.png" width="100" alt="Mains" />
   </a>
   <br />
   <br />
   <p>
     <h3>
-      <b>Jinzo</b>
+      <b>Mains</b>
     </h3>
   </p>
   <p>
@@ -28,7 +28,7 @@
 
 ---
 
-Jinzo - _Japanese for "artificial" (人造)_ - is a desktop app for running AI coding agents in managed workspaces. It wraps **GitHub Copilot**, **Claude Code**, and **OpenAI Codex** SDKs, tracks every run with full observability, and syncs issues from the tools you already use — all from one place.
+Mains is a desktop app for running AI coding agents in managed workspaces. It wraps the **GitHub Copilot** and **Claude Code** SDKs and the **OpenAI Codex** app server, tracks every run with full observability, and syncs issues from the tools you already use — all from one place.
 
 ```
 npm install
@@ -37,22 +37,42 @@ npm start
 
 ## Features
 
-- **Multi-Agent** - Run GitHub Copilot, Claude Code, and OpenAI Codex side by side with session resumption, tool approval, and usage tracking
-- **Workspaces** - Git-backed workspaces with status tracking (backlog → done), worktree isolation, diffs per run, and code reviews
-- **Integrations** - Sync issues from GitHub, GitLab, Linear, Jira, Asana, Trello, and Sentry
-- **Spaces** - Custom profiles with system prompts, model selection, themes, and per-agent UI configuration
-- **Structured Output** - Define JSON schemas to constrain agent output format via Claude SDK's `outputFormat`
-- **MCP Support** - Connect external tools via Model Context Protocol; auto-loads `.mcp.json` from project root
-- **Stats Dashboard** - Usage analytics and run statistics per provider
-- **Built-in Tools** - Terminal emulator, file explorer, git operations, and workspace activity log
+### Agents
+
+- **Multi-Agent** - Run GitHub Copilot, Claude Code, and OpenAI Codex side by side
+- **Session Management** - Resume, continue, and fork agent sessions across runs
+- **Tool Approval** - Interactive approve/deny flow for agent tool calls with pre-approved tool lists
+- **Structured Output** - Define JSON schemas to constrain Claude agent output format
+- **MCP Support** - Extend agents with Model Context Protocol servers
+
+### Workspaces & Projects
+
+- **Git-backed Workspaces** - Status tracking (backlog → todo → in_progress → in_review → done), worktree isolation, and per-run diffs
+- **Projects** - Group workspaces by remote origin with setup/run/archive scripts and shared commit/PR instructions
+- **Code Reviews** - Request structured reviews with severity-tagged findings, file locations, and suggestions
+- **Context Injection** - Attach files, diffs, selections, terminal output, linked issues, and Sentry errors as run context
+- **Activity Log** - Automatic tracking of commits, reviews, findings, and PRs per workspace
+
+### Integrations
+
+- **Issue Sync** - GitHub, GitLab, Linear, Jira, Asana, and Trello
+- **Error Tracking** - Sentry issues synced as signals with stack traces, affected users, and regression info
+- **Dependency Guards** - Package security checks via Socket.dev before installs (npm, pip, cargo, go, gems)
+
+### Observability
+
+- **Stats Dashboard** - Daily runs, cost breakdown by model, tool usage analytics, and success rates per provider
+- **Run Artifacts** - Collected patches, files, logs, reports, and command results per session
+- **Cost Tracking** - Token usage and USD cost per run with cache metrics
+
 
 ## Quick Start
 
 **Prerequisites:** [Node.js](https://nodejs.org/) 18+, Git
 
 ```bash
-git clone https://github.com/OkanBilal/jinzo.git
-cd jinzo
+git clone https://github.com/OkanBilal/mains.git
+cd mains
 npm install
 npm start
 ```
@@ -62,9 +82,8 @@ npm start
 3. Open the Copilot, Claude, or Codex view and start an agent run
 
 For Copilot, you'll need [GitHub CLI](https://cli.github.com/) authenticated (`gh auth login`).
+For Claude, you'll need [Claude Code](https://docs.anthropic.com/en/docs/claude-code) authenticated (`claude login`).
 For Codex, you'll need [Codex CLI](https://github.com/openai/codex) authenticated (`codex auth login`).
-
-
 ## Development
 
 ```bash

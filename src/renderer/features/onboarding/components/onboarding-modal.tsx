@@ -5,6 +5,7 @@ import { setOnboardingCompleted } from "@/lib/redux/slices/appSettingsSlice";
 import { ClaudeSetupStep } from "./claude-setup-step";
 import { CodexSetupStep } from "./codex-setup-step";
 import { CopilotSetupStep } from "./copilot-setup-step";
+import { CursorSetupStep } from "./cursor-setup-step";
 import { WelcomeStep } from "./welcome-step";
 
 interface OnboardingModalProps {
@@ -33,6 +34,10 @@ export function OnboardingModal({ open }: OnboardingModalProps) {
         render: () => <CodexSetupStep />,
       },
       {
+        id: "cursor",
+        render: () => <CursorSetupStep />,
+      },
+            {
         id: "copilot",
         render: () => <CopilotSetupStep />,
       },
@@ -50,7 +55,7 @@ export function OnboardingModal({ open }: OnboardingModalProps) {
       title=""
       onComplete={completeOnboarding}
       onCancel={completeOnboarding}
-      className="max-w-210 mb-24"
+      className="max-w-215 mb-24"
     />
   );
 }

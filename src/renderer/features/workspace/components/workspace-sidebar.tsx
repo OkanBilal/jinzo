@@ -1,12 +1,10 @@
 import { useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  FileExplorer,
-  type FileNode,
-} from "@/features/workspace/components/file-explorer";
+import { FileExplorer } from "@/features/workspace/components/file-explorer";
+import type { FileNode } from "@/features/workspace/types/file-explorer";
 import {
   useGetWorkspaceByIdQuery,
-  useGetLatestWorkspaceDiffQuery,
+  useGetLatestWorkspaceDiffSummaryQuery,
 } from "@/lib/redux/api";
 import type { ProjectIssue, SignalWithEntity } from "@/lib/redux/api";
 import {
@@ -24,7 +22,6 @@ import { FolderIcon } from "@/components/ui/icons/file-icons";
 import { TrackerSection } from "@/features/workspace/components/tracker-section";
 
 import { DiffSection } from "@/features/workspace/components/diff-section";
-import { ActivitySection } from "@/features/workspace/components/activity-section";
 import {
   isIssueTab,
   getIssueEntityId,
@@ -43,16 +40,18 @@ export function WorkspaceSidebar() {
 
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
 
-
   // Get workspace data from the selected workspace ID
   const { data: workspace } = useGetWorkspaceByIdQuery(workspaceId || "", {
     skip: !workspaceId,
   });
 
-  // Get diff data to show changed files count
-  const { currentData: diff } = useGetLatestWorkspaceDiffQuery(workspaceId || "", {
-    skip: !workspaceId,
-  });
+  // Get diff summary (no diffText) to show changed files count
+  const { currentData: diff } = useGetLatestWorkspaceDiffSummaryQuery(
+    workspaceId || "",
+    {
+      skip: !workspaceId,
+    },
+  );
 
   const changedFilesCount = diff?.files?.length ?? 0;
   const rootPath = workspace?.rootPath;
@@ -172,18 +171,18 @@ export function WorkspaceSidebar() {
   return (
     <div className="flex-1 flex flex-col h-[calc(100%-1rem)] mt-2 -pb-4 rounded-xl overflow-hidden">
       <div className="shrink-0 py-2 mt-8 px-3">
-        <div className="relative flex items-center p-0.5 rounded-[10px] bg-primary/40  dark:bg-primary/4">
+        <div className="relative flex items-center p-0.5 rounded-xl bg-primary/40  dark:bg-primary/5">
           <div
             className={`absolute top-0.5 bottom-0.5 rounded-lg dark:bg-primary/10 bg-primary  transition-transform duration-200 ease-out`}
             style={{
-              width: "calc((100% - 0.75rem) / 3)",
+              width: "calc((100% - 0.75rem) / 2)",
               left: "0.125rem",
-              transform: `translateX(calc(${tabIndex} * (100% + 0.25rem)))`,
+              transform: `translateX(calc(${tabIndex} * (100% + 0.5rem)))`,
             }}
           />
           <Button
             onClick={() => setSidebarTab("files")}
-            className={`relative z-(--z-base) flex-1 text-xs font-medium py-1 px-2 rounded-lg transition-colors ${
+            className={`relative z-(--z-base) flex-1 text-xs font-medium py-1 px-2 transition-colors ${
               sidebarTab === "files"
                 ? "text-primary-900 dark:text-primary-100"
                 : "text-primary-800 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
@@ -193,23 +192,13 @@ export function WorkspaceSidebar() {
           </Button>
           <Button
             onClick={() => setSidebarTab("changes")}
-            className={`relative z-(--z-base) flex-1 text-xs font-medium py-1 px-2 rounded-lg transition-colors ${
+            className={`relative z-(--z-base) flex-1 text-xs font-medium py-1 px-2  transition-colors ${
               sidebarTab === "changes"
                 ? "text-primary-900 dark:text-primary-100"
                 : "text-primary-800 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
             }`}
           >
             Changes{changedFilesCount > 0 && ` (${changedFilesCount})`}
-          </Button>
-          <Button
-            onClick={() => setSidebarTab("reviews")}
-            className={`relative z-(--z-base) flex-1 text-xs font-medium py-1 px-2 rounded-lg transition-colors ${
-              sidebarTab === "reviews"
-                ? "text-primary-900 dark:text-primary-100"
-                : "text-primary-800 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
-            }`}
-          >
-            Activity
           </Button>
         </div>
       </div>
@@ -247,9 +236,7 @@ export function WorkspaceSidebar() {
             onSelectDiffFile={handleSelectDiffFile}
           />
         </div>
-      ) : (
-        <ActivitySection workspaceId={workspaceId} />
-      )}
+      ) : null}
     </div>
   );
 }

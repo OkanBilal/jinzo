@@ -1,5 +1,12 @@
-import { Fragment, RefObject, useMemo, useState, useCallback } from "react";
-import { ToolCallGroup, InfoGroup, groupEvents, type EventGroup } from "./tools/tool-call-group";
+import { Fragment, type ReactNode, RefObject, useMemo, useState, useCallback, useEffect } from "react";
+import {
+  ToolCallGroup,
+  InfoGroup,
+  groupEvents,
+  isPlanToolCallGroup,
+  type EventGroup,
+} from "./tools/tool-call-group";
+import { PlanDisplay } from "./tools/plan-display";
 import { EditorContent } from "./editor-content";
 import { IssueTabContent } from "./issue-tab-content";
 import { SignalTabContent } from "./signal-tab-content";
@@ -13,7 +20,7 @@ import { isIssueTab, getIssueEntityId, isSignalTab, getSignalEntityId, isNoteTab
 import { AsciiLoader } from "./ascii-loader";
 import type { ToolApprovalRequest } from "../hooks/use-tool-approval";
 import { ToolApprovalDialog } from "./tools/tool-approval-dialog";
-import { Clipboard, Check, Branch } from "@/components/ui/icons";
+import { Clipboard, Check, Branch, ArrowUp } from "@/components/ui/icons";
 import { useGetAppSettingsQuery } from "@/lib/redux/api";
 import { Button, Tooltip } from "@/components/ui";
 import { PromptSuggestionChips } from "./prompt-suggestion-chips";
@@ -49,7 +56,7 @@ function formatCost(micros: number): string {
 function ModelUsageBlock({ modelName, usage }: { modelName: string; usage: ModelUsageEntry }) {
   return (
     <div className="space-y-0.5">
-      <div className="text-[11px] opacity-70 flex justify-between gap-4">
+      <div className="text-xxs opacity-70 flex justify-between gap-4">
         <span>{modelName}</span>
         <span>${usage.costUSD.toFixed(4)}</span>
       </div>
@@ -97,7 +104,7 @@ function UsageTooltipContent({ turn }: { turn: RunTurn }) {
       ) : (
         <>
           {turn.model && (
-            <div className="text-[11px] opacity-70 mb-1">{turn.model}</div>
+            <div className="text-xxs opacity-70 mb-1">{turn.model}</div>
           )}
           <div className="border-t border-current/15 pt-1 space-y-0.5">
             {turn.inputTokens != null && (
@@ -167,12 +174,12 @@ function SessionTimeBar({
   const hasUsage = turn && (turn.inputTokens || turn.outputTokens || turn.cacheReadTokens || turn.cacheWriteTokens || turn.costMicros);
 
   return (
-    <div className="flex items-center gap-2 text-s text-primary-700 dark:text-primary-400 pl-4 -mt-1">
+    <div className="flex items-center gap-2 text-s text-primary-700 dark:text-primary-400  -mt-1">
       {hasUsage ? (
         <Tooltip
           content={<UsageTooltipContent turn={turn} />}
           position="top-right"
-          className="whitespace-normal! max-w-none!"
+          className="whitespace-normal max-w-none"
         >
           <span className="cursor-default">{formatElapsed(info.elapsed)}</span>
         </Tooltip>
@@ -379,6 +386,252 @@ function computeSessionTimesFromEvents(
   return result;
 }
 
+function isUserPromptGroup(g: EventGroup): boolean {
+  return g.type === "info" && g.events[0]?.metadata?.kind === "user-prompt";
+}
+
+function expandIndexRange(r: { start: number; end: number }): number[] {
+  const out: number[] = [];
+  for (let i = r.start; i <= r.end; i++) out.push(i);
+  return out;
+}
+
+/** Total tool_call events in grouped UI ranges (collapsed accordion preview). */
+function countToolCallsInRanges(groups: EventGroup[], ranges: number[][]): number {
+  let n = 0;
+  for (const range of ranges) {
+    for (const i of range) {
+      const g = groups[i];
+      if (g?.type !== "tool_calls") continue;
+      for (const ev of g.events) {
+        if (ev.type === "tool_call") n++;
+      }
+    }
+  }
+  return n;
+}
+
+function formatAccordionToolSummary(total: number): string {
+  if (total <= 0) return "";
+  return total === 1 ? "1 tool call" : `${total} tool calls`;
+}
+
+/**
+ * Within one agent turn (content after a user message until the next user message),
+ * split into: optional non-response prefix chunks, then segments each starting with a response
+ * artifact and running until the next response (tools, status, suggestions, etc. stay attached).
+ */
+function partitionAgentTurn(
+  groups: EventGroup[],
+  turnStart: number,
+  turnEnd: number,
+): { prefix: Array<{ start: number; end: number }>; segments: Array<{ start: number; end: number }> } {
+  const prefix: Array<{ start: number; end: number }> = [];
+  const segments: Array<{ start: number; end: number }> = [];
+  let i = turnStart;
+  while (i <= turnEnd) {
+    if (groups[i].type !== "response") {
+      const pStart = i;
+      while (i <= turnEnd && groups[i].type !== "response") i++;
+      prefix.push({ start: pStart, end: i - 1 });
+      continue;
+    }
+    const segStart = i;
+    let segEnd = i;
+    i++;
+    while (i <= turnEnd && groups[i].type !== "response") {
+      segEnd = i;
+      i++;
+    }
+    segments.push({ start: segStart, end: segEnd });
+  }
+  return { prefix, segments };
+}
+
+type TurnRenderRow =
+  | { kind: "flat"; indices: number[] }
+  | {
+      kind: "accordion";
+      previousSegments: number[][];
+      /** Plan tool groups — pulled out of `previousSegments` so they stay outside the collapsed bucket. */
+      planBreakoutIndices: number[];
+      lastSegment: number[];
+      previousMessageCount: number;
+      previousToolSummary: string;
+    };
+
+/** Linear plan: every group index appears exactly once, in order. */
+function buildTurnRenderRows(groups: EventGroup[]): TurnRenderRow[] {
+  const rows: TurnRenderRow[] = [];
+  let idx = 0;
+  while (idx < groups.length) {
+    if (isUserPromptGroup(groups[idx])) {
+      rows.push({ kind: "flat", indices: [idx] });
+      idx++;
+      continue;
+    }
+    const turnStart = idx;
+    while (idx < groups.length && !isUserPromptGroup(groups[idx])) idx++;
+    const turnEnd = idx - 1;
+    if (turnStart > turnEnd) continue;
+
+    const { prefix, segments } = partitionAgentTurn(groups, turnStart, turnEnd);
+    const prefixIndices = prefix.flatMap(expandIndexRange);
+
+    if (segments.length === 0) {
+      for (const p of prefix) {
+        rows.push({ kind: "flat", indices: expandIndexRange(p) });
+      }
+      continue;
+    }
+
+    if (segments.length === 1) {
+      rows.push({
+        kind: "flat",
+        indices: [...prefixIndices, ...expandIndexRange(segments[0]!)],
+      });
+      continue;
+    }
+
+    // Accordion only merges groups that start with `response`; tool blocks before the first
+    // reply were emitted as separate "prefix" rows. Fold them into the first collapsed chunk.
+    const prevRanges = segments.slice(0, -1).map(expandIndexRange);
+    if (prefixIndices.length > 0) {
+      prevRanges[0] = [...prefixIndices, ...prevRanges[0]!];
+    }
+
+    // Plan (PlanDisplay) must stay out of the collapsed region so Apply / Dismiss stay usable.
+    const planBreakout: number[] = [];
+    for (const range of prevRanges) {
+      for (const gIdx of range) {
+        if (isPlanToolCallGroup(groups[gIdx]!)) {
+          planBreakout.push(gIdx);
+        }
+      }
+    }
+    planBreakout.sort((a, b) => a - b);
+    const planSet = new Set(planBreakout);
+    const filteredPrevRanges = prevRanges
+      .map((range) => range.filter((gIdx) => !planSet.has(gIdx)))
+      .filter((range) => range.length > 0);
+
+    if (filteredPrevRanges.length === 0) {
+      rows.push({
+        kind: "flat",
+        indices: [...planBreakout, ...expandIndexRange(segments[segments.length - 1]!)],
+      });
+      continue;
+    }
+
+    const toolTotal = countToolCallsInRanges(groups, filteredPrevRanges);
+    rows.push({
+      kind: "accordion",
+      previousSegments: filteredPrevRanges,
+      planBreakoutIndices: planBreakout,
+      lastSegment: expandIndexRange(segments[segments.length - 1]!),
+      previousMessageCount: segments.length - 1,
+      previousToolSummary: formatAccordionToolSummary(toolTotal),
+    });
+  }
+  return rows;
+}
+
+/** `isRunInProgress`: true only when this row is the last render row while the run is active (see map). */
+function AgentTurnMessagesAccordion({
+  previousSegments,
+  planBreakoutIndices,
+  lastSegment,
+  previousMessageCount,
+  previousToolSummary,
+  renderGroup,
+  isRunInProgress,
+}: {
+  previousSegments: number[][];
+  planBreakoutIndices: number[];
+  lastSegment: number[];
+  previousMessageCount: number;
+  previousToolSummary: string;
+  renderGroup: (index: number) => ReactNode;
+  isRunInProgress: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isRunInProgress) return;
+    queueMicrotask(() => setOpen(false));
+  }, [isRunInProgress]);
+
+  const expanded = isRunInProgress || open;
+
+  const messageLabel =
+    previousMessageCount === 1
+      ? "1 message"
+      : `${previousMessageCount} messages`;
+  const label =
+    previousToolSummary !== ""
+      ? `${messageLabel} · ${previousToolSummary}`
+      : messageLabel;
+
+  const previousInner = (
+    <div className="space-y-4">
+      {previousSegments.flatMap((range) =>
+        range.map((i) => (
+          <Fragment key={`acc-prev-${i}`}>{renderGroup(i)}</Fragment>
+        )),
+      )}
+    </div>
+  );
+
+  return (
+    <div className={`flex flex-col ${isRunInProgress ? "gap-0" : "gap-4"}`}>
+      <div
+        className={`grid transition-all duration-300 ease-out ${
+          isRunInProgress ? "grid-rows-[0fr] opacity-0 pointer-events-none" : "grid-rows-[1fr] opacity-100"
+        }`}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="border-b border-primary-200/50 dark:border-primary-800/50 pb-1">
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              className="group w-full flex flex-wrap items-center gap-x-1 gap-y-0.5 text-left text-s text-primary-600 dark:text-primary-400 font-sans cursor-pointer hover:text-primary-800 dark:hover:text-primary-200 transition-colors"
+            >
+              <span className="min-w-0 wrap-break-word">{label}</span>
+              <ArrowUp
+                className={`size-3.5 shrink-0 opacity-70 transition-transform duration-300 ease-out ${open ? "rotate-180" : "rotate-90"}`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <div
+          className={`grid transition-all duration-300 ease-out ${
+            expanded
+              ? "grid-rows-[1fr] opacity-100"
+              : "grid-rows-[0fr] opacity-0 pointer-events-none"
+          }`}
+        >
+          <div className="min-h-0 overflow-hidden">{previousInner}</div>
+        </div>
+        {planBreakoutIndices.length > 0 && (
+          <div className="space-y-4">
+            {planBreakoutIndices.map((i) => (
+              <Fragment key={`acc-plan-${i}`}>{renderGroup(i)}</Fragment>
+            ))}
+          </div>
+        )}
+        <div className="space-y-4">
+          {lastSegment.map((i) => (
+            <Fragment key={`acc-last-${i}`}>{renderGroup(i)}</Fragment>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface WorkspaceEventsProps {
   runs: Run[];
   activeTab: "editor" | string;
@@ -388,11 +641,12 @@ interface WorkspaceEventsProps {
   issueTabs: IssueWithEntity[];
   signalTabs?: SignalWithEntity[];
   turns?: RunTurn[];
-  variant?: "copilot" | "claude" | "codex";
+  variant?: "copilot" | "claude" | "codex" | "cursor";
   pendingApproval?: ToolApprovalRequest;
   onApprovalRespond?: (requestId: string, approved: boolean, answer?: string) => void;
   onForkRun?: (sourceRunId: string, message: string) => Promise<string | null>;
   onSuggestionSelect?: (suggestion: string) => void;
+  onApplyPlan?: () => void;
 }
 
 export function WorkspaceEvents({
@@ -409,6 +663,7 @@ export function WorkspaceEvents({
   onApprovalRespond,
   onForkRun,
   onSuggestionSelect,
+  onApplyPlan,
 }: WorkspaceEventsProps) {
   const isEditorActive = activeTab === "editor";
   const isIssueActive = isIssueTab(activeTab);
@@ -482,7 +737,6 @@ export function WorkspaceEvents({
     return last;
   }, [eventGroups]);
 
-  // Fork handler: forks from the current run with a default prompt
   const handleFork = useCallback(
     (_responseContent: string) => {
       if (!activeRun || !onForkRun) return;
@@ -490,6 +744,95 @@ export function WorkspaceEvents({
     },
     [activeRun, onForkRun],
   );
+
+  const turnRenderRows = useMemo(
+    () => buildTurnRenderRows(eventGroups),
+    [eventGroups],
+  );
+
+  const renderGroupAt = useCallback(
+    (index: number) => {
+      const group = eventGroups[index];
+      if (!group) return null;
+      const isLastSuggestion =
+        group.type === "prompt_suggestion" &&
+        onSuggestionSelect &&
+        isRunCompleted &&
+        index === lastSuggestionIndex;
+      const sessionBarForThis = sessionTimes.has(index)
+        ? sessionTimes.get(index)!
+        : null;
+
+      return (
+        <Fragment key={group.id}>
+          {group.type === "prompt_suggestion" ? (
+            <>
+              {sessionBarForThis && (
+                <SessionTimeBar
+                  info={sessionBarForThis}
+                  onFork={index === lastSessionIndex && isRunCompleted && onForkRun ? handleFork : undefined}
+                />
+              )}
+              {isLastSuggestion ? (
+                <PromptSuggestionChips
+                  suggestions={group.events.map((e) => e.content).filter(Boolean)}
+                  onSelect={onSuggestionSelect}
+                />
+              ) : null}
+            </>
+          ) : group.type === "tool_calls" ? (
+            group.events.length === 1 && (() => {
+              const c = group.events[0].content;
+              const ci = c.indexOf(":");
+              const n = (ci !== -1 ? c.substring(0, ci).trim() : c).toLowerCase();
+              return n === "plan" || n === "create plan" || n === "exitplanmode";
+            })() ? (
+              <PlanDisplay event={group.events[0]} onApplyPlan={onApplyPlan} />
+            ) : (
+              <ToolCallGroup
+                group={group}
+                defaultExpanded={index === eventGroups.length - 1}
+                variant={variant}
+              />
+            )
+          ) : (
+            <InfoGroup group={group} />
+          )}
+          {group.type !== "prompt_suggestion" && sessionBarForThis && (
+            <SessionTimeBar
+              info={sessionBarForThis}
+              onFork={index === lastSessionIndex && isRunCompleted && onForkRun ? handleFork : undefined}
+            />
+          )}
+        </Fragment>
+      );
+    },
+    [
+      eventGroups,
+      onSuggestionSelect,
+      isRunCompleted,
+      lastSuggestionIndex,
+      sessionTimes,
+      lastSessionIndex,
+      onForkRun,
+      handleFork,
+      variant,
+      onApplyPlan,
+    ],
+  );
+
+  // Latest thinking: ephemeral Cursor stream (cursor-think-*) or legacy persisted [thinking] logs
+  const latestThinking = useMemo(() => {
+    const reversed = [...currentEvents].reverse();
+    const streamed = reversed.find(
+      (e) => e.type === "artifact" && e.metadata?.kind === "thinking" && e.content.trim(),
+    );
+    if (streamed) return streamed.content;
+    const last = reversed.find(
+      (e) => e.type === "log" && e.content.startsWith("[thinking] "),
+    );
+    return last ? last.content.slice("[thinking] ".length) : undefined;
+  }, [currentEvents]);
 
   return (
     <div className=" text-sm h-full flex flex-col">
@@ -508,55 +851,32 @@ export function WorkspaceEvents({
         ) : hasRunContent ? (
           <div className="h-full overflow-y-auto noscrollbar">
             <div className="min-h-75 max-w-210 mx-auto space-y-4 pt-12 pb-24 px-4">
-              {eventGroups.map((group, index) => {
-                // If this is a prompt_suggestion, render any session time bar
-                // that was assigned to it BEFORE the suggestion (so it appears
-                // after the model's last message, not after the suggestion chip).
-                const isLastSuggestion =
-                  group.type === "prompt_suggestion" &&
-                  onSuggestionSelect &&
-                  isRunCompleted &&
-                  index === lastSuggestionIndex;
-                const sessionBarForThis = sessionTimes.has(index)
-                  ? sessionTimes.get(index)!
-                  : null;
-
+              {turnRenderRows.map((row, rowIndex) => {
+                if (row.kind === "flat") {
+                  const first = row.indices[0];
+                  const lastIdx = row.indices[row.indices.length - 1];
+                  return (
+                    <Fragment key={`row-flat-${first}-${lastIdx}`}>
+                      {row.indices.map((index) => renderGroupAt(index))}
+                    </Fragment>
+                  );
+                }
+                const isLiveTurnAccordion =
+                  isRunning && rowIndex === turnRenderRows.length - 1;
                 return (
-                  <Fragment key={group.id}>
-                    {group.type === "prompt_suggestion" ? (
-                      <>
-                        {sessionBarForThis && (
-                          <SessionTimeBar
-                            info={sessionBarForThis}
-                            onFork={index === lastSessionIndex && isRunCompleted && onForkRun ? handleFork : undefined}
-                          />
-                        )}
-                        {isLastSuggestion ? (
-                          <PromptSuggestionChips
-                            suggestions={group.events.map((e) => e.content).filter(Boolean)}
-                            onSelect={onSuggestionSelect}
-                          />
-                        ) : null}
-                      </>
-                    ) : group.type === "tool_calls" ? (
-                      <ToolCallGroup
-                        group={group}
-                        defaultExpanded={index === eventGroups.length - 1}
-                        variant={variant}
-                      />
-                    ) : (
-                      <InfoGroup group={group} />
-                    )}
-                    {group.type !== "prompt_suggestion" && sessionBarForThis && (
-                      <SessionTimeBar
-                        info={sessionBarForThis}
-                        onFork={index === lastSessionIndex && isRunCompleted && onForkRun ? handleFork : undefined}
-                      />
-                    )}
-                  </Fragment>
+                  <AgentTurnMessagesAccordion
+                    key={`row-acc-${row.previousSegments[0]?.[0] ?? 0}-${row.planBreakoutIndices.join("-") || "x"}-${row.lastSegment[0] ?? 0}`}
+                    previousSegments={row.previousSegments}
+                    planBreakoutIndices={row.planBreakoutIndices}
+                    lastSegment={row.lastSegment}
+                    previousMessageCount={row.previousMessageCount}
+                    previousToolSummary={row.previousToolSummary}
+                    renderGroup={renderGroupAt}
+                    isRunInProgress={isLiveTurnAccordion}
+                  />
                 );
               })}
-              {isRunning && <AsciiLoader variant={variant} />}
+              {isRunning && <AsciiLoader variant={variant} thinkingText={latestThinking} />}
               {isRunning && pendingApproval && onApprovalRespond && (
                 <ToolApprovalDialog
                   request={pendingApproval}
@@ -571,14 +891,7 @@ export function WorkspaceEvents({
           <WorkspaceEmptyState workspace={currentWorkspace} />
         )}
         {/* Top/bottom fade overlays — only shown on run content (chat), not on editor/issue/note tabs */}
-        {hasRunContent && !isEditorActive && !isIssueActive && !isNoteActive && !isNewRunActive && (
-            <div
-              className="absolute top-0 left-0 right-0 h-24 bg-linear-to-b from-primary to-transparent dark:from-primary-950 dark:to-transparent pointer-events-none z-(--z-base)"
-            />
-                )}
-            <div
-              className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-primary to-transparent dark:from-primary-950 dark:to-transparent pointer-events-none"
-            />
+
       </div>
     </div>
   );

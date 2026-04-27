@@ -1,12 +1,12 @@
-# Contributing to Jinzo
+# Contributing to Mains
 
 Thanks for your interest in contributing! This guide will help you get started.
 
 ## Development Setup
 
 ```bash
-git clone https://github.com/OkanBilal/jinzo.git
-cd jinzo
+git clone https://github.com/OkanBilal/mains.git
+cd mains
 npm install
 npm run db:push
 npm start
@@ -104,7 +104,7 @@ Channel format: `"domain:action"` (e.g. `"entities:getAll"`). Must stay in sync 
 
 ## Reporting Issues
 
-Use the [issue templates](https://github.com/OkanBilal/jinzo/issues/new/choose) for bug reports and feature requests.
+Use the [issue templates](https://github.com/OkanBilal/mains/issues/new/choose) for bug reports and feature requests.
 
 ## License
 

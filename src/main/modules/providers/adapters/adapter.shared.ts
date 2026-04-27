@@ -57,12 +57,13 @@ export const DEFAULT_ALLOWED_TOOLS = [
   "NotebookEdit",
   "Skill",
   "Agent",
-  "mcp__jinzo__GetWorkspaceDiff",
-  "mcp__jinzo__SaveReview",
-  "mcp__jinzo__SaveFinding",
-  "mcp__jinzo__SaveFindings",
-  "mcp__jinzo__CommitChanges",
-  "mcp__jinzo__CreatePR",
+  "mcp__mains__GetWorkspaceDiff",
+  "mcp__mains__SaveReview",
+  "mcp__mains__SaveFinding",
+  "mcp__mains__SaveFindings",
+  "mcp__mains__CommitChanges",
+  "mcp__mains__CreatePR",
+  "mcp__mains__CheckPackage",
 ];
 
 export const ALLOWED_TOOLS_SET = new Set(DEFAULT_ALLOWED_TOOLS);
@@ -87,7 +88,7 @@ export function saveAttachments(
   attachments: FileAttachment[],
   runId: string,
 ): { savedPaths: string[]; inlineTexts: string[] } {
-  const uploadDir = path.join(os.tmpdir(), "jinzo-uploads", runId);
+  const uploadDir = path.join(os.tmpdir(), "mains-uploads", runId);
   fs.mkdirSync(uploadDir, { recursive: true });
 
   const savedPaths: string[] = [];
@@ -95,21 +96,36 @@ export function saveAttachments(
 
   for (const attachment of attachments) {
     const filePath = path.join(uploadDir, attachment.name);
-    const buffer = Buffer.from(attachment.data, "base64");
+    const ext = path.extname(attachment.name).toLowerCase();
+    const hasSource = typeof attachment.sourcePath === "string" && attachment.sourcePath.length > 0;
 
-    if (attachment.type === "image") {
-      fs.writeFileSync(filePath, buffer);
-      savedPaths.push(filePath);
-    } else {
-      const ext = path.extname(attachment.name).toLowerCase();
-      if (ext === ".txt") {
-        inlineTexts.push(
-          `[Attached document: ${attachment.name}]\n${buffer.toString("utf-8")}`,
-        );
-      } else {
-        fs.writeFileSync(filePath, buffer);
-        savedPaths.push(filePath);
+    // Inline text documents are read into the prompt regardless of source.
+    if (attachment.type !== "image" && ext === ".txt") {
+      let text = "";
+      if (hasSource) {
+        try {
+          text = fs.readFileSync(attachment.sourcePath!, "utf-8");
+        } catch {
+          text = "";
+        }
+      } else if (attachment.data) {
+        text = Buffer.from(attachment.data, "base64").toString("utf-8");
       }
+      inlineTexts.push(`[Attached document: ${attachment.name}]\n${text}`);
+      continue;
+    }
+
+    if (hasSource) {
+      // Copy from disk directly — avoids holding base64 in memory.
+      try {
+        fs.copyFileSync(attachment.sourcePath!, filePath);
+        savedPaths.push(filePath);
+      } catch (err) {
+        console.warn("[adapter.shared] failed to copy attachment from sourcePath:", err);
+      }
+    } else if (attachment.data) {
+      fs.writeFileSync(filePath, Buffer.from(attachment.data, "base64"));
+      savedPaths.push(filePath);
     }
   }
 
@@ -391,11 +407,22 @@ export async function emitUserPromptArtifact(
     content,
     metadata: {
       source: "user",
-      attachments: options?.attachments?.map((a) => ({
-        name: a.name,
-        type: a.type,
-        mimeType: a.mimeType,
-      })),
+      attachments: options?.attachments?.map((a) => {
+        const captureName =
+          a.sourcePath && a.sourcePath.replace(/\\/g, "/").includes("/browser-captures/")
+            ? path.basename(a.sourcePath)
+            : undefined;
+        return {
+          name: a.name,
+          type: a.type,
+          mimeType: a.mimeType,
+          ...(a.type === "image" && a.data
+            ? { dataUrl: `data:${a.mimeType};base64,${a.data}` }
+            : {}),
+          ...(a.sourcePath ? { sourcePath: a.sourcePath } : {}),
+          ...(captureName ? { captureName } : {}),
+        };
+      }),
       issues: options?.contextIssues,
       signals: options?.contextSignals,
       files: options?.contextFiles,

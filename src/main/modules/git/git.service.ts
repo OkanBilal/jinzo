@@ -636,6 +636,25 @@ class GitService {
       };
     }
   }
+  /**
+   * Hard-reset the working tree to a given ref and clean untracked files
+   */
+  async resetHard(
+    rootPath: string,
+    ref: string
+  ): Promise<ServiceResponse<void>> {
+    try {
+      const git = this.getGit(rootPath);
+      await git.reset(["--hard", ref]);
+      await git.clean("f", ["-d"]);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to reset",
+      };
+    }
+  }
 }
 
 export const gitService = new GitService();

@@ -143,7 +143,7 @@ export default function WorkspacesList({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-16">
-        <Caption className="text-primary-800 dark:text-primary-100! font-semibold">
+        <Caption className="text-primary-800 dark:text-primary-100 font-semibold">
           Loading...
         </Caption>
       </div>
@@ -153,7 +153,7 @@ export default function WorkspacesList({
   if (workspaces.length === 0) {
     return (
       <div className="flex items-center justify-center h-16">
-        <Caption className="text-primary-800 dark:text-primary-100! font-semibold">
+        <Caption className="text-primary-800 dark:text-primary-100 font-semibold">
           No repositories yet
         </Caption>
       </div>
@@ -161,7 +161,7 @@ export default function WorkspacesList({
   }
 
   const basePath = getBaseRoutePath(
-    routeType === "claude" ? "claude" : routeType === "codex" ? "codex" : "copilot",
+    routeType === "claude" ? "claude" : routeType === "codex" ? "codex" : routeType === "cursor" ? "cursor" : "copilot",
   );
 
   const handleWorkspaceClick = (workspace: WorkspaceResponse) => {
@@ -346,7 +346,7 @@ export default function WorkspacesList({
         // onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsExpanded(!isExpanded); } }}
         className="w-full flex items-center justify-between transition-all duration-200 bg-transparent   px-2 py-0.5 mb-1 rounded-lg "
       >
-        <Caption className="text-primary-800 dark:text-primary-300! font-medium">
+        <Caption className="text-primary-800 dark:text-primary-300 font-medium">
           Workspaces
         </Caption>
         <div className="flex items-center ">

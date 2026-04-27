@@ -72,7 +72,7 @@ export function NoteTabContent({ reviewId }: NoteTabContentProps) {
               </ReactMarkdown>
             </div>
           ) : (
-            <p className="text-sm text-primary-400 dark:text-primary-500 italic">
+            <p className="text-sm text-primary-400 dark:text-primary-500">
               No summary provided.
             </p>
           )}

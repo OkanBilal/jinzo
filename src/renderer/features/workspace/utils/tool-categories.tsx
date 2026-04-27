@@ -19,33 +19,47 @@ import {
   Notion,
   Figma,
   Mcp,
-  Jinzo,
+  Mains,
   Sparkles,
+  Grep,
+  Trash,
 } from "@/components/ui/icons";
 
 export const TOOL_CATEGORIES: Record<
   string,
   { category: string; icon: React.ReactNode }
 > = {
-  jinzo: {
+  mains: {
     category: "Review",
-    icon: <Jinzo className="w-2 h-4 " />,
+    icon: <Mains className="size-3.5 " />,
   },
   getdiff: {
     category: "Review",
-    icon: <Jinzo className="w-2 h-4 " />,
+    icon: <Mains className="size-3.5 " />,
   },
   savereview: {
     category: "Review",
-    icon: <Jinzo className="w-2 h-4" />,
+    icon: <Mains className="size-3.5" />,
   },
   savefindings: {
     category: "Review",
-    icon: <Jinzo className="w-2 h-4  " />,
+    icon: <Mains className="size-3.5  " />,
   },
-    savefinding: {
+  savefinding: {
     category: "Review",
-    icon: <Jinzo className="w-2 h-4  " />,
+    icon: <Mains className="size-3.5  " />,
+  },
+  commit: {
+    category: "Git",
+    icon: <Mains className="size-3.5" />,
+  },
+  createpr: {
+    category: "Git",
+    icon: <Mains className="size-3.5" />,
+  },
+  checkpackage: {
+    category: "Guard",
+    icon: <Mains className="size-3.5" />,
   },
   figma: {
     category: "Design",
@@ -85,7 +99,7 @@ export const TOOL_CATEGORIES: Record<
   },
   grep: {
     category: "Search",
-    icon: <Search className="size-3.5" />,
+    icon: <Grep className="size-3.5" />,
   },
   glob: {
     category: "File",
@@ -94,6 +108,10 @@ export const TOOL_CATEGORIES: Record<
   websearch: {
     category: "Search",
     icon: <Web className="size-4" />,
+  },
+  delete: {
+    category: "File",
+    icon: <Trash className="size-3.5" />,
   },
   webfetch: {
     category: "Search",
@@ -124,6 +142,10 @@ export const TOOL_CATEGORIES: Record<
     icon: <Sparkles className="size-4" />,
   },
   askuserquestion: {
+    category: "Interaction",
+    icon: <Question className="size-4" />,
+  },
+  ask_user: {
     category: "Interaction",
     icon: <Question className="size-4" />,
   },
@@ -175,6 +197,10 @@ export const TOOL_CATEGORIES: Record<
     category: "Git",
     icon: <Branch className="size-4" />,
   },
+  web_fetch: {
+    category: "Search",
+    icon: <Web className="size-4" />,
+  },
 };
 
 export function getToolInfo(toolName: string): {
@@ -193,6 +219,6 @@ export function getToolInfo(toolName: string): {
 
   return {
     category: "Tool",
-    icon: <Jinzo className=" size-4" />,
+    icon: <Mains className=" size-4" />,
   };
 }

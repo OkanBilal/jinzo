@@ -111,7 +111,7 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
       ? { x: saved.x, y: saved.y }
       : {}),
     minWidth: 800,
-    title: "Jinzo",
+    title: "Mains",
     minHeight: 600,
     icon: iconPath,
     show: false, // Always create hidden, control visibility via ready-to-show
@@ -121,7 +121,10 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
       nodeIntegration: false,
       sandbox: false,
       devTools: !app.isPackaged,
-      backgroundThrottling: false,
+      // Throttle timers/rAF when the window is hidden/occluded — saves
+      // significant CPU and GPU when the user switches away. Streaming IPC
+      // events still arrive via `webContents.send` regardless of throttling.
+      backgroundThrottling: true,
     },
     ...(process.platform === "darwin" ? {
       titleBarStyle: "hiddenInset" as const,
@@ -184,6 +187,13 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
     // Production mode - load from built files
     mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   }
+
+  mainWindow.on("enter-full-screen", () => {
+    mainWindow?.webContents.send("app:fullscreenChange", true);
+  });
+  mainWindow.on("leave-full-screen", () => {
+    mainWindow?.webContents.send("app:fullscreenChange", false);
+  });
 
   mainWindow.on("closed", () => {
     mainWindow = null;

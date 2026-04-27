@@ -7,7 +7,9 @@ import { workspaceDiffsController } from "./workspaceDiffs.controller";
 const CHANNELS = {
   GET_BY_WORKSPACE: "workspaceDiffs:getByWorkspace",
   GET_LATEST: "workspaceDiffs:getLatest",
+  GET_LATEST_SUMMARY: "workspaceDiffs:getLatestSummary",
   GET_BY_RUN: "workspaceDiffs:getByRun",
+  DELETE_LATEST: "workspaceDiffs:deleteLatest",
 } as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -25,8 +27,19 @@ export function registerWorkspaceDiffsIpc(): void {
     return workspaceDiffsController.getLatest(workspaceId);
   });
 
+  ipcMain.handle(
+    CHANNELS.GET_LATEST_SUMMARY,
+    async (_, workspaceId: string) => {
+      return workspaceDiffsController.getLatestSummary(workspaceId);
+    },
+  );
+
   ipcMain.handle(CHANNELS.GET_BY_RUN, async (_, runId: string) => {
     return workspaceDiffsController.getByRun(runId);
+  });
+
+  ipcMain.handle(CHANNELS.DELETE_LATEST, async (_, workspaceId: string) => {
+    return workspaceDiffsController.deleteLatest(workspaceId);
   });
 }
 

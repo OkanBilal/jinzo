@@ -1,4 +1,5 @@
 import { useEffect, useReducer } from "react";
+export { AsciiSpinner } from "@/components/ui/ascii-spinner";
 
 const ASCII_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
@@ -32,56 +33,25 @@ function loaderReducer(state: LoaderState, action: LoaderAction): LoaderState {
   }
 }
 
-// Braille dots ordered by fill density: empty → full → empty (breathing cycle)
-const BREATHING_FRAMES = [
-  "⠀",
-  "⠁",
-  "⠃",
-  "⠇",
-  "⠏",
-  "⠟",
-  "⠿",
-  "⣿",
-  "⣿",
-  "⠿",
-  "⠟",
-  "⠏",
-  "⠇",
-  "⠃",
-  "⠁",
-  "⠀",
-];
-
-export function AsciiSpinner({
-  variant,
-}: {
-  variant?: "claude" | "copilot" | "codex" | "null";
-}) {
-  const [frameIndex, dispatch] = useReducer(
-    (i: number) => (i + 1) % BREATHING_FRAMES.length,
-    0,
-  );
-
-  useEffect(() => {
-    const id = setInterval(dispatch, 120);
-    return () => clearInterval(id);
-  }, []);
-
-  return (
-    <span
-      className={`font-mono text-xs leading-none ${variant === "claude" ? "text-claude" : variant === "copilot" ? "text-copilot" : variant === "codex" ? "text-codex" : "text-primary-900 dark:text-primary-200"}`}
-    >
-      {BREATHING_FRAMES[frameIndex]}
-    </span>
-  );
+/** Strip markdown formatting for plain-text display */
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "$1")  // **bold**
+    .replace(/\*(.+?)\*/g, "$1")       // *italic*
+    .replace(/__(.+?)__/g, "$1")       // __bold__
+    .replace(/_(.+?)_/g, "$1")         // _italic_
+    .replace(/`(.+?)`/g, "$1")         // `code`
+    .replace(/^#+\s*/gm, "");          // # headings
 }
 
 export function AsciiLoader({
   className,
   variant,
+  thinkingText,
 }: {
   className?: string;
-  variant?: "claude" | "copilot" | "codex";
+  variant?: "claude" | "copilot" | "codex" | "cursor";
+  thinkingText?: string;
 }) {
   const [state, dispatch] = useReducer(loaderReducer, undefined, () => ({
     frameIndex: 0,
@@ -101,11 +71,13 @@ export function AsciiLoader({
   return (
     <div className={`flex items-center gap-2 py-2 ${className || ""}`}>
       <span
-        className={`font-mono text-base ${variant === "claude" ? "text-claude" : variant === "copilot" ? "text-copilot" : variant === "codex" ? "text-codex" : "text-primary-900 dark:text-primary-200"}`}
+        className={`font-mono text-base ${variant === "claude" ? "text-claude" : variant === "copilot" ? "text-copilot" : variant === "codex" ? "text-codex" : variant === "cursor" ? "text-cursor" : "text-primary-900 dark:text-primary-200"}`}
       >
         {ASCII_FRAMES[state.frameIndex]}
       </span>
-      <span className="shine-text text-sm">{state.word}...</span>
+      <span className="shine-text text-sm truncate max-w-120">
+        {thinkingText ? stripMarkdown(thinkingText) : `${state.word}...`}
+      </span>
     </div>
   );
 }

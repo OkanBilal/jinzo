@@ -37,6 +37,7 @@ export const iconRegistry: Record<string, IconComponent> = {
   claude: Icons.Claude,
   copilot: Icons.Copilot,
   codex: Icons.Gpt,
+  cursor: Icons.CursorIcon,
 };
 
 export const availableIcons = Object.entries(iconRegistry).map(
@@ -47,7 +48,7 @@ export const availableIcons = Object.entries(iconRegistry).map(
 );
 
 export function parseIcon(iconString: string | null | undefined): {
-  type: "emoji" | "icon" | "copilot-animate" | "claude-animate" | "codex-animate";
+  type: "emoji" | "icon" | "copilot-animate" | "claude-animate" | "codex-animate" | "cursor-animate";
   value: string | IconComponent;
 } {
   if (!iconString) {
@@ -66,6 +67,9 @@ export function parseIcon(iconString: string | null | undefined): {
       }
       if (iconName === "codex") {
         return { type: "codex-animate", value: IconComponent };
+      }
+      if (iconName === "cursor") {
+        return { type: "cursor-animate", value: IconComponent };
       }
       return { type: "icon", value: IconComponent };
     }
@@ -86,6 +90,9 @@ export function parseIcon(iconString: string | null | undefined): {
     }
     if (lowerIcon === "codex") {
       return { type: "codex-animate", value: iconRegistry[lowerIcon] };
+    }
+    if (lowerIcon === "cursor") {
+      return { type: "cursor-animate", value: iconRegistry[lowerIcon] };
     }
     return { type: "icon", value: iconRegistry[lowerIcon] };
   }

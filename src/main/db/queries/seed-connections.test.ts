@@ -27,7 +27,7 @@ describe("seedConnections", () => {
   it("inserts all 6 provider connections", async () => {
     await seedConnections();
     const rows = db.select().from(connections).all();
-    expect(rows).toHaveLength(6);
+    expect(rows).toHaveLength(7);
   });
 
   it("creates connections for each provider", async () => {
@@ -49,13 +49,13 @@ describe("seedConnections", () => {
     await seedConnections();
     await seedConnections();
     const rows = db.select().from(connections).all();
-    expect(rows).toHaveLength(6);
+    expect(rows).toHaveLength(7);
   });
 
   it("sets unique connection ids", async () => {
     await seedConnections();
     const rows = db.select().from(connections).all();
     const ids = rows.map((r) => r.id);
-    expect(new Set(ids).size).toBe(6);
+    expect(new Set(ids).size).toBe(7);
   });
 });

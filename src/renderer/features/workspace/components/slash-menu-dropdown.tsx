@@ -132,7 +132,7 @@ export function SlashMenuDropdown({
                         onSelectSkill(skill);
                         onClose();
                       }}
-                      className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100"
+                      className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100"
                     >
                       <div className="flex flex-col gap-0.5">
                         <div className="font-medium flex items-center gap-1.5">
@@ -188,7 +188,7 @@ export function SlashMenuDropdown({
                         onSelectCommand(cmd);
                         onClose();
                       }}
-                      className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors last:rounded-b-xl hover:bg-primary-200/30 dark:hover:bg-primary-600/20 text-primary-700 dark:text-primary-100"
+                      className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors last:rounded-b-xl hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100"
                     >
                       <div className="flex flex-col gap-0.5">
                         <div className="font-medium flex items-center gap-1.5">

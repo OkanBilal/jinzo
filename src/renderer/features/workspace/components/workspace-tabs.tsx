@@ -1,4 +1,4 @@
-import { Plus, CopilotStatic, Codex } from "@/components/ui/icons";
+import { Plus, CopilotStatic, Codex, Cursor } from "@/components/ui/icons";
 import { RunTab, getTabTitle } from "./run-tab";
 import { EditorTab } from "./editor-tab";
 import { IssueTab } from "./issue-tab";
@@ -11,6 +11,7 @@ import type { ReviewTab as ReviewTabType } from "@/lib/redux/slices/workspaceSli
 import { useRef } from "react";
 import { Button } from "@/components/ui";
 import { Claude } from "@/components/ui/icons/space";
+import { useAppSelector } from "@/lib/redux/hooks";
 
 const EMPTY_NOTE_TABS: ReviewTabType[] = [];
 
@@ -37,7 +38,7 @@ interface WorkspaceTabsProps {
   showNewRunTab?: boolean;
   onSelectNewRunTab?: () => void;
   onCloseNewRunTab?: (e: React.MouseEvent) => void;
-  variant?: "claude" | "copilot" | "codex";
+  variant?: "claude" | "copilot" | "codex" | "cursor";
 }
 
 export function WorkspaceTabs({
@@ -66,12 +67,14 @@ export function WorkspaceTabs({
   onCloseNewRunTab,
 }: WorkspaceTabsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const sidebarCollapsed = useAppSelector((state) => state.appSettings.sidebarCollapsed);
 
   return (
     <div className="flex items-end">
       <div
         ref={containerRef}
         className="relative flex-1 flex items-end overflow-x-auto noscrollbar"
+        style={{ paddingLeft: sidebarCollapsed ? "0.75rem" : undefined }}
       >
         {hasSelectedFile && (
           <EditorTab
@@ -160,7 +163,7 @@ export function WorkspaceTabs({
         )}
         <Button
           onClick={onNewRun}
-          className="p-2.5 text-primary-900 ml-0.5 mb-0.5 mr-8 dark:text-primary-200  hover:text-primary-950 dark:hover:text-primary-300 hover:bg-primary/30 dark:hover:bg-primary/3  rounded-xl cursor-pointer transition-colors"
+          className="p-2.5 text-primary-900 ml-0.5 mr-8 dark:text-primary-200  hover:text-primary-950 dark:hover:text-primary-300 hover:bg-primary/30 dark:hover:bg-primary/5  rounded-xl cursor-pointer transition-colors"
           title="New run"
         >
           <Plus className="size-4" />
@@ -177,7 +180,7 @@ function NewRunTab({
   onClose,
 }: {
   isActive: boolean;
-  variant: "copilot" | "claude" | "codex";
+  variant: "copilot" | "claude" | "codex" | "cursor";
   onClick: () => void;
   onClose: (e: React.MouseEvent) => void;
 }) {
@@ -194,9 +197,11 @@ function NewRunTab({
       onClose={onClose}
       icon={
         variant === "claude" ? (
-          <Claude className="text-[#D97453]" />
+          <Claude className="text-claude" />
         ) : variant === "copilot" ? (
           <CopilotStatic className={className} />
+        ) : variant === "cursor" ? (
+          <Cursor className={className} />
         ) : (
           <Codex className={className} />
         )

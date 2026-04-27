@@ -33,6 +33,9 @@ export {
   useLazyGetSentryProjectsQuery,
   useGetSelectedSentryProjectsQuery,
   useLazyGetSelectedSentryProjectsQuery,
+  useLazyGetSocketDevOrganizationsQuery,
+  useGetSelectedSocketDevOrganizationsQuery,
+  useLazyGetSelectedSocketDevOrganizationsQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
   useRevokeConnectionMutation,
@@ -53,6 +56,8 @@ export type {
   SelectedTrelloBoard,
   SentryProject,
   SelectedSentryProject,
+  SocketDevOrganization,
+  SelectedSocketDevOrganization,
   SaveCredentialsPayload,
   SaveResourcesPayload,
 } from "./connectionsApi";
@@ -119,6 +124,7 @@ export {
   useSetPreventSleepDuringRunsMutation,
   useSetNotifyOnRunCompleteMutation,
   useSetNotifyOnToolApprovalMutation,
+  useSetShowMenuBarIconMutation,
   useSetCommitInstructionsMutation,
   useSetPrInstructionsMutation,
 } from "./appSettingsApi";
@@ -135,6 +141,8 @@ export type { SpaceState } from "../slices/spaceSlice";
 export {
   setDarkMode,
   setSidebarCollapsed,
+  setBrowserPanelOpen,
+  setRightPanelOpen,
 } from "../slices/appSettingsSlice";
 export type { AppSettingsState } from "../slices/appSettingsSlice";
 
@@ -296,10 +304,15 @@ export {
   workspaceDiffsApi,
   useGetLatestWorkspaceDiffQuery,
   useLazyGetLatestWorkspaceDiffQuery,
+  useGetLatestWorkspaceDiffSummaryQuery,
+  useLazyGetLatestWorkspaceDiffSummaryQuery,
   useGetWorkspaceDiffsQuery,
   useLazyGetWorkspaceDiffsQuery,
 } from "./workspaceDiffsApi";
-export type { WorkspaceDiff } from "./workspaceDiffsApi";
+export type {
+  WorkspaceDiff,
+  WorkspaceDiffSummary,
+} from "./workspaceDiffsApi";
 
 export {
   reviewsApi,
@@ -409,6 +422,25 @@ export type {
   SignalWithEntity,
   SignalQueryOptions,
 } from "./signalsApi";
+
+export {
+  guardsApi,
+  useGetActiveGuardQuery,
+  useCheckPackageMutation,
+  useCheckPackagesMutation,
+  useGetPackageScoreQuery,
+  useLazyGetPackageScoreQuery,
+  useScanWorkspaceMutation,
+} from "./guardsApi";
+export type {
+  PackageIdentifier,
+  PackageAlert,
+  PackageScore,
+  PackageCheckResult,
+  ManifestScanResult,
+  ScanSummary,
+  ActiveGuardInfo,
+} from "./guardsApi";
 
 export {
   automationsApi,

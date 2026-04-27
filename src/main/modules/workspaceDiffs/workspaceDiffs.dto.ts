@@ -13,6 +13,11 @@ export interface WorkspaceDiffResponse {
   createdAt: Date;
 }
 
+export type WorkspaceDiffSummaryResponse = Omit<
+  WorkspaceDiffResponse,
+  "diffText"
+>;
+
 export interface ServiceResponse<T> {
   success: boolean;
   data?: T;

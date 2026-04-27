@@ -57,6 +57,37 @@ export const workspaceDiffsRepo = {
     return rows[0] ? mapRowToResponse(rows[0]) : null;
   },
 
+  async findLatestSummaryByWorkspace(
+    workspaceId: string,
+  ): Promise<Omit<WorkspaceDiffResponse, "diffText"> | null> {
+    const db = getDb();
+    const rows = await db
+      .select({
+        id: workspaceDiffs.id,
+        workspaceId: workspaceDiffs.workspaceId,
+        runId: workspaceDiffs.runId,
+        baseRef: workspaceDiffs.baseRef,
+        filesJson: workspaceDiffs.filesJson,
+        statsJson: workspaceDiffs.statsJson,
+        createdAt: workspaceDiffs.createdAt,
+      })
+      .from(workspaceDiffs)
+      .where(eq(workspaceDiffs.workspaceId, workspaceId))
+      .orderBy(desc(workspaceDiffs.createdAt))
+      .limit(1);
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      id: row.id,
+      workspaceId: row.workspaceId,
+      runId: row.runId,
+      baseRef: row.baseRef,
+      files: safeJsonParse<string[]>(row.filesJson),
+      stats: safeJsonParse(row.statsJson),
+      createdAt: row.createdAt,
+    };
+  },
+
   async findByRun(runId: string): Promise<WorkspaceDiffResponse | null> {
     const db = getDb();
     const rows = await db
@@ -70,6 +101,24 @@ export const workspaceDiffsRepo = {
   async deleteByWorkspace(workspaceId: string): Promise<void> {
     const db = getDb();
     await db.delete(workspaceDiffs).where(eq(workspaceDiffs.workspaceId, workspaceId));
+  },
+
+  async deleteByRun(runId: string): Promise<void> {
+    const db = getDb();
+    await db.delete(workspaceDiffs).where(eq(workspaceDiffs.runId, runId));
+  },
+
+  async deleteLatestByWorkspace(workspaceId: string): Promise<void> {
+    const db = getDb();
+    const rows = await db
+      .select({ id: workspaceDiffs.id })
+      .from(workspaceDiffs)
+      .where(eq(workspaceDiffs.workspaceId, workspaceId))
+      .orderBy(desc(workspaceDiffs.createdAt))
+      .limit(1);
+    if (rows[0]) {
+      await db.delete(workspaceDiffs).where(eq(workspaceDiffs.id, rows[0].id));
+    }
   },
 
   async findByWorkspaceAndBaseRef(
