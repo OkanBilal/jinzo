@@ -49,21 +49,21 @@ export function EditDisplay({
     <div className="">
       <button
         onClick={() => hasDiff && setIsExpanded(!isExpanded)}
-        className={`group w-full flex items-center gap-1 py-1 text-primary-400 dark:text-primary-500 text-s font-sans ${hasDiff ? "cursor-pointer" : "cursor-default"}`}
+        className={`group w-full flex items-center gap-1 py-0.5 text-s font-sans ${hasDiff ? "cursor-pointer" : "cursor-default"}`}
       >
         {!isCompact && (
-          <Edit className="size-4 text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary" />
+          <Edit className="size-3.5 text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary" />
         )}
         {!isCompact && (
-          <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
-            Edit
+          <span className="text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
+            Edited
           </span>
         )}
-        <span className="text-primary-400 dark:text-primary-500 font-medium truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
           {fileName}
         </span>
         {(added > 0 || removed > 0) && (
-          <span className="text-primary-400 dark:text-primary-500 text-xs shrink-0 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className="text-primary-500 text-xs shrink-0 group-hover:text-primary-950 group-hover:dark:text-primary">
             {added > 0 && (
               <span className="text-green-600 dark:text-green-400">
                 +{added}
@@ -77,17 +77,17 @@ export function EditDisplay({
         )}
         {hasDiff && (
           <ArrowUp
-            className={`size-3.5 shrink-0 text-primary-800 dark:text-primary-300 opacity-0 transition-all duration-200 group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+            className={`size-3.5 shrink-0 text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
           />
         )}
       </button>
 
       {hasDiff && (
         <div
-          className={`grid transition-all duration-200 rounded-md  border border-primary-200/50 dark:border-primary-700/30 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+          className={`grid transition-all duration-200 rounded-md border border-primary-200/50 dark:border-primary-700/30 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
         >
           <div className="min-h-0 overflow-hidden">
-            <div className=" max-h-80 overflow-y-auto noscrollbar p-0.5">
+            <div className=" max-h-80 overflow-y-auto noscrollbar p-0.25">
               <PatchDiff
                 patch={unifiedDiff}
                 style={
@@ -210,8 +210,22 @@ function extractUnifiedDiff(output: unknown): string[] {
   if (typeof parsed === "object" && parsed !== null) {
     const obj = parsed as Record<string, unknown>;
     if (typeof obj.detailedContent === "string") {
-      // Parse unified diff — skip header lines (---, +++, @@) and keep +/-/context lines
-      return obj.detailedContent.split("\n").filter((l) => {
+      const content = obj.detailedContent;
+
+      // If it doesn't look like a unified diff, treat all lines as additions (new file)
+      const isUnifiedDiff =
+        content.startsWith("--- ") ||
+        content.startsWith("diff ") ||
+        content.startsWith("@@");
+      if (!isUnifiedDiff) {
+        return content
+          .split("\n")
+          .filter((l) => l !== "")
+          .map((l) => `+${l}`);
+      }
+
+      // Standard unified diff — skip headers, keep +/-/context lines
+      return content.split("\n").filter((l) => {
         if (
           l.startsWith("diff ") ||
           l.startsWith("index ") ||

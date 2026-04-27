@@ -21,17 +21,17 @@ export function ToolSubGroupAccordion({ subGroup }: ToolSubGroupAccordionProps) 
     <div className="">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="group w-full flex items-center gap-1 py-1 text-primary-400 dark:text-primary-500 text-s font-sans cursor-pointer"
+        className="group w-full flex items-center gap-1 py-1  text-s font-sans cursor-pointer"
       >
-        <span className="text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary shrink-0">{icon}</span>
-        <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary shrink-0">
+        <span className="text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary shrink-0">{icon}</span>
+        <span className="text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary shrink-0">
           {subGroup.toolType}
         </span>
-        <span className="text-primary-400 dark:text-primary-500 text-xs group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className="text-primary-500 text-xs group-hover:text-primary-950 group-hover:dark:text-primary">
           ({subGroup.events.length})
         </span>
         <ArrowUp
-          className={`size-3.5 shrink-0 text-primary-400 dark:text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          className={`size-3.5 shrink-0 text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
       </button>
 

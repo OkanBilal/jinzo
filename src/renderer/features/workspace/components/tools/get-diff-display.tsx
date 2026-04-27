@@ -9,6 +9,7 @@ interface DiffStats {
   filesChanged?: number;
   insertions?: number;
   deletions?: number;
+  shortstat?: string;
 }
 
 export function GetDiffDisplay({
@@ -28,40 +29,28 @@ export function GetDiffDisplay({
     <div className="">
       <button
         onClick={() => hasContent && setIsExpanded(!isExpanded)}
-        className={`group w-full flex items-center gap-1 py-1 text-primary-400 dark:text-primary-500 text-s font-sans ${hasContent ? "cursor-pointer" : "cursor-default"}`}
+        className={`group w-full flex items-center gap-1 py-1 text-s font-sans ${hasContent ? "cursor-pointer" : "cursor-default"}`}
       >
-        {!isCompact && <Mains className="size-3.5 text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary" />}
+        {!isCompact && <Mains className="size-3.5 text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary" />}
         {!isCompact && (
-          <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
-            GetDiff
+          <span className="text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
+            Checked diff
           </span>
         )}
-        {stats && (
-          <span className="flex items-center gap-1.5 text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
-            {stats.filesChanged != null && (
-              <span>{stats.filesChanged} file{stats.filesChanged !== 1 ? "s" : ""}</span>
-            )}
-            {stats.insertions != null && (
-              <span className="text-green-500">+{stats.insertions}</span>
-            )}
-            {stats.deletions != null && (
-              <span className="text-red-400">-{stats.deletions}</span>
-            )}
-          </span>
-        )}
+
         {files && files.length > 0 && (
-          <span className="text-primary-400 dark:text-primary-500 truncate text-xs font-mono group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
             {files.length <= 3 ? files.map(shortName).join(", ") : `${shortName(files[0])} +${files.length - 1}`}
           </span>
         )}
         {!stats && !files?.length && (
-          <span className="text-primary-400 dark:text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
             {params.runId ? `run: ${params.runId.slice(0, 8)}` : "workspace diff"}
           </span>
         )}
         {hasContent && (
           <ArrowUp
-            className={`size-3.5 shrink-0 text-primary-400 dark:text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+            className={`size-3.5 shrink-0 text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
           />
         )}
       </button>
@@ -70,7 +59,7 @@ export function GetDiffDisplay({
         <div className={`grid transition-all duration-200 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
           <div className="min-h-0 overflow-hidden">
             <div className=" ">
-              <pre className="noscrollbar text-s font-mono text-primary-600 dark:text-primary-400 whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-64 overflow-y-auto">
+              <pre className="noscrollbar text-s font-mono text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-64 overflow-y-auto">
                 {diffText}
               </pre>
             </div>
@@ -81,6 +70,64 @@ export function GetDiffDisplay({
   );
 }
 
+/**
+ * Agent tool output is sometimes a content array, e.g.
+ * `[{ "type": "text", "text": "{ \"diffText\": \"...\", \"files\": [...], \"stats\": {...} }" }]`
+ */
+function tryExtractWorkspaceDiffPayload(output: unknown): unknown | undefined {
+  if (!Array.isArray(output)) return undefined;
+  for (const item of output) {
+    if (typeof item !== "object" || item === null) continue;
+    const rec = item as Record<string, unknown>;
+    if (rec.type === "text" && typeof rec.text === "string") {
+      try {
+        const inner = JSON.parse(rec.text) as unknown;
+        if (
+          inner !== null &&
+          typeof inner === "object" &&
+          ("diffText" in (inner as object) || "files" in (inner as object))
+        ) {
+          return inner;
+        }
+      } catch {
+        /* next */
+      }
+    }
+    if ("diffText" in rec || ("files" in rec && "stats" in rec)) {
+      return item;
+    }
+  }
+  return undefined;
+}
+
+function normalizeStats(raw: unknown): DiffStats | null {
+  if (raw === null || typeof raw !== "object") return null;
+  const s = raw as Record<string, unknown>;
+  const out: DiffStats = {};
+
+  if (typeof s.filesChanged === "number") out.filesChanged = s.filesChanged;
+  else if (typeof s.files === "number") out.filesChanged = s.files;
+  if (typeof s.insertions === "number") out.insertions = s.insertions;
+  if (typeof s.deletions === "number") out.deletions = s.deletions;
+  if (typeof s.shortstat === "string") {
+    out.shortstat = s.shortstat;
+    if (out.filesChanged == null) {
+      const mFiles = /(\d+)\s+files?\s+changed/.exec(s.shortstat);
+      if (mFiles) out.filesChanged = Number(mFiles[1]);
+    }
+    if (out.insertions == null) {
+      const mIns = /(\d+)\s+insertions?\(\+\)/.exec(s.shortstat);
+      if (mIns) out.insertions = Number(mIns[1]);
+    }
+    if (out.deletions == null) {
+      const mDel = /(\d+)\s+deletions?\(-\)/.exec(s.shortstat);
+      if (mDel) out.deletions = Number(mDel[1]);
+    }
+  }
+
+  return Object.keys(out).length > 0 ? out : null;
+}
+
 function parseDiffOutput(output: unknown): {
   diffText: string | null;
   files: string[] | null;
@@ -88,7 +135,13 @@ function parseDiffOutput(output: unknown): {
 } {
   if (!output) return { diffText: null, files: null, stats: null };
 
-  let parsed = output;
+  const extracted = tryExtractWorkspaceDiffPayload(output);
+  let parsed: unknown = extracted !== undefined ? extracted : output;
+
+  if (Array.isArray(parsed) && extracted === undefined) {
+    return { diffText: null, files: null, stats: null };
+  }
+
   if (typeof parsed === "string") {
     try {
       parsed = JSON.parse(parsed);
@@ -97,14 +150,11 @@ function parseDiffOutput(output: unknown): {
     }
   }
 
-  if (typeof parsed === "object" && parsed !== null) {
+  if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
     const obj = parsed as Record<string, unknown>;
     const diffText = typeof obj.diffText === "string" ? obj.diffText : null;
     const files = Array.isArray(obj.files) ? (obj.files as string[]) : null;
-    const stats =
-      typeof obj.stats === "object" && obj.stats !== null
-        ? (obj.stats as DiffStats)
-        : null;
+    const stats = normalizeStats(obj.stats);
     return { diffText, files, stats };
   }
 

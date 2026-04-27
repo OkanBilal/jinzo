@@ -20,6 +20,7 @@ import { GlobDisplay, type GlobParams } from "./glob-display";
 import { ReadDisplay, type ReadParams } from "./read-display";
 import { GrepDisplay, type GrepParams } from "./grep-display";
 import { EditDisplay, type EditParams } from "./edit-display";
+import { DeleteDisplay, type DeleteParams } from "./delete-display";
 import { ViewDisplay, type ViewParams } from "./view-display";
 import { ToolSearchDisplay, type ToolSearchParams } from "./tool-search-display";
 import { SkillDisplay, type SkillParams } from "./skill-display";
@@ -43,6 +44,22 @@ function getToolParams<T>(
       : fallback;
 }
 
+function hasMeaningfulOutput(value: unknown): boolean {
+  if (value === undefined || value === null) {
+    return false;
+  }
+  if (typeof value === "string") {
+    return value.trim().length > 0;
+  }
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  if (typeof value === "object") {
+    return Object.keys(value as Record<string, unknown>).length > 0;
+  }
+  return true;
+}
+
 export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   const { toolName, params, summary } = parseToolContent(event.content);
   const toolNameLower = toolName.toLowerCase();
@@ -51,6 +68,37 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     | undefined;
   const displayName = getToolType(event.content);
   const { icon } = getToolInfo(displayName);
+
+  const hasParamsOrInput =
+    (params !== null && Object.keys(params).length > 0) ||
+    (metadataInput !== undefined && Object.keys(metadataInput).length > 0);
+  const hasSummary = Boolean(summary?.trim());
+  const isEmptyTool =
+    !hasParamsOrInput &&
+    !hasSummary &&
+    !hasMeaningfulOutput(event.metadata?.output);
+  const emptyLabel = "No input or output";
+
+  if (isEmptyTool) {
+    if (isCompact) {
+      return (
+        <div className="flex items-center gap-1 px-1 text-s font-sans">
+          <span className="text-primary-500/60 shrink-0">{emptyLabel}</span>
+        </div>
+      );
+    }
+    return (
+      <div className=" ">
+        <div className="flex items-center gap-1 text-s font-sans">
+          <span className="text-primary-500/60 group-hover:text-primary-900 group-hover:dark:text-primary-200">{icon}</span>
+          <span className="text-primary-500/60 group-hover:text-primary-900 group-hover:dark:text-primary-200 font-medium">
+            {displayName}
+          </span>
+          <span className="text-primary-500/60 italic truncate">{emptyLabel}</span>
+        </div>
+      </div>
+    );
+  }
 
   if (toolNameLower === "todowrite") {
     const todos = metadataInput?.todos ?? params?.todos;
@@ -103,7 +151,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
       : params
         ? (params as WriteParams)
         : { file_path: summary };
-    return <WriteDisplay params={writeParams} />;
+    return <WriteDisplay params={writeParams} output={event.metadata?.output} />;
   }
 
   // Show BashDisplay for bash/shell tool calls
@@ -156,6 +204,20 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
         ? (params as ReadParams)
         : { file_path: summary };
     return <ReadDisplay params={readParams} output={event.metadata?.output} isCompact={isCompact} />;
+  }
+
+  // Show DeleteDisplay for delete file tool calls (e.g. Cursor ACP)
+  if (toolNameLower === "delete") {
+    const deleteParams = getToolParams<DeleteParams>(metadataInput, params, {
+      file_path: summary,
+    });
+    return (
+      <DeleteDisplay
+        params={deleteParams}
+        output={event.metadata?.output}
+        isCompact={isCompact}
+      />
+    );
   }
 
   // Show ViewDisplay for Copilot view tool calls
@@ -211,7 +273,12 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   }
 
   // Show AskUserQuestionDisplay for interactive question tool calls
-  if (toolName.toLowerCase() === "askuserquestion") {
+  // Claude: AskUserQuestion — Copilot/Codex SDK: ask_user
+  if (
+    toolNameLower === "askuserquestion" ||
+    toolNameLower === "ask_user" ||
+    toolNameLower === "askuser"
+  ) {
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
       | undefined;
@@ -223,8 +290,12 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     return <AskUserQuestionDisplay params={askParams} output={event.metadata?.output} isCompact={isCompact} />;
   }
 
-  // Show WebFetchDisplay for web fetch tool calls
-  if (toolName.toLowerCase() === "webfetch" || toolName.toLowerCase() === "web_fetch") {
+  // Show WebFetchDisplay for web fetch (Copilot) and WebSearch (Codex: input.query, output "Searched: ...")
+  if (
+    toolName.toLowerCase() === "webfetch" ||
+    toolName.toLowerCase() === "web_fetch" ||
+    toolName.toLowerCase() === "websearch"
+  ) {
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
       | undefined;
@@ -232,7 +303,9 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
       ? (metadataInput as WebFetchParams)
       : params
         ? (params as WebFetchParams)
-        : { url: summary };
+        : toolName.toLowerCase() === "websearch"
+          ? { query: summary }
+          : { url: summary };
     return <WebFetchDisplay params={fetchParams} output={event.metadata?.output} isCompact={isCompact} />;
   }
 
@@ -340,8 +413,8 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   return (
     <div className="py-0.5 px-2 hover:bg-primary-50 dark:hover:bg-primary/5 rounded">
       <div className="flex items-center gap-2 text-s font-sans">
-        <span className="dark:text-primary-300">{icon}</span>
-        <span className="dark:text-primary-300 font-medium">{displayName}</span>
+        <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">{icon}</span>
+        <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary font-medium">{displayName}</span>
         <span className="text-primary-500 truncate">{summary}</span>
       </div>
     </div>

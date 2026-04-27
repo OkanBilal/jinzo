@@ -90,7 +90,7 @@ export function FileUploadDropdown({
         tooltip="Upload file or photo"
         tooltipPosition="top"
         onClick={onToggle}
-        className="p-1.5 hover:bg-primary-200/30 dark:hover:bg-primary-300/20 rounded-full transition-colors cursor-pointer"
+        className="p-1.5 hover:bg-primary-200/30 dark:hover:bg-primary-800 rounded-full transition-colors cursor-pointer"
         aria-label="Upload file"
         aria-expanded={isOpen}
       >

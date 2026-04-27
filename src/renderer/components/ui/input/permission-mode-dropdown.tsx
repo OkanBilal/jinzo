@@ -10,11 +10,7 @@ const PERMISSION_MODES = [
     label: "Ask permissions",
     description: "Always ask before making changes",
   },
-  {
-    value: "auto",
-    label: "Auto",
-    description: "Agent decides when to prompt or allow",
-  },
+
   {
     value: "acceptEdits",
     label: "Auto accept edits",

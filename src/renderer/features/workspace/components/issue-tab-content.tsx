@@ -90,7 +90,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
               </ReactMarkdown>
             </div>
           ) : (
-            <p className="text-sm text-primary-400 dark:text-primary-500 italic">
+            <p className="text-sm text-primary-400 dark:text-primary-500">
               Details not synced yet or no description provided.
             </p>
           )}

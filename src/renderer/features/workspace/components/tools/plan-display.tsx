@@ -5,6 +5,7 @@ import { markdownComponents } from "@/components/markdown-components";
 import type { RunEvent } from "../../types";
 import { Plan, ArrowUp } from "@/components/ui/icons";
 import { useUpdateToolCallMutation } from "@/lib/redux/api/toolsApi";
+import { Button } from "@/components/ui";
 
 type PlanStatus = "pending" | "applied" | "dismissed";
 
@@ -61,29 +62,29 @@ export function PlanDisplay({ event, onApplyPlan }: PlanDisplayProps) {
   const isPending = status === "pending";
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-primary-500/20 dark:border-primary-400/15 bg-primary-50/50 dark:bg-primary-500/5 max-w-2xl flex flex-col">
+    <div className="overflow-hidden rounded-xl glass-morphism flex flex-col my-4">
       {/* Header — badge + collapse toggle */}
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center gap-2 px-4 py-2.5 cursor-pointer hover:bg-primary-100/50 dark:hover:bg-primary-500/10 transition-colors"
       >
-        <Plan className="size-3.5 text-primary-600 dark:text-primary-400 shrink-0" />
-        <span className="text-xs font-medium text-primary-700 dark:text-primary-300">
+        <Plan className="size-3.5 text-primary-500 shrink-0" />
+        <span className="text-xs font-medium text-primary-500">
           Plan
         </span>
         {status === "applied" && (
-          <span className="flex items-center gap-1 text-xxs text-primary-600 dark:text-primary-400">
+          <span className="flex items-center gap-1 text-xxs text-primary-500">
             Applied
           </span>
         )}
         {status === "dismissed" && (
-          <span className="text-xxs text-primary-500 dark:text-primary-400">
+          <span className="text-xxs text-primary-500">
             Dismissed
           </span>
         )}
         <ArrowUp
-          className={`size-3 text-primary-500 dark:text-primary-400 ml-auto transition-transform ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          className={`size-3 text-primary-500 ml-auto transition-transform ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
       </button>
 
@@ -105,20 +106,20 @@ export function PlanDisplay({ event, onApplyPlan }: PlanDisplayProps) {
           {/* Action buttons — only when pending */}
           {isPending && (
             <div className="flex items-center gap-2 px-4 py-2.5 border-t border-primary-500/10 dark:border-primary-400/10 shrink-0">
-              <button
-                type="button"
+              <Button
+                variant="submit"
+                size="xs"
                 onClick={handleApply}
-                className="px-3 py-1 rounded-lg text-xs font-medium bg-primary-600 dark:bg-primary-500 text-white hover:bg-primary-700 dark:hover:bg-primary-400 transition-colors cursor-pointer"
               >
                 Apply Plan
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="secondary"
+                size="xs"
                 onClick={handleDismiss}
-                className="px-3 py-1 rounded-lg text-xs font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-500/10 transition-colors cursor-pointer"
               >
                 Dismiss
-              </button>
+              </Button>
             </div>
           )}
         </>

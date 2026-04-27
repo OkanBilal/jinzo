@@ -108,7 +108,7 @@ export function SignalTabContent({ signal }: SignalTabContentProps) {
               </ReactMarkdown>
             </div>
           ) : (
-            <p className="text-sm text-primary-400 dark:text-primary-500 italic">
+            <p className="text-sm text-primary-400 dark:text-primary-500">
               No description provided.
             </p>
           )}

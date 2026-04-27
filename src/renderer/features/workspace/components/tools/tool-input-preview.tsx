@@ -39,6 +39,15 @@ function filePath(input: Record<string, unknown>): string {
   return str(input.fileName ?? input.filePath ?? input.file_path ?? input.path ?? input.file ?? "");
 }
 
+/** Approval / tool preview: show only the filename, not the full absolute path */
+function basenameDisplay(p: string): string {
+  if (!p) return "";
+  const normalized = p.replace(/\\/g, "/").trim();
+  const withoutQuery = normalized.split("?")[0] ?? normalized;
+  const parts = withoutQuery.split("/").filter((s) => s.length > 0);
+  return parts.length > 0 ? parts[parts.length - 1]! : p;
+}
+
 function str(val: unknown, maxLen = 300): string {
   const s = typeof val === "string" ? val : String(val ?? "");
   return s.length > maxLen ? s.slice(0, maxLen) + "…" : s;
@@ -54,7 +63,7 @@ function Mono({ children }: { children: React.ReactNode }) {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-primary-400 dark:text-primary-500 text-xxs capitalize tracking-wide">
+    <span className="text-primary-400 dark:text-primary-500 text-xs capitalize tracking-wide">
       {children}
     </span>
   );
@@ -88,16 +97,16 @@ function DiffView({ diff, oldStr, newStr }: { diff?: string; oldStr?: string; ne
   if (lines.length === 0) return null;
 
   return (
-    <div className="text-xs leading-relaxed font-mono px-3 py-2 max-h-40 overflow-y-auto noscrollbar">
+    <div className="text-xs leading-relaxed font-mono   max-h-40 overflow-y-auto noscrollbar">
       {lines.map((l, lineNum) => (
         <div
           key={`${lineNum}:${l.type}`}
           className={
             l.type === "add"
-              ? "text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30"
+              ? "text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 px-2"
               : l.type === "remove"
-                ? "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30"
-                : "text-primary-600 dark:text-primary-400"
+                ? "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 px-2"
+                : "text-primary-600 dark:text-primary-400 px-2"
           }
         >
           {l.prefix}{l.text}
@@ -115,7 +124,7 @@ const RENDERERS: Record<string, Renderer> = {
   Bash: (input) => (
     <>
       {!!input.description && (
-        <div className="text-primary-400 dark:text-primary-500 italic">
+        <div className="text-primary-400 dark:text-primary-500">
           {str(input.description)}
         </div>
       )}
@@ -131,7 +140,8 @@ const RENDERERS: Record<string, Renderer> = {
   Read: (input) => (
     <>
       <div>
-        <Label>file</Label> <Mono>{str(input.file_path)}</Mono>
+        <Label>file</Label>{" "}
+        <Mono>{basenameDisplay(str(input.file_path))}</Mono>
       </div>
       {!!(input.offset || input.limit) && (
         <div className="text-primary-500 text-xxs">
@@ -146,7 +156,8 @@ const RENDERERS: Record<string, Renderer> = {
   Write: (input) => (
     <>
       <div className="px-1 pb-1">
-        <Label>file</Label> <Mono>{str(input.file_path)}</Mono>
+        <Label>file</Label>{" "}
+        <Mono>{basenameDisplay(str(input.file_path))}</Mono>
       </div>
       {!!input.content && (
         <div className="bg-primary-50 dark:bg-primary/5 rounded-lg">
@@ -159,7 +170,10 @@ const RENDERERS: Record<string, Renderer> = {
   Edit: (input) => (
     <>
       <div className="px-1 pb-1">
-        <Label>file</Label> <Mono>{str(input.file_path ?? input.path)}</Mono>
+        <Label>file</Label>{" "}
+        <Mono>
+          {basenameDisplay(str(input.file_path ?? input.path))}
+        </Mono>
       </div>
       <div className="bg-primary-50 dark:bg-primary/5 rounded-lg">
         <DiffView
@@ -209,7 +223,7 @@ const RENDERERS: Record<string, Renderer> = {
         <Label>url</Label> <Mono>{str(input.url)}</Mono>
       </div>
       {!!input.prompt && (
-        <div className="text-primary-400 dark:text-primary-500 italic mt-1">
+        <div className="text-primary-400 dark:text-primary-500 mt-1">
           {str(input.prompt)}
         </div>
       )}
@@ -234,7 +248,7 @@ const RENDERERS: Record<string, Renderer> = {
         </div>
       )}
       {!!input.description && (
-        <div className="text-primary-400 dark:text-primary-500 italic">
+        <div className="text-primary-400 dark:text-primary-500">
           {str(input.description)}
         </div>
       )}
@@ -249,7 +263,7 @@ const RENDERERS: Record<string, Renderer> = {
         </div>
       )}
       {!!input.overview && (
-        <div className="text-primary-400 dark:text-primary-500 italic">
+        <div className="text-primary-400 dark:text-primary-500">
           {str(input.overview, 500)}
         </div>
       )}
@@ -276,7 +290,8 @@ const RENDERERS: Record<string, Renderer> = {
   NotebookEdit: (input) => (
     <>
       <div>
-        <Label>notebook</Label> <Mono>{str(input.notebook_path)}</Mono>
+        <Label>notebook</Label>{" "}
+        <Mono>{basenameDisplay(str(input.notebook_path))}</Mono>
       </div>
       {!!input.edit_mode && (
         <div>
@@ -296,7 +311,7 @@ const RENDERERS: Record<string, Renderer> = {
     <>
 
       <div className="px-1 pb-1">
-        <Label>file</Label> <Mono>{filePath(input)}</Mono>
+        <Label>file</Label> <Mono>{basenameDisplay(filePath(input))}</Mono>
       </div>
       {!!input.diff && (
         <div className="bg-primary-50 dark:bg-primary/5 rounded-lg">
@@ -319,7 +334,7 @@ const RENDERERS: Record<string, Renderer> = {
 
   "[permission:read]": (input) => (
     <div className="px-3 py-2">
-      <Label>file</Label> <Mono>{filePath(input)}</Mono>
+      <Label>file</Label> <Mono>{basenameDisplay(filePath(input))}</Mono>
     </div>
   ),
 };

@@ -28,22 +28,17 @@ export function ReadDisplay({
     <div className="">
       <button
         onClick={() => hasContent && setIsExpanded(!isExpanded)}
-        className={`group w-full flex items-center gap-1 py-1 text-primary-400 dark:text-primary-500 text-s font-sans ${hasContent ? "cursor-pointer" : "cursor-default"}`}
+        className={`group w-full flex items-center gap-1 py-1 text-s font-sans ${hasContent ? "cursor-pointer" : "cursor-default"}`}
       >
         {!isCompact && (
-          <Read className="size-4 text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary" />
+          <Read className="size-3.5 shrink-0 text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary" />
         )}
         {!isCompact && (
-          <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className="text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
             Read
           </span>
         )}
-        {numLines > 0 && (
-          <span className="text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
-            {numLines} lines
-          </span>
-        )}
-        <code className="text-primary-400 dark:text-primary-500 font-mono text-xs truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <code className="text-primary-500 font-sans truncate group-hover:text-primary-950 group-hover:dark:text-primary">
           {shortPath(
             params.file_path ||
               params.path ||
@@ -55,9 +50,14 @@ export function ReadDisplay({
               "",
           )}
         </code>
+        {numLines > 0 && (
+          <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+            ({numLines} lines)
+          </span>
+        )}
         {hasContent && (
           <ArrowUp
-            className={`size-3.5 shrink-0 text-primary-400 dark:text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+            className={`size-3.5 shrink-0 text-primary-500  opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
           />
         )}
       </button>
@@ -68,7 +68,7 @@ export function ReadDisplay({
         >
           <div className="min-h-0 overflow-hidden">
             <div className=" ">
-              <pre className="noscrollbar text-xs font-mono text-primary-600 dark:text-primary-400 whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+              <pre className="noscrollbar text-xs font-mono text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
                 {content}
               </pre>
             </div>
@@ -124,5 +124,5 @@ function parseReadOutput(output: unknown): {
 
 function shortPath(fullPath: string): string {
   const parts = fullPath.split("/");
-  return parts.length > 3 ? ".../" + parts.slice(-3).join("/") : fullPath;
+  return parts.length > 3 ? "" + parts.slice(-1).join("/") : fullPath;
 }

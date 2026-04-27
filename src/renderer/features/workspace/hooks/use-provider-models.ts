@@ -5,9 +5,16 @@ import {
   useGetProviderSkillsQuery,
   useGetProviderByIdQuery,
   useUpdateProviderMutation,
+  type ModelInfo,
 } from "@/lib/redux/api/providersApi";
 import { setWorkspaceModel } from "@/lib/redux/slices/workspaceSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
+
+function getModelPrettyName(model: ModelInfo, variant: string): string {
+  if (variant !== "claude" || !model.description) return model.displayName;
+  const firstPart = model.description.split("·")[0].trim();
+  return firstPart.replace(/ with 1M context$/, " [1M]");
+}
 
 export function useProviderModels(
   activeProviderId: string,
@@ -125,14 +132,10 @@ export function useProviderModels(
     }
   }, [providerData, activeProviderId, updateProvider, variant]);
 
-  const { modelDisplayNames } = useMemo(() => {
-    if (providerModels && providerModels.length > 0) {
-      return {
-        modelDisplayNames: providerModels.map((m) => m.displayName),
-      };
-    }
-    return { modelDisplayNames: [] };
-  }, [providerModels]);
+  const modelDisplayNames = useMemo(
+    () => (providerModels ?? []).map((m) => getModelPrettyName(m, variant)),
+    [providerModels, variant],
+  );
 
   const selectedModel = externalSelectedModel ?? persistedModel ?? "";
   const setSelectedModel = useCallback(
@@ -146,10 +149,10 @@ export function useProviderModels(
   const selectedModelDisplayName = useMemo(() => {
     if (providerModels) {
       const model = providerModels.find((m) => m.id === selectedModel);
-      return model?.displayName ?? selectedModel;
+      return model ? getModelPrettyName(model, variant) : selectedModel;
     }
     return "";
-  }, [providerModels, selectedModel]);
+  }, [providerModels, selectedModel, variant]);
 
   const selectedModelInfo = useMemo(() => {
     if (providerModels) {
@@ -183,17 +186,17 @@ export function useProviderModels(
   }, [selectedModelInfo, effortLevel, thinkingMode, handleEffortLevelChange]);
 
   const handleModelChange = useCallback(
-    (displayName: string) => {
+    (prettyName: string) => {
       if (providerModels) {
-        const model = providerModels.find((m) => m.displayName === displayName);
+        const model = providerModels.find((m) => getModelPrettyName(m, variant) === prettyName);
         if (model) {
           setSelectedModel(model.id);
           return;
         }
       }
-      setSelectedModel(displayName);
+      setSelectedModel(prettyName);
     },
-    [providerModels, setSelectedModel],
+    [providerModels, setSelectedModel, variant],
   );
 
   return {

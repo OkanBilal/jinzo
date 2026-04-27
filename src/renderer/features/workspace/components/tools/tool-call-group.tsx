@@ -38,20 +38,20 @@ export function ToolCallGroup({
     <div>
       <button
         onClick={() => setExpandedOverride(!isExpanded)}
-        className="group w-full flex items-center gap-1  text-primary-400 dark:text-primary-500 text-s font-sans cursor-pointer"
+        className="group w-full flex items-center gap-1 mb-1 text-s font-sans cursor-pointer"
       >
         <div className="flex items-center gap-1 transition-all duration-200">
           {/* <Tools className="size-3.5 rotate-90 dark:text-primary-200 text-primary-700 group-hover:text-primary-950 group-hover:dark:text-primary" /> */}
-          <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className="text-primary-500  group-hover:text-primary-950 group-hover:dark:text-primary">
             {toolCount} tool call{toolCount !== 1 ? "s" : ""}
           </span>
-          <span className="text-xs text-primary-400 dark:text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className=" text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
             ({toolSummary}
             {moreCount})
           </span>
         </div>
         <ArrowUp
-          className={`size-3.5 shrink-0 text-primary-400 dark:text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          className={`size-3.5 shrink-0 text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
 {/*
         {group.isRunning && (
@@ -77,4 +77,4 @@ export function ToolCallGroup({
 
 // Re-export for backwards compatibility
 export { InfoGroup } from "./info-group";
-export { groupEvents, type EventGroup } from "../../utils/group-events";
+export { groupEvents, isPlanToolCallGroup, type EventGroup } from "../../utils/group-events";

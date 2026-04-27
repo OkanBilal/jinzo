@@ -19,15 +19,6 @@ interface ModelSelectDropdownProps {
   variant?: "claude" | "copilot" | "codex" | "cursor";
 }
 
-/** Shorten Claude's generic model aliases into branded names. */
-function formatClaudeModelName(model: string): string {
-  const lower = model.toLowerCase();
-  if (lower === "default (recommended)" || lower === "default" || lower === "opus") return "Claude Opus 4.6";
-  if (lower === "sonnet") return "Claude Sonnet 4.6";
-  if (lower === "haiku") return "Claude Haiku 4.5";
-  return model;
-}
-
 /**
  * Format raw Cursor model slugs into human-readable names.
  * Rules:
@@ -77,7 +68,6 @@ function formatCursorModelName(model: string): string {
 }
 
 function formatDisplayName(model: string, variant?: string): string {
-  if (variant === "claude") return formatClaudeModelName(model);
   if (variant === "cursor") return formatCursorModelName(model);
   return model;
 }
@@ -114,7 +104,7 @@ export function ModelSelectDropdown({
           tooltipPosition="top"
           type="button"
           onClick={noModels ? undefined : onToggle}
-          className={`text-sm font-medium px-2 py-1.5 flex items-center gap-1.5 ${
+          className={`text-sm font-medium px-2 py-1 flex items-center gap-1.5 ${
             noModels
               ? "text-primary-400 dark:text-primary-600 cursor-not-allowed"
               : "cursor-pointer text-primary-700 dark:text-primary-300"
@@ -129,7 +119,7 @@ export function ModelSelectDropdown({
             <span>No models found</span>
           ) : (
             <>
-              {getModelIcon(displayModel)}
+              {getModelIcon(displayModel, variant)}
               {displayModel}
               <ArrowUp className={`size-3.5 rotate-180 `} />
             </>
@@ -160,7 +150,7 @@ export function ModelSelectDropdown({
                     : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
                 }`}
               >
-                {getModelIcon(displayName)}
+                {getModelIcon(displayName, variant)}
                 {displayName}
               </Button>
             );

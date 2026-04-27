@@ -9,6 +9,23 @@ export interface EventGroup {
   isRunning?: boolean;
 }
 
+/** Tool events rendered as PlanDisplay — same name rules as `groupEvents` standalone plan groups. */
+function toolEventPlanName(event: { type: string; content: string }): string | null {
+  if (event.type !== "tool_call") return null;
+  const colonIdx = event.content.indexOf(":");
+  return (colonIdx !== -1 ? event.content.substring(0, colonIdx).trim() : event.content).toLowerCase();
+}
+
+function isPlanToolEvent(event: { type: string; content: string }): boolean {
+  const n = toolEventPlanName(event);
+  return n === "plan" || n === "exitplanmode" || n === "create plan";
+}
+
+export function isPlanToolCallGroup(group: EventGroup): boolean {
+  if (group.type !== "tool_calls") return false;
+  return group.events.some((ev) => isPlanToolEvent(ev));
+}
+
 export function groupEvents(events: RunEvent[]): EventGroup[] {
   const groups: EventGroup[] = [];
   let currentToolGroup: RunEvent[] = [];
@@ -29,9 +46,7 @@ export function groupEvents(events: RunEvent[]): EventGroup[] {
   for (const event of events) {
     if (event.type === "tool_call") {
       // Plan/ExitPlanMode tool calls render standalone, never inside a group
-      const colonIdx = event.content.indexOf(":");
-      const name = (colonIdx !== -1 ? event.content.substring(0, colonIdx).trim() : event.content).toLowerCase();
-      if (name === "plan" || name === "exitplanmode" || name === "create plan") {
+      if (isPlanToolEvent(event)) {
         flushToolGroup();
         groups.push({
           id: `plan-${event.id}`,

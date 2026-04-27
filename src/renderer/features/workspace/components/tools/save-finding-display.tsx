@@ -58,27 +58,27 @@ export function SaveFindingDisplay({
     <div className="">
       <button
         onClick={() => hasFindings && setIsExpanded(!isExpanded)}
-        className={`group w-full flex items-center gap-1 py-1 text-primary-400 dark:text-primary-500 text-s font-sans ${hasFindings ? "cursor-pointer" : "cursor-default"}`}
+        className={`group w-full flex items-center gap-1 py-1 text-s font-sans ${hasFindings ? "cursor-pointer" : "cursor-default"}`}
       >
-        {!isCompact && <Mains className="size-3.5 text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary" />}
+        {!isCompact && <Mains className="size-3.5 text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary" />}
         {!isCompact && (
-          <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
-            {findings.length === 1 ? "Finding" : "Findings"}
+          <span className="text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
+            Saved findings
           </span>
         )}
-        <span className="flex items-center gap-1.5 text-primary-400 dark:text-primary-500">
+        <span className="flex items-center gap-1.5 text-primary-500">
           {critical > 0 && <span className="text-red-400">{critical} critical</span>}
           {warning > 0 && <span className="text-yellow-400">{warning} warning</span>}
           {info > 0 && <span className="text-blue-400">{info} info</span>}
         </span>
         {findings.length === 1 && findings[0].file && (
-          <span className="text-primary-400 dark:text-primary-500 truncate text-xs font-mono group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className="text-primary-500 truncate text-xs font-mono group-hover:text-primary-950 group-hover:dark:text-primary">
             {shortName(findings[0].file)}
           </span>
         )}
         {hasFindings && (
           <ArrowUp
-            className={`size-3.5 shrink-0 text-primary-400 dark:text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+            className={`size-3.5 shrink-0 text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
           />
         )}
       </button>
@@ -91,22 +91,22 @@ export function SaveFindingDisplay({
                 <div key={`${f.file ?? ""}:${f.lineStart ?? ""}:${f.severity ?? ""}`} className="bg-primary-50 dark:bg-primary/5 rounded-md p-2 space-y-1">
                   <div className="flex items-center gap-2 text-xs">
                     {f.severity && (
-                      <span className={`px-1.5 py-0.5 rounded font-medium ${SEVERITY_STYLES[f.severity] ?? "bg-primary-500/10 text-primary-400"}`}>
+                      <span className={`px-1.5 py-0.5 rounded font-medium ${SEVERITY_STYLES[f.severity] ?? "bg-primary-500/10 text-primary-500"}`}>
                         {f.severity}
                       </span>
                     )}
                     {f.file && (
-                      <span className="font-mono text-primary-500">
+                        <span className="font-mono text-primary-950 dark:text-primary">
                         {shortName(f.file)}
                         {f.lineStart != null && `:${f.lineStart}${f.lineEnd != null && f.lineEnd !== f.lineStart ? `-${f.lineEnd}` : ""}`}
                       </span>
                     )}
                   </div>
                   {f.message && (
-                    <p className="text-s text-primary-600 dark:text-primary-400">{f.message}</p>
+                    <p className="text-s text-primary-950 dark:text-primary">{f.message}</p>
                   )}
                   {f.suggestion && (
-                    <p className="text-xs text-green-500 dark:text-green-400 italic">{f.suggestion}</p>
+                    <p className="text-xs text-green-600 dark:text-green-400">{f.suggestion}</p>
                   )}
                 </div>
               ))}

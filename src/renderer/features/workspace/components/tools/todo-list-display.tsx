@@ -16,20 +16,20 @@ export function TodoListDisplay({ todos }: { todos: TodoItem[] }) {
     <div className="">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="group w-full flex items-center gap-1 py-1 text-primary-400 dark:text-primary-500 text-s font-sans cursor-pointer"
+        className="group w-full flex items-center gap-1 py-1  text-s font-sans cursor-pointer"
       >
-        <Check className="size-3.5 text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary" />
-        <span className="text-primary-400 dark:text-primary-500 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">Todo</span>
-        <span className="text-primary-400 dark:text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+        <Check className="size-3.5 text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary" />
+        <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">Todo</span>
+        <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
           {completedCount}/{todos.length} completed
         </span>
         {inProgressItem && (
-          <span className="text-amber-500 dark:text-amber-400 truncate">
+          <span className="text-amber-600 dark:text-amber-400 truncate">
             • {inProgressItem.content}
           </span>
         )}
         <ArrowUp
-          className={`size-3.5 shrink-0 text-primary-400 dark:text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
+          className={`size-3.5 shrink-0 text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
       </button>
 
@@ -41,10 +41,10 @@ export function TodoListDisplay({ todos }: { todos: TodoItem[] }) {
                 <div
                   className={`mt-0.5 size-4 rounded flex items-center justify-center shrink-0 ${
                     todo.status === "completed"
-                      ? "bg-green-500/20 text-green-500"
+                      ? "bg-green-600/20 text-green-600"
                       : todo.status === "in_progress"
                         ? "bg-amber-500/20 text-amber-500"
-                        : "bg-primary-200 dark:bg-primary-700 text-primary-400"
+                        : "bg-primary-50 dark:bg-primary/5 text-primary-500"
                   }`}
                 >
                   {todo.status === "completed" && <Check className="size-3" />}
@@ -55,9 +55,9 @@ export function TodoListDisplay({ todos }: { todos: TodoItem[] }) {
                 <span
                   className={`${
                     todo.status === "completed"
-                      ? "text-primary-400 line-through"
+                        ? "text-primary-500 line-through"
                       : todo.status === "in_progress"
-                        ? "text-primary-700 dark:text-primary-200"
+                        ? "text-primary-950 dark:text-primary"
                         : "text-primary-500"
                   }`}
                 >

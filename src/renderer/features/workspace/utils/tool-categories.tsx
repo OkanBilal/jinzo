@@ -21,8 +21,8 @@ import {
   Mcp,
   Mains,
   Sparkles,
-  Delete,
   Grep,
+  Trash,
 } from "@/components/ui/icons";
 
 export const TOOL_CATEGORIES: Record<
@@ -111,7 +111,7 @@ export const TOOL_CATEGORIES: Record<
   },
   delete: {
     category: "File",
-    icon: <Delete className="size-3.5" />,
+    icon: <Trash className="size-3.5" />,
   },
   webfetch: {
     category: "Search",
@@ -142,6 +142,10 @@ export const TOOL_CATEGORIES: Record<
     icon: <Sparkles className="size-4" />,
   },
   askuserquestion: {
+    category: "Interaction",
+    icon: <Question className="size-4" />,
+  },
+  ask_user: {
     category: "Interaction",
     icon: <Question className="size-4" />,
   },

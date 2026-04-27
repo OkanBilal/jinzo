@@ -15,6 +15,7 @@ export function ToolApprovalDialog({
   onRespond,
   variant,
 }: ToolApprovalDialogProps) {
+  const isCursor = variant === "cursor";
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [freeText, setFreeText] = useState("");
 
@@ -34,13 +35,13 @@ export function ToolApprovalDialog({
     let answer: string;
     if (selectedOptions.length > 0) {
       answer = selectedOptions.join(", ");
-    } else if (freeText.trim()) {
+    } else if (!isCursor && freeText.trim()) {
       answer = freeText.trim();
     } else {
-      return; // nothing selected
+      return;
     }
     onRespond(request.requestId, true, answer);
-  }, [request.requestId, selectedOptions, freeText, onRespond]);
+  }, [request.requestId, selectedOptions, freeText, isCursor, onRespond]);
 
   const toggleOption = useCallback(
     (label: string) => {
@@ -57,67 +58,117 @@ export function ToolApprovalDialog({
     [request.multiSelect],
   );
 
+  const canSubmit =
+    selectedOptions.length > 0 ||
+    (!isCursor && freeText.trim().length > 0);
+
   if (request.kind === "ask_user") {
     return (
-      <div className="mx-auto max-w-210 px-4 mb-4">
-        <div className="rounded-xl  border border-primary-200/20 dark:border-primary-700/30 bg-primary-50/50 dark:bg-primary/5 p-4 space-y-3">
-          <div className="flex items-start gap-2">
-            <Question className="size-4 dark:text-primary-400 text-primary-600 mt-0.5 shrink-0" />
-            <div className="space-y-3 flex-1 min-w-0">
-              <p className="text-xs text-primary-600 dark:text-primary-400 ">
-                {request.question || "Claude is asking a question"}
-              </p>
-
-              {request.options && request.options.length > 0 && (
-                <div className="space-y-1.5">
-                  {request.options.map((opt) => (
-                    <button
-                      key={opt.label}
-                      onClick={() => toggleOption(opt.label)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors border ${
-                        selectedOptions.includes(opt.label)
-                          ? " bg-primary-200 dark:bg-primary-800 text-primary-500 dark:text-primary-400"
-                          : "border-primary-400/20 dark:border-primary-700/20 hover:bg-primary-300/20 dark:hover:bg-primary-600/30 cursor-pointer duration-200 transition-all text-primary-500 dark:text-primary-400"
-                      }`}
-                    >
-                      <span className="font-medium">{opt.label}</span>
-                      {opt.description && (
-                        <span className="ml-1.5 text-primary-400 dark:text-primary-300">
-                          {opt.description}
-                        </span>
-                      )}
-                    </button>
-                  ))}
+      <div className="mx-auto mb-4 max-w-210 px-4">
+        <div className="overflow-hidden rounded-xl  glass-morphism">
+          <div className="flex gap-3 px-3.5 pb-2 pt-3.5 sm:px-4 sm:pt-4">
+            <Question className="mt-0.5 size-4 shrink-0 text-primary-600 dark:text-primary-400" />
+            <div className="min-w-0 flex-1 space-y-2">
+              {request.multiSelect && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-lg bg-primary-100/50 px-1.5 py-0.5 text-xxs font-medium text-primary-600 dark:bg-primary-900/40 dark:text-primary-400">
+                    Multi-select
+                  </span>
                 </div>
               )}
+              <p className="text-sm font-medium leading-snug text-primary-900 dark:text-primary-100">
+                {request.question || "The agent is asking a question."}
+              </p>
+            </div>
+          </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={freeText}
-                  onChange={(e) => setFreeText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSubmitAnswer();
-                  }}
-                  placeholder="Type a custom answer..."
-                  className="flex-1 bg-primary-200/50 rounded-lg dark:bg-primary-700/30 hover:bg-primary-100/50 dark:hover:bg-primary-600/30 cursor-pointer duration-200 transition-all px-3 py-1.5 text-xs text-primary-200 dark:text-primary-300 placeholder:text-primary-400 dark:placeholder:text-primary-500 focus:outline-none focus:border-primary-400"
-                />
+          {request.options && request.options.length > 0 && (
+            <div className="space-y-2 px-3.5 pb-3 sm:px-4">
+              {request.options.map((opt) => {
+                const isSelected = selectedOptions.includes(opt.label);
+                return (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    onClick={() => toggleOption(opt.label)}
+                    className={`flex w-full gap-2.5 rounded-lg  px-2.5 py-2.5 text-left text-xs transition-colors ${
+                      isSelected
+                        ? " bg-emerald-500/8  dark:bg-emerald-500/10"
+                        : " bg-primary-100/30 hover:border-primary-300/70 dark:bg-primary-800/50 dark:hover:border-primary-600/50"
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded ${
+                        isSelected
+                          ? " bg-emerald-500 text-white dark:bg-emerald-600"
+                          : " bg-primary-50/80 dark:border-primary-600 dark:bg-primary-900/50"
+                      }`}
+                      aria-hidden
+                    >
+                      {isSelected && (
+                        <span className="text-[10px] font-bold leading-none text-white">
+                          ✓
+                        </span>
+                      )}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <span
+                        className={`font-semibold ${
+                          isSelected
+                            ? "text-emerald-800 dark:text-emerald-200"
+                            : "text-primary-800 dark:text-primary-200"
+                        }`}
+                      >
+                        {opt.label}
+                      </span>
+                      {opt.description && (
+                        <p className="mt-1 text-xxs leading-relaxed text-primary-600 dark:text-primary-400">
+                          {opt.description}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="border-t border-primary-200/40 px-3.5 py-3 dark:border-primary-700/25 sm:px-4">
+            <div
+              className={`flex flex-col gap-3 sm:flex-row sm:items-end ${isCursor ? "sm:justify-end" : ""}`}
+            >
+              {!isCursor && (
+                <label className="min-w-0 flex-1">
+                  <span className="sr-only">Custom answer</span>
+                  <input
+                    type="text"
+                    value={freeText}
+                    onChange={(e) => setFreeText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSubmitAnswer();
+                    }}
+                    placeholder="Type a custom answer…"
+                    className="w-full rounded-lg bg-primary-100/50   px-3 py-2 text-xs text-primary-950 transition-colors placeholder:text-primary-500 focus:outline-none dark:bg-primary-800/50 dark:text-primary-100 dark:placeholder:text-primary-500"
+                  />
+                </label>
+              )}
+              <div className="flex shrink-0 items-center justify-end gap-2 sm:pb-px">
                 <Button
                   variant="primary"
                   size="xs"
-                  className="min-w-16"
-                  onClick={handleSubmitAnswer}
-                  disabled={selectedOptions.length === 0 && !freeText.trim()}
-                >
-                  Submit
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="xs"
-                  className="min-w-16"
+                  className="min-w-18  text-primary-700 hover:bg-primary-200/40  dark:text-primary-300 dark:hover:bg-primary-800/50"
                   onClick={handleDeny}
                 >
                   Dismiss
+                </Button>
+                <Button
+                  variant="submit"
+                  size="xs"
+                  className="min-w-18 font-semibold shadow-sm disabled:opacity-45"
+                  onClick={handleSubmitAnswer}
+                  disabled={!canSubmit}
+                >
+                  Submit
                 </Button>
               </div>
             </div>
@@ -127,54 +178,51 @@ export function ToolApprovalDialog({
     );
   }
 
-  // tool_approval mode
   return (
-    <div className="mr-auto max-w-160 mb-4">
-      <div className=" space-y-3 bg-primary-50/50 dark:bg-primary/5 rounded-2xl p-5 ">
-        <div className="flex items-start gap-2">
-          <div className="space-y-2 flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-primary-200 dark:text-primary-300 mb-2">
-                Tool approval required
-              </span>
-              <span className="px-1.5 py-0.5 mb-2 rounded-lg text-xxs bg-primary-200/10 capitalize dark:bg-primary/10 text-primary-300 dark:text-primary-400">
-                {request.toolName}
-              </span>
-            </div>
+    <div className="mr-auto mb-4 max-w-160">
+      <div className="overflow-hidden rounded-xl p-4 glass-morphism">
+        <div className="min-w-0 flex-1 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-primary-900 dark:text-primary-100">
+              Tool approval required
+            </span>
+            <span className="rounded-lg bg-primary-100/40 px-2 py-0.5 text-xxs font-medium capitalize text-primary-700 dark:bg-primary-800/40 dark:text-primary-300">
+              {request.toolName}
+            </span>
+          </div>
 
-            <ToolInputPreview
-              toolName={request.toolName}
-              toolInput={request.toolInput}
-            />
+          <ToolInputPreview
+            toolName={request.toolName}
+            toolInput={request.toolInput}
+          />
 
-            <div className="flex items-center gap-2 pt-2">
+          <div className="flex flex-wrap items-center gap-2 pt-3 ">
+            <Button
+              variant="submit"
+              size="xs"
+              className="min-w-16 font-semibold"
+              onClick={handleAllow}
+            >
+              Allow
+            </Button>
+            {variant === "codex" && (
               <Button
                 variant="primary"
                 size="xs"
                 className="min-w-16"
-                onClick={handleAllow}
+                onClick={handleAllowForSession}
               >
-                Allow
+                Allow for Session
               </Button>
-              {(variant === "codex") && (
-                <Button
-                  variant="primary"
-                  size="xs"
-                  className="min-w-16 opacity-80"
-                  onClick={handleAllowForSession}
-                >
-                  Allow for Session
-                </Button>
-              )}
-              <Button
-                variant="secondary"
-                size="xs"
-                className="min-w-16"
-                onClick={handleDeny}
-              >
-                Deny
-              </Button>
-            </div>
+            )}
+            <Button
+              variant="secondary"
+              size="xs"
+              className="min-w-16 text-primary-700 hover:bg-primary-200/40  dark:text-primary-300 dark:hover:bg-primary-800/50"
+              onClick={handleDeny}
+            >
+              Deny
+            </Button>
           </div>
         </div>
       </div>

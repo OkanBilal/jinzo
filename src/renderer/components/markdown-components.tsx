@@ -5,37 +5,37 @@ import { Components } from "react-markdown";
  */
 export const markdownComponents: Components = {
   h1: ({ children }) => (
-    <h1 className="text-lg font-bold mt-4 mb-2 font-sans text-primary-900 dark:text-primary-100 transition-all duration-150 ease-out">
+    <h1 className="text-lg font-bold mt-4 mb-2 font-sans text-primary-900 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="text-base font-semibold mt-3 mb-2 font-sans text-primary-900 dark:text-primary-100 transition-all duration-150 ease-out">
+    <h2 className="text-base font-semibold mt-3 mb-2 font-sans text-primary-900 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </h2>
   ),
   h3: ({ children }) => (
-    <h3 className="text-sm font-semibold mt-2 mb-1 font-sans text-primary-900 dark:text-primary-100 transition-all duration-150 ease-out">
+    <h3 className="text-sm font-semibold mt-2 mb-1 font-sans text-primary-900 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </h3>
   ),
   p: ({ children }) => (
-    <p className="mb-2 text-sm leading-relaxed font-sans text-primary-800 dark:text-primary-200 transition-all duration-150 ease-out">
+    <p className=" text-sm leading-relaxed font-sans text-primary-800 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </p>
   ),
   ul: ({ children }) => (
-    <ul className="list-disc text-sm list-inside font-sans mb-2 space-y-1 text-primary-800 dark:text-primary-200 transition-all duration-150 ease-out">
+    <ul className="list-disc text-sm list-inside font-sans mb-2 space-y-1 text-primary-800 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </ul>
   ),
   ol: ({ children }) => (
-    <ol className="list-decimal text-sm list-inside font-sans mb-2 space-y-1 text-primary-800 dark:text-primary-200 transition-all duration-150 ease-out">
+    <ol className="list-decimal text-sm list-inside font-sans mb-2 space-y-1 text-primary-800 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </ol>
   ),
   li: ({ children }) => (
-    <li className="ml-2 font-sans text-sm text-primary-800 dark:text-primary-200 transition-all duration-150 ease-out">{children}</li>
+    <li className="ml-2 font-sans text-sm text-primary-800 dark:text-primary transition-all duration-150 ease-out">{children}</li>
   ),
   table: ({ children }) => (
     <div className="overflow-x-auto my-4 rounded-lg border border-primary-300 dark:border-primary-700 transition-all duration-150 ease-out">
@@ -59,7 +59,7 @@ export const markdownComponents: Components = {
     </th>
   ),
   td: ({ children }) => (
-    <td className="px-4 py-3 text-sm font-sans text-primary-800 dark:text-primary-200 border-r border-primary-200 dark:border-primary-700 last:border-r-0 transition-all duration-150 ease-out">
+    <td className="px-4 py-3 text-sm font-sans text-primary-800 dark:text-primary border-r border-primary-200 dark:border-primary-700 last:border-r-0 transition-all duration-150 ease-out">
       {children}
     </td>
   ),
@@ -67,13 +67,13 @@ export const markdownComponents: Components = {
     const isInline = !className;
     if (isInline) {
       return (
-        <code className="px-1 py-0.5 rounded text-primary-900 dark:text-primary-100 text-[0.9em] bg-primary-200/40 dark:bg-primary/5  font-mono transition-all duration-150 ease-out">
+        <code className="px-1 py-0.5 rounded text-primary-900 dark:text-primary-100 text-[0.9em] bg-primary-200/40 dark:bg-primary/5  transition-all duration-150 ease-out">
           {children}
         </code>
       );
     }
     return (
-      <code className="block p-4 rounded-xl bg-primary-50 dark:bg-primary/5 text-primary-900 dark:text-primary-100 text-s font-mono overflow-x-auto transition-all duration-150 ease-out">
+      <code className="block p-4 rounded-xl bg-primary-50 dark:bg-primary/5 text-primary-900 dark:text-primary-100 text-s overflow-x-auto transition-all duration-150 ease-out">
         {children}
       </code>
     );
@@ -100,12 +100,12 @@ export const markdownComponents: Components = {
     </blockquote>
   ),
   strong: ({ children }) => (
-    <strong className="font-semibold text-primary-900 dark:text-primary-100 transition-all duration-150 ease-out">
+    <strong className="font-semibold text-primary-900 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </strong>
   ),
   em: ({ children }) => (
-    <em className="italic text-primary-800 dark:text-primary-200 transition-all duration-150 ease-out">
+    <em className="italic text-primary-800 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </em>
   ),
