@@ -309,10 +309,12 @@ export function useWorkspaceRuns(
   // --- Effects ---
 
   useEffect(() => {
-    clearState();
-    if (workspaceId) {
-      loadWorkspaceRuns(workspaceId);
-    }
+    void (async () => {
+      clearState();
+      if (workspaceId) {
+        await loadWorkspaceRuns(workspaceId);
+      }
+    })();
   }, [workspaceId, loadWorkspaceRuns, clearState]);
 
   // Derive the active run's status once per render so the poll effect below

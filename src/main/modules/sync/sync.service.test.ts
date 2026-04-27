@@ -56,6 +56,7 @@ function mockFetchThrows(err: unknown) {
       entities: EntityInput[];
     }> {
       throw err;
+      yield { provider: "github", entities: [] };
     }
     return gen();
   });

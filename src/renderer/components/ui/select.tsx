@@ -98,7 +98,7 @@ export default function Select<T extends string = string>({
       console.error("Error parsing themeConfig:", e);
       return getDefaultDropdownBackground(darkMode, 0.98);
     }
-  }, [useFixedBackground, activeSpace?.themeConfig, darkMode]);
+  }, [useFixedBackground, activeSpace, darkMode]);
 
   const fixedBackgroundClass = useFixedBackground
     ? "bg-linear-to-b from-primary to-primary-50 dark:from-primary-900 dark:to-primary-950"

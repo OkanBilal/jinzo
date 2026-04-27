@@ -58,7 +58,7 @@ export function LinkResourcesModal({
       const linkedIds = new Set(
         resources.filter((r) => r.isLinked).map((r) => r.id),
       );
-      setSelectedIds(linkedIds);
+      queueMicrotask(() => setSelectedIds(linkedIds));
     }
   }, [isOpen, resources]);
 

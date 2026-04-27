@@ -128,7 +128,7 @@ export function BrowserPanel() {
     if (!isOpen) {
       if (attached) {
         api.detach();
-        setAttached(false);
+        queueMicrotask(() => setAttached(false));
       }
       return;
     }
@@ -153,7 +153,7 @@ export function BrowserPanel() {
       cancelled = true;
       clearTimeout(t);
       api.detach();
-      setAttached(false);
+      queueMicrotask(() => setAttached(false));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, api]);

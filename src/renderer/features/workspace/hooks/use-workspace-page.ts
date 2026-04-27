@@ -109,13 +109,14 @@ export function useWorkspacePage(providerId: string) {
 
   // Sync pendingGoal from Redux to local state
   useEffect(() => {
-    if (pendingGoal) {
-      setGoal(pendingGoal);
-      if (pendingAutoExecute) {
-        setAutoExecute(true);
-      }
-      dispatch(clearPendingGoal());
-    }
+    if (!pendingGoal) return;
+    const nextGoal = pendingGoal;
+    const runAuto = pendingAutoExecute;
+    dispatch(clearPendingGoal());
+    queueMicrotask(() => {
+      setGoal(nextGoal);
+      if (runAuto) setAutoExecute(true);
+    });
   }, [pendingGoal, pendingAutoExecute, dispatch]);
 
   const {
@@ -253,7 +254,7 @@ export function useWorkspacePage(providerId: string) {
   // Auto-execute when pendingAutoExecute was set (e.g. "Review Changes" button, suggestion chips)
   useEffect(() => {
     if (autoExecute && goal) {
-      setAutoExecute(false);
+      queueMicrotask(() => setAutoExecute(false));
       if (!workspaceId) return;
       const run = async () => {
         if (activeRunId && canResume && activeRun && activeRun.status !== "running") {

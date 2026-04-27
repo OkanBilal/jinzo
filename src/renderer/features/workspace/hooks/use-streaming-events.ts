@@ -50,10 +50,13 @@ export function useStreamingEvents(activeRunId: string | null) {
   }, []);
 
   useEffect(() => {
+    const streams = streamsRef.current;
+    const listeners = listenersRef.current;
+
     if (!activeRunId) {
-      streamsRef.current.clear();
+      streams.clear();
       snapshotRef.current = [];
-      for (const listener of listenersRef.current) listener();
+      for (const listener of listeners) listener();
       return;
     }
 
@@ -85,9 +88,9 @@ export function useStreamingEvents(activeRunId: string | null) {
         cancelAnimationFrame(throttleRef.current);
         throttleRef.current = null;
       }
-      streamsRef.current.clear();
+      streams.clear();
       snapshotRef.current = [];
-      for (const listener of listenersRef.current) listener();
+      for (const listener of listeners) listener();
     };
   }, [activeRunId, notify]);
 
