@@ -455,10 +455,18 @@ type TurnRenderRow =
       previousSegments: number[][];
       /** Plan tool groups — pulled out of `previousSegments` so they stay outside the collapsed bucket. */
       planBreakoutIndices: number[];
+      /** Groups containing image artifacts — kept visible so generated images aren't hidden behind the accordion. */
+      messageBreakoutIndices: number[];
       lastSegment: number[];
       previousMessageCount: number;
       previousToolSummary: string;
     };
+
+function groupHasImageArtifact(g: EventGroup): boolean {
+  return g.events.some(
+    (e) => e.type === "artifact" && e.metadata?.kind === "image",
+  );
+}
 
 /** Linear plan: every group index appears exactly once, in order. */
 function buildTurnRenderRows(groups: EventGroup[]): TurnRenderRow[] {
@@ -501,35 +509,52 @@ function buildTurnRenderRows(groups: EventGroup[]): TurnRenderRow[] {
     }
 
     // Plan (PlanDisplay) must stay out of the collapsed region so Apply / Dismiss stay usable.
+    // Image artifacts also stay outside — generated images shouldn't be hidden behind the accordion.
     const planBreakout: number[] = [];
+    const messageBreakout: number[] = [];
     for (const range of prevRanges) {
       for (const gIdx of range) {
-        if (isPlanToolCallGroup(groups[gIdx]!)) {
+        const g = groups[gIdx]!;
+        if (isPlanToolCallGroup(g)) {
           planBreakout.push(gIdx);
+        } else if (groupHasImageArtifact(g)) {
+          messageBreakout.push(gIdx);
         }
       }
     }
     planBreakout.sort((a, b) => a - b);
-    const planSet = new Set(planBreakout);
+    messageBreakout.sort((a, b) => a - b);
+    const breakoutSet = new Set([...planBreakout, ...messageBreakout]);
     const filteredPrevRanges = prevRanges
-      .map((range) => range.filter((gIdx) => !planSet.has(gIdx)))
+      .map((range) => range.filter((gIdx) => !breakoutSet.has(gIdx)))
       .filter((range) => range.length > 0);
 
     if (filteredPrevRanges.length === 0) {
       rows.push({
         kind: "flat",
-        indices: [...planBreakout, ...expandIndexRange(segments[segments.length - 1]!)],
+        indices: [
+          ...messageBreakout,
+          ...planBreakout,
+          ...expandIndexRange(segments[segments.length - 1]!),
+        ],
       });
       continue;
     }
 
     const toolTotal = countToolCallsInRanges(groups, filteredPrevRanges);
+    let visibleMessageCount = 0;
+    for (const range of filteredPrevRanges) {
+      for (const gIdx of range) {
+        if (groups[gIdx]?.type === "response") visibleMessageCount++;
+      }
+    }
     rows.push({
       kind: "accordion",
       previousSegments: filteredPrevRanges,
       planBreakoutIndices: planBreakout,
+      messageBreakoutIndices: messageBreakout,
       lastSegment: expandIndexRange(segments[segments.length - 1]!),
-      previousMessageCount: segments.length - 1,
+      previousMessageCount: visibleMessageCount,
       previousToolSummary: formatAccordionToolSummary(toolTotal),
     });
   }
@@ -540,6 +565,7 @@ function buildTurnRenderRows(groups: EventGroup[]): TurnRenderRow[] {
 function AgentTurnMessagesAccordion({
   previousSegments,
   planBreakoutIndices,
+  messageBreakoutIndices,
   lastSegment,
   previousMessageCount,
   previousToolSummary,
@@ -548,6 +574,7 @@ function AgentTurnMessagesAccordion({
 }: {
   previousSegments: number[][];
   planBreakoutIndices: number[];
+  messageBreakoutIndices: number[];
   lastSegment: number[];
   previousMessageCount: number;
   previousToolSummary: string;
@@ -564,13 +591,13 @@ function AgentTurnMessagesAccordion({
   const expanded = isRunInProgress || open;
 
   const messageLabel =
-    previousMessageCount === 1
-      ? "1 message"
-      : `${previousMessageCount} messages`;
-  const label =
-    previousToolSummary !== ""
-      ? `${messageLabel} · ${previousToolSummary}`
-      : messageLabel;
+    previousMessageCount === 0
+      ? ""
+      : previousMessageCount === 1
+        ? "1 message"
+        : `${previousMessageCount} messages`;
+  const parts = [messageLabel, previousToolSummary].filter(Boolean);
+  const label = parts.length > 0 ? parts.join(" · ") : "tool calls";
 
   const previousInner = (
     <div className="space-y-4">
@@ -615,6 +642,13 @@ function AgentTurnMessagesAccordion({
         >
           <div className="min-h-0 overflow-hidden">{previousInner}</div>
         </div>
+        {messageBreakoutIndices.length > 0 && (
+          <div className="space-y-4">
+            {messageBreakoutIndices.map((i) => (
+              <Fragment key={`acc-msg-${i}`}>{renderGroup(i)}</Fragment>
+            ))}
+          </div>
+        )}
         {planBreakoutIndices.length > 0 && (
           <div className="space-y-4">
             {planBreakoutIndices.map((i) => (
@@ -796,7 +830,7 @@ export function WorkspaceEvents({
               />
             )
           ) : (
-            <InfoGroup group={group} />
+            <InfoGroup group={group} workspaceRootPath={currentWorkspace?.rootPath} />
           )}
           {group.type !== "prompt_suggestion" && sessionBarForThis && (
             <SessionTimeBar
@@ -818,6 +852,7 @@ export function WorkspaceEvents({
       handleFork,
       variant,
       onApplyPlan,
+      currentWorkspace?.rootPath,
     ],
   );
 
@@ -868,6 +903,7 @@ export function WorkspaceEvents({
                     key={`row-acc-${row.previousSegments[0]?.[0] ?? 0}-${row.planBreakoutIndices.join("-") || "x"}-${row.lastSegment[0] ?? 0}`}
                     previousSegments={row.previousSegments}
                     planBreakoutIndices={row.planBreakoutIndices}
+                    messageBreakoutIndices={row.messageBreakoutIndices}
                     lastSegment={row.lastSegment}
                     previousMessageCount={row.previousMessageCount}
                     previousToolSummary={row.previousToolSummary}

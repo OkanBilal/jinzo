@@ -114,7 +114,8 @@ module.exports = {
       }
       return {
         osxSign: {
-          identity: 'Developer ID Application',
+          identity: 'Developer ID Application: Okan Bilal Balci (Y4MVJ7JSH6)',
+          identityValidation: false,
           optionsForFile: () => ({
             hardenedRuntime: true,
             entitlements: 'entitlements.plist',

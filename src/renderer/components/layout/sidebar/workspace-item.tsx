@@ -200,7 +200,7 @@ export default function WorkspaceItem({
                 <span className="size-2.75 mr-2 flex items-center" />
               )}
               {branch && !isRenamingBranch && (
-                <Muted className="text-xs  text-primary-900 dark:text-primary-200 truncate">
+                <Muted className={`text-xs  text-primary-900 dark:text-primary-200 truncate ${grouping === "status" ? "-ml-1.5" : ""}`}>
                   {branch}
                 </Muted>
               )}

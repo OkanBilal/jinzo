@@ -208,6 +208,8 @@ export function WorkspaceProviderPage({
         onRemoveContextIssue={ws.handleRemoveContextIssue}
         contextSignals={ws.contextSignals}
         onRemoveContextSignal={ws.handleRemoveContextSignal}
+        contextSkills={ws.contextSkills}
+        onRemoveContextSkill={ws.handleRemoveContextSkill}
         contextBrowserSelections={ws.contextBrowserSelections}
         onRemoveContextBrowserSelection={ws.handleRemoveContextBrowserSelection}
         workspacePath={ws.currentWorkspace?.rootPath}

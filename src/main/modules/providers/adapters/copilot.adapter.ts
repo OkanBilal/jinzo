@@ -1212,6 +1212,7 @@ export function createCopilotAdapter(
           contextIssues: request.contextIssues,
           contextSignals: request.contextSignals,
           contextFiles: request.contextFiles,
+          contextSkills: request.skills,
         });
 
         await onEvent({
@@ -1486,6 +1487,7 @@ export function createCopilotAdapter(
           contextIssues: request.contextIssues,
           contextSignals: request.contextSignals,
           contextFiles: request.contextFiles,
+          contextSkills: request.skills,
         });
 
         await onEvent({

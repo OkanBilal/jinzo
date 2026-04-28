@@ -3,14 +3,15 @@ import { useDispatch } from "react-redux";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
 import type { FileNode } from "@/features/workspace/types/file-explorer";
-import type { ContextIssue, ContextSignal, ContextBrowserSelection } from "@/lib/redux/slices/workspaceSlice";
-import { addContextFile, addContextIssue } from "@/lib/redux/slices/workspaceSlice";
+import type { ContextIssue, ContextSignal, ContextSkill, ContextBrowserSelection } from "@/lib/redux/slices/workspaceSlice";
+import { addContextFile, addContextIssue, addContextSkill } from "@/lib/redux/slices/workspaceSlice";
 import type { UploadedFile } from "@/components/ui";
 import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
 import { InputForm } from "@/components/ui";
 import { SlashMenuDropdown } from "@/features/workspace/components/slash-menu-dropdown";
 import { FileMentionDropdown } from "@/features/workspace/components/file-mention-dropdown";
 import { IssueMentionDropdown } from "@/features/workspace/components/issue-mention-dropdown";
+import { SkillMentionDropdown } from "@/features/workspace/components/skill-mention-dropdown";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { ContextChips } from "./context-chips";
 import { InputToolbar } from "./input-toolbar";
@@ -19,6 +20,7 @@ import { useProviderModels } from "../hooks/use-provider-models";
 const EMPTY_CONTEXT_FILES: FileNode[] = [];
 const EMPTY_CONTEXT_ISSUES: ContextIssue[] = [];
 const EMPTY_CONTEXT_SIGNALS: ContextSignal[] = [];
+const EMPTY_CONTEXT_SKILLS: ContextSkill[] = [];
 const EMPTY_CONTEXT_BROWSER: ContextBrowserSelection[] = [];
 const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
 
@@ -38,6 +40,8 @@ interface WorkspaceInputProps {
   onRemoveContextIssue?: (entityId: string) => void;
   contextSignals?: ContextSignal[];
   onRemoveContextSignal?: (entityId: string) => void;
+  contextSkills?: ContextSkill[];
+  onRemoveContextSkill?: (name: string) => void;
   contextBrowserSelections?: ContextBrowserSelection[];
   onRemoveContextBrowserSelection?: (id: string) => void;
   workspacePath?: string;
@@ -63,6 +67,8 @@ export function WorkspaceInput({
   onRemoveContextIssue,
   contextSignals = EMPTY_CONTEXT_SIGNALS,
   onRemoveContextSignal,
+  contextSkills = EMPTY_CONTEXT_SKILLS,
+  onRemoveContextSkill,
   contextBrowserSelections = EMPTY_CONTEXT_BROWSER,
   onRemoveContextBrowserSelection,
   workspacePath,
@@ -75,6 +81,7 @@ export function WorkspaceInput({
   const slashCommandDropdownRef = useRef<HTMLDivElement>(null);
   const fileMentionDropdownRef = useRef<HTMLDivElement>(null);
   const issueMentionDropdownRef = useRef<HTMLDivElement>(null);
+  const skillMentionDropdownRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
 
   const variant = useWorkspaceVariant();
@@ -139,6 +146,11 @@ export function WorkspaceInput({
     { visible: false, filter: "" },
   );
 
+  const [dollarMenu, updateDollarMenu] = useReducer(
+    (prev: { visible: boolean; filter: string }, next: Partial<{ visible: boolean; filter: string }>) => ({ ...prev, ...next }),
+    { visible: false, filter: "" },
+  );
+
   // Detect slash commands when goal is set externally (e.g. quick actions)
   useEffect(() => {
     const slashMatch = goal.match(/(?:^|\s)\/(\S*)$/);
@@ -171,6 +183,13 @@ export function WorkspaceInput({
       } else {
         updateHashMenu({ visible: false, filter: "" });
       }
+
+      const dollarMatch = value.match(/(?:^|\s)\$(\S*)$/);
+      if (dollarMatch) {
+        updateDollarMenu({ filter: dollarMatch[1], visible: true });
+      } else {
+        updateDollarMenu({ visible: false, filter: "" });
+      }
     },
     [onGoalChange],
   );
@@ -189,14 +208,21 @@ export function WorkspaceInput({
 
   const handleSkillSelect = useCallback(
     (skill: SkillInfo) => {
-      const newGoal = goal.replace(/(?:^|\s)\/\S*$/, (match) => {
-        const prefix = match.startsWith(" ") ? " " : "";
-        return `${prefix}/${skill.name} `;
-      });
-      onGoalChange(newGoal);
-      updateSlashMenu({ visible: false, filter: "" });
+      const newGoal = goal.replace(/(?:^|\s)\$\S*$/, (match) =>
+        match.startsWith(" ") ? " " : "",
+      );
+      onGoalChange(newGoal.trimEnd());
+      updateDollarMenu({ visible: false, filter: "" });
+      if (!skill.path) return;
+      dispatch(
+        addContextSkill({
+          name: skill.name,
+          path: skill.path,
+          description: skill.description,
+        }),
+      );
     },
-    [goal, onGoalChange],
+    [goal, onGoalChange, dispatch],
   );
 
   const handleFileSelect = useCallback(
@@ -243,9 +269,9 @@ export function WorkspaceInput({
   );
 
   const handleSubmit = useCallback(() => {
-    if (atMenu.visible || slashMenu.visible || hashMenu.visible) return;
+    if (atMenu.visible || slashMenu.visible || hashMenu.visible || dollarMenu.visible) return;
     onSubmit();
-  }, [atMenu.visible, slashMenu.visible, hashMenu.visible, onSubmit]);
+  }, [atMenu.visible, slashMenu.visible, hashMenu.visible, dollarMenu.visible, onSubmit]);
 
   //Copilot related TODO:
   const authErrorMessage = (() => {
@@ -287,10 +313,12 @@ export function WorkspaceInput({
         contextFiles={contextFiles}
         contextIssues={contextIssues}
         contextSignals={contextSignals}
+        contextSkills={contextSkills}
         contextBrowserSelections={contextBrowserSelections}
         onRemoveContextFile={onRemoveContextFile}
         onRemoveContextIssue={onRemoveContextIssue}
         onRemoveContextSignal={onRemoveContextSignal}
+        onRemoveContextSkill={onRemoveContextSkill}
         onRemoveContextBrowserSelection={onRemoveContextBrowserSelection}
       />
       <div className="relative">
@@ -301,21 +329,27 @@ export function WorkspaceInput({
           onSubmit={handleSubmit}
           placeholder={
             canResume
-              ? "Ask a follow-up question, run /commands, @files or #issues to add context"
-              : "Ask to edit, run /skills, @files or #issues to add context"
+              ? "Ask a follow-up question, run /commands, $skills, @files or #issues to add context"
+              : "Ask to edit, run /commands, $skills, @files or #issues to add context"
           }
         />
         <SlashMenuDropdown
           commands={providerCommands}
-          skills={providerSkills}
           isOpen={slashMenu.visible}
           onSelectCommand={handleSlashCommandSelect}
-          onSelectSkill={handleSkillSelect}
           onClose={() => updateSlashMenu({ visible: false })}
           dropdownRef={slashCommandDropdownRef}
           filterText={slashMenu.filter}
           isLoadingCommands={isLoadingCommands}
-          isLoadingSkills={isLoadingSkills}
+        />
+        <SkillMentionDropdown
+          isOpen={dollarMenu.visible}
+          filterText={dollarMenu.filter}
+          skills={providerSkills}
+          isLoading={isLoadingSkills}
+          onSelectSkill={handleSkillSelect}
+          onClose={() => updateDollarMenu({ visible: false, filter: "" })}
+          dropdownRef={skillMentionDropdownRef}
         />
         <FileMentionDropdown
           isOpen={atMenu.visible}

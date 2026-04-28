@@ -53,6 +53,8 @@ export interface WorkRunRequest {
   contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
   /** Structured context files passed from the UI */
   contextFiles?: Array<{ path: string }>;
+  /** User-selected skills to invoke during this run (adapter decides how to inject) */
+  skills?: Array<{ name: string; path: string }>;
   /**
    * Per-run hooks configuration that overrides or extends adapter-level hooks.
    * Useful for dynamic hook configuration based on the specific run context.
@@ -247,6 +249,8 @@ export interface WorkRunContinueRequest {
   contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
   /** Structured context files to inject into this follow-up */
   contextFiles?: Array<{ path: string }>;
+  /** User-selected skills to invoke for this follow-up (adapter decides how to inject) */
+  skills?: Array<{ name: string; path: string }>;
   /**
    * Per-run hooks configuration for this continuation.
    * Useful for dynamic hook configuration based on the continuation context.

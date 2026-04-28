@@ -3,9 +3,10 @@ import type { FileNode } from "@/features/workspace/types/file-explorer";
 import type {
   ContextIssue,
   ContextSignal,
+  ContextSkill,
   ContextBrowserSelection,
 } from "@/lib/redux/slices/workspaceSlice";
-import { Close, Web } from "@/components/ui/icons";
+import { Close, Sparkles, Web } from "@/components/ui/icons";
 import { Code } from "@/components/ui/icons/space";
 import { ProviderIcon } from "./provider-icon";
 
@@ -13,10 +14,12 @@ interface ContextChipsProps {
   contextFiles: FileNode[];
   contextIssues: ContextIssue[];
   contextSignals?: ContextSignal[];
+  contextSkills?: ContextSkill[];
   contextBrowserSelections?: ContextBrowserSelection[];
   onRemoveContextFile?: (filePath: string) => void;
   onRemoveContextIssue?: (entityId: string) => void;
   onRemoveContextSignal?: (entityId: string) => void;
+  onRemoveContextSkill?: (name: string) => void;
   onRemoveContextBrowserSelection?: (id: string) => void;
 }
 
@@ -140,10 +143,12 @@ export function ContextChips({
   contextFiles,
   contextIssues,
   contextSignals = [],
+  contextSkills = [],
   contextBrowserSelections = [],
   onRemoveContextFile,
   onRemoveContextIssue,
   onRemoveContextSignal,
+  onRemoveContextSkill,
   onRemoveContextBrowserSelection,
 }: ContextChipsProps) {
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -153,6 +158,7 @@ export function ContextChips({
     contextFiles.length > 0 ||
     contextIssues.length > 0 ||
     contextSignals.length > 0 ||
+    contextSkills.length > 0 ||
     contextBrowserSelections.length > 0;
 
   return (
@@ -192,6 +198,25 @@ export function ContextChips({
                     onClick={() => onRemoveContextIssue(issue.entityId)}
                     className="w-4 h-4 flex items-center justify-center rounded p-0.5  transition-colors"
                     title="Remove from context"
+                  >
+                    <Close className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+            {contextSkills.map((skill) => (
+              <div
+                key={skill.name}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-violet-500/15 text-violet-300"
+                title={skill.description ?? skill.name}
+              >
+                <Sparkles className="w-3 h-3" />
+                <span className="truncate max-w-37.5">{skill.name}</span>
+                {onRemoveContextSkill && (
+                  <button
+                    onClick={() => onRemoveContextSkill(skill.name)}
+                    className="w-4 h-4 flex items-center justify-center rounded p-0.5 transition-colors hover:bg-violet-500/20"
+                    title="Remove skill"
                   >
                     <Close className="w-3 h-3" />
                   </button>

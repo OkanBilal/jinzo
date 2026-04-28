@@ -11,6 +11,8 @@ import {
   clearContextIssues,
   removeContextSignal,
   clearContextSignals,
+  removeContextSkill,
+  clearContextSkills,
   removeContextBrowserSelection,
   clearContextBrowserSelections,
   clearIssueTabs,
@@ -50,6 +52,9 @@ export function useWorkspacePage(providerId: string) {
   );
   const contextSignals = useSelector(
     (state: RootState) => state.workspace.contextSignals,
+  );
+  const contextSkills = useSelector(
+    (state: RootState) => state.workspace.contextSkills,
   );
   const contextBrowserSelections = useSelector(
     (state: RootState) => state.workspace.contextBrowserSelections,
@@ -100,6 +105,7 @@ export function useWorkspacePage(providerId: string) {
     dispatch(clearContextFiles());
     dispatch(clearContextIssues());
     dispatch(clearContextSignals());
+    dispatch(clearContextSkills());
     dispatch(clearContextBrowserSelections());
     dispatch(clearIssueTabs());
     dispatch(clearSignalTabs());
@@ -198,6 +204,7 @@ export function useWorkspacePage(providerId: string) {
     dispatch(clearContextFiles());
     dispatch(clearContextIssues());
     dispatch(clearContextSignals());
+    dispatch(clearContextSkills());
     dispatch(clearContextBrowserSelections());
   }, [dispatch]);
 
@@ -212,7 +219,7 @@ export function useWorkspacePage(providerId: string) {
       : undefined;
 
     if (activeRunId && canResume && activeRun && activeRun.status !== "running") {
-      const success = (await continueRun(activeRunId, goal, attachments, contextIssues, contextFiles, contextSignals, selectedModel, contextBrowserSelections)) ?? false;
+      const success = (await continueRun(activeRunId, goal, attachments, contextIssues, contextFiles, contextSignals, selectedModel, contextBrowserSelections, contextSkills)) ?? false;
       if (success) clearInputState();
     } else {
       const newRunId = await executeRun(
@@ -225,6 +232,7 @@ export function useWorkspacePage(providerId: string) {
         contextFiles,
         contextSignals,
         contextBrowserSelections,
+        contextSkills,
       );
       if (newRunId) {
         clearInputState();
@@ -237,6 +245,7 @@ export function useWorkspacePage(providerId: string) {
     contextFiles,
     contextIssues,
     contextSignals,
+    contextSkills,
     contextBrowserSelections,
     workspaceId,
     selectedWorkspace,
@@ -293,6 +302,13 @@ export function useWorkspacePage(providerId: string) {
     [dispatch],
   );
 
+  const handleRemoveContextSkill = useCallback(
+    (name: string) => {
+      dispatch(removeContextSkill(name));
+    },
+    [dispatch],
+  );
+
   const handleRemoveContextBrowserSelection = useCallback(
     (id: string) => {
       const sel = contextBrowserSelections.find((s) => s.id === id);
@@ -337,6 +353,7 @@ export function useWorkspacePage(providerId: string) {
     contextFiles,
     contextIssues,
     contextSignals,
+    contextSkills,
     contextBrowserSelections,
     openIssueTabs,
     openSignalTabs,
@@ -358,6 +375,7 @@ export function useWorkspacePage(providerId: string) {
     handleRemoveContextFile,
     handleRemoveContextIssue,
     handleRemoveContextSignal,
+    handleRemoveContextSkill,
     handleRemoveContextBrowserSelection,
     setAutoExecute,
     ...tabHandlers,

@@ -1380,6 +1380,20 @@ describe("runsService", () => {
       expect(run!.lastError).toBe("Aborted by user");
     });
 
+    it("marks running tool calls as error on abort", async () => {
+      createRun(db, { id: "r1", status: "running" });
+      vi.mocked(createWorkAdapter).mockReturnValue({ abortRun: vi.fn() } as any);
+      createToolCall(db, { runId: "r1", status: "running" });
+
+      const result = await runsService.abortRun("r1");
+      expect(result.success).toBe(true);
+
+      const calls = await runsRepo.findToolCallsByRun("r1");
+      expect(calls).toHaveLength(1);
+      expect(calls[0].status).toBe("error");
+      expect(calls[0].endedAt).toBeTruthy();
+    });
+
     it("calls adapter.abortRun when available", async () => {
       createRun(db, { id: "r1", status: "running" });
       const mockAdapter = {

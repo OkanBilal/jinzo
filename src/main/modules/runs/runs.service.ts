@@ -220,9 +220,31 @@ async function closePendingToolCalls(
   pendingToolCalls.clear();
 }
 
+/** Mark any DB tool calls still in `running` as ended (e.g. IPC abort has no in-memory pending map). */
+async function closeRunningToolCallsForRun(runId: string): Promise<void> {
+  try {
+    const calls = await runsRepo.findToolCallsByRun(runId);
+    if (calls.length === 0) return;
+    const now = new Date();
+    for (const tc of calls) {
+      if (tc.status !== "running") continue;
+      try {
+        await runsRepo.updateToolCall(tc.id, {
+          status: "error",
+          endedAt: now,
+        });
+      } catch (err) {
+        console.error(`[RunsService] Failed to close running tool call ${tc.id}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error(`[RunsService] Failed to load tool calls for abort cleanup ${runId}:`, err);
+  }
+}
+
 /**
  * Compute git diff since baseRef and persist into workspace_diffs.
- * Called after a run succeeds.
+ * Called after normal completion (success) and on user abort to capture partial workspace changes.
  */
 async function persistRunDiff(runId: string, workspaceId: string, rootPath: string): Promise<void> {
   const baseRef = runBaseRefs.get(runId);
@@ -813,6 +835,7 @@ export const runsService = {
           contextIssues: payload.contextIssues,
           contextSignals: payload.contextSignals,
           contextFiles: payload.contextFiles,
+          skills: payload.contextSkills,
         },
         async (event: WorkRunEvent) => {
           try {
@@ -1248,12 +1271,23 @@ export const runsService = {
         }
       }
 
-      // Update run status
+      // Same ordering as executeRun completion: diff before status flip (avoids renderer race).
+      const workspace = run.workspaceId
+        ? await workspacesRepo.findById(run.workspaceId)
+        : null;
+      if (workspace) {
+        await persistRunDiff(runId, workspace.id, workspace.rootPath);
+      } else {
+        runBaseRefs.delete(runId);
+      }
+
       await runsRepo.updateRun(runId, {
         status: "canceled",
         endedAt: new Date(),
         lastError: "Aborted by user",
       });
+
+      await closeRunningToolCallsForRun(runId);
 
       await closeActiveTurn(runId);
       cleanupTurnState(runId);
@@ -1421,6 +1455,7 @@ export const runsService = {
           contextIssues: payload.contextIssues,
           contextSignals: payload.contextSignals,
           contextFiles: payload.contextFiles,
+          skills: payload.contextSkills,
         },
         async (event) => {
           try {

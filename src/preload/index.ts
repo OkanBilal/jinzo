@@ -307,6 +307,7 @@ const api = {
       contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
       contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
       contextFiles?: Array<{ path: string }>;
+      contextSkills?: Array<{ name: string; path: string }>;
     }) => ipcRenderer.invoke("runs:execute", payload),
     abort: (runId: string) => ipcRenderer.invoke("runs:abort", runId),
     getToolCalls: (runId: string) =>
@@ -327,6 +328,7 @@ const api = {
       contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
       contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
       contextFiles?: Array<{ path: string }>;
+      contextSkills?: Array<{ name: string; path: string }>;
     }) => ipcRenderer.invoke("runs:continue", payload),
     canResume: (runId: string) => ipcRenderer.invoke("runs:canResume", runId),
     fork: (payload: {

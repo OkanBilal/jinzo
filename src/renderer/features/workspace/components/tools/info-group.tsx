@@ -1,11 +1,43 @@
-import { useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/components/markdown-components";
 import type { EventGroup } from "../../utils/group-events";
 import { Code } from "@/components/ui/icons/space";
-import { Picture, Document, Codex, Close } from "@/components/ui/icons";
+import { Picture, Document, Codex, Close, Sparkles } from "@/components/ui/icons";
 import { ProviderIcon } from "../provider-icon";
+
+const IMAGE_PATH_REGEX = /([~/]?[\w./-]+\.(?:png|jpe?g|webp|gif))\b/gi;
+
+function extractImagePaths(text: string): string[] {
+  if (!text) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const m of text.matchAll(IMAGE_PATH_REGEX)) {
+    const p = m[1];
+    if (!p || p.includes("://")) continue;
+    const idx = m.index ?? 0;
+    const before = text.slice(Math.max(0, idx - 12), idx);
+    if (before.includes("://")) continue;
+    if (seen.has(p)) continue;
+    seen.add(p);
+    out.push(p);
+  }
+  return out;
+}
+
+function resolveImagePath(rawPath: string, workspaceRoot?: string): string | null {
+  if (!rawPath) return null;
+  if (rawPath.startsWith("~")) return rawPath;
+  if (rawPath.startsWith("/")) return rawPath;
+  if (!workspaceRoot) return null;
+  const sep = workspaceRoot.endsWith("/") ? "" : "/";
+  return `${workspaceRoot}${sep}${rawPath}`;
+}
+
+function localImageUrl(absPath: string): string {
+  return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
+}
 
 function ImagePreviewModal({ name, dataUrl, onClose }: { name: string; dataUrl: string; onClose: () => void }) {
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -42,9 +74,10 @@ function ImagePreviewModal({ name, dataUrl, onClose }: { name: string; dataUrl: 
 
 interface InfoGroupProps {
   group: EventGroup;
+  workspaceRootPath?: string;
 }
 
-export function InfoGroup({ group }: InfoGroupProps) {
+export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
   const event = group.events[0];
   const [previewAtt, setPreviewAtt] = useState<{ name: string; dataUrl: string } | null>(null);
   if (!event) return null;
@@ -77,6 +110,11 @@ export function InfoGroup({ group }: InfoGroupProps) {
       dataUrl?: string;
       captureName?: string;
       sourcePath?: string;
+    }>;
+    const skills = (event.metadata?.skills ?? []) as Array<{
+      name: string;
+      path?: string;
+      description?: string;
     }>;
 
     if (isReview) {
@@ -123,8 +161,18 @@ export function InfoGroup({ group }: InfoGroupProps) {
                 onClose={() => setPreviewAtt(null)}
               />
             )}
-            {(files.length > 0 || attachments.length > 0 || issues.length > 0 || signals.length > 0) && (
+            {(files.length > 0 || attachments.length > 0 || issues.length > 0 || signals.length > 0 || skills.length > 0) && (
               <div className="flex flex-wrap gap-1.5 justify-end">
+                {skills.map((skill) => (
+                  <div
+                    key={`skill-${skill.name}`}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-violet-500/15 text-violet-300"
+                    title={skill.description ?? skill.name}
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span className="truncate max-w-60">{skill.name}</span>
+                  </div>
+                ))}
                 {issues.map((issue) => (
                   <div
                     key={`${issue.provider}-${issue.number ?? issue.title}`}
@@ -208,23 +256,36 @@ export function InfoGroup({ group }: InfoGroupProps) {
     return <div className="display-none" />;
   }
 
+  if (event.type === "artifact" && event.metadata?.kind === "image") {
+    const absPath = (event.metadata?.path as string | undefined) ?? "";
+    if (!absPath) return null;
+    const fileName = (event.metadata?.fileName as string | undefined) ?? absPath.split("/").pop() ?? "image";
+    return (
+      <div className="overflow-hidden">
+        <ImageArtifact absPath={absPath} fileName={fileName} onPreview={setPreviewAtt} />
+        {previewAtt && (
+          <ImagePreviewModal
+            name={previewAtt.name}
+            dataUrl={previewAtt.dataUrl}
+            onClose={() => setPreviewAtt(null)}
+          />
+        )}
+      </div>
+    );
+  }
+
   if (event.type === "artifact") {
     const content = event.content;
     const isStreaming = event.metadata?.streaming === true;
 
     return (
-      <div className="overflow-hidden">
-          <div className="prose prose-sm dark:prose-invert max-w-none relative">
-            <div className={isStreaming ? "streaming-text" : undefined}>
-              <ReactMarkdown
-                components={markdownComponents}
-                remarkPlugins={[remarkGfm]}
-              >
-                {content}
-              </ReactMarkdown>
-            </div>
-        </div>
-      </div>
+      <ArtifactBody
+        content={content}
+        isStreaming={isStreaming}
+        previewAtt={previewAtt}
+        onPreview={setPreviewAtt}
+        workspaceRootPath={workspaceRootPath}
+      />
     );
   }
 
@@ -233,6 +294,132 @@ export function InfoGroup({ group }: InfoGroupProps) {
       <span className="text-primary-600 dark:text-primary-300">
         {event.content}
       </span>
+    </div>
+  );
+}
+
+function ImageArtifact({
+  absPath,
+  fileName,
+  onPreview,
+}: {
+  absPath: string;
+  fileName: string;
+  onPreview: (att: { name: string; dataUrl: string }) => void;
+}) {
+  const url = localImageUrl(absPath);
+  const [error, setError] = useState<string | null>(null);
+
+  if (error) {
+    return (
+      <div
+        className="rounded-xl  dark:bg-red-900/5 bg-red-700/5 px-4 py-3 text-xs dark:text-red-300 text-red-700 break-all"
+        title={absPath}
+      >
+        <div className="font-medium mb-1">Image failed to load</div>
+        <div className="opacity-70 dark:text-red-300 text-red-700">{error}</div>
+        <div className="mt-1 font-mono opacity-60">{absPath}</div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onPreview({ name: fileName, dataUrl: url })}
+      className="block w-full overflow-hidden rounded-xl border-2 border-primary-200/40 dark:border-primary-800/50 bg-primary-100 dark:bg-primary-900 cursor-pointer"
+      title={absPath}
+    >
+      <img
+        src={url}
+        alt={fileName}
+        className="w-full h-full object-contain"
+        loading="lazy"
+        onError={(e) => {
+          const target = e.currentTarget;
+          console.error("[mains-localimg] image load failed", {
+            src: target.src,
+            absPath,
+            naturalWidth: target.naturalWidth,
+            naturalHeight: target.naturalHeight,
+          });
+          setError(`Failed to load (src=${target.src})`);
+        }}
+        onLoad={() => {
+          console.log("[mains-localimg] image loaded:", absPath);
+        }}
+      />
+    </button>
+  );
+}
+
+function ArtifactBody({
+  content,
+  isStreaming,
+  previewAtt,
+  onPreview,
+  workspaceRootPath,
+}: {
+  content: string;
+  isStreaming: boolean;
+  previewAtt: { name: string; dataUrl: string } | null;
+  onPreview: (att: { name: string; dataUrl: string } | null) => void;
+  workspaceRootPath?: string;
+}) {
+  const resolvedImages = useMemo(() => {
+    const out: Array<{ key: string; raw: string; abs: string; name: string }> = [];
+    const seen = new Set<string>();
+    for (const raw of extractImagePaths(content)) {
+      const abs = resolveImagePath(raw, workspaceRootPath);
+      if (!abs || seen.has(abs)) continue;
+      seen.add(abs);
+      out.push({ key: abs, raw, abs, name: raw.split("/").pop() ?? raw });
+    }
+    return out;
+  }, [content, workspaceRootPath]);
+
+  return (
+    <div className="overflow-hidden">
+      <div className="prose prose-sm dark:prose-invert max-w-none relative">
+        <div className={isStreaming ? "streaming-text" : undefined}>
+          <ReactMarkdown
+            components={markdownComponents}
+            remarkPlugins={[remarkGfm]}
+          >
+            {content}
+          </ReactMarkdown>
+        </div>
+      </div>
+      {resolvedImages.length > 0 && (
+        <div className="mt-3 flex flex-col gap-3">
+          {resolvedImages.map(({ key, abs, name }) => {
+            const url = localImageUrl(abs);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => onPreview({ name, dataUrl: url })}
+                className="block w-full overflow-hidden rounded-xl border border-primary-200/40 dark:border-primary-700/40 bg-primary-100 dark:bg-primary-900 cursor-pointer"
+                title={abs}
+              >
+                <img
+                  src={url}
+                  alt={name}
+                  className="w-full max-h-[480px] object-contain"
+                  loading="lazy"
+                />
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {previewAtt && (
+        <ImagePreviewModal
+          name={previewAtt.name}
+          dataUrl={previewAtt.dataUrl}
+          onClose={() => onPreview(null)}
+        />
+      )}
     </div>
   );
 }

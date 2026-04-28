@@ -29,6 +29,12 @@ export interface ContextSignal {
   eventCount: number;
 }
 
+export interface ContextSkill {
+  name: string;
+  path: string;
+  description?: string;
+}
+
 export interface ContextBrowserSelection {
   id: string;
   url: string;
@@ -70,6 +76,7 @@ export interface WorkspaceState {
   contextFiles: FileNode[];
   contextIssues: ContextIssue[];
   contextSignals: ContextSignal[];
+  contextSkills: ContextSkill[];
   contextBrowserSelections: ContextBrowserSelection[];
   openIssueTabs: IssueWithEntity[];
   openSignalTabs: SignalWithEntity[];
@@ -99,6 +106,7 @@ const initialState: WorkspaceState = {
   contextFiles: [],
   contextIssues: [],
   contextSignals: [],
+  contextSkills: [],
   contextBrowserSelections: [],
   openIssueTabs: [],
   openSignalTabs: [],
@@ -202,6 +210,17 @@ const workspaceSlice = createSlice({
     },
     clearContextSignals: (state) => {
       state.contextSignals = [];
+    },
+    addContextSkill: (state, action: PayloadAction<ContextSkill>) => {
+      if (!state.contextSkills.some(s => s.name === action.payload.name)) {
+        state.contextSkills.push(action.payload);
+      }
+    },
+    removeContextSkill: (state, action: PayloadAction<string>) => {
+      state.contextSkills = state.contextSkills.filter(s => s.name !== action.payload);
+    },
+    clearContextSkills: (state) => {
+      state.contextSkills = [];
     },
     addContextBrowserSelection: (state, action: PayloadAction<ContextBrowserSelection>) => {
       if (!state.contextBrowserSelections.some(b => b.id === action.payload.id)) {
@@ -318,6 +337,9 @@ export const {
   addContextSignal,
   removeContextSignal,
   clearContextSignals,
+  addContextSkill,
+  removeContextSkill,
+  clearContextSkills,
   addContextBrowserSelection,
   removeContextBrowserSelection,
   clearContextBrowserSelections,

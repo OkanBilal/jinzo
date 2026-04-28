@@ -1252,6 +1252,7 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
           contextIssues: request.contextIssues,
           contextSignals: request.contextSignals,
           contextFiles: request.contextFiles,
+          contextSkills: request.skills,
         });
 
         // 2. Send prompt via session/prompt (blocks until completion)
@@ -1423,6 +1424,7 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
           contextIssues: request.contextIssues,
           contextSignals: request.contextSignals,
           contextFiles: request.contextFiles,
+          contextSkills: request.skills,
         });
 
         // Build follow-up prompt

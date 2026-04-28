@@ -10,6 +10,59 @@ import { setPendingGoal, setPendingAutoExecute } from "@/lib/redux/slices/worksp
 import { expandDiffForFindings } from "../utils/expand-diff";
 import { normalizePath, pathsMatch } from "../utils/path-utils";
 import type { FileContentResponse, ServiceResponse } from "@/features/workspace/types/file-explorer";
+import { ImagePreviewModal } from "./image-preview-modal";
+
+const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp", "gif"]);
+
+function isImagePath(filePath: string | undefined): boolean {
+  if (!filePath) return false;
+  const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
+  return IMAGE_EXTENSIONS.has(ext);
+}
+
+function localImageUrl(absPath: string): string {
+  return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
+}
+
+function ImageDiffView({ absPath, fileName }: { absPath: string; fileName: string }) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const url = localImageUrl(absPath);
+
+  return (
+    <div className="h-full overflow-auto px-2 ">
+      <div className="mx-auto ">
+        {error ? (
+          <div className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-3 text-xs text-red-300 break-all">
+            <div className="font-medium mb-1">Image failed to load</div>
+            <div className="opacity-70">{error}</div>
+            <div className="mt-1 font-mono opacity-60">{absPath}</div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            className="block w-full overflow-hidden  cursor-pointer"
+            title={absPath}
+          >
+            <img
+              src={url}
+              alt={fileName}
+              className="w-full max-h-[70vh] object-contain"
+              loading="lazy"
+              onError={(e) => {
+                setError(`Failed to load (src=${(e.currentTarget as HTMLImageElement).src})`);
+              }}
+            />
+          </button>
+        )}
+        {previewOpen && (
+          <ImagePreviewModal name={fileName} src={url} onClose={() => setPreviewOpen(false)} />
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface Finding {
   id: string;
@@ -253,6 +306,16 @@ export function DiffViewer({
     () => makeFindingAnnotation({ colors, textColor, mutedColor, suggestionColor, onApprove: handleApprove, onFix: handleFix }),
     [colors, textColor, mutedColor, suggestionColor, handleApprove, handleFix],
   );
+
+  if (isImagePath(filePath) && workspace?.rootPath && filePath) {
+    const fileName = filePath.split("/").pop() ?? filePath;
+    const absPath = `${workspace.rootPath.replace(/\/$/, "")}/${filePath}`;
+    return (
+      <div className={`h-full overflow-auto ${className}`}>
+        <ImageDiffView absPath={absPath} fileName={fileName} />
+      </div>
+    );
+  }
 
   return (
     <div className={`h-full overflow-auto ${className}`}>

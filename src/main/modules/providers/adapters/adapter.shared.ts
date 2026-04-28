@@ -399,6 +399,7 @@ export async function emitUserPromptArtifact(
       eventCount?: number;
     }>;
     contextFiles?: Array<{ path: string }>;
+    contextSkills?: Array<{ name: string; path: string; description?: string }>;
   },
 ): Promise<void> {
   await onEvent({
@@ -426,6 +427,7 @@ export async function emitUserPromptArtifact(
       issues: options?.contextIssues,
       signals: options?.contextSignals,
       files: options?.contextFiles,
+      skills: options?.contextSkills,
     },
   });
 }

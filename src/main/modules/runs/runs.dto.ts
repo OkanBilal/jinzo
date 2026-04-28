@@ -271,6 +271,8 @@ export interface StartRunPayload {
   contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
   /** Structured context files (displayed as chips in the UI, injected into LLM prompt by adapter) */
   contextFiles?: Array<{ path: string }>;
+  /** User-selected skills to invoke (displayed as chips in the UI, injected by adapter) */
+  contextSkills?: Array<{ name: string; path: string }>;
 }
 
 /** Response when a run is started */
@@ -296,6 +298,8 @@ export interface ContinueRunPayload {
   contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
   /** Structured context files to inject into this follow-up */
   contextFiles?: Array<{ path: string }>;
+  /** User-selected skills to invoke for this follow-up */
+  contextSkills?: Array<{ name: string; path: string }>;
 }
 
 /** Response when a run is continued */

@@ -1370,6 +1370,7 @@ export function createClaudeAdapter(
           contextIssues: request.contextIssues,
           contextSignals: request.contextSignals,
           contextFiles: request.contextFiles,
+          contextSkills: request.skills,
         });
 
         await onEvent({
@@ -1732,6 +1733,7 @@ export function createClaudeAdapter(
           contextIssues: request.contextIssues,
           contextSignals: request.contextSignals,
           contextFiles: request.contextFiles,
+          contextSkills: request.skills,
         });
 
         await onEvent({

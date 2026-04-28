@@ -283,6 +283,8 @@ const activeRuns = new Map<string, {
   fileChangeBuffers: Map<string, string>;
   /** Shell stdout/stderr chunks per command_execution itemId (Codex streams here; completed item often omits aggregatedOutput) */
   commandOutputBuffers: Map<string, string>;
+  /** Absolute image paths already emitted as artifacts during this run (deduped) */
+  emittedImagePaths: Set<string>;
 }>();
 
 // Session ID mapping: runId → threadId (for resume support)
@@ -575,6 +577,79 @@ class CodexAppServer {
 // ─────────────────────────────────────────────────────────────
 // Adapter factory
 // ─────────────────────────────────────────────────────────────
+
+// Image path scanning helpers — used to surface generated images from tool outputs
+// even when the agent doesn't mention the path in chat text.
+const IMAGE_PATH_SCAN_REGEX = /([~/][\w./\- ]+\.(?:png|jpe?g|webp|gif))/gi;
+
+function expandHomeTilde(p: string): string {
+  if (p === "~") return os.homedir();
+  if (p.startsWith("~/")) return path.join(os.homedir(), p.slice(2));
+  return p;
+}
+
+function findImagePathsInValue(value: unknown): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const visit = (v: unknown, depth: number): void => {
+    if (v == null || depth > 6) return;
+    if (typeof v === "string") {
+      for (const m of v.matchAll(IMAGE_PATH_SCAN_REGEX)) {
+        const p = m[1];
+        if (!p || p.includes("://")) continue;
+        const idx = m.index ?? 0;
+        const before = v.slice(Math.max(0, idx - 12), idx);
+        if (before.includes("://")) continue;
+        if (seen.has(p)) continue;
+        seen.add(p);
+        out.push(p);
+      }
+      return;
+    }
+    if (Array.isArray(v)) {
+      for (const item of v) visit(item, depth + 1);
+      return;
+    }
+    if (typeof v === "object") {
+      for (const item of Object.values(v as Record<string, unknown>)) {
+        visit(item, depth + 1);
+      }
+    }
+  };
+  visit(value, 0);
+  return out;
+}
+
+function emitImageArtifacts(
+  events: WorkRunEvent[],
+  runId: string | undefined,
+  source: unknown,
+  ts: number,
+): void {
+  if (!runId) return;
+  const rs = activeRuns.get(runId);
+  if (!rs) return;
+  for (const raw of findImagePathsInValue(source)) {
+    const expanded = expandHomeTilde(raw);
+    if (!path.isAbsolute(expanded)) continue;
+    const resolved = path.resolve(expanded);
+    if (rs.emittedImagePaths.has(resolved)) continue;
+    try {
+      const stat = fs.lstatSync(resolved);
+      if (stat.isSymbolicLink() || !stat.isFile()) continue;
+    } catch {
+      continue;
+    }
+    rs.emittedImagePaths.add(resolved);
+    events.push({
+      type: "artifact",
+      kind: "image",
+      content: "",
+      metadata: { kind: "image", path: resolved, fileName: path.basename(resolved) },
+      ts,
+    });
+  }
+}
 
 /** Convert a local file path to a data URL. Returns undefined if the file doesn't exist. */
 function fileToDataUrl(filePath: string | undefined | null): string | undefined {
@@ -1847,6 +1922,10 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         break;
     }
 
+    if (phase === "complete") {
+      emitImageArtifacts(events, runId, item, ts);
+    }
+
     return events;
   }
 
@@ -1857,6 +1936,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
   type TurnInput = Array<
     | { type: "text"; text: string; text_elements: [] }
     | { type: "localImage"; path: string }
+    | { type: "skill"; name: string; path: string }
   >;
 
   const MAINS_TOOL_INSTRUCTION = "IMPORTANT: Never commit changes using shell commands (git add, git commit). If the user asks you to commit, always use the CommitChanges tool to stage and commit changes. Similarly, never create pull requests using shell commands (gh pr create). Always use the CreatePR tool instead.";
@@ -1879,7 +1959,20 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       runId: request.runId,
     });
 
+    if (request.skills && request.skills.length > 0) {
+      const tokens = request.skills.map((s) => `$${s.name}`).join(" ");
+      prompt = `${tokens}\n\n${prompt}`;
+    }
+
     const input: TurnInput = [{ type: "text", text: prompt, text_elements: [] }];
+
+    if (request.skills) {
+      for (const s of request.skills) {
+        if (s.name && s.path) {
+          input.push({ type: "skill", name: s.name, path: s.path });
+        }
+      }
+    }
 
     // Handle image attachments
     if (request.attachments && request.attachments.length > 0) {
@@ -1913,7 +2006,20 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       runId: request.runId,
     });
 
+    if (request.skills && request.skills.length > 0) {
+      const tokens = request.skills.map((s) => `$${s.name}`).join(" ");
+      prompt = `${tokens}\n\n${prompt}`;
+    }
+
     const input: TurnInput = [{ type: "text", text: prompt, text_elements: [] }];
+
+    if (request.skills) {
+      for (const s of request.skills) {
+        if (s.name && s.path) {
+          input.push({ type: "skill", name: s.name, path: s.path });
+        }
+      }
+    }
 
     if (request.attachments && request.attachments.length > 0) {
       const { savedPaths, inlineTexts } = saveAttachments(request.attachments, request.runId);
@@ -2258,7 +2364,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         }
 
         const mainsCtx: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx, fileChangeBuffers: new Map(), commandOutputBuffers: new Map() });
+        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx, fileChangeBuffers: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set() });
 
         // Emit user prompt artifact
         await emitUserPromptArtifact(onEvent, request.goal, {
@@ -2266,6 +2372,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           contextIssues: request.contextIssues,
           contextSignals: request.contextSignals,
           contextFiles: request.contextFiles,
+          contextSkills: request.skills,
         });
 
         // 2. Start turn
@@ -2367,13 +2474,14 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         }
 
         const mainsCtxContinue: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxContinue, fileChangeBuffers: new Map(), commandOutputBuffers: new Map() });
+        activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxContinue, fileChangeBuffers: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set() });
 
         await emitUserPromptArtifact(onEvent, message, {
           attachments: request.attachments,
           contextIssues: request.contextIssues,
           contextSignals: request.contextSignals,
           contextFiles: request.contextFiles,
+          contextSkills: request.skills,
         });
 
         // 2. Start turn with the follow-up message
@@ -2477,6 +2585,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           mainsCtx: mainsCtxFork,
           fileChangeBuffers: new Map(),
           commandOutputBuffers: new Map(),
+          emittedImagePaths: new Set(),
         });
 
         // Emit user prompt artifact
@@ -2569,7 +2678,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         }
 
         const mainsCtxReview: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxReview, fileChangeBuffers: new Map(), commandOutputBuffers: new Map() });
+        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxReview, fileChangeBuffers: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set() });
 
         // Emit review user-prompt artifact
         const targetLabel =
