@@ -784,6 +784,22 @@ export function WorkspaceEvents({
     [eventGroups],
   );
 
+  /** User messages grouped as `info` + user-prompt — must stay in sync with `turns` length when events are up to date. */
+  const userPromptGroupCount = useMemo(
+    () => eventGroups.reduce((n, g) => n + (isUserPromptGroup(g) ? 1 : 0), 0),
+    [eventGroups],
+  );
+
+  /**
+   * After `continueRun`, main creates a new active turn before user-prompt artifacts appear in the
+   * event list. In that gap, the last render row can still be the *previous* turn's accordion; without
+   * this guard, `isRunInProgress` would force it open.
+   */
+  const suppressLiveAccordionForStaleEvents = useMemo(() => {
+    if (!isRunning || turns.length === 0) return false;
+    return turns.length > userPromptGroupCount;
+  }, [isRunning, turns.length, userPromptGroupCount]);
+
   const renderGroupAt = useCallback(
     (index: number) => {
       const group = eventGroups[index];
@@ -897,7 +913,9 @@ export function WorkspaceEvents({
                   );
                 }
                 const isLiveTurnAccordion =
-                  isRunning && rowIndex === turnRenderRows.length - 1;
+                  isRunning &&
+                  !suppressLiveAccordionForStaleEvents &&
+                  rowIndex === turnRenderRows.length - 1;
                 return (
                   <AgentTurnMessagesAccordion
                     key={`row-acc-${row.previousSegments[0]?.[0] ?? 0}-${row.planBreakoutIndices.join("-") || "x"}-${row.lastSegment[0] ?? 0}`}
@@ -927,7 +945,14 @@ export function WorkspaceEvents({
           <WorkspaceEmptyState workspace={currentWorkspace} />
         )}
         {/* Top/bottom fade overlays — only shown on run content (chat), not on editor/issue/note tabs */}
-
+        {hasRunContent && !isEditorActive && !isIssueActive && !isNoteActive && !isNewRunActive && (
+            <div
+              className="absolute top-0 left-0 right-0 h-6 bg-linear-to-b from-primary to-transparent dark:from-primary-950 dark:to-transparent pointer-events-none z-(--z-base)"
+            />
+                )}
+            <div
+              className="absolute bottom-0 left-0 right-0 h-6 bg-linear-to-t from-primary to-transparent dark:from-primary-950 dark:to-transparent pointer-events-none"
+            />
       </div>
     </div>
   );

@@ -272,7 +272,17 @@ export interface StartRunPayload {
   /** Structured context files (displayed as chips in the UI, injected into LLM prompt by adapter) */
   contextFiles?: Array<{ path: string }>;
   /** User-selected skills to invoke (displayed as chips in the UI, injected by adapter) */
-  contextSkills?: Array<{ name: string; path: string }>;
+  contextSkills?: Array<{
+    name: string;
+    path: string;
+    displayName?: string;
+    description?: string;
+    shortDescription?: string;
+    iconSmall?: string;
+    iconLarge?: string;
+    brandColor?: string;
+    scope?: string;
+  }>;
 }
 
 /** Response when a run is started */
@@ -299,7 +309,17 @@ export interface ContinueRunPayload {
   /** Structured context files to inject into this follow-up */
   contextFiles?: Array<{ path: string }>;
   /** User-selected skills to invoke for this follow-up */
-  contextSkills?: Array<{ name: string; path: string }>;
+  contextSkills?: Array<{
+    name: string;
+    path: string;
+    displayName?: string;
+    description?: string;
+    shortDescription?: string;
+    iconSmall?: string;
+    iconLarge?: string;
+    brandColor?: string;
+    scope?: string;
+  }>;
 }
 
 /** Response when a run is continued */

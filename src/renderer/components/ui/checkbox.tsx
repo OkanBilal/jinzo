@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "../../lib/cn";
+import { Check } from "./icons";
 
 export interface CheckboxProps {
   checked?: boolean;
@@ -40,30 +41,14 @@ export function Checkbox({
       />
       <div
         className={cn(
-          "w-5 h-5 min-w-5 min-h-5 rounded-md border transition-colors duration-200 flex items-center justify-center",
+          "w-4 h-4 min-w-4 min-h-4 rounded-md border transition-colors duration-200 flex items-center justify-center",
           checked
             ? "bg-primary-800 dark:bg-primary-200 border-primary-600 dark:border-primary-500"
-            : "bg-primary dark:bg-primary-950 border-primary-300 dark:border-primary-800/60",
+            : "bg-primary dark:bg-primary-800 border-primary-300 dark:border-primary-600/60",
           !disabled && "hover:border-primary-500 dark:hover:border-primary-700",
         )}
       >
-        <svg
-          className={cn(
-            "w-3.5 h-3.5 text-primary dark:text-primary-900 transition-opacity duration-200",
-            checked ? "opacity-100" : "opacity-0",
-          )}
-          viewBox="0 0 16 16"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M13.5 4.5L6 12L2.5 8.5"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        {checked && <Check className="w-3 h-3 text-primary dark:text-primary-900" />}
       </div>
     </label>
   );

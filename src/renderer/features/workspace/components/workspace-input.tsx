@@ -219,6 +219,12 @@ export function WorkspaceInput({
           name: skill.name,
           path: skill.path,
           description: skill.description,
+          displayName: skill.displayName,
+          shortDescription: skill.shortDescription,
+          iconSmall: skill.iconSmall,
+          iconLarge: skill.iconLarge,
+          brandColor: skill.brandColor,
+          scope: skill.scope,
         }),
       );
     },

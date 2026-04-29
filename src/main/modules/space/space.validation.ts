@@ -24,12 +24,14 @@ export function sanitizeSpacePayload(payload: unknown): SanitizedSpaceResult {
   const errors: Record<string, string> = {};
   const data: Partial<SpacePayload> = {};
 
-  // Name (required)
-  const name = sanitizeString(raw.name, 100);
-  if (!name || name === "") {
-    errors.name = "Name is required";
-  } else {
-    data.name = name;
+  // Name: required only when explicitly sent (create always sends it; partial updates can omit)
+  if (Object.prototype.hasOwnProperty.call(raw, "name")) {
+    const name = sanitizeString(raw.name, 100);
+    if (!name || name === "") {
+      errors.name = "Name is required";
+    } else {
+      data.name = name;
+    }
   }
 
   // Slug (optional, will be auto-generated if not provided)

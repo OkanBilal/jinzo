@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ArrowUp } from "@/components/ui/icons";
-import { getToolInfo } from "../../utils/tool-categories";
 import type { ToolSubGroup } from "../../utils/group-tool-calls";
 import { ToolCallItem } from "./tool-call-item";
 
@@ -10,7 +9,6 @@ interface ToolSubGroupAccordionProps {
 
 export function ToolSubGroupAccordion({ subGroup }: ToolSubGroupAccordionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { icon } = getToolInfo(subGroup.toolType);
 
   // If only one event, render directly without accordion - show full details
   if (subGroup.events.length === 1) {
@@ -23,9 +21,9 @@ export function ToolSubGroupAccordion({ subGroup }: ToolSubGroupAccordionProps) 
         onClick={() => setIsExpanded(!isExpanded)}
         className="group w-full flex items-center gap-1 py-1  text-s font-sans cursor-pointer"
       >
-        <span className="text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary shrink-0">{icon}</span>
+        <span className="text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary shrink-0">{subGroup.icon}</span>
         <span className="text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary shrink-0">
-          {subGroup.toolType}
+          {subGroup.displayName}
         </span>
         <span className="text-primary-500 text-xs group-hover:text-primary-950 group-hover:dark:text-primary">
           ({subGroup.events.length})

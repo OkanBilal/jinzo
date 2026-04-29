@@ -7,7 +7,7 @@ import {
   useUninstallProviderPluginMutation,
 } from "@/lib/redux/api";
 import type { PluginInfo } from "@/lib/redux/api";
-import { Search, Clipboard, Check, ChevronDown, Apps, Sparkles } from "@/components/ui/icons";
+import { Search, Clipboard, Check, ChevronDown, Apps, Sparkles, External, Plus } from "@/components/ui/icons";
 
 // ── Helpers ──
 
@@ -93,7 +93,7 @@ function PluginCard({
 
   return (
     <div
-      className="rounded-2xl bg-primary-100/50 dark:bg-primary-900 border border-primary-200/50 dark:border-primary-800/20 px-4 py-3 cursor-pointer hover:bg-primary-200/60 dark:hover:bg-primary/5 transition-colors flex items-center gap-3"
+      className="rounded-3xl glass-morphism px-4 py-6 cursor-pointer hover:bg-primary-200/60 dark:hover:bg-primary/5 transition-colors flex items-center gap-3"
       onClick={onSelect}
       role="button"
       tabIndex={0}
@@ -127,7 +127,7 @@ function PluginCard({
         }}
         disabled={isInstalling || plugin.installPolicy === "NOT_AVAILABLE"}
       >
-        {isInstalling ? "..." : plugin.installed ? "✓" : "+"}
+        {isInstalling ? "..." : plugin.installed ? <Check className="size-4" /> : <Plus className="size-4" />}
       </Button>
     </div>
   );
@@ -158,7 +158,6 @@ function PluginDetail({
     { providerId: "codex", pluginName, marketplacePath },
     { skip: !marketplacePath },
   );
-
   const hasIncludes = detail && (detail.skills.length > 0 || detail.apps.length > 0 || detail.mcpServers.length > 0);
 
   return (
@@ -249,11 +248,11 @@ function PluginDetail({
                 ) : app.installUrl ? (
                   <Button
                     size="sm"
-                    variant="secondary"
+                    variant="icon"
                     className="shrink-0 rounded-lg"
                     onClick={() => window.api.shell.openExternal(app.installUrl!)}
                   >
-                    Connect
+                    <External className="size-4" />
                   </Button>
                 ) : null}
               </div>
@@ -464,7 +463,8 @@ export default function CodexPlugins() {
     if (!pluginData) return [];
     return pluginData.marketplaces
       .flatMap((mp) => mp.plugins)
-      .filter((p) => p.interface?.developerName === "OpenAI" || p.interface?.developerName === "Vercel Labs" );
+      //.filter((p) => p.interface?.developerName === "OpenAI" || p.interface?.developerName === "Vercel Labs" );
+
   }, [pluginData]);
 
   const featuredIds = useMemo(() => {
@@ -614,7 +614,8 @@ export default function CodexPlugins() {
 
   // List view
   return (
-    <div>
+
+    <div className="mb-12">
       <div className="flex items-center justify-between mb-6">
         <Heading2>Plugins</Heading2>
       </div>
@@ -666,7 +667,7 @@ export default function CodexPlugins() {
           <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100 mb-3">
             Featured
           </h3>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 gap-8">
             {featured.map((p) => (
               <PluginCard
                 key={p.id}
@@ -689,7 +690,7 @@ export default function CodexPlugins() {
           <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100 mb-3">
             {category}
           </h3>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 gap-8">
             {plugins.map((p) => (
               <PluginCard
                 key={p.id}

@@ -1,7 +1,6 @@
 import type { RunEvent } from "../../types";
-import { getToolInfo } from "../../utils/tool-categories";
 import { parseToolContent } from "../../utils/parse-tool-content";
-import { getToolType } from "../../utils/group-tool-calls";
+import { resolveTool } from "../../utils/resolve-tool";
 import { TodoListDisplay, type TodoItem } from "./todo-list-display";
 import { TaskDisplay, type TaskParams } from "./task-display";
 import { PlanDisplay } from "./plan-display";
@@ -66,8 +65,9 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   const metadataInput = event.metadata?.input as
     | Record<string, unknown>
     | undefined;
-  const displayName = getToolType(event.content);
-  const { icon } = getToolInfo(displayName);
+  const resolved = resolveTool(event.content);
+  const displayName = resolved.displayName;
+  const icon = resolved.icon;
 
   const hasParamsOrInput =
     (params !== null && Object.keys(params).length > 0) ||
@@ -77,7 +77,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     !hasParamsOrInput &&
     !hasSummary &&
     !hasMeaningfulOutput(event.metadata?.output);
-  const emptyLabel = "No input or output";
+  const emptyLabel = "";
 
   if (isEmptyTool) {
     if (isCompact) {
@@ -387,19 +387,24 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     return <CheckPackageDisplay params={checkParams} output={event.metadata?.output} isCompact={isCompact} />;
   }
 
-  // Show McpDisplay for MCP tool calls with expandable params
-  if (
-    displayName.endsWith("Mcp") ||
-    displayName === "Mains" ||
-    displayName === "Linear" ||
-    displayName === "Notion" ||
-    displayName === "Figma"
-  ) {
+  // Show McpDisplay for MCP tool calls with expandable params. The resolver
+  // marks any tool that mapped to a vendor (Linear, GitHub, Figma, Notion,
+  // Computer use, Mains-without-special-renderer, …) with `vendorId`, so we
+  // don't need a brittle string-includes chain here.
+  if (resolved.vendorId !== undefined) {
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
       | undefined;
     const mcpParams = metadataInput ?? params;
-    return <McpDisplay displayName={displayName} params={mcpParams} />;
+    return (
+      <McpDisplay
+        displayName={displayName}
+        icon={icon}
+        params={mcpParams}
+        output={event.metadata?.output}
+        isCompact={isCompact}
+      />
+    );
   }
 
   if (isCompact) {
@@ -411,7 +416,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   }
 
   return (
-    <div className="py-0.5 px-2 hover:bg-primary-50 dark:hover:bg-primary/5 rounded">
+    <div className="py-0.5 hover:bg-primary-50 dark:hover:bg-primary/5 rounded">
       <div className="flex items-center gap-2 text-s font-sans">
         <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">{icon}</span>
         <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary font-medium">{displayName}</span>

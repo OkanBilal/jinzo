@@ -399,7 +399,17 @@ export async function emitUserPromptArtifact(
       eventCount?: number;
     }>;
     contextFiles?: Array<{ path: string }>;
-    contextSkills?: Array<{ name: string; path: string; description?: string }>;
+    contextSkills?: Array<{
+      name: string;
+      path: string;
+      description?: string;
+      displayName?: string;
+      shortDescription?: string;
+      iconSmall?: string;
+      iconLarge?: string;
+      brandColor?: string;
+      scope?: string;
+    }>;
   },
 ): Promise<void> {
   await onEvent({

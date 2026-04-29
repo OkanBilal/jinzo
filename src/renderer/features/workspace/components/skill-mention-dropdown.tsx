@@ -1,4 +1,4 @@
-import { RefObject, useMemo } from "react";
+import { RefObject, useMemo, useState } from "react";
 import { Button, DropdownWrapper } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import type { SkillInfo } from "@/lib/redux/api/providersApi";
@@ -14,17 +14,48 @@ interface SkillMentionDropdownProps {
   dropdownRef: RefObject<HTMLDivElement | null>;
 }
 
-function getSourceLabel(source?: string): string {
-  switch (source) {
+function getScopeLabel(scope?: string): string {
+  switch (scope) {
     case "user":
       return "User";
     case "project":
+    case "repo":
       return "Project";
+    case "system":
+      return "System";
     case "plugin":
       return "Plugin";
     default:
       return "";
   }
+}
+
+function localImageUrl(absPath: string): string {
+  return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
+}
+
+function SkillIcon({ skill }: { skill: SkillInfo }) {
+  const [failed, setFailed] = useState(false);
+  const iconPath = skill.iconLarge || skill.iconSmall;
+  if (iconPath && !failed) {
+    return (
+      <img
+        src={localImageUrl(iconPath)}
+        alt=""
+        className="size-5 rounded shrink-0 object-contain"
+        style={skill.brandColor ? { backgroundColor: skill.brandColor } : undefined}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <div
+      className="size-5 rounded shrink-0 flex items-center justify-center bg-primary-200/50 dark:bg-primary-700/50 text-primary-600 dark:text-primary-300"
+      style={skill.brandColor ? { backgroundColor: skill.brandColor, color: "#fff" } : undefined}
+    >
+      <Sparkles className="size-3" />
+    </div>
+  );
 }
 
 export function SkillMentionDropdown({
@@ -46,8 +77,11 @@ export function SkillMentionDropdown({
     const lower = filterText.toLowerCase();
     return userInvokable.filter((s) => {
       const nameMatch = s.name.toLowerCase().includes(lower);
-      const descMatch = s.description?.toLowerCase().includes(lower);
-      return nameMatch || descMatch;
+      const displayMatch = s.displayName?.toLowerCase().includes(lower);
+      const descMatch =
+        s.shortDescription?.toLowerCase().includes(lower) ||
+        s.description?.toLowerCase().includes(lower);
+      return nameMatch || displayMatch || descMatch;
     });
   }, [skills, filterText]);
 
@@ -75,40 +109,48 @@ export function SkillMentionDropdown({
               No skills available
             </div>
           ) : (
-            filtered.map((skill) => (
-              <Button
-                key={`skill-${skill.name}`}
-                type="button"
-                onClick={() => {
-                  onSelectSkill(skill);
-                  onClose();
-                }}
-                className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 last:rounded-b-xl"
-              >
-                <div className="flex flex-col gap-0.5">
-                  <div className="font-medium flex items-center gap-1.5">
-                    <span className="text-s">${skill.name}</span>
-                    <div className="ml-auto gap-2 flex items-center">
-                      {skill.argumentHint && (
-                        <span className="font-normal text-xs text-primary-500 dark:text-primary-400">
-                          {skill.argumentHint}
-                        </span>
-                      )}
-                      {skill.source && (
-                        <span className="text-t px-1.5 py-0.5 rounded-full bg-primary-200/50 dark:bg-primary-700/50 text-primary-600 dark:text-primary-300">
-                          {getSourceLabel(skill.source)}
-                        </span>
+            filtered.map((skill) => {
+              const title = skill.displayName || skill.name;
+              const desc = skill.shortDescription || skill.description;
+              const scopeLabel = getScopeLabel(skill.scope || skill.source);
+              return (
+                <Button
+                  key={`skill-${skill.name}-${skill.path ?? ""}`}
+                  type="button"
+                  onClick={() => {
+                    onSelectSkill(skill);
+                    onClose();
+                  }}
+                  className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 last:rounded-b-xl"
+                >
+                  <div className="flex items-start gap-2">
+                    <SkillIcon skill={skill} />
+                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                      <div className="font-medium flex items-center gap-1.5">
+                        <span className="truncate text-s">{title}</span>
+                        <div className="ml-auto gap-2 flex items-center shrink-0">
+                          {skill.argumentHint && (
+                            <span className="font-normal text-xs text-primary-500 dark:text-primary-400">
+                              {skill.argumentHint}
+                            </span>
+                          )}
+                          {scopeLabel && (
+                            <span className="text-t px-1.5 py-0.25 rounded-full bg-primary-200/50 dark:bg-primary-700/50 text-primary-600 dark:text-primary-300">
+                              {scopeLabel}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {desc && (
+                        <div className="text-xs line-clamp-2 text-primary-500 dark:text-primary-400">
+                          {desc}
+                        </div>
                       )}
                     </div>
                   </div>
-                  {skill.description && (
-                    <div className="text-xs line-clamp-2 text-primary-500 dark:text-primary-400">
-                      {skill.description}
-                    </div>
-                  )}
-                </div>
-              </Button>
-            ))
+                </Button>
+              );
+            })
           )}
         </div>
       </DropdownWrapper>

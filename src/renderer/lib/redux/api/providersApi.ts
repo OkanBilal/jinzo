@@ -98,6 +98,14 @@ export interface SkillInfo {
   forked?: boolean;
   agent?: string;
   path?: string;
+  displayName?: string;
+  shortDescription?: string;
+  iconSmall?: string;
+  iconLarge?: string;
+  brandColor?: string;
+  defaultPrompt?: string;
+  scope?: "user" | "project" | "system" | string;
+  enabled?: boolean;
 }
 
 export interface PluginInterfaceInfo {

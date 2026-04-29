@@ -16,6 +16,7 @@ function SpaceSelector({
   spaces,
   activeSpaceId,
   onSpaceChange,
+  onContextMenu,
 }: SpaceSelectorProps) {
   const [hoveredSpaceId, setHoveredSpaceId] = useState<string | null>(null);
 
@@ -30,10 +31,10 @@ function SpaceSelector({
           <Button
             key={space.id}
             onClick={() => onSpaceChange(space.id)}
-            // onContextMenu={(e) => {
-            //   e.preventDefault();
-            //   onContextMenu?.(space, e);
-            // }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              onContextMenu?.(space, e);
+            }}
             onMouseEnter={() => setHoveredSpaceId(space.id)}
             onMouseLeave={() => setHoveredSpaceId(null)}
             className={`shrink-0 flex items-center justify-center size-8 hover:bg-primary/60 dark:hover:bg-primary/20

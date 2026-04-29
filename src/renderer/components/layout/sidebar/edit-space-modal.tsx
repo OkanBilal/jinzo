@@ -6,8 +6,8 @@ import type { Space } from "@/lib/redux/api";
 import { useDarkMode } from "@/hooks/use-dark-mode";
 import {
   solidColors,
-  gradientColors,
   getThemeVariant,
+  parseThemeConfig,
   type ThemeColor,
 } from "@/lib/space-themes";
 import { availableIcons, parseIcon } from "@/lib/icon-registry";
@@ -22,7 +22,6 @@ interface EditSpaceFormState {
   iconMode: IconPickerMode;
   selectedColorIndex: number;
   isEmojiPickerOpen: boolean;
-  showGradients: boolean;
   systemPrompt: string;
   isClosing: boolean;
   prevSpaceId: string | null;
@@ -39,36 +38,6 @@ interface EditSpaceModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   sidebarWidth?: string;
-}
-
-function parseThemeConfig(themeConfig: string | null): {
-  colorIndex: number;
-  isGradient: boolean;
-} {
-  if (!themeConfig) {
-    return { colorIndex: 0, isGradient: false };
-  }
-
-  try {
-    const config = JSON.parse(themeConfig);
-    const darkBg = config.darkBackground || "";
-
-    for (let i = 0; i < gradientColors.length; i++) {
-      if (gradientColors[i].dark.value === darkBg) {
-        return { colorIndex: i, isGradient: true };
-      }
-    }
-
-    for (let i = 0; i < solidColors.length; i++) {
-      if (solidColors[i].dark.value === darkBg) {
-        return { colorIndex: i, isGradient: false };
-      }
-    }
-  } catch {
-    // Ignore parse errors
-  }
-
-  return { colorIndex: 0, isGradient: false };
 }
 
 function EditSpacePreviewIcon({ icon, iconMode }: { icon: string; iconMode: IconPickerMode }) {
@@ -94,12 +63,11 @@ export default function EditSpaceModal({
     iconMode: "emoji" as IconPickerMode,
     selectedColorIndex: 0,
     isEmojiPickerOpen: false,
-    showGradients: false,
     systemPrompt: "",
     isClosing: false,
     prevSpaceId: space?.id ?? null,
   });
-  const { name, icon, iconMode, selectedColorIndex, isEmojiPickerOpen, showGradients, systemPrompt, isClosing } = state;
+  const { name, icon, iconMode, selectedColorIndex, isEmojiPickerOpen, systemPrompt, isClosing } = state;
 
   const [updateSpace, { isLoading }] = useUpdateSpaceMutation();
   const { darkMode } = useDarkMode();
@@ -125,7 +93,7 @@ export default function EditSpaceModal({
         newIcon = typeof parsedIcon.value === "string" ? parsedIcon.value : "😊";
       }
     }
-    const { colorIndex, isGradient } = parseThemeConfig(space.themeConfig);
+    const { colorIndex } = parseThemeConfig(space.themeConfig);
     updateState({
       prevSpaceId: space.id,
       name: space.name,
@@ -133,7 +101,6 @@ export default function EditSpaceModal({
       iconMode: newIconMode,
       icon: newIcon,
       selectedColorIndex: colorIndex,
-      showGradients: isGradient,
       isClosing: false,
     });
   }
@@ -201,9 +168,8 @@ export default function EditSpaceModal({
 
   if (!isOpen || !space) return null;
 
-  const currentColors = showGradients ? gradientColors : solidColors;
   const selectedColorPair: ThemeColor =
-    currentColors[selectedColorIndex] || solidColors[0];
+    solidColors[selectedColorIndex] || solidColors[0];
   const currentVariant = getThemeVariant(selectedColorPair, darkMode);
 
   return createPortal(
@@ -290,9 +256,7 @@ export default function EditSpaceModal({
 
           <SpaceThemeSelector
             selectedColorIndex={selectedColorIndex}
-            showGradients={showGradients}
             onSelectColor={(index) => updateState({ selectedColorIndex: index })}
-            onToggleGradients={(show) => updateState({ showGradients: show, selectedColorIndex: 0 })}
           />
         </div>
 

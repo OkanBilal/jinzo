@@ -22,7 +22,6 @@ export function ClaudeSetupStep() {
 
   return (
     <div className="space-y-4">
-      <Text variant="h2">Claude Setup</Text>
       <Text variant="muted">
         Mains uses Claude CLI to power its AI coding agent. Make sure you
         have the CLI installed and authenticated before using the Claude.

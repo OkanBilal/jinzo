@@ -8,6 +8,7 @@ import { type Interface as ReadlineInterface } from "node:readline";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { shell } from "electron";
 import type {
   WorkRunAdapter,
   WorkRunRequest,
@@ -891,6 +892,18 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     });
 
     logInfo("App-server initialized successfully");
+
+    // Debug: fetch app/list and log the response shape.
+    // See https://github.com/openai/codex/tree/main/codex-rs/app-server#apps
+    server.sendRequest("app/list", {}, 15000)
+      .then((result) => {
+        logInfo(`[app/list] response: ${JSON.stringify(result, null, 2)}`);
+      })
+      .catch((err) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        logWarn(`[app/list] failed: ${msg}`);
+      });
+
     return server;
   }
 
@@ -1465,25 +1478,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     return { toolName: "Bash", input: { command: rawCommand } };
   }
 
-  function logCodexToolCall(
-    phase: "start" | "complete",
-    runId: string,
-    toolName: string,
-    meta: {
-      toolCallId?: string;
-      codexItemType?: string;
-      hasError?: boolean;
-    },
-  ): void {
-    const tag = phase === "start" ? "tool_call:start" : "tool_call:complete";
-    logInfo(tag, {
-      runId,
-      source: "codex",
-      toolName,
-      ...meta,
-    });
-  }
-
   /**
    * Map Codex ThreadItem to WorkRunEvents.
    * Matches the app-server's item schema (same structure as SDK ThreadItem).
@@ -1534,10 +1528,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         };
 
         if (phase === "start") {
-          logCodexToolCall("start", runId, toolName, {
-            toolCallId: item.id,
-            codexItemType: "command_execution",
-          });
           events.push({
             type: "tool_call",
             toolName,
@@ -1561,11 +1551,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           }
 
           const cmdFailed = status === "failed";
-          logCodexToolCall("complete", runId, toolName, {
-            toolCallId: item.id,
-            codexItemType: "command_execution",
-            hasError: cmdFailed,
-          });
           events.push({
             type: "tool_call",
             toolName,
@@ -1606,10 +1591,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         };
 
         if (phase === "start") {
-          logCodexToolCall("start", runId, "Read", {
-            toolCallId: item.id,
-            codexItemType: "file_read",
-          });
           events.push({
             type: "tool_call",
             toolName: "Read",
@@ -1635,11 +1616,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           }
 
           const readFailed = readStatus === "failed";
-          logCodexToolCall("complete", runId, "Read", {
-            toolCallId: item.id,
-            codexItemType: "file_read",
-            hasError: readFailed,
-          });
           events.push({
             type: "tool_call",
             toolName: "Read",
@@ -1673,10 +1649,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
               ?? (changes.length === 1 ? (bufferedDiff ?? itemPatch) : bufferedDiff);
 
             const fcId = `${item.id}-${change.path}`;
-            logCodexToolCall("start", runId, toolName, {
-              toolCallId: fcId,
-              codexItemType: "file_change",
-            });
             events.push({
               type: "tool_call",
               toolName,
@@ -1685,11 +1657,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
               metadata: { phase: "start", toolCallId: fcId, itemId: fcId, changeType: change.kind, codexItemType: "file_change" },
             });
             const patchErr = patchStatus === "failed";
-            logCodexToolCall("complete", runId, toolName, {
-              toolCallId: fcId,
-              codexItemType: "file_change",
-              hasError: patchErr,
-            });
             events.push({
               type: "tool_call",
               toolName,
@@ -1714,10 +1681,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         const error = (item.error as { message?: string } | undefined)?.message;
 
         if (phase === "start") {
-          logCodexToolCall("start", runId, toolName, {
-            toolCallId: item.id,
-            codexItemType: "mcp_tool_call",
-          });
           events.push({
             type: "tool_call",
             toolName,
@@ -1726,11 +1689,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             metadata: { phase: "start", toolCallId: item.id, itemId: item.id, codexItemType: "mcp_tool_call" },
           });
         } else if (phase === "complete") {
-          logCodexToolCall("complete", runId, toolName, {
-            toolCallId: item.id,
-            codexItemType: "mcp_tool_call",
-            hasError: Boolean(error),
-          });
           events.push({
             type: "tool_call",
             toolName,
@@ -1748,21 +1706,12 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       case "webSearch": {
         const query = typeof item.query === "string" ? item.query : "";
         if (phase === "complete" && query) {
-          logCodexToolCall("start", runId, "WebSearch", {
-            toolCallId: item.id,
-            codexItemType: "web_search",
-          });
           events.push({
             type: "tool_call",
             toolName: "WebSearch",
             input: { query },
             startedAt: ts,
             metadata: { phase: "start", toolCallId: item.id, itemId: item.id, codexItemType: "web_search" },
-          });
-          logCodexToolCall("complete", runId, "WebSearch", {
-            toolCallId: item.id,
-            codexItemType: "web_search",
-            hasError: false,
           });
           events.push({
             type: "tool_call",
@@ -1784,10 +1733,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         const status = item.status as string | undefined;
 
         if (phase === "start") {
-          logCodexToolCall("start", runId, tool, {
-            toolCallId: item.id,
-            codexItemType: "dynamic_tool_call",
-          });
           events.push({
             type: "tool_call",
             toolName: tool,
@@ -1797,11 +1742,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           });
         } else if (phase === "complete") {
           const dynFailed = status === "failed";
-          logCodexToolCall("complete", runId, tool, {
-            toolCallId: item.id,
-            codexItemType: "dynamic_tool_call",
-            hasError: dynFailed,
-          });
           events.push({
             type: "tool_call",
             toolName: tool,
@@ -2295,6 +2235,62 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
               }
             } else {
               server.respondToRequestError(id, -32601, `Unknown dynamic tool: ${toolName ?? "undefined"}`);
+            }
+            break;
+          }
+
+          // App / connector action approvals (Google Calendar create event,
+          // Gmail send, Notion edit, …). Codex routes app-tool approvals
+          // through MCP elicitation. Two modes:
+          //   - "form": user accepts/declines a structured action
+          //   - "url":  user must complete an action in the browser
+          // Response vocabulary: { action: "accept" | "decline" | "cancel" }.
+          // See codex-rs/app-server-protocol → McpServerElicitationRequest.
+          case "mcpServer/elicitation/request": {
+            const serverName = (p?.serverName as string) ?? "App";
+            const mode = (p?.mode as string) ?? "form";
+            const url = p?.url as string | undefined;
+
+            // Dump the full payload — proposed action args may live in `_meta`
+            // or a sibling field whose shape is still being mapped.
+            logInfo(`[mcpServer/elicitation/request] ${JSON.stringify(p, null, 2)}`);
+
+            const permissionMode = config.permissionMode || "default";
+            if (permissionMode === "bypassPermissions") {
+              if (mode === "url" && url) {
+                shell.openExternal(url).catch((err) =>
+                  logWarn(`Failed to open elicitation URL: ${err}`),
+                );
+              }
+              server.respondToRequest(id, { action: "accept", content: {} });
+              break;
+            }
+
+            try {
+              const result = await requestToolApproval({
+                requestId: String(id),
+                runId,
+                toolName: serverName,
+                // Forward the entire elicitation params so the dialog can
+                // render whatever the app-server actually sends (proposed
+                // args in _meta, schema properties, …).
+                toolInput: { ...(p ?? {}) },
+                kind: "tool_approval",
+                timestamp: Date.now(),
+              });
+
+              if (!result.approved) {
+                server.respondToRequest(id, { action: "decline" });
+              } else {
+                if (mode === "url" && url) {
+                  shell.openExternal(url).catch((err) =>
+                    logWarn(`Failed to open elicitation URL: ${err}`),
+                  );
+                }
+                server.respondToRequest(id, { action: "accept", content: {} });
+              }
+            } catch {
+              server.respondToRequest(id, { action: "decline" });
             }
             break;
           }
@@ -2910,12 +2906,26 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             for (const s of entrySkills) {
               if (!s.enabled) continue;
               const iface = s.interface as Record<string, unknown> | undefined;
+              const scopeRaw = s.scope as string | undefined;
+              const source = scopeRaw === "user"
+                ? "user"
+                : scopeRaw === "repo" || scopeRaw === "project"
+                  ? "project"
+                  : undefined;
               skills.push({
                 name: s.name as string,
                 description: (iface?.shortDescription as string) || (s.shortDescription as string) || (s.description as string) || "",
-                source: (s.scope === "user" ? "user" : s.scope === "repo" ? "project" : undefined) as "user" | "project" | undefined,
+                source: source as "user" | "project" | undefined,
                 path: s.path as string | undefined,
                 userInvokable: true,
+                displayName: (iface?.displayName as string) || undefined,
+                shortDescription: (iface?.shortDescription as string) || (s.shortDescription as string) || undefined,
+                iconSmall: (iface?.iconSmall as string) || undefined,
+                iconLarge: (iface?.iconLarge as string) || undefined,
+                brandColor: (iface?.brandColor as string) || undefined,
+                defaultPrompt: (iface?.defaultPrompt as string) || undefined,
+                scope: scopeRaw,
+                enabled: s.enabled as boolean | undefined,
               });
             }
           }

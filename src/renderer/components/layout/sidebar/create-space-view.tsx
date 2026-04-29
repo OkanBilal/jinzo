@@ -5,11 +5,7 @@ import {
   useSetActiveSpaceMutation,
 } from "@/lib/redux/api";
 import { useDarkMode } from "@/hooks/use-dark-mode";
-import {
-  solidColors,
-  gradientColors,
-  getThemeVariant,
-} from "@/lib/space-themes";
+import { solidColors, getThemeVariant } from "@/lib/space-themes";
 import { availableIcons } from "@/lib/icon-registry";
 import SpaceIconPicker from "./space-icon-picker";
 import SpaceThemeSelector from "./space-theme-selector";
@@ -32,7 +28,6 @@ interface CreateSpaceFormState {
   iconMode: IconPickerMode;
   selectedColorIndex: number;
   isEmojiPickerOpen: boolean;
-  showGradients: boolean;
   systemPrompt: string;
 }
 
@@ -56,10 +51,9 @@ export default function CreateSpaceView({
     iconMode: "emoji" as IconPickerMode,
     selectedColorIndex: 0,
     isEmojiPickerOpen: false,
-    showGradients: false,
     systemPrompt: "",
   });
-  const { name, icon, iconMode, selectedColorIndex, isEmojiPickerOpen, showGradients, systemPrompt } = state;
+  const { name, icon, iconMode, selectedColorIndex, isEmojiPickerOpen, systemPrompt } = state;
 
   const originalBackgroundColor = useRef<string>("");
 
@@ -82,21 +76,15 @@ export default function CreateSpaceView({
     };
   }, []);
 
-  const currentColors = showGradients ? gradientColors : solidColors;
-  const selectedColorPair = currentColors[selectedColorIndex] || solidColors[0];
+  const selectedColorPair = solidColors[selectedColorIndex] || solidColors[0];
   const currentVariant = getThemeVariant(selectedColorPair, darkMode);
   const backgroundColor = currentVariant.value;
 
   useEffect(() => {
     const appRoot = document.querySelector(".app-root") as HTMLElement;
     if (appRoot) {
-      if (backgroundColor.startsWith("linear-gradient")) {
-        appRoot.style.backgroundColor = "transparent";
-        appRoot.style.background = backgroundColor;
-      } else {
-        appRoot.style.background = "none";
-        appRoot.style.backgroundColor = backgroundColor;
-      }
+      appRoot.style.background = "none";
+      appRoot.style.backgroundColor = backgroundColor;
       appRoot.style.setProperty("--space-preview-bg", currentVariant.preview);
     }
   }, [backgroundColor, currentVariant.preview]);
@@ -209,9 +197,7 @@ export default function CreateSpaceView({
 
         <SpaceThemeSelector
           selectedColorIndex={selectedColorIndex}
-          showGradients={showGradients}
           onSelectColor={(index) => updateState({ selectedColorIndex: index })}
-          onToggleGradients={(show) => updateState({ showGradients: show, selectedColorIndex: 0 })}
         />
       </div>
 

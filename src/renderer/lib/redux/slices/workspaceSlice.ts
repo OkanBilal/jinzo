@@ -33,6 +33,12 @@ export interface ContextSkill {
   name: string;
   path: string;
   description?: string;
+  displayName?: string;
+  shortDescription?: string;
+  iconSmall?: string;
+  iconLarge?: string;
+  brandColor?: string;
+  scope?: string;
 }
 
 export interface ContextBrowserSelection {

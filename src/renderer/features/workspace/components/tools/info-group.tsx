@@ -39,6 +39,35 @@ function localImageUrl(absPath: string): string {
   return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
 }
 
+interface PromptSkillMeta {
+  name: string;
+  path?: string;
+  description?: string;
+  displayName?: string;
+  shortDescription?: string;
+  iconSmall?: string;
+  iconLarge?: string;
+  brandColor?: string;
+  scope?: string;
+}
+
+function PromptSkillChipIcon({ skill }: { skill: PromptSkillMeta }) {
+  const [failed, setFailed] = useState(false);
+  const iconPath = skill.iconLarge || skill.iconSmall;
+  if (iconPath && !failed) {
+    return (
+      <img
+        src={localImageUrl(iconPath)}
+        alt=""
+        className="w-3 h-3 rounded shrink-0 object-contain"
+        style={skill.brandColor ? { backgroundColor: skill.brandColor } : undefined}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return <Sparkles className="w-3 h-3 shrink-0" />;
+}
+
 function ImagePreviewModal({ name, dataUrl, onClose }: { name: string; dataUrl: string; onClose: () => void }) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -111,11 +140,7 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
       captureName?: string;
       sourcePath?: string;
     }>;
-    const skills = (event.metadata?.skills ?? []) as Array<{
-      name: string;
-      path?: string;
-      description?: string;
-    }>;
+    const skills = (event.metadata?.skills ?? []) as PromptSkillMeta[];
 
     if (isReview) {
       const reviewTarget = event.metadata?.reviewTarget as string | undefined;
@@ -163,16 +188,20 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
             )}
             {(files.length > 0 || attachments.length > 0 || issues.length > 0 || signals.length > 0 || skills.length > 0) && (
               <div className="flex flex-wrap gap-1.5 justify-end">
-                {skills.map((skill) => (
-                  <div
-                    key={`skill-${skill.name}`}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-violet-500/15 text-violet-300"
-                    title={skill.description ?? skill.name}
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    <span className="truncate max-w-60">{skill.name}</span>
-                  </div>
-                ))}
+                {skills.map((skill) => {
+                  const label = skill.displayName || skill.name;
+                  const tooltip = skill.shortDescription || skill.description || label;
+                  return (
+                    <div
+                      key={`skill-${skill.name}`}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-primary-500/15 dark:bg-primary-500/20 text-primary-500 dark:text-primary-300"
+                      title={tooltip}
+                    >
+                      <PromptSkillChipIcon skill={skill} />
+                      <span className="truncate max-w-37.5">{label}</span>
+                    </div>
+                  );
+                })}
                 {issues.map((issue) => (
                   <div
                     key={`${issue.provider}-${issue.number ?? issue.title}`}
@@ -311,16 +340,7 @@ function ImageArtifact({
   const [error, setError] = useState<string | null>(null);
 
   if (error) {
-    return (
-      <div
-        className="rounded-xl  dark:bg-red-900/5 bg-red-700/5 px-4 py-3 text-xs dark:text-red-300 text-red-700 break-all"
-        title={absPath}
-      >
-        <div className="font-medium mb-1">Image failed to load</div>
-        <div className="opacity-70 dark:text-red-300 text-red-700">{error}</div>
-        <div className="mt-1 font-mono opacity-60">{absPath}</div>
-      </div>
-    );
+    return null
   }
 
   return (
@@ -378,6 +398,15 @@ function ArtifactBody({
     return out;
   }, [content, workspaceRootPath]);
 
+  // Track images whose load failed so we hide them instead of leaving a
+  // broken icon. The extractor pulls path-like substrings from the markdown,
+  // resolves them against the workspace root, and renders an <img> for each;
+  // when the file doesn't actually live there (codex saves to ~/.codex/…
+  // etc.) the protocol returns 404 and the browser falls back to a broken
+  // image glyph. Mirrors ImageArtifact's onError behavior.
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const visibleImages = resolvedImages.filter((img) => !failedImages.has(img.key));
+
   return (
     <div className="overflow-hidden">
       <div className="prose prose-sm dark:prose-invert max-w-none relative">
@@ -390,9 +419,9 @@ function ArtifactBody({
           </ReactMarkdown>
         </div>
       </div>
-      {resolvedImages.length > 0 && (
+      {visibleImages.length > 0 && (
         <div className="mt-3 flex flex-col gap-3">
-          {resolvedImages.map(({ key, abs, name }) => {
+          {visibleImages.map(({ key, abs, name }) => {
             const url = localImageUrl(abs);
             return (
               <button
@@ -407,6 +436,14 @@ function ArtifactBody({
                   alt={name}
                   className="w-full max-h-[480px] object-contain"
                   loading="lazy"
+                  onError={() =>
+                    setFailedImages((prev) => {
+                      if (prev.has(key)) return prev;
+                      const next = new Set(prev);
+                      next.add(key);
+                      return next;
+                    })
+                  }
                 />
               </button>
             );

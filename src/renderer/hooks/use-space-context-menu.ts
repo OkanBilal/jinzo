@@ -35,11 +35,10 @@ export function useSpaceContextMenu() {
 
   // Context menu handlers
   const handleSpaceContextMenu = (space: Space, event: React.MouseEvent) => {
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
     event.preventDefault();
     setContextMenuState({
       isOpen: true,
-      position: { x: rect.right, y: rect.top },
+      position: { x: event.clientX, y: event.clientY },
       targetSpace: space,
     });
   };

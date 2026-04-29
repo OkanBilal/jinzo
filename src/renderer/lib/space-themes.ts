@@ -17,63 +17,39 @@ const solid = (light: string, dark: string): ThemeColor => ({
 
 export const solidColors: ThemeColor[] = [
   { ...solid("#ffffff40", "#00000070"), name: "Rose Quartz" },
-  { ...solid("#F6EAE7", "#54241ce6"), name: "Cider Brown" },
-  { ...solid("#F3E4E7", "#281d36e6"), name: "Rust Plum" },
-  { ...solid("#DCEDE3", "#0b2d1ae6"), name: "Deep Forest" },
-  { ...solid("#F4E9DD", "#1d2423e6"), name: "Warm Clay" },
-  { ...solid("#DEE6F3", "#19263ce6"), name: "Indigo Steel" },
-  { ...solid("#E9E4F1", "#1c1e27e6"), name: "Deep Grape" },
+  { ...solid("#EEEEEE", "#1c1c1cf5"), name: "Light Brown" },
+  { ...solid("#C6E1D4", "#12221cf5"), name: "Light Green" },
+  { ...solid("#C5DEEE", "#122028f5"), name: "Light Blue" },
+  { ...solid("#D6D4E8", "#21202Df5"), name: "Light Purple" },
+  { ...solid("#F1DFC4", "#332715f5"), name: "Light Yellow" },
+  { ...solid("#EFD3D8", "#321F23f5"), name: "Light Pink" },
+  { ...solid("#F3D0D2", "#341E20f5"), name: "Light Gray" },
+  { ...solid("#F2D2C7", "#331F18f5"), name: "Light Red" },
 ];
 
-const gradient = (
-  lightFrom: string,
-  lightTo: string,
-  darkFrom: string,
-  darkTo: string,
-): Omit<ThemeColor, "name"> => ({
-  light: {
-    value: `linear-gradient(180deg, ${lightFrom} 0%, ${lightTo} 100%)`,
-    preview: `linear-gradient(135deg, ${lightFrom} 0%, ${lightTo} 100%)`,
-  },
-  dark: {
-    value: `linear-gradient(180deg, ${darkFrom} 0%, ${darkTo} 100%)`,
-    preview: `linear-gradient(135deg, ${darkFrom} 0%, ${darkTo} 100%)`,
-  },
-});
+/** Derives solid swatch index from stored `space.themeConfig` (gradients in DB default to 0). */
+export function parseThemeConfig(themeConfig: string | null): { colorIndex: number } {
+  if (!themeConfig) {
+    return { colorIndex: 0 };
+  }
 
-export const gradientColors: ThemeColor[] = [
-  {
-    name: "Deep Grape",
-    ...gradient("#917db9cc", "#E3DDF1", "#3A3241", "#2A2430"),
-  },
-  {
-    name: "Rust Plum",
-    ...gradient("#bc8a90cc", "#EEDDE0", "#473138", "#312127"),
-  },
-  {
-    name: "Cider Brown",
-    ...gradient("#d5a59acc", "#F0E1DE", "#503835", "#362422"),
-  },
-  {
-    name: "Warm Clay",
-    ...gradient("#e7ae70cc", "#EEDFCC", "#5E4837", "#3E2F24"),
-  },
-  {
-    name: "Sage Mist",
-    ...gradient("#b7af65cc", "#ECEBDE", "#8E8D78", "#6A6A59"),
-  },
-  {
-    name: "Deep Forest",
-    ...gradient("#6e977ecc", "#D4E7DC", "#395D4C", "#22382E"),
-  },
-  {
-    name: "Indigo Steel",
-    ...gradient("#7090d0cc", "#D6E1F5", "#33486A", "#1E2B41"),
-  },
-];
+  try {
+    const config = JSON.parse(themeConfig) as { darkBackground?: string };
+    const darkBg = config.darkBackground || "";
+    if (darkBg.includes("linear-gradient") || darkBg.includes("gradient")) {
+      return { colorIndex: 0 };
+    }
+    for (let i = 0; i < solidColors.length; i++) {
+      if (solidColors[i].dark.value === darkBg) {
+        return { colorIndex: i };
+      }
+    }
+  } catch {
+    // ignore
+  }
 
-export const getThemeColors = (showGradients: boolean): ThemeColor[] =>
-  showGradients ? gradientColors : solidColors;
+  return { colorIndex: 0 };
+}
 
 export const getThemeVariant = (
   colorPair: ThemeColor,

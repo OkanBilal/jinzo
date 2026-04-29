@@ -30,7 +30,7 @@ function ImageDiffView({ absPath, fileName }: { absPath: string; fileName: strin
   const url = localImageUrl(absPath);
 
   return (
-    <div className="h-full overflow-auto px-2 ">
+    <div className="h-full overflow-auto px-2  ">
       <div className="mx-auto ">
         {error ? (
           <div className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-3 text-xs text-red-300 break-all">

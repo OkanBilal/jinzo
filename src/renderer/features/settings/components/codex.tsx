@@ -21,6 +21,7 @@ import {
   ProviderVisibilitySection,
   useProviderSettings,
 } from "./provider-settings-shared";
+import { useSearchParams } from "react-router-dom";
 
 function formatResetDate(resetsAt: number): string {
   const date = new Date(resetsAt * 1000);
@@ -145,7 +146,7 @@ export default function CodexSettings() {
   });
   const { data: accountInfo, isLoading: isLoadingAccount } = useGetProviderAccountInfoQuery("codex");
 
-  // const [, setSearchParams] = useSearchParams();
+  const [, setSearchParams] = useSearchParams();
   const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] =
     useState(false);
 
@@ -216,8 +217,7 @@ export default function CodexSettings() {
 
       <SettingsSection title="Configuration">
 
-        {/*
-        TODO:
+
         <SettingsRow
           title="Plugins"
           description="Browse and manage Codex plugins"
@@ -230,7 +230,7 @@ export default function CodexSettings() {
             Browse
           </Button>
         </SettingsRow>
-        <SettingsDivider />*/}
+        <SettingsDivider />
         <SettingsRow
           title="Approval Policy"
           description="Choose when Codex asks for approval"

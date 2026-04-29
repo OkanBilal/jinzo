@@ -125,11 +125,14 @@ export const spaceService = {
         }
       }
 
-      // Update space
-      await spaceRepo.update(spaceId, {
-        ...data,
-        slug: data.slug || (data.name ? generateSlug(data.name) : undefined),
-      });
+      // Update space (only set slug when provided or implied by a new name)
+      const updatePayload: typeof data = { ...data };
+      if (data.slug) {
+        updatePayload.slug = data.slug;
+      } else if (data.name) {
+        updatePayload.slug = generateSlug(data.name);
+      }
+      await spaceRepo.update(spaceId, updatePayload);
 
       const updated = await spaceRepo.findById(spaceId);
       if (!updated) {

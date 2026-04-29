@@ -1,8 +1,14 @@
 import type { RunEvent } from "../types";
+import { resolveTool } from "./resolve-tool";
 
 export interface ToolSubGroup {
   id: string;
-  toolType: string;
+  /** Human-readable label rendered in the accordion header. */
+  displayName: string;
+  /** Stable comparison key — events sharing this key collapse into one group. */
+  groupKey: string;
+  /** Icon rendered next to the displayName in the accordion header. */
+  icon: React.ReactNode;
   events: RunEvent[];
 }
 
@@ -73,93 +79,63 @@ function collapseEditsByFilePath(events: RunEvent[]): RunEvent[] {
   return result;
 }
 
+/**
+ * Backwards-compatible accessor — returns the resolved displayName for an
+ * event's content. Callers that need grouping logic should use
+ * `resolveTool(content).groupKey` directly.
+ */
 export function getToolType(content: string): string {
-  const colonIdx = content.indexOf(":");
-  const toolName =
-    colonIdx > 0 ? content.substring(0, colonIdx).trim() : content;
-  const lower = toolName.toLowerCase();
-
-  // Mains tools: MCP prefix (mcp__mains__*) or direct name from bridge
-  if (lower.startsWith("mcp__mains__") || lower.includes("__mains__")) {
-    if (lower.includes("getworkspacediff")) return "GetDiff";
-    if (lower.includes("savereview")) return "SaveReview";
-    if (lower.includes("savefinding")) return "SaveFinding";
-    if (lower.includes("commitchanges")) return "Commit";
-    if (lower.includes("createpr")) return "CreatePR";
-    if (lower.includes("checkpackage")) return "CheckPackage";
-    return "Mains";
-  }
-  if (lower === "getworkspacediff") return "GetDiff";
-  if (lower === "savereview") return "SaveReview";
-  if (lower === "savefinding" || lower === "savefindings") return "SaveFinding";
-  if (lower.includes("commitchanges")) return "Commit";
-  if (lower.includes("createpr")) return "CreatePR";
-  if (lower.includes("checkpackage")) return "CheckPackage";
-
-  if (lower === "todowrite") return "TodoWrite";
-  if (lower === "task") return "Task";
-  if (lower === "read" ||  lower.includes("read"))
-    return "Read";
-  if (lower === "view" || lower.includes("view"))
-    return "View";
-  if (lower === "bash" || lower === "terminal")
-    return "Bash";
-  if (lower === "shell" || lower.includes("shell"))
-    return "Shell";
-  if (lower === "edit" || lower.includes("edit")) return "Edit";
-  if (lower === "write" || lower.includes("write")) return "Write";
-  if (lower === "websearch" || lower === "web_search") return "WebSearch";
-  if (lower === "webfetch" || lower === "web_fetch") return "WebFetch";
-  if (lower === "search" || lower === "find") return "Search";
-  if (lower === "glob") return "Glob";
-  if (lower === "grep") return "Grep";
-  if (lower === "report_intent") return "Intent";
-  if (lower === "toolsearch") return "ToolSearch";
-  if (lower === "ask_user" || lower === "askuser") return "AskUserQuestion";
-  if (lower === "delete") return "Delete";
-
-  return toolName;
+  return resolveTool(content).displayName;
 }
 
 export function groupConsecutiveToolCalls(events: RunEvent[]): ToolSubGroup[] {
   const subGroups: ToolSubGroup[] = [];
   let currentGroup: RunEvent[] = [];
-  let currentToolType: string | null = null;
+  let currentKey: string | null = null;
+  let currentLabel = "";
+  let currentIcon: React.ReactNode = null;
 
   const flushGroup = () => {
-    if (currentGroup.length > 0 && currentToolType) {
-      const events =
-        currentToolType === "Edit" || currentToolType === "Write"
-          ? collapseEditsByFilePath(currentGroup)
-          : [...currentGroup];
-      subGroups.push({
-        id: `subgroup-${currentGroup[0].id}`,
-        toolType: currentToolType,
-        events,
-      });
-      currentGroup = [];
-      currentToolType = null;
-    }
+    if (currentGroup.length === 0 || currentKey === null) return;
+    const events =
+      currentKey === "edit" || currentKey === "write"
+        ? collapseEditsByFilePath(currentGroup)
+        : [...currentGroup];
+    subGroups.push({
+      id: `subgroup-${currentGroup[0].id}`,
+      groupKey: currentKey,
+      displayName: currentLabel,
+      icon: currentIcon,
+      events,
+    });
+    currentGroup = [];
+    currentKey = null;
+    currentLabel = "";
+    currentIcon = null;
   };
 
   for (const event of events) {
-    const toolType = getToolType(event.content);
+    const resolved = resolveTool(event.content);
 
-    const lowerToolType = toolType.toLowerCase();
-    const isSpecial = lowerToolType === "task" || lowerToolType === "todowrite";
-
-    if (isSpecial) {
+    if (resolved.isSpecialGroup) {
       flushGroup();
       subGroups.push({
         id: `subgroup-${event.id}`,
-        toolType: toolType,
+        groupKey: resolved.groupKey,
+        displayName: resolved.groupLabel,
+        icon: resolved.icon,
         events: [event],
       });
-    } else if (toolType === currentToolType) {
+      continue;
+    }
+
+    if (resolved.groupKey === currentKey) {
       currentGroup.push(event);
     } else {
       flushGroup();
-      currentToolType = toolType;
+      currentKey = resolved.groupKey;
+      currentLabel = resolved.groupLabel;
+      currentIcon = resolved.icon;
       currentGroup = [event];
     }
   }

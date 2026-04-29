@@ -105,7 +105,7 @@ export function PlanDisplay({ event, onApplyPlan }: PlanDisplayProps) {
 
           {/* Action buttons — only when pending */}
           {isPending && (
-            <div className="flex items-center gap-2 px-4 py-2.5 border-t border-primary-500/10 dark:border-primary-400/10 shrink-0">
+            <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-primary-500/10 dark:border-primary-400/10 shrink-0">
               <Button
                 variant="submit"
                 size="xs"

@@ -31,6 +31,27 @@ function hostname(url: string) {
   }
 }
 
+function skillIconSrc(absPath: string): string {
+  return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
+}
+
+function ContextSkillChipIcon({ skill }: { skill: ContextSkill }) {
+  const [failed, setFailed] = useState(false);
+  const iconPath = skill.iconLarge || skill.iconSmall;
+  if (iconPath && !failed) {
+    return (
+      <img
+        src={skillIconSrc(iconPath)}
+        alt=""
+        className="w-3 h-3 rounded shrink-0 object-contain"
+        style={skill.brandColor ? { backgroundColor: skill.brandColor } : undefined}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return <Sparkles className="w-3 h-3 shrink-0" />;
+}
+
 function BrowserSelectionPreview({
   sel,
   onClose,
@@ -204,25 +225,29 @@ export function ContextChips({
                 )}
               </div>
             ))}
-            {contextSkills.map((skill) => (
-              <div
-                key={skill.name}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-violet-500/15 text-violet-300"
-                title={skill.description ?? skill.name}
-              >
-                <Sparkles className="w-3 h-3" />
-                <span className="truncate max-w-37.5">{skill.name}</span>
-                {onRemoveContextSkill && (
-                  <button
-                    onClick={() => onRemoveContextSkill(skill.name)}
-                    className="w-4 h-4 flex items-center justify-center rounded p-0.5 transition-colors hover:bg-violet-500/20"
-                    title="Remove skill"
-                  >
-                    <Close className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            ))}
+            {contextSkills.map((skill) => {
+              const label = skill.displayName || skill.name;
+              const tooltip = skill.shortDescription || skill.description || label;
+              return (
+                <div
+                  key={skill.name}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-primary-500/15 dark:bg-primary-500/20 text-primary-500 dark:text-primary-300"
+                  title={tooltip}
+                >
+                  <ContextSkillChipIcon skill={skill} />
+                  <span className="truncate max-w-37.5">{label}</span>
+                  {onRemoveContextSkill && (
+                    <button
+                      onClick={() => onRemoveContextSkill(skill.name)}
+                      className="w-4 h-4 flex items-center justify-center rounded p-0.5 transition-colors hover:bg-primary-500/20"
+                      title="Remove skill"
+                    >
+                      <Close className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
             {contextSignals.map((signal) => (
               <div
                 key={signal.entityId}

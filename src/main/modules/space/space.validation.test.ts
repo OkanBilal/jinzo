@@ -36,8 +36,14 @@ describe("sanitizeSpacePayload", () => {
     expect(result.errors.body).toBe("Invalid payload");
   });
 
-  it("requires name", () => {
+  it("does not require name when omitted (partial update)", () => {
     const result = sanitizeSpacePayload({});
+    expect(result.errors.name).toBeUndefined();
+    expect(result.data).toEqual({});
+  });
+
+  it("rejects empty name when name is provided", () => {
+    const result = sanitizeSpacePayload({ name: "   " });
     expect(result.errors.name).toBe("Name is required");
   });
 
@@ -65,6 +71,13 @@ describe("sanitizeSpacePayload", () => {
       themeConfig: '{"primary":"#fff"}',
     });
     expect(result.data.themeConfig).toBe('{"primary":"#fff"}');
+  });
+
+  it("accepts partial payload with only themeConfig", () => {
+    const json = '{"lightBackground":"#f6eae7","darkBackground":"#54241ce6"}';
+    const result = sanitizeSpacePayload({ themeConfig: json });
+    expect(result.errors).toEqual({});
+    expect(result.data.themeConfig).toBe(json);
   });
 
   it("accepts sortOrder as number", () => {

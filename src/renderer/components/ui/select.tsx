@@ -32,6 +32,8 @@ export default function Select<T extends string = string>({
   title,
 }: SelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
+  const [animateIn, setAnimateIn] = useState(false);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState({
@@ -40,12 +42,35 @@ export default function Select<T extends string = string>({
     width: 0,
   });
 
+  // Reset enter animation when the menu closes or opens so the double-RAF ramp
+  // always starts from prewarm (avoids sync setState in an effect).
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (!isOpen || (isOpen && !prevIsOpen)) {
+      setAnimateIn(false);
+    }
+  }
+
   // Calculate dropdown position once when opened
   useEffect(() => {
     if (!isOpen || !containerRef.current) return;
 
     const rect = containerRef.current.getBoundingClientRect();
     setDropdownPosition({ top: rect.bottom, left: rect.left, width: rect.width });
+  }, [isOpen]);
+
+  // Defer animation by two frames so React commit + first paint of children
+  // happen before the GPU starts the keyframe — prevents first-open jank.
+  useEffect(() => {
+    if (!isOpen) return;
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setAnimateIn(true));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
   }, [isOpen]);
 
   useEffect(() => {
@@ -154,7 +179,7 @@ export default function Select<T extends string = string>({
           className={`fixed z-(--z-modal)
             border border-t-0 border-primary-950/10 dark:border-primary/10
             rounded-b-xl shadow-lg overflow-hidden
-            ${isOpen ? "animate-dropdown-in" : "pointer-events-none invisible will-change-[transform,opacity]"}
+            ${isOpen && animateIn ? "animate-dropdown-in" : "dropdown-prewarm"}
             origin-top ${fixedBackgroundClass}`}
           style={{
             background: dropdownBackground,

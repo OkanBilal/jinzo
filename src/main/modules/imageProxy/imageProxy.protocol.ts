@@ -115,6 +115,7 @@ const LOCALIMG_EXT_MIME: Record<string, string> = {
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
   ".gif": "image/gif",
+  ".svg": "image/svg+xml",
 };
 
 let cachedWorkspaceRoots: string[] = [];
@@ -147,6 +148,13 @@ async function isPathInAllowedRoot(absPath: string): Promise<boolean> {
   const roots = [
     path.resolve(path.join(os.homedir(), ".codex", "generated_images")),
     path.resolve(path.join(os.homedir(), ".codex", "sessions")),
+    path.resolve(path.join(os.homedir(), ".codex", "skills")),
+    path.resolve(path.join(os.homedir(), ".codex", "plugins")),
+    path.resolve(path.join(os.homedir(), ".agents", "skills")),
+    path.resolve(path.join(os.homedir(), "Desktop")),
+    path.resolve(path.join(os.homedir(), "Documents")),
+    path.resolve(path.join(os.homedir(), "Downloads")),
+    path.resolve(path.join(os.homedir(), "Pictures")),
     path.resolve(app.getPath("userData")),
     ...(await getWorkspaceRoots()),
   ];

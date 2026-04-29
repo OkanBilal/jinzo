@@ -480,7 +480,17 @@ export function useWorkspaceRuns(
           contextIssues: contextIssues?.map(i => ({ provider: i.provider, number: i.number, title: i.title, body: i.body })),
           contextFiles: contextFiles?.map(f => ({ path: f.fullPath })),
           contextSignals: contextSignals?.map(s => ({ source: s.source, level: s.level, category: s.category, title: s.title, body: s.body, stackTrace: s.stackTrace, eventCount: s.eventCount })),
-          contextSkills: contextSkills?.map(s => ({ name: s.name, path: s.path })),
+          contextSkills: contextSkills?.map(s => ({
+            name: s.name,
+            path: s.path,
+            displayName: s.displayName,
+            description: s.description,
+            shortDescription: s.shortDescription,
+            iconSmall: s.iconSmall,
+            iconLarge: s.iconLarge,
+            brandColor: s.brandColor,
+            scope: s.scope,
+          })),
         });
 
         if (!result.success) {
@@ -526,7 +536,17 @@ export function useWorkspaceRuns(
         contextIssues: contextIssues?.map(i => ({ provider: i.provider, number: i.number, title: i.title, body: i.body })),
         contextFiles: contextFiles?.map(f => ({ path: f.fullPath })),
         contextSignals: contextSignals?.map(s => ({ source: s.source, level: s.level, category: s.category, title: s.title, body: s.body, stackTrace: s.stackTrace, eventCount: s.eventCount })),
-        contextSkills: contextSkills?.map(s => ({ name: s.name, path: s.path })),
+        contextSkills: contextSkills?.map(s => ({
+          name: s.name,
+          path: s.path,
+          displayName: s.displayName,
+          description: s.description,
+          shortDescription: s.shortDescription,
+          iconSmall: s.iconSmall,
+          iconLarge: s.iconLarge,
+          brandColor: s.brandColor,
+          scope: s.scope,
+        })),
       });
 
       if (!result.success) {
@@ -540,10 +560,12 @@ export function useWorkspaceRuns(
         );
       }
 
+      void loadRunDetails(runId);
+
       dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
       return true;
     }, false, "Failed to continue run");
-  }, [runOperation, dispatch]);
+  }, [runOperation, dispatch, loadRunDetails]);
 
   const forkRun = useCallback(
     async (sourceRunId: string, message: string): Promise<string | null> => {

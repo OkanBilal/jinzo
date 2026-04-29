@@ -30,7 +30,7 @@ export function ToolCallGroup({
     );
   }
 
-  const toolTypes = new Set(subGroups.map((sg) => sg.toolType));
+  const toolTypes = new Set(subGroups.map((sg) => sg.displayName));
   const toolSummary = Array.from(toolTypes).slice(0, 3).join(", ");
   const moreCount = toolTypes.size > 3 ? ` +${toolTypes.size - 3}` : "";
 

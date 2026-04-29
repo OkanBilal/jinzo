@@ -54,7 +54,17 @@ export interface WorkRunRequest {
   /** Structured context files passed from the UI */
   contextFiles?: Array<{ path: string }>;
   /** User-selected skills to invoke during this run (adapter decides how to inject) */
-  skills?: Array<{ name: string; path: string }>;
+  skills?: Array<{
+    name: string;
+    path: string;
+    displayName?: string;
+    description?: string;
+    shortDescription?: string;
+    iconSmall?: string;
+    iconLarge?: string;
+    brandColor?: string;
+    scope?: string;
+  }>;
   /**
    * Per-run hooks configuration that overrides or extends adapter-level hooks.
    * Useful for dynamic hook configuration based on the specific run context.
@@ -108,6 +118,7 @@ export interface WorkRunArtifactEvent {
   ephemeral?: boolean;
   /** Identifies the streaming source — renderer uses this to accumulate deltas */
   streamId?: string;
+  ts?: number;
 }
 
 /**
@@ -250,7 +261,17 @@ export interface WorkRunContinueRequest {
   /** Structured context files to inject into this follow-up */
   contextFiles?: Array<{ path: string }>;
   /** User-selected skills to invoke for this follow-up (adapter decides how to inject) */
-  skills?: Array<{ name: string; path: string }>;
+  skills?: Array<{
+    name: string;
+    path: string;
+    displayName?: string;
+    description?: string;
+    shortDescription?: string;
+    iconSmall?: string;
+    iconLarge?: string;
+    brandColor?: string;
+    scope?: string;
+  }>;
   /**
    * Per-run hooks configuration for this continuation.
    * Useful for dynamic hook configuration based on the continuation context.
@@ -727,6 +748,22 @@ export interface SkillInfo {
   agent?: string;
   /** Full path to the SKILL.md file */
   path?: string;
+  /** Human-friendly display name (from interface.displayName, e.g. "Documents") */
+  displayName?: string;
+  /** Short description for compact UI surfaces (from interface.shortDescription) */
+  shortDescription?: string;
+  /** Small icon path/url (from interface.iconSmall) */
+  iconSmall?: string;
+  /** Large icon path/url (from interface.iconLarge) */
+  iconLarge?: string;
+  /** Brand color (hex string, from interface.brandColor) */
+  brandColor?: string;
+  /** Default prompt suggestion (from interface.defaultPrompt) */
+  defaultPrompt?: string;
+  /** Provider-reported scope: "user" | "project" | "system" | other */
+  scope?: "user" | "project" | "system" | string;
+  /** Whether the skill is enabled */
+  enabled?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────

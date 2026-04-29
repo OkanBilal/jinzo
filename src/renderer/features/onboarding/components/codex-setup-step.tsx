@@ -20,7 +20,6 @@ export function CodexSetupStep() {
 
   return (
     <div className="space-y-4">
-      <Text variant="h2">Codex Setup</Text>
       <Text variant="muted">
         Mains can use OpenAI Codex CLI as an AI coding agent. Make sure you have
         the CLI installed and authenticated before using the Codex.

@@ -8,6 +8,7 @@ import {
   useReducer,
   useState,
 } from "react";
+import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { WizardProvider, type WizardContextValue } from "./wizard-context";
 import { usePrefersReducedMotion } from "../../../hooks/use-prefers-reduced-motion";
@@ -24,6 +25,8 @@ export interface WizardStep<
 > {
   id: string;
   title?: string;
+  /** Shown beside the step title in the modal header (per-step; overrides modal `icon`). */
+  titleIcon?: ReactNode;
   render: (ctx: WizardContextValue<TData>) => React.ReactNode;
   canNext?: (ctx: WizardContextValue<TData>) => boolean;
   canBack?: (ctx: WizardContextValue<TData>) => boolean;
@@ -127,6 +130,7 @@ export function WizardModal<
 
   const currentStep = steps[stepIndex];
   const displayTitle = currentStep?.title ?? title;
+  const displayTitleIcon = currentStep?.titleIcon;
 
   const setData = useCallback((partial: Partial<TData>) => {
     dispatch({ type: "SET_DATA", data: partial });
@@ -208,7 +212,7 @@ export function WizardModal<
   return createPortal(
     <div className="fixed inset-0 z-(--z-modal) flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 dark:bg-primary-950/50 bg-primary/50 backdrop-blur-xs "
+        className="absolute inset-0 dark:bg-primary-950/60 bg-primary/80  "
         onClick={() => !isSubmitting && close()}
         aria-hidden="true"
       />
@@ -225,16 +229,25 @@ export function WizardModal<
             : undefined,
         }}
       >
-        <div className="flex items-center justify-between pl-4 pr-3 py-4">
-          <div className="flex items-center gap-2">
-            {icon && (
-              <img
-                src={icon}
-                alt=""
-                className="w-9 h-9"
-                width={256}
-                height={256}
-              />
+        <div className="flex items-center justify-between pl-4 pr-3 pt-4">
+          <div className="flex min-h-9 items-center gap-2">
+            {displayTitleIcon != null ? (
+              <span
+                className="flex size-9 shrink-0 items-center justify-center [&_svg]:size-7 [&>div]:flex [&>div]:size-9 [&>div]:items-center [&>div]:justify-center"
+                aria-hidden
+              >
+                {displayTitleIcon}
+              </span>
+            ) : (
+              icon && (
+                <img
+                  src={icon}
+                  alt=""
+                  className="w-9 h-9"
+                  width={256}
+                  height={256}
+                />
+              )
             )}
             <span id="wizard-title">
               <Text variant="h3">{displayTitle}</Text>

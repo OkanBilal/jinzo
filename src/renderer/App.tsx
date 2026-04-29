@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { HashRouter as Router, useLocation } from "react-router-dom";
 import Sidebar from "./components/layout/sidebar";
 import RightPanel from "./components/layout/right-panel";
@@ -21,7 +22,23 @@ import { OnboardingModal } from "./features/onboarding/components/onboarding-mod
 import { ErrorBoundary } from "./components/ui/error-boundary";
 import { MainHeaderProvider } from "./hooks/use-main-header";
 
+function useDropdownAnimationPrewarm() {
+  useEffect(() => {
+    const el = document.createElement("div");
+    el.className = "animate-dropdown-in";
+    el.style.cssText =
+      "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;pointer-events:none;";
+    document.body.appendChild(el);
+    const id = window.setTimeout(() => el.remove(), 400);
+    return () => {
+      window.clearTimeout(id);
+      el.remove();
+    };
+  }, []);
+}
+
 function AppContent() {
+  useDropdownAnimationPrewarm();
   const { mainMarginLeft, rightPanelWidth } = useLayoutConfig();
   const location = useLocation();
   const hideRightPanel = shouldHideRightPanel(location.pathname);
