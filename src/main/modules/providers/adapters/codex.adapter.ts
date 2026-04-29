@@ -891,19 +891,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       }
     });
 
-    logInfo("App-server initialized successfully");
-
-    // Debug: fetch app/list and log the response shape.
-    // See https://github.com/openai/codex/tree/main/codex-rs/app-server#apps
-    server.sendRequest("app/list", {}, 15000)
-      .then((result) => {
-        logInfo(`[app/list] response: ${JSON.stringify(result, null, 2)}`);
-      })
-      .catch((err) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        logWarn(`[app/list] failed: ${msg}`);
-      });
-
+    logInfo("App-server initialized successfully")
     return server;
   }
 
