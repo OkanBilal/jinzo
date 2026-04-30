@@ -577,7 +577,6 @@ export default function CodexPlugins() {
   if (isLoading) {
     return (
       <div>
-        <Heading2 className="mb-2">Plugins</Heading2>
         <Muted>Loading plugins... This may take a moment on first load.</Muted>
       </div>
     );
@@ -589,7 +588,6 @@ export default function CodexPlugins() {
                    "data" in (error as any) ? String((error as any).data) : "Unknown error";
     return (
       <div>
-        <Heading2 className="mb-2">Plugins</Heading2>
         <Muted>Failed to load plugins: {errMsg}</Muted>
       </div>
     );
@@ -616,10 +614,6 @@ export default function CodexPlugins() {
   return (
 
     <div className="mb-12">
-      <div className="flex items-center justify-between mb-6">
-        <Heading2>Plugins</Heading2>
-      </div>
-
       {/* Category filter + search */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex gap-1">

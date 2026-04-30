@@ -54,7 +54,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   icon: "cursor-pointer p-1 rounded-md text-primary-600 dark:text-primary-200 hover:bg-primary-200/40 dark:hover:bg-primary-700",
   link: "cursor-pointer text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 underline-offset-4 hover:underline ",
   subtle:
-    "cursor-pointer flex items-center gap-2 bg-primary/50 dark:bg-primary/5 hover:bg-primary/80 dark:hover:bg-primary/10 ",
+    "cursor-pointer flex items-center gap-2  hover:bg-primary/80 dark:hover:bg-primary/10 ",
   frosted:
     "cursor-pointer glass-morphism-button text-primary-800 dark:text-primary-200 ",
   bare: "cursor-pointer",
@@ -64,7 +64,7 @@ const sizeStyles: Record<ButtonSize, string> = {
   xxs: "px-0 py-1 text-xs",
   xs: "px-3 py-1.5 text-xs rounded-lg",
   sm: "px-3 py-1.75 text-s rounded-lg",
-  md: "px-3 py-2 text-s rounded-xl",
+  md: "px-3 py-1.75 text-s rounded-xl",
   lg: "px-3 py-2.5 text-base rounded-xl",
 };
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { SidebarHeader } from "./sidebar-header";
 import { SidebarFooter } from "./sidebar-footer";
 import { SidebarContent } from "./sidebar-content";
@@ -12,7 +13,7 @@ import HelpMenu from "./help-menu";
 import SpaceContextMenu from "./space-context-menu";
 import EditSpaceModal from "./edit-space-modal";
 import DeleteSpaceModal from "./delete-space-modal";
-import { Edit, Plus, Connect } from "@/components/ui/icons";
+import { Edit, Plus, Connect, Apps } from "@/components/ui/icons";
 import CloneRepoModal from "./clone-repo-modal";
 import { useDeleteWorkspace } from "@/features/workspace/hooks";
 import { useArchiveWorkspace } from "@/features/workspace/hooks";
@@ -26,12 +27,16 @@ import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useScriptNotifications } from "@/hooks/use-script-notifications";
 import { UpdateBanner } from "./update-banner";
+import { Button } from "@/components/ui/button";
+import { Body } from "@/components/ui";
 
 interface SidebarProps {
   collapsed?: boolean;
 }
 
 export default function Sidebar({ collapsed }: SidebarProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const sidebarConfig = useSidebarConfig();
   const { spaces, activeSpaceId } = useActiveSpace();
 
@@ -115,6 +120,10 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   // Suppress unused variable warning for handleRefreshConnections
   void handleRefreshConnections;
 
+  const isPluginsRoute =
+    location.pathname === "/plugins" ||
+    location.pathname.startsWith("/plugins/");
+
   return (
     <>
       <aside
@@ -144,7 +153,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               onSearchChange={setSearchQuery}
               onSearchClear={handleSearchClear}
             />
-            <div className="p-3">
+            <div className="px-3 py-0.25">
               <NewButton
                 onClick={handleNewClick}
                 icon={
@@ -183,6 +192,36 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                     : undefined
                 }
               />
+            </div>
+            <div className="px-3 mb-2">
+              <Button
+                variant="subtle"
+                size="md"
+                className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
+                  isPluginsRoute
+                    ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/8"
+                    : ""
+                }`}
+                onClick={() => navigate("/plugins")}
+                aria-current={isPluginsRoute ? "page" : undefined}
+              >
+                <Apps
+                  className={`w-4 h-4 -ml-1 ${
+                    isPluginsRoute
+                      ? "text-primary-950 dark:text-primary"
+                      : "text-primary-900 dark:text-primary-200"
+                  }`}
+                />
+                <Body
+                  className={`text-s font-medium ${
+                    isPluginsRoute
+                      ? "text-primary-950 dark:text-primary"
+                      : "text-primary-900 dark:text-primary-100"
+                  }`}
+                >
+                  Plugins
+                </Body>
+              </Button>
             </div>
             <SidebarContent
               workspaces={workspaces}

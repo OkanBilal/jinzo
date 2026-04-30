@@ -7,6 +7,7 @@ import { useActiveSpace } from "@/hooks/use-active-space";
 import ClaudePage from "@/routes/Claude";
 import CodexPage from "@/routes/Codex";
 import CursorPage from "@/routes/Cursor";
+import PluginsPage from "@/routes/Plugins";
 
 function DefaultRoute() {
   const { activeSpace } = useActiveSpace();
@@ -28,6 +29,7 @@ export function MainRoutes() {
       <Route path="/claude" element={<ClaudePage />} />
       <Route path="/claude/:workspaceId" element={<ClaudePage />} />
       <Route path="/settings" element={<Settings />} />
+      <Route path="/plugins" element={<PluginsPage />} />
       <Route path="/copilot" element={<Copilot />} />
       <Route path="/copilot/:workspaceId" element={<Copilot />} />
       <Route path="/codex" element={<CodexPage />} />

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { getRouteType, getBaseRoutePath } from "./route-utils";
+import {
+  getRouteType,
+  getBaseRoutePath,
+  getWorkspaceListBasePath,
+} from "./route-utils";
 
 describe("getRouteType", () => {
   it('returns "home" for /', () => {
@@ -54,5 +58,19 @@ describe("getBaseRoutePath", () => {
 
   it('returns / for "unknown"', () => {
     expect(getBaseRoutePath("unknown")).toBe("/");
+  });
+});
+
+describe("getWorkspaceListBasePath", () => {
+  it("uses current agent route when on /codex", () => {
+    expect(getWorkspaceListBasePath("/codex/ws-1", "/copilot")).toBe("/codex");
+  });
+
+  it("uses space default on /plugins", () => {
+    expect(getWorkspaceListBasePath("/plugins", "/cursor")).toBe("/cursor");
+  });
+
+  it("falls back when space default missing on unknown path", () => {
+    expect(getWorkspaceListBasePath("/plugins", "")).toBe("/claude");
   });
 });

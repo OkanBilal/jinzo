@@ -1344,7 +1344,7 @@ export function createClaudeAdapter(
       const skills: SkillInfo[] = [];
 
       if (settingSources.includes("user")) {
-        const userSkillsDir = path.join(os.homedir(), ".claude", "skills");
+        const userSkillsDir = path.join(os.homedir(), ".claude", "skills", );
         const userSkills = await discoverSkillsFromDirectory(
           userSkillsDir,
           "user",

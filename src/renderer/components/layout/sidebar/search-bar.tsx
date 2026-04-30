@@ -25,23 +25,23 @@ export default function SearchBar({
     >
       {isExpanded ? (
         <div className="relative animate-in fade-in duration-200 w-full">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-900 dark:text-primary-400 " />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-900 dark:text-primary-200 " />
           <input
             type="text"
             placeholder="Search"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full h-9 bg-primary-950/5 dark:bg-primary/5 border-none
-                        rounded-xl pl-10 pr-10 text-sm text-primary-900 dark:text-primary-100
-                        placeholder:text-primary-900 dark:placeholder:text-primary/35
+                        rounded-xl pl-9 pr-10 text-sm text-primary-900 dark:text-primary/80
+                        placeholder:text-primary-900 dark:placeholder:text-primary-200
                         transition-all duration-200 focus:outline-none focus:bg-primary-950/10 dark:focus:bg-primary/10 "
           />
           <Button
             tooltip="Clear search"
             onClick={onClear}
-            className="absolute cursor-pointer right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-primary/20 dark:hover:bg-primary/10 rounded-md transition-all duration-200"
+            className="absolute cursor-pointer right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-primary/20 dark:hover:bg-primary/10 rounded-md transition-all duration-200"
           >
-            <Close className="w-3 h-3 text-primary-900 dark:text-primary-400" />
+            <Close className="w-3.5 h-3.5 text-primary-900 dark:text-primary-200" />
           </Button>
         </div>
       ) : (
@@ -51,7 +51,7 @@ export default function SearchBar({
           tooltipPosition="top"
           className="p-2 cursor-pointer duration-200 flex items-center justify-center hover:bg-primary/20 dark:hover:bg-primary/10 rounded-xl transition-all"
         >
-          <Search className="w-4 h-4 text-primary-900 dark:text-primary-400" />
+          <Search className="w-4 h-4 text-primary-900 dark:text-primary-200" />
         </Button>
       )}
     </div>

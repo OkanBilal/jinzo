@@ -455,3 +455,26 @@ export type {
   CreateAutomationInput,
   UpdateAutomationInput,
 } from "./automationsApi";
+
+export {
+  skillsMarketplaceApi,
+  useListMarketplaceSkillsQuery,
+  useLazyListMarketplaceSkillsQuery,
+  useSearchMarketplaceSkillsQuery,
+  useLazySearchMarketplaceSkillsQuery,
+  useGetCuratedSkillsQuery,
+  useGetMarketplaceSkillDetailQuery,
+  useGetMarketplaceSkillAuditQuery,
+} from "./skillsMarketplaceApi";
+export type {
+  SkillView,
+  SkillSummary,
+  SkillListResponse,
+  SkillSearchResponse,
+  CuratedGroup,
+  CuratedResponse,
+  SkillDetailResponse,
+  SkillFile,
+  SkillAuditEntry,
+  SkillAuditResponse,
+} from "./skillsMarketplaceApi";

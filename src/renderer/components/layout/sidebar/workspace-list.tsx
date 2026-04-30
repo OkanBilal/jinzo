@@ -12,8 +12,8 @@ import { ArrowUp } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
 import type { Workspace as WorkspaceResponse } from "@/lib/redux/api/workspacesApi";
 import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
-import { useRouteType } from "@/hooks/use-route-type";
-import { getBaseRoutePath } from "@/lib/route-utils";
+import { useSidebarConfig } from "@/hooks/use-sidebar-config";
+import { getWorkspaceListBasePath } from "@/lib/route-utils";
 import type { RootState } from "@/lib/redux";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
@@ -112,7 +112,7 @@ export default function WorkspacesList({
   }>({ isOpen: false, projectId: "", workspaceName: "" });
   const navigate = useNavigate();
   const location = useLocation();
-  const routeType = useRouteType();
+  const { defaultRoute: spaceDefaultRoute } = useSidebarConfig();
   const [updateWorkspace] = useUpdateWorkspaceMutation();
   const activeWorkspaceId = useSelector(
     (state: RootState) => state.workspace.activeWorkspaceId,
@@ -140,6 +140,11 @@ export default function WorkspacesList({
     return map;
   }, [projects]);
 
+  const basePath = useMemo(
+    () => getWorkspaceListBasePath(location.pathname, spaceDefaultRoute),
+    [location.pathname, spaceDefaultRoute],
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-16">
@@ -159,10 +164,6 @@ export default function WorkspacesList({
       </div>
     );
   }
-
-  const basePath = getBaseRoutePath(
-    routeType === "claude" ? "claude" : routeType === "codex" ? "codex" : routeType === "cursor" ? "cursor" : "copilot",
-  );
 
   const handleWorkspaceClick = (workspace: WorkspaceResponse) => {
     navigate(`${basePath}/${workspace.id}`);
@@ -346,7 +347,7 @@ export default function WorkspacesList({
         // onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsExpanded(!isExpanded); } }}
         className="w-full flex items-center justify-between transition-all duration-200 bg-transparent   px-2 py-0.5 mb-1 rounded-lg "
       >
-        <Caption className="text-primary-800 dark:text-primary-300 font-medium">
+        <Caption className="text-primary-800 dark:text-primary-200 font-medium">
           Workspaces
         </Caption>
         <div className="flex items-center ">

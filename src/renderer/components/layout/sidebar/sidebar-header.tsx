@@ -28,7 +28,7 @@ export function SidebarHeader({
           isSearchExpanded ? "gap-0" : "gap-3"
         }`}
       >
-        {/* <UserProfile
+        <UserProfile
           avatarUrl={avatarUrl}
           displayName={displayName}
           isVisible={!isSearchExpanded}
@@ -39,7 +39,7 @@ export function SidebarHeader({
           onToggle={onSearchExpand}
           onSearchChange={onSearchChange}
           onClear={onSearchClear}
-        /> */}
+        />
       </div>
     </div>
   );

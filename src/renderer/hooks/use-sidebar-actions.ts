@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   useSetActiveSpaceMutation,
   useCreateWorkspaceMutation,
@@ -12,12 +12,11 @@ import {
 import { toast } from "@/components/ui";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
-import { useRouteType } from "@/hooks/use-route-type";
-import { getBaseRoutePath } from "@/lib/route-utils";
+import { getWorkspaceListBasePath } from "@/lib/route-utils";
 
 export function useSidebarActions() {
   const navigate = useNavigate();
-  const routeType = useRouteType();
+  const location = useLocation();
   const { spaces } = useActiveSpace();
   const sidebarConfig = useSidebarConfig();
   const { data: account } = useGetAccountQuery();
@@ -214,7 +213,10 @@ export function useSidebarActions() {
         }
 
         toast.success("Workspace added");
-        const basePath = getBaseRoutePath(routeType === "settings" || routeType === "home" || routeType === "unknown" ? "codex" : routeType);
+        const basePath = getWorkspaceListBasePath(
+          location.pathname,
+          sidebarConfig.defaultRoute,
+        );
         navigate(`${basePath}/${workspaceId}`);
       }
     } catch (error) {
@@ -348,7 +350,10 @@ export function useSidebarActions() {
 
       toast.success("Repository cloned and workspace created");
       setIsCloneModalOpen(false);
-      const basePath = getBaseRoutePath(routeType === "settings" || routeType === "home" || routeType === "unknown" ? "codex" : routeType);
+      const basePath = getWorkspaceListBasePath(
+        location.pathname,
+        sidebarConfig.defaultRoute,
+      );
       navigate(`${basePath}/${workspaceId}`);
     } catch (error) {
       console.error("Failed to clone repository:", error);

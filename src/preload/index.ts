@@ -227,6 +227,18 @@ const api = {
     installPlugin: (id: string, pluginId: string) => ipcRenderer.invoke("providers:installPlugin", id, pluginId),
     uninstallPlugin: (id: string, pluginId: string) => ipcRenderer.invoke("providers:uninstallPlugin", id, pluginId),
   },
+  // Skills.sh marketplace (read-only)
+  skillsMarketplace: {
+    list: (args?: { view?: "trending" | "hot" | "all-time"; page?: number; perPage?: number }) =>
+      ipcRenderer.invoke("skillsMarketplace:list", args ?? {}),
+    search: (args: { q: string; limit?: number }) =>
+      ipcRenderer.invoke("skillsMarketplace:search", args),
+    curated: () => ipcRenderer.invoke("skillsMarketplace:curated"),
+    detail: (ref: { source: string; skill: string }) =>
+      ipcRenderer.invoke("skillsMarketplace:detail", ref),
+    audit: (ref: { source: string; skill: string }) =>
+      ipcRenderer.invoke("skillsMarketplace:audit", ref),
+  },
   // Tool calls operations
   toolCalls: {
     getByRun: (runId: string) =>

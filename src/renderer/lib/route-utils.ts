@@ -65,3 +65,17 @@ export function getBaseRoutePath(routeType: RouteType): string {
       return "/";
   }
 }
+
+/** Base URL segment for opening a workspace from the sidebar (e.g. `/codex`). Uses the current agent route when on one; otherwise the active space `defaultRoute` (plugins, home, unknown paths). */
+export function getWorkspaceListBasePath(
+  pathname: string,
+  spaceDefaultRoute: string,
+): string {
+  const routeType = getRouteType(pathname);
+  if (isWorkspaceRouteType(routeType)) {
+    return getBaseRoutePath(routeType);
+  }
+  const raw = (spaceDefaultRoute || "/claude").trim().replace(/\/+$/, "");
+  if (raw === "" || raw === "/") return "/claude";
+  return raw;
+}

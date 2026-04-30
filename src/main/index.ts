@@ -125,6 +125,10 @@ import {
   unregisterBrowserIpc,
   browserService,
 } from "./modules/browser";
+import {
+  registerSkillsMarketplaceIpc,
+  unregisterSkillsMarketplaceIpc,
+} from "./modules/skillsMarketplace";
 
 // ─────────────────────────────────────────────────────────────
 // Installed app detection (macOS)
@@ -464,6 +468,7 @@ async function initializeApp() {
     registerAutomationsIpc();
     registerGuardsIpc();
     registerBrowserIpc();
+    registerSkillsMarketplaceIpc();
     automationsService.start();
 
     // Shell utilities
@@ -698,6 +703,7 @@ async function cleanupApp() {
     await shutdownAllGuardAdapters();
     try { browserService.destroy(); } catch { /* ignore */ }
     unregisterBrowserIpc();
+    unregisterSkillsMarketplaceIpc();
     ipcMain.removeHandler("shell:openExternal");
     ipcMain.removeHandler("shell:openPath");
     ipcMain.removeHandler("shell:openInApp");
