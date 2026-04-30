@@ -49,8 +49,8 @@ export const providersController = {
     return providersService.getModels(id);
   },
 
-  async getCommands(id: string) {
-    return providersService.getCommands(id);
+  async getCommands(id: string, workspacePath?: string) {
+    return providersService.getCommands(id, workspacePath);
   },
 
   async getSkills(id: string, workspacePath?: string) {

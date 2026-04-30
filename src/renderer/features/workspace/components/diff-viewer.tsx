@@ -8,6 +8,7 @@ import {
 } from "@/lib/redux/api";
 import { setPendingGoal, setPendingAutoExecute } from "@/lib/redux/slices/workspaceSlice";
 import { expandDiffForFindings } from "../utils/expand-diff";
+import { normalizePatchForPatchDiff } from "../utils/patch-utils";
 import { normalizePath, pathsMatch } from "../utils/path-utils";
 import type { FileContentResponse, ServiceResponse } from "@/features/workspace/types/file-explorer";
 import { ImagePreviewModal } from "./image-preview-modal";
@@ -245,10 +246,15 @@ export function DiffViewer({
     };
   }, [findingLineNumbers.length, workspace?.rootPath, filePath]);
 
+  const singleFilePatch = useMemo(
+    () => normalizePatchForPatchDiff(diffText, filePath),
+    [diffText, filePath],
+  );
+
   const expandedDiff = useMemo(() => {
-    if (!fileLines || findingLineNumbers.length === 0) return diffText;
-    return expandDiffForFindings(diffText, findingLineNumbers, fileLines);
-  }, [diffText, findingLineNumbers, fileLines]);
+    if (!fileLines || findingLineNumbers.length === 0) return singleFilePatch;
+    return expandDiffForFindings(singleFilePatch, findingLineNumbers, fileLines);
+  }, [singleFilePatch, findingLineNumbers, fileLines]);
 
   const lineAnnotations = useMemo(() => {
     if (fileFindings.length === 0) return undefined;
@@ -319,20 +325,24 @@ export function DiffViewer({
 
   return (
     <div className={`h-full overflow-auto ${className}`}>
-      <PatchDiff
-        patch={expandedDiff}
-         style={{ "--diffs-font-size": "12px", "--diffs-font-family": "'Geist Mono', monospace" } as React.CSSProperties}
-        options={{
-          theme: isDarkMode ? "pierre-dark" : "pierre-light",
-          themeType: isDarkMode ? "dark" : "light",
-          diffStyle: "unified",
-          overflow: "wrap",
-          disableFileHeader: true,
-          unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper], [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"}); background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
-        }}
-        lineAnnotations={lineAnnotations}
-        renderAnnotation={lineAnnotations ? renderAnnotation : undefined}
-      />
+      {!expandedDiff.trim() ? (
+        <div className="px-4 py-3 text-xs text-primary-600 dark:text-primary-400">No diff content to display.</div>
+      ) : (
+        <PatchDiff
+          patch={expandedDiff}
+          style={{ "--diffs-font-size": "12px", "--diffs-font-family": "'Geist Mono', monospace" } as React.CSSProperties}
+          options={{
+            theme: isDarkMode ? "pierre-dark" : "pierre-light",
+            themeType: isDarkMode ? "dark" : "light",
+            diffStyle: "unified",
+            overflow: "wrap",
+            disableFileHeader: true,
+            unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper], [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"}); background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
+          }}
+          lineAnnotations={lineAnnotations}
+          renderAnnotation={lineAnnotations ? renderAnnotation : undefined}
+        />
+      )}
     </div>
   );
 }

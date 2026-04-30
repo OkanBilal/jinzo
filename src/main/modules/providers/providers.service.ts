@@ -140,7 +140,10 @@ export const providersService = {
     }
   },
 
-  async getCommands(id: string): Promise<ServiceResponse<CommandInfo[]>> {
+  async getCommands(
+    id: string,
+    workspacePath?: string,
+  ): Promise<ServiceResponse<CommandInfo[]>> {
     try {
       const provider = await providersRepo.findById(id);
       if (!provider) {
@@ -151,7 +154,7 @@ export const providersService = {
         return { success: false, error: "Provider is not enabled" };
       }
 
-      const commands = await listCommandsForProvider(provider);
+      const commands = await listCommandsForProvider(provider, workspacePath);
       return { success: true, data: commands };
     } catch (error) {
       console.error(`[ProvidersService] Failed to get commands for provider ${id}:`, error);

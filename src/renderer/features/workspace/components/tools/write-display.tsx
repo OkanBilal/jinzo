@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ArrowUp, Edit } from "@/components/ui/icons";
 import { PatchDiff } from "@pierre/diffs/react";
+import { normalizePatchForPatchDiff } from "../../utils/patch-utils";
 
 export interface WriteParams {
   file_path?: string;
@@ -74,18 +75,29 @@ function parseStructuredPatchOutput(output: unknown): {
   };
 }
 
-function hunkLineToUnified(line: string): string {
-  if (line.startsWith("-")) return line;
-  if (line.startsWith("+")) return line;
-  return line === "" ? " " : ` ${line}`;
+/** One unified-diff physical line (prefix + body segment). */
+function expandStructuredHunkLine(line: string): string[] {
+  if (line.startsWith("\\")) return [line];
+  const prefix = line[0];
+  if (prefix === "+" || prefix === "-" || prefix === " ") {
+    const body = line.slice(1);
+    const segs = body.split("\n");
+    return segs.map((seg) => `${prefix}${seg}`);
+  }
+  const segs = line.split("\n");
+  return segs.map((seg) => (seg === "" ? " " : ` ${seg}`));
 }
 
 function structuredPatchToUnifiedDiff(hunks: StructuredHunk[], fileName: string): string {
-  const parts = [`--- a/${fileName}`, `+++ b/${fileName}`];
+  const parts = [
+    `diff --git a/${fileName} b/${fileName}`,
+    `--- a/${fileName}`,
+    `+++ b/${fileName}`,
+  ];
   for (const h of hunks) {
     parts.push(`@@ -${h.oldStart},${h.oldLines} +${h.newStart},${h.newLines} @@`);
     for (const line of h.lines) {
-      parts.push(hunkLineToUnified(line));
+      parts.push(...expandStructuredHunkLine(line));
     }
   }
   return parts.join("\n");
@@ -121,8 +133,9 @@ export function WriteDisplay({ params, output }: { params: WriteParams; output?:
   const { unifiedDiff, added, removed, lineCount, hasDiff } = useMemo(() => {
     if (parsedPatch) {
       const { added: a, removed: r } = countStructuredPatchChanges(parsedPatch.hunks);
+      const raw = structuredPatchToUnifiedDiff(parsedPatch.hunks, fileName);
       return {
-        unifiedDiff: structuredPatchToUnifiedDiff(parsedPatch.hunks, fileName),
+        unifiedDiff: normalizePatchForPatchDiff(raw, filePath || undefined),
         added: a,
         removed: r,
         lineCount: 0,
@@ -133,19 +146,23 @@ export function WriteDisplay({ params, output }: { params: WriteParams; output?:
       return { unifiedDiff: "", added: 0, removed: 0, lineCount: 0, hasDiff: false };
     }
     const lines = content.split("\n");
+    const addedLines = lines.flatMap((l) => l.split("\n").map((seg) => `+${seg}`));
+    const raw = [
+      `diff --git a/${fileName} b/${fileName}`,
+      `new file mode 100644`,
+      `--- /dev/null`,
+      `+++ b/${fileName}`,
+      `@@ -0,0 +1,${addedLines.length} @@`,
+      ...addedLines,
+    ].join("\n");
     return {
-      unifiedDiff: [
-        `--- /dev/null`,
-        `+++ b/${fileName}`,
-        `@@ -0,0 +1,${lines.length} @@`,
-        ...lines.map((l) => `+${l}`),
-      ].join("\n"),
-      added: lines.length,
+      unifiedDiff: normalizePatchForPatchDiff(raw, filePath || undefined),
+      added: addedLines.length,
       removed: 0,
-      lineCount: lines.length,
+      lineCount: addedLines.length,
       hasDiff: true,
     };
-  }, [parsedPatch, content, fileName]);
+  }, [parsedPatch, content, fileName, filePath]);
 
   return (
     <div className="">

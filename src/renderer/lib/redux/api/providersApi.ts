@@ -304,10 +304,13 @@ export const providersApi = baseApi.injectEndpoints({
       providesTags: (_result, _error, id) => [{ type: "ProviderModels", id }],
     }),
 
-    getProviderCommands: builder.query<CommandInfo[], string>({
-      query: (id) => ({
+    getProviderCommands: builder.query<
+      CommandInfo[],
+      { id: string; workspacePath?: string }
+    >({
+      query: ({ id, workspacePath }) => ({
         handler: "providers:getCommands",
-        args: [id],
+        args: [id, workspacePath],
       }),
       transformResponse: (response: {
         success: boolean;
@@ -319,7 +322,9 @@ export const providersApi = baseApi.injectEndpoints({
         }
         return response.data;
       },
-      providesTags: (_result, _error, id) => [{ type: "ProviderCommands", id }],
+      providesTags: (_result, _error, { id, workspacePath }) => [
+        { type: "ProviderCommands", id: `${id}:${workspacePath ?? ""}` },
+      ],
     }),
 
     getProviderSkills: builder.query<

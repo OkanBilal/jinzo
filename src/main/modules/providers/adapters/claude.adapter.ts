@@ -315,6 +315,8 @@ interface SDKSlashCommand {
   name: string;
   description: string;
   argumentHint: string;
+  /** Skill slash aliases — same shape as `@anthropic-ai/claude-agent-sdk` SlashCommand */
+  aliases?: string[];
 }
 
 interface SDKInitializationResult {
@@ -357,9 +359,11 @@ let cachedModels: ModelInfo[] | null = null;
 let cachedModelsTimestamp = 0;
 const MODELS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-// Cached commands list (with TTL)
-let cachedCommands: CommandInfo[] | null = null;
-let cachedCommandsTimestamp = 0;
+// Cached commands list (keyed by workspace path for disk-skill filtering, with TTL)
+const commandsCache = new Map<
+  string,
+  { commands: CommandInfo[]; timestamp: number }
+>();
 const COMMANDS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 // Cached skills list (keyed by workspacePath, with TTL)
@@ -1297,6 +1301,16 @@ export function createClaudeAdapter(
 
   // saveAttachments, buildAttachmentPrompt are internal to adapter.shared
 
+  /** User-pinned skill names ($) — filesystem metadata is enough; prompt only echoes names for transparency. */
+  function prependPinnedSkillsToPrompt(
+    prompt: string,
+    skills: WorkRunRequest["skills"],
+  ): string {
+    if (!skills?.length) return prompt;
+    const tokens = skills.map((s) => `${s.name}`).join(" ");
+    return `${tokens}\n\n${prompt}`;
+  }
+
   function buildPrompt(request: WorkRunRequest): string {
     let prompt = request.goal;
 
@@ -1305,13 +1319,54 @@ export function createClaudeAdapter(
       prompt = `Context:\n${contextParts}\n\n---\n\nGoal: ${request.goal}`;
     }
 
-    return appendPromptSections(prompt, {
+    prompt = appendPromptSections(prompt, {
       contextIssues: request.contextIssues,
       contextSignals: request.contextSignals,
       contextFiles: request.contextFiles,
       attachments: request.attachments,
       runId: request.runId,
     });
+
+    return prependPinnedSkillsToPrompt(prompt, request.skills);
+  }
+
+  /** Same discovery as listSkills — shared so listCommands can exclude disk skills from the / menu. */
+  async function fetchDiskSkills(workspacePath?: string): Promise<SkillInfo[]> {
+    const cacheKey = workspacePath ?? "__global__";
+    const now = Date.now();
+    const cached = skillsCache.get(cacheKey);
+    if (cached && now - cached.timestamp < SKILLS_CACHE_TTL_MS) {
+      return cached.skills;
+    }
+
+    try {
+      const settingSources = config.settingSources ?? ["user", "project", "local"];
+      const skills: SkillInfo[] = [];
+
+      if (settingSources.includes("user")) {
+        const userSkillsDir = path.join(os.homedir(), ".claude", "skills");
+        const userSkills = await discoverSkillsFromDirectory(
+          userSkillsDir,
+          "user",
+        );
+        skills.push(...userSkills);
+      }
+
+      if (settingSources.includes("project") && workspacePath) {
+        const projectSkillsDir = path.join(workspacePath, ".claude", "skills");
+        const projectSkills = await discoverSkillsFromDirectory(
+          projectSkillsDir,
+          "project",
+        );
+        skills.push(...projectSkills);
+      }
+
+      skillsCache.set(cacheKey, { skills, timestamp: now });
+      return skills;
+    } catch (error) {
+      logError("Failed to discover skills:", error);
+      return [];
+    }
   }
 
   return {
@@ -1320,7 +1375,7 @@ export function createClaudeAdapter(
       onEvent: WorkRunEventHandler,
     ): Promise<WorkRunResult> {
       const { runId, model } = request;
-      const timeout = config.timeout ?? 6000000; 
+      const timeout = config.timeout ?? 6000000;
 
       const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
       const abortController = new AbortController();
@@ -1726,6 +1781,8 @@ export function createClaudeAdapter(
           runId,
           includeIssueBody: false,
         });
+
+        prompt = prependPinnedSkillsToPrompt(prompt, request.skills);
 
         // Emit user's follow-up message as artifact for UI display
         await emitUserPromptArtifact(onEvent, message, {
@@ -2407,8 +2464,7 @@ export function createClaudeAdapter(
       cachedModelsTimestamp = 0;
 
       // Clear commands cache
-      cachedCommands = null;
-      cachedCommandsTimestamp = 0;
+      commandsCache.clear();
 
       // Clear skills cache
       skillsCache.clear();
@@ -2497,14 +2553,12 @@ export function createClaudeAdapter(
       }
     },
 
-    async listCommands(): Promise<CommandInfo[]> {
-      // Check cache first
+    async listCommands(workspacePath?: string): Promise<CommandInfo[]> {
       const now = Date.now();
-      if (
-        cachedCommands &&
-        now - cachedCommandsTimestamp < COMMANDS_CACHE_TTL_MS
-      ) {
-        return cachedCommands;
+      const cacheKey = workspacePath ?? "__global__";
+      const cachedEntry = commandsCache.get(cacheKey);
+      if (cachedEntry && now - cachedEntry.timestamp < COMMANDS_CACHE_TTL_MS) {
+        return cachedEntry.commands;
       }
 
       try {
@@ -2532,16 +2586,13 @@ export function createClaudeAdapter(
           return [];
         }
 
-        // Create a temporary query to fetch supported commands
         const tempQuery = queryFn({
-          prompt: "", // Empty prompt - we just need the query object
+          prompt: "",
           options: {
             pathToClaudeCodeExecutable: binaryPath,
           },
         });
 
-        // Use initializationResult() which returns the full command list
-        // including skills, unlike supportedCommands() which may differ
         const initResult = await tempQuery.initializationResult();
 
         if (!initResult?.commands || initResult.commands.length === 0) {
@@ -2549,17 +2600,22 @@ export function createClaudeAdapter(
           return [];
         }
 
-        // Map SDK commands to our CommandInfo format
-        const commands: CommandInfo[] = initResult.commands.map((cmd) => ({
-          name: cmd.name,
-          description: cmd.description,
-          argumentHint: cmd.argumentHint,
-          userFacing: true,
-        }));
+        // initializationResult().commands mixes built-in /commands with disk-backed skills.
+        // supportedCommands() currently mirrors the full list (cannot use it to split). Exclude only
+        // skills we discover the same way as the $ menu (SKILL.md trees under ~/.claude/skills and project .claude/skills).
+        const diskSkills = await fetchDiskSkills(workspacePath);
+        const diskSkillNames = new Set(diskSkills.map((s) => s.name));
 
-        // Cache the result
-        cachedCommands = commands;
-        cachedCommandsTimestamp = now;
+        const commands: CommandInfo[] = initResult.commands
+          .filter((cmd) => !diskSkillNames.has(cmd.name))
+          .map((cmd) => ({
+            name: cmd.name,
+            description: cmd.description,
+            argumentHint: cmd.argumentHint,
+            userFacing: true,
+          }));
+
+        commandsCache.set(cacheKey, { commands, timestamp: now });
 
         return commands;
       } catch (error) {
@@ -2654,53 +2710,7 @@ export function createClaudeAdapter(
     },
 
     async listSkills(workspacePath?: string): Promise<SkillInfo[]> {
-      // Check cache first (keyed by workspacePath)
-      const cacheKey = workspacePath ?? "__global__";
-      const now = Date.now();
-      const cached = skillsCache.get(cacheKey);
-      if (cached && now - cached.timestamp < SKILLS_CACHE_TTL_MS) {
-        return cached.skills;
-      }
-
-      try {
-        const settingSources = config.settingSources ?? ["user", "project", "local"];
-        const skills: SkillInfo[] = [];
-
-        // Discover skills from user directory (~/.claude/skills/)
-        if (settingSources.includes("user")) {
-          const userSkillsDir = path.join(os.homedir(), ".claude", "skills");
-          const userSkills = await discoverSkillsFromDirectory(
-            userSkillsDir,
-            "user",
-          );
-          skills.push(...userSkills);
-        }
-
-        // Discover skills from project directory (.claude/skills/)
-        if (settingSources.includes("project") && workspacePath) {
-          const projectSkillsDir = path.join(
-            workspacePath,
-            ".claude",
-            "skills",
-          );
-          const projectSkills = await discoverSkillsFromDirectory(
-            projectSkillsDir,
-            "project",
-          );
-          skills.push(...projectSkills);
-        }
-
-        // Cache the result keyed by workspace
-        skillsCache.set(cacheKey, { skills, timestamp: now });
-
-        if (skills.length > 0) {
-          //logInfo(`Discovered ${skills.length} skill(s)`);
-        }
-        return skills;
-      } catch (error) {
-        logError("Failed to discover skills:", error);
-        return [];
-      }
+      return fetchDiskSkills(workspacePath);
     },
   };
 }

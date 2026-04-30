@@ -418,7 +418,8 @@ export interface WorkRunAdapter {
    * List available slash commands.
    * @returns Promise resolving to array of CommandInfo
    */
-  listCommands?(): Promise<CommandInfo[]>;
+  /** Workspace path lets Claude exclude project disk skills from the / menu (same dirs as listSkills). */
+  listCommands?(workspacePath?: string): Promise<CommandInfo[]>;
 
   /**
    * List available skills.

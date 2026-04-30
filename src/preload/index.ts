@@ -217,7 +217,8 @@ const api = {
     enable: (id: string) => ipcRenderer.invoke("providers:enable", id),
     disable: (id: string) => ipcRenderer.invoke("providers:disable", id),
     getModels: (id: string) => ipcRenderer.invoke("providers:getModels", id),
-    getCommands: (id: string) => ipcRenderer.invoke("providers:getCommands", id),
+    getCommands: (id: string, workspacePath?: string) =>
+      ipcRenderer.invoke("providers:getCommands", id, workspacePath),
     getSkills: (id: string, workspacePath?: string) => ipcRenderer.invoke("providers:getSkills", id, workspacePath),
     getRateLimits: (id: string) => ipcRenderer.invoke("providers:getRateLimits", id),
     getAccountInfo: (id: string) => ipcRenderer.invoke("providers:getAccountInfo", id),

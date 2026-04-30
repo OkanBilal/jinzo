@@ -1,4 +1,4 @@
-import { useReducer, useRef, useEffect, useCallback } from "react";
+import { useReducer, useRef, useEffect, useCallback, useState, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
@@ -23,6 +23,38 @@ const EMPTY_CONTEXT_SIGNALS: ContextSignal[] = [];
 const EMPTY_CONTEXT_SKILLS: ContextSkill[] = [];
 const EMPTY_CONTEXT_BROWSER: ContextBrowserSelection[] = [];
 const EMPTY_UPLOADED_FILES: UploadedFile[] = [];
+
+function looksLikeImageFile(file: File): boolean {
+  if (file.type.startsWith("image/")) return true;
+  return /\.(png|jpe?g|gif|webp|bmp|heic|svg)$/i.test(file.name);
+}
+
+/** Matches toolbar document picker: pdf, doc, docx, txt */
+function looksLikeDocumentFile(file: File): boolean {
+  const mime = file.type.toLowerCase();
+  if (
+    mime === "application/pdf" ||
+    mime === "application/msword" ||
+    mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    mime === "text/plain"
+  ) {
+    return true;
+  }
+  return /\.(pdf|doc|docx|txt)$/i.test(file.name);
+}
+
+function isAttachableUpload(file: File): boolean {
+  return looksLikeImageFile(file) || looksLikeDocumentFile(file);
+}
+
+function fileToUploadedFile(file: File): UploadedFile {
+  const isImage = looksLikeImageFile(file);
+  return {
+    file,
+    type: isImage ? "image" : "document",
+    preview: isImage ? URL.createObjectURL(file) : undefined,
+  };
+}
 
 interface WorkspaceInputProps {
   goal: string;
@@ -279,6 +311,71 @@ export function WorkspaceInput({
     onSubmit();
   }, [atMenu.visible, slashMenu.visible, hashMenu.visible, dollarMenu.visible, onSubmit]);
 
+  const [isFileDragOver, setIsFileDragOver] = useState(false);
+
+  const handleWrapperDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    setIsFileDragOver(true);
+  }, []);
+
+  const handleWrapperDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    const next = e.relatedTarget as Node | null;
+    if (next && e.currentTarget.contains(next)) return;
+    setIsFileDragOver(false);
+  }, []);
+
+  const handleWrapperDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const handleWrapperDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsFileDragOver(false);
+      const merge = onUploadedFilesChange;
+      if (!merge) return;
+      const files = Array.from(e.dataTransfer.files).filter(isAttachableUpload);
+      if (files.length === 0) return;
+      const newFiles: UploadedFile[] = files.map(fileToUploadedFile);
+      merge([...uploadedFiles, ...newFiles]);
+    },
+    [uploadedFiles, onUploadedFilesChange],
+  );
+
+  const inputPlaceholder = useMemo(() => {
+    if (isFileDragOver) {
+      return "Drop images or documents here";
+    }
+    const baseHint = canResume
+      ? "Ask a follow-up, use /commands, $skills, @files or #issues"
+      : "Ask to edit, use /commands, $skills, @files or #issues";
+    const dropTail = " — or drop images and documents here";
+
+    if (uploadedFiles.length === 0) {
+      return baseHint + dropTail;
+    }
+
+    const hasImages = uploadedFiles.some((f) => f.type === "image");
+    const hasDocs = uploadedFiles.some((f) => f.type === "document");
+
+    if (hasImages && hasDocs) {
+      return "Ask about your attachments — drop more images or documents here";
+    }
+    if (hasImages) {
+      return uploadedFiles.length === 1
+        ? "Ask about this image — drop more files here anytime"
+        : "Ask about these images — drop more files here anytime";
+    }
+    return uploadedFiles.length === 1
+      ? "Ask about this document — drop more files here anytime"
+      : "Ask about these documents — drop more files here anytime";
+  }, [isFileDragOver, uploadedFiles, canResume]);
+
   //Copilot related TODO:
   const authErrorMessage = (() => {
     if (!modelsError) return null;
@@ -313,7 +410,12 @@ export function WorkspaceInput({
 
     <div
       className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism
-        cursor-pointer transition-all`}
+        cursor-pointer transition-all
+        ${isFileDragOver ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-background" : ""}`}
+      onDragEnter={handleWrapperDragEnter}
+      onDragLeave={handleWrapperDragLeave}
+      onDragOver={handleWrapperDragOver}
+      onDrop={handleWrapperDrop}
     >
       <ContextChips
         contextFiles={contextFiles}
@@ -333,11 +435,7 @@ export function WorkspaceInput({
           query={goal}
           onQueryChange={handleGoalChange}
           onSubmit={handleSubmit}
-          placeholder={
-            canResume
-              ? "Ask a follow-up question, run /commands, $skills, @files or #issues to add context"
-              : "Ask to edit, run /commands, $skills, @files or #issues to add context"
-          }
+          placeholder={inputPlaceholder}
         />
         <SlashMenuDropdown
           commands={providerCommands}

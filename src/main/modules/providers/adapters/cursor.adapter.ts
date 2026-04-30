@@ -226,11 +226,12 @@ class CursorAcpServer {
 
     try {
       child.stdin?.end();
+      try { child.kill("SIGTERM"); } catch { /* already exited */ }
       await new Promise<void>((resolve) => {
         const killTimer = setTimeout(() => {
-          child.kill("SIGKILL");
+          try { child.kill("SIGKILL"); } catch { /* already exited */ }
           resolve();
-        }, 3000);
+        }, 500);
         child.on("close", () => {
           clearTimeout(killTimer);
           resolve();
@@ -353,11 +354,12 @@ class CursorAcpServer {
 export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter {
   let acpServer: CursorAcpServer | null = null;
   let mcpServer: MainsMcpStdioServer | null = null;
-  let mcpConfigured = false;
 
   /**
    * Set up the MCP server (bridge + config file).
-   * If ACP is already running, restart it so it picks up the new MCP config.
+   * ACP does not need to be restarted: `session/new` carries the mcpServers
+   * config per-session, and the .cursor/mcp.json file is only needed for
+   * the user-runs-cursor-manually auto-discovery path.
    */
   async function ensureMcpServer(ctx: MainsToolContext): Promise<typeof mcpServer> {
     if (mcpServer?.isRunning) {
@@ -366,16 +368,6 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
     mcpServer = new MainsMcpStdioServer(ctx);
     await mcpServer.start();
     logInfo(`Mains MCP stdio bridge started`);
-
-    // If ACP was started before MCP was configured, restart it
-    // so it discovers the .cursor/mcp.json on initialization.
-    if (!mcpConfigured && acpServer?.isRunning) {
-      logInfo("Restarting ACP server to pick up MCP config...");
-      await acpServer.stop();
-      acpServer = null;
-    }
-    mcpConfigured = true;
-
     return mcpServer;
   }
 

@@ -34,7 +34,10 @@ export function useProviderModels(
     useGetProviderModelsQuery(activeProviderId, { skip: !activeProviderId });
 
   const { data: providerCommands = [], isLoading: isLoadingCommands } =
-    useGetProviderCommandsQuery(activeProviderId, { skip: !activeProviderId });
+    useGetProviderCommandsQuery(
+      { id: activeProviderId, workspacePath },
+      { skip: !activeProviderId },
+    );
 
   const { data: providerSkills = [], isLoading: isLoadingSkills } =
     useGetProviderSkillsQuery(

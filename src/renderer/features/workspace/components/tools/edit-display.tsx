@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ArrowUp, Edit } from "@/components/ui/icons";
 import { PatchDiff } from "@pierre/diffs/react";
+import { normalizePatchForPatchDiff } from "../../utils/patch-utils";
 
 export interface EditParams {
   // Claude params
@@ -42,8 +43,8 @@ export function EditDisplay({
 
   const unifiedDiff = useMemo(() => {
     if (!hasDiff) return "";
-    return buildUnifiedDiff(patchLines, fileName);
-  }, [patchLines, hasDiff, fileName]);
+    return normalizePatchForPatchDiff(buildUnifiedDiff(patchLines, fileName), filePath || undefined);
+  }, [patchLines, hasDiff, fileName, filePath]);
 
   return (
     <div className="">
@@ -114,16 +115,32 @@ export function EditDisplay({
 }
 
 function buildUnifiedDiff(lines: DiffLine[], fileName: string): string {
-  const oldCount = lines.filter((l) => l.type !== "add").length;
-  const newCount = lines.filter((l) => l.type !== "remove").length;
-  const hunkLines = lines.map((l) =>
-    l.type === "add"
-      ? `+${l.text}`
-      : l.type === "remove"
-        ? `-${l.text}`
-        : ` ${l.text}`,
-  );
+  // Each physical line must carry +/-/' ' prefix. Embedded \n in text otherwise emits raw
+  // lines; a continuation starting with `--- ` makes @pierre/diffs treat it as a second file
+  // in unified mode (no diff --git).
+  const hunkLines: string[] = [];
+  let oldCount = 0;
+  let newCount = 0;
+  for (const l of lines) {
+    const parts = l.text.split("\n");
+    for (const part of parts) {
+      if (l.type === "add") {
+        hunkLines.push(`+${part}`);
+        newCount++;
+      } else if (l.type === "remove") {
+        hunkLines.push(`-${part}`);
+        oldCount++;
+      } else {
+        hunkLines.push(` ${part}`);
+        oldCount++;
+        newCount++;
+      }
+    }
+  }
+  // `diff --git` forces git-style parsing so stray `---`-looking lines inside hunks never
+  // start a new logical file.
   return [
+    `diff --git a/${fileName} b/${fileName}`,
     `--- a/${fileName}`,
     `+++ b/${fileName}`,
     `@@ -1,${oldCount} +1,${newCount} @@`,

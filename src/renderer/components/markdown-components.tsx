@@ -1,5 +1,7 @@
 import { Components } from "react-markdown";
 
+import { proxiedImageSrc } from "@/lib/proxied-image-src";
+
 /**
  * Custom ReactMarkdown component overrides for consistent styling.
  */
@@ -113,10 +115,7 @@ export const markdownComponents: Components = {
   ),
   hr: () => <hr className="my-4 border-primary-300 dark:border-primary-700 transition-all duration-150 ease-out" />,
   img: ({ src, alt }) => {
-    const proxiedSrc =
-      src && src.startsWith("https://")
-        ? `mains-img://proxy?url=${encodeURIComponent(src)}`
-        : src;
+    const proxiedSrc = proxiedImageSrc(src) ?? src;
     return (
       <img
         src={proxiedSrc}

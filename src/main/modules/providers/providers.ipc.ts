@@ -70,9 +70,12 @@ export function registerProvidersIpc(): void {
     return providersController.getModels(id);
   });
 
-  ipcMain.handle(CHANNELS.GET_COMMANDS, async (_, id: string) => {
-    return providersController.getCommands(id);
-  });
+  ipcMain.handle(
+    CHANNELS.GET_COMMANDS,
+    async (_, id: string, workspacePath?: string) => {
+      return providersController.getCommands(id, workspacePath);
+    },
+  );
 
   ipcMain.handle(CHANNELS.GET_SKILLS, async (_, id: string, workspacePath?: string) => {
     return providersController.getSkills(id, workspacePath);

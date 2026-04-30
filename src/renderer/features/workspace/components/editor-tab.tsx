@@ -17,9 +17,9 @@ export function EditorTab({ isActive, isFirst, onClick, hasFile, fileName, onClo
       isFirst={isFirst}
       onClick={onClick}
       onClose={onClose}
-      icon={<Code className="size-4.5 shrink-0 text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200 " />}
+      icon={<Code className="size-4 shrink-0 text-primary-800 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200 " />}
       label={
-        <span className="text-s truncate text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200  flex-1">
+        <span className="text-xs truncate text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200  flex-1">
           {fileName || "Editor"}
           {hasFile && <span className="ml-1 ">*</span>}
         </span>

@@ -202,7 +202,10 @@ export async function listModelsForProvider(provider: ProviderResponse): Promise
  * @param provider - The provider configuration from the database
  * @returns Promise resolving to array of CommandInfo
  */
-export async function listCommandsForProvider(provider: ProviderResponse): Promise<CommandInfo[]> {
+export async function listCommandsForProvider(
+  provider: ProviderResponse,
+  workspacePath?: string,
+): Promise<CommandInfo[]> {
   const adapter = createWorkAdapter(provider);
 
   if (!adapter.listCommands) {
@@ -210,7 +213,7 @@ export async function listCommandsForProvider(provider: ProviderResponse): Promi
     return [];
   }
 
-  return adapter.listCommands();
+  return adapter.listCommands(workspacePath);
 }
 
 /**
