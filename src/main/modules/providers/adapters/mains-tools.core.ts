@@ -48,7 +48,7 @@ export const TOOL_DESCRIPTIONS = {
   CreatePR:
     "Create a GitHub pull request for the current branch using the GitHub CLI (gh). Requires gh to be installed and authenticated. Push the branch before calling this tool. If the project has prInstructions configured, the tool will return them on the first call (when body is not provided) so you can follow them before creating the PR.",
   CheckPackage:
-    "IMPORTANT: You MUST call this tool BEFORE running any package install command (npm install, pip install, cargo add, etc.). Checks packages against a dependency security service and returns safety scores, risk levels, and alerts. If any package is blocked, do NOT install it — inform the user instead.",
+    "IMPORTANT: Call this tool only before explicitly adding named packages (for example: npm install axios, pnpm add zod, pip install requests, cargo add serde). Do NOT call it for dependency restore commands with no package names, such as npm install, npm ci, pnpm install, yarn install, or bun install. Checks packages against a dependency security service and returns safety scores, risk levels, and alerts. If any package is blocked, do NOT install it — inform the user instead.",
 } as const;
 
 // ─────────────────────────────────────────────────────────────

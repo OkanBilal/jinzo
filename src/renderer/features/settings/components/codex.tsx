@@ -73,11 +73,6 @@ function RateLimitRow({
 
 const APPROVAL_OPTIONS = [
   {
-    value: "on-failure",
-    label: "On Failure",
-    description: "Ask only when a command fails",
-  },
-  {
     value: "on-request",
     label: "On Request",
     description: "Ask when escalation is requested",
@@ -150,7 +145,7 @@ export default function CodexSettings() {
   const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] =
     useState(false);
 
-  const approvalMode = (config as any).approvalMode ?? "on-failure";
+  const approvalMode = (config as any).approvalMode ?? "on-request";
   const sandboxMode = (config as any).sandboxMode ?? "workspace-write";
   const networkAccessEnabled = (config as any).networkAccessEnabled ?? true;
   const webSearchMode = (config as any).webSearchMode ?? "live";
