@@ -6,7 +6,7 @@ import type {
   ContextSkill,
   ContextBrowserSelection,
 } from "@/lib/redux/slices/workspaceSlice";
-import { Close, Sparkles, Web } from "@/components/ui/icons";
+import { Close, Web } from "@/components/ui/icons";
 import { Code } from "@/components/ui/icons/space";
 import { ProviderIcon } from "./provider-icon";
 
@@ -19,7 +19,6 @@ interface ContextChipsProps {
   onRemoveContextFile?: (filePath: string) => void;
   onRemoveContextIssue?: (entityId: string) => void;
   onRemoveContextSignal?: (entityId: string) => void;
-  onRemoveContextSkill?: (name: string) => void;
   onRemoveContextBrowserSelection?: (id: string) => void;
 }
 
@@ -31,26 +30,7 @@ function hostname(url: string) {
   }
 }
 
-function skillIconSrc(absPath: string): string {
-  return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
-}
 
-function ContextSkillChipIcon({ skill }: { skill: ContextSkill }) {
-  const [failed, setFailed] = useState(false);
-  const iconPath = skill.iconLarge || skill.iconSmall;
-  if (iconPath && !failed) {
-    return (
-      <img
-        src={skillIconSrc(iconPath)}
-        alt=""
-        className="w-3 h-3 rounded shrink-0 object-contain"
-        style={skill.brandColor ? { backgroundColor: skill.brandColor } : undefined}
-        onError={() => setFailed(true)}
-      />
-    );
-  }
-  return <Sparkles className="w-3 h-3 shrink-0" />;
-}
 
 function BrowserSelectionPreview({
   sel,
@@ -169,7 +149,6 @@ export function ContextChips({
   onRemoveContextFile,
   onRemoveContextIssue,
   onRemoveContextSignal,
-  onRemoveContextSkill,
   onRemoveContextBrowserSelection,
 }: ContextChipsProps) {
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -192,7 +171,7 @@ export function ContextChips({
             {contextFiles.map((file) => (
               <div
                 key={file.fullPath}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-200 dark:bg-primary/10 text-xs text-primary-700 dark:text-primary-300"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-100"
               >
                 <Code className="w-3 h-3" />
                 <span className="truncate max-w-37.5">{file.name}</span>
@@ -210,7 +189,7 @@ export function ContextChips({
             {contextIssues.map((issue) => (
               <div
                 key={issue.entityId}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-100`}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-primary-200/40 dark:bg-primary-200/20 text-primary-800 dark:text-primary-100`}
               >
                 <ProviderIcon provider={issue.provider} className="w-3 h-3" fallback="text" />
                 <span className="truncate max-w-37.5">{issue.title}</span>
@@ -225,29 +204,7 @@ export function ContextChips({
                 )}
               </div>
             ))}
-            {contextSkills.map((skill) => {
-              const label = skill.displayName || skill.name;
-              const tooltip = skill.shortDescription || skill.description || label;
-              return (
-                <div
-                  key={skill.name}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-primary-500/15 dark:bg-primary-500/20 text-primary-500 dark:text-primary-300"
-                  title={tooltip}
-                >
-                  <ContextSkillChipIcon skill={skill} />
-                  <span className="truncate max-w-37.5">{label}</span>
-                  {onRemoveContextSkill && (
-                    <button
-                      onClick={() => onRemoveContextSkill(skill.name)}
-                      className="w-4 h-4 flex items-center justify-center rounded p-0.5 transition-colors hover:bg-primary-500/20"
-                      title="Remove skill"
-                    >
-                      <Close className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+
             {contextSignals.map((signal) => (
               <div
                 key={signal.entityId}

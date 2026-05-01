@@ -1,9 +1,10 @@
-import { RefObject, useMemo } from "react";
+import { RefObject, useCallback, useMemo } from "react";
 import { Button, DropdownWrapper } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { useGetIssuesByProjectQuery } from "@/lib/redux/api";
 import { ProviderIcon } from "./provider-icon";
+import { useDropdownKeyboardNavigation } from "@/features/workspace/hooks/use-dropdown-keyboard-navigation";
 
 interface IssueMentionDropdownProps {
   isOpen: boolean;
@@ -44,6 +45,23 @@ export function IssueMentionDropdown({
     });
   }, [issues, filterText]);
 
+  const selectIssueAt = useCallback(
+    (index: number) => {
+      const issue = filtered[index];
+      if (!issue) return;
+      onSelectIssue(issue);
+    },
+    [filtered, onSelectIssue],
+  );
+
+  const { activeIndex, setActiveIndex } = useDropdownKeyboardNavigation({
+    isOpen,
+    itemCount: filtered.length,
+    disabled: isLoading,
+    resetKey: filterText,
+    onSelectActive: selectIssueAt,
+  });
+
   if (!isOpen) return null;
 
   return (
@@ -67,12 +85,16 @@ export function IssueMentionDropdown({
               {projectId ? "No matching issues" : "No project linked"}
             </div>
           ) : (
-            filtered.map((item) => (
+            filtered.map((item, index) => (
               <Button
                 key={item.issue.entityId}
                 type="button"
+                data-dropdown-active={index === activeIndex ? "true" : undefined}
+                onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => onSelectIssue(item)}
-                className="w-full text-left px-3 py-2 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 first:rounded-t-xl last:rounded-b-xl"
+                className={`w-full text-left px-3 py-2 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 first:rounded-t-xl last:rounded-b-xl ${
+                  index === activeIndex ? "bg-primary-200/30 dark:bg-primary-800" : ""
+                }`}
               >
                 <div className="flex items-center gap-2">
                   <ProviderIcon provider={item.issue.provider} className="w-3.5 h-3.5 shrink-0" fallback="text" />

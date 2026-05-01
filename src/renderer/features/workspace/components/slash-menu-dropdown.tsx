@@ -1,7 +1,8 @@
-import { RefObject, useMemo } from "react";
+import { RefObject, useCallback, useMemo } from "react";
 import { Button, DropdownWrapper } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import type { CommandInfo } from "@/lib/redux/api/providersApi";
+import { useDropdownKeyboardNavigation } from "@/features/workspace/hooks/use-dropdown-keyboard-navigation";
 
 interface SlashMenuDropdownProps {
   commands: CommandInfo[];
@@ -37,6 +38,24 @@ export function SlashMenuDropdown({
     });
   }, [commands, filterText]);
 
+  const selectCommandAt = useCallback(
+    (index: number) => {
+      const command = filteredCommands[index];
+      if (!command) return;
+      onSelectCommand(command);
+      onClose();
+    },
+    [filteredCommands, onClose, onSelectCommand],
+  );
+
+  const { activeIndex, setActiveIndex } = useDropdownKeyboardNavigation({
+    isOpen,
+    itemCount: filteredCommands.length,
+    disabled: isLoadingCommands,
+    resetKey: filterText,
+    onSelectActive: selectCommandAt,
+  });
+
   if (!isOpen) return null;
 
   return (
@@ -61,15 +80,19 @@ export function SlashMenuDropdown({
               <div className="px-3 pt-2 pb-1 text-sm font-medium text-primary-400 dark:text-primary-500">
                 ⌘ Commands
               </div>
-              {filteredCommands.map((cmd) => (
+              {filteredCommands.map((cmd, index) => (
                 <Button
                   key={`cmd-${cmd.name}`}
                   type="button"
+                  data-dropdown-active={index === activeIndex ? "true" : undefined}
+                  onMouseEnter={() => setActiveIndex(index)}
                   onClick={() => {
                     onSelectCommand(cmd);
                     onClose();
                   }}
-                  className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors last:rounded-b-xl hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100"
+                  className={`w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors last:rounded-b-xl hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 ${
+                    index === activeIndex ? "bg-primary-200/30 dark:bg-primary-800" : ""
+                  }`}
                 >
                   <div className="flex flex-col gap-0.5">
                     <div className="font-medium flex items-center gap-1.5">

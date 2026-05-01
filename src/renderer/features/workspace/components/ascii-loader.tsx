@@ -4,15 +4,16 @@ export { AsciiSpinner } from "@/components/ui/ascii-spinner";
 const ASCII_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 const LOADER_WORDS = [
+  "Thinking",
   "Analyzing",
-  "Mapping",
-  "Connecting",
-  "Synthesizing",
-  "Structuring",
-  "Clarifying",
-  "Filtering",
-  "Resolving",
-  "Composing",
+  "Searching",
+  "Processing",
+  "Generating",
+  "Creating",
+  "Building",
+  "Designing",
+  "Developing",
+
 ];
 
 type LoaderState = { frameIndex: number; word: string };
@@ -46,7 +47,6 @@ function stripMarkdown(text: string): string {
 
 export function AsciiLoader({
   className,
-  variant,
   thinkingText,
 }: {
   className?: string;
@@ -69,14 +69,10 @@ export function AsciiLoader({
   }, []);
 
   return (
-    <div className={`flex items-center gap-2 py-2 ${className || ""}`}>
-      <span
-        className={`font-mono text-base ${variant === "claude" ? "text-claude" : variant === "copilot" ? "text-copilot" : variant === "codex" ? "text-codex" : variant === "cursor" ? "text-cursor" : "text-primary-900 dark:text-primary-200"}`}
-      >
-        {ASCII_FRAMES[state.frameIndex]}
-      </span>
+    <div className={`flex items-center gap-2 ${className || ""}`}>
+
       <span className="shine-text text-sm truncate max-w-120">
-        {thinkingText ? stripMarkdown(thinkingText) : `${state.word}...`}
+        {thinkingText ? stripMarkdown(thinkingText) : `${state.word}`}
       </span>
     </div>
   );

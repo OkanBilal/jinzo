@@ -63,7 +63,7 @@ export function BaseTab({
       }`}>
         {icon}
       </span>
-      <span className={`relative min-w-0 flex-1 mb-1 truncate transition-colors duration-150 ${
+      <span className={`relative min-w-0 flex-1 mb-0.5 truncate transition-colors duration-150 ${
         isActive ? "text-primary-900 dark:text-primary-200" : "text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200"
       }`}>
         {typeof label === "string" ? (

@@ -80,7 +80,7 @@ export function IssueListItem({
             {labels.map((label) => (
               <span
                 key={label}
-                className={`inline-block capitalize px-1.5 py-0 text-xxs font-medium rounded-full bg-primary-200 dark:bg-primary-600 text-primary-600 dark:text-primary-100`}
+                className={`inline-block capitalize px-1.5 py-0 text-xxs font-medium rounded-lg bg-primary/40 dark:bg-primary-200/20 text-primary-800 dark:text-primary-100`}
               >
                 {label}
               </span>

@@ -40,7 +40,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   primary:
     "cursor-pointer bg-primary-200/60 dark:bg-primary-800/20 hover:bg-primary-200 dark:hover:bg-primary-800/40 text-primary-700 dark:text-primary-200",
   secondary:
-    "cursor-pointer bg-primary-500 dark:bg-primary-200/20 hover:bg-primary-700 dark:hover:bg-primary-600 text-primary dark:text-primary-200",
+    "cursor-pointer bg-primary-400 dark:bg-primary-200/10 hover:bg-primary-600 dark:hover:bg-primary-200/30 text-primary dark:text-primary-200",
   submit:
     "cursor-pointer bg-blue-500 hover:bg-blue-600 text-primary disabled:bg-blue-600/50",
   ghost:

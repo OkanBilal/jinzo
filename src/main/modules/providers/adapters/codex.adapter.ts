@@ -26,6 +26,7 @@ import type {
   PluginDetail,
   MarketplaceInfo,
   CodexAccountInfo,
+  WorkRunContextItem,
 } from "./adapter.types";
 import {
   cancelPendingRequests,
@@ -697,6 +698,7 @@ function fileToDataUrl(filePath: string | undefined | null): string | undefined 
  */
 export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
   let appServer: CodexAppServer | null = null;
+  const titleGenerationModel = "gpt-5.4-mini";
 
   // Marketplace path cache: marketplace name → path
   const marketplacePathCache = new Map<string, string>();
@@ -2982,8 +2984,145 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       }
     },
 
-    async generateTitle(goal: string): Promise<string> {
-      return goal.slice(0, 50);
+    async generateTitle(goal: string, context?: WorkRunContextItem[]): Promise<string> {
+      try {
+        const binaryPath = findCodexBinary();
+
+        let contextSnippet = "";
+        if (context && context.length > 0) {
+          contextSnippet = context
+            .map((ctx) => {
+              const header = ctx.ref ? `[${ctx.kind}: ${ctx.ref}]` : `[${ctx.kind}]`;
+              return `${header} ${(ctx.content || "").substring(0, 200)}`;
+            })
+            .join("\n")
+            .substring(0, 500);
+        }
+
+        const titlePrompt = [
+          "Generate a concise title (2-5 words) that summarizes what the user wants.",
+          "Rules:",
+          "- Reply with ONLY the title text, nothing else",
+          "- Use natural wording, e.g. \"fix login redirect\", \"add dark mode\", \"hello greeting\"",
+          "- Do NOT use generic descriptions of the request type, e.g. NOT \"title generation\"",
+          "- No quotes, no punctuation at the end, no prefixes",
+          "",
+          `User message: ${goal}`,
+          contextSnippet ? `\nContext:\n${contextSnippet}` : "",
+        ].filter(Boolean).join("\n");
+
+        const titleText = await new Promise<string>((resolve, reject) => {
+          const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-title-"));
+          const outputPath = path.join(tmpDir, "title.txt");
+          let settled = false;
+          let stdout = "";
+          let stderr = "";
+
+          const cleanup = () => {
+            try {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+            } catch {
+              // Ignore temp cleanup failures.
+            }
+          };
+
+          const env: Record<string, string | undefined> = {
+            ...process.env,
+            HOME: os.homedir(),
+            PATH: [
+              path.dirname(binaryPath),
+              path.join(os.homedir(), ".nvm", "versions", "node"),
+              "/usr/local/bin",
+              "/opt/homebrew/bin",
+              process.env.PATH || "",
+            ].join(":"),
+          };
+          if (config.apiKey) {
+            env.OPENAI_API_KEY = config.apiKey;
+          } else if (process.env.OPENAI_API_KEY) {
+            env.OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+          } else if (process.env.CODEX_API_KEY) {
+            env.CODEX_API_KEY = process.env.CODEX_API_KEY;
+          }
+
+          const args = [
+            "exec",
+            "--ephemeral",
+            "--skip-git-repo-check",
+            "--ignore-rules",
+            "--sandbox", "read-only",
+            "--color", "never",
+            "--output-last-message", outputPath,
+            "--model", titleGenerationModel,
+            "-",
+          ];
+
+          const child = spawn(binaryPath, args, {
+            cwd: os.homedir(),
+            env,
+            stdio: ["pipe", "pipe", "pipe"],
+          });
+
+          const timer = setTimeout(() => {
+            try { child.kill("SIGKILL"); } catch { /* already exited */ }
+            finish(() => {
+              cleanup();
+              reject(new Error("Codex title generation timed out"));
+            });
+          }, 15000);
+
+          function finish(fn: () => void) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            fn();
+          }
+
+          child.stdout?.on("data", (d: Buffer) => { stdout += d.toString(); });
+          child.stderr?.on("data", (d: Buffer) => { stderr += d.toString(); });
+          child.on("error", (err) => {
+            finish(() => {
+              cleanup();
+              reject(err);
+            });
+          });
+          child.on("close", (code) => {
+            finish(() => {
+              try {
+                const output = fs.existsSync(outputPath)
+                  ? fs.readFileSync(outputPath, "utf-8").trim()
+                  : stdout.trim();
+                cleanup();
+                if (code === 0 && output) {
+                  resolve(output);
+                } else {
+                  reject(new Error(stderr.trim() || `Exit code ${code}`));
+                }
+              } catch (err) {
+                cleanup();
+                reject(err);
+              }
+            });
+          });
+
+          child.stdin?.end(titlePrompt);
+        });
+
+        const title = titleText
+          .split("\n")[0]
+          .trim()
+          .replace(/^(title:\s*)/i, "")
+          .replace(/^["'`]|["'`]$/g, "")
+          .replace(/[.!?]$/, "")
+          .trim();
+
+        if (!title) throw new Error("Empty title generated");
+
+        return title.slice(0, 50);
+      } catch (err) {
+        logWarn("Title generation failed, using fallback:", err);
+        return goal.slice(0, 50);
+      }
     },
 
     async listPlugins(): Promise<PluginListResponse> {

@@ -4,10 +4,10 @@ import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
 import type { FileNode } from "@/features/workspace/types/file-explorer";
 import type { ContextIssue, ContextSignal, ContextSkill, ContextBrowserSelection } from "@/lib/redux/slices/workspaceSlice";
-import { addContextFile, addContextIssue, addContextSkill } from "@/lib/redux/slices/workspaceSlice";
-import type { UploadedFile } from "@/components/ui";
+import { addContextFile, addContextIssue, addContextSkill, removeContextSkill } from "@/lib/redux/slices/workspaceSlice";
+import type { UploadedFile, RichInputFormHandle, RichSkillChipData } from "@/components/ui";
 import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
-import { InputForm } from "@/components/ui";
+import { RichInputForm } from "@/components/ui";
 import { SlashMenuDropdown } from "@/features/workspace/components/slash-menu-dropdown";
 import { FileMentionDropdown } from "@/features/workspace/components/file-mention-dropdown";
 import { IssueMentionDropdown } from "@/features/workspace/components/issue-mention-dropdown";
@@ -47,6 +47,28 @@ function isAttachableUpload(file: File): boolean {
   return looksLikeImageFile(file) || looksLikeDocumentFile(file);
 }
 
+/**
+ * When the dropdown steals focus, caret-based DOM replace fails. Rewrites `goal` by finding
+ * the active mention token (same boundary rules as caret detection: start or whitespace before trigger).
+ */
+function replaceMentionInGoal(
+  goal: string,
+  trigger: string,
+  filter: string,
+  replacement: string,
+): string | null {
+  const suffix = trigger + filter;
+  let idx = goal.lastIndexOf(suffix);
+  while (idx >= 0) {
+    const prev = idx === 0 ? "" : goal[idx - 1];
+    if (idx === 0 || /\s/.test(prev)) {
+      return goal.slice(0, idx) + replacement + goal.slice(idx + suffix.length);
+    }
+    idx = goal.lastIndexOf(suffix, idx - 1);
+  }
+  return null;
+}
+
 function fileToUploadedFile(file: File): UploadedFile {
   const isImage = looksLikeImageFile(file);
   return {
@@ -73,7 +95,6 @@ interface WorkspaceInputProps {
   contextSignals?: ContextSignal[];
   onRemoveContextSignal?: (entityId: string) => void;
   contextSkills?: ContextSkill[];
-  onRemoveContextSkill?: (name: string) => void;
   contextBrowserSelections?: ContextBrowserSelection[];
   onRemoveContextBrowserSelection?: (id: string) => void;
   workspacePath?: string;
@@ -100,7 +121,6 @@ export function WorkspaceInput({
   contextSignals = EMPTY_CONTEXT_SIGNALS,
   onRemoveContextSignal,
   contextSkills = EMPTY_CONTEXT_SKILLS,
-  onRemoveContextSkill,
   contextBrowserSelections = EMPTY_CONTEXT_BROWSER,
   onRemoveContextBrowserSelection,
   workspacePath,
@@ -109,7 +129,7 @@ export function WorkspaceInput({
   onUploadedFilesChange,
   onStop,
 }: WorkspaceInputProps) {
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<RichInputFormHandle>(null);
   const slashCommandDropdownRef = useRef<HTMLDivElement>(null);
   const fileMentionDropdownRef = useRef<HTMLDivElement>(null);
   const issueMentionDropdownRef = useRef<HTMLDivElement>(null);
@@ -195,57 +215,48 @@ export function WorkspaceInput({
   const handleGoalChange = useCallback(
     (value: string) => {
       onGoalChange(value);
-      const slashMatch = value.match(/(?:^|\s)\/(\S*)$/);
-      if (slashMatch) {
-        updateSlashMenu({ filter: slashMatch[1], visible: true });
-      } else {
-        updateSlashMenu({ visible: false, filter: "" });
-      }
-
-      const atMatch = value.match(/(?:^|\s)@(\S*)$/);
-      if (atMatch) {
-        updateAtMenu({ filter: atMatch[1], visible: true });
-      } else {
-        updateAtMenu({ visible: false, filter: "" });
-      }
-
-      const hashMatch = value.match(/(?:^|\s)#(\S*)$/);
-      if (hashMatch) {
-        updateHashMenu({ filter: hashMatch[1], visible: true });
-      } else {
-        updateHashMenu({ visible: false, filter: "" });
-      }
-
-      const dollarMatch = value.match(/(?:^|\s)\$(\S*)$/);
-      if (dollarMatch) {
-        updateDollarMenu({ filter: dollarMatch[1], visible: true });
-      } else {
-        updateDollarMenu({ visible: false, filter: "" });
-      }
     },
     [onGoalChange],
   );
 
+  // Triggers fire based on the text BEFORE the caret, so users can insert mentions
+  // mid-text — not just at the end of the prompt.
+  const handleCaretContext = useCallback((before: string) => {
+    const slashMatch = before.match(/(?:^|\s)\/(\S*)$/);
+    if (slashMatch) updateSlashMenu({ filter: slashMatch[1], visible: true });
+    else updateSlashMenu({ visible: false, filter: "" });
+
+    const atMatch = before.match(/(?:^|\s)@(\S*)$/);
+    if (atMatch) updateAtMenu({ filter: atMatch[1], visible: true });
+    else updateAtMenu({ visible: false, filter: "" });
+
+    const hashMatch = before.match(/(?:^|\s)#(\S*)$/);
+    if (hashMatch) updateHashMenu({ filter: hashMatch[1], visible: true });
+    else updateHashMenu({ visible: false, filter: "" });
+
+    const dollarMatch = before.match(/(?:^|\s)\$(\S*)$/);
+    if (dollarMatch) updateDollarMenu({ filter: dollarMatch[1], visible: true });
+    else updateDollarMenu({ visible: false, filter: "" });
+  }, []);
+
   const handleSlashCommandSelect = useCallback(
     (command: CommandInfo) => {
-      const newGoal = goal.replace(/(?:^|\s)\/\S*$/, (match) => {
-        const prefix = match.startsWith(" ") ? " " : "";
-        return `${prefix}/${command.name} `;
-      });
-      onGoalChange(newGoal);
+      const replacement = `/${command.name} `;
+      const ok = inputRef.current?.replaceTokenWithText("/", replacement) ?? false;
+      if (!ok) {
+        const next = replaceMentionInGoal(goal, "/", slashMenu.filter, replacement);
+        if (next !== null) onGoalChange(next);
+      }
       updateSlashMenu({ visible: false, filter: "" });
     },
-    [goal, onGoalChange],
+    [goal, onGoalChange, slashMenu.filter],
   );
 
   const handleSkillSelect = useCallback(
     (skill: SkillInfo) => {
-      const newGoal = goal.replace(/(?:^|\s)\$\S*$/, (match) =>
-        match.startsWith(" ") ? " " : "",
-      );
-      onGoalChange(newGoal.trimEnd());
       updateDollarMenu({ visible: false, filter: "" });
       if (!skill.path) return;
+      // Persist to Redux first so submission flow keeps working; chip is the inline view.
       dispatch(
         addContextSkill({
           name: skill.name,
@@ -259,28 +270,68 @@ export function WorkspaceInput({
           scope: skill.scope,
         }),
       );
+      inputRef.current?.replaceTokenWithSkillChip("$", {
+        name: skill.name,
+        displayName: skill.displayName,
+        iconSmall: skill.iconSmall,
+        iconLarge: skill.iconLarge,
+        brandColor: skill.brandColor,
+      });
     },
-    [goal, onGoalChange, dispatch],
+    [dispatch],
+  );
+
+  const contextSkillsRef = useRef(contextSkills);
+  useEffect(() => {
+    contextSkillsRef.current = contextSkills;
+  }, [contextSkills]);
+
+  const skillChipMap = useMemo(() => {
+    const m = new Map<string, RichSkillChipData>();
+    for (const s of contextSkills) {
+      m.set(s.name, {
+        name: s.name,
+        displayName: s.displayName,
+        iconSmall: s.iconSmall,
+        iconLarge: s.iconLarge,
+        brandColor: s.brandColor,
+      });
+    }
+    return m;
+  }, [contextSkills]);
+
+  const handleSkillChipsChange = useCallback(
+    (names: string[]) => {
+      const present = new Set(names);
+      for (const skill of contextSkillsRef.current) {
+        if (!present.has(skill.name)) {
+          dispatch(removeContextSkill(skill.name));
+        }
+      }
+    },
+    [dispatch],
   );
 
   const handleFileSelect = useCallback(
     (node: FileNode) => {
-      const newGoal = goal.replace(/(?:^|\s)@\S*$/, (match) =>
-        match.startsWith(" ") ? " " : "",
-      );
-      onGoalChange(newGoal.trimEnd());
+      const ok = inputRef.current?.replaceTokenWithText("@", "") ?? false;
+      if (!ok) {
+        const next = replaceMentionInGoal(goal, "@", atMenu.filter, "");
+        if (next !== null) onGoalChange(next);
+      }
       updateAtMenu({ visible: false, filter: "" });
       dispatch(addContextFile(node));
     },
-    [goal, onGoalChange, dispatch],
+    [dispatch, goal, onGoalChange, atMenu.filter],
   );
 
   const handleIssueSelect = useCallback(
     (item: IssueWithEntity) => {
-      const newGoal = goal.replace(/(?:^|\s)#\S*$/, (match) =>
-        match.startsWith(" ") ? " " : "",
-      );
-      onGoalChange(newGoal.trimEnd());
+      const ok = inputRef.current?.replaceTokenWithText("#", "") ?? false;
+      if (!ok) {
+        const next = replaceMentionInGoal(goal, "#", hashMenu.filter, "");
+        if (next !== null) onGoalChange(next);
+      }
       updateHashMenu({ visible: false, filter: "" });
       dispatch(addContextIssue({
         entityId: item.issue.entityId,
@@ -291,19 +342,20 @@ export function WorkspaceInput({
         labels: item.issue.labels,
       }));
     },
-    [goal, onGoalChange, dispatch],
+    [dispatch, goal, onGoalChange, hashMenu.filter],
   );
 
   const handleAtMenuNavigate = useCallback(
     (dirPath: string) => {
-      const newGoal = goal.replace(/(?:^|\s)@\S*$/, (match) => {
-        const prefix = match.startsWith(" ") ? " " : "";
-        return `${prefix}@${dirPath}`;
-      });
-      onGoalChange(newGoal);
+      const replacement = `@${dirPath}`;
+      const ok = inputRef.current?.replaceTokenWithText("@", replacement) ?? false;
+      if (!ok) {
+        const next = replaceMentionInGoal(goal, "@", atMenu.filter, replacement);
+        if (next !== null) onGoalChange(next);
+      }
       updateAtMenu({ filter: dirPath });
     },
-    [goal, onGoalChange],
+    [goal, onGoalChange, atMenu.filter],
   );
 
   const handleSubmit = useCallback(() => {
@@ -352,12 +404,12 @@ export function WorkspaceInput({
       return "Drop images or documents here";
     }
     const baseHint = canResume
-      ? "Ask a follow-up, use /commands, $skills, @files or #issues"
-      : "Ask to edit, use /commands, $skills, @files or #issues";
-    const dropTail = " — or drop images and documents here";
+      ? "Ask a follow-up, use /commands, $skills, @files or #issues to add context"
+      : "Ask to edit, use /commands, $skills, @files or #issues to add context";
+
 
     if (uploadedFiles.length === 0) {
-      return baseHint + dropTail;
+      return baseHint;
     }
 
     const hasImages = uploadedFiles.some((f) => f.type === "image");
@@ -421,20 +473,21 @@ export function WorkspaceInput({
         contextFiles={contextFiles}
         contextIssues={contextIssues}
         contextSignals={contextSignals}
-        contextSkills={contextSkills}
         contextBrowserSelections={contextBrowserSelections}
         onRemoveContextFile={onRemoveContextFile}
         onRemoveContextIssue={onRemoveContextIssue}
         onRemoveContextSignal={onRemoveContextSignal}
-        onRemoveContextSkill={onRemoveContextSkill}
         onRemoveContextBrowserSelection={onRemoveContextBrowserSelection}
       />
       <div className="relative">
-        <InputForm
+        <RichInputForm
           ref={inputRef}
           query={goal}
           onQueryChange={handleGoalChange}
           onSubmit={handleSubmit}
+          onSkillChipsChange={handleSkillChipsChange}
+          onCaretContextChange={handleCaretContext}
+          chipMap={skillChipMap}
           placeholder={inputPlaceholder}
         />
         <SlashMenuDropdown

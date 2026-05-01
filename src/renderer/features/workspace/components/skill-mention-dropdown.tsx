@@ -1,8 +1,9 @@
-import { RefObject, useMemo, useState } from "react";
+import { RefObject, useCallback, useMemo, useState } from "react";
 import { Button, DropdownWrapper } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import type { SkillInfo } from "@/lib/redux/api/providersApi";
 import { Sparkles } from "@/components/ui/icons";
+import { useDropdownKeyboardNavigation } from "@/features/workspace/hooks/use-dropdown-keyboard-navigation";
 
 interface SkillMentionDropdownProps {
   isOpen: boolean;
@@ -85,6 +86,24 @@ export function SkillMentionDropdown({
     });
   }, [skills, filterText]);
 
+  const selectSkillAt = useCallback(
+    (index: number) => {
+      const skill = filtered[index];
+      if (!skill) return;
+      onSelectSkill(skill);
+      onClose();
+    },
+    [filtered, onClose, onSelectSkill],
+  );
+
+  const { activeIndex, setActiveIndex } = useDropdownKeyboardNavigation({
+    isOpen,
+    itemCount: filtered.length,
+    disabled: isLoading,
+    resetKey: filterText,
+    onSelectActive: selectSkillAt,
+  });
+
   if (!isOpen) return null;
 
   return (
@@ -109,7 +128,7 @@ export function SkillMentionDropdown({
               No skills available
             </div>
           ) : (
-            filtered.map((skill) => {
+            filtered.map((skill, index) => {
               const title = skill.displayName || skill.name;
               const desc = skill.shortDescription || skill.description;
               const scopeLabel = getScopeLabel(skill.scope || skill.source);
@@ -117,11 +136,15 @@ export function SkillMentionDropdown({
                 <Button
                   key={`skill-${skill.name}-${skill.path ?? ""}`}
                   type="button"
+                  data-dropdown-active={index === activeIndex ? "true" : undefined}
+                  onMouseEnter={() => setActiveIndex(index)}
                   onClick={() => {
                     onSelectSkill(skill);
                     onClose();
                   }}
-                  className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 last:rounded-b-xl"
+                  className={`w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 last:rounded-b-xl ${
+                    index === activeIndex ? "bg-primary-200/30 dark:bg-primary-800" : ""
+                  }`}
                 >
                   <div className="flex items-start gap-2">
                     <SkillIcon skill={skill} />

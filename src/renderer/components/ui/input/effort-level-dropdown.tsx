@@ -42,7 +42,7 @@ export function EffortLevelDropdown({
         tooltip="Toggle Thinking Mode"
         type="button"
         onClick={onThinkingModeToggle}
-        className={`flex items-center gap-1 px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer animate-blur-reveal ${
+        className={`flex items-center gap-1 px-2 py-1 -ml-px rounded-full text-sm  transition-all cursor-pointer animate-blur-reveal ${
           thinkingMode
             ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-100"
             : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
@@ -68,7 +68,7 @@ export function EffortLevelDropdown({
         tooltip="Thinking & Effort"
         type="button"
         onClick={onToggle}
-        className={`flex items-center hover:bg-primary-200/30 dark:hover:bg-primary-800 px-2 py-1 -ml-px rounded-full text-sm font-medium transition-all cursor-pointer ${
+        className={`flex items-center hover:bg-primary-200/30 dark:hover:bg-primary-800 px-2 py-1 -ml-px rounded-full text-sm  transition-all cursor-pointer ${
           thinkingMode
             ? "gap-1 text-primary-400 dark:text-primary-300"
             : "text-primary-400 dark:text-primary-300 hover:bg-primary/10"
@@ -100,7 +100,7 @@ export function EffortLevelDropdown({
             }}
             className={`w-full text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-xl ${
               !thinkingMode
-                ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100 font-medium"
+                ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100 "
                 : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
             }`}
           >

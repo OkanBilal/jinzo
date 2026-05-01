@@ -8,18 +8,18 @@ const PERMISSION_MODES = [
   {
     value: "default",
     label: "Ask permissions",
-    description: "Always ask before making changes",
+    description: "Ask before changes",
   },
 
   {
     value: "acceptEdits",
     label: "Auto accept edits",
-    description: "Automatically accept all file edits",
+    description: "Accept all edits",
   },
   {
     value: "plan",
     label: "Plan mode",
-    description: "Create a plan before making changes",
+    description: "Plan before changes",
   },
 ] as const;
 
@@ -36,10 +36,10 @@ const CURSOR_MODES = [
   {
     value: "ask",
     label: "Ask",
-    description: "Answer questions without taking action",
+    description: "Ask before actions",
   },
   { value: "agent", label: "Agent", description: "Full autonomous agent mode" },
-  { value: "plan", label: "Plan", description: "Plan before executing" },
+  { value: "plan", label: "Plan", description: "Plan before actions" },
 ] as const;
 
 const CURSOR_MODE_LABELS: Record<string, string> = {
@@ -146,13 +146,13 @@ export function PermissionModeDropdown({
         tooltip="Permission Mode"
         type="button"
         onClick={onToggle}
-        className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-sm transition-all cursor-pointer animate-blur-reveal ${
+        className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-sm transition-all cursor-pointer hover:bg-primary-200/30 animate-blur-reveal dark:hover:bg-primary-800  ${
           permissionMode === "bypassPermissions" ||
           permissionMode === "danger-full-access"
             ? "dark:bg-yellow-100/10 bg-yellow-400/30 text-yellow-600 dark:text-yellow-200"
             : permissionMode !== "default"
-              ? "dark:bg-primary-800 bg-primary-300/30 text-primary-700 dark:text-primary-100"
-              : "text-primary-700 dark:text-primary-300 hover:bg-primary/10"
+              ? " text-primary-700 dark:text-primary-300"
+              : "text-primary-700 dark:text-primary-300 "
         }`}
       >
         <PermissionModeIcon mode={permissionMode} className="size-3.5" />
@@ -173,7 +173,7 @@ export function PermissionModeDropdown({
               onPermissionModeChange(mode.value);
               onToggle();
             }}
-            className={`w-full text-left px-2.5 py-1 cursor-pointer transition-colors flex items-center gap-2.5 first:rounded-t-xl last:rounded-b-xl ${
+            className={`w-full text-left px-2.5 py-1.5 cursor-pointer transition-colors flex items-center gap-2.5 first:rounded-t-xl last:rounded-b-xl ${
               permissionMode === mode.value
                 ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100"
                 : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
@@ -184,8 +184,8 @@ export function PermissionModeDropdown({
               className="size-3.5 shrink-0"
             />
             <div className="flex flex-col flex-1 min-w-0">
-              <Body className="text-s tracking-tight mb-0.5">{mode.label}</Body>
-              <span className="text-xs text-primary-400 dark:text-primary-500 tracking-tight">
+              <Body className="text-s mb-0.5">{mode.label}</Body>
+              <span className="text-xs text-primary-500  ">
                 {mode.description}
               </span>
             </div>
