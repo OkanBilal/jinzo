@@ -536,6 +536,60 @@ class GitService {
   }
 
   /**
+   * Create a new empty repo: mkdir under parentPath (defaults to user Desktop),
+   * git init on `main`, seed README, commit. Errors if the folder already exists.
+   */
+  async initRepo(
+    projectName: string,
+    parentPath?: string
+  ): Promise<ServiceResponse<{ rootPath: string; defaultBranch: string }>> {
+    const targetParent = parentPath ?? app.getPath("desktop");
+    const rootPath = path.join(targetParent, projectName);
+    let createdFolder = false;
+    try {
+      if (fs.existsSync(rootPath)) {
+        return { success: false, error: "Folder already exists" };
+      }
+      fs.mkdirSync(rootPath, { recursive: false });
+      createdFolder = true;
+
+      const git = this.getGit(rootPath);
+      await git.init(false, ["--initial-branch=main"]);
+
+      fs.writeFileSync(path.join(rootPath, "README.md"), `# ${projectName}\n`);
+      await git.add(".");
+      try {
+        await git.commit("Initial commit");
+      } catch {
+        // Fallback when the user has no global git identity configured.
+        await git.raw([
+          "-c",
+          "user.email=mains@local",
+          "-c",
+          "user.name=Mains",
+          "commit",
+          "-m",
+          "Initial commit",
+        ]);
+      }
+
+      return { success: true, data: { rootPath, defaultBranch: "main" } };
+    } catch (error) {
+      if (createdFolder) {
+        try {
+          fs.rmSync(rootPath, { recursive: true, force: true });
+        } catch {
+          // best-effort cleanup
+        }
+      }
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to initialize repository",
+      };
+    }
+  }
+
+  /**
    * Clone a remote git repository to a local path
    */
   async cloneRepo(

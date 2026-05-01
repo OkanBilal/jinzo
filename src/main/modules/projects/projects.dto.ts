@@ -9,7 +9,7 @@ export interface ProjectResponse {
   rootPath: string;
   workspacesPath: string | null;
   branches: string[] | null;
-  remoteOrigin: string;
+  remoteOrigin: string | null;
   defaultBranch: string | null;
   setupScript: string | null;
   runScript: string | null;
@@ -27,7 +27,7 @@ export interface CreateProjectPayload {
   accountId: string;
   name: string;
   rootPath: string;
-  remoteOrigin: string;
+  remoteOrigin?: string | null;
   workspacesPath?: string;
   branches?: string[];
   defaultBranch?: string;
@@ -44,7 +44,7 @@ export interface UpdateProjectPayload {
   rootPath?: string;
   workspacesPath?: string;
   branches?: string[];
-  remoteOrigin?: string;
+  remoteOrigin?: string | null;
   defaultBranch?: string;
   setupScript?: string;
   runScript?: string;

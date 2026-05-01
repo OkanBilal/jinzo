@@ -582,6 +582,12 @@ const api = {
     cloneRepo: (url: string, targetPath: string) =>
       ipcRenderer.invoke("git:cloneRepo", url, targetPath),
     /**
+     * Initialize a new git repo in a fresh folder under parentPath
+     * (defaults to user Desktop). Always uses `main` as the branch.
+     */
+    initRepo: (projectName: string, parentPath?: string) =>
+      ipcRenderer.invoke("git:initRepo", projectName, parentPath),
+    /**
      * Hard-reset working tree to a given ref and clean untracked files
      */
     resetHard: (rootPath: string, ref: string) =>
