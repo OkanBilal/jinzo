@@ -74,10 +74,10 @@ export default function DashboardPage() {
         <Heading2>Dashboard</Heading2>
         <div
           ref={containerRef}
-          className="relative flex rounded-xl glass-morphism bg-primary-100/50  dark:bg-primary-800/20 p-0.5"
+          className="relative flex rounded-[10px] bg-primary-200/40 dark:bg-primary-200/5 p-0.5"
         >
           <div
-            className="absolute top-0.75 bg-primary dark:bg-primary/10  rounded-lg shadow-sm transition-all duration-300 ease-in-out"
+            className="absolute top-0.75 bg-primary dark:bg-primary/10  rounded-lg  transition-all duration-300 ease-in-out"
             style={{
               left: indicator.left,
               width: indicator.width,
@@ -91,7 +91,7 @@ export default function DashboardPage() {
                 if (el) tabRefs.current.set(tab.id, el);
               }}
               onClick={() => setFilter(tab.id)}
-              className={`relative z-(--z-base) flex-1 text-center px-3 py-1 text-xs font-medium rounded-xl transition-colors duration-300 cursor-pointer ${
+              className={`relative z-(--z-base) flex-1 text-center px-3 py-1 text-xs font-medium rounded-[10px] transition-colors duration-300 cursor-pointer ${
                 filter === tab.id
                   ? "text-primary-900 dark:text-primary-100"
                   : "text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"

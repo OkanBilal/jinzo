@@ -68,6 +68,60 @@ function PromptSkillChipIcon({ skill }: { skill: PromptSkillMeta }) {
   return <Sparkles className="w-3 h-3 shrink-0" />;
 }
 
+function PromptSkillInlineChip({ skill }: { skill: PromptSkillMeta }) {
+  const label = skill.displayName || skill.name;
+  const tooltip = skill.shortDescription || skill.description || label;
+  return (
+    <span
+      className="inline-flex align-middle items-center gap-1 px-1.5 h-6 mx-0.5 rounded-lg text-xs font-medium leading-none select-none bg-primary dark:bg-primary-300/10 dark:text-primary-200"
+      title={tooltip}
+    >
+      <span className="inline-flex items-center justify-center size-3.5 shrink-0 rounded-sm overflow-hidden">
+        <PromptSkillChipIcon skill={skill} />
+      </span>
+      <span className="leading-none">{label}</span>
+    </span>
+  );
+}
+
+/**
+ * Tokenizes a user prompt message and renders `$<skillname>` substrings as inline chips.
+ * Tolerates a duplicated `:<name>` suffix produced by older serializations so legacy runs
+ * still display cleanly without leaving the literal word visible.
+ */
+function renderMessageWithSkillChips(message: string, skills: PromptSkillMeta[]) {
+  if (!message) return null;
+  if (skills.length === 0) return message;
+  const byName = new Map(skills.map((s) => [s.name, s]));
+  const names = skills
+    .map((s) => s.name)
+    .sort((a, b) => b.length - a.length)
+    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const re = new RegExp(`\\$(${names.join("|")})(?::[\\w-]+)?(?![\\w-])`, "g");
+  const out: React.ReactNode[] = [];
+  let lastIdx = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(message)) !== null) {
+    if (match.index > lastIdx) {
+      out.push(
+        <span key={`t${key++}`}>{message.slice(lastIdx, match.index)}</span>,
+      );
+    }
+    const skill = byName.get(match[1]);
+    if (skill) {
+      out.push(<PromptSkillInlineChip key={`c${key++}`} skill={skill} />);
+    } else {
+      out.push(<span key={`t${key++}`}>{match[0]}</span>);
+    }
+    lastIdx = match.index + match[0].length;
+  }
+  if (lastIdx < message.length) {
+    out.push(<span key={`t${key++}`}>{message.slice(lastIdx)}</span>);
+  }
+  return out;
+}
+
 function ImagePreviewModal({ name, dataUrl, onClose }: { name: string; dataUrl: string; onClose: () => void }) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -174,9 +228,11 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
       <div className="w-full overflow-hidden">
         <div className="w-full py-2 flex justify-end">
           <div className="flex flex-col items-end gap-2 max-w-[80%]">
-            <div className="px-4 py-2.5 rounded-2xl bg-primary-50 dark:bg-primary/5 ">
+            <div className="px-3.5 py-2 rounded-2xl bg-primary-50 dark:bg-primary/5 ">
               <div className="text-primary-950 dark:text-primary">
-                <p className="text-sm whitespace-pre-wrap">{message}</p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {renderMessageWithSkillChips(message, skills)}
+                </p>
               </div>
             </div>
             {previewAtt && (
@@ -186,26 +242,12 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                 onClose={() => setPreviewAtt(null)}
               />
             )}
-            {(files.length > 0 || attachments.length > 0 || issues.length > 0 || signals.length > 0 || skills.length > 0) && (
+            {(files.length > 0 || attachments.length > 0 || issues.length > 0 || signals.length > 0) && (
               <div className="flex flex-wrap gap-1.5 justify-end">
-                {skills.map((skill) => {
-                  const label = skill.displayName || skill.name;
-                  const tooltip = skill.shortDescription || skill.description || label;
-                  return (
-                    <div
-                      key={`skill-${skill.name}`}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-primary-500/15 dark:bg-primary-500/20 text-primary-500 dark:text-primary-300"
-                      title={tooltip}
-                    >
-                      <PromptSkillChipIcon skill={skill} />
-                      <span className="truncate max-w-37.5">{label}</span>
-                    </div>
-                  );
-                })}
                 {issues.map((issue) => (
                   <div
                     key={`${issue.provider}-${issue.number ?? issue.title}`}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-100`}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-primary-200/40 dark:bg-primary-200/20 text-primary-800 dark:text-primary-100`}
                   >
                     <ProviderIcon provider={issue.provider} className="w-3 h-3" fallback="text" />
                     <span className="truncate max-w-60">
@@ -227,7 +269,7 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                 {files.map((file) => (
                   <div
                     key={file.fullPath}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-50 dark:bg-primary-700/15 text-xs"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-100"
                     title={file.fullPath}
                   >
                     <Code className="size-3 dark:text-primary-200 text-primary-700" />
@@ -244,7 +286,7 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                     <button
                       key={att.name}
                       onClick={() => setPreviewAtt({ name: att.name, dataUrl: imgSrc })}
-                      className="flex items-center gap-1.5 pl-2 pr-2 py-1 rounded-xl bg-primary-50 dark:bg-primary-700/15 text-xs hover:bg-primary-100 dark:hover:bg-primary-700/30 transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 pl-2 pr-2 py-1 rounded-xl bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-100 hover:bg-primary-100 dark:hover:bg-primary-700/30 transition-colors cursor-pointer"
                       title={`Click to preview · ${att.name}`}
                     >
                       <img

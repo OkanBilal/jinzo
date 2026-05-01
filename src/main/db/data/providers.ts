@@ -52,7 +52,7 @@ export const seedProviders: CreateProviderPayload[] = [
     defaultModel: "gpt-5.4",
     config: {
       timeout: 600000,
-      approvalMode: "on-failure",
+      approvalMode: "on-request",
       sandboxMode: "workspace-write",
       permissionMode: "default",
       networkAccessEnabled: true,

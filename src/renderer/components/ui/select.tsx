@@ -51,12 +51,38 @@ export default function Select<T extends string = string>({
     }
   }
 
-  // Calculate dropdown position once when opened
-  useEffect(() => {
-    if (!isOpen || !containerRef.current) return;
-
+  const updateDropdownPosition = () => {
+    if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     setDropdownPosition({ top: rect.bottom, left: rect.left, width: rect.width });
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    updateDropdownPosition();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let frameId = 0;
+    const schedulePositionUpdate = () => {
+      if (frameId) return;
+      frameId = requestAnimationFrame(() => {
+        frameId = 0;
+        updateDropdownPosition();
+      });
+    };
+
+    document.addEventListener("scroll", schedulePositionUpdate, true);
+    window.addEventListener("resize", schedulePositionUpdate);
+
+    return () => {
+      if (frameId) cancelAnimationFrame(frameId);
+      document.removeEventListener("scroll", schedulePositionUpdate, true);
+      window.removeEventListener("resize", schedulePositionUpdate);
+    };
   }, [isOpen]);
 
   // Defer animation by two frames so React commit + first paint of children
@@ -137,7 +163,7 @@ export default function Select<T extends string = string>({
         onClick={() => setIsOpen(!isOpen)}
         className={`
           w-full pl-3 pr-2.5 py-2.5
-          min-w-54
+          min-w-52
           bg-primary-950/5 dark:bg-primary/4
           border border-primary-950/10 dark:border-primary/5
           text-primary-900 dark:text-primary

@@ -3,12 +3,12 @@ import { createPortal } from "react-dom";
 import {
   useGetProviderByIdQuery,
 } from "@/lib/redux/api";
-import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
 import { SchemaListTab } from "./schema-list-tab";
 import { SchemaEditorTab, type SchemaProperty } from "./schema-editor-tab";
 import { SchemaDeleteDialog } from "./schema-delete-dialog";
 import { SchemaModalHeader } from "./schema-modal-header";
 import { useSchemaCrud } from "./use-schema-crud";
+import { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
 
 type Tab = "schemas" | "editor";
 

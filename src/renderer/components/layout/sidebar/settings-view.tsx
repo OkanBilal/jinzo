@@ -52,11 +52,11 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
               <Button
                 key={item.id}
                 onClick={() => handleSectionClick(item.id)}
-                className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm transition-all flex items-center gap-2
+                className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl  text-sm tracking-tight transition-all flex items-center gap-2
                   ${
                     isActive
                       ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
-                      : "text-primary-900 dark:text-primary-200 bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
+                      : "text-primary-800 dark:text-primary-200 bg-transparent hover:bg-primary/60 dark:hover:bg-primary/5"
                   }
                   `}
               >
@@ -86,11 +86,11 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                 <Button
                   key={item.id}
                   onClick={() => handleSectionClick(item.id)}
-                  className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm transition-all flex items-center gap-2
+                  className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm tracking-tight transition-all flex items-center gap-2
                     ${
                       isActive
                         ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
-                        : "text-primary-900 dark:text-primary-200 bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
+                        : "text-primary-800 dark:text-primary-200 bg-transparent hover:bg-primary/60 dark:hover:bg-primary/5"
                     }
                     `}
                 >
@@ -146,11 +146,11 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                     onClick={() =>
                       navigate(`/settings?section=projects&id=${project.id}`)
                     }
-                    className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm transition-all flex items-center gap-2
+                    className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm tracking-tight transition-all flex items-center gap-2
                       ${
                         isActive
                           ? "bg-primary/80 dark:bg-primary/5 text-primary-900 dark:text-primary-100"
-                          : "text-primary-900 dark:text-primary-200 bg-transparent hover:bg-primary/20 dark:hover:bg-primary/5"
+                          : "text-primary-800 dark:text-primary-200 bg-transparent hover:bg-primary/60 dark:hover:bg-primary/5"
                       }
                       `}
                   >
@@ -160,7 +160,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                     >
                       {iconContent}
                     </div>
-                    <span className="font-medium truncate">{project.name}</span>
+                    <span className="truncate font-medium">{project.name}</span>
                   </Button>
                 );
               })}

@@ -29,6 +29,7 @@ interface ModelSelectDropdownProps {
  */
 function formatCursorModelName(model: string): string {
   if (model === "default") return "Default";
+  if (model === "composer-2") return "Composer 2 (Fast)";
 
   const BRANDS: Record<string, string> = {
     gpt: "GPT",
@@ -104,7 +105,7 @@ export function ModelSelectDropdown({
           tooltipPosition="top"
           type="button"
           onClick={noModels ? undefined : onToggle}
-          className={`text-sm font-medium px-2 py-1 flex items-center gap-1.5 ${
+          className={`text-sm  px-2 py-1 flex items-center gap-1.5 ${
             noModels
               ? "text-primary-400 dark:text-primary-600 cursor-not-allowed"
               : "cursor-pointer text-primary-700 dark:text-primary-300"
@@ -146,7 +147,7 @@ export function ModelSelectDropdown({
                 }}
                 className={`w-full text-left px-2.5 py-2 cursor-pointer text-sm transition-colors flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl ${
                   model === m
-                    ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-300 font-medium"
+                    ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-300 "
                     : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
                 }`}
               >

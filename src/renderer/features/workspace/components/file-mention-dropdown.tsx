@@ -1,8 +1,9 @@
-import { RefObject, useEffect, useMemo, useReducer } from "react";
+import { RefObject, useCallback, useEffect, useMemo, useReducer } from "react";
 import { Button, DropdownWrapper } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
 import type { DirEntry, FileNode } from "@/features/workspace/types/file-explorer";
+import { useDropdownKeyboardNavigation } from "@/features/workspace/hooks/use-dropdown-keyboard-navigation";
 
 interface FetchState {
   entries: DirEntry[];
@@ -114,6 +115,35 @@ export function FileMentionDropdown({
     });
   }, [filteredEntries]);
 
+  const selectEntryAt = useCallback(
+    (index: number) => {
+      const entry = sortedEntries[index];
+      if (!entry) return;
+
+      if (entry.type === "directory") {
+        onNavigate(dirPath + entry.name + "/");
+        return;
+      }
+
+      onSelectFile({
+        name: entry.name,
+        fullPath: entry.fullPath,
+        type: entry.type,
+        extension: entry.extension,
+        size: entry.size,
+      });
+    },
+    [dirPath, onNavigate, onSelectFile, sortedEntries],
+  );
+
+  const { activeIndex, setActiveIndex } = useDropdownKeyboardNavigation({
+    isOpen,
+    itemCount: sortedEntries.length,
+    disabled: fetchState.loading || !!fetchState.error,
+    resetKey: filterText,
+    onSelectActive: selectEntryAt,
+  });
+
   if (!isOpen) return null;
 
   return (
@@ -143,24 +173,16 @@ export function FileMentionDropdown({
               No matching files
             </div>
           ) : (
-            sortedEntries.map((entry) => (
+            sortedEntries.map((entry, index) => (
               <Button
                 key={entry.fullPath}
                 type="button"
-                onClick={() => {
-                  if (entry.type === "directory") {
-                    onNavigate(dirPath + entry.name + "/");
-                  } else {
-                    onSelectFile({
-                      name: entry.name,
-                      fullPath: entry.fullPath,
-                      type: entry.type,
-                      extension: entry.extension,
-                      size: entry.size,
-                    });
-                  }
-                }}
-                className="w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 first:rounded-t-xl last:rounded-b-xl"
+                data-dropdown-active={index === activeIndex ? "true" : undefined}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={() => selectEntryAt(index)}
+                className={`w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 first:rounded-t-xl last:rounded-b-xl ${
+                  index === activeIndex ? "bg-primary-200/30 dark:bg-primary-800" : ""
+                }`}
               >
                 <div className="flex items-center gap-2">
                   <FileIconComponent

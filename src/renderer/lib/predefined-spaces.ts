@@ -49,12 +49,12 @@ export const predefinedSpaces: PredefinedSpace[] = [
     systemPrompt: "",
     uiConfig: {
       sidebar: {
-        width: "19rem",
+        width: "18rem",
         title: "Workspace",
         itemType: "workspace",
         defaultRoute: "/claude",
       },
-      main: { margin: "19rem" },
+      main: { margin: "18rem" },
       rightPanel: { width: "22rem", component: "workspace" },
     },
   },
@@ -66,12 +66,12 @@ export const predefinedSpaces: PredefinedSpace[] = [
     systemPrompt: "",
     uiConfig: {
       sidebar: {
-        width: "19rem",
+        width: "18rem",
         title: "Workspace",
         itemType: "workspace",
         defaultRoute: "/copilot",
       },
-      main: { margin: "19rem" },
+      main: { margin: "18rem" },
       rightPanel: { width: "22rem", component: "workspace" },
     },
   },
@@ -83,12 +83,12 @@ export const predefinedSpaces: PredefinedSpace[] = [
     systemPrompt: "",
     uiConfig: {
       sidebar: {
-        width: "19rem",
+        width: "18rem",
         title: "Workspace",
         itemType: "workspace",
         defaultRoute: "/codex",
       },
-      main: { margin: "19rem" },
+      main: { margin: "18rem" },
       rightPanel: { width: "22rem", component: "workspace" },
     },
   },
@@ -100,12 +100,12 @@ export const predefinedSpaces: PredefinedSpace[] = [
     systemPrompt: "",
     uiConfig: {
       sidebar: {
-        width: "19rem",
+        width: "18rem",
         title: "Workspace",
         itemType: "workspace",
         defaultRoute: "/cursor",
       },
-      main: { margin: "19rem" },
+      main: { margin: "18rem" },
       rightPanel: { width: "22rem", component: "workspace" },
     },
   },

@@ -59,6 +59,21 @@ const IGNORED_FLAGS = new Set([
   "-v", "--verbose",
 ]);
 
+const FLAGS_WITH_VALUES = new Set([
+  "--cache",
+  "--config",
+  "--include",
+  "--omit",
+  "--prefix",
+  "--registry",
+  "--scope",
+  "--tag",
+  "--workspace",
+  "-C",
+  "-c",
+  "-w",
+]);
+
 /**
  * Parse a shell command and extract package identifiers if it's an install command.
  * Returns null if the command is not a package install.
@@ -87,7 +102,7 @@ export function parseInstallCommand(command: string): ParsedInstallCommand | nul
  * Filters out flags, file paths, and URLs.
  */
 function extractPackageNames(argsStr: string, ecosystem: PackageEcosystem): PackageIdentifier[] {
-  const tokens = tokenize(argsStr);
+  const tokens = tokenize(truncateAtShellSeparator(argsStr));
   const packages: PackageIdentifier[] = [];
 
   let skipNext = false;
@@ -101,7 +116,7 @@ function extractPackageNames(argsStr: string, ecosystem: PackageEcosystem): Pack
     if (token.startsWith("-")) {
       if (IGNORED_FLAGS.has(token)) continue;
       // Flags that take a value (e.g., --registry <url>)
-      if (token === "--registry" || token === "--cache" || token === "--prefix") {
+      if (FLAGS_WITH_VALUES.has(token)) {
         skipNext = true;
       }
       continue;
@@ -121,6 +136,30 @@ function extractPackageNames(argsStr: string, ecosystem: PackageEcosystem): Pack
   }
 
   return packages;
+}
+
+function truncateAtShellSeparator(input: string): string {
+  let inQuote: string | null = null;
+
+  for (let i = 0; i < input.length; i += 1) {
+    const ch = input[i];
+
+    if (inQuote) {
+      if (ch === inQuote) inQuote = null;
+      continue;
+    }
+
+    if (ch === '"' || ch === "'") {
+      inQuote = ch;
+      continue;
+    }
+
+    if (ch === ";" || ch === "|" || (ch === "&" && input[i + 1] === "&")) {
+      return input.slice(0, i).trim();
+    }
+  }
+
+  return input;
 }
 
 /**

@@ -26,6 +26,7 @@ import type {
   PluginDetail,
   MarketplaceInfo,
   CodexAccountInfo,
+  WorkRunContextItem,
 } from "./adapter.types";
 import {
   cancelPendingRequests,
@@ -109,8 +110,25 @@ interface Usage {
 // Approval mode mapping
 // ─────────────────────────────────────────────────────────────
 
+const VALID_SANDBOX_MODES = new Set(["read-only", "workspace-write", "danger-full-access"]);
+
 function mapSandboxMode(mode?: string): "read-only" | "workspace-write" | "danger-full-access" {
-  return (mode as "read-only" | "workspace-write" | "danger-full-access") ?? "workspace-write";
+  return mode && VALID_SANDBOX_MODES.has(mode)
+    ? (mode as "read-only" | "workspace-write" | "danger-full-access")
+    : "workspace-write";
+}
+
+/**
+ * Codex's app-server treats ThreadStartParams.config as a TOML override map
+ * (codex-rs/config/src/overrides.rs::build_cli_overrides_layer). The key uses
+ * dotted-path notation matching ConfigToml fields. Network access lives under
+ * `sandbox_workspace_write.network_access` — there is NO top-level
+ * `sandbox_network_access` field.
+ */
+function buildCodexConfigOverrides(networkAccess: boolean): Record<string, unknown> {
+  return {
+    sandbox_workspace_write: { network_access: networkAccess },
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -680,6 +698,7 @@ function fileToDataUrl(filePath: string | undefined | null): string | undefined 
  */
 export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
   let appServer: CodexAppServer | null = null;
+  const titleGenerationModel = "gpt-5.4-mini";
 
   // Marketplace path cache: marketplace name → path
   const marketplacePathCache = new Map<string, string>();
@@ -1031,12 +1050,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         if (status === "failed" && error?.message) {
           events.push({ type: "log", message: `Codex turn failed: ${error.message}`, level: "error", ts });
         }
-        break;
-      }
-
-      case "turn/failed": {
-        const error = (p?.error as { message?: string })?.message ?? "Unknown error";
-        events.push({ type: "log", message: `Codex turn failed: ${error}`, level: "error", ts });
         break;
       }
 
@@ -1867,7 +1880,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     | { type: "skill"; name: string; path: string }
   >;
 
-  const MAINS_TOOL_INSTRUCTION = "IMPORTANT: Never commit changes using shell commands (git add, git commit). If the user asks you to commit, always use the CommitChanges tool to stage and commit changes. Similarly, never create pull requests using shell commands (gh pr create). Always use the CreatePR tool instead.";
+  const MAINS_TOOL_INSTRUCTION = "IMPORTANT: Never commit changes using shell commands (git add, git commit). If the user asks you to commit, always use the CommitChanges tool to stage and commit changes. Similarly, never create pull requests using shell commands (gh pr create). Always use the CreatePR tool instead. Before explicitly adding named packages (for example: npm install axios, pnpm add zod, pip install requests, cargo add serde), call CheckPackage first to verify package safety. Do not call CheckPackage for dependency restore commands with no package names, such as npm install, npm ci, pnpm install, yarn install, or bun install.";
 
   function buildTurnInput(request: WorkRunRequest): TurnInput {
     const workspaceInfo = `Working directory: ${request.workspace.rootPath}`;
@@ -2037,7 +2050,8 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           }
         }
 
-        // Check for turn completion
+        // Check for turn completion. TurnStatus = completed | interrupted | failed | inProgress
+        // (v2.rs::TurnStatus). interrupted == user called turn/interrupt, must surface as canceled.
         if (method === "turn/completed") {
           const p = params as Record<string, unknown> | undefined;
           const turn = p?.turn as Record<string, unknown> | undefined;
@@ -2046,18 +2060,16 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           if (!resolved) {
             resolved = true;
             clearTimeout(timeoutTimer);
+            const resolvedStatus: "succeeded" | "failed" | "canceled" =
+              status === "failed" ? "failed"
+              : status === "interrupted" ? "canceled"
+              : "succeeded";
             resolve({
-              status: status === "failed" ? "failed" : "succeeded",
-              error: status === "failed" ? ((turn?.error as { message?: string })?.message ?? "Turn failed") : undefined,
+              status: resolvedStatus,
+              error: resolvedStatus === "failed"
+                ? ((turn?.error as { message?: string })?.message ?? "Turn failed")
+                : undefined,
             });
-          }
-        } else if (method === "turn/failed") {
-          if (!resolved) {
-            resolved = true;
-            clearTimeout(timeoutTimer);
-            const p = params as Record<string, unknown> | undefined;
-            const msg = (p?.error as { message?: string })?.message ?? "Turn failed";
-            resolve({ status: "failed", error: msg });
           }
         } else if (method === "error") {
           const p = params as Record<string, unknown> | undefined;
@@ -2075,11 +2087,11 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       const handleServerRequest = async (id: number | string, method: string, params: unknown) => {
         const p = params as Record<string, unknown> | undefined;
         switch (method) {
-          // Approval requests — auto-approve or broker
+          // Decision-based approval requests (command exec + file change).
+          // Response shape: { decision: "accept" | "acceptForSession" | "decline" | "cancel" }
+          // See v2.rs::CommandExecutionRequestApprovalResponse / FileChangeRequestApprovalResponse.
           case "item/commandExecution/requestApproval":
-          case "item/fileRead/requestApproval":
-          case "item/fileChange/requestApproval":
-          case "item/permissions/requestApproval": {
+          case "item/fileChange/requestApproval": {
             // Dependency guard check — intercept install commands before approval
             if (method === "item/commandExecution/requestApproval") {
               const cmd = (p?.command as string) || "";
@@ -2094,10 +2106,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             if (permissionMode === "bypassPermissions") {
               server.respondToRequest(id, { decision: "accept" });
             } else {
-              // Route through approval broker for interactive UI
-              const toolName = method.includes("command") ? "Bash" :
-                              method.includes("fileRead") ? "Read" :
-                              method.includes("fileChange") ? "Edit" : "Permission";
+              const toolName = method.includes("command") ? "Bash" : "Edit";
               const command = (p?.command as string) ?? (p?.path as string) ?? (p?.reason as string) ?? "";
               try {
                 const result = await requestToolApproval({
@@ -2115,6 +2124,48 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
               } catch {
                 server.respondToRequest(id, { decision: "decline" });
               }
+            }
+            break;
+          }
+
+          // Permissions request — model is asking for elevated network/fs permissions.
+          // Response shape: { permissions: GrantedPermissionProfile, scope: "turn" | "session" }
+          // (NOT a decision). See v2.rs::PermissionsRequestApprovalResponse.
+          case "item/permissions/requestApproval": {
+            const requestedPermissions = (p?.permissions ?? {}) as Record<string, unknown>;
+            const reason = (p?.reason as string) ?? "elevated permissions";
+
+            const permissionMode = config.permissionMode || "default";
+            if (permissionMode === "bypassPermissions") {
+              server.respondToRequest(id, {
+                permissions: requestedPermissions,
+                scope: "turn",
+              });
+              break;
+            }
+
+            try {
+              const result = await requestToolApproval({
+                requestId: String(id),
+                runId,
+                toolName: "Permission",
+                toolInput: { command: reason, permissions: requestedPermissions },
+                kind: "tool_approval",
+                timestamp: Date.now(),
+              });
+              if (result.approved) {
+                // Echo back the requested permissions to grant them; pick scope
+                // based on whether the user opted into session-wide grant.
+                server.respondToRequest(id, {
+                  permissions: requestedPermissions,
+                  scope: result.answer === "acceptForSession" ? "session" : "turn",
+                });
+              } else {
+                // Empty permissions = decline (grant nothing)
+                server.respondToRequest(id, { permissions: {}, scope: "turn" });
+              }
+            } catch {
+              server.respondToRequest(id, { permissions: {}, scope: "turn" });
             }
             break;
           }
@@ -2176,11 +2227,17 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           }
 
           // Auth token refresh — the server asks the client to supply fresh tokens.
-          // We can't supply them directly, but responding with an empty result
-          // allows the server to fall back to its own refresh flow (via auth.json).
+          // ChatgptAuthTokensRefreshResponse requires { accessToken, chatgptAccountId },
+          // which we don't manage from the renderer. Returning an empty {} would
+          // fail serde deserialization on the codex side. Reject with -32601 so
+          // codex falls back to its own auth.json refresh flow.
           case "account/chatgptAuthTokens/refresh": {
-            logInfo("Auth token refresh requested by app-server");
-            server.respondToRequest(id, {});
+            logInfo("Auth token refresh requested by app-server; deferring to codex auth.json");
+            server.respondToRequestError(
+              id,
+              -32601,
+              "Client does not manage ChatGPT tokens; use auth.json fallback",
+            );
             break;
           }
 
@@ -2316,7 +2373,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
         const server = await ensureServer();
 
-        const approvalPolicy = config.approvalMode ?? "on-failure";
+        const approvalPolicy = config.approvalMode ?? "on-request";
         const sandbox = mapSandboxMode(config.sandboxMode);
         const personality = config.personality ?? "none";
 
@@ -2328,9 +2385,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           sandbox,
           personality,
           ...(resolvedModel ? { model: resolvedModel } : {}),
-          config: {
-            ...(networkAccess ? { sandbox_network_access: true } : {}),
-          },
+          config: buildCodexConfigOverrides(networkAccess),
           dynamicTools: MAINS_DYNAMIC_TOOLS,
         };
 
@@ -2422,9 +2477,10 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           throw new Error(`No session found for run ${runId}. Cannot resume.`);
         }
 
-        const approvalPolicy = config.approvalMode ?? "on-failure";
+        const approvalPolicy = config.approvalMode ?? "on-request";
         const sandbox = mapSandboxMode(config.sandboxMode);
         const personality = config.personality ?? "none";
+        const networkAccess = config.networkAccessEnabled !== false;
 
         // 1. Resume thread
         try {
@@ -2435,6 +2491,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             sandbox,
             personality,
             ...(resolvedModel ? { model: resolvedModel } : {}),
+            config: buildCodexConfigOverrides(networkAccess),
           });
         } catch (resumeError) {
           const errMsg = resumeError instanceof Error ? resumeError.message : String(resumeError);
@@ -2447,6 +2504,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
               sandbox,
               personality,
               ...(resolvedModel ? { model: resolvedModel } : {}),
+              config: buildCodexConfigOverrides(networkAccess),
               dynamicTools: MAINS_DYNAMIC_TOOLS,
             }) as Record<string, unknown>;
             const newThreadId = (threadResult?.thread as Record<string, unknown>)?.id as string ??
@@ -2532,9 +2590,10 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           throw new Error(`No session found for source run ${sourceRunId}. Cannot fork.`);
         }
 
-        const approvalPolicy = config.approvalMode ?? "on-failure";
+        const approvalPolicy = config.approvalMode ?? "on-request";
         const sandbox = mapSandboxMode(config.sandboxMode);
         const personality = config.personality ?? "none";
+        const networkAccess = config.networkAccessEnabled !== false;
 
         // 1. Fork thread via thread/fork
         const forkResult = await server.sendRequest("thread/fork", {
@@ -2544,6 +2603,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           sandbox,
           personality,
           ...(resolvedModel ? { model: resolvedModel } : {}),
+          config: buildCodexConfigOverrides(networkAccess),
         }) as Record<string, unknown>;
 
         const forkedThread = forkResult?.thread as Record<string, unknown> | undefined;
@@ -2631,7 +2691,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
         const server = await ensureServer();
 
-        const approvalPolicy = config.approvalMode ?? "on-failure";
+        const approvalPolicy = config.approvalMode ?? "on-request";
         const sandbox = mapSandboxMode(config.sandboxMode);
         const personality = config.personality ?? "none";
 
@@ -2643,9 +2703,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           sandbox,
           personality,
           ...(resolvedModel ? { model: resolvedModel } : {}),
-          config: {
-            ...(networkAccess ? { sandbox_network_access: true } : {}),
-          },
+          config: buildCodexConfigOverrides(networkAccess),
           dynamicTools: MAINS_DYNAMIC_TOOLS,
         };
 
@@ -2926,8 +2984,145 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       }
     },
 
-    async generateTitle(goal: string): Promise<string> {
-      return goal.slice(0, 50);
+    async generateTitle(goal: string, context?: WorkRunContextItem[]): Promise<string> {
+      try {
+        const binaryPath = findCodexBinary();
+
+        let contextSnippet = "";
+        if (context && context.length > 0) {
+          contextSnippet = context
+            .map((ctx) => {
+              const header = ctx.ref ? `[${ctx.kind}: ${ctx.ref}]` : `[${ctx.kind}]`;
+              return `${header} ${(ctx.content || "").substring(0, 200)}`;
+            })
+            .join("\n")
+            .substring(0, 500);
+        }
+
+        const titlePrompt = [
+          "Generate a concise title (2-5 words) that summarizes what the user wants.",
+          "Rules:",
+          "- Reply with ONLY the title text, nothing else",
+          "- Use natural wording, e.g. \"fix login redirect\", \"add dark mode\", \"hello greeting\"",
+          "- Do NOT use generic descriptions of the request type, e.g. NOT \"title generation\"",
+          "- No quotes, no punctuation at the end, no prefixes",
+          "",
+          `User message: ${goal}`,
+          contextSnippet ? `\nContext:\n${contextSnippet}` : "",
+        ].filter(Boolean).join("\n");
+
+        const titleText = await new Promise<string>((resolve, reject) => {
+          const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-title-"));
+          const outputPath = path.join(tmpDir, "title.txt");
+          let settled = false;
+          let stdout = "";
+          let stderr = "";
+
+          const cleanup = () => {
+            try {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+            } catch {
+              // Ignore temp cleanup failures.
+            }
+          };
+
+          const env: Record<string, string | undefined> = {
+            ...process.env,
+            HOME: os.homedir(),
+            PATH: [
+              path.dirname(binaryPath),
+              path.join(os.homedir(), ".nvm", "versions", "node"),
+              "/usr/local/bin",
+              "/opt/homebrew/bin",
+              process.env.PATH || "",
+            ].join(":"),
+          };
+          if (config.apiKey) {
+            env.OPENAI_API_KEY = config.apiKey;
+          } else if (process.env.OPENAI_API_KEY) {
+            env.OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+          } else if (process.env.CODEX_API_KEY) {
+            env.CODEX_API_KEY = process.env.CODEX_API_KEY;
+          }
+
+          const args = [
+            "exec",
+            "--ephemeral",
+            "--skip-git-repo-check",
+            "--ignore-rules",
+            "--sandbox", "read-only",
+            "--color", "never",
+            "--output-last-message", outputPath,
+            "--model", titleGenerationModel,
+            "-",
+          ];
+
+          const child = spawn(binaryPath, args, {
+            cwd: os.homedir(),
+            env,
+            stdio: ["pipe", "pipe", "pipe"],
+          });
+
+          const timer = setTimeout(() => {
+            try { child.kill("SIGKILL"); } catch { /* already exited */ }
+            finish(() => {
+              cleanup();
+              reject(new Error("Codex title generation timed out"));
+            });
+          }, 15000);
+
+          function finish(fn: () => void) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            fn();
+          }
+
+          child.stdout?.on("data", (d: Buffer) => { stdout += d.toString(); });
+          child.stderr?.on("data", (d: Buffer) => { stderr += d.toString(); });
+          child.on("error", (err) => {
+            finish(() => {
+              cleanup();
+              reject(err);
+            });
+          });
+          child.on("close", (code) => {
+            finish(() => {
+              try {
+                const output = fs.existsSync(outputPath)
+                  ? fs.readFileSync(outputPath, "utf-8").trim()
+                  : stdout.trim();
+                cleanup();
+                if (code === 0 && output) {
+                  resolve(output);
+                } else {
+                  reject(new Error(stderr.trim() || `Exit code ${code}`));
+                }
+              } catch (err) {
+                cleanup();
+                reject(err);
+              }
+            });
+          });
+
+          child.stdin?.end(titlePrompt);
+        });
+
+        const title = titleText
+          .split("\n")[0]
+          .trim()
+          .replace(/^(title:\s*)/i, "")
+          .replace(/^["'`]|["'`]$/g, "")
+          .replace(/[.!?]$/, "")
+          .trim();
+
+        if (!title) throw new Error("Empty title generated");
+
+        return title.slice(0, 50);
+      } catch (err) {
+        logWarn("Title generation failed, using fallback:", err);
+        return goal.slice(0, 50);
+      }
     },
 
     async listPlugins(): Promise<PluginListResponse> {

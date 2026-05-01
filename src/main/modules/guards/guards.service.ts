@@ -83,7 +83,7 @@ export const guardsService = {
   },
 
   /**
-   * Check a raw command string for package installs.
+   * Check a raw command string for explicit package additions.
    * Used by Codex adapter which has no hook system — called inline.
    */
   async checkCommand(command: string): Promise<{ blocked: boolean; reason?: string }> {
@@ -168,7 +168,7 @@ export const guardsService = {
 
   /**
    * Build a PreToolUse hook for the Claude Agent SDK that intercepts
-   * package install commands and checks them against the active guard.
+   * explicit package additions and checks them against the active guard.
    *
    * Returns null if no guard is connected.
    */

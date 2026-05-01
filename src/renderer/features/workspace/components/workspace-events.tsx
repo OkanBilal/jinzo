@@ -930,7 +930,7 @@ export function WorkspaceEvents({
                   />
                 );
               })}
-              {isRunning && <AsciiLoader variant={variant} thinkingText={latestThinking} />}
+              {isRunning && <AsciiLoader thinkingText={latestThinking} />}
               {isRunning && pendingApproval && onApprovalRespond && (
                 <ToolApprovalDialog
                   request={pendingApproval}

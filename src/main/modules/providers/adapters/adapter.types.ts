@@ -507,7 +507,7 @@ export interface CodexAdapterConfig {
   /** Permission mode for tool access */
   permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
   /** Approval policy passed to Codex CLI (no interactive hooks — CLI handles internally) */
-  approvalMode?: "untrusted" | "on-request" | "on-failure" | "never";
+  approvalMode?: "untrusted" | "on-request" | "never";
   /** Sandbox mode for file/network isolation */
   sandboxMode?: "read-only" | "workspace-write" | "danger-full-access";
   /** Model reasoning effort level */

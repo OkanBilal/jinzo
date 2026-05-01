@@ -29,12 +29,12 @@ export const seedSpaces: SeedSpace[] = [
     },
     uiConfig: {
       sidebar: {
-        width: "19rem",
+        width: "18rem",
         title: "Repository",
         itemType: "workspace",
         defaultRoute: "/claude",
       },
-      main: { margin: "19rem" },
+      main: { margin: "18rem" },
       rightPanel: { width: "22rem", component: "workspace" },
     },
     sortOrder: 0,
@@ -52,12 +52,12 @@ export const seedSpaces: SeedSpace[] = [
     },
     uiConfig: {
       sidebar: {
-        width: "19rem",
+        width: "18rem",
         title: "Repository",
         itemType: "workspace",
         defaultRoute: "/codex",
       },
-      main: { margin: "19rem" },
+      main: { margin: "18rem" },
       rightPanel: { width: "22rem", component: "workspace" },
     },
     sortOrder: 1,
@@ -74,12 +74,12 @@ export const seedSpaces: SeedSpace[] = [
     },
     uiConfig: {
       sidebar: {
-        width: "19rem",
+        width: "18rem",
         title: "Repository",
         itemType: "workspace",
         defaultRoute: "/copilot",
       },
-      main: { margin: "19rem" },
+      main: { margin: "18rem" },
       rightPanel: { width: "22rem", component: "workspace" },
     },
     sortOrder: 2,
@@ -96,12 +96,12 @@ export const seedSpaces: SeedSpace[] = [
     },
     uiConfig: {
       sidebar: {
-        width: "19rem",
+        width: "18rem",
         title: "Repository",
         itemType: "workspace",
         defaultRoute: "/cursor",
       },
-      main: { margin: "19rem" },
+      main: { margin: "18rem" },
       rightPanel: { width: "22rem", component: "workspace" },
     },
     sortOrder: 3,

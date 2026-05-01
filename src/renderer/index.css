@@ -2,6 +2,133 @@
 @import "tailwindcss";
 
 @font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+  src: url('/fonts/Inter-Thin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 100;
+  font-display: swap;
+  src: url('/fonts/Inter-ThinItalic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+  src: url('/fonts/Inter-ExtraLight.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 200;
+  font-display: swap;
+  src: url('/fonts/Inter-ExtraLightItalic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/fonts/Inter-Light.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/fonts/Inter-LightItalic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Inter-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Inter-Italic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/Inter-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/Inter-MediumItalic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/Inter-SemiBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/Inter-SemiBoldItalic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/Inter-Bold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/Inter-BoldItalic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/fonts/Inter-ExtraBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/fonts/Inter-ExtraBoldItalic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url('/fonts/Inter-Black.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
+  src: url('/fonts/Inter-BlackItalic.woff2') format('woff2');
+}
+
+@font-face {
   font-family: 'Geist Mono';
   font-style: normal;
   font-weight: 400;
@@ -29,6 +156,8 @@
   font-display: swap;
   src: url('/fonts/GeistMono-BoldItalic.woff2') format('woff2');
 }
+
+
 
 
 
@@ -128,8 +257,8 @@ html:not(.app-ready) *::after {
 
 
   /* Layout */
-  --sidebar-width: 19rem;
-  --panel-width: 19rem;
+  --sidebar-width: 18rem;
+  --panel-width: 18rem;
   --drag-region-height: 1rem;
   --dropdown-min-width: 140px;
 
@@ -138,7 +267,7 @@ html:not(.app-ready) *::after {
   --shadow-inset-subtle-dark: inset 0 0.5px 0 rgba(255, 255, 255, 0.03);
   --shadow-inset-toggle: inset 0 0.5px 2px rgba(0, 0, 0, 0.1);
   --shadow-inset-toggle-dark: inset 0 0.5px 2px rgba(0, 0, 0, 0.3);
-  --font-sans: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
 
   --font-mono: 'Geist Mono', monospace;
 
@@ -457,15 +586,15 @@ html {
 .shine-text {
   color: transparent;
   background-clip: text !important;
-  animation: shine 1.5s linear infinite;
+  animation: shine 2s linear infinite;
   background:
-    radial-gradient(circle at center, #ffffff8c, transparent) -200% 50% / 200% 100% no-repeat,
-    var(--color-primary-700);
+    radial-gradient(circle at center, var(--color-primary-900), transparent) -200% 50% / 200% 100% no-repeat,
+    var(--color-primary-400);
 
   .dark & {
     background:
-      radial-gradient(circle at center, #18181bd9, transparent) -200% 50% / 200% 100% no-repeat,
-      var(--color-primary-300);
+      radial-gradient(circle at center, var(--color-primary-100), transparent) -200% 50% / 200% 100% no-repeat,
+      var(--color-primary-700);
   }
 }
 
