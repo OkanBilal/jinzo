@@ -14,6 +14,7 @@ import EditSpaceModal from "./edit-space-modal";
 import DeleteSpaceModal from "./delete-space-modal";
 import { Edit, Plus, Connect } from "@/components/ui/icons";
 import CloneRepoModal from "./clone-repo-modal";
+import CreateProjectModal from "./create-project-modal";
 import { useDeleteWorkspace } from "@/features/workspace/hooks";
 import { useArchiveWorkspace } from "@/features/workspace/hooks";
 import { useSpaceContextMenu } from "@/hooks/use-space-context-menu";
@@ -107,6 +108,11 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     handleCloseCloneModal,
     isCloneModalOpen,
     isCloning,
+    handleCreateProject,
+    handleOpenCreateProjectModal,
+    handleCloseCreateProjectModal,
+    isCreateProjectModalOpen,
+    isCreatingProject,
   } = useSidebarActions();
 
   const deleteWorkspace = useDeleteWorkspace();
@@ -178,6 +184,15 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                           shortcut: "u",
                           shortcutLabel: "\u2318\u21e7U",
                           onClick: handleOpenCloneModal,
+                        },
+                        {
+                          label: "Create new project",
+                          icon: (
+                            <Edit className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
+                          ),
+                          shortcut: "n",
+                          shortcutLabel: "\u2318\u21e7N",
+                          onClick: handleOpenCreateProjectModal,
                         },
                       ]
                     : undefined
@@ -255,6 +270,13 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         isCloning={isCloning}
         onClone={handleCloneRepo}
         onClose={handleCloseCloneModal}
+      />
+
+      <CreateProjectModal
+        isOpen={isCreateProjectModalOpen}
+        isCreating={isCreatingProject}
+        onCreate={handleCreateProject}
+        onClose={handleCloseCreateProjectModal}
       />
     </>
   );

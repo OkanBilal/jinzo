@@ -55,8 +55,12 @@ export function validateCreateProject(
   if (!obj.rootPath || typeof obj.rootPath !== "string") {
     return { valid: false, error: "rootPath is required and must be a string" };
   }
-  if (!obj.remoteOrigin || typeof obj.remoteOrigin !== "string") {
-    return { valid: false, error: "remoteOrigin is required and must be a string" };
+  if (
+    obj.remoteOrigin !== undefined &&
+    obj.remoteOrigin !== null &&
+    typeof obj.remoteOrigin !== "string"
+  ) {
+    return { valid: false, error: "remoteOrigin must be a string when provided" };
   }
 
   // Strip unknown fields

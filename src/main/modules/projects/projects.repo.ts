@@ -59,6 +59,24 @@ export const projectsRepo = {
     return rows[0] ? mapRowToResponse(rows[0]) : null;
   },
 
+  async findByAccountAndRootPath(
+    accountId: string,
+    rootPath: string,
+  ): Promise<ProjectResponse | null> {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(projects)
+      .where(
+        and(
+          eq(projects.accountId, accountId),
+          eq(projects.rootPath, rootPath),
+        ),
+      )
+      .limit(1);
+    return rows[0] ? mapRowToResponse(rows[0]) : null;
+  },
+
   async insert(payload: CreateProjectPayload & { id: string }): Promise<string> {
     const db = getDb();
     await db.insert(projects).values({
@@ -68,7 +86,7 @@ export const projectsRepo = {
       rootPath: payload.rootPath,
       workspacesPath: payload.workspacesPath,
       branches: payload.branches ? JSON.stringify(payload.branches) : null,
-      remoteOrigin: payload.remoteOrigin,
+      remoteOrigin: payload.remoteOrigin ?? null,
       defaultBranch: payload.defaultBranch,
       setupScript: payload.setupScript,
       runScript: payload.runScript,

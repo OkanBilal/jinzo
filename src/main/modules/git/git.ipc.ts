@@ -21,6 +21,7 @@ const CHANNELS = {
   REMOVE_WORKTREE: "git:removeWorktree",
   GET_WORKTREES_DIR: "git:getWorktreesDir",
   CLONE_REPO: "git:cloneRepo",
+  INIT_REPO: "git:initRepo",
   RESET_HARD: "git:resetHard",
 } as const;
 
@@ -99,6 +100,10 @@ export function registerGitIpc(): void {
 
   ipcMain.handle(CHANNELS.CLONE_REPO, async (_, url: string, targetPath: string) => {
     return gitService.cloneRepo(url, targetPath);
+  });
+
+  ipcMain.handle(CHANNELS.INIT_REPO, async (_, projectName: string, parentPath?: string) => {
+    return gitService.initRepo(projectName, parentPath);
   });
 
   ipcMain.handle(CHANNELS.RESET_HARD, async (_, rootPath: string, ref: string) => {

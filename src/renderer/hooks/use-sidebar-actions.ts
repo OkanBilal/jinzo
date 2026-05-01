@@ -31,6 +31,8 @@ export function useSidebarActions() {
 
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
   const [isCloning, setIsCloning] = useState(false);
+  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
 
   const handleSpaceChange = async (spaceId: string) => {
     try {
@@ -89,16 +91,15 @@ export function useSidebarActions() {
               ? branchResult.data
               : "main";
 
-          // 3. Find or create project first so we have the project name
-          const projectResult = originUrl
-            ? await findOrCreateProject({
-                accountId: account?.id || "default",
-                name: folderName,
-                rootPath: selectedPath,
-                remoteOrigin: originUrl,
-                defaultBranch: baseBranch,
-              }).unwrap()
-            : null;
+          // 3. Find or create project first so we have the project name.
+          // Origin-less repos still get a project record (deduped by rootPath).
+          const projectResult = await findOrCreateProject({
+            accountId: account?.id || "default",
+            name: folderName,
+            rootPath: selectedPath,
+            remoteOrigin: originUrl ?? undefined,
+            defaultBranch: baseBranch,
+          }).unwrap();
 
           const projectName = projectResult?.name || folderName;
 
@@ -179,17 +180,15 @@ export function useSidebarActions() {
             originUrl,
           } = importResult.data;
 
-          // Find or create project for this remote origin (skip if no remote)
-          const projectResult = originUrl
-            ? await findOrCreateProject({
-                accountId: account?.id || "default",
-                name: folderName,
-                rootPath: selectedPath,
-                remoteOrigin: originUrl,
-                branches: [branchName],
-                defaultBranch: baseBranch,
-              }).unwrap()
-            : null;
+          // Find or create project — origin-less repos dedup by rootPath.
+          const projectResult = await findOrCreateProject({
+            accountId: account?.id || "default",
+            name: folderName,
+            rootPath: selectedPath,
+            remoteOrigin: originUrl ?? undefined,
+            branches: [branchName],
+            defaultBranch: baseBranch,
+          }).unwrap();
 
           const metadata = {
             isGitRepo: true,
@@ -377,6 +376,68 @@ export function useSidebarActions() {
     setIsCloneModalOpen(false);
   };
 
+  const handleOpenCreateProjectModal = () => {
+    setIsCreateProjectModalOpen(true);
+  };
+
+  const handleCloseCreateProjectModal = () => {
+    setIsCreateProjectModalOpen(false);
+  };
+
+  const handleCreateProject = async (name: string) => {
+    setIsCreatingProject(true);
+    try {
+      // Always init under the user's Desktop on the `main` branch — bypasses
+      // the worktree config so a brand-new project lives at its real path.
+      const initResult = await window.api.git.initRepo(name);
+      if (!initResult.success || !initResult.data) {
+        throw new Error(initResult.error || "Failed to create project");
+      }
+
+      const { rootPath } = initResult.data;
+      const workspaceId = crypto.randomUUID();
+
+      // Local-only project — no remoteOrigin yet. findOrCreate now dedups by rootPath
+      // when the origin is missing, so this safely creates one project per folder.
+      const projectResult = await findOrCreateProject({
+        accountId: account?.id || "default",
+        name,
+        rootPath,
+        defaultBranch: "main",
+        branches: ["main"],
+      }).unwrap();
+
+      const metadata = {
+        isGitRepo: true,
+        tracking: null,
+        ahead: 0,
+        behind: 0,
+        worktree: { enabled: false as const },
+        baseBranch: "main",
+      };
+
+      await createWorkspace({
+        id: workspaceId,
+        accountId: account?.id || "default",
+        name,
+        rootPath,
+        defaultBranch: "main",
+        metadata,
+        projectId: projectResult?.id,
+      }).unwrap();
+
+      toast.success("Project created");
+      setIsCreateProjectModalOpen(false);
+      const basePath = getBaseRoutePath(routeType === "settings" || routeType === "home" || routeType === "unknown" ? "codex" : routeType);
+      navigate(`${basePath}/${workspaceId}`);
+    } catch (error) {
+      console.error("Failed to create project:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to create project");
+    } finally {
+      setIsCreatingProject(false);
+    }
+  };
+
   return {
     handleSpaceChange,
     handleNewClick,
@@ -386,5 +447,10 @@ export function useSidebarActions() {
     handleCloseCloneModal,
     isCloneModalOpen,
     isCloning,
+    handleCreateProject,
+    handleOpenCreateProjectModal,
+    handleCloseCreateProjectModal,
+    isCreateProjectModalOpen,
+    isCreatingProject,
   };
 }

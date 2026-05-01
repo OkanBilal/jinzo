@@ -69,15 +69,18 @@ export const projectsService = {
 
   async findOrCreate(payload: CreateProjectPayload): Promise<ServiceResponse<ProjectResponse>> {
     try {
-      const normalized = normalizeRemoteOrigin(payload.remoteOrigin);
+      const normalized = payload.remoteOrigin
+        ? normalizeRemoteOrigin(payload.remoteOrigin)
+        : null;
 
-      // Check if project with same (accountId, normalizedOrigin) exists
-      const existing = await projectsRepo.findByRemoteOrigin(payload.accountId, normalized);
+      // Dedup by remote origin when present, otherwise by rootPath (local-only projects).
+      const existing = normalized
+        ? await projectsRepo.findByRemoteOrigin(payload.accountId, normalized)
+        : await projectsRepo.findByAccountAndRootPath(payload.accountId, payload.rootPath);
       if (existing) {
         return { success: true, data: existing };
       }
 
-      // Create new project with normalized origin
       const id = payload.id || randomUUID();
       await projectsRepo.insert({
         ...payload,
@@ -98,12 +101,20 @@ export const projectsService = {
 
   async create(payload: CreateProjectPayload): Promise<ServiceResponse<ProjectResponse>> {
     try {
-      const normalized = normalizeRemoteOrigin(payload.remoteOrigin);
+      const normalized = payload.remoteOrigin
+        ? normalizeRemoteOrigin(payload.remoteOrigin)
+        : null;
 
-      // Check for duplicate
-      const existing = await projectsRepo.findByRemoteOrigin(payload.accountId, normalized);
+      const existing = normalized
+        ? await projectsRepo.findByRemoteOrigin(payload.accountId, normalized)
+        : await projectsRepo.findByAccountAndRootPath(payload.accountId, payload.rootPath);
       if (existing) {
-        return { success: false, error: "Project with this remote origin already exists" };
+        return {
+          success: false,
+          error: normalized
+            ? "Project with this remote origin already exists"
+            : "Project at this path already exists",
+        };
       }
 
       const id = payload.id || randomUUID();

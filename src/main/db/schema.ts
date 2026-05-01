@@ -146,7 +146,7 @@ export const projects = sqliteTable(
     rootPath: text("root_path").notNull(), // original clone/source repo path
     workspacesPath: text("workspaces_path"), // worktree directory for this project
     branches: text("branches"), // JSON array of branch names
-    remoteOrigin: text("remote_origin").notNull(), // normalized origin URL
+    remoteOrigin: text("remote_origin"), // normalized origin URL — null for local-only projects
     defaultBranch: text("default_branch"),
     setupScript: text("setup_script"),
     runScript: text("run_script"),
@@ -165,7 +165,12 @@ export const projects = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (t) => [
-    uniqueIndex("uniq_projects_account_origin").on(t.accountId, t.remoteOrigin),
+    uniqueIndex("uniq_projects_account_origin")
+      .on(t.accountId, t.remoteOrigin)
+      .where(sql`${t.remoteOrigin} IS NOT NULL`),
+    uniqueIndex("uniq_projects_account_root")
+      .on(t.accountId, t.rootPath)
+      .where(sql`${t.remoteOrigin} IS NULL`),
     index("idx_projects_account").on(t.accountId),
     index("idx_projects_remote_origin").on(t.remoteOrigin),
     index("idx_projects_updated").on(t.updatedAt),

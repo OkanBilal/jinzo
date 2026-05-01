@@ -41,8 +41,18 @@ describe("validateCreateProject", () => {
     expect(result.valid).toBe(false);
   });
 
-  it("rejects missing remoteOrigin", () => {
+  it("accepts payload without remoteOrigin (local-only project)", () => {
     const result = validateCreateProject({ ...validPayload, remoteOrigin: undefined });
+    expect(result.valid).toBe(true);
+  });
+
+  it("accepts null remoteOrigin", () => {
+    const result = validateCreateProject({ ...validPayload, remoteOrigin: null });
+    expect(result.valid).toBe(true);
+  });
+
+  it("rejects non-string remoteOrigin", () => {
+    const result = validateCreateProject({ ...validPayload, remoteOrigin: 123 });
     expect(result.valid).toBe(false);
   });
 
