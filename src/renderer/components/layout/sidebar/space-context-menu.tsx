@@ -1,8 +1,7 @@
 import { useState, useCallback, memo } from "react";
-import { Edit, Trash } from "@/components/ui/icons";
 import type { Space } from "@/lib/redux/api";
 import { useUpdateSpaceMutation } from "@/lib/redux/api";
-import { DropdownMenu, DropdownMenuItem, toast } from "@/components/ui";
+import { DropdownMenu, toast } from "@/components/ui";
 import { solidColors, parseThemeConfig } from "@/lib/space-themes";
 import SpaceThemeSelector from "./space-theme-selector";
 
@@ -65,16 +64,16 @@ export default function SpaceContextMenu({
   isOpen,
   position,
   space,
-  onEdit,
-  onDelete,
+  // onEdit,
+  // onDelete,
   onClose,
 }: SpaceContextMenuProps) {
   if (!space) return null;
-  const isSystemSpace =
-    space.slug === "claude" ||
-    space.slug === "copilot" ||
-    space.slug === "codex" ||
-    space.slug === "cursor";
+  // const isSystemSpace =
+  //   space.slug === "claude" ||
+  //   space.slug === "copilot" ||
+  //   space.slug === "codex" ||
+  //   space.slug === "cursor";
 
   return (
     <DropdownMenu

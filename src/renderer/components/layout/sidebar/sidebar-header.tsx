@@ -1,5 +1,5 @@
-import UserProfile from "./user-profile";
-import SearchBar from "./search-bar";
+// import UserProfile from "./user-profile";
+// import SearchBar from "./search-bar";
 
 interface SidebarHeaderProps {
   avatarUrl?: string;
@@ -12,13 +12,13 @@ interface SidebarHeaderProps {
 }
 
 export function SidebarHeader({
-  avatarUrl,
-  displayName,
+  // avatarUrl,
+  // displayName,
   isSearchExpanded,
-  searchQuery,
-  onSearchExpand,
-  onSearchChange,
-  onSearchClear,
+  // searchQuery,
+  // onSearchExpand,
+  // onSearchChange,
+  // onSearchClear,
 }: SidebarHeaderProps) {
   return (
     <div className="px-3 pt-10 shrink-0">

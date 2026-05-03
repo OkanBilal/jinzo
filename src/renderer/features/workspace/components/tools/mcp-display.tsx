@@ -39,27 +39,27 @@ function formatCodePayload(raw: string): string {
   }
 }
 
-function formatValue(value: unknown, depth = 0): string {
-  if (value === null || value === undefined) return "null";
-  if (typeof value === "string") {
-    if (value.length > 300) return value.substring(0, 300) + "…";
-    return value;
-  }
-  if (typeof value === "number" || typeof value === "boolean")
-    return String(value);
-  if (Array.isArray(value)) {
-    if (depth > 1) return `[${value.length} items]`;
-    return value.map((v) => formatValue(v, depth + 1)).join("\n");
-  }
-  if (typeof value === "object") {
-    if (depth > 1) return JSON.stringify(value);
-    const entries = Object.entries(value as Record<string, unknown>);
-    return entries
-      .map(([k, v]) => `${k}: ${formatValue(v, depth + 1)}`)
-      .join("\n");
-  }
-  return String(value);
-}
+// function formatValue(value: unknown, depth = 0): string {
+//   if (value === null || value === undefined) return "null";
+//   if (typeof value === "string") {
+//     if (value.length > 300) return value.substring(0, 300) + "…";
+//     return value;
+//   }
+//   if (typeof value === "number" || typeof value === "boolean")
+//     return String(value);
+//   if (Array.isArray(value)) {
+//     if (depth > 1) return `[${value.length} items]`;
+//     return value.map((v) => formatValue(v, depth + 1)).join("\n");
+//   }
+//   if (typeof value === "object") {
+//     if (depth > 1) return JSON.stringify(value);
+//     const entries = Object.entries(value as Record<string, unknown>);
+//     return entries
+//       .map(([k, v]) => `${k}: ${formatValue(v, depth + 1)}`)
+//       .join("\n");
+//   }
+//   return String(value);
+// }
 
 /** Renders MCP `content[].text` segments inside a monospace/code block shell. */
 function McpOutputCodeBlocks({ rawTexts }: { rawTexts: string[] }) {
@@ -100,18 +100,18 @@ export function McpDisplay({ displayName, icon, params, output, isCompact = fals
   const hasCodeBodies = codeSegments.length > 0;
   const canExpand = hasExpandedParams || hasCodeBodies;
 
-  const totalCodeChars = codeSegments.join("").length;
-  const summary =
-    hasCodeBodies &&
-    textsFromMetadata.length > 0 &&
-    output !== undefined &&
-    output !== null
-      ? `output (${JSON.stringify(output).length} chars)`
-      : hasCodeBodies
-        ? `content (${totalCodeChars} chars)`
-        : paramKeys.length > 0
-          ? `{${paramKeys.join(", ")}} (${JSON.stringify(params).length} chars)`
-          : "No params";
+  //const totalCodeChars = codeSegments.join("").length;
+  // const summary =
+  //   hasCodeBodies &&
+  //   textsFromMetadata.length > 0 &&
+  //   output !== undefined &&
+  //   output !== null
+  //     ? `output (${JSON.stringify(output).length} chars)`
+  //     : hasCodeBodies
+  //       ? `content (${totalCodeChars} chars)`
+  //       : paramKeys.length > 0
+  //         ? `{${paramKeys.join(", ")}} (${JSON.stringify(params).length} chars)`
+  //         : "No params";
 
   return (
     <div className="">
