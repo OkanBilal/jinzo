@@ -92,6 +92,13 @@ module.exports = {
     name: 'Mains',
     executableName: 'mains',
     appBundleId: 'build.mains.app', // TODO: change this to your own bundle ID
+    // TCC: Apple Events (kTCCServiceAppleEvents), screen capture (kTCCServiceScreenCapture).
+    extendInfo: {
+      NSAppleEventsUsageDescription:
+        'Mains needs permission to send Apple events to control other apps for desktop automation.',
+      NSScreenCaptureUsageDescription:
+        'Mains may capture the screen when you use features or connected tools that need a visual of your desktop.',
+    },
     asar: {
       unpack: '{**/*.node,**/copilot,**/spawn-helper,**/rg,**/*.wasm}',
       unpackDir: '.vite/build/node_modules/{node-pty,@github/copilot-darwin-arm64,@github/copilot/prebuilds,@github/copilot/ripgrep,@anthropic-ai/claude-agent-sdk/vendor}',
