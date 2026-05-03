@@ -7,6 +7,7 @@ import {
   WorkspaceTabs,
   TerminalSection,
   DiffSummaryBar,
+  TodoSummaryBar,
 } from "@/features/workspace/components";
 import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
 import { isFirstWorkspaceTabActive } from "@/features/workspace/utils/is-first-workspace-tab-active";
@@ -182,6 +183,7 @@ export function WorkspaceProviderPage({
           />
         )}
       </div>
+      <TodoSummaryBar events={ws.currentEvents} />
 
       {ws.currentWorkspace && (
         <DiffSummaryBar
@@ -191,6 +193,7 @@ export function WorkspaceProviderPage({
           lastCompletedRunId={ws.activeRun?.status !== "running" ? ws.activeRunId : null}
         />
       )}
+
 
       <WorkspaceInput
         goal={ws.goal}

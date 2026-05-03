@@ -23,7 +23,7 @@ export default function UserProfile({
 }: UserProfileProps) {
   return (
     <div
-      className={`flex items-center gap-2 transition-all duration-300 ease-in-out ml-1 ${
+      className={`flex items-center gap-2 transition-all duration-300 ease-in-out  ${
         isVisible
           ? "opacity-100 flex-1 scale-100"
           : "opacity-0 w-0 scale-95 pointer-events-none"
@@ -33,7 +33,7 @@ export default function UserProfile({
         <img
           src={proxiedImageSrc(avatarUrl) ?? avatarUrl}
           alt={displayName || "Mains"}
-          className="w-6 h-6 rounded-full object-cover"
+          className="w-6 h-6 rounded-full object-cover ml-1"
         />
       ) : (
         <div className="w-6 h-6 rounded-full bg-primary-200/60 dark:bg-primary/5 flex items-center justify-center">

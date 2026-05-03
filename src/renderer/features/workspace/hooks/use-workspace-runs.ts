@@ -17,7 +17,17 @@ type Attachments = Array<{
 type ContextIssue = { provider: string; number?: number | null; title: string; body?: string | null };
 type ContextSignal = { source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number };
 type ContextFile = { fullPath: string; displayName?: string };
-type ContextSkill = { name: string; path: string; description?: string };
+type ContextSkill = {
+  name: string;
+  path?: string;
+  description?: string;
+  displayName?: string;
+  shortDescription?: string;
+  iconSmall?: string;
+  iconLarge?: string;
+  brandColor?: string;
+  scope?: string;
+};
 type BrowserContextSelection = {
   id: string;
   url: string;

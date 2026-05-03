@@ -1209,15 +1209,17 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
           }
         }
 
-        // Set mode if configured
-        if (config.mode && config.mode !== "agent" && sessionId) {
+        // Set mode if configured (per-run override wins, e.g. Pulse forces "agent")
+        const overrideMode = ((request.configSnapshot ?? {}) as Record<string, unknown>).mode;
+        const effectiveMode = (typeof overrideMode === "string" && overrideMode) || config.mode;
+        if (effectiveMode && effectiveMode !== "agent" && sessionId) {
           try {
             await server.sendRequest("session/set_mode", {
               sessionId,
-              modeId: config.mode,
+              modeId: effectiveMode,
             });
           } catch {
-            logWarn(`Failed to set mode to ${config.mode}`);
+            logWarn(`Failed to set mode to ${effectiveMode}`);
           }
         }
 

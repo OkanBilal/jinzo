@@ -1016,15 +1016,34 @@ export function createClaudeAdapter(
             };
           }
 
-          // For AskUserQuestion, inject the user's answer into the tool input
+          // For AskUserQuestion, inject the user's answer into the tool input.
+          // Per Anthropic docs (code.claude.com/docs/en/agent-sdk/user-input):
+          //   - `questions` MUST be passed through unchanged (required for tool processing)
+          //   - `answers` keys MUST be the question text (NOT an index)
+          //   - Multi-select values are joined with ", " (UI already does this)
           if (isAskUser && response.answer !== undefined) {
+            const askedQuestions = (toolInput.questions ?? []) as Array<{ question?: string }>;
+            const answersMap: Record<string, string> = {};
+            // Primary: first question takes the user's actual selection from the dialog.
+            const primaryText = askedQuestions[0]?.question;
+            if (primaryText) {
+              answersMap[primaryText] = response.answer;
+            }
+            // Best-effort fallback for multi-question tool calls — Claude
+            // usually sends a single question, but if it bundles multiple,
+            // the tool rejects the call when any question key is missing.
+            // Mirroring is a stopgap until the dialog can render N questions.
+            for (let i = 1; i < askedQuestions.length; i++) {
+              const text = askedQuestions[i]?.question;
+              if (text) answersMap[text] = response.answer;
+            }
             return {
               hookSpecificOutput: {
                 hookEventName: "PreToolUse",
                 permissionDecision: "allow",
                 updatedInput: {
-                  ...toolInput,
-                  answers: { "0": response.answer },
+                  questions: askedQuestions,
+                  answers: answersMap,
                 },
               },
             };
@@ -1409,6 +1428,13 @@ export function createClaudeAdapter(
           undefined, // forkSession
           onEvent, // for PostToolUse output capture
         );
+
+        // Per-run override (e.g. Pulse forces permissionMode="auto")
+        const overridePermissionMode = (request.configSnapshot as Record<string, unknown> | null | undefined)
+          ?.permissionMode;
+        if (typeof overridePermissionMode === "string") {
+          (options as { permissionMode?: string }).permissionMode = overridePermissionMode;
+        }
 
         await onEvent({
           type: "log",

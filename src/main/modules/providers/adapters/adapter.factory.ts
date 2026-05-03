@@ -30,6 +30,49 @@ export function isSupportedWorkProvider(providerId: string): providerId is Suppo
  */
 const adapterCache = new Map<string, WorkRunAdapter>();
 
+function pluginListToSkillInfo(pluginList: PluginListResponse): SkillInfo[] {
+  const skills: SkillInfo[] = [];
+
+  for (const marketplace of pluginList.marketplaces) {
+    for (const plugin of marketplace.plugins) {
+      if (!plugin.installed) continue;
+
+      skills.push({
+        name: plugin.name,
+        description:
+          plugin.interface?.shortDescription ||
+          plugin.interface?.longDescription ||
+          undefined,
+        userInvokable: true,
+        displayName: plugin.interface?.displayName || plugin.name,
+        shortDescription: plugin.interface?.shortDescription,
+        iconSmall: plugin.interface?.composerIcon || plugin.interface?.logo,
+        iconLarge: plugin.interface?.logo || plugin.interface?.composerIcon,
+        brandColor: plugin.interface?.brandColor,
+        defaultPrompt: plugin.interface?.defaultPrompt?.[0],
+        scope: "plugin",
+        enabled: plugin.enabled,
+      });
+    }
+  }
+
+  return skills;
+}
+
+function mergeSkillsWithInstalledPlugins(
+  skills: SkillInfo[],
+  pluginList: PluginListResponse,
+): SkillInfo[] {
+  const seenNames = new Set(skills.map((skill) => skill.name));
+  const pluginSkills = pluginListToSkillInfo(pluginList).filter((pluginSkill) => {
+    if (seenNames.has(pluginSkill.name)) return false;
+    seenNames.add(pluginSkill.name);
+    return true;
+  });
+
+  return [...skills, ...pluginSkills];
+}
+
 /**
  * Create or retrieve a work run adapter for the given provider
  *
@@ -218,7 +261,7 @@ export async function listCommandsForProvider(
 
 /**
  * List available skills for a provider
- * Skills are SKILL.md files that extend Claude's capabilities.
+ * Skills are SKILL.md files plus installed provider plugins that can be invoked from the prompt.
  *
  * @param provider - The provider configuration from the database
  * @param workspacePath - Optional workspace path for discovering project skills
@@ -230,12 +273,20 @@ export async function listSkillsForProvider(
 ): Promise<SkillInfo[]> {
   const adapter = createWorkAdapter(provider);
 
+  let skills: SkillInfo[] = [];
   if (!adapter.listSkills) {
-    // Return empty array if provider doesn't support skills
-    return [];
+    // Return installed plugins only if the provider doesn't support native skills.
+    skills = [];
+  } else {
+    skills = await adapter.listSkills(workspacePath);
   }
 
-  return adapter.listSkills(workspacePath);
+  if (!adapter.listPlugins) {
+    return skills;
+  }
+
+  const plugins = await adapter.listPlugins();
+  return mergeSkillsWithInstalledPlugins(skills, plugins);
 }
 
 /**

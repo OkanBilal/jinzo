@@ -1,4 +1,11 @@
-import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useDarkMode } from "@/hooks/use-dark-mode";
@@ -57,9 +64,8 @@ export default function Select<T extends string = string>({
     setDropdownPosition({ top: rect.bottom, left: rect.left, width: rect.width });
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isOpen) return;
-
     updateDropdownPosition();
   }, [isOpen]);
 
@@ -162,7 +168,7 @@ export default function Select<T extends string = string>({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`
-          w-full pl-3 pr-2.5 py-2.5
+          w-full px-2.5 py-2
           min-w-52
           bg-primary-950/5 dark:bg-primary/4
           border border-primary-950/10 dark:border-primary/5
@@ -202,7 +208,8 @@ export default function Select<T extends string = string>({
       {createPortal(
         <div
           ref={dropdownRef}
-          className={`fixed z-(--z-modal)
+          onMouseDown={(e) => e.stopPropagation()}
+          className={`fixed z-(--z-modal-critical)
             border border-t-0 border-primary-950/10 dark:border-primary/10
             rounded-b-xl shadow-lg overflow-hidden
             ${isOpen && animateIn ? "animate-dropdown-in" : "dropdown-prewarm"}
@@ -225,8 +232,8 @@ export default function Select<T extends string = string>({
                 }}
                 className={`
                   w-full cursor-pointer text-left
-                  transition-colors px-3 py-2
-                  text-sm flex items-center gap-2
+                  transition-colors px-3 py-1
+                  text-s flex items-center gap-2
                   ${
                     value === option.value
                       ? "bg-primary-950/5 dark:bg-primary/10 text-primary-900 dark:text-primary "
@@ -236,7 +243,7 @@ export default function Select<T extends string = string>({
               >
                 {option.icon}
                 <div className="flex flex-col min-w-0">
-                  <span className="truncate">{option.label}</span>
+                  <span className="truncate my-0.5">{option.label}</span>
                   {option.description && (
                     <span className="text-xxs tracking-tight text-primary-500 dark:text-primary-400 font-normal truncate">
                       {option.description}

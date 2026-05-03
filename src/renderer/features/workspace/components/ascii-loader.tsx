@@ -10,9 +10,10 @@ const LOADER_WORDS = [
   "Processing",
   "Generating",
   "Creating",
-  "Building",
-  "Designing",
-  "Developing",
+  "Evaluating",
+  "Researching",
+  "Refining",
+  "Formulating"
 
 ];
 

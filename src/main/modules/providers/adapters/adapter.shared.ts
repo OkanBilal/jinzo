@@ -401,7 +401,7 @@ export async function emitUserPromptArtifact(
     contextFiles?: Array<{ path: string }>;
     contextSkills?: Array<{
       name: string;
-      path: string;
+      path?: string;
       description?: string;
       displayName?: string;
       shortDescription?: string;

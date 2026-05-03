@@ -45,6 +45,11 @@ function localImageUrl(absPath: string): string {
   return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
 }
 
+function resolveImageUrl(src: string): string {
+  if (/^(data:|https?:|mains-localimg:)/.test(src)) return src;
+  return localImageUrl(src);
+}
+
 function buildChip(skill: RichSkillChipData): HTMLSpanElement {
   const chip = document.createElement("span");
   chip.setAttribute(CHIP_ATTR, "true");
@@ -65,7 +70,7 @@ function buildChip(skill: RichSkillChipData): HTMLSpanElement {
   const iconPath = skill.iconLarge || skill.iconSmall;
   if (iconPath) {
     const img = document.createElement("img");
-    img.src = localImageUrl(iconPath);
+    img.src = resolveImageUrl(iconPath);
     img.alt = "";
     img.className = "size-full object-contain";
     if (skill.brandColor) {

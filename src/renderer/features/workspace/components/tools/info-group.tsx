@@ -39,6 +39,11 @@ function localImageUrl(absPath: string): string {
   return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
 }
 
+function resolveImageUrl(src: string): string {
+  if (/^(data:|https?:|mains-localimg:|mains-capture:)/.test(src)) return src;
+  return localImageUrl(src);
+}
+
 interface PromptSkillMeta {
   name: string;
   path?: string;
@@ -57,7 +62,7 @@ function PromptSkillChipIcon({ skill }: { skill: PromptSkillMeta }) {
   if (iconPath && !failed) {
     return (
       <img
-        src={localImageUrl(iconPath)}
+        src={resolveImageUrl(iconPath)}
         alt=""
         className="w-3 h-3 rounded shrink-0 object-contain"
         style={skill.brandColor ? { backgroundColor: skill.brandColor } : undefined}

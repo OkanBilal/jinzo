@@ -7,6 +7,8 @@ export type RouteType =
   | "cursor"
   | "settings"
   | "home"
+  | "plugins"
+  | "pulse"
   | "unknown";
 
 export type WorkspaceRouteType = Extract<
@@ -23,6 +25,8 @@ const ROUTE_PATTERNS = {
   cursor: "/cursor/:id?",
   settings: "/settings",
   home: "/",
+  plugins: "/plugins",
+  pulse: "/pulse",
 } as const;
 
 export function getRouteType(pathname: string): RouteType {
@@ -34,6 +38,8 @@ export function getRouteType(pathname: string): RouteType {
   if (matchPath(ROUTE_PATTERNS.copilot, pathname)) return "copilot";
   if (matchPath(ROUTE_PATTERNS.codex, pathname)) return "codex";
   if (matchPath(ROUTE_PATTERNS.cursor, pathname)) return "cursor";
+  if (matchPath(ROUTE_PATTERNS.plugins, pathname)) return "plugins";
+  if (matchPath(ROUTE_PATTERNS.pulse, pathname)) return "pulse";
 
   return "unknown";
 }
@@ -61,6 +67,10 @@ export function getBaseRoutePath(routeType: RouteType): string {
       return "/settings";
     case "home":
       return "/";
+    case "plugins":
+      return "/plugins";
+    case "pulse":
+      return "/pulse";
     default:
       return "/";
   }

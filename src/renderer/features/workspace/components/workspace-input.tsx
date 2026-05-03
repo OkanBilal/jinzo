@@ -255,7 +255,6 @@ export function WorkspaceInput({
   const handleSkillSelect = useCallback(
     (skill: SkillInfo) => {
       updateDollarMenu({ visible: false, filter: "" });
-      if (!skill.path) return;
       // Persist to Redux first so submission flow keeps working; chip is the inline view.
       dispatch(
         addContextSkill({

@@ -45,6 +45,14 @@ export interface WorkRunRequest {
   systemPrompt?: string | null;
   context?: WorkRunContextItem[];
   toolPolicy?: Record<string, unknown> | null;
+  /**
+   * Per-run config snapshot. Adapters use these values to override their
+   * cached provider config when present (e.g. Pulse forces specific
+   * permission/sandbox/mode regardless of the user's current provider settings).
+   * Recognised keys: permissionMode, sandboxMode, mode, thinkingMode, effortLevel,
+   * modelReasoningEffort.
+   */
+  configSnapshot?: Record<string, unknown> | null;
   /** File attachments (images/documents) to include in the prompt */
   attachments?: FileAttachment[];
   /** Structured context issues passed from the UI */
@@ -56,7 +64,7 @@ export interface WorkRunRequest {
   /** User-selected skills to invoke during this run (adapter decides how to inject) */
   skills?: Array<{
     name: string;
-    path: string;
+    path?: string;
     displayName?: string;
     description?: string;
     shortDescription?: string;
@@ -263,7 +271,7 @@ export interface WorkRunContinueRequest {
   /** User-selected skills to invoke for this follow-up (adapter decides how to inject) */
   skills?: Array<{
     name: string;
-    path: string;
+    path?: string;
     displayName?: string;
     description?: string;
     shortDescription?: string;
@@ -504,8 +512,6 @@ export interface CodexAdapterConfig {
   defaultModel?: string;
   /** Timeout in milliseconds */
   timeout?: number;
-  /** Permission mode for tool access */
-  permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
   /** Approval policy passed to Codex CLI (no interactive hooks — CLI handles internally) */
   approvalMode?: "untrusted" | "on-request" | "never";
   /** Sandbox mode for file/network isolation */

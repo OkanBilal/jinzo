@@ -457,6 +457,24 @@ export type {
 } from "./automationsApi";
 
 export {
+  pulseApi,
+  useGetPulsesQuery,
+  useLazyGetPulsesQuery,
+  useGetPulseByIdQuery,
+  useCreatePulseMutation,
+  useUpdatePulseMutation,
+  useDeletePulseMutation,
+  useTogglePulseMutation,
+  useRunPulseNowMutation,
+} from "./pulseApi";
+export type {
+  Pulse,
+  PulseFrequency,
+  CreatePulseInput,
+  UpdatePulseInput,
+} from "./pulseApi";
+
+export {
   skillsMarketplaceApi,
   useListMarketplaceSkillsQuery,
   useLazyListMarketplaceSkillsQuery,

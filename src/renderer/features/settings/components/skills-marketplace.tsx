@@ -419,7 +419,7 @@ export default function SkillsMarketplace() {
 
       {isLoading && <Muted>Loading skills from skills.sh…</Muted>}
 
-      {error && !isLoading && (
+      {!!error && !isLoading && (
         <div className="rounded-2xl glass-morphism px-5 py-5">
           <div className="text-sm font-medium text-primary-900 dark:text-primary-100 mb-2">
             Skills cannot be listed right now

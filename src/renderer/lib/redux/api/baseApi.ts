@@ -76,6 +76,7 @@ export const baseApi = createApi({
     'Stats',
     'WorkspaceActivity',
     'Automations',
+    'Pulse',
     'ProjectSignals',
     'SkillsMarketplace',
   ],

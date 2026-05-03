@@ -320,7 +320,7 @@ const api = {
       contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
       contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
       contextFiles?: Array<{ path: string }>;
-      contextSkills?: Array<{ name: string; path: string }>;
+      contextSkills?: Array<{ name: string; path?: string; displayName?: string; description?: string; shortDescription?: string; iconSmall?: string; iconLarge?: string; brandColor?: string; scope?: string }>;
     }) => ipcRenderer.invoke("runs:execute", payload),
     abort: (runId: string) => ipcRenderer.invoke("runs:abort", runId),
     getToolCalls: (runId: string) =>
@@ -341,7 +341,7 @@ const api = {
       contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
       contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
       contextFiles?: Array<{ path: string }>;
-      contextSkills?: Array<{ name: string; path: string }>;
+      contextSkills?: Array<{ name: string; path?: string; displayName?: string; description?: string; shortDescription?: string; iconSmall?: string; iconLarge?: string; brandColor?: string; scope?: string }>;
     }) => ipcRenderer.invoke("runs:continue", payload),
     canResume: (runId: string) => ipcRenderer.invoke("runs:canResume", runId),
     fork: (payload: {
@@ -711,6 +711,20 @@ const api = {
     getRunHistory: (automationId: string, limit?: number) =>
       ipcRenderer.invoke("automations:getRunHistory", automationId, limit),
     getAvailableActions: () => ipcRenderer.invoke("automations:getAvailableActions"),
+  },
+
+  // Pulse operations (scheduled work runs)
+  pulse: {
+    getAll: () => ipcRenderer.invoke("pulse:getAll"),
+    getById: (id: string) => ipcRenderer.invoke("pulse:getById", id),
+    create: (accountId: string, input: unknown) =>
+      ipcRenderer.invoke("pulse:create", accountId, input),
+    update: (id: string, input: unknown) =>
+      ipcRenderer.invoke("pulse:update", id, input),
+    delete: (id: string) => ipcRenderer.invoke("pulse:delete", id),
+    toggle: (id: string, isActive: boolean) =>
+      ipcRenderer.invoke("pulse:toggle", id, isActive),
+    runNow: (id: string) => ipcRenderer.invoke("pulse:runNow", id),
   },
 };
 

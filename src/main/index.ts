@@ -116,6 +116,11 @@ import {
   automationsService,
 } from "./modules/automations";
 import {
+  registerPulseIpc,
+  unregisterPulseIpc,
+  pulseService,
+} from "./modules/pulse";
+import {
   registerGuardsIpc,
   unregisterGuardsIpc,
   shutdownAllGuardAdapters,
@@ -466,10 +471,12 @@ async function initializeApp() {
     registerUpdatesIpc();
     updatesService.initialize();
     registerAutomationsIpc();
+    registerPulseIpc();
     registerGuardsIpc();
     registerBrowserIpc();
     registerSkillsMarketplaceIpc();
     automationsService.start();
+    pulseService.start();
 
     // Shell utilities
     ipcMain.handle("shell:openExternal", async (_, url: string) => {
@@ -699,6 +706,8 @@ async function cleanupApp() {
     unregisterUpdatesIpc();
     automationsService.stop();
     unregisterAutomationsIpc();
+    pulseService.stop();
+    unregisterPulseIpc();
     unregisterGuardsIpc();
     await shutdownAllGuardAdapters();
     try { browserService.destroy(); } catch { /* ignore */ }

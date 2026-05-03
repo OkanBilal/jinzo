@@ -56,6 +56,14 @@ export function GlobDisplay({ params, output, isCompact = false }: { params: Glo
   );
 }
 
+function parseRawFileList(raw: string): { filenames: string[]; numFiles: number } {
+  const filenames = raw
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return { filenames, numFiles: filenames.length };
+}
+
 function parseGlobOutput(output: unknown): { filenames: string[]; numFiles: number } {
   if (!output) return { filenames: [], numFiles: 0 };
 
@@ -64,7 +72,9 @@ function parseGlobOutput(output: unknown): { filenames: string[]; numFiles: numb
     try {
       parsed = JSON.parse(parsed);
     } catch {
-      return { filenames: [], numFiles: 0 };
+      // Adapters that emit raw shell stdout (newline-separated paths) get a
+      // best-effort fallback so the file list still renders.
+      return parseRawFileList(parsed as string);
     }
   }
 

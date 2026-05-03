@@ -233,7 +233,7 @@ export function WizardModal<
           <div className="flex min-h-9 items-center gap-2">
             {displayTitleIcon != null ? (
               <span
-                className="flex size-9 shrink-0 items-center justify-center [&_svg]:size-7 [&>div]:flex [&>div]:size-9 [&>div]:items-center [&>div]:justify-center"
+                className="flex size-8 shrink-0 items-center justify-center [&_svg]:size-7 [&>div]:flex [&>div]:size-9 [&>div]:items-center [&>div]:justify-center"
                 aria-hidden
               >
                 {displayTitleIcon}

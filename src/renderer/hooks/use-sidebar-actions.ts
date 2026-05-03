@@ -12,7 +12,8 @@ import {
 import { toast } from "@/components/ui";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
-import { getWorkspaceListBasePath } from "@/lib/route-utils";
+import { getRouteType, getWorkspaceListBasePath } from "@/lib/route-utils";
+import { getBaseRoutePath } from "@/lib/route-utils";
 
 export function useSidebarActions() {
   const navigate = useNavigate();
@@ -433,7 +434,7 @@ export function useSidebarActions() {
 
       toast.success("Project created");
       setIsCreateProjectModalOpen(false);
-      const basePath = getBaseRoutePath(routeType === "settings" || routeType === "home" || routeType === "unknown" ? "codex" : routeType);
+      const basePath = getBaseRoutePath(getRouteType(location.pathname));
       navigate(`${basePath}/${workspaceId}`);
     } catch (error) {
       console.error("Failed to create project:", error);

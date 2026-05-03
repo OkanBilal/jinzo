@@ -54,7 +54,6 @@ export const seedProviders: CreateProviderPayload[] = [
       timeout: 600000,
       approvalMode: "on-request",
       sandboxMode: "workspace-write",
-      permissionMode: "default",
       networkAccessEnabled: true,
       webSearchMode: "live",
       personality: "none",

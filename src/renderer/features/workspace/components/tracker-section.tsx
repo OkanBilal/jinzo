@@ -115,10 +115,10 @@ export function TrackerSection({
         onClick={() =>
           setState((prev) => ({ ...prev, expanded: !prev.expanded }))
         }
-        className="w-full flex items-center "
+        className="w-full flex items-center bg-primary/50 dark:bg-primary/5"
       >
         <ArrowUp
-          className={`w-3 h-3 transform text-primary-900 dark:text-primary transition-transform ${
+          className={`w-3 h-3 transform text-primary-900 dark:text-primary transition-transform  g ${
             expanded ? "rotate-180" : "rotate-90"
           }`}
         />

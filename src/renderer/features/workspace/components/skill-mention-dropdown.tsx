@@ -35,13 +35,18 @@ function localImageUrl(absPath: string): string {
   return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
 }
 
+function resolveImageUrl(src: string): string {
+  if (/^(data:|https?:|mains-localimg:)/.test(src)) return src;
+  return localImageUrl(src);
+}
+
 function SkillIcon({ skill }: { skill: SkillInfo }) {
   const [failed, setFailed] = useState(false);
   const iconPath = skill.iconLarge || skill.iconSmall;
   if (iconPath && !failed) {
     return (
       <img
-        src={localImageUrl(iconPath)}
+        src={resolveImageUrl(iconPath)}
         alt=""
         className="size-5 rounded shrink-0 object-contain"
         style={skill.brandColor ? { backgroundColor: skill.brandColor } : undefined}

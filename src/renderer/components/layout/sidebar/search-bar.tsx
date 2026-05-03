@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from "react";
 import { Button } from "@/components/ui";
 import { Search, Close } from "@/components/ui/icons";
 
@@ -16,6 +17,14 @@ export default function SearchBar({
   onSearchChange,
   onClear,
 }: SearchBarProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useLayoutEffect(() => {
+    if (isExpanded) {
+      inputRef.current?.focus();
+    }
+  }, [isExpanded]);
+
   return (
     <div
       className={`relative transition-all duration-200 ease-in-out h-9 flex items-center ${
@@ -27,6 +36,7 @@ export default function SearchBar({
         <div className="relative animate-in fade-in duration-200 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-900 dark:text-primary-200 " />
           <input
+            ref={inputRef}
             type="text"
             placeholder="Search"
             value={searchQuery}

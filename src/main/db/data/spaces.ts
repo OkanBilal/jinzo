@@ -30,7 +30,7 @@ export const seedSpaces: SeedSpace[] = [
     uiConfig: {
       sidebar: {
         width: "18rem",
-        title: "Repository",
+        title: "Project",
         itemType: "workspace",
         defaultRoute: "/claude",
       },
@@ -53,7 +53,7 @@ export const seedSpaces: SeedSpace[] = [
     uiConfig: {
       sidebar: {
         width: "18rem",
-        title: "Repository",
+        title: "Project",
         itemType: "workspace",
         defaultRoute: "/codex",
       },
@@ -75,7 +75,7 @@ export const seedSpaces: SeedSpace[] = [
     uiConfig: {
       sidebar: {
         width: "18rem",
-        title: "Repository",
+        title: "Project",
         itemType: "workspace",
         defaultRoute: "/copilot",
       },
@@ -97,7 +97,7 @@ export const seedSpaces: SeedSpace[] = [
     uiConfig: {
       sidebar: {
         width: "18rem",
-        title: "Repository",
+        title: "Project",
         itemType: "workspace",
         defaultRoute: "/cursor",
       },

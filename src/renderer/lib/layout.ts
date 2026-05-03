@@ -1,4 +1,4 @@
-const ROUTES_WITHOUT_RIGHT_PANEL = ["/settings", "/plugins"];
+const ROUTES_WITHOUT_RIGHT_PANEL = ["/settings", "/plugins", "/pulse"];
 
 export function shouldHideRightPanel(pathname: string): boolean {
   return ROUTES_WITHOUT_RIGHT_PANEL.some(

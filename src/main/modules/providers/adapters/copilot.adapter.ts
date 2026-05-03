@@ -1082,18 +1082,20 @@ export function createCopilotAdapter(
 
         const copilotClient = await ensureClient(request.workspace.rootPath);
 
-        const permissionMode = config.permissionMode || "default";
+        // Per-run override (e.g. Pulse forces permissionMode="allow")
+        const overrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
+        const permissionMode = (typeof overrides.permissionMode === "string" && overrides.permissionMode) || config.permissionMode || "default";
 
         const sessionConfig: SessionConfig = {
           sessionId: runId,
           streaming: true,
           cwd: request.workspace.rootPath,
-          onPermissionRequest: permissionMode === "bypassPermissions"
+          onPermissionRequest: permissionMode === "bypassPermissions" || permissionMode === "allow"
             ? approveAllPermissions
             : buildPermissionHandler(runId),
         };
 
-        if (permissionMode !== "bypassPermissions") {
+        if (permissionMode !== "bypassPermissions" && permissionMode !== "allow") {
           sessionConfig.hooks = { onPreToolUse: buildPreToolUseHook(runId) };
           sessionConfig.onUserInputRequest = buildUserInputHandler(runId);
         }
@@ -1103,7 +1105,12 @@ export function createCopilotAdapter(
         }
 
         // Set reasoning effort from config (if model supports it)
-        const reasoningEffort = (config as any).modelReasoningEffort as ReasoningEffort | undefined;
+        const overrideEffort = typeof overrides.modelReasoningEffort === "string"
+          ? overrides.modelReasoningEffort
+          : typeof overrides.effortLevel === "string" && overrides.effortLevel
+            ? overrides.effortLevel
+            : undefined;
+        const reasoningEffort = (overrideEffort ?? (config as any).modelReasoningEffort) as ReasoningEffort | undefined;
         if (reasoningEffort) {
           sessionConfig.reasoningEffort = reasoningEffort;
         }

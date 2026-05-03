@@ -413,7 +413,10 @@ export const providersApi = baseApi.injectEndpoints({
           throw new Error(response.error || "Failed to install plugin");
         }
       },
-      invalidatesTags: (_r, _e, { providerId }) => [{ type: "ProviderPlugins", id: providerId }],
+      invalidatesTags: (_r, _e, { providerId }) => [
+        { type: "ProviderPlugins", id: providerId },
+        "ProviderSkills",
+      ],
     }),
 
     uninstallProviderPlugin: builder.mutation<void, { providerId: string; pluginId: string }>({
@@ -426,7 +429,10 @@ export const providersApi = baseApi.injectEndpoints({
           throw new Error(response.error || "Failed to uninstall plugin");
         }
       },
-      invalidatesTags: (_r, _e, { providerId }) => [{ type: "ProviderPlugins", id: providerId }],
+      invalidatesTags: (_r, _e, { providerId }) => [
+        { type: "ProviderPlugins", id: providerId },
+        "ProviderSkills",
+      ],
     }),
 
     getProviderRateLimits: builder.query<RateLimitInfo | null, string>({

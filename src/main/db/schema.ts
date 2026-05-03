@@ -1158,3 +1158,73 @@ export const automationRuns = sqliteTable(
   ],
 );
 
+/* -----------------------------
+   PULSES (scheduled work runs)
+------------------------------ */
+
+export const pulses = sqliteTable(
+  "pulses",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+
+    providerId: text("provider_id")
+      .notNull()
+      .references(() => providers.id, { onDelete: "restrict" }),
+
+    model: text("model").notNull(),
+
+    title: text("title").notNull(),
+    prompt: text("prompt").notNull(),
+
+    frequency: text("frequency", {
+      enum: ["hourly", "daily", "weekdays", "weekly"],
+    }).notNull(),
+
+    dayOfWeek: integer("day_of_week"), // 0=Sun..6=Sat, only for weekly
+    hour: integer("hour").notNull().default(9), // 0-23, ignored for hourly
+    minute: integer("minute").notNull().default(0), // 0-59
+    timezone: text("timezone").notNull(),
+
+    thinkingMode: integer("thinking_mode", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    effortLevel: text("effort_level"), // "" | minimal | low | medium | high | max | xhigh
+
+    isActive: integer("is_active", { mode: "boolean" })
+      .notNull()
+      .default(true),
+
+    lastRunAt: integer("last_run_at", { mode: "timestamp" }),
+    nextRunAt: integer("next_run_at", { mode: "timestamp" }),
+    lastRunId: text("last_run_id").references(() => runs.id, {
+      onDelete: "set null",
+    }),
+    lastError: text("last_error"),
+
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("idx_pulses_account").on(t.accountId),
+    index("idx_pulses_workspace").on(t.workspaceId),
+    index("idx_pulses_active_next_run").on(t.isActive, t.nextRunAt),
+    check(
+      "check_pulses_frequency_dow",
+      sql`(${t.frequency} = 'weekly' AND ${t.dayOfWeek} BETWEEN 0 AND 6) OR (${t.frequency} <> 'weekly' AND ${t.dayOfWeek} IS NULL)`,
+    ),
+    check("check_pulses_hour", sql`${t.hour} BETWEEN 0 AND 23`),
+    check("check_pulses_minute", sql`${t.minute} BETWEEN 0 AND 59`),
+  ],
+);
+

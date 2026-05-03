@@ -300,6 +300,12 @@ const activeRuns = new Map<string, {
   mainsCtx: MainsToolContext;
   /** Accumulated file change diff content per itemId (from output/delta events) */
   fileChangeBuffers: Map<string, string>;
+  /**
+   * fileChange item details keyed by itemId, captured on item/started.
+   * `item/fileChange/requestApproval` only carries `itemId`/`reason`, so we
+   * look paths/kind up here to render a useful approval dialog.
+   */
+  fileChangeItems: Map<string, Array<{ path: string; kind: string; diff?: string }>>;
   /** Shell stdout/stderr chunks per command_execution itemId (Codex streams here; completed item often omits aggregatedOutput) */
   commandOutputBuffers: Map<string, string>;
   /** Absolute image paths already emitted as artifacts during this run (deduped) */
@@ -1480,6 +1486,40 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
   }
 
   /**
+   * Reshape raw shell stdout into the JSON envelope each tool's renderer
+   * expects. Codex maps ad-hoc shell commands to logical tools (Glob/Grep/…)
+   * via classifyCodexShellCommand, but their stdout is just newline-separated
+   * text — GlobDisplay/GrepDisplay need a structured object.
+   *
+   * Returns a stringified JSON envelope when normalization applies, otherwise
+   * the raw stdout (or a fallback exit-code marker when stdout is empty).
+   */
+  function formatShellOutputForTool(
+    toolName: string,
+    stdout: string | undefined,
+    exitCode: number | undefined,
+  ): string {
+    const raw = stdout?.trim() ?? "";
+
+    if (toolName === "Glob") {
+      const filenames = raw
+        ? raw.split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
+        : [];
+      return JSON.stringify({ filenames, numFiles: filenames.length });
+    }
+
+    if (toolName === "Grep") {
+      const lines = raw ? raw.split(/\r?\n/) : [];
+      return JSON.stringify({
+        content: raw || null,
+        numLines: lines.length,
+      });
+    }
+
+    return raw ? raw : `exit code: ${exitCode ?? "unknown"}`;
+  }
+
+  /**
    * Map Codex ThreadItem to WorkRunEvents.
    * Matches the app-server's item schema (same structure as SDK ThreadItem).
    */
@@ -1552,11 +1592,16 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           }
 
           const cmdFailed = status === "failed";
+          // Normalize output to the shape the renderer's tool display expects.
+          // Glob → { filenames, numFiles }, Grep → { content, numLines } so
+          // GlobDisplay/GrepDisplay render rich previews instead of empty
+          // dropdowns. Other tools (Bash/Read) keep the raw stdout string.
+          const normalizedOutput = formatShellOutputForTool(toolName, mergedOut, exitCode);
           events.push({
             type: "tool_call",
             toolName,
             input,
-            output: mergedOut?.trim() ? mergedOut : `exit code: ${exitCode ?? "unknown"}`,
+            output: normalizedOutput,
             error: cmdFailed ? `Command failed with exit code ${exitCode}` : undefined,
             endedAt: ts,
             metadata: { phase: "complete", ...cmdMeta, exitCode },
@@ -1637,11 +1682,27 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         // Item-level patch (some versions of Codex put it here)
         const itemPatch = (item.patch ?? item.unifiedDiff ?? item.diff) as string | undefined;
 
+        // Cache change details on start/update so item/fileChange/requestApproval
+        // (which only carries itemId/reason) can render a rich approval dialog.
+        if ((phase === "start" || phase === "update") && changes && changes.length > 0 && runId) {
+          const rs = activeRuns.get(runId);
+          if (rs) {
+            rs.fileChangeItems.set(item.id, changes.map((c) => ({
+              path: c.path,
+              kind: c.kind,
+              diff: c.patch ?? c.unifiedDiff ?? c.diff,
+            })));
+          }
+        }
+
         if (phase === "complete" && changes && changes.length > 0) {
           // Retrieve accumulated diff from delta events, then clean up
           const runState = runId ? activeRuns.get(runId) : undefined;
           const bufferedDiff = runState?.fileChangeBuffers.get(item.id);
-          if (runState) runState.fileChangeBuffers.delete(item.id);
+          if (runState) {
+            runState.fileChangeBuffers.delete(item.id);
+            runState.fileChangeItems.delete(item.id);
+          }
 
           for (const change of changes) {
             const toolName = change.kind === "delete" ? "Delete" : (change.kind === "add" || change.kind === "create") ? "Write" : "Edit";
@@ -2087,43 +2148,87 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       const handleServerRequest = async (id: number | string, method: string, params: unknown) => {
         const p = params as Record<string, unknown> | undefined;
         switch (method) {
-          // Decision-based approval requests (command exec + file change).
-          // Response shape: { decision: "accept" | "acceptForSession" | "decline" | "cancel" }
-          // See v2.rs::CommandExecutionRequestApprovalResponse / FileChangeRequestApprovalResponse.
-          case "item/commandExecution/requestApproval":
-          case "item/fileChange/requestApproval": {
+          // Command exec approval. Payload carries command, cwd, optional
+          // commandActions/reason. Dispatch to the renderer's Bash preview.
+          // Response shape: { decision: "accept" | "acceptForSession" | "decline" | "cancel" }.
+          case "item/commandExecution/requestApproval": {
+            const command = (p?.command as string) ?? "";
+            const cwd = (p?.cwd as string) ?? undefined;
+            const reason = (p?.reason as string) ?? undefined;
+
             // Dependency guard check — intercept install commands before approval
-            if (method === "item/commandExecution/requestApproval") {
-              const cmd = (p?.command as string) || "";
-              const guardResult = await guardsService.checkCommand(cmd);
-              if (guardResult.blocked) {
-                server.respondToRequest(id, { decision: "decline" });
-                break;
-              }
+            const guardResult = await guardsService.checkCommand(command);
+            if (guardResult.blocked) {
+              server.respondToRequest(id, { decision: "decline" });
+              break;
             }
 
-            const permissionMode = config.permissionMode || "default";
-            if (permissionMode === "bypassPermissions") {
-              server.respondToRequest(id, { decision: "accept" });
-            } else {
-              const toolName = method.includes("command") ? "Bash" : "Edit";
-              const command = (p?.command as string) ?? (p?.path as string) ?? (p?.reason as string) ?? "";
-              try {
-                const result = await requestToolApproval({
-                  requestId: String(id),
-                  runId,
-                  toolName,
-                  toolInput: { command },
-                  kind: "tool_approval",
-                  timestamp: Date.now(),
-                });
-                const decision = !result.approved ? "decline"
-                  : result.answer === "acceptForSession" ? "acceptForSession"
-                  : "accept";
-                server.respondToRequest(id, { decision });
-              } catch {
-                server.respondToRequest(id, { decision: "decline" });
-              }
+            try {
+              const result = await requestToolApproval({
+                requestId: String(id),
+                runId,
+                toolName: "Bash",
+                toolInput: {
+                  command,
+                  ...(cwd ? { cwd } : {}),
+                  ...(reason ? { description: reason } : {}),
+                },
+                kind: "tool_approval",
+                timestamp: Date.now(),
+              });
+              const decision = !result.approved ? "decline"
+                : result.answer === "acceptForSession" ? "acceptForSession"
+                : "accept";
+              server.respondToRequest(id, { decision });
+            } catch {
+              server.respondToRequest(id, { decision: "decline" });
+            }
+            break;
+          }
+
+          // File change approval. Payload only carries itemId/reason — look
+          // up the previously-cached fileChange item details to render
+          // path/kind in the approval dialog. When multiple files share the
+          // same patch, we surface them under a generic "FileChange" tool so
+          // the dialog falls back to the key/value table renderer.
+          case "item/fileChange/requestApproval": {
+            const itemId = (p?.itemId as string) ?? (p?.item_id as string) ?? "";
+            const reason = (p?.reason as string) ?? undefined;
+            const cached = itemId ? activeRuns.get(runId)?.fileChangeItems.get(itemId) : undefined;
+
+            const single = cached && cached.length === 1 ? cached[0] : undefined;
+            const toolName = single
+              ? (single.kind === "delete" ? "Delete"
+                : (single.kind === "add" || single.kind === "create") ? "Write"
+                : "Edit")
+              : "FileChange";
+
+            const toolInput: Record<string, unknown> = single
+              ? {
+                  file_path: single.path,
+                  ...(single.diff ? { diff: single.diff } : {}),
+                  ...(reason ? { description: reason } : {}),
+                }
+              : {
+                  files: cached?.map((c) => ({ path: c.path, kind: c.kind })) ?? [],
+                  ...(reason ? { description: reason } : {}),
+                };
+
+            try {
+              const result = await requestToolApproval({
+                requestId: String(id),
+                runId,
+                toolName,
+                toolInput,
+                kind: "tool_approval",
+                timestamp: Date.now(),
+              });
+              const decision = !result.approved ? "decline"
+                : result.answer === "acceptForSession" ? "acceptForSession"
+                : "accept";
+              server.respondToRequest(id, { decision });
+            } catch {
+              server.respondToRequest(id, { decision: "decline" });
             }
             break;
           }
@@ -2134,15 +2239,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           case "item/permissions/requestApproval": {
             const requestedPermissions = (p?.permissions ?? {}) as Record<string, unknown>;
             const reason = (p?.reason as string) ?? "elevated permissions";
-
-            const permissionMode = config.permissionMode || "default";
-            if (permissionMode === "bypassPermissions") {
-              server.respondToRequest(id, {
-                permissions: requestedPermissions,
-                scope: "turn",
-              });
-              break;
-            }
 
             try {
               const result = await requestToolApproval({
@@ -2300,17 +2396,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             // or a sibling field whose shape is still being mapped.
             logInfo(`[mcpServer/elicitation/request] ${JSON.stringify(p, null, 2)}`);
 
-            const permissionMode = config.permissionMode || "default";
-            if (permissionMode === "bypassPermissions") {
-              if (mode === "url" && url) {
-                shell.openExternal(url).catch((err) =>
-                  logWarn(`Failed to open elicitation URL: ${err}`),
-                );
-              }
-              server.respondToRequest(id, { action: "accept", content: {} });
-              break;
-            }
-
             try {
               const result = await requestToolApproval({
                 requestId: String(id),
@@ -2374,7 +2459,17 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         const server = await ensureServer();
 
         const approvalPolicy = config.approvalMode ?? "on-request";
-        const sandbox = mapSandboxMode(config.sandboxMode);
+        // Per-run override (e.g. Pulse forces sandboxMode="workspace-write")
+        const overrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
+        const overrideSandboxMode = typeof overrides.sandboxMode === "string"
+          ? (overrides.sandboxMode as CodexAdapterConfig["sandboxMode"])
+          : undefined;
+        const overrideEffort = typeof overrides.modelReasoningEffort === "string"
+          ? (overrides.modelReasoningEffort as string)
+          : typeof overrides.effortLevel === "string" && overrides.effortLevel
+            ? (overrides.effortLevel as string)
+            : undefined;
+        const sandbox = mapSandboxMode(overrideSandboxMode ?? config.sandboxMode);
         const personality = config.personality ?? "none";
 
         // Start thread (cwd passed per-thread, not per-server)
@@ -2403,7 +2498,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         }
 
         const mainsCtx: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx, fileChangeBuffers: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set() });
+        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set() });
 
         // Emit user prompt artifact
         await emitUserPromptArtifact(onEvent, request.goal, {
@@ -2416,11 +2511,12 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
         // 2. Start turn
         const turnInput = buildTurnInput(request);
+        const effort = overrideEffort ?? config.modelReasoningEffort;
         const turnStartParams: Record<string, unknown> = {
           threadId: threadId ?? "",
           input: turnInput,
           ...(resolvedModel ? { model: resolvedModel } : {}),
-          ...(config.modelReasoningEffort ? { effort: config.modelReasoningEffort } : {}),
+          ...(effort ? { effort } : {}),
         };
 
         await server.sendRequest("turn/start", turnStartParams);
@@ -2516,7 +2612,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         }
 
         const mainsCtxContinue: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxContinue, fileChangeBuffers: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set() });
+        activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxContinue, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set() });
 
         await emitUserPromptArtifact(onEvent, message, {
           attachments: request.attachments,
@@ -2628,6 +2724,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           pendingFlush: [],
           mainsCtx: mainsCtxFork,
           fileChangeBuffers: new Map(),
+          fileChangeItems: new Map(),
           commandOutputBuffers: new Map(),
           emittedImagePaths: new Set(),
         });
@@ -2720,7 +2817,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         }
 
         const mainsCtxReview: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxReview, fileChangeBuffers: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set() });
+        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxReview, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set() });
 
         // Emit review user-prompt artifact
         const targetLabel =

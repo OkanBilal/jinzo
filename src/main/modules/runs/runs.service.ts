@@ -831,6 +831,7 @@ export const runsService = {
           systemPrompt: payload.systemPrompt,
           context: payload.initialContext as WorkRunContextItem[] | undefined,
           toolPolicy: payload.toolPolicySnapshot,
+          configSnapshot: payload.configSnapshot ?? null,
           attachments: payload.attachments,
           contextIssues: payload.contextIssues,
           contextSignals: payload.contextSignals,

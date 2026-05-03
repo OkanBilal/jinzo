@@ -17,11 +17,14 @@ export function useActiveSpace() {
 
   const spaceSlug = activeSpace?.slug;
   const isClaudeSpace = spaceSlug === "claude";
+  /** Agent flavor for the row pointed to by `app_settings.active_space_id` */
+  const activeSpaceAgentSlug = spaceSlug ?? null;
 
   return {
     activeSpaceId,
     activeSpace,
     spaceSlug,
+    activeSpaceAgentSlug,
     isClaudeSpace,
     spaces,
     allSpaces,
