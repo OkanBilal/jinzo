@@ -79,9 +79,9 @@ export default function NewButton({
         <Body className="text-primary-900 dark:text-primary-100 text-s font-medium">
           {actionPrefix} {title}
         </Body>
-        {/* <Caption className="ml-auto text-primary-900 dark:text-primary-100">
+        <Body className="ml-auto text-primary-900 dark:text-primary-200 text-xs!">
           ⌘ N
-        </Caption> */}
+        </Body>
       </Button>
 
       {dropdownItems && (

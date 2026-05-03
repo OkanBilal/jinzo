@@ -5,6 +5,8 @@ import * as path from "path";
 import { imageProxyService } from "./imageProxy.service";
 import { workspacesRepo } from "../workspaces/workspaces.repo";
 
+//TODO: imageproxy service limitations check
+
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 function checkContentLength(response: Response): Response | null {

@@ -8,10 +8,12 @@ import { addContextFile, addContextIssue, addContextSkill, removeContextSkill } 
 import type { UploadedFile, RichInputFormHandle, RichSkillChipData } from "@/components/ui";
 import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
 import { RichInputForm } from "@/components/ui";
-import { SlashMenuDropdown } from "@/features/workspace/components/slash-menu-dropdown";
-import { FileMentionDropdown } from "@/features/workspace/components/file-mention-dropdown";
-import { IssueMentionDropdown } from "@/features/workspace/components/issue-mention-dropdown";
+import {
+  UnifiedContextDropdown,
+  type UnifiedContextTrigger,
+} from "@/features/workspace/components/unified-context-dropdown";
 import { SkillMentionDropdown } from "@/features/workspace/components/skill-mention-dropdown";
+import { IssueMentionDropdown } from "@/features/workspace/components/issue-mention-dropdown";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { ContextChips } from "./context-chips";
 import { InputToolbar } from "./input-toolbar";
@@ -130,8 +132,7 @@ export function WorkspaceInput({
   onStop,
 }: WorkspaceInputProps) {
   const inputRef = useRef<RichInputFormHandle>(null);
-  const slashCommandDropdownRef = useRef<HTMLDivElement>(null);
-  const fileMentionDropdownRef = useRef<HTMLDivElement>(null);
+  const unifiedContextDropdownRef = useRef<HTMLDivElement>(null);
   const issueMentionDropdownRef = useRef<HTMLDivElement>(null);
   const skillMentionDropdownRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
@@ -149,7 +150,6 @@ export function WorkspaceInput({
     isLoadingModels,
     handleModelChange,
     providerCommands,
-    isLoadingCommands,
     providerSkills,
     isLoadingSkills,
     modelsError,
@@ -183,14 +183,12 @@ export function WorkspaceInput({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const [slashMenu, updateSlashMenu] = useReducer(
-    (prev: { visible: boolean; filter: string }, next: Partial<{ visible: boolean; filter: string }>) => ({ ...prev, ...next }),
-    { visible: false, filter: "" },
-  );
-
-  const [atMenu, updateAtMenu] = useReducer(
-    (prev: { visible: boolean; filter: string }, next: Partial<{ visible: boolean; filter: string }>) => ({ ...prev, ...next }),
-    { visible: false, filter: "" },
+  const [unifiedMenu, updateUnifiedMenu] = useReducer(
+    (
+      prev: { visible: boolean; filter: string; trigger: UnifiedContextTrigger },
+      next: Partial<{ visible: boolean; filter: string; trigger: UnifiedContextTrigger }>,
+    ) => ({ ...prev, ...next }),
+    { visible: false, filter: "", trigger: "@" },
   );
 
   const [hashMenu, updateHashMenu] = useReducer(
@@ -203,11 +201,17 @@ export function WorkspaceInput({
     { visible: false, filter: "" },
   );
 
-  // Detect slash commands when goal is set externally (e.g. quick actions)
+  // Detect @ / context menu when goal is set externally (e.g. quick actions)
   useEffect(() => {
     const slashMatch = goal.match(/(?:^|\s)\/(\S*)$/);
     if (slashMatch) {
-      updateSlashMenu({ filter: slashMatch[1], visible: true });
+      updateUnifiedMenu({ filter: slashMatch[1], visible: true, trigger: "/" });
+      inputRef.current?.focus();
+      return;
+    }
+    const atMatch = goal.match(/(?:^|\s)@(\S*)$/);
+    if (atMatch) {
+      updateUnifiedMenu({ filter: atMatch[1], visible: true, trigger: "@" });
       inputRef.current?.focus();
     }
   }, [goal]);
@@ -223,12 +227,14 @@ export function WorkspaceInput({
   // mid-text — not just at the end of the prompt.
   const handleCaretContext = useCallback((before: string) => {
     const slashMatch = before.match(/(?:^|\s)\/(\S*)$/);
-    if (slashMatch) updateSlashMenu({ filter: slashMatch[1], visible: true });
-    else updateSlashMenu({ visible: false, filter: "" });
-
     const atMatch = before.match(/(?:^|\s)@(\S*)$/);
-    if (atMatch) updateAtMenu({ filter: atMatch[1], visible: true });
-    else updateAtMenu({ visible: false, filter: "" });
+    if (slashMatch) {
+      updateUnifiedMenu({ filter: slashMatch[1], visible: true, trigger: "/" });
+    } else if (atMatch) {
+      updateUnifiedMenu({ filter: atMatch[1], visible: true, trigger: "@" });
+    } else {
+      updateUnifiedMenu({ visible: false, filter: "" });
+    }
 
     const hashMatch = before.match(/(?:^|\s)#(\S*)$/);
     if (hashMatch) updateHashMenu({ filter: hashMatch[1], visible: true });
@@ -242,20 +248,21 @@ export function WorkspaceInput({
   const handleSlashCommandSelect = useCallback(
     (command: CommandInfo) => {
       const replacement = `/${command.name} `;
-      const ok = inputRef.current?.replaceTokenWithText("/", replacement) ?? false;
+      const t = unifiedMenu.trigger;
+      const ok = inputRef.current?.replaceTokenWithText(t, replacement) ?? false;
       if (!ok) {
-        const next = replaceMentionInGoal(goal, "/", slashMenu.filter, replacement);
+        const next = replaceMentionInGoal(goal, t, unifiedMenu.filter, replacement);
         if (next !== null) onGoalChange(next);
       }
-      updateSlashMenu({ visible: false, filter: "" });
+      updateUnifiedMenu({ visible: false, filter: "" });
     },
-    [goal, onGoalChange, slashMenu.filter],
+    [goal, onGoalChange, unifiedMenu.filter, unifiedMenu.trigger],
   );
 
   const handleSkillSelect = useCallback(
-    (skill: SkillInfo) => {
+    (skill: SkillInfo, trigger: "$" | "@" | "/") => {
       updateDollarMenu({ visible: false, filter: "" });
-      // Persist to Redux first so submission flow keeps working; chip is the inline view.
+      updateUnifiedMenu({ visible: false, filter: "" });
       dispatch(
         addContextSkill({
           name: skill.name,
@@ -269,7 +276,7 @@ export function WorkspaceInput({
           scope: skill.scope,
         }),
       );
-      inputRef.current?.replaceTokenWithSkillChip("$", {
+      inputRef.current?.replaceTokenWithSkillChip(trigger, {
         name: skill.name,
         displayName: skill.displayName,
         iconSmall: skill.iconSmall,
@@ -278,6 +285,20 @@ export function WorkspaceInput({
       });
     },
     [dispatch],
+  );
+
+  const handleUnifiedSkillSelect = useCallback(
+    (skill: SkillInfo) => {
+      handleSkillSelect(skill, unifiedMenu.trigger);
+    },
+    [handleSkillSelect, unifiedMenu.trigger],
+  );
+
+  const handleDollarSkillSelect = useCallback(
+    (skill: SkillInfo) => {
+      handleSkillSelect(skill, "$");
+    },
+    [handleSkillSelect],
   );
 
   const contextSkillsRef = useRef(contextSkills);
@@ -311,17 +332,41 @@ export function WorkspaceInput({
     [dispatch],
   );
 
-  const handleFileSelect = useCallback(
+  const handleUnifiedFileSelect = useCallback(
     (node: FileNode) => {
-      const ok = inputRef.current?.replaceTokenWithText("@", "") ?? false;
+      const t = unifiedMenu.trigger;
+      const ok = inputRef.current?.replaceTokenWithText(t, "") ?? false;
       if (!ok) {
-        const next = replaceMentionInGoal(goal, "@", atMenu.filter, "");
+        const next = replaceMentionInGoal(goal, t, unifiedMenu.filter, "");
         if (next !== null) onGoalChange(next);
       }
-      updateAtMenu({ visible: false, filter: "" });
+      updateUnifiedMenu({ visible: false, filter: "" });
       dispatch(addContextFile(node));
     },
-    [dispatch, goal, onGoalChange, atMenu.filter],
+    [dispatch, goal, onGoalChange, unifiedMenu.filter, unifiedMenu.trigger],
+  );
+
+  const handleUnifiedIssueSelect = useCallback(
+    (item: IssueWithEntity) => {
+      const t = unifiedMenu.trigger;
+      const ok = inputRef.current?.replaceTokenWithText(t, "") ?? false;
+      if (!ok) {
+        const next = replaceMentionInGoal(goal, t, unifiedMenu.filter, "");
+        if (next !== null) onGoalChange(next);
+      }
+      updateUnifiedMenu({ visible: false, filter: "" });
+      dispatch(
+        addContextIssue({
+          entityId: item.issue.entityId,
+          title: item.entity.title,
+          body: item.entity.body,
+          provider: item.issue.provider,
+          number: item.issue.number,
+          labels: item.issue.labels,
+        }),
+      );
+    },
+    [dispatch, goal, onGoalChange, unifiedMenu.filter, unifiedMenu.trigger],
   );
 
   const handleIssueSelect = useCallback(
@@ -344,23 +389,24 @@ export function WorkspaceInput({
     [dispatch, goal, onGoalChange, hashMenu.filter],
   );
 
-  const handleAtMenuNavigate = useCallback(
+  const handleUnifiedFileNavigate = useCallback(
     (dirPath: string) => {
-      const replacement = `@${dirPath}`;
-      const ok = inputRef.current?.replaceTokenWithText("@", replacement) ?? false;
+      const t = unifiedMenu.trigger;
+      const replacement = `${t}${dirPath}`;
+      const ok = inputRef.current?.replaceTokenWithText(t, replacement) ?? false;
       if (!ok) {
-        const next = replaceMentionInGoal(goal, "@", atMenu.filter, replacement);
+        const next = replaceMentionInGoal(goal, t, unifiedMenu.filter, replacement);
         if (next !== null) onGoalChange(next);
       }
-      updateAtMenu({ filter: dirPath });
+      updateUnifiedMenu({ filter: dirPath });
     },
-    [goal, onGoalChange, atMenu.filter],
+    [goal, onGoalChange, unifiedMenu.filter, unifiedMenu.trigger],
   );
 
   const handleSubmit = useCallback(() => {
-    if (atMenu.visible || slashMenu.visible || hashMenu.visible || dollarMenu.visible) return;
+    if (unifiedMenu.visible || hashMenu.visible || dollarMenu.visible) return;
     onSubmit();
-  }, [atMenu.visible, slashMenu.visible, hashMenu.visible, dollarMenu.visible, onSubmit]);
+  }, [unifiedMenu.visible, hashMenu.visible, dollarMenu.visible, onSubmit]);
 
   const [isFileDragOver, setIsFileDragOver] = useState(false);
 
@@ -403,8 +449,8 @@ export function WorkspaceInput({
       return "Drop images or documents here";
     }
     const baseHint = canResume
-      ? "Ask a follow-up, use /commands, $skills, @files or #issues to add context"
-      : "Ask to edit, use /commands, $skills, @files or #issues to add context";
+      ? "Ask a follow-up, use @ or / for commands, files, skills and issues"
+      : "Ask to edit, use @ or / for commands, files, skills and issues";
 
 
     if (uploadedFiles.length === 0) {
@@ -489,32 +535,30 @@ export function WorkspaceInput({
           chipMap={skillChipMap}
           placeholder={inputPlaceholder}
         />
-        <SlashMenuDropdown
+        <UnifiedContextDropdown
+          isOpen={unifiedMenu.visible}
+          trigger={unifiedMenu.trigger}
+          filterText={unifiedMenu.filter}
+          workspacePath={workspacePath}
+          projectId={projectId}
           commands={providerCommands}
-          isOpen={slashMenu.visible}
+          skills={providerSkills}
           onSelectCommand={handleSlashCommandSelect}
-          onClose={() => updateSlashMenu({ visible: false })}
-          dropdownRef={slashCommandDropdownRef}
-          filterText={slashMenu.filter}
-          isLoadingCommands={isLoadingCommands}
+          onSelectSkill={handleUnifiedSkillSelect}
+          onSelectFile={handleUnifiedFileSelect}
+          onNavigateFile={handleUnifiedFileNavigate}
+          onSelectIssue={handleUnifiedIssueSelect}
+          onClose={() => updateUnifiedMenu({ visible: false, filter: "" })}
+          dropdownRef={unifiedContextDropdownRef}
         />
         <SkillMentionDropdown
           isOpen={dollarMenu.visible}
           filterText={dollarMenu.filter}
           skills={providerSkills}
           isLoading={isLoadingSkills}
-          onSelectSkill={handleSkillSelect}
+          onSelectSkill={handleDollarSkillSelect}
           onClose={() => updateDollarMenu({ visible: false, filter: "" })}
           dropdownRef={skillMentionDropdownRef}
-        />
-        <FileMentionDropdown
-          isOpen={atMenu.visible}
-          filterText={atMenu.filter}
-          workspacePath={workspacePath}
-          onSelectFile={handleFileSelect}
-          onNavigate={handleAtMenuNavigate}
-          onClose={() => updateAtMenu({ visible: false, filter: "" })}
-          dropdownRef={fileMentionDropdownRef}
         />
         <IssueMentionDropdown
           isOpen={hashMenu.visible}

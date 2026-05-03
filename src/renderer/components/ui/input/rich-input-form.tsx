@@ -19,8 +19,11 @@ export type RichTriggerChar = "/" | "@" | "#" | "$";
 
 export interface RichInputFormHandle {
   focus: () => void;
-  /** Replace a leading "$<filter>" token at the caret with an inline skill chip + trailing space. */
-  replaceTokenWithSkillChip: (triggerChar: "$", skill: RichSkillChipData) => void;
+  /** Replace a leading "<trigger><filter>" token at the caret with an inline skill chip + trailing space. */
+  replaceTokenWithSkillChip: (
+    triggerChar: "$" | "@" | "/",
+    skill: RichSkillChipData,
+  ) => void;
   /** Replace a leading "<trigger><filter>" token at the caret with the given plain-text replacement. Returns false if the caret was not in a text node (e.g. after focus moved to a dropdown). */
   replaceTokenWithText: (triggerChar: RichTriggerChar, replacement: string) => boolean;
 }

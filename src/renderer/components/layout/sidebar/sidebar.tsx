@@ -19,6 +19,7 @@ import {
   Connect,
   Apps,
   Project,
+  Relay as RelayIcon,
   Sun,
   External,
 } from "@/components/ui/icons";
@@ -137,6 +138,9 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     location.pathname.startsWith("/plugins/");
   const isPulseRoute =
     location.pathname === "/pulse" || location.pathname.startsWith("/pulse/");
+  const isRelayRoute =
+    location.pathname === "/relay" ||
+    location.pathname.startsWith("/relay/");
   /** From `app_settings.active_space_id` → `spaces.slug` (not current route). */
   const pluginsUseClaudeExternalUrl = activeSpaceAgentSlug === "claude";
   const isPluginsDisabledForAgent =
@@ -252,7 +256,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 </Body>
               </Button>
             </div>
-            <div className="px-3 mb-2">
+            <div className="px-3 mb-0.25">
               {isPluginsDisabledForAgent ? (
                 <Tooltip
                   content="Not available for this agent yet."
@@ -336,6 +340,46 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   ) : null}
                 </Button>
               )}
+            </div>
+            <div className="px-3 mb-2">
+              <Button
+                variant="subtle"
+                tooltip="Relay"
+                size="xs"
+                className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
+                  isRelayRoute
+                    ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/8"
+                    : ""
+                }`}
+                onClick={() => navigate("/relay")}
+                aria-current={isRelayRoute ? "page" : undefined}
+              >
+                <RelayIcon
+                  className={`w-4 h-4 -ml-1 shrink-0 ${
+                    isRelayRoute
+                      ? "text-primary-950 dark:text-primary"
+                      : "text-primary-900 dark:text-primary-200"
+                  }`}
+                />
+                <Body
+                  className={`text-s font-medium flex-1 text-left ${
+                    isRelayRoute
+                      ? "text-primary-950 dark:text-primary"
+                      : "text-primary-900 dark:text-primary-100"
+                  }`}
+                >
+                  Relay
+                </Body>
+                <span
+                  className={`shrink-0 text-[10px] uppercase px-1.5 py-px rounded-md ${
+                    isRelayRoute
+                      ? "bg-primary-400/20 text-primary-800 dark:bg-primary/5 dark:text-primary"
+                      : "bg-primary-400/20 text-primary-600 dark:bg-primary/5 dark:text-primary-200"
+                  }`}
+                >
+                  Beta
+                </span>
+              </Button>
             </div>
             <SidebarContent
               workspaces={workspaces}

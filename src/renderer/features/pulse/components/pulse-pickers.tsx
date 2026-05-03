@@ -30,6 +30,7 @@ import {
   WEEK_DAYS,
 } from "../utils/format-schedule";
 import type { PulseFrequency } from "@/lib/redux/api/pulseApi";
+import type { Workspace } from "@/lib/redux/api/workspacesApi";
 
 const SUPPORTED_PROVIDER_IDS = [
   "claude_code",
@@ -83,6 +84,11 @@ const DAY_OPTIONS: { value: string; label: string }[] = WEEK_DAYS.map((d) => ({
 
 // ── Workspace picker ────────────────────────────────────────────
 
+function workspacePickLabel(w: Pick<Workspace, "name" | "defaultBranch">) {
+  const b = w.defaultBranch?.trim();
+  return b ? `${w.name} · ${b}` : w.name;
+}
+
 export function WorkspacePicker({
   value,
   onChange,
@@ -107,8 +113,8 @@ export function WorkspacePicker({
         className={triggerClass}
       >
         <Project className="size-3.5" />
-        <span className="truncate ">
-          {selected?.name ?? "Select workspace"}
+        <span className="truncate max-w-[200px]">
+          {selected ? workspacePickLabel(selected) : "Select workspace"}
         </span>
         <ArrowUp className="size-3.5 rotate-180 " />
       </Button>
@@ -133,7 +139,9 @@ export function WorkspacePicker({
                   : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
               }`}
             >
-              <span className="truncate">{w.name}</span>
+              <span className="truncate text-left" title={workspacePickLabel(w)}>
+                {workspacePickLabel(w)}
+              </span>
             </Button>
           ))}
         </div>
