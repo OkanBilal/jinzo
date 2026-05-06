@@ -12,8 +12,12 @@ import {
 import { toast } from "@/components/ui";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
-import { getRouteType, getWorkspaceListBasePath } from "@/lib/route-utils";
-import { getBaseRoutePath } from "@/lib/route-utils";
+import {
+  getRouteType,
+  getWorkspaceListBasePath,
+  getBaseRoutePath,
+  getSpaceDefaultRoute,
+} from "@/lib/route-utils";
 
 export function useSidebarActions() {
   const navigate = useNavigate();
@@ -38,16 +42,9 @@ export function useSidebarActions() {
     try {
       // Parse route BEFORE mutation to avoid stale closure issues
       const selectedSpace = spaces.find((s) => s.id === spaceId);
-      let defaultRoute = "/";
-
-      if (selectedSpace?.uiConfig) {
-        try {
-          const config = JSON.parse(selectedSpace.uiConfig);
-          defaultRoute = config.sidebar?.defaultRoute || "/";
-        } catch {
-          // Keep default "/"
-        }
-      }
+      const defaultRoute = selectedSpace
+        ? getSpaceDefaultRoute(selectedSpace)
+        : "/";
 
       await setActiveSpace(spaceId || null).unwrap();
 

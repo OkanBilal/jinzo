@@ -1944,14 +1944,13 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
   const MAINS_TOOL_INSTRUCTION = "IMPORTANT: Never commit changes using shell commands (git add, git commit). If the user asks you to commit, always use the CommitChanges tool to stage and commit changes. Similarly, never create pull requests using shell commands (gh pr create). Always use the CreatePR tool instead. Before explicitly adding named packages (for example: npm install axios, pnpm add zod, pip install requests, cargo add serde), call CheckPackage first to verify package safety. Do not call CheckPackage for dependency restore commands with no package names, such as npm install, npm ci, pnpm install, yarn install, or bun install.";
 
   function buildTurnInput(request: WorkRunRequest): TurnInput {
-    const workspaceInfo = `Working directory: ${request.workspace.rootPath}`;
     let prompt: string;
 
     if (request.context && request.context.length > 0) {
       const contextParts = formatContextSection(request.context);
-      prompt = `${workspaceInfo}\n\nContext:\n${contextParts}\n\n---\n\n${MAINS_TOOL_INSTRUCTION}\n\nGoal: ${request.goal}`;
+      prompt = `Context:\n${contextParts}\n\n---\n\n${MAINS_TOOL_INSTRUCTION}\n\nGoal: ${request.goal}`;
     } else {
-      prompt = `${workspaceInfo}\n\n${MAINS_TOOL_INSTRUCTION}\n\nGoal: ${request.goal}`;
+      prompt = `${MAINS_TOOL_INSTRUCTION}\n\nGoal: ${request.goal}`;
     }
 
     prompt = appendPromptSections(prompt, {
@@ -1960,11 +1959,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       contextFiles: request.contextFiles,
       runId: request.runId,
     });
-
-    if (request.skills && request.skills.length > 0) {
-      const tokens = request.skills.map((s) => `$${s.name}`).join(" ");
-      prompt = `${tokens}\n\n${prompt}`;
-    }
 
     const input: TurnInput = [{ type: "text", text: prompt, text_elements: [] }];
 
@@ -2007,11 +2001,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       contextFiles: request.contextFiles,
       runId: request.runId,
     });
-
-    if (request.skills && request.skills.length > 0) {
-      const tokens = request.skills.map((s) => `$${s.name}`).join(" ");
-      prompt = `${tokens}\n\n${prompt}`;
-    }
 
     const input: TurnInput = [{ type: "text", text: prompt, text_elements: [] }];
 

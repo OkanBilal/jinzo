@@ -1,5 +1,5 @@
-// import UserProfile from "./user-profile";
-// import SearchBar from "./search-bar";
+import UserProfile from "./user-profile";
+import SearchBar from "./search-bar";
 
 interface SidebarHeaderProps {
   avatarUrl?: string;
@@ -12,22 +12,22 @@ interface SidebarHeaderProps {
 }
 
 export function SidebarHeader({
-  // avatarUrl,
-  // displayName,
+  avatarUrl,
+  displayName,
   isSearchExpanded,
-  // searchQuery,
-  // onSearchExpand,
-  // onSearchChange,
-  // onSearchClear,
+  searchQuery,
+  onSearchExpand,
+  onSearchChange,
+  onSearchClear,
 }: SidebarHeaderProps) {
   return (
-    <div className="px-3 pt-10 shrink-0">
+    <div className="px-3 pt-12  shrink-0">
       <div
         className={`flex items-center transition-all duration-200 ease-in-out ${
           isSearchExpanded ? "gap-0" : "gap-3"
         }`}
       >
-        {/* <UserProfile
+        <UserProfile
           avatarUrl={avatarUrl}
           displayName={displayName}
           isVisible={!isSearchExpanded}
@@ -38,7 +38,7 @@ export function SidebarHeader({
           onToggle={onSearchExpand}
           onSearchChange={onSearchChange}
           onClear={onSearchClear}
-        /> */}
+        />
       </div>
     </div>
   );

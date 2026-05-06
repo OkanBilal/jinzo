@@ -33,11 +33,11 @@ export default function UserProfile({
         <img
           src={proxiedImageSrc(avatarUrl) ?? avatarUrl}
           alt={displayName || "Mains"}
-          className="w-6 h-6 rounded-full object-cover ml-1"
+          className="size-6 rounded-full object-cover ml-2"
         />
       ) : (
-        <div className="w-6 h-6 rounded-full bg-primary-200/60 dark:bg-primary/5 flex items-center justify-center">
-          <Caption className="text-primary-900 dark:text-primary-200 text-xxs font-medium">
+        <div className="size-6 rounded-full bg-primary/20 dark:bg-primary/5 flex items-center justify-center ml-1">
+          <Caption className="text-primary-900 dark:text-primary-200 text-t font-medium">
             {getInitials(displayName || "")}
           </Caption>
         </div>

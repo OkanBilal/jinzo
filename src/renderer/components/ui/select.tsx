@@ -168,7 +168,7 @@ export default function Select<T extends string = string>({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`
-          w-full px-2.5 py-2
+          w-full px-2.5 py-1.5
           min-w-52
           bg-primary-950/5 dark:bg-primary/4
           border border-primary-950/10 dark:border-primary/5
@@ -232,7 +232,7 @@ export default function Select<T extends string = string>({
                 }}
                 className={`
                   w-full cursor-pointer text-left
-                  transition-colors px-3 py-1
+                  transition-colors px-3 py-1.5
                   text-s flex items-center gap-2
                   ${
                     value === option.value

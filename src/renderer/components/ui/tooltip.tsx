@@ -158,8 +158,8 @@ export default function Tooltip({
             zIndex: 9999,
           }}
           className={cn(
-            "px-2 py-1 text-xs font-light whitespace-nowrap rounded-lg pointer-events-none glass-morphism",
-            " text-primary-700 dark:text-primary-200",
+            "px-2 py-1 text-xs whitespace-nowrap rounded-lg pointer-events-none glass-morphism",
+            " text-primary-950 dark:text-primary",
             "shadow-lg shadow-primary-950/10 ",
             "transition-all duration-50 ease-out",
             "flex items-center gap-2",

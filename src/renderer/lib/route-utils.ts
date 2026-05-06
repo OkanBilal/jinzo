@@ -89,3 +89,19 @@ export function getWorkspaceListBasePath(
   if (raw === "" || raw === "/") return "/claude";
   return raw;
 }
+
+/** Default HashRouter path from a space record (`uiConfig.sidebar.defaultRoute`). */
+export function getSpaceDefaultRoute(space: {
+  uiConfig: string | null;
+}): string {
+  if (!space.uiConfig) return "/";
+  try {
+    const config = JSON.parse(space.uiConfig) as {
+      sidebar?: { defaultRoute?: string };
+    };
+    const route = config.sidebar?.defaultRoute;
+    return typeof route === "string" && route.length > 0 ? route : "/";
+  } catch {
+    return "/";
+  }
+}

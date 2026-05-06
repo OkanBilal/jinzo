@@ -36,7 +36,7 @@ export function PulseList({ onEdit }: PulseListProps) {
       <h2 className="text-base font-medium text-primary-900 dark:text-primary-100 mb-3 pb-2 border-b border-primary-200/40 dark:border-primary-800/60">
         Current
       </h2>
-      <ul className="divide-y divide-primary-200/30 dark:divide-primary-800/40">
+      <ul className="">
         {pulses.map((pulse) => {
           const workspace = workspaces.find((w) => w.id === pulse.workspaceId);
           const isConfirming = confirmDeleteId === pulse.id;

@@ -73,6 +73,7 @@ export const baseApi = createApi({
     'Projects',
     'Updates',
     'InstalledApps',
+    'AppsForFile',
     'Stats',
     'WorkspaceActivity',
     'Automations',

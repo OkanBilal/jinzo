@@ -617,6 +617,10 @@ const api = {
     openPath: (path: string) => ipcRenderer.invoke("shell:openPath", path),
     openInApp: (appId: string, path: string) => ipcRenderer.invoke("shell:openInApp", appId, path),
     getInstalledApps: () => ipcRenderer.invoke("shell:getInstalledApps"),
+    getAppsForFile: (filePath: string) =>
+      ipcRenderer.invoke("shell:getAppsForFile", filePath),
+    openFileWithBundle: (filePath: string, bundleId: string) =>
+      ipcRenderer.invoke("shell:openFileWithBundle", filePath, bundleId),
   },
   stats: {
     getDashboard: (filter?: string) => ipcRenderer.invoke("stats:getDashboard", filter),

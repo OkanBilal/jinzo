@@ -250,7 +250,7 @@ export function WizardModal<
               )
             )}
             <span id="wizard-title">
-              <Text variant="h3">{displayTitle}</Text>
+              <Text variant="h3" className="text-primary-900 dark:text-primary-200">{displayTitle}</Text>
             </span>
           </div>
           <Button

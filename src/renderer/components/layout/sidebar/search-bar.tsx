@@ -44,7 +44,7 @@ export default function SearchBar({
             className="w-full h-9 bg-primary-950/5 dark:bg-primary/5 border-none
                         rounded-xl pl-9 pr-10 text-sm text-primary-900 dark:text-primary/80
                         placeholder:text-primary-900 dark:placeholder:text-primary-200
-                        transition-all duration-200 focus:outline-none focus:bg-primary-950/10 dark:focus:bg-primary/10 "
+                        transition-all duration-200 focus:outline-none focus:bg-primary/30 dark:focus:bg-primary/10 "
           />
           <Button
             tooltip="Clear search"

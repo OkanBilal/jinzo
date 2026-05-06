@@ -1,4 +1,5 @@
-import { useCallback, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   ArrowUp,
@@ -14,10 +15,12 @@ import {
   CursorIcon,
   Earth,
 } from "@/components/ui/icons/space";
+import { ProjectIcon } from "@/components/layout/sidebar/project-icon";
 import DropdownWrapper from "@/components/ui/dropdown-wrapper";
 import Select from "@/components/ui/select";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { getModelIcon, type ModelIconVariant } from "@/lib/model-icons";
+import { useGetProjectsQuery } from "@/lib/redux/api/projectsApi";
 import { useGetWorkspacesQuery } from "@/lib/redux/api/workspacesApi";
 import {
   useGetEnabledProvidersQuery,
@@ -63,7 +66,7 @@ function ProviderIcon({ id, className }: { id: string; className?: string }) {
 }
 
 const triggerClass =
-  "flex items-center gap-1.5 px-2 py-1 rounded-xl text-s transition-all cursor-pointer animate-blur-reveal text-primary-700 dark:text-primary-300 hover:bg-primary-200/30 dark:hover:bg-primary-800";
+  "flex items-center gap-1.5 px-2 py-1.5 rounded-xl text-s transition-all cursor-pointer animate-blur-reveal text-primary-700 dark:text-primary-300 hover:bg-primary-200/30 dark:hover:bg-primary-800";
 
 // 24h × 4 (15-minute) = 96 entries, formatted as "1:15 PM"
 const TIME_OPTIONS: { value: string; label: string }[] = (() => {
@@ -84,9 +87,64 @@ const DAY_OPTIONS: { value: string; label: string }[] = WEEK_DAYS.map((d) => ({
 
 // ── Workspace picker ────────────────────────────────────────────
 
-function workspacePickLabel(w: Pick<Workspace, "name" | "defaultBranch">) {
+function workspacePickTitle(w: Pick<Workspace, "name" | "defaultBranch">) {
   const b = w.defaultBranch?.trim();
-  return b ? `${w.name} · ${b}` : w.name;
+  return b ? `${w.name}\n${b}` : w.name;
+}
+
+function WorkspacePickRows({
+  w,
+  title,
+  textColumnClassName,
+  projectIcon,
+  showIcon = true,
+}: {
+  w: Pick<Workspace, "name" | "defaultBranch">;
+  title?: string;
+  textColumnClassName?: string;
+  /** Resolved from workspace project when available; falls back to generic Project glyph */
+  projectIcon?: ReactNode;
+  showIcon?: boolean;
+}) {
+  const branch = w.defaultBranch?.trim();
+  const textColumn = (
+    <div
+      className={`min-w-0 flex-1 text-left leading-tight ${textColumnClassName ?? ""}`}
+    >
+      <div className="truncate" title={title ?? workspacePickTitle(w)}>
+        {w.name}
+      </div>
+      {branch ? (
+        <div
+          className="truncate text-[11px] text-primary-500 dark:text-primary-400"
+          title={branch}
+        >
+          {branch}
+        </div>
+      ) : null}
+    </div>
+  );
+  if (!showIcon) return textColumn;
+  return (
+    <>
+      <span className="shrink-0 self-center flex items-center justify-center">
+        {projectIcon ?? (
+          <Project className="size-3.5 text-primary-900 dark:text-primary-300" />
+        )}
+      </span>
+      {textColumn}
+    </>
+  );
+}
+
+function workspaceProjectIcon(
+  workspace: Pick<Workspace, "projectId">,
+  projectDataMap: Map<string, { name: string; icon: string | null }>,
+): ReactNode | undefined {
+  if (!workspace.projectId) return undefined;
+  const pd = projectDataMap.get(workspace.projectId);
+  if (!pd) return undefined;
+  return <ProjectIcon icon={pd.icon} projectName={pd.name} />;
 }
 
 export function WorkspacePicker({
@@ -101,6 +159,14 @@ export function WorkspacePicker({
   const close = useCallback(() => setOpen(false), []);
   useClickOutside(ref, close);
   const { data: workspaces = [] } = useGetWorkspacesQuery();
+  const { data: projects = [] } = useGetProjectsQuery();
+  const projectDataMap = useMemo(() => {
+    const map = new Map<string, { name: string; icon: string | null }>();
+    for (const project of projects) {
+      map.set(project.id, { name: project.name, icon: project.icon });
+    }
+    return map;
+  }, [projects]);
   const active = workspaces.filter((w) => !w.isArchived);
   const selected = active.find((w) => w.id === value);
 
@@ -112,10 +178,17 @@ export function WorkspacePicker({
         onClick={() => setOpen((v) => !v)}
         className={triggerClass}
       >
-        <Project className="size-3.5" />
-        <span className="truncate max-w-[200px]">
-          {selected ? workspacePickLabel(selected) : "Select workspace"}
-        </span>
+        {selected ? (
+            <div className="flex items-center gap-2">
+              {workspaceProjectIcon(selected, projectDataMap)}
+              <span className="truncate max-w-[200px]">{selected.name}</span>
+            </div>
+        ) : (
+          <>
+            <Project className="size-3.5 shrink-0" />
+            <span className="truncate max-w-[200px]">Select workspace</span>
+          </>
+        )}
         <ArrowUp className="size-3.5 rotate-180 " />
       </Button>
       <DropdownWrapper isOpen={open} minWidth="min-w-44" useFixedBackground>
@@ -133,15 +206,16 @@ export function WorkspacePicker({
                 onChange(w.id);
                 setOpen(false);
               }}
-              className={`w-full text-left px-2.5 py-1.5 text-s cursor-pointer transition-colors first:rounded-t-sm! last:rounded-b-sm! ${
+              className={`w-full flex items-center gap-2 text-left px-2.5 py-1.5 text-s cursor-pointer transition-colors first:rounded-t-sm! last:rounded-b-sm! ${
                 value === w.id
                   ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-100"
                   : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
               }`}
             >
-              <span className="truncate text-left" title={workspacePickLabel(w)}>
-                {workspacePickLabel(w)}
-              </span>
+              <WorkspacePickRows
+                w={w}
+                projectIcon={workspaceProjectIcon(w, projectDataMap)}
+              />
             </Button>
           ))}
         </div>
@@ -388,7 +462,7 @@ export function SchedulePicker({
           {/* Time — hourly fires on the hour, no minute picker */}
           {frequency !== "hourly" && (
             <div>
-              <div className="text-[11px] uppercase tracking-wide text-primary-500 mb-1.5">
+              <div className="text-[11px] tracking-wide text-primary-500 mb-0.5">
                 Time
               </div>
               <Select<string>

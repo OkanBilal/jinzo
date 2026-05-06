@@ -37,7 +37,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
         animation: "slide-fade-down 300ms ease-in-out",
       }}
     >
-      <div className="flex flex-col items-start pt-16 pb-1 px-4">
+      <div className="flex flex-col items-start pt-12 pb-1 px-4">
         <Body className="text-left text-sm text-primary-900 dark:text-primary font-medium ">
           Settings
         </Body>
@@ -74,7 +74,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
         {/* Providers section */}
         <div className="mt-2">
           <div className="px-3 mb-1">
-            <span className="text-xs font-medium text-primary-900 dark:text-primary-400">
+            <span className="text-xs font-medium text-primary-900 dark:text-primary-200">
               Agents
             </span>
           </div>
@@ -110,7 +110,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
         {projects.length > 0 && (
           <div className="mt-2">
             <div className="px-3 mb-1">
-              <span className="text-xs font-medium text-primary-900 dark:text-primary-400">
+              <span className="text-xs font-medium text-primary-900 dark:text-primary-200">
                 Projects
               </span>
             </div>

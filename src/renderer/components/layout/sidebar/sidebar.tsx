@@ -19,7 +19,6 @@ import {
   Connect,
   Apps,
   Project,
-  Relay as RelayIcon,
   Sun,
   External,
 } from "@/components/ui/icons";
@@ -138,9 +137,9 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     location.pathname.startsWith("/plugins/");
   const isPulseRoute =
     location.pathname === "/pulse" || location.pathname.startsWith("/pulse/");
-  const isRelayRoute =
-    location.pathname === "/relay" ||
-    location.pathname.startsWith("/relay/");
+  // const isRelayRoute =
+  //   location.pathname === "/relay" ||
+  //   location.pathname.startsWith("/relay/");
   /** From `app_settings.active_space_id` → `spaces.slug` (not current route). */
   const pluginsUseClaudeExternalUrl = activeSpaceAgentSlug === "claude";
   const isPluginsDisabledForAgent =
@@ -297,6 +296,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               ) : (
                 <Button
                   variant="subtle"
+                  tooltip="View plugins"
                   size="xs"
                   className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
                     isPluginsRoute
@@ -341,7 +341,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 </Button>
               )}
             </div>
-            <div className="px-3 mb-2">
+            {/* <div className="px-3 mb-2">
               <Button
                 variant="subtle"
                 tooltip="Relay"
@@ -380,7 +380,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   Beta
                 </span>
               </Button>
-            </div>
+            </div> */}
             <SidebarContent
               workspaces={workspaces}
               isLoadingWorkspaces={isLoadingWorkspaces}

@@ -1,11 +1,13 @@
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, type MouseEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/components/markdown-components";
 import type { EventGroup } from "../../utils/group-events";
 import { Code } from "@/components/ui/icons/space";
-import { Picture, Document, Codex, Close, Sparkles } from "@/components/ui/icons";
+import { Picture, Document, Codex, Close, Sparkles, External, ArrowUp } from "@/components/ui/icons";
 import { ProviderIcon } from "../provider-icon";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
+import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
 
 const IMAGE_PATH_REGEX = /([~/]?[\w./-]+\.(?:png|jpe?g|webp|gif))\b/gi;
 
@@ -338,7 +340,7 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
     const fileName = (event.metadata?.fileName as string | undefined) ?? absPath.split("/").pop() ?? "image";
     return (
       <div className="overflow-hidden">
-        <ImageArtifact absPath={absPath} fileName={fileName} onPreview={setPreviewAtt} />
+        <ImageArtifact key={absPath} absPath={absPath} fileName={fileName} onPreview={setPreviewAtt} />
         {previewAtt && (
           <ImagePreviewModal
             name={previewAtt.name}
@@ -384,39 +386,126 @@ function ImageArtifact({
   onPreview: (att: { name: string; dataUrl: string }) => void;
 }) {
   const url = localImageUrl(absPath);
-  const [error, setError] = useState<string | null>(null);
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
+  const openBtnRef = useRef<HTMLButtonElement>(null);
+  const [fetchApps, { data: handlerApps = [], isFetching }] = useLazyGetAppsForFileQuery();
 
-  if (error) {
-    return null
-  }
+  const ext =
+    fileName.includes(".") ? (fileName.split(".").pop() ?? "").toUpperCase() : "";
+
+  useEffect(() => {
+    if (menuOpen) {
+      void fetchApps(absPath);
+    }
+  }, [menuOpen, absPath, fetchApps]);
+
+  const openInMains = () => {
+    setMenuOpen(false);
+    onPreview({ name: fileName, dataUrl: url });
+  };
+
+  const openMenu = (e: MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (openBtnRef.current) {
+      const r = openBtnRef.current.getBoundingClientRect();
+      const menuWidth = 240;
+      setMenuPos({
+        x: Math.max(8, r.right - menuWidth),
+        y: r.bottom + 6,
+      });
+    }
+    setMenuOpen(true);
+  };
+
+
+  const openWithBundle = (bundleId: string) => {
+    setMenuOpen(false);
+    void window.api.shell.openFileWithBundle(absPath, bundleId);
+  };
 
   return (
-    <button
-      type="button"
-      onClick={() => onPreview({ name: fileName, dataUrl: url })}
-      className="block w-full overflow-hidden rounded-xl border-2 border-primary-200/40 dark:border-primary-800/50 bg-primary-100 dark:bg-primary-900 cursor-pointer"
+    <div
+      className="relative flex items-center gap-3 w-full max-w-xl rounded-2xl bg-primary-50/90 dark:bg-primary-900/85 px-3 py-2.5 shadow-sm"
       title={absPath}
     >
-      <img
-        src={url}
-        alt={fileName}
-        className="w-full h-full object-contain"
-        loading="lazy"
-        onError={(e) => {
-          const target = e.currentTarget;
-          console.error("[mains-localimg] image load failed", {
-            src: target.src,
-            absPath,
-            naturalWidth: target.naturalWidth,
-            naturalHeight: target.naturalHeight,
-          });
-          setError(`Failed to load (src=${target.src})`);
-        }}
-        onLoad={() => {
-          console.log("[mains-localimg] image loaded:", absPath);
-        }}
-      />
-    </button>
+      <button
+        type="button"
+        onClick={openInMains}
+        className="shrink-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary-400 overflow-hidden"
+        aria-label={`Preview ${fileName} in Mains`}
+      >
+        <div className="size-10 rounded-lg border border-primary-700/40 dark:border-primary-600/30 bg-primary-900 dark:bg-primary-950/80 flex items-center justify-center overflow-hidden">
+          {!thumbFailed ? (
+            <img
+              src={url}
+              alt=""
+              className="size-full object-cover"
+              loading="lazy"
+              draggable={false}
+              onError={() => setThumbFailed(true)}
+            />
+          ) : (
+            <Picture className="size-5 text-primary-100 dark:text-primary-200" />
+          )}
+        </div>
+      </button>
+      <button
+        type="button"
+        onClick={openInMains}
+        className="flex-1 min-w-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded-md"
+      >
+        <div className="text-sm font-medium text-primary-950 dark:text-primary-50 truncate">
+          {fileName}
+        </div>
+        <div className="text-xs text-primary-500 dark:text-primary-400 mt-0.5">
+          Image{ext ? ` · ${ext}` : ""}
+        </div>
+      </button>
+      <button
+        ref={openBtnRef}
+        type="button"
+        onClick={openMenu}
+        className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-primary-800 dark:text-primary-100  bg-primary-100/80 dark:bg-primary-800/40 hover:bg-primary-200/60 dark:hover:bg-primary-700/35 transition-colors cursor-pointer"
+      >
+        Open
+        <ArrowUp className="size-3.5  rotate-180" />
+      </button>
+      <DropdownMenu
+        isOpen={menuOpen}
+        position={menuPos}
+        onClose={() => setMenuOpen(false)}
+        minWidth={240}
+        origin="top-right"
+      >
+        <DropdownMenuItem onClick={openInMains}>Show Image</DropdownMenuItem>
+        {isFetching ? (
+          <div className="px-3 py-2 text-xs text-primary-500 dark:text-primary-400">
+            Loading applications…
+          </div>
+        ) : (
+          handlerApps.map((app) => (
+            <DropdownMenuItem
+              key={app.bundleId}
+              onClick={() => openWithBundle(app.bundleId)}
+            >
+              {app.icon ? (
+                <img
+                  src={app.icon}
+                  alt=""
+                  draggable={false}
+                  className="size-4 shrink-0 rounded-sm"
+                />
+              ) : (
+                <External className="size-4 shrink-0 opacity-70" />
+              )}
+              <span className="truncate">{app.name}</span>
+            </DropdownMenuItem>
+          ))
+        )}
+      </DropdownMenu>
+    </div>
   );
 }
 

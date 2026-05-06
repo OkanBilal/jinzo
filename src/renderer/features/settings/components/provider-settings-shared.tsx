@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import { Toggle, toast } from "@/components/ui";
 import {
   SettingsPageShell,
@@ -13,11 +14,13 @@ import {
   useUnarchiveSpaceMutation,
   useUpdateProviderMutation,
 } from "@/lib/redux/api";
+import { getSpaceDefaultRoute } from "@/lib/route-utils";
 
 type ProviderData = ReturnType<typeof useGetProviderByIdQuery>["data"];
 type Space = NonNullable<ReturnType<typeof useGetSpacesQuery>["data"]>[number];
 
 export function useProviderSettings(providerId: string, spaceSlug: string) {
+  const navigate = useNavigate();
   const {
     data: provider,
     isLoading,
@@ -62,6 +65,8 @@ export function useProviderSettings(providerId: string, spaceSlug: string) {
         const target = otherVisibleSpaces[0];
         if (target) {
           await setActiveSpace(target.id).unwrap();
+          const route = getSpaceDefaultRoute(target);
+          setTimeout(() => navigate(route, { replace: true }), 0);
         }
         toast.success("Space hidden");
       }

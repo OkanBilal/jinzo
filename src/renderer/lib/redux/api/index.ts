@@ -362,8 +362,9 @@ export type {
 export {
   shellApi,
   useGetInstalledAppsQuery,
+  useLazyGetAppsForFileQuery,
 } from "./shellApi";
-export type { InstalledApp } from "./shellApi";
+export type { InstalledApp, FileHandlerApp } from "./shellApi";
 
 export {
   reviewFindingsApi,

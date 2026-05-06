@@ -41,7 +41,7 @@ function SpaceSelector({
                rounded-xl transition-all duration-200 ease-out font-medium cursor-pointer ${
               isActive
                 ? "text-primary-900 dark:text-primary"
-                : "text-primary-900 dark:text-primary opacity-60"
+                : "text-primary-900 dark:text-primary opacity-50"
             }`}
             title={space.name}
             aria-label={space.name}

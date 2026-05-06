@@ -192,7 +192,7 @@ function PluginDetail({
       detail.mcpServers.length > 0);
 
   return (
-    <div>
+    <div className="mb-12">
       <Button
         onClick={onBack}
         className="flex items-center gap-1.5 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-100 mb-6 cursor-pointer"

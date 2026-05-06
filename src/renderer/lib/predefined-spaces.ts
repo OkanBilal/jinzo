@@ -45,7 +45,7 @@ export const predefinedSpaces: PredefinedSpace[] = [
     id: "claude",
     name: "Claude",
     icon: "icon:claude",
-    theme: theme("#f2dbcfa6", "#0e0d0dbf"),
+    theme: theme("#ffffff40", "#00000070"),
     systemPrompt: "",
     uiConfig: {
       sidebar: {
@@ -62,7 +62,7 @@ export const predefinedSpaces: PredefinedSpace[] = [
     id: "copilot",
     name: "Copilot",
     icon: "icon:copilot",
-    theme: theme("#f0e9fab0", "#15111abf"),
+    theme: theme("#ffffff40", "#00000070"),
     systemPrompt: "",
     uiConfig: {
       sidebar: {
@@ -79,7 +79,7 @@ export const predefinedSpaces: PredefinedSpace[] = [
     id: "codex",
     name: "Codex",
     icon: "icon:code",
-    theme: theme("#dcecfaa1", "#0c0c0cbd"),
+    theme: theme("#ffffff40", "#00000070"),
     systemPrompt: "",
     uiConfig: {
       sidebar: {
@@ -96,7 +96,7 @@ export const predefinedSpaces: PredefinedSpace[] = [
     id: "cursor",
     name: "Cursor",
     icon: "icon:cursor",
-    theme: theme("#cfced2a6", "#0f0e14bf"),
+    theme: theme("#ffffff40", "#00000070"),
     systemPrompt: "",
     uiConfig: {
       sidebar: {
