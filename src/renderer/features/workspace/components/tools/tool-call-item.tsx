@@ -13,6 +13,7 @@ import { PRDisplay, type PRParams } from "./pr-display";
 import { CheckPackageDisplay, type CheckPackageParams } from "./check-package-display";
 import { SaveFindingDisplay, type SaveFindingParams } from "./save-finding-display";
 import { AgentDisplay, type AgentParams } from "./agent-display";
+import { SpawnAgentDisplay } from "./spawn-agent-display";
 import { IntentDisplay, type IntentParams } from "./intent-display";
 import { BashDisplay, type BashParams } from "./bash-display";
 import { GlobDisplay, type GlobParams } from "./glob-display";
@@ -131,6 +132,25 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
       description: summary,
     });
     return <AgentDisplay params={agentParams} isCompact={isCompact} />;
+  }
+
+  // Codex AgentControl collab tool calls — all 5 variants share the same
+  // single-line "<Verb> <Nickname> <Role>" layout via SpawnAgentDisplay,
+  // which dispatches on the variant carried in output/toolName.
+  if (
+    toolNameLower === "spawnagent" ||
+    toolNameLower === "sendcollabinput" ||
+    toolNameLower === "waitcollabagent" ||
+    toolNameLower === "closecollabagent" ||
+    toolNameLower === "resumecollabagent"
+  ) {
+    //const spawnParams = getToolParams<SpawnAgentParams>(metadataInput, params, {});
+    return (
+      <SpawnAgentDisplay
+        output={event.metadata?.output}
+        toolName={toolNameLower}
+      />
+    );
   }
 
   // Show EditDisplay for edit tool calls

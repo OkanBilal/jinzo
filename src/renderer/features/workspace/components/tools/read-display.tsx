@@ -28,17 +28,17 @@ export function ReadDisplay({
     <div className="">
       <button
         onClick={() => hasContent && setIsExpanded(!isExpanded)}
-        className={`group w-full flex items-center gap-1 py-1 text-s font-sans ${hasContent ? "cursor-pointer" : "cursor-default"}`}
+        className={`group w-full min-w-0 flex items-center gap-1 py-1 text-s font-sans ${hasContent ? "cursor-pointer" : "cursor-default"}`}
       >
         {!isCompact && (
           <Read className="size-3.5 shrink-0 text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary" />
         )}
         {!isCompact && (
-          <span className="text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className="shrink-0 text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
             Read
           </span>
         )}
-        <code className="text-primary-500 font-sans truncate group-hover:text-primary-950 group-hover:dark:text-primary">
+        <code className="min-w-0 flex-1 text-left text-primary-500 font-sans truncate group-hover:text-primary-950 group-hover:dark:text-primary">
           {shortPath(
             params.file_path ||
               params.path ||
@@ -51,7 +51,7 @@ export function ReadDisplay({
           )}
         </code>
         {numLines > 0 && (
-          <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className="shrink-0 text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
             ({numLines} lines)
           </span>
         )}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Delete, Edit } from "@/components/ui/icons";
+import { Edit, Trash } from "@/components/ui/icons";
 import {
   useDeletePulseMutation,
   useGetPulsesQuery,
@@ -118,7 +118,7 @@ export function PulseList({ onEdit }: PulseListProps) {
                     onClick={() => setConfirmDeleteId(pulse.id)}
                     className="p-1.5 rounded-lg hover:bg-primary-200/30 dark:hover:bg-primary-800 cursor-pointer text-primary-500"
                   >
-                    <Delete className="size-4" />
+                    <Trash className="size-4" />
                   </Button>
                 )}
               </div>

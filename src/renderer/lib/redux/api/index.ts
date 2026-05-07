@@ -167,6 +167,7 @@ export {
   useInstallProviderPluginMutation,
   useUninstallProviderPluginMutation,
   useGetProviderRateLimitsQuery,
+  useGetProviderModelsQuery,
 } from "./providersApi";
 export type {
   Provider,

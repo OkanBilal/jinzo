@@ -2,7 +2,6 @@ import { Select } from "@/components/ui";
 import { SettingsSection, SettingsRow } from "./settings-layout";
 import {
   ProviderSettingsLayout,
-  ProviderVisibilitySection,
   useProviderSettings,
 } from "./provider-settings-shared";
 
@@ -24,16 +23,14 @@ const MODE_OPTIONS = [
   },
 ];
 
-export default function CursorSettings() {
+export default function CursorSettings(
+) {
   const {
     provider,
     isLoading,
     error,
     config,
-    space,
-    canHide,
     updateConfig,
-    setSpaceVisible,
   } = useProviderSettings("cursor", "cursor");
   const mode = (config as any).mode ?? "agent";
 
@@ -54,12 +51,6 @@ export default function CursorSettings() {
           />
         </SettingsRow>
       </SettingsSection>
-
-      <ProviderVisibilitySection
-        space={space}
-        canHide={canHide}
-        onVisibleChange={setSpaceVisible}
-      />
     </ProviderSettingsLayout>
   );
 }

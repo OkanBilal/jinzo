@@ -2,21 +2,18 @@ import { Toggle, Button, toast } from "@/components/ui";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import {
   ProviderSettingsLayout,
-  ProviderVisibilitySection,
   useProviderSettings,
 } from "./provider-settings-shared";
 
-export default function CopilotSettings() {
+export default function CopilotSettings(
+) {
   const {
     provider,
     isLoading,
     error,
     updating,
     config,
-    space,
-    canHide,
     updateConfig,
-    setSpaceVisible,
   } = useProviderSettings("copilot_cli", "copilot");
   const permissionMode = (config as any).permissionMode ?? "default";
   const isBypassing = permissionMode === "bypassPermissions";
@@ -102,12 +99,6 @@ export default function CopilotSettings() {
           </Button>
         </SettingsRow>
       </SettingsSection>
-
-      <ProviderVisibilitySection
-        space={space}
-        canHide={canHide}
-        onVisibleChange={setSpaceVisible}
-      />
     </ProviderSettingsLayout>
   );
 }

@@ -890,7 +890,7 @@ export function WorkspaceEvents({
       {/* Content area */}
       <div className="flex-1 min-h-0 overflow-hidden relative">
         {isNewRunActive ? (
-          <WorkspaceEmptyState workspace={currentWorkspace} />
+          <div className="h-full min-h-0 shrink-0" aria-hidden />
         ) : isEditorActive ? (
           <EditorContent className="h-full" />
         ) : isIssueActive && activeIssue ? (

@@ -7,7 +7,6 @@ import {
   getSettingsRouteId,
   isSettingsNavItemActive,
   SETTINGS_MAIN_NAV_ITEMS,
-  SETTINGS_PROVIDER_NAV_ITEMS,
   type SettingsRouteId,
 } from "@/features/settings/settings-sections";
 
@@ -70,41 +69,6 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
             );
           })}
         </nav>
-
-        {/* Providers section */}
-        <div className="mt-2">
-          <div className="px-3 mb-1">
-            <span className="text-xs font-medium text-primary-900 dark:text-primary-200">
-              Agents
-            </span>
-          </div>
-          <div className="space-y-0.5">
-            {SETTINGS_PROVIDER_NAV_ITEMS.map((item) => {
-              const IconComponent = item.icon;
-              const isActive = isOnSettingsPage && isSettingsNavItemActive(item, activeSection);
-              return (
-                <Button
-                  key={item.id}
-                  onClick={() => handleSectionClick(item.id)}
-                  className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm tracking-tight transition-all flex items-center gap-2
-                    ${
-                      isActive
-                        ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
-                        : "text-primary-800 dark:text-primary-200 bg-transparent hover:bg-primary/60 dark:hover:bg-primary/5"
-                    }
-                    `}
-                >
-                  {IconComponent ? (
-                    <IconComponent className={`size-3.75 `} />
-                  ) : (
-                    <div className="size-3.75 rounded bg-primary-300 dark:bg-primary-700" />
-                  )}
-                  <span className="font-medium">{item.label}</span>
-                </Button>
-              );
-            })}
-          </div>
-        </div>
 
         {/* Projects section */}
         {projects.length > 0 && (

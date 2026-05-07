@@ -62,10 +62,10 @@ function WorkspaceGroupSection({
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="group/section w-full flex items-center gap-1.5 px-2 py-1 mb-1 rounded-lg cursor-pointer hover:bg-primary/10 dark:hover:bg-primary/5 transition-colors"
+        className="group/section w-full flex items-center gap-1.5 px-2 py-1 mb-0.5 rounded-lg cursor-pointer hover:bg-primary/10 dark:hover:bg-primary/5 transition-colors"
       >
-        {group.icon && <span className="shrink-0">{group.icon}</span>}
-        <span className="text-xs font-medium text-primary-900 dark:text-primary-300 truncate">
+        {group.icon && <span className="shrink-0 text-xs">{group.icon}</span>}
+        <span className="text-xs font-medium text-primary-900 dark:text-primary-200 truncate">
           {group.label}
         </span>
         <div className="ml-auto flex items-center gap-1.5">
@@ -347,7 +347,7 @@ export default function WorkspacesList({
         // onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsExpanded(!isExpanded); } }}
         className="w-full flex items-center justify-between transition-all duration-200 bg-transparent   px-2 py-0.5 mb-1 rounded-lg "
       >
-        <Caption className="text-primary-800 dark:text-primary-200 font-medium">
+        <Caption className="text-primary-900 dark:text-primary-100 font-medium">
           Workspaces
         </Caption>
         <div className="flex items-center ">

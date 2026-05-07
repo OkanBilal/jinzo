@@ -1,10 +1,8 @@
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { Toggle, toast } from "@/components/ui";
+import { toast } from "@/components/ui";
 import {
   SettingsPageShell,
-  SettingsSection,
-  SettingsRow,
 } from "./settings-layout";
 import {
   useArchiveSpaceMutation,
@@ -17,7 +15,6 @@ import {
 import { getSpaceDefaultRoute } from "@/lib/route-utils";
 
 type ProviderData = ReturnType<typeof useGetProviderByIdQuery>["data"];
-type Space = NonNullable<ReturnType<typeof useGetSpacesQuery>["data"]>[number];
 
 export function useProviderSettings(providerId: string, spaceSlug: string) {
   const navigate = useNavigate();
@@ -115,36 +112,5 @@ export function ProviderSettingsLayout({
     >
       {children}
     </SettingsPageShell>
-  );
-}
-
-export function ProviderVisibilitySection({
-  space,
-  canHide,
-  onVisibleChange,
-}: {
-  space: Space | undefined;
-  canHide: boolean;
-  onVisibleChange: (visible: boolean) => Promise<void>;
-}) {
-  if (!space) return null;
-
-  return (
-    <SettingsSection title="Visibility">
-      <SettingsRow
-        title="Show in Selector"
-        description={
-          !canHide && !space.isArchived
-            ? "At least one agent must be active"
-            : "Show or hide this agent from the selector"
-        }
-      >
-        <Toggle
-          enabled={!space.isArchived}
-          disabled={!canHide && !space.isArchived}
-          onChange={onVisibleChange}
-        />
-      </SettingsRow>
-    </SettingsSection>
   );
 }

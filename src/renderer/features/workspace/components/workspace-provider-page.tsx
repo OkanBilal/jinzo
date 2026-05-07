@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { RefObject } from "react";
 import {
   WorkspaceEmptyState,
@@ -9,6 +9,7 @@ import {
   DiffSummaryBar,
   TodoSummaryBar,
 } from "@/features/workspace/components";
+import { SpaceSuggestions } from "@/features/workspace/components/space-suggestions";
 import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
 import { isFirstWorkspaceTabActive } from "@/features/workspace/utils/is-first-workspace-tab-active";
 import {
@@ -16,6 +17,7 @@ import {
   useGetProviderByIdQuery,
   useUpdateProviderMutation,
 } from "@/lib/redux/api";
+import { useAppSelector } from "@/lib/redux/hooks";
 import { useSetMainHeader } from "@/hooks/use-main-header";
 import { useWorkspaceRouteTopRounding } from "@/hooks/use-workspace-route-top-rounding";
 import { useBottomTerminal } from "@/hooks/use-bottom-terminal";
@@ -43,13 +45,25 @@ export function WorkspaceProviderPage({
   enableForkRun = false,
   enableSuggestions = false,
 }: WorkspaceProviderPageProps) {
+  const onboardingCompleted = useAppSelector(
+    (state) => state.appSettings.onboardingCompleted,
+  );
+  const showSuggestions = useAppSelector(
+    (state) => state.appSettings.showSuggestions,
+  );
   const ws = useWorkspacePage(providerId);
+  const [customizeRequested, setCustomizeRequested] = useState(false);
   const [abortRun] = useAbortRunMutation();
   const { data: providerData } = useGetProviderByIdQuery(providerId);
   const [updateProvider] = useUpdateProviderMutation();
   const bottomTerminal = useBottomTerminal();
 
   const { pendingApprovals, respond: respondToolApproval } = useToolApproval(ws.runs);
+
+  const useCenteredPromptLayout =
+    (ws.showEmptyState && onboardingCompleted) || ws.showNewRunTab;
+  const customizing =
+    customizeRequested && (ws.showEmptyState || ws.showNewRunTab);
 
   const currentApproval = ws.activeRunId
     ? pendingApprovals.find((approval) => approval.runId === ws.activeRunId)
@@ -161,8 +175,55 @@ export function WorkspaceProviderPage({
 
   return (
     <div className={`flex flex-col h-full dark:bg-primary-950 ${routeTopRounding} overflow-hidden`}>
-      <div className="flex-1 overflow-hidden noscrollbar">
-        {ws.showEmptyState ? (
+      <div className="flex-1 overflow-hidden noscrollbar min-h-0">
+        {useCenteredPromptLayout ? (
+          <div className="flex h-full min-h-0 flex-col items-center justify-center-safe gap-8 overflow-y-auto px-4 py-10 noscrollbar">
+            <WorkspaceEmptyState
+              workspace={ws.currentWorkspace}
+              presentation="headline"
+              isCustomizing={customizing}
+              onToggleCustomize={() => setCustomizeRequested((prev) => !prev)}
+            />
+            {customizing ? null : (
+              <div className="w-full flex flex-col items-center gap-3">
+                <WorkspaceInput
+                  goal={ws.goal}
+                  onGoalChange={ws.setGoal}
+                  onSubmit={ws.handleExecute}
+                  isLoading={ws.isLoading}
+                  activeRun={ws.activeRun}
+                  canResume={ws.canResume ?? false}
+                  providerId={providerId}
+                  selectedModel={ws.selectedModel}
+                  onModelChange={ws.handleModelChange}
+                  contextFiles={ws.contextFiles}
+                  onRemoveContextFile={ws.handleRemoveContextFile}
+                  contextIssues={ws.contextIssues}
+                  onRemoveContextIssue={ws.handleRemoveContextIssue}
+                  contextSignals={ws.contextSignals}
+                  onRemoveContextSignal={ws.handleRemoveContextSignal}
+                  contextBrowserSelections={ws.contextBrowserSelections}
+                  onRemoveContextBrowserSelection={ws.handleRemoveContextBrowserSelection}
+                  workspacePath={ws.currentWorkspace?.rootPath}
+                  projectId={ws.currentWorkspace?.projectId ?? undefined}
+                  uploadedFiles={ws.uploadedFiles}
+                  onUploadedFilesChange={ws.setUploadedFiles}
+                  onStop={handleStop}
+                  isNewRunTabActive={ws.showNewRunTab}
+                  layout="centered"
+                />
+                {showSuggestions ? (
+                  <div className="w-200 max-w-full">
+                    <SpaceSuggestions
+                      variant={variant}
+                      onSelectPrompt={ws.setGoal}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+        ) : ws.showEmptyState ? (
           <WorkspaceEmptyState workspace={ws.currentWorkspace} />
         ) : (
           <WorkspaceEvents
@@ -183,9 +244,11 @@ export function WorkspaceProviderPage({
           />
         )}
       </div>
+      {ws.showEmptyState || ws.showNewRunTab ? null : (
       <TodoSummaryBar events={ws.currentEvents} />
+      )}
 
-      {ws.currentWorkspace && (
+      {ws.currentWorkspace && !ws.showEmptyState && !ws.showNewRunTab && (
         <DiffSummaryBar
           workspaceId={ws.currentWorkspace.id}
           rootPath={ws.currentWorkspace.rootPath}
@@ -194,31 +257,33 @@ export function WorkspaceProviderPage({
         />
       )}
 
-
-      <WorkspaceInput
-        goal={ws.goal}
-        onGoalChange={ws.setGoal}
-        onSubmit={ws.handleExecute}
-        isLoading={ws.isLoading}
-        activeRun={ws.activeRun}
-        canResume={ws.canResume ?? false}
-        providerId={providerId}
-        selectedModel={ws.selectedModel}
-        onModelChange={ws.handleModelChange}
-        contextFiles={ws.contextFiles}
-        onRemoveContextFile={ws.handleRemoveContextFile}
-        contextIssues={ws.contextIssues}
-        onRemoveContextIssue={ws.handleRemoveContextIssue}
-        contextSignals={ws.contextSignals}
-        onRemoveContextSignal={ws.handleRemoveContextSignal}
-        contextBrowserSelections={ws.contextBrowserSelections}
-        onRemoveContextBrowserSelection={ws.handleRemoveContextBrowserSelection}
-        workspacePath={ws.currentWorkspace?.rootPath}
-        projectId={ws.currentWorkspace?.projectId ?? undefined}
-        uploadedFiles={ws.uploadedFiles}
-        onUploadedFilesChange={ws.setUploadedFiles}
-        onStop={handleStop}
-      />
+      {onboardingCompleted && !ws.showEmptyState && !ws.showNewRunTab ? (
+        <WorkspaceInput
+          goal={ws.goal}
+          onGoalChange={ws.setGoal}
+          onSubmit={ws.handleExecute}
+          isLoading={ws.isLoading}
+          activeRun={ws.activeRun}
+          canResume={ws.canResume ?? false}
+          providerId={providerId}
+          selectedModel={ws.selectedModel}
+          onModelChange={ws.handleModelChange}
+          contextFiles={ws.contextFiles}
+          onRemoveContextFile={ws.handleRemoveContextFile}
+          contextIssues={ws.contextIssues}
+          onRemoveContextIssue={ws.handleRemoveContextIssue}
+          contextSignals={ws.contextSignals}
+          onRemoveContextSignal={ws.handleRemoveContextSignal}
+          contextBrowserSelections={ws.contextBrowserSelections}
+          onRemoveContextBrowserSelection={ws.handleRemoveContextBrowserSelection}
+          workspacePath={ws.currentWorkspace?.rootPath}
+          projectId={ws.currentWorkspace?.projectId ?? undefined}
+          uploadedFiles={ws.uploadedFiles}
+          onUploadedFilesChange={ws.setUploadedFiles}
+          onStop={handleStop}
+          isNewRunTabActive={ws.showNewRunTab}
+        />
+      ) : null}
 
       {ws.currentWorkspace && (
         <TerminalSection

@@ -518,6 +518,12 @@ export interface CodexAdapterConfig {
   sandboxMode?: "read-only" | "workspace-write" | "danger-full-access";
   /** Model reasoning effort level */
   modelReasoningEffort?: "minimal" | "low" | "medium" | "high" | "xhigh";
+  /**
+   * Service tier id passed to `turn/start` (e.g. "priority", "flex", "default").
+   * Discovered via `model/list` per-model `serviceTiers`. When set on the adapter
+   * config it applies to all turns; per-run config snapshot can override.
+   */
+  serviceTier?: string;
   /** Enable network access within sandbox_workspace_write mode */
   networkAccessEnabled?: boolean;
   /** Web search mode */
@@ -706,6 +712,12 @@ export interface ModelInfo {
   supportsEffort?: boolean;
   /** Available effort levels for this model */
   supportedEffortLevels?: ('minimal' | 'low' | 'medium' | 'high' | 'max' | 'xhigh')[];
+  /**
+   * Provider-specific service tiers (e.g. Codex: `priority`, `flex`, `default`).
+   * When set, the UI exposes a tier picker so users can trade quality/cost
+   * vs. throughput per turn. The tier is passed to the provider on `turn/start`.
+   */
+  serviceTiers?: Array<{ id: string; name: string; description?: string }>;
   /** Model description */
   description?: string;
   // TODO: expose in UI — model supports auto mode selection

@@ -57,7 +57,13 @@ export function useProviderModels(
   const thinkingMode = variant === "codex" || variant === "copilot"
     ? !!(providerData?.config as any)?.modelReasoningEffort
     : !!(providerData?.config as any)?.thinkingMode;
-  const fastMode = !!(providerData?.config as any)?.fastMode;
+  // Codex maps "fast mode" to its "fast" service tier (canonical id from
+  // model/list; Codex's request_value forwards it to OpenAI as "priority").
+  // Accept both ids so it stays consistent with whatever the Settings dropdown
+  // persists, and so legacy installs that stored "priority" still register.
+  const fastMode = variant === "codex"
+    ? ["fast", "priority"].includes(((providerData?.config as any)?.serviceTier as string) ?? "")
+    : !!(providerData?.config as any)?.fastMode;
   const effortLevel: string = variant === "codex" || variant === "copilot"
     ? (providerData?.config as any)?.modelReasoningEffort || ""
     : (providerData?.config as any)?.effortLevel || "";
@@ -94,16 +100,21 @@ export function useProviderModels(
   const handleFastModeToggle = useCallback(async () => {
     if (!providerData) return;
     const currentConfig = providerData.config ?? {};
+    // For codex, toggle the "fast" service tier on/off (matches the dropdown's
+    // canonical id from model/list); non-codex variants keep the simple boolean.
+    const patch: Record<string, unknown> = variant === "codex"
+      ? { serviceTier: fastMode ? undefined : "fast" }
+      : { fastMode: !fastMode };
     await updateProvider({
       id: activeProviderId,
       payload: {
         config: {
           ...currentConfig,
-          fastMode: !fastMode,
+          ...patch,
         },
       },
     });
-  }, [providerData, fastMode, activeProviderId, updateProvider]);
+  }, [providerData, fastMode, activeProviderId, updateProvider, variant]);
 
   const handleEffortLevelChange = useCallback(async (level: string) => {
     if (!providerData) return;

@@ -76,6 +76,12 @@ export interface ModelInfo {
   supportsFastMode?: boolean;
   supportsEffort?: boolean;
   supportedEffortLevels?: ('low' | 'medium' | 'high' | 'max')[];
+  /**
+   * Provider-specific service tiers (e.g. Codex: priority/flex/default).
+   * Mirrors the field on the main-process `ModelInfo`; populated from
+   * `model/list` responses so the settings UI can offer a tier picker.
+   */
+  serviceTiers?: Array<{ id: string; name: string; description?: string }>;
   description?: string;
   metadata?: Record<string, unknown>;
 }

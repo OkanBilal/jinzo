@@ -104,6 +104,10 @@ interface WorkspaceInputProps {
   uploadedFiles?: UploadedFile[];
   onUploadedFilesChange?: (files: UploadedFile[]) => void;
   onStop?: () => void;
+  /** When true (e.g. new-run draft tab active), focus the prompt after layout. */
+  isNewRunTabActive?: boolean;
+  /** Empty-state stack: tighter outer margins so the bar sits vertically centered with the headline. */
+  layout?: "default" | "centered";
 }
 
 export function WorkspaceInput({
@@ -130,6 +134,8 @@ export function WorkspaceInput({
   uploadedFiles = EMPTY_UPLOADED_FILES,
   onUploadedFilesChange,
   onStop,
+  isNewRunTabActive = false,
+  layout = "default",
 }: WorkspaceInputProps) {
   const inputRef = useRef<RichInputFormHandle>(null);
   const unifiedContextDropdownRef = useRef<HTMLDivElement>(null);
@@ -182,6 +188,14 @@ export function WorkspaceInput({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (!isNewRunTabActive) return;
+    const id = requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [isNewRunTabActive]);
 
   const [unifiedMenu, updateUnifiedMenu] = useReducer(
     (
@@ -506,8 +520,9 @@ export function WorkspaceInput({
       )}
 
     <div
-      className={`w-200 mb-4 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism
+      className={`w-200 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism
         cursor-pointer transition-all
+        ${layout === "default" ? "mb-4" : ""}
         ${isFileDragOver ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-background" : ""}`}
       onDragEnter={handleWrapperDragEnter}
       onDragLeave={handleWrapperDragLeave}

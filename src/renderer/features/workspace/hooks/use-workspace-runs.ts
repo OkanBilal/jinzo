@@ -434,17 +434,26 @@ export function useWorkspaceRuns(
 
     if (activeStreams.length === 0) return dbEvents;
 
-    const streamRunEvents: RunEvent[] = activeStreams.map((se) => ({
-      id: se.id,
-      type: "artifact" as const,
-      content: se.content,
-      timestamp: new Date(se.timestamp),
-      metadata: {
-        kind: se.streamId.startsWith("cursor-think-") ? "thinking" : "report",
-        streaming: true,
-        streamId: se.streamId,
-      },
-    }));
+    const streamRunEvents: RunEvent[] = activeStreams.map((se) => {
+      // Live progress for codex commands (e.g. npm install) routes to the
+      // AsciiLoader status line, not into the main timeline as an
+      // agent-message bubble.
+      const kind =
+        se.streamId.startsWith("cursor-think-") ? "thinking"
+          : se.streamId.startsWith("codex-cmd-") ? "thinking"
+          : "report";
+      return {
+        id: se.id,
+        type: "artifact" as const,
+        content: se.content,
+        timestamp: new Date(se.timestamp),
+        metadata: {
+          kind,
+          streaming: true,
+          streamId: se.streamId,
+        },
+      };
+    });
 
     return [...dbEvents, ...streamRunEvents];
   }, [activeRunId, runEvents, streamingEvents]);

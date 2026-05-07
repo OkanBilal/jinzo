@@ -255,7 +255,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 </Body>
               </Button>
             </div>
-            <div className="px-3 mb-0.25">
+            <div className="px-3 mb-2">
               {isPluginsDisabledForAgent ? (
                 <Tooltip
                   content="Not available for this agent yet."
@@ -341,6 +341,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 </Button>
               )}
             </div>
+
             {/* <div className="px-3 mb-2">
               <Button
                 variant="subtle"

@@ -310,6 +310,13 @@ const activeRuns = new Map<string, {
   commandOutputBuffers: Map<string, string>;
   /** Absolute image paths already emitted as artifacts during this run (deduped) */
   emittedImagePaths: Set<string>;
+  /**
+   * Sub-agent metadata keyed by sub-thread id. Captured from `thread/started`
+   * notifications for AgentControl-spawned sub-threads (which carry
+   * `agentNickname`/`agentRole`). Used to render Conductor-style "Spawned X Y"
+   * lines on `collabAgentToolCall` (`spawnAgent`) items.
+   */
+  subAgents: Map<string, { threadId: string; nickname?: string; role?: string }>;
 }>();
 
 // Session ID mapping: runId → threadId (for resume support)
@@ -317,6 +324,18 @@ const sessionIdMap = new Map<string, string>();
 
 // Track saved review item IDs to prevent duplicate persistence
 const savedReviewItems = new Set<string>();
+
+// No-op handlers installed when waitForTurnCompletion finishes, so any late
+// notifications/requests from a long-running codex turn don't fall back into
+// stale closures that still reference a finished run's onEvent.
+const noopNotificationHandler = (_method: string, _params: unknown): void => undefined;
+const noopServerRequestHandler = (id: number | string, _method: string, _params: unknown): void => {
+  // Best-effort: nothing to do here. The next active run will replace this
+  // handler before the caller observes any side effect; until then any inbound
+  // request will simply time out on codex's side, which is the correct
+  // behavior when there's no live run to respond from.
+  void id;
+};
 
 const { info: logInfo, error: logError, warn: logWarn } = createLogger("[CodexAdapter]");
 
@@ -992,12 +1011,79 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     return undefined;
   }
 
-  function appendCommandOutputBuffer(runId: string, itemId: string | undefined, delta: string | undefined): void {
-    if (!delta || !itemId) return;
+  function appendCommandOutputBuffer(runId: string, itemId: string | undefined, delta: string | undefined): string | undefined {
+    if (!delta || !itemId) return undefined;
     const runState = activeRuns.get(runId);
-    if (!runState) return;
+    if (!runState) return undefined;
     const cur = runState.commandOutputBuffers.get(itemId) ?? "";
-    runState.commandOutputBuffers.set(itemId, cur + delta);
+    const next = cur + delta;
+    runState.commandOutputBuffers.set(itemId, next);
+    return next;
+  }
+
+  /**
+   * Compact a command's stdout/stderr buffer into a single status line for the
+   * AsciiLoader. Long outputs (think `npm install`) get reduced to the last
+   * non-empty line so the user sees live progress without a wall of text.
+   */
+  function streamingStatusLine(buffer: string | undefined): string {
+    if (!buffer) return "";
+    const lines = buffer.split(/\r?\n/);
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const trimmed = lines[i].trim();
+      if (trimmed) return trimmed.length > 200 ? trimmed.slice(0, 200) + "…" : trimmed;
+    }
+    return "";
+  }
+
+  /**
+   * Detect a `collabAgentToolCall` item completing on the parent thread, then
+   * fetch each new sub-thread's nickname/role via `thread/read` and cache it
+   * on runState. Runs before `mapNotification` so subsequent emissions have
+   * names available. Fires for ALL collab variants (spawn/wait/close/
+   * sendInput/resumeAgent) — wait/close events for sub-threads we never saw
+   * a spawn for (e.g. resumed a thread from a past run) still need a name.
+   * Best-effort — silent on failure (UI falls back to a short threadId).
+   */
+  async function maybeResolveCollabSubAgents(
+    server: CodexAppServer,
+    params: unknown,
+    runId: string,
+  ): Promise<void> {
+    const p = params as Record<string, unknown> | undefined;
+    const item = (p?.item ?? p) as Record<string, unknown> | undefined;
+    const itemType = item?.type as string | undefined;
+    if (itemType !== "collabAgentToolCall" && itemType !== "collab_agent_tool_call") return;
+
+    const eventThreadId = (p?.threadId ?? p?.thread_id) as string | undefined;
+    const runState = activeRuns.get(runId);
+    // Only run for the parent thread's collab events
+    if (!runState || (runState.threadId && eventThreadId && runState.threadId !== eventThreadId)) {
+      return;
+    }
+
+    const receiverThreadIds =
+      ((item?.receiverThreadIds ?? item?.receiver_thread_ids) as string[] | undefined) ?? [];
+    const unknownIds = receiverThreadIds.filter((id) => !runState.subAgents.has(id));
+    if (unknownIds.length === 0) return;
+
+    await Promise.all(
+      unknownIds.map(async (threadId) => {
+        try {
+          const res = (await server.sendRequest("thread/read", {
+            threadId,
+            includeTurns: false,
+          })) as { thread?: { agentNickname?: string | null; agentRole?: string | null } } | undefined;
+          const nickname = res?.thread?.agentNickname ?? undefined;
+          const role = res?.thread?.agentRole ?? undefined;
+          runState.subAgents.set(threadId, { threadId, nickname: nickname ?? undefined, role: role ?? undefined });
+        } catch {
+          // App-server doesn't know the thread yet, or read failed — keep
+          // placeholder; the artifact will fall back to a short threadId.
+          runState.subAgents.set(threadId, { threadId });
+        }
+      }),
+    );
   }
 
   function mapNotification(method: string, params: unknown, runId: string, model?: string): WorkRunEvent[] {
@@ -1010,9 +1096,25 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         const thread = p?.thread as Record<string, unknown> | undefined;
         const threadId = (thread?.id ?? p?.threadId) as string | undefined;
         if (threadId) {
-          sessionIdMap.set(runId, threadId);
           const runState = activeRuns.get(runId);
-          if (runState) runState.threadId = threadId;
+
+          // Sub-agent thread (AgentControl-spawned). The parent thread for this
+          // run was already captured on the first thread/started; subsequent
+          // thread/started notifications correspond to spawned sub-threads and
+          // carry agentNickname/agentRole metadata we need to render
+          // "Spawned <Nickname> <Role>" lines.
+          const isSubThread =
+            runState?.threadId !== undefined &&
+            runState.threadId !== null &&
+            runState.threadId !== threadId;
+          const nickname = thread?.agentNickname as string | undefined;
+          const role = thread?.agentRole as string | undefined;
+          if (runState && isSubThread && (nickname || role)) {
+            runState.subAgents.set(threadId, { threadId, nickname, role });
+          } else if (!isSubThread) {
+            sessionIdMap.set(runId, threadId);
+            if (runState) runState.threadId = threadId;
+          }
         }
         break;
       }
@@ -1062,9 +1164,58 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       case "item/started":
       case "item/updated":
       case "item/completed": {
-        // Flush agent message buffer before tool events (preserves order)
-        const rsItem = activeRuns.get(runId);
-        if (rsItem && rsItem.agentMessageBuffer.trim()) {
+        const item = (p?.item ?? p) as ThreadItem | undefined;
+        const eventThreadId = (p?.threadId ?? p?.thread_id) as string | undefined;
+        const parentRs = activeRuns.get(runId);
+        const isSubThreadItem =
+          eventThreadId !== undefined &&
+          parentRs?.threadId !== undefined &&
+          parentRs.threadId !== null &&
+          eventThreadId !== parentRs.threadId;
+
+        // Sub-thread items pollute parent's streaming UI (agentMessage deltas
+        // mix into parent's buffer, command output appears as parent's, etc.).
+        // The parent thread shows sub-agent activity via `collabAgentToolCall`
+        // items on its own thread, so safely skip everything else here.
+        // `collabAgentToolCall` is only emitted on the parent thread.
+        if (isSubThreadItem) {
+          // Emit a heartbeat into the AsciiLoader so the user can see
+          // background subagent activity even though the items themselves
+          // are filtered out of the parent timeline.
+          if (eventThreadId) {
+            const meta = parentRs?.subAgents.get(eventThreadId);
+            const label = meta?.nickname ?? eventThreadId.slice(-8);
+            const role = meta?.role ? ` (${meta.role})` : "";
+            events.push({
+              type: "artifact",
+              kind: "report",
+              content: `Subagent ${label}${role} working…`,
+              metadata: { source: "codex_subagent_heartbeat", subThreadId: eventThreadId },
+              ephemeral: true,
+              streamId: `codex-cmd-subagent-${runId}-${eventThreadId}`,
+            });
+          }
+          break;
+        }
+
+        // Flush agent message buffer before tool events (preserves order).
+        // BUT: codex streams `item/updated` snapshots for the same agentMessage
+        // item while it's still receiving `item/agentMessage/delta` chunks.
+        // If we flushed on those, the running paragraph gets cut into two
+        // bubbles — the head ("The") emits early and the rest ("hook
+        // currently exposes…") becomes a second bubble. So only flush when
+        // the incoming item is something other than the agentMessage we're
+        // currently accumulating.
+        const rsItem = parentRs;
+        const incomingId = (item?.id ?? null) as string | null;
+        const incomingType = item?.type as string | undefined;
+        const isOwnAgentMessageUpdate =
+          rsItem?.currentMessageItemId !== null &&
+          rsItem?.currentMessageItemId !== undefined &&
+          incomingId === rsItem.currentMessageItemId &&
+          (incomingType === "agentMessage" || incomingType === "agent_message");
+
+        if (rsItem && rsItem.agentMessageBuffer.trim() && !isOwnAgentMessageUpdate) {
           events.push({
             type: "artifact",
             kind: "report",
@@ -1075,7 +1226,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           rsItem.currentMessageItemId = null;
         }
 
-        const item = (p?.item ?? p) as ThreadItem | undefined;
         if (item?.type) {
           events.push(...mapThreadItem(item, method, ts, runId));
         }
@@ -1084,6 +1234,18 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
       // Streaming delta: accumulate agent message text per itemId
       case "item/agentMessage/delta": {
+        // Skip sub-thread deltas — they would garble the parent's streaming buffer
+        const deltaThreadId = (p?.threadId ?? p?.thread_id) as string | undefined;
+        const parentForDelta = activeRuns.get(runId);
+        if (
+          deltaThreadId !== undefined &&
+          parentForDelta?.threadId !== undefined &&
+          parentForDelta.threadId !== null &&
+          deltaThreadId !== parentForDelta.threadId
+        ) {
+          break;
+        }
+
         const delta = p?.delta as string | undefined;
         const itemId = p?.itemId as string | undefined;
         if (delta) {
@@ -1122,6 +1284,17 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       // Accumulate file change diff output per itemId
       case "item/fileChange/output/delta":
       case "item/fileChange/outputDelta": {
+        const fcThreadId = (p?.threadId ?? p?.thread_id) as string | undefined;
+        const parentForFc = activeRuns.get(runId);
+        if (
+          fcThreadId !== undefined &&
+          parentForFc?.threadId !== undefined &&
+          parentForFc.threadId !== null &&
+          fcThreadId !== parentForFc.threadId
+        ) {
+          break;
+        }
+
         const delta = notificationOutputDeltaText(p) ?? ((p?.delta ?? p?.content) as string | undefined);
         const itemId = resolveStreamOutputItemId(p) ?? (p?.itemId as string | undefined);
         if (delta && itemId) {
@@ -1147,9 +1320,37 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       case "item/file_read/outputDelta":
       case "item/shell/output/delta":
       case "item/shell/outputDelta": {
+        const cmdThreadId = (p?.threadId ?? p?.thread_id) as string | undefined;
+        const parentForCmd = activeRuns.get(runId);
+        if (
+          cmdThreadId !== undefined &&
+          parentForCmd?.threadId !== undefined &&
+          parentForCmd.threadId !== null &&
+          cmdThreadId !== parentForCmd.threadId
+        ) {
+          break;
+        }
+
         const delta = notificationOutputDeltaText(p);
         const itemId = resolveStreamOutputItemId(p);
-        appendCommandOutputBuffer(runId, itemId, delta);
+        const next = appendCommandOutputBuffer(runId, itemId, delta);
+
+        // Push a live progress line into the AsciiLoader so long-running
+        // commands (npm install, builds, etc.) don't make the run look frozen.
+        // The renderer maps streamId prefix `codex-cmd-` to the thinking lane.
+        if (next && itemId) {
+          const status = streamingStatusLine(next);
+          if (status) {
+            events.push({
+              type: "artifact",
+              kind: "report",
+              content: status,
+              metadata: { source: "codex_cmd_streaming", itemId },
+              ephemeral: true,
+              streamId: `codex-cmd-${runId}-${itemId}`,
+            });
+          }
+        }
         break;
       }
 
@@ -1606,6 +1807,17 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             endedAt: ts,
             metadata: { phase: "complete", ...cmdMeta, exitCode },
           });
+
+          // Clear the live status line — empty content removes the stream
+          // entry from AsciiLoader once the command has actually finished.
+          events.push({
+            type: "artifact",
+            kind: "report",
+            content: "",
+            metadata: { source: "codex_cmd_streaming", itemId: item.id },
+            ephemeral: true,
+            streamId: `codex-cmd-${runId}-${item.id}`,
+          });
         }
         break;
       }
@@ -1670,6 +1882,16 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             error: readFailed ? "File read failed" : undefined,
             endedAt: ts,
             metadata: { phase: "complete", ...readMeta },
+          });
+
+          // Clear the live progress stream for this file read.
+          events.push({
+            type: "artifact",
+            kind: "report",
+            content: "",
+            metadata: { source: "codex_cmd_streaming", itemId: item.id },
+            ephemeral: true,
+            streamId: `codex-cmd-${runId}-${item.id}`,
           });
         }
         break;
@@ -1912,6 +2134,94 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         break;
       }
 
+      case "collab_agent_tool_call":
+      case "collabAgentToolCall": {
+        // Codex AgentControl emits collab tool calls in 5 variants:
+        //   spawnAgent  → start a new sub-agent thread
+        //   sendInput   → push user input into a running sub-agent
+        //   wait        → block until sub-agent(s) complete a turn
+        //   closeAgent  → terminate sub-agent thread(s)
+        //   resumeAgent → reactivate a closed sub-agent
+        // Each carries the same shape (sender, receiver_thread_ids, prompt,
+        // agents_states). We surface every variant so the timeline mirrors
+        // the parent's actual state transitions ("Spawned X", "Finished
+        // waiting for X", "Closed X" — matching Codex VS Code / Conductor).
+        const tool = (item.tool as string | undefined) ?? "spawnAgent";
+
+        const status = item.status as string | undefined;
+        const senderThreadId = (item.senderThreadId ?? item.sender_thread_id) as string | undefined;
+        const receiverThreadIds = ((item.receiverThreadIds ?? item.receiver_thread_ids) as string[] | undefined) ?? [];
+        const prompt = item.prompt as string | undefined;
+        const collabModel = item.model as string | undefined;
+        const agentsStates = (item.agentsStates ?? item.agents_states) as
+          | Record<string, { status?: string; message?: string | null } | undefined>
+          | undefined;
+
+        // Resolve sub-agent metadata captured up-front by maybeResolveCollabSubAgents
+        const runStateCollab = runId ? activeRuns.get(runId) : undefined;
+        const subAgents = receiverThreadIds.map((id) => {
+          const meta = runStateCollab?.subAgents.get(id);
+          return {
+            threadId: id,
+            nickname: meta?.nickname,
+            role: meta?.role,
+            status: agentsStates?.[id]?.status,
+          };
+        });
+
+        // Map codex's tool name to a stable lowercased variant the renderer
+        // dispatches on (group-events.ts treats these as standalone groups
+        // and tool-call-item.tsx routes them to CollabAgentDisplay).
+        const toolNameByVariant: Record<string, string> = {
+          spawnAgent: "spawnAgent",
+          sendInput: "sendCollabInput",
+          wait: "waitCollabAgent",
+          closeAgent: "closeCollabAgent",
+          resumeAgent: "resumeCollabAgent",
+        };
+        const toolName = toolNameByVariant[tool] ?? tool;
+
+        const collabMeta = {
+          toolCallId: item.id,
+          itemId: item.id,
+          codexItemType: "collab_agent_tool_call" as const,
+          collabTool: tool,
+          senderThreadId,
+        };
+
+        // Skip the in-flight `start` for non-spawn variants — they're noisy
+        // (lots of repeat updates while the parent waits), and only the
+        // completed state carries a useful sub-agent snapshot. SpawnAgent
+        // keeps the start so users see "Spawning agent…" right away.
+        if (phase === "start" && tool === "spawnAgent") {
+          events.push({
+            type: "tool_call",
+            toolName,
+            input: { prompt, model: collabModel, receiverThreadIds },
+            startedAt: ts,
+            metadata: { phase: "start", ...collabMeta },
+          });
+        } else if (phase === "complete") {
+          const errorByVariant: Record<string, string> = {
+            spawnAgent: "Spawn agent failed",
+            sendInput: "Send input failed",
+            wait: "Wait failed",
+            closeAgent: "Close agent failed",
+            resumeAgent: "Resume agent failed",
+          };
+          events.push({
+            type: "tool_call",
+            toolName,
+            input: { prompt, model: collabModel, receiverThreadIds },
+            output: { subAgents, prompt, model: collabModel, collabTool: tool },
+            error: status === "failed" ? (errorByVariant[tool] ?? "Collab tool failed") : undefined,
+            endedAt: ts,
+            metadata: { phase: "complete", ...collabMeta },
+          });
+        }
+        break;
+      }
+
       case "error": {
         events.push({ type: "log", message: `[item_error] ${item.message ?? safeJson(item)}`, level: "error", ts, metadata: { itemId: item.id } });
         break;
@@ -2051,21 +2361,36 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
   ): Promise<{ status: "succeeded" | "failed" | "canceled"; error?: string }> {
     return new Promise((resolve) => {
       let resolved = false;
-      const timeoutTimer = setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          resolve({ status: "failed", error: `Codex run timed out after ${timeout}ms` });
+
+      // Detach codex callbacks so notifications/requests for an already-
+      // finished turn don't fall back into stale closures (which would still
+      // reference this run's onEvent and could pop up dialogs/toolcalls long
+      // after the user thinks the run is done).
+      const detachHandlers = () => {
+        try {
+          server.setNotificationHandler(noopNotificationHandler);
+          server.setServerRequestHandler(noopServerRequestHandler);
+        } catch {
+          // ignore — server may already be torn down
         }
+      };
+
+      const finalize = (result: { status: "succeeded" | "failed" | "canceled"; error?: string }) => {
+        if (resolved) return;
+        resolved = true;
+        clearTimeout(timeoutTimer);
+        detachHandlers();
+        resolve(result);
+      };
+
+      const timeoutTimer = setTimeout(() => {
+        finalize({ status: "failed", error: `Codex run timed out after ${timeout}ms` });
       }, timeout);
 
       const handleNotification = async (method: string, params: unknown) => {
         const runState = activeRuns.get(runId);
         if (runState?.aborted) {
-          if (!resolved) {
-            resolved = true;
-            clearTimeout(timeoutTimer);
-            resolve({ status: "canceled" });
-          }
+          finalize({ status: "canceled" });
           return;
         }
 
@@ -2079,6 +2404,14 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
               collectedArtifacts.push({ kind: evt.kind, path: evt.path });
             }
           }
+        }
+
+        // Resolve nicknames for collab spawn ends BEFORE mapNotification emits.
+        // App-server's `collabAgentToolCall` item carries thread IDs only; the
+        // sub-thread's `agentNickname`/`agentRole` live on the Thread object,
+        // so we fetch via `thread/read` to populate runState.subAgents up-front.
+        if (method === "item/completed") {
+          await maybeResolveCollabSubAgents(server, params, runId);
         }
 
         const mappedEvents = mapNotification(method, params, runId, model);
@@ -2107,34 +2440,55 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           const turn = p?.turn as Record<string, unknown> | undefined;
           const status = (turn?.status ?? p?.status) as string | undefined;
 
-          if (!resolved) {
-            resolved = true;
-            clearTimeout(timeoutTimer);
-            const resolvedStatus: "succeeded" | "failed" | "canceled" =
-              status === "failed" ? "failed"
-              : status === "interrupted" ? "canceled"
-              : "succeeded";
-            resolve({
-              status: resolvedStatus,
-              error: resolvedStatus === "failed"
-                ? ((turn?.error as { message?: string })?.message ?? "Turn failed")
-                : undefined,
-            });
-          }
+          const resolvedStatus: "succeeded" | "failed" | "canceled" =
+            status === "failed" ? "failed"
+            : status === "interrupted" ? "canceled"
+            : "succeeded";
+          finalize({
+            status: resolvedStatus,
+            error: resolvedStatus === "failed"
+              ? ((turn?.error as { message?: string })?.message ?? "Turn failed")
+              : undefined,
+          });
         } else if (method === "error") {
           const p = params as Record<string, unknown> | undefined;
           const willRetry = (p as any)?.willRetry as boolean | undefined;
-          if (!willRetry && !resolved) {
-            resolved = true;
-            clearTimeout(timeoutTimer);
+          if (!willRetry) {
             const msg = (p?.error as { message?: string })?.message ?? (p?.message as string) ?? "Error";
-            resolve({ status: "failed", error: msg });
+            finalize({ status: "failed", error: msg });
           }
         }
       };
 
       // Handle server requests — approval, user input, auth tokens
       const handleServerRequest = async (id: number | string, method: string, params: unknown) => {
+        // If the run was aborted or already resolved, codex shouldn't be
+        // popping approval dialogs. Auto-decline anything that would surface
+        // UI so a stale background turn can't grab the user's attention.
+        const reqRunState = activeRuns.get(runId);
+        const runIsDead = resolved || reqRunState?.aborted === true;
+        if (runIsDead) {
+          if (
+            method === "item/commandExecution/requestApproval" ||
+            method === "item/fileChange/requestApproval" ||
+            method === "item/permissions/requestApproval"
+          ) {
+            server.respondToRequest(id, { decision: "decline" });
+            return;
+          }
+          if (method === "item/tool/requestUserInput") {
+            // Empty answers map matches the timeout/fallback shape codex expects.
+            server.respondToRequest(id, { answers: {} });
+            return;
+          }
+          if (method === "mcpServer/elicitation/request") {
+            server.respondToRequest(id, { action: "cancel" });
+            return;
+          }
+          // Pass through auth/tool-call requests; refusing them mid-flight can
+          // wedge codex's internal state worse than letting them complete.
+        }
+
         const p = params as Record<string, unknown> | undefined;
         switch (method) {
           // Command exec approval. Payload carries command, cwd, optional
@@ -2458,6 +2812,9 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           : typeof overrides.effortLevel === "string" && overrides.effortLevel
             ? (overrides.effortLevel as string)
             : undefined;
+        const overrideServiceTier = typeof overrides.serviceTier === "string" && overrides.serviceTier
+          ? (overrides.serviceTier as string)
+          : undefined;
         const sandbox = mapSandboxMode(overrideSandboxMode ?? config.sandboxMode);
         const personality = config.personality ?? "none";
 
@@ -2487,7 +2844,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         }
 
         const mainsCtx: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set() });
+        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), subAgents: new Map() });
 
         // Emit user prompt artifact
         await emitUserPromptArtifact(onEvent, request.goal, {
@@ -2501,11 +2858,13 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         // 2. Start turn
         const turnInput = buildTurnInput(request);
         const effort = overrideEffort ?? config.modelReasoningEffort;
+        const serviceTier = overrideServiceTier ?? config.serviceTier;
         const turnStartParams: Record<string, unknown> = {
           threadId: threadId ?? "",
           input: turnInput,
           ...(resolvedModel ? { model: resolvedModel } : {}),
           ...(effort ? { effort } : {}),
+          ...(serviceTier ? { serviceTier } : {}),
         };
 
         await server.sendRequest("turn/start", turnStartParams);
@@ -2601,7 +2960,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         }
 
         const mainsCtxContinue: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxContinue, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set() });
+        activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxContinue, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), subAgents: new Map() });
 
         await emitUserPromptArtifact(onEvent, message, {
           attachments: request.attachments,
@@ -2620,6 +2979,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           input: turnInput,
           ...(resolvedModel ? { model: resolvedModel } : {}),
           ...(config.modelReasoningEffort ? { effort: config.modelReasoningEffort } : {}),
+          ...(config.serviceTier ? { serviceTier: config.serviceTier } : {}),
         });
 
         // 3. Wait for turn completion
@@ -2716,6 +3076,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           fileChangeItems: new Map(),
           commandOutputBuffers: new Map(),
           emittedImagePaths: new Set(),
+          subAgents: new Map(),
         });
 
         // Emit user prompt artifact
@@ -2736,6 +3097,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           input: turnInput,
           ...(resolvedModel ? { model: resolvedModel } : {}),
           ...(config.modelReasoningEffort ? { effort: config.modelReasoningEffort } : {}),
+          ...(config.serviceTier ? { serviceTier: config.serviceTier } : {}),
         });
 
         // 3. Wait for turn completion
@@ -2806,7 +3168,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         }
 
         const mainsCtxReview: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxReview, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set() });
+        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxReview, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), subAgents: new Map() });
 
         // Emit review user-prompt artifact
         const targetLabel =
@@ -2946,6 +3308,18 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
             const effortOptions = m.supportedReasoningEfforts as Array<{ reasoningEffort: string }> | undefined;
             const effortLevels = effortOptions?.map((e) => e.reasoningEffort) as ("low" | "medium" | "high" | "xhigh")[] | undefined;
 
+            // serviceTiers (preferred) or legacy additionalSpeedTiers (string[]).
+            // Codex returns { id, name, description } per tier; the older
+            // additionalSpeedTiers array carries only ids, so we lift them
+            // into the same shape with id==name as a fallback.
+            const tiersRaw = m.serviceTiers as Array<{ id: string; name?: string; description?: string }> | undefined;
+            const legacyTiers = m.additionalSpeedTiers as string[] | undefined;
+            const serviceTiers = tiersRaw && tiersRaw.length > 0
+              ? tiersRaw.map((t) => ({ id: t.id, name: t.name ?? t.id, description: t.description }))
+              : legacyTiers && legacyTiers.length > 0
+                ? legacyTiers.map((id) => ({ id, name: id }))
+                : undefined;
+
             const rawName = (m.displayName as string) || (m.id as string);
             // Format display name: "gpt-5.4" → "GPT-5.4", "gpt-5.1-codex-mini" → "GPT-5.1 Codex Mini"
             const displayName = rawName
@@ -2954,6 +3328,13 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
               .replace(/-mini$/i, " Mini")
               .replace(/-max$/i, " Max")
               .replace(/-spark$/i, " Spark");
+
+            // Codex's "fast" speed tier (id = SPEED_TIER_FAST = "fast" in
+            // codex-rs/protocol/src/openai_models.rs; Codex internally maps it
+            // to OpenAI's "priority" service tier). Some legacy responses still
+            // surface it as "priority", so accept either.
+            const supportsFastMode =
+              serviceTiers?.some((t) => t.id === "fast" || t.id === "priority") ?? false;
 
             return {
               id: m.id as string,
@@ -2965,6 +3346,8 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
               },
               supportsEffort: (effortLevels && effortLevels.length > 0) ?? false,
               supportedEffortLevels: effortLevels,
+              supportsFastMode,
+              serviceTiers,
             };
           });
       } catch (error) {

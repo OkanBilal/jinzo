@@ -22,6 +22,7 @@ const appSettingsPersistConfig = {
     "rightPanelOpen",
     "browserPanelOpen",
     "onboardingCompleted",
+    "showSuggestions",
   ],
 };
 

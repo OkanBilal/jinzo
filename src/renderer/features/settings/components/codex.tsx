@@ -18,10 +18,8 @@ import { StructuredOutputsModal } from "./structured-outputs-modal";
 import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
 import {
   ProviderSettingsLayout,
-  ProviderVisibilitySection,
   useProviderSettings,
 } from "./provider-settings-shared";
-import { useSearchParams } from "react-router-dom";
 
 function formatResetDate(resetsAt: number): string {
   const date = new Date(resetsAt * 1000);
@@ -125,23 +123,20 @@ const SANDBOX_OPTIONS = [
   },
 ];
 
-export default function CodexSettings() {
+export default function CodexSettings(
+) {
   const {
     provider,
     isLoading,
     error,
     config,
-    space,
-    canHide,
     updateConfig,
-    setSpaceVisible,
   } = useProviderSettings("codex", "codex");
   const { data: rateLimits, isLoading: isLoadingRateLimits } = useGetProviderRateLimitsQuery("codex", {
     pollingInterval: 60000,
   });
   const { data: accountInfo, isLoading: isLoadingAccount } = useGetProviderAccountInfoQuery("codex");
 
-  const [, setSearchParams] = useSearchParams();
   const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] =
     useState(false);
 
@@ -211,21 +206,6 @@ export default function CodexSettings() {
       </SettingsSection>
 
       <SettingsSection title="Configuration">
-
-
-        <SettingsRow
-          title="Plugins"
-          description="Browse and manage Codex plugins"
-        >
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setSearchParams({ section: "codex-plugins" })}
-          >
-            Browse
-          </Button>
-        </SettingsRow>
-        <SettingsDivider />
         <SettingsRow
           title="Approval Policy"
           description="Choose when Codex asks for approval"
@@ -380,12 +360,6 @@ export default function CodexSettings() {
           </div>
         )}
       </SettingsSection>
-
-      <ProviderVisibilitySection
-        space={space}
-        canHide={canHide}
-        onVisibleChange={setSpaceVisible}
-      />
 
       <StructuredOutputsModal
         isOpen={isStructuredOutputsModalOpen}

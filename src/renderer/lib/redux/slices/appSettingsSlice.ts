@@ -6,6 +6,7 @@ export interface AppSettingsState {
   rightPanelOpen: boolean;
   browserPanelOpen: boolean;
   onboardingCompleted: boolean;
+  showSuggestions: boolean;
 }
 
 const initialState: AppSettingsState = {
@@ -14,6 +15,7 @@ const initialState: AppSettingsState = {
   rightPanelOpen: false,
   browserPanelOpen: false,
   onboardingCompleted: false,
+  showSuggestions: false,
 };
 
 const appSettingsSlice = createSlice({
@@ -35,6 +37,9 @@ const appSettingsSlice = createSlice({
     setOnboardingCompleted: (state, action: PayloadAction<boolean>) => {
       state.onboardingCompleted = action.payload;
     },
+    setShowSuggestions: (state, action: PayloadAction<boolean>) => {
+      state.showSuggestions = action.payload;
+    },
   },
 });
 
@@ -44,5 +49,6 @@ export const {
   setBrowserPanelOpen,
   setRightPanelOpen,
   setOnboardingCompleted,
+  setShowSuggestions,
 } = appSettingsSlice.actions;
 export default appSettingsSlice.reducer;

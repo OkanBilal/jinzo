@@ -3,7 +3,6 @@ import { Button, Select } from "@/components/ui";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import {
   ProviderSettingsLayout,
-  ProviderVisibilitySection,
   useProviderSettings,
 } from "./provider-settings-shared";
 import { StructuredOutputsModal } from "./structured-outputs-modal";
@@ -18,17 +17,15 @@ const SETTINGS_PERMISSION_MODES = [
   { value: "dontAsk", label: "Don't ask", description: "Deny unapproved tools silently" },
 ];
 
-export default function ClaudeSettings() {
+export default function ClaudeSettings(
+) {
   const {
     provider,
     isLoading,
     error,
     updating,
     config,
-    space,
-    canHide,
     updateConfig,
-    setSpaceVisible,
   } = useProviderSettings("claude_code", "claude");
 
   const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] =
@@ -214,12 +211,6 @@ export default function ClaudeSettings() {
           </Button>
         </SettingsRow>
       </SettingsSection>
-
-      <ProviderVisibilitySection
-        space={space}
-        canHide={canHide}
-        onVisibleChange={setSpaceVisible}
-      />
 
       <StructuredOutputsModal
         isOpen={isStructuredOutputsModalOpen}

@@ -21,6 +21,24 @@ function isPlanToolEvent(event: { type: string; content: string }): boolean {
   return n === "plan" || n === "exitplanmode" || n === "create plan";
 }
 
+/**
+ * Codex AgentControl collab tool calls (spawn/sendInput/wait/close/resume) —
+ * render standalone outside the tool_calls accordion so each transition shows
+ * up clearly in the timeline ("Spawned X", "Finished waiting for X", etc.).
+ */
+const COLLAB_TOOL_NAMES = new Set([
+  "spawnagent",
+  "sendcollabinput",
+  "waitcollabagent",
+  "closecollabagent",
+  "resumecollabagent",
+]);
+
+function isStandaloneToolEvent(event: { type: string; content: string }): boolean {
+  const n = toolEventPlanName(event);
+  return n !== null && COLLAB_TOOL_NAMES.has(n);
+}
+
 export function isPlanToolCallGroup(group: EventGroup): boolean {
   if (group.type !== "tool_calls") return false;
   return group.events.some((ev) => isPlanToolEvent(ev));
@@ -50,6 +68,17 @@ export function groupEvents(events: RunEvent[]): EventGroup[] {
         flushToolGroup();
         groups.push({
           id: `plan-${event.id}`,
+          type: "tool_calls",
+          events: [event],
+          startTime: event.timestamp,
+          endTime: event.timestamp,
+        });
+      } else if (isStandaloneToolEvent(event)) {
+        // Codex spawnAgent calls — keep each one as its own group so subagent
+        // info is visible and not collapsed inside the tool_calls accordion.
+        flushToolGroup();
+        groups.push({
+          id: `standalone-${event.id}`,
           type: "tool_calls",
           events: [event],
           startTime: event.timestamp,

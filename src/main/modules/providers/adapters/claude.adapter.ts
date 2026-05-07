@@ -2547,26 +2547,39 @@ export function createClaudeAdapter(
         }
 
         // Map SDK models to our ModelInfo format
-        const models: ModelInfo[] = sdkModels.map((sdkModel, index) => ({
-          id: sdkModel.value,
-          displayName: sdkModel.displayName,
-          description: sdkModel.description,
-          isDefault:
-            sdkModel.value === config.defaultModel ||
-            (!config.defaultModel && index === 0),
-          capabilities: {
-            streaming: true,
-            vision: true,
-            functionCalling: true,
-            // Mark opus models as having reasoning capability
-            reasoning: sdkModel.value.includes("opus"),
-          },
-          // Estimate context window based on model name
-          contextWindow: sdkModel.value.includes("haiku") ? 128000 : 200000,
-          supportsFastMode: sdkModel.supportsFastMode,
-          supportsEffort: sdkModel.supportsEffort,
-          supportedEffortLevels: sdkModel.supportedEffortLevels,
-        }));
+        const models: ModelInfo[] = sdkModels.map((sdkModel, index) => {
+          // SDK's .d.ts declares supportsFastMode but the runtime payload
+          // doesn't include it (verified via the actual sdkModels response:
+          // only value/displayName/description/supportsEffort/supportedEffortLevels/
+          // supportsAdaptiveThinking/supportsAutoMode are populated). Fast mode
+          // is currently only meaningful on Opus 4.6; opus 4.7 / sonnet 4.6 /
+          // haiku do NOT use it. Match the historical literal ids so when the
+          // SDK starts returning supportsFastMode (or surfaces an opus-4-6
+          // entry again) it lights up automatically.
+          //TO-DO: add supportsFastMode to the sdkModels response 
+          const id = sdkModel.value;
+          const fallbackFastMode = id === "claude-opus-4-6" || id === "opus-4-6";
+          return {
+            id,
+            displayName: sdkModel.displayName,
+            description: sdkModel.description,
+            isDefault:
+              sdkModel.value === config.defaultModel ||
+              (!config.defaultModel && index === 0),
+            capabilities: {
+              streaming: true,
+              vision: true,
+              functionCalling: true,
+              // Mark opus models as having reasoning capability
+              reasoning: sdkModel.value.includes("opus"),
+            },
+            // Estimate context window based on model name
+            contextWindow: sdkModel.value.includes("haiku") ? 128000 : 200000,
+            supportsFastMode: sdkModel.supportsFastMode ?? fallbackFastMode,
+            supportsEffort: sdkModel.supportsEffort,
+            supportedEffortLevels: sdkModel.supportedEffortLevels,
+          };
+        });
 
         // Cache the result
         cachedModels = models;
