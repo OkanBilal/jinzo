@@ -79,6 +79,8 @@ export interface WorkspaceState {
   isLoadingFileContent: boolean;
   fileContentError: string | null;
   activeTab: "editor" | string;
+  /** Tab that was active before "editor" was opened — used to restore on editor close. */
+  previousNonEditorTab: string | null;
   contextFiles: FileNode[];
   contextIssues: ContextIssue[];
   contextSignals: ContextSignal[];
@@ -109,6 +111,7 @@ const initialState: WorkspaceState = {
   isLoadingFileContent: false,
   fileContentError: null,
   activeTab: "editor",
+  previousNonEditorTab: null,
   contextFiles: [],
   contextIssues: [],
   contextSignals: [],
@@ -134,6 +137,7 @@ const workspaceSlice = createSlice({
         state.selectedFileContent = null;
         state.fileContentError = null;
         state.isLoadingFileContent = false;
+        state.previousNonEditorTab = null;
       }
       state.activeWorkspaceId = action.payload;
     },
@@ -144,6 +148,7 @@ const workspaceSlice = createSlice({
         state.selectedFileContent = null;
         state.fileContentError = null;
         state.isLoadingFileContent = false;
+        state.previousNonEditorTab = null;
       }
       state.activeWorkspaceIdByProvider[action.payload.providerId] = action.payload.workspaceId;
     },
@@ -181,6 +186,11 @@ const workspaceSlice = createSlice({
       state.isLoadingFileContent = false;
     },
     setActiveTab: (state, action: PayloadAction<"editor" | string>) => {
+      // Remember which tab the user was on before opening the editor so we can
+      // return there when the editor tab is closed (rather than jumping to runs[0]).
+      if (action.payload === "editor" && state.activeTab !== "editor") {
+        state.previousNonEditorTab = state.activeTab;
+      }
       state.activeTab = action.payload;
     },
     addContextFile: (state, action: PayloadAction<FileNode>) => {

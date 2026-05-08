@@ -1748,7 +1748,7 @@ export function createCopilotAdapter(
       // Embed the title instruction directly in the prompt so it can't be overridden
       const titlePrompt = [
         "TASK: Generate a short title (3-5 words) for the following coding task.",
-        "RULES: Reply with ONLY the title. No quotes, no explanation, no punctuation at the end, no prefixes like 'Title:'.",
+        "RULES: Reply with ONLY the title (title case — capitalize each word). No quotes, no explanation, no punctuation at the end, no prefixes like 'Title:'.",
         "",
         `User's request: ${goal}`,
         contextSnippet ? `\nContext:\n${contextSnippet}` : "",
@@ -1759,7 +1759,8 @@ export function createCopilotAdapter(
       const session = await copilotClient.createSession({
         model: "gpt-4.1-nano",
         systemMessage: {
-          content: "You are a title generator. Output ONLY a short title (3-5 words). Never explain, never use tools, never write code.",
+          content:
+            "You are a title generator. Output ONLY a short title (3-5 words) in title case (capitalize the first letter of each word). Never explain, never use tools, never write code.",
         },
         onPermissionRequest: approveAllPermissions,
       });

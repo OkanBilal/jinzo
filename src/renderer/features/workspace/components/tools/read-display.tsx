@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { ArrowUp, Read } from "@/components/ui/icons";
+import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
+import { FileIconComponent } from "../file-explorer/components/file-icon";
 
 export interface ReadParams {
   // Claude params
@@ -20,9 +22,24 @@ export function ReadDisplay({
   isCompact?: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const openFile = useOpenFileInEditor();
 
   const { content, numLines } = parseReadOutput(output);
   const hasContent = !!content;
+  const fullFilePath =
+    params.file_path ||
+    params.path ||
+    ((params as any)._title &&
+    ((params as any)._title.includes("/") ||
+      (params as any)._title.includes("."))
+      ? (params as any)._title
+      : "") ||
+    "";
+  const fileNameOnly = fullFilePath.split("/").pop() || fullFilePath;
+  const fileExt = (() => {
+    const dotIdx = fileNameOnly.lastIndexOf(".");
+    return dotIdx > 0 ? fileNameOnly.slice(dotIdx + 1) : undefined;
+  })();
 
   return (
     <div className="">
@@ -38,18 +55,27 @@ export function ReadDisplay({
             Read
           </span>
         )}
-        <code className="min-w-0 flex-1 text-left text-primary-500 font-sans truncate group-hover:text-primary-950 group-hover:dark:text-primary">
-          {shortPath(
-            params.file_path ||
-              params.path ||
-              ((params as any)._title &&
-              ((params as any)._title.includes("/") ||
-                (params as any)._title.includes("."))
-                ? (params as any)._title
-                : "") ||
-              "",
+        <span
+          role={fullFilePath ? "link" : undefined}
+          title={fullFilePath ? "Open in editor" : undefined}
+          onClick={(e) => {
+            if (!fullFilePath) return;
+            e.stopPropagation();
+            openFile(fullFilePath);
+          }}
+          className={`min-w-0 inline-flex items-center gap-1 text-left text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary ${fullFilePath ? "cursor-pointer hover:underline hover:text-primary-950 hover:dark:text-primary" : ""}`}
+        >
+          {fullFilePath && (
+            <FileIconComponent
+              extension={fileExt}
+              fileName={fileNameOnly}
+              className="size-3.5 shrink-0"
+            />
           )}
-        </code>
+          <code className="min-w-0 font-sans truncate">
+            {shortPath(fullFilePath)}
+          </code>
+        </span>
         {numLines > 0 && (
           <span className="shrink-0 text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
             ({numLines} lines)

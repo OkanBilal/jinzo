@@ -1603,6 +1603,7 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
 
         const titlePrompt = [
           "Generate a concise title (2-5 words) for this task.",
+          "Use title case: capitalize the first letter of each word.",
           "Reply with ONLY the title text, nothing else.",
           "No quotes, no punctuation, no prefixes.",
           "",

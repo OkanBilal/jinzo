@@ -501,6 +501,8 @@ const FEATURED_PLUGIN_NAMES = [
   "google-calendar",
   "google-drive",
   "figma",
+  "chrome",
+  "computer-use"
 ];
 
 // ── Main Component ──

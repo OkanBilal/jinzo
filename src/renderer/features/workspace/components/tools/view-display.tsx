@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { ArrowUp, Read } from "@/components/ui/icons";
+import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
+import { FileIconComponent } from "../file-explorer/components/file-icon";
 
 export interface ViewParams {
   path?: string;
@@ -7,11 +9,16 @@ export interface ViewParams {
 
 export function ViewDisplay({ params, output, isCompact = false }: { params: ViewParams; output?: unknown; isCompact?: boolean }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const openFile = useOpenFileInEditor();
 
   const { content, numLines } = parseViewOutput(output);
   const hasContent = !!content;
   const filePath = params.path ?? "";
   const fileName = filePath.split("/").pop() || filePath;
+  const fileExt = (() => {
+    const dotIdx = fileName.lastIndexOf(".");
+    return dotIdx > 0 ? fileName.slice(dotIdx + 1) : undefined;
+  })();
 
   return (
     <div className="">
@@ -30,8 +37,24 @@ export function ViewDisplay({ params, output, isCompact = false }: { params: Vie
             {numLines} lines
           </span>
         )}
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
-          {fileName}
+        <span
+          role={filePath ? "link" : undefined}
+          title={filePath ? "Open in editor" : undefined}
+          onClick={(e) => {
+            if (!filePath) return;
+            e.stopPropagation();
+            openFile(filePath);
+          }}
+          className={`inline-flex items-center gap-1 min-w-0 text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary ${filePath ? "cursor-pointer hover:underline hover:text-primary-950 hover:dark:text-primary" : ""}`}
+        >
+          {filePath && (
+            <FileIconComponent
+              extension={fileExt}
+              fileName={fileName}
+              className="size-3.5 shrink-0"
+            />
+          )}
+          <span className="truncate">{fileName}</span>
         </span>
         {hasContent && (
           <ArrowUp

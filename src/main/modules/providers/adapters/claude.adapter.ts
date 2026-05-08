@@ -2687,9 +2687,9 @@ export function createClaudeAdapter(
         "Generate a concise title (2-5 words) that summarizes what the user wants.",
         "Rules:",
         "- Reply with ONLY the title text, nothing else",
-        "- Use natural, (e.g. \"fix login redirect\", \"add dark mode\", \"greeting message\")",
-        "- Do NOT use generic descriptions of the request type (e.g. NOT \"greeting title generation\")",
-        "- Instead, describe the actual topic or intent (e.g. \"hello greeting\" for a hello message)",
+        "- Use title case: capitalize the first letter of each word (e.g. \"Fix Login Redirect\", \"Add Dark Mode\", \"Greeting Message\")",
+        "- Do NOT use generic descriptions of the request type (e.g. NOT \"Greeting Title Generation\")",
+        "- Instead, describe the actual topic or intent (e.g. \"Hello Greeting\" for a hello message)",
         "- No quotes, no punctuation at the end, no prefixes",
         "",
         `User message: ${goal}`,
@@ -2710,7 +2710,8 @@ export function createClaudeAdapter(
       options.maxTurns = 1;
       options.allowedTools = [];
       options.disallowedTools = ["*"];
-      options.systemPrompt = "You generate short titles. Output ONLY the title (2-5 words, lowercase). Describe the topic, not the action of generating a title.";
+      options.systemPrompt =
+        "You generate short titles. Output ONLY the title (2-5 words, title case). Describe the topic, not the action of generating a title.";
 
       const query = queryFn({
         prompt: titlePrompt,

@@ -30,8 +30,13 @@ export function useProviderModels(
       state.workspace.selectedModelByProvider[activeProviderId],
   );
 
-  const { data: providerModels, isLoading: isLoadingModels, error: modelsError, refetch: refetchModels } =
-    useGetProviderModelsQuery(activeProviderId, { skip: !activeProviderId });
+  const {
+    data: providerModels,
+    isLoading: isLoadingModels,
+    isFetching: isFetchingModels,
+    error: modelsError,
+    refetch: refetchModels,
+  } = useGetProviderModelsQuery(activeProviderId, { skip: !activeProviderId });
 
   const { data: providerCommands = [], isLoading: isLoadingCommands } =
     useGetProviderCommandsQuery(
@@ -218,6 +223,7 @@ export function useProviderModels(
     selectedModelDisplayName,
     modelDisplayNames,
     isLoadingModels,
+    isFetchingModels,
     handleModelChange,
     providerCommands,
     isLoadingCommands,

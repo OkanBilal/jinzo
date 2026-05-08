@@ -7,7 +7,7 @@ import type { ContextIssue, ContextSignal, ContextSkill, ContextBrowserSelection
 import { addContextFile, addContextIssue, addContextSkill, removeContextSkill } from "@/lib/redux/slices/workspaceSlice";
 import type { UploadedFile, RichInputFormHandle, RichSkillChipData } from "@/components/ui";
 import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
-import { RichInputForm } from "@/components/ui";
+import { Button, RichInputForm } from "@/components/ui";
 import {
   UnifiedContextDropdown,
   type UnifiedContextTrigger,
@@ -154,6 +154,7 @@ export function WorkspaceInput({
     selectedModelDisplayName,
     modelDisplayNames,
     isLoadingModels,
+    isFetchingModels,
     handleModelChange,
     providerCommands,
     providerSkills,
@@ -504,18 +505,20 @@ export function WorkspaceInput({
   return (
     <>
           {authErrorMessage && (
-        <div className="w-200 mx-auto mb-2 px-3 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/10 text-yellow-200/80 text-xs flex items-center justify-between">
+        <div className="w-200 mx-auto  px-3 py-2 rounded-xl text-yellow-500/80 bg-yellow-500/10  dark:bg-yellow-300/10  dark:text-yellow-200/80 text-xs flex items-center justify-between">
           <span>
             <span className="font-medium">Auth required:</span>{" "}
             {authErrorMessage}
           </span>
-          <button
+          <Button
             type="button"
-            onClick={() => refetchModels()}
-            className="ml-3 shrink-0 px-2 py-0.5 rounded-md bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-200 transition-colors cursor-pointer"
+            variant="subtle"
+            onClick={() => void refetchModels()}
+            isLoading={isFetchingModels}
+            className="ml-3 shrink-0 px-2 py-1 rounded-md bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-600/80 dark:text-yellow-200/80 transition-colors cursor-pointer "
           >
             Check Auth
-          </button>
+          </Button>
         </div>
       )}
 

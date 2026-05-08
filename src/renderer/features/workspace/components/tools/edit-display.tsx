@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { ArrowUp, Edit } from "@/components/ui/icons";
 import { PatchDiff } from "@pierre/diffs/react";
 import { normalizePatchForPatchDiff } from "../../utils/patch-utils";
+import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
+import { FileIconComponent } from "../file-explorer/components/file-icon";
 
 export interface EditParams {
   // Claude params
@@ -31,9 +33,14 @@ export function EditDisplay({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const isDarkMode = document.documentElement.classList.contains("dark");
+  const openFile = useOpenFileInEditor();
 
   const filePath = params.file_path ?? params.path ?? "";
   const fileName = filePath.split("/").pop() || filePath;
+  const fileExt = (() => {
+    const dotIdx = fileName.lastIndexOf(".");
+    return dotIdx > 0 ? fileName.slice(dotIdx + 1) : undefined;
+  })();
   const {
     lines: patchLines,
     added,
@@ -60,8 +67,24 @@ export function EditDisplay({
             Edited
           </span>
         )}
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
-          {fileName}
+        <span
+          role={filePath ? "link" : undefined}
+          title={filePath ? "Open in editor" : undefined}
+          onClick={(e) => {
+            if (!filePath) return;
+            e.stopPropagation();
+            openFile(filePath);
+          }}
+          className={`inline-flex items-center gap-1 min-w-0 text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary ${filePath ? "cursor-pointer hover:underline hover:text-primary-950 hover:dark:text-primary" : ""}`}
+        >
+          {filePath && (
+            <FileIconComponent
+              extension={fileExt}
+              fileName={fileName}
+              className="size-3.5 shrink-0"
+            />
+          )}
+          <span className="truncate">{fileName}</span>
         </span>
         {(added > 0 || removed > 0) && (
           <span className="text-primary-500 text-xs shrink-0 group-hover:text-primary-950 group-hover:dark:text-primary">

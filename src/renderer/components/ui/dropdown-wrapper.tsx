@@ -14,6 +14,8 @@ interface DropdownWrapperProps {
   usePortal?: boolean;
   triggerRef?: React.RefObject<HTMLElement | null>;
   dropdownRef?: React.RefObject<HTMLDivElement | null>;
+  /** When portal + anchored: set false so panel can grow beyond trigger width (e.g. menus with min-width). */
+  matchTriggerWidth?: boolean;
   useFixedBackground?: boolean;
 }
 
@@ -26,6 +28,7 @@ export default function DropdownWrapper({
   usePortal = false,
   triggerRef,
   dropdownRef: externalDropdownRef,
+  matchTriggerWidth = true,
   useFixedBackground = false,
 }: DropdownWrapperProps) {
   const [coords, setCoords] = useState<{
@@ -148,7 +151,7 @@ export default function DropdownWrapper({
                 position === "right"
                   ? `${window.innerWidth - coords.left - coords.width}px`
                   : "auto",
-              width: coords.width,
+              ...(matchTriggerWidth ? { width: coords.width } : {}),
               transform: openUpward ? "translateY(-100%)" : "none",
             }
           : {}),
