@@ -1,4 +1,5 @@
 import { matchPath } from "react-router-dom";
+import { parseUiConfig } from "./parse-ui-config";
 
 export type RouteType =
   | "claude"
@@ -53,27 +54,13 @@ export function getWorkspaceVariant(pathname: string): WorkspaceVariant {
   return isWorkspaceRouteType(routeType) ? routeType : "default";
 }
 
+/**
+ * Strip `/:id?` (or any param segment) off a route pattern to get the bare base.
+ * Derived from `ROUTE_PATTERNS` so a new route only has to be registered there.
+ */
 export function getBaseRoutePath(routeType: RouteType): string {
-  switch (routeType) {
-    case "claude":
-      return "/claude";
-    case "copilot":
-      return "/copilot";
-    case "codex":
-      return "/codex";
-    case "cursor":
-      return "/cursor";
-    case "settings":
-      return "/settings";
-    case "home":
-      return "/";
-    case "plugins":
-      return "/plugins";
-    case "pulse":
-      return "/pulse";
-    default:
-      return "/";
-  }
+  if (routeType === "unknown") return "/";
+  return ROUTE_PATTERNS[routeType].split("/:")[0] || "/";
 }
 
 /** Base URL segment for opening a workspace from the sidebar (e.g. `/codex`). Uses the current agent route when on one; otherwise the active space `defaultRoute` (plugins, home, unknown paths). */
@@ -94,14 +81,6 @@ export function getWorkspaceListBasePath(
 export function getSpaceDefaultRoute(space: {
   uiConfig: string | null;
 }): string {
-  if (!space.uiConfig) return "/";
-  try {
-    const config = JSON.parse(space.uiConfig) as {
-      sidebar?: { defaultRoute?: string };
-    };
-    const route = config.sidebar?.defaultRoute;
-    return typeof route === "string" && route.length > 0 ? route : "/";
-  } catch {
-    return "/";
-  }
+  const route = parseUiConfig(space.uiConfig).sidebar?.defaultRoute;
+  return typeof route === "string" && route.length > 0 ? route : "/";
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowUp, Search } from "@/components/ui/icons";
+import { Search } from "@/components/ui/icons";
+import { ToolHeader, ToolCollapse } from "./_shared";
 
 export interface ToolSearchParams {
   query?: string;
@@ -13,43 +14,31 @@ export function ToolSearchDisplay({ output, isCompact = false }: { params: ToolS
   const hasMatches = matches.length > 0;
 
   return (
-    <div className="">
-      <button
-        onClick={() => hasMatches && setIsExpanded(!isExpanded)}
-        className={`group w-full flex items-center gap-1 py-1  text-s font-sans ${hasMatches ? "cursor-pointer" : "cursor-default"}`}
+    <div>
+      <ToolHeader
+        icon={<Search className="size-3.5" />}
+        verb="Searched tools"
+        hasDetails={hasMatches}
+        isExpanded={isExpanded}
+        onToggle={() => setIsExpanded((v) => !v)}
+        isCompact={isCompact}
       >
-        {!isCompact && <Search className="size-3.5 text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary" />}
-        {!isCompact && (
-          <span className="text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
-            Searched tools
-          </span>
-        )}
-
         {matches.length > 0 && (
           <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
             {matches.length} match{matches.length !== 1 ? "es" : ""}
             {total > 0 && ` / ${total} total`}
           </span>
         )}
-        {hasMatches && (
-          <ArrowUp
-            className={`size-3.5 shrink-0 text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-          />
-        )}
-      </button>
+      </ToolHeader>
 
       {hasMatches && (
-        <div className={`grid transition-all duration-200 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-          <div className="min-h-0 overflow-hidden">
-            <div className="">
-              <div className="noscrollbar text-s font-sans text-primary-950 dark:text-primary bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
-                {matches.map((m) => (
-                  <div key={m} className="truncate">{m}</div>
-                ))}
-              </div>
-            </div>
+        <ToolCollapse isExpanded={isExpanded}>
+          <div className="noscrollbar text-s font-sans text-primary-950 dark:text-primary bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+            {matches.map((m) => (
+              <div key={m} className="truncate">{m}</div>
+            ))}
           </div>
-        </div>
+        </ToolCollapse>
       )}
     </div>
   );

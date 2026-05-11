@@ -3,6 +3,7 @@ import { useGetProjectResourcesQuery, useRemoveProjectResourceMutation } from "@
 import { SettingsSection, SettingsDivider } from "../settings-layout";
 import { Close, Plus } from "@/components/ui/icons";
 import { ResourceIcon } from "@/features/workspace/components/provider-icon";
+import { extractErrorMessage } from "@/lib/extract-error-message";
 
 interface ProjectLinkedResourcesProps {
   projectId: string;
@@ -17,8 +18,8 @@ export function ProjectLinkedResources({ projectId, onManageClick }: ProjectLink
     try {
       await removeResource({ projectId, resourceId }).unwrap();
       toast.success("Resource removed");
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to remove resource");
+    } catch (err) {
+      toast.error(extractErrorMessage(err, "Failed to remove resource"));
     }
   };
 

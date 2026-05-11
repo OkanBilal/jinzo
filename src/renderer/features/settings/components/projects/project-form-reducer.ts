@@ -35,7 +35,7 @@ function parseProjectIcon(iconStr: string | null | undefined): { icon: string; i
     return { icon: iconStr.replace("emoji:", ""), iconMode: "emoji" };
   }
   const parsed = parseIcon(iconStr);
-  if (parsed.type === "icon" || parsed.type === "copilot-animate" || parsed.type === "claude-animate") {
+  if (parsed.type === "icon") {
     return { icon: iconStr.toLowerCase(), iconMode: "icon" };
   }
   return { icon: typeof parsed.value === "string" ? parsed.value : "", iconMode: "emoji" };

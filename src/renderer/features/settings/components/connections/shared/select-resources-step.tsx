@@ -115,7 +115,7 @@ export function SelectResourcesStep<T extends SelectableResource>({
       {error && <ErrorText>{error}</ErrorText>}
 
       <div className="flex justify-between gap-3 pt-2">
-        <Button variant="link" onClick={onBack} disabled={loading} className="px-1">
+        <Button variant="ghost" size="sm" onClick={onBack} disabled={loading}>
           Back
         </Button>
         <Button

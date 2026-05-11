@@ -89,7 +89,6 @@ export default function CreateProjectModal({
           <Button
             className="flex-1"
             variant="secondary"
-            size="md"
             onClick={onClose}
             disabled={isCreating}
           >
@@ -98,7 +97,6 @@ export default function CreateProjectModal({
           <Button
             className="flex-1"
             variant="primary"
-            size="md"
             onClick={handleSubmit}
             disabled={isCreating || isInvalid}
           >

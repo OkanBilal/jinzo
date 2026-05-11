@@ -20,6 +20,7 @@ import { CredentialStep } from "./credential-step";
 import { AutoSyncSection } from "./auto-sync-section";
 import { useConnectionModalState } from "./use-connection-modal-state";
 import { ConnectionLoadingStep } from "./connection-loading-step";
+import { extractErrorMessage } from "@/lib/extract-error-message";
 
 const CRED_MIN_LOADING_MS = 800;
 const SAVE_MIN_LOADING_MS = 1000;
@@ -30,12 +31,6 @@ async function withMinDelay<T>(work: Promise<T>, minMs: number): Promise<T> {
   const remaining = Math.max(0, minMs - (Date.now() - start));
   if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
   return result;
-}
-
-function extractErrorMessage(err: any, fallback = "An error occurred"): string {
-  if (err?.status === "CUSTOM_ERROR") return err?.error || fallback;
-  if (typeof err === "string") return err;
-  return err?.data?.error || err?.data?.message || err?.message || fallback;
 }
 
 export interface CredentialField {

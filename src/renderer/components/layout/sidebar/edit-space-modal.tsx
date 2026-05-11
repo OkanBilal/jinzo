@@ -7,7 +7,7 @@ import { useDarkMode } from "@/hooks/use-dark-mode";
 import {
   solidColors,
   getThemeVariant,
-  parseThemeConfig,
+  themeConfigToSwatchIndex,
   type ThemeColor,
 } from "@/lib/space-themes";
 import { availableIcons, parseIcon } from "@/lib/icon-registry";
@@ -85,7 +85,7 @@ export default function EditSpaceModal({
       newIcon = iconStr.replace("emoji:", "");
     } else {
       const parsedIcon = parseIcon(iconStr);
-      if (parsedIcon.type === "icon" || parsedIcon.type === "copilot-animate" || parsedIcon.type === "claude-animate") {
+      if (parsedIcon.type === "icon") {
         newIconMode = "icon";
         newIcon = iconStr.toLowerCase();
       } else {
@@ -93,7 +93,7 @@ export default function EditSpaceModal({
         newIcon = typeof parsedIcon.value === "string" ? parsedIcon.value : "😊";
       }
     }
-    const { colorIndex } = parseThemeConfig(space.themeConfig);
+    const { colorIndex } = themeConfigToSwatchIndex(space.themeConfig);
     updateState({
       prevSpaceId: space.id,
       name: space.name,

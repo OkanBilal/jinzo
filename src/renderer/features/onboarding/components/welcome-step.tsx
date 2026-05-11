@@ -211,13 +211,14 @@ export function WelcomeStep() {
       </div>
 
       <div className="flex justify-end pt-2">
-        <button
+        <Button
+          variant="bare"
           onClick={goNext}
-          className="inline-flex items-center gap-1 text-sm font-medium text-primary-900 dark:text-primary-100 hover:opacity-70 transition-opacity cursor-pointer"
+          className="inline-flex items-center gap-1 text-sm font-medium text-primary-900 dark:text-primary-100 hover:opacity-70 transition-opacity"
         >
           Begin
           <ChevronUp className="w-4 h-4 rotate-90" />
-        </button>
+        </Button>
       </div>
     </div>
   );

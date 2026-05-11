@@ -7,6 +7,7 @@ import { PulseModal } from "@/features/pulse/components/pulse-modal";
 import { PulseTemplates } from "@/features/pulse/components/pulse-templates";
 import type { PulseTemplate } from "@/features/pulse/templates";
 import { Heading2 } from "@/components/ui";
+import { PageShell } from "@/components/layout/page-shell";
 
 export default function PulsePage() {
   const { data: pulses = [] } = useGetPulsesQuery();
@@ -39,14 +40,12 @@ export default function PulsePage() {
   };
 
   return (
-    <div className="h-full max-w-240 mx-auto px-2 py-16  overflow-y-auto noscrollbar bg-primary dark:bg-primary-950">
+    <PageShell bottomPadded>
       <header className="flex items-start justify-between mb-8">
         <div>
-          <Heading2 >
-            Pulse
-          </Heading2>
+          <Heading2>Pulse</Heading2>
           <p className="text-sm text-primary-500 mt-1">
-          Pulse keeps your work in motion with scheduled, automated runs.
+            Pulse keeps your work in motion with scheduled, automated runs.
           </p>
         </div>
         <Button
@@ -74,6 +73,6 @@ export default function PulsePage() {
         pulse={editingPulse}
         initialTemplate={activeTemplate}
       />
-    </div>
+    </PageShell>
   );
 }

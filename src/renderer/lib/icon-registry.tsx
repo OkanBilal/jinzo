@@ -1,5 +1,6 @@
 import { ComponentType, SVGProps } from "react";
 import * as Icons from "@/components/ui/icons/space";
+import { Codex, Cursor } from "@/components/ui/icons";
 
 export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -36,8 +37,8 @@ export const iconRegistry: Record<string, IconComponent> = {
   vinyl: Icons.Vinyl,
   claude: Icons.Claude,
   copilot: Icons.Copilot,
-  codex: Icons.Gpt,
-  cursor: Icons.CursorIcon,
+  codex: Codex,
+  cursor: Cursor,
 };
 
 export const availableIcons = Object.entries(iconRegistry).map(
@@ -47,33 +48,19 @@ export const availableIcons = Object.entries(iconRegistry).map(
   }),
 );
 
-export function parseIcon(iconString: string | null | undefined): {
-  type: "emoji" | "icon" | "copilot-animate" | "claude-animate" | "codex-animate" | "cursor-animate";
-  value: string | IconComponent;
-} {
+type ParsedIcon =
+  | { type: "emoji"; value: string }
+  | { type: "icon"; value: IconComponent };
+
+export function parseIcon(iconString: string | null | undefined): ParsedIcon {
   if (!iconString) {
     return { type: "emoji", value: "💬" };
   }
 
   if (iconString.startsWith("icon:")) {
     const iconName = iconString.replace("icon:", "").toLowerCase();
-    const IconComponent = iconRegistry[iconName];
-    if (IconComponent) {
-      if (iconName === "copilot") {
-        return { type: "copilot-animate", value: IconComponent };
-      }
-      if (iconName === "claude") {
-        return { type: "claude-animate", value: IconComponent };
-      }
-      if (iconName === "codex") {
-        return { type: "codex-animate", value: IconComponent };
-      }
-      if (iconName === "cursor") {
-        return { type: "cursor-animate", value: IconComponent };
-      }
-      return { type: "icon", value: IconComponent };
-    }
-    return { type: "emoji", value: "⌘" };
+    const Icon = iconRegistry[iconName];
+    return Icon ? { type: "icon", value: Icon } : { type: "emoji", value: "⌘" };
   }
 
   if (iconString.startsWith("emoji:")) {
@@ -81,21 +68,8 @@ export function parseIcon(iconString: string | null | undefined): {
   }
 
   const lowerIcon = iconString.toLowerCase();
-  if (iconRegistry[lowerIcon]) {
-    if (lowerIcon === "copilot") {
-      return { type: "copilot-animate", value: iconRegistry[lowerIcon] };
-    }
-    if (lowerIcon === "claude") {
-      return { type: "claude-animate", value: iconRegistry[lowerIcon] };
-    }
-    if (lowerIcon === "codex") {
-      return { type: "codex-animate", value: iconRegistry[lowerIcon] };
-    }
-    if (lowerIcon === "cursor") {
-      return { type: "cursor-animate", value: iconRegistry[lowerIcon] };
-    }
-    return { type: "icon", value: iconRegistry[lowerIcon] };
-  }
+  const Icon = iconRegistry[lowerIcon];
+  if (Icon) return { type: "icon", value: Icon };
 
   return { type: "emoji", value: iconString };
 }

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useActiveSpace } from "./use-active-space";
+import { useParsedUiConfig } from "./use-parsed-ui-config";
 
 interface LayoutConfig {
   mainMarginLeft: string;
@@ -8,29 +8,13 @@ interface LayoutConfig {
 }
 
 export function useLayoutConfig(): LayoutConfig {
-  const { activeSpace } = useActiveSpace();
-
-  return useMemo(() => {
-    const defaults: LayoutConfig = {
-      mainMarginLeft: "var(--sidebar-width)",
-      rightPanelWidth: "var(--panel-width)",
-      rightPanelComponent: "config",
-    };
-
-    if (!activeSpace?.uiConfig) {
-      return defaults;
-    }
-
-    try {
-      const config = JSON.parse(activeSpace.uiConfig);
-      return {
-        mainMarginLeft: config.main?.margin || defaults.mainMarginLeft,
-        rightPanelWidth: config.rightPanel?.width || defaults.rightPanelWidth,
-        rightPanelComponent: config.rightPanel?.component || defaults.rightPanelComponent,
-      };
-    } catch (error) {
-      console.error("Failed to parse space uiConfig:", error);
-      return defaults;
-    }
-  }, [activeSpace]);
+  const uiConfig = useParsedUiConfig();
+  return useMemo(
+    () => ({
+      mainMarginLeft: uiConfig.main?.margin || "var(--sidebar-width)",
+      rightPanelWidth: uiConfig.rightPanel?.width || "var(--panel-width)",
+      rightPanelComponent: uiConfig.rightPanel?.component || "config",
+    }),
+    [uiConfig],
+  );
 }

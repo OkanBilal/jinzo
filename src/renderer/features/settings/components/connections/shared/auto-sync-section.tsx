@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Body, Caption, Toggle, Text } from "@/components/ui";
+import { Body, Caption, Toggle, Text, SegmentedTabs } from "@/components/ui";
 import {
   useGetAutomationsQuery,
   useCreateAutomationMutation,
@@ -103,24 +103,16 @@ export function AutoSyncSection({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Caption>Every</Caption>
-            <div className="inline-flex rounded-xl border border-primary-200/50 dark:border-primary-800/40 overflow-hidden">
-              {INTERVAL_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  disabled={!isEnabled}
-                  onClick={() => handleIntervalChange(opt.value)}
-                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                    !isEnabled
-                      ? "bg-primary-100 dark:bg-primary-900 text-primary-400 dark:text-primary-600 cursor-not-allowed opacity-50"
-                      : interval === opt.value
-                        ? "bg-primary-900 dark:bg-primary-200 text-primary dark:text-primary-900 cursor-pointer"
-                        : "bg-primary dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-800 cursor-pointer"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+            <SegmentedTabs
+              value={String(interval)}
+              onChange={(v) => handleIntervalChange(Number(v))}
+              options={INTERVAL_OPTIONS.map((o) => ({
+                value: String(o.value),
+                label: o.label,
+              }))}
+              variant="bordered"
+              disabled={!isEnabled}
+            />
           </div>
           {syncAutomation?.lastRunAt && (
             <Caption className="text-primary-500">

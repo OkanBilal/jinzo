@@ -2,66 +2,38 @@ import { useMemo } from "react";
 import { useActiveSpace } from "./use-active-space";
 import { useDarkMode } from "./use-dark-mode";
 import { getDefaultBackground } from "@/lib/theme";
+import { parseThemeConfig } from "@/lib/parse-theme-config";
 
 export interface ThemeConfig {
   backgroundColor?: string;
 }
 
-export interface StoredThemeConfig {
-  backgroundColor?: string; // Legacy single color
-  lightBackground?: string; // Light mode background
-  darkBackground?: string; // Dark mode background
-  lightUserMessageBackground?: string; // Light mode user message background
-  darkUserMessageBackground?: string; // Dark mode user message background
-  // Nested format from predefined spaces
-  light?: { value: string; preview?: string };
-  dark?: { value: string; preview?: string };
-}
-
 /**
- * Hook to get theme configuration from active space's themeConfig
- * Automatically switches between light/dark variants based on app theme
- * @returns {ThemeConfig} Theme configuration object
+ * Hook to get theme configuration from active space's themeConfig.
+ * Automatically switches between light/dark variants based on app theme.
  */
 export function useTheme(): ThemeConfig {
   const { activeSpace } = useActiveSpace();
   const { darkMode } = useDarkMode();
+  const raw = activeSpace?.themeConfig ?? null;
 
-  const themeConfig = useMemo(() => {
-    const defaultConfig: ThemeConfig = {
-      backgroundColor: getDefaultBackground(darkMode),
-    };
+  return useMemo(() => {
+    const defaultBg = getDefaultBackground(darkMode);
+    const config = parseThemeConfig(raw);
 
-    if (activeSpace?.themeConfig) {
-      try {
-        const config: StoredThemeConfig = JSON.parse(activeSpace.themeConfig);
-
-        // Determine background color
-        let backgroundColor = defaultConfig.backgroundColor;
-        if (config.lightBackground && config.darkBackground) {
-          backgroundColor = darkMode
-            ? config.darkBackground
-            : config.lightBackground;
-        } else if (config.light?.value && config.dark?.value) {
-          // Handle nested format: { light: { value }, dark: { value } }
-          backgroundColor = darkMode
-            ? config.dark.value
-            : config.light.value;
-        } else if (config.backgroundColor) {
-          backgroundColor = config.backgroundColor;
-        }
-
-        return {
-          backgroundColor,
-        };
-      } catch (error) {
-        console.error("Failed to parse space themeConfig:", error);
-        return defaultConfig;
-      }
+    if (config.lightBackground && config.darkBackground) {
+      return {
+        backgroundColor: darkMode ? config.darkBackground : config.lightBackground,
+      };
     }
-
-    return defaultConfig;
-  }, [activeSpace, darkMode]);
-
-  return themeConfig;
+    if (config.light?.value && config.dark?.value) {
+      return {
+        backgroundColor: darkMode ? config.dark.value : config.light.value,
+      };
+    }
+    if (config.backgroundColor) {
+      return { backgroundColor: config.backgroundColor };
+    }
+    return { backgroundColor: defaultBg };
+  }, [raw, darkMode]);
 }

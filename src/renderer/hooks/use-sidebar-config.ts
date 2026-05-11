@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useActiveSpace } from "./use-active-space";
+import { useParsedUiConfig } from "./use-parsed-ui-config";
 
 export type SidebarItemType = "workspace";
 
@@ -11,35 +11,14 @@ export interface SidebarConfig {
 }
 
 export function useSidebarConfig(): SidebarConfig {
-  const { activeSpace } = useActiveSpace();
-
-  const sidebarConfig = useMemo(() => {
-    const defaultConfig: SidebarConfig = {
-      width: "var(--sidebar-width)",
-      title: "Workspaces",
-      itemType: "workspace",
-      defaultRoute: "/claude",
-    };
-
-    if (activeSpace?.uiConfig) {
-      try {
-        const config = JSON.parse(activeSpace.uiConfig);
-        return {
-          width: config.sidebar?.width || defaultConfig.width,
-          title: config.sidebar?.title || defaultConfig.title,
-          itemType: (config.sidebar?.itemType ||
-            defaultConfig.itemType) as SidebarItemType,
-          defaultRoute:
-            config.sidebar?.defaultRoute || defaultConfig.defaultRoute,
-        };
-      } catch (error) {
-        console.error("Failed to parse space uiConfig:", error);
-        return defaultConfig;
-      }
-    }
-
-    return defaultConfig;
-  }, [activeSpace]);
-
-  return sidebarConfig;
+  const uiConfig = useParsedUiConfig();
+  return useMemo(
+    () => ({
+      width: uiConfig.sidebar?.width || "var(--sidebar-width)",
+      title: uiConfig.sidebar?.title || "Workspaces",
+      itemType: (uiConfig.sidebar?.itemType || "workspace") as SidebarItemType,
+      defaultRoute: uiConfig.sidebar?.defaultRoute || "/claude",
+    }),
+    [uiConfig],
+  );
 }

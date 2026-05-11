@@ -1,20 +1,10 @@
 // Buttons
-export {
-  Button,
-  PrimaryButton,
-  SecondaryButton,
-  SubmitButton,
-  GhostButton,
-  DangerButton,
-  WarningButton,
-  SuccessButton,
-  IconButton,
-  LinkButton,
-  SubtleButton,
-  FrostedButton,
-  BareButton,
-} from "./button";
+export { Button } from "./button";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./button";
+
+// Segmented tabs
+export { SegmentedTabs } from "./segmented-tabs";
+export type { SegmentedTabOption } from "./segmented-tabs";
 
 // Text
 export {

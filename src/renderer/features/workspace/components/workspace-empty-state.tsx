@@ -3,10 +3,11 @@ import type { Workspace } from "../types";
 import { useRouteType } from "@/hooks/use-route-type";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useUpdateSpaceMutation } from "@/lib/redux/api";
-import { solidColors, parseThemeConfig } from "@/lib/space-themes";
+import { solidColors, themeConfigToSwatchIndex } from "@/lib/space-themes";
 import type { RouteType } from "@/lib/route-utils";
 import { ParticleLogoCanvas } from "./particle-logo-canvas";
 import { Mains } from "@/components/ui/icons";
+import { Button } from "@/components/ui";
 import { SpaceThemePicker } from "./space-theme-picker";
 import ClaudeSettings from "@/features/settings/components/claude";
 import CodexSettings from "@/features/settings/components/codex";
@@ -47,7 +48,7 @@ export function WorkspaceEmptyState({
   const { activeSpace } = useActiveSpace();
   const [updateSpace] = useUpdateSpaceMutation();
 
-  const { colorIndex } = parseThemeConfig(activeSpace?.themeConfig || null);
+  const { colorIndex } = themeConfigToSwatchIndex(activeSpace?.themeConfig || null);
 
   const [trackedSpaceId, setTrackedSpaceId] = useState<string | undefined>(
     activeSpace?.id,
@@ -71,10 +72,9 @@ export function WorkspaceEmptyState({
 
     return (
       <div className="flex flex-col items-center py-2 text-center shrink-0 w-full max-w-200">
-        <button
-          type="button"
+        <Button
+          variant="bare"
           onClick={onToggleCustomize}
-          className="appearance-none bg-transparent border-0 p-0 cursor-pointer focus:outline-none"
           aria-label={
             isCustomizing ? "Hide space customizer" : "Customize space"
           }
@@ -84,7 +84,7 @@ export function WorkspaceEmptyState({
             className="h-16 w-auto shrink-0 text-primary-200 dark:text-primary-800 hover:text-primary-600 dark:hover:text-primary-300 hover:scale-105 transition-all duration-300"
             aria-hidden
           />
-        </button>
+        </Button>
 
         <div
           className="grid w-full transition-[grid-template-rows,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0.24,1)]"

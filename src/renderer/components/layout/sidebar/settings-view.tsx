@@ -87,12 +87,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                 const parsed = project.icon ? parseIcon(project.icon) : null;
                 const initial = (project.name?.[0] ?? "P").toUpperCase();
                 let iconContent: React.ReactNode;
-                if (
-                  parsed &&
-                  (parsed.type === "icon" ||
-                    parsed.type === "copilot-animate" ||
-                    parsed.type === "claude-animate")
-                ) {
+                if (parsed && parsed.type === "icon") {
                   const IconComp = parsed.value as IconComponent;
                   iconContent = <IconComp className="size-4" />;
                 } else if (parsed && parsed.type === "emoji") {

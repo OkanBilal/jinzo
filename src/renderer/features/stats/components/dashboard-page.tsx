@@ -1,4 +1,4 @@
-import { useState, useRef, useLayoutEffect, useCallback } from "react";
+import { useState } from "react";
 import { useGetDashboardQuery } from "@/lib/redux/api";
 import type { ProviderFilter } from "@/lib/redux/api";
 import SummaryCards from "./summary-cards";
@@ -7,7 +7,7 @@ import HourHeatmap from "./hour-heatmap";
 import CostByModelChart from "./cost-by-model-chart";
 import ToolUsageChart from "./tool-usage-chart";
 import RecentSessionsList from "./recent-sessions-list";
-import { Heading2 } from "@/components/ui";
+import { Heading2, SegmentedTabs } from "@/components/ui";
 import SuccessRateChart from "./success-rate-chart";
 import { PROVIDER_IDS } from "../../../../main/modules/providers/provider-ids";
 
@@ -22,28 +22,6 @@ const TABS: { id: ProviderFilter; label: string }[] = [
 export default function DashboardPage() {
   const [filter, setFilter] = useState<ProviderFilter>("all");
   const { data, isLoading, isError } = useGetDashboardQuery(filter);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
-
-  const updateIndicator = useCallback(() => {
-    const container = containerRef.current;
-    const activeTab = tabRefs.current.get(filter);
-    if (container && activeTab) {
-      const containerRect = container.getBoundingClientRect();
-      const tabRect = activeTab.getBoundingClientRect();
-      setIndicator({
-        left: tabRect.left - containerRect.left,
-        width: tabRect.width,
-      });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, data]);
-
-  useLayoutEffect(() => {
-    updateIndicator();
-  }, [updateIndicator]);
 
   if (isLoading) {
     return (
@@ -73,35 +51,11 @@ export default function DashboardPage() {
     <div className="space-y-4 pb-16">
       <div className="flex items-center justify-between mb-8">
         <Heading2>Dashboard</Heading2>
-        <div
-          ref={containerRef}
-          className="relative flex rounded-[10px] bg-primary-200/40 dark:bg-primary-200/5 p-0.5"
-        >
-          <div
-            className="absolute top-0.75 bg-primary dark:bg-primary/10  rounded-lg  transition-all duration-300 ease-in-out"
-            style={{
-              left: indicator.left,
-              width: indicator.width,
-              height: "calc(100% - 5.5px)",
-            }}
-          />
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              ref={(el) => {
-                if (el) tabRefs.current.set(tab.id, el);
-              }}
-              onClick={() => setFilter(tab.id)}
-              className={`relative z-(--z-base) flex-1 text-center px-3 py-1 text-xs font-medium rounded-[10px] transition-colors duration-300 cursor-pointer ${
-                filter === tab.id
-                  ? "text-primary-900 dark:text-primary-100"
-                  : "text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <SegmentedTabs
+          value={filter}
+          onChange={setFilter}
+          options={TABS.map((t) => ({ value: t.id, label: t.label }))}
+        />
       </div>
 
       <SummaryCards summary={data.summary} />

@@ -16,6 +16,7 @@ import {
 } from "@/lib/redux/api";
 import type { PluginInfo } from "@/lib/redux/api";
 import { PROVIDER_IDS } from "../../../../main/modules/providers/provider-ids";
+import { extractErrorMessage } from "@/lib/extract-error-message";
 import {
   Search,
   Clipboard,
@@ -610,7 +611,7 @@ export default function CodexPlugins() {
         await installPlugin({ providerId: PROVIDER_IDS.codex, pluginId }).unwrap();
         toast.success("Plugin installed");
       } catch (err: any) {
-        toast.error(err?.message || "Failed to install plugin");
+        toast.error(extractErrorMessage(err, "Failed to install plugin"));
       } finally {
         setActionInFlight(null);
       }
@@ -625,7 +626,7 @@ export default function CodexPlugins() {
         await uninstallPlugin({ providerId: PROVIDER_IDS.codex, pluginId }).unwrap();
         toast.success("Plugin uninstalled");
       } catch (err: any) {
-        toast.error(err?.message || "Failed to uninstall plugin");
+        toast.error(extractErrorMessage(err, "Failed to uninstall plugin"));
       } finally {
         setActionInFlight(null);
       }
@@ -642,17 +643,9 @@ export default function CodexPlugins() {
   }
 
   if (error) {
-    const errMsg =
-      "message" in (error as any)
-        ? (error as any).message
-        : "error" in (error as any)
-          ? String((error as any).error)
-          : "data" in (error as any)
-            ? String((error as any).data)
-            : "Unknown error";
     return (
       <div>
-        <Muted>Failed to load plugins: {errMsg}</Muted>
+        <Muted>Failed to load plugins: {extractErrorMessage(error, "Unknown error")}</Muted>
       </div>
     );
   }

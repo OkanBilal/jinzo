@@ -13,6 +13,7 @@ import {
   useUpdateProviderMutation,
 } from "@/lib/redux/api";
 import { getSpaceDefaultRoute } from "@/lib/route-utils";
+import { extractErrorMessage } from "@/lib/extract-error-message";
 
 type ProviderData = ReturnType<typeof useGetProviderByIdQuery>["data"];
 
@@ -48,7 +49,7 @@ export function useProviderSettings<TConfig extends object = Record<string, unkn
       }).unwrap();
       return true;
     } catch (err: any) {
-      toast.error(err?.message || "Failed to update setting");
+      toast.error(extractErrorMessage(err, "Failed to update setting"));
       return false;
     }
   };
@@ -71,7 +72,7 @@ export function useProviderSettings<TConfig extends object = Record<string, unkn
         toast.success("Space hidden");
       }
     } catch (err: any) {
-      toast.error(err?.message || "Failed to update space visibility");
+      toast.error(extractErrorMessage(err, "Failed to update space visibility"));
     }
   };
 

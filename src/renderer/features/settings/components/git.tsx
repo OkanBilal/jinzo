@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Toggle, Textarea, toast } from "@/components/ui";
+import { extractErrorMessage } from "@/lib/extract-error-message";
 import {
   SettingsPageShell,
   SettingsSection,
@@ -36,7 +37,7 @@ export default function GitSettings() {
           : "Worktrees disabled — new projects will use the repo directly",
       );
     } catch (err: any) {
-      toast.error(err?.message || "Failed to update worktree setting");
+      toast.error(extractErrorMessage(err, "Failed to update worktree setting"));
     }
   };
 
@@ -46,7 +47,7 @@ export default function GitSettings() {
       await setCommitInstructions(localInstructions).unwrap();
       setLocalInstructions(null);
     } catch (err: any) {
-      toast.error(err?.message || "Failed to update commit instructions");
+      toast.error(extractErrorMessage(err, "Failed to update commit instructions"));
     }
   };
 
@@ -56,7 +57,7 @@ export default function GitSettings() {
       await setPrInstructions(localPrInstructions).unwrap();
       setLocalPrInstructions(null);
     } catch (err: any) {
-      toast.error(err?.message || "Failed to update PR instructions");
+      toast.error(extractErrorMessage(err, "Failed to update PR instructions"));
     }
   };
 

@@ -74,6 +74,10 @@ const baseStyles =
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
+      // Default to "button" instead of the native HTML default "submit" — keeps
+      // a stray <Button> inside a future <form> from accidentally submitting it.
+      // Callers that genuinely need submit pass `type="submit"` explicitly.
+      type = "button",
       variant = "bare",
       size = "md",
       isLoading = false,
@@ -105,6 +109,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const buttonElement = (
       <button
         ref={ref}
+        type={type}
         className={cn(
           baseClass,
           variantClass,
@@ -152,75 +157,3 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = "Button";
-
-export const PrimaryButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="primary" {...props} />);
-PrimaryButton.displayName = "PrimaryButton";
-
-export const SecondaryButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="secondary" {...props} />);
-SecondaryButton.displayName = "SecondaryButton";
-
-export const SubmitButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="submit" {...props} />);
-SubmitButton.displayName = "SubmitButton";
-
-export const GhostButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="ghost" {...props} />);
-GhostButton.displayName = "GhostButton";
-
-export const DangerButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="danger" {...props} />);
-DangerButton.displayName = "DangerButton";
-
-export const WarningButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="warning" {...props} />);
-WarningButton.displayName = "WarningButton";
-
-export const SuccessButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="success" {...props} />);
-SuccessButton.displayName = "SuccessButton";
-
-export const IconButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="icon" {...props} />);
-IconButton.displayName = "IconButton";
-
-export const LinkButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="link" {...props} />);
-LinkButton.displayName = "LinkButton";
-
-export const SubtleButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="subtle" {...props} />);
-SubtleButton.displayName = "SubtleButton";
-
-export const FrostedButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="frosted" {...props} />);
-FrostedButton.displayName = "FrostedButton";
-
-export const BareButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="bare" {...props} />);
-BareButton.displayName = "BareButton";

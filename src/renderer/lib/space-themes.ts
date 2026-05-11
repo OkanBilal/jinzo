@@ -1,3 +1,5 @@
+import { parseThemeConfig } from "./parse-theme-config";
+
 export interface ThemeVariant {
   value: string;
   preview: string;
@@ -27,27 +29,28 @@ export const solidColors: ThemeColor[] = [
   { ...solid("#F2D2C7", "#331F18f5"), name: "Light Red" },
 ];
 
-/** Derives solid swatch index from stored `space.themeConfig` (gradients in DB default to 0). */
-export function parseThemeConfig(themeConfig: string | null): { colorIndex: number } {
-  if (!themeConfig) {
+/**
+ * Maps a stored `space.themeConfig` blob back to the index of the
+ * `solidColors` swatch that produced it. Used by space-edit UIs to highlight
+ * the currently-selected colour. Gradients (which aren't in `solidColors`)
+ * fall back to index 0.
+ *
+ * Note: this is the swatch-matching consumer; for the general parsed shape
+ * use `parseThemeConfig` from `@/lib/parse-theme-config`.
+ */
+export function themeConfigToSwatchIndex(
+  themeConfig: string | null,
+): { colorIndex: number } {
+  const parsed = parseThemeConfig(themeConfig);
+  const darkBg = parsed.darkBackground || "";
+  if (darkBg.includes("linear-gradient") || darkBg.includes("gradient")) {
     return { colorIndex: 0 };
   }
-
-  try {
-    const config = JSON.parse(themeConfig) as { darkBackground?: string };
-    const darkBg = config.darkBackground || "";
-    if (darkBg.includes("linear-gradient") || darkBg.includes("gradient")) {
-      return { colorIndex: 0 };
+  for (let i = 0; i < solidColors.length; i++) {
+    if (solidColors[i].dark.value === darkBg) {
+      return { colorIndex: i };
     }
-    for (let i = 0; i < solidColors.length; i++) {
-      if (solidColors[i].dark.value === darkBg) {
-        return { colorIndex: i };
-      }
-    }
-  } catch {
-    // ignore
   }
-
   return { colorIndex: 0 };
 }
 

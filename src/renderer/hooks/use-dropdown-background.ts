@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useActiveSpace } from "./use-active-space";
 import { useDarkMode } from "./use-dark-mode";
 import { getDefaultDropdownBackground } from "@/lib/theme";
+import { parseThemeConfig } from "@/lib/parse-theme-config";
 
 /**
  * Computes the dropdown background color/gradient for the active space.
@@ -13,6 +14,7 @@ export function useDropdownBackground(
 ): string | undefined {
   const { activeSpace } = useActiveSpace();
   const { darkMode } = useDarkMode();
+  const raw = activeSpace?.themeConfig ?? null;
 
   return useMemo(() => {
     if (disabled) return undefined;
@@ -22,16 +24,10 @@ export function useDropdownBackground(
         ? getDefaultDropdownBackground(darkMode)
         : getDefaultDropdownBackground(darkMode, opacity);
 
-    if (!activeSpace?.themeConfig) return fallback();
-
-    try {
-      const cfg = JSON.parse(activeSpace.themeConfig);
-      const bgColor = darkMode ? cfg.darkBackground : cfg.lightBackground;
-      if (!bgColor) return fallback();
-      if (bgColor.startsWith("linear-gradient")) return bgColor;
-      return bgColor.length === 9 ? bgColor.slice(0, 7) : bgColor;
-    } catch {
-      return fallback();
-    }
-  }, [disabled, activeSpace, darkMode, opacity]);
+    const cfg = parseThemeConfig(raw);
+    const bgColor = darkMode ? cfg.darkBackground : cfg.lightBackground;
+    if (!bgColor) return fallback();
+    if (bgColor.startsWith("linear-gradient")) return bgColor;
+    return bgColor.length === 9 ? bgColor.slice(0, 7) : bgColor;
+  }, [disabled, raw, darkMode, opacity]);
 }

@@ -2,7 +2,7 @@ import { useState, useCallback, memo } from "react";
 import type { Space } from "@/lib/redux/api";
 import { useUpdateSpaceMutation } from "@/lib/redux/api";
 import { DropdownMenu, toast } from "@/components/ui";
-import { solidColors, parseThemeConfig } from "@/lib/space-themes";
+import { solidColors, themeConfigToSwatchIndex } from "@/lib/space-themes";
 import SpaceThemeSelector from "./space-theme-selector";
 
 const SpaceContextThemeSection = memo(function SpaceContextThemeSection({
@@ -11,7 +11,7 @@ const SpaceContextThemeSection = memo(function SpaceContextThemeSection({
   space: Space;
 }) {
   const [updateSpace, { isLoading: isSavingTheme }] = useUpdateSpaceMutation();
-  const { colorIndex: initialIndex } = parseThemeConfig(space.themeConfig);
+  const { colorIndex: initialIndex } = themeConfigToSwatchIndex(space.themeConfig);
   const [selectedColorIndex, setSelectedColorIndex] = useState(() => initialIndex);
 
   const handleSelectColor = useCallback(

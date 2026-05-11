@@ -10,11 +10,7 @@ export function ProjectIcon({
 }): ReactNode {
   if (icon) {
     const parsed = parseIcon(icon);
-    if (
-      parsed.type === "icon" ||
-      parsed.type === "copilot-animate" ||
-      parsed.type === "claude-animate"
-    ) {
+    if (parsed.type === "icon") {
       const IconComp = parsed.value as IconComponent;
       return (
         <IconComp className="size-3.5 text-primary-900 dark:text-primary-300" />

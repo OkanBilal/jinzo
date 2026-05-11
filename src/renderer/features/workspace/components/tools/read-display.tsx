@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ArrowUp, Read } from "@/components/ui/icons";
+import { Read } from "@/components/ui/icons";
 import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
 import { FileIconComponent } from "../file-explorer/components/file-icon";
+import { ToolHeader, ToolCollapse } from "./_shared";
 
 export interface ReadParams {
   // Claude params
@@ -42,19 +43,15 @@ export function ReadDisplay({
   })();
 
   return (
-    <div className="">
-      <button
-        onClick={() => hasContent && setIsExpanded(!isExpanded)}
-        className={`group w-full min-w-0 flex items-center gap-1 py-1 text-s font-sans ${hasContent ? "cursor-pointer" : "cursor-default"}`}
+    <div>
+      <ToolHeader
+        icon={<Read className="size-3.5" />}
+        verb="Read"
+        hasDetails={hasContent}
+        isExpanded={isExpanded}
+        onToggle={() => setIsExpanded((v) => !v)}
+        isCompact={isCompact}
       >
-        {!isCompact && (
-          <Read className="size-3.5 shrink-0 text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary" />
-        )}
-        {!isCompact && (
-          <span className="shrink-0 text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
-            Read
-          </span>
-        )}
         <span
           role={fullFilePath ? "link" : undefined}
           title={fullFilePath ? "Open in editor" : undefined}
@@ -81,25 +78,14 @@ export function ReadDisplay({
             ({numLines} lines)
           </span>
         )}
-        {hasContent && (
-          <ArrowUp
-            className={`size-3.5 shrink-0 text-primary-500  opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-          />
-        )}
-      </button>
+      </ToolHeader>
 
       {hasContent && (
-        <div
-          className={`grid transition-all duration-200 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
-        >
-          <div className="min-h-0 overflow-hidden">
-            <div className=" ">
-              <pre className="noscrollbar text-xs font-mono text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
-                {content}
-              </pre>
-            </div>
-          </div>
-        </div>
+        <ToolCollapse isExpanded={isExpanded}>
+          <pre className="noscrollbar text-xs font-mono text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+            {content}
+          </pre>
+        </ToolCollapse>
       )}
     </div>
   );

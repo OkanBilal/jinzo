@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import { ArrowUp, Edit } from "@/components/ui/icons";
+import { Edit } from "@/components/ui/icons";
 import { PatchDiff } from "@pierre/diffs/react";
 import { normalizePatchForPatchDiff } from "../../utils/patch-utils";
 import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
 import { FileIconComponent } from "../file-explorer/components/file-icon";
+import { ToolHeader, ToolCollapse } from "./_shared";
 
 export interface EditParams {
   // Claude params
@@ -54,19 +55,15 @@ export function EditDisplay({
   }, [patchLines, hasDiff, fileName, filePath]);
 
   return (
-    <div className="">
-      <button
-        onClick={() => hasDiff && setIsExpanded(!isExpanded)}
-        className={`group w-full flex items-center gap-1 py-0.5 text-s font-sans ${hasDiff ? "cursor-pointer" : "cursor-default"}`}
+    <div>
+      <ToolHeader
+        icon={<Edit className="size-3.5" />}
+        verb="Edited"
+        hasDetails={hasDiff}
+        isExpanded={isExpanded}
+        onToggle={() => setIsExpanded((v) => !v)}
+        isCompact={isCompact}
       >
-        {!isCompact && (
-          <Edit className="size-3.5 text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary" />
-        )}
-        {!isCompact && (
-          <span className="text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
-            Edited
-          </span>
-        )}
         <span
           role={filePath ? "link" : undefined}
           title={filePath ? "Open in editor" : undefined}
@@ -99,39 +96,33 @@ export function EditDisplay({
             )}
           </span>
         )}
-        {hasDiff && (
-          <ArrowUp
-            className={`size-3.5 shrink-0 text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-          />
-        )}
-      </button>
+      </ToolHeader>
 
       {hasDiff && (
-        <div
-          className={`grid transition-all duration-200 rounded-md border border-primary-200/50 dark:border-primary-700/30 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+        <ToolCollapse
+          isExpanded={isExpanded}
+          className="rounded-md border border-primary-200/50 dark:border-primary-700/30"
         >
-          <div className="min-h-0 overflow-hidden">
-            <div className=" max-h-80 overflow-y-auto noscrollbar p-0.25">
-              <PatchDiff
-                patch={unifiedDiff}
-                style={
-                  {
-                    "--diffs-font-size": "12px",
-                    "--diffs-font-family": "'Geist Mono', monospace",
-                  } as React.CSSProperties
-                }
-                options={{
-                  theme: isDarkMode ? "pierre-dark" : "pierre-light",
-                  themeType: isDarkMode ? "dark" : "light",
-                  diffStyle: "unified",
-                  overflow: "wrap",
-                  disableFileHeader: true,
-                  unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper], [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"}); background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
-                }}
-              />
-            </div>
+          <div className="max-h-80 overflow-y-auto noscrollbar p-0.25">
+            <PatchDiff
+              patch={unifiedDiff}
+              style={
+                {
+                  "--diffs-font-size": "12px",
+                  "--diffs-font-family": "'Geist Mono', monospace",
+                } as React.CSSProperties
+              }
+              options={{
+                theme: isDarkMode ? "pierre-dark" : "pierre-light",
+                themeType: isDarkMode ? "dark" : "light",
+                diffStyle: "unified",
+                overflow: "wrap",
+                disableFileHeader: true,
+                unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper], [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"}); background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
+              }}
+            />
           </div>
-        </div>
+        </ToolCollapse>
       )}
     </div>
   );

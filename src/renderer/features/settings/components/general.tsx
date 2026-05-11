@@ -49,7 +49,7 @@ function UpdateButton({
       );
     case "downloaded":
       return (
-        <Button type="button" variant="submit" size="md" onClick={onInstall}>
+        <Button type="button" variant="submit" onClick={onInstall}>
           Restart &amp; Update
         </Button>
       );
@@ -59,7 +59,7 @@ function UpdateButton({
           <span className="text-xs text-red-400 dark:text-red-400/80 leading-relaxed text-right line-clamp-2 max-w-48">
             {state.error}
           </span>
-          <Button type="button" variant="ghost" size="md" onClick={onCheck}>
+          <Button type="button" variant="ghost" onClick={onCheck}>
             Retry
           </Button>
         </div>
@@ -70,7 +70,7 @@ function UpdateButton({
           <span className="text-xs text-primary-500 dark:text-primary-400">
             Up to date
           </span>
-          <Button type="button" variant="ghost" size="md" onClick={onCheck}>
+          <Button type="button" variant="ghost" onClick={onCheck}>
             Check Again
           </Button>
         </div>
@@ -82,7 +82,6 @@ function UpdateButton({
             className="flex"
             type="button"
             variant="primary"
-            size="md"
             onClick={onCheck}
           >
             <Refresh className="w-4 h-4 mr-1" />

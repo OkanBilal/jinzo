@@ -118,7 +118,6 @@ export default function CloneRepoModal({
           <Button
             className="flex-1"
             variant="secondary"
-            size="md"
             onClick={onClose}
             disabled={isCloning}
           >
@@ -127,7 +126,6 @@ export default function CloneRepoModal({
           <Button
             className="flex-1 "
             variant="primary"
-            size="md"
             onClick={handleSubmit}
             disabled={isCloning || !url.trim() || !clonePath.trim()}
           >

@@ -1,30 +1,17 @@
 import type { ThemeVariant } from "./space-themes";
+import type { ParsedUiConfig } from "./parse-ui-config";
+
 export interface PredefinedSpaceTheme {
   light: ThemeVariant;
   dark: ThemeVariant;
 }
 
-export interface SidebarConfig {
-  width?: string;
-  title?: string;
-  itemType?: string;
-  defaultRoute?: string;
-}
-
-export interface MainConfig {
-  margin?: string;
-}
-
-export interface RightPanelConfig {
-  width?: string;
-  component?: string;
-}
-
-export interface PredefinedSpaceUIConfig {
-  sidebar?: SidebarConfig;
-  main?: MainConfig;
-  rightPanel?: RightPanelConfig;
-}
+/**
+ * Predefined spaces share the wire shape with the runtime parse result —
+ * see `ParsedUiConfig` in `parse-ui-config.ts`. The alias keeps callers'
+ * intent ("this is a seed value") clear without duplicating the type.
+ */
+export type PredefinedSpaceUIConfig = ParsedUiConfig;
 
 export interface PredefinedSpace {
   id: string;

@@ -9,27 +9,17 @@ export function useSettingsNavigation() {
   const { activeSpace } = useActiveSpace();
   const sidebarConfig = useSidebarConfig();
 
-  const isOnSettings = location.pathname.startsWith("/settings");
-
-  const [isSettingsOpen, setIsSettingsOpen] = useState(isOnSettings);
+  // Derived directly from the URL — no local mirror state needed. Avoids the
+  // setState-during-render dance the previous version used to keep them in sync.
+  const isSettingsOpen = location.pathname.startsWith("/settings");
   const [previousPath, setPreviousPath] = useState<string | null>(null);
-
-  // Sync state when route changes externally (e.g. navigate from workspace dropdown)
-  if (isOnSettings && !isSettingsOpen) {
-    setIsSettingsOpen(true);
-  } else if (!isOnSettings && isSettingsOpen) {
-    setIsSettingsOpen(false);
-  }
 
   const handleOpenSettings = () => {
     setPreviousPath(location.pathname + location.search);
-    setIsSettingsOpen(true);
     navigate("/settings?section=general");
   };
 
   const handleCloseSettings = () => {
-    setIsSettingsOpen(false);
-
     // If previousPath belongs to a space that's now archived, go to active space's default route
     if (previousPath) {
       const belongsToArchivedSpace =

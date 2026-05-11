@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { toast, Button, Input, Textarea } from "@/components/ui";
 import { useGetAccountQuery, useUpdateAccountMutation } from "@/lib/redux/api";
+import { extractErrorMessage } from "@/lib/extract-error-message";
 import {
   SettingsPageShell,
   SettingsSection,
@@ -101,9 +102,8 @@ function PersonalizationForm({ initialValues, lastSavedAt, saving, loading, onSu
         setIsDirty(false);
         toast.success("Personalization updated");
       }
-    } catch (err: any) {
-      const message = err?.data?.error || err?.message || "A problem occurred while saving";
-      toast.error(message);
+    } catch (err) {
+      toast.error(extractErrorMessage(err, "A problem occurred while saving"));
     }
   };
 
