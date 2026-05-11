@@ -8,6 +8,7 @@ import {
 import { ArrowUp, Close } from "@/components/ui/icons";
 import { Button, toast } from "@/components/ui";
 import { FileIconComponent } from "./file-explorer/components/file-icon";
+import { parseFileDiffSegment, parsePerFileStats } from "../utils/parse-diff";
 
 // DiffViewer pulls in `@pierre/diffs` (~hundreds of KB + heavy syntax parser).
 // Defer the bundle until the summary bar is actually opened + a file picked.
@@ -20,37 +21,6 @@ interface DiffSummaryBarProps {
   rootPath: string;
   isRunning: boolean;
   lastCompletedRunId?: string | null;
-}
-
-function parsePerFileStats(
-  fullDiff: string,
-): Record<string, { ins: number; del: number }> {
-  const stats: Record<string, { ins: number; del: number }> = {};
-  const fileSections = fullDiff.split(/(?=diff --git )/);
-  for (const section of fileSections) {
-    const headerMatch = section.match(/^diff --git a\/(.+?) b\//);
-    if (!headerMatch) continue;
-    const filePath = headerMatch[1];
-    let ins = 0;
-    let del = 0;
-    const lines = section.split("\n");
-    for (const line of lines) {
-      if (line.startsWith("+++") || line.startsWith("---")) continue;
-      if (line.startsWith("+")) ins++;
-      else if (line.startsWith("-")) del++;
-    }
-    stats[filePath] = { ins, del };
-  }
-  return stats;
-}
-
-function parseFileDiffSegment(filePath: string, fullDiff: string): string {
-  const escapedPath = filePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(
-    `(?:^|\\n)diff --git a\\/${escapedPath} b\\/${escapedPath}[\\s\\S]*?(?=\\ndiff --git|$)`,
-  );
-  const match = fullDiff.match(pattern);
-  return match ? match[0].trim() : "";
 }
 
 function getTotalStats(diff: WorkspaceDiff | null | undefined) {

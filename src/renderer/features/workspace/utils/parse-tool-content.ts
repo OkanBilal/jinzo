@@ -1,8 +1,10 @@
-export function parseToolContent(content: string): {
+export interface ParsedToolContent {
   toolName: string;
   params: Record<string, unknown> | null;
   summary: string;
-} {
+}
+
+export function parseToolContent(content: string): ParsedToolContent {
   const colonIdx = content.indexOf(":");
   if (colonIdx === -1) {
     return { toolName: content, params: null, summary: content };

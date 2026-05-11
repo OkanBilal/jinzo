@@ -219,6 +219,24 @@ function SessionTimeBar({
   );
 }
 
+/** Join `content` from every `response` group in [fromIdx, toIdx] (inclusive, clamped). */
+function collectResponseContent(
+  groups: EventGroup[],
+  fromIdx: number,
+  toIdx: number,
+): string {
+  const parts: string[] = [];
+  const end = Math.min(toIdx, groups.length - 1);
+  for (let j = fromIdx; j <= end; j++) {
+    if (groups[j]?.type === "response") {
+      for (const event of groups[j].events) {
+        if (event.content) parts.push(event.content);
+      }
+    }
+  }
+  return parts.join("\n\n");
+}
+
 /**
  * Match backend turns to event group indices.
  * For each completed turn, find the last event group whose endTime falls
@@ -236,21 +254,6 @@ function matchTurnsToGroups(
     // Fallback: no turns from backend yet — compute from events like before
     return computeSessionTimesFromEvents(groups, runStartedAt, isRunCompleted);
   }
-
-  // Build a list of turn boundaries using turn endedAt timestamps
-  // For each completed turn, find the group index closest to endedAt
-  const collectResponseContent = (fromIdx: number, toIdx: number): string => {
-    const parts: string[] = [];
-    const end = Math.min(toIdx, groups.length - 1);
-    for (let j = fromIdx; j <= end; j++) {
-      if (groups[j]?.type === "response") {
-        for (const event of groups[j].events) {
-          if (event.content) parts.push(event.content);
-        }
-      }
-    }
-    return parts.join("\n\n");
-  };
 
   // For each turn, find the group range and place the session bar
   let lastGroupIdx = 0;
@@ -296,7 +299,8 @@ function matchTurnsToGroups(
 
     result.set(bestIdx, {
       elapsed: turn.elapsedMs,
-      responseContent: turn.responseContent || collectResponseContent(lastGroupIdx, bestIdx),
+      responseContent:
+        turn.responseContent || collectResponseContent(groups, lastGroupIdx, bestIdx),
       turn,
     });
 
@@ -320,19 +324,6 @@ function computeSessionTimesFromEvents(
     : null;
   let turnStartIdx = 0;
 
-  const collectResponseContent = (fromIdx: number, toIdx: number): string => {
-    const parts: string[] = [];
-    const end = Math.min(toIdx, groups.length - 1);
-    for (let j = fromIdx; j <= end; j++) {
-      if (groups[j]?.type === "response") {
-        for (const event of groups[j].events) {
-          if (event.content) parts.push(event.content);
-        }
-      }
-    }
-    return parts.join("\n\n");
-  };
-
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i];
     const isUserPrompt =
@@ -353,7 +344,7 @@ function computeSessionTimesFromEvents(
         if (elapsed > 0) {
           result.set(i - 1, {
             elapsed,
-            responseContent: collectResponseContent(turnStartIdx, i - 1),
+            responseContent: collectResponseContent(groups, turnStartIdx, i - 1),
           });
         }
       }
@@ -377,7 +368,7 @@ function computeSessionTimesFromEvents(
       if (elapsed > 0) {
         result.set(lastIdx, {
           elapsed,
-          responseContent: collectResponseContent(turnStartIdx, lastIdx),
+          responseContent: collectResponseContent(groups, turnStartIdx, lastIdx),
         });
       }
     }
@@ -944,15 +935,14 @@ export function WorkspaceEvents({
         ) : (
           <WorkspaceEmptyState workspace={currentWorkspace} />
         )}
-        {/* Top/bottom fade overlays — only shown on run content (chat), not on editor/issue/note tabs */}
-        {hasRunContent && !isEditorActive && !isIssueActive && !isNoteActive && !isNewRunActive && (
-            <div
-              className="absolute top-0 left-0 right-0 h-6 bg-linear-to-b from-primary to-transparent dark:from-primary-950 dark:to-transparent pointer-events-none z-(--z-base)"
-            />
-                )}
-            <div
-              className="absolute bottom-0 left-0 right-0 h-6 bg-linear-to-t from-primary to-transparent dark:from-primary-950 dark:to-transparent pointer-events-none"
-            />
+        {/* Top/bottom fade overlays — only shown on run content (chat), not on editor/issue/note tabs.
+            `hasRunContent` already excludes editor/issue/signal/note/new-run tabs, so no extra guards needed. */}
+        {hasRunContent && (
+          <>
+            <div className="absolute top-0 left-0 right-0 h-6 bg-linear-to-b from-primary to-transparent dark:from-primary-950 dark:to-transparent pointer-events-none z-(--z-base)" />
+            <div className="absolute bottom-0 left-0 right-0 h-6 bg-linear-to-t from-primary to-transparent dark:from-primary-950 dark:to-transparent pointer-events-none" />
+          </>
+        )}
       </div>
     </div>
   );
