@@ -7,7 +7,7 @@ import {
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { Caption } from "@/components/ui";
+import { Button, Caption } from "@/components/ui";
 import { ArrowUp } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
 import type { Workspace as WorkspaceResponse } from "@/lib/redux/api/workspacesApi";
@@ -59,10 +59,10 @@ function WorkspaceGroupSection({
 
   return (
     <div className="mb-1">
-      <button
+      <Button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="group/section w-full flex items-center gap-1.5 px-2 py-1 mb-0.5 rounded-lg cursor-pointer hover:bg-primary/10 dark:hover:bg-primary/5 transition-colors"
+        className="group/section w-full flex items-center gap-1.5 px-2 py-1 mb-0.5 rounded-lg cursor-pointer hover:bg-primary/50 dark:hover:bg-primary/5 transition-colors"
       >
         {group.icon && <span className="shrink-0 text-xs">{group.icon}</span>}
         <span className="text-xs font-medium text-primary-900 dark:text-primary-200 truncate">
@@ -78,7 +78,7 @@ function WorkspaceGroupSection({
             }`}
           />
         </div>
-      </button>
+      </Button>
       <div
         className={`grid transition-[grid-template-rows] duration-300 ease-out ${
           expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"

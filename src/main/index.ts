@@ -404,6 +404,7 @@ const APP_SEARCH_DIRS = [
   "/Applications/Utilities",
   "/System/Applications",
   "/System/Applications/Utilities",
+  "/System/Library/CoreServices",
   path.join(app.getPath("home"), "Applications"),
 ];
 
