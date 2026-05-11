@@ -172,6 +172,8 @@ export function useWorkspaceRuns(
   const eventsEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const lastCommitCountRef = useRef<number>(0);
+  // Prevents double-toast when push and polling both observe the terminal transition.
+  const finalizedRunIdsRef = useRef<Set<string>>(new Set());
   /** LRU of recently-viewed run IDs (most recent last). */
   const recentRunIdsRef = useRef<string[]>([]);
 
@@ -193,6 +195,7 @@ export function useWorkspaceRuns(
     setRunEvents({});
     setRunTurns({});
     recentRunIdsRef.current = [];
+    finalizedRunIdsRef.current.clear();
   }, []);
 
   /** Wraps async run operations with loading state, account fetch, and error handling */
@@ -328,16 +331,90 @@ export function useWorkspaceRuns(
     })();
   }, [workspaceId, loadWorkspaceRuns, clearState]);
 
-  // Derive the active run's status once per render so the poll effect below
-  // only rebinds its interval when the status actually flips (running →
-  // succeeded/failed/…). Depending on the full `runs` array would tear the
-  // interval down on every poll tick.
+  // Derive the active run's status so the effects below only rebind on actual
+  // status flips, not on every `runs` refetch.
   const activeRunStatus = useMemo(
     () => runs.find((r) => r.id === activeRunId)?.status,
     [runs, activeRunId],
   );
 
-  // Poll for updates when active run is running
+  const finalizeRun = useCallback(async (run: Run) => {
+    if (run.status === "running" || run.status === "queued") return;
+    if (finalizedRunIdsRef.current.has(run.id)) return;
+    finalizedRunIdsRef.current.add(run.id);
+
+    if (run.status === "failed") {
+      const lastError = run.lastError || "Run failed";
+      let isAuthError = /not logged in|not authenticated|gh auth login/i.test(lastError);
+      if (!isAuthError && /exited with code/i.test(lastError)) {
+        const artRes = await window.api.runArtifacts.getByRun(run.id);
+        if (artRes.success && artRes.data) {
+          isAuthError = artRes.data.some(
+            (a: { content: any }) =>
+              /not logged in|not authenticated|gh auth login/i.test(a.content ?? ""),
+          );
+        }
+      }
+      // Regex-based detection is fragile — providers should return a
+      // structured `lastErrorCode: "auth"` so this branch can go away.
+      if (isAuthError) {
+        const isCopilot = /gh auth/i.test(lastError);
+        toast.error(
+          isCopilot
+            ? "GitHub CLI not authenticated — run `gh auth login` in your terminal"
+            : "Not logged in — run `claude login` in your terminal",
+          { duration: 8000 },
+        );
+      } else {
+        toast.error(lastError, { duration: 5000 });
+      }
+    } else if (run.status === "canceled") {
+      toast.error("Run canceled");
+    }
+
+    dispatch(runsApi.util.invalidateTags(["Runs", "WorkspaceDiffs"]));
+    dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
+    dispatch(reviewsApi.util.invalidateTags(["Reviews"]));
+    dispatch(reviewFindingsApi.util.invalidateTags(["ReviewFindings"]));
+  }, [dispatch]);
+
+  // Push subscription: main broadcasts after each persisted event and on
+  // terminal transitions. Debounce refetches to coalesce bursts.
+  useEffect(() => {
+    if (!activeRunId || activeRunStatus !== "running") return;
+
+    let refetchTimer: number | null = null;
+    const scheduleRefetch = () => {
+      if (refetchTimer !== null) return;
+      refetchTimer = window.setTimeout(() => {
+        refetchTimer = null;
+        loadRunDetails(activeRunId);
+      }, 250);
+    };
+
+    const offEvent = window.api.runs.onEventPersisted(({ runId }) => {
+      if (runId === activeRunId) scheduleRefetch();
+    });
+
+    const offStatus = window.api.runs.onStatusChanged(async ({ runId }) => {
+      if (runId !== activeRunId) return;
+      const result = await window.api.runs.getById(activeRunId);
+      if (result.success && result.data) {
+        setRuns((prev) => prev.map((r) => (r.id === activeRunId ? result.data : r)));
+        await finalizeRun(result.data);
+      }
+      void loadRunDetails(activeRunId);
+    });
+
+    return () => {
+      offEvent();
+      offStatus();
+      if (refetchTimer !== null) window.clearTimeout(refetchTimer);
+    };
+  }, [activeRunId, activeRunStatus, loadRunDetails, finalizeRun]);
+
+  // Polling fallback for dropped pushes, stalled adapters, or backgrounded
+  // renderers. 10s keeps IO low since push handles the common case.
   useEffect(() => {
     if (activeRunStatus !== "running") {
       if (pollingRef.current) {
@@ -350,61 +427,27 @@ export function useWorkspaceRuns(
 
     pollingRef.current = setInterval(async () => {
       try {
-        if (activeRunId) {
-          loadRunDetails(activeRunId);
+        if (!activeRunId) return;
+        loadRunDetails(activeRunId);
 
-          const result = await window.api.runs.getById(activeRunId);
-          if (result.success && result.data) {
-            setRuns((prev) =>
-              prev.map((r) => (r.id === activeRunId ? result.data : r)),
-            );
+        const result = await window.api.runs.getById(activeRunId);
+        if (!result.success || !result.data) return;
 
-            if (result.data.status !== "running") {
-              if (pollingRef.current) {
-                clearInterval(pollingRef.current);
-                pollingRef.current = null;
-              }
+        setRuns((prev) =>
+          prev.map((r) => (r.id === activeRunId ? result.data : r)),
+        );
 
-              if (result.data.status === "failed") {
-                const lastError = result.data.lastError || "Run failed";
-
-                // Detect auth error from lastError or run artifacts
-                let isAuthError = /not logged in|not authenticated|gh auth login/i.test(lastError);
-                if (!isAuthError && /exited with code/i.test(lastError)) {
-                  const artRes = await window.api.runArtifacts.getByRun(activeRunId);
-                  if (artRes.success && artRes.data) {
-                    isAuthError = artRes.data.some(
-                      (a: { content: any; }) => /not logged in|not authenticated|gh auth login/i.test(a.content ?? ""),
-                    );
-                  }
-                }
-                // TODO: IMPROVE: This is a very naive way to detect auth errors. We should standardize error reporting from providers to make this more robust.
-                if (isAuthError) {
-                  const isCopilot = /gh auth/i.test(lastError);
-                  toast.error(
-                    isCopilot
-                      ? "GitHub CLI not authenticated — run `gh auth login` in your terminal"
-                      : "Not logged in — run `claude login` in your terminal",
-                    { duration: 8000 },
-                  );
-                } else {
-                  toast.error(lastError, { duration: 5000 });
-                }
-              } else if (result.data.status === "canceled") {
-                toast.error("Run canceled");
-              }
-
-              dispatch(runsApi.util.invalidateTags(["Runs", "WorkspaceDiffs"]));
-              dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
-              dispatch(reviewsApi.util.invalidateTags(["Reviews"]));
-              dispatch(reviewFindingsApi.util.invalidateTags(["ReviewFindings"]));
-            }
+        if (result.data.status !== "running") {
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
           }
+          await finalizeRun(result.data);
         }
       } catch (err) {
         console.error("Polling error:", err);
       }
-    }, 1500);
+    }, 10000);
 
     return () => {
       if (pollingRef.current) {
@@ -413,7 +456,7 @@ export function useWorkspaceRuns(
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeRunId, activeRunStatus, loadRunDetails]);
+  }, [activeRunId, activeRunStatus, loadRunDetails, finalizeRun]);
 
   // Auto-scroll to bottom
   const currentEvents = useMemo(() => {

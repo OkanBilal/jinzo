@@ -1,6 +1,11 @@
 import { ipcMain } from "electron";
 import { fileExplorerController } from "./fileExplorer.controller";
-import type { ReadDirectoryOptions, ReadFileTextOptions, ListDirOptions } from "./fileExplorer.dto";
+import type {
+  ReadDirectoryOptions,
+  ReadFileTextOptions,
+  ListDirOptions,
+  SearchFilesOptions,
+} from "./fileExplorer.dto";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Channel Names
@@ -12,6 +17,7 @@ const CHANNELS = {
   READ_FILE: "fileExplorer:readFile",
   READ_FILE_TEXT: "fileExplorer:readFileText",
   LIST_DIR: "fileExplorer:listDir",
+  SEARCH_FILES: "fileExplorer:searchFiles",
 } as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -47,6 +53,10 @@ export function registerFileExplorerIpc(): void {
 
   ipcMain.handle(CHANNELS.LIST_DIR, async (_, options: ListDirOptions) => {
     return fileExplorerController.listDir(options);
+  });
+
+  ipcMain.handle(CHANNELS.SEARCH_FILES, async (_, options: SearchFilesOptions) => {
+    return fileExplorerController.searchFiles(options);
   });
 }
 

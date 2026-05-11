@@ -5,7 +5,7 @@ import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import { Sparkles } from "@/components/ui/icons";
 import { useDropdownKeyboardNavigation } from "@/features/workspace/hooks/use-dropdown-keyboard-navigation";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
-import type { DirEntry, FileNode, FileTreeResponse } from "@/features/workspace/types/file-explorer";
+import type { DirEntry, FileNode } from "@/features/workspace/types/file-explorer";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { useGetIssuesByProjectQuery } from "@/lib/redux/api";
 import { ProviderIcon } from "./provider-icon";
@@ -62,41 +62,6 @@ function workspaceRelativeDir(fullPath: string, workspacePath?: string): string 
 
 const WORKSPACE_SEARCH_DEBOUNCE_MS = 320;
 const MAX_WORKSPACE_FILE_MATCHES = 150;
-
-function fileNodeToDirEntry(n: FileNode): DirEntry {
-  return {
-    name: n.name,
-    fullPath: n.fullPath,
-    type: "file",
-    hasChildren: false,
-    size: n.size,
-    extension: n.extension,
-  };
-}
-
-function collectWorkspaceSearchMatches(
-  node: FileNode,
-  needle: string,
-  workspacePath: string,
-  out: DirEntry[],
-  max: number,
-): void {
-  if (out.length >= max) return;
-  const lower = needle.toLowerCase();
-  if (node.type === "file") {
-    const rel = workspaceRelativePath(node.fullPath, workspacePath).toLowerCase();
-    if (node.name.toLowerCase().includes(lower) || rel.includes(lower)) {
-      out.push(fileNodeToDirEntry(node));
-    }
-    return;
-  }
-  if (node.children) {
-    for (const c of node.children) {
-      collectWorkspaceSearchMatches(c, needle, workspacePath, out, max);
-      if (out.length >= max) return;
-    }
-  }
-}
 
 function localImageUrl(absPath: string): string {
   return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
@@ -281,19 +246,15 @@ export function UnifiedContextDropdown({
 
     const timeoutId = window.setTimeout(() => {
       window.api.fileExplorer
-        .readDirectory({ rootPath: workspacePath, depth: -1 })
-        .then((response: { success: boolean; data?: FileTreeResponse; error?: string }) => {
+        .searchFiles({
+          rootPath: workspacePath,
+          query: nameFilter,
+          max: MAX_WORKSPACE_FILE_MATCHES,
+        })
+        .then((response: { success: boolean; data?: DirEntry[]; error?: string }) => {
           if (cancelled) return;
-          if (response.success && response.data?.root) {
-            const matches: DirEntry[] = [];
-            collectWorkspaceSearchMatches(
-              response.data.root,
-              nameFilter,
-              workspacePath,
-              matches,
-              MAX_WORKSPACE_FILE_MATCHES,
-            );
-            dispatchFetch({ type: "fetch_success", entries: matches });
+          if (response.success && response.data) {
+            dispatchFetch({ type: "fetch_success", entries: response.data });
           } else {
             dispatchFetch({ type: "fetch_error", error: response.error || "Failed to search workspace" });
           }

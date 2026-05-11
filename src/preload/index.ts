@@ -394,6 +394,19 @@ const api = {
       ipcRenderer.on("runs:ephemeralEvent", listener);
       return () => ipcRenderer.removeListener("runs:ephemeralEvent", listener);
     },
+    // Fired after each persisted run event (log / tool_call / artifact / prompt_suggestion).
+    // Renderer debounces and refetches run details — keeps the UI in sync without polling.
+    onEventPersisted: (callback: (data: { runId: string; ts: number }) => void) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on("runs:eventPersisted", listener);
+      return () => ipcRenderer.removeListener("runs:eventPersisted", listener);
+    },
+    // Fired when a run reaches a terminal status (succeeded / failed / canceled).
+    onStatusChanged: (callback: (data: { runId: string; status: string; ts: number }) => void) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on("runs:statusChanged", listener);
+      return () => ipcRenderer.removeListener("runs:statusChanged", listener);
+    },
   },
   // Reviews operations
   reviews: {
@@ -502,6 +515,13 @@ const api = {
       includeHidden?: boolean;
       excludePatterns?: string[];
     }) => ipcRenderer.invoke("fileExplorer:listDir", options),
+    searchFiles: (options: {
+      rootPath: string;
+      query: string;
+      max?: number;
+      includeHidden?: boolean;
+      excludePatterns?: string[];
+    }) => ipcRenderer.invoke("fileExplorer:searchFiles", options),
   },
   // Git operations
   git: {

@@ -75,6 +75,22 @@ export function releaseAllSleepBlockers(): void {
   }
 }
 
+function broadcastToWindows(channel: string, payload: unknown): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) win.webContents.send(channel, payload);
+  }
+}
+
+// Renderer debounces and refetches run details; a dropped push is recovered
+// by the low-frequency polling fallback in `use-workspace-runs`.
+function broadcastRunUpdate(runId: string): void {
+  broadcastToWindows("runs:eventPersisted", { runId, ts: Date.now() });
+}
+
+function broadcastRunStatusChange(runId: string, status: string): void {
+  broadcastToWindows("runs:statusChanged", { runId, status, ts: Date.now() });
+}
+
 async function sendRunNotification(runId: string, status: string): Promise<void> {
   try {
     const settings = await appSettingsRepo.findById("default");
@@ -890,6 +906,7 @@ export const runsService = {
             console.error(`[RunsService] Cleanup failed for run ${runId}:`, cleanupErr);
           } finally {
             cleanupTurnState(runId);
+            broadcastRunStatusChange(runId, finalStatus);
             sendRunNotification(runId, finalStatus);
             releaseSleepBlocker(runId);
           }
@@ -914,6 +931,7 @@ export const runsService = {
             console.error(`[RunsService] Cleanup failed for run ${runId}:`, cleanupErr);
           } finally {
             cleanupTurnState(runId);
+            broadcastRunStatusChange(runId, "failed");
             sendRunNotification(runId, "failed");
             releaseSleepBlocker(runId);
           }
@@ -1085,6 +1103,7 @@ export const runsService = {
     event: WorkRunEvent,
     pendingToolCalls: Map<string, number>,
   ): Promise<void> {
+    let didPersist = false;
     switch (event.type) {
       case "log": {
         // Store logs as artifacts with kind="log"
@@ -1097,6 +1116,7 @@ export const runsService = {
             ts: event.ts,
           },
         });
+        didPersist = true;
 
         // Auto-generated title from provider (e.g. Codex CLI thread/name/updated)
         const threadTitle = (event.metadata as Record<string, unknown> | undefined)?.threadTitle as string | undefined;
@@ -1121,6 +1141,7 @@ export const runsService = {
             input: event.input,
             startedAt: event.startedAt ? new Date(event.startedAt) : new Date(),
           });
+          didPersist = true;
 
           // Track for later update using toolCallId from metadata if available
           const metadataToolCallId = (
@@ -1169,6 +1190,7 @@ export const runsService = {
               latencyMs,
               metadata: event.metadata,
             });
+            didPersist = true;
           }
           // If no pending call found, skip - don't create duplicate records
           // The start event should always come first
@@ -1178,15 +1200,15 @@ export const runsService = {
 
 
       case "artifact": {
-        // Ephemeral events: push to renderer only, skip DB
+        // Streaming chunks: push to renderer only, skip DB and skip the
+        // persisted-event broadcast.
         if (event.ephemeral) {
-          const payload = { runId, event: { type: event.type, kind: event.kind, content: event.content, metadata: event.metadata, streamId: event.streamId }, ts: Date.now() };
-          for (const win of BrowserWindow.getAllWindows()) {
-            if (!win.isDestroyed()) {
-              win.webContents.send("runs:ephemeralEvent", payload);
-            }
-          }
-          break;
+          broadcastToWindows("runs:ephemeralEvent", {
+            runId,
+            event: { type: event.type, kind: event.kind, content: event.content, metadata: event.metadata, streamId: event.streamId },
+            ts: Date.now(),
+          });
+          return;
         }
 
         await runsRepo.insertArtifact({
@@ -1203,6 +1225,7 @@ export const runsService = {
           contentHash: event.content ? hashContent(event.content) : undefined,
           metadata: event.metadata,
         });
+        didPersist = true;
 
         // Turn tracking: new user-prompt → start new turn
         const artifactKind = (event.metadata as Record<string, unknown> | undefined)?.kind;
@@ -1230,6 +1253,7 @@ export const runsService = {
           content: event.suggestion,
           metadata: { ts: event.ts },
         });
+        didPersist = true;
         break;
       }
 
@@ -1240,6 +1264,8 @@ export const runsService = {
         break;
       }
     }
+
+    if (didPersist) broadcastRunUpdate(runId);
   },
 
   /**
@@ -1509,6 +1535,7 @@ export const runsService = {
           await closeActiveTurn(runId, result.usage);
           await closePendingToolCalls(pendingToolCalls, finalStatus === "succeeded" ? "done" : "error");
           cleanupTurnState(runId);
+          broadcastRunStatusChange(runId, finalStatus);
           sendRunNotification(runId, finalStatus);
           releaseSleepBlocker(runId);
         })
@@ -1531,6 +1558,7 @@ export const runsService = {
           await closeActiveTurn(runId);
           await closePendingToolCalls(pendingToolCalls, "error");
           cleanupTurnState(runId);
+          broadcastRunStatusChange(runId, "failed");
           sendRunNotification(runId, "failed");
           releaseSleepBlocker(runId);
         });
@@ -1724,6 +1752,7 @@ export const runsService = {
           await closeActiveTurn(newRunId, result.usage);
           await closePendingToolCalls(pendingToolCalls, finalStatus === "succeeded" ? "done" : "error");
           cleanupTurnState(newRunId);
+          broadcastRunStatusChange(newRunId, finalStatus);
           sendRunNotification(newRunId, finalStatus);
           releaseSleepBlocker(newRunId);
         })
@@ -1746,6 +1775,7 @@ export const runsService = {
           await closeActiveTurn(newRunId);
           await closePendingToolCalls(pendingToolCalls, "error");
           cleanupTurnState(newRunId);
+          broadcastRunStatusChange(newRunId, "failed");
           sendRunNotification(newRunId, "failed");
           releaseSleepBlocker(newRunId);
         });
@@ -1862,6 +1892,7 @@ export const runsService = {
           console.error(`[RunsService] Cleanup failed for run ${runId}:`, cleanupErr);
         } finally {
           cleanupTurnState(runId);
+          broadcastRunStatusChange(runId, finalStatus);
           sendRunNotification(runId, finalStatus);
           releaseSleepBlocker(runId);
         }
@@ -1886,6 +1917,7 @@ export const runsService = {
           console.error(`[RunsService] Cleanup failed for run ${runId}:`, cleanupErr);
         } finally {
           cleanupTurnState(runId);
+          broadcastRunStatusChange(runId, "failed");
           sendRunNotification(runId, "failed");
           releaseSleepBlocker(runId);
         }

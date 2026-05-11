@@ -1247,24 +1247,25 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           break;
         }
 
-        // Flush agent message buffer before tool events (preserves order).
-        // BUT: codex streams `item/updated` snapshots for the same agentMessage
-        // item while it's still receiving `item/agentMessage/delta` chunks.
-        // If we flushed on those, the running paragraph gets cut into two
-        // bubbles — the head ("The") emits early and the rest ("hook
-        // currently exposes…") becomes a second bubble. So only flush when
-        // the incoming item is something other than the agentMessage we're
-        // currently accumulating.
+        // Only flush the agent message buffer when a COMPETING agentMessage
+        // item starts (different itemId, same type) — that's the only signal
+        // that the previous message is done. Codex runs Plan / Reasoning /
+        // CollabAgent items concurrently with AgentMessage and interleaves
+        // their deltas (see codex-rs/core/tests/suite/items.rs:779-839), so
+        // flushing on any non-own item splits the running paragraph into two
+        // bubbles ("There's a prior" + "commit named …"). The agentMessage's
+        // own `item/completed` and `turn/completed` paths handle the normal
+        // end-of-message flush.
         const rsItem = parentRs;
         const incomingId = (item?.id ?? null) as string | null;
         const incomingType = item?.type as string | undefined;
-        const isOwnAgentMessageUpdate =
+        const isCompetingAgentMessage =
           rsItem?.currentMessageItemId !== null &&
           rsItem?.currentMessageItemId !== undefined &&
-          incomingId === rsItem.currentMessageItemId &&
+          incomingId !== rsItem.currentMessageItemId &&
           (incomingType === "agentMessage" || incomingType === "agent_message");
 
-        if (rsItem && rsItem.agentMessageBuffer.trim() && !isOwnAgentMessageUpdate) {
+        if (rsItem && rsItem.agentMessageBuffer.trim() && isCompetingAgentMessage) {
           events.push({
             type: "artifact",
             kind: "report",
@@ -1780,10 +1781,28 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
 
     switch (item.type) {
       case "agent_message":
-      case "agentMessage":
+      case "agentMessage": {
+        // Deltas accumulate into runState.agentMessageBuffer; flush here on
+        // completion so the message is persisted as a single artifact instead
+        // of waiting for turn/completed (which would let an unrelated next
+        // item arrive first and split ordering).
+        if (phase === "complete" && runId) {
+          const rs = activeRuns.get(runId);
+          if (rs && rs.currentMessageItemId === item.id && rs.agentMessageBuffer.trim()) {
+            events.push({
+              type: "artifact",
+              kind: "report",
+              content: rs.agentMessageBuffer.trim(),
+              metadata: { source: "agent_message", itemId: rs.currentMessageItemId },
+            });
+            rs.agentMessageBuffer = "";
+            rs.currentMessageItemId = null;
+          }
+        }
+        break;
+      }
       case "userMessage":
-        // Agent message text is accumulated via item/agentMessage/delta and emitted at turn/completed
-        // User message is internal — no UI event needed
+        // Internal — no UI event needed.
         break;
 
       case "reasoning": {

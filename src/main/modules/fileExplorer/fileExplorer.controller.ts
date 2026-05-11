@@ -1,5 +1,10 @@
 import { fileExplorerService } from "./fileExplorer.service";
-import type { ReadDirectoryOptions, ReadFileTextOptions, ListDirOptions } from "./fileExplorer.dto";
+import type {
+  ReadDirectoryOptions,
+  ReadFileTextOptions,
+  ListDirOptions,
+  SearchFilesOptions,
+} from "./fileExplorer.dto";
 
 // ─────────────────────────────────────────────────────────────
 // File Explorer Controller
@@ -24,4 +29,7 @@ export const fileExplorerController = {
 
   listDir: (options: ListDirOptions) =>
     fileExplorerService.listDir(options),
+
+  searchFiles: (options: SearchFilesOptions) =>
+    fileExplorerService.searchFiles(options),
 };
