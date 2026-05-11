@@ -1,6 +1,6 @@
-import { useState, useReducer, useEffect, useCallback } from "react";
+import { useState } from "react";
 
-import { Body, Muted, WizardModal, useWizard, type WizardStep } from "@/components/ui";
+import { Body, WizardModal, useWizard, type WizardStep } from "@/components/ui";
 import {
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,
@@ -8,16 +8,16 @@ import {
   useLazyGetSelectedAsanaProjectsQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
-  useRevokeConnectionMutation,
   type AsanaProject,
   type SelectedAsanaProject,
 } from "@/lib/redux/api";
 import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
-import { toast } from "@/components/ui";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
 import { CredentialStep } from "../shared/credential-step";
 import { AutoSyncSection } from "../shared/auto-sync-section";
+import { useConnectionModalState } from "../shared/use-connection-modal-state";
+import { ConnectionLoadingStep } from "../shared/connection-loading-step";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -39,8 +39,6 @@ interface AsanaWizardData {
   isFirstConnection: boolean;
   fromManage: boolean;
 }
-
-type StepId = "loading" | "setToken" | "add" | "manage";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step: Set Token
@@ -206,7 +204,6 @@ function SelectProjectsStep({ onComplete }: { onComplete: () => void }) {
       const remainingTime = Math.max(0, minLoadingTime - elapsed);
       await new Promise((resolve) => setTimeout(resolve, remainingTime));
 
-      // If coming from manage step, reload and go back to manage
       if (data.fromManage) {
         const result = await getSelectedProjects("asana").unwrap();
         if (result.success) {
@@ -217,7 +214,6 @@ function SelectProjectsStep({ onComplete }: { onComplete: () => void }) {
         }
         goTo("manage");
       } else {
-        // First time setup - close modal
         onComplete();
       }
     } catch (err: any) {
@@ -278,7 +274,6 @@ function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
 
     try {
       await deleteResource(projectId).unwrap();
-      // Reload current projects
       const result = await getSelectedProjects("asana").unwrap();
       if (result.success) {
         setData({ currentProjects: result.projects });
@@ -353,28 +348,6 @@ function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Loading State
-// ─────────────────────────────────────────────────────────────────────────────
-
-function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
-  const { goTo } = useWizard<AsanaWizardData>();
-
-  useEffect(() => {
-    if (targetStep && targetStep !== "loading") {
-      goTo(targetStep);
-    }
-  }, [targetStep, goTo]);
-
-  return (
-    <div className="flex items-center justify-center py-20">
-      <div className="text-center space-y-3">
-        <Muted className="shine-text">Loading projects...</Muted>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Main Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -384,113 +357,39 @@ export default function AsanaModal({
   isConnected,
   onSuccess,
 }: AsanaModalProps) {
-  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<AsanaWizardData> };
-  const [initState, setInitState] = useReducer(
-    (_: InitState, next: InitState) => next,
-    { initializing: true, targetStep: null, data: {} },
-  );
-
   const [getSelectedProjects] = useLazyGetSelectedAsanaProjectsQuery();
-  const [getConnection] = useLazyGetConnectionQuery();
-  const [revokeConnection, { isLoading: isRevoking }] =
-    useRevokeConnectionMutation();
 
-  // Load initial data when modal opens
-  useEffect(() => {
-    if (!open) {
-      setInitState({ initializing: true, targetStep: null, data: {} });
-      return;
-    }
-
-    const loadInitialData = async () => {
-      const baseData: Partial<AsanaWizardData> = {
+  const { initState, showRevokeConfirm, setShowRevokeConfirm, handleClose, handleRevoke, isRevoking } =
+    useConnectionModalState<AsanaWizardData>({
+      open,
+      onClose,
+      isConnected,
+      provider: "asana",
+      appName: "Asana",
+      baseData: {
         token: "",
         projects: [],
         selectedProjects: new Set(),
         currentProjects: [],
         isFirstConnection: false,
         fromManage: false,
-      };
+      },
+      fetchSelected: async () => {
+        const result = await getSelectedProjects("asana").unwrap();
+        if (!result.success) return null;
+        return { connectionId: result.connectionId, currentProjects: result.projects };
+      },
+    });
 
-      let finalStep: StepId = "setToken";
-      let finalData: Partial<AsanaWizardData> = baseData;
-
-      if (isConnected) {
-        try {
-          const startTime = Date.now();
-          const result = await getSelectedProjects("asana").unwrap();
-
-          if (result.success) {
-            finalData = {
-              ...baseData,
-              connectionId: result.connectionId,
-              currentProjects: result.projects,
-            };
-            finalStep = "manage";
-          } else {
-            const connResult = await getConnection("asana").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentProjects: [],
-              };
-              finalStep = "manage";
-            }
-          }
-
-          // Ensure minimum loading time for smooth UX
-          const elapsed = Date.now() - startTime;
-          const minLoadingTime = 600;
-          const remainingTime = Math.max(0, minLoadingTime - elapsed);
-          await new Promise((resolve) => setTimeout(resolve, remainingTime));
-        } catch (err) {
-          console.error("[loadInitialData] Error:", err);
-          try {
-            const connResult = await getConnection("asana").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentProjects: [],
-              };
-              finalStep = "manage";
-            }
-          } catch {
-            // Keep defaults
-          }
-        }
-      }
-
-      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
-    };
-
-    loadInitialData();
-  }, [open, isConnected, getSelectedProjects, getConnection]);
-
-  const handleClose = useCallback(() => {
-    setShowRevokeConfirm(false);
-    onClose();
-  }, [onClose]);
-
-  const handleRevoke = async () => {
-    try {
-      await revokeConnection("asana").unwrap();
-      setShowRevokeConfirm(false);
-      handleClose();
-    } catch (err) {
-      console.error("[handleRevoke] Error:", err);
-      setShowRevokeConfirm(false);
-      toast.error("Failed to revoke Asana access");
-    }
-  };
-
-  // Define wizard steps
   const steps: WizardStep<AsanaWizardData>[] = [
     {
       id: "loading",
-      render: () => <LoadingStep targetStep={initState.targetStep} />,
+      render: () => (
+        <ConnectionLoadingStep
+          targetStep={initState.targetStep}
+          message="Loading projects..."
+        />
+      ),
     },
     {
       id: "setToken",
@@ -502,11 +401,7 @@ export default function AsanaModal({
     },
     {
       id: "manage",
-      render: () => (
-        <ManageProjectsStep
-          onRevoke={() => setShowRevokeConfirm(true)}
-        />
-      ),
+      render: () => <ManageProjectsStep onRevoke={() => setShowRevokeConfirm(true)} />,
     },
   ];
 

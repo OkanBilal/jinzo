@@ -1,6 +1,6 @@
-import { useState, useReducer, useEffect, useCallback } from "react";
+import { useState } from "react";
 
-import { Body, Muted, WizardModal, useWizard, type WizardStep } from "@/components/ui";
+import { Body, WizardModal, useWizard, type WizardStep } from "@/components/ui";
 import {
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,
@@ -8,16 +8,16 @@ import {
   useLazyGetSelectedTrelloBoardsQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
-  useRevokeConnectionMutation,
   type TrelloBoard,
   type SelectedTrelloBoard,
 } from "@/lib/redux/api";
 import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
-import { toast } from "@/components/ui";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
 import { CredentialStep } from "../shared/credential-step";
 import { AutoSyncSection } from "../shared/auto-sync-section";
+import { useConnectionModalState } from "../shared/use-connection-modal-state";
+import { ConnectionLoadingStep } from "../shared/connection-loading-step";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -40,8 +40,6 @@ interface TrelloWizardData {
   isFirstConnection: boolean;
   fromManage: boolean;
 }
-
-type StepId = "loading" | "setToken" | "add" | "manage";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step: Set Token
@@ -368,28 +366,6 @@ function ManageBoardsStep({ onRevoke }: { onRevoke: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Loading State
-// ─────────────────────────────────────────────────────────────────────────────
-
-function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
-  const { goTo } = useWizard<TrelloWizardData>();
-
-  useEffect(() => {
-    if (targetStep && targetStep !== "loading") {
-      goTo(targetStep);
-    }
-  }, [targetStep, goTo]);
-
-  return (
-    <div className="flex items-center justify-center py-20">
-      <div className="text-center space-y-3">
-        <Muted className="shine-text">Loading boards...</Muted>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Main Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -399,27 +375,16 @@ export default function TrelloModal({
   isConnected,
   onSuccess,
 }: TrelloModalProps) {
-  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<TrelloWizardData> };
-  const [initState, setInitState] = useReducer(
-    (_: InitState, next: InitState) => next,
-    { initializing: true, targetStep: null, data: {} },
-  );
-
   const [getSelectedBoards] = useLazyGetSelectedTrelloBoardsQuery();
-  const [getConnection] = useLazyGetConnectionQuery();
-  const [revokeConnection, { isLoading: isRevoking }] =
-    useRevokeConnectionMutation();
 
-  // Load initial data when modal opens
-  useEffect(() => {
-    if (!open) {
-      setInitState({ initializing: true, targetStep: null, data: {} });
-      return;
-    }
-
-    const loadInitialData = async () => {
-      const baseData: Partial<TrelloWizardData> = {
+  const { initState, showRevokeConfirm, setShowRevokeConfirm, handleClose, handleRevoke, isRevoking } =
+    useConnectionModalState<TrelloWizardData>({
+      open,
+      onClose,
+      isConnected,
+      provider: "trello",
+      appName: "Trello",
+      baseData: {
         apiKey: "",
         token: "",
         boards: [],
@@ -427,84 +392,23 @@ export default function TrelloModal({
         currentBoards: [],
         isFirstConnection: false,
         fromManage: false,
-      };
-
-      let finalStep: StepId = "setToken";
-      let finalData: Partial<TrelloWizardData> = baseData;
-
-      if (isConnected) {
-        try {
-          const startTime = Date.now();
-          const result = await getSelectedBoards("trello").unwrap();
-
-          if (result.success) {
-            finalData = {
-              ...baseData,
-              connectionId: result.connectionId,
-              currentBoards: result.boards,
-            };
-            finalStep = "manage";
-          } else {
-            const connResult = await getConnection("trello").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentBoards: [],
-              };
-              finalStep = "manage";
-            }
-          }
-
-          const elapsed = Date.now() - startTime;
-          const minLoadingTime = 600;
-          const remainingTime = Math.max(0, minLoadingTime - elapsed);
-          await new Promise((resolve) => setTimeout(resolve, remainingTime));
-        } catch (err) {
-          console.error("[loadInitialData] Error:", err);
-          try {
-            const connResult = await getConnection("trello").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentBoards: [],
-              };
-              finalStep = "manage";
-            }
-          } catch {
-            // Keep defaults
-          }
-        }
-      }
-
-      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
-    };
-
-    loadInitialData();
-  }, [open, isConnected, getSelectedBoards, getConnection]);
-
-  const handleClose = useCallback(() => {
-    setShowRevokeConfirm(false);
-    onClose();
-  }, [onClose]);
-
-  const handleRevoke = async () => {
-    try {
-      await revokeConnection("trello").unwrap();
-      setShowRevokeConfirm(false);
-      handleClose();
-    } catch (err) {
-      console.error("[handleRevoke] Error:", err);
-      setShowRevokeConfirm(false);
-      toast.error("Failed to revoke Trello access");
-    }
-  };
+      },
+      fetchSelected: async () => {
+        const result = await getSelectedBoards("trello").unwrap();
+        if (!result.success) return null;
+        return { connectionId: result.connectionId, currentBoards: result.boards };
+      },
+    });
 
   const steps: WizardStep<TrelloWizardData>[] = [
     {
       id: "loading",
-      render: () => <LoadingStep targetStep={initState.targetStep} />,
+      render: () => (
+        <ConnectionLoadingStep
+          targetStep={initState.targetStep}
+          message="Loading boards..."
+        />
+      ),
     },
     {
       id: "setToken",
@@ -516,11 +420,7 @@ export default function TrelloModal({
     },
     {
       id: "manage",
-      render: () => (
-        <ManageBoardsStep
-          onRevoke={() => setShowRevokeConfirm(true)}
-        />
-      ),
+      render: () => <ManageBoardsStep onRevoke={() => setShowRevokeConfirm(true)} />,
     },
   ];
 

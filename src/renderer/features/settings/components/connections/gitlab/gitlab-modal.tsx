@@ -1,6 +1,6 @@
-import { useState, useReducer, useEffect, useCallback } from "react";
+import { useState } from "react";
 
-import { Body, Muted, WizardModal, useWizard, type WizardStep } from "@/components/ui";
+import { Body, WizardModal, useWizard, type WizardStep } from "@/components/ui";
 import {
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,
@@ -8,17 +8,17 @@ import {
   useLazyGetSelectedGitLabProjectsQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
-  useRevokeConnectionMutation,
   type GitLabProject,
   type SelectedGitLabProject,
 } from "@/lib/redux/api";
 import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
-import { toast } from "@/components/ui";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
 import { CredentialStep } from "../shared/credential-step";
 import { AutoSyncSection } from "../shared/auto-sync-section";
 import LockIcon from "@/components/ui/icons/lock";
+import { useConnectionModalState } from "../shared/use-connection-modal-state";
+import { ConnectionLoadingStep } from "../shared/connection-loading-step";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -41,8 +41,6 @@ interface GitLabWizardData {
   isFirstConnection: boolean;
   fromManage: boolean;
 }
-
-type StepId = "loading" | "setToken" | "add" | "manage";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step: Set Token
@@ -375,7 +373,11 @@ function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
       revokeButtonLabel="Revoke GitLab Access"
       extraContent={<AutoSyncSection provider="gitlab" providerLabel="GitLab" />}
       renderResourceItem={(resource) => {
-        const visibility = resource.metadata ? (typeof resource.metadata === 'string' ? JSON.parse(resource.metadata) : resource.metadata)?.visibility : null;
+        const visibility = resource.metadata
+          ? (typeof resource.metadata === "string"
+              ? JSON.parse(resource.metadata)
+              : resource.metadata)?.visibility
+          : null;
         return (
           <div className="flex-1">
             <div className="flex items-center gap-2">
@@ -396,28 +398,6 @@ function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Loading State
-// ─────────────────────────────────────────────────────────────────────────────
-
-function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
-  const { goTo } = useWizard<GitLabWizardData>();
-
-  useEffect(() => {
-    if (targetStep && targetStep !== "loading") {
-      goTo(targetStep);
-    }
-  }, [targetStep, goTo]);
-
-  return (
-    <div className="flex items-center justify-center py-20">
-      <div className="text-center space-y-3">
-        <Muted className="shine-text">Loading projects...</Muted>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Main Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -427,26 +407,16 @@ export default function GitLabModal({
   isConnected,
   onSuccess,
 }: GitLabModalProps) {
-  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<GitLabWizardData> };
-  const [initState, setInitState] = useReducer(
-    (_: InitState, next: InitState) => next,
-    { initializing: true, targetStep: null, data: {} },
-  );
-
   const [getSelectedProjects] = useLazyGetSelectedGitLabProjectsQuery();
-  const [getConnection] = useLazyGetConnectionQuery();
-  const [revokeConnection, { isLoading: isRevoking }] =
-    useRevokeConnectionMutation();
 
-  useEffect(() => {
-    if (!open) {
-      setInitState({ initializing: true, targetStep: null, data: {} });
-      return;
-    }
-
-    const loadInitialData = async () => {
-      const baseData: Partial<GitLabWizardData> = {
+  const { initState, showRevokeConfirm, setShowRevokeConfirm, handleClose, handleRevoke, isRevoking } =
+    useConnectionModalState<GitLabWizardData>({
+      open,
+      onClose,
+      isConnected,
+      provider: "gitlab",
+      appName: "GitLab",
+      baseData: {
         token: "",
         domain: "",
         projects: [],
@@ -454,84 +424,23 @@ export default function GitLabModal({
         currentProjects: [],
         isFirstConnection: false,
         fromManage: false,
-      };
-
-      let finalStep: StepId = "setToken";
-      let finalData: Partial<GitLabWizardData> = baseData;
-
-      if (isConnected) {
-        try {
-          const startTime = Date.now();
-          const result = await getSelectedProjects("gitlab").unwrap();
-
-          if (result.success) {
-            finalData = {
-              ...baseData,
-              connectionId: result.connectionId,
-              currentProjects: result.projects,
-            };
-            finalStep = "manage";
-          } else {
-            const connResult = await getConnection("gitlab").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentProjects: [],
-              };
-              finalStep = "manage";
-            }
-          }
-
-          const elapsed = Date.now() - startTime;
-          const minLoadingTime = 600;
-          const remainingTime = Math.max(0, minLoadingTime - elapsed);
-          await new Promise((resolve) => setTimeout(resolve, remainingTime));
-        } catch (err) {
-          console.error("[loadInitialData] Error:", err);
-          try {
-            const connResult = await getConnection("gitlab").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentProjects: [],
-              };
-              finalStep = "manage";
-            }
-          } catch {
-            // Keep defaults
-          }
-        }
-      }
-
-      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
-    };
-
-    loadInitialData();
-  }, [open, isConnected, getSelectedProjects, getConnection]);
-
-  const handleClose = useCallback(() => {
-    setShowRevokeConfirm(false);
-    onClose();
-  }, [onClose]);
-
-  const handleRevoke = async () => {
-    try {
-      await revokeConnection("gitlab").unwrap();
-      setShowRevokeConfirm(false);
-      handleClose();
-    } catch (err) {
-      console.error("[handleRevoke] Error:", err);
-      setShowRevokeConfirm(false);
-      toast.error("Failed to revoke GitLab access");
-    }
-  };
+      },
+      fetchSelected: async () => {
+        const result = await getSelectedProjects("gitlab").unwrap();
+        if (!result.success) return null;
+        return { connectionId: result.connectionId, currentProjects: result.projects };
+      },
+    });
 
   const steps: WizardStep<GitLabWizardData>[] = [
     {
       id: "loading",
-      render: () => <LoadingStep targetStep={initState.targetStep} />,
+      render: () => (
+        <ConnectionLoadingStep
+          targetStep={initState.targetStep}
+          message="Loading projects..."
+        />
+      ),
     },
     {
       id: "setToken",
@@ -543,9 +452,7 @@ export default function GitLabModal({
     },
     {
       id: "manage",
-      render: () => (
-        <ManageProjectsStep onRevoke={() => setShowRevokeConfirm(true)} />
-      ),
+      render: () => <ManageProjectsStep onRevoke={() => setShowRevokeConfirm(true)} />,
     },
   ];
 

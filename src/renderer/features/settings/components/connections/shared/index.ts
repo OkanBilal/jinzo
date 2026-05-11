@@ -7,3 +7,5 @@ export { ManageResourcesStep } from "./manage-resources-step";
 export { SelectResourcesStep } from "./select-resources-step";
 export { CredentialStep } from "./credential-step";
 export { useResourceSelection, useConnectionModal } from "./hooks";
+export { useConnectionModalState } from "./use-connection-modal-state";
+export { ConnectionLoadingStep } from "./connection-loading-step";

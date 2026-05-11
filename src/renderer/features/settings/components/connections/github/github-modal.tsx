@@ -1,7 +1,7 @@
-import { useState, useReducer, useEffect, useCallback } from "react";
+import { useState } from "react";
 
 import { Lock } from "@/components/ui/icons";
-import { Body, Muted, WizardModal, useWizard, type WizardStep } from "@/components/ui";
+import { Body, WizardModal, useWizard, type WizardStep } from "@/components/ui";
 import {
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,
@@ -9,16 +9,16 @@ import {
   useLazyGetSelectedReposQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
-  useRevokeConnectionMutation,
   type GitHubRepo,
   type SelectedRepo,
 } from "@/lib/redux/api";
 import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
-import { toast } from "@/components/ui";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
 import { CredentialStep } from "../shared/credential-step";
 import { AutoSyncSection } from "../shared/auto-sync-section";
+import { useConnectionModalState } from "../shared/use-connection-modal-state";
+import { ConnectionLoadingStep } from "../shared/connection-loading-step";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -40,8 +40,6 @@ interface GitHubWizardData {
   isFirstConnection: boolean;
   fromManage: boolean;
 }
-
-type StepId = "loading" | "setToken" | "add" | "manage";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step: Set Token
@@ -207,7 +205,6 @@ function SelectReposStep({ onComplete }: { onComplete: () => void }) {
       const remainingTime = Math.max(0, minLoadingTime - elapsed);
       await new Promise((resolve) => setTimeout(resolve, remainingTime));
 
-      // If coming from manage step, reload and go back to manage
       if (data.fromManage) {
         const result = await getSelectedRepos("github").unwrap();
         if (result.success) {
@@ -218,7 +215,6 @@ function SelectReposStep({ onComplete }: { onComplete: () => void }) {
         }
         goTo("manage");
       } else {
-        // First time setup - close modal
         onComplete();
       }
     } catch (err: any) {
@@ -279,7 +275,6 @@ function ManageReposStep({ onRevoke }: { onRevoke: () => void }) {
 
     try {
       await deleteResource(repoId).unwrap();
-      // Reload current repos
       const result = await getSelectedRepos("github").unwrap();
       if (result.success) {
         setData({ currentRepos: result.repos });
@@ -351,28 +346,6 @@ function ManageReposStep({ onRevoke }: { onRevoke: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Loading State
-// ─────────────────────────────────────────────────────────────────────────────
-
-function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
-  const { goTo } = useWizard<GitHubWizardData>();
-
-  useEffect(() => {
-    if (targetStep && targetStep !== "loading") {
-      goTo(targetStep);
-    }
-  }, [targetStep, goTo]);
-
-  return (
-    <div className="flex items-center justify-center  py-20">
-      <div className="text-center space-y-3">
-        <Muted className="shine-text">Loading repositories...</Muted>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Main Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -382,115 +355,39 @@ export default function GitHubModal({
   isConnected,
   onSuccess,
 }: GitHubModalProps) {
-  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<GitHubWizardData> };
-  const [initState, setInitState] = useReducer(
-    (_: InitState, next: InitState) => next,
-    { initializing: true, targetStep: null, data: {} },
-  );
-
   const [getSelectedRepos] = useLazyGetSelectedReposQuery();
-  const [getConnection] = useLazyGetConnectionQuery();
-  const [revokeConnection, { isLoading: isRevoking }] =
-    useRevokeConnectionMutation();
 
-  // Load initial data when modal opens
-  useEffect(() => {
-    if (!open) {
-      setInitState({ initializing: true, targetStep: null, data: {} });
-      return;
-    }
-
-    const loadInitialData = async () => {
-      const baseData: Partial<GitHubWizardData> = {
+  const { initState, showRevokeConfirm, setShowRevokeConfirm, handleClose, handleRevoke, isRevoking } =
+    useConnectionModalState<GitHubWizardData>({
+      open,
+      onClose,
+      isConnected,
+      provider: "github",
+      appName: "GitHub",
+      baseData: {
         token: "",
         repos: [],
         selectedRepos: new Set(),
         currentRepos: [],
         isFirstConnection: false,
         fromManage: false,
-      };
+      },
+      fetchSelected: async () => {
+        const result = await getSelectedRepos("github").unwrap();
+        if (!result.success) return null;
+        return { connectionId: result.connectionId, currentRepos: result.repos };
+      },
+    });
 
-      // Track what we'll set at the end
-      let finalStep: StepId = "setToken";
-      let finalData: Partial<GitHubWizardData> = baseData;
-
-      if (isConnected) {
-        try {
-          const startTime = Date.now();
-          const result = await getSelectedRepos("github").unwrap();
-
-          if (result.success) {
-            finalData = {
-              ...baseData,
-              connectionId: result.connectionId,
-              currentRepos: result.repos,
-            };
-            finalStep = "manage";
-          } else {
-            const connResult = await getConnection("github").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentRepos: [],
-              };
-              finalStep = "manage";
-            }
-          }
-
-          // Ensure minimum loading time for smooth UX
-          const elapsed = Date.now() - startTime;
-          const minLoadingTime = 600;
-          const remainingTime = Math.max(0, minLoadingTime - elapsed);
-          await new Promise((resolve) => setTimeout(resolve, remainingTime));
-        } catch (err) {
-          console.error("[loadInitialData] Error:", err);
-          try {
-            const connResult = await getConnection("github").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentRepos: [],
-              };
-              finalStep = "manage";
-            }
-          } catch {
-            // Keep defaults
-          }
-        }
-      }
-
-      // Single final state update
-      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
-    };
-
-    loadInitialData();
-  }, [open, isConnected, getSelectedRepos, getConnection]);
-
-  const handleClose = useCallback(() => {
-    setShowRevokeConfirm(false);
-    onClose();
-  }, [onClose]);
-
-  const handleRevoke = async () => {
-    try {
-      await revokeConnection("github").unwrap();
-      setShowRevokeConfirm(false);
-      handleClose();
-    } catch (err) {
-      console.error("[handleRevoke] Error:", err);
-      setShowRevokeConfirm(false);
-      toast.error("Failed to revoke GitHub access");
-    }
-  };
-
-  // Define wizard steps
   const steps: WizardStep<GitHubWizardData>[] = [
     {
       id: "loading",
-      render: () => <LoadingStep targetStep={initState.targetStep} />,
+      render: () => (
+        <ConnectionLoadingStep
+          targetStep={initState.targetStep}
+          message="Loading repositories..."
+        />
+      ),
     },
     {
       id: "setToken",
@@ -502,11 +399,7 @@ export default function GitHubModal({
     },
     {
       id: "manage",
-      render: () => (
-        <ManageReposStep
-          onRevoke={() => setShowRevokeConfirm(true)}
-        />
-      ),
+      render: () => <ManageReposStep onRevoke={() => setShowRevokeConfirm(true)} />,
     },
   ];
 

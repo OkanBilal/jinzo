@@ -1091,6 +1091,29 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     const events: WorkRunEvent[] = [];
     const p = params as Record<string, unknown> | undefined;
 
+    // [DIAG] Surface every notification so we can see if collab close/wait
+    // events are arriving from codex. Remove once subagent flow is verified.
+    {
+      const item = (p?.item ?? null) as Record<string, unknown> | null;
+      const evtThreadId = (p?.threadId ?? p?.thread_id) as string | undefined;
+      const itemType = item?.type as string | undefined;
+      const itemTool = item?.tool as string | undefined;
+      const itemStatus = item?.status as string | undefined;
+      if (
+        method === "thread/started" ||
+        method === "thread/closed" ||
+        method === "thread/status/changed" ||
+        method === "turn/completed" ||
+        (itemType && (itemType === "collabAgentToolCall" || itemType === "collab_agent_tool_call"))
+      ) {
+        logInfo(
+          `[DIAG] ${method} thread=${evtThreadId ?? "?"} ${
+            itemType ? `item=${itemType} tool=${itemTool ?? "?"} status=${itemStatus ?? "?"}` : ""
+          }`,
+        );
+      }
+    }
+
     switch (method) {
       case "thread/started": {
         const thread = p?.thread as Record<string, unknown> | undefined;
@@ -1130,6 +1153,19 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       }
 
       case "turn/completed": {
+        // Sub-thread (subagent) turn completions stream into the same handler;
+        // they must not flush the parent's agentMessage buffer or count their
+        // usage twice. Only the parent thread's turn/completed advances the run.
+        const tcThreadId = (p?.threadId ?? p?.thread_id) as string | undefined;
+        const tcParentRs = activeRuns.get(runId);
+        if (
+          tcThreadId &&
+          tcParentRs?.threadId &&
+          tcThreadId !== tcParentRs.threadId
+        ) {
+          break;
+        }
+
         trackUsage(runId, p, model);
 
         // Flush any remaining agent message buffer
@@ -2437,6 +2473,20 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         // (v2.rs::TurnStatus). interrupted == user called turn/interrupt, must surface as canceled.
         if (method === "turn/completed") {
           const p = params as Record<string, unknown> | undefined;
+          // Subagent turns stream their own turn/completed into the same handler.
+          // Finalizing on those would mark the run "succeeded" while the parent
+          // thread is still running (the user-visible "çat diye bitti" bug),
+          // so wait for the parent thread's own turn/completed.
+          const tcThreadId = (p?.threadId ?? p?.thread_id) as string | undefined;
+          const tcParentRs = activeRuns.get(runId);
+          if (
+            tcThreadId &&
+            tcParentRs?.threadId &&
+            tcThreadId !== tcParentRs.threadId
+          ) {
+            return;
+          }
+
           const turn = p?.turn as Record<string, unknown> | undefined;
           const status = (turn?.status ?? p?.status) as string | undefined;
 
@@ -3472,8 +3522,8 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           "Generate a concise title (2-5 words) that summarizes what the user wants.",
           "Rules:",
           "- Reply with ONLY the title text, nothing else",
-          "- Use natural wording, e.g. \"fix login redirect\", \"add dark mode\", \"hello greeting\"",
-          "- Do NOT use generic descriptions of the request type, e.g. NOT \"title generation\"",
+          "- Use title case: capitalize the first letter of each word, e.g. \"Fix Login Redirect\", \"Add Dark Mode\", \"Hello Greeting\"",
+          "- Do NOT use generic descriptions of the request type, e.g. NOT \"Title Generation\"",
           "- No quotes, no punctuation at the end, no prefixes",
           "",
           `User message: ${goal}`,

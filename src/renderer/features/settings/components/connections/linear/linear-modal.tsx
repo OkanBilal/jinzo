@@ -1,6 +1,6 @@
-import { useState, useReducer, useEffect, useCallback } from "react";
+import { useState } from "react";
 
-import { Body, Muted, WizardModal, useWizard, type WizardStep } from "@/components/ui";
+import { Body, WizardModal, useWizard, type WizardStep } from "@/components/ui";
 import {
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,
@@ -8,16 +8,16 @@ import {
   useLazyGetSelectedTeamsQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
-  useRevokeConnectionMutation,
   type LinearTeam,
   type SelectedTeam,
 } from "@/lib/redux/api";
 import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
-import { toast } from "@/components/ui";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
 import { CredentialStep } from "../shared/credential-step";
 import { AutoSyncSection } from "../shared/auto-sync-section";
+import { useConnectionModalState } from "../shared/use-connection-modal-state";
+import { ConnectionLoadingStep } from "../shared/connection-loading-step";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -39,8 +39,6 @@ interface LinearWizardData {
   isFirstConnection: boolean;
   fromManage: boolean;
 }
-
-type StepId = "loading" | "setToken" | "add" | "manage";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step: Set Token
@@ -369,28 +367,6 @@ function ManageTeamsStep({ onRevoke }: { onRevoke: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Loading State
-// ─────────────────────────────────────────────────────────────────────────────
-
-function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
-  const { goTo } = useWizard<LinearWizardData>();
-
-  useEffect(() => {
-    if (targetStep && targetStep !== "loading") {
-      goTo(targetStep);
-    }
-  }, [targetStep, goTo]);
-
-  return (
-    <div className="flex items-center justify-center py-20">
-      <div className="text-center space-y-3">
-        <Muted className="shine-text">Loading teams...</Muted>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Main Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -400,110 +376,39 @@ export default function LinearModal({
   isConnected,
   onSuccess,
 }: LinearModalProps) {
-  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<LinearWizardData> };
-  const [initState, setInitState] = useReducer(
-    (_: InitState, next: InitState) => next,
-    { initializing: true, targetStep: null, data: {} },
-  );
-
   const [getSelectedTeams] = useLazyGetSelectedTeamsQuery();
-  const [getConnection] = useLazyGetConnectionQuery();
-  const [revokeConnection, { isLoading: isRevoking }] =
-    useRevokeConnectionMutation();
 
-  useEffect(() => {
-    if (!open) {
-      setInitState({ initializing: true, targetStep: null, data: {} });
-      return;
-    }
-
-    const loadInitialData = async () => {
-      const baseData: Partial<LinearWizardData> = {
+  const { initState, showRevokeConfirm, setShowRevokeConfirm, handleClose, handleRevoke, isRevoking } =
+    useConnectionModalState<LinearWizardData>({
+      open,
+      onClose,
+      isConnected,
+      provider: "linear",
+      appName: "Linear",
+      baseData: {
         apiKey: "",
         teams: [],
         selectedTeams: new Set(),
         currentTeams: [],
         isFirstConnection: false,
         fromManage: false,
-      };
-
-      let finalStep: StepId = "setToken";
-      let finalData: Partial<LinearWizardData> = baseData;
-
-      if (isConnected) {
-        try {
-          const startTime = Date.now();
-          const result = await getSelectedTeams("linear").unwrap();
-
-          if (result.success) {
-            finalData = {
-              ...baseData,
-              connectionId: result.connectionId,
-              currentTeams: result.teams,
-            };
-            finalStep = "manage";
-          } else {
-            const connResult = await getConnection("linear").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentTeams: [],
-              };
-              finalStep = "manage";
-            }
-          }
-
-          const elapsed = Date.now() - startTime;
-          const minLoadingTime = 600;
-          const remainingTime = Math.max(0, minLoadingTime - elapsed);
-          await new Promise((resolve) => setTimeout(resolve, remainingTime));
-        } catch (err) {
-          console.error("[loadInitialData] Error:", err);
-          try {
-            const connResult = await getConnection("linear").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentTeams: [],
-              };
-              finalStep = "manage";
-            }
-          } catch {
-            // Keep defaults
-          }
-        }
-      }
-
-      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
-    };
-
-    loadInitialData();
-  }, [open, isConnected, getSelectedTeams, getConnection]);
-
-  const handleClose = useCallback(() => {
-    setShowRevokeConfirm(false);
-    onClose();
-  }, [onClose]);
-
-  const handleRevoke = async () => {
-    try {
-      await revokeConnection("linear").unwrap();
-      setShowRevokeConfirm(false);
-      handleClose();
-    } catch (err) {
-      console.error("[handleRevoke] Error:", err);
-      setShowRevokeConfirm(false);
-      toast.error("Failed to revoke Linear access");
-    }
-  };
+      },
+      fetchSelected: async () => {
+        const result = await getSelectedTeams("linear").unwrap();
+        if (!result.success) return null;
+        return { connectionId: result.connectionId, currentTeams: result.teams };
+      },
+    });
 
   const steps: WizardStep<LinearWizardData>[] = [
     {
       id: "loading",
-      render: () => <LoadingStep targetStep={initState.targetStep} />,
+      render: () => (
+        <ConnectionLoadingStep
+          targetStep={initState.targetStep}
+          message="Loading teams..."
+        />
+      ),
     },
     {
       id: "setToken",
@@ -515,9 +420,7 @@ export default function LinearModal({
     },
     {
       id: "manage",
-      render: () => (
-        <ManageTeamsStep onRevoke={() => setShowRevokeConfirm(true)} />
-      ),
+      render: () => <ManageTeamsStep onRevoke={() => setShowRevokeConfirm(true)} />,
     },
   ];
 

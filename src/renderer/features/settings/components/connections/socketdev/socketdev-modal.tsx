@@ -1,6 +1,6 @@
-import { useState, useReducer, useEffect, useCallback } from "react";
+import { useState } from "react";
 
-import { Body, Muted, WizardModal, useWizard, type WizardStep } from "@/components/ui";
+import { Body, WizardModal, useWizard, type WizardStep } from "@/components/ui";
 import {
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,
@@ -8,15 +8,15 @@ import {
   useLazyGetSelectedSocketDevOrganizationsQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
-  useRevokeConnectionMutation,
   type SocketDevOrganization,
   type SelectedSocketDevOrganization,
 } from "@/lib/redux/api";
 import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
-import { toast } from "@/components/ui";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
 import { CredentialStep } from "../shared/credential-step";
+import { useConnectionModalState } from "../shared/use-connection-modal-state";
+import { ConnectionLoadingStep } from "../shared/connection-loading-step";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -38,8 +38,6 @@ interface SocketDevWizardData {
   isFirstConnection: boolean;
   fromManage: boolean;
 }
-
-type StepId = "loading" | "setToken" | "add" | "manage";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step: Set Token
@@ -82,10 +80,6 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
       onSuccess?.();
 
       const orgsResult = await getOrganizations(connId).unwrap();
-
-      if (!orgsResult.success) {
-        throw new Error("Failed to fetch organizations");
-      }
 
       if (!orgsResult.success) {
         throw new Error("Failed to fetch organizations");
@@ -348,28 +342,6 @@ function ManageOrgsStep({ onRevoke }: { onRevoke: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Loading State
-// ─────────────────────────────────────────────────────────────────────────────
-
-function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
-  const { goTo } = useWizard<SocketDevWizardData>();
-
-  useEffect(() => {
-    if (targetStep && targetStep !== "loading") {
-      goTo(targetStep);
-    }
-  }, [targetStep, goTo]);
-
-  return (
-    <div className="flex items-center justify-center py-20">
-      <div className="text-center space-y-3">
-        <Muted className="shine-text">Loading organizations...</Muted>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Main Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -379,109 +351,39 @@ export default function SocketDevModal({
   isConnected,
   onSuccess,
 }: SocketDevModalProps) {
-  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<SocketDevWizardData> };
-  const [initState, setInitState] = useReducer(
-    (_: InitState, next: InitState) => next,
-    { initializing: true, targetStep: null, data: {} },
-  );
-
   const [getSelectedOrgs] = useLazyGetSelectedSocketDevOrganizationsQuery();
-  const [getConnection] = useLazyGetConnectionQuery();
-  const [revokeConnection, { isLoading: isRevoking }] =
-    useRevokeConnectionMutation();
 
-  useEffect(() => {
-    if (!open) {
-      setInitState({ initializing: true, targetStep: null, data: {} });
-      return;
-    }
-
-    const loadInitialData = async () => {
-      const baseData: Partial<SocketDevWizardData> = {
+  const { initState, showRevokeConfirm, setShowRevokeConfirm, handleClose, handleRevoke, isRevoking } =
+    useConnectionModalState<SocketDevWizardData>({
+      open,
+      onClose,
+      isConnected,
+      provider: "socketdev",
+      appName: "Socket",
+      baseData: {
         apiToken: "",
         organizations: [],
         selectedOrgs: new Set(),
         currentOrgs: [],
         isFirstConnection: false,
         fromManage: false,
-      };
-
-      let finalStep: StepId = "setToken";
-      let finalData: Partial<SocketDevWizardData> = baseData;
-
-      if (isConnected) {
-        try {
-          const startTime = Date.now();
-          const result = await getSelectedOrgs("socketdev").unwrap();
-
-          if (result.success) {
-            finalData = {
-              ...baseData,
-              connectionId: result.connectionId,
-              currentOrgs: result.organizations,
-            };
-            finalStep = "manage";
-          } else {
-            const connResult = await getConnection("socketdev").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentOrgs: [],
-              };
-              finalStep = "manage";
-            }
-          }
-
-          const elapsed = Date.now() - startTime;
-          const remainingTime = Math.max(0, 600 - elapsed);
-          await new Promise((resolve) => setTimeout(resolve, remainingTime));
-        } catch (err) {
-          console.error("[loadInitialData] Error:", err);
-          try {
-            const connResult = await getConnection("socketdev").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentOrgs: [],
-              };
-              finalStep = "manage";
-            }
-          } catch {
-            // Keep defaults
-          }
-        }
-      }
-
-      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
-    };
-
-    loadInitialData();
-  }, [open, isConnected, getSelectedOrgs, getConnection]);
-
-  const handleClose = useCallback(() => {
-    setShowRevokeConfirm(false);
-    onClose();
-  }, [onClose]);
-
-  const handleRevoke = async () => {
-    try {
-      await revokeConnection("socketdev").unwrap();
-      setShowRevokeConfirm(false);
-      handleClose();
-    } catch (err) {
-      console.error("[handleRevoke] Error:", err);
-      setShowRevokeConfirm(false);
-      toast.error("Failed to revoke Socket access");
-    }
-  };
+      },
+      fetchSelected: async () => {
+        const result = await getSelectedOrgs("socketdev").unwrap();
+        if (!result.success) return null;
+        return { connectionId: result.connectionId, currentOrgs: result.organizations };
+      },
+    });
 
   const steps: WizardStep<SocketDevWizardData>[] = [
     {
       id: "loading",
-      render: () => <LoadingStep targetStep={initState.targetStep} />,
+      render: () => (
+        <ConnectionLoadingStep
+          targetStep={initState.targetStep}
+          message="Loading organizations..."
+        />
+      ),
     },
     {
       id: "setToken",
@@ -493,11 +395,7 @@ export default function SocketDevModal({
     },
     {
       id: "manage",
-      render: () => (
-        <ManageOrgsStep
-          onRevoke={() => setShowRevokeConfirm(true)}
-        />
-      ),
+      render: () => <ManageOrgsStep onRevoke={() => setShowRevokeConfirm(true)} />,
     },
   ];
 

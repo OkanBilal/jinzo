@@ -1,6 +1,6 @@
-import { useState, useReducer, useEffect, useCallback } from "react";
+import { useState } from "react";
 
-import { Body, Muted, WizardModal, useWizard, type WizardStep } from "@/components/ui";
+import { Body, WizardModal, useWizard, type WizardStep } from "@/components/ui";
 import {
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,
@@ -8,16 +8,16 @@ import {
   useLazyGetSelectedProjectsQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
-  useRevokeConnectionMutation,
   type JiraProject,
   type SelectedProject,
 } from "@/lib/redux/api";
 import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
-import { toast } from "@/components/ui";
 import { ManageResourcesStep } from "../shared/manage-resources-step";
 import { SelectResourcesStep } from "../shared/select-resources-step";
 import { CredentialStep } from "../shared/credential-step";
 import { AutoSyncSection } from "../shared/auto-sync-section";
+import { useConnectionModalState } from "../shared/use-connection-modal-state";
+import { ConnectionLoadingStep } from "../shared/connection-loading-step";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -42,8 +42,6 @@ interface JiraWizardData {
   fromManage: boolean;
 }
 
-type StepId = "loading" | "setToken" | "add" | "manage";
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Step: Set Token
 // ─────────────────────────────────────────────────────────────────────────────
@@ -58,7 +56,6 @@ function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
   const [getJiraProjects] = useLazyGetJiraProjectsQuery();
 
   const handleSubmit = async () => {
-    // Validate all fields
     if (!data.domain?.trim()) {
       setErrors({ domain: "Please enter your Jira domain" });
       return;
@@ -299,13 +296,6 @@ function SelectProjectsStep({ onComplete }: { onComplete: () => void }) {
       saveButtonLabel={`Save ${selectedProjects.size} Projects`}
       renderResourceItem={(project) => (
         <div className="flex items-center gap-2">
-          {/* {project.avatarUrl && (
-            <img
-              src={project.avatarUrl}
-              alt={project.name}
-              className="w-6 h-6 rounded"
-            />
-          )} */}
           <Body>{project.name}</Body>
           <span className="text-xs text-primary-500">{project.key}</span>
         </div>
@@ -408,28 +398,6 @@ function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Loading State
-// ─────────────────────────────────────────────────────────────────────────────
-
-function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
-  const { goTo } = useWizard<JiraWizardData>();
-
-  useEffect(() => {
-    if (targetStep && targetStep !== "loading") {
-      goTo(targetStep);
-    }
-  }, [targetStep, goTo]);
-
-  return (
-    <div className="flex items-center justify-center py-20">
-      <div className="text-center space-y-3">
-        <Muted className="shine-text">Loading projects...</Muted>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Main Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -439,26 +407,16 @@ export default function JiraModal({
   isConnected,
   onSuccess,
 }: JiraModalProps) {
-  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<JiraWizardData> };
-  const [initState, setInitState] = useReducer(
-    (_: InitState, next: InitState) => next,
-    { initializing: true, targetStep: null, data: {} },
-  );
-
   const [getSelectedProjects] = useLazyGetSelectedProjectsQuery();
-  const [getConnection] = useLazyGetConnectionQuery();
-  const [revokeConnection, { isLoading: isRevoking }] =
-    useRevokeConnectionMutation();
 
-  useEffect(() => {
-    if (!open) {
-      setInitState({ initializing: true, targetStep: null, data: {} });
-      return;
-    }
-
-    const loadInitialData = async () => {
-      const baseData: Partial<JiraWizardData> = {
+  const { initState, showRevokeConfirm, setShowRevokeConfirm, handleClose, handleRevoke, isRevoking } =
+    useConnectionModalState<JiraWizardData>({
+      open,
+      onClose,
+      isConnected,
+      provider: "jira",
+      appName: "Jira",
+      baseData: {
         apiToken: "",
         domain: "",
         email: "",
@@ -467,84 +425,23 @@ export default function JiraModal({
         currentProjects: [],
         isFirstConnection: false,
         fromManage: false,
-      };
-
-      let finalStep: StepId = "setToken";
-      let finalData: Partial<JiraWizardData> = baseData;
-
-      if (isConnected) {
-        try {
-          const startTime = Date.now();
-          const result = await getSelectedProjects("jira").unwrap();
-
-          if (result.success) {
-            finalData = {
-              ...baseData,
-              connectionId: result.connectionId,
-              currentProjects: result.projects,
-            };
-            finalStep = "manage";
-          } else {
-            const connResult = await getConnection("jira").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentProjects: [],
-              };
-              finalStep = "manage";
-            }
-          }
-
-          const elapsed = Date.now() - startTime;
-          const minLoadingTime = 600;
-          const remainingTime = Math.max(0, minLoadingTime - elapsed);
-          await new Promise((resolve) => setTimeout(resolve, remainingTime));
-        } catch (err) {
-          console.error("[loadInitialData] Error:", err);
-          try {
-            const connResult = await getConnection("jira").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentProjects: [],
-              };
-              finalStep = "manage";
-            }
-          } catch {
-            // Keep defaults
-          }
-        }
-      }
-
-      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
-    };
-
-    loadInitialData();
-  }, [open, isConnected, getSelectedProjects, getConnection]);
-
-  const handleClose = useCallback(() => {
-    setShowRevokeConfirm(false);
-    onClose();
-  }, [onClose]);
-
-  const handleRevoke = async () => {
-    try {
-      await revokeConnection("jira").unwrap();
-      setShowRevokeConfirm(false);
-      handleClose();
-    } catch (err) {
-      console.error("[handleRevoke] Error:", err);
-      setShowRevokeConfirm(false);
-      toast.error("Failed to revoke Jira access");
-    }
-  };
+      },
+      fetchSelected: async () => {
+        const result = await getSelectedProjects("jira").unwrap();
+        if (!result.success) return null;
+        return { connectionId: result.connectionId, currentProjects: result.projects };
+      },
+    });
 
   const steps: WizardStep<JiraWizardData>[] = [
     {
       id: "loading",
-      render: () => <LoadingStep targetStep={initState.targetStep} />,
+      render: () => (
+        <ConnectionLoadingStep
+          targetStep={initState.targetStep}
+          message="Loading projects..."
+        />
+      ),
     },
     {
       id: "setToken",
@@ -556,9 +453,7 @@ export default function JiraModal({
     },
     {
       id: "manage",
-      render: () => (
-        <ManageProjectsStep onRevoke={() => setShowRevokeConfirm(true)} />
-      ),
+      render: () => <ManageProjectsStep onRevoke={() => setShowRevokeConfirm(true)} />,
     },
   ];
 
