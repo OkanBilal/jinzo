@@ -18,7 +18,7 @@ import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { ContextChips } from "./context-chips";
 import { InputToolbar } from "./input-toolbar";
 import { useProviderModels } from "../hooks/use-provider-models";
-import { PROVIDER_IDS } from "../../../../main/modules/providers/provider-ids";
+import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
 const EMPTY_CONTEXT_FILES: FileNode[] = [];
 const EMPTY_CONTEXT_ISSUES: ContextIssue[] = [];

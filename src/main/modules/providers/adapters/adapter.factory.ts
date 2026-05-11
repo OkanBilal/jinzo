@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { ProviderResponse } from "../providers.dto";
-import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, CursorAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, CodexAccountInfo } from "./adapter.types";
+import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, CursorAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, CodexAccountInfo } from "../../../../shared/adapter.types";
 import { createCopilotAdapter } from "./copilot.adapter";
 import { createClaudeAdapter } from "./claude.adapter";
 import { createCodexAdapter } from "./codex.adapter";
@@ -15,7 +15,7 @@ import {
   SUPPORTED_PROVIDER_IDS,
   type ProviderId,
   isProviderId,
-} from "../provider-ids";
+} from "../../../../shared/provider-ids";
 
 /**
  * Known provider IDs that support work runs.
@@ -339,7 +339,7 @@ export async function uninstallPluginForProvider(provider: ProviderResponse, plu
 
 export async function getRateLimitsForProvider(
   provider: ProviderResponse,
-): Promise<import("./adapter.types").RateLimitInfo | null> {
+): Promise<import("../../../../shared/adapter.types").RateLimitInfo | null> {
   const adapter = createWorkAdapter(provider);
   if (!adapter.getRateLimits) return null;
   return adapter.getRateLimits();

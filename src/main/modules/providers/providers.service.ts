@@ -6,7 +6,7 @@ import type {
   ServiceResponse,
 } from "./providers.dto";
 import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, getAccountInfoForProvider, listPluginsForProvider, readPluginForProvider, installPluginForProvider, uninstallPluginForProvider, getRateLimitsForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo, type PluginListResponse, type PluginDetail, type CodexAccountInfo } from "./adapters";
-import type { RateLimitInfo } from "./adapters/adapter.types";
+import type { RateLimitInfo } from "../../../shared/adapter.types";
 
 // ─────────────────────────────────────────────────────────────
 // Providers Service

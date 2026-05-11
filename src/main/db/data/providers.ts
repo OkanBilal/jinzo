@@ -1,5 +1,5 @@
 import type { CreateProviderPayload } from "../../modules/providers/providers.dto";
-import { PROVIDER_IDS } from "../../modules/providers/provider-ids";
+import { PROVIDER_IDS } from "../../../shared/provider-ids";
 
 export const seedProviders: CreateProviderPayload[] = [
 

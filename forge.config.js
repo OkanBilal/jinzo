@@ -91,7 +91,7 @@ module.exports = {
   packagerConfig: {
     name: 'Mains',
     executableName: 'mains',
-    appBundleId: 'build.mains.app', // TODO: change this to your own bundle ID
+    appBundleId: 'dev.mains.app',
     // TCC: Apple Events (kTCCServiceAppleEvents), screen capture (kTCCServiceScreenCapture).
     extendInfo: {
       NSAppleEventsUsageDescription:
@@ -142,10 +142,6 @@ module.exports = {
   },
   makers: [
     {
-      name: '@electron-forge/maker-squirrel',
-      config: {},
-    },
-    {
       name: '@electron-forge/maker-zip',
       platforms: ['darwin'],
     },
@@ -163,17 +159,13 @@ module.exports = {
         window: { size: { width: 660, height: 400 } },
       },
     },
-    {
-      name: '@electron-forge/maker-deb',
-      config: {},
-    },
-    {
-      name: '@electron-forge/maker-rpm',
-      config: {},
-    },
   ],
   publishers: [
     {
+      // Release flow: tag push → CI builds + uploads assets to a DRAFT release.
+      // Auto-updater (update.electronjs.org) only sees PUBLISHED releases, so
+      // after CI finishes you must manually click "Publish release" on GitHub.
+      // Repo must be public for ElectronPublicUpdateService to read it.
       name: '@electron-forge/publisher-github',
       config: {
         repository: { owner: 'OkanBilal', name: 'mains' },

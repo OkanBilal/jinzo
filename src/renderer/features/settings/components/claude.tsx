@@ -6,8 +6,8 @@ import {
   useProviderSettings,
 } from "./provider-settings-shared";
 import { StructuredOutputsModal } from "./structured-outputs-modal";
-import type { ClaudeCodeAdapterConfig } from "../../../../main/modules/providers/adapters/adapter.types";
-import { PROVIDER_IDS } from "../../../../main/modules/providers/provider-ids";
+import type { ClaudeCodeAdapterConfig } from "../../../../shared/adapter.types";
+import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
 type ClaudePermissionMode = NonNullable<
   ClaudeCodeAdapterConfig["permissionMode"]

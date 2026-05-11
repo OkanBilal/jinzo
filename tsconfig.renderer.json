@@ -11,6 +11,6 @@
   "include": [
     "src/renderer/**/*",
     "src/preload/types.d.ts",
-    "src/main/modules/providers/provider-ids.ts"
+    "src/shared/**/*"
   ]
 }

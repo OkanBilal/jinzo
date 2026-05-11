@@ -37,7 +37,7 @@ import type {
   RunDetailsResponse,
   RunTurnResponse,
 } from "./runs.dto";
-import type { WorkRunUsage } from "../providers/adapters/adapter.types";
+import type { WorkRunUsage } from "../../../shared/adapter.types";
 import { createHash } from "crypto";
 import fs from "fs";
 import path from "path";
@@ -1853,7 +1853,7 @@ export const runsService = {
 
   /** @internal Shared background completion handler for run/review promises */
   _handleRunCompletion(
-    runPromise: Promise<import("../providers/adapters/adapter.types").WorkRunResult>,
+    runPromise: Promise<import("../../../shared/adapter.types").WorkRunResult>,
     runId: string,
     workspace: { id: string; rootPath: string },
     pendingToolCalls?: Map<string, number>,

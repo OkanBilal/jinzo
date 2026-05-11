@@ -27,6 +27,7 @@
     "db:clean:all": "npm run db:clean:dev && npm run db:clean:runtime",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
+    "typecheck": "tsc --noEmit -p tsconfig.main.json && tsc --noEmit -p tsconfig.preload.json && tsc --noEmit -p tsconfig.renderer.json",
     "reset": "npm rebuild better-sqlite3 && npm run db:clean:dev",
     "hard-reset": "npm run reset && rm -rf node_modules package-lock.json .vite dist .webpack && npm install",
     "clean": "rm -rf .vite dist out .webpack node_modules/.vite node_modules/.cache"
@@ -68,10 +69,7 @@
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.11.1",
-    "@electron-forge/maker-deb": "^7.11.1",
     "@electron-forge/maker-dmg": "^7.11.1",
-    "@electron-forge/maker-rpm": "^7.11.1",
-    "@electron-forge/maker-squirrel": "^7.11.1",
     "@electron-forge/maker-zip": "^7.11.1",
     "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
     "@electron-forge/plugin-fuses": "^7.11.1",

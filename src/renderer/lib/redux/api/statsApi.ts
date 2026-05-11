@@ -77,7 +77,7 @@ export interface DashboardData {
   codeActivity: CodeActivityStats;
 }
 
-import type { ProviderId } from "../../../../main/modules/providers/provider-ids";
+import type { ProviderId } from "../../../../shared/provider-ids";
 
 export type ProviderFilter = "all" | ProviderId;
 

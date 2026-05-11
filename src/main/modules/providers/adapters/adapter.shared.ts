@@ -11,7 +11,7 @@ import type {
   WorkRunEventHandler,
   WorkRunContextItem,
   FileAttachment,
-} from "./adapter.types";
+} from "../../../../shared/adapter.types";
 
 // ─────────────────────────────────────────────────────────────
 // Logging

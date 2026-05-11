@@ -2,7 +2,7 @@
 // Stats DTO — Types for the statistics dashboard
 // ─────────────────────────────────────────────────────────────
 
-import type { ProviderId } from "../providers/provider-ids";
+import type { ProviderId } from "../../../shared/provider-ids";
 
 export interface DashboardSummary {
   totalProjects: number;

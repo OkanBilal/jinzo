@@ -37,7 +37,7 @@ import type { Workspace } from "@/lib/redux/api/workspacesApi";
 import {
   PROVIDER_IDS,
   type ProviderId,
-} from "../../../../main/modules/providers/provider-ids";
+} from "../../../../shared/provider-ids";
 
 // Local copy keeps the picker's display order (Claude first) separate from
 // the registry tuple's ordering (Copilot first).

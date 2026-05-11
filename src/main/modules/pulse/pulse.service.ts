@@ -3,7 +3,7 @@ import { validateCreate, validateUpdate } from "./pulse.validation";
 import { runsService } from "../runs/runs.service";
 import { appSettingsRepo } from "../appSettings/appSettings.repo";
 import { SETTINGS_ID } from "../appSettings/appSettings.constants";
-import { PROVIDER_IDS } from "../providers/provider-ids";
+import { PROVIDER_IDS } from "../../../shared/provider-ids";
 import type {
   CreatePulseInput,
   Pulse,

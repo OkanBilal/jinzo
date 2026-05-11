@@ -1,5 +1,5 @@
 import { WorkspaceProviderPage } from "@/features/workspace/components/workspace-provider-page";
-import { PROVIDER_IDS } from "../../main/modules/providers/provider-ids";
+import { PROVIDER_IDS } from "../../shared/provider-ids";
 
 export default function CodexPage() {
   return (

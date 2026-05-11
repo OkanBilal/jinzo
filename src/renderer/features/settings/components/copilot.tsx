@@ -4,8 +4,8 @@ import {
   ProviderSettingsLayout,
   useProviderSettings,
 } from "./provider-settings-shared";
-import type { CopilotAdapterConfig } from "../../../../main/modules/providers/adapters/adapter.types";
-import { PROVIDER_IDS } from "../../../../main/modules/providers/provider-ids";
+import type { CopilotAdapterConfig } from "../../../../shared/adapter.types";
+import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
 export default function CopilotSettings(
 ) {

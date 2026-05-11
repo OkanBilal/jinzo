@@ -47,7 +47,7 @@ describe("seedSpacesData", () => {
     const claude = db.select().from(spaces).all().find((r) => r.id === "claude");
     expect(claude!.themeConfig).not.toBeNull();
     const theme = JSON.parse(claude!.themeConfig!);
-    expect(theme.lightBackground).toBe("#f2dbcfa6");
+    expect(theme.lightBackground).toBe("#ffffff40");
   });
 
   it("creates or updates appSettings with activeSpaceId", async () => {

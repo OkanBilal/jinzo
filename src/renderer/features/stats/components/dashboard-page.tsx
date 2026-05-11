@@ -9,7 +9,7 @@ import ToolUsageChart from "./tool-usage-chart";
 import RecentSessionsList from "./recent-sessions-list";
 import { Heading2, SegmentedTabs } from "@/components/ui";
 import SuccessRateChart from "./success-rate-chart";
-import { PROVIDER_IDS } from "../../../../main/modules/providers/provider-ids";
+import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
 const TABS: { id: ProviderFilter; label: string }[] = [
   { id: "all", label: "All" },

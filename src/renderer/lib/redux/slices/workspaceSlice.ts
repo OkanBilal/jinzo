@@ -2,7 +2,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { FileNode, FileContentResponse } from "@/features/workspace/types/file-explorer";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import type { SignalWithEntity } from "@/lib/redux/api/signalsApi";
-import { PROVIDER_IDS } from "../../../../main/modules/providers/provider-ids";
+import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
 export interface ReviewTab {
   id: string;

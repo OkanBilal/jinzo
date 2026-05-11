@@ -15,7 +15,7 @@ import type {
   WorkRunEvent,
   CopilotAdapterConfig,
   ModelInfo,
-} from "./adapter.types";
+} from "../../../../shared/adapter.types";
 import {
   requestToolApproval,
   cancelPendingRequests,
@@ -1730,7 +1730,7 @@ export function createCopilotAdapter(
       logInfo("Shutdown complete");
     },
 
-    async generateTitle(goal: string, context?: import("./adapter.types").WorkRunContextItem[]): Promise<string> {
+    async generateTitle(goal: string, context?: import("../../../../shared/adapter.types").WorkRunContextItem[]): Promise<string> {
       const copilotClient = await ensureClient();
 
       // Build context snippet if available

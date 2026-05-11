@@ -17,7 +17,7 @@ import type {
   HooksConfig,
   HookMatcher,
   AgentsConfig,
-} from "./adapter.types";
+} from "../../../../shared/adapter.types";
 import { findClaudeBinary, resolveCandidate } from "../providers.utils";
 import {
   requestToolApproval,
@@ -2663,7 +2663,7 @@ export function createClaudeAdapter(
       }
     },
 
-    async generateTitle(goal: string, context?: import("./adapter.types").WorkRunContextItem[]): Promise<string> {
+    async generateTitle(goal: string, context?: import("../../../../shared/adapter.types").WorkRunContextItem[]): Promise<string> {
       await ensureSDK();
 
       if (!queryFn) {

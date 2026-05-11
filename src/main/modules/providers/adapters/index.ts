@@ -67,7 +67,7 @@ export type {
   HookCallback,
   HookMatcher,
   HooksConfig,
-} from "./adapter.types";
+} from "../../../../shared/adapter.types";
 
 // Factory
 export {

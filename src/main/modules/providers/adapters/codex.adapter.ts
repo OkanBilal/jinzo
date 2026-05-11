@@ -27,7 +27,7 @@ import type {
   MarketplaceInfo,
   CodexAccountInfo,
   WorkRunContextItem,
-} from "./adapter.types";
+} from "../../../../shared/adapter.types";
 import {
   cancelPendingRequests,
   requestToolApproval,
@@ -3446,7 +3446,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       }
     },
 
-    async getAccountInfo(): Promise<import("./adapter.types").CodexAccountInfo> {
+    async getAccountInfo(): Promise<import("../../../../shared/adapter.types").CodexAccountInfo> {
       try {
         const server = await ensureServer();
         const result = await server.sendRequest("account/read", {}) as Record<string, unknown>;
@@ -3460,7 +3460,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       }
     },
 
-    async getRateLimits(): Promise<import("./adapter.types").RateLimitInfo | null> {
+    async getRateLimits(): Promise<import("../../../../shared/adapter.types").RateLimitInfo | null> {
       try {
         if (!appServer?.isRunning) return null;
         const result = await appServer.sendRequest("account/rateLimits/read", {}) as Record<string, unknown>;
@@ -3495,13 +3495,13 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
       }
     },
 
-    async listSkills(): Promise<import("./adapter.types").SkillInfo[]> {
+    async listSkills(): Promise<import("../../../../shared/adapter.types").SkillInfo[]> {
       try {
         const server = await ensureServer();
         const result = await server.sendRequest("skills/list", { forceReload: true }) as Record<string, unknown>;
         const entries = result?.data as Array<Record<string, unknown>> | undefined;
 
-        const skills: import("./adapter.types").SkillInfo[] = [];
+        const skills: import("../../../../shared/adapter.types").SkillInfo[] = [];
         if (entries && Array.isArray(entries)) {
           for (const entry of entries) {
             const entrySkills = entry.skills as Array<Record<string, unknown>> | undefined;

@@ -15,7 +15,7 @@ import {
   useGetProviderAccountInfoQuery,
 } from "@/lib/redux/api";
 import { StructuredOutputsModal } from "./structured-outputs-modal";
-import type { CodexAdapterConfig } from "../../../../main/modules/providers/adapters/adapter.types";
+import type { CodexAdapterConfig } from "../../../../shared/adapter.types";
 
 type CodexApprovalMode = NonNullable<CodexAdapterConfig["approvalMode"]>;
 type CodexPersonality = NonNullable<CodexAdapterConfig["personality"]>;
@@ -24,7 +24,7 @@ import {
   useProviderSettings,
 } from "./provider-settings-shared";
 import { CODEX_SANDBOX_MODES } from "@/lib/provider-modes";
-import { PROVIDER_IDS } from "../../../../main/modules/providers/provider-ids";
+import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
 function formatResetDate(resetsAt: number): string {
   const date = new Date(resetsAt * 1000);

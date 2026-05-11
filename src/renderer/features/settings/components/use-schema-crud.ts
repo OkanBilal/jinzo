@@ -1,6 +1,6 @@
 import { toast } from "@/components/ui";
 import { useUpdateProviderMutation } from "@/lib/redux/api";
-import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
+import type { StructuredOutputEntry } from "../../../../shared/adapter.types";
 import type { SchemaProperty } from "./schema-editor-tab";
 import { schemaToProperties, propertiesToSchema } from "./schema-utils";
 import { extractErrorMessage } from "@/lib/extract-error-message";

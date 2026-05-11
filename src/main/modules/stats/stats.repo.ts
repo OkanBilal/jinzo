@@ -19,7 +19,7 @@ import type {
   CodeActivityStats,
   ProviderFilter,
 } from "./stats.dto";
-import { PROVIDER_IDS } from "../providers/provider-ids";
+import { PROVIDER_IDS } from "../../../shared/provider-ids";
 
 function providerWhere(filter: ProviderFilter) {
   if (filter === "all") return sql`1=1`;

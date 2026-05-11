@@ -4,9 +4,9 @@ import {
   ProviderSettingsLayout,
   useProviderSettings,
 } from "./provider-settings-shared";
-import type { CursorAdapterConfig } from "../../../../main/modules/providers/adapters/adapter.types";
+import type { CursorAdapterConfig } from "../../../../shared/adapter.types";
 import { CURSOR_MODES } from "@/lib/provider-modes";
-import { PROVIDER_IDS } from "../../../../main/modules/providers/provider-ids";
+import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
 export default function CursorSettings(
 ) {

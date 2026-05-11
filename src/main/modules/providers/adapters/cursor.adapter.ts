@@ -17,7 +17,7 @@ import type {
   WorkRunEvent,
   CursorAdapterConfig,
   ModelInfo,
-} from "./adapter.types";
+} from "../../../../shared/adapter.types";
 import {
   cancelPendingRequests,
   requestToolApproval,
@@ -1586,7 +1586,7 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
       }
     },
 
-    async generateTitle(goal: string, context?: import("./adapter.types").WorkRunContextItem[]): Promise<string> {
+    async generateTitle(goal: string, context?: import("../../../../shared/adapter.types").WorkRunContextItem[]): Promise<string> {
       try {
         const binaryPath = findCursorBinary();
 

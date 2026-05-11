@@ -15,7 +15,7 @@ import {
   useUninstallProviderPluginMutation,
 } from "@/lib/redux/api";
 import type { PluginInfo } from "@/lib/redux/api";
-import { PROVIDER_IDS } from "../../../../main/modules/providers/provider-ids";
+import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import {
   Search,

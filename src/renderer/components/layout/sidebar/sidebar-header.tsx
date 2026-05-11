@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import UserProfile from "./user-profile";
 import SearchBar from "./search-bar";
 
