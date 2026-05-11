@@ -10,19 +10,24 @@ import { createClaudeAdapter } from "./claude.adapter";
 import { createCodexAdapter } from "./codex.adapter";
 import { createCursorAdapter } from "./cursor.adapter";
 import { findCopilotCliPath } from "../providers.utils";
+import {
+  PROVIDER_IDS,
+  SUPPORTED_PROVIDER_IDS,
+  type ProviderId,
+  isProviderId,
+} from "../provider-ids";
 
 /**
- * Known provider IDs that support work runs
+ * Known provider IDs that support work runs.
+ * Re-exported from the canonical provider-ids registry for legacy call sites
+ * that still import from this module.
  */
-export const SUPPORTED_WORK_PROVIDERS = ["copilot_cli", "claude_code", "codex", "cursor"] as const;
-export type SupportedWorkProvider = (typeof SUPPORTED_WORK_PROVIDERS)[number];
+export const SUPPORTED_WORK_PROVIDERS = SUPPORTED_PROVIDER_IDS;
+export type SupportedWorkProvider = ProviderId;
 
-/**
- * Check if a provider ID is supported for work runs
- */
-export function isSupportedWorkProvider(providerId: string): providerId is SupportedWorkProvider {
-  return SUPPORTED_WORK_PROVIDERS.includes(providerId as SupportedWorkProvider);
-}
+export const isSupportedWorkProvider = isProviderId as (
+  providerId: string,
+) => providerId is SupportedWorkProvider;
 
 /**
  * Cache of adapter instances by provider ID
@@ -104,7 +109,7 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
   let adapter: WorkRunAdapter;
 
   switch (provider.id) {
-    case "copilot_cli": {
+    case PROVIDER_IDS.copilot: {
       const config: CopilotAdapterConfig = {
         ...(provider.config as CopilotAdapterConfig | null),
         defaultModel: provider.defaultModel ?? undefined,
@@ -122,7 +127,7 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
       break;
     }
 
-    case "claude_code": {
+    case PROVIDER_IDS.claude: {
       const config: ClaudeCodeAdapterConfig = {
         ...(provider.config as ClaudeCodeAdapterConfig | null),
         defaultModel: provider.defaultModel ?? undefined,
@@ -131,7 +136,7 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
       break;
     }
 
-    case "codex": {
+    case PROVIDER_IDS.codex: {
       const config: CodexAdapterConfig = {
         ...(provider.config as CodexAdapterConfig | null),
         defaultModel: provider.defaultModel ?? undefined,
@@ -140,7 +145,7 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
       break;
     }
 
-    case "cursor": {
+    case PROVIDER_IDS.cursor: {
       const config: CursorAdapterConfig = {
         ...(provider.config as CursorAdapterConfig | null),
         defaultModel: provider.defaultModel ?? undefined,

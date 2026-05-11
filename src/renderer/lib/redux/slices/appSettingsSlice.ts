@@ -1,7 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface AppSettingsState {
-  isDarkMode: boolean;
   sidebarCollapsed: boolean;
   rightPanelOpen: boolean;
   browserPanelOpen: boolean;
@@ -10,7 +9,6 @@ export interface AppSettingsState {
 }
 
 const initialState: AppSettingsState = {
-  isDarkMode: false,
   sidebarCollapsed: false,
   rightPanelOpen: false,
   browserPanelOpen: false,
@@ -22,9 +20,6 @@ const appSettingsSlice = createSlice({
   name: "appSettings",
   initialState,
   reducers: {
-    setDarkMode: (state, action: PayloadAction<boolean>) => {
-      state.isDarkMode = action.payload;
-    },
     setSidebarCollapsed: (state, action: PayloadAction<boolean>) => {
       state.sidebarCollapsed = action.payload;
     },
@@ -44,7 +39,6 @@ const appSettingsSlice = createSlice({
 });
 
 export const {
-  setDarkMode,
   setSidebarCollapsed,
   setBrowserPanelOpen,
   setRightPanelOpen,

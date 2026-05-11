@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback, createContext, useContext, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
+import { useEscapeKey } from "@/hooks/use-escape-key";
 import { ArrowUp, Selected } from "./icons";
 
 // Context to let parent DropdownMenu know about submenu portals
@@ -42,9 +43,10 @@ export function DropdownMenu({
     submenuRefs.current.delete(el);
   }, []);
 
+  // Click-outside stays inline — the submenu Set requires per-event iteration,
+  // which the single-/dual-ref useClickOutside doesn't cover.
   useEffect(() => {
     if (!isOpen) return;
-
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
       if (menuRef.current && menuRef.current.contains(target)) return;
@@ -53,21 +55,13 @@ export function DropdownMenu({
       }
       onClose();
     };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
     document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onClose]);
+
+  useEscapeKey(() => {
+    if (isOpen) onClose();
+  });
 
   if (!isOpen) return null;
 

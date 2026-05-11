@@ -9,13 +9,14 @@ import ToolUsageChart from "./tool-usage-chart";
 import RecentSessionsList from "./recent-sessions-list";
 import { Heading2 } from "@/components/ui";
 import SuccessRateChart from "./success-rate-chart";
+import { PROVIDER_IDS } from "../../../../main/modules/providers/provider-ids";
 
 const TABS: { id: ProviderFilter; label: string }[] = [
   { id: "all", label: "All" },
-  { id: "claude_code", label: "Claude" },
-  { id: "copilot_cli", label: "Copilot" },
-  { id: "codex", label: "Codex" },
-  { id: "cursor", label: "Cursor" },
+  { id: PROVIDER_IDS.claude, label: "Claude" },
+  { id: PROVIDER_IDS.copilot, label: "Copilot" },
+  { id: PROVIDER_IDS.codex, label: "Codex" },
+  { id: PROVIDER_IDS.cursor, label: "Cursor" },
 ];
 
 export default function DashboardPage() {

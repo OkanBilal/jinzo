@@ -1,27 +1,10 @@
-import { useState } from "react";
-
-import { Body, WizardModal, useWizard, type WizardStep } from "@/components/ui";
+import { useCallback } from "react";
+import { Body } from "@/components/ui";
+import { useLazyGetSentryProjectsQuery } from "@/lib/redux/api";
 import {
-  useLazyGetConnectionQuery,
-  useSaveCredentialsMutation,
-  useLazyGetSentryProjectsQuery,
-  useLazyGetSelectedSentryProjectsQuery,
-  useSaveResourcesMutation,
-  useDeleteResourceMutation,
-  type SentryProject,
-  type SelectedSentryProject,
-} from "@/lib/redux/api";
-import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
-import { ManageResourcesStep } from "../shared/manage-resources-step";
-import { SelectResourcesStep } from "../shared/select-resources-step";
-import { CredentialStep } from "../shared/credential-step";
-import { AutoSyncSection } from "../shared/auto-sync-section";
-import { useConnectionModalState } from "../shared/use-connection-modal-state";
-import { ConnectionLoadingStep } from "../shared/connection-loading-step";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
+  ResourceWizardModal,
+  type ResourceWizardConfig,
+} from "../shared/resource-wizard-modal";
 
 interface SentryModalProps {
   open: boolean;
@@ -30,423 +13,112 @@ interface SentryModalProps {
   onSuccess?: () => void;
 }
 
-interface SentryWizardData {
-  token: string;
-  organization: string;
-  connectionId: string;
-  projects: SentryProject[];
-  selectedProjects: Set<string>;
-  currentProjects: SelectedSentryProject[];
-  isFirstConnection: boolean;
-  fromManage: boolean;
-}
+const CONFIG: ResourceWizardConfig = {
+  provider: "sentry",
+  appName: "Sentry",
+  modalTitle: "Sentry",
+  icon: "connections/sentry.png",
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Step: Set Token
-// ─────────────────────────────────────────────────────────────────────────────
-
-function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
-  const { data, setData, errors, setErrors, goTo } =
-    useWizard<SentryWizardData>();
-  const [loading, setLoading] = useState(false);
-
-  const [getConnection] = useLazyGetConnectionQuery();
-  const [saveCredentials] = useSaveCredentialsMutation();
-  const [getSentryProjects] = useLazyGetSentryProjectsQuery();
-
-  const handleSubmit = async () => {
-    if (!data.token?.trim()) {
-      setErrors({ token: "Please enter a valid auth token" });
-      return;
-    }
-    if (!data.organization?.trim()) {
-      setErrors({ organization: "Please enter your organization slug" });
-      return;
-    }
-
-    setLoading(true);
-    setErrors({ token: "", organization: "" });
-
-    try {
-      const startTime = Date.now();
-      const connectionResult = await getConnection("sentry").unwrap();
-
-      if (!connectionResult.success) {
-        throw new Error("Failed to get connection");
-      }
-
-      const connId = connectionResult.connection.id;
-
-      await saveCredentials({
-        provider: "sentry",
-        connectionId: connId,
-        token: data.token,
-        organization: data.organization,
-      }).unwrap();
-
-      onSuccess?.();
-
-      const projectsResult = await getSentryProjects(connId).unwrap();
-
-      if (!projectsResult.success) {
-        throw new Error("Failed to fetch Sentry projects");
-      }
-
-      const elapsed = Date.now() - startTime;
-      const minLoadingTime = 800;
-      const remainingTime = Math.max(0, minLoadingTime - elapsed);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
-
-      setData({
-        connectionId: connId,
-        projects: projectsResult.projects,
-        isFirstConnection: true,
-        fromManage: false,
-      });
-
-      goTo("add");
-    } catch (err: any) {
-      const errorMessage =
-        err?.data?.error || err?.message || "An error occurred";
-      setErrors({ token: errorMessage });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <CredentialStep
-      description="Enter your Sentry Auth Token and organization slug to connect your projects."
-      fields={[
-        {
-          id: "sentry-token",
-          label: "Auth Token",
-          placeholder: "sntrys_xxxxxxxxxxxxxxxxxxxx",
-          value: data.token || "",
-          onChange: (value) => {
-            setData({ token: value });
-            if (errors.token) setErrors({ token: "" });
-          },
-        },
-        {
-          id: "sentry-org",
-          label: "Organization Slug",
-          placeholder: "my-org",
-          value: data.organization || "",
-          onChange: (value) => {
-            setData({ organization: value });
-            if (errors.organization) setErrors({ organization: "" });
-          },
-        },
-      ]}
-      instructions={
-        <>
-          <strong>How to create a token:</strong>
-          <br />
-          1. Go to Sentry Settings &rarr;{" "}
-          <a
-            href="https://sentry.io/settings/auth-tokens/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary-600 dark:text-primary-400 underline"
-          >
-            Auth Tokens
-          </a>
-          <br />
-          2. Create a new token
-          <br />
-          3. Select scopes: <code>project:read</code>, <code>event:read</code>,{" "}
-          <code>org:read</code>
-          <br />
-          <br />
-          <strong>Organization slug:</strong> found in your Sentry URL:{" "}
-          <code>sentry.io/organizations/[slug]/</code>
-        </>
-      }
-      onSubmit={handleSubmit}
-      loading={loading}
-      error={errors.token || errors.organization || ""}
-    />
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Step: Select Projects
-// ─────────────────────────────────────────────────────────────────────────────
-
-function SelectProjectsStep({ onComplete }: { onComplete: () => void }) {
-  const { data, setData, errors, setErrors, goTo } =
-    useWizard<SentryWizardData>();
-  const [loading, setLoading] = useState(false);
-
-  const [saveResources] = useSaveResourcesMutation();
-  const [getSelectedProjects] = useLazyGetSelectedSentryProjectsQuery();
-
-  const selectedProjects = data.selectedProjects || new Set<string>();
-
-  const toggleProject = (slug: string | number) => {
-    const key = String(slug);
-    const next = new Set(selectedProjects);
-    if (next.has(key)) {
-      next.delete(key);
-    } else {
-      next.add(key);
-    }
-    setData({ selectedProjects: next });
-  };
-
-  const handleSave = async () => {
-    if (selectedProjects.size === 0) {
-      setErrors({ projects: "Please select at least one project" });
-      return;
-    }
-
-    setLoading(true);
-    setErrors({ projects: "" });
-
-    try {
-      const startTime = Date.now();
-
-      const selectedProjectObjects = data.projects.filter((p) =>
-        selectedProjects.has(p.slug)
-      );
-
-      await saveResources({
-        provider: "sentry",
-        connectionId: data.connectionId,
-        resources: selectedProjectObjects,
-      }).unwrap();
-
-      const elapsed = Date.now() - startTime;
-      const minLoadingTime = 1000;
-      const remainingTime = Math.max(0, minLoadingTime - elapsed);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
-
-      if (data.fromManage) {
-        const result = await getSelectedProjects("sentry").unwrap();
-        if (result.success) {
-          setData({
-            currentProjects: result.projects,
-            selectedProjects: new Set(),
-          });
-        }
-        goTo("manage");
-      } else {
-        onComplete();
-      }
-    } catch (err: any) {
-      setErrors({ projects: err?.data?.error || err.message || "An error occurred" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBack = () => {
-    if (data.fromManage) {
-      goTo("manage");
-    } else if (data.isFirstConnection) {
-      onComplete();
-    } else {
-      goTo("setToken");
-    }
-  };
-
-  return (
-    <SelectResourcesStep
-      resources={data.projects.map((p) => ({ ...p, id: p.slug }))}
-      selectedResources={selectedProjects}
-      onToggleResource={toggleProject}
-      onSave={handleSave}
-      onBack={handleBack}
-      loading={loading}
-      error={errors.projects || ""}
-      title="Select the Sentry projects you want to monitor."
-      saveButtonLabel={`Save ${selectedProjects.size} Projects`}
-      renderResourceItem={(project) => (
-        <div className="flex items-center gap-2">
-          <Body>{project.name}</Body>
-          {project.platform && (
-            <span className="text-xs text-primary-500 dark:text-primary-600">
-              {project.platform}
-            </span>
-          )}
-        </div>
-      )}
-    />
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Step: Manage Projects
-// ─────────────────────────────────────────────────────────────────────────────
-
-function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
-  const { data, setData, errors, setErrors, goTo } =
-    useWizard<SentryWizardData>();
-  const [loading, setLoading] = useState(false);
-
-  const [deleteResource] = useDeleteResourceMutation();
-  const [getSentryProjects] = useLazyGetSentryProjectsQuery();
-  const [getSelectedProjects] = useLazyGetSelectedSentryProjectsQuery();
-
-  const handleRemove = async (projectId: string) => {
-    setErrors({ manage: "" });
-
-    try {
-      await deleteResource(projectId).unwrap();
-      const result = await getSelectedProjects("sentry").unwrap();
-      if (result.success) {
-        setData({ currentProjects: result.projects });
-      }
-    } catch (err: any) {
-      setErrors({ manage: err?.data?.error || err.message || "An error occurred" });
-    }
-  };
-
-  const handleAddNew = async () => {
-    setLoading(true);
-    setErrors({ manage: "" });
-
-    try {
-      const projectsResult = await getSentryProjects(data.connectionId).unwrap();
-
-      if (!projectsResult.success) {
-        throw new Error("Failed to fetch projects");
-      }
-
-      const currentSlugs = new Set(data.currentProjects.map((p) => p.slug));
-      const availableProjects = projectsResult.projects.filter(
-        (p: SentryProject) => !currentSlugs.has(p.slug)
-      );
-
-      if (availableProjects.length === 0) {
-        setErrors({ manage: "All projects are already connected" });
-        return;
-      }
-
-      setData({
-        projects: availableProjects,
-        selectedProjects: new Set(),
-        fromManage: true,
-      });
-      goTo("add");
-    } catch (err: any) {
-      setErrors({ manage: err?.data?.error || err.message || "An error occurred" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <ManageResourcesStep
-      resources={data.currentProjects}
-      onAddNew={handleAddNew}
-      onRemove={handleRemove}
-      onRevoke={onRevoke}
-      loading={loading}
-      error={errors.manage || ""}
-      resourceLabel="project"
-      resourceLabelPlural="projects"
-      addButtonLabel="Add Project"
-      revokeButtonLabel="Revoke Sentry Access"
-      extraContent={<AutoSyncSection provider="sentry" providerLabel="Sentry" />}
-      renderResourceItem={(resource) => (
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <Body>{resource.name}</Body>
-            {resource.metadata?.platform && (
-              <span className="text-xs text-primary-500 dark:text-primary-600">
-                {resource.metadata.platform}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-    />
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Main Modal
-// ─────────────────────────────────────────────────────────────────────────────
-
-export default function SentryModal({
-  open,
-  onClose,
-  isConnected,
-  onSuccess,
-}: SentryModalProps) {
-  const [getSelectedProjects] = useLazyGetSelectedSentryProjectsQuery();
-
-  const { initState, showRevokeConfirm, setShowRevokeConfirm, handleClose, handleRevoke, isRevoking } =
-    useConnectionModalState<SentryWizardData>({
-      open,
-      onClose,
-      isConnected,
-      provider: "sentry",
-      appName: "Sentry",
-      baseData: {
-        token: "",
-        organization: "",
-        projects: [],
-        selectedProjects: new Set(),
-        currentProjects: [],
-        isFirstConnection: false,
-        fromManage: false,
-      },
-      fetchSelected: async () => {
-        const result = await getSelectedProjects("sentry").unwrap();
-        if (!result.success) return null;
-        return { connectionId: result.connectionId, currentProjects: result.projects };
-      },
-    });
-
-  const steps: WizardStep<SentryWizardData>[] = [
+  credentialDescription:
+    "Enter your Sentry Auth Token and organization slug to connect your projects.",
+  credentialFields: [
     {
-      id: "loading",
-      render: () => (
-        <ConnectionLoadingStep
-          targetStep={initState.targetStep}
-          message="Loading projects..."
-        />
-      ),
+      id: "sentry-token",
+      label: "Auth Token",
+      placeholder: "sntrys_xxxxxxxxxxxxxxxxxxxx",
+      dataKey: "token",
+      emptyError: "Please enter a valid Auth Token",
     },
     {
-      id: "setToken",
-      render: () => <TokenStep onSuccess={onSuccess} />,
+      id: "sentry-org",
+      label: "Organization Slug",
+      placeholder: "my-org",
+      dataKey: "organization",
+      emptyError: "Please enter your organization slug",
     },
-    {
-      id: "add",
-      render: () => <SelectProjectsStep onComplete={handleClose} />,
-    },
-    {
-      id: "manage",
-      render: () => <ManageProjectsStep onRevoke={() => setShowRevokeConfirm(true)} />,
-    },
-  ];
-
-  return (
+  ],
+  credentialInstructions: (
     <>
-      <WizardModal
-        open={open}
-        onOpenChange={(isOpen) => !isOpen && handleClose()}
-        steps={steps}
-        initialStep="loading"
-        initialData={initState.data}
-        title="Sentry"
-        icon="connections/sentry.png"
-        onCancel={handleClose}
-      />
-
-      {showRevokeConfirm && (
-        <RevokeConfirmModal
-          onConfirm={handleRevoke}
-          onCancel={() => setShowRevokeConfirm(false)}
-          loading={isRevoking}
-          appName="Sentry"
-          description="This will disconnect all projects and remove all Sentry data. This action cannot be undone."
-        />
-      )}
+      <strong>How to create a token:</strong>
+      <br />
+      1. Go to Sentry Settings →{" "}
+      <a
+        href="https://sentry.io/settings/auth-tokens/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary-600 dark:text-primary-400 underline"
+      >
+        Auth Tokens
+      </a>
+      <br />
+      2. Create a new token
+      <br />
+      3. Select scopes: <code>project:read</code>, <code>event:read</code>,{" "}
+      <code>org:read</code>
+      <br />
+      <br />
+      <strong>Organization slug:</strong> found in your Sentry URL:{" "}
+      <code>sentry.io/organizations/[slug]/</code>
     </>
+  ),
+  buildCredentials: (values) => ({
+    token: values.token,
+    organization: values.organization,
+  }),
+
+  loadingMessage: "Loading projects...",
+  selectTitle: "Select the Sentry projects you want to monitor.",
+  resourceLabel: "project",
+  resourceLabelPlural: "projects",
+  saveButtonLabel: (count) => `Save ${count} Projects`,
+  addButtonLabel: "Add Project",
+  revokeButtonLabel: "Revoke Sentry Access",
+  revokeDescription:
+    "This will disconnect all projects and remove all Sentry data. This action cannot be undone.",
+
+  identityForItem: (project) => project.slug,
+  identityForCurrent: (current) => current.slug,
+
+  renderItemForSelect: (project) => (
+    <div className="flex items-center gap-2">
+      <Body>{project.name}</Body>
+      {project.platform && (
+        <span className="text-xs text-primary-500 dark:text-primary-600">
+          {project.platform}
+        </span>
+      )}
+    </div>
+  ),
+  renderItemForManage: (resource) => (
+    <div className="flex-1">
+      <div className="flex items-center gap-2">
+        <Body>{resource.name}</Body>
+        {resource.metadata?.platform && (
+          <span className="text-xs text-primary-500 dark:text-primary-600">
+            {resource.metadata.platform}
+          </span>
+        )}
+      </div>
+    </div>
+  ),
+
+  autoSyncProviderLabel: "Sentry",
+};
+
+export default function SentryModal(props: SentryModalProps) {
+  const [getProjects] = useLazyGetSentryProjectsQuery();
+  const fetchAllResources = useCallback(
+    async (connectionId: string) => {
+      const result = await getProjects(connectionId).unwrap();
+      return { success: result.success, items: result.projects };
+    },
+    [getProjects],
+  );
+  return (
+    <ResourceWizardModal
+      {...props}
+      config={CONFIG}
+      fetchAllResources={fetchAllResources}
+    />
   );
 }

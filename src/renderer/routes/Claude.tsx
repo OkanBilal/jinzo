@@ -1,11 +1,10 @@
 import { WorkspaceProviderPage } from "@/features/workspace/components/workspace-provider-page";
-
-const CLAUDE_PROVIDER_ID = "claude_code";
+import { PROVIDER_IDS } from "../../main/modules/providers/provider-ids";
 
 export default function ClaudePage() {
   return (
     <WorkspaceProviderPage
-      providerId={CLAUDE_PROVIDER_ID}
+      providerId={PROVIDER_IDS.claude}
       variant="claude"
       planExitConfig={{
         key: "permissionMode",

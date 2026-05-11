@@ -4,24 +4,9 @@ import {
   ProviderSettingsLayout,
   useProviderSettings,
 } from "./provider-settings-shared";
-
-const MODE_OPTIONS = [
-  {
-    value: "ask",
-    label: "Ask",
-    description: "Answer questions without taking action",
-  },
-  {
-    value: "agent",
-    label: "Agent",
-    description: "Full autonomous agent mode",
-  },
-  {
-    value: "plan",
-    label: "Plan",
-    description: "Plan before executing",
-  },
-];
+import type { CursorAdapterConfig } from "../../../../main/modules/providers/adapters/adapter.types";
+import { CURSOR_MODES } from "@/lib/provider-modes";
+import { PROVIDER_IDS } from "../../../../main/modules/providers/provider-ids";
 
 export default function CursorSettings(
 ) {
@@ -31,8 +16,8 @@ export default function CursorSettings(
     error,
     config,
     updateConfig,
-  } = useProviderSettings("cursor", "cursor");
-  const mode = (config as any).mode ?? "agent";
+  } = useProviderSettings<CursorAdapterConfig>(PROVIDER_IDS.cursor, "cursor");
+  const mode = config.mode ?? "agent";
 
   return (
     <ProviderSettingsLayout
@@ -46,8 +31,14 @@ export default function CursorSettings(
           <Select
             useFixedBackground
             value={mode}
-            onChange={(value) => updateConfig({ mode: value })}
-            options={MODE_OPTIONS}
+            onChange={(value) =>
+              updateConfig({ mode: value as CursorAdapterConfig["mode"] })
+            }
+            options={CURSOR_MODES.map((m) => ({
+              value: m.value,
+              label: m.label,
+              description: m.description,
+            }))}
           />
         </SettingsRow>
       </SettingsSection>

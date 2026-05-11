@@ -1,11 +1,10 @@
 import { WorkspaceProviderPage } from "@/features/workspace/components/workspace-provider-page";
-
-const CODEX_PROVIDER_ID = "codex";
+import { PROVIDER_IDS } from "../../main/modules/providers/provider-ids";
 
 export default function CodexPage() {
   return (
     <WorkspaceProviderPage
-      providerId={CODEX_PROVIDER_ID}
+      providerId={PROVIDER_IDS.codex}
       variant="codex"
       planExitConfig={{
         key: "sandboxMode",

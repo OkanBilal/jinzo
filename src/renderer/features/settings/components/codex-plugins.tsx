@@ -15,6 +15,7 @@ import {
   useUninstallProviderPluginMutation,
 } from "@/lib/redux/api";
 import type { PluginInfo } from "@/lib/redux/api";
+import { PROVIDER_IDS } from "../../../../main/modules/providers/provider-ids";
 import {
   Search,
   Clipboard,
@@ -182,7 +183,7 @@ function PluginDetail({
   const pluginName = plugin.name || plugin.id.split("@")[0];
 
   const { data: detail } = useReadProviderPluginQuery(
-    { providerId: "codex", pluginName, marketplacePath },
+    { providerId: PROVIDER_IDS.codex, pluginName, marketplacePath },
     { skip: !marketplacePath },
   );
   const hasIncludes =
@@ -512,7 +513,7 @@ export default function CodexPlugins() {
     data: pluginData,
     isLoading,
     error,
-  } = useGetProviderPluginsQuery("codex");
+  } = useGetProviderPluginsQuery(PROVIDER_IDS.codex);
   const [installPlugin, { isLoading: isInstalling }] =
     useInstallProviderPluginMutation();
   const [uninstallPlugin, { isLoading: isUninstalling }] =
@@ -606,7 +607,7 @@ export default function CodexPlugins() {
     async (pluginId: string) => {
       setActionInFlight(pluginId);
       try {
-        await installPlugin({ providerId: "codex", pluginId }).unwrap();
+        await installPlugin({ providerId: PROVIDER_IDS.codex, pluginId }).unwrap();
         toast.success("Plugin installed");
       } catch (err: any) {
         toast.error(err?.message || "Failed to install plugin");
@@ -621,7 +622,7 @@ export default function CodexPlugins() {
     async (pluginId: string) => {
       setActionInFlight(pluginId);
       try {
-        await uninstallPlugin({ providerId: "codex", pluginId }).unwrap();
+        await uninstallPlugin({ providerId: PROVIDER_IDS.codex, pluginId }).unwrap();
         toast.success("Plugin uninstalled");
       } catch (err: any) {
         toast.error(err?.message || "Failed to uninstall plugin");

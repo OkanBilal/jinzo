@@ -34,31 +34,37 @@ import {
 } from "../utils/format-schedule";
 import type { PulseFrequency } from "@/lib/redux/api/pulseApi";
 import type { Workspace } from "@/lib/redux/api/workspacesApi";
+import {
+  PROVIDER_IDS,
+  type ProviderId,
+} from "../../../../main/modules/providers/provider-ids";
 
+// Local copy keeps the picker's display order (Claude first) separate from
+// the registry tuple's ordering (Copilot first).
 const SUPPORTED_PROVIDER_IDS = [
-  "claude_code",
-  "copilot_cli",
-  "codex",
-  "cursor",
-];
+  PROVIDER_IDS.claude,
+  PROVIDER_IDS.copilot,
+  PROVIDER_IDS.codex,
+  PROVIDER_IDS.cursor,
+] as const satisfies readonly ProviderId[];
 
 const PROVIDER_LABELS: Record<string, string> = {
-  claude_code: "Claude",
-  copilot_cli: "Copilot",
-  codex: "Codex",
-  cursor: "Cursor",
+  [PROVIDER_IDS.claude]: "Claude",
+  [PROVIDER_IDS.copilot]: "Copilot",
+  [PROVIDER_IDS.codex]: "Codex",
+  [PROVIDER_IDS.cursor]: "Cursor",
 };
 
 function ProviderIcon({ id, className }: { id: string; className?: string }) {
   const cls = className ?? "size-4";
   switch (id) {
-    case "claude_code":
+    case PROVIDER_IDS.claude:
       return <Claude className={cls} />;
-    case "copilot_cli":
+    case PROVIDER_IDS.copilot:
       return <CopilotStatic className={cls} />;
-    case "codex":
+    case PROVIDER_IDS.codex:
       return <Codex className={cls} />;
-    case "cursor":
+    case PROVIDER_IDS.cursor:
       return <CursorIcon className={cls} />;
     default:
       return null;
@@ -239,7 +245,7 @@ export function ProviderPicker({
   useClickOutside(ref, close);
   const { data: providers = [] } = useGetEnabledProvidersQuery();
   const eligible = providers.filter((p) =>
-    SUPPORTED_PROVIDER_IDS.includes(p.id),
+    (SUPPORTED_PROVIDER_IDS as readonly string[]).includes(p.id),
   );
   const selected = eligible.find((p) => p.id === value);
 
@@ -308,13 +314,13 @@ export function ModelPicker({
   });
   const selected = models.find((m) => m.id === value);
   const variant: ModelIconVariant | undefined =
-    providerId === "claude_code"
+    providerId === PROVIDER_IDS.claude
       ? "claude"
-      : providerId === "copilot_cli"
+      : providerId === PROVIDER_IDS.copilot
         ? "copilot"
-        : providerId === "codex"
+        : providerId === PROVIDER_IDS.codex
           ? "codex"
-          : providerId === "cursor"
+          : providerId === PROVIDER_IDS.cursor
             ? "cursor"
             : undefined;
 
@@ -507,11 +513,11 @@ export function PulseEffortPicker({
   const model = models.find((m) => m.id === modelId);
   const supported = model?.supportedEffortLevels ?? [];
   const variant: "claude" | "copilot" | "codex" | "cursor" =
-    providerId === "claude_code"
+    providerId === PROVIDER_IDS.claude
       ? "claude"
-      : providerId === "copilot_cli"
+      : providerId === PROVIDER_IDS.copilot
         ? "copilot"
-        : providerId === "codex"
+        : providerId === PROVIDER_IDS.codex
           ? "codex"
           : "cursor";
 

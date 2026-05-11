@@ -18,6 +18,7 @@ import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { ContextChips } from "./context-chips";
 import { InputToolbar } from "./input-toolbar";
 import { useProviderModels } from "../hooks/use-provider-models";
+import { PROVIDER_IDS } from "../../../../main/modules/providers/provider-ids";
 
 const EMPTY_CONTEXT_FILES: FileNode[] = [];
 const EMPTY_CONTEXT_ISSUES: ContextIssue[] = [];
@@ -147,7 +148,13 @@ export function WorkspaceInput({
   const providerVariant: "claude" | "copilot" | "codex" | "cursor" =
     variant === "claude" ? "claude" : variant === "codex" ? "codex" : variant === "cursor" ? "cursor" : "copilot";
   const defaultProviderId =
-    providerVariant === "claude" ? "claude_code" : providerVariant === "codex" ? "codex" : providerVariant === "cursor" ? "cursor" : "copilot_cli";
+    providerVariant === "claude"
+      ? PROVIDER_IDS.claude
+      : providerVariant === "codex"
+        ? PROVIDER_IDS.codex
+        : providerVariant === "cursor"
+          ? PROVIDER_IDS.cursor
+          : PROVIDER_IDS.copilot;
   const activeProviderId = providerId ?? defaultProviderId;
 
   const {

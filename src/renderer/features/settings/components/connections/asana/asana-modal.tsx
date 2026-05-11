@@ -1,27 +1,10 @@
-import { useState } from "react";
-
-import { Body, WizardModal, useWizard, type WizardStep } from "@/components/ui";
+import { useCallback } from "react";
+import { Body } from "@/components/ui";
+import { useLazyGetAsanaProjectsQuery } from "@/lib/redux/api";
 import {
-  useLazyGetConnectionQuery,
-  useSaveCredentialsMutation,
-  useLazyGetAsanaProjectsQuery,
-  useLazyGetSelectedAsanaProjectsQuery,
-  useSaveResourcesMutation,
-  useDeleteResourceMutation,
-  type AsanaProject,
-  type SelectedAsanaProject,
-} from "@/lib/redux/api";
-import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
-import { ManageResourcesStep } from "../shared/manage-resources-step";
-import { SelectResourcesStep } from "../shared/select-resources-step";
-import { CredentialStep } from "../shared/credential-step";
-import { AutoSyncSection } from "../shared/auto-sync-section";
-import { useConnectionModalState } from "../shared/use-connection-modal-state";
-import { ConnectionLoadingStep } from "../shared/connection-loading-step";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
+  ResourceWizardModal,
+  type ResourceWizardConfig,
+} from "../shared/resource-wizard-modal";
 
 interface AsanaModalProps {
   open: boolean;
@@ -30,403 +13,95 @@ interface AsanaModalProps {
   onSuccess?: () => void;
 }
 
-interface AsanaWizardData {
-  token: string;
-  connectionId: string;
-  projects: AsanaProject[];
-  selectedProjects: Set<string>;
-  currentProjects: SelectedAsanaProject[];
-  isFirstConnection: boolean;
-  fromManage: boolean;
-}
+const CONFIG: ResourceWizardConfig = {
+  provider: "asana",
+  appName: "Asana",
+  modalTitle: "Asana",
+  icon: "connections/asana.png",
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Step: Set Token
-// ─────────────────────────────────────────────────────────────────────────────
-
-function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
-  const { data, setData, errors, setErrors, goTo } =
-    useWizard<AsanaWizardData>();
-  const [loading, setLoading] = useState(false);
-
-  const [getConnection] = useLazyGetConnectionQuery();
-  const [saveCredentials] = useSaveCredentialsMutation();
-  const [getAsanaProjects] = useLazyGetAsanaProjectsQuery();
-
-  const handleSubmit = async () => {
-    if (!data.token?.trim()) {
-      setErrors({ token: "Please enter a valid token" });
-      return;
-    }
-
-    setLoading(true);
-    setErrors({ token: "" });
-
-    try {
-      const startTime = Date.now();
-      const connectionResult = await getConnection("asana").unwrap();
-
-      if (!connectionResult.success) {
-        console.error("[Asana] Failed to get connection:", connectionResult);
-        throw new Error("Failed to get connection");
-      }
-
-      const connId = connectionResult.connection.id;
-
-      await saveCredentials({
-        provider: "asana",
-        connectionId: connId,
-        accessToken: data.token,
-      }).unwrap();
-
-      onSuccess?.();
-
-      const projectsResult = await getAsanaProjects(connId).unwrap();
-
-      if (!projectsResult.success) {
-        console.error("[Asana] Failed to fetch projects:", projectsResult);
-        throw new Error("Failed to fetch projects");
-      }
-
-      const elapsed = Date.now() - startTime;
-      const minLoadingTime = 800;
-      const remainingTime = Math.max(0, minLoadingTime - elapsed);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
-
-      setData({
-        connectionId: connId,
-        projects: projectsResult.projects,
-        isFirstConnection: true,
-        fromManage: false,
-      });
-
-      goTo("add");
-    } catch (err: any) {
-      console.error("[Asana] Error in credential submit:", err);
-      const errorMessage =
-        err?.data?.error || err?.message || "An error occurred";
-      setErrors({ token: errorMessage });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <CredentialStep
-      description="Enter your Asana Personal Access Token to connect your projects."
-      fields={[
-        {
-          id: "asana-token",
-          label: "Personal Access Token",
-          placeholder: "0/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-          value: data.token || "",
-          onChange: (value) => {
-            setData({ token: value });
-            if (errors.token) setErrors({ token: "" });
-          },
-        },
-      ]}
-      instructions={
-        <>
-          <strong>How to create a token:</strong>
-          <br />
-          1. Go to{" "}
-          <a
-            href="https://app.asana.com/0/my-apps"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary-600 dark:text-primary-400 underline"
-          >
-            Asana Developer Console
-          </a>
-          <br />
-          2. Click &quot;Create new token&quot;
-          <br />
-          3. Give it a name and copy the token
-        </>
-      }
-      onSubmit={handleSubmit}
-      loading={loading}
-      error={errors.token || ""}
-    />
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Step: Select Projects
-// ─────────────────────────────────────────────────────────────────────────────
-
-function SelectProjectsStep({ onComplete }: { onComplete: () => void }) {
-  const { data, setData, errors, setErrors, goTo } =
-    useWizard<AsanaWizardData>();
-  const [loading, setLoading] = useState(false);
-
-  const [saveResources] = useSaveResourcesMutation();
-  const [getSelectedProjects] = useLazyGetSelectedAsanaProjectsQuery();
-
-  const selectedProjects = data.selectedProjects || new Set<string>();
-
-  const toggleProject = (projectGid: string | number) => {
-    const gid = String(projectGid);
-    const next = new Set(selectedProjects);
-    if (next.has(gid)) {
-      next.delete(gid);
-    } else {
-      next.add(gid);
-    }
-    setData({ selectedProjects: next });
-  };
-
-  const handleSave = async () => {
-    if (selectedProjects.size === 0) {
-      setErrors({ projects: "Please select at least one project" });
-      return;
-    }
-
-    setLoading(true);
-    setErrors({ projects: "" });
-
-    try {
-      const startTime = Date.now();
-
-      const selectedProjectObjects = data.projects.filter((project) =>
-        selectedProjects.has(project.gid)
-      );
-
-      await saveResources({
-        provider: "asana",
-        connectionId: data.connectionId,
-        resources: selectedProjectObjects,
-      }).unwrap();
-
-      const elapsed = Date.now() - startTime;
-      const minLoadingTime = 1000;
-      const remainingTime = Math.max(0, minLoadingTime - elapsed);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
-
-      if (data.fromManage) {
-        const result = await getSelectedProjects("asana").unwrap();
-        if (result.success) {
-          setData({
-            currentProjects: result.projects,
-            selectedProjects: new Set(),
-          });
-        }
-        goTo("manage");
-      } else {
-        onComplete();
-      }
-    } catch (err: any) {
-      setErrors({ projects: err?.data?.error || err.message || "An error occurred" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBack = () => {
-    if (data.fromManage) {
-      goTo("manage");
-    } else if (data.isFirstConnection) {
-      onComplete();
-    } else {
-      goTo("setToken");
-    }
-  };
-
-  return (
-    <SelectResourcesStep
-      resources={data.projects.map((project) => ({ ...project, id: project.gid }))}
-      selectedResources={selectedProjects}
-      onToggleResource={toggleProject}
-      onSave={handleSave}
-      onBack={handleBack}
-      loading={loading}
-      error={errors.projects || ""}
-      title="Select the projects you want to sync tasks from."
-      saveButtonLabel={`Save ${selectedProjects.size} Projects`}
-      renderResourceItem={(project) => (
-        <div className="flex items-center gap-2">
-          <Body>{project.name}</Body>
-          {project.workspaceName && (
-            <span className="text-xs text-primary-500">{project.workspaceName}</span>
-          )}
-        </div>
-      )}
-    />
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Step: Manage Projects
-// ─────────────────────────────────────────────────────────────────────────────
-
-function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
-  const { data, setData, errors, setErrors, goTo } =
-    useWizard<AsanaWizardData>();
-  const [loading, setLoading] = useState(false);
-
-  const [deleteResource] = useDeleteResourceMutation();
-  const [getAsanaProjects] = useLazyGetAsanaProjectsQuery();
-  const [getSelectedProjects] = useLazyGetSelectedAsanaProjectsQuery();
-
-  const handleRemove = async (projectId: string) => {
-    setErrors({ manage: "" });
-
-    try {
-      await deleteResource(projectId).unwrap();
-      const result = await getSelectedProjects("asana").unwrap();
-      if (result.success) {
-        setData({ currentProjects: result.projects });
-      }
-    } catch (err: any) {
-      setErrors({ manage: err?.data?.error || err.message || "An error occurred" });
-    }
-  };
-
-  const handleAddNew = async () => {
-    setLoading(true);
-    setErrors({ manage: "" });
-
-    try {
-      const projectsResult = await getAsanaProjects(data.connectionId).unwrap();
-
-      if (!projectsResult.success) {
-        throw new Error("Failed to fetch projects");
-      }
-
-      const currentProjectGids = new Set(data.currentProjects.map((p) => p.gid));
-      const availableProjects = projectsResult.projects.filter(
-        (project: AsanaProject) => !currentProjectGids.has(project.gid)
-      );
-
-      if (availableProjects.length === 0) {
-        setErrors({ manage: "All projects are already connected" });
-        return;
-      }
-
-      setData({
-        projects: availableProjects,
-        selectedProjects: new Set(),
-        fromManage: true,
-      });
-      goTo("add");
-    } catch (err: any) {
-      setErrors({ manage: err?.data?.error || err.message || "An error occurred" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <ManageResourcesStep
-      resources={data.currentProjects.map((p) => ({
-        ...p,
-        fullName: p.name,
-      }))}
-      onAddNew={handleAddNew}
-      onRemove={handleRemove}
-      onRevoke={onRevoke}
-      loading={loading}
-      error={errors.manage || ""}
-      resourceLabel="project"
-      resourceLabelPlural="projects"
-      addButtonLabel="Add Project"
-      revokeButtonLabel="Revoke Asana Access"
-      extraContent={<AutoSyncSection provider="asana" providerLabel="Asana" />}
-      renderResourceItem={(resource) => (
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <Body>{resource.name}</Body>
-            {resource.metadata?.workspaceName && (
-              <span className="text-xs text-primary-500">{resource.metadata.workspaceName}</span>
-            )}
-          </div>
-        </div>
-      )}
-    />
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Main Modal
-// ─────────────────────────────────────────────────────────────────────────────
-
-export default function AsanaModal({
-  open,
-  onClose,
-  isConnected,
-  onSuccess,
-}: AsanaModalProps) {
-  const [getSelectedProjects] = useLazyGetSelectedAsanaProjectsQuery();
-
-  const { initState, showRevokeConfirm, setShowRevokeConfirm, handleClose, handleRevoke, isRevoking } =
-    useConnectionModalState<AsanaWizardData>({
-      open,
-      onClose,
-      isConnected,
-      provider: "asana",
-      appName: "Asana",
-      baseData: {
-        token: "",
-        projects: [],
-        selectedProjects: new Set(),
-        currentProjects: [],
-        isFirstConnection: false,
-        fromManage: false,
-      },
-      fetchSelected: async () => {
-        const result = await getSelectedProjects("asana").unwrap();
-        if (!result.success) return null;
-        return { connectionId: result.connectionId, currentProjects: result.projects };
-      },
-    });
-
-  const steps: WizardStep<AsanaWizardData>[] = [
+  credentialDescription:
+    "Enter your Asana Personal Access Token to connect your projects.",
+  credentialFields: [
     {
-      id: "loading",
-      render: () => (
-        <ConnectionLoadingStep
-          targetStep={initState.targetStep}
-          message="Loading projects..."
-        />
-      ),
+      id: "asana-token",
+      label: "Personal Access Token",
+      placeholder: "0/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      dataKey: "token",
+      emptyError: "Please enter a valid token",
     },
-    {
-      id: "setToken",
-      render: () => <TokenStep onSuccess={onSuccess} />,
-    },
-    {
-      id: "add",
-      render: () => <SelectProjectsStep onComplete={handleClose} />,
-    },
-    {
-      id: "manage",
-      render: () => <ManageProjectsStep onRevoke={() => setShowRevokeConfirm(true)} />,
-    },
-  ];
-
-  return (
+  ],
+  credentialInstructions: (
     <>
-      <WizardModal
-        open={open}
-        onOpenChange={(isOpen) => !isOpen && handleClose()}
-        steps={steps}
-        initialStep="loading"
-        initialData={initState.data}
-        title="Asana"
-        icon="connections/asana.png"
-        onCancel={handleClose}
-      />
-
-      {showRevokeConfirm && (
-        <RevokeConfirmModal
-          onConfirm={handleRevoke}
-          onCancel={() => setShowRevokeConfirm(false)}
-          loading={isRevoking}
-          appName="Asana"
-          description="This will disconnect all projects and remove all Asana data. This action cannot be undone."
-        />
-      )}
+      <strong>How to create a token:</strong>
+      <br />
+      1. Go to{" "}
+      <a
+        href="https://app.asana.com/0/my-apps"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary-600 dark:text-primary-400 underline"
+      >
+        Asana Developer Console
+      </a>
+      <br />
+      2. Click &quot;Create new token&quot;
+      <br />
+      3. Give it a name and copy the token
     </>
+  ),
+  buildCredentials: (values) => ({ accessToken: values.token }),
+
+  loadingMessage: "Loading projects...",
+  selectTitle: "Select the projects you want to sync tasks from.",
+  resourceLabel: "project",
+  resourceLabelPlural: "projects",
+  saveButtonLabel: (count) => `Save ${count} Projects`,
+  addButtonLabel: "Add Project",
+  revokeButtonLabel: "Revoke Asana Access",
+  revokeDescription:
+    "This will disconnect all projects and remove all Asana data. This action cannot be undone.",
+
+  identityForItem: (project) => project.gid,
+  identityForCurrent: (current) => current.gid,
+
+  renderItemForSelect: (project) => (
+    <div className="flex items-center gap-2">
+      <Body>{project.name}</Body>
+      {project.workspaceName && (
+        <span className="text-xs text-primary-500">{project.workspaceName}</span>
+      )}
+    </div>
+  ),
+  renderItemForManage: (resource) => (
+    <div className="flex-1">
+      <div className="flex items-center gap-2">
+        <Body>{resource.name}</Body>
+        {resource.metadata?.workspaceName && (
+          <span className="text-xs text-primary-500">
+            {resource.metadata.workspaceName}
+          </span>
+        )}
+      </div>
+    </div>
+  ),
+
+  autoSyncProviderLabel: "Asana",
+};
+
+export default function AsanaModal(props: AsanaModalProps) {
+  const [getProjects] = useLazyGetAsanaProjectsQuery();
+  const fetchAllResources = useCallback(
+    async (connectionId: string) => {
+      const result = await getProjects(connectionId).unwrap();
+      return { success: result.success, items: result.projects };
+    },
+    [getProjects],
+  );
+  return (
+    <ResourceWizardModal
+      {...props}
+      config={CONFIG}
+      fetchAllResources={fetchAllResources}
+    />
   );
 }

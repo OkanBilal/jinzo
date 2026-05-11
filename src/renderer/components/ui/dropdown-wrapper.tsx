@@ -1,9 +1,7 @@
-import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
-import { useActiveSpace } from "@/hooks/use-active-space";
-import { useDarkMode } from "@/hooks/use-dark-mode";
-import { getDefaultDropdownBackground } from "@/lib/theme";
+import { useDropdownBackground } from "@/hooks/use-dropdown-background";
 
 interface DropdownWrapperProps {
   isOpen: boolean;
@@ -50,11 +48,6 @@ export default function DropdownWrapper({
     }
   }
 
-  const { activeSpace } = useActiveSpace();
-  const { darkMode } = useDarkMode();
-
-
-
   useEffect(() => {
     if (isOpen && usePortal && triggerRef?.current) {
       const rect = triggerRef.current.getBoundingClientRect();
@@ -82,33 +75,7 @@ export default function DropdownWrapper({
     };
   }, [isOpen]);
 
-  // Cache background — avoid DOM queries on every render
-  const dropdownBackground = useMemo(() => {
-    if (useFixedBackground) return undefined;
-
-    if (!activeSpace?.themeConfig) {
-      return getDefaultDropdownBackground(darkMode);
-    }
-
-    try {
-      const themeConfig = JSON.parse(activeSpace.themeConfig);
-      const bgColor = darkMode
-        ? themeConfig.darkBackground
-        : themeConfig.lightBackground;
-
-      if (!bgColor) {
-        return getDefaultDropdownBackground(darkMode);
-      }
-
-      if (bgColor.startsWith("linear-gradient")) {
-        return bgColor;
-      } else {
-        return bgColor.length === 9 ? bgColor.slice(0, 7) : bgColor;
-      }
-    } catch {
-      return getDefaultDropdownBackground(darkMode);
-    }
-  }, [useFixedBackground, activeSpace, darkMode]);
+  const dropdownBackground = useDropdownBackground(undefined, useFixedBackground);
 
   const fixedBackgroundClass = useFixedBackground
     ? "bg-linear-to-b from-primary/90 to-primary-50/80 dark:from-primary-900 dark:to-primary-800"

@@ -24,18 +24,10 @@ export {
   useLazyGetAsanaProjectsQuery,
   useLazyGetGitLabProjectsQuery,
   useLazyGetTrelloBoardsQuery,
-  useLazyGetSelectedReposQuery,
-  useLazyGetSelectedTeamsQuery,
-  useLazyGetSelectedProjectsQuery,
-  useLazyGetSelectedAsanaProjectsQuery,
-  useLazyGetSelectedGitLabProjectsQuery,
-  useLazyGetSelectedTrelloBoardsQuery,
   useLazyGetSentryProjectsQuery,
-  useGetSelectedSentryProjectsQuery,
-  useLazyGetSelectedSentryProjectsQuery,
   useLazyGetSocketDevOrganizationsQuery,
-  useGetSelectedSocketDevOrganizationsQuery,
-  useLazyGetSelectedSocketDevOrganizationsQuery,
+  useGetSelectedResourcesQuery,
+  useLazyGetSelectedResourcesQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
   useRevokeConnectionMutation,
@@ -133,13 +125,6 @@ export type { AppSettings } from "./appSettingsApi";
 
 
 export {
-  setActiveSpaceId,
-  setSelectedSpaceForEdit,
-} from "../slices/spaceSlice";
-export type { SpaceState } from "../slices/spaceSlice";
-
-export {
-  setDarkMode,
   setSidebarCollapsed,
   setBrowserPanelOpen,
   setRightPanelOpen,

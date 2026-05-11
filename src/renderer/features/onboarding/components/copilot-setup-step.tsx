@@ -1,52 +1,22 @@
-import { Text, Button, useWizard } from "@/components/ui";
-import { CopyButton } from "@/components/ui/copy-button";
+import { CliSetupStep } from "./cli-setup-step";
 
 export function CopilotSetupStep() {
-  const { goNext, goBack } = useWizard();
-
   return (
-    <div className="space-y-1">
-      <Text variant="muted">
-        Mains can use GitHub Copilot as an coding agent. You need an
-        active Copilot subscription and the GitHub CLI authenticated.
-      </Text>
-
-      <div className="space-y-1 rounded-2xl bg-primary-100/50 dark:bg-primary-900 py-4">
-        <Text variant="label">Check authentication:</Text>
-        <div className="flex items-center rounded-lg bg-primary-200/60 dark:bg-primary-800/40 px-3 mt-2 py-2">
-          <code className="flex-1 text-sm font-mono text-primary-800 dark:text-primary-200">
-            gh auth status
-          </code>
-          <CopyButton text="gh auth status" />
-        </div>
-        <Text variant="label">If not authenticated:</Text>
-        <div className="flex items-center rounded-lg bg-primary-200/60 dark:bg-primary-800/40 px-3 mt-2 py-2">
-          <code className="flex-1 text-sm font-mono text-primary-800 dark:text-primary-200">
-            gh auth login
-          </code>
-          <CopyButton text="gh auth login" />
-        </div>
-      </div>
-
-      <Text variant="mutedSmall">
-        Requires an active{" "}
-        <button
-          type="button"
-          onClick={() => window.api.shell.openExternal("https://github.com/features/copilot")}
-          className="text-primary-600 dark:text-primary-400 underline cursor-pointer"
-        >
-          GitHub Copilot subscription
-        </button>
-      </Text>
-
-      <div className="flex justify-between pt-2">
-        <Button variant="ghost" size="sm" onClick={goBack}>
-          Back
-        </Button>
-        <Button variant="submit" size="sm" onClick={goNext}>
-          Next
-        </Button>
-      </div>
-    </div>
+    <CliSetupStep
+      intro="Mains can use GitHub Copilot as an coding agent. You need an active Copilot subscription and the GitHub CLI authenticated."
+      sections={[
+        {
+          label: "Check authentication:",
+          commands: ["gh auth status"],
+        },
+        {
+          label: "If not authenticated:",
+          commands: ["gh auth login"],
+        },
+      ]}
+      helpText="Requires an active"
+      helpLinkUrl="https://github.com/features/copilot"
+      helpLinkLabel="GitHub Copilot subscription"
+    />
   );
 }

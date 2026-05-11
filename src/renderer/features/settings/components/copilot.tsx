@@ -4,6 +4,8 @@ import {
   ProviderSettingsLayout,
   useProviderSettings,
 } from "./provider-settings-shared";
+import type { CopilotAdapterConfig } from "../../../../main/modules/providers/adapters/adapter.types";
+import { PROVIDER_IDS } from "../../../../main/modules/providers/provider-ids";
 
 export default function CopilotSettings(
 ) {
@@ -14,8 +16,8 @@ export default function CopilotSettings(
     updating,
     config,
     updateConfig,
-  } = useProviderSettings("copilot_cli", "copilot");
-  const permissionMode = (config as any).permissionMode ?? "default";
+  } = useProviderSettings<CopilotAdapterConfig>(PROVIDER_IDS.copilot, "copilot");
+  const permissionMode = config.permissionMode ?? "default";
   const isBypassing = permissionMode === "bypassPermissions";
 
   const openPath = (targetPath: string) => {

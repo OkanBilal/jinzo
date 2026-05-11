@@ -16,7 +16,10 @@ import { getSpaceDefaultRoute } from "@/lib/route-utils";
 
 type ProviderData = ReturnType<typeof useGetProviderByIdQuery>["data"];
 
-export function useProviderSettings(providerId: string, spaceSlug: string) {
+export function useProviderSettings<TConfig extends object = Record<string, unknown>>(
+  providerId: string,
+  spaceSlug: string,
+) {
   const navigate = useNavigate();
   const {
     data: provider,
@@ -34,9 +37,9 @@ export function useProviderSettings(providerId: string, spaceSlug: string) {
     (s) => s.slug !== spaceSlug && !s.isArchived,
   );
   const canHide = otherVisibleSpaces.length > 0;
-  const config = provider?.config ?? {};
+  const config = (provider?.config ?? {}) as TConfig;
 
-  const updateConfig = async (patch: Record<string, unknown>) => {
+  const updateConfig = async (patch: Partial<TConfig>) => {
     if (!provider || updating) return false;
     try {
       await updateProvider({

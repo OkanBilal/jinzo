@@ -119,6 +119,19 @@ function mapSandboxMode(mode?: string): "read-only" | "workspace-write" | "dange
 }
 
 /**
+ * Resolve the JSON Schema selected for structured output. Returns the schema
+ * payload Codex's `turn/start` expects via `output_schema`, or undefined if
+ * the user hasn't selected one. Mirrors the wiring in claude.adapter.ts.
+ */
+function resolveOutputSchema(
+  config: CodexAdapterConfig,
+): Record<string, unknown> | undefined {
+  const selectedId = config.structuredOutputsSelectedId;
+  if (!selectedId) return undefined;
+  return config.structuredOutputs?.[selectedId]?.schema;
+}
+
+/**
  * Codex's app-server treats ThreadStartParams.config as a TOML override map
  * (codex-rs/config/src/overrides.rs::build_cli_overrides_layer). The key uses
  * dotted-path notation matching ConfigToml fields. Network access lives under
@@ -2862,6 +2875,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           : typeof overrides.effortLevel === "string" && overrides.effortLevel
             ? (overrides.effortLevel as string)
             : undefined;
+        const outputSchema = resolveOutputSchema(config);
         const overrideServiceTier = typeof overrides.serviceTier === "string" && overrides.serviceTier
           ? (overrides.serviceTier as string)
           : undefined;
@@ -2915,6 +2929,7 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           ...(resolvedModel ? { model: resolvedModel } : {}),
           ...(effort ? { effort } : {}),
           ...(serviceTier ? { serviceTier } : {}),
+          ...(outputSchema ? { output_schema: outputSchema } : {}),
         };
 
         await server.sendRequest("turn/start", turnStartParams);
@@ -3024,12 +3039,14 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         const currentThreadId = sessionIdMap.get(runId) ?? threadId;
         const turnInput = buildContinueTurnInput(message, request);
 
+        const continueOutputSchema = resolveOutputSchema(config);
         await server.sendRequest("turn/start", {
           threadId: currentThreadId,
           input: turnInput,
           ...(resolvedModel ? { model: resolvedModel } : {}),
           ...(config.modelReasoningEffort ? { effort: config.modelReasoningEffort } : {}),
           ...(config.serviceTier ? { serviceTier: config.serviceTier } : {}),
+          ...(continueOutputSchema ? { output_schema: continueOutputSchema } : {}),
         });
 
         // 3. Wait for turn completion
@@ -3142,12 +3159,14 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           attachments: request.attachments,
         } as WorkRunContinueRequest);
 
+        const forkOutputSchema = resolveOutputSchema(config);
         await server.sendRequest("turn/start", {
           threadId: forkedThreadId,
           input: turnInput,
           ...(resolvedModel ? { model: resolvedModel } : {}),
           ...(config.modelReasoningEffort ? { effort: config.modelReasoningEffort } : {}),
           ...(config.serviceTier ? { serviceTier: config.serviceTier } : {}),
+          ...(forkOutputSchema ? { output_schema: forkOutputSchema } : {}),
         });
 
         // 3. Wait for turn completion

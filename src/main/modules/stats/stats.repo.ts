@@ -19,6 +19,7 @@ import type {
   CodeActivityStats,
   ProviderFilter,
 } from "./stats.dto";
+import { PROVIDER_IDS } from "../providers/provider-ids";
 
 function providerWhere(filter: ProviderFilter) {
   if (filter === "all") return sql`1=1`;
@@ -60,7 +61,7 @@ export const statsRepo = {
       SELECT COALESCE(SUM(${runTurns.costMicros}), 0) AS total
       FROM ${runTurns}
       INNER JOIN ${runs} r ON r.id = ${runTurns.runId}
-      WHERE ${runTurns.status} = 'completed' AND r.provider_id != 'copilot_cli' AND ${ptw}
+      WHERE ${runTurns.status} = 'completed' AND r.provider_id != ${PROVIDER_IDS.copilot} AND ${ptw}
     `);
 
     return {
@@ -100,13 +101,13 @@ export const statsRepo = {
         dayMap.set(row.date, { date: row.date, claude: 0, copilot: 0, codex: 0, cursor: 0, other: 0 });
       }
       const day = dayMap.get(row.date)!;
-      if (row.provider_id === "claude_code") {
+      if (row.provider_id === PROVIDER_IDS.claude) {
         day.claude += row.count;
-      } else if (row.provider_id === "copilot_cli") {
+      } else if (row.provider_id === PROVIDER_IDS.copilot) {
         day.copilot += row.count;
-      } else if (row.provider_id === "codex") {
+      } else if (row.provider_id === PROVIDER_IDS.codex) {
         day.codex += row.count;
-      } else if (row.provider_id === "cursor") {
+      } else if (row.provider_id === PROVIDER_IDS.cursor) {
         day.cursor += row.count;
       } else {
         day.other += row.count;
@@ -151,7 +152,7 @@ export const statsRepo = {
       , json_each(t.model_usage) j
       WHERE t.status = 'completed'
         AND t.model_usage IS NOT NULL
-        AND r.provider_id != 'copilot_cli'
+        AND r.provider_id != ${PROVIDER_IDS.copilot}
         AND ${ptw}
       GROUP BY j.key
       ORDER BY cost_micros DESC
@@ -301,7 +302,7 @@ export const statsRepo = {
       providerId: r.provider_id,
       projectName: r.project_name,
       durationMs: r.duration_ms,
-      totalCostUsd: r.provider_id === "copilot_cli" ? null : r.cost_micros != null ? r.cost_micros / 1_000_000 : null,
+      totalCostUsd: r.provider_id === PROVIDER_IDS.copilot ? null : r.cost_micros != null ? r.cost_micros / 1_000_000 : null,
       createdAt: r.created_at,
     }));
   },

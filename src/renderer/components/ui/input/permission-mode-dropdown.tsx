@@ -3,6 +3,11 @@ import { Plan, Lock, Edit, DontAsk, Danger, ArrowUp, Infinite } from "../icons";
 import DropdownWrapper from "../dropdown-wrapper";
 import { Button } from "../button";
 import { Body } from "../text";
+import {
+  CURSOR_MODES as CURSOR_MODE_DEFS,
+  CODEX_SANDBOX_MODES as CODEX_SANDBOX_MODE_DEFS,
+  shortLabelMap,
+} from "@/lib/provider-modes";
 
 const PERMISSION_MODES = [
   {
@@ -32,45 +37,10 @@ const PERMISSION_MODE_LABELS: Record<string, string> = {
   dontAsk: "Don't Ask",
 };
 
-const CURSOR_MODES = [
-  {
-    value: "ask",
-    label: "Ask",
-    description: "Ask before actions",
-  },
-  { value: "agent", label: "Agent", description: "Full autonomous agent mode" },
-  { value: "plan", label: "Plan", description: "Plan before actions" },
-] as const;
-
-const CURSOR_MODE_LABELS: Record<string, string> = {
-  agent: "Agent",
-  plan: "Plan",
-  ask: "Ask",
-};
-
-const CODEX_SANDBOX_MODES = [
-  {
-    value: "read-only",
-    label: "Read Only",
-    description: "Agent cannot modify files",
-  },
-  {
-    value: "workspace-write",
-    label: "Workspace Write",
-    description: "Write within workspace only",
-  },
-  {
-    value: "danger-full-access",
-    label: "Full Access",
-    description: "No restrictions",
-  },
-] as const;
-
-const CODEX_SANDBOX_LABELS: Record<string, string> = {
-  "read-only": "Read Only",
-  "workspace-write": "Write",
-  "danger-full-access": "Full Access",
-};
+const CURSOR_MODES = CURSOR_MODE_DEFS;
+const CURSOR_MODE_LABELS = shortLabelMap(CURSOR_MODE_DEFS);
+const CODEX_SANDBOX_MODES = CODEX_SANDBOX_MODE_DEFS;
+const CODEX_SANDBOX_LABELS = shortLabelMap(CODEX_SANDBOX_MODE_DEFS);
 
 function PermissionModeIcon({
   mode,

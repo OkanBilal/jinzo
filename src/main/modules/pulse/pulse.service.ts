@@ -3,6 +3,7 @@ import { validateCreate, validateUpdate } from "./pulse.validation";
 import { runsService } from "../runs/runs.service";
 import { appSettingsRepo } from "../appSettings/appSettings.repo";
 import { SETTINGS_ID } from "../appSettings/appSettings.constants";
+import { PROVIDER_IDS } from "../providers/provider-ids";
 import type {
   CreatePulseInput,
   Pulse,
@@ -19,20 +20,20 @@ function buildConfigSnapshot(
   const snapshot: Record<string, unknown> = {};
 
   switch (providerId) {
-    case "claude_code":
+    case PROVIDER_IDS.claude:
       snapshot.permissionMode = "auto";
       snapshot.thinkingMode = pulse.thinkingMode;
       if (pulse.effortLevel) snapshot.effortLevel = pulse.effortLevel;
       break;
-    case "codex":
+    case PROVIDER_IDS.codex:
       snapshot.sandboxMode = "workspace-write";
       if (pulse.effortLevel) snapshot.modelReasoningEffort = pulse.effortLevel;
       break;
-    case "copilot_cli":
+    case PROVIDER_IDS.copilot:
       snapshot.permissionMode = "allow";
       if (pulse.effortLevel) snapshot.modelReasoningEffort = pulse.effortLevel;
       break;
-    case "cursor":
+    case PROVIDER_IDS.cursor:
       snapshot.mode = "agent";
       break;
   }
@@ -249,15 +250,16 @@ export const pulseService = {
       });
 
       if (!result.success) {
-        pulseRepo.markRun(id, { lastRunAt: now, nextRunAt, lastError: result.error });
+        const errMsg = result.error ?? "Run failed";
+        pulseRepo.markRun(id, { lastRunAt: now, nextRunAt, lastError: errMsg });
         scheduleNext();
-        return { success: false, error: result.error };
+        return { success: false, error: errMsg };
       }
 
       pulseRepo.markRun(id, {
         lastRunAt: now,
         nextRunAt,
-        lastRunId: result.data.runId,
+        lastRunId: result.data!.runId,
         lastError: null,
       });
       scheduleNext();
