@@ -127,7 +127,7 @@ export default function Select<T extends string = string>({
         className={`
           w-full px-2.5 py-2
           min-w-52
-          bg-primary-950/5 dark:bg-primary/4
+          bg-primary-950/5 dark:bg-primary/5
           border border-primary-950/10 dark:border-primary/5
           text-primary-900 dark:text-primary
           text-sm focus:outline-none cursor-pointer

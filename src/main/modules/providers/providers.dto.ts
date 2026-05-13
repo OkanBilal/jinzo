@@ -69,3 +69,13 @@ export interface ServiceResponse<T> {
   data?: T;
   error?: string;
 }
+
+// ─────────────────────────────────────────────────────────────
+// CLI Detection
+// ─────────────────────────────────────────────────────────────
+export interface DetectedClisResponse {
+  claude: boolean;
+  copilot: boolean;
+  codex: boolean;
+  cursor: boolean;
+}

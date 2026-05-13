@@ -8,7 +8,10 @@ import {
 } from "@/components/ui/icons";
 import { Claude } from "@/components/ui/icons/space";
 import { useAppDispatch } from "@/lib/redux/hooks";
-import { useGetSpacesQuery } from "@/lib/redux/api";
+import {
+  useGetSpacesQuery,
+  useDetectInstalledClisQuery,
+} from "@/lib/redux/api";
 import { setOnboardingCompleted } from "@/lib/redux/slices/appSettingsSlice";
 import {
   isOnboardingAgentSlug,
@@ -36,14 +39,14 @@ const STEP_BY_SLUG: Record<
   claude: {
     id: "claude",
     title: "Claude Setup",
-    titleIcon: <Claude size={28} className="text-claude" />,
+    titleIcon: <Claude  className="text-claude size-6!" />,
     Setup: ClaudeSetupStep,
   },
   codex: {
     id: "codex",
     title: "Codex Setup",
     titleIcon: (
-      <Codex className="size-7 text-primary-900 dark:text-primary-50" />
+      <Codex className="size-6! text-primary-900 dark:text-primary-50" />
     ),
     Setup: CodexSetupStep,
   },
@@ -51,7 +54,7 @@ const STEP_BY_SLUG: Record<
     id: "cursor",
     title: "Cursor Setup",
     titleIcon: (
-      <CursorBrandIcon className="size-7 text-primary-900 dark:text-primary-100" />
+      <CursorBrandIcon className="size-6! text-primary-900 dark:text-primary-100" />
     ),
     Setup: CursorSetupStep,
   },
@@ -59,7 +62,7 @@ const STEP_BY_SLUG: Record<
     id: "copilot",
     title: "GitHub Copilot Setup",
     titleIcon: (
-      <CopilotStatic className="size-7 text-primary-900 dark:text-primary-100" />
+      <CopilotStatic className="size-6! text-primary-900 dark:text-primary-100" />
     ),
     Setup: CopilotSetupStep,
   },
@@ -68,6 +71,7 @@ const STEP_BY_SLUG: Record<
 export function OnboardingModal({ open }: OnboardingModalProps) {
   const dispatch = useAppDispatch();
   const { data: spaces = [] } = useGetSpacesQuery();
+  const { data: detectedClis } = useDetectInstalledClisQuery();
 
   const completeOnboarding = useCallback(() => {
     dispatch(setOnboardingCompleted(true));
@@ -79,13 +83,17 @@ export function OnboardingModal({ open }: OnboardingModalProps) {
       render: () => <WelcomeStep />,
     };
 
-    const activeProviders = spaces
-      .filter(
-        (s) => s.slug && isOnboardingAgentSlug(s.slug) && !s.isArchived,
-      )
+    const setupCandidates = spaces
+      .filter((s) => s.slug && isOnboardingAgentSlug(s.slug) && !s.isArchived)
+      .filter((s) => {
+        // Skip setup for agents whose CLI is already installed.
+        // If detection hasn't loaded yet, fall back to showing all selected.
+        if (!detectedClis) return true;
+        return !detectedClis[s.slug as OnboardingAgentSlug];
+      })
       .sort((a, b) => a.sortOrder - b.sortOrder);
 
-    const providerSteps: WizardStep[] = activeProviders.map((space) => {
+    const providerSteps: WizardStep[] = setupCandidates.map((space) => {
       const slug = space.slug as OnboardingAgentSlug;
       const def = STEP_BY_SLUG[slug];
       const Setup = def.Setup;
@@ -98,7 +106,7 @@ export function OnboardingModal({ open }: OnboardingModalProps) {
     });
 
     return [welcomeStep, ...providerSteps];
-  }, [spaces]);
+  }, [spaces, detectedClis]);
 
   return (
     <WizardModal
@@ -109,7 +117,7 @@ export function OnboardingModal({ open }: OnboardingModalProps) {
       steps={steps}
       onComplete={completeOnboarding}
       onCancel={completeOnboarding}
-      className="max-w-160 mb-24"
+      className="max-w-190 ml-72 mb-24"
     />
   );
 }

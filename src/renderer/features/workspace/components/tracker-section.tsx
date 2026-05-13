@@ -152,7 +152,7 @@ export function TrackerSection({
                 className={`px-2 py-0.5 text-xxs font-medium rounded-lg transition-colors ${
                   filter === f.value
                     ? "bg-primary/80 dark:bg-primary/10 text-primary-900 dark:text-primary-100"
-                    : "text-primary-700 dark:text-primary-300 hover:bg-primary/40 dark:hover:bg-primary/5"
+                    : "text-primary-700 dark:text-primary-300 hover:bg-primary/50 dark:hover:bg-primary/5"
                 }`}
               >
                 {f.label}

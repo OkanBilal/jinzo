@@ -15,7 +15,7 @@ export function FastModeButton({ fastMode, onToggle }: FastModeButtonProps) {
       onClick={onToggle}
       className={`flex items-center pl-2 pr-2.5 py-1 -ml-px rounded-full text-sm transition-all animate-blur-reveal cursor-pointer ${
         fastMode
-          ? "dark:bg-orange-200/10 gap-1 bg-orange-400/30 text-orange-600 dark:text-orange-200"
+          ? "dark:bg-primary-200/10 gap-1 bg-primary-400/20 text-primary-600 dark:text-primary-200"
           : "text-primary-700 dark:text-primary-300 hover:bg-primary/10"
       }`}
       title={
@@ -26,7 +26,7 @@ export function FastModeButton({ fastMode, onToggle }: FastModeButtonProps) {
     >
       {fastMode ? (
         <BoltFill
-          className="size-4 transition-colors text-orange-600 dark:text-orange-200"
+          className="size-4 transition-colors text-primary-600 dark:text-primary-200"
           style={{
             transitionDelay: "0ms",
             transitionDuration: "150ms",
@@ -42,7 +42,7 @@ export function FastModeButton({ fastMode, onToggle }: FastModeButtonProps) {
         />
       )}
       <span
-        className={`inline-block overflow-hidden whitespace-nowrap text-orange-600 dark:text-orange-200 transition-[max-width,opacity,transform] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        className={`inline-block overflow-hidden whitespace-nowrap text-primary-600 dark:text-primary-200 transition-[max-width,opacity,transform] ease-[cubic-bezier(0.22,1,0.36,1)] ${
           fastMode
             ? "max-w-11 translate-x-0 opacity-100 duration-300"
             : "max-w-0 -translate-x-0.5 opacity-0 duration-200"

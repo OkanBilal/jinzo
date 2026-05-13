@@ -1,5 +1,18 @@
-import { useState, useRef, useEffect, type MouseEvent, type ReactNode } from "react";
-import { Muted, Button, DropdownMenu, DropdownMenuItem, DropdownMenuSub, Tooltip } from "@/components/ui";
+import {
+  useState,
+  useRef,
+  useEffect,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
+import {
+  Muted,
+  Button,
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  Tooltip,
+} from "@/components/ui";
 import {
   Trash,
   Option,
@@ -13,7 +26,7 @@ import {
 } from "@/components/ui/icons";
 import { useGetInstalledAppsQuery } from "@/lib/redux/api";
 import { useGetLatestWorkspaceDiffSummaryQuery } from "@/lib/redux/api/workspaceDiffsApi";
-import { formatDate } from "@/lib/format-date";
+//import { formatDate } from "@/lib/format-date";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspacesApi";
@@ -56,7 +69,7 @@ export default function WorkspaceItem({
   rootPath,
   status = "todo",
   branch,
-  updatedAt,
+  //updatedAt,
   isActive = false,
   projectId,
   projectIcon,
@@ -159,12 +172,12 @@ export default function WorkspaceItem({
         className={`block px-2.5 py-1.5
           rounded-xl transition-all duration-200 ease-out cursor-pointer ${
             isActive
-              ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/8"
-              : "bg-transparent group-hover:bg-primary/40 dark:group-hover:bg-primary/5"
+              ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
+              : "bg-transparent group-hover:bg-primary/50 dark:group-hover:bg-primary/5"
           }`}
       >
         <div className="flex flex-col ">
-          <div className="flex items-center gap-1 min-w-0 flex-1">
+          <div className="flex items-center gap-1 min-w-0 flex-1 mb-0.5">
             {grouping !== "project" && (
               <span className="shrink-0 ">
                 {projectIcon ?? (
@@ -175,8 +188,8 @@ export default function WorkspaceItem({
             <span
               className={`truncate text-s font-medium ${
                 isActive
-                  ? "text-primary-950 dark:text-primary"
-                  : "text-primary-900 dark:text-primary-100"
+                  ? "text-primary-800 dark:text-primary"
+                  : "text-primary-800 dark:text-primary-100"
               }`}
             >
               {name}
@@ -200,7 +213,9 @@ export default function WorkspaceItem({
                 <span className="size-2.75 mr-2 flex items-center" />
               )}
               {branch && !isRenamingBranch && (
-                <Muted className={`text-xs  text-primary-900 dark:text-primary-200 truncate ${grouping === "status" ? "-ml-1.5" : ""}`}>
+                <Muted
+                  className={`text-xs  text-primary-900 dark:text-primary-200 truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
+                >
                   {branch}
                 </Muted>
               )}
@@ -219,7 +234,7 @@ export default function WorkspaceItem({
                   className="text-xs bg-primary/20 dark:bg-primary/10 text-primary-900 dark:text-primary-200 rounded px-1 py-0.5 outline-none border border-primary/30 dark:border-primary/20 w-full max-w-35"
                 />
               )}
-              {branch && updatedAt && (
+              {/* {branch && updatedAt && (
                 <span className="text-primary-900 text-lg leading-6 dark:text-primary-200">
                   ·
                 </span>
@@ -228,7 +243,7 @@ export default function WorkspaceItem({
                 <Muted className="text-xs text-primary-900 dark:text-primary-200 truncate">
                   {formatDate(new Date(updatedAt).toISOString())}
                 </Muted>
-              )}
+              )} */}
             </div>
           </div>
         </div>
@@ -237,7 +252,7 @@ export default function WorkspaceItem({
       {/* Diff stats (visible by default, hidden on hover) / Options button (hidden by default, visible on hover) */}
       <div className="absolute right-1.5 top-1/2 -translate-y-1/2 z-(--z-base)">
         {(insertions || deletions) && (
-          <span className="flex items-center gap-1 text-xxs font-mono group-hover:opacity-0 transition-opacity pointer-events-none">
+          <span className="flex items-center gap-1 text-t font-mono group-hover:opacity-0 transition-opacity pointer-events-none">
             {insertions && (
               <span className="text-green-600 dark:text-green-400">
                 +{insertions}

@@ -86,7 +86,7 @@ export function SelectResourcesStep<T extends SelectableResource>({
       {title && <Muted>{title}</Muted>}
       {!title && (
         <Muted>
-          <span className="mr-1 font-semibold dark:text-primary-50 text-primary-950">
+          <span className="mr-1 font-semibold dark:text-primary text-primary-950">
             {selectedCount}
           </span>
           selected.

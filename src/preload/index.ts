@@ -226,6 +226,7 @@ const api = {
     readPlugin: (id: string, pluginName: string, marketplacePath: string) => ipcRenderer.invoke("providers:readPlugin", id, pluginName, marketplacePath),
     installPlugin: (id: string, pluginId: string) => ipcRenderer.invoke("providers:installPlugin", id, pluginId),
     uninstallPlugin: (id: string, pluginId: string) => ipcRenderer.invoke("providers:uninstallPlugin", id, pluginId),
+    detectInstalled: () => ipcRenderer.invoke("providers:detectInstalled"),
   },
   // Skills.sh marketplace (read-only)
   skillsMarketplace: {

@@ -94,7 +94,7 @@ export function AskUserQuestionDisplay({
                             className={`flex items-start gap-2 rounded px-2 py-1.5 ${
                               isSelected
                                 ? "bg-green-50/80 dark:bg-green-500/10"
-                                : "bg-primary-100/60 dark:bg-primary/10"
+                                : "bg-primary-100/50 dark:bg-primary/10"
                             }`}
                           >
                             {isSelected && (

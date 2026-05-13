@@ -492,14 +492,14 @@ export function UnifiedContextDropdown({
                           data-dropdown-active={active ? "true" : undefined}
                           onMouseEnter={() => setActiveIndex(idx)}
                           onClick={() => selectRowAt(idx)}
-                          className={`w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 ${
+                          className={`w-full text-left px-3 py-1.5 cursor-pointer text-xs transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 ${
                             active ? "bg-primary-200/30 dark:bg-primary-800" : ""
                           }`}
                         >
                           <div className="flex items-start gap-2">
                             <SkillRowIcon skill={skill} />
                             <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                              <div className="font-medium truncate">{title}</div>
+                              <div className="font-medium truncate text-xs">{title}</div>
                               {desc && (
                                 <div className="text-xs line-clamp-2 text-primary-500 dark:text-primary-400">{desc}</div>
                               )}
@@ -517,7 +517,7 @@ export function UnifiedContextDropdown({
                           data-dropdown-active={active ? "true" : undefined}
                           onMouseEnter={() => setActiveIndex(idx)}
                           onClick={() => selectRowAt(idx)}
-                          className={`w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 ${
+                          className={`w-full text-left px-3 py-1.5 cursor-pointer transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 ${
                             active ? "bg-primary-200/30 dark:bg-primary-800" : ""
                           }`}
                         >
@@ -529,7 +529,7 @@ export function UnifiedContextDropdown({
                               className="size-4 shrink-0 mt-0.5"
                             />
                             <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                              <span className="truncate font-medium">{entry.name}</span>
+                              <span className="truncate font-medium text-xs">{entry.name}</span>
                               {entry.type !== "directory" && (
                                 <span className="text-xs text-primary-500 dark:text-primary-400 truncate">
                                   {workspaceRelativeDir(entry.fullPath, workspacePath) || entry.fullPath}
@@ -552,7 +552,7 @@ export function UnifiedContextDropdown({
                           data-dropdown-active={active ? "true" : undefined}
                           onMouseEnter={() => setActiveIndex(idx)}
                           onClick={() => selectRowAt(idx)}
-                          className={`w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 ${
+                          className={`w-full text-left px-3 py-1.5 cursor-pointer transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 ${
                             active ? "bg-primary-200/30 dark:bg-primary-800" : ""
                           }`}
                         >
@@ -567,7 +567,7 @@ export function UnifiedContextDropdown({
                                 #{item.issue.number}
                               </span>
                             )}
-                            <span className="truncate">{item.entity.title}</span>
+                            <span className="truncate text-xs">{item.entity.title}</span>
                           </div>
                         </Button>
                       );
@@ -580,7 +580,7 @@ export function UnifiedContextDropdown({
                         data-dropdown-active={active ? "true" : undefined}
                         onMouseEnter={() => setActiveIndex(idx)}
                         onClick={() => selectRowAt(idx)}
-                        className={`w-full text-left px-3 py-1.5 cursor-pointer text-sm transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 ${
+                        className={`w-full text-left px-3 py-1.5 cursor-pointer text-xs transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-100 ${
                           active ? "bg-primary-200/30 dark:bg-primary-800" : ""
                         }`}
                       >

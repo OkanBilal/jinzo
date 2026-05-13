@@ -14,7 +14,7 @@ interface ThemePreviewCardProps {
   onClick: () => void;
   lightBackground: string;
   darkBackground: string;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
 }
 
 export function ThemePreviewCard({
@@ -40,7 +40,7 @@ export function ThemePreviewCard({
   const darkBgStyle = getBackgroundStyle(darkBackground);
 
   const dimensions =
-    size === "sm" ? "w-20 h-14" : "w-24 h-16";
+    size === "sm" ? "w-20 h-14" : size === "md" ? "w-24 h-16" : size === "lg" ? "w-36 h-24" : "w-64 h-32";
 
   return (
     <Button
@@ -180,7 +180,7 @@ export function useSpaceThemeBackgrounds() {
 }
 
 interface ThemePickerProps {
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   className?: string;
   onChange?: (theme: ThemeValue) => void;
 }

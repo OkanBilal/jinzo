@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, useWizard } from "@/components/ui";
+import { Button, Toggle, useWizard } from "@/components/ui";
 import { Check, ChevronUp, Plus } from "@/components/ui/icons";
 import { Codex, CopilotStatic, Cursor } from "@/components/ui/icons";
 import { Claude } from "@/components/ui/icons/space";
@@ -12,6 +12,9 @@ import {
   useArchiveSpaceMutation,
   useUnarchiveSpaceMutation,
   useSetActiveSpaceMutation,
+  useSetNotifyOnRunCompleteMutation,
+  useSetNotifyOnToolApprovalMutation,
+  useDetectInstalledClisQuery,
 } from "@/lib/redux/api";
 import { ThemePicker } from "@/features/settings/components/theme-picker";
 import {
@@ -81,6 +84,16 @@ function AgentCard({
   );
 }
 
+const NOTIFICATION_CHOICES: {
+  key: "notifyOnRunComplete" | "notifyOnToolApproval";
+  label: string;
+}[] = [
+  { key: "notifyOnRunComplete", label: "Run complete" },
+  { key: "notifyOnToolApproval", label: "Tool approval" },
+];
+
+const CLI_AUTO_SELECT_FLAG = "mains:onboarding:cli-auto-select-applied";
+
 export function WelcomeStep() {
   const { goNext } = useWizard();
   const navigate = useNavigate();
@@ -89,6 +102,10 @@ export function WelcomeStep() {
   const [archiveSpace] = useArchiveSpaceMutation();
   const [unarchiveSpace] = useUnarchiveSpaceMutation();
   const [setActiveSpace] = useSetActiveSpaceMutation();
+  const [setNotifyOnRunComplete] = useSetNotifyOnRunCompleteMutation();
+  const [setNotifyOnToolApproval] = useSetNotifyOnToolApprovalMutation();
+  const { data: detectedClis } = useDetectInstalledClisQuery();
+  const hasAppliedAutoSelect = useRef(false);
 
   const agentSpaces = useMemo(
     () =>
@@ -117,6 +134,63 @@ export function WelcomeStep() {
     }
     return map;
   }, [agentSpaces]);
+
+  useEffect(() => {
+    if (hasAppliedAutoSelect.current) return;
+    if (!detectedClis) return;
+    if (agentSpaces.length === 0) return;
+    if (localStorage.getItem(CLI_AUTO_SELECT_FLAG) === "1") return;
+
+    const installedSpaces = agentSpaces.filter(
+      (s) => detectedClis[s.slug as OnboardingAgentSlug],
+    );
+
+    hasAppliedAutoSelect.current = true;
+    localStorage.setItem(CLI_AUTO_SELECT_FLAG, "1");
+
+    if (installedSpaces.length === 0) {
+      // Detection found nothing — likely PATH issue. Leave defaults alone.
+      return;
+    }
+
+    const notInstalledVisible = agentSpaces.filter(
+      (s) => !s.isArchived && !detectedClis[s.slug as OnboardingAgentSlug],
+    );
+
+    const activeId = appSettings?.activeSpaceId ?? null;
+    const activeWillBeArchived = notInstalledVisible.some(
+      (s) => s.id === activeId,
+    );
+
+    void (async () => {
+      if (activeWillBeArchived) {
+        const nextActive = installedSpaces
+          .slice()
+          .sort((a, b) => a.sortOrder - b.sortOrder)[0];
+        try {
+          await setActiveSpace(nextActive.id).unwrap();
+          const route = getSpaceDefaultRoute(nextActive);
+          setTimeout(() => navigate(route, { replace: true }), 0);
+        } catch {
+          // ignore
+        }
+      }
+      for (const space of notInstalledVisible) {
+        try {
+          await archiveSpace(space.id).unwrap();
+        } catch {
+          // ignore — best-effort pre-selection
+        }
+      }
+    })();
+  }, [
+    agentSpaces,
+    detectedClis,
+    appSettings?.activeSpaceId,
+    archiveSpace,
+    setActiveSpace,
+    navigate,
+  ]);
 
   const handleAgentToggle = async (slug: OnboardingAgentSlug) => {
     const space = agentSpaces.find((s) => s.slug === slug);
@@ -152,7 +226,7 @@ export function WelcomeStep() {
 
   return (
     <div className="space-y-4 -mt-8">
-      <div className="space-y-1">
+      <div className="space-y-1 ">
         <h1 className="text-xl font-serif tracking-tight text-primary-900 dark:text-primary-100 leading-tight">
           Welcome to Mains
         </h1>
@@ -162,28 +236,19 @@ export function WelcomeStep() {
         </p>
       </div>
 
-      <div className="relative w-full h-64 rounded-2xl overflow-hidden">
-        <img
-          src="welcome.png"
-          alt="Welcome to Mains"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent" />
-      </div>
 
-      <div className="space-y-1">
+      <div className="space-y-2 mt-8">
         <div className="flex items-baseline justify-between">
           <h2 className="text-s text-primary-900 dark:text-primary-100">
             Theme
           </h2>
-          <p className="text-xs text-primary-500 dark:text-primary-400">
-            Pick a look that feels right
-          </p>
         </div>
-        <ThemePicker size="md" />
+        <div className="flex justify-center w-full">
+          <ThemePicker size="lg" />
+        </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 mt-8">
         <div className="flex items-baseline justify-between">
           <h2 className="text-s text-primary-900 dark:text-primary-100">
             Pick your agents
@@ -204,6 +269,35 @@ export function WelcomeStep() {
                 isSelected={isSelected}
                 disabled={!space || cannotArchiveLast}
                 onClick={() => handleAgentToggle(slug)}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="space-y-2 mt-8 mb-8">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-s text-primary-900 dark:text-primary-100">
+            Notifications
+          </h2>
+
+        </div>
+        <div className="space-y-1">
+          {NOTIFICATION_CHOICES.map(({ key, label }) => {
+            const enabled = appSettings?.[key] ?? true;
+            const handleChange = (next: boolean) => {
+              if (key === "notifyOnRunComplete") {
+                setNotifyOnRunComplete(next);
+              } else {
+                setNotifyOnToolApproval(next);
+              }
+            };
+            return (
+              <Toggle
+                key={key}
+                label={label}
+                enabled={enabled}
+                onChange={handleChange}
               />
             );
           })}

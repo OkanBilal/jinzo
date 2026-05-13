@@ -29,7 +29,7 @@ function SpaceSelector({
               e.preventDefault();
               onContextMenu?.(space, e);
             }}
-            className={`shrink-0 flex items-center justify-center size-8 hover:bg-primary/60 dark:hover:bg-primary/20
+            className={`shrink-0 flex items-center justify-center size-8 hover:bg-primary/50 dark:hover:bg-primary/20
                rounded-xl transition-all duration-200 ease-out font-medium cursor-pointer ${
               isActive
                 ? "text-primary-900 dark:text-primary"

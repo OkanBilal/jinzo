@@ -371,14 +371,14 @@ export default function WorkspacesList({
         }`}
       >
         {grouping === "none" ? (
-          <div className="flex flex-col space-y-0.5">
+          <div className="flex flex-col space-y-1">
             {sortedWorkspaces.map(renderWorkspaceItem)}
           </div>
         ) : (
           <div className="flex flex-col ">
             {groups.map((group) => (
               <WorkspaceGroupSection key={group.key} group={group}>
-                <div className="flex flex-col space-y-0.5 pl-1 pr-1">
+                <div className="flex flex-col space-y-1 pl-1 pr-1">
                   {group.workspaces.map(renderWorkspaceItem)}
                 </div>
               </WorkspaceGroupSection>

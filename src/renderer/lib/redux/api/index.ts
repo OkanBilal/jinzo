@@ -153,6 +153,7 @@ export {
   useUninstallProviderPluginMutation,
   useGetProviderRateLimitsQuery,
   useGetProviderModelsQuery,
+  useDetectInstalledClisQuery,
 } from "./providersApi";
 export type {
   Provider,
@@ -170,6 +171,7 @@ export type {
   PluginDetailResponse,
   PluginSkillSummary,
   PluginAppSummary,
+  DetectedClis,
 } from "./providersApi";
 
 export {

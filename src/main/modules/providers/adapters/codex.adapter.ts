@@ -9,6 +9,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { shell } from "electron";
+import { findCodexBinaryPath } from "../providers.utils";
 import type {
   WorkRunAdapter,
   WorkRunRequest,
@@ -824,37 +825,8 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
   function findCodexBinary(): string {
     if (config.binary) return config.binary;
 
-    // Check PATH
-    const { execSync } = require("child_process");
-    try {
-      const result = execSync("which codex", { encoding: "utf-8", timeout: 5000 }).trim();
-      if (result) return result;
-    } catch {
-      // not found in PATH
-    }
-
-    // Check common locations
-    const homedir = os.homedir();
-    const candidates = [
-      path.join(homedir, ".codex", "bin", "codex"),
-      "/usr/local/bin/codex",
-      // nvm-managed global installs
-      ...(() => {
-        try {
-          const nvmDir = process.env.NVM_DIR || path.join(homedir, ".nvm");
-          const nodeVersions = fs.readdirSync(path.join(nvmDir, "versions", "node"));
-          return nodeVersions.map((v: string) => path.join(nvmDir, "versions", "node", v, "bin", "codex"));
-        } catch { return []; }
-      })(),
-    ];
-    for (const c of candidates) {
-      try {
-        fs.accessSync(c, fs.constants.X_OK);
-        return c;
-      } catch {
-        // not executable
-      }
-    }
+    const resolved = findCodexBinaryPath();
+    if (resolved) return resolved;
 
     throw new Error(
       "Codex CLI not found. Please install Codex and ensure `codex` is in your PATH, " +
@@ -1103,29 +1075,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     const ts = Date.now();
     const events: WorkRunEvent[] = [];
     const p = params as Record<string, unknown> | undefined;
-
-    // [DIAG] Surface every notification so we can see if collab close/wait
-    // events are arriving from codex. Remove once subagent flow is verified.
-    {
-      const item = (p?.item ?? null) as Record<string, unknown> | null;
-      const evtThreadId = (p?.threadId ?? p?.thread_id) as string | undefined;
-      const itemType = item?.type as string | undefined;
-      const itemTool = item?.tool as string | undefined;
-      const itemStatus = item?.status as string | undefined;
-      if (
-        method === "thread/started" ||
-        method === "thread/closed" ||
-        method === "thread/status/changed" ||
-        method === "turn/completed" ||
-        (itemType && (itemType === "collabAgentToolCall" || itemType === "collab_agent_tool_call"))
-      ) {
-        logInfo(
-          `[DIAG] ${method} thread=${evtThreadId ?? "?"} ${
-            itemType ? `item=${itemType} tool=${itemTool ?? "?"} status=${itemStatus ?? "?"}` : ""
-          }`,
-        );
-      }
-    }
 
     switch (method) {
       case "thread/started": {

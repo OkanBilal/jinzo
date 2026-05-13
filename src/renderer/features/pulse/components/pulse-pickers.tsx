@@ -214,7 +214,7 @@ export function WorkspacePicker({
               }}
               className={`w-full flex items-center gap-2 text-left px-2.5 py-1.5 text-s cursor-pointer transition-colors first:rounded-t-sm! last:rounded-b-sm! ${
                 value === w.id
-                  ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-100"
+                  ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
                   : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
               }`}
             >
@@ -281,7 +281,7 @@ export function ProviderPicker({
             }}
             className={`w-full flex items-center gap-2 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-sm! last:rounded-b-sm! ${
               value === p.id
-                ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-100"
+                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
                 : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
             }`}
           >
@@ -360,7 +360,7 @@ export function ModelPicker({
               }}
               className={`w-full flex items-center gap-2 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-xl last:rounded-b-xl ${
                 value === m.id
-                  ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-100"
+                  ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
                   : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
               }`}
             >
@@ -533,7 +533,7 @@ export function PulseEffortPicker({
         onClick={() => onChange({ thinkingMode: !thinkingMode, effortLevel: "" })}
         className={`flex items-center gap-1 px-2 py-1 rounded-xl text-s transition-all cursor-pointer animate-blur-reveal ${
           thinkingMode
-            ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-100"
+            ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
             : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
         }`}
       >
@@ -573,7 +573,7 @@ export function PulseEffortPicker({
             }}
             className={`w-full text-left px-2.5 py-1.5 text-s cursor-pointer transition-colors first:rounded-t-sm last:rounded-b-sm ${
               !thinkingMode
-                ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-100"
+                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
                 : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
             }`}
           >
@@ -590,7 +590,7 @@ export function PulseEffortPicker({
             }}
             className={`w-full flex items-center gap-1.5 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors capitalize last:rounded-b-xl ${
               thinkingMode && effortLevel === level
-                ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-700 dark:text-primary-100"
+                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
                 : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
             }`}
           >

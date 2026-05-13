@@ -55,7 +55,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                   ${
                     isActive
                       ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
-                      : "text-primary-800 dark:text-primary-200 bg-transparent hover:bg-primary/60 dark:hover:bg-primary/5"
+                      : "text-primary-800 dark:text-primary-200 bg-transparent hover:bg-primary/50 dark:hover:bg-primary/5"
                   }
                   `}
               >
@@ -109,7 +109,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                       ${
                         isActive
                           ? "bg-primary/80 dark:bg-primary/5 text-primary-900 dark:text-primary-100"
-                          : "text-primary-800 dark:text-primary-200 bg-transparent hover:bg-primary/60 dark:hover:bg-primary/5"
+                          : "text-primary-800 dark:text-primary-200 bg-transparent hover:bg-primary/50 dark:hover:bg-primary/5"
                       }
                       `}
                   >

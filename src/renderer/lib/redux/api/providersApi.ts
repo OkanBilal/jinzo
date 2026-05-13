@@ -196,6 +196,13 @@ export interface CodexAccountInfo {
   requiresOpenaiAuth: boolean;
 }
 
+export interface DetectedClis {
+  claude: boolean;
+  copilot: boolean;
+  codex: boolean;
+  cursor: boolean;
+}
+
 export const providersApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getProviders: builder.query<Provider[], void>({
@@ -455,6 +462,16 @@ export const providersApi = baseApi.injectEndpoints({
         return response.data;
       },
     }),
+
+    detectInstalledClis: builder.query<DetectedClis, void>({
+      query: () => ({
+        handler: "providers:detectInstalled",
+      }),
+      transformResponse: (response: {
+        success: boolean;
+        data?: DetectedClis;
+      }) => response.data ?? { claude: false, copilot: false, codex: false, cursor: false },
+    }),
   }),
 });
 
@@ -484,4 +501,5 @@ export const {
   useInstallProviderPluginMutation,
   useUninstallProviderPluginMutation,
   useGetProviderRateLimitsQuery,
+  useDetectInstalledClisQuery,
 } = providersApi;

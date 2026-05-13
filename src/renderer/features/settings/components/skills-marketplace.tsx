@@ -71,7 +71,7 @@ function SkillLogo({
 
   return (
     <div
-      className={`${sizeClass} ${roundedClass} flex items-center justify-center font-semibold ${textSize} text-white shrink-0 bg-primary-500`}
+      className={`${sizeClass} ${roundedClass} flex items-center justify-center font-semibold ${textSize} text-primary shrink-0 bg-primary-500`}
     >
       {name.charAt(0).toUpperCase()}
     </div>

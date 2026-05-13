@@ -42,9 +42,9 @@ export default function SearchBar({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full h-9 bg-primary-950/5 dark:bg-primary/5 border-none
-                        rounded-xl pl-9 pr-10 text-sm text-primary-900 dark:text-primary/80
+                        rounded-xl pl-9 pr-10 text-sm text-primary-900 dark:text-primary
                         placeholder:text-primary-900 dark:placeholder:text-primary-200
-                        transition-all duration-200 focus:outline-none focus:bg-primary/30 dark:focus:bg-primary/10 "
+                        transition-all duration-200 focus:outline-none focus:bg-primary/20 dark:focus:bg-primary/10 "
           />
           <Button
             tooltip="Clear search"

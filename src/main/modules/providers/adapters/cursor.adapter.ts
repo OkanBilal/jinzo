@@ -4,9 +4,9 @@
 // ─────────────────────────────────────────────────────────────
 
 import { spawn, type ChildProcess } from "node:child_process";
-import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { findCursorBinaryPath } from "../providers.utils";
 import type {
   WorkRunAdapter,
   WorkRunRequest,
@@ -403,30 +403,8 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
   function findCursorBinary(): string {
     if (config.binary) return config.binary;
 
-    const { execSync } = require("child_process");
-    try {
-      const result = execSync("which agent", { encoding: "utf-8", timeout: 5000 }).trim();
-      if (result) return result;
-    } catch {
-      // not found in PATH
-    }
-
-    // Check common locations
-    const homedir = os.homedir();
-    const candidates = [
-      path.join(homedir, ".local", "bin", "agent"),
-      "/usr/local/bin/agent",
-      "/opt/homebrew/bin/agent",
-      path.join(homedir, ".cursor", "bin", "agent"),
-    ];
-    for (const c of candidates) {
-      try {
-        fs.accessSync(c, fs.constants.X_OK);
-        return c;
-      } catch {
-        // not executable
-      }
-    }
+    const resolved = findCursorBinaryPath();
+    if (resolved) return resolved;
 
     throw new Error(
       "Cursor Agent CLI not found. Install it with: curl https://cursor.com/install -fsS | bash\n" +

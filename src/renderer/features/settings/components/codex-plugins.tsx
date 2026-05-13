@@ -86,7 +86,7 @@ function PluginLogo({
 
   return (
     <div
-      className={`${sizeClass} ${roundedClass} flex items-center justify-center font-semibold ${textSize} text-white shrink-0`}
+      className={`${sizeClass} ${roundedClass} flex items-center justify-center font-semibold ${textSize} text-primary shrink-0`}
       style={{ backgroundColor: brandColor || "var(--color-primary-500)" }}
     >
       {name.charAt(0).toUpperCase()}
