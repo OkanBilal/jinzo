@@ -1,30 +1,17 @@
 import type { ThemeVariant } from "./space-themes";
+import type { ParsedUiConfig } from "./parse-ui-config";
+
 export interface PredefinedSpaceTheme {
   light: ThemeVariant;
   dark: ThemeVariant;
 }
 
-export interface SidebarConfig {
-  width?: string;
-  title?: string;
-  itemType?: string;
-  defaultRoute?: string;
-}
-
-export interface MainConfig {
-  margin?: string;
-}
-
-export interface RightPanelConfig {
-  width?: string;
-  component?: string;
-}
-
-export interface PredefinedSpaceUIConfig {
-  sidebar?: SidebarConfig;
-  main?: MainConfig;
-  rightPanel?: RightPanelConfig;
-}
+/**
+ * Predefined spaces share the wire shape with the runtime parse result —
+ * see `ParsedUiConfig` in `parse-ui-config.ts`. The alias keeps callers'
+ * intent ("this is a seed value") clear without duplicating the type.
+ */
+export type PredefinedSpaceUIConfig = ParsedUiConfig;
 
 export interface PredefinedSpace {
   id: string;
@@ -45,7 +32,7 @@ export const predefinedSpaces: PredefinedSpace[] = [
     id: "claude",
     name: "Claude",
     icon: "icon:claude",
-    theme: theme("#f2dbcfa6", "#0e0d0dbf"),
+    theme: theme("#ffffff40", "#00000070"),
     systemPrompt: "",
     uiConfig: {
       sidebar: {
@@ -62,7 +49,7 @@ export const predefinedSpaces: PredefinedSpace[] = [
     id: "copilot",
     name: "Copilot",
     icon: "icon:copilot",
-    theme: theme("#f0e9fab0", "#15111abf"),
+    theme: theme("#ffffff40", "#00000070"),
     systemPrompt: "",
     uiConfig: {
       sidebar: {
@@ -79,7 +66,7 @@ export const predefinedSpaces: PredefinedSpace[] = [
     id: "codex",
     name: "Codex",
     icon: "icon:code",
-    theme: theme("#dcecfaa1", "#0c0c0cbd"),
+    theme: theme("#ffffff40", "#00000070"),
     systemPrompt: "",
     uiConfig: {
       sidebar: {
@@ -96,7 +83,7 @@ export const predefinedSpaces: PredefinedSpace[] = [
     id: "cursor",
     name: "Cursor",
     icon: "icon:cursor",
-    theme: theme("#cfced2a6", "#0f0e14bf"),
+    theme: theme("#ffffff40", "#00000070"),
     systemPrompt: "",
     uiConfig: {
       sidebar: {

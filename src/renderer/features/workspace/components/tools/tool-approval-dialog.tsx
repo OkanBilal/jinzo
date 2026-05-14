@@ -244,13 +244,13 @@ export function ToolApprovalDialog({
                     <span
                       className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded ${
                         isSelected
-                          ? " bg-emerald-500 text-white dark:bg-emerald-600"
-                          : " bg-primary-50/80 dark:border-primary-600 dark:bg-primary-900/50"
+                          ? " bg-emerald-500 text-primary dark:bg-emerald-600"
+                          : " bg-primary-50 dark:border-primary-600 dark:bg-primary-900/50"
                       }`}
                       aria-hidden
                     >
                       {isSelected && (
-                        <span className="text-[10px] font-bold leading-none text-white">
+                        <span className="text-[10px] font-bold leading-none text-primary">
                           ✓
                         </span>
                       )}

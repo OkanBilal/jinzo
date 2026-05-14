@@ -116,6 +116,11 @@ import {
   automationsService,
 } from "./modules/automations";
 import {
+  registerPulseIpc,
+  unregisterPulseIpc,
+  pulseService,
+} from "./modules/pulse";
+import {
   registerGuardsIpc,
   unregisterGuardsIpc,
   shutdownAllGuardAdapters,
@@ -125,6 +130,10 @@ import {
   unregisterBrowserIpc,
   browserService,
 } from "./modules/browser";
+import {
+  registerSkillsMarketplaceIpc,
+  unregisterSkillsMarketplaceIpc,
+} from "./modules/skillsMarketplace";
 
 // ─────────────────────────────────────────────────────────────
 // Installed app detection (macOS)
@@ -265,12 +274,137 @@ async function getAppIcon(
   }
 }
 
+/** Apps Launch Services associates with opening a file URL (macOS). */
+interface FileHandlerApp {
+  bundleId: string;
+  name: string;
+  path: string;
+  icon: string | null;
+}
+
+const JXA_LIST_APPS_FOR_FILE = `
+function run(argv) {
+  if (!argv || argv.length < 1) return "[]";
+  var filePath = argv[0];
+  try {
+    ObjC.import("AppKit");
+    var ws = $.NSWorkspace.sharedWorkspace;
+    var fileURL = $.NSURL.fileURLWithPath(filePath);
+    var appURLs = ws.URLsForApplicationsToOpenURL(fileURL);
+    if (!appURLs || appURLs.count === 0) return "[]";
+    var out = [];
+    var seen = {};
+    for (var i = 0; i < appURLs.count; i++) {
+      var u = appURLs.objectAtIndex(i);
+      var p = ObjC.unwrap(u.path);
+      if (seen[p]) continue;
+      seen[p] = true;
+      out.push(p);
+    }
+    return JSON.stringify(out);
+  } catch (e) {
+    return "[]";
+  }
+}
+`.trim();
+
+/** Remove invisible bidi / format characters macOS bundle names sometimes include (e.g. WhatsApp LRM). */
+function sanitizeAppDisplayName(raw: string): string {
+  return raw
+    .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069\u200B-\u200D\uFEFF]/g, "")
+    .replace(/^\\u200e/gi, "")
+    .trim();
+}
+
+async function readAppBundleMetadata(
+  appPath: string,
+): Promise<{ bundleId: string; name: string } | null> {
+  const infoDir = path.join(appPath, "Contents", "Info");
+  try {
+    const { stdout: bundleIdRaw } = await execFileAsync("defaults", [
+      "read",
+      infoDir,
+      "CFBundleIdentifier",
+    ]);
+    const bundleId = bundleIdRaw.trim();
+    if (!bundleId) return null;
+
+    let name: string | null = null;
+    for (const key of ["CFBundleDisplayName", "CFBundleName"]) {
+      try {
+        const { stdout } = await execFileAsync("defaults", [
+          "read",
+          infoDir,
+          key,
+        ]);
+        const v = stdout.trim();
+        if (v) {
+          name = v;
+          break;
+        }
+      } catch {
+        /* try next key */
+      }
+    }
+    if (!name) name = path.basename(appPath, ".app");
+
+    return { bundleId, name: sanitizeAppDisplayName(name) };
+  } catch {
+    return null;
+  }
+}
+
+async function getMacOSAppsForFile(filePath: string): Promise<FileHandlerApp[]> {
+  try {
+    const { stdout } = await execFileAsync("osascript", [
+      "-l",
+      "JavaScript",
+      "-e",
+      JXA_LIST_APPS_FOR_FILE,
+      "--",
+      filePath,
+    ]);
+    const paths = JSON.parse(stdout.trim()) as string[];
+    if (!Array.isArray(paths)) return [];
+
+    const metas: FileHandlerApp[] = [];
+    const seenBundles = new Set<string>();
+
+    for (const appPath of paths) {
+      if (!appPath.endsWith(".app")) continue;
+      const meta = await readAppBundleMetadata(appPath);
+      if (!meta || seenBundles.has(meta.bundleId)) continue;
+      seenBundles.add(meta.bundleId);
+      const iconId = `ls_${meta.bundleId.replace(/[^a-zA-Z0-9]/g, "_")}`;
+      const icon = await getAppIcon(appPath, iconId);
+      metas.push({
+        bundleId: meta.bundleId,
+        name: meta.name,
+        path: appPath,
+        icon,
+      });
+    }
+
+    metas.sort((a, b) => {
+      if (a.bundleId === "com.apple.Preview") return -1;
+      if (b.bundleId === "com.apple.Preview") return 1;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    });
+
+    return metas;
+  } catch (err) {
+    console.warn("getMacOSAppsForFile failed:", err);
+    return [];
+  }
+}
+
 // Directories to search for .app bundles (no Spotlight / mdfind needed)
 const APP_SEARCH_DIRS = [
   "/Applications",
   "/Applications/Utilities",
   "/System/Applications",
   "/System/Applications/Utilities",
+  "/System/Library/CoreServices",
   path.join(app.getPath("home"), "Applications"),
 ];
 
@@ -462,9 +596,12 @@ async function initializeApp() {
     registerUpdatesIpc();
     updatesService.initialize();
     registerAutomationsIpc();
+    registerPulseIpc();
     registerGuardsIpc();
     registerBrowserIpc();
+    registerSkillsMarketplaceIpc();
     automationsService.start();
+    pulseService.start();
 
     // Shell utilities
     ipcMain.handle("shell:openExternal", async (_, url: string) => {
@@ -521,6 +658,71 @@ async function initializeApp() {
         };
       }
     });
+
+    ipcMain.handle("shell:getAppsForFile", async (_, filePath: string) => {
+      if (typeof filePath !== "string" || !path.isAbsolute(filePath)) {
+        return { success: false, error: "Invalid path" };
+      }
+      const normalized = path.normalize(filePath);
+      if (normalized !== filePath) {
+        return { success: false, error: "Invalid path" };
+      }
+      if (process.platform !== "darwin") {
+        return { success: true, data: [] };
+      }
+      try {
+        const data = await getMacOSAppsForFile(normalized);
+        return { success: true, data };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : "Failed to list applications",
+        };
+      }
+    });
+
+    ipcMain.handle(
+      "shell:openFileWithBundle",
+      async (_, filePath: string, bundleId: string) => {
+        if (typeof filePath !== "string" || typeof bundleId !== "string") {
+          return { success: false, error: "Invalid arguments" };
+        }
+        if (!path.isAbsolute(filePath)) {
+          return { success: false, error: "Invalid path" };
+        }
+        const normalized = path.normalize(filePath);
+        if (normalized !== filePath) {
+          return { success: false, error: "Invalid path" };
+        }
+        if (process.platform !== "darwin") {
+          return { success: false, error: "Unsupported platform" };
+        }
+        const apps = await getMacOSAppsForFile(normalized);
+        if (!apps.some((a) => a.bundleId === bundleId)) {
+          return {
+            success: false,
+            error: "App is not registered to open this file",
+          };
+        }
+        try {
+          const child = spawn("open", ["-b", bundleId, normalized], {
+            detached: true,
+            stdio: "ignore",
+          });
+          child.unref();
+          child.on("error", (err) =>
+            console.warn("shell:openFileWithBundle spawn error:", err),
+          );
+          return { success: true };
+        } catch (err) {
+          return {
+            success: false,
+            error: err instanceof Error ? err.message : "open failed",
+          };
+        }
+      },
+    );
 
     ipcMain.handle("app:setUnsavedChanges", (_, value: boolean) => {
       hasUnsavedChanges = value;
@@ -694,14 +896,19 @@ async function cleanupApp() {
     unregisterUpdatesIpc();
     automationsService.stop();
     unregisterAutomationsIpc();
+    pulseService.stop();
+    unregisterPulseIpc();
     unregisterGuardsIpc();
     await shutdownAllGuardAdapters();
     try { browserService.destroy(); } catch { /* ignore */ }
     unregisterBrowserIpc();
+    unregisterSkillsMarketplaceIpc();
     ipcMain.removeHandler("shell:openExternal");
     ipcMain.removeHandler("shell:openPath");
     ipcMain.removeHandler("shell:openInApp");
     ipcMain.removeHandler("shell:getInstalledApps");
+    ipcMain.removeHandler("shell:getAppsForFile");
+    ipcMain.removeHandler("shell:openFileWithBundle");
     ipcMain.removeHandler("app:setUnsavedChanges");
     ipcMain.removeHandler("app:setMenuBarIconVisible");
 

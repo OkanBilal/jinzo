@@ -86,7 +86,7 @@ export function SelectResourcesStep<T extends SelectableResource>({
       {title && <Muted>{title}</Muted>}
       {!title && (
         <Muted>
-          <span className="mr-1 font-semibold dark:text-primary-50 text-primary-950">
+          <span className="mr-1 font-semibold dark:text-primary text-primary-950">
             {selectedCount}
           </span>
           selected.
@@ -115,7 +115,7 @@ export function SelectResourcesStep<T extends SelectableResource>({
       {error && <ErrorText>{error}</ErrorText>}
 
       <div className="flex justify-between gap-3 pt-2">
-        <Button variant="link" onClick={onBack} disabled={loading} className="px-1">
+        <Button variant="ghost" size="sm" onClick={onBack} disabled={loading}>
           Back
         </Button>
         <Button

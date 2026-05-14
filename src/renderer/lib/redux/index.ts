@@ -3,25 +3,18 @@ import { persistStore, persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage";
 
 import { baseApi } from "./api/baseApi";
-import spaceReducer from "./slices/spaceSlice";
 import appSettingsReducer from "./slices/appSettingsSlice";
 import workspaceReducer from "./slices/workspaceSlice";
-
-const spacePersistConfig = {
-  key: "space",
-  storage,
-  whitelist: ["activeSpaceId"],
-};
 
 const appSettingsPersistConfig = {
   key: "appSettings",
   storage,
   whitelist: [
-    "isDarkMode",
     "sidebarCollapsed",
     "rightPanelOpen",
     "browserPanelOpen",
     "onboardingCompleted",
+    "showSuggestions",
   ],
 };
 
@@ -36,7 +29,6 @@ const workspacePersistConfig = {
   ],
 };
 
-const persistedSpaceReducer = persistReducer(spacePersistConfig, spaceReducer);
 const persistedAppSettingsReducer = persistReducer(
   appSettingsPersistConfig,
   appSettingsReducer,
@@ -49,7 +41,6 @@ const persistedWorkspaceReducer = persistReducer(
 export const store = configureStore({
   reducer: {
     [baseApi.reducerPath]: baseApi.reducer,
-    space: persistedSpaceReducer,
     appSettings: persistedAppSettingsReducer,
     workspace: persistedWorkspaceReducer,
   },

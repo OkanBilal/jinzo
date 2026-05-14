@@ -1,12 +1,14 @@
 import { providersRepo } from "./providers.repo";
+import { detectInstalledClis } from "./providers.utils";
 import type {
   CreateProviderPayload,
   UpdateProviderPayload,
   ProviderResponse,
   ServiceResponse,
+  DetectedClisResponse,
 } from "./providers.dto";
 import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, getAccountInfoForProvider, listPluginsForProvider, readPluginForProvider, installPluginForProvider, uninstallPluginForProvider, getRateLimitsForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo, type PluginListResponse, type PluginDetail, type CodexAccountInfo } from "./adapters";
-import type { RateLimitInfo } from "./adapters/adapter.types";
+import type { RateLimitInfo } from "../../../shared/adapter.types";
 
 // ─────────────────────────────────────────────────────────────
 // Providers Service
@@ -266,6 +268,18 @@ export const providersService = {
     } catch (error) {
       console.error(`[ProvidersService] Failed to uninstall plugin ${pluginId}:`, error);
       return { success: false, error: error instanceof Error ? error.message : "Failed to uninstall plugin" };
+    }
+  },
+
+  async detectInstalled(): Promise<ServiceResponse<DetectedClisResponse>> {
+    try {
+      return { success: true, data: detectInstalledClis() };
+    } catch (error) {
+      console.error("[ProvidersService] Failed to detect installed CLIs:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to detect installed CLIs",
+      };
     }
   },
 };

@@ -1,11 +1,10 @@
 import { WorkspaceProviderPage } from "@/features/workspace/components/workspace-provider-page";
-
-const COPILOT_CLI_PROVIDER_ID = "copilot_cli";
+import { PROVIDER_IDS } from "../../shared/provider-ids";
 
 export default function CopilotPage() {
   return (
     <WorkspaceProviderPage
-      providerId={COPILOT_CLI_PROVIDER_ID}
+      providerId={PROVIDER_IDS.copilot}
       variant="copilot"
       planExitConfig={{
         key: "permissionMode",

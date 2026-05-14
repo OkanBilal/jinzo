@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import type { FileNode } from "@/features/workspace/types/file-explorer";
 import type {
   ContextIssue,
   ContextSignal,
@@ -7,16 +6,13 @@ import type {
   ContextBrowserSelection,
 } from "@/lib/redux/slices/workspaceSlice";
 import { Close, Web } from "@/components/ui/icons";
-import { Code } from "@/components/ui/icons/space";
 import { ProviderIcon } from "./provider-icon";
 
 interface ContextChipsProps {
-  contextFiles: FileNode[];
   contextIssues: ContextIssue[];
   contextSignals?: ContextSignal[];
   contextSkills?: ContextSkill[];
   contextBrowserSelections?: ContextBrowserSelection[];
-  onRemoveContextFile?: (filePath: string) => void;
   onRemoveContextIssue?: (entityId: string) => void;
   onRemoveContextSignal?: (entityId: string) => void;
   onRemoveContextBrowserSelection?: (id: string) => void;
@@ -141,12 +137,10 @@ function BrowserSelectionPreview({
 }
 
 export function ContextChips({
-  contextFiles,
   contextIssues,
   contextSignals = [],
   contextSkills = [],
   contextBrowserSelections = [],
-  onRemoveContextFile,
   onRemoveContextIssue,
   onRemoveContextSignal,
   onRemoveContextBrowserSelection,
@@ -155,7 +149,6 @@ export function ContextChips({
   const previewSel = contextBrowserSelections.find((s) => s.id === previewId) ?? null;
 
   const hasContext =
-    contextFiles.length > 0 ||
     contextIssues.length > 0 ||
     contextSignals.length > 0 ||
     contextSkills.length > 0 ||
@@ -168,24 +161,6 @@ export function ContextChips({
       >
         <div className="overflow-hidden min-h-0">
           <div className="flex flex-wrap gap-2 px-4 pt-3 pb-1">
-            {contextFiles.map((file) => (
-              <div
-                key={file.fullPath}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-100"
-              >
-                <Code className="w-3 h-3" />
-                <span className="truncate max-w-37.5">{file.name}</span>
-                {onRemoveContextFile && (
-                  <button
-                    onClick={() => onRemoveContextFile(file.fullPath)}
-                    className="w-4 h-4 flex items-center justify-center rounded p-0.5 hover:bg-primary/20 dark:hover:bg-primary/10 transition-colors"
-                    title="Remove from context"
-                  >
-                    <Close className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            ))}
             {contextIssues.map((issue) => (
               <div
                 key={issue.entityId}

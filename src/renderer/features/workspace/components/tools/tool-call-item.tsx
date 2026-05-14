@@ -1,5 +1,6 @@
+import type { ReactNode } from "react";
 import type { RunEvent } from "../../types";
-import { parseToolContent } from "../../utils/parse-tool-content";
+import { parseToolContent, type ParsedToolContent } from "../../utils/parse-tool-content";
 import { resolveTool } from "../../utils/resolve-tool";
 import { TodoListDisplay, type TodoItem } from "./todo-list-display";
 import { TaskDisplay, type TaskParams } from "./task-display";
@@ -13,6 +14,7 @@ import { PRDisplay, type PRParams } from "./pr-display";
 import { CheckPackageDisplay, type CheckPackageParams } from "./check-package-display";
 import { SaveFindingDisplay, type SaveFindingParams } from "./save-finding-display";
 import { AgentDisplay, type AgentParams } from "./agent-display";
+import { SpawnAgentDisplay } from "./spawn-agent-display";
 import { IntentDisplay, type IntentParams } from "./intent-display";
 import { BashDisplay, type BashParams } from "./bash-display";
 import { GlobDisplay, type GlobParams } from "./glob-display";
@@ -31,380 +33,239 @@ interface ToolCallItemProps {
   isCompact?: boolean;
 }
 
-function getToolParams<T>(
-  metadataInput: Record<string, unknown> | undefined,
-  params: Record<string, unknown> | null,
-  fallback: T,
-): T {
-  return metadataInput
-    ? (metadataInput as T)
-    : params
-      ? (params as T)
-      : fallback;
+interface Ctx {
+  toolNameLower: string;
+  displayName: string;
+  icon: ReactNode;
+  resolved: ReturnType<typeof resolveTool>;
+  metadataInput: Record<string, unknown> | undefined;
+  params: Record<string, unknown> | null;
+  summary: string;
+  event: RunEvent;
+  isCompact: boolean;
+}
+
+type Renderer = (ctx: Ctx) => ReactNode | null;
+
+function pickParams<T>(ctx: Ctx, fallback: T): T {
+  if (ctx.metadataInput) return ctx.metadataInput as T;
+  if (ctx.params) return ctx.params as T;
+  return fallback;
 }
 
 function hasMeaningfulOutput(value: unknown): boolean {
-  if (value === undefined || value === null) {
-    return false;
-  }
-  if (typeof value === "string") {
-    return value.trim().length > 0;
-  }
-  if (Array.isArray(value)) {
-    return value.length > 0;
-  }
+  if (value === undefined || value === null) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
   if (typeof value === "object") {
     return Object.keys(value as Record<string, unknown>).length > 0;
   }
   return true;
 }
 
+/** Codex AgentControl collab tool calls — single SpawnAgentDisplay dispatches by toolName. */
+const COLLAB_TOOL_NAMES = new Set([
+  "spawnagent",
+  "sendcollabinput",
+  "waitcollabagent",
+  "closecollabagent",
+  "resumecollabagent",
+]);
+
+/**
+ * Match toolNameLower ∈ names, render `<Display params output isCompact />`.
+ * `buildFallback` runs only when neither metadata.input nor parsed params are present.
+ */
+function withOutput<T>(
+  names: readonly string[],
+  Display: React.ComponentType<{ params: T; output?: unknown; isCompact?: boolean }>,
+  buildFallback: (ctx: Ctx) => T,
+): Renderer {
+  const renderer: Renderer = function renderWithOutput(ctx) {
+    if (!names.includes(ctx.toolNameLower)) return null;
+    const params = pickParams<T>(ctx, buildFallback(ctx));
+    return <Display params={params} output={ctx.event.metadata?.output} isCompact={ctx.isCompact} />;
+  };
+  return renderer;
+}
+
+/** Same as `withOutput` but for displays that don't accept an `output` prop. */
+function noOutput<T>(
+  names: readonly string[],
+  Display: React.ComponentType<{ params: T; isCompact?: boolean }>,
+  buildFallback: (ctx: Ctx) => T,
+): Renderer {
+  const renderer: Renderer = function renderNoOutput(ctx) {
+    if (!names.includes(ctx.toolNameLower)) return null;
+    const params = pickParams<T>(ctx, buildFallback(ctx));
+    return <Display params={params} isCompact={ctx.isCompact} />;
+  };
+  return renderer;
+}
+
+/** Mains-style tools resolve to a PascalCase `displayName` and use an empty-object fallback. */
+function byDisplayName<T>(
+  name: string,
+  render: (ctx: Ctx, params: T) => ReactNode,
+): Renderer {
+  const renderer: Renderer = function renderByDisplayName(ctx) {
+    if (ctx.displayName !== name) return null;
+    return render(ctx, pickParams<T>(ctx, {} as T));
+  };
+  return renderer;
+}
+
+const summaryAs = (key: string) => (ctx: Ctx) => ({ [key]: ctx.summary }) as never;
+
+const DISPATCH: Renderer[] = [
+  // TodoWrite — only matches when `todos` is a real array; otherwise falls through.
+  (ctx) => {
+    if (ctx.toolNameLower !== "todowrite") return null;
+    const todos = ctx.metadataInput?.todos ?? ctx.params?.todos;
+    return Array.isArray(todos) ? <TodoListDisplay todos={todos as TodoItem[]} /> : null;
+  },
+
+  // Plan / ExitPlanMode — PlanDisplay needs the raw event, not params.
+  (ctx) =>
+    ctx.toolNameLower === "plan" ||
+    ctx.toolNameLower === "create plan" ||
+    ctx.toolNameLower === "exitplanmode"
+      ? <PlanDisplay event={ctx.event} />
+      : null,
+
+  // Codex AgentControl collab — all 5 variants share SpawnAgentDisplay.
+  (ctx) =>
+    COLLAB_TOOL_NAMES.has(ctx.toolNameLower)
+      ? <SpawnAgentDisplay output={ctx.event.metadata?.output} toolName={ctx.toolNameLower} />
+      : null,
+
+  noOutput<TaskParams>(["task"], TaskDisplay, (ctx) => ({ description: ctx.summary })),
+  noOutput<AgentParams>(["agent"], AgentDisplay, (ctx) => ({ description: ctx.summary })),
+
+  withOutput<EditParams>(["edit", "replace"], EditDisplay, summaryAs("file_path")),
+
+  // WriteDisplay is the odd one — accepts `output` but not `isCompact`.
+  (ctx) => {
+    if (!["write", "writeifempty", "create_file"].includes(ctx.toolNameLower)) return null;
+    const params = pickParams<WriteParams>(ctx, { file_path: ctx.summary });
+    return <WriteDisplay params={params} output={ctx.event.metadata?.output} />;
+  },
+
+  withOutput<BashParams>(["bash", "shell"], BashDisplay, summaryAs("command")),
+  withOutput<GlobParams>(["glob", "find"], GlobDisplay, summaryAs("pattern")),
+  withOutput<GrepParams>(["grep", "search"], GrepDisplay, summaryAs("pattern")),
+  withOutput<ReadParams>(["read"], ReadDisplay, summaryAs("file_path")),
+  withOutput<DeleteParams>(["delete"], DeleteDisplay, summaryAs("file_path")),
+  withOutput<ViewParams>(["view"], ViewDisplay, summaryAs("path")),
+  noOutput<IntentParams>(["report_intent"], IntentDisplay, summaryAs("intent")),
+  withOutput<ToolSearchParams>(["toolsearch"], ToolSearchDisplay, summaryAs("query")),
+  noOutput<SkillParams>(["skill"], SkillDisplay, summaryAs("skill")),
+  withOutput<AskUserQuestionParams>(
+    ["askuserquestion", "ask_user", "askuser"],
+    AskUserQuestionDisplay,
+    summaryAs("question"),
+  ),
+  withOutput<WebFetchParams>(
+    ["webfetch", "web_fetch", "websearch"],
+    WebFetchDisplay,
+    (ctx) =>
+      ctx.toolNameLower === "websearch"
+        ? { query: ctx.summary }
+        : { url: ctx.summary },
+  ),
+
+  byDisplayName<GetDiffParams>("GetDiff", (ctx, params) => (
+    <GetDiffDisplay params={params} output={ctx.event.metadata?.output} isCompact={ctx.isCompact} />
+  )),
+  byDisplayName<SaveReviewParams>("SaveReview", (ctx, params) => (
+    <SaveReviewDisplay params={params} isCompact={ctx.isCompact} />
+  )),
+  byDisplayName<SaveFindingParams>("SaveFinding", (ctx, params) => (
+    <SaveFindingDisplay params={params} isCompact={ctx.isCompact} />
+  )),
+  byDisplayName<CommitParams>("Commit", (ctx, params) => (
+    <CommitDisplay params={params} isCompact={ctx.isCompact} />
+  )),
+  byDisplayName<PRParams>("CreatePR", (ctx, params) => (
+    <PRDisplay params={params} isCompact={ctx.isCompact} />
+  )),
+  byDisplayName<CheckPackageParams>("CheckPackage", (ctx, params) => (
+    <CheckPackageDisplay params={params} output={ctx.event.metadata?.output} isCompact={ctx.isCompact} />
+  )),
+
+  // Generic MCP fallback — the resolver tags any vendor-mapped tool (Linear, GitHub,
+  // Figma, Notion, computer-use, Mains-without-special-renderer, …) with `vendorId`,
+  // so we don't need a brittle string-includes chain.
+  (ctx) => {
+    if (ctx.resolved.vendorId === undefined) return null;
+    return (
+      <McpDisplay
+        displayName={ctx.displayName}
+        icon={ctx.icon}
+        params={ctx.metadataInput ?? ctx.params}
+        output={ctx.event.metadata?.output}
+        isCompact={ctx.isCompact}
+      />
+    );
+  },
+];
+
 export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
-  const { toolName, params, summary } = parseToolContent(event.content);
-  const toolNameLower = toolName.toLowerCase();
+  // Mapper memoizes the parse on metadata.parsed; fall back for legacy events
+  // (e.g. streaming artifacts that never went through `mapToolCallToEvent`).
+  const { toolName, params, summary } =
+    (event.metadata?.parsed as ParsedToolContent | undefined) ??
+    parseToolContent(event.content);
   const metadataInput = event.metadata?.input as
     | Record<string, unknown>
     | undefined;
   const resolved = resolveTool(event.content);
-  const displayName = resolved.displayName;
-  const icon = resolved.icon;
 
   const hasParamsOrInput =
     (params !== null && Object.keys(params).length > 0) ||
     (metadataInput !== undefined && Object.keys(metadataInput).length > 0);
   const hasSummary = Boolean(summary?.trim());
   const isEmptyTool =
-    !hasParamsOrInput &&
-    !hasSummary &&
-    !hasMeaningfulOutput(event.metadata?.output);
-  const emptyLabel = "";
+    !hasParamsOrInput && !hasSummary && !hasMeaningfulOutput(event.metadata?.output);
 
   if (isEmptyTool) {
     if (isCompact) {
       return (
         <div className="flex items-center gap-1 px-1 text-s font-sans">
-          <span className="text-primary-500/60 shrink-0">{emptyLabel}</span>
+          <span className="text-primary-500/60 shrink-0" />
         </div>
       );
     }
     return (
       <div className=" ">
         <div className="flex items-center gap-1 text-s font-sans">
-          <span className="text-primary-500/60 group-hover:text-primary-900 group-hover:dark:text-primary-200">{icon}</span>
-          <span className="text-primary-500/60 group-hover:text-primary-900 group-hover:dark:text-primary-200 font-medium">
-            {displayName}
+          <span className="text-primary-500/60 group-hover:text-primary-900 group-hover:dark:text-primary-200">
+            {resolved.icon}
           </span>
-          <span className="text-primary-500/60 italic truncate">{emptyLabel}</span>
+          <span className="text-primary-500/60 group-hover:text-primary-900 group-hover:dark:text-primary-200 font-medium">
+            {resolved.displayName}
+          </span>
+          <span className="text-primary-500/60 italic truncate" />
         </div>
       </div>
     );
   }
 
-  if (toolNameLower === "todowrite") {
-    const todos = metadataInput?.todos ?? params?.todos;
-    if (todos && Array.isArray(todos)) {
-      return <TodoListDisplay todos={todos as TodoItem[]} />;
-    }
-  }
+  const ctx: Ctx = {
+    toolNameLower: toolName.toLowerCase(),
+    displayName: resolved.displayName,
+    icon: resolved.icon,
+    resolved,
+    metadataInput,
+    params,
+    summary,
+    event,
+    isCompact,
+  };
 
-  // Show PlanDisplay for Plan / Create Plan tool calls
-  if (toolNameLower === "plan" || toolNameLower === "create plan") {
-    return <PlanDisplay event={event} />;
-  }
-
-  // Show PlanDisplay for ExitPlanMode tool calls
-  if (toolNameLower === "exitplanmode") {
-    return <PlanDisplay event={event} />;
-  }
-
-  // Show TaskDisplay for task tool calls - prefer metadata.input over parsed content
-  if (toolNameLower === "task") {
-    const taskParams = getToolParams<TaskParams>(metadataInput, params, {
-      description: summary,
-    });
-    return <TaskDisplay params={taskParams} isCompact={isCompact} />;
-  }
-
-  // Show AgentDisplay for agent tool calls
-  if (toolNameLower === "agent") {
-    const agentParams = getToolParams<AgentParams>(metadataInput, params, {
-      description: summary,
-    });
-    return <AgentDisplay params={agentParams} isCompact={isCompact} />;
-  }
-
-  // Show EditDisplay for edit tool calls
-  if (toolNameLower === "edit" || toolNameLower === "replace") {
-    const editParams = getToolParams<EditParams>(metadataInput, params, {
-      file_path: summary,
-    });
-    return <EditDisplay params={editParams} output={event.metadata?.output} isCompact={isCompact} />;
-  }
-
-  // Show WriteDisplay for write/create file tool calls
-  if (toolName.toLowerCase() === "write" || toolName.toLowerCase() === "writeifempty" || toolName.toLowerCase() === "create_file") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const writeParams: WriteParams = metadataInput
-      ? (metadataInput as WriteParams)
-      : params
-        ? (params as WriteParams)
-        : { file_path: summary };
-    return <WriteDisplay params={writeParams} output={event.metadata?.output} />;
-  }
-
-  // Show BashDisplay for bash/shell tool calls
-  if (toolName.toLowerCase() === "bash" || toolName.toLowerCase() === "shell") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const bashParams: BashParams = metadataInput
-      ? (metadataInput as BashParams)
-      : params
-        ? (params as BashParams)
-        : { command: summary };
-    return <BashDisplay params={bashParams} output={event.metadata?.output} isCompact={isCompact} />;
-  }
-
-  // Show GlobDisplay for glob/find tool calls
-  if (toolName.toLowerCase() === "glob" || toolName.toLowerCase() === "find") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const globParams: GlobParams = metadataInput
-      ? (metadataInput as GlobParams)
-      : params
-        ? (params as GlobParams)
-        : { pattern: summary };
-    return <GlobDisplay params={globParams} output={event.metadata?.output} isCompact={isCompact} />;
-  }
-
-  // Show GrepDisplay for grep/search tool calls
-  if (toolName.toLowerCase() === "grep" || toolName.toLowerCase() === "search") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const grepParams: GrepParams = metadataInput
-      ? (metadataInput as GrepParams)
-      : params
-        ? (params as GrepParams)
-        : { pattern: summary };
-    return <GrepDisplay params={grepParams} output={event.metadata?.output} isCompact={isCompact} />;
-  }
-
-  // Show ReadDisplay for read tool calls
-  if (toolName.toLowerCase() === "read") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const readParams: ReadParams = metadataInput
-      ? (metadataInput as ReadParams)
-      : params
-        ? (params as ReadParams)
-        : { file_path: summary };
-    return <ReadDisplay params={readParams} output={event.metadata?.output} isCompact={isCompact} />;
-  }
-
-  // Show DeleteDisplay for delete file tool calls (e.g. Cursor ACP)
-  if (toolNameLower === "delete") {
-    const deleteParams = getToolParams<DeleteParams>(metadataInput, params, {
-      file_path: summary,
-    });
-    return (
-      <DeleteDisplay
-        params={deleteParams}
-        output={event.metadata?.output}
-        isCompact={isCompact}
-      />
-    );
-  }
-
-  // Show ViewDisplay for Copilot view tool calls
-  if (toolName.toLowerCase() === "view") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const viewParams: ViewParams = metadataInput
-      ? (metadataInput as ViewParams)
-      : params
-        ? (params as ViewParams)
-        : { path: summary };
-    return <ViewDisplay params={viewParams} output={event.metadata?.output} isCompact={isCompact} />;
-  }
-
-  // Show IntentDisplay for report_intent tool calls
-  if (toolName.toLowerCase() === "report_intent") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const intentParams: IntentParams = metadataInput
-      ? (metadataInput as IntentParams)
-      : params
-        ? (params as IntentParams)
-        : { intent: summary };
-    return <IntentDisplay params={intentParams} isCompact={isCompact} />;
-  }
-
-  // Show ToolSearchDisplay for ToolSearch tool calls
-  if (toolName.toLowerCase() === "toolsearch") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const tsParams: ToolSearchParams = metadataInput
-      ? (metadataInput as ToolSearchParams)
-      : params
-        ? (params as ToolSearchParams)
-        : { query: summary };
-    return <ToolSearchDisplay params={tsParams} output={event.metadata?.output} isCompact={isCompact} />;
-  }
-
-  // Show SkillDisplay for Skill tool calls
-  if (toolName.toLowerCase() === "skill") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const skillParams: SkillParams = metadataInput
-      ? (metadataInput as SkillParams)
-      : params
-        ? (params as SkillParams)
-        : { skill: summary };
-    return <SkillDisplay params={skillParams} isCompact={isCompact} />;
-  }
-
-  // Show AskUserQuestionDisplay for interactive question tool calls
-  // Claude: AskUserQuestion — Copilot/Codex SDK: ask_user
-  if (
-    toolNameLower === "askuserquestion" ||
-    toolNameLower === "ask_user" ||
-    toolNameLower === "askuser"
-  ) {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const askParams: AskUserQuestionParams = metadataInput
-      ? (metadataInput as AskUserQuestionParams)
-      : params
-        ? (params as AskUserQuestionParams)
-        : { question: summary };
-    return <AskUserQuestionDisplay params={askParams} output={event.metadata?.output} isCompact={isCompact} />;
-  }
-
-  // Show WebFetchDisplay for web fetch (Copilot) and WebSearch (Codex: input.query, output "Searched: ...")
-  if (
-    toolName.toLowerCase() === "webfetch" ||
-    toolName.toLowerCase() === "web_fetch" ||
-    toolName.toLowerCase() === "websearch"
-  ) {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const fetchParams: WebFetchParams = metadataInput
-      ? (metadataInput as WebFetchParams)
-      : params
-        ? (params as WebFetchParams)
-        : toolName.toLowerCase() === "websearch"
-          ? { query: summary }
-          : { url: summary };
-    return <WebFetchDisplay params={fetchParams} output={event.metadata?.output} isCompact={isCompact} />;
-  }
-
-  // Show GetDiffDisplay for Mains GetDiff tool calls
-  if (displayName === "GetDiff") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const diffParams: GetDiffParams = metadataInput
-      ? (metadataInput as GetDiffParams)
-      : params
-        ? (params as GetDiffParams)
-        : {};
-    return <GetDiffDisplay params={diffParams} output={event.metadata?.output} isCompact={isCompact} />;
-  }
-
-  // Show PersistReviewDisplay for Mains SaveReview tool calls
-  if (displayName === "SaveReview") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const reviewParams: SaveReviewParams = metadataInput
-      ? (metadataInput as SaveReviewParams)
-      : params
-        ? (params as SaveReviewParams)
-        : {};
-    return <SaveReviewDisplay params={reviewParams} isCompact={isCompact} />;
-  }
-
-  // Show PersistFindingDisplay for Mains SaveFinding/SaveFindings tool calls
-  if (displayName === "SaveFinding") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const findingParams: SaveFindingParams = metadataInput
-      ? (metadataInput as SaveFindingParams)
-      : params
-        ? (params as SaveFindingParams)
-        : {};
-    return <SaveFindingDisplay params={findingParams} isCompact={isCompact} />;
-  }
-
-  // Show CommitDisplay for Mains CommitChanges tool calls
-  if (displayName === "Commit") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const commitParams: CommitParams = metadataInput
-      ? (metadataInput as CommitParams)
-      : params
-        ? (params as CommitParams)
-        : {};
-    return <CommitDisplay params={commitParams} isCompact={isCompact} />;
-  }
-
-  // Show PRDisplay for Mains CreatePR tool calls
-  if (displayName === "CreatePR") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const prParams: PRParams = metadataInput
-      ? (metadataInput as PRParams)
-      : params
-        ? (params as PRParams)
-        : {};
-    return <PRDisplay params={prParams} isCompact={isCompact} />;
-  }
-
-  // Show CheckPackageDisplay for Mains CheckPackage tool calls
-  if (displayName === "CheckPackage") {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const checkParams: CheckPackageParams = metadataInput
-      ? (metadataInput as CheckPackageParams)
-      : params
-        ? (params as CheckPackageParams)
-        : {};
-    return <CheckPackageDisplay params={checkParams} output={event.metadata?.output} isCompact={isCompact} />;
-  }
-
-  // Show McpDisplay for MCP tool calls with expandable params. The resolver
-  // marks any tool that mapped to a vendor (Linear, GitHub, Figma, Notion,
-  // Computer use, Mains-without-special-renderer, …) with `vendorId`, so we
-  // don't need a brittle string-includes chain here.
-  if (resolved.vendorId !== undefined) {
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const mcpParams = metadataInput ?? params;
-    return (
-      <McpDisplay
-        displayName={displayName}
-        icon={icon}
-        params={mcpParams}
-        output={event.metadata?.output}
-        isCompact={isCompact}
-      />
-    );
+  for (const renderer of DISPATCH) {
+    const node = renderer(ctx);
+    if (node !== null) return node;
   }
 
   if (isCompact) {
@@ -418,8 +279,12 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   return (
     <div className="py-0.5 hover:bg-primary-50 dark:hover:bg-primary/5 rounded">
       <div className="flex items-center gap-2 text-s font-sans">
-        <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">{icon}</span>
-        <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary font-medium">{displayName}</span>
+        <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+          {resolved.icon}
+        </span>
+        <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary font-medium">
+          {resolved.displayName}
+        </span>
         <span className="text-primary-500 truncate">{summary}</span>
       </div>
     </div>

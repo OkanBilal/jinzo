@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { useDispatch } from "react-redux";
+import NumberFlow from "@number-flow/react";
 import {
   useGetLatestWorkspaceDiffQuery,
   workspaceDiffsApi,
@@ -8,6 +9,7 @@ import {
 import { ArrowUp, Close } from "@/components/ui/icons";
 import { Button, toast } from "@/components/ui";
 import { FileIconComponent } from "./file-explorer/components/file-icon";
+import { parseFileDiffSegment, parsePerFileStats } from "../utils/parse-diff";
 
 // DiffViewer pulls in `@pierre/diffs` (~hundreds of KB + heavy syntax parser).
 // Defer the bundle until the summary bar is actually opened + a file picked.
@@ -20,37 +22,6 @@ interface DiffSummaryBarProps {
   rootPath: string;
   isRunning: boolean;
   lastCompletedRunId?: string | null;
-}
-
-function parsePerFileStats(
-  fullDiff: string,
-): Record<string, { ins: number; del: number }> {
-  const stats: Record<string, { ins: number; del: number }> = {};
-  const fileSections = fullDiff.split(/(?=diff --git )/);
-  for (const section of fileSections) {
-    const headerMatch = section.match(/^diff --git a\/(.+?) b\//);
-    if (!headerMatch) continue;
-    const filePath = headerMatch[1];
-    let ins = 0;
-    let del = 0;
-    const lines = section.split("\n");
-    for (const line of lines) {
-      if (line.startsWith("+++") || line.startsWith("---")) continue;
-      if (line.startsWith("+")) ins++;
-      else if (line.startsWith("-")) del++;
-    }
-    stats[filePath] = { ins, del };
-  }
-  return stats;
-}
-
-function parseFileDiffSegment(filePath: string, fullDiff: string): string {
-  const escapedPath = filePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(
-    `(?:^|\\n)diff --git a\\/${escapedPath} b\\/${escapedPath}[\\s\\S]*?(?=\\ndiff --git|$)`,
-  );
-  const match = fullDiff.match(pattern);
-  return match ? match[0].trim() : "";
 }
 
 function getTotalStats(diff: WorkspaceDiff | null | undefined) {
@@ -140,18 +111,22 @@ export function DiffSummaryBar({
               className={`size-3 text-primary-500 dark:text-primary-400 transition-transform duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
             />
             <span className="text-xs font-medium text-primary-700 dark:text-primary-300">
-              {stats.files} file{stats.files !== 1 ? "s" : ""} changed
+              <NumberFlow value={stats.files} /> file{stats.files !== 1 ? "s" : ""} changed
             </span>
             <span className="flex items-center gap-1.5 text-xs tabular-nums">
               {stats.insertions > 0 && (
-                <span className="text-green-600 dark:text-green-400 font-medium">
-                  +{stats.insertions}
-                </span>
+                <NumberFlow
+                  value={stats.insertions}
+                  prefix="+"
+                  className="text-green-600 dark:text-green-400 font-medium"
+                />
               )}
               {stats.deletions > 0 && (
-                <span className="text-red-500 dark:text-red-400 font-medium">
-                  -{stats.deletions}
-                </span>
+                <NumberFlow
+                  value={stats.deletions}
+                  prefix="-"
+                  className="text-red-500 dark:text-red-400 font-medium"
+                />
               )}
             </span>
           </button>
@@ -214,14 +189,18 @@ export function DiffSummaryBar({
                       {fStats && (
                         <span className="flex items-center gap-1 text-xxs tabular-nums ml-auto shrink-0">
                           {fStats.ins > 0 && (
-                            <span className="text-green-600 dark:text-green-400">
-                              +{fStats.ins}
-                            </span>
+                            <NumberFlow
+                              value={fStats.ins}
+                              prefix="+"
+                              className="text-green-600 dark:text-green-400"
+                            />
                           )}
                           {fStats.del > 0 && (
-                            <span className="text-red-500 dark:text-red-400">
-                              -{fStats.del}
-                            </span>
+                            <NumberFlow
+                              value={fStats.del}
+                              prefix="-"
+                              className="text-red-500 dark:text-red-400"
+                            />
                           )}
                         </span>
                       )}

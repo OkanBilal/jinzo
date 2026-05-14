@@ -48,7 +48,7 @@ export function WorkspaceGroupDropdown({
           className={`w-3.5 h-3.5 transition-colors ${
             grouping !== "none"
               ? "text-primary-950 dark:text-primary "
-              : "text-primary-800 dark:text-primary-300"
+              : "text-primary-800 dark:text-primary-200"
           }`}
         />
       </Button>

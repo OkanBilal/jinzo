@@ -3,13 +3,21 @@ import { Button, Select } from "@/components/ui";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import {
   ProviderSettingsLayout,
-  ProviderVisibilitySection,
   useProviderSettings,
 } from "./provider-settings-shared";
 import { StructuredOutputsModal } from "./structured-outputs-modal";
-import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
+import type { ClaudeCodeAdapterConfig } from "../../../../shared/adapter.types";
+import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
-const SETTINGS_PERMISSION_MODES = [
+type ClaudePermissionMode = NonNullable<
+  ClaudeCodeAdapterConfig["permissionMode"]
+>;
+
+const SETTINGS_PERMISSION_MODES: Array<{
+  value: ClaudePermissionMode;
+  label: string;
+  description: string;
+}> = [
   { value: "default", label: "Ask permissions", description: "Always ask before making changes" },
   { value: "auto", label: "Auto", description: "Claude Code picks when to prompt vs allow, based on risk" },
   { value: "acceptEdits", label: "Auto accept edits", description: "Automatically accept all file edits" },
@@ -18,35 +26,29 @@ const SETTINGS_PERMISSION_MODES = [
   { value: "dontAsk", label: "Don't ask", description: "Deny unapproved tools silently" },
 ];
 
-export default function ClaudeSettings() {
+export default function ClaudeSettings(
+) {
   const {
     provider,
     isLoading,
     error,
     updating,
     config,
-    space,
-    canHide,
     updateConfig,
-    setSpaceVisible,
-  } = useProviderSettings("claude_code", "claude");
+  } = useProviderSettings<ClaudeCodeAdapterConfig>(PROVIDER_IDS.claude, "claude");
 
   const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] =
     useState(false);
 
-  const permissionMode = (config as any).permissionMode ?? "bypassPermissions";
+  const permissionMode = config.permissionMode ?? "bypassPermissions";
 
-  const structuredOutputs = ((config as any).structuredOutputs ?? {}) as Record<
-    string,
-    StructuredOutputEntry
-  >;
-  const structuredOutputsSelectedId =
-    ((config as any).structuredOutputsSelectedId as string | null) ?? null;
+  const structuredOutputs = config.structuredOutputs ?? {};
+  const structuredOutputsSelectedId = config.structuredOutputsSelectedId ?? null;
   const selectedSchemaName = structuredOutputsSelectedId
     ? (structuredOutputs[structuredOutputsSelectedId]?.name ?? "Off")
     : "Off";
 
-  const handlePermissionModeChange = async (mode: string) => {
+  const handlePermissionModeChange = async (mode: ClaudePermissionMode) => {
     if (!provider || updating) return;
     await updateConfig({ permissionMode: mode });
   };
@@ -215,16 +217,10 @@ export default function ClaudeSettings() {
         </SettingsRow>
       </SettingsSection>
 
-      <ProviderVisibilitySection
-        space={space}
-        canHide={canHide}
-        onVisibleChange={setSpaceVisible}
-      />
-
       <StructuredOutputsModal
         isOpen={isStructuredOutputsModalOpen}
         onClose={() => setIsStructuredOutputsModalOpen(false)}
-        providerId="claude_code"
+        providerId={PROVIDER_IDS.claude}
       />
     </ProviderSettingsLayout>
   );

@@ -4,7 +4,9 @@
     "composite": true,
     "lib": ["ES2020"],
     "jsx": "preserve",
-    "types": ["node"]
+    "types": ["node"],
+    "outDir": ".vite/build",
+    "rootDir": "."
   },
   "include": [
     "drizzle.config.ts",

@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { ArrowUp, Read } from "@/components/ui/icons";
+import { Read } from "@/components/ui/icons";
+import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
+import { FileIconComponent } from "../file-explorer/components/file-icon";
+import { ToolHeader, ToolCollapse } from "./_shared";
 
 export interface ReadParams {
   // Claude params
@@ -20,60 +23,69 @@ export function ReadDisplay({
   isCompact?: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const openFile = useOpenFileInEditor();
 
   const { content, numLines } = parseReadOutput(output);
   const hasContent = !!content;
+  const fullFilePath =
+    params.file_path ||
+    params.path ||
+    ((params as any)._title &&
+    ((params as any)._title.includes("/") ||
+      (params as any)._title.includes("."))
+      ? (params as any)._title
+      : "") ||
+    "";
+  const fileNameOnly = fullFilePath.split("/").pop() || fullFilePath;
+  const fileExt = (() => {
+    const dotIdx = fileNameOnly.lastIndexOf(".");
+    return dotIdx > 0 ? fileNameOnly.slice(dotIdx + 1) : undefined;
+  })();
 
   return (
-    <div className="">
-      <button
-        onClick={() => hasContent && setIsExpanded(!isExpanded)}
-        className={`group w-full flex items-center gap-1 py-1 text-s font-sans ${hasContent ? "cursor-pointer" : "cursor-default"}`}
+    <div>
+      <ToolHeader
+        icon={<Read className="size-3.5" />}
+        verb="Read"
+        hasDetails={hasContent}
+        isExpanded={isExpanded}
+        onToggle={() => setIsExpanded((v) => !v)}
+        isCompact={isCompact}
       >
-        {!isCompact && (
-          <Read className="size-3.5 shrink-0 text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary" />
-        )}
-        {!isCompact && (
-          <span className="text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
-            Read
-          </span>
-        )}
-        <code className="text-primary-500 font-sans truncate group-hover:text-primary-950 group-hover:dark:text-primary">
-          {shortPath(
-            params.file_path ||
-              params.path ||
-              ((params as any)._title &&
-              ((params as any)._title.includes("/") ||
-                (params as any)._title.includes("."))
-                ? (params as any)._title
-                : "") ||
-              "",
+        <span
+          role={fullFilePath ? "link" : undefined}
+          title={fullFilePath ? "Open in editor" : undefined}
+          onClick={(e) => {
+            if (!fullFilePath) return;
+            e.stopPropagation();
+            openFile(fullFilePath);
+          }}
+          className={`min-w-0 inline-flex items-center gap-1 text-left text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary ${fullFilePath ? "cursor-pointer hover:underline hover:text-primary-950 hover:dark:text-primary" : ""}`}
+        >
+          {fullFilePath && (
+            <FileIconComponent
+              extension={fileExt}
+              fileName={fileNameOnly}
+              className="size-3.5 shrink-0"
+            />
           )}
-        </code>
+          <code className="min-w-0 font-sans truncate">
+            {shortPath(fullFilePath)}
+          </code>
+        </span>
         {numLines > 0 && (
-          <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+          <span className="shrink-0 text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
             ({numLines} lines)
           </span>
         )}
-        {hasContent && (
-          <ArrowUp
-            className={`size-3.5 shrink-0 text-primary-500  opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-          />
-        )}
-      </button>
+      </ToolHeader>
 
       {hasContent && (
-        <div
-          className={`grid transition-all duration-200 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
-        >
-          <div className="min-h-0 overflow-hidden">
-            <div className=" ">
-              <pre className="noscrollbar text-xs font-mono text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
-                {content}
-              </pre>
-            </div>
-          </div>
-        </div>
+        <ToolCollapse isExpanded={isExpanded}>
+          <pre className="noscrollbar text-xs font-mono text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto">
+            {content}
+          </pre>
+        </ToolCollapse>
       )}
     </div>
   );

@@ -15,7 +15,7 @@ import type {
   WorkRunEvent,
   CopilotAdapterConfig,
   ModelInfo,
-} from "./adapter.types";
+} from "../../../../shared/adapter.types";
 import {
   requestToolApproval,
   cancelPendingRequests,
@@ -1082,18 +1082,20 @@ export function createCopilotAdapter(
 
         const copilotClient = await ensureClient(request.workspace.rootPath);
 
-        const permissionMode = config.permissionMode || "default";
+        // Per-run override (e.g. Pulse forces permissionMode="allow")
+        const overrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
+        const permissionMode = (typeof overrides.permissionMode === "string" && overrides.permissionMode) || config.permissionMode || "default";
 
         const sessionConfig: SessionConfig = {
           sessionId: runId,
           streaming: true,
           cwd: request.workspace.rootPath,
-          onPermissionRequest: permissionMode === "bypassPermissions"
+          onPermissionRequest: permissionMode === "bypassPermissions" || permissionMode === "allow"
             ? approveAllPermissions
             : buildPermissionHandler(runId),
         };
 
-        if (permissionMode !== "bypassPermissions") {
+        if (permissionMode !== "bypassPermissions" && permissionMode !== "allow") {
           sessionConfig.hooks = { onPreToolUse: buildPreToolUseHook(runId) };
           sessionConfig.onUserInputRequest = buildUserInputHandler(runId);
         }
@@ -1103,7 +1105,12 @@ export function createCopilotAdapter(
         }
 
         // Set reasoning effort from config (if model supports it)
-        const reasoningEffort = (config as any).modelReasoningEffort as ReasoningEffort | undefined;
+        const overrideEffort = typeof overrides.modelReasoningEffort === "string"
+          ? overrides.modelReasoningEffort
+          : typeof overrides.effortLevel === "string" && overrides.effortLevel
+            ? overrides.effortLevel
+            : undefined;
+        const reasoningEffort = (overrideEffort ?? (config as any).modelReasoningEffort) as ReasoningEffort | undefined;
         if (reasoningEffort) {
           sessionConfig.reasoningEffort = reasoningEffort;
         }
@@ -1723,7 +1730,7 @@ export function createCopilotAdapter(
       logInfo("Shutdown complete");
     },
 
-    async generateTitle(goal: string, context?: import("./adapter.types").WorkRunContextItem[]): Promise<string> {
+    async generateTitle(goal: string, context?: import("../../../../shared/adapter.types").WorkRunContextItem[]): Promise<string> {
       const copilotClient = await ensureClient();
 
       // Build context snippet if available
@@ -1741,7 +1748,7 @@ export function createCopilotAdapter(
       // Embed the title instruction directly in the prompt so it can't be overridden
       const titlePrompt = [
         "TASK: Generate a short title (3-5 words) for the following coding task.",
-        "RULES: Reply with ONLY the title. No quotes, no explanation, no punctuation at the end, no prefixes like 'Title:'.",
+        "RULES: Reply with ONLY the title (title case — capitalize each word). No quotes, no explanation, no punctuation at the end, no prefixes like 'Title:'.",
         "",
         `User's request: ${goal}`,
         contextSnippet ? `\nContext:\n${contextSnippet}` : "",
@@ -1752,7 +1759,8 @@ export function createCopilotAdapter(
       const session = await copilotClient.createSession({
         model: "gpt-4.1-nano",
         systemMessage: {
-          content: "You are a title generator. Output ONLY a short title (3-5 words). Never explain, never use tools, never write code.",
+          content:
+            "You are a title generator. Output ONLY a short title (3-5 words) in title case (capitalize the first letter of each word). Never explain, never use tools, never write code.",
         },
         onPermissionRequest: approveAllPermissions,
       });

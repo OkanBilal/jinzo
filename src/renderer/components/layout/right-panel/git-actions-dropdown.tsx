@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback } from "react";
 import { Commit, PullRequest, ArrowUp, Branch } from "@/components/ui/icons";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
+import { Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
 import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks";
 import {
   useGetLatestWorkspaceDiffSummaryQuery,
@@ -57,17 +57,17 @@ export function GitActionsDropdown() {
 
   return (
     <>
-      <button
+      <Button
         ref={triggerRef}
         onClick={handleToggle}
-        className="flex items-center gap-1 px-1.5 py-1.25 rounded-lg cursor-pointer text-primary-700 dark:text-primary-500 hover:bg-primary-100/80 dark:hover:bg-primary/10 transition-all duration-300 ease-out"
+        className="flex items-center gap-1 px-1.5 py-1.25 rounded-lg cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-100/80 dark:hover:bg-primary/10 transition-all duration-300 ease-out"
       >
         <Branch className="size-3.5" />
         <span className="text-xs font-medium">Git</span>
         <ArrowUp
           className={`size-3 transition-transform duration-200 rotate-180`}
         />
-      </button>
+      </Button>
 
       <DropdownMenu
         isOpen={isOpen}
@@ -76,7 +76,7 @@ export function GitActionsDropdown() {
         minWidth={160}
         origin="top-right"
       >
-        <div className="px-3 py-1.5 text-xs font-medium text-primary-700 dark:text-primary-500">
+        <div className="px-3 py-1.5 text-xs font-medium text-primary-700 dark:text-primary-300">
           Git actions
         </div>
         <DropdownMenuItem onClick={handleCommit} disabled={!hasDiff}>

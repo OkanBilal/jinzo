@@ -88,7 +88,26 @@ export function getToolType(content: string): string {
   return resolveTool(content).displayName;
 }
 
+/**
+ * Strip TodoWrite tool calls out of the timeline entirely.
+ *
+ * TodoWrite represents the *current* plan state — every call is a full
+ * snapshot, not an incremental change. Rendering each call inline produces
+ * a noisy, repetitive timeline; instead, the latest snapshot is surfaced
+ * as a sticky `<TodoSummaryBar />` above the input (mirrors Codex's pinned
+ * plan card), so the in-message cards become redundant.
+ */
+function stripTodoWriteEvents(events: RunEvent[]): RunEvent[] {
+  return events.filter(
+    (event) => resolveTool(event.content).groupKey !== "todowrite",
+  );
+}
+
 export function groupConsecutiveToolCalls(events: RunEvent[]): ToolSubGroup[] {
+  // Pre-process: drop TodoWrite events — the pinned summary bar above the
+  // input is the single source of truth for plan state.
+  const processedEvents = stripTodoWriteEvents(events);
+
   const subGroups: ToolSubGroup[] = [];
   let currentGroup: RunEvent[] = [];
   let currentKey: string | null = null;
@@ -114,7 +133,7 @@ export function groupConsecutiveToolCalls(events: RunEvent[]): ToolSubGroup[] {
     currentIcon = null;
   };
 
-  for (const event of events) {
+  for (const event of processedEvents) {
     const resolved = resolveTool(event.content);
 
     if (resolved.isSpecialGroup) {

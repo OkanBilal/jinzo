@@ -3,6 +3,11 @@ import { Plan, Lock, Edit, DontAsk, Danger, ArrowUp, Infinite } from "../icons";
 import DropdownWrapper from "../dropdown-wrapper";
 import { Button } from "../button";
 import { Body } from "../text";
+import {
+  CURSOR_MODES as CURSOR_MODE_DEFS,
+  CODEX_SANDBOX_MODES as CODEX_SANDBOX_MODE_DEFS,
+  shortLabelMap,
+} from "@/lib/provider-modes";
 
 const PERMISSION_MODES = [
   {
@@ -10,7 +15,6 @@ const PERMISSION_MODES = [
     label: "Ask permissions",
     description: "Ask before changes",
   },
-
   {
     value: "acceptEdits",
     label: "Auto accept edits",
@@ -20,6 +24,11 @@ const PERMISSION_MODES = [
     value: "plan",
     label: "Plan mode",
     description: "Plan before changes",
+  },
+  {
+    value: "bypassPermissions",
+    label: "Bypass permissions",
+    description: "Bypass all permissions",
   },
 ] as const;
 
@@ -32,45 +41,10 @@ const PERMISSION_MODE_LABELS: Record<string, string> = {
   dontAsk: "Don't Ask",
 };
 
-const CURSOR_MODES = [
-  {
-    value: "ask",
-    label: "Ask",
-    description: "Ask before actions",
-  },
-  { value: "agent", label: "Agent", description: "Full autonomous agent mode" },
-  { value: "plan", label: "Plan", description: "Plan before actions" },
-] as const;
-
-const CURSOR_MODE_LABELS: Record<string, string> = {
-  agent: "Agent",
-  plan: "Plan",
-  ask: "Ask",
-};
-
-const CODEX_SANDBOX_MODES = [
-  {
-    value: "read-only",
-    label: "Read Only",
-    description: "Agent cannot modify files",
-  },
-  {
-    value: "workspace-write",
-    label: "Workspace Write",
-    description: "Write within workspace only",
-  },
-  {
-    value: "danger-full-access",
-    label: "Full Access",
-    description: "No restrictions",
-  },
-] as const;
-
-const CODEX_SANDBOX_LABELS: Record<string, string> = {
-  "read-only": "Read Only",
-  "workspace-write": "Write",
-  "danger-full-access": "Full Access",
-};
+const CURSOR_MODES = CURSOR_MODE_DEFS;
+const CURSOR_MODE_LABELS = shortLabelMap(CURSOR_MODE_DEFS);
+const CODEX_SANDBOX_MODES = CODEX_SANDBOX_MODE_DEFS;
+const CODEX_SANDBOX_LABELS = shortLabelMap(CODEX_SANDBOX_MODE_DEFS);
 
 function PermissionModeIcon({
   mode,
@@ -103,6 +77,25 @@ function PermissionModeIcon({
   }
 }
 
+function PlanToggleSwitch({ checked }: { checked: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors ${
+        checked
+          ? "bg-primary-500 dark:bg-primary-400"
+          : "bg-primary-300/60 dark:bg-primary-700"
+      }`}
+    >
+      <span
+        className={`inline-block size-3 rounded-full bg-white shadow-sm transition-transform ${
+          checked ? "translate-x-3.5" : "translate-x-0.5"
+        }`}
+      />
+    </span>
+  );
+}
+
 interface PermissionModeDropdownProps {
   permissionMode: string;
   onPermissionModeChange: (mode: string) => void;
@@ -112,6 +105,9 @@ interface PermissionModeDropdownProps {
   variant?: string;
   modes?: readonly { value: string; label: string; description?: string }[];
   modeLabels?: Record<string, string>;
+  /** Codex-only: plan mode runs alongside the sandbox mode. */
+  planMode?: boolean;
+  onPlanModeToggle?: () => void;
 }
 
 export function PermissionModeDropdown({
@@ -123,9 +119,12 @@ export function PermissionModeDropdown({
   variant,
   modes: modesProp,
   modeLabels: modeLabelsProp,
+  planMode = false,
+  onPlanModeToggle,
 }: PermissionModeDropdownProps) {
   const isCursor = variant === "cursor";
   const isCodex = variant === "codex";
+  const showPlanRow = isCodex && !!onPlanModeToggle;
   const modes =
     modesProp ??
     (isCursor
@@ -149,7 +148,7 @@ export function PermissionModeDropdown({
         className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-sm transition-all cursor-pointer hover:bg-primary-200/30 animate-blur-reveal dark:hover:bg-primary-800  ${
           permissionMode === "bypassPermissions" ||
           permissionMode === "danger-full-access"
-            ? "dark:bg-yellow-100/10 bg-yellow-400/30 text-yellow-600 dark:text-yellow-200"
+            ? "dark:bg-yellow-100/10 hover:bg-yellow-500/30  bg-yellow-400/30 text-yellow-600 dark:text-yellow-200"
             : permissionMode !== "default"
               ? " text-primary-700 dark:text-primary-300"
               : "text-primary-700 dark:text-primary-300 "
@@ -157,6 +156,7 @@ export function PermissionModeDropdown({
       >
         <PermissionModeIcon mode={permissionMode} className="size-3.5" />
         {modeLabels[permissionMode] ?? permissionMode}
+        {showPlanRow && planMode ? " + Plan" : ""}
         <ArrowUp className="size-3.5 rotate-180" />
       </Button>
       <DropdownWrapper
@@ -173,9 +173,11 @@ export function PermissionModeDropdown({
               onPermissionModeChange(mode.value);
               onToggle();
             }}
-            className={`w-full text-left px-2.5 py-1.5 cursor-pointer transition-colors flex items-center gap-2.5 first:rounded-t-xl last:rounded-b-xl ${
+            className={`w-full text-left px-2.5 py-1.5 cursor-pointer transition-colors flex items-center gap-2.5 first:rounded-t-xl ${
+              !showPlanRow ? "last:rounded-b-xl" : ""
+            } ${
               permissionMode === mode.value
-                ? "bg-primary-200/60 dark:bg-primary-200/8 text-primary-500 dark:text-primary-100"
+                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-500 dark:text-primary-100"
                 : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
             }`}
           >
@@ -191,6 +193,33 @@ export function PermissionModeDropdown({
             </div>
           </Button>
         ))}
+        {showPlanRow && (
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => onPlanModeToggle?.()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onPlanModeToggle?.();
+              }
+            }}
+            className={`w-full text-left px-2.5 py-1.5 cursor-pointer transition-colors flex items-center gap-2.5 last:rounded-b-xl border-t border-primary-200/40 dark:border-primary-800 ${
+              planMode
+                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-500 dark:text-primary-100"
+                : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
+            }`}
+          >
+            <Plan className="size-3.5 shrink-0" />
+            <div className="flex flex-col flex-1 min-w-0">
+              <Body className="text-s mb-0.5">Plan Mode</Body>
+              <span className="text-xs text-primary-500">
+                Plan before changes
+              </span>
+            </div>
+            <PlanToggleSwitch checked={planMode} />
+          </div>
+        )}
       </DropdownWrapper>
     </div>
   );

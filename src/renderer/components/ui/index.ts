@@ -1,20 +1,10 @@
 // Buttons
-export {
-  Button,
-  PrimaryButton,
-  SecondaryButton,
-  SubmitButton,
-  GhostButton,
-  DangerButton,
-  WarningButton,
-  SuccessButton,
-  IconButton,
-  LinkButton,
-  SubtleButton,
-  FrostedButton,
-  BareButton,
-} from "./button";
+export { Button } from "./button";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./button";
+
+// Segmented tabs
+export { SegmentedTabs } from "./segmented-tabs";
+export type { SegmentedTabOption } from "./segmented-tabs";
 
 // Text
 export {
@@ -41,7 +31,7 @@ export { SendButton } from "./input/send-button";
 export { DictationButton } from "./input/dictation-button";
 export { InputForm } from "./input/input-form";
 export { RichInputForm } from "./input/rich-input-form";
-export type { RichInputFormHandle, RichSkillChipData } from "./input/rich-input-form";
+export type { RichInputFormHandle, RichSkillChipData, RichFileChipData } from "./input/rich-input-form";
 export { FileUploadDropdown, FILE_TYPES } from "./input/file-upload-dropdown";
 export type { UploadedFile } from "./input/file-upload-dropdown";
 export { ModelSelectDropdown } from "./input/model-select-dropdown";

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Heading2, Muted } from "@/components/ui";
+import { Heading2, Heading3, Muted } from "@/components/ui";
 
 export function SettingsPageShell({
   title,
@@ -26,8 +26,8 @@ export function SettingsPageShell({
       {headerActions}
     </div>
   ) : (
-    <div className="mb-8">
-      <Heading2>{title}</Heading2>
+    <div className="mb-4">
+      <Heading3>{title} settings</Heading3>
     </div>
   );
 
@@ -68,11 +68,11 @@ export function SettingsSection({
   return (
     <div className="mb-4">
       {title && (
-        <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100 mb-3">
+        <h3 className="text-sm font-medium text-primary-900 dark:text-primary-200 mb-3">
           {title}
         </h3>
       )}
-      <div className="rounded-3xl glass-morphism px-5 py-1">
+      <div className="rounded-3xl glass-morphism px-4 py-1">
         {children}
       </div>
     </div>
@@ -94,7 +94,7 @@ export function SettingsRow({
     return (
       <div className="flex items-start justify-between py-5 gap-8">
         <div className="shrink-0 w-80">
-          <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100">
+          <h3 className="text-sm font-medium text-primary-900 mb-1 dark:text-primary-200">
             {title}
           </h3>
           {description && (
@@ -111,11 +111,11 @@ export function SettingsRow({
   return (
     <div className="flex items-center justify-between py-3">
       <div className="flex-1 pr-8">
-        <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100">
+        <h3 className="text-sm text-primary-900 font-medium mb-1 dark:text-primary-200">
           {title}
         </h3>
         {description && (
-          <p className="text-s text-primary-500 dark:text-primary-500 mt-1 ">
+          <p className="text-xs text-primary-500 dark:text-primary-500 ">
             {description}
           </p>
         )}

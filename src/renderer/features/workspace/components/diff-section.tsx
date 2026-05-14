@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/icons";
 import { Body, Button } from "@/components/ui";
 import { buildSyntheticDiff } from "../utils/expand-diff";
+import { parseFileDiffSegment, parsePerFileStats } from "../utils/parse-diff";
 import { normalizePath, pathsMatch } from "../utils/path-utils";
 
 interface DiffSectionProps {
@@ -45,39 +46,6 @@ function DiffStats({ stats }: { stats: WorkspaceDiff["stats"] }) {
       )}
     </div>
   );
-}
-
-/** Extract the diff section for a single file from the full unified diff */
-function parseFileDiffSegment(filePath: string, fullDiff: string): string {
-  const escapedPath = filePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(
-    `(?:^|\\n)diff --git a\\/${escapedPath} b\\/${escapedPath}[\\s\\S]*?(?=\\ndiff --git|$)`,
-  );
-  const match = fullDiff.match(pattern);
-  return match ? match[0].trim() : "";
-}
-
-/** Count insertions / deletions per file from the unified diff */
-function parsePerFileStats(
-  fullDiff: string,
-): Record<string, { ins: number; del: number }> {
-  const stats: Record<string, { ins: number; del: number }> = {};
-  const fileSections = fullDiff.split(/(?=diff --git )/);
-  for (const section of fileSections) {
-    const headerMatch = section.match(/^diff --git a\/(.+?) b\//);
-    if (!headerMatch) continue;
-    const filePath = headerMatch[1];
-    let ins = 0;
-    let del = 0;
-    const lines = section.split("\n");
-    for (const line of lines) {
-      if (line.startsWith("+++") || line.startsWith("---")) continue;
-      if (line.startsWith("+")) ins++;
-      else if (line.startsWith("-")) del++;
-    }
-    stats[filePath] = { ins, del };
-  }
-  return stats;
 }
 
 /** Finding severity indicator dots */

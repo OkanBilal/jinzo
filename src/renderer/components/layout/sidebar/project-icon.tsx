@@ -10,14 +10,10 @@ export function ProjectIcon({
 }): ReactNode {
   if (icon) {
     const parsed = parseIcon(icon);
-    if (
-      parsed.type === "icon" ||
-      parsed.type === "copilot-animate" ||
-      parsed.type === "claude-animate"
-    ) {
+    if (parsed.type === "icon") {
       const IconComp = parsed.value as IconComponent;
       return (
-        <IconComp className="size-3.5 text-primary-900 dark:text-primary-300" />
+        <IconComp className="size-3.5 text-primary-700 dark:text-primary-200" />
       );
     }
     if (parsed.type === "emoji") {
@@ -28,7 +24,7 @@ export function ProjectIcon({
   }
   const initial = (projectName?.[0] ?? "P").toUpperCase();
   return (
-    <div className="size-4 rounded-md flex items-center justify-center text-t font-medium text-primary-950 dark:text-primary-200 border border-primary-950/50 dark:border-primary/10">
+    <div className="size-3.5 rounded-md flex items-center font-mono justify-center text-t font-medium text-primary-700 dark:text-primary-200 border border-primary-700 dark:border-primary-200">
       {initial}
     </div>
   );

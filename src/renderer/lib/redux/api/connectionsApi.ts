@@ -244,15 +244,6 @@ export const connectionsApi = baseApi.injectEndpoints({
       transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
     }),
 
-    getSelectedSentryProjects: builder.query<{ success: boolean; projects: SelectedSentryProject[]; connectionId: string }, string>({
-      query: (provider) => ({
-        handler: 'connections:getSelectedResources',
-        args: [provider],
-      }),
-      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects, connectionId: response.data.connectionId } : { success: false, projects: [], connectionId: '' },
-      providesTags: ['ConnectionStates'],
-    }),
-
     getSocketDevOrganizations: builder.query<{ success: boolean; organizations: SocketDevOrganization[] }, string>({
       query: (connectionId) => ({
         handler: 'connections:getSocketDevOrganizations',
@@ -261,66 +252,26 @@ export const connectionsApi = baseApi.injectEndpoints({
       transformResponse: (response: any) => response.success ? { success: true, organizations: response.data.organizations } : { success: false, organizations: [] },
     }),
 
-    getSelectedSocketDevOrganizations: builder.query<{ success: boolean; organizations: SelectedSocketDevOrganization[]; connectionId: string }, string>({
+    /**
+     * Generic accessor for the items the user has linked under a connection.
+     * Main returns `{ [providerSpecificKey]: items, connectionId }` (e.g. `repos`,
+     * `teams`, `projects`, `boards`, `organizations`); we strip the wrapping key
+     * here so the renderer always sees `{ items, connectionId }`.
+     */
+    getSelectedResources: builder.query<
+      { success: boolean; items: any[]; connectionId: string },
+      string
+    >({
       query: (provider) => ({
         handler: 'connections:getSelectedResources',
         args: [provider],
       }),
-      transformResponse: (response: any) => response.success ? { success: true, organizations: response.data.organizations, connectionId: response.data.connectionId } : { success: false, organizations: [], connectionId: '' },
-      providesTags: ['ConnectionStates'],
-    }),
-
-    getSelectedTrelloBoards: builder.query<{ success: boolean; boards: SelectedTrelloBoard[]; connectionId: string }, string>({
-      query: (provider) => ({
-        handler: 'connections:getSelectedResources',
-        args: [provider],
-      }),
-      transformResponse: (response: any) => response.success ? { success: true, boards: response.data.boards, connectionId: response.data.connectionId } : { success: false, boards: [], connectionId: '' },
-      providesTags: ['ConnectionStates'],
-    }),
-
-    getSelectedGitLabProjects: builder.query<{ success: boolean; projects: SelectedGitLabProject[]; connectionId: string }, string>({
-      query: (provider) => ({
-        handler: 'connections:getSelectedResources',
-        args: [provider],
-      }),
-      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects, connectionId: response.data.connectionId } : { success: false, projects: [], connectionId: '' },
-      providesTags: ['ConnectionStates'],
-    }),
-
-    getSelectedAsanaProjects: builder.query<{ success: boolean; projects: SelectedAsanaProject[]; connectionId: string }, string>({
-      query: (provider) => ({
-        handler: 'connections:getSelectedResources',
-        args: [provider],
-      }),
-      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects, connectionId: response.data.connectionId } : { success: false, projects: [], connectionId: '' },
-      providesTags: ['ConnectionStates'],
-    }),
-
-    getSelectedProjects: builder.query<{ success: boolean; projects: SelectedProject[]; connectionId: string }, string>({
-      query: (provider) => ({
-        handler: 'connections:getSelectedResources',
-        args: [provider],
-      }),
-      transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects, connectionId: response.data.connectionId } : { success: false, projects: [], connectionId: '' },
-      providesTags: ['ConnectionStates'],
-    }),
-
-    getSelectedTeams: builder.query<{ success: boolean; teams: SelectedTeam[]; connectionId: string }, string>({
-      query: (provider) => ({
-        handler: 'connections:getSelectedResources',
-        args: [provider],
-      }),
-      transformResponse: (response: any) => response.success ? { success: true, teams: response.data.teams, connectionId: response.data.connectionId } : { success: false, teams: [], connectionId: '' },
-      providesTags: ['ConnectionStates'],
-    }),
-
-    getSelectedRepos: builder.query<{ success: boolean; repos: SelectedRepo[]; connectionId: string }, string>({
-      query: (provider) => ({
-        handler: 'connections:getSelectedResources',
-        args: [provider],
-      }),
-      transformResponse: (response: any) => response.success ? { success: true, repos: response.data.repos, connectionId: response.data.connectionId } : { success: false, repos: [], connectionId: '' },
+      transformResponse: (response: any) => {
+        if (!response.success) return { success: false, items: [], connectionId: '' };
+        const { connectionId = '', ...rest } = response.data ?? {};
+        const items = (Object.values(rest)[0] as any[]) ?? [];
+        return { success: true, items, connectionId };
+      },
       providesTags: ['ConnectionStates'],
     }),
 
@@ -377,24 +328,10 @@ export const {
   useLazyGetAsanaProjectsQuery,
   useLazyGetGitLabProjectsQuery,
   useLazyGetTrelloBoardsQuery,
-  useGetSelectedReposQuery,
-  useLazyGetSelectedReposQuery,
-  useGetSelectedTeamsQuery,
-  useLazyGetSelectedTeamsQuery,
-  useGetSelectedProjectsQuery,
-  useLazyGetSelectedProjectsQuery,
-  useGetSelectedAsanaProjectsQuery,
-  useLazyGetSelectedAsanaProjectsQuery,
-  useGetSelectedGitLabProjectsQuery,
-  useLazyGetSelectedGitLabProjectsQuery,
-  useGetSelectedTrelloBoardsQuery,
-  useLazyGetSelectedTrelloBoardsQuery,
   useLazyGetSentryProjectsQuery,
-  useGetSelectedSentryProjectsQuery,
-  useLazyGetSelectedSentryProjectsQuery,
   useLazyGetSocketDevOrganizationsQuery,
-  useGetSelectedSocketDevOrganizationsQuery,
-  useLazyGetSelectedSocketDevOrganizationsQuery,
+  useGetSelectedResourcesQuery,
+  useLazyGetSelectedResourcesQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
   useRevokeConnectionMutation,

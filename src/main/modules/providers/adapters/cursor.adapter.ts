@@ -4,9 +4,9 @@
 // ─────────────────────────────────────────────────────────────
 
 import { spawn, type ChildProcess } from "node:child_process";
-import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { findCursorBinaryPath } from "../providers.utils";
 import type {
   WorkRunAdapter,
   WorkRunRequest,
@@ -17,7 +17,7 @@ import type {
   WorkRunEvent,
   CursorAdapterConfig,
   ModelInfo,
-} from "./adapter.types";
+} from "../../../../shared/adapter.types";
 import {
   cancelPendingRequests,
   requestToolApproval,
@@ -403,30 +403,8 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
   function findCursorBinary(): string {
     if (config.binary) return config.binary;
 
-    const { execSync } = require("child_process");
-    try {
-      const result = execSync("which agent", { encoding: "utf-8", timeout: 5000 }).trim();
-      if (result) return result;
-    } catch {
-      // not found in PATH
-    }
-
-    // Check common locations
-    const homedir = os.homedir();
-    const candidates = [
-      path.join(homedir, ".local", "bin", "agent"),
-      "/usr/local/bin/agent",
-      "/opt/homebrew/bin/agent",
-      path.join(homedir, ".cursor", "bin", "agent"),
-    ];
-    for (const c of candidates) {
-      try {
-        fs.accessSync(c, fs.constants.X_OK);
-        return c;
-      } catch {
-        // not executable
-      }
-    }
+    const resolved = findCursorBinaryPath();
+    if (resolved) return resolved;
 
     throw new Error(
       "Cursor Agent CLI not found. Install it with: curl https://cursor.com/install -fsS | bash\n" +
@@ -1209,15 +1187,17 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
           }
         }
 
-        // Set mode if configured
-        if (config.mode && config.mode !== "agent" && sessionId) {
+        // Set mode if configured (per-run override wins, e.g. Pulse forces "agent")
+        const overrideMode = ((request.configSnapshot ?? {}) as Record<string, unknown>).mode;
+        const effectiveMode = (typeof overrideMode === "string" && overrideMode) || config.mode;
+        if (effectiveMode && effectiveMode !== "agent" && sessionId) {
           try {
             await server.sendRequest("session/set_mode", {
               sessionId,
-              modeId: config.mode,
+              modeId: effectiveMode,
             });
           } catch {
-            logWarn(`Failed to set mode to ${config.mode}`);
+            logWarn(`Failed to set mode to ${effectiveMode}`);
           }
         }
 
@@ -1584,7 +1564,7 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
       }
     },
 
-    async generateTitle(goal: string, context?: import("./adapter.types").WorkRunContextItem[]): Promise<string> {
+    async generateTitle(goal: string, context?: import("../../../../shared/adapter.types").WorkRunContextItem[]): Promise<string> {
       try {
         const binaryPath = findCursorBinary();
 
@@ -1601,6 +1581,7 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
 
         const titlePrompt = [
           "Generate a concise title (2-5 words) for this task.",
+          "Use title case: capitalize the first letter of each word.",
           "Reply with ONLY the title text, nothing else.",
           "No quotes, no punctuation, no prefixes.",
           "",

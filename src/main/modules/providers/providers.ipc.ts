@@ -24,6 +24,7 @@ const CHANNELS = {
   READ_PLUGIN: "providers:readPlugin",
   INSTALL_PLUGIN: "providers:installPlugin",
   UNINSTALL_PLUGIN: "providers:uninstallPlugin",
+  DETECT_INSTALLED: "providers:detectInstalled",
 } as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -103,6 +104,10 @@ export function registerProvidersIpc(): void {
 
   ipcMain.handle(CHANNELS.UNINSTALL_PLUGIN, async (_, id: string, pluginId: string) => {
     return providersController.uninstallPlugin(id, pluginId);
+  });
+
+  ipcMain.handle(CHANNELS.DETECT_INSTALLED, async () => {
+    return providersController.detectInstalled();
   });
 }
 

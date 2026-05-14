@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Body, Caption, Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
+import { Body, Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
 
 interface NewButtonProps {
   onClick: () => void;
@@ -69,19 +69,19 @@ export default function NewButton({
         tooltip={`${actionPrefix} ${title}`}
         variant="subtle"
         tooltipShortcut="⌘N"
-        size="md"
+        size="xs"
         onClick={handleClick}
         fullWidth
-        className="justify-start cursor-pointer transition-transform duration-200 "
+        className="justify-start cursor-pointer transition-transform duration-200 px-2 rounded-xl"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         {icon}
         <Body className="text-primary-900 dark:text-primary-100 text-s font-medium">
           {actionPrefix} {title}
         </Body>
-        <Caption className="ml-auto text-primary-900 dark:text-primary-100">
+        <Body className="ml-auto text-primary-900 dark:text-primary-200 text-xs!">
           ⌘ N
-        </Caption>
+        </Body>
       </Button>
 
       {dropdownItems && (

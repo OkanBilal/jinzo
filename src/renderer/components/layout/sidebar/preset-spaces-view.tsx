@@ -176,7 +176,7 @@ export default function PresetSpacesView({
           onClick={handleCreate}
           disabled={isLoading}
           className="w-full py-2.5 px-3 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer disabled:opacity-50
-          disabled:cursor-not-allowed brightness-120 text-primary-800 dark:text-primary dark:bg-primary/5 dark:hover:bg-primary/10 bg-primary/30 hover:bg-primary/50"
+          disabled:cursor-not-allowed brightness-120 text-primary-800 dark:text-primary dark:bg-primary/5 dark:hover:bg-primary/10 bg-primary/20 hover:bg-primary/50"
 
         >
           {isLoading ? "Loading..." : "Choose" + (selectedTemplate ? ` ${selectedTemplate.name}` : "")}

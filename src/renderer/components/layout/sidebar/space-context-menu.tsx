@@ -1,9 +1,8 @@
 import { useState, useCallback, memo } from "react";
-import { Edit, Trash } from "@/components/ui/icons";
 import type { Space } from "@/lib/redux/api";
 import { useUpdateSpaceMutation } from "@/lib/redux/api";
-import { DropdownMenu, DropdownMenuItem, toast } from "@/components/ui";
-import { solidColors, parseThemeConfig } from "@/lib/space-themes";
+import { DropdownMenu, toast } from "@/components/ui";
+import { solidColors, themeConfigToSwatchIndex } from "@/lib/space-themes";
 import SpaceThemeSelector from "./space-theme-selector";
 
 const SpaceContextThemeSection = memo(function SpaceContextThemeSection({
@@ -12,7 +11,7 @@ const SpaceContextThemeSection = memo(function SpaceContextThemeSection({
   space: Space;
 }) {
   const [updateSpace, { isLoading: isSavingTheme }] = useUpdateSpaceMutation();
-  const { colorIndex: initialIndex } = parseThemeConfig(space.themeConfig);
+  const { colorIndex: initialIndex } = themeConfigToSwatchIndex(space.themeConfig);
   const [selectedColorIndex, setSelectedColorIndex] = useState(() => initialIndex);
 
   const handleSelectColor = useCallback(
@@ -65,16 +64,16 @@ export default function SpaceContextMenu({
   isOpen,
   position,
   space,
-  onEdit,
-  onDelete,
+  // onEdit,
+  // onDelete,
   onClose,
 }: SpaceContextMenuProps) {
   if (!space) return null;
-  const isSystemSpace =
-    space.slug === "claude" ||
-    space.slug === "copilot" ||
-    space.slug === "codex" ||
-    space.slug === "cursor";
+  // const isSystemSpace =
+  //   space.slug === "claude" ||
+  //   space.slug === "copilot" ||
+  //   space.slug === "codex" ||
+  //   space.slug === "cursor";
 
   return (
     <DropdownMenu

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeImage, screen } from "electron";
+import { app, BrowserWindow, nativeImage, screen, shell } from "electron";
 import path from "path";
 import fs, { existsSync } from "fs";
 
@@ -179,6 +179,37 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
     process.env.VITE_DEV_SERVER_URL ||
     process.env.RENDERER_VITE_DEV_SERVER_URL ||
     "http://localhost:5173";
+
+  // Same allowlist as `shell:openExternal` IPC handler in main/index.ts —
+  // restricts which URL schemes can hand off to the OS.
+  const ALLOWED_EXTERNAL = new Set(["https:", "http:", "mailto:"]);
+  const openExternalSafe = (url: string) => {
+    try {
+      const parsed = new URL(url);
+      if (ALLOWED_EXTERNAL.has(parsed.protocol)) {
+        shell.openExternal(url).catch(() => { /* user-cancelled / no handler */ });
+      }
+    } catch { /* invalid URL */ }
+  };
+
+  // Route all popup attempts (window.open, target="_blank") to the user's
+  // default browser. Denies in-app popups inheriting webPreferences/preload.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    openExternalSafe(url);
+    return { action: "deny" };
+  });
+
+  // Block the renderer from navigating the main window off the app shell.
+  // Permits the Vite dev server (dev) and file:// (packaged). Anything else
+  // — typically an external link clicked inside the renderer — is routed
+  // to the system browser instead of replacing the app UI.
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    const isDev = !app.isPackaged && url.startsWith(devServerUrl);
+    const isFile = url.startsWith("file://");
+    if (isDev || isFile) return;
+    event.preventDefault();
+    openExternalSafe(url);
+  });
 
   if (!app.isPackaged) {
     // Development mode - load from Vite dev server

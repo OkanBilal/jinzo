@@ -226,6 +226,19 @@ const api = {
     readPlugin: (id: string, pluginName: string, marketplacePath: string) => ipcRenderer.invoke("providers:readPlugin", id, pluginName, marketplacePath),
     installPlugin: (id: string, pluginId: string) => ipcRenderer.invoke("providers:installPlugin", id, pluginId),
     uninstallPlugin: (id: string, pluginId: string) => ipcRenderer.invoke("providers:uninstallPlugin", id, pluginId),
+    detectInstalled: () => ipcRenderer.invoke("providers:detectInstalled"),
+  },
+  // Skills.sh marketplace (read-only)
+  skillsMarketplace: {
+    list: (args?: { view?: "trending" | "hot" | "all-time"; page?: number; perPage?: number }) =>
+      ipcRenderer.invoke("skillsMarketplace:list", args ?? {}),
+    search: (args: { q: string; limit?: number }) =>
+      ipcRenderer.invoke("skillsMarketplace:search", args),
+    curated: () => ipcRenderer.invoke("skillsMarketplace:curated"),
+    detail: (ref: { source: string; skill: string }) =>
+      ipcRenderer.invoke("skillsMarketplace:detail", ref),
+    audit: (ref: { source: string; skill: string }) =>
+      ipcRenderer.invoke("skillsMarketplace:audit", ref),
   },
   // Tool calls operations
   toolCalls: {
@@ -308,7 +321,7 @@ const api = {
       contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
       contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
       contextFiles?: Array<{ path: string }>;
-      contextSkills?: Array<{ name: string; path: string }>;
+      contextSkills?: Array<{ name: string; path?: string; displayName?: string; description?: string; shortDescription?: string; iconSmall?: string; iconLarge?: string; brandColor?: string; scope?: string }>;
     }) => ipcRenderer.invoke("runs:execute", payload),
     abort: (runId: string) => ipcRenderer.invoke("runs:abort", runId),
     getToolCalls: (runId: string) =>
@@ -329,7 +342,7 @@ const api = {
       contextIssues?: Array<{ provider: string; number?: number | null; title: string; body?: string | null }>;
       contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
       contextFiles?: Array<{ path: string }>;
-      contextSkills?: Array<{ name: string; path: string }>;
+      contextSkills?: Array<{ name: string; path?: string; displayName?: string; description?: string; shortDescription?: string; iconSmall?: string; iconLarge?: string; brandColor?: string; scope?: string }>;
     }) => ipcRenderer.invoke("runs:continue", payload),
     canResume: (runId: string) => ipcRenderer.invoke("runs:canResume", runId),
     fork: (payload: {
@@ -381,6 +394,26 @@ const api = {
       const listener = (_: any, data: any) => callback(data);
       ipcRenderer.on("runs:ephemeralEvent", listener);
       return () => ipcRenderer.removeListener("runs:ephemeralEvent", listener);
+    },
+    // Fired after each persisted run event (log / tool_call / artifact / prompt_suggestion).
+    // Renderer debounces and refetches run details — keeps the UI in sync without polling.
+    onEventPersisted: (callback: (data: { runId: string; ts: number }) => void) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on("runs:eventPersisted", listener);
+      return () => ipcRenderer.removeListener("runs:eventPersisted", listener);
+    },
+    // Fired when a run reaches a terminal status (succeeded / failed / canceled).
+    onStatusChanged: (callback: (data: { runId: string; status: string; ts: number }) => void) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on("runs:statusChanged", listener);
+      return () => ipcRenderer.removeListener("runs:statusChanged", listener);
+    },
+    // Fired after the workspace diff is recomputed (incrementally during a run
+    // and once finally at completion). Renderer refetches the diff.
+    onDiffUpdated: (callback: (data: { runId: string; workspaceId: string; ts: number }) => void) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on("runs:diffUpdated", listener);
+      return () => ipcRenderer.removeListener("runs:diffUpdated", listener);
     },
   },
   // Reviews operations
@@ -490,6 +523,13 @@ const api = {
       includeHidden?: boolean;
       excludePatterns?: string[];
     }) => ipcRenderer.invoke("fileExplorer:listDir", options),
+    searchFiles: (options: {
+      rootPath: string;
+      query: string;
+      max?: number;
+      includeHidden?: boolean;
+      excludePatterns?: string[];
+    }) => ipcRenderer.invoke("fileExplorer:searchFiles", options),
   },
   // Git operations
   git: {
@@ -605,6 +645,10 @@ const api = {
     openPath: (path: string) => ipcRenderer.invoke("shell:openPath", path),
     openInApp: (appId: string, path: string) => ipcRenderer.invoke("shell:openInApp", appId, path),
     getInstalledApps: () => ipcRenderer.invoke("shell:getInstalledApps"),
+    getAppsForFile: (filePath: string) =>
+      ipcRenderer.invoke("shell:getAppsForFile", filePath),
+    openFileWithBundle: (filePath: string, bundleId: string) =>
+      ipcRenderer.invoke("shell:openFileWithBundle", filePath, bundleId),
   },
   stats: {
     getDashboard: (filter?: string) => ipcRenderer.invoke("stats:getDashboard", filter),
@@ -699,6 +743,20 @@ const api = {
     getRunHistory: (automationId: string, limit?: number) =>
       ipcRenderer.invoke("automations:getRunHistory", automationId, limit),
     getAvailableActions: () => ipcRenderer.invoke("automations:getAvailableActions"),
+  },
+
+  // Pulse operations (scheduled work runs)
+  pulse: {
+    getAll: () => ipcRenderer.invoke("pulse:getAll"),
+    getById: (id: string) => ipcRenderer.invoke("pulse:getById", id),
+    create: (accountId: string, input: unknown) =>
+      ipcRenderer.invoke("pulse:create", accountId, input),
+    update: (id: string, input: unknown) =>
+      ipcRenderer.invoke("pulse:update", id, input),
+    delete: (id: string) => ipcRenderer.invoke("pulse:delete", id),
+    toggle: (id: string, isActive: boolean) =>
+      ipcRenderer.invoke("pulse:toggle", id, isActive),
+    runNow: (id: string) => ipcRenderer.invoke("pulse:runNow", id),
   },
 };
 

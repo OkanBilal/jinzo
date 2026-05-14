@@ -91,7 +91,14 @@ module.exports = {
   packagerConfig: {
     name: 'Mains',
     executableName: 'mains',
-    appBundleId: 'build.mains.app', // TODO: change this to your own bundle ID
+    appBundleId: 'dev.mains.app',
+    // TCC: Apple Events (kTCCServiceAppleEvents), screen capture (kTCCServiceScreenCapture).
+    extendInfo: {
+      NSAppleEventsUsageDescription:
+        'Mains needs permission to send Apple events to control other apps for desktop automation.',
+      NSScreenCaptureUsageDescription:
+        'Mains may capture the screen when you use features or connected tools that need a visual of your desktop.',
+    },
     asar: {
       unpack: '{**/*.node,**/copilot,**/spawn-helper,**/rg,**/*.wasm}',
       unpackDir: '.vite/build/node_modules/{node-pty,@github/copilot-darwin-arm64,@github/copilot/prebuilds,@github/copilot/ripgrep,@anthropic-ai/claude-agent-sdk/vendor}',
@@ -135,10 +142,6 @@ module.exports = {
   },
   makers: [
     {
-      name: '@electron-forge/maker-squirrel',
-      config: {},
-    },
-    {
       name: '@electron-forge/maker-zip',
       platforms: ['darwin'],
     },
@@ -156,17 +159,13 @@ module.exports = {
         window: { size: { width: 660, height: 400 } },
       },
     },
-    {
-      name: '@electron-forge/maker-deb',
-      config: {},
-    },
-    {
-      name: '@electron-forge/maker-rpm',
-      config: {},
-    },
   ],
   publishers: [
     {
+      // Release flow: tag push → CI builds + uploads assets to a DRAFT release.
+      // Auto-updater (update.electronjs.org) only sees PUBLISHED releases, so
+      // after CI finishes you must manually click "Publish release" on GitHub.
+      // Repo must be public for ElectronPublicUpdateService to read it.
       name: '@electron-forge/publisher-github',
       config: {
         repository: { owner: 'OkanBilal', name: 'mains' },

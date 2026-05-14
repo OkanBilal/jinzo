@@ -1,13 +1,16 @@
-import { useLocation } from "react-router-dom";
 import { useMemo } from "react";
-import { getWorkspaceVariant, type WorkspaceVariant } from "@/lib/route-utils";
+import { useRouteType } from "./use-route-type";
+import { isWorkspaceRouteType, type WorkspaceVariant } from "@/lib/route-utils";
 
 /**
- * Hook to determine the workspace variant based on the current route
- * @returns "claude" for /claude routes, "copilot" for /copilot routes, "codex" for /codex routes, "cursor" for /cursor routes
+ * Returns the active workspace variant ("claude" / "copilot" / "codex" / "cursor"),
+ * or "default" on non-workspace routes. Derived from `useRouteType` to avoid
+ * parsing the pathname twice when both hooks are active in the tree.
  */
 export function useWorkspaceVariant(): WorkspaceVariant {
-  const location = useLocation();
-
-  return useMemo(() => getWorkspaceVariant(location.pathname), [location.pathname]);
+  const routeType = useRouteType();
+  return useMemo(
+    () => (isWorkspaceRouteType(routeType) ? routeType : "default"),
+    [routeType],
+  );
 }

@@ -219,19 +219,7 @@ function resolveUnknownMcp(lower: string): ResolvedTool {
   };
 }
 
-/**
- * Resolve a tool name (or full RunEvent content) into a `ResolvedTool`. Order
- * of resolution:
- *   1) Vendor prefix match → MCP tool (verb/entity parsed)
- *   2) Generic `mcp__…` fallback for any unrecognized vendor — never touches
- *      the builtin list, because substrings like `read`/`search`/`bash`
- *      legitimately appear inside MCP tool names (`gmail_read_email_thread`)
- *      and must not falsely match builtins.
- *   3) Built-in match (Read, Bash, …) — only for non-MCP names
- *   4) Plain unknown tool — keep the original name and use the Mcp icon
- */
-export function resolveTool(rawNameOrContent: string): ResolvedTool {
-  const toolName = extractToolName(rawNameOrContent);
+function resolveToolImpl(toolName: string): ResolvedTool {
   const lower = toolName.toLowerCase();
 
   // Vendor prefix wins — `mcp__linear__list_issues` resolves cleanly even
@@ -271,4 +259,43 @@ export function resolveTool(rawNameOrContent: string): ResolvedTool {
     isSpecialGroup: false,
     isBuiltin: false,
   };
+}
+
+/**
+ * FIFO cache keyed by lowercased tool name. `resolveTool` is pure on the
+ * extracted tool name (the JSON args after `:` are discarded), so identical
+ * tool names always yield identical results — safe to share across callers.
+ *
+ * Memory ceiling: 500 entries × ~200 B ≈ 100 KB. In a long session the unique
+ * tool-name set typically plateaus well below this, so eviction rarely fires.
+ */
+const RESOLVE_CACHE = new Map<string, ResolvedTool>();
+const RESOLVE_CACHE_LIMIT = 500;
+
+/**
+ * Resolve a tool name (or full RunEvent content) into a `ResolvedTool`. Order
+ * of resolution:
+ *   1) Vendor prefix match → MCP tool (verb/entity parsed)
+ *   2) Generic `mcp__…` fallback for any unrecognized vendor — never touches
+ *      the builtin list, because substrings like `read`/`search`/`bash`
+ *      legitimately appear inside MCP tool names (`gmail_read_email_thread`)
+ *      and must not falsely match builtins.
+ *   3) Built-in match (Read, Bash, …) — only for non-MCP names
+ *   4) Plain unknown tool — keep the original name and use the Mcp icon
+ */
+export function resolveTool(rawNameOrContent: string): ResolvedTool {
+  const toolName = extractToolName(rawNameOrContent);
+  const key = toolName.toLowerCase();
+
+  const cached = RESOLVE_CACHE.get(key);
+  if (cached !== undefined) return cached;
+
+  const resolved = resolveToolImpl(toolName);
+
+  if (RESOLVE_CACHE.size >= RESOLVE_CACHE_LIMIT) {
+    const firstKey = RESOLVE_CACHE.keys().next().value;
+    if (firstKey !== undefined) RESOLVE_CACHE.delete(firstKey);
+  }
+  RESOLVE_CACHE.set(key, resolved);
+  return resolved;
 }

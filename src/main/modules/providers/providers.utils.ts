@@ -398,3 +398,136 @@ export function findCopilotCliPath(): string | null {
   logWarn(`Copilot native binary (${nativePkg}/${binaryName}) not found in packaged app`);
   return null;
 }
+
+// ─────────────────────────────────────────────────────────────
+// CLI Detection Helpers (non-throwing)
+//
+// Used by the onboarding flow to pre-select agents whose CLIs are
+// detected on the user's machine. Mirrors the install-path probing
+// done by each adapter, but returns null instead of throwing so the
+// renderer can render a simple installed/not-installed map.
+// ─────────────────────────────────────────────────────────────
+
+const isWindowsPlatform = process.platform === "win32";
+
+function whichBinary(name: string): string | null {
+  const cmd = isWindowsPlatform ? "where" : "which";
+  try {
+    const result = execFileSync(cmd, [name], {
+      encoding: "utf-8",
+      timeout: 5000,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    const line = result.split(/\r?\n/).find((l) => l.trim().length > 0);
+    return line ? line.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function firstExecutable(candidates: string[]): string | null {
+  for (const c of candidates) {
+    try {
+      fs.accessSync(c, fs.constants.X_OK);
+      return c;
+    } catch {
+      // not executable
+    }
+  }
+  return null;
+}
+
+/**
+ * Locate the `copilot` CLI binary on the user's machine.
+ * Detection-only — separate from findCopilotCliPath() which targets
+ * the SDK's bundled native binary inside the packaged app.
+ */
+export function findCopilotBinaryPath(): string | null {
+  const onPath = whichBinary("copilot");
+  if (onPath) return onPath;
+
+  const homedir = os.homedir();
+  const candidates = isWindowsPlatform
+    ? [
+        path.join(homedir, ".npm-global", "bin", "copilot.cmd"),
+        path.join(homedir, "AppData", "Roaming", "npm", "copilot.cmd"),
+      ]
+    : [
+        path.join(homedir, ".local", "bin", "copilot"),
+        "/opt/homebrew/bin/copilot",
+        "/usr/local/bin/copilot",
+        path.join(homedir, ".npm-global", "bin", "copilot"),
+      ];
+
+  return firstExecutable(candidates);
+}
+
+/**
+ * Locate the `codex` CLI binary on the user's machine.
+ * Hoisted from the inline closure inside codex.adapter.ts so it can
+ * be used for both adapter resolution and onboarding detection.
+ */
+export function findCodexBinaryPath(): string | null {
+  const onPath = whichBinary("codex");
+  if (onPath) return onPath;
+
+  const homedir = os.homedir();
+  const candidates = [
+    path.join(homedir, ".codex", "bin", "codex"),
+    "/usr/local/bin/codex",
+    // nvm-managed global installs
+    ...(() => {
+      try {
+        const nvmDir = process.env.NVM_DIR || path.join(homedir, ".nvm");
+        const nodeVersions = fs.readdirSync(path.join(nvmDir, "versions", "node"));
+        return nodeVersions.map((v: string) =>
+          path.join(nvmDir, "versions", "node", v, "bin", "codex"),
+        );
+      } catch {
+        return [];
+      }
+    })(),
+  ];
+
+  return firstExecutable(candidates);
+}
+
+/**
+ * Locate the Cursor Agent CLI binary on the user's machine.
+ * The Cursor CLI binary is called `agent` (not `cursor`).
+ * Installed via: curl https://cursor.com/install -fsS | bash
+ */
+export function findCursorBinaryPath(): string | null {
+  const onPath = whichBinary("agent");
+  if (onPath) return onPath;
+
+  const homedir = os.homedir();
+  const candidates = [
+    path.join(homedir, ".local", "bin", "agent"),
+    "/usr/local/bin/agent",
+    "/opt/homebrew/bin/agent",
+    path.join(homedir, ".cursor", "bin", "agent"),
+  ];
+
+  return firstExecutable(candidates);
+}
+
+export interface DetectedClis {
+  claude: boolean;
+  copilot: boolean;
+  codex: boolean;
+  cursor: boolean;
+}
+
+/**
+ * Detect which provider CLIs are installed on the user's machine.
+ * Used by the onboarding flow to pre-select detected agents.
+ */
+export function detectInstalledClis(): DetectedClis {
+  return {
+    claude: findClaudeBinary() !== null,
+    copilot: findCopilotBinaryPath() !== null,
+    codex: findCodexBinaryPath() !== null,
+    cursor: findCursorBinaryPath() !== null,
+  };
+}

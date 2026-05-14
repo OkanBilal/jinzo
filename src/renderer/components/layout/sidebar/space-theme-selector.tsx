@@ -21,7 +21,7 @@ export default function SpaceThemeSelector({
     <div
       className={cn(
         "overflow-hidden",
-        "bg-primary-950/5 dark:bg-primary/4",
+        "bg-primary-950/5 dark:bg-primary/5",
         "shadow-(--shadow-inset-subtle) dark:shadow-(--shadow-inset-subtle-dark)",
         compact ? "rounded-lg" : "rounded-2xl",
       )}

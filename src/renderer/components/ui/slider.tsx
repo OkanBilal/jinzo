@@ -66,7 +66,7 @@ export function Slider({
           w-full px-3 py-4
           overflow-hidden
           min-w-50 rounded-xl
-          bg-primary-950/5 dark:bg-primary/4
+          bg-primary-950/5 dark:bg-primary/5
           border border-primary-950/10 dark:border-primary/10
           text-primary-900 dark:text-primary
           text-sm focus:outline-none cursor-pointer
@@ -81,7 +81,7 @@ export function Slider({
         >
           {/* Vertical line inside percentage bar */}
           <div
-            className="absolute inset-y-0 right-2 h-4.5 rounded-full top-1.75 w-[1.5px] bg-primary-950/20 dark:bg-primary/40 transition-opacity duration-150"
+            className="absolute inset-y-0 right-2 h-4.5 rounded-full top-1.75 w-[1.5px] bg-primary-950/20 dark:bg-primary/50 transition-opacity duration-150"
             style={{ opacity: lineOpacity }}
           />
         </div>

@@ -32,7 +32,7 @@ export function SidebarToggleButton({ isOpen, onClick }: SidebarToggleButtonProp
         {isOpen ? (
           <Toggle  className="size-4 text-primary-800 dark:text-primary-100 rotate-180" />
         ) : (
-          <ToggleClose  className="size-4 text-primary-700 dark:text-primary-500 rotate-180" />
+          <ToggleClose  className="size-4 text-primary-700 dark:text-primary-300 rotate-180" />
         )}
       </Button>
     </div>

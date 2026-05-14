@@ -25,7 +25,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { execSync } from "node:child_process";
 import type { MainsToolContext } from "./mains-tools.core";
-import type { WorkRunEventHandler } from "./adapter.types";
+import type { WorkRunEventHandler } from "../../../../shared/adapter.types";
 import {
   TOOL_DESCRIPTIONS,
   handleGetWorkspaceDiff,

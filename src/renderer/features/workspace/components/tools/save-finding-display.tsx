@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowUp, Mains } from "@/components/ui/icons";
+import { Mains } from "@/components/ui/icons";
+import { ToolHeader, ToolCollapse } from "./_shared";
 
 interface Finding {
   severity?: string;
@@ -55,17 +56,15 @@ export function SaveFindingDisplay({
   const info = findings.filter(f => f.severity === "info").length;
 
   return (
-    <div className="">
-      <button
-        onClick={() => hasFindings && setIsExpanded(!isExpanded)}
-        className={`group w-full flex items-center gap-1 py-1 text-s font-sans ${hasFindings ? "cursor-pointer" : "cursor-default"}`}
+    <div>
+      <ToolHeader
+        icon={<Mains className="size-3.5" />}
+        verb="Saved findings"
+        hasDetails={hasFindings}
+        isExpanded={isExpanded}
+        onToggle={() => setIsExpanded((v) => !v)}
+        isCompact={isCompact}
       >
-        {!isCompact && <Mains className="size-3.5 text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary" />}
-        {!isCompact && (
-          <span className="text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
-            Saved findings
-          </span>
-        )}
         <span className="flex items-center gap-1.5 text-primary-500">
           {critical > 0 && <span className="text-red-400">{critical} critical</span>}
           {warning > 0 && <span className="text-yellow-400">{warning} warning</span>}
@@ -76,43 +75,36 @@ export function SaveFindingDisplay({
             {shortName(findings[0].file)}
           </span>
         )}
-        {hasFindings && (
-          <ArrowUp
-            className={`size-3.5 shrink-0 text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-          />
-        )}
-      </button>
+      </ToolHeader>
 
       {hasFindings && (
-        <div className={`grid transition-all duration-200 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-          <div className="min-h-0 overflow-hidden">
-            <div className="space-y-2">
-              {findings.map((f) => (
-                <div key={`${f.file ?? ""}:${f.lineStart ?? ""}:${f.severity ?? ""}`} className="bg-primary-50 dark:bg-primary/5 rounded-md p-2 space-y-1">
-                  <div className="flex items-center gap-2 text-xs">
-                    {f.severity && (
-                      <span className={`px-1.5 py-0.5 rounded font-medium ${SEVERITY_STYLES[f.severity] ?? "bg-primary-500/10 text-primary-500"}`}>
-                        {f.severity}
-                      </span>
-                    )}
-                    {f.file && (
-                        <span className="font-mono text-primary-950 dark:text-primary">
-                        {shortName(f.file)}
-                        {f.lineStart != null && `:${f.lineStart}${f.lineEnd != null && f.lineEnd !== f.lineStart ? `-${f.lineEnd}` : ""}`}
-                      </span>
-                    )}
-                  </div>
-                  {f.message && (
-                    <p className="text-s text-primary-950 dark:text-primary">{f.message}</p>
+        <ToolCollapse isExpanded={isExpanded}>
+          <div className="space-y-2">
+            {findings.map((f) => (
+              <div key={`${f.file ?? ""}:${f.lineStart ?? ""}:${f.severity ?? ""}`} className="bg-primary-50 dark:bg-primary/5 rounded-md p-2 space-y-1">
+                <div className="flex items-center gap-2 text-xs">
+                  {f.severity && (
+                    <span className={`px-1.5 py-0.5 rounded font-medium ${SEVERITY_STYLES[f.severity] ?? "bg-primary-500/10 text-primary-500"}`}>
+                      {f.severity}
+                    </span>
                   )}
-                  {f.suggestion && (
-                    <p className="text-xs text-green-600 dark:text-green-400">{f.suggestion}</p>
+                  {f.file && (
+                    <span className="font-mono text-primary-950 dark:text-primary">
+                      {shortName(f.file)}
+                      {f.lineStart != null && `:${f.lineStart}${f.lineEnd != null && f.lineEnd !== f.lineStart ? `-${f.lineEnd}` : ""}`}
+                    </span>
                   )}
                 </div>
-              ))}
-            </div>
+                {f.message && (
+                  <p className="text-s text-primary-950 dark:text-primary">{f.message}</p>
+                )}
+                {f.suggestion && (
+                  <p className="text-xs text-green-600 dark:text-green-400">{f.suggestion}</p>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
+        </ToolCollapse>
       )}
     </div>
   );

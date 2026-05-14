@@ -28,6 +28,9 @@ interface InputToolbarProps {
   // Permission mode (Claude only)
   permissionMode: string;
   onPermissionModeChange: (mode: string) => void;
+  // Plan mode (Codex only) — runs alongside the sandbox mode
+  planMode?: boolean;
+  onPlanModeToggle?: () => void;
   // Thinking mode (Claude only)
   thinkingMode: boolean;
   onThinkingModeToggle: () => void;
@@ -67,6 +70,8 @@ export function InputToolbar({
   isLoadingModels,
   permissionMode,
   onPermissionModeChange,
+  planMode,
+  onPlanModeToggle,
   thinkingMode,
   onThinkingModeToggle,
   fastMode,
@@ -161,7 +166,7 @@ export function InputToolbar({
   return (
     <div className="flex items-start space-x-2 px-3 pt-6">
       <div className="flex items-center justify-between w-full">
-        <div className={`flex items-center relative ml-1 gap-0.5`}>
+        <div className="relative ml-1 flex min-w-0 flex-1 items-center gap-0.5 pr-2">
           <FileUploadDropdown
               isOpen={showFileDropdown}
               onToggle={() => setShowFileDropdown(!showFileDropdown)}
@@ -213,6 +218,8 @@ export function InputToolbar({
                   onToggle={() => setShowPermissionDropdown(!showPermissionDropdown)}
                   dropdownRef={permissionDropdownRef}
                   variant={variant}
+                  planMode={planMode}
+                  onPlanModeToggle={onPlanModeToggle}
                 />
               )}
             </>

@@ -671,27 +671,6 @@ input[type="range"].slider {
 }
 
 
-.glass-morphism-button{
-  background: transparent;
-  backdrop-filter: blur(12px);
-  border: 0.5px solid #ffffff2e;
-  box-shadow:
-    0 1px 1px #00000021,
-    0 1px 1px #00000012,
-    inset 0 1px 1px #00000031;
-}
-
-.dark .glass-morphism-button {
-  background: transparent;
-  backdrop-filter: blur(12px);
-  border-color: #ffffff1f;
-  box-shadow:
-    0 1px 1px #00000040,
-    0 1px 1px #00000026,
-    inset 0 1px 0 #ffffff29;
-}
-
-
 .glass-morphism {
   background: linear-gradient(to bottom, var(--color-primary-100), var(--color-primary-100));
   border: 0.5px solid #ffffff2e;
@@ -703,11 +682,11 @@ input[type="range"].slider {
 
 .dark .glass-morphism {
   background: linear-gradient(to bottom, var(--color-primary-900), var(--color-primary-900));
-  border-color: #ffffff19;
+  border-color: #f7f7f612;
   box-shadow:
     0 1px 1px #00000040,
     0 1px 1px #00000026,
-    inset 0 1px 0 #ffffff24;
+    inset 0 1px 0 #f7f7f612;
 }
 
 

@@ -124,3 +124,7 @@ export { default as Crop } from "./crop";
 export { default as Gmail } from "./gmail";
 export { default as GoogleCalendar } from "./google-calendar";
 export { default as Slack } from "./slack";
+export { default as Project } from "./project";
+export { default as Relay } from "./relay";
+export { default as Sun } from "./sun";
+export { default as BoltFill } from "./bolt-fill";

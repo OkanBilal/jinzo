@@ -1,4 +1,5 @@
 import { matchPath } from "react-router-dom";
+import { parseUiConfig } from "./parse-ui-config";
 
 export type RouteType =
   | "claude"
@@ -7,6 +8,8 @@ export type RouteType =
   | "cursor"
   | "settings"
   | "home"
+  | "plugins"
+  | "pulse"
   | "unknown";
 
 export type WorkspaceRouteType = Extract<
@@ -23,6 +26,8 @@ const ROUTE_PATTERNS = {
   cursor: "/cursor/:id?",
   settings: "/settings",
   home: "/",
+  plugins: "/plugins",
+  pulse: "/pulse",
 } as const;
 
 export function getRouteType(pathname: string): RouteType {
@@ -34,6 +39,8 @@ export function getRouteType(pathname: string): RouteType {
   if (matchPath(ROUTE_PATTERNS.copilot, pathname)) return "copilot";
   if (matchPath(ROUTE_PATTERNS.codex, pathname)) return "codex";
   if (matchPath(ROUTE_PATTERNS.cursor, pathname)) return "cursor";
+  if (matchPath(ROUTE_PATTERNS.plugins, pathname)) return "plugins";
+  if (matchPath(ROUTE_PATTERNS.pulse, pathname)) return "pulse";
 
   return "unknown";
 }
@@ -47,21 +54,33 @@ export function getWorkspaceVariant(pathname: string): WorkspaceVariant {
   return isWorkspaceRouteType(routeType) ? routeType : "default";
 }
 
+/**
+ * Strip `/:id?` (or any param segment) off a route pattern to get the bare base.
+ * Derived from `ROUTE_PATTERNS` so a new route only has to be registered there.
+ */
 export function getBaseRoutePath(routeType: RouteType): string {
-  switch (routeType) {
-    case "claude":
-      return "/claude";
-    case "copilot":
-      return "/copilot";
-    case "codex":
-      return "/codex";
-    case "cursor":
-      return "/cursor";
-    case "settings":
-      return "/settings";
-    case "home":
-      return "/";
-    default:
-      return "/";
+  if (routeType === "unknown") return "/";
+  return ROUTE_PATTERNS[routeType].split("/:")[0] || "/";
+}
+
+/** Base URL segment for opening a workspace from the sidebar (e.g. `/codex`). Uses the current agent route when on one; otherwise the active space `defaultRoute` (plugins, home, unknown paths). */
+export function getWorkspaceListBasePath(
+  pathname: string,
+  spaceDefaultRoute: string,
+): string {
+  const routeType = getRouteType(pathname);
+  if (isWorkspaceRouteType(routeType)) {
+    return getBaseRoutePath(routeType);
   }
+  const raw = (spaceDefaultRoute || "/claude").trim().replace(/\/+$/, "");
+  if (raw === "" || raw === "/") return "/claude";
+  return raw;
+}
+
+/** Default HashRouter path from a space record (`uiConfig.sidebar.defaultRoute`). */
+export function getSpaceDefaultRoute(space: {
+  uiConfig: string | null;
+}): string {
+  const route = parseUiConfig(space.uiConfig).sidebar?.defaultRoute;
+  return typeof route === "string" && route.length > 0 ? route : "/";
 }

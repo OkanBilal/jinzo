@@ -1,5 +1,6 @@
 import type { RunEvent, RunArtifact, ToolCall } from "../types";
 import { formatToolData } from "./format-tool-data";
+import { parseToolContent } from "./parse-tool-content";
 
 function parseMetadata(metadata: unknown): Record<string, unknown> | undefined {
   if (!metadata) return undefined;
@@ -50,17 +51,21 @@ export function mapToolCallToEvent(tc: ToolCall): RunEvent | null {
   try {
     const inputDisplay = formatToolData(tc.input);
     const outputDisplay = formatToolData(tc.output);
+    const content = `${tc.toolName}: ${inputDisplay}${outputDisplay ? `\n→ ${outputDisplay}` : ""}`;
 
     return {
       id: `tool-${tc.id}`,
       type: "tool_call",
-      content: `${tc.toolName}: ${inputDisplay}${outputDisplay ? `\n→ ${outputDisplay}` : ""}`,
+      content,
       timestamp: tc.createdAt ? new Date(tc.createdAt) : new Date(),
       metadata: {
         status: tc.status,
         toolName: tc.toolName,
         input: parseRawInput(tc.input),
         output: tc.output,
+        // Pre-parsed once at event-creation time so `ToolCallItem` doesn't
+        // re-`JSON.parse` the content string on every render.
+        parsed: parseToolContent(content),
       },
     };
   } catch (err) {

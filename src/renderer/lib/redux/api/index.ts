@@ -24,18 +24,10 @@ export {
   useLazyGetAsanaProjectsQuery,
   useLazyGetGitLabProjectsQuery,
   useLazyGetTrelloBoardsQuery,
-  useLazyGetSelectedReposQuery,
-  useLazyGetSelectedTeamsQuery,
-  useLazyGetSelectedProjectsQuery,
-  useLazyGetSelectedAsanaProjectsQuery,
-  useLazyGetSelectedGitLabProjectsQuery,
-  useLazyGetSelectedTrelloBoardsQuery,
   useLazyGetSentryProjectsQuery,
-  useGetSelectedSentryProjectsQuery,
-  useLazyGetSelectedSentryProjectsQuery,
   useLazyGetSocketDevOrganizationsQuery,
-  useGetSelectedSocketDevOrganizationsQuery,
-  useLazyGetSelectedSocketDevOrganizationsQuery,
+  useGetSelectedResourcesQuery,
+  useLazyGetSelectedResourcesQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
   useRevokeConnectionMutation,
@@ -133,13 +125,6 @@ export type { AppSettings } from "./appSettingsApi";
 
 
 export {
-  setActiveSpaceId,
-  setSelectedSpaceForEdit,
-} from "../slices/spaceSlice";
-export type { SpaceState } from "../slices/spaceSlice";
-
-export {
-  setDarkMode,
   setSidebarCollapsed,
   setBrowserPanelOpen,
   setRightPanelOpen,
@@ -167,6 +152,8 @@ export {
   useInstallProviderPluginMutation,
   useUninstallProviderPluginMutation,
   useGetProviderRateLimitsQuery,
+  useGetProviderModelsQuery,
+  useDetectInstalledClisQuery,
 } from "./providersApi";
 export type {
   Provider,
@@ -184,6 +171,7 @@ export type {
   PluginDetailResponse,
   PluginSkillSummary,
   PluginAppSummary,
+  DetectedClis,
 } from "./providersApi";
 
 export {
@@ -362,8 +350,9 @@ export type {
 export {
   shellApi,
   useGetInstalledAppsQuery,
+  useLazyGetAppsForFileQuery,
 } from "./shellApi";
-export type { InstalledApp } from "./shellApi";
+export type { InstalledApp, FileHandlerApp } from "./shellApi";
 
 export {
   reviewFindingsApi,
@@ -455,3 +444,44 @@ export type {
   CreateAutomationInput,
   UpdateAutomationInput,
 } from "./automationsApi";
+
+export {
+  pulseApi,
+  useGetPulsesQuery,
+  useLazyGetPulsesQuery,
+  useGetPulseByIdQuery,
+  useCreatePulseMutation,
+  useUpdatePulseMutation,
+  useDeletePulseMutation,
+  useTogglePulseMutation,
+  useRunPulseNowMutation,
+} from "./pulseApi";
+export type {
+  Pulse,
+  PulseFrequency,
+  CreatePulseInput,
+  UpdatePulseInput,
+} from "./pulseApi";
+
+export {
+  skillsMarketplaceApi,
+  useListMarketplaceSkillsQuery,
+  useLazyListMarketplaceSkillsQuery,
+  useSearchMarketplaceSkillsQuery,
+  useLazySearchMarketplaceSkillsQuery,
+  useGetCuratedSkillsQuery,
+  useGetMarketplaceSkillDetailQuery,
+  useGetMarketplaceSkillAuditQuery,
+} from "./skillsMarketplaceApi";
+export type {
+  SkillView,
+  SkillSummary,
+  SkillListResponse,
+  SkillSearchResponse,
+  CuratedGroup,
+  CuratedResponse,
+  SkillDetailResponse,
+  SkillFile,
+  SkillAuditEntry,
+  SkillAuditResponse,
+} from "./skillsMarketplaceApi";

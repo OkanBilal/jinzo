@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   useSetActiveSpaceMutation,
   useCreateWorkspaceMutation,
@@ -12,12 +12,16 @@ import {
 import { toast } from "@/components/ui";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
-import { useRouteType } from "@/hooks/use-route-type";
-import { getBaseRoutePath } from "@/lib/route-utils";
+import {
+  getRouteType,
+  getWorkspaceListBasePath,
+  getBaseRoutePath,
+  getSpaceDefaultRoute,
+} from "@/lib/route-utils";
 
 export function useSidebarActions() {
   const navigate = useNavigate();
-  const routeType = useRouteType();
+  const location = useLocation();
   const { spaces } = useActiveSpace();
   const sidebarConfig = useSidebarConfig();
   const { data: account } = useGetAccountQuery();
@@ -38,16 +42,9 @@ export function useSidebarActions() {
     try {
       // Parse route BEFORE mutation to avoid stale closure issues
       const selectedSpace = spaces.find((s) => s.id === spaceId);
-      let defaultRoute = "/";
-
-      if (selectedSpace?.uiConfig) {
-        try {
-          const config = JSON.parse(selectedSpace.uiConfig);
-          defaultRoute = config.sidebar?.defaultRoute || "/";
-        } catch {
-          // Keep default "/"
-        }
-      }
+      const defaultRoute = selectedSpace
+        ? getSpaceDefaultRoute(selectedSpace)
+        : "/";
 
       await setActiveSpace(spaceId || null).unwrap();
 
@@ -213,7 +210,10 @@ export function useSidebarActions() {
         }
 
         toast.success("Workspace added");
-        const basePath = getBaseRoutePath(routeType === "settings" || routeType === "home" || routeType === "unknown" ? "codex" : routeType);
+        const basePath = getWorkspaceListBasePath(
+          location.pathname,
+          sidebarConfig.defaultRoute,
+        );
         navigate(`${basePath}/${workspaceId}`);
       }
     } catch (error) {
@@ -347,7 +347,10 @@ export function useSidebarActions() {
 
       toast.success("Repository cloned and workspace created");
       setIsCloneModalOpen(false);
-      const basePath = getBaseRoutePath(routeType === "settings" || routeType === "home" || routeType === "unknown" ? "codex" : routeType);
+      const basePath = getWorkspaceListBasePath(
+        location.pathname,
+        sidebarConfig.defaultRoute,
+      );
       navigate(`${basePath}/${workspaceId}`);
     } catch (error) {
       console.error("Failed to clone repository:", error);
@@ -428,7 +431,7 @@ export function useSidebarActions() {
 
       toast.success("Project created");
       setIsCreateProjectModalOpen(false);
-      const basePath = getBaseRoutePath(routeType === "settings" || routeType === "home" || routeType === "unknown" ? "codex" : routeType);
+      const basePath = getBaseRoutePath(getRouteType(location.pathname));
       navigate(`${basePath}/${workspaceId}`);
     } catch (error) {
       console.error("Failed to create project:", error);

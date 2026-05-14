@@ -16,8 +16,9 @@ jobs:
     permissions:
       contents: write
     strategy:
+      max-parallel: 1
       matrix:
-        arch: [arm64]
+        arch: [arm64, x64]
     steps:
       - uses: actions/checkout@v5
 

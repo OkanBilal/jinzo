@@ -9,6 +9,7 @@ import {
   Checkbox,
   toast,
 } from "@/components/ui";
+import { extractErrorMessage } from "@/lib/extract-error-message";
 import {
   useGetAvailableResourcesQuery,
   useAddProjectResourceMutation,
@@ -125,10 +126,8 @@ export function LinkResourcesModal({
         `Updated ${totalChanges} resource${totalChanges > 1 ? "s" : ""}`,
       );
       onClose();
-    } catch (err: any) {
-      setError(
-        err?.data?.error || err?.message || "Failed to update resources",
-      );
+    } catch (err) {
+      setError(extractErrorMessage(err, "Failed to update resources"));
     } finally {
       setSaving(false);
     }
@@ -241,7 +240,7 @@ export function LinkResourcesModal({
           </div>
 
           <div className="flex justify-between items-center gap-3 pt-2">
-            <Button variant="link" onClick={handleCancel} disabled={saving}>
+            <Button variant="ghost" onClick={handleCancel} disabled={saving}>
               Cancel
             </Button>
             <Button

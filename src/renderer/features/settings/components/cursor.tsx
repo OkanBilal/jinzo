@@ -2,40 +2,22 @@ import { Select } from "@/components/ui";
 import { SettingsSection, SettingsRow } from "./settings-layout";
 import {
   ProviderSettingsLayout,
-  ProviderVisibilitySection,
   useProviderSettings,
 } from "./provider-settings-shared";
+import type { CursorAdapterConfig } from "../../../../shared/adapter.types";
+import { CURSOR_MODES } from "@/lib/provider-modes";
+import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
-const MODE_OPTIONS = [
-  {
-    value: "ask",
-    label: "Ask",
-    description: "Answer questions without taking action",
-  },
-  {
-    value: "agent",
-    label: "Agent",
-    description: "Full autonomous agent mode",
-  },
-  {
-    value: "plan",
-    label: "Plan",
-    description: "Plan before executing",
-  },
-];
-
-export default function CursorSettings() {
+export default function CursorSettings(
+) {
   const {
     provider,
     isLoading,
     error,
     config,
-    space,
-    canHide,
     updateConfig,
-    setSpaceVisible,
-  } = useProviderSettings("cursor", "cursor");
-  const mode = (config as any).mode ?? "agent";
+  } = useProviderSettings<CursorAdapterConfig>(PROVIDER_IDS.cursor, "cursor");
+  const mode = config.mode ?? "agent";
 
   return (
     <ProviderSettingsLayout
@@ -49,17 +31,17 @@ export default function CursorSettings() {
           <Select
             useFixedBackground
             value={mode}
-            onChange={(value) => updateConfig({ mode: value })}
-            options={MODE_OPTIONS}
+            onChange={(value) =>
+              updateConfig({ mode: value as CursorAdapterConfig["mode"] })
+            }
+            options={CURSOR_MODES.map((m) => ({
+              value: m.value,
+              label: m.label,
+              description: m.description,
+            }))}
           />
         </SettingsRow>
       </SettingsSection>
-
-      <ProviderVisibilitySection
-        space={space}
-        canHide={canHide}
-        onVisibleChange={setSpaceVisible}
-      />
     </ProviderSettingsLayout>
   );
 }

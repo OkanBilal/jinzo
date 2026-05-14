@@ -30,6 +30,27 @@ export const workspaceDiffsRepo = {
     return payload.id;
   },
 
+  async updateDiff(
+    id: string,
+    payload: {
+      diffText: string;
+      filesJson?: string | null;
+      statsJson?: string | null;
+      baseRef?: string | null;
+    },
+  ): Promise<void> {
+    const db = getDb();
+    await db
+      .update(workspaceDiffs)
+      .set({
+        diffText: payload.diffText,
+        filesJson: payload.filesJson ?? null,
+        statsJson: payload.statsJson ?? null,
+        ...(payload.baseRef !== undefined ? { baseRef: payload.baseRef } : {}),
+      })
+      .where(eq(workspaceDiffs.id, id));
+  },
+
   async findByWorkspace(
     workspaceId: string,
     limit = 20,

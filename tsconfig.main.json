@@ -9,6 +9,7 @@
   },
   "include": [
     "src/main/**/*",
+    "src/shared/**/*",
     "src/test/**/*"
   ]
 }

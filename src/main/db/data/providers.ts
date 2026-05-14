@@ -1,9 +1,10 @@
 import type { CreateProviderPayload } from "../../modules/providers/providers.dto";
+import { PROVIDER_IDS } from "../../../shared/provider-ids";
 
 export const seedProviders: CreateProviderPayload[] = [
 
   {
-    id: "copilot_cli",
+    id: PROVIDER_IDS.copilot,
     kind: "agent_runtime",
     displayName: "GitHub Copilot (CLI/SDK)",
     isEnabled: true,
@@ -24,7 +25,7 @@ export const seedProviders: CreateProviderPayload[] = [
   },
 
   {
-    id: "claude_code",
+    id: PROVIDER_IDS.claude,
     kind: "agent_runtime",
     displayName: "Claude Code (Local Agent)",
     isEnabled: true,
@@ -45,7 +46,7 @@ export const seedProviders: CreateProviderPayload[] = [
   },
 
   {
-    id: "codex",
+    id: PROVIDER_IDS.codex,
     kind: "agent_runtime",
     displayName: "OpenAI Codex (CLI/SDK)",
     isEnabled: true,
@@ -54,7 +55,6 @@ export const seedProviders: CreateProviderPayload[] = [
       timeout: 600000,
       approvalMode: "on-request",
       sandboxMode: "workspace-write",
-      permissionMode: "default",
       networkAccessEnabled: true,
       webSearchMode: "live",
       personality: "none",
@@ -70,7 +70,7 @@ export const seedProviders: CreateProviderPayload[] = [
   },
 
   {
-    id: "cursor",
+    id: PROVIDER_IDS.cursor,
     kind: "agent_runtime",
     displayName: "Cursor (ACP/CLI)",
     isEnabled: true,

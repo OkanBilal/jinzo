@@ -76,6 +76,12 @@ export interface ModelInfo {
   supportsFastMode?: boolean;
   supportsEffort?: boolean;
   supportedEffortLevels?: ('low' | 'medium' | 'high' | 'max')[];
+  /**
+   * Provider-specific service tiers (e.g. Codex: priority/flex/default).
+   * Mirrors the field on the main-process `ModelInfo`; populated from
+   * `model/list` responses so the settings UI can offer a tier picker.
+   */
+  serviceTiers?: Array<{ id: string; name: string; description?: string }>;
   description?: string;
   metadata?: Record<string, unknown>;
 }
@@ -188,6 +194,13 @@ export interface CodexAccountInfo {
     planType: string;
   } | null;
   requiresOpenaiAuth: boolean;
+}
+
+export interface DetectedClis {
+  claude: boolean;
+  copilot: boolean;
+  codex: boolean;
+  cursor: boolean;
 }
 
 export const providersApi = baseApi.injectEndpoints({
@@ -413,7 +426,10 @@ export const providersApi = baseApi.injectEndpoints({
           throw new Error(response.error || "Failed to install plugin");
         }
       },
-      invalidatesTags: (_r, _e, { providerId }) => [{ type: "ProviderPlugins", id: providerId }],
+      invalidatesTags: (_r, _e, { providerId }) => [
+        { type: "ProviderPlugins", id: providerId },
+        "ProviderSkills",
+      ],
     }),
 
     uninstallProviderPlugin: builder.mutation<void, { providerId: string; pluginId: string }>({
@@ -426,7 +442,10 @@ export const providersApi = baseApi.injectEndpoints({
           throw new Error(response.error || "Failed to uninstall plugin");
         }
       },
-      invalidatesTags: (_r, _e, { providerId }) => [{ type: "ProviderPlugins", id: providerId }],
+      invalidatesTags: (_r, _e, { providerId }) => [
+        { type: "ProviderPlugins", id: providerId },
+        "ProviderSkills",
+      ],
     }),
 
     getProviderRateLimits: builder.query<RateLimitInfo | null, string>({
@@ -442,6 +461,16 @@ export const providersApi = baseApi.injectEndpoints({
         if (!response.success) return null;
         return response.data;
       },
+    }),
+
+    detectInstalledClis: builder.query<DetectedClis, void>({
+      query: () => ({
+        handler: "providers:detectInstalled",
+      }),
+      transformResponse: (response: {
+        success: boolean;
+        data?: DetectedClis;
+      }) => response.data ?? { claude: false, copilot: false, codex: false, cursor: false },
     }),
   }),
 });
@@ -472,4 +501,5 @@ export const {
   useInstallProviderPluginMutation,
   useUninstallProviderPluginMutation,
   useGetProviderRateLimitsQuery,
+  useDetectInstalledClisQuery,
 } = providersApi;

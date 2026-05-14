@@ -1,28 +1,11 @@
-import { useState, useReducer, useEffect, useCallback } from "react";
-
-import { Body, Muted, WizardModal, useWizard, type WizardStep } from "@/components/ui";
-import {
-  useLazyGetConnectionQuery,
-  useSaveCredentialsMutation,
-  useLazyGetGitLabProjectsQuery,
-  useLazyGetSelectedGitLabProjectsQuery,
-  useSaveResourcesMutation,
-  useDeleteResourceMutation,
-  useRevokeConnectionMutation,
-  type GitLabProject,
-  type SelectedGitLabProject,
-} from "@/lib/redux/api";
-import { RevokeConfirmModal } from "../shared/revoke-confirm-modal";
-import { toast } from "@/components/ui";
-import { ManageResourcesStep } from "../shared/manage-resources-step";
-import { SelectResourcesStep } from "../shared/select-resources-step";
-import { CredentialStep } from "../shared/credential-step";
-import { AutoSyncSection } from "../shared/auto-sync-section";
+import { useCallback } from "react";
+import { Body } from "@/components/ui";
 import LockIcon from "@/components/ui/icons/lock";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
+import { useLazyGetGitLabProjectsQuery } from "@/lib/redux/api";
+import {
+  ResourceWizardModal,
+  type ResourceWizardConfig,
+} from "../shared/resource-wizard-modal";
 
 interface GitLabModalProps {
   open: boolean;
@@ -31,546 +14,127 @@ interface GitLabModalProps {
   onSuccess?: () => void;
 }
 
-interface GitLabWizardData {
-  token: string;
-  domain: string;
-  connectionId: string;
-  projects: GitLabProject[];
-  selectedProjects: Set<string>;
-  currentProjects: SelectedGitLabProject[];
-  isFirstConnection: boolean;
-  fromManage: boolean;
+function readVisibility(metadata: unknown): string | null {
+  if (!metadata) return null;
+  try {
+    const parsed =
+      typeof metadata === "string" ? JSON.parse(metadata) : metadata;
+    return (parsed as { visibility?: string })?.visibility ?? null;
+  } catch {
+    return null;
+  }
 }
 
-type StepId = "loading" | "setToken" | "add" | "manage";
+const CONFIG: ResourceWizardConfig = {
+  provider: "gitlab",
+  appName: "GitLab",
+  modalTitle: "GitLab",
+  icon: "connections/gitlab.png",
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Step: Set Token
-// ─────────────────────────────────────────────────────────────────────────────
+  credentialDescription:
+    "Enter your GitLab credentials to connect your projects and sync issues.",
+  credentialFields: [
+    {
+      id: "gitlab-domain",
+      label: "GitLab Domain",
+      placeholder: "gitlab.com",
+      type: "text",
+      required: false,
+      dataKey: "domain",
+      helperText:
+        "Leave empty for gitlab.com, or enter your self-hosted domain (e.g. gitlab.yourcompany.com)",
+    },
+    {
+      id: "gitlab-token",
+      label: "Personal Access Token",
+      placeholder: "glpat-xxxxxxxxxxxxxxxxxxxx",
+      dataKey: "token",
+      emptyError: "Please enter a valid token",
+    },
+  ],
+  credentialInstructions: (
+    <>
+      <strong>How to create a token:</strong>
+      <br />
+      1. Go to GitLab Settings → Access Tokens →{" "}
+      <a
+        href="https://gitlab.com/-/user_settings/personal_access_tokens"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary-600 dark:text-primary-400 underline"
+      >
+        Personal access tokens
+      </a>
+      <br />
+      2. Create a new token
+      <br />
+      3. Select scopes: <code>read_api</code>
+    </>
+  ),
+  buildCredentials: (values) => ({
+    token: values.token,
+    domain: values.domain || "gitlab.com",
+  }),
 
-function TokenStep({ onSuccess }: { onSuccess?: () => void }) {
-  const { data, setData, errors, setErrors, goTo } =
-    useWizard<GitLabWizardData>();
-  const [loading, setLoading] = useState(false);
+  loadingMessage: "Loading projects...",
+  selectTitle:
+    "Select the projects you want to sync issues and merge requests from.",
+  resourceLabel: "project",
+  resourceLabelPlural: "projects",
+  saveButtonLabel: (count) => `Save ${count} Projects`,
+  addButtonLabel: "Add Project",
+  revokeButtonLabel: "Revoke GitLab Access",
+  revokeDescription:
+    "This will disconnect all projects and remove all GitLab data. This action cannot be undone.",
 
-  const [getConnection] = useLazyGetConnectionQuery();
-  const [saveCredentials] = useSaveCredentialsMutation();
-  const [getGitLabProjects] = useLazyGetGitLabProjectsQuery();
+  identityForItem: (project) => String(project.id),
+  identityForCurrent: (current) => current.externalId,
 
-  const handleSubmit = async () => {
-    if (!data.token?.trim()) {
-      setErrors({ token: "Please enter a valid token" });
-      return;
-    }
-
-    setLoading(true);
-    setErrors({ token: "", domain: "" });
-
-    try {
-      const startTime = Date.now();
-      const connectionResult = await getConnection("gitlab").unwrap();
-
-      if (!connectionResult.success) {
-        console.error("[GitLab] Failed to get connection:", connectionResult);
-        throw new Error("Failed to get connection");
-      }
-
-      const connId = connectionResult.connection.id;
-
-      await saveCredentials({
-        provider: "gitlab",
-        connectionId: connId,
-        token: data.token,
-        domain: data.domain || "gitlab.com",
-      }).unwrap();
-
-      onSuccess?.();
-
-      const projectsResult = await getGitLabProjects(connId).unwrap();
-
-      if (!projectsResult.success) {
-        console.error("[GitLab] Failed to fetch projects:", projectsResult);
-        throw new Error("Failed to fetch projects");
-      }
-
-      const elapsed = Date.now() - startTime;
-      const minLoadingTime = 800;
-      const remainingTime = Math.max(0, minLoadingTime - elapsed);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
-
-      setData({
-        connectionId: connId,
-        projects: projectsResult.projects,
-        isFirstConnection: true,
-        fromManage: false,
-      });
-
-      goTo("add");
-    } catch (err: any) {
-      console.error("[GitLab] Error in credential submit:", err);
-
-      let errorMessage =
-        "Failed to connect to GitLab. Please check your credentials.";
-
-      if (err?.data?.error) {
-        errorMessage = err.data.error;
-      } else if (err?.message) {
-        errorMessage = err.message;
-      }
-
-      setErrors({ token: errorMessage });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <CredentialStep
-      description="Enter your GitLab credentials to connect your projects and sync issues."
-      fields={[
-        {
-          id: "gitlab-domain",
-          label: "GitLab Domain",
-          placeholder: "gitlab.com",
-          type: "text",
-          required: false,
-          value: data.domain || "",
-          helperText: "Leave empty for gitlab.com, or enter your self-hosted domain (e.g. gitlab.yourcompany.com)",
-          onChange: (value) => {
-            setData({ domain: value });
-            if (errors.domain) setErrors({ domain: "" });
-          },
-        },
-        {
-          id: "gitlab-token",
-          label: "Personal Access Token",
-          placeholder: "glpat-xxxxxxxxxxxxxxxxxxxx",
-          value: data.token || "",
-          onChange: (value) => {
-            setData({ token: value });
-            if (errors.token) setErrors({ token: "" });
-          },
-        },
-      ]}
-      instructions={
-        <>
-          <strong>How to create a token:</strong>
-          <br />
-          1. Go to GitLab Settings → Access Tokens →{" "}
-          <a
-            href="https://gitlab.com/-/user_settings/personal_access_tokens"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary-600 dark:text-primary-400 underline"
-          >
-            Personal access tokens
-          </a>
-          <br />
-          2. Create a new token
-          <br />
-          3. Select scopes: <code>read_api</code>
-        </>
-      }
-      onSubmit={handleSubmit}
-      loading={loading}
-      error={errors.token || errors.domain || ""}
-    />
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Step: Select Projects
-// ─────────────────────────────────────────────────────────────────────────────
-
-function SelectProjectsStep({ onComplete }: { onComplete: () => void }) {
-  const { data, setData, errors, setErrors, goTo } =
-    useWizard<GitLabWizardData>();
-  const [loading, setLoading] = useState(false);
-
-  const [saveResources] = useSaveResourcesMutation();
-  const [getSelectedProjects] = useLazyGetSelectedGitLabProjectsQuery();
-
-  const selectedProjects = data.selectedProjects || new Set<string>();
-
-  const toggleProject = (projectId: string | number) => {
-    const id = String(projectId);
-    const next = new Set(selectedProjects);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    setData({ selectedProjects: next });
-  };
-
-  const handleSave = async () => {
-    if (selectedProjects.size === 0) {
-      setErrors({ projects: "Please select at least one project" });
-      return;
-    }
-
-    setLoading(true);
-    setErrors({ projects: "" });
-
-    try {
-      const startTime = Date.now();
-
-      const selectedProjectObjects = data.projects.filter((project) =>
-        selectedProjects.has(String(project.id))
-      );
-
-      await saveResources({
-        provider: "gitlab",
-        connectionId: data.connectionId,
-        resources: selectedProjectObjects,
-      }).unwrap();
-
-      const elapsed = Date.now() - startTime;
-      const minLoadingTime = 1000;
-      const remainingTime = Math.max(0, minLoadingTime - elapsed);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
-
-      if (data.fromManage) {
-        const result = await getSelectedProjects("gitlab").unwrap();
-        if (result.success) {
-          setData({
-            currentProjects: result.projects,
-            selectedProjects: new Set(),
-          });
-        }
-        goTo("manage");
-      } else {
-        onComplete();
-      }
-    } catch (err: any) {
-      setErrors({
-        projects: err?.data?.error || err.message || "An error occurred",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBack = () => {
-    if (data.fromManage) {
-      goTo("manage");
-    } else if (data.isFirstConnection) {
-      onComplete();
-    } else {
-      goTo("setToken");
-    }
-  };
-
-  return (
-    <SelectResourcesStep
-      resources={data.projects.map((project) => ({
-        ...project,
-        id: String(project.id),
-      }))}
-      selectedResources={selectedProjects}
-      onToggleResource={toggleProject}
-      onSave={handleSave}
-      onBack={handleBack}
-      loading={loading}
-      error={errors.projects || ""}
-      title="Select the projects you want to sync issues and merge requests from."
-      saveButtonLabel={`Save ${selectedProjects.size} Projects`}
-      renderResourceItem={(project) => (
+  renderItemForSelect: (project) => (
+    <div className="flex items-center gap-2">
+      <Body>{project.pathWithNamespace || project.name}</Body>
+      {project.visibility &&
+        (project.visibility === "private" ? (
+          <LockIcon className="w-3 h-3 text-primary-500" />
+        ) : (
+          <span className="text-xs text-primary-500">{project.visibility}</span>
+        ))}
+    </div>
+  ),
+  renderItemForManage: (resource) => {
+    const visibility = readVisibility(resource.metadata);
+    return (
+      <div className="flex-1">
         <div className="flex items-center gap-2">
-          <Body>{project.pathWithNamespace || project.name}</Body>
-          {project.visibility && (
-            project.visibility === "private" ? (
+          <Body>{resource.name}</Body>
+          {visibility &&
+            (visibility === "private" ? (
               <LockIcon className="w-3 h-3 text-primary-500" />
             ) : (
-              <span className="text-xs text-primary-500">{project.visibility}</span>
-            )
-          )}
+              <span className="text-xs text-primary-500">{visibility}</span>
+            ))}
         </div>
-      )}
-    />
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Step: Manage Projects
-// ─────────────────────────────────────────────────────────────────────────────
-
-function ManageProjectsStep({ onRevoke }: { onRevoke: () => void }) {
-  const { data, setData, errors, setErrors, goTo } =
-    useWizard<GitLabWizardData>();
-  const [loading, setLoading] = useState(false);
-
-  const [deleteResource] = useDeleteResourceMutation();
-  const [getGitLabProjects] = useLazyGetGitLabProjectsQuery();
-  const [getSelectedProjects] = useLazyGetSelectedGitLabProjectsQuery();
-
-  const handleRemove = async (projectId: string) => {
-    setErrors({ manage: "" });
-
-    try {
-      await deleteResource(projectId).unwrap();
-      const result = await getSelectedProjects("gitlab").unwrap();
-      if (result.success) {
-        setData({ currentProjects: result.projects });
-      }
-    } catch (err: any) {
-      setErrors({
-        manage: err?.data?.error || err.message || "An error occurred",
-      });
-    }
-  };
-
-  const handleAddNew = async () => {
-    setLoading(true);
-    setErrors({ manage: "" });
-
-    try {
-      const projectsResult = await getGitLabProjects(data.connectionId).unwrap();
-
-      if (!projectsResult.success) {
-        throw new Error("Failed to fetch projects");
-      }
-
-      const currentProjectIds = new Set(
-        data.currentProjects.map((p) => p.externalId)
-      );
-      const availableProjects = projectsResult.projects.filter(
-        (project: GitLabProject) => !currentProjectIds.has(String(project.id))
-      );
-
-      if (availableProjects.length === 0) {
-        setErrors({ manage: "All projects are already connected" });
-        return;
-      }
-
-      setData({
-        projects: availableProjects,
-        selectedProjects: new Set(),
-        fromManage: true,
-      });
-      goTo("add");
-    } catch (err: any) {
-      setErrors({
-        manage: err?.data?.error || err.message || "An error occurred",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <ManageResourcesStep
-      resources={data.currentProjects.map((p) => ({
-        ...p,
-        fullName: p.name,
-      }))}
-      onAddNew={handleAddNew}
-      onRemove={handleRemove}
-      onRevoke={onRevoke}
-      loading={loading}
-      error={errors.manage || ""}
-      resourceLabel="project"
-      resourceLabelPlural="projects"
-      addButtonLabel="Add Project"
-      revokeButtonLabel="Revoke GitLab Access"
-      extraContent={<AutoSyncSection provider="gitlab" providerLabel="GitLab" />}
-      renderResourceItem={(resource) => {
-        const visibility = resource.metadata ? (typeof resource.metadata === 'string' ? JSON.parse(resource.metadata) : resource.metadata)?.visibility : null;
-        return (
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <Body>{resource.name}</Body>
-              {visibility && (
-                visibility === "private" ? (
-                  <LockIcon className="w-3 h-3 text-primary-500" />
-                ) : (
-                  <span className="text-xs text-primary-500">{visibility}</span>
-                )
-              )}
-            </div>
-          </div>
-        );
-      }}
-    />
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Loading State
-// ─────────────────────────────────────────────────────────────────────────────
-
-function LoadingStep({ targetStep }: { targetStep: StepId | null }) {
-  const { goTo } = useWizard<GitLabWizardData>();
-
-  useEffect(() => {
-    if (targetStep && targetStep !== "loading") {
-      goTo(targetStep);
-    }
-  }, [targetStep, goTo]);
-
-  return (
-    <div className="flex items-center justify-center py-20">
-      <div className="text-center space-y-3">
-        <Muted className="shine-text">Loading projects...</Muted>
       </div>
-    </div>
+    );
+  },
+
+  autoSyncProviderLabel: "GitLab",
+};
+
+export default function GitLabModal(props: GitLabModalProps) {
+  const [getProjects] = useLazyGetGitLabProjectsQuery();
+  const fetchAllResources = useCallback(
+    async (connectionId: string) => {
+      const result = await getProjects(connectionId).unwrap();
+      return { success: result.success, items: result.projects };
+    },
+    [getProjects],
   );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Main Modal
-// ─────────────────────────────────────────────────────────────────────────────
-
-export default function GitLabModal({
-  open,
-  onClose,
-  isConnected,
-  onSuccess,
-}: GitLabModalProps) {
-  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  type InitState = { initializing: boolean; targetStep: StepId | null; data: Partial<GitLabWizardData> };
-  const [initState, setInitState] = useReducer(
-    (_: InitState, next: InitState) => next,
-    { initializing: true, targetStep: null, data: {} },
-  );
-
-  const [getSelectedProjects] = useLazyGetSelectedGitLabProjectsQuery();
-  const [getConnection] = useLazyGetConnectionQuery();
-  const [revokeConnection, { isLoading: isRevoking }] =
-    useRevokeConnectionMutation();
-
-  useEffect(() => {
-    if (!open) {
-      setInitState({ initializing: true, targetStep: null, data: {} });
-      return;
-    }
-
-    const loadInitialData = async () => {
-      const baseData: Partial<GitLabWizardData> = {
-        token: "",
-        domain: "",
-        projects: [],
-        selectedProjects: new Set(),
-        currentProjects: [],
-        isFirstConnection: false,
-        fromManage: false,
-      };
-
-      let finalStep: StepId = "setToken";
-      let finalData: Partial<GitLabWizardData> = baseData;
-
-      if (isConnected) {
-        try {
-          const startTime = Date.now();
-          const result = await getSelectedProjects("gitlab").unwrap();
-
-          if (result.success) {
-            finalData = {
-              ...baseData,
-              connectionId: result.connectionId,
-              currentProjects: result.projects,
-            };
-            finalStep = "manage";
-          } else {
-            const connResult = await getConnection("gitlab").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentProjects: [],
-              };
-              finalStep = "manage";
-            }
-          }
-
-          const elapsed = Date.now() - startTime;
-          const minLoadingTime = 600;
-          const remainingTime = Math.max(0, minLoadingTime - elapsed);
-          await new Promise((resolve) => setTimeout(resolve, remainingTime));
-        } catch (err) {
-          console.error("[loadInitialData] Error:", err);
-          try {
-            const connResult = await getConnection("gitlab").unwrap();
-            if (connResult.success) {
-              finalData = {
-                ...baseData,
-                connectionId: connResult.connection.id,
-                currentProjects: [],
-              };
-              finalStep = "manage";
-            }
-          } catch {
-            // Keep defaults
-          }
-        }
-      }
-
-      setInitState({ initializing: false, targetStep: finalStep, data: finalData });
-    };
-
-    loadInitialData();
-  }, [open, isConnected, getSelectedProjects, getConnection]);
-
-  const handleClose = useCallback(() => {
-    setShowRevokeConfirm(false);
-    onClose();
-  }, [onClose]);
-
-  const handleRevoke = async () => {
-    try {
-      await revokeConnection("gitlab").unwrap();
-      setShowRevokeConfirm(false);
-      handleClose();
-    } catch (err) {
-      console.error("[handleRevoke] Error:", err);
-      setShowRevokeConfirm(false);
-      toast.error("Failed to revoke GitLab access");
-    }
-  };
-
-  const steps: WizardStep<GitLabWizardData>[] = [
-    {
-      id: "loading",
-      render: () => <LoadingStep targetStep={initState.targetStep} />,
-    },
-    {
-      id: "setToken",
-      render: () => <TokenStep onSuccess={onSuccess} />,
-    },
-    {
-      id: "add",
-      render: () => <SelectProjectsStep onComplete={handleClose} />,
-    },
-    {
-      id: "manage",
-      render: () => (
-        <ManageProjectsStep onRevoke={() => setShowRevokeConfirm(true)} />
-      ),
-    },
-  ];
-
   return (
-    <>
-      <WizardModal
-        open={open}
-        onOpenChange={(isOpen) => !isOpen && handleClose()}
-        steps={steps}
-        initialStep="loading"
-        initialData={initState.data}
-        title="GitLab"
-        icon="connections/gitlab.png"
-        onCancel={handleClose}
-      />
-
-      {showRevokeConfirm && (
-        <RevokeConfirmModal
-          onConfirm={handleRevoke}
-          onCancel={() => setShowRevokeConfirm(false)}
-          loading={isRevoking}
-          appName="GitLab"
-          description="This will disconnect all projects and remove all GitLab data. This action cannot be undone."
-        />
-      )}
-    </>
+    <ResourceWizardModal
+      {...props}
+      config={CONFIG}
+      fetchAllResources={fetchAllResources}
+    />
   );
 }

@@ -15,13 +15,16 @@ import {
   useGetProviderAccountInfoQuery,
 } from "@/lib/redux/api";
 import { StructuredOutputsModal } from "./structured-outputs-modal";
-import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
+import type { CodexAdapterConfig } from "../../../../shared/adapter.types";
+
+type CodexApprovalMode = NonNullable<CodexAdapterConfig["approvalMode"]>;
+type CodexPersonality = NonNullable<CodexAdapterConfig["personality"]>;
 import {
   ProviderSettingsLayout,
-  ProviderVisibilitySection,
   useProviderSettings,
 } from "./provider-settings-shared";
-import { useSearchParams } from "react-router-dom";
+import { CODEX_SANDBOX_MODES } from "@/lib/provider-modes";
+import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
 function formatResetDate(resetsAt: number): string {
   const date = new Date(resetsAt * 1000);
@@ -71,7 +74,11 @@ function RateLimitRow({
   );
 }
 
-const APPROVAL_OPTIONS = [
+const APPROVAL_OPTIONS: Array<{
+  value: CodexApprovalMode;
+  label: string;
+  description: string;
+}> = [
   {
     value: "on-request",
     label: "On Request",
@@ -89,7 +96,11 @@ const APPROVAL_OPTIONS = [
   },
 ];
 
-const PERSONALITY_OPTIONS = [
+const PERSONALITY_OPTIONS: Array<{
+  value: CodexPersonality;
+  label: string;
+  description: string;
+}> = [
   {
     value: "none",
     label: "None",
@@ -107,57 +118,38 @@ const PERSONALITY_OPTIONS = [
   },
 ];
 
-const SANDBOX_OPTIONS = [
-  {
-    value: "read-only",
-    label: "Read Only",
-    description: "Agent cannot modify files",
-  },
-  {
-    value: "workspace-write",
-    label: "Workspace Write",
-    description: "Write within workspace only",
-  },
-  {
-    value: "danger-full-access",
-    label: "Full Access",
-    description: "No restrictions",
-  },
-];
+const SANDBOX_OPTIONS = CODEX_SANDBOX_MODES.map((m) => ({
+  value: m.value,
+  label: m.label,
+  description: m.description,
+}));
 
-export default function CodexSettings() {
+export default function CodexSettings(
+) {
   const {
     provider,
     isLoading,
     error,
     config,
-    space,
-    canHide,
     updateConfig,
-    setSpaceVisible,
-  } = useProviderSettings("codex", "codex");
-  const { data: rateLimits, isLoading: isLoadingRateLimits } = useGetProviderRateLimitsQuery("codex", {
+  } = useProviderSettings<CodexAdapterConfig>(PROVIDER_IDS.codex, "codex");
+  const { data: rateLimits, isLoading: isLoadingRateLimits } = useGetProviderRateLimitsQuery(PROVIDER_IDS.codex, {
     pollingInterval: 60000,
   });
-  const { data: accountInfo, isLoading: isLoadingAccount } = useGetProviderAccountInfoQuery("codex");
+  const { data: accountInfo, isLoading: isLoadingAccount } = useGetProviderAccountInfoQuery(PROVIDER_IDS.codex);
 
-  const [, setSearchParams] = useSearchParams();
   const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] =
     useState(false);
 
-  const approvalMode = (config as any).approvalMode ?? "on-request";
-  const sandboxMode = (config as any).sandboxMode ?? "workspace-write";
-  const networkAccessEnabled = (config as any).networkAccessEnabled ?? true;
-  const webSearchMode = (config as any).webSearchMode ?? "live";
-  const skipGitRepoCheck = (config as any).skipGitRepoCheck ?? false;
-  const personality = (config as any).personality ?? "none";
+  const approvalMode = config.approvalMode ?? "on-request";
+  const sandboxMode = config.sandboxMode ?? "workspace-write";
+  const networkAccessEnabled = config.networkAccessEnabled ?? true;
+  const webSearchMode = config.webSearchMode ?? "live";
+  const skipGitRepoCheck = config.skipGitRepoCheck ?? false;
+  const personality = config.personality ?? "none";
 
-  const structuredOutputs = ((config as any).structuredOutputs ?? {}) as Record<
-    string,
-    StructuredOutputEntry
-  >;
-  const structuredOutputsSelectedId =
-    ((config as any).structuredOutputsSelectedId as string | null) ?? null;
+  const structuredOutputs = config.structuredOutputs ?? {};
+  const structuredOutputsSelectedId = config.structuredOutputsSelectedId ?? null;
   const selectedSchemaName = structuredOutputsSelectedId
     ? (structuredOutputs[structuredOutputsSelectedId]?.name ?? "Off")
     : "Off";
@@ -211,21 +203,6 @@ export default function CodexSettings() {
       </SettingsSection>
 
       <SettingsSection title="Configuration">
-
-
-        <SettingsRow
-          title="Plugins"
-          description="Browse and manage Codex plugins"
-        >
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setSearchParams({ section: "codex-plugins" })}
-          >
-            Browse
-          </Button>
-        </SettingsRow>
-        <SettingsDivider />
         <SettingsRow
           title="Approval Policy"
           description="Choose when Codex asks for approval"
@@ -381,16 +358,10 @@ export default function CodexSettings() {
         )}
       </SettingsSection>
 
-      <ProviderVisibilitySection
-        space={space}
-        canHide={canHide}
-        onVisibleChange={setSpaceVisible}
-      />
-
       <StructuredOutputsModal
         isOpen={isStructuredOutputsModalOpen}
         onClose={() => setIsStructuredOutputsModalOpen(false)}
-        providerId="codex"
+        providerId={PROVIDER_IDS.codex}
       />
     </ProviderSettingsLayout>
   );

@@ -1,8 +1,13 @@
-import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
-import { useActiveSpace } from "@/hooks/use-active-space";
-import { useDarkMode } from "@/hooks/use-dark-mode";
-import { getDefaultDropdownBackground } from "@/lib/theme";
+import { useDropdownBackground } from "@/hooks/use-dropdown-background";
+import { useClickOutside } from "@/hooks/use-click-outside";
 import { Button } from "./button";
 import { Caption } from "./text";
 import { SelectOption } from "./icons";
@@ -57,9 +62,8 @@ export default function Select<T extends string = string>({
     setDropdownPosition({ top: rect.bottom, left: rect.left, width: rect.width });
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isOpen) return;
-
     updateDropdownPosition();
   }, [isOpen]);
 
@@ -99,57 +103,16 @@ export default function Select<T extends string = string>({
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(target) &&
-        dropdownRef.current &&
-        !dropdownRef.current.contains(target)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+  useClickOutside(
+    containerRef,
+    () => {
+      if (isOpen) setIsOpen(false);
+    },
+    dropdownRef,
+  );
 
   const selectedOption = options.find((opt) => opt.value === value);
-  const { activeSpace } = useActiveSpace();
-  const { darkMode } = useDarkMode();
-
-  // Cache background computation — avoid DOM queries on every render
-  const dropdownBackground = useMemo(() => {
-    if (useFixedBackground) return undefined;
-
-    if (!activeSpace?.themeConfig) {
-      return getDefaultDropdownBackground(darkMode, 0.98);
-    }
-
-    try {
-      const themeConfig = JSON.parse(activeSpace.themeConfig);
-      const bgColor = darkMode
-        ? themeConfig.darkBackground
-        : themeConfig.lightBackground;
-
-      if (!bgColor) {
-        return getDefaultDropdownBackground(darkMode, 0.98);
-      }
-
-      if (bgColor.startsWith("linear-gradient")) {
-        return bgColor;
-      } else {
-        return bgColor.length === 9 ? bgColor.slice(0, 7) : bgColor;
-      }
-    } catch (e) {
-      console.error("Error parsing themeConfig:", e);
-      return getDefaultDropdownBackground(darkMode, 0.98);
-    }
-  }, [useFixedBackground, activeSpace, darkMode]);
+  const dropdownBackground = useDropdownBackground(0.98, useFixedBackground);
 
   const fixedBackgroundClass = useFixedBackground
     ? "bg-linear-to-b from-primary to-primary-50 dark:from-primary-900 dark:to-primary-950"
@@ -162,9 +125,9 @@ export default function Select<T extends string = string>({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`
-          w-full pl-3 pr-2.5 py-2.5
+          w-full px-2.5 py-2
           min-w-52
-          bg-primary-950/5 dark:bg-primary/4
+          bg-primary-950/5 dark:bg-primary/5
           border border-primary-950/10 dark:border-primary/5
           text-primary-900 dark:text-primary
           text-sm focus:outline-none cursor-pointer
@@ -202,7 +165,8 @@ export default function Select<T extends string = string>({
       {createPortal(
         <div
           ref={dropdownRef}
-          className={`fixed z-(--z-modal)
+          onMouseDown={(e) => e.stopPropagation()}
+          className={`fixed z-(--z-modal-critical)
             border border-t-0 border-primary-950/10 dark:border-primary/10
             rounded-b-xl shadow-lg overflow-hidden
             ${isOpen && animateIn ? "animate-dropdown-in" : "dropdown-prewarm"}
@@ -225,8 +189,8 @@ export default function Select<T extends string = string>({
                 }}
                 className={`
                   w-full cursor-pointer text-left
-                  transition-colors px-3 py-2
-                  text-sm flex items-center gap-2
+                  transition-colors px-3 py-1
+                  text-s flex items-center gap-2
                   ${
                     value === option.value
                       ? "bg-primary-950/5 dark:bg-primary/10 text-primary-900 dark:text-primary "
@@ -236,7 +200,7 @@ export default function Select<T extends string = string>({
               >
                 {option.icon}
                 <div className="flex flex-col min-w-0">
-                  <span className="truncate">{option.label}</span>
+                  <span className="truncate my-0.5">{option.label}</span>
                   {option.description && (
                     <span className="text-xxs tracking-tight text-primary-500 dark:text-primary-400 font-normal truncate">
                       {option.description}

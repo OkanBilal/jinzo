@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { FileNode, FileContentResponse } from "@/features/workspace/types/file-explorer";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import type { SignalWithEntity } from "@/lib/redux/api/signalsApi";
+import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
 export interface ReviewTab {
   id: string;
@@ -31,7 +32,7 @@ export interface ContextSignal {
 
 export interface ContextSkill {
   name: string;
-  path: string;
+  path?: string;
   description?: string;
   displayName?: string;
   shortDescription?: string;
@@ -79,6 +80,8 @@ export interface WorkspaceState {
   isLoadingFileContent: boolean;
   fileContentError: string | null;
   activeTab: "editor" | string;
+  /** Tab that was active before "editor" was opened — used to restore on editor close. */
+  previousNonEditorTab: string | null;
   contextFiles: FileNode[];
   contextIssues: ContextIssue[];
   contextSignals: ContextSignal[];
@@ -102,13 +105,14 @@ const initialState: WorkspaceState = {
   activeWorkspaceId: null,
   activeWorkspaceIdByProvider: {},
   selectedModelByProvider: {},
-  selectedProviderId: "claude_code",
+  selectedProviderId: PROVIDER_IDS.claude,
   thinkingEnabled: false,
   selectedFile: null,
   selectedFileContent: null,
   isLoadingFileContent: false,
   fileContentError: null,
   activeTab: "editor",
+  previousNonEditorTab: null,
   contextFiles: [],
   contextIssues: [],
   contextSignals: [],
@@ -134,6 +138,7 @@ const workspaceSlice = createSlice({
         state.selectedFileContent = null;
         state.fileContentError = null;
         state.isLoadingFileContent = false;
+        state.previousNonEditorTab = null;
       }
       state.activeWorkspaceId = action.payload;
     },
@@ -144,6 +149,7 @@ const workspaceSlice = createSlice({
         state.selectedFileContent = null;
         state.fileContentError = null;
         state.isLoadingFileContent = false;
+        state.previousNonEditorTab = null;
       }
       state.activeWorkspaceIdByProvider[action.payload.providerId] = action.payload.workspaceId;
     },
@@ -181,6 +187,11 @@ const workspaceSlice = createSlice({
       state.isLoadingFileContent = false;
     },
     setActiveTab: (state, action: PayloadAction<"editor" | string>) => {
+      // Remember which tab the user was on before opening the editor so we can
+      // return there when the editor tab is closed (rather than jumping to runs[0]).
+      if (action.payload === "editor" && state.activeTab !== "editor") {
+        state.previousNonEditorTab = state.activeTab;
+      }
       state.activeTab = action.payload;
     },
     addContextFile: (state, action: PayloadAction<FileNode>) => {

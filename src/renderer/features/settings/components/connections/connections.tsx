@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Text, Button, toast } from "@/components/ui";
+import { Text, Button, SegmentedTabs, toast } from "@/components/ui";
 import { SettingsPageShell } from "../settings-layout";
 import AsanaModal from "./asana/asana-modal";
 import GitHubModal from "./github/github-modal";
@@ -105,21 +105,13 @@ export default function ConnectionsSettings() {
   return (
     <SettingsPageShell title="Connections" headerActions={headerActions}>
       {/* Category filter tabs */}
-      <div className="flex gap-1 mb-6">
-        {FILTER_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setFilter(tab.id)}
-            className={`px-2.5 py-1 text-sm rounded-xl transition-colors cursor-pointer ${
-              filter === tab.id
-                ? "bg-primary-200/80 dark:bg-primary-800/60 text-primary-900 dark:text-primary-100 "
-                : "text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 hover:bg-primary-100/50 dark:hover:bg-primary-800/30"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs
+        value={filter}
+        onChange={setFilter}
+        options={FILTER_TABS.map((t) => ({ value: t.id, label: t.label }))}
+        variant="plain"
+        className="mb-6"
+      />
 
       {/* Connected */}
       {connectedFiltered.length > 0 && (

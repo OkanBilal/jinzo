@@ -47,7 +47,6 @@ export default function Alert({
           <Button
             className="flex-1 rounded-full font-semibold"
             variant="danger"
-            size="md"
             onClick={onPrimary}
             disabled={isPrimaryLoading}
           >
@@ -56,7 +55,6 @@ export default function Alert({
           <Button
             className="flex-1 rounded-full font-semibold"
             variant="primary"
-            size="md"
             onClick={onSecondary}
             disabled={isPrimaryLoading}
           >

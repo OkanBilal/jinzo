@@ -10,6 +10,16 @@ import {
   openNewRunTab,
   closeNewRunTab,
 } from "@/lib/redux/slices/workspaceSlice";
+import {
+  isIssueTab,
+  isNewRunTab,
+  isNoteTab,
+  isRunTab,
+  isSignalTab,
+  getIssueEntityId,
+  getSignalEntityId,
+  getNoteId,
+} from "@/features/workspace/utils/repo-utils";
 
 interface UseTabHandlersParams {
   activeTab: string;
@@ -34,7 +44,7 @@ export function useTabHandlers({
 }: UseTabHandlersParams) {
   const dispatch = useAppDispatch();
   const [updateRun] = useUpdateRunMutation();
-  const { openIssueTabs, openSignalTabs, openNoteTabs, selectedFile } = useAppSelector(
+  const { openIssueTabs, openSignalTabs, openNoteTabs, selectedFile, previousNonEditorTab } = useAppSelector(
     (state) => state.workspace,
   );
 
@@ -167,15 +177,42 @@ export function useTabHandlers({
     [dispatch, activeTab, getNextTab],
   );
 
+  const isTabStillValid = useCallback(
+    (tabId: string | null): tabId is string => {
+      if (!tabId || tabId === "editor") return false;
+      if (isNewRunTab(tabId)) return true;
+      if (isIssueTab(tabId)) {
+        const id = getIssueEntityId(tabId);
+        return openIssueTabs.some((t) => t.issue.entityId === id);
+      }
+      if (isSignalTab(tabId)) {
+        const id = getSignalEntityId(tabId);
+        return openSignalTabs.some((t) => t.signal.entityId === id);
+      }
+      if (isNoteTab(tabId)) {
+        const id = getNoteId(tabId);
+        return openNoteTabs.some((t) => t.id === id);
+      }
+      return runs.some((r) => r.id === tabId);
+    },
+    [openIssueTabs, openSignalTabs, openNoteTabs, runs],
+  );
+
   const handleCloseEditorTab = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
       if (activeTab === "editor") {
-        dispatch(setActiveTab(getNextTab("editor")));
+        const restored = isTabStillValid(previousNonEditorTab) ? previousNonEditorTab : null;
+        const nextTab = restored ?? getNextTab("editor");
+        dispatch(setActiveTab(nextTab));
+        // Sync the underlying run state so the rendered content matches the active tab.
+        if (isRunTab(nextTab)) {
+          selectTab(nextTab);
+        }
       }
       dispatch(clearSelectedFile());
     },
-    [dispatch, activeTab, getNextTab],
+    [dispatch, activeTab, getNextTab, previousNonEditorTab, isTabStillValid, selectTab],
   );
 
   const handleRenameRun = useCallback(

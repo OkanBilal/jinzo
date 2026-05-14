@@ -54,9 +54,9 @@ const variantStyles: Record<ButtonVariant, string> = {
   icon: "cursor-pointer p-1 rounded-md text-primary-600 dark:text-primary-200 hover:bg-primary-200/40 dark:hover:bg-primary-700",
   link: "cursor-pointer text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 underline-offset-4 hover:underline ",
   subtle:
-    "cursor-pointer flex items-center gap-2 bg-primary/50 dark:bg-primary/5 hover:bg-primary/80 dark:hover:bg-primary/10 ",
+    "cursor-pointer flex items-center gap-2  hover:bg-primary/80 dark:hover:bg-primary/10 ",
   frosted:
-    "cursor-pointer glass-morphism-button text-primary-800 dark:text-primary-200 ",
+    "cursor-pointer  text-primary-800 dark:text-primary-200 ",
   bare: "cursor-pointer",
 };
 
@@ -64,7 +64,7 @@ const sizeStyles: Record<ButtonSize, string> = {
   xxs: "px-0 py-1 text-xs",
   xs: "px-3 py-1.5 text-xs rounded-lg",
   sm: "px-3 py-1.75 text-s rounded-lg",
-  md: "px-3 py-2 text-s rounded-xl",
+  md: "px-3 py-1.75 text-s rounded-xl",
   lg: "px-3 py-2.5 text-base rounded-xl",
 };
 
@@ -74,6 +74,10 @@ const baseStyles =
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
+      // Default to "button" instead of the native HTML default "submit" — keeps
+      // a stray <Button> inside a future <form> from accidentally submitting it.
+      // Callers that genuinely need submit pass `type="submit"` explicitly.
+      type = "button",
       variant = "bare",
       size = "md",
       isLoading = false,
@@ -105,6 +109,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const buttonElement = (
       <button
         ref={ref}
+        type={type}
         className={cn(
           baseClass,
           variantClass,
@@ -152,75 +157,3 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = "Button";
-
-export const PrimaryButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="primary" {...props} />);
-PrimaryButton.displayName = "PrimaryButton";
-
-export const SecondaryButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="secondary" {...props} />);
-SecondaryButton.displayName = "SecondaryButton";
-
-export const SubmitButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="submit" {...props} />);
-SubmitButton.displayName = "SubmitButton";
-
-export const GhostButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="ghost" {...props} />);
-GhostButton.displayName = "GhostButton";
-
-export const DangerButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="danger" {...props} />);
-DangerButton.displayName = "DangerButton";
-
-export const WarningButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="warning" {...props} />);
-WarningButton.displayName = "WarningButton";
-
-export const SuccessButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="success" {...props} />);
-SuccessButton.displayName = "SuccessButton";
-
-export const IconButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="icon" {...props} />);
-IconButton.displayName = "IconButton";
-
-export const LinkButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="link" {...props} />);
-LinkButton.displayName = "LinkButton";
-
-export const SubtleButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="subtle" {...props} />);
-SubtleButton.displayName = "SubtleButton";
-
-export const FrostedButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="frosted" {...props} />);
-FrostedButton.displayName = "FrostedButton";
-
-export const BareButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, "variant">
->((props, ref) => <Button ref={ref} variant="bare" {...props} />);
-BareButton.displayName = "BareButton";

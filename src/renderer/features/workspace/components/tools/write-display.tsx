@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
-import { ArrowUp, Edit } from "@/components/ui/icons";
+import { Edit } from "@/components/ui/icons";
 import { PatchDiff } from "@pierre/diffs/react";
 import { normalizePatchForPatchDiff } from "../../utils/patch-utils";
+import { useOpenFileInEditor } from "../../hooks/use-open-file-in-editor";
+import { FileIconComponent } from "../file-explorer/components/file-icon";
+import { ToolHeader, ToolCollapse } from "./_shared";
 
 export interface WriteParams {
   file_path?: string;
@@ -118,6 +121,7 @@ function countStructuredPatchChanges(hunks: StructuredHunk[]): { added: number; 
 export function WriteDisplay({ params, output }: { params: WriteParams; output?: unknown }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const isDarkMode = document.documentElement.classList.contains("dark");
+  const openFile = useOpenFileInEditor();
 
   const parsedPatch = useMemo(() => parseStructuredPatchOutput(output), [output]);
 
@@ -129,6 +133,10 @@ export function WriteDisplay({ params, output }: { params: WriteParams; output?:
   const content =
     params.content ?? extractDetailedContent(output) ?? "";
   const fileName = filePath.split("/").pop() || filePath || "file";
+  const fileExt = (() => {
+    const dotIdx = fileName.lastIndexOf(".");
+    return dotIdx > 0 ? fileName.slice(dotIdx + 1) : undefined;
+  })();
 
   const { unifiedDiff, added, removed, lineCount, hasDiff } = useMemo(() => {
     if (parsedPatch) {
@@ -165,17 +173,32 @@ export function WriteDisplay({ params, output }: { params: WriteParams; output?:
   }, [parsedPatch, content, fileName, filePath]);
 
   return (
-    <div className="">
-      <button
-        onClick={() => hasDiff && setIsExpanded(!isExpanded)}
-        className={`group w-full flex items-center gap-1 py-1  text-s font-sans ${hasDiff ? "cursor-pointer" : "cursor-default"}`}
+    <div>
+      <ToolHeader
+        icon={<Edit className="size-3.5" />}
+        verb="Edited"
+        hasDetails={hasDiff}
+        isExpanded={isExpanded}
+        onToggle={() => setIsExpanded((v) => !v)}
       >
-        <Edit className="size-3.5 text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary" />
-        <span className="text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
-          Edited
-        </span>
-        <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">
-          {fileName}
+        <span
+          role={filePath ? "link" : undefined}
+          title={filePath ? "Open in editor" : undefined}
+          onClick={(e) => {
+            if (!filePath) return;
+            e.stopPropagation();
+            openFile(filePath);
+          }}
+          className={`inline-flex items-center gap-1 min-w-0 text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary ${filePath ? "cursor-pointer hover:underline hover:text-primary-950 hover:dark:text-primary" : ""}`}
+        >
+          {filePath && (
+            <FileIconComponent
+              extension={fileExt}
+              fileName={fileName}
+              className="size-3.5 shrink-0"
+            />
+          )}
+          <span className="truncate">{fileName}</span>
         </span>
         {parsedPatch ? (
           (added > 0 || removed > 0) && (
@@ -196,32 +219,28 @@ export function WriteDisplay({ params, output }: { params: WriteParams; output?:
             </span>
           )
         )}
-        {hasDiff && (
-          <ArrowUp
-            className={`size-3.5 shrink-0 text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-          />
-        )}
-      </button>
+      </ToolHeader>
 
       {unifiedDiff && (
-        <div className={`grid transition-all duration-200 rounded-md border border-primary-200/50 dark:border-primary-700/30 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-          <div className="min-h-0 overflow-hidden">
-            <div className=" max-h-80 overflow-y-auto noscrollbar p-0.5">
-              <PatchDiff
-                patch={unifiedDiff}
-                style={{ "--diffs-font-size": "12px", "--diffs-font-family": "'Geist Mono', monospace" } as React.CSSProperties}
-                options={{
-                  theme: isDarkMode ? "pierre-dark" : "pierre-light",
-                  themeType: isDarkMode ? "dark" : "light",
-                  diffStyle: "unified",
-                  overflow: "wrap",
-                  disableFileHeader: true,
-                  unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper], [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"}); background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
-                }}
-              />
-            </div>
+        <ToolCollapse
+          isExpanded={isExpanded}
+          className="rounded-md border border-primary-200/50 dark:border-primary-700/30"
+        >
+          <div className="max-h-80 overflow-y-auto noscrollbar p-0.5">
+            <PatchDiff
+              patch={unifiedDiff}
+              style={{ "--diffs-font-size": "12px", "--diffs-font-family": "'Geist Mono', monospace" } as React.CSSProperties}
+              options={{
+                theme: isDarkMode ? "pierre-dark" : "pierre-light",
+                themeType: isDarkMode ? "dark" : "light",
+                diffStyle: "unified",
+                overflow: "wrap",
+                disableFileHeader: true,
+                unsafeCSS: `:host, [data-diffs], [data-diffs-header], [data-error-wrapper], [data-line], [data-column-number], [data-code] { --diffs-bg: var(--color-${isDarkMode ? "primary-950" : "primary"}); background-color: var(--color-${isDarkMode ? "primary-950" : "primary"}); }`,
+              }}
+            />
           </div>
-        </div>
+        </ToolCollapse>
       )}
     </div>
   );

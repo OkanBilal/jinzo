@@ -48,7 +48,6 @@ export function ManageResourcesStep({
           variant="primary"
           onClick={onAddNew}
           disabled={loading}
-          size="md"
         >
           {addButtonLabel}
         </Button>

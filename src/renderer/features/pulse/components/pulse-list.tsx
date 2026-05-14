@@ -1,0 +1,131 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Edit, Trash } from "@/components/ui/icons";
+import {
+  useDeletePulseMutation,
+  useGetPulsesQuery,
+  useTogglePulseMutation,
+  type Pulse,
+} from "@/lib/redux/api/pulseApi";
+import { useGetWorkspacesQuery } from "@/lib/redux/api/workspacesApi";
+import { formatSchedule } from "../utils/format-schedule";
+
+interface PulseListProps {
+  onEdit: (pulse: Pulse) => void;
+}
+
+export function PulseList({ onEdit }: PulseListProps) {
+  const { data: pulses = [], isLoading } = useGetPulsesQuery();
+  const { data: workspaces = [] } = useGetWorkspacesQuery();
+  const [togglePulse] = useTogglePulseMutation();
+  const [deletePulse] = useDeletePulseMutation();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  if (isLoading) {
+    return (
+      <div className="text-sm text-primary-500 px-1 py-3">Loading…</div>
+    );
+  }
+
+  if (pulses.length === 0) {
+    return null;
+  }
+
+  return (
+    <section>
+      <h2 className="text-base font-medium text-primary-900 dark:text-primary-100 mb-3 pb-2 border-b border-primary-200/40 dark:border-primary-800/60">
+        Current
+      </h2>
+      <ul className="">
+        {pulses.map((pulse) => {
+          const workspace = workspaces.find((w) => w.id === pulse.workspaceId);
+          const isConfirming = confirmDeleteId === pulse.id;
+          return (
+            <li
+              key={pulse.id}
+              className="group flex items-center gap-3 py-3"
+            >
+              <Button
+                type="button"
+                tooltip={pulse.isActive ? "Disable" : "Enable"}
+                onClick={() =>
+                  togglePulse({ id: pulse.id, isActive: !pulse.isActive })
+                }
+                className="cursor-pointer p-0"
+              >
+                <span
+                  className={`block size-4 rounded-full border-2 ${
+                    pulse.isActive
+                      ? "border-primary-700 dark:border-primary-200 bg-primary-700/20 dark:bg-primary-200/30"
+                      : "border-primary-400 dark:border-primary-600"
+                  }`}
+                />
+              </Button>
+
+              <div className="flex-1 min-w-0 flex items-baseline gap-2">
+                <span className="text-sm text-primary-900 dark:text-primary-100 truncate">
+                  {pulse.title}
+                </span>
+                {workspace && (
+                  <span className="text-xs text-primary-500 truncate">
+                    {workspace.name}
+                  </span>
+                )}
+              </div>
+
+              <span className="text-xs text-primary-500 whitespace-nowrap">
+                {formatSchedule({
+                  frequency: pulse.frequency,
+                  hour: pulse.hour,
+                  minute: pulse.minute,
+                  dayOfWeek: pulse.dayOfWeek,
+                })}
+              </span>
+
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button
+                  type="button"
+                  tooltip="Edit"
+                  onClick={() => onEdit(pulse)}
+                  className="p-1.5 rounded-lg hover:bg-primary-200/30 dark:hover:bg-primary-800 cursor-pointer text-primary-500"
+                >
+                  <Edit className="size-4" />
+                </Button>
+                {isConfirming ? (
+                  <>
+                    <Button
+                      type="button"
+                      onClick={async () => {
+                        await deletePulse(pulse.id).unwrap();
+                        setConfirmDeleteId(null);
+                      }}
+                      className="px-2 py-1 rounded-lg text-xs bg-red-500/15 text-red-500 hover:bg-red-500/25 cursor-pointer"
+                    >
+                      Confirm
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="px-2 py-1 rounded-lg text-xs hover:bg-primary-200/30 dark:hover:bg-primary-800 cursor-pointer text-primary-500"
+                    >
+                      Cancel
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    type="button"
+                    tooltip="Delete"
+                    onClick={() => setConfirmDeleteId(pulse.id)}
+                    className="p-1.5 rounded-lg hover:bg-primary-200/30 dark:hover:bg-primary-800 cursor-pointer text-primary-500"
+                  >
+                    <Trash className="size-4" />
+                  </Button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}

@@ -7,7 +7,7 @@ import { useDarkMode } from "@/hooks/use-dark-mode";
 import {
   solidColors,
   getThemeVariant,
-  parseThemeConfig,
+  themeConfigToSwatchIndex,
   type ThemeColor,
 } from "@/lib/space-themes";
 import { availableIcons, parseIcon } from "@/lib/icon-registry";
@@ -85,7 +85,7 @@ export default function EditSpaceModal({
       newIcon = iconStr.replace("emoji:", "");
     } else {
       const parsedIcon = parseIcon(iconStr);
-      if (parsedIcon.type === "icon" || parsedIcon.type === "copilot-animate" || parsedIcon.type === "claude-animate") {
+      if (parsedIcon.type === "icon") {
         newIconMode = "icon";
         newIcon = iconStr.toLowerCase();
       } else {
@@ -93,7 +93,7 @@ export default function EditSpaceModal({
         newIcon = typeof parsedIcon.value === "string" ? parsedIcon.value : "😊";
       }
     }
-    const { colorIndex } = parseThemeConfig(space.themeConfig);
+    const { colorIndex } = themeConfigToSwatchIndex(space.themeConfig);
     updateState({
       prevSpaceId: space.id,
       name: space.name,
@@ -212,7 +212,7 @@ export default function EditSpaceModal({
               onChange={(e) => updateState({ name: e.target.value })}
               placeholder="Space name..."
               className="w-full px-3 py-2 border-0 shadow-none
-                bg-primary-950/10 dark:bg-primary/4
+                bg-primary-950/10 dark:bg-primary/5
                 dark:placeholder:text-primary-100
                 placeholder:text-primary-700
                 text-primary-800 dark:text-primary
@@ -245,7 +245,7 @@ export default function EditSpaceModal({
               placeholder="Enter a system prompt to customize AI behavior..."
               rows={3}
               className="w-full px-3 py-2 border-0 shadow-none resize-none
-                bg-primary-950/10 dark:bg-primary/4
+                bg-primary-950/10 dark:bg-primary/5
                 placeholder:text-primary-700 dark:placeholder:text-primary-100
                 text-primary-800 dark:text-primary
                 text-sm focus:outline-none

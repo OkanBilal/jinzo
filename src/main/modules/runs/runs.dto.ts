@@ -274,7 +274,7 @@ export interface StartRunPayload {
   /** User-selected skills to invoke (displayed as chips in the UI, injected by adapter) */
   contextSkills?: Array<{
     name: string;
-    path: string;
+    path?: string;
     displayName?: string;
     description?: string;
     shortDescription?: string;
@@ -311,7 +311,7 @@ export interface ContinueRunPayload {
   /** User-selected skills to invoke for this follow-up */
   contextSkills?: Array<{
     name: string;
-    path: string;
+    path?: string;
     displayName?: string;
     description?: string;
     shortDescription?: string;

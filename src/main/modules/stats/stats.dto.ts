@@ -2,6 +2,8 @@
 // Stats DTO — Types for the statistics dashboard
 // ─────────────────────────────────────────────────────────────
 
+import type { ProviderId } from "../../../shared/provider-ids";
+
 export interface DashboardSummary {
   totalProjects: number;
   runsToday: number;
@@ -68,7 +70,7 @@ export interface CodeActivityStats {
   totalFilesChanged: number;
 }
 
-export type ProviderFilter = "all" | "claude_code" | "copilot_cli" | "codex" | "cursor";
+export type ProviderFilter = "all" | ProviderId;
 
 export interface DashboardData {
   summary: DashboardSummary;

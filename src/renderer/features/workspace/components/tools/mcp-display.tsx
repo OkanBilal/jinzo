@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ArrowUp } from "@/components/ui/icons";
 import { resolveTool } from "../../utils/resolve-tool";
+import { ToolHeader, ToolCollapse } from "./_shared";
 
 interface McpDisplayProps {
   displayName: string;
@@ -37,28 +37,6 @@ function formatCodePayload(raw: string): string {
   } catch {
     return raw;
   }
-}
-
-function formatValue(value: unknown, depth = 0): string {
-  if (value === null || value === undefined) return "null";
-  if (typeof value === "string") {
-    if (value.length > 300) return value.substring(0, 300) + "…";
-    return value;
-  }
-  if (typeof value === "number" || typeof value === "boolean")
-    return String(value);
-  if (Array.isArray(value)) {
-    if (depth > 1) return `[${value.length} items]`;
-    return value.map((v) => formatValue(v, depth + 1)).join("\n");
-  }
-  if (typeof value === "object") {
-    if (depth > 1) return JSON.stringify(value);
-    const entries = Object.entries(value as Record<string, unknown>);
-    return entries
-      .map(([k, v]) => `${k}: ${formatValue(v, depth + 1)}`)
-      .join("\n");
-  }
-  return String(value);
 }
 
 /** Renders MCP `content[].text` segments inside a monospace/code block shell. */
@@ -100,57 +78,29 @@ export function McpDisplay({ displayName, icon, params, output, isCompact = fals
   const hasCodeBodies = codeSegments.length > 0;
   const canExpand = hasExpandedParams || hasCodeBodies;
 
-  const totalCodeChars = codeSegments.join("").length;
-  const summary =
-    hasCodeBodies &&
-    textsFromMetadata.length > 0 &&
-    output !== undefined &&
-    output !== null
-      ? `output (${JSON.stringify(output).length} chars)`
-      : hasCodeBodies
-        ? `content (${totalCodeChars} chars)`
-        : paramKeys.length > 0
-          ? `{${paramKeys.join(", ")}} (${JSON.stringify(params).length} chars)`
-          : "No params";
-
   return (
-    <div className="">
-      <button
-        onClick={() => canExpand && setIsExpanded(!isExpanded)}
-        className={`group w-full flex items-center gap-1 py-1  text-s font-sans ${canExpand ? "cursor-pointer" : "cursor-default"}`}
-      >
-        {!isCompact && (
-          <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
-            {resolvedIcon}
-          </span>
-        )}
-        <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
-          {displayName}
-        </span>
-        {/* <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">{summary}</span> */}
-        {canExpand && (
-          <ArrowUp
-            className={`size-3.5 shrink-0 text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-          />
-        )}
-      </button>
+    <div>
+      <ToolHeader
+        icon={resolvedIcon}
+        verb={displayName}
+        hasDetails={canExpand}
+        isExpanded={isExpanded}
+        onToggle={() => setIsExpanded((v) => !v)}
+        isCompact={isCompact}
+      />
 
       {canExpand && (
-        <div
-          className={`grid transition-all duration-200 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
-        >
-          <div className="min-h-0 overflow-hidden">
-            <div className="space-y-2 pt-1">
-              {hasCodeBodies && (
-                <div>
-                  <div className="mt-1">
-                    <McpOutputCodeBlocks rawTexts={codeSegments} />
-                  </div>
+        <ToolCollapse isExpanded={isExpanded}>
+          <div className="space-y-2 pt-1">
+            {hasCodeBodies && (
+              <div>
+                <div className="mt-1">
+                  <McpOutputCodeBlocks rawTexts={codeSegments} />
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-        </div>
+        </ToolCollapse>
       )}
     </div>
   );

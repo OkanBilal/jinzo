@@ -1,11 +1,10 @@
 import { WorkspaceProviderPage } from "@/features/workspace/components/workspace-provider-page";
-
-const CURSOR_PROVIDER_ID = "cursor";
+import { PROVIDER_IDS } from "../../shared/provider-ids";
 
 export default function CursorPage() {
   return (
     <WorkspaceProviderPage
-      providerId={CURSOR_PROVIDER_ID}
+      providerId={PROVIDER_IDS.cursor}
       variant="cursor"
       planExitConfig={{
         key: "mode",

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowUp, Trash } from "@/components/ui/icons";
+import { Trash } from "@/components/ui/icons";
+import { ToolHeader, ToolCollapse } from "./_shared";
 
 /** Cursor ACP / agent delete file tool — often mirrors edit-style fields with empty `new_string`. */
 export interface DeleteParams {
@@ -64,40 +65,26 @@ export function DeleteDisplay({
   const canExpand = fullPath.length > 0 && fullPath !== displayPath;
 
   return (
-    <div className="">
-      <button
-        type="button"
-        onClick={() => canExpand && setIsExpanded(!isExpanded)}
-        className={`group w-full flex items-center gap-1 py-1 text-s font-sans ${canExpand ? "cursor-pointer" : "cursor-default"}`}
+    <div>
+      <ToolHeader
+        icon={<Trash className="size-3.5" />}
+        verb="Deleted"
+        hasDetails={canExpand}
+        isExpanded={isExpanded}
+        onToggle={() => setIsExpanded((v) => !v)}
+        isCompact={isCompact}
       >
-        {!isCompact && (
-          <Trash className="size-3.5 shrink-0 text-primary-500 dark:text-primary-300 group-hover:text-primary-950 group-hover:dark:text-primary" />
-        )}
-        {!isCompact && (
-          <span className="text-primary-500 dark:text-primary-300 font-medium group-hover:text-primary-950 group-hover:dark:text-primary">
-            Deleted
-          </span>
-        )}
         <code className="text-primary-500 font-sans truncate group-hover:text-primary-950 group-hover:dark:text-primary">
           {displayPath || fullPath || "file"}
         </code>
-        {canExpand && (
-          <ArrowUp
-            className={`size-3.5 shrink-0 text-primary-500 opacity-0 transition-all duration-200 group-hover:text-primary-950 group-hover:dark:text-primary group-hover:opacity-100 ${isExpanded ? "rotate-180" : "rotate-90"}`}
-          />
-        )}
-      </button>
+      </ToolHeader>
 
       {canExpand && (
-        <div
-          className={`grid transition-all duration-200 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
-        >
-          <div className="min-h-0 overflow-hidden">
-            <pre className="noscrollbar text-xs font-mono text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto break-all">
-              {fullPath}
-            </pre>
-          </div>
-        </div>
+        <ToolCollapse isExpanded={isExpanded}>
+          <pre className="noscrollbar text-xs font-mono text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-48 overflow-y-auto break-all">
+            {fullPath}
+          </pre>
+        </ToolCollapse>
       )}
     </div>
   );

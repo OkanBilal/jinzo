@@ -45,6 +45,14 @@ export interface WorkRunRequest {
   systemPrompt?: string | null;
   context?: WorkRunContextItem[];
   toolPolicy?: Record<string, unknown> | null;
+  /**
+   * Per-run config snapshot. Adapters use these values to override their
+   * cached provider config when present (e.g. Pulse forces specific
+   * permission/sandbox/mode regardless of the user's current provider settings).
+   * Recognised keys: permissionMode, sandboxMode, mode, thinkingMode, effortLevel,
+   * modelReasoningEffort.
+   */
+  configSnapshot?: Record<string, unknown> | null;
   /** File attachments (images/documents) to include in the prompt */
   attachments?: FileAttachment[];
   /** Structured context issues passed from the UI */
@@ -56,7 +64,7 @@ export interface WorkRunRequest {
   /** User-selected skills to invoke during this run (adapter decides how to inject) */
   skills?: Array<{
     name: string;
-    path: string;
+    path?: string;
     displayName?: string;
     description?: string;
     shortDescription?: string;
@@ -263,7 +271,7 @@ export interface WorkRunContinueRequest {
   /** User-selected skills to invoke for this follow-up (adapter decides how to inject) */
   skills?: Array<{
     name: string;
-    path: string;
+    path?: string;
     displayName?: string;
     description?: string;
     shortDescription?: string;
@@ -504,14 +512,18 @@ export interface CodexAdapterConfig {
   defaultModel?: string;
   /** Timeout in milliseconds */
   timeout?: number;
-  /** Permission mode for tool access */
-  permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
   /** Approval policy passed to Codex CLI (no interactive hooks — CLI handles internally) */
   approvalMode?: "untrusted" | "on-request" | "never";
   /** Sandbox mode for file/network isolation */
   sandboxMode?: "read-only" | "workspace-write" | "danger-full-access";
   /** Model reasoning effort level */
   modelReasoningEffort?: "minimal" | "low" | "medium" | "high" | "xhigh";
+  /**
+   * Service tier id passed to `turn/start` (e.g. "priority", "flex", "default").
+   * Discovered via `model/list` per-model `serviceTiers`. When set on the adapter
+   * config it applies to all turns; per-run config snapshot can override.
+   */
+  serviceTier?: string;
   /** Enable network access within sandbox_workspace_write mode */
   networkAccessEnabled?: boolean;
   /** Web search mode */
@@ -520,12 +532,22 @@ export interface CodexAdapterConfig {
   skipGitRepoCheck?: boolean;
   /** Thread personality — controls the agent's conversational style */
   personality?: "friendly" | "pragmatic" | "none";
+  /**
+   * When true, sends `collaborationMode: { mode: "plan", … }` on `turn/start`,
+   * activating Codex's built-in plan preset (medium reasoning, plan instructions).
+   * Independent of `sandboxMode` — both can be active.
+   */
+  planMode?: boolean;
   /** Additional directories the agent can access */
   additionalDirectories?: string[];
   /** Base URL override for OpenAI API */
   baseUrl?: string;
   /** Additional Codex CLI config overrides (passed as --config key=value) */
   config?: Record<string, unknown>;
+  /** Saved JSON Schema definitions for structured output (forwarded as `output_schema` on `turn/start`). */
+  structuredOutputs?: Record<string, StructuredOutputEntry>;
+  /** ID of the currently selected structured output schema (null = disabled). */
+  structuredOutputsSelectedId?: string | null;
 }
 
 /**
@@ -700,6 +722,12 @@ export interface ModelInfo {
   supportsEffort?: boolean;
   /** Available effort levels for this model */
   supportedEffortLevels?: ('minimal' | 'low' | 'medium' | 'high' | 'max' | 'xhigh')[];
+  /**
+   * Provider-specific service tiers (e.g. Codex: `priority`, `flex`, `default`).
+   * When set, the UI exposes a tier picker so users can trade quality/cost
+   * vs. throughput per turn. The tier is passed to the provider on `turn/start`.
+   */
+  serviceTiers?: Array<{ id: string; name: string; description?: string }>;
   /** Model description */
   description?: string;
   // TODO: expose in UI — model supports auto mode selection

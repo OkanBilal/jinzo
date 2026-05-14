@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { SidebarHeader } from "./sidebar-header";
 import { SidebarFooter } from "./sidebar-footer";
 import { SidebarContent } from "./sidebar-content";
@@ -12,7 +13,15 @@ import HelpMenu from "./help-menu";
 import SpaceContextMenu from "./space-context-menu";
 import EditSpaceModal from "./edit-space-modal";
 import DeleteSpaceModal from "./delete-space-modal";
-import { Edit, Plus, Connect } from "@/components/ui/icons";
+import {
+  Edit,
+  Plus,
+  Connect,
+  Apps,
+  Project,
+  Sun,
+  External,
+} from "@/components/ui/icons";
 import CloneRepoModal from "./clone-repo-modal";
 import CreateProjectModal from "./create-project-modal";
 import { useDeleteWorkspace } from "@/features/workspace/hooks";
@@ -27,14 +36,20 @@ import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useScriptNotifications } from "@/hooks/use-script-notifications";
 import { UpdateBanner } from "./update-banner";
+import { Button } from "@/components/ui/button";
+import { Body, Tooltip } from "@/components/ui";
+
+const CLAUDE_PLUGINS_URL = "https://claude.com/plugins#plugins";
 
 interface SidebarProps {
   collapsed?: boolean;
 }
 
 export default function Sidebar({ collapsed }: SidebarProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const sidebarConfig = useSidebarConfig();
-  const { spaces, activeSpaceId } = useActiveSpace();
+  const { spaces, activeSpaceId, activeSpaceAgentSlug } = useActiveSpace();
 
   const {
     searchQuery,
@@ -92,12 +107,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     setHelpMenuState({ isOpen: false, position: { x: 0, y: 0 } });
   };
 
-  const {
-    account,
-    workspaces,
-    isLoadingWorkspaces,
-    handleRefreshConnections,
-  } = useSidebarData({ searchQuery, sidebarConfig });
+  const { account, workspaces, isLoadingWorkspaces, handleRefreshConnections } =
+    useSidebarData({ searchQuery, sidebarConfig });
 
   const {
     handleSpaceChange,
@@ -120,6 +131,20 @@ export default function Sidebar({ collapsed }: SidebarProps) {
 
   // Suppress unused variable warning for handleRefreshConnections
   void handleRefreshConnections;
+
+  const isPluginsRoute =
+    location.pathname === "/plugins" ||
+    location.pathname.startsWith("/plugins/");
+  const isPulseRoute =
+    location.pathname === "/pulse" || location.pathname.startsWith("/pulse/");
+  // const isRelayRoute =
+  //   location.pathname === "/relay" ||
+  //   location.pathname.startsWith("/relay/");
+  /** From `app_settings.active_space_id` → `spaces.slug` (not current route). */
+  const pluginsUseClaudeExternalUrl = activeSpaceAgentSlug === "claude";
+  const isPluginsDisabledForAgent =
+    activeSpaceAgentSlug === "copilot" ||
+    activeSpaceAgentSlug === "cursor";
 
   return (
     <>
@@ -150,12 +175,12 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               onSearchChange={setSearchQuery}
               onSearchClear={handleSearchClear}
             />
-            <div className="p-3">
+            <div className="px-3 py-0.25">
               <NewButton
                 onClick={handleNewClick}
                 icon={
                   sidebarConfig.itemType === "workspace" ? (
-                    <Plus className="size-3.5 text-primary-900 dark:text-primary-100" />
+                    <Project className="size-3.5 text-primary-900 dark:text-primary-100" />
                   ) : (
                     <Edit className="w-4 h-4 text-primary-900 dark:text-primary-100" />
                   )
@@ -199,6 +224,164 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 }
               />
             </div>
+            <div className="px-3 mb-0.25">
+              <Button
+                variant="subtle"
+                tooltip="View your pulse"
+                size="xs"
+                className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
+                  isPulseRoute
+                    ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
+                    : ""
+                }`}
+                onClick={() => navigate("/pulse")}
+                aria-current={isPulseRoute ? "page" : undefined}
+              >
+                <Sun
+                  className={`w-4 h-4 -ml-1 ${
+                    isPulseRoute
+                      ? "text-primary-950 dark:text-primary"
+                      : "text-primary-900 dark:text-primary-200"
+                  }`}
+                />
+                <Body
+                  className={`text-s font-medium ${
+                    isPulseRoute
+                      ? "text-primary-950 dark:text-primary"
+                      : "text-primary-900 dark:text-primary-100"
+                  }`}
+                >
+                  Pulse
+                </Body>
+              </Button>
+            </div>
+            <div className="px-3 mb-2">
+              {isPluginsDisabledForAgent ? (
+                <Tooltip
+                  content="Not available for this agent yet."
+                  position="top"
+                >
+                  <span className="block w-full">
+                    <Button
+                      variant="subtle"
+                      size="xs"
+                      tooltip={`${isPluginsDisabledForAgent ? "Not available for this agent yet.": "View plugins"}`}
+                      disabled
+                      className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors pointer-events-none opacity-50 ${
+                        isPluginsRoute
+                          ? "bg-primary/50 dark:bg-primary/5"
+                          : ""
+                      }`}
+                      aria-current={isPluginsRoute ? "page" : undefined}
+                    >
+                      <Apps
+                        className={`w-4 h-4 -ml-1 ${
+                          isPluginsRoute
+                            ? "text-primary-950 dark:text-primary"
+                            : "text-primary-900 dark:text-primary-200"
+                        }`}
+                      />
+                      <Body
+                        className={`text-s font-medium flex-1 text-left ${
+                          isPluginsRoute
+                            ? "text-primary-950 dark:text-primary"
+                            : "text-primary-900 dark:text-primary-100"
+                        }`}
+                      >
+                        Plugins
+                      </Body>
+                    </Button>
+                  </span>
+                </Tooltip>
+              ) : (
+                <Button
+                  variant="subtle"
+                  tooltip="View plugins"
+                  size="xs"
+                  className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
+                    isPluginsRoute
+                      ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
+                      : ""
+                  }`}
+                  onClick={() => {
+                    if (pluginsUseClaudeExternalUrl) {
+                      void window.api.shell.openExternal(CLAUDE_PLUGINS_URL);
+                      return;
+                    }
+                    navigate("/plugins");
+                  }}
+                  aria-current={isPluginsRoute ? "page" : undefined}
+                >
+                  <Apps
+                    className={`w-4 h-4 -ml-1 shrink-0 ${
+                      isPluginsRoute
+                        ? "text-primary-950 dark:text-primary"
+                        : "text-primary-900 dark:text-primary-200"
+                    }`}
+                  />
+                  <Body
+                    className={`text-s font-medium flex-1 text-left ${
+                      isPluginsRoute
+                        ? "text-primary-950 dark:text-primary"
+                        : "text-primary-900 dark:text-primary-100"
+                    }`}
+                  >
+                    Plugins
+                  </Body>
+                  {pluginsUseClaudeExternalUrl ? (
+                    <External
+                      className={`w-3.5 h-3.5 shrink-0 ${
+                        isPluginsRoute
+                          ? "text-primary-950 dark:text-primary"
+                          : "text-primary-900 dark:text-primary-200"
+                      }`}
+                      aria-hidden
+                    />
+                  ) : null}
+                </Button>
+              )}
+            </div>
+
+            {/* <div className="px-3 mb-2">
+              <Button
+                variant="subtle"
+                tooltip="Relay"
+                size="xs"
+                className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
+                  isRelayRoute
+                    ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
+                    : ""
+                }`}
+                onClick={() => navigate("/relay")}
+                aria-current={isRelayRoute ? "page" : undefined}
+              >
+                <RelayIcon
+                  className={`w-4 h-4 -ml-1 shrink-0 ${
+                    isRelayRoute
+                      ? "text-primary-950 dark:text-primary"
+                      : "text-primary-900 dark:text-primary-200"
+                  }`}
+                />
+                <Body
+                  className={`text-s font-medium flex-1 text-left ${
+                    isRelayRoute
+                      ? "text-primary-950 dark:text-primary"
+                      : "text-primary-900 dark:text-primary-100"
+                  }`}
+                >
+                  Relay
+                </Body>
+                <span
+                  className={`shrink-0 text-[10px] uppercase px-1.5 py-px rounded-md ${
+                    isRelayRoute
+                      ? "bg-primary-400/20 text-primary-800 dark:bg-primary/5 dark:text-primary"
+                      : "bg-primary-400/20 text-primary-600 dark:bg-primary/5 dark:text-primary-200"
+                  }`}
+                >
+                  Beta
+                </span>
+              </Button>
+            </div> */}
             <SidebarContent
               workspaces={workspaces}
               isLoadingWorkspaces={isLoadingWorkspaces}

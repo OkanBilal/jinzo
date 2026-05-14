@@ -17,7 +17,7 @@ import type {
   HooksConfig,
   HookMatcher,
   AgentsConfig,
-} from "./adapter.types";
+} from "../../../../shared/adapter.types";
 import { findClaudeBinary, resolveCandidate } from "../providers.utils";
 import {
   requestToolApproval,
@@ -184,6 +184,11 @@ interface SDKOptions {
   effort?: "low" | "medium" | "high" | "max";
   settings?: Record<string, unknown>;
   promptSuggestions?: boolean;
+  /**
+   * Emit incremental `stream_event` messages with raw Anthropic content-block
+   * deltas (text_delta, thinking_delta, …) for token-by-token streaming.
+   */
+  includePartialMessages?: boolean;
 }
 
 interface SDKMessageContent {
@@ -287,11 +292,35 @@ interface SDKSystemMessage {
   skills?: string[];
 }
 
+interface SDKRawStreamEvent {
+  type: string;
+  index?: number;
+  content_block?: { type: string; [key: string]: unknown };
+  delta?: {
+    type?: string;
+    text?: string;
+    thinking?: string;
+    partial_json?: string;
+    [key: string]: unknown;
+  };
+  message?: { id?: string; [key: string]: unknown };
+  [key: string]: unknown;
+}
+
+interface SDKPartialAssistantMessage {
+  type: "stream_event";
+  event: SDKRawStreamEvent;
+  parent_tool_use_id: string | null;
+  uuid: string;
+  session_id: string;
+}
+
 type SDKMessage =
   | SDKAssistantMessage
   | SDKUserMessage
   | SDKResultMessage
   | SDKSystemMessage
+  | SDKPartialAssistantMessage
   | {
       type: string;
       session_id?: string;
@@ -395,6 +424,11 @@ export function createClaudeAdapter(
     string,
     { toolName: string; input?: unknown; startedAt?: number }
   >();
+
+  // Accumulated text per (runId, content_block_index) for streaming UI.
+  // Replaced (not appended) by the renderer each emit, so we send full text.
+  const partialTextBuffers = new Map<string, string>();
+  const partialThinkingBuffers = new Map<string, string>();
 
   async function ensureSDK(): Promise<void> {
     if (loadError) {
@@ -607,6 +641,9 @@ export function createClaudeAdapter(
 
     // Enable prompt suggestions
     options.promptSuggestions = true;
+
+    // Stream raw content-block deltas (text + thinking) for token-by-token UI
+    options.includePartialMessages = true;
 
     // Inject interactive tool approval via PreToolUse hook
     // Only inject when NOT in bypassPermissions mode and we have a runId
@@ -1016,15 +1053,34 @@ export function createClaudeAdapter(
             };
           }
 
-          // For AskUserQuestion, inject the user's answer into the tool input
+          // For AskUserQuestion, inject the user's answer into the tool input.
+          // Per Anthropic docs (code.claude.com/docs/en/agent-sdk/user-input):
+          //   - `questions` MUST be passed through unchanged (required for tool processing)
+          //   - `answers` keys MUST be the question text (NOT an index)
+          //   - Multi-select values are joined with ", " (UI already does this)
           if (isAskUser && response.answer !== undefined) {
+            const askedQuestions = (toolInput.questions ?? []) as Array<{ question?: string }>;
+            const answersMap: Record<string, string> = {};
+            // Primary: first question takes the user's actual selection from the dialog.
+            const primaryText = askedQuestions[0]?.question;
+            if (primaryText) {
+              answersMap[primaryText] = response.answer;
+            }
+            // Best-effort fallback for multi-question tool calls — Claude
+            // usually sends a single question, but if it bundles multiple,
+            // the tool rejects the call when any question key is missing.
+            // Mirroring is a stopgap until the dialog can render N questions.
+            for (let i = 1; i < askedQuestions.length; i++) {
+              const text = askedQuestions[i]?.question;
+              if (text) answersMap[text] = response.answer;
+            }
             return {
               hookSpecificOutput: {
                 hookEventName: "PreToolUse",
                 permissionDecision: "allow",
                 updatedInput: {
-                  ...toolInput,
-                  answers: { "0": response.answer },
+                  questions: askedQuestions,
+                  answers: answersMap,
                 },
               },
             };
@@ -1224,6 +1280,70 @@ export function createClaudeAdapter(
         break;
       }
 
+      case "stream_event": {
+        const partialMsg = msg as SDKPartialAssistantMessage;
+        const event = partialMsg.event;
+        if (!event) break;
+
+        // Skip subagent streams — they would pollute the parent timeline
+        if (partialMsg.parent_tool_use_id) break;
+
+        const blockIndex = typeof event.index === "number" ? event.index : -1;
+
+        if (event.type === "content_block_delta" && event.delta && blockIndex >= 0) {
+          const bufferKey = `${_runId}-${blockIndex}`;
+
+          if (event.delta.type === "text_delta" && event.delta.text) {
+            const next = (partialTextBuffers.get(bufferKey) ?? "") + event.delta.text;
+            partialTextBuffers.set(bufferKey, next);
+            events.push({
+              type: "artifact",
+              kind: "report",
+              content: next,
+              metadata: { source: "agent_message_streaming" },
+              ephemeral: true,
+              streamId: `claude-msg-${_runId}-${blockIndex}`,
+            });
+          } else if (event.delta.type === "thinking_delta" && event.delta.thinking) {
+            const next = (partialThinkingBuffers.get(bufferKey) ?? "") + event.delta.thinking;
+            partialThinkingBuffers.set(bufferKey, next);
+            events.push({
+              type: "artifact",
+              kind: "report",
+              content: next,
+              metadata: { source: "agent_thinking_streaming" },
+              ephemeral: true,
+              streamId: `claude-think-${_runId}-${blockIndex}`,
+            });
+          }
+        } else if (event.type === "content_block_stop" && blockIndex >= 0) {
+          const key = `${_runId}-${blockIndex}`;
+          // Thinking lane has no DB-persisted counterpart, so the content-match
+          // filter in the renderer won't auto-clear it. Push an empty update.
+          if (partialThinkingBuffers.has(key)) {
+            events.push({
+              type: "artifact",
+              kind: "report",
+              content: "",
+              metadata: { source: "agent_thinking_streaming" },
+              ephemeral: true,
+              streamId: `claude-think-${_runId}-${blockIndex}`,
+            });
+          }
+          partialTextBuffers.delete(key);
+          partialThinkingBuffers.delete(key);
+        } else if (event.type === "message_stop") {
+          // Safety net: clear any leftover buffers for this run
+          for (const key of partialTextBuffers.keys()) {
+            if (key.startsWith(`${_runId}-`)) partialTextBuffers.delete(key);
+          }
+          for (const key of partialThinkingBuffers.keys()) {
+            if (key.startsWith(`${_runId}-`)) partialThinkingBuffers.delete(key);
+          }
+        }
+        break;
+      }
+
       default: {
         // Handle tool results that might come as different message types
         const anyMsg = msg as any;
@@ -1344,7 +1464,7 @@ export function createClaudeAdapter(
       const skills: SkillInfo[] = [];
 
       if (settingSources.includes("user")) {
-        const userSkillsDir = path.join(os.homedir(), ".claude", "skills");
+        const userSkillsDir = path.join(os.homedir(), ".claude", "skills", );
         const userSkills = await discoverSkillsFromDirectory(
           userSkillsDir,
           "user",
@@ -1409,6 +1529,13 @@ export function createClaudeAdapter(
           undefined, // forkSession
           onEvent, // for PostToolUse output capture
         );
+
+        // Per-run override (e.g. Pulse forces permissionMode="auto")
+        const overridePermissionMode = (request.configSnapshot as Record<string, unknown> | null | undefined)
+          ?.permissionMode;
+        if (typeof overridePermissionMode === "string") {
+          (options as { permissionMode?: string }).permissionMode = overridePermissionMode;
+        }
 
         await onEvent({
           type: "log",
@@ -2521,26 +2648,39 @@ export function createClaudeAdapter(
         }
 
         // Map SDK models to our ModelInfo format
-        const models: ModelInfo[] = sdkModels.map((sdkModel, index) => ({
-          id: sdkModel.value,
-          displayName: sdkModel.displayName,
-          description: sdkModel.description,
-          isDefault:
-            sdkModel.value === config.defaultModel ||
-            (!config.defaultModel && index === 0),
-          capabilities: {
-            streaming: true,
-            vision: true,
-            functionCalling: true,
-            // Mark opus models as having reasoning capability
-            reasoning: sdkModel.value.includes("opus"),
-          },
-          // Estimate context window based on model name
-          contextWindow: sdkModel.value.includes("haiku") ? 128000 : 200000,
-          supportsFastMode: sdkModel.supportsFastMode,
-          supportsEffort: sdkModel.supportsEffort,
-          supportedEffortLevels: sdkModel.supportedEffortLevels,
-        }));
+        const models: ModelInfo[] = sdkModels.map((sdkModel, index) => {
+          // SDK's .d.ts declares supportsFastMode but the runtime payload
+          // doesn't include it (verified via the actual sdkModels response:
+          // only value/displayName/description/supportsEffort/supportedEffortLevels/
+          // supportsAdaptiveThinking/supportsAutoMode are populated). Fast mode
+          // is currently only meaningful on Opus 4.6; opus 4.7 / sonnet 4.6 /
+          // haiku do NOT use it. Match the historical literal ids so when the
+          // SDK starts returning supportsFastMode (or surfaces an opus-4-6
+          // entry again) it lights up automatically.
+          //TO-DO: add supportsFastMode to the sdkModels response 
+          const id = sdkModel.value;
+          const fallbackFastMode = id === "claude-opus-4-6" || id === "opus-4-6";
+          return {
+            id,
+            displayName: sdkModel.displayName,
+            description: sdkModel.description,
+            isDefault:
+              sdkModel.value === config.defaultModel ||
+              (!config.defaultModel && index === 0),
+            capabilities: {
+              streaming: true,
+              vision: true,
+              functionCalling: true,
+              // Mark opus models as having reasoning capability
+              reasoning: sdkModel.value.includes("opus"),
+            },
+            // Estimate context window based on model name
+            contextWindow: sdkModel.value.includes("haiku") ? 128000 : 200000,
+            supportsFastMode: sdkModel.supportsFastMode ?? fallbackFastMode,
+            supportsEffort: sdkModel.supportsEffort,
+            supportedEffortLevels: sdkModel.supportedEffortLevels,
+          };
+        });
 
         // Cache the result
         cachedModels = models;
@@ -2624,7 +2764,7 @@ export function createClaudeAdapter(
       }
     },
 
-    async generateTitle(goal: string, context?: import("./adapter.types").WorkRunContextItem[]): Promise<string> {
+    async generateTitle(goal: string, context?: import("../../../../shared/adapter.types").WorkRunContextItem[]): Promise<string> {
       await ensureSDK();
 
       if (!queryFn) {
@@ -2648,9 +2788,9 @@ export function createClaudeAdapter(
         "Generate a concise title (2-5 words) that summarizes what the user wants.",
         "Rules:",
         "- Reply with ONLY the title text, nothing else",
-        "- Use natural, (e.g. \"fix login redirect\", \"add dark mode\", \"greeting message\")",
-        "- Do NOT use generic descriptions of the request type (e.g. NOT \"greeting title generation\")",
-        "- Instead, describe the actual topic or intent (e.g. \"hello greeting\" for a hello message)",
+        "- Use title case: capitalize the first letter of each word (e.g. \"Fix Login Redirect\", \"Add Dark Mode\", \"Greeting Message\")",
+        "- Do NOT use generic descriptions of the request type (e.g. NOT \"Greeting Title Generation\")",
+        "- Instead, describe the actual topic or intent (e.g. \"Hello Greeting\" for a hello message)",
         "- No quotes, no punctuation at the end, no prefixes",
         "",
         `User message: ${goal}`,
@@ -2671,7 +2811,8 @@ export function createClaudeAdapter(
       options.maxTurns = 1;
       options.allowedTools = [];
       options.disallowedTools = ["*"];
-      options.systemPrompt = "You generate short titles. Output ONLY the title (2-5 words, lowercase). Describe the topic, not the action of generating a title.";
+      options.systemPrompt =
+        "You generate short titles. Output ONLY the title (2-5 words, title case). Describe the topic, not the action of generating a title.";
 
       const query = queryFn({
         prompt: titlePrompt,

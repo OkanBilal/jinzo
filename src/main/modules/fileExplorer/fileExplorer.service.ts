@@ -9,12 +9,14 @@ import type {
   ReadFileTextOptions,
   DirEntry,
   ListDirOptions,
+  SearchFilesOptions,
 } from "./fileExplorer.dto";
 import {
   DEFAULT_EXCLUDE_PATTERNS,
   MAX_FILE_SIZE_BYTES,
   MAX_READ_DIRECTORY_NODES,
   DEFAULT_READ_DIRECTORY_DEPTH,
+  DEFAULT_SEARCH_FILES_MAX,
 } from "./fileExplorer.dto";
 
 
@@ -525,10 +527,86 @@ export const fileExplorerService = {
   },
 
   /**
-   * List directory contents for lazy loading.
-   * Returns immediate children with hasChildren flag for directories.
-   * This is optimized for tree expansion - doesn't recurse.
+   * Recursive substring search across the workspace tree. Matches against the
+   * filename and the workspace-relative path; stops as soon as `max` matches
+   * are collected. No `fs.stat` per match — keeps the hot keystroke path cheap.
    */
+  async searchFiles(
+    options: SearchFilesOptions,
+  ): Promise<ServiceResponse<DirEntry[]>> {
+    const {
+      rootPath,
+      query,
+      max = DEFAULT_SEARCH_FILES_MAX,
+      includeHidden = false,
+      excludePatterns = DEFAULT_EXCLUDE_PATTERNS,
+    } = options;
+
+    const needle = query.toLowerCase();
+    if (!needle) return { success: true, data: [] };
+
+    const normalizedRoot = rootPath.replace(/\/$/, "");
+    const rootPrefix = normalizedRoot + path.sep;
+    const results: DirEntry[] = [];
+
+    const walk = async (dirPath: string): Promise<void> => {
+      if (results.length >= max) return;
+      let entries;
+      try {
+        entries = await fs.readdir(dirPath, { withFileTypes: true });
+      } catch {
+        // Permission denied / vanished directory — skip silently.
+        return;
+      }
+      for (const entry of entries) {
+        if (results.length >= max) return;
+        const name = entry.name;
+        if (shouldExclude(name, excludePatterns, includeHidden)) continue;
+        const fullPath = path.join(dirPath, name);
+
+        if (entry.isDirectory()) {
+          await walk(fullPath);
+        } else if (entry.isFile()) {
+          const relativePath = fullPath.startsWith(rootPrefix)
+            ? fullPath.slice(rootPrefix.length)
+            : fullPath;
+          if (
+            name.toLowerCase().includes(needle) ||
+            relativePath.toLowerCase().includes(needle)
+          ) {
+            results.push({
+              name,
+              fullPath,
+              type: "file",
+              hasChildren: false,
+              extension: getFileExtension(name),
+            });
+          }
+        }
+      }
+    };
+
+    try {
+      const rootStat = await fs.stat(rootPath);
+      if (!rootStat.isDirectory()) {
+        return { success: false, error: "Path is not a directory" };
+      }
+      await walk(rootPath);
+      return { success: true, data: results };
+    } catch (error) {
+      const errCode = (error as NodeJS.ErrnoException).code;
+      if (errCode === "ENOENT") {
+        return { success: false, error: "Directory does not exist" };
+      }
+      if (errCode === "EACCES") {
+        return { success: false, error: "Permission denied" };
+      }
+      console.error("[FileExplorer] searchFiles failed:", error);
+      return { success: false, error: "Failed to search files" };
+    }
+  },
+
+  // Immediate children only — no recursion. Used for lazy tree expansion.
   async listDir(options: ListDirOptions): Promise<ServiceResponse<DirEntry[]>> {
     const {
       dirPath,

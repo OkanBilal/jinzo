@@ -8,7 +8,7 @@ import { SchemaEditorTab, type SchemaProperty } from "./schema-editor-tab";
 import { SchemaDeleteDialog } from "./schema-delete-dialog";
 import { SchemaModalHeader } from "./schema-modal-header";
 import { useSchemaCrud } from "./use-schema-crud";
-import { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
+import { StructuredOutputEntry } from "../../../../shared/adapter.types";
 
 type Tab = "schemas" | "editor";
 

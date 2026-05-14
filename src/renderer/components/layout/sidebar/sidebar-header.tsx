@@ -22,13 +22,13 @@ export function SidebarHeader({
   onSearchClear,
 }: SidebarHeaderProps) {
   return (
-    <div className="px-3 pt-10 shrink-0">
-      <div
+    <div className="px-3 pt-12  shrink-0">
+      {/* <div
         className={`flex items-center transition-all duration-200 ease-in-out ${
           isSearchExpanded ? "gap-0" : "gap-3"
         }`}
       >
-        {/* <UserProfile
+        <UserProfile
           avatarUrl={avatarUrl}
           displayName={displayName}
           isVisible={!isSearchExpanded}
@@ -39,8 +39,8 @@ export function SidebarHeader({
           onToggle={onSearchExpand}
           onSearchChange={onSearchChange}
           onClear={onSearchClear}
-        /> */}
-      </div>
+        />
+      </div> */}
     </div>
   );
 }

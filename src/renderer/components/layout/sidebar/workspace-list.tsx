@@ -7,13 +7,13 @@ import {
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { Caption } from "@/components/ui";
+import { Button, Caption } from "@/components/ui";
 import { ArrowUp } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
 import type { Workspace as WorkspaceResponse } from "@/lib/redux/api/workspacesApi";
 import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
-import { useRouteType } from "@/hooks/use-route-type";
-import { getBaseRoutePath } from "@/lib/route-utils";
+import { useSidebarConfig } from "@/hooks/use-sidebar-config";
+import { getWorkspaceListBasePath } from "@/lib/route-utils";
 import type { RootState } from "@/lib/redux";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
@@ -59,13 +59,13 @@ function WorkspaceGroupSection({
 
   return (
     <div className="mb-1">
-      <button
+      <Button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="group/section w-full flex items-center gap-1.5 px-2 py-1 mb-1 rounded-lg cursor-pointer hover:bg-primary/10 dark:hover:bg-primary/5 transition-colors"
+        className="group/section w-full flex items-center gap-1.5 px-2 py-1 mb-0.5 rounded-lg cursor-pointer hover:bg-primary/50 dark:hover:bg-primary/5 transition-colors"
       >
-        {group.icon && <span className="shrink-0">{group.icon}</span>}
-        <span className="text-xs font-medium text-primary-900 dark:text-primary-300 truncate">
+        {group.icon && <span className="shrink-0 text-xs">{group.icon}</span>}
+        <span className="text-xs font-medium text-primary-900 dark:text-primary-200 truncate">
           {group.label}
         </span>
         <div className="ml-auto flex items-center gap-1.5">
@@ -78,7 +78,7 @@ function WorkspaceGroupSection({
             }`}
           />
         </div>
-      </button>
+      </Button>
       <div
         className={`grid transition-[grid-template-rows] duration-300 ease-out ${
           expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
@@ -112,7 +112,7 @@ export default function WorkspacesList({
   }>({ isOpen: false, projectId: "", workspaceName: "" });
   const navigate = useNavigate();
   const location = useLocation();
-  const routeType = useRouteType();
+  const { defaultRoute: spaceDefaultRoute } = useSidebarConfig();
   const [updateWorkspace] = useUpdateWorkspaceMutation();
   const activeWorkspaceId = useSelector(
     (state: RootState) => state.workspace.activeWorkspaceId,
@@ -140,10 +140,15 @@ export default function WorkspacesList({
     return map;
   }, [projects]);
 
+  const basePath = useMemo(
+    () => getWorkspaceListBasePath(location.pathname, spaceDefaultRoute),
+    [location.pathname, spaceDefaultRoute],
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-16">
-        <Caption className="text-primary-800 dark:text-primary-100 font-semibold">
+        <Caption className="text-primary-800 dark:text-primary-200 font-medium">
           Loading...
         </Caption>
       </div>
@@ -153,16 +158,12 @@ export default function WorkspacesList({
   if (workspaces.length === 0) {
     return (
       <div className="flex items-center justify-center h-16">
-        <Caption className="text-primary-800 dark:text-primary-100 font-semibold">
-          No repositories yet
+        <Caption className="text-primary-800 dark:text-primary-200 font-medium">
+          No projects yet
         </Caption>
       </div>
     );
   }
-
-  const basePath = getBaseRoutePath(
-    routeType === "claude" ? "claude" : routeType === "codex" ? "codex" : routeType === "cursor" ? "cursor" : "copilot",
-  );
 
   const handleWorkspaceClick = (workspace: WorkspaceResponse) => {
     navigate(`${basePath}/${workspace.id}`);
@@ -346,7 +347,7 @@ export default function WorkspacesList({
         // onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsExpanded(!isExpanded); } }}
         className="w-full flex items-center justify-between transition-all duration-200 bg-transparent   px-2 py-0.5 mb-1 rounded-lg "
       >
-        <Caption className="text-primary-800 dark:text-primary-300 font-medium">
+        <Caption className="text-primary-900 dark:text-primary-100 font-medium">
           Workspaces
         </Caption>
         <div className="flex items-center ">
@@ -370,14 +371,14 @@ export default function WorkspacesList({
         }`}
       >
         {grouping === "none" ? (
-          <div className="flex flex-col space-y-0.5">
+          <div className="flex flex-col space-y-1">
             {sortedWorkspaces.map(renderWorkspaceItem)}
           </div>
         ) : (
           <div className="flex flex-col ">
             {groups.map((group) => (
               <WorkspaceGroupSection key={group.key} group={group}>
-                <div className="flex flex-col space-y-0.5 pl-1 pr-1">
+                <div className="flex flex-col space-y-1 pl-1 pr-1">
                   {group.workspaces.map(renderWorkspaceItem)}
                 </div>
               </WorkspaceGroupSection>

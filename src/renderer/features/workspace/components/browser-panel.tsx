@@ -313,7 +313,7 @@ export function BrowserPanel() {
           onKeyDown={handleKeyDown}
           onFocus={(e) => e.currentTarget.select()}
           placeholder="Enter URL or search"
-          className="flex-1 min-w-0 px-3 py-1.5 text-xs rounded-md bg-primary-200/40 dark:bg-primary-800/40 text-primary-900 dark:text-primary-100 placeholder:text-primary-500/60 outline-none focus:bg-primary-200/60 dark:focus:bg-primary-800/60"
+          className="flex-1 min-w-0 px-3 py-1.5 text-xs rounded-md bg-primary-200/40 dark:bg-primary-800/40 text-primary-900 dark:text-primary-100 placeholder:text-primary-500 outline-none focus:bg-primary-200/60 dark:focus:bg-primary-800/60"
           spellCheck={false}
         />
         <Button
@@ -342,7 +342,7 @@ export function BrowserPanel() {
       </div>
 
       {/* Title bar */}
-      <div className="px-3 py-1 text-[11px] -mb-0.25 text-primary-500/80 dark:text-primary-400/80 truncate border-b border-primary-200/40 dark:border-primary-800/40">
+      <div className="px-3 py-1 text-[11px] -mb-0.25 text-primary-500 dark:text-primary-400 truncate border-b border-primary-200/40 dark:border-primary-800/40">
         {nav.title || nav.url || "New tab"}
       </div>
 
@@ -352,7 +352,7 @@ export function BrowserPanel() {
         className="relative flex-1 overflow-hidden mb-0.25"
       >
         {!nav.url && (
-          <div className="absolute inset-0 flex items-center justify-center text-primary-500/80 dark:text-primary-400/80 text-xs pointer-events-none">
+          <div className="absolute inset-0 flex items-center justify-center text-primary-500 dark:text-primary-400 text-xs pointer-events-none">
             Enter a URL above to get started
           </div>
         )}

@@ -34,6 +34,16 @@ export interface ListDirOptions {
   excludePatterns?: string[];
 }
 
+export interface SearchFilesOptions {
+  rootPath: string;
+  query: string;
+  max?: number;
+  includeHidden?: boolean;
+  excludePatterns?: string[];
+}
+
+export const DEFAULT_SEARCH_FILES_MAX = 150;
+
 export interface ReadDirectoryOptions {
   rootPath: string;
   depth?: number; // Max recursion depth, undefined = infinite

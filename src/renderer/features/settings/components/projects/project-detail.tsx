@@ -14,6 +14,7 @@ import { ProjectLinkedResources } from "./project-linked-resources";
 import { ProjectScriptsSection } from "./project-scripts-section";
 import { ProjectInstructionsSection } from "./project-instructions-section";
 import { ProjectSaveBar } from "./project-save-bar";
+import { extractErrorMessage } from "@/lib/extract-error-message";
 
 interface ProjectDetailProps {
   id: string;
@@ -81,7 +82,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       dispatch({ type: "MARK_CLEAN" });
       toast.success("Project settings saved");
     } catch (err: any) {
-      toast.error(err?.message || "Failed to save project settings");
+      toast.error(extractErrorMessage(err, "Failed to save project settings"));
     }
   }, [saving, project, icon, iconMode, defaultBranch, setupScript, runScript, archiveScript, commitInstructions, prInstructions, updateProject]);
 
@@ -109,7 +110,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       toast.success("Repository removed");
       setSearchParams({});
     } catch (err: any) {
-      toast.error(err?.message || "Failed to remove repository");
+      toast.error(extractErrorMessage(err, "Failed to remove repository"));
     } finally {
       setShowRemoveAlert(false);
     }
@@ -228,7 +229,6 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
           <Button
             type="button"
             variant="danger"
-            size="md"
             onClick={() => setShowRemoveAlert(true)}
             disabled={removing}
           >

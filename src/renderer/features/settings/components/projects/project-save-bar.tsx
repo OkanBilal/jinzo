@@ -27,7 +27,6 @@ export function ProjectSaveBar({ lastSavedLabel, isDirty, saving, isLoading, onR
         </Button>
         <Button
           type="button"
-          size="md"
           variant="submit"
           disabled={!isDirty || saving}
           isLoading={saving}

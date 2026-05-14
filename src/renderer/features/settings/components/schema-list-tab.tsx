@@ -1,7 +1,7 @@
 import { useRef, useEffect } from "react";
 import { Trash, Edit, Duplicate } from "@/components/ui/icons";
 import { Muted, Input, Button } from "@/components/ui";
-import type { StructuredOutputEntry } from "../../../../main/modules/providers/adapters/adapter.types";
+import type { StructuredOutputEntry } from "../../../../shared/adapter.types";
 
 function RadioDot({ active }: { active: boolean }) {
   return (

@@ -67,7 +67,7 @@ export type {
   HookCallback,
   HookMatcher,
   HooksConfig,
-} from "./adapter.types";
+} from "../../../../shared/adapter.types";
 
 // Factory
 export {
@@ -94,3 +94,6 @@ export {
 // Adapters
 export { createCopilotAdapter } from "./copilot.adapter";
 export { createClaudeAdapter } from "./claude.adapter";
+
+// Shared helpers
+export { couldModifyFiles, FILE_MODIFYING_TOOLS } from "./adapter.shared";

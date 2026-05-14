@@ -49,13 +49,11 @@ export type SettingsRouteId =
   | "cursor"
   | "dashboard";
 
-export type SettingsNavGroup = "main" | "provider";
-
 export type SettingsSection = {
   id: SettingsRouteId;
   label: string;
   icon?: ElementType;
-  group?: SettingsNavGroup;
+  showInNav?: boolean;
   activeIds?: SettingsRouteId[];
   Component: ComponentType;
 };
@@ -68,22 +66,21 @@ export type SettingsNavItem = {
 };
 
 export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
-  { id: "general", label: "General", icon: General, group: "main", Component: GeneralSettings },
-  { id: "git", label: "Git", icon: Branch, group: "main", Component: GitSettings },
-  { id: "connections", label: "Connections", icon: Apps, group: "main", Component: ConnectionsSettings },
-  { id: "dashboard", label: "Dashboard", icon: Chart, group: "main", Component: DashboardPage },
+  { id: "general", label: "General", icon: General, showInNav: true, Component: GeneralSettings },
+  { id: "git", label: "Git", icon: Branch, showInNav: true, Component: GitSettings },
+  { id: "connections", label: "Connections", icon: Apps, showInNav: true, Component: ConnectionsSettings },
+  { id: "dashboard", label: "Dashboard", icon: Chart, showInNav: true, Component: DashboardPage },
 
-  { id: "claude", label: "Claude", icon: Claude, group: "provider", Component: ClaudeSettings },
+  { id: "claude", label: "Claude", icon: Claude, Component: ClaudeSettings },
   {
     id: "codex",
     label: "Codex",
     icon: Codex,
-    group: "provider",
     activeIds: ["codex", "codex-plugins"],
     Component: CodexSettings,
   },
-  { id: "copilot", label: "Copilot", icon: CopilotStatic, group: "provider", Component: CopilotSettings },
-  { id: "cursor", label: "Cursor", icon: Cursor, group: "provider", Component: CursorSettings },
+  { id: "copilot", label: "Copilot", icon: CopilotStatic, Component: CopilotSettings },
+  { id: "cursor", label: "Cursor", icon: Cursor, Component: CursorSettings },
 
   { id: "notifications", label: "Notifications", Component: NotificationsSettings },
   { id: "personalization", label: "Personalization", Component: PersonalizationSettings },
@@ -105,10 +102,7 @@ const toNavItem = (section: SettingsSection): SettingsNavItem => ({
 });
 
 export const SETTINGS_MAIN_NAV_ITEMS: readonly SettingsNavItem[] =
-  SETTINGS_SECTIONS.filter((s) => s.group === "main").map(toNavItem);
-
-export const SETTINGS_PROVIDER_NAV_ITEMS: readonly SettingsNavItem[] =
-  SETTINGS_SECTIONS.filter((s) => s.group === "provider").map(toNavItem);
+  SETTINGS_SECTIONS.filter((s) => s.showInNav).map(toNavItem);
 
 const SETTINGS_ROUTE_ID_SET = new Set<string>(
   SETTINGS_SECTIONS.map((section) => section.id),

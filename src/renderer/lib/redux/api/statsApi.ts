@@ -77,7 +77,9 @@ export interface DashboardData {
   codeActivity: CodeActivityStats;
 }
 
-export type ProviderFilter = "all" | "claude_code" | "copilot_cli" | "codex" | "cursor";
+import type { ProviderId } from "../../../../shared/provider-ids";
+
+export type ProviderFilter = "all" | ProviderId;
 
 export const statsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({

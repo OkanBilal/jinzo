@@ -1,11 +1,14 @@
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, type MouseEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/components/markdown-components";
 import type { EventGroup } from "../../utils/group-events";
 import { Code } from "@/components/ui/icons/space";
-import { Picture, Document, Codex, Close, Sparkles } from "@/components/ui/icons";
+import { Picture, Document, Codex, Close, Sparkles, External, ArrowUp } from "@/components/ui/icons";
 import { ProviderIcon } from "../provider-icon";
+import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
+import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
 
 const IMAGE_PATH_REGEX = /([~/]?[\w./-]+\.(?:png|jpe?g|webp|gif))\b/gi;
 
@@ -39,6 +42,11 @@ function localImageUrl(absPath: string): string {
   return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
 }
 
+function resolveImageUrl(src: string): string {
+  if (/^(data:|https?:|mains-localimg:|mains-capture:)/.test(src)) return src;
+  return localImageUrl(src);
+}
+
 interface PromptSkillMeta {
   name: string;
   path?: string;
@@ -57,7 +65,7 @@ function PromptSkillChipIcon({ skill }: { skill: PromptSkillMeta }) {
   if (iconPath && !failed) {
     return (
       <img
-        src={localImageUrl(iconPath)}
+        src={resolveImageUrl(iconPath)}
         alt=""
         className="w-3 h-3 rounded shrink-0 object-contain"
         style={skill.brandColor ? { backgroundColor: skill.brandColor } : undefined}
@@ -73,7 +81,7 @@ function PromptSkillInlineChip({ skill }: { skill: PromptSkillMeta }) {
   const tooltip = skill.shortDescription || skill.description || label;
   return (
     <span
-      className="inline-flex align-middle items-center gap-1 px-1.5 h-6 mx-0.5 rounded-lg text-xs font-medium leading-none select-none bg-primary dark:bg-primary-300/10 dark:text-primary-200"
+      className="inline-flex align-middle items-center gap-1 px-1.5 mb-0.5 h-6 mx-0.5 rounded-lg text-xs font-medium leading-none select-none bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-800"
       title={tooltip}
     >
       <span className="inline-flex items-center justify-center size-3.5 shrink-0 rounded-sm overflow-hidden">
@@ -84,35 +92,89 @@ function PromptSkillInlineChip({ skill }: { skill: PromptSkillMeta }) {
   );
 }
 
+interface PromptFileMeta {
+  fullPath: string;
+  basename: string;
+}
+
+function PromptFileInlineChip({ file }: { file: PromptFileMeta }) {
+  const dotIdx = file.basename.lastIndexOf(".");
+  const extension =
+    dotIdx > 0 && dotIdx < file.basename.length - 1 ? file.basename.slice(dotIdx + 1) : undefined;
+  return (
+    <span
+      className="inline-flex align-middle items-center gap-1 px-1.5 mb-0.5 h-6 mx-0.5 rounded-lg text-xs font-medium leading-none select-none bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-800 "
+      title={file.fullPath}
+    >
+      <span className="inline-flex items-center justify-center size-3.5 shrink-0">
+        <FileIconComponent extension={extension} fileName={file.basename} className="size-3.5" />
+      </span>
+      <span className="leading-none">{file.basename}</span>
+    </span>
+  );
+}
+
+const REGEX_ESC = /[.*+?^${}()|[\]\\]/g;
+
 /**
- * Tokenizes a user prompt message and renders `$<skillname>` substrings as inline chips.
- * Tolerates a duplicated `:<name>` suffix produced by older serializations so legacy runs
- * still display cleanly without leaving the literal word visible.
+ * Tokenizes a user prompt message and renders `$<skillname>` / `@<path>` substrings as inline chips.
+ * Tolerates a duplicated `:<name>` suffix produced by older skill serializations so legacy runs
+ * still display cleanly without leaving the literal word visible. Records which file paths were
+ * matched inline (via `matchedFilePaths`) so the caller can omit them from the external file row.
  */
-function renderMessageWithSkillChips(message: string, skills: PromptSkillMeta[]) {
+function renderMessageWithChips(
+  message: string,
+  skills: PromptSkillMeta[],
+  files: PromptFileMeta[],
+  matchedFilePaths: Set<string>,
+) {
   if (!message) return null;
-  if (skills.length === 0) return message;
-  const byName = new Map(skills.map((s) => [s.name, s]));
-  const names = skills
-    .map((s) => s.name)
-    .sort((a, b) => b.length - a.length)
-    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  const re = new RegExp(`\\$(${names.join("|")})(?::[\\w-]+)?(?![\\w-])`, "g");
+  if (skills.length === 0 && files.length === 0) return message;
+  const skillByName = new Map(skills.map((s) => [s.name, s]));
+  const fileByPath = new Map(files.map((f) => [f.fullPath, f]));
+  const parts: string[] = [];
+  if (skills.length > 0) {
+    const names = skills
+      .map((s) => s.name)
+      .sort((a, b) => b.length - a.length)
+      .map((n) => n.replace(REGEX_ESC, "\\$&"));
+    parts.push(`\\$(?<skill>${names.join("|")})(?::[\\w-]+)?(?![\\w-])`);
+  }
+  if (files.length > 0) {
+    const paths = files
+      .map((f) => f.fullPath)
+      .sort((a, b) => b.length - a.length)
+      .map((p) => p.replace(REGEX_ESC, "\\$&"));
+    parts.push(`@(?<file>${paths.join("|")})(?![\\w./-])`);
+  }
+  const re = new RegExp(parts.join("|"), "g");
   const out: React.ReactNode[] = [];
   let lastIdx = 0;
   let key = 0;
   let match: RegExpExecArray | null;
   while ((match = re.exec(message)) !== null) {
     if (match.index > lastIdx) {
-      out.push(
-        <span key={`t${key++}`}>{message.slice(lastIdx, match.index)}</span>,
-      );
+      out.push(<span key={`t${key++}`}>{message.slice(lastIdx, match.index)}</span>);
     }
-    const skill = byName.get(match[1]);
-    if (skill) {
-      out.push(<PromptSkillInlineChip key={`c${key++}`} skill={skill} />);
-    } else {
-      out.push(<span key={`t${key++}`}>{match[0]}</span>);
+    const skillName = match.groups?.skill;
+    const filePath = match.groups?.file;
+    if (skillName) {
+      const skill = skillByName.get(skillName);
+      out.push(
+        skill ? (
+          <PromptSkillInlineChip key={`c${key++}`} skill={skill} />
+        ) : (
+          <span key={`t${key++}`}>{match[0]}</span>
+        ),
+      );
+    } else if (filePath) {
+      const file = fileByPath.get(filePath);
+      if (file) {
+        matchedFilePaths.add(filePath);
+        out.push(<PromptFileInlineChip key={`c${key++}`} file={file} />);
+      } else {
+        out.push(<span key={`t${key++}`}>{match[0]}</span>);
+      }
     }
     lastIdx = match.index + match[0].length;
   }
@@ -184,7 +246,11 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
       const dir = f.path.substring(0, lastSlash);
       const parentSlash = dir.lastIndexOf("/");
       const parent = dir.substring(parentSlash + 1);
-      return { fullPath: f.path, displayName: parent ? `${parent}/${fileName}` : fileName };
+      return {
+        fullPath: f.path,
+        basename: fileName,
+        displayName: parent ? `${parent}/${fileName}` : fileName,
+      };
     });
     const attachments = (event.metadata?.attachments ?? []) as Array<{
       name: string;
@@ -224,15 +290,16 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
       );
     }
 
+    const matchedFilePaths = new Set<string>();
+    const renderedMessage = renderMessageWithChips(message, skills, files, matchedFilePaths);
+    const externalFiles = files.filter((f) => !matchedFilePaths.has(f.fullPath));
     return (
       <div className="w-full overflow-hidden">
         <div className="w-full py-2 flex justify-end">
           <div className="flex flex-col items-end gap-2 max-w-[80%]">
             <div className="px-3.5 py-2 rounded-2xl bg-primary-50 dark:bg-primary/5 ">
               <div className="text-primary-950 dark:text-primary">
-                <p className="text-sm whitespace-pre-wrap">
-                  {renderMessageWithSkillChips(message, skills)}
-                </p>
+                <p className="text-sm whitespace-pre-wrap">{renderedMessage}</p>
               </div>
             </div>
             {previewAtt && (
@@ -242,7 +309,7 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                 onClose={() => setPreviewAtt(null)}
               />
             )}
-            {(files.length > 0 || attachments.length > 0 || issues.length > 0 || signals.length > 0) && (
+            {(externalFiles.length > 0 || attachments.length > 0 || issues.length > 0 || signals.length > 0) && (
               <div className="flex flex-wrap gap-1.5 justify-end">
                 {issues.map((issue) => (
                   <div
@@ -266,7 +333,7 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                     </span>
                   </div>
                 ))}
-                {files.map((file) => (
+                {externalFiles.map((file) => (
                   <div
                     key={file.fullPath}
                     className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-100"
@@ -333,7 +400,7 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
     const fileName = (event.metadata?.fileName as string | undefined) ?? absPath.split("/").pop() ?? "image";
     return (
       <div className="overflow-hidden">
-        <ImageArtifact absPath={absPath} fileName={fileName} onPreview={setPreviewAtt} />
+        <ImageArtifact key={absPath} absPath={absPath} fileName={fileName} onPreview={setPreviewAtt} />
         {previewAtt && (
           <ImagePreviewModal
             name={previewAtt.name}
@@ -379,39 +446,126 @@ function ImageArtifact({
   onPreview: (att: { name: string; dataUrl: string }) => void;
 }) {
   const url = localImageUrl(absPath);
-  const [error, setError] = useState<string | null>(null);
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
+  const openBtnRef = useRef<HTMLButtonElement>(null);
+  const [fetchApps, { data: handlerApps = [], isFetching }] = useLazyGetAppsForFileQuery();
 
-  if (error) {
-    return null
-  }
+  const ext =
+    fileName.includes(".") ? (fileName.split(".").pop() ?? "").toUpperCase() : "";
+
+  useEffect(() => {
+    if (menuOpen) {
+      void fetchApps(absPath);
+    }
+  }, [menuOpen, absPath, fetchApps]);
+
+  const openInMains = () => {
+    setMenuOpen(false);
+    onPreview({ name: fileName, dataUrl: url });
+  };
+
+  const openMenu = (e: MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (openBtnRef.current) {
+      const r = openBtnRef.current.getBoundingClientRect();
+      const menuWidth = 240;
+      setMenuPos({
+        x: Math.max(8, r.right - menuWidth),
+        y: r.bottom + 6,
+      });
+    }
+    setMenuOpen(true);
+  };
+
+
+  const openWithBundle = (bundleId: string) => {
+    setMenuOpen(false);
+    void window.api.shell.openFileWithBundle(absPath, bundleId);
+  };
 
   return (
-    <button
-      type="button"
-      onClick={() => onPreview({ name: fileName, dataUrl: url })}
-      className="block w-full overflow-hidden rounded-xl border-2 border-primary-200/40 dark:border-primary-800/50 bg-primary-100 dark:bg-primary-900 cursor-pointer"
+    <div
+      className="relative flex items-center gap-3 w-full max-w-xl rounded-2xl bg-primary-50 dark:bg-primary-900/85 px-3 py-2.5 shadow-sm"
       title={absPath}
     >
-      <img
-        src={url}
-        alt={fileName}
-        className="w-full h-full object-contain"
-        loading="lazy"
-        onError={(e) => {
-          const target = e.currentTarget;
-          console.error("[mains-localimg] image load failed", {
-            src: target.src,
-            absPath,
-            naturalWidth: target.naturalWidth,
-            naturalHeight: target.naturalHeight,
-          });
-          setError(`Failed to load (src=${target.src})`);
-        }}
-        onLoad={() => {
-          console.log("[mains-localimg] image loaded:", absPath);
-        }}
-      />
-    </button>
+      <button
+        type="button"
+        onClick={openInMains}
+        className="shrink-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary-400 overflow-hidden"
+        aria-label={`Preview ${fileName} in Mains`}
+      >
+        <div className="size-10 rounded-lg border border-primary-700/40 dark:border-primary-600/30 bg-primary-900 dark:bg-primary-950/80 flex items-center justify-center overflow-hidden">
+          {!thumbFailed ? (
+            <img
+              src={url}
+              alt=""
+              className="size-full object-cover"
+              loading="lazy"
+              draggable={false}
+              onError={() => setThumbFailed(true)}
+            />
+          ) : (
+            <Picture className="size-5 text-primary-100 dark:text-primary-200" />
+          )}
+        </div>
+      </button>
+      <button
+        type="button"
+        onClick={openInMains}
+        className="flex-1 min-w-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded-md"
+      >
+        <div className="text-sm font-medium text-primary-950 dark:text-primary truncate">
+          {fileName}
+        </div>
+        <div className="text-xs text-primary-500 dark:text-primary-400 mt-0.5">
+          Image{ext ? ` · ${ext}` : ""}
+        </div>
+      </button>
+      <button
+        ref={openBtnRef}
+        type="button"
+        onClick={openMenu}
+        className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-primary-800 dark:text-primary-100  bg-primary-100/80 dark:bg-primary-800/40 hover:bg-primary-200/60 dark:hover:bg-primary-700/35 transition-colors cursor-pointer"
+      >
+        Open
+        <ArrowUp className="size-3.5  rotate-180" />
+      </button>
+      <DropdownMenu
+        isOpen={menuOpen}
+        position={menuPos}
+        onClose={() => setMenuOpen(false)}
+        minWidth={240}
+        origin="top-right"
+      >
+        <DropdownMenuItem onClick={openInMains}>Show Image</DropdownMenuItem>
+        {isFetching ? (
+          <div className="px-3 py-2 text-xs text-primary-500 dark:text-primary-400">
+            Loading applications…
+          </div>
+        ) : (
+          handlerApps.map((app) => (
+            <DropdownMenuItem
+              key={app.bundleId}
+              onClick={() => openWithBundle(app.bundleId)}
+            >
+              {app.icon ? (
+                <img
+                  src={app.icon}
+                  alt=""
+                  draggable={false}
+                  className="size-4 shrink-0 rounded-sm"
+                />
+              ) : (
+                <External className="size-4 shrink-0 opacity-70" />
+              )}
+              <span className="truncate">{app.name}</span>
+            </DropdownMenuItem>
+          ))
+        )}
+      </DropdownMenu>
+    </div>
   );
 }
 

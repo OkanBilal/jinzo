@@ -6,6 +6,7 @@ import {
   getSettingsSection,
 } from "@/features/settings/settings-sections";
 import { SettingsPageShell } from "@/features/settings/components/settings-layout";
+import { PageShell } from "@/components/layout/page-shell";
 
 export default function SettingsPage() {
   const [searchParams] = useSearchParams();
@@ -20,13 +21,13 @@ export default function SettingsPage() {
   }, [closeBrowserPanel]);
 
   return (
-    <div className="h-full max-w-240 mx-auto px-2 pt-16 overflow-y-auto noscrollbar bg-primary dark:bg-primary-950">
+    <PageShell>
       <Suspense
         key={section.id}
         fallback={<SettingsPageShell title={section.label} isLoading />}
       >
         <Component />
       </Suspense>
-    </div>
+    </PageShell>
   );
 }

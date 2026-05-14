@@ -4,31 +4,79 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { ProviderResponse } from "../providers.dto";
-import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, CursorAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, CodexAccountInfo } from "./adapter.types";
+import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, CursorAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, CodexAccountInfo } from "../../../../shared/adapter.types";
 import { createCopilotAdapter } from "./copilot.adapter";
 import { createClaudeAdapter } from "./claude.adapter";
 import { createCodexAdapter } from "./codex.adapter";
 import { createCursorAdapter } from "./cursor.adapter";
 import { findCopilotCliPath } from "../providers.utils";
+import {
+  PROVIDER_IDS,
+  SUPPORTED_PROVIDER_IDS,
+  type ProviderId,
+  isProviderId,
+} from "../../../../shared/provider-ids";
 
 /**
- * Known provider IDs that support work runs
+ * Known provider IDs that support work runs.
+ * Re-exported from the canonical provider-ids registry for legacy call sites
+ * that still import from this module.
  */
-export const SUPPORTED_WORK_PROVIDERS = ["copilot_cli", "claude_code", "codex", "cursor"] as const;
-export type SupportedWorkProvider = (typeof SUPPORTED_WORK_PROVIDERS)[number];
+export const SUPPORTED_WORK_PROVIDERS = SUPPORTED_PROVIDER_IDS;
+export type SupportedWorkProvider = ProviderId;
 
-/**
- * Check if a provider ID is supported for work runs
- */
-export function isSupportedWorkProvider(providerId: string): providerId is SupportedWorkProvider {
-  return SUPPORTED_WORK_PROVIDERS.includes(providerId as SupportedWorkProvider);
-}
+export const isSupportedWorkProvider = isProviderId as (
+  providerId: string,
+) => providerId is SupportedWorkProvider;
 
 /**
  * Cache of adapter instances by provider ID
  * We reuse adapters to maintain connection state
  */
 const adapterCache = new Map<string, WorkRunAdapter>();
+
+function pluginListToSkillInfo(pluginList: PluginListResponse): SkillInfo[] {
+  const skills: SkillInfo[] = [];
+
+  for (const marketplace of pluginList.marketplaces) {
+    for (const plugin of marketplace.plugins) {
+      if (!plugin.installed) continue;
+
+      skills.push({
+        name: plugin.name,
+        description:
+          plugin.interface?.shortDescription ||
+          plugin.interface?.longDescription ||
+          undefined,
+        userInvokable: true,
+        displayName: plugin.interface?.displayName || plugin.name,
+        shortDescription: plugin.interface?.shortDescription,
+        iconSmall: plugin.interface?.composerIcon || plugin.interface?.logo,
+        iconLarge: plugin.interface?.logo || plugin.interface?.composerIcon,
+        brandColor: plugin.interface?.brandColor,
+        defaultPrompt: plugin.interface?.defaultPrompt?.[0],
+        scope: "plugin",
+        enabled: plugin.enabled,
+      });
+    }
+  }
+
+  return skills;
+}
+
+function mergeSkillsWithInstalledPlugins(
+  skills: SkillInfo[],
+  pluginList: PluginListResponse,
+): SkillInfo[] {
+  const seenNames = new Set(skills.map((skill) => skill.name));
+  const pluginSkills = pluginListToSkillInfo(pluginList).filter((pluginSkill) => {
+    if (seenNames.has(pluginSkill.name)) return false;
+    seenNames.add(pluginSkill.name);
+    return true;
+  });
+
+  return [...skills, ...pluginSkills];
+}
 
 /**
  * Create or retrieve a work run adapter for the given provider
@@ -61,7 +109,7 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
   let adapter: WorkRunAdapter;
 
   switch (provider.id) {
-    case "copilot_cli": {
+    case PROVIDER_IDS.copilot: {
       const config: CopilotAdapterConfig = {
         ...(provider.config as CopilotAdapterConfig | null),
         defaultModel: provider.defaultModel ?? undefined,
@@ -79,7 +127,7 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
       break;
     }
 
-    case "claude_code": {
+    case PROVIDER_IDS.claude: {
       const config: ClaudeCodeAdapterConfig = {
         ...(provider.config as ClaudeCodeAdapterConfig | null),
         defaultModel: provider.defaultModel ?? undefined,
@@ -88,7 +136,7 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
       break;
     }
 
-    case "codex": {
+    case PROVIDER_IDS.codex: {
       const config: CodexAdapterConfig = {
         ...(provider.config as CodexAdapterConfig | null),
         defaultModel: provider.defaultModel ?? undefined,
@@ -97,7 +145,7 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
       break;
     }
 
-    case "cursor": {
+    case PROVIDER_IDS.cursor: {
       const config: CursorAdapterConfig = {
         ...(provider.config as CursorAdapterConfig | null),
         defaultModel: provider.defaultModel ?? undefined,
@@ -218,7 +266,7 @@ export async function listCommandsForProvider(
 
 /**
  * List available skills for a provider
- * Skills are SKILL.md files that extend Claude's capabilities.
+ * Skills are SKILL.md files plus installed provider plugins that can be invoked from the prompt.
  *
  * @param provider - The provider configuration from the database
  * @param workspacePath - Optional workspace path for discovering project skills
@@ -230,12 +278,20 @@ export async function listSkillsForProvider(
 ): Promise<SkillInfo[]> {
   const adapter = createWorkAdapter(provider);
 
+  let skills: SkillInfo[] = [];
   if (!adapter.listSkills) {
-    // Return empty array if provider doesn't support skills
-    return [];
+    // Return installed plugins only if the provider doesn't support native skills.
+    skills = [];
+  } else {
+    skills = await adapter.listSkills(workspacePath);
   }
 
-  return adapter.listSkills(workspacePath);
+  if (!adapter.listPlugins) {
+    return skills;
+  }
+
+  const plugins = await adapter.listPlugins();
+  return mergeSkillsWithInstalledPlugins(skills, plugins);
 }
 
 /**
@@ -283,7 +339,7 @@ export async function uninstallPluginForProvider(provider: ProviderResponse, plu
 
 export async function getRateLimitsForProvider(
   provider: ProviderResponse,
-): Promise<import("./adapter.types").RateLimitInfo | null> {
+): Promise<import("../../../../shared/adapter.types").RateLimitInfo | null> {
   const adapter = createWorkAdapter(provider);
   if (!adapter.getRateLimits) return null;
   return adapter.getRateLimits();

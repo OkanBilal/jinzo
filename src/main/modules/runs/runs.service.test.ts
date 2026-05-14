@@ -51,6 +51,7 @@ vi.mock("electron", () => ({
 
 vi.mock("../providers/adapters", () => ({
   createWorkAdapter: vi.fn(),
+  couldModifyFiles: vi.fn().mockReturnValue(false),
 }));
 
 vi.mock("../git/git.service", () => ({

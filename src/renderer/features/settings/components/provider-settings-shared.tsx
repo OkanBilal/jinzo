@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
-import { Toggle, toast } from "@/components/ui";
+import { useNavigate } from "react-router-dom";
+import { toast } from "@/components/ui";
 import {
   SettingsPageShell,
-  SettingsSection,
-  SettingsRow,
 } from "./settings-layout";
 import {
   useArchiveSpaceMutation,
@@ -13,11 +12,16 @@ import {
   useUnarchiveSpaceMutation,
   useUpdateProviderMutation,
 } from "@/lib/redux/api";
+import { getSpaceDefaultRoute } from "@/lib/route-utils";
+import { extractErrorMessage } from "@/lib/extract-error-message";
 
 type ProviderData = ReturnType<typeof useGetProviderByIdQuery>["data"];
-type Space = NonNullable<ReturnType<typeof useGetSpacesQuery>["data"]>[number];
 
-export function useProviderSettings(providerId: string, spaceSlug: string) {
+export function useProviderSettings<TConfig extends object = Record<string, unknown>>(
+  providerId: string,
+  spaceSlug: string,
+) {
+  const navigate = useNavigate();
   const {
     data: provider,
     isLoading,
@@ -34,9 +38,9 @@ export function useProviderSettings(providerId: string, spaceSlug: string) {
     (s) => s.slug !== spaceSlug && !s.isArchived,
   );
   const canHide = otherVisibleSpaces.length > 0;
-  const config = provider?.config ?? {};
+  const config = (provider?.config ?? {}) as TConfig;
 
-  const updateConfig = async (patch: Record<string, unknown>) => {
+  const updateConfig = async (patch: Partial<TConfig>) => {
     if (!provider || updating) return false;
     try {
       await updateProvider({
@@ -45,7 +49,7 @@ export function useProviderSettings(providerId: string, spaceSlug: string) {
       }).unwrap();
       return true;
     } catch (err: any) {
-      toast.error(err?.message || "Failed to update setting");
+      toast.error(extractErrorMessage(err, "Failed to update setting"));
       return false;
     }
   };
@@ -62,11 +66,13 @@ export function useProviderSettings(providerId: string, spaceSlug: string) {
         const target = otherVisibleSpaces[0];
         if (target) {
           await setActiveSpace(target.id).unwrap();
+          const route = getSpaceDefaultRoute(target);
+          setTimeout(() => navigate(route, { replace: true }), 0);
         }
         toast.success("Space hidden");
       }
     } catch (err: any) {
-      toast.error(err?.message || "Failed to update space visibility");
+      toast.error(extractErrorMessage(err, "Failed to update space visibility"));
     }
   };
 
@@ -110,36 +116,5 @@ export function ProviderSettingsLayout({
     >
       {children}
     </SettingsPageShell>
-  );
-}
-
-export function ProviderVisibilitySection({
-  space,
-  canHide,
-  onVisibleChange,
-}: {
-  space: Space | undefined;
-  canHide: boolean;
-  onVisibleChange: (visible: boolean) => Promise<void>;
-}) {
-  if (!space) return null;
-
-  return (
-    <SettingsSection title="Visibility">
-      <SettingsRow
-        title="Show in Selector"
-        description={
-          !canHide && !space.isArchived
-            ? "At least one agent must be active"
-            : "Show or hide this agent from the selector"
-        }
-      >
-        <Toggle
-          enabled={!space.isArchived}
-          disabled={!canHide && !space.isArchived}
-          onChange={onVisibleChange}
-        />
-      </SettingsRow>
-    </SettingsSection>
   );
 }

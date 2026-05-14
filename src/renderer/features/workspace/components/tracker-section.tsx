@@ -115,10 +115,10 @@ export function TrackerSection({
         onClick={() =>
           setState((prev) => ({ ...prev, expanded: !prev.expanded }))
         }
-        className="w-full flex items-center "
+        className="w-full flex items-center bg-primary/50 dark:bg-primary/5"
       >
         <ArrowUp
-          className={`w-3 h-3 transform text-primary-900 dark:text-primary transition-transform ${
+          className={`w-3 h-3 transform text-primary-900 dark:text-primary transition-transform  g ${
             expanded ? "rotate-180" : "rotate-90"
           }`}
         />
@@ -152,7 +152,7 @@ export function TrackerSection({
                 className={`px-2 py-0.5 text-xxs font-medium rounded-lg transition-colors ${
                   filter === f.value
                     ? "bg-primary/80 dark:bg-primary/10 text-primary-900 dark:text-primary-100"
-                    : "text-primary-700 dark:text-primary-300 hover:bg-primary/40 dark:hover:bg-primary/5"
+                    : "text-primary-700 dark:text-primary-300 hover:bg-primary/50 dark:hover:bg-primary/5"
                 }`}
               >
                 {f.label}

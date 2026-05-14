@@ -1,9 +1,7 @@
-import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
-import { useActiveSpace } from "@/hooks/use-active-space";
-import { useDarkMode } from "@/hooks/use-dark-mode";
-import { getDefaultDropdownBackground } from "@/lib/theme";
+import { useDropdownBackground } from "@/hooks/use-dropdown-background";
 
 interface DropdownWrapperProps {
   isOpen: boolean;
@@ -14,6 +12,8 @@ interface DropdownWrapperProps {
   usePortal?: boolean;
   triggerRef?: React.RefObject<HTMLElement | null>;
   dropdownRef?: React.RefObject<HTMLDivElement | null>;
+  /** When portal + anchored: set false so panel can grow beyond trigger width (e.g. menus with min-width). */
+  matchTriggerWidth?: boolean;
   useFixedBackground?: boolean;
 }
 
@@ -26,6 +26,7 @@ export default function DropdownWrapper({
   usePortal = false,
   triggerRef,
   dropdownRef: externalDropdownRef,
+  matchTriggerWidth = true,
   useFixedBackground = false,
 }: DropdownWrapperProps) {
   const [coords, setCoords] = useState<{
@@ -46,11 +47,6 @@ export default function DropdownWrapper({
       setAnimateIn(false);
     }
   }
-
-  const { activeSpace } = useActiveSpace();
-  const { darkMode } = useDarkMode();
-
-
 
   useEffect(() => {
     if (isOpen && usePortal && triggerRef?.current) {
@@ -79,33 +75,7 @@ export default function DropdownWrapper({
     };
   }, [isOpen]);
 
-  // Cache background — avoid DOM queries on every render
-  const dropdownBackground = useMemo(() => {
-    if (useFixedBackground) return undefined;
-
-    if (!activeSpace?.themeConfig) {
-      return getDefaultDropdownBackground(darkMode);
-    }
-
-    try {
-      const themeConfig = JSON.parse(activeSpace.themeConfig);
-      const bgColor = darkMode
-        ? themeConfig.darkBackground
-        : themeConfig.lightBackground;
-
-      if (!bgColor) {
-        return getDefaultDropdownBackground(darkMode);
-      }
-
-      if (bgColor.startsWith("linear-gradient")) {
-        return bgColor;
-      } else {
-        return bgColor.length === 9 ? bgColor.slice(0, 7) : bgColor;
-      }
-    } catch {
-      return getDefaultDropdownBackground(darkMode);
-    }
-  }, [useFixedBackground, activeSpace, darkMode]);
+  const dropdownBackground = useDropdownBackground(undefined, useFixedBackground);
 
   const fixedBackgroundClass = useFixedBackground
     ? "bg-linear-to-b from-primary/90 to-primary-50/80 dark:from-primary-900 dark:to-primary-800"
@@ -148,7 +118,7 @@ export default function DropdownWrapper({
                 position === "right"
                   ? `${window.innerWidth - coords.left - coords.width}px`
                   : "auto",
-              width: coords.width,
+              ...(matchTriggerWidth ? { width: coords.width } : {}),
               transform: openUpward ? "translateY(-100%)" : "none",
             }
           : {}),

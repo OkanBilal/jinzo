@@ -1,4 +1,5 @@
 import { Caption, Body } from "@/components/ui";
+import { proxiedImageSrc } from "@/lib/proxied-image-src";
 
 interface UserProfileProps {
   avatarUrl?: string;
@@ -22,7 +23,7 @@ export default function UserProfile({
 }: UserProfileProps) {
   return (
     <div
-      className={`flex items-center gap-2 transition-all duration-300 ease-in-out ${
+      className={`flex items-center gap-2 transition-all duration-300 ease-in-out  ${
         isVisible
           ? "opacity-100 flex-1 scale-100"
           : "opacity-0 w-0 scale-95 pointer-events-none"
@@ -30,19 +31,19 @@ export default function UserProfile({
     >
       {avatarUrl ? (
         <img
-          src={avatarUrl}
-          alt={displayName || "User"}
-          className="w-7 h-7 rounded-full object-cover"
+          src={proxiedImageSrc(avatarUrl) ?? avatarUrl}
+          alt={displayName || "Mains"}
+          className="size-6 rounded-full object-cover ml-2"
         />
       ) : (
-        <div className="w-7 h-7 rounded-full bg-primary-200 dark:bg-primary/5 flex items-center justify-center">
-          <Caption className="text-primary-900 dark:text-primary-300 font-medium">
+        <div className="size-6 rounded-full bg-primary/20 dark:bg-primary/5 flex items-center justify-center ml-1">
+          <Caption className="text-primary-900 dark:text-primary-200 text-t font-medium">
             {getInitials(displayName || "")}
           </Caption>
         </div>
       )}
       <Body className="font-medium text-primary-900 dark:text-primary-100 truncate whitespace-nowrap">
-        {displayName || "User"}
+        {displayName || "Mains"}
       </Body>
     </div>
   );

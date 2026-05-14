@@ -30,8 +30,13 @@ export function useProviderModels(
       state.workspace.selectedModelByProvider[activeProviderId],
   );
 
-  const { data: providerModels, isLoading: isLoadingModels, error: modelsError, refetch: refetchModels } =
-    useGetProviderModelsQuery(activeProviderId, { skip: !activeProviderId });
+  const {
+    data: providerModels,
+    isLoading: isLoadingModels,
+    isFetching: isFetchingModels,
+    error: modelsError,
+    refetch: refetchModels,
+  } = useGetProviderModelsQuery(activeProviderId, { skip: !activeProviderId });
 
   const { data: providerCommands = [], isLoading: isLoadingCommands } =
     useGetProviderCommandsQuery(
@@ -57,10 +62,19 @@ export function useProviderModels(
   const thinkingMode = variant === "codex" || variant === "copilot"
     ? !!(providerData?.config as any)?.modelReasoningEffort
     : !!(providerData?.config as any)?.thinkingMode;
-  const fastMode = !!(providerData?.config as any)?.fastMode;
+  // Codex maps "fast mode" to its "fast" service tier (canonical id from
+  // model/list; Codex's request_value forwards it to OpenAI as "priority").
+  // Accept both ids so it stays consistent with whatever the Settings dropdown
+  // persists, and so legacy installs that stored "priority" still register.
+  const fastMode = variant === "codex"
+    ? ["fast", "priority"].includes(((providerData?.config as any)?.serviceTier as string) ?? "")
+    : !!(providerData?.config as any)?.fastMode;
   const effortLevel: string = variant === "codex" || variant === "copilot"
     ? (providerData?.config as any)?.modelReasoningEffort || ""
     : (providerData?.config as any)?.effortLevel || "";
+  const planMode: boolean = variant === "codex"
+    ? !!(providerData?.config as any)?.planMode
+    : false;
 
   const handlePermissionModeChange = useCallback(async (mode: string) => {
     if (!providerData) return;
@@ -76,6 +90,20 @@ export function useProviderModels(
       },
     });
   }, [providerData, activeProviderId, variant, updateProvider]);
+
+  const handlePlanModeToggle = useCallback(async () => {
+    if (!providerData) return;
+    const currentConfig = providerData.config ?? {};
+    await updateProvider({
+      id: activeProviderId,
+      payload: {
+        config: {
+          ...currentConfig,
+          planMode: !planMode,
+        },
+      },
+    });
+  }, [providerData, planMode, activeProviderId, updateProvider]);
 
   const handleThinkingModeToggle = useCallback(async () => {
     if (!providerData) return;
@@ -94,16 +122,21 @@ export function useProviderModels(
   const handleFastModeToggle = useCallback(async () => {
     if (!providerData) return;
     const currentConfig = providerData.config ?? {};
+    // For codex, toggle the "fast" service tier on/off (matches the dropdown's
+    // canonical id from model/list); non-codex variants keep the simple boolean.
+    const patch: Record<string, unknown> = variant === "codex"
+      ? { serviceTier: fastMode ? undefined : "fast" }
+      : { fastMode: !fastMode };
     await updateProvider({
       id: activeProviderId,
       payload: {
         config: {
           ...currentConfig,
-          fastMode: !fastMode,
+          ...patch,
         },
       },
     });
-  }, [providerData, fastMode, activeProviderId, updateProvider]);
+  }, [providerData, fastMode, activeProviderId, updateProvider, variant]);
 
   const handleEffortLevelChange = useCallback(async (level: string) => {
     if (!providerData) return;
@@ -207,6 +240,7 @@ export function useProviderModels(
     selectedModelDisplayName,
     modelDisplayNames,
     isLoadingModels,
+    isFetchingModels,
     handleModelChange,
     providerCommands,
     isLoadingCommands,
@@ -223,5 +257,7 @@ export function useProviderModels(
     effortLevel,
     handleEffortLevelChange,
     selectedModelInfo,
+    planMode,
+    handlePlanModeToggle,
   };
 }

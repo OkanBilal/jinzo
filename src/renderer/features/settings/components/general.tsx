@@ -1,9 +1,4 @@
-import { useMemo } from "react";
 import { Button, Select, Toggle, toast } from "@/components/ui";
-import { useDarkMode } from "../../../hooks/use-dark-mode";
-import { useActiveSpace } from "../../../hooks/use-active-space";
-import { cn } from "@/lib/cn";
-import { defaultTheme } from "@/lib/theme";
 import {
   useGetAppSettingsQuery,
   useSetShowToolCallsMutation,
@@ -18,143 +13,10 @@ import {
   SettingsRow,
   SettingsDivider,
 } from "./settings-layout";
+import { ThemePicker } from "./theme-picker";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
 import { Refresh } from "@/components/ui/icons";
 import { AsciiSpinner } from "@/components/ui/ascii-spinner";
-
-type ThemeValue = "light" | "dark" | "system";
-
-function ThemePreviewCard({
-  themeValue,
-  label,
-  isSelected,
-  onClick,
-  lightBackground,
-  darkBackground,
-}: {
-  themeValue: ThemeValue;
-  label: string;
-  isSelected: boolean;
-  onClick: () => void;
-  lightBackground: string;
-  darkBackground: string;
-}) {
-  const isLight = themeValue === "light";
-  const isAuto = themeValue === "system";
-
-  const getBackgroundStyle = (bg: string) => {
-    if (bg.startsWith("linear-gradient")) {
-      return { background: bg };
-    }
-    return { backgroundColor: bg };
-  };
-
-  const lightBgStyle = getBackgroundStyle(lightBackground);
-  const darkBgStyle = getBackgroundStyle(darkBackground);
-
-  return (
-    <Button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex flex-col items-center gap-2 cursor-pointer group duration-200 transition-all",
-      )}
-    >
-      <div
-        className={cn(
-          "relative w-24 h-16 rounded-xl overflow-hidden border-2 transition-all duration-200",
-          isSelected
-            ? "border-blue-500 "
-            : "border-primary-200 dark:border-primary-700 hover:border-primary-300 dark:hover:border-primary-600",
-        )}
-      >
-        {isAuto ? (
-          <div className="w-full h-full flex">
-            <div className="w-1/2 h-full flex">
-              <div
-                className={cn("w-4 h-full flex flex-col p-1 gap-1")}
-                style={lightBgStyle}
-              >
-                <div className="w-2 h-2 bg-primary-950/15 rounded-full" />
-                <div className="w-full h-1 bg-primary-950/10 rounded-full mt-1" />
-                <div className="w-2/3 h-1 bg-primary-950/10 rounded-full" />
-              </div>
-              <div className="flex-1 h-full bg-primary-100 flex flex-col p-1.5">
-                <div className="flex-1" />
-                <div className="w-full h-2 bg-primary  rounded-sm border border-primary-950/10" />
-              </div>
-            </div>
-            <div className="w-1/2 h-full flex">
-              <div
-                className={cn("w-4 h-full flex flex-col p-1 gap-1")}
-                style={darkBgStyle}
-              >
-                <div className="w-2 h-2 bg-primary/20 rounded-full" />
-                <div className="w-full h-1 bg-primary/10 rounded-full mt-1" />
-                <div className="w-2/3 h-1 bg-primary/10 rounded-full" />
-              </div>
-              <div className="flex-1 h-full flex bg-primary-950 flex-col p-1.5">
-                <div className="flex-1" />
-                <div className="w-full h-2 bg-primary/10 rounded-sm flex items-center justify-end pr-0.5"></div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="w-full h-full flex">
-            <div
-              className={cn("w-5 h-full flex flex-col p-1.5 gap-1")}
-              style={isLight ? lightBgStyle : darkBgStyle}
-            >
-              <div
-                className={cn(
-                  "w-2 h-2 rounded-full",
-                  isLight ? "bg-primary-950/15" : "bg-primary/20",
-                )}
-              />
-              <div className="flex flex-col gap-0.5 mt-1">
-                <div
-                  className={cn(
-                    "w-full h-1 rounded-full",
-                    isLight ? "bg-primary-950/10" : "bg-primary/10",
-                  )}
-                />
-                <div
-                  className={cn(
-                    "w-4/5 h-1 rounded-full",
-                    isLight ? "bg-primary-950/10" : "bg-primary/10",
-                  )}
-                />
-              </div>
-            </div>
-            <div
-              className={`flex-1 h-full flex flex-col p-2 ${isLight ? "bg-primary-100" : "bg-primary-950"}`}
-            >
-              <div className="flex-1" />
-              <div
-                className={cn(
-                  "w-full h-2 rounded-sm flex items-center px-1",
-                  isLight
-                    ? "bg-primary/80 border border-primary-950/10"
-                    : "bg-primary/10",
-                )}
-              ></div>
-            </div>
-          </div>
-        )}
-      </div>
-      <span
-        className={cn(
-          "text-s font-medium transition-colors",
-          isSelected
-            ? "text-primary-900 dark:text-primary-100"
-            : "text-primary-500 dark:text-primary-400 group-hover:text-primary-700 dark:group-hover:text-primary-300",
-        )}
-      >
-        {label}
-      </span>
-    </Button>
-  );
-}
 
 function UpdateButton({
   state,
@@ -187,7 +49,7 @@ function UpdateButton({
       );
     case "downloaded":
       return (
-        <Button type="button" variant="submit" size="md" onClick={onInstall}>
+        <Button type="button" variant="submit" onClick={onInstall}>
           Restart &amp; Update
         </Button>
       );
@@ -197,7 +59,7 @@ function UpdateButton({
           <span className="text-xs text-red-400 dark:text-red-400/80 leading-relaxed text-right line-clamp-2 max-w-48">
             {state.error}
           </span>
-          <Button type="button" variant="ghost" size="md" onClick={onCheck}>
+          <Button type="button" variant="ghost" onClick={onCheck}>
             Retry
           </Button>
         </div>
@@ -208,7 +70,7 @@ function UpdateButton({
           <span className="text-xs text-primary-500 dark:text-primary-400">
             Up to date
           </span>
-          <Button type="button" variant="ghost" size="md" onClick={onCheck}>
+          <Button type="button" variant="ghost" onClick={onCheck}>
             Check Again
           </Button>
         </div>
@@ -220,7 +82,6 @@ function UpdateButton({
             className="flex"
             type="button"
             variant="primary"
-            size="md"
             onClick={onCheck}
           >
             <Refresh className="w-4 h-4 mr-1" />
@@ -316,41 +177,11 @@ function NotifyToolApprovalToggle() {
 }
 
 export default function GeneralSettings() {
-  const { theme, setTheme } = useDarkMode();
-  const { activeSpace } = useActiveSpace();
   const {
     state: updateState,
     check: checkUpdate,
     install: installUpdate,
   } = useAutoUpdate();
-  const activeSpaceThemeConfig = activeSpace?.themeConfig;
-
-  const { lightBackground, darkBackground } = useMemo(() => {
-    if (!activeSpaceThemeConfig) {
-      return {
-        lightBackground: defaultTheme.lightBackground.replace(
-          /[0-9a-f]{2}$/i,
-          "",
-        ),
-        darkBackground: defaultTheme.darkBackground.replace(
-          /[0-9a-f]{2}$/i,
-          "",
-        ),
-      };
-    }
-    try {
-      const config = JSON.parse(activeSpaceThemeConfig);
-      return {
-        lightBackground: config.lightBackground || "#f5f3ee",
-        darkBackground: config.darkBackground || "#1a1a1a",
-      };
-    } catch {
-      return {
-        lightBackground: "#f5f3ee",
-        darkBackground: "#1a1a1a",
-      };
-    }
-  }, [activeSpaceThemeConfig]);
 
   return (
     <SettingsPageShell title="General">
@@ -375,41 +206,12 @@ export default function GeneralSettings() {
           title="Theme"
           description="Choose your preferred color mode"
         >
-          <div className="flex gap-4">
-            <ThemePreviewCard
-              themeValue="light"
-              label="Light"
-              isSelected={theme === "light"}
-              lightBackground={lightBackground}
-              darkBackground={darkBackground}
-              onClick={() => {
-                setTheme("light");
-                toast.success("Theme changed to Light");
-              }}
-            />
-            <ThemePreviewCard
-              themeValue="system"
-              label="Auto"
-              isSelected={theme === "system"}
-              lightBackground={lightBackground}
-              darkBackground={darkBackground}
-              onClick={() => {
-                setTheme("system");
-                toast.success("Theme changed to Auto");
-              }}
-            />
-            <ThemePreviewCard
-              themeValue="dark"
-              label="Dark"
-              isSelected={theme === "dark"}
-              lightBackground={lightBackground}
-              darkBackground={darkBackground}
-              onClick={() => {
-                setTheme("dark");
-                toast.success("Theme changed to Dark");
-              }}
-            />
-          </div>
+          <ThemePicker
+            onChange={(value) => {
+              const labelMap = { light: "Light", system: "Auto", dark: "Dark" };
+              toast.success(`Theme changed to ${labelMap[value]}`);
+            }}
+          />
         </SettingsRow>
       </SettingsSection>
 

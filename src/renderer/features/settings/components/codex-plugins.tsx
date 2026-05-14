@@ -1,5 +1,13 @@
 import { useState, useMemo, useCallback } from "react";
-import { Heading2, Heading3, Body, Muted, Button, toast } from "@/components/ui";
+import {
+  Heading2,
+  Heading3,
+  Body,
+  Muted,
+  Button,
+  toast,
+  AsciiSpinner,
+} from "@/components/ui";
 import {
   useGetProviderPluginsQuery,
   useReadProviderPluginQuery,
@@ -7,7 +15,18 @@ import {
   useUninstallProviderPluginMutation,
 } from "@/lib/redux/api";
 import type { PluginInfo } from "@/lib/redux/api";
-import { Search, Clipboard, Check, ChevronDown, Apps, Sparkles, External, Plus } from "@/components/ui/icons";
+import { PROVIDER_IDS } from "../../../../shared/provider-ids";
+import { extractErrorMessage } from "@/lib/extract-error-message";
+import {
+  Search,
+  Clipboard,
+  Check,
+  Apps,
+  Sparkles,
+  External,
+  Plus,
+  ArrowUp,
+} from "@/components/ui/icons";
 
 // ── Helpers ──
 
@@ -43,9 +62,11 @@ function PluginLogo({
   plugin: PluginInfo;
   size?: "sm" | "md" | "lg";
 }) {
-  const sizeClass = size === "lg" ? "size-14" : size === "md" ? "size-8" : "size-8";
+  const sizeClass =
+    size === "lg" ? "size-14" : size === "md" ? "size-8" : "size-8";
   const roundedClass = size === "lg" ? "rounded-2xl" : "rounded-lg";
-  const textSize = size === "lg" ? "text-xl" : size === "md" ? "text-sm" : "text-xs";
+  const textSize =
+    size === "lg" ? "text-xl" : size === "md" ? "text-sm" : "text-xs";
   const brandColor = plugin.interface?.brandColor;
   const logo = plugin.interface?.logo;
   const name = plugin.interface?.displayName || plugin.name;
@@ -65,7 +86,7 @@ function PluginLogo({
 
   return (
     <div
-      className={`${sizeClass} ${roundedClass} flex items-center justify-center font-semibold ${textSize} text-white shrink-0`}
+      className={`${sizeClass} ${roundedClass} flex items-center justify-center font-semibold ${textSize} text-primary shrink-0`}
       style={{ backgroundColor: brandColor || "var(--color-primary-500)" }}
     >
       {name.charAt(0).toUpperCase()}
@@ -127,7 +148,15 @@ function PluginCard({
         }}
         disabled={isInstalling || plugin.installPolicy === "NOT_AVAILABLE"}
       >
-        {isInstalling ? "..." : plugin.installed ? <Check className="size-4" /> : <Plus className="size-4" />}
+        {isInstalling ? (
+          <div className="mb-1 px-1.5">
+            <AsciiSpinner variant="null" />
+          </div>
+        ) : plugin.installed ? (
+          <Check className="size-4" />
+        ) : (
+          <Plus className="size-4" />
+        )}
       </Button>
     </div>
   );
@@ -155,18 +184,22 @@ function PluginDetail({
   const pluginName = plugin.name || plugin.id.split("@")[0];
 
   const { data: detail } = useReadProviderPluginQuery(
-    { providerId: "codex", pluginName, marketplacePath },
+    { providerId: PROVIDER_IDS.codex, pluginName, marketplacePath },
     { skip: !marketplacePath },
   );
-  const hasIncludes = detail && (detail.skills.length > 0 || detail.apps.length > 0 || detail.mcpServers.length > 0);
+  const hasIncludes =
+    detail &&
+    (detail.skills.length > 0 ||
+      detail.apps.length > 0 ||
+      detail.mcpServers.length > 0);
 
   return (
-    <div>
+    <div className="mb-12">
       <Button
         onClick={onBack}
         className="flex items-center gap-1.5 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-100 mb-6 cursor-pointer"
       >
-        <ChevronDown className="size-4 rotate-90" />
+        <ArrowUp className="size-4 rotate-270" />
         Back to plugins
       </Button>
 
@@ -177,15 +210,22 @@ function PluginDetail({
             <Heading2>{name}</Heading2>
             <Button
               onClick={plugin.installed ? onUninstall : onInstall}
-              disabled={isInstalling || plugin.installPolicy === "NOT_AVAILABLE"}
+              disabled={
+                isInstalling || plugin.installPolicy === "NOT_AVAILABLE"
+              }
               variant={plugin.installed ? "secondary" : "primary"}
               size="sm"
+              className=""
             >
-              {isInstalling
-                ? "..."
-                : plugin.installed
-                  ? "Uninstall"
-                  : "Add"}
+              {isInstalling ? (
+                <div className=" px-1.5">
+                  <AsciiSpinner variant="null" />
+                </div>
+              ) : plugin.installed ? (
+                "Uninstall"
+              ) : (
+                "Add"
+              )}
             </Button>
           </div>
           {iface?.shortDescription && (
@@ -225,11 +265,14 @@ function PluginDetail({
             {detail.apps.map((app) => (
               <div key={app.id} className="flex items-center gap-3 px-4 py-3">
                 <div className="size-7 rounded-lg bg-primary-200/50 dark:bg-primary-700/30 flex items-center justify-center shrink-0">
-                  <Apps className="size-4 text-primary-800 dark:text-primary"/>
+                  <Apps className="size-4 text-primary-800 dark:text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-primary-900 dark:text-primary-100">
-                    {name} <span className="text-xs font-normal text-primary-400 dark:text-primary-500 ml-1">App</span>
+                    {name}{" "}
+                    <span className="text-xs font-normal text-primary-400 dark:text-primary-500 ml-1">
+                      App
+                    </span>
                   </div>
                   {app.description && (
                     <div className="text-xs text-primary-500 dark:text-primary-400 truncate">
@@ -250,7 +293,9 @@ function PluginDetail({
                     size="sm"
                     variant="icon"
                     className="shrink-0 rounded-lg"
-                    onClick={() => window.api.shell.openExternal(app.installUrl!)}
+                    onClick={() =>
+                      window.api.shell.openExternal(app.installUrl!)
+                    }
                   >
                     <External className="size-4" />
                   </Button>
@@ -258,13 +303,19 @@ function PluginDetail({
               </div>
             ))}
             {detail.skills.map((skill) => (
-              <div key={skill.name} className="flex items-center gap-3 px-4 py-3">
+              <div
+                key={skill.name}
+                className="flex items-center gap-3 px-4 py-3"
+              >
                 <div className="size-7 rounded-lg bg-primary-200/50 dark:bg-primary-700/30 flex items-center justify-center shrink-0">
-                  <Sparkles className="size-4 text-primary-800 dark:text-primary"/>
+                  <Sparkles className="size-4 text-primary-800 dark:text-primary" />
                 </div>
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-primary-900 dark:text-primary-100">
-                    {skill.displayName || formatIncludeName(skill.name)} <span className="text-xs font-normal text-primary-400 dark:text-primary-500 ml-1">Skill</span>
+                    {skill.displayName || formatIncludeName(skill.name)}{" "}
+                    <span className="text-xs font-normal text-primary-400 dark:text-primary-500 ml-1">
+                      Skill
+                    </span>
                   </div>
                   {(skill.shortDescription || skill.description) && (
                     <div className="text-xs text-primary-500 dark:text-primary-400 truncate">
@@ -277,11 +328,16 @@ function PluginDetail({
             {detail.mcpServers.map((server) => (
               <div key={server} className="flex items-center gap-3 px-4 py-3">
                 <div className="size-8 rounded-lg bg-primary-200/50 dark:bg-primary-700/30 flex items-center justify-center shrink-0">
-                  <span className="text-xs text-primary-500 dark:text-primary-400">MCP</span>
+                  <span className="text-xs text-primary-500 dark:text-primary-400">
+                    MCP
+                  </span>
                 </div>
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-primary-900 dark:text-primary-100">
-                    {server} <span className="text-xs font-normal text-primary-400 dark:text-primary-500 ml-1">MCP Server</span>
+                    {server}{" "}
+                    <span className="text-xs font-normal text-primary-400 dark:text-primary-500 ml-1">
+                      MCP Server
+                    </span>
                   </div>
                 </div>
               </div>
@@ -322,9 +378,7 @@ function PluginDetail({
       {/* Information table */}
       <Heading3 className="mb-3">Information</Heading3>
       <div className="rounded-xl border border-primary-200/60 dark:border-primary-800/20 divide-y divide-primary-200/60 dark:divide-primary-800/20">
-        {iface?.category && (
-          <InfoRow label="Category" value={iface.category} />
-        )}
+        {iface?.category && <InfoRow label="Category" value={iface.category} />}
         {iface?.developerName && (
           <InfoRow label="Developer" value={iface.developerName} />
         )}
@@ -342,7 +396,13 @@ function PluginDetail({
                   window.open(iface.websiteUrl!, "_blank");
                 }}
               >
-                {(() => { try { return new URL(iface.websiteUrl!).hostname; } catch { return iface.websiteUrl; } })()}
+                {(() => {
+                  try {
+                    return new URL(iface.websiteUrl!).hostname;
+                  } catch {
+                    return iface.websiteUrl;
+                  }
+                })()}
               </a>
             }
           />
@@ -411,19 +471,17 @@ function PromptRow({ prompt }: { prompt: string }) {
         className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-primary-400 dark:text-primary-500 hover:text-primary-700 dark:hover:text-primary-200"
         tooltip={copied ? "Copied!" : "Copy"}
       >
-        {copied ? <Check className="size-4" /> : <Clipboard className="size-4" />}
+        {copied ? (
+          <Check className="size-4" />
+        ) : (
+          <Clipboard className="size-4" />
+        )}
       </Button>
     </div>
   );
 }
 
-function InfoRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between px-4 py-3">
       <span className="text-sm text-primary-500 dark:text-primary-400">
@@ -437,8 +495,16 @@ function InfoRow({
 }
 
 const FEATURED_PLUGIN_NAMES = [
-  "github", "slack", "notion", "linear",
-  "gmail", "google-calendar", "google-drive", "figma",
+  "github",
+  "slack",
+  "notion",
+  "linear",
+  "gmail",
+  "google-calendar",
+  "google-drive",
+  "figma",
+  "chrome",
+  "computer-use"
 ];
 
 // ── Main Component ──
@@ -448,7 +514,7 @@ export default function CodexPlugins() {
     data: pluginData,
     isLoading,
     error,
-  } = useGetProviderPluginsQuery("codex");
+  } = useGetProviderPluginsQuery(PROVIDER_IDS.codex);
   const [installPlugin, { isLoading: isInstalling }] =
     useInstallProviderPluginMutation();
   const [uninstallPlugin, { isLoading: isUninstalling }] =
@@ -461,10 +527,8 @@ export default function CodexPlugins() {
   // Flatten all plugins from all marketplaces (only OpenAI plugins for now)
   const allPlugins = useMemo(() => {
     if (!pluginData) return [];
-    return pluginData.marketplaces
-      .flatMap((mp) => mp.plugins)
-      //.filter((p) => p.interface?.developerName === "OpenAI" || p.interface?.developerName === "Vercel Labs" );
-
+    return pluginData.marketplaces.flatMap((mp) => mp.plugins);
+    //.filter((p) => p.interface?.developerName === "OpenAI" || p.interface?.developerName === "Vercel Labs" );
   }, [pluginData]);
 
   const featuredIds = useMemo(() => {
@@ -501,9 +565,7 @@ export default function CodexPlugins() {
       );
     }
     if (categoryFilter) {
-      result = result.filter(
-        (p) => p.interface?.category === categoryFilter,
-      );
+      result = result.filter((p) => p.interface?.category === categoryFilter);
     }
     return result;
   }, [allPlugins, search, categoryFilter]);
@@ -523,9 +585,7 @@ export default function CodexPlugins() {
       list.push(p);
       groups.set(cat, list);
     }
-    return Array.from(groups.entries()).sort(([a], [b]) =>
-      a.localeCompare(b),
-    );
+    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [filteredPlugins, featuredIds, categoryFilter]);
 
   const selectedPlugin = useMemo(
@@ -548,10 +608,10 @@ export default function CodexPlugins() {
     async (pluginId: string) => {
       setActionInFlight(pluginId);
       try {
-        await installPlugin({ providerId: "codex", pluginId }).unwrap();
+        await installPlugin({ providerId: PROVIDER_IDS.codex, pluginId }).unwrap();
         toast.success("Plugin installed");
       } catch (err: any) {
-        toast.error(err?.message || "Failed to install plugin");
+        toast.error(extractErrorMessage(err, "Failed to install plugin"));
       } finally {
         setActionInFlight(null);
       }
@@ -563,10 +623,10 @@ export default function CodexPlugins() {
     async (pluginId: string) => {
       setActionInFlight(pluginId);
       try {
-        await uninstallPlugin({ providerId: "codex", pluginId }).unwrap();
+        await uninstallPlugin({ providerId: PROVIDER_IDS.codex, pluginId }).unwrap();
         toast.success("Plugin uninstalled");
       } catch (err: any) {
-        toast.error(err?.message || "Failed to uninstall plugin");
+        toast.error(extractErrorMessage(err, "Failed to uninstall plugin"));
       } finally {
         setActionInFlight(null);
       }
@@ -577,20 +637,15 @@ export default function CodexPlugins() {
   if (isLoading) {
     return (
       <div>
-        <Heading2 className="mb-2">Plugins</Heading2>
         <Muted>Loading plugins... This may take a moment on first load.</Muted>
       </div>
     );
   }
 
   if (error) {
-    const errMsg = "message" in (error as any) ? (error as any).message :
-                   "error" in (error as any) ? String((error as any).error) :
-                   "data" in (error as any) ? String((error as any).data) : "Unknown error";
     return (
       <div>
-        <Heading2 className="mb-2">Plugins</Heading2>
-        <Muted>Failed to load plugins: {errMsg}</Muted>
+        <Muted>Failed to load plugins: {extractErrorMessage(error, "Unknown error")}</Muted>
       </div>
     );
   }
@@ -614,12 +669,7 @@ export default function CodexPlugins() {
 
   // List view
   return (
-
     <div className="mb-12">
-      <div className="flex items-center justify-between mb-6">
-        <Heading2>Plugins</Heading2>
-      </div>
-
       {/* Category filter + search */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex gap-1">
@@ -657,7 +707,7 @@ export default function CodexPlugins() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search plugins..."
             className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-primary-100/50 dark:bg-primary-800/30 border border-primary-200/50 dark:border-primary-700/30 text-sm text-primary-900 dark:text-primary-100 placeholder:text-primary-400 dark:placeholder:text-primary-500 outline-none focus:ring-1 focus:ring-primary-300 dark:focus:ring-primary-600"
-        />
+          />
         </div>
       </div>
 

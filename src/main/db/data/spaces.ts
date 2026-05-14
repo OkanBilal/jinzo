@@ -24,13 +24,13 @@ export const seedSpaces: SeedSpace[] = [
     icon: "icon:claude",
     systemPrompt: "",
     themeConfig: {
-      lightBackground: "#f2dbcfa6",
-      darkBackground: "#0e0d0dbf",
+      lightBackground: "#ffffff40",
+      darkBackground: "#00000070",
     },
     uiConfig: {
       sidebar: {
         width: "18rem",
-        title: "Repository",
+        title: "Project",
         itemType: "workspace",
         defaultRoute: "/claude",
       },
@@ -47,13 +47,13 @@ export const seedSpaces: SeedSpace[] = [
     icon: "icon:codex",
     systemPrompt: "",
     themeConfig: {
-      lightBackground: "#dcecfaa1",
-      darkBackground: "#0c0c0cbd",
+      lightBackground: "#ffffff40",
+      darkBackground: "#00000070",
     },
     uiConfig: {
       sidebar: {
         width: "18rem",
-        title: "Repository",
+        title: "Project",
         itemType: "workspace",
         defaultRoute: "/codex",
       },
@@ -69,13 +69,13 @@ export const seedSpaces: SeedSpace[] = [
     icon: "icon:copilot",
     systemPrompt: "",
     themeConfig: {
-      lightBackground: "#f0e9fab0",
-      darkBackground: "#15111abf",
+      lightBackground: "#ffffff40",
+      darkBackground: "#00000070",
     },
     uiConfig: {
       sidebar: {
         width: "18rem",
-        title: "Repository",
+        title: "Project",
         itemType: "workspace",
         defaultRoute: "/copilot",
       },
@@ -91,13 +91,13 @@ export const seedSpaces: SeedSpace[] = [
     icon: "icon:cursor",
     systemPrompt: "",
     themeConfig: {
-      lightBackground: "#cfced2a6",
-      darkBackground: "#0f0e14bf",
+      lightBackground: "#ffffff40",
+      darkBackground: "#00000070",
     },
     uiConfig: {
       sidebar: {
         width: "18rem",
-        title: "Repository",
+        title: "Project",
         itemType: "workspace",
         defaultRoute: "/cursor",
       },

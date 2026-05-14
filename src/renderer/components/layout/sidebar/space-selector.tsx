@@ -1,9 +1,6 @@
-import { useState } from "react";
 import { Space } from "@/lib/redux/api";
 import { parseIcon } from "@/lib/icon-registry";
-import { Copilot, Claude } from "@/components/ui/icons/space";
 import { Button } from "@/components/ui";
-import { Codex, Cursor } from "@/components/ui/icons";
 
 interface SpaceSelectorProps {
   spaces: Space[];
@@ -18,14 +15,11 @@ function SpaceSelector({
   onSpaceChange,
   onContextMenu,
 }: SpaceSelectorProps) {
-  const [hoveredSpaceId, setHoveredSpaceId] = useState<string | null>(null);
-
   return (
     <div className="flex items-center gap-1.5 overflow-x-auto noscrollbar px-1 ">
       {spaces.map((space) => {
         const icon = parseIcon(space.icon);
         const isActive = activeSpaceId === space.id;
-        const isHovered = hoveredSpaceId === space.id;
 
         return (
           <Button
@@ -35,36 +29,19 @@ function SpaceSelector({
               e.preventDefault();
               onContextMenu?.(space, e);
             }}
-            onMouseEnter={() => setHoveredSpaceId(space.id)}
-            onMouseLeave={() => setHoveredSpaceId(null)}
-            className={`shrink-0 flex items-center justify-center size-8 hover:bg-primary/60 dark:hover:bg-primary/20
+            className={`shrink-0 flex items-center justify-center size-8 hover:bg-primary/50 dark:hover:bg-primary/20
                rounded-xl transition-all duration-200 ease-out font-medium cursor-pointer ${
               isActive
                 ? "text-primary-900 dark:text-primary"
-                : "text-primary-900 dark:text-primary opacity-60"
+                : "text-primary-900 dark:text-primary opacity-50"
             }`}
             title={space.name}
             aria-label={space.name}
           >
             {icon.type === "emoji" ? (
-              <span className="text-lg font-medium">
-                {icon.value as string}
-              </span>
-            ) : icon.type === "copilot-animate" ? (
-              <Copilot className="text-primary-800 dark:text-primary" animate={isHovered} />
-            ) : icon.type === "claude-animate" ? (
-              <Claude className="text-primary-800 dark:text-primary" animate={isHovered} />
-            ) : icon.type === "codex-animate" ? (
-              <Codex
-                className={`size-4 text-primary-800 dark:text-primary`}
-              />
-            ) : icon.type === "cursor-animate" ? (
-              <Cursor
-                className="size-4 text-primary-800 dark:text-primary"
-                animate={isHovered}
-              />
+              <span className="text-lg font-medium">{icon.value}</span>
             ) : (
-              <icon.value className="size-4" />
+              <icon.value className="size-4 text-primary-800 dark:text-primary" />
             )}
           </Button>
         );

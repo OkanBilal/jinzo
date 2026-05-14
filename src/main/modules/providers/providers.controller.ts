@@ -80,4 +80,8 @@ export const providersController = {
   async uninstallPlugin(id: string, pluginId: string) {
     return providersService.uninstallPlugin(id, pluginId);
   },
+
+  async detectInstalled() {
+    return providersService.detectInstalled();
+  },
 };
