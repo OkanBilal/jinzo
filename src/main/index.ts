@@ -62,11 +62,8 @@ import {
   registerWorkspacesIpc,
   unregisterWorkspacesIpc,
 } from "./modules/workspaces";
-import {
-  registerRunsIpc,
-  unregisterRunsIpc,
-  releaseAllSleepBlockers,
-} from "./modules/runs";
+import { registerRunsIpc, unregisterRunsIpc } from "./modules/runs";
+import { runSessionRegistry } from "./modules/runs/run-session-registry";
 import { registerReviewsIpc, unregisterReviewsIpc } from "./modules/reviews";
 import {
   registerReviewFindingsIpc,
@@ -869,8 +866,9 @@ async function cleanupApp() {
     // Shutdown work adapters (Copilot, Claude Code, etc.)
     await shutdownAllWorkAdapters();
 
-    // Release any active sleep blockers
-    releaseAllSleepBlockers();
+    // Force-finalize any active run sessions (releases sleep blockers,
+    // marks runs as failed in DB so they don't sit as "running" across restart)
+    runSessionRegistry.shutdownAll();
 
     // Unregister IPC handlers
     unregisterAccountIpc();

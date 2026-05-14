@@ -12,7 +12,7 @@ import { workspaceDiffsRepo } from "../../workspaceDiffs/workspaceDiffs.repo";
 import { reviewsRepo } from "../../reviews/reviews.repo";
 import { reviewFindingsRepo } from "../../reviewFindings/reviewFindings.repo";
 import { workspaceActivityService } from "../../workspaceActivity/workspaceActivity.service";
-import { updateRunBaseRef } from "../../runs";
+import { runSessionRegistry } from "../../runs/run-session-registry";
 import { gitService } from "../../git/git.service";
 import { workspacesRepo } from "../../workspaces/workspaces.repo";
 import { projectsRepo } from "../../projects/projects.repo";
@@ -310,7 +310,7 @@ export async function handleCommitChanges(
     }
 
     if (ctx.runId && newHead) {
-      updateRunBaseRef(ctx.runId, newHead);
+      runSessionRegistry.get(ctx.runId)?.updateBaseRef(newHead);
     }
 
     // Clear review findings for this workspace — committed code is accepted
