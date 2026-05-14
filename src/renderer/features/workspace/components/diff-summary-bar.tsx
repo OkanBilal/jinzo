@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { useDispatch } from "react-redux";
+import NumberFlow from "@number-flow/react";
 import {
   useGetLatestWorkspaceDiffQuery,
   workspaceDiffsApi,
@@ -110,18 +111,22 @@ export function DiffSummaryBar({
               className={`size-3 text-primary-500 dark:text-primary-400 transition-transform duration-200 ${isExpanded ? "rotate-180" : "rotate-90"}`}
             />
             <span className="text-xs font-medium text-primary-700 dark:text-primary-300">
-              {stats.files} file{stats.files !== 1 ? "s" : ""} changed
+              <NumberFlow value={stats.files} /> file{stats.files !== 1 ? "s" : ""} changed
             </span>
             <span className="flex items-center gap-1.5 text-xs tabular-nums">
               {stats.insertions > 0 && (
-                <span className="text-green-600 dark:text-green-400 font-medium">
-                  +{stats.insertions}
-                </span>
+                <NumberFlow
+                  value={stats.insertions}
+                  prefix="+"
+                  className="text-green-600 dark:text-green-400 font-medium"
+                />
               )}
               {stats.deletions > 0 && (
-                <span className="text-red-500 dark:text-red-400 font-medium">
-                  -{stats.deletions}
-                </span>
+                <NumberFlow
+                  value={stats.deletions}
+                  prefix="-"
+                  className="text-red-500 dark:text-red-400 font-medium"
+                />
               )}
             </span>
           </button>
@@ -184,14 +189,18 @@ export function DiffSummaryBar({
                       {fStats && (
                         <span className="flex items-center gap-1 text-xxs tabular-nums ml-auto shrink-0">
                           {fStats.ins > 0 && (
-                            <span className="text-green-600 dark:text-green-400">
-                              +{fStats.ins}
-                            </span>
+                            <NumberFlow
+                              value={fStats.ins}
+                              prefix="+"
+                              className="text-green-600 dark:text-green-400"
+                            />
                           )}
                           {fStats.del > 0 && (
-                            <span className="text-red-500 dark:text-red-400">
-                              -{fStats.del}
-                            </span>
+                            <NumberFlow
+                              value={fStats.del}
+                              prefix="-"
+                              className="text-red-500 dark:text-red-400"
+                            />
                           )}
                         </span>
                       )}

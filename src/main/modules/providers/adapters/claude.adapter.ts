@@ -184,6 +184,11 @@ interface SDKOptions {
   effort?: "low" | "medium" | "high" | "max";
   settings?: Record<string, unknown>;
   promptSuggestions?: boolean;
+  /**
+   * Emit incremental `stream_event` messages with raw Anthropic content-block
+   * deltas (text_delta, thinking_delta, …) for token-by-token streaming.
+   */
+  includePartialMessages?: boolean;
 }
 
 interface SDKMessageContent {
@@ -287,11 +292,35 @@ interface SDKSystemMessage {
   skills?: string[];
 }
 
+interface SDKRawStreamEvent {
+  type: string;
+  index?: number;
+  content_block?: { type: string; [key: string]: unknown };
+  delta?: {
+    type?: string;
+    text?: string;
+    thinking?: string;
+    partial_json?: string;
+    [key: string]: unknown;
+  };
+  message?: { id?: string; [key: string]: unknown };
+  [key: string]: unknown;
+}
+
+interface SDKPartialAssistantMessage {
+  type: "stream_event";
+  event: SDKRawStreamEvent;
+  parent_tool_use_id: string | null;
+  uuid: string;
+  session_id: string;
+}
+
 type SDKMessage =
   | SDKAssistantMessage
   | SDKUserMessage
   | SDKResultMessage
   | SDKSystemMessage
+  | SDKPartialAssistantMessage
   | {
       type: string;
       session_id?: string;
@@ -395,6 +424,11 @@ export function createClaudeAdapter(
     string,
     { toolName: string; input?: unknown; startedAt?: number }
   >();
+
+  // Accumulated text per (runId, content_block_index) for streaming UI.
+  // Replaced (not appended) by the renderer each emit, so we send full text.
+  const partialTextBuffers = new Map<string, string>();
+  const partialThinkingBuffers = new Map<string, string>();
 
   async function ensureSDK(): Promise<void> {
     if (loadError) {
@@ -607,6 +641,9 @@ export function createClaudeAdapter(
 
     // Enable prompt suggestions
     options.promptSuggestions = true;
+
+    // Stream raw content-block deltas (text + thinking) for token-by-token UI
+    options.includePartialMessages = true;
 
     // Inject interactive tool approval via PreToolUse hook
     // Only inject when NOT in bypassPermissions mode and we have a runId
@@ -1239,6 +1276,70 @@ export function createClaudeAdapter(
             suggestion: suggestionMsg.suggestion,
             ts,
           });
+        }
+        break;
+      }
+
+      case "stream_event": {
+        const partialMsg = msg as SDKPartialAssistantMessage;
+        const event = partialMsg.event;
+        if (!event) break;
+
+        // Skip subagent streams — they would pollute the parent timeline
+        if (partialMsg.parent_tool_use_id) break;
+
+        const blockIndex = typeof event.index === "number" ? event.index : -1;
+
+        if (event.type === "content_block_delta" && event.delta && blockIndex >= 0) {
+          const bufferKey = `${_runId}-${blockIndex}`;
+
+          if (event.delta.type === "text_delta" && event.delta.text) {
+            const next = (partialTextBuffers.get(bufferKey) ?? "") + event.delta.text;
+            partialTextBuffers.set(bufferKey, next);
+            events.push({
+              type: "artifact",
+              kind: "report",
+              content: next,
+              metadata: { source: "agent_message_streaming" },
+              ephemeral: true,
+              streamId: `claude-msg-${_runId}-${blockIndex}`,
+            });
+          } else if (event.delta.type === "thinking_delta" && event.delta.thinking) {
+            const next = (partialThinkingBuffers.get(bufferKey) ?? "") + event.delta.thinking;
+            partialThinkingBuffers.set(bufferKey, next);
+            events.push({
+              type: "artifact",
+              kind: "report",
+              content: next,
+              metadata: { source: "agent_thinking_streaming" },
+              ephemeral: true,
+              streamId: `claude-think-${_runId}-${blockIndex}`,
+            });
+          }
+        } else if (event.type === "content_block_stop" && blockIndex >= 0) {
+          const key = `${_runId}-${blockIndex}`;
+          // Thinking lane has no DB-persisted counterpart, so the content-match
+          // filter in the renderer won't auto-clear it. Push an empty update.
+          if (partialThinkingBuffers.has(key)) {
+            events.push({
+              type: "artifact",
+              kind: "report",
+              content: "",
+              metadata: { source: "agent_thinking_streaming" },
+              ephemeral: true,
+              streamId: `claude-think-${_runId}-${blockIndex}`,
+            });
+          }
+          partialTextBuffers.delete(key);
+          partialThinkingBuffers.delete(key);
+        } else if (event.type === "message_stop") {
+          // Safety net: clear any leftover buffers for this run
+          for (const key of partialTextBuffers.keys()) {
+            if (key.startsWith(`${_runId}-`)) partialTextBuffers.delete(key);
+          }
+          for (const key of partialThinkingBuffers.keys()) {
+            if (key.startsWith(`${_runId}-`)) partialThinkingBuffers.delete(key);
+          }
         }
         break;
       }

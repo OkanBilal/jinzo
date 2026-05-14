@@ -72,6 +72,9 @@ export function useProviderModels(
   const effortLevel: string = variant === "codex" || variant === "copilot"
     ? (providerData?.config as any)?.modelReasoningEffort || ""
     : (providerData?.config as any)?.effortLevel || "";
+  const planMode: boolean = variant === "codex"
+    ? !!(providerData?.config as any)?.planMode
+    : false;
 
   const handlePermissionModeChange = useCallback(async (mode: string) => {
     if (!providerData) return;
@@ -87,6 +90,20 @@ export function useProviderModels(
       },
     });
   }, [providerData, activeProviderId, variant, updateProvider]);
+
+  const handlePlanModeToggle = useCallback(async () => {
+    if (!providerData) return;
+    const currentConfig = providerData.config ?? {};
+    await updateProvider({
+      id: activeProviderId,
+      payload: {
+        config: {
+          ...currentConfig,
+          planMode: !planMode,
+        },
+      },
+    });
+  }, [providerData, planMode, activeProviderId, updateProvider]);
 
   const handleThinkingModeToggle = useCallback(async () => {
     if (!providerData) return;
@@ -240,5 +257,7 @@ export function useProviderModels(
     effortLevel,
     handleEffortLevelChange,
     selectedModelInfo,
+    planMode,
+    handlePlanModeToggle,
   };
 }

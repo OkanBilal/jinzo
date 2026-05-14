@@ -73,6 +73,8 @@ export function WorkspaceEmptyState({
     return (
       <div className="flex flex-col items-center py-2 text-center shrink-0 w-full max-w-200">
         <Button
+        tooltip="Customize space"
+        
           variant="bare"
           onClick={onToggleCustomize}
           aria-label={

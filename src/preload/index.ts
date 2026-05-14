@@ -408,6 +408,13 @@ const api = {
       ipcRenderer.on("runs:statusChanged", listener);
       return () => ipcRenderer.removeListener("runs:statusChanged", listener);
     },
+    // Fired after the workspace diff is recomputed (incrementally during a run
+    // and once finally at completion). Renderer refetches the diff.
+    onDiffUpdated: (callback: (data: { runId: string; workspaceId: string; ts: number }) => void) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on("runs:diffUpdated", listener);
+      return () => ipcRenderer.removeListener("runs:diffUpdated", listener);
+    },
   },
   // Reviews operations
   reviews: {

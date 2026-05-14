@@ -532,6 +532,12 @@ export interface CodexAdapterConfig {
   skipGitRepoCheck?: boolean;
   /** Thread personality — controls the agent's conversational style */
   personality?: "friendly" | "pragmatic" | "none";
+  /**
+   * When true, sends `collaborationMode: { mode: "plan", … }` on `turn/start`,
+   * activating Codex's built-in plan preset (medium reasoning, plan instructions).
+   * Independent of `sandboxMode` — both can be active.
+   */
+  planMode?: boolean;
   /** Additional directories the agent can access */
   additionalDirectories?: string[];
   /** Base URL override for OpenAI API */

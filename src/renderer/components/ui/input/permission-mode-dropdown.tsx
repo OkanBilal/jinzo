@@ -15,7 +15,6 @@ const PERMISSION_MODES = [
     label: "Ask permissions",
     description: "Ask before changes",
   },
-
   {
     value: "acceptEdits",
     label: "Auto accept edits",
@@ -25,6 +24,11 @@ const PERMISSION_MODES = [
     value: "plan",
     label: "Plan mode",
     description: "Plan before changes",
+  },
+  {
+    value: "bypassPermissions",
+    label: "Bypass permissions",
+    description: "Bypass all permissions",
   },
 ] as const;
 
@@ -73,6 +77,25 @@ function PermissionModeIcon({
   }
 }
 
+function PlanToggleSwitch({ checked }: { checked: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors ${
+        checked
+          ? "bg-primary-500 dark:bg-primary-400"
+          : "bg-primary-300/60 dark:bg-primary-700"
+      }`}
+    >
+      <span
+        className={`inline-block size-3 rounded-full bg-white shadow-sm transition-transform ${
+          checked ? "translate-x-3.5" : "translate-x-0.5"
+        }`}
+      />
+    </span>
+  );
+}
+
 interface PermissionModeDropdownProps {
   permissionMode: string;
   onPermissionModeChange: (mode: string) => void;
@@ -82,6 +105,9 @@ interface PermissionModeDropdownProps {
   variant?: string;
   modes?: readonly { value: string; label: string; description?: string }[];
   modeLabels?: Record<string, string>;
+  /** Codex-only: plan mode runs alongside the sandbox mode. */
+  planMode?: boolean;
+  onPlanModeToggle?: () => void;
 }
 
 export function PermissionModeDropdown({
@@ -93,9 +119,12 @@ export function PermissionModeDropdown({
   variant,
   modes: modesProp,
   modeLabels: modeLabelsProp,
+  planMode = false,
+  onPlanModeToggle,
 }: PermissionModeDropdownProps) {
   const isCursor = variant === "cursor";
   const isCodex = variant === "codex";
+  const showPlanRow = isCodex && !!onPlanModeToggle;
   const modes =
     modesProp ??
     (isCursor
@@ -127,6 +156,7 @@ export function PermissionModeDropdown({
       >
         <PermissionModeIcon mode={permissionMode} className="size-3.5" />
         {modeLabels[permissionMode] ?? permissionMode}
+        {showPlanRow && planMode ? " + Plan" : ""}
         <ArrowUp className="size-3.5 rotate-180" />
       </Button>
       <DropdownWrapper
@@ -143,7 +173,9 @@ export function PermissionModeDropdown({
               onPermissionModeChange(mode.value);
               onToggle();
             }}
-            className={`w-full text-left px-2.5 py-1.5 cursor-pointer transition-colors flex items-center gap-2.5 first:rounded-t-xl last:rounded-b-xl ${
+            className={`w-full text-left px-2.5 py-1.5 cursor-pointer transition-colors flex items-center gap-2.5 first:rounded-t-xl ${
+              !showPlanRow ? "last:rounded-b-xl" : ""
+            } ${
               permissionMode === mode.value
                 ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-500 dark:text-primary-100"
                 : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
@@ -161,6 +193,33 @@ export function PermissionModeDropdown({
             </div>
           </Button>
         ))}
+        {showPlanRow && (
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => onPlanModeToggle?.()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onPlanModeToggle?.();
+              }
+            }}
+            className={`w-full text-left px-2.5 py-1.5 cursor-pointer transition-colors flex items-center gap-2.5 last:rounded-b-xl border-t border-primary-200/40 dark:border-primary-800 ${
+              planMode
+                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-500 dark:text-primary-100"
+                : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
+            }`}
+          >
+            <Plan className="size-3.5 shrink-0" />
+            <div className="flex flex-col flex-1 min-w-0">
+              <Body className="text-s mb-0.5">Plan Mode</Body>
+              <span className="text-xs text-primary-500">
+                Plan before changes
+              </span>
+            </div>
+            <PlanToggleSwitch checked={planMode} />
+          </div>
+        )}
       </DropdownWrapper>
     </div>
   );

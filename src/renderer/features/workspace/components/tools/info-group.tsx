@@ -6,6 +6,7 @@ import type { EventGroup } from "../../utils/group-events";
 import { Code } from "@/components/ui/icons/space";
 import { Picture, Document, Codex, Close, Sparkles, External, ArrowUp } from "@/components/ui/icons";
 import { ProviderIcon } from "../provider-icon";
+import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
 import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
 
@@ -80,7 +81,7 @@ function PromptSkillInlineChip({ skill }: { skill: PromptSkillMeta }) {
   const tooltip = skill.shortDescription || skill.description || label;
   return (
     <span
-      className="inline-flex align-middle items-center gap-1 px-1.5 h-6 mx-0.5 rounded-lg text-xs font-medium leading-none select-none bg-primary dark:bg-primary-300/10 dark:text-primary-200"
+      className="inline-flex align-middle items-center gap-1 px-1.5 mb-0.5 h-6 mx-0.5 rounded-lg text-xs font-medium leading-none select-none bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-800"
       title={tooltip}
     >
       <span className="inline-flex items-center justify-center size-3.5 shrink-0 rounded-sm overflow-hidden">
@@ -91,35 +92,89 @@ function PromptSkillInlineChip({ skill }: { skill: PromptSkillMeta }) {
   );
 }
 
+interface PromptFileMeta {
+  fullPath: string;
+  basename: string;
+}
+
+function PromptFileInlineChip({ file }: { file: PromptFileMeta }) {
+  const dotIdx = file.basename.lastIndexOf(".");
+  const extension =
+    dotIdx > 0 && dotIdx < file.basename.length - 1 ? file.basename.slice(dotIdx + 1) : undefined;
+  return (
+    <span
+      className="inline-flex align-middle items-center gap-1 px-1.5 mb-0.5 h-6 mx-0.5 rounded-lg text-xs font-medium leading-none select-none bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-800 "
+      title={file.fullPath}
+    >
+      <span className="inline-flex items-center justify-center size-3.5 shrink-0">
+        <FileIconComponent extension={extension} fileName={file.basename} className="size-3.5" />
+      </span>
+      <span className="leading-none">{file.basename}</span>
+    </span>
+  );
+}
+
+const REGEX_ESC = /[.*+?^${}()|[\]\\]/g;
+
 /**
- * Tokenizes a user prompt message and renders `$<skillname>` substrings as inline chips.
- * Tolerates a duplicated `:<name>` suffix produced by older serializations so legacy runs
- * still display cleanly without leaving the literal word visible.
+ * Tokenizes a user prompt message and renders `$<skillname>` / `@<path>` substrings as inline chips.
+ * Tolerates a duplicated `:<name>` suffix produced by older skill serializations so legacy runs
+ * still display cleanly without leaving the literal word visible. Records which file paths were
+ * matched inline (via `matchedFilePaths`) so the caller can omit them from the external file row.
  */
-function renderMessageWithSkillChips(message: string, skills: PromptSkillMeta[]) {
+function renderMessageWithChips(
+  message: string,
+  skills: PromptSkillMeta[],
+  files: PromptFileMeta[],
+  matchedFilePaths: Set<string>,
+) {
   if (!message) return null;
-  if (skills.length === 0) return message;
-  const byName = new Map(skills.map((s) => [s.name, s]));
-  const names = skills
-    .map((s) => s.name)
-    .sort((a, b) => b.length - a.length)
-    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  const re = new RegExp(`\\$(${names.join("|")})(?::[\\w-]+)?(?![\\w-])`, "g");
+  if (skills.length === 0 && files.length === 0) return message;
+  const skillByName = new Map(skills.map((s) => [s.name, s]));
+  const fileByPath = new Map(files.map((f) => [f.fullPath, f]));
+  const parts: string[] = [];
+  if (skills.length > 0) {
+    const names = skills
+      .map((s) => s.name)
+      .sort((a, b) => b.length - a.length)
+      .map((n) => n.replace(REGEX_ESC, "\\$&"));
+    parts.push(`\\$(?<skill>${names.join("|")})(?::[\\w-]+)?(?![\\w-])`);
+  }
+  if (files.length > 0) {
+    const paths = files
+      .map((f) => f.fullPath)
+      .sort((a, b) => b.length - a.length)
+      .map((p) => p.replace(REGEX_ESC, "\\$&"));
+    parts.push(`@(?<file>${paths.join("|")})(?![\\w./-])`);
+  }
+  const re = new RegExp(parts.join("|"), "g");
   const out: React.ReactNode[] = [];
   let lastIdx = 0;
   let key = 0;
   let match: RegExpExecArray | null;
   while ((match = re.exec(message)) !== null) {
     if (match.index > lastIdx) {
-      out.push(
-        <span key={`t${key++}`}>{message.slice(lastIdx, match.index)}</span>,
-      );
+      out.push(<span key={`t${key++}`}>{message.slice(lastIdx, match.index)}</span>);
     }
-    const skill = byName.get(match[1]);
-    if (skill) {
-      out.push(<PromptSkillInlineChip key={`c${key++}`} skill={skill} />);
-    } else {
-      out.push(<span key={`t${key++}`}>{match[0]}</span>);
+    const skillName = match.groups?.skill;
+    const filePath = match.groups?.file;
+    if (skillName) {
+      const skill = skillByName.get(skillName);
+      out.push(
+        skill ? (
+          <PromptSkillInlineChip key={`c${key++}`} skill={skill} />
+        ) : (
+          <span key={`t${key++}`}>{match[0]}</span>
+        ),
+      );
+    } else if (filePath) {
+      const file = fileByPath.get(filePath);
+      if (file) {
+        matchedFilePaths.add(filePath);
+        out.push(<PromptFileInlineChip key={`c${key++}`} file={file} />);
+      } else {
+        out.push(<span key={`t${key++}`}>{match[0]}</span>);
+      }
     }
     lastIdx = match.index + match[0].length;
   }
@@ -191,7 +246,11 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
       const dir = f.path.substring(0, lastSlash);
       const parentSlash = dir.lastIndexOf("/");
       const parent = dir.substring(parentSlash + 1);
-      return { fullPath: f.path, displayName: parent ? `${parent}/${fileName}` : fileName };
+      return {
+        fullPath: f.path,
+        basename: fileName,
+        displayName: parent ? `${parent}/${fileName}` : fileName,
+      };
     });
     const attachments = (event.metadata?.attachments ?? []) as Array<{
       name: string;
@@ -231,15 +290,16 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
       );
     }
 
+    const matchedFilePaths = new Set<string>();
+    const renderedMessage = renderMessageWithChips(message, skills, files, matchedFilePaths);
+    const externalFiles = files.filter((f) => !matchedFilePaths.has(f.fullPath));
     return (
       <div className="w-full overflow-hidden">
         <div className="w-full py-2 flex justify-end">
           <div className="flex flex-col items-end gap-2 max-w-[80%]">
             <div className="px-3.5 py-2 rounded-2xl bg-primary-50 dark:bg-primary/5 ">
               <div className="text-primary-950 dark:text-primary">
-                <p className="text-sm whitespace-pre-wrap">
-                  {renderMessageWithSkillChips(message, skills)}
-                </p>
+                <p className="text-sm whitespace-pre-wrap">{renderedMessage}</p>
               </div>
             </div>
             {previewAtt && (
@@ -249,7 +309,7 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                 onClose={() => setPreviewAtt(null)}
               />
             )}
-            {(files.length > 0 || attachments.length > 0 || issues.length > 0 || signals.length > 0) && (
+            {(externalFiles.length > 0 || attachments.length > 0 || issues.length > 0 || signals.length > 0) && (
               <div className="flex flex-wrap gap-1.5 justify-end">
                 {issues.map((issue) => (
                   <div
@@ -273,7 +333,7 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                     </span>
                   </div>
                 ))}
-                {files.map((file) => (
+                {externalFiles.map((file) => (
                   <div
                     key={file.fullPath}
                     className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-100"

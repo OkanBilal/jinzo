@@ -406,12 +406,24 @@ export function useWorkspaceRuns(
       void loadRunDetails(activeRunId);
     });
 
+    // Live workspace diff: invalidate cached diff queries on each
+    // incremental recomputation so the UI re-renders with fresh changes.
+    const offDiff = window.api.runs.onDiffUpdated(({ runId, workspaceId }) => {
+      if (runId !== activeRunId) return;
+      dispatch(
+        workspaceDiffsApi.util.invalidateTags([
+          { type: "WorkspaceDiffs", id: workspaceId },
+        ]),
+      );
+    });
+
     return () => {
       offEvent();
       offStatus();
+      offDiff();
       if (refetchTimer !== null) window.clearTimeout(refetchTimer);
     };
-  }, [activeRunId, activeRunStatus, loadRunDetails, finalizeRun]);
+  }, [activeRunId, activeRunStatus, loadRunDetails, finalizeRun, dispatch]);
 
   // Polling fallback for dropped pushes, stalled adapters, or backgrounded
   // renderers. 10s keeps IO low since push handles the common case.
@@ -484,6 +496,7 @@ export function useWorkspaceRuns(
       const kind =
         se.streamId.startsWith("cursor-think-") ? "thinking"
           : se.streamId.startsWith("codex-cmd-") ? "thinking"
+          : se.streamId.startsWith("claude-think-") ? "thinking"
           : "report";
       return {
         id: se.id,

@@ -35,6 +35,33 @@ export function createLogger(prefix: string): AdapterLogger {
 // Pre-approved tools (auto-allow without user dialog)
 // ─────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────
+// Tool classification — tools that could plausibly modify files on disk.
+// Used to trigger incremental workspace diff recomputation during a run.
+// Bash is included because shell commands can touch arbitrary files.
+// ─────────────────────────────────────────────────────────────
+
+export const FILE_MODIFYING_TOOLS = new Set([
+  "Write",
+  "Edit",
+  "MultiEdit",
+  "NotebookEdit",
+  "write_file",
+  "edit_file",
+  "create_file",
+  "str_replace_editor",
+  "apply_patch",
+  "apply_diff",
+  "patch",
+  "Bash",
+  "bash",
+  "shell",
+]);
+
+export function couldModifyFiles(toolName: string): boolean {
+  return FILE_MODIFYING_TOOLS.has(toolName);
+}
+
 export const DEFAULT_ALLOWED_TOOLS = [
   "Bash",
   "Read",
@@ -352,10 +379,10 @@ export function appendPromptSections(
     result = `${result}\n\n---\n\nContext signals (error reports):\n${signalsList}`;
   }
 
-  if (options.contextFiles && options.contextFiles.length > 0) {
-    const filesList = formatFilesSection(options.contextFiles);
-    result = `${result}\n\n---\n\nContext files (read these before starting):\n${filesList}`;
-  }
+  // Context files are no longer appended as a block — every file the user attaches arrives in
+  // `prompt` as an inline `@<path>` mention (file explorer's "Add to context" auto-appends one
+  // via WorkspaceInput's reactive sync). `contextFiles` stays on the options shape so the
+  // user-prompt artifact metadata still carries structured file info for the UI.
 
   if (
     options.attachments &&

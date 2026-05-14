@@ -9,6 +9,7 @@ import { workspaceActivityService } from "../workspaceActivity/workspaceActivity
 import { workspaceDiffsRepo } from "../workspaceDiffs/workspaceDiffs.repo";
 import {
   createWorkAdapter,
+  couldModifyFiles,
   type WorkRunEvent,
   type WorkRunContextItem,
   type WorkRunAdapter,
@@ -52,6 +53,16 @@ const sleepBlockers = new Map<string, number>();
 const activeTurnIds = new Map<string, number>(); // runId → active turn DB id
 const turnCounters = new Map<string, number>(); // runId → last turnIndex
 
+// In-memory map: runId -> workspace context for live diff updates
+// Populated at run start, cleared on completion/abort.
+const runWorkspaces = new Map<string, { id: string; rootPath: string }>();
+
+// Live diff scheduling: debounce timers + in-flight guard per run
+const liveDiffTimers = new Map<string, NodeJS.Timeout>();
+const liveDiffInFlight = new Set<string>();
+const liveDiffPending = new Set<string>();
+const LIVE_DIFF_DEBOUNCE_MS = 300;
+
 async function acquireSleepBlocker(runId: string): Promise<void> {
   const settings = await appSettingsRepo.findById("default");
   if (!settings?.preventSleepDuringRuns) return;
@@ -89,6 +100,10 @@ function broadcastRunUpdate(runId: string): void {
 
 function broadcastRunStatusChange(runId: string, status: string): void {
   broadcastToWindows("runs:statusChanged", { runId, status, ts: Date.now() });
+}
+
+function broadcastDiffUpdate(runId: string, workspaceId: string): void {
+  broadcastToWindows("runs:diffUpdated", { runId, workspaceId, ts: Date.now() });
 }
 
 async function sendRunNotification(runId: string, status: string): Promise<void> {
@@ -215,6 +230,9 @@ async function startNewTurn(runId: string, promptContent?: string): Promise<void
 function cleanupTurnState(runId: string): void {
   activeTurnIds.delete(runId);
   turnCounters.delete(runId);
+  runWorkspaces.delete(runId);
+  clearLiveDiffSchedule(runId);
+  liveDiffInFlight.delete(runId);
 }
 
 async function closePendingToolCalls(
@@ -258,15 +276,22 @@ async function closeRunningToolCallsForRun(runId: string): Promise<void> {
   }
 }
 
-/**
- * Compute git diff since baseRef and persist into workspace_diffs.
- * Called after normal completion (success) and on user abort to capture partial workspace changes.
- */
-async function persistRunDiff(runId: string, workspaceId: string, rootPath: string): Promise<void> {
-  const baseRef = runBaseRefs.get(runId);
-  runBaseRefs.delete(runId);
+interface DiffSnapshot {
+  baseRef: string;
+  diffText: string;
+  files: string[];
+  untrackedFiles: string[];
+  shortstat: string;
+}
 
-  if (!baseRef) return;
+/**
+ * Pure read: compute the current git diff snapshot for a run against its baseRef.
+ * Does NOT mutate runBaseRefs — caller decides when to drop it.
+ * Returns null if no baseRef recorded or git operations all fail.
+ */
+async function buildDiffSnapshot(runId: string, rootPath: string): Promise<DiffSnapshot | null> {
+  const baseRef = runBaseRefs.get(runId);
+  if (!baseRef) return null;
 
   try {
     const [diffResult, filesResult, statResult, untrackedResult] = await Promise.all([
@@ -281,11 +306,9 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
     const untrackedFiles = untrackedResult.success ? (untrackedResult.data ?? []) : [];
     let shortstat = statResult.success ? (statResult.data ?? "") : "";
 
-    // Merge tracked and untracked file lists (deduplicated)
     const files = [...new Set([...trackedFiles, ...untrackedFiles])];
 
-    // Generate diff entries for untracked (new) files
-    // Also count their lines to include in shortstat (git diff --shortstat doesn't cover untracked files)
+    // Inline untracked (new) files as synthetic diff hunks — git diff doesn't cover them.
     let untrackedInsertions = 0;
     if (untrackedFiles.length > 0) {
       const untrackedDiffs: string[] = [];
@@ -293,10 +316,9 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
         const fullPath = path.join(rootPath, filePath);
         try {
           const stat = fs.statSync(fullPath);
-          // Skip binary / large files (>256KB)
           if (stat.size > 256 * 1024) {
             untrackedDiffs.push(
-              `diff --git a/${filePath} b/${filePath}\nnew file\nBinary or large file (${stat.size} bytes)`
+              `diff --git a/${filePath} b/${filePath}\nnew file\nBinary or large file (${stat.size} bytes)`,
             );
             continue;
           }
@@ -313,9 +335,8 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
           const diffBody = lines.map((l) => `+${l}`).join("\n");
           untrackedDiffs.push(`${diffHeader}\n${diffBody}`);
         } catch {
-          // File may have been deleted between ls-files and read, skip
           untrackedDiffs.push(
-            `diff --git a/${filePath} b/${filePath}\nnew file\n(could not read file)`
+            `diff --git a/${filePath} b/${filePath}\nnew file\n(could not read file)`,
           );
         }
       }
@@ -326,41 +347,159 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
       }
     }
 
-    // Merge untracked file insertions into shortstat
-    // git diff --shortstat only covers tracked files, so new (untracked) files are missing
     if (untrackedInsertions > 0) {
       shortstat = mergeUntrackedIntoShortstat(shortstat, untrackedFiles.length, untrackedInsertions);
     }
 
-    // Remove the latest diff for this workspace so we always reflect the current state
-    // (covers both continuations of the same run and new runs replacing old ones)
+    return { baseRef, diffText, files, untrackedFiles, shortstat };
+  } catch (err) {
+    console.error(`[RunsService] buildDiffSnapshot failed for ${runId}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Upsert the workspace_diffs row for a run.
+ * First call for a runId: deletes the workspace's prior diff (cross-run cleanup),
+ * then inserts a fresh row. Subsequent calls update the same row in place.
+ */
+async function upsertDiffForRun(
+  runId: string,
+  workspaceId: string,
+  snapshot: DiffSnapshot,
+): Promise<void> {
+  const existing = await workspaceDiffsRepo.findByRun(runId);
+  const filesJson = JSON.stringify(snapshot.files);
+  const statsJson = JSON.stringify({
+    shortstat: snapshot.shortstat,
+    files: snapshot.files.length,
+    newFiles: snapshot.untrackedFiles.length,
+  });
+
+  if (existing) {
+    await workspaceDiffsRepo.updateDiff(existing.id, {
+      diffText: snapshot.diffText,
+      filesJson,
+      statsJson,
+      baseRef: snapshot.baseRef,
+    });
+  } else {
+    // First persisted diff for this run — wipe the workspace's prior (stale) row.
     await workspaceDiffsRepo.deleteLatestByWorkspace(workspaceId);
+    await workspaceDiffsService.createDiff({
+      id: generateRunId(),
+      workspaceId,
+      runId,
+      baseRef: snapshot.baseRef,
+      diffText: snapshot.diffText,
+      filesJson,
+      statsJson,
+    });
+  }
+}
 
-    // Skip if no files changed
-    if (files.length === 0) {
-      console.log(`[RunsService] No changes since ${baseRef} for run ${runId}, skipping diff persist`);
+/**
+ * Live (incremental) diff recomputation, triggered after each file-modifying
+ * tool call. Upserts the run's diff row and broadcasts so the renderer refetches.
+ * No activity log — that fires once at run completion via persistRunDiff.
+ */
+async function recomputeLiveDiff(
+  runId: string,
+  workspaceId: string,
+  rootPath: string,
+): Promise<void> {
+  const snapshot = await buildDiffSnapshot(runId, rootPath);
+  if (!snapshot) return;
+
+  // No files changed yet — nothing to persist.
+  if (snapshot.files.length === 0) return;
+
+  // Skip write if diff content is identical to the row we already have for this run.
+  const existing = await workspaceDiffsRepo.findByRun(runId);
+  if (existing && hashContent(existing.diffText) === hashContent(snapshot.diffText)) {
+    return;
+  }
+
+  try {
+    await upsertDiffForRun(runId, workspaceId, snapshot);
+    broadcastDiffUpdate(runId, workspaceId);
+  } catch (err) {
+    console.error(`[RunsService] recomputeLiveDiff failed for ${runId}:`, err);
+  }
+}
+
+/** Run live diff with overlap protection — coalesces concurrent invocations. */
+async function runLiveDiff(runId: string): Promise<void> {
+  const ws = runWorkspaces.get(runId);
+  if (!ws) return;
+
+  if (liveDiffInFlight.has(runId)) {
+    liveDiffPending.add(runId);
+    return;
+  }
+
+  liveDiffInFlight.add(runId);
+  try {
+    await recomputeLiveDiff(runId, ws.id, ws.rootPath);
+  } finally {
+    liveDiffInFlight.delete(runId);
+    if (liveDiffPending.has(runId)) {
+      liveDiffPending.delete(runId);
+      // Re-run once to capture changes that arrived during the previous pass.
+      void runLiveDiff(runId);
+    }
+  }
+}
+
+function scheduleLiveDiff(runId: string): void {
+  const existing = liveDiffTimers.get(runId);
+  if (existing) clearTimeout(existing);
+  const timer = setTimeout(() => {
+    liveDiffTimers.delete(runId);
+    void runLiveDiff(runId);
+  }, LIVE_DIFF_DEBOUNCE_MS);
+  liveDiffTimers.set(runId, timer);
+}
+
+function clearLiveDiffSchedule(runId: string): void {
+  const timer = liveDiffTimers.get(runId);
+  if (timer) {
+    clearTimeout(timer);
+    liveDiffTimers.delete(runId);
+  }
+  liveDiffPending.delete(runId);
+}
+
+/**
+ * Final diff persistence at run completion (success or abort).
+ * Builds the canonical snapshot, upserts (finalizing any live-diff row),
+ * and logs a single workspace activity entry.
+ */
+async function persistRunDiff(runId: string, workspaceId: string, rootPath: string): Promise<void> {
+  clearLiveDiffSchedule(runId);
+
+  const snapshot = await buildDiffSnapshot(runId, rootPath);
+  runBaseRefs.delete(runId);
+  if (!snapshot) return;
+
+  try {
+    if (snapshot.files.length === 0) {
+      console.log(`[RunsService] No changes since ${snapshot.baseRef} for run ${runId}, skipping diff persist`);
       return;
     }
 
-    // Skip if identical diff content was already persisted for this workspace
-    const diffHash = hashContent(diffText);
+    // Compute incremental file count vs a prior diff sharing the same baseRef
+    // (excluding our own live row for this run), so the activity entry reflects
+    // only what changed since the last recorded snapshot — not cumulative noise.
     const recentDiffs = await workspaceDiffsRepo.findByWorkspace(workspaceId, 10);
-    const duplicateDiff = recentDiffs.find((d) => hashContent(d.diffText) === diffHash);
-    if (duplicateDiff) {
-      console.log(`[RunsService] Identical diff already exists (id: ${duplicateDiff.id}), skipping`);
-      return;
-    }
-
-    // Compute incremental file count: if a previous diff shares the same baseRef,
-    // compare per-file diff hashes to find only files whose content actually changed
-    // since the last recorded diff (avoids cumulative inflation when multiple runs
-    // happen without a commit in between).
-    let incrementalFileCount = files.length;
-    let incrementalFileNames: string[] = files;
-    const prevDiffWithSameBase = recentDiffs.find((d) => d.baseRef === baseRef);
+    let incrementalFileCount = snapshot.files.length;
+    let incrementalFileNames: string[] = snapshot.files;
+    const prevDiffWithSameBase = recentDiffs.find(
+      (d) => d.baseRef === snapshot.baseRef && d.runId !== runId,
+    );
     if (prevDiffWithSameBase) {
       const prevPerFile = buildPerFileDiffHashes(prevDiffWithSameBase.diffText);
-      const currPerFile = buildPerFileDiffHashes(diffText);
+      const currPerFile = buildPerFileDiffHashes(snapshot.diffText);
       const changedFiles: string[] = [];
       for (const [file, hash] of currPerFile) {
         if (prevPerFile.get(file) !== hash) {
@@ -371,30 +510,20 @@ async function persistRunDiff(runId: string, workspaceId: string, rootPath: stri
       incrementalFileNames = changedFiles;
     }
 
-    await workspaceDiffsService.createDiff({
-      id: generateRunId(),
-      workspaceId,
-      runId,
-      baseRef,
-      diffText,
-      filesJson: JSON.stringify(files),
-      statsJson: JSON.stringify({ shortstat, files: files.length, newFiles: untrackedFiles.length }),
-    });
+    await upsertDiffForRun(runId, workspaceId, snapshot);
+    broadcastDiffUpdate(runId, workspaceId);
 
-    // Log activity with incremental count (only files that actually changed since last diff)
-    const activityFileCount = incrementalFileCount;
-    if (activityFileCount > 0) {
-      // Show changed file names (basename only) instead of cumulative shortstat
+    if (incrementalFileCount > 0) {
       const summaryLines = incrementalFileNames
         .map((f) => f.split("/").pop() ?? f)
         .join(", ");
       workspaceActivityService.log({
         workspaceId,
         type: "diff",
-        title: `${activityFileCount} file${activityFileCount === 1 ? "" : "s"} changed`,
+        title: `${incrementalFileCount} file${incrementalFileCount === 1 ? "" : "s"} changed`,
         summary: summaryLines,
         refId: runId,
-        metadata: { files: activityFileCount, fileNames: incrementalFileNames },
+        metadata: { files: incrementalFileCount, fileNames: incrementalFileNames },
       });
     }
   } catch (err) {
@@ -801,6 +930,7 @@ export const runsService = {
 
       // Capture git HEAD sha at run start for diff computation
       await captureBaseRef(runId, workspace.rootPath);
+      runWorkspaces.set(runId, { id: workspace.id, rootPath: workspace.rootPath });
 
       // 4. Persist initial context
       if (payload.initialContext && payload.initialContext.length > 0) {
@@ -1015,6 +1145,7 @@ export const runsService = {
 
       // Capture git HEAD sha at run start
       await captureBaseRef(runId, workspace.rootPath);
+      runWorkspaces.set(runId, { id: workspace.id, rootPath: workspace.rootPath });
 
       // 4. Create adapter
       const adapter = createWorkAdapter(provider);
@@ -1194,6 +1325,12 @@ export const runsService = {
           }
           // If no pending call found, skip - don't create duplicate records
           // The start event should always come first
+
+          // Live diff: if this tool could have touched the filesystem,
+          // schedule a debounced incremental git diff recomputation.
+          if (!event.error && couldModifyFiles(event.toolName)) {
+            scheduleLiveDiff(runId);
+          }
         }
         break;
       }
@@ -1439,6 +1576,7 @@ export const runsService = {
       // Capture git HEAD sha at continue start for diff computation
       if (workspace) {
         await captureBaseRef(runId, workspace.rootPath);
+        runWorkspaces.set(runId, { id: workspace.id, rootPath: workspace.rootPath });
       }
 
       // Recover turn counter from existing turns and start new turn
@@ -1672,6 +1810,7 @@ export const runsService = {
       // Capture git HEAD sha for diff computation
       if (workspace) {
         await captureBaseRef(newRunId, workspace.rootPath);
+        runWorkspaces.set(newRunId, { id: workspace.id, rootPath: workspace.rootPath });
       }
 
       // Track tool calls for updating when completed

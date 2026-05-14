@@ -28,6 +28,9 @@ interface InputToolbarProps {
   // Permission mode (Claude only)
   permissionMode: string;
   onPermissionModeChange: (mode: string) => void;
+  // Plan mode (Codex only) — runs alongside the sandbox mode
+  planMode?: boolean;
+  onPlanModeToggle?: () => void;
   // Thinking mode (Claude only)
   thinkingMode: boolean;
   onThinkingModeToggle: () => void;
@@ -67,6 +70,8 @@ export function InputToolbar({
   isLoadingModels,
   permissionMode,
   onPermissionModeChange,
+  planMode,
+  onPlanModeToggle,
   thinkingMode,
   onThinkingModeToggle,
   fastMode,
@@ -213,6 +218,8 @@ export function InputToolbar({
                   onToggle={() => setShowPermissionDropdown(!showPermissionDropdown)}
                   dropdownRef={permissionDropdownRef}
                   variant={variant}
+                  planMode={planMode}
+                  onPlanModeToggle={onPlanModeToggle}
                 />
               )}
             </>

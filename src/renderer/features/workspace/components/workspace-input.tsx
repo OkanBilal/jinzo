@@ -5,7 +5,7 @@ import type { Run } from "../types";
 import type { FileNode } from "@/features/workspace/types/file-explorer";
 import type { ContextIssue, ContextSignal, ContextSkill, ContextBrowserSelection } from "@/lib/redux/slices/workspaceSlice";
 import { addContextFile, addContextIssue, addContextSkill, removeContextSkill } from "@/lib/redux/slices/workspaceSlice";
-import type { UploadedFile, RichInputFormHandle, RichSkillChipData } from "@/components/ui";
+import type { UploadedFile, RichInputFormHandle, RichSkillChipData, RichFileChipData } from "@/components/ui";
 import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
 import { Button, RichInputForm } from "@/components/ui";
 import {
@@ -177,6 +177,8 @@ export function WorkspaceInput({
     effortLevel,
     handleEffortLevelChange,
     selectedModelInfo,
+    planMode,
+    handlePlanModeToggle,
   } = useProviderModels(
     activeProviderId,
     providerVariant,
@@ -328,6 +330,33 @@ export function WorkspaceInput({
     contextSkillsRef.current = contextSkills;
   }, [contextSkills]);
 
+  const contextFilesRef = useRef(contextFiles);
+  useEffect(() => {
+    contextFilesRef.current = contextFiles;
+  }, [contextFiles]);
+
+  // When a file is added to context via a non-inline path (file explorer's "Add to context"),
+  // there's no `@<path>` token in goal yet — append one so the chip renders and the agent sees
+  // the file the same way it sees inline-mentioned ones. Inline picks already write `@<path>`
+  // into goal themselves, so the check below skips them.
+  const seenContextFilePathsRef = useRef<Set<string>>(
+    new Set(contextFiles.map((f) => f.fullPath)),
+  );
+  useEffect(() => {
+    const current = new Set(contextFiles.map((f) => f.fullPath));
+    const additions: string[] = [];
+    for (const f of contextFiles) {
+      if (seenContextFilePathsRef.current.has(f.fullPath)) continue;
+      const escaped = f.fullPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      if (new RegExp(`@${escaped}(?![\\w./-])`).test(goal)) continue;
+      additions.push(f.fullPath);
+    }
+    seenContextFilePathsRef.current = current;
+    if (additions.length === 0) return;
+    const sep = goal.length === 0 || /\s$/.test(goal) ? "" : " ";
+    onGoalChange(goal + sep + additions.map((p) => `@${p}`).join(" ") + " ");
+  }, [contextFiles, goal, onGoalChange]);
+
   const skillChipMap = useMemo(() => {
     const m = new Map<string, RichSkillChipData>();
     for (const s of contextSkills) {
@@ -342,6 +371,14 @@ export function WorkspaceInput({
     return m;
   }, [contextSkills]);
 
+  const fileChipMap = useMemo(() => {
+    const m = new Map<string, RichFileChipData>();
+    for (const f of contextFiles) {
+      m.set(f.fullPath, { path: f.fullPath, basename: f.name });
+    }
+    return m;
+  }, [contextFiles]);
+
   const handleSkillChipsChange = useCallback(
     (names: string[]) => {
       const present = new Set(names);
@@ -354,16 +391,34 @@ export function WorkspaceInput({
     [dispatch],
   );
 
+  const handleFileChipsChange = useCallback(
+    (paths: string[]) => {
+      const present = new Set(paths);
+      for (const file of contextFilesRef.current) {
+        if (!present.has(file.fullPath)) {
+          onRemoveContextFile?.(file.fullPath);
+        }
+      }
+    },
+    [onRemoveContextFile],
+  );
+
   const handleUnifiedFileSelect = useCallback(
     (node: FileNode) => {
       const t = unifiedMenu.trigger;
-      const ok = inputRef.current?.replaceTokenWithText(t, "") ?? false;
+      // Dispatch first so fileChipMap has the entry by the time the sync effect rebuilds the chip
+      // from a rewritten goal string in the dropdown-focus fallback path.
+      dispatch(addContextFile(node));
+      const ok =
+        inputRef.current?.replaceTokenWithFileChip(t, {
+          path: node.fullPath,
+          basename: node.name,
+        }) ?? false;
       if (!ok) {
-        const next = replaceMentionInGoal(goal, t, unifiedMenu.filter, "");
+        const next = replaceMentionInGoal(goal, t, unifiedMenu.filter, `@${node.fullPath} `);
         if (next !== null) onGoalChange(next);
       }
       updateUnifiedMenu({ visible: false, filter: "" });
-      dispatch(addContextFile(node));
     },
     [dispatch, goal, onGoalChange, unifiedMenu.filter, unifiedMenu.trigger],
   );
@@ -540,11 +595,9 @@ export function WorkspaceInput({
       onDrop={handleWrapperDrop}
     >
       <ContextChips
-        contextFiles={contextFiles}
         contextIssues={contextIssues}
         contextSignals={contextSignals}
         contextBrowserSelections={contextBrowserSelections}
-        onRemoveContextFile={onRemoveContextFile}
         onRemoveContextIssue={onRemoveContextIssue}
         onRemoveContextSignal={onRemoveContextSignal}
         onRemoveContextBrowserSelection={onRemoveContextBrowserSelection}
@@ -556,8 +609,10 @@ export function WorkspaceInput({
           onQueryChange={handleGoalChange}
           onSubmit={handleSubmit}
           onSkillChipsChange={handleSkillChipsChange}
+          onFileChipsChange={handleFileChipsChange}
           onCaretContextChange={handleCaretContext}
-          chipMap={skillChipMap}
+          skillChipMap={skillChipMap}
+          fileChipMap={fileChipMap}
           placeholder={inputPlaceholder}
         />
         <UnifiedContextDropdown
@@ -605,6 +660,8 @@ export function WorkspaceInput({
         isLoadingModels={isLoadingModels}
         permissionMode={permissionMode}
         onPermissionModeChange={handlePermissionModeChange}
+        planMode={planMode}
+        onPlanModeToggle={handlePlanModeToggle}
         thinkingMode={thinkingMode}
         onThinkingModeToggle={handleThinkingModeToggle}
         fastMode={fastMode}

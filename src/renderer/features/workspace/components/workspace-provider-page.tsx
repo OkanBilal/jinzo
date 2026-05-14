@@ -26,8 +26,8 @@ type WorkspaceProviderVariant = "claude" | "copilot" | "codex" | "cursor";
 
 type PlanExitConfig = {
   key: string;
-  planValue: string;
-  nextValue: string;
+  planValue: string | boolean;
+  nextValue: string | boolean;
 };
 
 interface WorkspaceProviderPageProps {

@@ -7,9 +7,9 @@ export default function CodexPage() {
       providerId={PROVIDER_IDS.codex}
       variant="codex"
       planExitConfig={{
-        key: "sandboxMode",
-        planValue: "plan",
-        nextValue: "workspace-write",
+        key: "planMode",
+        planValue: true,
+        nextValue: false,
       }}
       enableForkRun
     />

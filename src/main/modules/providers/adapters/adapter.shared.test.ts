@@ -266,33 +266,17 @@ describe("appendPromptSections", () => {
     expect(result).toContain("[GITHUB #1] Fix it");
   });
 
-  it("appends context files section", () => {
-    const result = appendPromptSections("Do work", {
+  it("does not append a context files section (files arrive inline as @<path>)", () => {
+    const result = appendPromptSections("Do work @src/a.ts", {
       contextFiles: [{ path: "src/a.ts" }],
     });
-    expect(result).toContain("Context files (read these before starting):");
-    expect(result).toContain("- src/a.ts");
-  });
-
-  it("appends both issues and files", () => {
-    const result = appendPromptSections("Do work", {
-      contextIssues: [{ provider: "linear", title: "Task" }],
-      contextFiles: [{ path: "src/b.ts" }],
-    });
-    expect(result).toContain("Context issues:");
-    expect(result).toContain("Context files");
+    expect(result).not.toContain("Context files");
+    expect(result).toBe("Do work @src/a.ts");
   });
 
   it("skips empty issues array", () => {
     const result = appendPromptSections("Prompt", {
       contextIssues: [],
-    });
-    expect(result).toBe("Prompt");
-  });
-
-  it("skips empty files array", () => {
-    const result = appendPromptSections("Prompt", {
-      contextFiles: [],
     });
     expect(result).toBe("Prompt");
   });
