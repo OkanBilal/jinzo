@@ -9,6 +9,7 @@ import { ProviderIcon } from "../provider-icon";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
 import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
+import { useLocalImageUrl } from "@/hooks/use-local-image-url";
 
 const IMAGE_PATH_REGEX = /([~/]?[\w./-]+\.(?:png|jpe?g|webp|gif))\b/gi;
 
@@ -38,15 +39,6 @@ function resolveImagePath(rawPath: string, workspaceRoot?: string): string | nul
   return `${workspaceRoot}${sep}${rawPath}`;
 }
 
-function localImageUrl(absPath: string): string {
-  return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
-}
-
-function resolveImageUrl(src: string): string {
-  if (/^(data:|https?:|mains-localimg:|mains-capture:)/.test(src)) return src;
-  return localImageUrl(src);
-}
-
 interface PromptSkillMeta {
   name: string;
   path?: string;
@@ -62,10 +54,11 @@ interface PromptSkillMeta {
 function PromptSkillChipIcon({ skill }: { skill: PromptSkillMeta }) {
   const [failed, setFailed] = useState(false);
   const iconPath = skill.iconLarge || skill.iconSmall;
-  if (iconPath && !failed) {
+  const resolved = useLocalImageUrl(iconPath);
+  if (iconPath && resolved && !failed) {
     return (
       <img
-        src={resolveImageUrl(iconPath)}
+        src={resolved}
         alt=""
         className="w-3 h-3 rounded shrink-0 object-contain"
         style={skill.brandColor ? { backgroundColor: skill.brandColor } : undefined}
@@ -445,7 +438,7 @@ function ImageArtifact({
   fileName: string;
   onPreview: (att: { name: string; dataUrl: string }) => void;
 }) {
-  const url = localImageUrl(absPath);
+  const url = useLocalImageUrl(absPath);
   const [thumbFailed, setThumbFailed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
@@ -462,6 +455,7 @@ function ImageArtifact({
   }, [menuOpen, absPath, fetchApps]);
 
   const openInMains = () => {
+    if (!url) return;
     setMenuOpen(false);
     onPreview({ name: fileName, dataUrl: url });
   };
@@ -497,7 +491,7 @@ function ImageArtifact({
         aria-label={`Preview ${fileName} in Mains`}
       >
         <div className="size-10 rounded-lg border border-primary-700/40 dark:border-primary-600/30 bg-primary-900 dark:bg-primary-950/80 flex items-center justify-center overflow-hidden">
-          {!thumbFailed ? (
+          {url && !thumbFailed ? (
             <img
               src={url}
               alt=""
@@ -569,6 +563,37 @@ function ImageArtifact({
   );
 }
 
+function InlineMarkdownImage({
+  abs,
+  name,
+  onPreview,
+  onError,
+}: {
+  abs: string;
+  name: string;
+  onPreview: (att: { name: string; dataUrl: string }) => void;
+  onError: () => void;
+}) {
+  const url = useLocalImageUrl(abs);
+  if (!url) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => onPreview({ name, dataUrl: url })}
+      className="block w-full overflow-hidden rounded-xl border border-primary-200/40 dark:border-primary-700/40 bg-primary-100 dark:bg-primary-900 cursor-pointer"
+      title={abs}
+    >
+      <img
+        src={url}
+        alt={name}
+        className="w-full max-h-[480px] object-contain"
+        loading="lazy"
+        onError={onError}
+      />
+    </button>
+  );
+}
+
 function ArtifactBody({
   content,
   isStreaming,
@@ -617,33 +642,22 @@ function ArtifactBody({
       </div>
       {visibleImages.length > 0 && (
         <div className="mt-3 flex flex-col gap-3">
-          {visibleImages.map(({ key, abs, name }) => {
-            const url = localImageUrl(abs);
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => onPreview({ name, dataUrl: url })}
-                className="block w-full overflow-hidden rounded-xl border border-primary-200/40 dark:border-primary-700/40 bg-primary-100 dark:bg-primary-900 cursor-pointer"
-                title={abs}
-              >
-                <img
-                  src={url}
-                  alt={name}
-                  className="w-full max-h-[480px] object-contain"
-                  loading="lazy"
-                  onError={() =>
-                    setFailedImages((prev) => {
-                      if (prev.has(key)) return prev;
-                      const next = new Set(prev);
-                      next.add(key);
-                      return next;
-                    })
-                  }
-                />
-              </button>
-            );
-          })}
+          {visibleImages.map(({ key, abs, name }) => (
+            <InlineMarkdownImage
+              key={key}
+              abs={abs}
+              name={name}
+              onPreview={onPreview}
+              onError={() =>
+                setFailedImages((prev) => {
+                  if (prev.has(key)) return prev;
+                  const next = new Set(prev);
+                  next.add(key);
+                  return next;
+                })
+              }
+            />
+          ))}
         </div>
       )}
       {previewAtt && (

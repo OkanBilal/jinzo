@@ -17,6 +17,16 @@ npm run db:clean:dev    # Reset dev database
 npm run db:clean:runtime  # Reset runtime database (~/Library/Application Support/mains/)
 npm run db:clean:all    # Reset both databases
 
+# Tests & types
+npm test                # vitest run (auto-rebuilds better-sqlite3 first)
+npm run test:watch      # vitest in watch mode
+npm run test:coverage   # vitest with coverage
+npm run typecheck       # tsc --noEmit across main, preload, and renderer tsconfigs
+
+# Run a single test file or pattern
+npx vitest run path/to/file.test.ts
+npx vitest run -t "describes substring"
+
 # Linting
 npm run lint            # Run ESLint on src/
 npm run lint:fix        # Run ESLint with auto-fix
@@ -31,9 +41,11 @@ npm run reset           # Rebuild better-sqlite3 + reset dev database
 npm run hard-reset      # Full reset (reset + nuke node_modules + reinstall)
 ```
 
+Tests require `better-sqlite3` to be rebuilt against the local Node ABI — the `test*` scripts handle this automatically, but running `vitest` directly will fail if you skip that step (use `npm rebuild better-sqlite3` first).
+
 ## Architecture Overview
 
-Mains is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM). CommonJS package with ESM Vite configs (`.mjs`).
+Mains is an Electron 41 desktop app (React 19 renderer, SQLite + Drizzle ORM). CommonJS package with ESM Vite configs (`.mjs`).
 
 ### Process Boundaries
 
@@ -44,13 +56,14 @@ Mains is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM). C
 
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
-- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.account`, `api.connectionStates`, `api.sync`, `api.connectionCredentials`, `api.connections`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.providers`, `api.tools`, `api.toolCalls`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.shell`, `api.feedback`, `api.stats`, `api.app`, `api.updates`
+- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.signals`, `api.account`, `api.connectionStates`, `api.sync`, `api.connectionCredentials`, `api.connections`, `api.guards`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.providers`, `api.skillsMarketplace`, `api.toolCalls`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.imageProxy`, `api.shell`, `api.stats`, `api.app`, `api.updates`, `api.browser`, `api.automations`, `api.pulse`
 - After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
 - React app with Redux Toolkit, React Router (HashRouter), `@/` alias → `src/renderer/`
-- Routes: `/` (Home — redirects to `/copilot`), `/settings` (Settings), `/copilot` and `/copilot/:workspaceId` (Copilot — GitHub Copilot agent), `/claude` and `/claude/:workspaceId` (Claude Code agent), `/codex` and `/codex/:workspaceId` (OpenAI Codex agent)
-- Copilot, Claude, and Codex routes share the same workspace UI but use different provider IDs (`copilot_cli` vs `claude_code` vs `codex`)
+- Routes: `/` (default route), `/settings`, `/copilot[/:workspaceId]` (GitHub Copilot agent), `/claude[/:workspaceId]` (Claude Code agent), `/codex[/:workspaceId]` (OpenAI Codex agent), `/cursor[/:workspaceId]` (Cursor agent), `/plugins`, `/pulse`, `/relay`
+- Copilot / Claude / Codex / Cursor routes share the same workspace UI but pick different provider IDs (`copilot_cli`, `claude_code`, `codex`, `cursor`)
+- Route table lives in `src/renderer/components/layout/main/main-routes.tsx`
 
 ### Module Architecture (`src/main/modules/`)
 
@@ -68,7 +81,9 @@ Each domain module follows a layered pattern (see `src/main/modules/account/` as
 
 **Critical**: All layers are **plain object literals**, never classes. No DI — repos call `getDb()` inline.
 
-All modules: `account`, `appSettings`, `connectionStates`, `connectionCredentials`, `connections`, `entities`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `space`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
+All modules: `account`, `appSettings`, `automations`, `browser`, `connectionStates`, `connectionCredentials`, `connections`, `entities`, `fileExplorer`, `git`, `guards`, `imageProxy`, `projects`, `providers`, `pulse`, `reviewFindings`, `reviews`, `runs`, `seed`, `skillsMarketplace`, `space`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
+
+A handful of modules deviate from the canonical 7-file layout — `guards`, `browser`, `skillsMarketplace`, and `terminal` skip the repo/dto layer because they don't own database tables (they wrap external sources, native handles, or HTTP). When adding a module, match a sibling with similar responsibilities rather than blindly copying `account/`.
 
 ### IPC Convention
 
@@ -191,10 +206,24 @@ Domain-specific views on entities:
 - Database seeding for initial setup (connectionStates, connections, providers, spaces, accounts)
 
 **Image Proxy** (`src/main/modules/imageProxy/`)
-- Protocol handler for enhanced image loading in the renderer
+- Custom protocol handler that fetches and serves remote images to the renderer (avoids CSP / mixed-content issues)
+- Pairs with `src/renderer/lib/proxied-image-src.ts` + `local-image-url.ts` and the `useLocalImageUrl` hook — use these when rendering remote URLs in the renderer rather than `<img src={remoteUrl}>` directly
 
-**Feedback Module** (`src/main/modules/feedback/`)
-- User feedback collection and management
+**Guards Module** (`src/main/modules/guards/`)
+- Pluggable package-safety adapters (`adapters/`) that score npm/PyPI/etc. packages and scan a workspace's manifests for risky dependencies. No DB tables — results stream back to the renderer per call.
+
+**Browser Module** (`src/main/modules/browser/`)
+- Drives an embedded `BrowserView`/`WebContentsView` panel inside the Electron window — attach/detach, set bounds, navigate, capture screenshots
+- `inspector.script.ts` is injected into the guest page for select-mode (DOM element picking); IPC `browser:navState` streams nav state changes to the renderer
+
+**Automations Module** (`src/main/modules/automations/`)
+- User-defined scheduled / triggered automations (cron-style routines that fan out into runs)
+
+**Pulse Module** (`src/main/modules/pulse/`)
+- Aggregated activity feed across workspaces, runs, and connections — backs the `/pulse` route
+
+**Skills Marketplace** (`src/main/modules/skillsMarketplace/`)
+- Browse / search / inspect external agent skill bundles (list, search, curated, detail, audit). No local table — proxies a remote registry.
 
 **Stats Module** (`src/main/modules/stats/`)
 - Dashboard statistics and analytics
@@ -211,11 +240,11 @@ Domain-specific views on entities:
 ### Frontend Conventions
 
 - **Redux**: RTK Query with custom `ipcBaseQuery`, `baseApi.injectEndpoints()` per domain
-- **Redux API files**: `accountApi`, `appsApi`, `appSettingsApi`, `connectionsApi`, `entitiesApi`, `spaceApi`, `projectsApi`, `providersApi`, `reviewsApi`, `reviewFindingsApi`, `runsApi`, `shellApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceActivityApi`, `workspaceDiffsApi`, `workspaceResourcesApi`, `workspacesApi`
+- **Redux API files** (`src/renderer/lib/redux/api/`): `accountApi`, `appSettingsApi`, `automationsApi`, `connectionsApi`, `connectionStates`, `entitiesApi`, `guardsApi`, `projectsApi`, `providersApi`, `pulseApi`, `reviewFindingsApi`, `reviewsApi`, `runsApi`, `shellApi`, `signalsApi`, `skillsMarketplaceApi`, `spaceApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceActivityApi`, `workspaceDiffsApi`, `workspaceResourcesApi`, `workspacesApi`
 - **Redux slices**: `spaceSlice`, `appSettingsSlice`, `workspaceSlice`
 - **Hooks**: `use-kebab-case.ts` filenames, `useCamelCase` export names
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`
-- **Feature dirs**: `onboarding`, `settings`, `stats`, `workspace`
+- **Feature dirs**: `onboarding`, `pulse`, `settings`, `stats`, `workspace`
 - **Routing**: HashRouter — routes defined in `src/renderer/routes/`
 - **Settings Routing**: `/settings?section={sectionName}` — query parameter controls active tab (general, connections, claude, copilot, codex, codex-plugins, projects, git, dashboard, etc.)
 - **Styling**: Tailwind CSS v4 (PostCSS-based)

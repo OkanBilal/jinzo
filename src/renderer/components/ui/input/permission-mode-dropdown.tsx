@@ -204,7 +204,7 @@ export function PermissionModeDropdown({
                 onPlanModeToggle?.();
               }
             }}
-            className={`w-full text-left px-2.5 py-1.5 cursor-pointer transition-colors flex items-center gap-2.5 last:rounded-b-xl border-t border-primary-200/40 dark:border-primary-800 ${
+            className={`w-full text-left px-2.5 py-1.5 cursor-pointer transition-colors flex items-center gap-2.5 last:rounded-b-xl border-t border-primary-200/40 dark:border-primary/5 ${
               planMode
                 ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-500 dark:text-primary-100"
                 : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"

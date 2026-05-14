@@ -9,6 +9,7 @@ import {
 import { renderToStaticMarkup } from "react-dom/server";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
 import { Sparkles } from "@/components/ui/icons";
+import { applySignedSrc } from "@/lib/local-image-url";
 
 const sparklesIconMarkup = renderToStaticMarkup(<Sparkles className="w-3 h-3 shrink-0" />);
 
@@ -66,15 +67,6 @@ const FILE_CHIP_ATTR = "data-file-chip";
 const FILE_PATH_ATTR = "data-file-path";
 const CHIP_KEY_SEP = "";
 
-function localImageUrl(absPath: string): string {
-  return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
-}
-
-function resolveImageUrl(src: string): string {
-  if (/^(data:|https?:|mains-localimg:)/.test(src)) return src;
-  return localImageUrl(src);
-}
-
 function buildChip(skill: RichSkillChipData): HTMLSpanElement {
   const chip = document.createElement("span");
   chip.setAttribute(CHIP_ATTR, "true");
@@ -95,7 +87,6 @@ function buildChip(skill: RichSkillChipData): HTMLSpanElement {
   const iconPath = skill.iconLarge || skill.iconSmall;
   if (iconPath) {
     const img = document.createElement("img");
-    img.src = resolveImageUrl(iconPath);
     img.alt = "";
     img.className = "size-full object-contain";
     if (skill.brandColor) {
@@ -108,6 +99,7 @@ function buildChip(skill: RichSkillChipData): HTMLSpanElement {
       iconSlot.innerHTML = sparklesIconMarkup;
     };
     iconSlot.appendChild(img);
+    applySignedSrc(img, iconPath);
   } else {
     iconSlot.innerHTML = sparklesIconMarkup;
   }

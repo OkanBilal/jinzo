@@ -104,6 +104,8 @@ import {
 import {
   registerImageProxyScheme,
   registerImageProxyHandler,
+  registerImageProxyIpc,
+  unregisterImageProxyIpc,
 } from "./modules/imageProxy";
 import {
   registerUpdatesIpc,
@@ -592,6 +594,7 @@ async function initializeApp() {
     registerWorkspaceDiffsIpc();
     registerWorkspaceActivityIpc();
     registerImageProxyHandler();
+    registerImageProxyIpc();
     registerStatsIpc();
     registerUpdatesIpc();
     updatesService.initialize();
@@ -892,6 +895,7 @@ async function cleanupApp() {
     unregisterReviewFindingsIpc();
     unregisterWorkspaceDiffsIpc();
     unregisterWorkspaceActivityIpc();
+    unregisterImageProxyIpc();
     unregisterStatsIpc();
     unregisterUpdatesIpc();
     automationsService.stop();

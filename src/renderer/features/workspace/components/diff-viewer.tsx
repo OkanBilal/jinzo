@@ -12,6 +12,7 @@ import { normalizePatchForPatchDiff } from "../utils/patch-utils";
 import { normalizePath, pathsMatch } from "../utils/path-utils";
 import type { FileContentResponse, ServiceResponse } from "@/features/workspace/types/file-explorer";
 import { ImagePreviewModal } from "./image-preview-modal";
+import { useLocalImageUrl } from "@/hooks/use-local-image-url";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp", "gif"]);
 
@@ -21,14 +22,10 @@ function isImagePath(filePath: string | undefined): boolean {
   return IMAGE_EXTENSIONS.has(ext);
 }
 
-function localImageUrl(absPath: string): string {
-  return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
-}
-
 function ImageDiffView({ absPath, fileName }: { absPath: string; fileName: string }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const url = localImageUrl(absPath);
+  const url = useLocalImageUrl(absPath);
 
   return (
     <div className="h-full overflow-auto px-2  ">
@@ -39,7 +36,7 @@ function ImageDiffView({ absPath, fileName }: { absPath: string; fileName: strin
             <div className="opacity-70">{error}</div>
             <div className="mt-1 font-mono opacity-60">{absPath}</div>
           </div>
-        ) : (
+        ) : url ? (
           <button
             type="button"
             onClick={() => setPreviewOpen(true)}
@@ -56,8 +53,8 @@ function ImageDiffView({ absPath, fileName }: { absPath: string; fileName: strin
               }}
             />
           </button>
-        )}
-        {previewOpen && (
+        ) : null}
+        {previewOpen && url && (
           <ImagePreviewModal name={fileName} src={url} onClose={() => setPreviewOpen(false)} />
         )}
       </div>

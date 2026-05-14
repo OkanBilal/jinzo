@@ -640,6 +640,9 @@ const api = {
   platform: {
     homedir: os.homedir(),
   },
+  imageProxy: {
+    sign: (absPath: string) => ipcRenderer.invoke("imageProxy:sign", absPath),
+  },
   shell: {
     openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
     openPath: (path: string) => ipcRenderer.invoke("shell:openPath", path),

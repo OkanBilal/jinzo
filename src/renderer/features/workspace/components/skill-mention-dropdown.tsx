@@ -1,6 +1,7 @@
 import { RefObject, useCallback, useMemo, useState } from "react";
 import { Button, DropdownWrapper } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
+import { useLocalImageUrl } from "@/hooks/use-local-image-url";
 import type { SkillInfo } from "@/lib/redux/api/providersApi";
 import { Sparkles } from "@/components/ui/icons";
 import { useDropdownKeyboardNavigation } from "@/features/workspace/hooks/use-dropdown-keyboard-navigation";
@@ -31,22 +32,14 @@ function getScopeLabel(scope?: string): string {
   }
 }
 
-function localImageUrl(absPath: string): string {
-  return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
-}
-
-function resolveImageUrl(src: string): string {
-  if (/^(data:|https?:|mains-localimg:)/.test(src)) return src;
-  return localImageUrl(src);
-}
-
 function SkillIcon({ skill }: { skill: SkillInfo }) {
   const [failed, setFailed] = useState(false);
   const iconPath = skill.iconLarge || skill.iconSmall;
-  if (iconPath && !failed) {
+  const resolved = useLocalImageUrl(iconPath);
+  if (iconPath && resolved && !failed) {
     return (
       <img
-        src={resolveImageUrl(iconPath)}
+        src={resolved}
         alt=""
         className="size-5 rounded shrink-0 object-contain"
         style={skill.brandColor ? { backgroundColor: skill.brandColor } : undefined}

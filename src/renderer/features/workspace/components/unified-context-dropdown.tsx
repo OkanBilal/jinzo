@@ -9,6 +9,7 @@ import type { DirEntry, FileNode } from "@/features/workspace/types/file-explore
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { useGetIssuesByProjectQuery } from "@/lib/redux/api";
 import { ProviderIcon } from "./provider-icon";
+import { useLocalImageUrl } from "@/hooks/use-local-image-url";
 
 export type UnifiedContextTrigger = "@" | "/";
 
@@ -63,15 +64,6 @@ function workspaceRelativeDir(fullPath: string, workspacePath?: string): string 
 const WORKSPACE_SEARCH_DEBOUNCE_MS = 320;
 const MAX_WORKSPACE_FILE_MATCHES = 150;
 
-function localImageUrl(absPath: string): string {
-  return `mains-localimg://img/?path=${encodeURIComponent(absPath)}`;
-}
-
-function resolveImageUrl(src: string): string {
-  if (/^(data:|https?:|mains-localimg:)/.test(src)) return src;
-  return localImageUrl(src);
-}
-
 function bucketSkill(skill: SkillInfo): "plugins" | "mac_apps" | "skills" | null {
   if (skill.userInvokable === false) return null;
   const sc = (skill.scope || "").toLowerCase();
@@ -83,10 +75,11 @@ function bucketSkill(skill: SkillInfo): "plugins" | "mac_apps" | "skills" | null
 function SkillRowIcon({ skill }: { skill: SkillInfo }) {
   const [failed, setFailed] = useState(false);
   const iconPath = skill.iconLarge || skill.iconSmall;
-  if (iconPath && !failed) {
+  const resolved = useLocalImageUrl(iconPath);
+  if (iconPath && resolved && !failed) {
     return (
       <img
-        src={resolveImageUrl(iconPath)}
+        src={resolved}
         alt=""
         className="size-5 rounded shrink-0 object-contain"
         style={skill.brandColor ? { backgroundColor: skill.brandColor } : undefined}
