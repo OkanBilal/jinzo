@@ -1,9 +1,6 @@
 // IPC
 export { registerAppSettingsIpc, unregisterAppSettingsIpc } from "./appSettings.ipc";
 
-// Controller
-export { appSettingsController } from "./appSettings.controller";
-
 // Service
 export { appSettingsService } from "./appSettings.service";
 
@@ -11,12 +8,12 @@ export { appSettingsService } from "./appSettings.service";
 export { appSettingsRepo } from "./appSettings.repo";
 
 // Validation
-export { validateSpaceId } from "./appSettings.validation";
+export { sanitizeAppSettingsPatch } from "./appSettings.validation";
 
 // DTOs
 export type {
   AppSettingsRecord,
-  SetActiveSpaceRequest,
+  AppSettingsPatch,
   ServiceResponse,
   SuccessResponse,
   ErrorResponse,

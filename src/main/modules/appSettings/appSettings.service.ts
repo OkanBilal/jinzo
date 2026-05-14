@@ -1,39 +1,26 @@
 import { ACCOUNT_ID, SETTINGS_ID } from "./appSettings.constants";
 import { appSettingsRepo } from "./appSettings.repo";
-import { validateSpaceId } from "./appSettings.validation";
+import { sanitizeAppSettingsPatch } from "./appSettings.validation";
 import type { AppSettingsRecord, ServiceResponse } from "./appSettings.dto";
 
 // ─────────────────────────────────────────────────────────────
 // Service - Business Logic
 // ─────────────────────────────────────────────────────────────
 export const appSettingsService = {
-  /**
-   * Ensures the default settings row exists
-   */
   async ensureSettings(): Promise<AppSettingsRecord> {
     const existing = await appSettingsRepo.findById(SETTINGS_ID);
     if (existing) return existing;
 
-    // Ensure default account exists first (foreign key constraint)
     await appSettingsRepo.createDefaultAccount();
-
-    // Create default settings
-    await appSettingsRepo.create({
-      id: SETTINGS_ID,
-      accountId: ACCOUNT_ID,
-    });
+    await appSettingsRepo.create({ id: SETTINGS_ID, accountId: ACCOUNT_ID });
 
     const created = await appSettingsRepo.findById(SETTINGS_ID);
     if (!created) {
       throw new Error("Failed to create app settings");
     }
-
     return created;
   },
 
-  /**
-   * Gets the current app settings
-   */
   async getSettings(): Promise<ServiceResponse<AppSettingsRecord>> {
     try {
       const settings = await this.ensureSettings();
@@ -47,210 +34,23 @@ export const appSettingsService = {
     }
   },
 
-  /**
-   * Sets the active space
-   */
-  async setActiveSpace(spaceId: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
+  async updateSettings(
+    patch: unknown,
+  ): Promise<ServiceResponse<AppSettingsRecord>> {
     try {
-      const { value, error } = validateSpaceId(spaceId);
-      if (error) {
-        return { success: false, error };
+      const sanitized = sanitizeAppSettingsPatch(patch);
+      if (!sanitized) {
+        return { success: false, error: "patch must be an object" };
       }
 
       await this.ensureSettings();
-
-      const updated = await appSettingsRepo.updateActiveSpace(SETTINGS_ID, value);
+      const updated = await appSettingsRepo.update(SETTINGS_ID, sanitized);
       if (!updated) {
         return { success: false, error: "Failed to update settings" };
       }
-
       return { success: true, data: updated };
     } catch (error) {
-      console.error("Error updating active space:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  },
-
-  async setEnableWorktrees(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
-    try {
-      if (typeof enabled !== "boolean") {
-        return { success: false, error: "enabled must be a boolean" };
-      }
-
-      await this.ensureSettings();
-
-      const updated = await appSettingsRepo.updateEnableWorktrees(SETTINGS_ID, enabled);
-      if (!updated) {
-        return { success: false, error: "Failed to update settings" };
-      }
-
-      return { success: true, data: updated };
-    } catch (error) {
-      console.error("Error updating enableWorktrees:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  },
-
-  async setShowToolCalls(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
-    try {
-      if (typeof enabled !== "boolean") {
-        return { success: false, error: "enabled must be a boolean" };
-      }
-
-      await this.ensureSettings();
-
-      const updated = await appSettingsRepo.updateShowToolCalls(SETTINGS_ID, enabled);
-      if (!updated) {
-        return { success: false, error: "Failed to update settings" };
-      }
-
-      return { success: true, data: updated };
-    } catch (error) {
-      console.error("Error updating showToolCalls:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  },
-
-  async setPreventSleepDuringRuns(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
-    try {
-      if (typeof enabled !== "boolean") {
-        return { success: false, error: "enabled must be a boolean" };
-      }
-
-      await this.ensureSettings();
-
-      const updated = await appSettingsRepo.updatePreventSleepDuringRuns(SETTINGS_ID, enabled);
-      if (!updated) {
-        return { success: false, error: "Failed to update settings" };
-      }
-
-      return { success: true, data: updated };
-    } catch (error) {
-      console.error("Error updating preventSleepDuringRuns:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  },
-
-  async setNotifyOnRunComplete(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
-    try {
-      if (typeof enabled !== "boolean") {
-        return { success: false, error: "enabled must be a boolean" };
-      }
-
-      await this.ensureSettings();
-
-      const updated = await appSettingsRepo.updateNotifyOnRunComplete(SETTINGS_ID, enabled);
-      if (!updated) {
-        return { success: false, error: "Failed to update settings" };
-      }
-
-      return { success: true, data: updated };
-    } catch (error) {
-      console.error("Error updating notifyOnRunComplete:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  },
-
-  async setNotifyOnToolApproval(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
-    try {
-      if (typeof enabled !== "boolean") {
-        return { success: false, error: "enabled must be a boolean" };
-      }
-
-      await this.ensureSettings();
-
-      const updated = await appSettingsRepo.updateNotifyOnToolApproval(SETTINGS_ID, enabled);
-      if (!updated) {
-        return { success: false, error: "Failed to update settings" };
-      }
-
-      return { success: true, data: updated };
-    } catch (error) {
-      console.error("Error updating notifyOnToolApproval:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  },
-
-  async setShowMenuBarIcon(enabled: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
-    try {
-      if (typeof enabled !== "boolean") {
-        return { success: false, error: "enabled must be a boolean" };
-      }
-
-      await this.ensureSettings();
-
-      const updated = await appSettingsRepo.updateShowMenuBarIcon(SETTINGS_ID, enabled);
-      if (!updated) {
-        return { success: false, error: "Failed to update settings" };
-      }
-
-      return { success: true, data: updated };
-    } catch (error) {
-      console.error("Error updating showMenuBarIcon:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  },
-
-  async setCommitInstructions(instructions: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
-    try {
-      if (typeof instructions !== "string") {
-        return { success: false, error: "instructions must be a string" };
-      }
-
-      await this.ensureSettings();
-
-      const updated = await appSettingsRepo.updateCommitInstructions(SETTINGS_ID, instructions);
-      if (!updated) {
-        return { success: false, error: "Failed to update settings" };
-      }
-
-      return { success: true, data: updated };
-    } catch (error) {
-      console.error("Error updating commitInstructions:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  },
-
-  async setPrInstructions(instructions: unknown): Promise<ServiceResponse<AppSettingsRecord>> {
-    try {
-      if (typeof instructions !== "string") {
-        return { success: false, error: "instructions must be a string" };
-      }
-
-      await this.ensureSettings();
-
-      const updated = await appSettingsRepo.updatePrInstructions(SETTINGS_ID, instructions);
-      if (!updated) {
-        return { success: false, error: "Failed to update settings" };
-      }
-
-      return { success: true, data: updated };
-    } catch (error) {
-      console.error("Error updating prInstructions:", error);
+      console.error("Error updating app settings:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",

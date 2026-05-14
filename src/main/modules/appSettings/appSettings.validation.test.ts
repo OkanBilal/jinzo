@@ -1,34 +1,56 @@
 import { describe, it, expect } from "vitest";
-import { validateSpaceId } from "./appSettings.validation";
+import { sanitizeAppSettingsPatch } from "./appSettings.validation";
 
-describe("validateSpaceId", () => {
-  it("accepts null", () => {
-    const result = validateSpaceId(null);
-    expect(result).toEqual({ value: null, error: null });
+describe("sanitizeAppSettingsPatch", () => {
+  it("returns null for non-objects", () => {
+    expect(sanitizeAppSettingsPatch(null)).toBeNull();
+    expect(sanitizeAppSettingsPatch(undefined)).toBeNull();
+    expect(sanitizeAppSettingsPatch("string")).toBeNull();
+    expect(sanitizeAppSettingsPatch(42)).toBeNull();
+    expect(sanitizeAppSettingsPatch(true)).toBeNull();
   });
 
-  it("accepts undefined", () => {
-    const result = validateSpaceId(undefined);
-    expect(result).toEqual({ value: null, error: null });
+  it("keeps all mutable fields", () => {
+    const patch = {
+      activeSpaceId: "s1",
+      enableWorktrees: true,
+      showToolCalls: false,
+      preventSleepDuringRuns: true,
+      notifyOnRunComplete: false,
+      notifyOnToolApproval: true,
+      showMenuBarIcon: false,
+      commitInstructions: "use conventional commits",
+      prInstructions: "include a test plan",
+    };
+    expect(sanitizeAppSettingsPatch(patch)).toEqual(patch);
   });
 
-  it("accepts a valid string", () => {
-    const result = validateSpaceId("space-123");
-    expect(result).toEqual({ value: "space-123", error: null });
+  it("strips unknown keys", () => {
+    const result = sanitizeAppSettingsPatch({
+      enableWorktrees: false,
+      somethingMadeUp: "hi",
+    });
+    expect(result).toEqual({ enableWorktrees: false });
   });
 
-  it("rejects a number", () => {
-    const result = validateSpaceId(42);
-    expect(result.error).toBe("spaceId must be a string or null");
+  it("strips immutable fields (id, accountId, createdAt, updatedAt)", () => {
+    const result = sanitizeAppSettingsPatch({
+      id: "hacked",
+      accountId: "hacked",
+      createdAt: 0,
+      updatedAt: 0,
+      enableWorktrees: false,
+    });
+    expect(result).toEqual({ enableWorktrees: false });
   });
 
-  it("rejects a boolean", () => {
-    const result = validateSpaceId(true);
-    expect(result.error).toBe("spaceId must be a string or null");
+  it("preserves null for activeSpaceId", () => {
+    expect(sanitizeAppSettingsPatch({ activeSpaceId: null })).toEqual({
+      activeSpaceId: null,
+    });
   });
 
-  it("rejects an object", () => {
-    const result = validateSpaceId({ id: "space" });
-    expect(result.error).toBe("spaceId must be a string or null");
+  it("returns an empty patch for an empty object", () => {
+    expect(sanitizeAppSettingsPatch({})).toEqual({});
   });
 });

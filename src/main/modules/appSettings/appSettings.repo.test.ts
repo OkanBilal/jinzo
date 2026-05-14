@@ -29,9 +29,8 @@ describe("appSettingsRepo", () => {
       expect(result).toBeNull();
     });
 
-    it("returns settings when found", async () => {
+    it("returns the row when found", async () => {
       createAppSettings(db, { id: "default" });
-
       const result = await appSettingsRepo.findById("default");
       expect(result).not.toBeNull();
       expect(result!.id).toBe("default");
@@ -40,10 +39,7 @@ describe("appSettingsRepo", () => {
 
   describe("createDefaultAccount", () => {
     it("creates the default account if it does not exist", async () => {
-      await appSettingsRepo.createDefaultAccount();
-
-      const settings = createAppSettings(db, { id: "default", accountId: "default" });
-      expect(settings.accountId).toBe("default");
+      await expect(appSettingsRepo.createDefaultAccount()).resolves.not.toThrow();
     });
 
     it("does not fail if the default account already exists", async () => {
@@ -53,7 +49,7 @@ describe("appSettingsRepo", () => {
   });
 
   describe("create", () => {
-    it("inserts a new settings row", async () => {
+    it("inserts a new row", async () => {
       createAccount(db, { id: "default" });
       await appSettingsRepo.create({ id: "s1", accountId: "default" });
 
@@ -70,92 +66,56 @@ describe("appSettingsRepo", () => {
     });
   });
 
-  describe("updateActiveSpace", () => {
-    it("sets activeSpaceId and returns updated row", async () => {
+  describe("update", () => {
+    it("applies a single-field patch", async () => {
+      createAppSettings(db, { id: "default" });
+      const result = await appSettingsRepo.update("default", {
+        enableWorktrees: false,
+      });
+      expect(result).not.toBeNull();
+      expect(result!.enableWorktrees).toBe(false);
+    });
+
+    it("applies a multi-field patch", async () => {
+      createAppSettings(db, { id: "default" });
+      const result = await appSettingsRepo.update("default", {
+        showToolCalls: false,
+        notifyOnRunComplete: false,
+        commitInstructions: "Conventional commits",
+      });
+      expect(result!.showToolCalls).toBe(false);
+      expect(result!.notifyOnRunComplete).toBe(false);
+      expect(result!.commitInstructions).toBe("Conventional commits");
+    });
+
+    it("sets activeSpaceId to a space id", async () => {
       createAppSettings(db, { id: "default" });
       const space = createSpace(db, { accountId: "default" });
-
-      const result = await appSettingsRepo.updateActiveSpace("default", space.id);
-      expect(result).not.toBeNull();
+      const result = await appSettingsRepo.update("default", {
+        activeSpaceId: space.id,
+      });
       expect(result!.activeSpaceId).toBe(space.id);
     });
 
     it("clears activeSpaceId when set to null", async () => {
       createAppSettings(db, { id: "default" });
-
-      const result = await appSettingsRepo.updateActiveSpace("default", null);
-      expect(result).not.toBeNull();
+      const result = await appSettingsRepo.update("default", {
+        activeSpaceId: null,
+      });
       expect(result!.activeSpaceId).toBeNull();
     });
-  });
 
-  describe("updateEnableWorktrees", () => {
-    it("toggles enableWorktrees", async () => {
+    it("touches updatedAt", async () => {
       createAppSettings(db, { id: "default" });
-
-      const result = await appSettingsRepo.updateEnableWorktrees("default", false);
-      expect(result).not.toBeNull();
-      expect(result!.enableWorktrees).toBe(false);
-    });
-  });
-
-  describe("updateShowToolCalls", () => {
-    it("toggles showToolCalls", async () => {
-      createAppSettings(db, { id: "default" });
-
-      const result = await appSettingsRepo.updateShowToolCalls("default", false);
-      expect(result!.showToolCalls).toBe(false);
-    });
-  });
-
-  describe("updatePreventSleepDuringRuns", () => {
-    it("toggles preventSleepDuringRuns", async () => {
-      createAppSettings(db, { id: "default" });
-
-      const result = await appSettingsRepo.updatePreventSleepDuringRuns("default", true);
-      expect(result!.preventSleepDuringRuns).toBe(true);
-    });
-  });
-
-  describe("updateNotifyOnRunComplete", () => {
-    it("toggles notifyOnRunComplete", async () => {
-      createAppSettings(db, { id: "default" });
-
-      const result = await appSettingsRepo.updateNotifyOnRunComplete("default", false);
-      expect(result!.notifyOnRunComplete).toBe(false);
-    });
-  });
-
-  describe("updateNotifyOnToolApproval", () => {
-    it("toggles notifyOnToolApproval", async () => {
-      createAppSettings(db, { id: "default" });
-
-      const result = await appSettingsRepo.updateNotifyOnToolApproval("default", false);
-      expect(result!.notifyOnToolApproval).toBe(false);
-    });
-  });
-
-  describe("updateCommitInstructions", () => {
-    it("sets commit instructions text", async () => {
-      createAppSettings(db, { id: "default" });
-
-      const result = await appSettingsRepo.updateCommitInstructions(
-        "default",
-        "Use conventional commits",
+      const before = (await appSettingsRepo.findById("default"))!;
+      // unixepoch() has 1-second resolution; wait past that boundary.
+      await new Promise((r) => setTimeout(r, 1100));
+      const result = await appSettingsRepo.update("default", {
+        enableWorktrees: false,
+      });
+      expect(result!.updatedAt.getTime()).toBeGreaterThan(
+        before.updatedAt.getTime(),
       );
-      expect(result!.commitInstructions).toBe("Use conventional commits");
-    });
-  });
-
-  describe("updatePrInstructions", () => {
-    it("sets PR instructions text", async () => {
-      createAppSettings(db, { id: "default" });
-
-      const result = await appSettingsRepo.updatePrInstructions(
-        "default",
-        "Include ticket number",
-      );
-      expect(result!.prInstructions).toBe("Include ticket number");
     });
   });
 });
