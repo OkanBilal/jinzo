@@ -1,19 +1,18 @@
-import { powerSaveBlocker, Notification, BrowserWindow } from "electron";
+import { BrowserWindow } from "electron";
+import { createHash } from "crypto";
+
 import { runsRepo } from "./runs.repo";
 import { providersRepo } from "../providers/providers.repo";
 import { workspacesRepo } from "../workspaces/workspaces.repo";
-import { appSettingsRepo } from "../appSettings/appSettings.repo";
-import { gitService } from "../git/git.service";
-import { workspaceDiffsService } from "../workspaceDiffs/workspaceDiffs.service";
-import { workspaceActivityService } from "../workspaceActivity/workspaceActivity.service";
-import { workspaceDiffsRepo } from "../workspaceDiffs/workspaceDiffs.repo";
 import {
   createWorkAdapter,
-  couldModifyFiles,
-  type WorkRunEvent,
   type WorkRunContextItem,
   type WorkRunAdapter,
+  type WorkRunEvent,
 } from "../providers/adapters";
+import type { WorkRunResult } from "../../../shared/adapter.types";
+import { createRunSession, type RunSession, type RunSessionResult } from "./run-session";
+import { runSessionRegistry } from "./run-session-registry";
 import type {
   CreateRunPayload,
   UpdateRunPayload,
@@ -38,502 +37,22 @@ import type {
   RunDetailsResponse,
   RunTurnResponse,
 } from "./runs.dto";
-import type { WorkRunUsage } from "../../../shared/adapter.types";
-import { createHash } from "crypto";
-import fs from "fs";
-import path from "path";
-
-// In-memory map: runId -> git HEAD sha captured at run start
-const runBaseRefs = new Map<string, string>();
-
-// In-memory map: runId -> powerSaveBlocker id
-const sleepBlockers = new Map<string, number>();
-
-// In-memory maps for turn tracking
-const activeTurnIds = new Map<string, number>(); // runId → active turn DB id
-const turnCounters = new Map<string, number>(); // runId → last turnIndex
-
-// In-memory map: runId -> workspace context for live diff updates
-// Populated at run start, cleared on completion/abort.
-const runWorkspaces = new Map<string, { id: string; rootPath: string }>();
-
-// Live diff scheduling: debounce timers + in-flight guard per run
-const liveDiffTimers = new Map<string, NodeJS.Timeout>();
-const liveDiffInFlight = new Set<string>();
-const liveDiffPending = new Set<string>();
-const LIVE_DIFF_DEBOUNCE_MS = 300;
-
-async function acquireSleepBlocker(runId: string): Promise<void> {
-  const settings = await appSettingsRepo.findById("default");
-  if (!settings?.preventSleepDuringRuns) return;
-  if (!sleepBlockers.has(runId)) {
-    const id = powerSaveBlocker.start("prevent-app-suspension");
-    sleepBlockers.set(runId, id);
-  }
-}
-
-function releaseSleepBlocker(runId: string): void {
-  const id = sleepBlockers.get(runId);
-  if (id !== undefined && powerSaveBlocker.isStarted(id)) {
-    powerSaveBlocker.stop(id);
-  }
-  sleepBlockers.delete(runId);
-}
-
-export function releaseAllSleepBlockers(): void {
-  for (const [runId] of sleepBlockers) {
-    releaseSleepBlocker(runId);
-  }
-}
-
-function broadcastToWindows(channel: string, payload: unknown): void {
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) win.webContents.send(channel, payload);
-  }
-}
-
-// Renderer debounces and refetches run details; a dropped push is recovered
-// by the low-frequency polling fallback in `use-workspace-runs`.
-function broadcastRunUpdate(runId: string): void {
-  broadcastToWindows("runs:eventPersisted", { runId, ts: Date.now() });
-}
-
-function broadcastRunStatusChange(runId: string, status: string): void {
-  broadcastToWindows("runs:statusChanged", { runId, status, ts: Date.now() });
-}
-
-function broadcastDiffUpdate(runId: string, workspaceId: string): void {
-  broadcastToWindows("runs:diffUpdated", { runId, workspaceId, ts: Date.now() });
-}
-
-async function sendRunNotification(runId: string, status: string): Promise<void> {
-  try {
-    const settings = await appSettingsRepo.findById("default");
-    if (!settings?.notifyOnRunComplete) return;
-
-    const title = status === "succeeded" ? "Run Completed" : "Run Failed";
-    const body = status === "succeeded"
-      ? `Run  finished successfully`
-      : `Run  failed`;
-
-    const notification = new Notification({ title, body });
-    notification.on("click", () => {
-      const windows = BrowserWindow.getAllWindows();
-      if (windows.length > 0) {
-        const win = windows[0];
-        if (win.isMinimized()) win.restore();
-        win.focus();
-      }
-    });
-    notification.show();
-  } catch (err) {
-    console.error("[RunsService] Failed to send run notification:", err);
-  }
-}
-
-/**
- * Update the base ref for a run (e.g. after a commit so persistRunDiff
- * compares against the post-commit HEAD instead of the pre-commit one).
- */
-export function updateRunBaseRef(runId: string, sha: string): void {
-  runBaseRefs.set(runId, sha);
-}
-
-/**
- * Capture HEAD sha at run start for later diff computation.
- * Silently no-ops if the workspace is not a git repo.
- */
-async function captureBaseRef(runId: string, rootPath: string): Promise<void> {
-  try {
-    const result = await gitService.getHeadSha(rootPath);
-    if (result.success && result.data) {
-      runBaseRefs.set(runId, result.data);
-    }
-  } catch {
-    // Not a git repo or git error – ignore
-  }
-}
 
 // ─────────────────────────────────────────────────────────────
-// Turn Tracking Helpers
+// Helpers
 // ─────────────────────────────────────────────────────────────
 
-async function createInitialTurn(runId: string, promptContent?: string): Promise<void> {
-  try {
-    const turnIndex = 0;
-    const id = await runsRepo.insertTurn({
-      runId,
-      turnIndex,
-      promptContent,
-      startedAt: new Date(),
-    });
-    activeTurnIds.set(runId, id);
-    turnCounters.set(runId, turnIndex);
-  } catch (err) {
-    console.error(`[RunsService] Failed to create initial turn for ${runId}:`, err);
-  }
-}
-
-async function closeActiveTurn(runId: string, usage?: WorkRunUsage): Promise<void> {
-  const turnId = activeTurnIds.get(runId);
-  if (turnId === undefined) return;
-
-  try {
-    const now = new Date();
-    // Find the turn to compute elapsed
-    const turns = await runsRepo.findTurnsByRun(runId);
-    const activeTurn = turns.find((t) => t.id === turnId);
-    const elapsedMs = activeTurn?.startedAt
-      ? now.getTime() - new Date(activeTurn.startedAt).getTime()
-      : undefined;
-
-    await runsRepo.updateTurn(turnId, {
-      endedAt: now,
-      elapsedMs,
-      status: "completed",
-      inputTokens: usage?.inputTokens,
-      outputTokens: usage?.outputTokens,
-      cacheReadTokens: usage?.cacheReadTokens,
-      cacheWriteTokens: usage?.cacheWriteTokens,
-      costMicros: usage?.totalCostUsd
-        ? Math.round(usage.totalCostUsd * 1_000_000)
-        : undefined,
-      model: usage?.model,
-      modelUsage: usage?.modelUsage,
-    });
-
-    activeTurnIds.delete(runId);
-  } catch (err) {
-    console.error(`[RunsService] Failed to close active turn for ${runId}:`, err);
-  }
-}
-
-async function startNewTurn(runId: string, promptContent?: string): Promise<void> {
-  // Close current active turn without usage (usage comes at completion)
-  await closeActiveTurn(runId);
-
-  try {
-    const nextIndex = (turnCounters.get(runId) ?? -1) + 1;
-    const id = await runsRepo.insertTurn({
-      runId,
-      turnIndex: nextIndex,
-      promptContent,
-      startedAt: new Date(),
-    });
-    activeTurnIds.set(runId, id);
-    turnCounters.set(runId, nextIndex);
-  } catch (err) {
-    console.error(`[RunsService] Failed to start new turn for ${runId}:`, err);
-  }
-}
-
-function cleanupTurnState(runId: string): void {
-  activeTurnIds.delete(runId);
-  turnCounters.delete(runId);
-  runWorkspaces.delete(runId);
-  clearLiveDiffSchedule(runId);
-  liveDiffInFlight.delete(runId);
-}
-
-async function closePendingToolCalls(
-  pendingToolCalls: Map<string, number>,
-  finalStatus: "done" | "error",
-): Promise<void> {
-  if (pendingToolCalls.size === 0) return;
-  const now = new Date();
-  for (const [callKey, toolCallId] of pendingToolCalls) {
-    try {
-      await runsRepo.updateToolCall(toolCallId, {
-        status: finalStatus,
-        endedAt: now,
-      });
-    } catch (err) {
-      console.error(`[RunsService] Failed to close orphaned tool call ${callKey}:`, err);
-    }
-  }
-  pendingToolCalls.clear();
-}
-
-/** Mark any DB tool calls still in `running` as ended (e.g. IPC abort has no in-memory pending map). */
-async function closeRunningToolCallsForRun(runId: string): Promise<void> {
-  try {
-    const calls = await runsRepo.findToolCallsByRun(runId);
-    if (calls.length === 0) return;
-    const now = new Date();
-    for (const tc of calls) {
-      if (tc.status !== "running") continue;
-      try {
-        await runsRepo.updateToolCall(tc.id, {
-          status: "error",
-          endedAt: now,
-        });
-      } catch (err) {
-        console.error(`[RunsService] Failed to close running tool call ${tc.id}:`, err);
-      }
-    }
-  } catch (err) {
-    console.error(`[RunsService] Failed to load tool calls for abort cleanup ${runId}:`, err);
-  }
-}
-
-interface DiffSnapshot {
-  baseRef: string;
-  diffText: string;
-  files: string[];
-  untrackedFiles: string[];
-  shortstat: string;
-}
-
-/**
- * Pure read: compute the current git diff snapshot for a run against its baseRef.
- * Does NOT mutate runBaseRefs — caller decides when to drop it.
- * Returns null if no baseRef recorded or git operations all fail.
- */
-async function buildDiffSnapshot(runId: string, rootPath: string): Promise<DiffSnapshot | null> {
-  const baseRef = runBaseRefs.get(runId);
-  if (!baseRef) return null;
-
-  try {
-    const [diffResult, filesResult, statResult, untrackedResult] = await Promise.all([
-      gitService.getDiffSince(rootPath, baseRef),
-      gitService.getChangedFilesSince(rootPath, baseRef),
-      gitService.getShortStatSince(rootPath, baseRef),
-      gitService.getUntrackedFiles(rootPath),
-    ]);
-
-    let diffText = diffResult.success ? (diffResult.data ?? "") : "";
-    const trackedFiles = filesResult.success ? (filesResult.data ?? []) : [];
-    const untrackedFiles = untrackedResult.success ? (untrackedResult.data ?? []) : [];
-    let shortstat = statResult.success ? (statResult.data ?? "") : "";
-
-    const files = [...new Set([...trackedFiles, ...untrackedFiles])];
-
-    // Inline untracked (new) files as synthetic diff hunks — git diff doesn't cover them.
-    let untrackedInsertions = 0;
-    if (untrackedFiles.length > 0) {
-      const untrackedDiffs: string[] = [];
-      for (const filePath of untrackedFiles) {
-        const fullPath = path.join(rootPath, filePath);
-        try {
-          const stat = fs.statSync(fullPath);
-          if (stat.size > 256 * 1024) {
-            untrackedDiffs.push(
-              `diff --git a/${filePath} b/${filePath}\nnew file\nBinary or large file (${stat.size} bytes)`,
-            );
-            continue;
-          }
-          const content = fs.readFileSync(fullPath, "utf-8");
-          const lines = content.split("\n");
-          untrackedInsertions += lines.length;
-          const diffHeader = [
-            `diff --git a/${filePath} b/${filePath}`,
-            `new file mode 100644`,
-            `--- /dev/null`,
-            `+++ b/${filePath}`,
-            `@@ -0,0 +1,${lines.length} @@`,
-          ].join("\n");
-          const diffBody = lines.map((l) => `+${l}`).join("\n");
-          untrackedDiffs.push(`${diffHeader}\n${diffBody}`);
-        } catch {
-          untrackedDiffs.push(
-            `diff --git a/${filePath} b/${filePath}\nnew file\n(could not read file)`,
-          );
-        }
-      }
-      if (untrackedDiffs.length > 0) {
-        diffText = diffText
-          ? `${diffText}\n${untrackedDiffs.join("\n")}`
-          : untrackedDiffs.join("\n");
-      }
-    }
-
-    if (untrackedInsertions > 0) {
-      shortstat = mergeUntrackedIntoShortstat(shortstat, untrackedFiles.length, untrackedInsertions);
-    }
-
-    return { baseRef, diffText, files, untrackedFiles, shortstat };
-  } catch (err) {
-    console.error(`[RunsService] buildDiffSnapshot failed for ${runId}:`, err);
-    return null;
-  }
-}
-
-/**
- * Upsert the workspace_diffs row for a run.
- * First call for a runId: deletes the workspace's prior diff (cross-run cleanup),
- * then inserts a fresh row. Subsequent calls update the same row in place.
- */
-async function upsertDiffForRun(
-  runId: string,
-  workspaceId: string,
-  snapshot: DiffSnapshot,
-): Promise<void> {
-  const existing = await workspaceDiffsRepo.findByRun(runId);
-  const filesJson = JSON.stringify(snapshot.files);
-  const statsJson = JSON.stringify({
-    shortstat: snapshot.shortstat,
-    files: snapshot.files.length,
-    newFiles: snapshot.untrackedFiles.length,
+function generateRunId(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
   });
-
-  if (existing) {
-    await workspaceDiffsRepo.updateDiff(existing.id, {
-      diffText: snapshot.diffText,
-      filesJson,
-      statsJson,
-      baseRef: snapshot.baseRef,
-    });
-  } else {
-    // First persisted diff for this run — wipe the workspace's prior (stale) row.
-    await workspaceDiffsRepo.deleteLatestByWorkspace(workspaceId);
-    await workspaceDiffsService.createDiff({
-      id: generateRunId(),
-      workspaceId,
-      runId,
-      baseRef: snapshot.baseRef,
-      diffText: snapshot.diffText,
-      filesJson,
-      statsJson,
-    });
-  }
 }
 
-/**
- * Live (incremental) diff recomputation, triggered after each file-modifying
- * tool call. Upserts the run's diff row and broadcasts so the renderer refetches.
- * No activity log — that fires once at run completion via persistRunDiff.
- */
-async function recomputeLiveDiff(
-  runId: string,
-  workspaceId: string,
-  rootPath: string,
-): Promise<void> {
-  const snapshot = await buildDiffSnapshot(runId, rootPath);
-  if (!snapshot) return;
-
-  // No files changed yet — nothing to persist.
-  if (snapshot.files.length === 0) return;
-
-  // Skip write if diff content is identical to the row we already have for this run.
-  const existing = await workspaceDiffsRepo.findByRun(runId);
-  if (existing && hashContent(existing.diffText) === hashContent(snapshot.diffText)) {
-    return;
-  }
-
-  try {
-    await upsertDiffForRun(runId, workspaceId, snapshot);
-    broadcastDiffUpdate(runId, workspaceId);
-  } catch (err) {
-    console.error(`[RunsService] recomputeLiveDiff failed for ${runId}:`, err);
-  }
+function hashContent(content: string): string {
+  return createHash("sha256").update(content).digest("hex").substring(0, 16);
 }
-
-/** Run live diff with overlap protection — coalesces concurrent invocations. */
-async function runLiveDiff(runId: string): Promise<void> {
-  const ws = runWorkspaces.get(runId);
-  if (!ws) return;
-
-  if (liveDiffInFlight.has(runId)) {
-    liveDiffPending.add(runId);
-    return;
-  }
-
-  liveDiffInFlight.add(runId);
-  try {
-    await recomputeLiveDiff(runId, ws.id, ws.rootPath);
-  } finally {
-    liveDiffInFlight.delete(runId);
-    if (liveDiffPending.has(runId)) {
-      liveDiffPending.delete(runId);
-      // Re-run once to capture changes that arrived during the previous pass.
-      void runLiveDiff(runId);
-    }
-  }
-}
-
-function scheduleLiveDiff(runId: string): void {
-  const existing = liveDiffTimers.get(runId);
-  if (existing) clearTimeout(existing);
-  const timer = setTimeout(() => {
-    liveDiffTimers.delete(runId);
-    void runLiveDiff(runId);
-  }, LIVE_DIFF_DEBOUNCE_MS);
-  liveDiffTimers.set(runId, timer);
-}
-
-function clearLiveDiffSchedule(runId: string): void {
-  const timer = liveDiffTimers.get(runId);
-  if (timer) {
-    clearTimeout(timer);
-    liveDiffTimers.delete(runId);
-  }
-  liveDiffPending.delete(runId);
-}
-
-/**
- * Final diff persistence at run completion (success or abort).
- * Builds the canonical snapshot, upserts (finalizing any live-diff row),
- * and logs a single workspace activity entry.
- */
-async function persistRunDiff(runId: string, workspaceId: string, rootPath: string): Promise<void> {
-  clearLiveDiffSchedule(runId);
-
-  const snapshot = await buildDiffSnapshot(runId, rootPath);
-  runBaseRefs.delete(runId);
-  if (!snapshot) return;
-
-  try {
-    if (snapshot.files.length === 0) {
-      console.log(`[RunsService] No changes since ${snapshot.baseRef} for run ${runId}, skipping diff persist`);
-      return;
-    }
-
-    // Compute incremental file count vs a prior diff sharing the same baseRef
-    // (excluding our own live row for this run), so the activity entry reflects
-    // only what changed since the last recorded snapshot — not cumulative noise.
-    const recentDiffs = await workspaceDiffsRepo.findByWorkspace(workspaceId, 10);
-    let incrementalFileCount = snapshot.files.length;
-    let incrementalFileNames: string[] = snapshot.files;
-    const prevDiffWithSameBase = recentDiffs.find(
-      (d) => d.baseRef === snapshot.baseRef && d.runId !== runId,
-    );
-    if (prevDiffWithSameBase) {
-      const prevPerFile = buildPerFileDiffHashes(prevDiffWithSameBase.diffText);
-      const currPerFile = buildPerFileDiffHashes(snapshot.diffText);
-      const changedFiles: string[] = [];
-      for (const [file, hash] of currPerFile) {
-        if (prevPerFile.get(file) !== hash) {
-          changedFiles.push(file);
-        }
-      }
-      incrementalFileCount = changedFiles.length;
-      incrementalFileNames = changedFiles;
-    }
-
-    await upsertDiffForRun(runId, workspaceId, snapshot);
-    broadcastDiffUpdate(runId, workspaceId);
-
-    if (incrementalFileCount > 0) {
-      const summaryLines = incrementalFileNames
-        .map((f) => f.split("/").pop() ?? f)
-        .join(", ");
-      workspaceActivityService.log({
-        workspaceId,
-        type: "diff",
-        title: `${incrementalFileCount} file${incrementalFileCount === 1 ? "" : "s"} changed`,
-        summary: summaryLines,
-        refId: runId,
-        metadata: { files: incrementalFileCount, fileNames: incrementalFileNames },
-      });
-    }
-  } catch (err) {
-    console.error(`[RunsService] Failed to persist run diff for ${runId}:`, err);
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Title Generation Helpers
-// ─────────────────────────────────────────────────────────────
 
 function fallbackTitle(goal: string): string {
   const firstLine = goal.split("\n")[0].trim();
@@ -562,13 +81,72 @@ async function generateRunTitle(
   await runsRepo.updateRun(runId, { title });
 }
 
+/** Broadcast statusChanged for runs that fail before a session is created. */
+function broadcastStatusChangedPreSession(runId: string, status: string): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send("runs:statusChanged", { runId, status, ts: Date.now() });
+    }
+  }
+}
+
+/** Wire an adapter run promise to session.finalize. Idempotent on both sides. */
+function wireSessionCompletion(
+  runPromise: Promise<WorkRunResult>,
+  session: RunSession,
+): void {
+  runPromise
+    .then((result) => {
+      const status: RunSessionResult["status"] =
+        result.status === "succeeded"
+          ? "succeeded"
+          : result.status === "canceled"
+            ? "canceled"
+            : "failed";
+      return session.finalize({
+        status,
+        summary: result.status === "failed" ? result.summary : undefined,
+        stopReason: result.stopReason,
+        usage: result.usage,
+      });
+    })
+    .catch((err) =>
+      session.finalize({
+        status: "failed",
+        summary: err instanceof Error ? err.message : String(err),
+      }),
+    );
+}
+
+/**
+ * Pre-session failure recovery — the orchestrator threw before adapter wiring.
+ * If a session somehow registered, finalize it; else write status directly.
+ */
+async function handlePreSessionFailure(runId: string, error: unknown): Promise<void> {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  console.error(`[RunsService] Pre-session failure for ${runId}:`, errorMessage);
+  const session = runSessionRegistry.get(runId);
+  if (session) {
+    await session.finalize({ status: "failed", summary: errorMessage });
+    return;
+  }
+  try {
+    await runsRepo.updateRun(runId, {
+      status: "failed",
+      endedAt: new Date(),
+      lastError: errorMessage,
+    });
+  } catch {
+    // Run row may not exist yet — ignore
+  }
+  broadcastStatusChangedPreSession(runId, "failed");
+}
+
 // ─────────────────────────────────────────────────────────────
 // Runs Service
 // ─────────────────────────────────────────────────────────────
 export const runsService = {
-  // ─────────────────────────────────────────────────────────────
-  // Run Operations
-  // ─────────────────────────────────────────────────────────────
+  // ─── Run Operations ───
   async getAllRuns(limit?: number): Promise<ServiceResponse<RunResponse[]>> {
     try {
       const runs = await runsRepo.findAllRuns(limit);
@@ -582,9 +160,7 @@ export const runsService = {
   async getRunById(id: string): Promise<ServiceResponse<RunResponse>> {
     try {
       const run = await runsRepo.findRunById(id);
-      if (!run) {
-        return { success: false, error: "Run not found" };
-      }
+      if (!run) return { success: false, error: "Run not found" };
       return { success: true, data: run };
     } catch (error) {
       console.error(`[RunsService] Failed to get run ${id}:`, error);
@@ -600,10 +176,7 @@ export const runsService = {
       const runs = await runsRepo.findRunsByAccount(accountId, limit);
       return { success: true, data: runs };
     } catch (error) {
-      console.error(
-        `[RunsService] Failed to get runs for account ${accountId}:`,
-        error,
-      );
+      console.error(`[RunsService] Failed to get runs for account ${accountId}:`, error);
       return { success: false, error: "Failed to get runs" };
     }
   },
@@ -616,10 +189,7 @@ export const runsService = {
       const runs = await runsRepo.findRunsByWorkspace(workspaceId, limit);
       return { success: true, data: runs };
     } catch (error) {
-      console.error(
-        `[RunsService] Failed to get runs for workspace ${workspaceId}:`,
-        error,
-      );
+      console.error(`[RunsService] Failed to get runs for workspace ${workspaceId}:`, error);
       return { success: false, error: "Failed to get runs" };
     }
   },
@@ -653,9 +223,7 @@ export const runsService = {
   ): Promise<ServiceResponse<RunResponse>> {
     try {
       const updated = await runsRepo.updateRun(id, payload);
-      if (!updated) {
-        return { success: false, error: "Run not found" };
-      }
+      if (!updated) return { success: false, error: "Run not found" };
       return { success: true, data: updated };
     } catch (error) {
       console.error(`[RunsService] Failed to update run ${id}:`, error);
@@ -671,10 +239,7 @@ export const runsService = {
     return this.updateRun(id, { status: "succeeded", endedAt: new Date() });
   },
 
-  async failRun(
-    id: string,
-    error: string,
-  ): Promise<ServiceResponse<RunResponse>> {
+  async failRun(id: string, error: string): Promise<ServiceResponse<RunResponse>> {
     return this.updateRun(id, {
       status: "failed",
       endedAt: new Date(),
@@ -699,9 +264,7 @@ export const runsService = {
   async archiveRun(id: string): Promise<ServiceResponse<RunResponse>> {
     try {
       const archived = await runsRepo.archiveRun(id);
-      if (!archived) {
-        return { success: false, error: "Run not found" };
-      }
+      if (!archived) return { success: false, error: "Run not found" };
       return { success: true, data: archived };
     } catch (error) {
       console.error(`[RunsService] Failed to archive run ${id}:`, error);
@@ -709,27 +272,18 @@ export const runsService = {
     }
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // Run Context Operations
-  // ─────────────────────────────────────────────────────────────
-  async getContextByRun(
-    runId: string,
-  ): Promise<ServiceResponse<RunContextResponse[]>> {
+  // ─── Run Context Operations ───
+  async getContextByRun(runId: string): Promise<ServiceResponse<RunContextResponse[]>> {
     try {
       const contexts = await runsRepo.findContextByRun(runId);
       return { success: true, data: contexts };
     } catch (error) {
-      console.error(
-        `[RunsService] Failed to get context for run ${runId}:`,
-        error,
-      );
+      console.error(`[RunsService] Failed to get context for run ${runId}:`, error);
       return { success: false, error: "Failed to get context" };
     }
   },
 
-  async addContext(
-    payload: CreateRunContextPayload,
-  ): Promise<ServiceResponse<number>> {
+  async addContext(payload: CreateRunContextPayload): Promise<ServiceResponse<number>> {
     try {
       const id = await runsRepo.insertContext(payload);
       return { success: true, data: id };
@@ -749,27 +303,18 @@ export const runsService = {
     }
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // Run Artifact Operations
-  // ─────────────────────────────────────────────────────────────
-  async getArtifactsByRun(
-    runId: string,
-  ): Promise<ServiceResponse<RunArtifactResponse[]>> {
+  // ─── Run Artifact Operations ───
+  async getArtifactsByRun(runId: string): Promise<ServiceResponse<RunArtifactResponse[]>> {
     try {
       const artifacts = await runsRepo.findArtifactsByRun(runId);
       return { success: true, data: artifacts };
     } catch (error) {
-      console.error(
-        `[RunsService] Failed to get artifacts for run ${runId}:`,
-        error,
-      );
+      console.error(`[RunsService] Failed to get artifacts for run ${runId}:`, error);
       return { success: false, error: "Failed to get artifacts" };
     }
   },
 
-  async addArtifact(
-    payload: CreateRunArtifactPayload,
-  ): Promise<ServiceResponse<number>> {
+  async addArtifact(payload: CreateRunArtifactPayload): Promise<ServiceResponse<number>> {
     try {
       const id = await runsRepo.insertArtifact(payload);
       return { success: true, data: id };
@@ -789,28 +334,18 @@ export const runsService = {
     }
   },
 
-
-  // ─────────────────────────────────────────────────────────────
-  // Tool Call Operations
-  // ─────────────────────────────────────────────────────────────
-  async getToolCallsByRun(
-    runId: string,
-  ): Promise<ServiceResponse<ToolCallResponse[]>> {
+  // ─── Tool Call Operations ───
+  async getToolCallsByRun(runId: string): Promise<ServiceResponse<ToolCallResponse[]>> {
     try {
       const toolCalls = await runsRepo.findToolCallsByRun(runId);
       return { success: true, data: toolCalls };
     } catch (error) {
-      console.error(
-        `[RunsService] Failed to get tool calls for run ${runId}:`,
-        error,
-      );
+      console.error(`[RunsService] Failed to get tool calls for run ${runId}:`, error);
       return { success: false, error: "Failed to get tool calls" };
     }
   },
 
-  async addToolCall(
-    payload: CreateToolCallPayload,
-  ): Promise<ServiceResponse<number>> {
+  async addToolCall(payload: CreateToolCallPayload): Promise<ServiceResponse<number>> {
     try {
       const id = await runsRepo.insertToolCall(payload);
       return { success: true, data: id };
@@ -833,34 +368,20 @@ export const runsService = {
     }
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // Get Run Details (with all related data)
-  // ─────────────────────────────────────────────────────────────
-  async getRunDetails(
-    runId: string,
-  ): Promise<ServiceResponse<RunDetailsResponse>> {
+  // ─── Composite Read ───
+  async getRunDetails(runId: string): Promise<ServiceResponse<RunDetailsResponse>> {
     try {
       const run = await runsRepo.findRunById(runId);
-      if (!run) {
-        return { success: false, error: "Run not found" };
-      }
-
+      if (!run) return { success: false, error: "Run not found" };
       const [context, artifacts, toolCalls, turns] = await Promise.all([
         runsRepo.findContextByRun(runId),
         runsRepo.findArtifactsByRun(runId),
         runsRepo.findToolCallsByRun(runId),
         runsRepo.findTurnsByRun(runId),
       ]);
-
       return {
         success: true,
-        data: {
-          run,
-          context,
-          artifacts,
-          toolCalls,
-          turns,
-        },
+        data: { run, context, artifacts, toolCalls, turns },
       };
     } catch (error) {
       console.error(`[RunsService] Failed to get run details ${runId}:`, error);
@@ -868,28 +389,22 @@ export const runsService = {
     }
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // Execute Run (main orchestration)
-  // ─────────────────────────────────────────────────────────────
-  async executeRun(
-    payload: StartRunPayload,
-  ): Promise<ServiceResponse<StartRunResponse>> {
-    const runId = generateRunId();
+  // ─── Orchestrators ───
 
+  /**
+   * Start a new run. Validates provider+workspace, creates the run row,
+   * persists initial context, then spawns a RunSession wired to the adapter.
+   * The session owns the lifecycle from here on; this method returns immediately.
+   */
+  async executeRun(payload: StartRunPayload): Promise<ServiceResponse<StartRunResponse>> {
+    const runId = generateRunId();
     try {
-      // 1. Load provider and verify it's enabled
       const provider = await providersRepo.findById(payload.providerId);
       if (!provider) {
-        return {
-          success: false,
-          error: `Provider "${payload.providerId}" not found`,
-        };
+        return { success: false, error: `Provider "${payload.providerId}" not found` };
       }
       if (!provider.isEnabled) {
-        return {
-          success: false,
-          error: `Provider "${provider.displayName}" is not enabled`,
-        };
+        return { success: false, error: `Provider "${provider.displayName}" is not enabled` };
       }
       if (provider.kind !== "agent_runtime") {
         return {
@@ -898,20 +413,14 @@ export const runsService = {
         };
       }
 
-      // 2. Load workspace
       const workspace = await workspacesRepo.findById(payload.workspaceId);
       if (!workspace) {
-        return {
-          success: false,
-          error: `Workspace "${payload.workspaceId}" not found`,
-        };
+        return { success: false, error: `Workspace "${payload.workspaceId}" not found` };
       }
 
-      // Transition workspace to in_progress when run starts
       await workspacesRepo.update(payload.workspaceId, { status: "in_progress" });
 
-      // 3. Create run record with status=running
-      const createPayload: CreateRunPayload = {
+      await runsRepo.insertRun({
         id: runId,
         accountId: payload.accountId,
         workspaceId: payload.workspaceId,
@@ -923,16 +432,9 @@ export const runsService = {
         systemPrompt: payload.systemPrompt,
         configSnapshot: payload.configSnapshot,
         toolPolicySnapshot: payload.toolPolicySnapshot,
-      };
-
-      await runsRepo.insertRun(createPayload);
+      });
       await runsRepo.updateRun(runId, { startedAt: new Date() });
 
-      // Capture git HEAD sha at run start for diff computation
-      await captureBaseRef(runId, workspace.rootPath);
-      runWorkspaces.set(runId, { id: workspace.id, rootPath: workspace.rootPath });
-
-      // 4. Persist initial context
       if (payload.initialContext && payload.initialContext.length > 0) {
         for (const ctx of payload.initialContext) {
           await runsRepo.insertContext({
@@ -946,32 +448,24 @@ export const runsService = {
         }
       }
 
-      // 5. Create adapter
-      const adapter = createWorkAdapter(provider);
+      const session = createRunSession({
+        runId,
+        accountId: payload.accountId,
+        providerId: payload.providerId,
+        workspace: { id: workspace.id, rootPath: workspace.rootPath },
+        initialPromptContent: payload.goal,
+      });
 
-      // Fire-and-forget: generate title in background
+      const adapter = createWorkAdapter(provider);
       generateRunTitle(runId, adapter, payload.goal, payload.initialContext).catch((err) =>
         console.error(`[RunsService] Title generation failed for ${runId}:`, err),
       );
 
-      // Track tool calls for updating when completed
-      const pendingToolCalls = new Map<string, number>();
-
-      // 6. Create initial turn
-      await createInitialTurn(runId, payload.goal);
-
-      // 7. Acquire sleep blocker if enabled
-      await acquireSleepBlocker(runId);
-
-      // 8. Start run with event handler (runs in background)
       const runPromise = adapter.startRun(
         {
           runId,
           accountId: payload.accountId,
-          workspace: {
-            id: workspace.id,
-            rootPath: workspace.rootPath,
-          },
+          workspace: { id: workspace.id, rootPath: workspace.rootPath },
           goal: payload.goal,
           model: payload.model,
           systemPrompt: payload.systemPrompt,
@@ -984,125 +478,33 @@ export const runsService = {
           contextFiles: payload.contextFiles,
           skills: payload.contextSkills,
         },
-        async (event: WorkRunEvent) => {
-          try {
-            await this.handleRunEvent(
-              runId,
-              payload.accountId,
-              payload.providerId,
-              event,
-              pendingToolCalls,
-            );
-          } catch (err) {
-            console.error(
-              `[RunsService] Error handling event for run ${runId}:`,
-              err,
-            );
-          }
-        },
+        (event: WorkRunEvent) =>
+          session.project(event).catch((err) =>
+            console.error(`[RunsService] project failed for ${runId}:`, err),
+          ),
       );
 
-      // 7. Handle completion in background
-      runPromise
-        .then(async (result) => {
-          const finalStatus: RunStatus =
-            result.status === "succeeded"
-              ? "succeeded"
-              : result.status === "canceled"
-                ? "canceled"
-                : "failed";
+      wireSessionCompletion(runPromise, session);
 
-          try {
-            // Persist git diff BEFORE updating status so that when the
-            // renderer polls and sees the status change it can immediately
-            // fetch the diff without a race condition.
-            if (finalStatus === "succeeded") {
-              await persistRunDiff(runId, workspace.id, workspace.rootPath);
-            } else {
-              runBaseRefs.delete(runId);
-            }
-
-            await runsRepo.updateRun(runId, {
-              status: finalStatus,
-              endedAt: new Date(),
-              lastError: result.status === "failed" ? result.summary : undefined,
-              stopReason: result.stopReason ?? null,
-            });
-
-            await closeActiveTurn(runId, result.usage);
-            // Close any orphaned "running" tool calls
-            await closePendingToolCalls(pendingToolCalls, finalStatus === "succeeded" ? "done" : "error");
-          } catch (cleanupErr) {
-            console.error(`[RunsService] Cleanup failed for run ${runId}:`, cleanupErr);
-          } finally {
-            cleanupTurnState(runId);
-            broadcastRunStatusChange(runId, finalStatus);
-            sendRunNotification(runId, finalStatus);
-            releaseSleepBlocker(runId);
-          }
-        })
-        .catch(async (error) => {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          console.error(`[RunsService] Run ${runId} failed:`, errorMessage);
-
-          runBaseRefs.delete(runId);
-
-          try {
-            await runsRepo.updateRun(runId, {
-              status: "failed",
-              endedAt: new Date(),
-              lastError: errorMessage,
-            });
-            await closeActiveTurn(runId);
-            // Close any orphaned "running" tool calls
-            await closePendingToolCalls(pendingToolCalls, "error");
-          } catch (cleanupErr) {
-            console.error(`[RunsService] Cleanup failed for run ${runId}:`, cleanupErr);
-          } finally {
-            cleanupTurnState(runId);
-            broadcastRunStatusChange(runId, "failed");
-            sendRunNotification(runId, "failed");
-            releaseSleepBlocker(runId);
-          }
-        });
-
-      // Return immediately with runId
       return { success: true, data: { runId } };
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.error(`[RunsService] Failed to execute run:`, errorMessage);
-
-      runBaseRefs.delete(runId);
-      cleanupTurnState(runId);
-      releaseSleepBlocker(runId);
-
-      // Try to mark run as failed if it was created
-      try {
-        await runsRepo.updateRun(runId, {
-          status: "failed",
-          endedAt: new Date(),
-          lastError: errorMessage,
-        });
-      } catch {
-        // Ignore cleanup errors
-      }
-
-      return { success: false, error: errorMessage };
+      await handlePreSessionFailure(runId, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // Execute Review (native code review via review/start)
-  // ─────────────────────────────────────────────────────────────
+  /**
+   * Run a code review. Same shape as executeRun, but uses adapter.reviewRun
+   * (with adapter.startRun as fallback). Workspace status transitions to in_review.
+   */
   async executeReview(
     payload: ReviewRunPayload,
   ): Promise<ServiceResponse<StartRunResponse>> {
     const runId = generateRunId();
-
     try {
-      // 1. Load provider
       const provider = await providersRepo.findById(payload.providerId);
       if (!provider) {
         return { success: false, error: `Provider "${payload.providerId}" not found` };
@@ -1111,22 +513,30 @@ export const runsService = {
         return { success: false, error: `Provider "${provider.displayName}" is not enabled` };
       }
       if (provider.kind !== "agent_runtime") {
-        return { success: false, error: `Provider "${provider.displayName}" is not an agent runtime` };
+        return {
+          success: false,
+          error: `Provider "${provider.displayName}" is not an agent runtime`,
+        };
       }
 
-      // 2. Load workspace
       const workspace = await workspacesRepo.findById(payload.workspaceId);
       if (!workspace) {
         return { success: false, error: `Workspace "${payload.workspaceId}" not found` };
       }
 
-      // Transition workspace to in_review
       await workspacesRepo.update(payload.workspaceId, { status: "in_review" });
 
-      // 3. Create run record
-      const goalDescription = `Review ${payload.target.type === "uncommittedChanges" ? "uncommitted changes" : payload.target.type === "baseBranch" ? `changes vs ${payload.target.branch ?? "base branch"}` : payload.target.type === "commit" ? `commit ${payload.target.sha ?? ""}` : "code changes"}`;
+      const goalDescription = `Review ${
+        payload.target.type === "uncommittedChanges"
+          ? "uncommitted changes"
+          : payload.target.type === "baseBranch"
+            ? `changes vs ${payload.target.branch ?? "base branch"}`
+            : payload.target.type === "commit"
+              ? `commit ${payload.target.sha ?? ""}`
+              : "code changes"
+      }`;
 
-      const createPayload: CreateRunPayload = {
+      await runsRepo.insertRun({
         id: runId,
         accountId: payload.accountId,
         workspaceId: payload.workspaceId,
@@ -1138,31 +548,40 @@ export const runsService = {
         systemPrompt: payload.systemPrompt,
         configSnapshot: payload.configSnapshot,
         toolPolicySnapshot: payload.toolPolicySnapshot,
-      };
-
-      await runsRepo.insertRun(createPayload);
+      });
       await runsRepo.updateRun(runId, { startedAt: new Date() });
 
-      // Capture git HEAD sha at run start
-      await captureBaseRef(runId, workspace.rootPath);
-      runWorkspaces.set(runId, { id: workspace.id, rootPath: workspace.rootPath });
+      const session = createRunSession({
+        runId,
+        accountId: payload.accountId,
+        providerId: payload.providerId,
+        workspace: { id: workspace.id, rootPath: workspace.rootPath },
+        initialPromptContent: goalDescription,
+      });
 
-      // 4. Create adapter
       const adapter = createWorkAdapter(provider);
 
-      // Track tool calls
-      const pendingToolCalls = new Map<string, number>();
+      const eventCallback = (event: WorkRunEvent) =>
+        session.project(event).catch((err) =>
+          console.error(`[RunsService] project failed for review run ${runId}:`, err),
+        );
 
-      // 5. Create initial turn
-      await createInitialTurn(runId, goalDescription);
-
-      // 6. Acquire sleep blocker
-      await acquireSleepBlocker(runId);
-
-      // 7. Check if adapter supports native review
-      if (!adapter.reviewRun) {
+      let runPromise: Promise<WorkRunResult>;
+      if (adapter.reviewRun) {
+        runPromise = adapter.reviewRun(
+          {
+            runId,
+            accountId: payload.accountId,
+            workspace: { id: workspace.id, rootPath: workspace.rootPath },
+            target: payload.target,
+            delivery: payload.delivery,
+            model: payload.model,
+          },
+          eventCallback,
+        );
+      } else {
         // Fallback: use startRun with a review goal text
-        const runPromise = adapter.startRun(
+        runPromise = adapter.startRun(
           {
             runId,
             accountId: payload.accountId,
@@ -1171,385 +590,54 @@ export const runsService = {
             model: payload.model,
             systemPrompt: payload.systemPrompt,
           },
-          async (event: WorkRunEvent) => {
-            try {
-              await this.handleRunEvent(runId, payload.accountId, payload.providerId, event, pendingToolCalls);
-            } catch (err) {
-              console.error(`[RunsService] Error handling event for review run ${runId}:`, err);
-            }
-          },
+          eventCallback,
         );
-
-        this._handleRunCompletion(runPromise, runId, workspace, pendingToolCalls);
-        return { success: true, data: { runId } };
       }
 
-      // 8. Start native review
-      const runPromise = adapter.reviewRun(
-        {
-          runId,
-          accountId: payload.accountId,
-          workspace: { id: workspace.id, rootPath: workspace.rootPath },
-          target: payload.target,
-          delivery: payload.delivery,
-          model: payload.model,
-        },
-        async (event: WorkRunEvent) => {
-          try {
-            await this.handleRunEvent(runId, payload.accountId, payload.providerId, event, pendingToolCalls);
-          } catch (err) {
-            console.error(`[RunsService] Error handling event for review run ${runId}:`, err);
-          }
-        },
-      );
-
-      this._handleRunCompletion(runPromise, runId, workspace, pendingToolCalls);
+      wireSessionCompletion(runPromise, session);
 
       return { success: true, data: { runId } };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`[RunsService] Failed to execute review run:`, errorMessage);
-
-      runBaseRefs.delete(runId);
-      cleanupTurnState(runId);
-      releaseSleepBlocker(runId);
-
-      try {
-        await runsRepo.updateRun(runId, { status: "failed", endedAt: new Date(), lastError: errorMessage });
-      } catch {
-        // Ignore cleanup errors
-      }
-
-      return { success: false, error: errorMessage };
+      await handlePreSessionFailure(runId, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   },
 
   /**
-   * Handle events emitted during a run
-   */
-  async handleRunEvent(
-    runId: string,
-    accountId: string,
-    providerId: string,
-    event: WorkRunEvent,
-    pendingToolCalls: Map<string, number>,
-  ): Promise<void> {
-    let didPersist = false;
-    switch (event.type) {
-      case "log": {
-        // Store logs as artifacts with kind="log"
-        await runsRepo.insertArtifact({
-          runId,
-          kind: "log",
-          content: event.message,
-          metadata: {
-            level: event.level,
-            ts: event.ts,
-          },
-        });
-        didPersist = true;
-
-        // Auto-generated title from provider (e.g. Codex CLI thread/name/updated)
-        const threadTitle = (event.metadata as Record<string, unknown> | undefined)?.threadTitle as string | undefined;
-        if (threadTitle) {
-          await runsRepo.updateRun(runId, { title: threadTitle });
-        }
-        break;
-      }
-
-      case "tool_call": {
-        const phase = (event.metadata as Record<string, unknown> | undefined)
-          ?.phase;
-
-        if (phase === "start") {
-          // Create tool call record
-          const toolCallId = await runsRepo.insertToolCall({
-            accountId,
-            runId,
-            providerId,
-            toolName: event.toolName,
-            status: "running",
-            input: event.input,
-            startedAt: event.startedAt ? new Date(event.startedAt) : new Date(),
-          });
-          didPersist = true;
-
-          // Track for later update using toolCallId from metadata if available
-          const metadataToolCallId = (
-            event.metadata as Record<string, unknown> | undefined
-          )?.toolCallId;
-          const callKey = metadataToolCallId
-            ? String(metadataToolCallId)
-            : `${event.toolName}-${event.startedAt || Date.now()}`;
-          pendingToolCalls.set(callKey, toolCallId);
-        } else if (phase === "end" || phase === "complete") {
-          // Find the pending tool call using toolCallId from metadata first
-          const metadataToolCallId = (
-            event.metadata as Record<string, unknown> | undefined
-          )?.toolCallId;
-          let callKey: string | undefined;
-
-          if (metadataToolCallId) {
-            callKey = String(metadataToolCallId);
-            if (!pendingToolCalls.has(callKey)) {
-              // Try fallback to toolName-based key
-              callKey = Array.from(pendingToolCalls.keys()).find((k) =>
-                k.startsWith(`${event.toolName}-`),
-              );
-            }
-          } else {
-            callKey = Array.from(pendingToolCalls.keys()).find((k) =>
-              k.startsWith(`${event.toolName}-`),
-            );
-          }
-
-          if (callKey && pendingToolCalls.has(callKey)) {
-            const toolCallId = pendingToolCalls.get(callKey)!;
-            pendingToolCalls.delete(callKey);
-
-            const latencyMs =
-              event.startedAt && event.endedAt
-                ? event.endedAt - event.startedAt
-                : undefined;
-
-            await runsRepo.updateToolCall(toolCallId, {
-              status: event.error ? "error" : "done",
-              input: event.input as Record<string, unknown> | undefined,
-              output: event.output,
-              error: event.error,
-              endedAt: event.endedAt ? new Date(event.endedAt) : new Date(),
-              latencyMs,
-              metadata: event.metadata,
-            });
-            didPersist = true;
-          }
-          // If no pending call found, skip - don't create duplicate records
-          // The start event should always come first
-
-          // Live diff: if this tool could have touched the filesystem,
-          // schedule a debounced incremental git diff recomputation.
-          if (!event.error && couldModifyFiles(event.toolName)) {
-            scheduleLiveDiff(runId);
-          }
-        }
-        break;
-      }
-
-
-      case "artifact": {
-        // Streaming chunks: push to renderer only, skip DB and skip the
-        // persisted-event broadcast.
-        if (event.ephemeral) {
-          broadcastToWindows("runs:ephemeralEvent", {
-            runId,
-            event: { type: event.type, kind: event.kind, content: event.content, metadata: event.metadata, streamId: event.streamId },
-            ts: Date.now(),
-          });
-          return;
-        }
-
-        await runsRepo.insertArtifact({
-          runId,
-          kind: event.kind as
-            | "patch"
-            | "file"
-            | "log"
-            | "report"
-            | "command_result"
-            | "result",
-          path: event.path,
-          content: event.content,
-          contentHash: event.content ? hashContent(event.content) : undefined,
-          metadata: event.metadata,
-        });
-        didPersist = true;
-
-        // Turn tracking: new user-prompt → start new turn
-        const artifactKind = (event.metadata as Record<string, unknown> | undefined)?.kind;
-        if (artifactKind === "user-prompt") {
-          await startNewTurn(runId, event.content);
-        }
-        // Turn tracking: result → append response content
-        if (artifactKind === "result" && event.content) {
-          const turnId = activeTurnIds.get(runId);
-          if (turnId !== undefined) {
-            try {
-              await runsRepo.appendResponseContent(turnId, event.content);
-            } catch (err) {
-              console.error(`[RunsService] Failed to append response for turn ${turnId}:`, err);
-            }
-          }
-        }
-        break;
-      }
-
-      case "prompt_suggestion": {
-        await runsRepo.insertArtifact({
-          runId,
-          kind: "prompt_suggestion",
-          content: event.suggestion,
-          metadata: { ts: event.ts },
-        });
-        didPersist = true;
-        break;
-      }
-
-      case "status": {
-        // Status changes are handled by the main run promise
-        // Log them for debugging
-        console.log(`[RunsService] Run ${runId} status event: ${event.status}`);
-        break;
-      }
-    }
-
-    if (didPersist) broadcastRunUpdate(runId);
-  },
-
-  /**
-   * Abort a running run
-   */
-  async abortRun(runId: string): Promise<ServiceResponse<void>> {
-    try {
-      const run = await runsRepo.findRunById(runId);
-      if (!run) {
-        return { success: false, error: "Run not found" };
-      }
-
-      if (run.status !== "running") {
-        return {
-          success: false,
-          error: `Run is not running (status: ${run.status})`,
-        };
-      }
-
-      // Get provider and abort via adapter
-      const provider = await providersRepo.findById(run.providerId);
-      if (provider) {
-        try {
-          const adapter = createWorkAdapter(provider);
-          if (adapter.abortRun) {
-            await adapter.abortRun(runId);
-          }
-        } catch (err) {
-          console.error(`[RunsService] Error aborting via adapter:`, err);
-        }
-      }
-
-      // Same ordering as executeRun completion: diff before status flip (avoids renderer race).
-      const workspace = run.workspaceId
-        ? await workspacesRepo.findById(run.workspaceId)
-        : null;
-      if (workspace) {
-        await persistRunDiff(runId, workspace.id, workspace.rootPath);
-      } else {
-        runBaseRefs.delete(runId);
-      }
-
-      await runsRepo.updateRun(runId, {
-        status: "canceled",
-        endedAt: new Date(),
-        lastError: "Aborted by user",
-      });
-
-      await closeRunningToolCallsForRun(runId);
-
-      await closeActiveTurn(runId);
-      cleanupTurnState(runId);
-      releaseSleepBlocker(runId);
-
-      return { success: true };
-    } catch (error) {
-      console.error(`[RunsService] Failed to abort run ${runId}:`, error);
-      return { success: false, error: "Failed to abort run" };
-    }
-  },
-
-  /**
-   * Check if a run's session can be resumed
-   */
-  async canResumeRun(runId: string): Promise<ServiceResponse<boolean>> {
-    try {
-      const run = await runsRepo.findRunById(runId);
-      if (!run) {
-        return { success: false, error: "Run not found" };
-      }
-
-      // Can only resume runs that completed (succeeded, failed, or canceled)
-      if (run.status === "running" || run.status === "queued") {
-        return { success: true, data: false };
-      }
-
-      const provider = await providersRepo.findById(run.providerId);
-      if (!provider) {
-        return { success: true, data: false };
-      }
-
-      const adapter = createWorkAdapter(provider);
-      if (!adapter.canResumeSession) {
-        return { success: true, data: false };
-      }
-
-      const canResume = await adapter.canResumeSession(runId);
-      return { success: true, data: canResume };
-    } catch (error) {
-      console.error(
-        `[RunsService] Failed to check resume for run ${runId}:`,
-        error,
-      );
-      return { success: false, error: "Failed to check resume capability" };
-    }
-  },
-
-  /**
-   * Continue an existing run by resuming its session
+   * Continue a previously-completed run, resuming the adapter session.
+   * Un-finalizes the run row, recovers the turn counter from existing turns,
+   * spawns a new RunSession (with seedTurnIndex so turns continue from the right index).
    */
   async continueRun(
     payload: ContinueRunPayload,
   ): Promise<ServiceResponse<ContinueRunResponse>> {
     const { runId, accountId, message, additionalContext } = payload;
-
     try {
-      // 1. Load existing run
       const run = await runsRepo.findRunById(runId);
-      if (!run) {
-        return { success: false, error: "Run not found" };
-      }
-
-      // 2. Verify ownership
+      if (!run) return { success: false, error: "Run not found" };
       if (run.accountId !== accountId) {
         return { success: false, error: "Run does not belong to this account" };
       }
 
-      // 3. Load provider
       const provider = await providersRepo.findById(run.providerId);
       if (!provider) {
-        return {
-          success: false,
-          error: `Provider "${run.providerId}" not found`,
-        };
+        return { success: false, error: `Provider "${run.providerId}" not found` };
       }
       if (!provider.isEnabled) {
-        return {
-          success: false,
-          error: `Provider "${provider.displayName}" is not enabled`,
-        };
+        return { success: false, error: `Provider "${provider.displayName}" is not enabled` };
       }
 
-      // 4. Load workspace
       const workspace = run.workspaceId
         ? await workspacesRepo.findById(run.workspaceId)
         : null;
 
-      // 5. Create adapter and check if it supports resume
       const adapter = createWorkAdapter(provider);
       if (!adapter.continueRun) {
-        return {
-          success: false,
-          error: "Provider does not support session resumption",
-        };
+        return { success: false, error: "Provider does not support session resumption" };
       }
-
-      // 6. Check if session can be resumed
       if (adapter.canResumeSession) {
         const canResume = await adapter.canResumeSession(runId);
         if (!canResume) {
@@ -1560,12 +648,16 @@ export const runsService = {
         }
       }
 
-      // Transition workspace to in_progress when run continues
+      const existingTurns = await runsRepo.findTurnsByRun(runId);
+      const seedTurnIndex = existingTurns.reduce(
+        (max, t) => Math.max(max, t.turnIndex),
+        -1,
+      );
+
       if (workspace) {
         await workspacesRepo.update(workspace.id, { status: "in_progress" });
       }
 
-      // 7. Update run status to running
       await runsRepo.updateRun(runId, {
         status: "running",
         startedAt: new Date(),
@@ -1573,19 +665,6 @@ export const runsService = {
         lastError: null,
       });
 
-      // Capture git HEAD sha at continue start for diff computation
-      if (workspace) {
-        await captureBaseRef(runId, workspace.rootPath);
-        runWorkspaces.set(runId, { id: workspace.id, rootPath: workspace.rootPath });
-      }
-
-      // Recover turn counter from existing turns and start new turn
-      const existingTurns = await runsRepo.findTurnsByRun(runId);
-      const maxIndex = existingTurns.reduce((max, t) => Math.max(max, t.turnIndex), -1);
-      turnCounters.set(runId, maxIndex);
-      await startNewTurn(runId, message);
-
-      // 8. Add any additional context
       if (additionalContext && additionalContext.length > 0) {
         for (const ctx of additionalContext) {
           await runsRepo.insertContext({
@@ -1599,20 +678,24 @@ export const runsService = {
         }
       }
 
-      // Track tool calls for updating when completed
-      const pendingToolCalls = new Map<string, number>();
+      const workspaceCtx = workspace
+        ? { id: workspace.id, rootPath: workspace.rootPath }
+        : { id: "", rootPath: process.cwd() };
 
-      // 9. Acquire sleep blocker if enabled
-      await acquireSleepBlocker(runId);
+      const session = createRunSession({
+        runId,
+        accountId,
+        providerId: run.providerId,
+        workspace: workspaceCtx,
+        initialPromptContent: message,
+        seedTurnIndex,
+      });
 
-      // 10. Continue the run
       const runPromise = adapter.continueRun(
         {
           runId,
           accountId,
-          workspace: workspace
-            ? { id: workspace.id, rootPath: workspace.rootPath }
-            : { id: "", rootPath: process.cwd() },
+          workspace: workspaceCtx,
           message,
           model: payload.model,
           context: additionalContext as any,
@@ -1622,163 +705,54 @@ export const runsService = {
           contextFiles: payload.contextFiles,
           skills: payload.contextSkills,
         },
-        async (event) => {
-          try {
-            await this.handleRunEvent(
-              runId,
-              accountId,
-              run.providerId,
-              event,
-              pendingToolCalls,
-            );
-          } catch (err) {
-            console.error(
-              `[RunsService] Error handling event for run ${runId}:`,
-              err,
-            );
-          }
-        },
+        (event: WorkRunEvent) =>
+          session.project(event).catch((err) =>
+            console.error(`[RunsService] project failed for ${runId}:`, err),
+          ),
       );
 
-      // 10. Handle completion in background
-      runPromise
-        .then(async (result) => {
-          const finalStatus: RunStatus =
-            result.status === "succeeded"
-              ? "succeeded"
-              : result.status === "canceled"
-                ? "canceled"
-                : "failed";
-
-          // Persist git diff BEFORE updating status so that when the
-          // renderer polls and sees the status change it can immediately
-          // fetch the diff without a race condition.
-          if (finalStatus === "succeeded" && workspace) {
-            await persistRunDiff(runId, workspace.id, workspace.rootPath);
-          } else {
-            runBaseRefs.delete(runId);
-          }
-
-          await runsRepo.updateRun(runId, {
-            status: finalStatus,
-            endedAt: new Date(),
-            lastError: result.status === "failed" ? result.summary : undefined,
-            stopReason: result.stopReason ?? null,
-          });
-
-          console.log(
-            `[RunsService] Continued run ${runId} completed with status: ${finalStatus}`,
-          );
-
-          await closeActiveTurn(runId, result.usage);
-          await closePendingToolCalls(pendingToolCalls, finalStatus === "succeeded" ? "done" : "error");
-          cleanupTurnState(runId);
-          broadcastRunStatusChange(runId, finalStatus);
-          sendRunNotification(runId, finalStatus);
-          releaseSleepBlocker(runId);
-        })
-        .catch(async (error) => {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          console.error(
-            `[RunsService] Continued run ${runId} failed:`,
-            errorMessage,
-          );
-
-          runBaseRefs.delete(runId);
-
-          await runsRepo.updateRun(runId, {
-            status: "failed",
-            endedAt: new Date(),
-            lastError: errorMessage,
-          });
-
-          await closeActiveTurn(runId);
-          await closePendingToolCalls(pendingToolCalls, "error");
-          cleanupTurnState(runId);
-          broadcastRunStatusChange(runId, "failed");
-          sendRunNotification(runId, "failed");
-          releaseSleepBlocker(runId);
-        });
+      wireSessionCompletion(runPromise, session);
 
       return { success: true, data: { runId, resumed: true } };
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.error(`[RunsService] Failed to continue run:`, errorMessage);
-
-      runBaseRefs.delete(runId);
-      await closeActiveTurn(runId);
-      cleanupTurnState(runId);
-      releaseSleepBlocker(runId);
-
-      // Try to reset run status if it was updated
-      try {
-        await runsRepo.updateRun(runId, {
-          status: "failed",
-          endedAt: new Date(),
-          lastError: errorMessage,
-        });
-      } catch {
-        // Ignore cleanup errors
-      }
-
-      return { success: false, error: errorMessage };
+      await handlePreSessionFailure(runId, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   },
 
   /**
-   * Fork an existing run's session into a new run.
-   * Creates a new run that branches from the source run's session state.
+   * Fork a completed run's session into a new run that branches from the source.
+   * Creates a new run row, then spawns a RunSession wired to adapter.forkRun.
    */
-  async forkRun(
-    payload: ForkRunPayload,
-  ): Promise<ServiceResponse<ForkRunResponse>> {
+  async forkRun(payload: ForkRunPayload): Promise<ServiceResponse<ForkRunResponse>> {
     const { sourceRunId, accountId, message } = payload;
     const newRunId = generateRunId();
-
     try {
-      // 1. Load source run
       const sourceRun = await runsRepo.findRunById(sourceRunId);
-      if (!sourceRun) {
-        return { success: false, error: "Source run not found" };
-      }
-
-      // 2. Verify ownership
+      if (!sourceRun) return { success: false, error: "Source run not found" };
       if (sourceRun.accountId !== accountId) {
         return { success: false, error: "Source run does not belong to this account" };
       }
 
-      // 3. Load provider
       const provider = await providersRepo.findById(sourceRun.providerId);
       if (!provider) {
-        return {
-          success: false,
-          error: `Provider "${sourceRun.providerId}" not found`,
-        };
+        return { success: false, error: `Provider "${sourceRun.providerId}" not found` };
       }
       if (!provider.isEnabled) {
-        return {
-          success: false,
-          error: `Provider "${provider.displayName}" is not enabled`,
-        };
+        return { success: false, error: `Provider "${provider.displayName}" is not enabled` };
       }
 
-      // 4. Load workspace
       const workspace = sourceRun.workspaceId
         ? await workspacesRepo.findById(sourceRun.workspaceId)
         : null;
 
-      // 5. Create adapter and check if it supports forkRun
       const adapter = createWorkAdapter(provider);
       if (!adapter.forkRun) {
-        return {
-          success: false,
-          error: "Provider does not support session forking",
-        };
+        return { success: false, error: "Provider does not support session forking" };
       }
-
-      // 6. Check if source session exists
       if (adapter.canResumeSession) {
         const canResume = await adapter.canResumeSession(sourceRunId);
         if (!canResume) {
@@ -1789,12 +763,10 @@ export const runsService = {
         }
       }
 
-      // Transition workspace to in_progress
       if (workspace) {
         await workspacesRepo.update(workspace.id, { status: "in_progress" });
       }
 
-      // 7. Create new run record
       await runsRepo.insertRun({
         id: newRunId,
         accountId,
@@ -1807,150 +779,113 @@ export const runsService = {
         systemPrompt: sourceRun.systemPrompt ?? undefined,
       });
 
-      // Capture git HEAD sha for diff computation
-      if (workspace) {
-        await captureBaseRef(newRunId, workspace.rootPath);
-        runWorkspaces.set(newRunId, { id: workspace.id, rootPath: workspace.rootPath });
-      }
+      const workspaceCtx = workspace
+        ? { id: workspace.id, rootPath: workspace.rootPath }
+        : { id: "", rootPath: process.cwd() };
 
-      // Track tool calls for updating when completed
-      const pendingToolCalls = new Map<string, number>();
+      const session = createRunSession({
+        runId: newRunId,
+        accountId,
+        providerId: sourceRun.providerId,
+        workspace: workspaceCtx,
+        initialPromptContent: message,
+      });
 
-      // Create initial turn for forked run
-      await createInitialTurn(newRunId, message);
-
-      // 8. Acquire sleep blocker
-      await acquireSleepBlocker(newRunId);
-
-      // 9. Generate title in background
       generateRunTitle(newRunId, adapter, message).catch((err) =>
         console.error(`[RunsService] Title generation failed for forked run ${newRunId}:`, err),
       );
 
-      // 10. Fork the run
       const runPromise = adapter.forkRun(
         {
           runId: newRunId,
           sourceRunId,
           accountId,
-          workspace: workspace
-            ? { id: workspace.id, rootPath: workspace.rootPath }
-            : { id: "", rootPath: process.cwd() },
+          workspace: workspaceCtx,
           message,
           context: payload.additionalContext as any,
           attachments: payload.attachments,
         },
-        async (event) => {
-          try {
-            await this.handleRunEvent(
-              newRunId,
-              accountId,
-              sourceRun.providerId,
-              event,
-              pendingToolCalls,
-            );
-          } catch (err) {
-            console.error(
-              `[RunsService] Error handling event for forked run ${newRunId}:`,
-              err,
-            );
-          }
-        },
+        (event: WorkRunEvent) =>
+          session.project(event).catch((err) =>
+            console.error(`[RunsService] project failed for forked run ${newRunId}:`, err),
+          ),
       );
 
-      // 11. Handle completion in background
-      runPromise
-        .then(async (result) => {
-          const finalStatus: RunStatus =
-            result.status === "succeeded"
-              ? "succeeded"
-              : result.status === "canceled"
-                ? "canceled"
-                : "failed";
-
-          // Persist git diff BEFORE updating status so that when the
-          // renderer polls and sees the status change it can immediately
-          // fetch the diff without a race condition.
-          if (finalStatus === "succeeded" && workspace) {
-            await persistRunDiff(newRunId, workspace.id, workspace.rootPath);
-          } else {
-            runBaseRefs.delete(newRunId);
-          }
-
-          await runsRepo.updateRun(newRunId, {
-            status: finalStatus,
-            endedAt: new Date(),
-            lastError: result.status === "failed" ? result.summary : undefined,
-            stopReason: result.stopReason ?? null,
-          });
-
-          console.log(
-            `[RunsService] Forked run ${newRunId} (from ${sourceRunId}) completed with status: ${finalStatus}`,
-          );
-
-          await closeActiveTurn(newRunId, result.usage);
-          await closePendingToolCalls(pendingToolCalls, finalStatus === "succeeded" ? "done" : "error");
-          cleanupTurnState(newRunId);
-          broadcastRunStatusChange(newRunId, finalStatus);
-          sendRunNotification(newRunId, finalStatus);
-          releaseSleepBlocker(newRunId);
-        })
-        .catch(async (error) => {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          console.error(
-            `[RunsService] Forked run ${newRunId} failed:`,
-            errorMessage,
-          );
-
-          runBaseRefs.delete(newRunId);
-
-          await runsRepo.updateRun(newRunId, {
-            status: "failed",
-            endedAt: new Date(),
-            lastError: errorMessage,
-          });
-
-          await closeActiveTurn(newRunId);
-          await closePendingToolCalls(pendingToolCalls, "error");
-          cleanupTurnState(newRunId);
-          broadcastRunStatusChange(newRunId, "failed");
-          sendRunNotification(newRunId, "failed");
-          releaseSleepBlocker(newRunId);
-        });
+      wireSessionCompletion(runPromise, session);
 
       return { success: true, data: { runId: newRunId, sourceRunId } };
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.error(`[RunsService] Failed to fork run:`, errorMessage);
-
-      runBaseRefs.delete(newRunId);
-      await closeActiveTurn(newRunId);
-      cleanupTurnState(newRunId);
-      releaseSleepBlocker(newRunId);
-
-      // Try to reset run status
-      try {
-        await runsRepo.updateRun(newRunId, {
-          status: "failed",
-          endedAt: new Date(),
-          lastError: errorMessage,
-        });
-      } catch {
-        // Ignore cleanup errors
-      }
-
-      return { success: false, error: errorMessage };
+      await handlePreSessionFailure(newRunId, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   },
 
   /**
-   * Get turns for a run
+   * Abort a running run. Signals the adapter via the session; cleanup happens
+   * on the completion path (session.finalize). Edge case: if the DB says
+   * running but no live session is registered (process restart), write
+   * status="canceled" directly.
    */
-  async getTurnsByRun(
-    runId: string,
-  ): Promise<ServiceResponse<RunTurnResponse[]>> {
+  async abortRun(runId: string): Promise<ServiceResponse<void>> {
+    try {
+      const run = await runsRepo.findRunById(runId);
+      if (!run) return { success: false, error: "Run not found" };
+      if (run.status !== "running") {
+        return {
+          success: false,
+          error: `Run is not running (status: ${run.status})`,
+        };
+      }
+
+      const session = runSessionRegistry.get(runId);
+      if (session) {
+        await session.abort();
+        return { success: true };
+      }
+
+      // DB says running but no live session — process restart edge case.
+      await runsRepo.updateRun(runId, {
+        status: "canceled",
+        endedAt: new Date(),
+        lastError: "Run had no live session (likely process restart mid-run)",
+      });
+      broadcastStatusChangedPreSession(runId, "canceled");
+      return { success: true };
+    } catch (error) {
+      console.error(`[RunsService] Failed to abort run ${runId}:`, error);
+      return { success: false, error: "Failed to abort run" };
+    }
+  },
+
+  // ─── Session inspection / deletion ───
+  async canResumeRun(runId: string): Promise<ServiceResponse<boolean>> {
+    try {
+      const run = await runsRepo.findRunById(runId);
+      if (!run) return { success: false, error: "Run not found" };
+
+      // Can only resume runs that completed (succeeded, failed, or canceled)
+      if (run.status === "running" || run.status === "queued") {
+        return { success: true, data: false };
+      }
+
+      const provider = await providersRepo.findById(run.providerId);
+      if (!provider) return { success: true, data: false };
+
+      const adapter = createWorkAdapter(provider);
+      if (!adapter.canResumeSession) return { success: true, data: false };
+
+      const canResume = await adapter.canResumeSession(runId);
+      return { success: true, data: canResume };
+    } catch (error) {
+      console.error(`[RunsService] Failed to check resume for run ${runId}:`, error);
+      return { success: false, error: "Failed to check resume capability" };
+    }
+  },
+
+  async getTurnsByRun(runId: string): Promise<ServiceResponse<RunTurnResponse[]>> {
     try {
       const turns = await runsRepo.findTurnsByRun(runId);
       return { success: true, data: turns };
@@ -1960,177 +895,22 @@ export const runsService = {
     }
   },
 
-  /**
-   * Delete a run's persisted session
-   */
   async deleteRunSession(runId: string): Promise<ServiceResponse<void>> {
     try {
       const run = await runsRepo.findRunById(runId);
-      if (!run) {
-        return { success: false, error: "Run not found" };
-      }
+      if (!run) return { success: false, error: "Run not found" };
 
       const provider = await providersRepo.findById(run.providerId);
-      if (!provider) {
-        return { success: true }; // No provider, nothing to delete
-      }
+      if (!provider) return { success: true }; // No provider, nothing to delete
 
       const adapter = createWorkAdapter(provider);
       if (adapter.deleteSession) {
         await adapter.deleteSession(runId);
       }
-
       return { success: true };
     } catch (error) {
-      console.error(
-        `[RunsService] Failed to delete session for run ${runId}:`,
-        error,
-      );
+      console.error(`[RunsService] Failed to delete session for run ${runId}:`, error);
       return { success: false, error: "Failed to delete session" };
     }
   },
-
-  /** @internal Shared background completion handler for run/review promises */
-  _handleRunCompletion(
-    runPromise: Promise<import("../../../shared/adapter.types").WorkRunResult>,
-    runId: string,
-    workspace: { id: string; rootPath: string },
-    pendingToolCalls?: Map<string, number>,
-  ): void {
-    runPromise
-      .then(async (result) => {
-        const finalStatus: RunStatus =
-          result.status === "succeeded"
-            ? "succeeded"
-            : result.status === "canceled"
-              ? "canceled"
-              : "failed";
-
-        try {
-          // Persist git diff BEFORE updating status so that when the
-          // renderer polls and sees the status change it can immediately
-          // fetch the diff without a race condition.
-          if (finalStatus === "succeeded") {
-            await persistRunDiff(runId, workspace.id, workspace.rootPath);
-          } else {
-            runBaseRefs.delete(runId);
-          }
-
-          await runsRepo.updateRun(runId, {
-            status: finalStatus,
-            endedAt: new Date(),
-            lastError: result.status === "failed" ? result.summary : undefined,
-            stopReason: result.stopReason ?? null,
-          });
-
-          await closeActiveTurn(runId, result.usage);
-          if (pendingToolCalls) {
-            await closePendingToolCalls(pendingToolCalls, finalStatus === "succeeded" ? "done" : "error");
-          }
-        } catch (cleanupErr) {
-          console.error(`[RunsService] Cleanup failed for run ${runId}:`, cleanupErr);
-        } finally {
-          cleanupTurnState(runId);
-          broadcastRunStatusChange(runId, finalStatus);
-          sendRunNotification(runId, finalStatus);
-          releaseSleepBlocker(runId);
-        }
-      })
-      .catch(async (error) => {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`[RunsService] Run ${runId} failed:`, errorMessage);
-
-        runBaseRefs.delete(runId);
-
-        try {
-          await runsRepo.updateRun(runId, {
-            status: "failed",
-            endedAt: new Date(),
-            lastError: errorMessage,
-          });
-          await closeActiveTurn(runId);
-          if (pendingToolCalls) {
-            await closePendingToolCalls(pendingToolCalls, "error");
-          }
-        } catch (cleanupErr) {
-          console.error(`[RunsService] Cleanup failed for run ${runId}:`, cleanupErr);
-        } finally {
-          cleanupTurnState(runId);
-          broadcastRunStatusChange(runId, "failed");
-          sendRunNotification(runId, "failed");
-          releaseSleepBlocker(runId);
-        }
-      });
-  },
 };
-
-// ─────────────────────────────────────────────────────────────
-// Utility Functions
-// ─────────────────────────────────────────────────────────────
-
-function generateRunId(): string {
-  // UUID v4 format
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-function hashContent(content: string): string {
-  return createHash("sha256").update(content).digest("hex").substring(0, 16);
-}
-
-/**
- * Split a unified diff into per-file chunks and return a map of
- * filename → content hash. Used to detect which files actually changed
- * between two cumulative diffs that share the same baseRef.
- */
-function buildPerFileDiffHashes(diffText: string): Map<string, string> {
-  const result = new Map<string, string>();
-  if (!diffText) return result;
-
-  // Split on "diff --git" boundaries
-  const chunks = diffText.split(/^(?=diff --git )/m);
-  for (const chunk of chunks) {
-    if (!chunk.trim()) continue;
-    // Extract filename from "diff --git a/path b/path"
-    const match = chunk.match(/^diff --git a\/(.+?) b\/(.+)/);
-    if (match) {
-      const fileName = match[2];
-      result.set(fileName, hashContent(chunk));
-    }
-  }
-  return result;
-}
-
-/**
- * Merge untracked file stats into a git shortstat string.
- * git diff --shortstat only covers tracked files, so new (untracked) files
- * and their insertions are missing from the shortstat output.
- *
- * Input shortstat format: "N file(s) changed, X insertion(s)(+), Y deletion(s)(-)"
- * Any part may be missing if count is 0.
- */
-function mergeUntrackedIntoShortstat(shortstat: string, newFileCount: number, newInsertions: number): string {
-  if (newFileCount === 0 && newInsertions === 0) return shortstat;
-
-  // Parse existing values from shortstat
-  const existingFiles = parseInt(shortstat.match(/(\d+) file/)?.[1] ?? "0", 10);
-  const existingInsertions = parseInt(shortstat.match(/(\d+) insertion/)?.[1] ?? "0", 10);
-  const existingDeletions = parseInt(shortstat.match(/(\d+) deletion/)?.[1] ?? "0", 10);
-
-  const totalFiles = existingFiles + newFileCount;
-  const totalInsertions = existingInsertions + newInsertions;
-
-  const parts: string[] = [];
-  parts.push(`${totalFiles} file${totalFiles !== 1 ? "s" : ""} changed`);
-  if (totalInsertions > 0) {
-    parts.push(`${totalInsertions} insertion${totalInsertions !== 1 ? "s" : ""}(+)`);
-  }
-  if (existingDeletions > 0) {
-    parts.push(`${existingDeletions} deletion${existingDeletions !== 1 ? "s" : ""}(-)`);
-  }
-
-  return parts.join(", ");
-}

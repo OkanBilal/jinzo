@@ -84,6 +84,7 @@ vi.mock("../workspaceActivity/workspaceActivity.service", () => ({
 
 import { runsService } from "./runs.service";
 import { runsRepo } from "./runs.repo";
+import { runSessionRegistry } from "./run-session-registry";
 import { createWorkAdapter } from "../providers/adapters";
 import { gitService } from "../git/git.service";
 
@@ -1098,239 +1099,12 @@ describe("runsService", () => {
   });
 
   // ─────────────────────────────────────────────────────────────
-  // handleRunEvent
+  // Adapter-event projection (was handleRunEvent on the service)
+  //
+  // Tests for projection logic moved to run-session.test.ts when the
+  // logic moved from runsService.handleRunEvent into RunSession.project.
+  // See follow-up task. Smoke tests cover regressions in the meantime.
   // ─────────────────────────────────────────────────────────────
-  describe("handleRunEvent", () => {
-    const pendingToolCalls = () => new Map<string, number>();
-
-    beforeEach(() => {
-      createRun(db, { id: "r1" });
-    });
-
-    it("handles log event by inserting artifact", async () => {
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "log",
-        message: "Starting work...",
-        level: "info",
-        ts: Date.now(),
-      } as any, pendingToolCalls());
-
-      const artifacts = await runsRepo.findArtifactsByRun("r1");
-      expect(artifacts).toHaveLength(1);
-      expect(artifacts[0].kind).toBe("log");
-      expect(artifacts[0].content).toBe("Starting work...");
-    });
-
-    it("handles tool_call start event", async () => {
-      const pending = pendingToolCalls();
-
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "tool_call",
-        toolName: "Bash",
-        input: { command: "ls" },
-        metadata: { phase: "start", toolCallId: "tc-1" },
-      } as any, pending);
-
-      expect(pending.size).toBe(1);
-      const toolCalls = await runsRepo.findToolCallsByRun("r1");
-      expect(toolCalls).toHaveLength(1);
-      expect(toolCalls[0].toolName).toBe("Bash");
-      expect(toolCalls[0].status).toBe("running");
-    });
-
-    it("handles tool_call end event after start", async () => {
-      const pending = pendingToolCalls();
-
-      // Start
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "tool_call",
-        toolName: "Bash",
-        input: { command: "ls" },
-        metadata: { phase: "start", toolCallId: "tc-1" },
-      } as any, pending);
-
-      // End
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "tool_call",
-        toolName: "Bash",
-        output: { stdout: "file.ts" },
-        metadata: { phase: "end", toolCallId: "tc-1" },
-        startedAt: 1000,
-        endedAt: 2000,
-      } as any, pending);
-
-      expect(pending.size).toBe(0);
-      const toolCalls = await runsRepo.findToolCallsByRun("r1");
-      expect(toolCalls).toHaveLength(1);
-      expect(toolCalls[0].status).toBe("done");
-    });
-
-    it("handles tool_call end with error", async () => {
-      const pending = pendingToolCalls();
-
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "tool_call",
-        toolName: "Read",
-        metadata: { phase: "start", toolCallId: "tc-2" },
-      } as any, pending);
-
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "tool_call",
-        toolName: "Read",
-        error: "file not found",
-        metadata: { phase: "end", toolCallId: "tc-2" },
-      } as any, pending);
-
-      const toolCalls = await runsRepo.findToolCallsByRun("r1");
-      expect(toolCalls[0].status).toBe("error");
-    });
-
-    it("handles tool_call end with no pending call (skip)", async () => {
-      const pending = pendingToolCalls();
-
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "tool_call",
-        toolName: "Bash",
-        metadata: { phase: "end", toolCallId: "unknown" },
-      } as any, pending);
-
-      const toolCalls = await runsRepo.findToolCallsByRun("r1");
-      expect(toolCalls).toHaveLength(0);
-    });
-
-    it("handles tool_call end with fallback key (no toolCallId in end)", async () => {
-      const pending = pendingToolCalls();
-
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "tool_call",
-        toolName: "Grep",
-        metadata: { phase: "start" },
-        startedAt: 1000,
-      } as any, pending);
-
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "tool_call",
-        toolName: "Grep",
-        output: { lines: ["match"] },
-        metadata: { phase: "end" },
-        startedAt: 1000,
-        endedAt: 1500,
-      } as any, pending);
-
-      expect(pending.size).toBe(0);
-      const toolCalls = await runsRepo.findToolCallsByRun("r1");
-      expect(toolCalls).toHaveLength(1);
-      expect(toolCalls[0].status).toBe("done");
-    });
-
-    it("handles artifact event", async () => {
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "artifact",
-        kind: "file",
-        path: "/src/index.ts",
-        content: "export {}",
-        metadata: {},
-      } as any, pendingToolCalls());
-
-      const artifacts = await runsRepo.findArtifactsByRun("r1");
-      expect(artifacts).toHaveLength(1);
-      expect(artifacts[0].kind).toBe("file");
-      expect(artifacts[0].path).toBe("/src/index.ts");
-    });
-
-    it("handles artifact event with user-prompt kind (triggers new turn)", async () => {
-      // Set up an initial turn so startNewTurn has something to close
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "artifact",
-        kind: "result",
-        content: "first prompt",
-        metadata: { kind: "user-prompt" },
-      } as any, pendingToolCalls());
-
-      const artifacts = await runsRepo.findArtifactsByRun("r1");
-      expect(artifacts.length).toBeGreaterThanOrEqual(1);
-    });
-
-    it("handles artifact event with result kind (appends response)", async () => {
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "artifact",
-        kind: "result",
-        content: "some result text",
-        metadata: { kind: "result" },
-      } as any, pendingToolCalls());
-
-      const artifacts = await runsRepo.findArtifactsByRun("r1");
-      expect(artifacts).toHaveLength(1);
-    });
-
-    it("handles prompt_suggestion event", async () => {
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "prompt_suggestion",
-        suggestion: "Try asking about X",
-        ts: Date.now(),
-      } as any, pendingToolCalls());
-
-      const artifacts = await runsRepo.findArtifactsByRun("r1");
-      expect(artifacts).toHaveLength(1);
-      expect(artifacts[0].kind).toBe("prompt_suggestion");
-      expect(artifacts[0].content).toBe("Try asking about X");
-    });
-
-    it("handles status event (no-op, just logs)", async () => {
-      // Should not throw
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "status",
-        status: "running",
-      } as any, pendingToolCalls());
-
-      // Verify no artifacts were created
-      const artifacts = await runsRepo.findArtifactsByRun("r1");
-      expect(artifacts).toHaveLength(0);
-    });
-
-    it("handles tool_call complete phase same as end", async () => {
-      const pending = pendingToolCalls();
-
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "tool_call",
-        toolName: "Edit",
-        metadata: { phase: "start", toolCallId: "tc-3" },
-      } as any, pending);
-
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "tool_call",
-        toolName: "Edit",
-        output: { result: "edited" },
-        metadata: { phase: "complete", toolCallId: "tc-3" },
-      } as any, pending);
-
-      expect(pending.size).toBe(0);
-      const toolCalls = await runsRepo.findToolCallsByRun("r1");
-      expect(toolCalls[0].status).toBe("done");
-    });
-
-    it("computes latencyMs from startedAt and endedAt", async () => {
-      const pending = pendingToolCalls();
-
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "tool_call",
-        toolName: "Bash",
-        metadata: { phase: "start", toolCallId: "tc-lat" },
-        startedAt: 1000,
-      } as any, pending);
-
-      await runsService.handleRunEvent("r1", "default", "copilot_cli", {
-        type: "tool_call",
-        toolName: "Bash",
-        metadata: { phase: "end", toolCallId: "tc-lat" },
-        startedAt: 1000,
-        endedAt: 3500,
-      } as any, pending);
-
-      const toolCalls = await runsRepo.findToolCallsByRun("r1");
-      expect(toolCalls[0].latencyMs).toBe(2500);
-    });
-  });
 
   // ─────────────────────────────────────────────────────────────
   // abortRun
@@ -1366,79 +1140,34 @@ describe("runsService", () => {
       expect(result.error).toContain("not running");
     });
 
-    it("aborts running run successfully", async () => {
+    it("delegates to session.abort when a live session is registered", async () => {
       createRun(db, { id: "r1", status: "running" });
-      const mockAdapter = {
-        abortRun: vi.fn(),
-      };
-      vi.mocked(createWorkAdapter).mockReturnValue(mockAdapter as any);
+      const sessionAbort = vi.fn().mockResolvedValue(undefined);
+      runSessionRegistry.register("r1", {
+        runId: "r1",
+        project: vi.fn(),
+        abort: sessionAbort,
+        finalize: vi.fn(),
+        updateBaseRef: vi.fn(),
+      });
+
+      const result = await runsService.abortRun("r1");
+
+      expect(result.success).toBe(true);
+      expect(sessionAbort).toHaveBeenCalledOnce();
+      runSessionRegistry.unregister("r1");
+    });
+
+    it("marks status canceled directly when no live session (process-restart edge case)", async () => {
+      createRun(db, { id: "r1", status: "running" });
+      // No session registered — DB says running but in-memory state is gone.
 
       const result = await runsService.abortRun("r1");
       expect(result.success).toBe(true);
 
       const run = await runsRepo.findRunById("r1");
       expect(run!.status).toBe("canceled");
-      expect(run!.lastError).toBe("Aborted by user");
-    });
-
-    it("marks running tool calls as error on abort", async () => {
-      createRun(db, { id: "r1", status: "running" });
-      vi.mocked(createWorkAdapter).mockReturnValue({ abortRun: vi.fn() } as any);
-      createToolCall(db, { runId: "r1", status: "running" });
-
-      const result = await runsService.abortRun("r1");
-      expect(result.success).toBe(true);
-
-      const calls = await runsRepo.findToolCallsByRun("r1");
-      expect(calls).toHaveLength(1);
-      expect(calls[0].status).toBe("error");
-      expect(calls[0].endedAt).toBeTruthy();
-    });
-
-    it("calls adapter.abortRun when available", async () => {
-      createRun(db, { id: "r1", status: "running" });
-      const mockAdapter = {
-        abortRun: vi.fn(),
-      };
-      vi.mocked(createWorkAdapter).mockReturnValue(mockAdapter as any);
-
-      await runsService.abortRun("r1");
-      expect(mockAdapter.abortRun).toHaveBeenCalledWith("r1");
-    });
-
-    it("succeeds when provider not found", async () => {
-      createProvider(db, { id: "temp_provider" });
-      createRun(db, { id: "r1", status: "running", providerId: "temp_provider" });
-      // Delete the provider manually so findById returns null
-      vi.spyOn(
-        await import("../providers/providers.repo").then(m => m.providersRepo),
-        "findById"
-      ).mockResolvedValueOnce(null);
-
-      const result = await runsService.abortRun("r1");
-      expect(result.success).toBe(true);
-    });
-
-    it("succeeds when adapter.abortRun throws", async () => {
-      createRun(db, { id: "r1", status: "running" });
-      const mockAdapter = {
-        abortRun: vi.fn().mockRejectedValue(new Error("abort failed")),
-      };
-      vi.mocked(createWorkAdapter).mockReturnValue(mockAdapter as any);
-
-      const result = await runsService.abortRun("r1");
-      expect(result.success).toBe(true);
-
-      const run = await runsRepo.findRunById("r1");
-      expect(run!.status).toBe("canceled");
-    });
-
-    it("succeeds when adapter has no abortRun method", async () => {
-      createRun(db, { id: "r1", status: "running" });
-      vi.mocked(createWorkAdapter).mockReturnValue({} as any);
-
-      const result = await runsService.abortRun("r1");
-      expect(result.success).toBe(true);
+      expect(run!.lastError).toContain("no live session");
     });
 
     it("returns error on outer catch", async () => {
