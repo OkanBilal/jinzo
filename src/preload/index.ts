@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import os from "node:os";
+import { CHANNELS } from "../shared/ipc-kit/channels";
 
 // Expose IPC methods to renderer process
 const api = {
@@ -9,65 +10,65 @@ const api = {
       kind?: string;
       connectionId?: string;
       limit?: number;
-    }) => ipcRenderer.invoke("entities:getAll", options),
-    getById: (id: string) => ipcRenderer.invoke("entities:getById", id),
+    }) => ipcRenderer.invoke(CHANNELS.entities.getAll, options),
+    getById: (id: string) => ipcRenderer.invoke(CHANNELS.entities.getById, id),
     create: (payload: unknown) =>
-      ipcRenderer.invoke("entities:create", payload),
+      ipcRenderer.invoke(CHANNELS.entities.create, payload),
     update: (id: string, payload: unknown) =>
-      ipcRenderer.invoke("entities:update", id, payload),
-    delete: (id: string) => ipcRenderer.invoke("entities:delete", id),
+      ipcRenderer.invoke(CHANNELS.entities.update, id, payload),
+    delete: (id: string) => ipcRenderer.invoke(CHANNELS.entities.delete, id),
     search: (query: string, options?: { kind?: string; limit?: number }) =>
-      ipcRenderer.invoke("entities:search", query, options),
+      ipcRenderer.invoke(CHANNELS.entities.search, query, options),
   },
   // Task operations (actionable domain)
   tasks: {
     getAll: (options?: { status?: string; limit?: number }) =>
-      ipcRenderer.invoke("tasks:getAll", options),
+      ipcRenderer.invoke(CHANNELS.tasks.getAll, options),
     getById: (entityId: string) =>
-      ipcRenderer.invoke("tasks:getById", entityId),
-    create: (payload: unknown) => ipcRenderer.invoke("tasks:create", payload),
+      ipcRenderer.invoke(CHANNELS.tasks.getById, entityId),
+    create: (payload: unknown) => ipcRenderer.invoke(CHANNELS.tasks.create, payload),
     update: (entityId: string, payload: unknown) =>
-      ipcRenderer.invoke("tasks:update", entityId, payload),
-    delete: (entityId: string) => ipcRenderer.invoke("tasks:delete", entityId),
+      ipcRenderer.invoke(CHANNELS.tasks.update, entityId, payload),
+    delete: (entityId: string) => ipcRenderer.invoke(CHANNELS.tasks.delete, entityId),
   },
   // Issue operations (actionable domain)
   issues: {
     getAll: (options?: { provider?: string; state?: string; repo?: string; limit?: number }) =>
-      ipcRenderer.invoke("issues:getAll", options),
+      ipcRenderer.invoke(CHANNELS.issues.getAll, options),
     getById: (entityId: string) =>
-      ipcRenderer.invoke("issues:getById", entityId),
-    create: (payload: unknown) => ipcRenderer.invoke("issues:create", payload),
+      ipcRenderer.invoke(CHANNELS.issues.getById, entityId),
+    create: (payload: unknown) => ipcRenderer.invoke(CHANNELS.issues.create, payload),
     update: (entityId: string, payload: unknown) =>
-      ipcRenderer.invoke("issues:update", entityId, payload),
-    delete: (entityId: string) => ipcRenderer.invoke("issues:delete", entityId),
+      ipcRenderer.invoke(CHANNELS.issues.update, entityId, payload),
+    delete: (entityId: string) => ipcRenderer.invoke(CHANNELS.issues.delete, entityId),
   },
   // Signal operations (error reports, crashes, alerts, feedback)
   signals: {
     getAll: (options?: { source?: string; level?: string; category?: string; state?: string; projectId?: string; limit?: number }) =>
-      ipcRenderer.invoke("signals:getAll", options),
+      ipcRenderer.invoke(CHANNELS.signals.getAll, options),
     getById: (entityId: string) =>
-      ipcRenderer.invoke("signals:getById", entityId),
-    create: (payload: unknown) => ipcRenderer.invoke("signals:create", payload),
+      ipcRenderer.invoke(CHANNELS.signals.getById, entityId),
+    create: (payload: unknown) => ipcRenderer.invoke(CHANNELS.signals.create, payload),
     update: (entityId: string, payload: unknown) =>
-      ipcRenderer.invoke("signals:update", entityId, payload),
-    delete: (entityId: string) => ipcRenderer.invoke("signals:delete", entityId),
+      ipcRenderer.invoke(CHANNELS.signals.update, entityId, payload),
+    delete: (entityId: string) => ipcRenderer.invoke(CHANNELS.signals.delete, entityId),
   },
   // Account operations
   account: {
-    get: () => ipcRenderer.invoke("account:get"),
-    update: (payload: unknown) => ipcRenderer.invoke("account:update", payload),
+    get: () => ipcRenderer.invoke(CHANNELS.account.get),
+    update: (payload: unknown) => ipcRenderer.invoke(CHANNELS.account.update, payload),
   },
   // ConnectionStates operations
   connectionStates: {
-    getAll: () => ipcRenderer.invoke("connectionStates:getAll"),
+    getAll: () => ipcRenderer.invoke(CHANNELS.connectionStates.getAll),
     updateById: (
       id: string,
       payload: { isConnected: boolean; connectionId?: string | null },
-    ) => ipcRenderer.invoke("connectionStates:updateById", id, payload),
+    ) => ipcRenderer.invoke(CHANNELS.connectionStates.updateById, id, payload),
   },
   // Sync operations
   sync: {
-    runEntitySync: (provider?: string) => ipcRenderer.invoke("sync:runEntitySync", provider),
+    runEntitySync: (provider?: string) => ipcRenderer.invoke(CHANNELS.sync.runEntitySync, provider),
   },
   // Connection credentials operations
   connectionCredentials: {
@@ -75,216 +76,216 @@ const api = {
       provider: string;
       connectionId: string;
       [key: string]: any;
-    }) => ipcRenderer.invoke("connections:saveCredentials", payload),
+    }) => ipcRenderer.invoke(CHANNELS.connections.saveCredentials, payload),
     check: (provider: string) =>
-      ipcRenderer.invoke("connections:checkCredentials", provider),
+      ipcRenderer.invoke(CHANNELS.connections.checkCredentials, provider),
   },
   // Connections operations
   connections: {
     getGithubRepos: (connectionId: string) =>
-      ipcRenderer.invoke("connections:getGithubRepos", connectionId),
+      ipcRenderer.invoke(CHANNELS.connections.getGithubRepos, connectionId),
     getLinearTeams: (connectionId: string) =>
-      ipcRenderer.invoke("connections:getLinearTeams", connectionId),
+      ipcRenderer.invoke(CHANNELS.connections.getLinearTeams, connectionId),
     getJiraProjects: (connectionId: string) =>
-      ipcRenderer.invoke("connections:getJiraProjects", connectionId),
+      ipcRenderer.invoke(CHANNELS.connections.getJiraProjects, connectionId),
     getAsanaProjects: (connectionId: string) =>
-      ipcRenderer.invoke("connections:getAsanaProjects", connectionId),
+      ipcRenderer.invoke(CHANNELS.connections.getAsanaProjects, connectionId),
     getGitlabProjects: (connectionId: string) =>
-      ipcRenderer.invoke("connections:getGitlabProjects", connectionId),
+      ipcRenderer.invoke(CHANNELS.connections.getGitlabProjects, connectionId),
     getTrelloBoards: (connectionId: string) =>
-      ipcRenderer.invoke("connections:getTrelloBoards", connectionId),
+      ipcRenderer.invoke(CHANNELS.connections.getTrelloBoards, connectionId),
     getSentryProjects: (connectionId: string) =>
-      ipcRenderer.invoke("connections:getSentryProjects", connectionId),
+      ipcRenderer.invoke(CHANNELS.connections.getSentryProjects, connectionId),
     getSocketDevOrganizations: (connectionId: string) =>
-      ipcRenderer.invoke("connections:getSocketDevOrganizations", connectionId),
+      ipcRenderer.invoke(CHANNELS.connections.getSocketDevOrganizations, connectionId),
     saveResources: (payload: {
       provider: string;
       connectionId: string;
       resources?: any[];
       sources?: string[];
-    }) => ipcRenderer.invoke("connections:saveResources", payload),
+    }) => ipcRenderer.invoke(CHANNELS.connections.saveResources, payload),
     deleteResource: (resourceId: string) =>
-      ipcRenderer.invoke("connections:deleteResource", resourceId),
+      ipcRenderer.invoke(CHANNELS.connections.deleteResource, resourceId),
     revoke: (provider: string) =>
-      ipcRenderer.invoke("connections:revoke", provider),
+      ipcRenderer.invoke(CHANNELS.connections.revoke, provider),
     getByProvider: (provider: string) =>
-      ipcRenderer.invoke("connections:getByProvider", provider),
+      ipcRenderer.invoke(CHANNELS.connections.getByProvider, provider),
     getSelectedResources: (provider: string) =>
-      ipcRenderer.invoke("connections:getSelectedResources", provider),
+      ipcRenderer.invoke(CHANNELS.connections.getSelectedResources, provider),
   },
   // Guards operations (dependency security)
   guards: {
-    getActiveGuard: () => ipcRenderer.invoke("guards:getActiveGuard"),
+    getActiveGuard: () => ipcRenderer.invoke(CHANNELS.guards.getActiveGuard),
     checkPackage: (pkg: { name: string; version?: string; ecosystem: string }) =>
-      ipcRenderer.invoke("guards:checkPackage", pkg),
+      ipcRenderer.invoke(CHANNELS.guards.checkPackage, pkg),
     checkPackages: (pkgs: Array<{ name: string; version?: string; ecosystem: string }>) =>
-      ipcRenderer.invoke("guards:checkPackages", pkgs),
+      ipcRenderer.invoke(CHANNELS.guards.checkPackages, pkgs),
     getPackageScore: (pkg: { name: string; version?: string; ecosystem: string }) =>
-      ipcRenderer.invoke("guards:getPackageScore", pkg),
+      ipcRenderer.invoke(CHANNELS.guards.getPackageScore, pkg),
     scanWorkspace: (workspaceId: string, rootPath: string) =>
-      ipcRenderer.invoke("guards:scanWorkspace", workspaceId, rootPath),
+      ipcRenderer.invoke(CHANNELS.guards.scanWorkspace, workspaceId, rootPath),
   },
   // Projects operations
   projects: {
-    getAll: () => ipcRenderer.invoke("projects:getAll"),
-    getById: (id: string) => ipcRenderer.invoke("projects:getById", id),
+    getAll: () => ipcRenderer.invoke(CHANNELS.projects.getAll),
+    getById: (id: string) => ipcRenderer.invoke(CHANNELS.projects.getById, id),
     getByAccount: (accountId: string) =>
-      ipcRenderer.invoke("projects:getByAccount", accountId),
+      ipcRenderer.invoke(CHANNELS.projects.getByAccount, accountId),
     findByRemoteOrigin: (accountId: string, remoteOrigin: string) =>
-      ipcRenderer.invoke("projects:findByRemoteOrigin", accountId, remoteOrigin),
+      ipcRenderer.invoke(CHANNELS.projects.findByRemoteOrigin, accountId, remoteOrigin),
     findOrCreate: (payload: unknown) =>
-      ipcRenderer.invoke("projects:findOrCreate", payload),
+      ipcRenderer.invoke(CHANNELS.projects.findOrCreate, payload),
     create: (payload: unknown) =>
-      ipcRenderer.invoke("projects:create", payload),
+      ipcRenderer.invoke(CHANNELS.projects.create, payload),
     update: (id: string, payload: unknown) =>
-      ipcRenderer.invoke("projects:update", id, payload),
-    remove: (id: string) => ipcRenderer.invoke("projects:remove", id),
-    delete: (id: string) => ipcRenderer.invoke("projects:delete", id),
-    archive: (id: string) => ipcRenderer.invoke("projects:archive", id),
+      ipcRenderer.invoke(CHANNELS.projects.update, id, payload),
+    remove: (id: string) => ipcRenderer.invoke(CHANNELS.projects.remove, id),
+    delete: (id: string) => ipcRenderer.invoke(CHANNELS.projects.delete, id),
+    archive: (id: string) => ipcRenderer.invoke(CHANNELS.projects.archive, id),
   },
   // Project Resources operations
   projectResources: {
     getByProject: (projectId: string) =>
-      ipcRenderer.invoke("projectResources:getByProject", projectId),
+      ipcRenderer.invoke(CHANNELS.projectResources.getByProject, projectId),
     getAvailable: (projectId: string) =>
-      ipcRenderer.invoke("projectResources:getAvailable", projectId),
+      ipcRenderer.invoke(CHANNELS.projectResources.getAvailable, projectId),
     add: (payload: { projectId: string; resourceId: string }) =>
-      ipcRenderer.invoke("projectResources:add", payload),
+      ipcRenderer.invoke(CHANNELS.projectResources.add, payload),
     remove: (payload: { projectId: string; resourceId: string }) =>
-      ipcRenderer.invoke("projectResources:remove", payload),
+      ipcRenderer.invoke(CHANNELS.projectResources.remove, payload),
     getIssues: (projectId: string) =>
-      ipcRenderer.invoke("projectResources:getIssues", projectId),
+      ipcRenderer.invoke(CHANNELS.projectResources.getIssues, projectId),
   },
   // Seed operations
   seed: {
-    connectionStates: () => ipcRenderer.invoke("seed:connectionStates"),
-    connections: () => ipcRenderer.invoke("seed:connections"),
-    all: () => ipcRenderer.invoke("seed:all"),
+    connectionStates: () => ipcRenderer.invoke(CHANNELS.seed.connectionStates),
+    connections: () => ipcRenderer.invoke(CHANNELS.seed.connections),
+    all: () => ipcRenderer.invoke(CHANNELS.seed.all),
   },
   // Space operations
   space: {
-    getAll: () => ipcRenderer.invoke("space:getAll"),
-    getById: (spaceId: string) => ipcRenderer.invoke("space:getById", spaceId),
-    create: (payload: unknown) => ipcRenderer.invoke("space:create", payload),
+    getAll: () => ipcRenderer.invoke(CHANNELS.space.getAll),
+    getById: (spaceId: string) => ipcRenderer.invoke(CHANNELS.space.getById, spaceId),
+    create: (payload: unknown) => ipcRenderer.invoke(CHANNELS.space.create, payload),
     update: (spaceId: string, payload: unknown) =>
-      ipcRenderer.invoke("space:update", spaceId, payload),
-    delete: (spaceId: string) => ipcRenderer.invoke("space:delete", spaceId),
-    archive: (spaceId: string) => ipcRenderer.invoke("space:archive", spaceId),
-    unarchive: (spaceId: string) => ipcRenderer.invoke("space:unarchive", spaceId),
+      ipcRenderer.invoke(CHANNELS.space.update, spaceId, payload),
+    delete: (spaceId: string) => ipcRenderer.invoke(CHANNELS.space.delete, spaceId),
+    archive: (spaceId: string) => ipcRenderer.invoke(CHANNELS.space.archive, spaceId),
+    unarchive: (spaceId: string) => ipcRenderer.invoke(CHANNELS.space.unarchive, spaceId),
   },
   // App settings operations
   appSettings: {
-    get: () => ipcRenderer.invoke("appSettings:get"),
+    get: () => ipcRenderer.invoke(CHANNELS.appSettings.get),
     update: (patch: Record<string, unknown>) =>
-      ipcRenderer.invoke("appSettings:update", patch),
+      ipcRenderer.invoke(CHANNELS.appSettings.update, patch),
     onSpaceChanged: (
       callback: (data: { activeSpaceId: string | null }) => void,
     ) => {
       const listener = (_: any, data: { activeSpaceId: string | null }) =>
         callback(data);
-      ipcRenderer.on("space:changed", listener);
-      return () => ipcRenderer.removeListener("space:changed", listener);
+      ipcRenderer.on(CHANNELS.space.changed, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.space.changed, listener);
     },
   },
   // Provider operations
   providers: {
-    getAll: () => ipcRenderer.invoke("providers:getAll"),
-    getById: (id: string) => ipcRenderer.invoke("providers:getById", id),
+    getAll: () => ipcRenderer.invoke(CHANNELS.providers.getAll),
+    getById: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getById, id),
     getByKind: (kind: "llm_runtime" | "agent_runtime") =>
-      ipcRenderer.invoke("providers:getByKind", kind),
-    getEnabled: () => ipcRenderer.invoke("providers:getEnabled"),
+      ipcRenderer.invoke(CHANNELS.providers.getByKind, kind),
+    getEnabled: () => ipcRenderer.invoke(CHANNELS.providers.getEnabled),
     create: (payload: unknown) =>
-      ipcRenderer.invoke("providers:create", payload),
+      ipcRenderer.invoke(CHANNELS.providers.create, payload),
     update: (id: string, payload: unknown) =>
-      ipcRenderer.invoke("providers:update", id, payload),
-    delete: (id: string) => ipcRenderer.invoke("providers:delete", id),
-    enable: (id: string) => ipcRenderer.invoke("providers:enable", id),
-    disable: (id: string) => ipcRenderer.invoke("providers:disable", id),
-    getModels: (id: string) => ipcRenderer.invoke("providers:getModels", id),
+      ipcRenderer.invoke(CHANNELS.providers.update, id, payload),
+    delete: (id: string) => ipcRenderer.invoke(CHANNELS.providers.delete, id),
+    enable: (id: string) => ipcRenderer.invoke(CHANNELS.providers.enable, id),
+    disable: (id: string) => ipcRenderer.invoke(CHANNELS.providers.disable, id),
+    getModels: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getModels, id),
     getCommands: (id: string, workspacePath?: string) =>
-      ipcRenderer.invoke("providers:getCommands", id, workspacePath),
-    getSkills: (id: string, workspacePath?: string) => ipcRenderer.invoke("providers:getSkills", id, workspacePath),
-    getRateLimits: (id: string) => ipcRenderer.invoke("providers:getRateLimits", id),
-    getAccountInfo: (id: string) => ipcRenderer.invoke("providers:getAccountInfo", id),
-    getPlugins: (id: string) => ipcRenderer.invoke("providers:getPlugins", id),
-    readPlugin: (id: string, pluginName: string, marketplacePath: string) => ipcRenderer.invoke("providers:readPlugin", id, pluginName, marketplacePath),
-    installPlugin: (id: string, pluginId: string) => ipcRenderer.invoke("providers:installPlugin", id, pluginId),
-    uninstallPlugin: (id: string, pluginId: string) => ipcRenderer.invoke("providers:uninstallPlugin", id, pluginId),
-    detectInstalled: () => ipcRenderer.invoke("providers:detectInstalled"),
+      ipcRenderer.invoke(CHANNELS.providers.getCommands, id, workspacePath),
+    getSkills: (id: string, workspacePath?: string) => ipcRenderer.invoke(CHANNELS.providers.getSkills, id, workspacePath),
+    getRateLimits: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getRateLimits, id),
+    getAccountInfo: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getAccountInfo, id),
+    getPlugins: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getPlugins, id),
+    readPlugin: (id: string, pluginName: string, marketplacePath: string) => ipcRenderer.invoke(CHANNELS.providers.readPlugin, id, pluginName, marketplacePath),
+    installPlugin: (id: string, pluginId: string) => ipcRenderer.invoke(CHANNELS.providers.installPlugin, id, pluginId),
+    uninstallPlugin: (id: string, pluginId: string) => ipcRenderer.invoke(CHANNELS.providers.uninstallPlugin, id, pluginId),
+    detectInstalled: () => ipcRenderer.invoke(CHANNELS.providers.detectInstalled),
   },
   // Skills.sh marketplace (read-only)
   skillsMarketplace: {
     list: (args?: { view?: "trending" | "hot" | "all-time"; page?: number; perPage?: number }) =>
-      ipcRenderer.invoke("skillsMarketplace:list", args ?? {}),
+      ipcRenderer.invoke(CHANNELS.skillsMarketplace.list, args ?? {}),
     search: (args: { q: string; limit?: number }) =>
-      ipcRenderer.invoke("skillsMarketplace:search", args),
-    curated: () => ipcRenderer.invoke("skillsMarketplace:curated"),
+      ipcRenderer.invoke(CHANNELS.skillsMarketplace.search, args),
+    curated: () => ipcRenderer.invoke(CHANNELS.skillsMarketplace.curated),
     detail: (ref: { source: string; skill: string }) =>
-      ipcRenderer.invoke("skillsMarketplace:detail", ref),
+      ipcRenderer.invoke(CHANNELS.skillsMarketplace.detail, ref),
     audit: (ref: { source: string; skill: string }) =>
-      ipcRenderer.invoke("skillsMarketplace:audit", ref),
+      ipcRenderer.invoke(CHANNELS.skillsMarketplace.audit, ref),
   },
   // Tool calls operations
   toolCalls: {
     getByRun: (runId: string) =>
-      ipcRenderer.invoke("toolCalls:getByRun", runId),
+      ipcRenderer.invoke(CHANNELS.toolCalls.getByRun, runId),
     getByAccount: (accountId: string, limit?: number) =>
-      ipcRenderer.invoke("toolCalls:getByAccount", accountId, limit),
+      ipcRenderer.invoke(CHANNELS.toolCalls.getByAccount, accountId, limit),
     create: (payload: unknown) =>
-      ipcRenderer.invoke("toolCalls:create", payload),
+      ipcRenderer.invoke(CHANNELS.toolCalls.create, payload),
     update: (id: number, payload: unknown) =>
-      ipcRenderer.invoke("toolCalls:update", id, payload),
-    start: (id: number) => ipcRenderer.invoke("toolCalls:start", id),
+      ipcRenderer.invoke(CHANNELS.toolCalls.update, id, payload),
+    start: (id: number) => ipcRenderer.invoke(CHANNELS.toolCalls.start, id),
     complete: (id: number, output: unknown, latencyMs?: number) =>
-      ipcRenderer.invoke("toolCalls:complete", id, output, latencyMs),
+      ipcRenderer.invoke(CHANNELS.toolCalls.complete, id, output, latencyMs),
     fail: (id: number, error: string) =>
-      ipcRenderer.invoke("toolCalls:fail", id, error),
+      ipcRenderer.invoke(CHANNELS.toolCalls.fail, id, error),
   },
   // Workspaces operations
   workspaces: {
-    getAll: () => ipcRenderer.invoke("workspaces:getAll"),
-    getById: (id: string) => ipcRenderer.invoke("workspaces:getById", id),
+    getAll: () => ipcRenderer.invoke(CHANNELS.workspaces.getAll),
+    getById: (id: string) => ipcRenderer.invoke(CHANNELS.workspaces.getById, id),
     getByAccount: (accountId: string) =>
-      ipcRenderer.invoke("workspaces:getByAccount", accountId),
+      ipcRenderer.invoke(CHANNELS.workspaces.getByAccount, accountId),
     getByRootPath: (accountId: string, rootPath: string) =>
-      ipcRenderer.invoke("workspaces:getByRootPath", accountId, rootPath),
+      ipcRenderer.invoke(CHANNELS.workspaces.getByRootPath, accountId, rootPath),
     create: (payload: unknown) =>
-      ipcRenderer.invoke("workspaces:create", payload),
+      ipcRenderer.invoke(CHANNELS.workspaces.create, payload),
     update: (id: string, payload: unknown) =>
-      ipcRenderer.invoke("workspaces:update", id, payload),
-    delete: (id: string) => ipcRenderer.invoke("workspaces:delete", id),
-    archive: (id: string) => ipcRenderer.invoke("workspaces:archive", id),
-    selectDirectory: () => ipcRenderer.invoke("workspaces:selectDirectory"),
+      ipcRenderer.invoke(CHANNELS.workspaces.update, id, payload),
+    delete: (id: string) => ipcRenderer.invoke(CHANNELS.workspaces.delete, id),
+    archive: (id: string) => ipcRenderer.invoke(CHANNELS.workspaces.archive, id),
+    selectDirectory: () => ipcRenderer.invoke(CHANNELS.workspaces.selectDirectory),
     onScriptComplete: (callback: (data: { workspaceId: string; script: string; success: boolean; error?: string }) => void) => {
       const listener = (_: any, data: { workspaceId: string; script: string; success: boolean; error?: string }) => callback(data);
-      ipcRenderer.on("workspaces:scriptComplete", listener);
-      return () => ipcRenderer.removeListener("workspaces:scriptComplete", listener);
+      ipcRenderer.on(CHANNELS.workspaces.scriptComplete, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.workspaces.scriptComplete, listener);
     },
   },
   // Runs operations
   runs: {
-    getAll: (limit?: number) => ipcRenderer.invoke("runs:getAll", limit),
-    getById: (id: string) => ipcRenderer.invoke("runs:getById", id),
+    getAll: (limit?: number) => ipcRenderer.invoke(CHANNELS.runs.getAll, limit),
+    getById: (id: string) => ipcRenderer.invoke(CHANNELS.runs.getById, id),
     getByAccount: (accountId: string, limit?: number) =>
-      ipcRenderer.invoke("runs:getByAccount", accountId, limit),
+      ipcRenderer.invoke(CHANNELS.runs.getByAccount, accountId, limit),
     getByWorkspace: (workspaceId: string, limit?: number) =>
-      ipcRenderer.invoke("runs:getByWorkspace", workspaceId, limit),
+      ipcRenderer.invoke(CHANNELS.runs.getByWorkspace, workspaceId, limit),
     getByStatus: (
       accountId: string,
       status: "queued" | "running" | "succeeded" | "failed" | "canceled",
-    ) => ipcRenderer.invoke("runs:getByStatus", accountId, status),
-    create: (payload: unknown) => ipcRenderer.invoke("runs:create", payload),
+    ) => ipcRenderer.invoke(CHANNELS.runs.getByStatus, accountId, status),
+    create: (payload: unknown) => ipcRenderer.invoke(CHANNELS.runs.create, payload),
     update: (id: string, payload: unknown) =>
-      ipcRenderer.invoke("runs:update", id, payload),
-    start: (id: string) => ipcRenderer.invoke("runs:start", id),
-    complete: (id: string) => ipcRenderer.invoke("runs:complete", id),
+      ipcRenderer.invoke(CHANNELS.runs.update, id, payload),
+    start: (id: string) => ipcRenderer.invoke(CHANNELS.runs.start, id),
+    complete: (id: string) => ipcRenderer.invoke(CHANNELS.runs.complete, id),
     fail: (id: string, error: string) =>
-      ipcRenderer.invoke("runs:fail", id, error),
-    cancel: (id: string) => ipcRenderer.invoke("runs:cancel", id),
-    delete: (id: string) => ipcRenderer.invoke("runs:delete", id),
-    archive: (id: string) => ipcRenderer.invoke("runs:archive", id),
+      ipcRenderer.invoke(CHANNELS.runs.fail, id, error),
+    cancel: (id: string) => ipcRenderer.invoke(CHANNELS.runs.cancel, id),
+    delete: (id: string) => ipcRenderer.invoke(CHANNELS.runs.delete, id),
+    archive: (id: string) => ipcRenderer.invoke(CHANNELS.runs.archive, id),
     // New methods for executing work runs
-    getDetails: (runId: string) => ipcRenderer.invoke("runs:getDetails", runId),
+    getDetails: (runId: string) => ipcRenderer.invoke(CHANNELS.runs.getDetails, runId),
     execute: (payload: {
       accountId: string;
       workspaceId: string;
@@ -306,10 +307,10 @@ const api = {
       contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
       contextFiles?: Array<{ path: string }>;
       contextSkills?: Array<{ name: string; path?: string; displayName?: string; description?: string; shortDescription?: string; iconSmall?: string; iconLarge?: string; brandColor?: string; scope?: string }>;
-    }) => ipcRenderer.invoke("runs:execute", payload),
-    abort: (runId: string) => ipcRenderer.invoke("runs:abort", runId),
+    }) => ipcRenderer.invoke(CHANNELS.runs.execute, payload),
+    abort: (runId: string) => ipcRenderer.invoke(CHANNELS.runs.abort, runId),
     getToolCalls: (runId: string) =>
-      ipcRenderer.invoke("runToolCalls:getByRun", runId),
+      ipcRenderer.invoke(CHANNELS.runToolCalls.getByRun, runId),
     // Session resume methods
     continue: (payload: {
       runId: string;
@@ -327,8 +328,8 @@ const api = {
       contextSignals?: Array<{ source: string; level: string; category: string; title: string; body?: string | null; stackTrace?: string | null; eventCount?: number }>;
       contextFiles?: Array<{ path: string }>;
       contextSkills?: Array<{ name: string; path?: string; displayName?: string; description?: string; shortDescription?: string; iconSmall?: string; iconLarge?: string; brandColor?: string; scope?: string }>;
-    }) => ipcRenderer.invoke("runs:continue", payload),
-    canResume: (runId: string) => ipcRenderer.invoke("runs:canResume", runId),
+    }) => ipcRenderer.invoke(CHANNELS.runs.continue, payload),
+    canResume: (runId: string) => ipcRenderer.invoke(CHANNELS.runs.canResume, runId),
     fork: (payload: {
       sourceRunId: string;
       accountId: string;
@@ -340,7 +341,7 @@ const api = {
         metadata?: Record<string, unknown>;
       }>;
       attachments?: Array<{ name: string; type: string; data?: string; sourcePath?: string; mimeType: string }>;
-    }) => ipcRenderer.invoke("runs:fork", payload),
+    }) => ipcRenderer.invoke(CHANNELS.runs.fork, payload),
     executeReview: (payload: {
       accountId: string;
       workspaceId: string;
@@ -358,119 +359,119 @@ const api = {
       systemPrompt?: string;
       configSnapshot?: Record<string, unknown>;
       toolPolicySnapshot?: Record<string, unknown>;
-    }) => ipcRenderer.invoke("runs:executeReview", payload),
+    }) => ipcRenderer.invoke(CHANNELS.runs.executeReview, payload),
     deleteSession: (runId: string) =>
-      ipcRenderer.invoke("runs:deleteSession", runId),
+      ipcRenderer.invoke(CHANNELS.runs.deleteSession, runId),
     // Interactive tool approval
     onToolApprovalRequest: (callback: (request: any) => void) => {
       const listener = (_: any, request: any) => callback(request);
-      ipcRenderer.on("runs:toolApprovalRequest", listener);
+      ipcRenderer.on(CHANNELS.runs.toolApprovalRequest, listener);
       return () =>
-        ipcRenderer.removeListener("runs:toolApprovalRequest", listener);
+        ipcRenderer.removeListener(CHANNELS.runs.toolApprovalRequest, listener);
     },
     respondToolApproval: (response: {
       requestId: string;
       approved: boolean;
       answer?: string;
-    }) => ipcRenderer.invoke("runs:toolApprovalResponse", response),
+    }) => ipcRenderer.invoke(CHANNELS.runs.toolApprovalResponse, response),
     // Streaming events (ephemeral — pushed from main, not persisted)
     onStreamingEvent: (callback: (data: { runId: string; event: { type: string; kind: string; content?: string; metadata?: Record<string, unknown>; streamId?: string }; ts: number }) => void) => {
       const listener = (_: any, data: any) => callback(data);
-      ipcRenderer.on("runs:ephemeralEvent", listener);
-      return () => ipcRenderer.removeListener("runs:ephemeralEvent", listener);
+      ipcRenderer.on(CHANNELS.runs.ephemeralEvent, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.runs.ephemeralEvent, listener);
     },
     // Fired after each persisted run event (log / tool_call / artifact / prompt_suggestion).
     // Renderer debounces and refetches run details — keeps the UI in sync without polling.
     onEventPersisted: (callback: (data: { runId: string; ts: number }) => void) => {
       const listener = (_: any, data: any) => callback(data);
-      ipcRenderer.on("runs:eventPersisted", listener);
-      return () => ipcRenderer.removeListener("runs:eventPersisted", listener);
+      ipcRenderer.on(CHANNELS.runs.eventPersisted, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.runs.eventPersisted, listener);
     },
     // Fired when a run reaches a terminal status (succeeded / failed / canceled).
     onStatusChanged: (callback: (data: { runId: string; status: string; ts: number }) => void) => {
       const listener = (_: any, data: any) => callback(data);
-      ipcRenderer.on("runs:statusChanged", listener);
-      return () => ipcRenderer.removeListener("runs:statusChanged", listener);
+      ipcRenderer.on(CHANNELS.runs.statusChanged, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.runs.statusChanged, listener);
     },
     // Fired after the workspace diff is recomputed (incrementally during a run
     // and once finally at completion). Renderer refetches the diff.
     onDiffUpdated: (callback: (data: { runId: string; workspaceId: string; ts: number }) => void) => {
       const listener = (_: any, data: any) => callback(data);
-      ipcRenderer.on("runs:diffUpdated", listener);
-      return () => ipcRenderer.removeListener("runs:diffUpdated", listener);
+      ipcRenderer.on(CHANNELS.runs.diffUpdated, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.runs.diffUpdated, listener);
     },
   },
   // Reviews operations
   reviews: {
     getByWorkspace: (workspaceId: string, limit?: number) =>
-      ipcRenderer.invoke("reviews:getByWorkspace", workspaceId, limit),
+      ipcRenderer.invoke(CHANNELS.reviews.getByWorkspace, workspaceId, limit),
     getById: (id: string) =>
-      ipcRenderer.invoke("reviews:getById", id),
+      ipcRenderer.invoke(CHANNELS.reviews.getById, id),
     create: (payload: unknown) =>
-      ipcRenderer.invoke("reviews:create", payload),
+      ipcRenderer.invoke(CHANNELS.reviews.create, payload),
     update: (id: string, payload: unknown) =>
-      ipcRenderer.invoke("reviews:update", id, payload),
+      ipcRenderer.invoke(CHANNELS.reviews.update, id, payload),
     delete: (id: string) =>
-      ipcRenderer.invoke("reviews:delete", id),
+      ipcRenderer.invoke(CHANNELS.reviews.delete, id),
   },
   // Review findings operations
   reviewFindings: {
     getByWorkspace: (workspaceId: string) =>
-      ipcRenderer.invoke("reviewFindings:getByWorkspace", workspaceId),
+      ipcRenderer.invoke(CHANNELS.reviewFindings.getByWorkspace, workspaceId),
     getByReview: (reviewId: string, limit?: number) =>
-      ipcRenderer.invoke("reviewFindings:getByReview", reviewId, limit),
+      ipcRenderer.invoke(CHANNELS.reviewFindings.getByReview, reviewId, limit),
     getById: (id: string) =>
-      ipcRenderer.invoke("reviewFindings:getById", id),
+      ipcRenderer.invoke(CHANNELS.reviewFindings.getById, id),
     create: (payload: unknown) =>
-      ipcRenderer.invoke("reviewFindings:create", payload),
+      ipcRenderer.invoke(CHANNELS.reviewFindings.create, payload),
     createMany: (payloads: unknown) =>
-      ipcRenderer.invoke("reviewFindings:createMany", payloads),
+      ipcRenderer.invoke(CHANNELS.reviewFindings.createMany, payloads),
     update: (id: string, payload: unknown) =>
-      ipcRenderer.invoke("reviewFindings:update", id, payload),
+      ipcRenderer.invoke(CHANNELS.reviewFindings.update, id, payload),
     delete: (id: string) =>
-      ipcRenderer.invoke("reviewFindings:delete", id),
+      ipcRenderer.invoke(CHANNELS.reviewFindings.delete, id),
   },
   // Workspace diff operations
   workspaceDiffs: {
     getByWorkspace: (workspaceId: string, limit?: number) =>
-      ipcRenderer.invoke("workspaceDiffs:getByWorkspace", workspaceId, limit),
+      ipcRenderer.invoke(CHANNELS.workspaceDiffs.getByWorkspace, workspaceId, limit),
     getLatest: (workspaceId: string) =>
-      ipcRenderer.invoke("workspaceDiffs:getLatest", workspaceId),
+      ipcRenderer.invoke(CHANNELS.workspaceDiffs.getLatest, workspaceId),
     getLatestSummary: (workspaceId: string) =>
-      ipcRenderer.invoke("workspaceDiffs:getLatestSummary", workspaceId),
+      ipcRenderer.invoke(CHANNELS.workspaceDiffs.getLatestSummary, workspaceId),
     getByRun: (runId: string) =>
-      ipcRenderer.invoke("workspaceDiffs:getByRun", runId),
+      ipcRenderer.invoke(CHANNELS.workspaceDiffs.getByRun, runId),
     deleteLatest: (workspaceId: string) =>
-      ipcRenderer.invoke("workspaceDiffs:deleteLatest", workspaceId),
+      ipcRenderer.invoke(CHANNELS.workspaceDiffs.deleteLatest, workspaceId),
   },
   // Workspace activity operations
   workspaceActivity: {
     getByWorkspace: (workspaceId: string, limit?: number) =>
-      ipcRenderer.invoke("workspaceActivity:getByWorkspace", workspaceId, limit),
+      ipcRenderer.invoke(CHANNELS.workspaceActivity.getByWorkspace, workspaceId, limit),
     create: (payload: unknown) =>
-      ipcRenderer.invoke("workspaceActivity:create", payload),
+      ipcRenderer.invoke(CHANNELS.workspaceActivity.create, payload),
     createMany: (payloads: unknown) =>
-      ipcRenderer.invoke("workspaceActivity:createMany", payloads),
+      ipcRenderer.invoke(CHANNELS.workspaceActivity.createMany, payloads),
     delete: (id: string) =>
-      ipcRenderer.invoke("workspaceActivity:delete", id),
+      ipcRenderer.invoke(CHANNELS.workspaceActivity.delete, id),
   },
   // Run context operations
   runContext: {
     getByRun: (runId: string) =>
-      ipcRenderer.invoke("runContext:getByRun", runId),
-    add: (payload: unknown) => ipcRenderer.invoke("runContext:add", payload),
-    remove: (id: number) => ipcRenderer.invoke("runContext:remove", id),
+      ipcRenderer.invoke(CHANNELS.runContext.getByRun, runId),
+    add: (payload: unknown) => ipcRenderer.invoke(CHANNELS.runContext.add, payload),
+    remove: (id: number) => ipcRenderer.invoke(CHANNELS.runContext.remove, id),
   },
   // Run artifacts operations
   runArtifacts: {
     getByRun: (runId: string) =>
-      ipcRenderer.invoke("runArtifacts:getByRun", runId),
-    add: (payload: unknown) => ipcRenderer.invoke("runArtifacts:add", payload),
-    remove: (id: number) => ipcRenderer.invoke("runArtifacts:remove", id),
+      ipcRenderer.invoke(CHANNELS.runArtifacts.getByRun, runId),
+    add: (payload: unknown) => ipcRenderer.invoke(CHANNELS.runArtifacts.add, payload),
+    remove: (id: number) => ipcRenderer.invoke(CHANNELS.runArtifacts.remove, id),
   },
   // Run turns operations
   runTurns: {
-    getByRun: (runId: string) => ipcRenderer.invoke("runTurns:getByRun", runId),
+    getByRun: (runId: string) => ipcRenderer.invoke(CHANNELS.runTurns.getByRun, runId),
   },
   // File explorer operations
   fileExplorer: {
@@ -479,15 +480,15 @@ const api = {
       depth?: number;
       includeHidden?: boolean;
       excludePatterns?: string[];
-    }) => ipcRenderer.invoke("fileExplorer:readDirectory", options),
+    }) => ipcRenderer.invoke(CHANNELS.fileExplorer.readDirectory, options),
     readDirectoryShallow: (
       dirPath: string,
       options?: { includeHidden?: boolean; excludePatterns?: string[] }
-    ) => ipcRenderer.invoke("fileExplorer:readDirectoryShallow", dirPath, options),
+    ) => ipcRenderer.invoke(CHANNELS.fileExplorer.readDirectoryShallow, dirPath, options),
     getPathInfo: (targetPath: string) =>
-      ipcRenderer.invoke("fileExplorer:getPathInfo", targetPath),
+      ipcRenderer.invoke(CHANNELS.fileExplorer.getPathInfo, targetPath),
     readFile: (filePath: string) =>
-      ipcRenderer.invoke("fileExplorer:readFile", filePath),
+      ipcRenderer.invoke(CHANNELS.fileExplorer.readFile, filePath),
     /**
      * Securely read file text within a workspace boundary.
      * Enforces path traversal protection, symlink escape prevention,
@@ -497,7 +498,7 @@ const api = {
       filePath: string;
       workspaceRoot: string;
       maxSizeBytes?: number;
-    }) => ipcRenderer.invoke("fileExplorer:readFileText", options),
+    }) => ipcRenderer.invoke(CHANNELS.fileExplorer.readFileText, options),
     /**
      * List directory contents for lazy loading.
      * Returns immediate children with hasChildren flag for directories.
@@ -506,191 +507,191 @@ const api = {
       dirPath: string;
       includeHidden?: boolean;
       excludePatterns?: string[];
-    }) => ipcRenderer.invoke("fileExplorer:listDir", options),
+    }) => ipcRenderer.invoke(CHANNELS.fileExplorer.listDir, options),
     searchFiles: (options: {
       rootPath: string;
       query: string;
       max?: number;
       includeHidden?: boolean;
       excludePatterns?: string[];
-    }) => ipcRenderer.invoke("fileExplorer:searchFiles", options),
+    }) => ipcRenderer.invoke(CHANNELS.fileExplorer.searchFiles, options),
   },
   // Git operations
   git: {
     /**
      * Check if a path is a git repository
      */
-    isRepo: (rootPath: string) => ipcRenderer.invoke("git:isRepo", rootPath),
+    isRepo: (rootPath: string) => ipcRenderer.invoke(CHANNELS.git.isRepo, rootPath),
     /**
      * Get the current branch name
      */
     getCurrentBranch: (rootPath: string) =>
-      ipcRenderer.invoke("git:getCurrentBranch", rootPath),
+      ipcRenderer.invoke(CHANNELS.git.getCurrentBranch, rootPath),
     /**
      * Get all branches
      */
     getBranches: (rootPath: string) =>
-      ipcRenderer.invoke("git:getBranches", rootPath),
+      ipcRenderer.invoke(CHANNELS.git.getBranches, rootPath),
     /**
      * Get git status (modified, staged, untracked files, etc.)
      */
     getStatus: (rootPath: string) =>
-      ipcRenderer.invoke("git:getStatus", rootPath),
+      ipcRenderer.invoke(CHANNELS.git.getStatus, rootPath),
     /**
      * Get recent commits
      */
     getLog: (rootPath: string, limit?: number) =>
-      ipcRenderer.invoke("git:getLog", rootPath, limit),
+      ipcRenderer.invoke(CHANNELS.git.getLog, rootPath, limit),
     /**
      * Get remote URLs
      */
     getRemotes: (rootPath: string) =>
-      ipcRenderer.invoke("git:getRemotes", rootPath),
+      ipcRenderer.invoke(CHANNELS.git.getRemotes, rootPath),
     /**
      * Get diff for a file or all files
      */
     getDiff: (rootPath: string, filePath?: string) =>
-      ipcRenderer.invoke("git:getDiff", rootPath, filePath),
+      ipcRenderer.invoke(CHANNELS.git.getDiff, rootPath, filePath),
     /**
      * Get the root directory of the git repository
      */
     getRepoRoot: (rootPath: string) =>
-      ipcRenderer.invoke("git:getRepoRoot", rootPath),
+      ipcRenderer.invoke(CHANNELS.git.getRepoRoot, rootPath),
     /**
      * Create a new local branch
      */
     createBranch: (rootPath: string, branchName: string) =>
-      ipcRenderer.invoke("git:createBranch", rootPath, branchName),
+      ipcRenderer.invoke(CHANNELS.git.createBranch, rootPath, branchName),
     /**
      * Create a worktree for a branch
      */
     createWorktree: (rootPath: string, worktreePath: string, branchName: string) =>
-      ipcRenderer.invoke("git:createWorktree", rootPath, worktreePath, branchName),
+      ipcRenderer.invoke(CHANNELS.git.createWorktree, rootPath, worktreePath, branchName),
     /**
      * Import a local git repo by creating a branch + worktree.
      * Returns full metadata needed for workspace creation.
      */
     importLocalRepo: (sourcePath: string, projectName?: string, customBranchName?: string) =>
-      ipcRenderer.invoke("git:importLocalRepo", sourcePath, projectName, customBranchName),
+      ipcRenderer.invoke(CHANNELS.git.importLocalRepo, sourcePath, projectName, customBranchName),
     importLocalRepoDirect: (sourcePath: string) =>
-      ipcRenderer.invoke("git:importLocalRepoDirect", sourcePath),
+      ipcRenderer.invoke(CHANNELS.git.importLocalRepoDirect, sourcePath),
     /**
      * Rename a local branch
      */
     renameBranch: (rootPath: string, oldName: string, newName: string) =>
-      ipcRenderer.invoke("git:renameBranch", rootPath, oldName, newName),
+      ipcRenderer.invoke(CHANNELS.git.renameBranch, rootPath, oldName, newName),
     /**
      * Remove a worktree
      */
     removeWorktree: (sourcePath: string, worktreePath: string) =>
-      ipcRenderer.invoke("git:removeWorktree", sourcePath, worktreePath),
+      ipcRenderer.invoke(CHANNELS.git.removeWorktree, sourcePath, worktreePath),
     /**
      * Get the worktrees directory path
      */
-    getWorktreesDir: () => ipcRenderer.invoke("git:getWorktreesDir"),
+    getWorktreesDir: () => ipcRenderer.invoke(CHANNELS.git.getWorktreesDir),
     /**
      * Clone a remote git repository to a local path
      */
     cloneRepo: (url: string, targetPath: string) =>
-      ipcRenderer.invoke("git:cloneRepo", url, targetPath),
+      ipcRenderer.invoke(CHANNELS.git.cloneRepo, url, targetPath),
     /**
      * Initialize a new git repo in a fresh folder under parentPath
      * (defaults to user Desktop). Always uses `main` as the branch.
      */
     initRepo: (projectName: string, parentPath?: string) =>
-      ipcRenderer.invoke("git:initRepo", projectName, parentPath),
+      ipcRenderer.invoke(CHANNELS.git.initRepo, projectName, parentPath),
     /**
      * Hard-reset working tree to a given ref and clean untracked files
      */
     resetHard: (rootPath: string, ref: string) =>
-      ipcRenderer.invoke("git:resetHard", rootPath, ref),
+      ipcRenderer.invoke(CHANNELS.git.resetHard, rootPath, ref),
   },
   // Terminal operations
   terminal: {
     create: (payload: { id: string; cwd: string }) =>
-      ipcRenderer.invoke("terminal:create", payload),
+      ipcRenderer.invoke(CHANNELS.terminal.create, payload),
     write: (id: string, data: string) =>
-      ipcRenderer.invoke("terminal:write", id, data),
+      ipcRenderer.invoke(CHANNELS.terminal.write, id, data),
     resize: (id: string, cols: number, rows: number) =>
-      ipcRenderer.invoke("terminal:resize", id, cols, rows),
-    destroy: (id: string) => ipcRenderer.invoke("terminal:destroy", id),
+      ipcRenderer.invoke(CHANNELS.terminal.resize, id, cols, rows),
+    destroy: (id: string) => ipcRenderer.invoke(CHANNELS.terminal.destroy, id),
     onData: (callback: (data: { id: string; data: string }) => void) => {
       const listener = (_: any, data: { id: string; data: string }) =>
         callback(data);
-      ipcRenderer.on("terminal:data", listener);
-      return () => ipcRenderer.removeListener("terminal:data", listener);
+      ipcRenderer.on(CHANNELS.terminal.data, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.terminal.data, listener);
     },
   },
   platform: {
     homedir: os.homedir(),
   },
   imageProxy: {
-    sign: (absPath: string) => ipcRenderer.invoke("imageProxy:sign", absPath),
+    sign: (absPath: string) => ipcRenderer.invoke(CHANNELS.imageProxy.sign, absPath),
   },
   shell: {
-    openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
-    openPath: (path: string) => ipcRenderer.invoke("shell:openPath", path),
-    openInApp: (appId: string, path: string) => ipcRenderer.invoke("shell:openInApp", appId, path),
-    getInstalledApps: () => ipcRenderer.invoke("shell:getInstalledApps"),
+    openExternal: (url: string) => ipcRenderer.invoke(CHANNELS.shell.openExternal, url),
+    openPath: (path: string) => ipcRenderer.invoke(CHANNELS.shell.openPath, path),
+    openInApp: (appId: string, path: string) => ipcRenderer.invoke(CHANNELS.shell.openInApp, appId, path),
+    getInstalledApps: () => ipcRenderer.invoke(CHANNELS.shell.getInstalledApps),
     getAppsForFile: (filePath: string) =>
-      ipcRenderer.invoke("shell:getAppsForFile", filePath),
+      ipcRenderer.invoke(CHANNELS.shell.getAppsForFile, filePath),
     openFileWithBundle: (filePath: string, bundleId: string) =>
-      ipcRenderer.invoke("shell:openFileWithBundle", filePath, bundleId),
+      ipcRenderer.invoke(CHANNELS.shell.openFileWithBundle, filePath, bundleId),
   },
   stats: {
-    getDashboard: (filter?: string) => ipcRenderer.invoke("stats:getDashboard", filter),
+    getDashboard: (filter?: string) => ipcRenderer.invoke(CHANNELS.stats.getDashboard, filter),
   },
   app: {
     setUnsavedChanges: (hasChanges: boolean) =>
-      ipcRenderer.invoke("app:setUnsavedChanges", hasChanges),
+      ipcRenderer.invoke(CHANNELS.app.setUnsavedChanges, hasChanges),
     setMenuBarIconVisible: (visible: boolean) =>
-      ipcRenderer.invoke("app:setMenuBarIconVisible", visible),
+      ipcRenderer.invoke(CHANNELS.app.setMenuBarIconVisible, visible),
     onFlushAndQuit: (callback: () => void) => {
       const listener = () => callback();
-      ipcRenderer.on("app:flushAndQuit", listener);
-      return () => ipcRenderer.removeListener("app:flushAndQuit", listener);
+      ipcRenderer.on(CHANNELS.app.flushAndQuit, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.app.flushAndQuit, listener);
     },
     onFullscreenChange: (callback: (isFullscreen: boolean) => void) => {
       const listener = (_: any, isFullscreen: boolean) => callback(isFullscreen);
-      ipcRenderer.on("app:fullscreenChange", listener);
+      ipcRenderer.on(CHANNELS.app.fullscreenChange, listener);
       return () => {
-        ipcRenderer.removeListener("app:fullscreenChange", listener);
+        ipcRenderer.removeListener(CHANNELS.app.fullscreenChange, listener);
       };
     },
   },
   updates: {
-    checkForUpdates: () => ipcRenderer.invoke("updates:check"),
-    downloadUpdate: () => ipcRenderer.invoke("updates:download"),
-    quitAndInstall: () => ipcRenderer.invoke("updates:quitAndInstall"),
-    getStatus: () => ipcRenderer.invoke("updates:getStatus"),
+    checkForUpdates: () => ipcRenderer.invoke(CHANNELS.updates.check),
+    downloadUpdate: () => ipcRenderer.invoke(CHANNELS.updates.download),
+    quitAndInstall: () => ipcRenderer.invoke(CHANNELS.updates.quitAndInstall),
+    getStatus: () => ipcRenderer.invoke(CHANNELS.updates.getStatus),
     onStatusChange: (callback: (data: any) => void) => {
       const listener = (_: any, data: any) => callback(data);
-      ipcRenderer.on("updates:status", listener);
-      return () => ipcRenderer.removeListener("updates:status", listener);
+      ipcRenderer.on(CHANNELS.updates.status, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.updates.status, listener);
     },
   },
 
   // Embedded browser panel operations
   browser: {
     attach: (bounds: { x: number; y: number; width: number; height: number }) =>
-      ipcRenderer.invoke("browser:attach", bounds),
-    detach: () => ipcRenderer.invoke("browser:detach"),
-    destroy: () => ipcRenderer.invoke("browser:destroy"),
+      ipcRenderer.invoke(CHANNELS.browser.attach, bounds),
+    detach: () => ipcRenderer.invoke(CHANNELS.browser.detach),
+    destroy: () => ipcRenderer.invoke(CHANNELS.browser.destroy),
     setBounds: (bounds: { x: number; y: number; width: number; height: number }) =>
-      ipcRenderer.invoke("browser:setBounds", bounds),
+      ipcRenderer.invoke(CHANNELS.browser.setBounds, bounds),
     setVisible: (visible: boolean) =>
-      ipcRenderer.invoke("browser:setVisible", visible),
-    navigate: (url: string) => ipcRenderer.invoke("browser:navigate", url),
-    back: () => ipcRenderer.invoke("browser:back"),
-    forward: () => ipcRenderer.invoke("browser:forward"),
-    reload: () => ipcRenderer.invoke("browser:reload"),
-    stop: () => ipcRenderer.invoke("browser:stop"),
+      ipcRenderer.invoke(CHANNELS.browser.setVisible, visible),
+    navigate: (url: string) => ipcRenderer.invoke(CHANNELS.browser.navigate, url),
+    back: () => ipcRenderer.invoke(CHANNELS.browser.back),
+    forward: () => ipcRenderer.invoke(CHANNELS.browser.forward),
+    reload: () => ipcRenderer.invoke(CHANNELS.browser.reload),
+    stop: () => ipcRenderer.invoke(CHANNELS.browser.stop),
     setSelectMode: (enabled: boolean) =>
-      ipcRenderer.invoke("browser:setSelectMode", enabled),
-    getNavState: () => ipcRenderer.invoke("browser:getNavState"),
+      ipcRenderer.invoke(CHANNELS.browser.setSelectMode, enabled),
+    getNavState: () => ipcRenderer.invoke(CHANNELS.browser.getNavState),
     /** Remove a browser capture PNG from userData/browser-captures. Pass the basename only. */
     deleteCapture: (captureName: string) =>
-      ipcRenderer.invoke("browser:deleteCapture", captureName),
+      ipcRenderer.invoke(CHANNELS.browser.deleteCapture, captureName),
     onNavState: (
       callback: (state: {
         url: string;
@@ -701,49 +702,49 @@ const api = {
       }) => void,
     ) => {
       const listener = (_: any, state: any) => callback(state);
-      ipcRenderer.on("browser:navState", listener);
-      return () => ipcRenderer.removeListener("browser:navState", listener);
+      ipcRenderer.on(CHANNELS.browser.navState, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.browser.navState, listener);
     },
     onSelectModeChanged: (callback: (data: { enabled: boolean }) => void) => {
       const listener = (_: any, data: any) => callback(data);
-      ipcRenderer.on("browser:selectModeChanged", listener);
+      ipcRenderer.on(CHANNELS.browser.selectModeChanged, listener);
       return () =>
-        ipcRenderer.removeListener("browser:selectModeChanged", listener);
+        ipcRenderer.removeListener(CHANNELS.browser.selectModeChanged, listener);
     },
     onSelection: (callback: (selection: any) => void) => {
       const listener = (_: any, selection: any) => callback(selection);
-      ipcRenderer.on("browser:selection", listener);
-      return () => ipcRenderer.removeListener("browser:selection", listener);
+      ipcRenderer.on(CHANNELS.browser.selection, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.browser.selection, listener);
     },
   },
 
   // Automation operations (scheduled jobs)
   automations: {
-    getAll: () => ipcRenderer.invoke("automations:getAll"),
-    getById: (id: string) => ipcRenderer.invoke("automations:getById", id),
+    getAll: () => ipcRenderer.invoke(CHANNELS.automations.getAll),
+    getById: (id: string) => ipcRenderer.invoke(CHANNELS.automations.getById, id),
     create: (accountId: string, input: unknown) =>
-      ipcRenderer.invoke("automations:create", accountId, input),
+      ipcRenderer.invoke(CHANNELS.automations.create, accountId, input),
     update: (id: string, input: unknown) =>
-      ipcRenderer.invoke("automations:update", id, input),
-    delete: (id: string) => ipcRenderer.invoke("automations:delete", id),
-    execute: (id: string) => ipcRenderer.invoke("automations:execute", id),
+      ipcRenderer.invoke(CHANNELS.automations.update, id, input),
+    delete: (id: string) => ipcRenderer.invoke(CHANNELS.automations.delete, id),
+    execute: (id: string) => ipcRenderer.invoke(CHANNELS.automations.execute, id),
     getRunHistory: (automationId: string, limit?: number) =>
-      ipcRenderer.invoke("automations:getRunHistory", automationId, limit),
-    getAvailableActions: () => ipcRenderer.invoke("automations:getAvailableActions"),
+      ipcRenderer.invoke(CHANNELS.automations.getRunHistory, automationId, limit),
+    getAvailableActions: () => ipcRenderer.invoke(CHANNELS.automations.getAvailableActions),
   },
 
   // Pulse operations (scheduled work runs)
   pulse: {
-    getAll: () => ipcRenderer.invoke("pulse:getAll"),
-    getById: (id: string) => ipcRenderer.invoke("pulse:getById", id),
+    getAll: () => ipcRenderer.invoke(CHANNELS.pulse.getAll),
+    getById: (id: string) => ipcRenderer.invoke(CHANNELS.pulse.getById, id),
     create: (accountId: string, input: unknown) =>
-      ipcRenderer.invoke("pulse:create", accountId, input),
+      ipcRenderer.invoke(CHANNELS.pulse.create, accountId, input),
     update: (id: string, input: unknown) =>
-      ipcRenderer.invoke("pulse:update", id, input),
-    delete: (id: string) => ipcRenderer.invoke("pulse:delete", id),
+      ipcRenderer.invoke(CHANNELS.pulse.update, id, input),
+    delete: (id: string) => ipcRenderer.invoke(CHANNELS.pulse.delete, id),
     toggle: (id: string, isActive: boolean) =>
-      ipcRenderer.invoke("pulse:toggle", id, isActive),
-    runNow: (id: string) => ipcRenderer.invoke("pulse:runNow", id),
+      ipcRenderer.invoke(CHANNELS.pulse.toggle, id, isActive),
+    runNow: (id: string) => ipcRenderer.invoke(CHANNELS.pulse.runNow, id),
   },
 };
 

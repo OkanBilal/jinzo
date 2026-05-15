@@ -1,5 +1,6 @@
 import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export interface WorkspaceDiff {
   id: string;
@@ -48,7 +49,7 @@ export const workspaceDiffsApi = baseApi.injectEndpoints({
       { workspaceId: string; limit?: number }
     >({
       query: ({ workspaceId, limit }) => ({
-        handler: "workspaceDiffs:getByWorkspace",
+        handler: CHANNELS.workspaceDiffs.getByWorkspace,
         args: [workspaceId, limit],
       }),
       transformResponse: (response: ServiceResponse<WorkspaceDiff[]>) => unwrap(response),

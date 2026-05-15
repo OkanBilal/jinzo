@@ -129,6 +129,7 @@ import {
   unregisterBrowserIpc,
   browserService,
 } from "./modules/browser";
+import { CHANNELS } from "../shared/ipc-kit/channels";
 import {
   registerSkillsMarketplaceIpc,
   unregisterSkillsMarketplaceIpc,
@@ -604,7 +605,7 @@ async function initializeApp() {
     pulseService.start();
 
     // Shell utilities
-    ipcMain.handle("shell:openExternal", async (_, url: string) => {
+    ipcMain.handle(CHANNELS.shell.openExternal, async (_, url: string) => {
       if (typeof url !== "string") return;
       let parsed: URL;
       try {
@@ -621,14 +622,14 @@ async function initializeApp() {
       }
       await shell.openExternal(url);
     });
-    ipcMain.handle("shell:openPath", async (_, filePath: string) => {
+    ipcMain.handle(CHANNELS.shell.openPath, async (_, filePath: string) => {
       if (typeof filePath !== "string" || !path.isAbsolute(filePath)) return;
       const normalized = path.normalize(filePath);
       if (normalized !== filePath) return;
       await shell.openPath(filePath);
     });
     ipcMain.handle(
-      "shell:openInApp",
+      CHANNELS.shell.openInApp,
       async (_, appId: string, filePath: string) => {
         if (process.platform !== "darwin") return;
         const known = KNOWN_APPS.find((a) => a.id === appId);
@@ -643,7 +644,7 @@ async function initializeApp() {
         );
       },
     );
-    ipcMain.handle("shell:getInstalledApps", async () => {
+    ipcMain.handle(CHANNELS.shell.getInstalledApps, async () => {
       if (process.platform !== "darwin") {
         return { success: true, data: [] };
       }
@@ -659,7 +660,7 @@ async function initializeApp() {
       }
     });
 
-    ipcMain.handle("shell:getAppsForFile", async (_, filePath: string) => {
+    ipcMain.handle(CHANNELS.shell.getAppsForFile, async (_, filePath: string) => {
       if (typeof filePath !== "string" || !path.isAbsolute(filePath)) {
         return { success: false, error: "Invalid path" };
       }
@@ -683,7 +684,7 @@ async function initializeApp() {
     });
 
     ipcMain.handle(
-      "shell:openFileWithBundle",
+      CHANNELS.shell.openFileWithBundle,
       async (_, filePath: string, bundleId: string) => {
         if (typeof filePath !== "string" || typeof bundleId !== "string") {
           return { success: false, error: "Invalid arguments" };
@@ -724,7 +725,7 @@ async function initializeApp() {
       },
     );
 
-    ipcMain.handle("app:setUnsavedChanges", (_, value: boolean) => {
+    ipcMain.handle(CHANNELS.app.setUnsavedChanges, (_, value: boolean) => {
       hasUnsavedChanges = value;
     });
 
@@ -819,7 +820,7 @@ async function initializeApp() {
     }
 
     // IPC: toggle menu bar icon visibility at runtime
-    ipcMain.handle("app:setMenuBarIconVisible", (_, visible: boolean) => {
+    ipcMain.handle(CHANNELS.app.setMenuBarIconVisible, (_, visible: boolean) => {
       if (visible) {
         createTray();
       } else {
@@ -905,14 +906,14 @@ async function cleanupApp() {
     try { browserService.destroy(); } catch { /* ignore */ }
     unregisterBrowserIpc();
     unregisterSkillsMarketplaceIpc();
-    ipcMain.removeHandler("shell:openExternal");
-    ipcMain.removeHandler("shell:openPath");
-    ipcMain.removeHandler("shell:openInApp");
-    ipcMain.removeHandler("shell:getInstalledApps");
-    ipcMain.removeHandler("shell:getAppsForFile");
-    ipcMain.removeHandler("shell:openFileWithBundle");
-    ipcMain.removeHandler("app:setUnsavedChanges");
-    ipcMain.removeHandler("app:setMenuBarIconVisible");
+    ipcMain.removeHandler(CHANNELS.shell.openExternal);
+    ipcMain.removeHandler(CHANNELS.shell.openPath);
+    ipcMain.removeHandler(CHANNELS.shell.openInApp);
+    ipcMain.removeHandler(CHANNELS.shell.getInstalledApps);
+    ipcMain.removeHandler(CHANNELS.shell.getAppsForFile);
+    ipcMain.removeHandler(CHANNELS.shell.openFileWithBundle);
+    ipcMain.removeHandler(CHANNELS.app.setUnsavedChanges);
+    ipcMain.removeHandler(CHANNELS.app.setMenuBarIconVisible);
 
     // Close database
     await closeDatabase();
@@ -1006,7 +1007,7 @@ app.on("before-quit", async (event) => {
       // Save & Quit — notify renderer to flush, then quit
       const win = BrowserWindow.getAllWindows()[0];
       if (win && !win.isDestroyed()) {
-        win.webContents.send("app:flushAndQuit");
+        win.webContents.send(CHANNELS.app.flushAndQuit);
         // Give renderer time to save
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }

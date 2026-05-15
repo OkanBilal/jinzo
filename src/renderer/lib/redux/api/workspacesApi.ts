@@ -1,5 +1,6 @@
 import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export interface WorkspaceMetadata {
   language?: string;
@@ -56,7 +57,7 @@ export const workspacesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getWorkspaces: builder.query<Workspace[], void>({
       query: () => ({
-        handler: "workspaces:getAll",
+        handler: CHANNELS.workspaces.getAll,
       }),
       transformResponse: (response: ServiceResponse<Workspace[]>) => unwrap(response),
       providesTags: ["Workspaces"],
@@ -64,7 +65,7 @@ export const workspacesApi = baseApi.injectEndpoints({
 
     getWorkspaceById: builder.query<Workspace, string>({
       query: (id) => ({
-        handler: "workspaces:getById",
+        handler: CHANNELS.workspaces.getById,
         args: [id],
       }),
       transformResponse: (response: ServiceResponse<Workspace>) => unwrap(response),
@@ -73,7 +74,7 @@ export const workspacesApi = baseApi.injectEndpoints({
 
     getWorkspacesByAccount: builder.query<Workspace[], string>({
       query: (accountId) => ({
-        handler: "workspaces:getByAccount",
+        handler: CHANNELS.workspaces.getByAccount,
         args: [accountId],
       }),
       transformResponse: (response: ServiceResponse<Workspace[]>) => unwrap(response),
@@ -85,7 +86,7 @@ export const workspacesApi = baseApi.injectEndpoints({
       { accountId: string; rootPath: string }
     >({
       query: ({ accountId, rootPath }) => ({
-        handler: "workspaces:getByRootPath",
+        handler: CHANNELS.workspaces.getByRootPath,
         args: [accountId, rootPath],
       }),
       transformResponse: (response: ServiceResponse<Workspace>) => unwrap(response),
@@ -94,7 +95,7 @@ export const workspacesApi = baseApi.injectEndpoints({
 
     createWorkspace: builder.mutation<string, CreateWorkspacePayload>({
       query: (payload) => ({
-        handler: "workspaces:create",
+        handler: CHANNELS.workspaces.create,
         args: [payload],
       }),
       transformResponse: (response: ServiceResponse<string>) => unwrap(response),
@@ -106,7 +107,7 @@ export const workspacesApi = baseApi.injectEndpoints({
       { id: string; payload: UpdateWorkspacePayload }
     >({
       query: ({ id, payload }) => ({
-        handler: "workspaces:update",
+        handler: CHANNELS.workspaces.update,
         args: [id, payload],
       }),
       transformResponse: (response: ServiceResponse<Workspace>) => unwrap(response),
@@ -118,7 +119,7 @@ export const workspacesApi = baseApi.injectEndpoints({
 
     deleteWorkspace: builder.mutation<void, string>({
       query: (id) => ({
-        handler: "workspaces:delete",
+        handler: CHANNELS.workspaces.delete,
         args: [id],
       }),
       invalidatesTags: ["Workspaces"],
@@ -126,7 +127,7 @@ export const workspacesApi = baseApi.injectEndpoints({
 
     archiveWorkspace: builder.mutation<Workspace, string>({
       query: (id) => ({
-        handler: "workspaces:archive",
+        handler: CHANNELS.workspaces.archive,
         args: [id],
       }),
       transformResponse: (response: ServiceResponse<Workspace>) => unwrap(response),
@@ -138,7 +139,7 @@ export const workspacesApi = baseApi.injectEndpoints({
 
     selectDirectory: builder.mutation<string | null, void>({
       query: () => ({
-        handler: "workspaces:selectDirectory",
+        handler: CHANNELS.workspaces.selectDirectory,
       }),
       transformResponse: (response: ServiceResponse<string | null>) => unwrap(response),
     }),

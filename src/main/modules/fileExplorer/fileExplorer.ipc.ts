@@ -1,5 +1,6 @@
 import { ipcMain } from "electron";
 import { fileExplorerService } from "./fileExplorer.service";
+import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import type {
   ReadDirectoryOptions,
   ReadFileTextOptions,
@@ -10,26 +11,15 @@ import type {
 // ─────────────────────────────────────────────────────────────
 // IPC Channel Names
 // ─────────────────────────────────────────────────────────────
-const CHANNELS = {
-  READ_DIRECTORY: "fileExplorer:readDirectory",
-  READ_DIRECTORY_SHALLOW: "fileExplorer:readDirectoryShallow",
-  GET_PATH_INFO: "fileExplorer:getPathInfo",
-  READ_FILE: "fileExplorer:readFile",
-  READ_FILE_TEXT: "fileExplorer:readFileText",
-  LIST_DIR: "fileExplorer:listDir",
-  SEARCH_FILES: "fileExplorer:searchFiles",
-} as const;
-
-// ─────────────────────────────────────────────────────────────
 // IPC Handlers
 // ─────────────────────────────────────────────────────────────
 export function registerFileExplorerIpc(): void {
-  ipcMain.handle(CHANNELS.READ_DIRECTORY, async (_, options: ReadDirectoryOptions) => {
+  ipcMain.handle(CHANNELS.fileExplorer.readDirectory, async (_, options: ReadDirectoryOptions) => {
     return fileExplorerService.readDirectory(options);
   });
 
   ipcMain.handle(
-    CHANNELS.READ_DIRECTORY_SHALLOW,
+    CHANNELS.fileExplorer.readDirectoryShallow,
     async (
       _,
       dirPath: string,
@@ -39,29 +29,35 @@ export function registerFileExplorerIpc(): void {
     }
   );
 
-  ipcMain.handle(CHANNELS.GET_PATH_INFO, async (_, targetPath: string) => {
+  ipcMain.handle(CHANNELS.fileExplorer.getPathInfo, async (_, targetPath: string) => {
     return fileExplorerService.getPathInfo(targetPath);
   });
 
-  ipcMain.handle(CHANNELS.READ_FILE, async (_, filePath: string) => {
+  ipcMain.handle(CHANNELS.fileExplorer.readFile, async (_, filePath: string) => {
     return fileExplorerService.readFile(filePath);
   });
 
-  ipcMain.handle(CHANNELS.READ_FILE_TEXT, async (_, options: ReadFileTextOptions) => {
+  ipcMain.handle(CHANNELS.fileExplorer.readFileText, async (_, options: ReadFileTextOptions) => {
     return fileExplorerService.readFileText(options);
   });
 
-  ipcMain.handle(CHANNELS.LIST_DIR, async (_, options: ListDirOptions) => {
+  ipcMain.handle(CHANNELS.fileExplorer.listDir, async (_, options: ListDirOptions) => {
     return fileExplorerService.listDir(options);
   });
 
-  ipcMain.handle(CHANNELS.SEARCH_FILES, async (_, options: SearchFilesOptions) => {
+  ipcMain.handle(CHANNELS.fileExplorer.searchFiles, async (_, options: SearchFilesOptions) => {
     return fileExplorerService.searchFiles(options);
   });
 }
 
 export function unregisterFileExplorerIpc(): void {
-  Object.values(CHANNELS).forEach((channel) => {
-    ipcMain.removeHandler(channel);
-  });
+  [
+    CHANNELS.fileExplorer.readDirectory,
+    CHANNELS.fileExplorer.readDirectoryShallow,
+    CHANNELS.fileExplorer.getPathInfo,
+    CHANNELS.fileExplorer.readFile,
+    CHANNELS.fileExplorer.readFileText,
+    CHANNELS.fileExplorer.listDir,
+    CHANNELS.fileExplorer.searchFiles,
+  ].forEach((channel) => ipcMain.removeHandler(channel));
 }

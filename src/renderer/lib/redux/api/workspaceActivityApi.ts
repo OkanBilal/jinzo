@@ -1,4 +1,5 @@
 import { baseApi } from "./baseApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export type ActivityType = "diff" | "review" | "finding" | "commit" | "pr";
 
@@ -29,7 +30,7 @@ export const workspaceActivityApi = baseApi.injectEndpoints({
       { workspaceId: string; limit?: number }
     >({
       query: ({ workspaceId, limit }) => ({
-        handler: "workspaceActivity:getByWorkspace",
+        handler: CHANNELS.workspaceActivity.getByWorkspace,
         args: [workspaceId, limit],
       }),
       transformResponse: (response: any) => response?.data ?? [],
@@ -44,7 +45,7 @@ export const workspaceActivityApi = baseApi.injectEndpoints({
       CreateWorkspaceActivityPayload
     >({
       query: (payload) => ({
-        handler: "workspaceActivity:create",
+        handler: CHANNELS.workspaceActivity.create,
         args: [payload],
       }),
       transformResponse: (response: any) => response?.data,
@@ -55,7 +56,7 @@ export const workspaceActivityApi = baseApi.injectEndpoints({
 
     deleteWorkspaceActivity: builder.mutation<void, { id: string; workspaceId: string }>({
       query: ({ id }) => ({
-        handler: "workspaceActivity:delete",
+        handler: CHANNELS.workspaceActivity.delete,
         args: [id],
       }),
       invalidatesTags: (_result, _error, { workspaceId }) => [

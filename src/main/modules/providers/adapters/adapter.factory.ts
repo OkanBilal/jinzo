@@ -5,10 +5,11 @@
 
 import type { ProviderResponse } from "../providers.dto";
 import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, CursorAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, CodexAccountInfo } from "../../../../shared/adapter.types";
-import { createCopilotAdapter } from "./copilot.adapter";
-import { createClaudeAdapter } from "./claude.adapter";
-import { createCodexAdapter } from "./codex.adapter";
-import { createCursorAdapter } from "./cursor.adapter";
+import { createClaudeDriver } from "./claude.driver";
+import { createCodexDriver } from "./codex.driver";
+import { createCopilotDriver } from "./copilot.driver";
+import { createCursorDriver } from "./cursor.driver";
+import { createWorkRunAdapter } from "./work-run-core";
 import { findCopilotCliPath } from "../providers.utils";
 import {
   PROVIDER_IDS,
@@ -123,7 +124,7 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
           config.binary = resolvedPath;
         }
       }
-      adapter = createCopilotAdapter(config);
+      adapter = createWorkRunAdapter(createCopilotDriver(config));
       break;
     }
 
@@ -132,7 +133,7 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
         ...(provider.config as ClaudeCodeAdapterConfig | null),
         defaultModel: provider.defaultModel ?? undefined,
       };
-      adapter = createClaudeAdapter(config);
+      adapter = createWorkRunAdapter(createClaudeDriver(config));
       break;
     }
 
@@ -141,7 +142,7 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
         ...(provider.config as CodexAdapterConfig | null),
         defaultModel: provider.defaultModel ?? undefined,
       };
-      adapter = createCodexAdapter(config);
+      adapter = createWorkRunAdapter(createCodexDriver(config));
       break;
     }
 
@@ -150,7 +151,7 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
         ...(provider.config as CursorAdapterConfig | null),
         defaultModel: provider.defaultModel ?? undefined,
       };
-      adapter = createCursorAdapter(config);
+      adapter = createWorkRunAdapter(createCursorDriver(config));
       break;
     }
 

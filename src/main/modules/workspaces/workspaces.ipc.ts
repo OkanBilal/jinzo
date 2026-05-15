@@ -2,59 +2,47 @@ import { ok } from "../../../shared/ipc-kit/service-response";
 import { ipcMain, dialog, BrowserWindow } from "electron";
 import { workspacesService } from "./workspaces.service";
 import type { CreateWorkspacePayload, UpdateWorkspacePayload } from "./workspaces.dto";
+import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Channel Names
 // ─────────────────────────────────────────────────────────────
-const CHANNELS = {
-  GET_ALL: "workspaces:getAll",
-  GET_BY_ID: "workspaces:getById",
-  GET_BY_ACCOUNT: "workspaces:getByAccount",
-  GET_BY_ROOT_PATH: "workspaces:getByRootPath",
-  CREATE: "workspaces:create",
-  UPDATE: "workspaces:update",
-  DELETE: "workspaces:delete",
-  ARCHIVE: "workspaces:archive",
-  SELECT_DIRECTORY: "workspaces:selectDirectory",
-} as const;
-
-// ─────────────────────────────────────────────────────────────
 // IPC Handlers
 // ─────────────────────────────────────────────────────────────
 export function registerWorkspacesIpc(): void {
-  ipcMain.handle(CHANNELS.GET_ALL, async () => {
+  ipcMain.handle(CHANNELS.workspaces.getAll, async () => {
     return workspacesService.getAll();
   });
 
-  ipcMain.handle(CHANNELS.GET_BY_ID, async (_, id: string) => {
+  ipcMain.handle(CHANNELS.workspaces.getById, async (_, id: string) => {
     return workspacesService.getById(id);
   });
 
-  ipcMain.handle(CHANNELS.GET_BY_ACCOUNT, async (_, accountId: string) => {
+  ipcMain.handle(CHANNELS.workspaces.getByAccount, async (_, accountId: string) => {
     return workspacesService.getByAccountId(accountId);
   });
 
-  ipcMain.handle(CHANNELS.GET_BY_ROOT_PATH, async (_, accountId: string, rootPath: string) => {
+  ipcMain.handle(CHANNELS.workspaces.getByRootPath, async (_, accountId: string, rootPath: string) => {
     return workspacesService.getByRootPath(accountId, rootPath);
   });
 
-  ipcMain.handle(CHANNELS.CREATE, async (_, payload: CreateWorkspacePayload) => {
+  ipcMain.handle(CHANNELS.workspaces.create, async (_, payload: CreateWorkspacePayload) => {
     return workspacesService.create(payload);
   });
 
-  ipcMain.handle(CHANNELS.UPDATE, async (_, id: string, payload: UpdateWorkspacePayload) => {
+  ipcMain.handle(CHANNELS.workspaces.update, async (_, id: string, payload: UpdateWorkspacePayload) => {
     return workspacesService.update(id, payload);
   });
 
-  ipcMain.handle(CHANNELS.DELETE, async (_, id: string) => {
+  ipcMain.handle(CHANNELS.workspaces.delete, async (_, id: string) => {
     return workspacesService.delete(id);
   });
 
-  ipcMain.handle(CHANNELS.ARCHIVE, async (_, id: string) => {
+  ipcMain.handle(CHANNELS.workspaces.archive, async (_, id: string) => {
     return workspacesService.archive(id);
   });
 
-ipcMain.handle(CHANNELS.SELECT_DIRECTORY, async () => {
+ipcMain.handle(CHANNELS.workspaces.selectDirectory, async () => {
   const window = BrowserWindow.getFocusedWindow();
 
   const result = window
@@ -78,7 +66,15 @@ ipcMain.handle(CHANNELS.SELECT_DIRECTORY, async () => {
 }
 
 export function unregisterWorkspacesIpc(): void {
-  Object.values(CHANNELS).forEach((channel) => {
-    ipcMain.removeHandler(channel);
-  });
+  [
+    CHANNELS.workspaces.getAll,
+    CHANNELS.workspaces.getById,
+    CHANNELS.workspaces.getByAccount,
+    CHANNELS.workspaces.getByRootPath,
+    CHANNELS.workspaces.create,
+    CHANNELS.workspaces.update,
+    CHANNELS.workspaces.delete,
+    CHANNELS.workspaces.archive,
+    CHANNELS.workspaces.selectDirectory,
+  ].forEach((channel) => ipcMain.removeHandler(channel));
 }

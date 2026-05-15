@@ -481,6 +481,96 @@ export interface WorkRunAdapter {
   uninstallPlugin?(pluginId: string): Promise<void>;
 }
 
+// ─────────────────────────────────────────────────────────────
+// ProviderDriver — the SDK-specific seam behind WorkRunCore
+//
+// Each provider (cursor, copilot, claude, codex) ships a `ProviderDriver`
+// that knows its SDK's API. `createWorkRunAdapter(driver)` wraps it in the
+// shared lifecycle (status emission, artifact collection, AbortSignal
+// propagation, sessionId persistence, cleanup) and returns a WorkRunAdapter.
+//
+// The Driver owns:
+//   - Acquiring sessions (new / resume / fork / review) and building the
+//     prompt that goes with them.
+//   - Mapping the SDK's streaming messages into WorkRunEvents and pushing
+//     them via onEvent.
+//   - Reporting the final outcome (status + stopReason + usage).
+//
+// Core owns:
+//   - The `runId → session` map for abort lookup.
+//   - Wrapping onEvent to collect artifacts and inject timestamps.
+//   - Persisting sessionId to runsRepo when acquisition reports it.
+//   - Emitting `running` / final status events around the Driver's work.
+//   - Per-run cleanup (driver.cleanup, cancelPendingRequests).
+// ─────────────────────────────────────────────────────────────
+
+/** Outcome the Driver returns from executePrompt. */
+export interface DriverOutcome {
+  status: "succeeded" | "failed" | "canceled";
+  stopReason?: string;
+  usage?: WorkRunUsage;
+  /** Error message when status is "failed" or "canceled" with a reason. */
+  summary?: string;
+}
+
+/**
+ * Result of a session-acquisition method. Driver returns the opaque session
+ * (Core stores it for abort lookup), the prompt to send, and optionally the
+ * sessionId so Core can persist it to runsRepo.
+ */
+export interface AcquiredSession {
+  /** Driver-opaque session handle. Core stores and forwards on abort/cleanup. */
+  session: unknown;
+  /** The full prompt string to send to the SDK. */
+  prompt: string;
+  /** Provider-assigned session ID; Core persists to runsRepo when present. */
+  sessionId?: string;
+}
+
+export interface ProviderDriver {
+  /** Create a new session and build the initial prompt. */
+  createSession(request: WorkRunRequest): Promise<AcquiredSession>;
+
+  /** Resume an existing session by id and build the follow-up prompt. */
+  resumeSession?(request: WorkRunContinueRequest): Promise<AcquiredSession>;
+
+  /** Fork an existing session into a new run and build the prompt. */
+  forkSession?(request: WorkRunForkRequest): Promise<AcquiredSession>;
+
+  /** Acquire a session for a native code review. */
+  reviewSession?(request: WorkRunReviewRequest): Promise<AcquiredSession>;
+
+  /**
+   * Run the prompt against the session, pushing WorkRunEvents to onEvent as
+   * the SDK streams. Honour `signal` — Core fires it on abortRun.
+   * Resolve with the final outcome.
+   */
+  executePrompt(
+    session: unknown,
+    prompt: string,
+    onEvent: WorkRunEventHandler,
+    signal: AbortSignal,
+  ): Promise<DriverOutcome>;
+
+  /** Tear down per-run state in the SDK (file handles, timers, etc.). */
+  cleanup?(session: unknown): Promise<void>;
+
+  // ── Pass-through methods (Core delegates 1:1 to the matching WorkRunAdapter method) ──
+  shutdown?(): Promise<void>;
+  canResumeSession?(runId: string): Promise<boolean>;
+  deleteSession?(runId: string): Promise<void>;
+  listModels?(): Promise<ModelInfo[]>;
+  listCommands?(workspacePath?: string): Promise<CommandInfo[]>;
+  listSkills?(workspacePath?: string): Promise<SkillInfo[]>;
+  generateTitle?(goal: string, context?: WorkRunContextItem[]): Promise<string>;
+  getRateLimits?(): Promise<RateLimitInfo | null>;
+  getAccountInfo?(): Promise<CodexAccountInfo>;
+  listPlugins?(): Promise<PluginListResponse>;
+  readPlugin?(pluginName: string, marketplacePath: string): Promise<PluginDetail>;
+  installPlugin?(pluginId: string): Promise<void>;
+  uninstallPlugin?(pluginId: string): Promise<void>;
+}
+
 /**
  * Rate limit information from a provider
  */

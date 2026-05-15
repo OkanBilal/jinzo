@@ -1,5 +1,6 @@
 import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export type RunStatus =
   | "queued"
@@ -155,7 +156,7 @@ export const runsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getRuns: builder.query<Run[], number | void>({
       query: (limit) => ({
-        handler: "runs:getAll",
+        handler: CHANNELS.runs.getAll,
         args: limit ? [limit] : [],
       }),
       transformResponse: (response: ServiceResponse<Run[]>) => unwrap(response),
@@ -164,7 +165,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     getRunById: builder.query<Run, string>({
       query: (id) => ({
-        handler: "runs:getById",
+        handler: CHANNELS.runs.getById,
         args: [id],
       }),
       transformResponse: (response: ServiceResponse<Run>) => unwrap(response),
@@ -176,7 +177,7 @@ export const runsApi = baseApi.injectEndpoints({
       { accountId: string; limit?: number }
     >({
       query: ({ accountId, limit }) => ({
-        handler: "runs:getByAccount",
+        handler: CHANNELS.runs.getByAccount,
         args: [accountId, limit],
       }),
       transformResponse: (response: ServiceResponse<Run[]>) => unwrap(response),
@@ -188,7 +189,7 @@ export const runsApi = baseApi.injectEndpoints({
       { workspaceId: string; limit?: number }
     >({
       query: ({ workspaceId, limit }) => ({
-        handler: "runs:getByWorkspace",
+        handler: CHANNELS.runs.getByWorkspace,
         args: [workspaceId, limit],
       }),
       transformResponse: (response: ServiceResponse<Run[]>) => unwrap(response),
@@ -200,7 +201,7 @@ export const runsApi = baseApi.injectEndpoints({
       { accountId: string; status: RunStatus }
     >({
       query: ({ accountId, status }) => ({
-        handler: "runs:getByStatus",
+        handler: CHANNELS.runs.getByStatus,
         args: [accountId, status],
       }),
       transformResponse: (response: ServiceResponse<Run[]>) => unwrap(response),
@@ -209,7 +210,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     createRun: builder.mutation<string, CreateRunPayload>({
       query: (payload) => ({
-        handler: "runs:create",
+        handler: CHANNELS.runs.create,
         args: [payload],
       }),
       transformResponse: (response: ServiceResponse<string>) => unwrap(response),
@@ -219,7 +220,7 @@ export const runsApi = baseApi.injectEndpoints({
     updateRun: builder.mutation<Run, { id: string; payload: UpdateRunPayload }>(
       {
         query: ({ id, payload }) => ({
-          handler: "runs:update",
+          handler: CHANNELS.runs.update,
           args: [id, payload],
         }),
         transformResponse: (response: ServiceResponse<Run>) => unwrap(response),
@@ -232,7 +233,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     startRun: builder.mutation<Run, string>({
       query: (id) => ({
-        handler: "runs:start",
+        handler: CHANNELS.runs.start,
         args: [id],
       }),
       transformResponse: (response: ServiceResponse<Run>) => unwrap(response),
@@ -241,7 +242,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     completeRun: builder.mutation<Run, string>({
       query: (id) => ({
-        handler: "runs:complete",
+        handler: CHANNELS.runs.complete,
         args: [id],
       }),
       transformResponse: (response: ServiceResponse<Run>) => unwrap(response),
@@ -250,7 +251,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     failRun: builder.mutation<Run, { id: string; error: string }>({
       query: ({ id, error }) => ({
-        handler: "runs:fail",
+        handler: CHANNELS.runs.fail,
         args: [id, error],
       }),
       transformResponse: (response: ServiceResponse<Run>) => unwrap(response),
@@ -262,7 +263,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     cancelRun: builder.mutation<Run, string>({
       query: (id) => ({
-        handler: "runs:cancel",
+        handler: CHANNELS.runs.cancel,
         args: [id],
       }),
       transformResponse: (response: ServiceResponse<Run>) => unwrap(response),
@@ -271,7 +272,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     abortRun: builder.mutation<void, string>({
       query: (runId) => ({
-        handler: "runs:abort",
+        handler: CHANNELS.runs.abort,
         args: [runId],
       }),
       invalidatesTags: (_result, _error, runId) => ["Runs", { type: "Runs", id: runId }],
@@ -279,7 +280,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     deleteRun: builder.mutation<void, string>({
       query: (id) => ({
-        handler: "runs:delete",
+        handler: CHANNELS.runs.delete,
         args: [id],
       }),
       invalidatesTags: ["Runs"],
@@ -287,7 +288,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     archiveRun: builder.mutation<Run, string>({
       query: (id) => ({
-        handler: "runs:archive",
+        handler: CHANNELS.runs.archive,
         args: [id],
       }),
       transformResponse: (response: ServiceResponse<Run>) => unwrap(response),
@@ -296,7 +297,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     getRunContext: builder.query<RunContext[], string>({
       query: (runId) => ({
-        handler: "runContext:getByRun",
+        handler: CHANNELS.runContext.getByRun,
         args: [runId],
       }),
       transformResponse: (response: ServiceResponse<RunContext[]>) => unwrap(response),
@@ -307,7 +308,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     addRunContext: builder.mutation<number, CreateRunContextPayload>({
       query: (payload) => ({
-        handler: "runContext:add",
+        handler: CHANNELS.runContext.add,
         args: [payload],
       }),
       transformResponse: (response: ServiceResponse<number>) => unwrap(response),
@@ -319,7 +320,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     removeRunContext: builder.mutation<void, { id: number; runId: string }>({
       query: ({ id }) => ({
-        handler: "runContext:remove",
+        handler: CHANNELS.runContext.remove,
         args: [id],
       }),
       invalidatesTags: (_result, _error, { runId }) => [
@@ -330,7 +331,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     getRunArtifacts: builder.query<RunArtifact[], string>({
       query: (runId) => ({
-        handler: "runArtifacts:getByRun",
+        handler: CHANNELS.runArtifacts.getByRun,
         args: [runId],
       }),
       transformResponse: (response: ServiceResponse<RunArtifact[]>) => unwrap(response),
@@ -341,7 +342,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     addRunArtifact: builder.mutation<number, CreateRunArtifactPayload>({
       query: (payload) => ({
-        handler: "runArtifacts:add",
+        handler: CHANNELS.runArtifacts.add,
         args: [payload],
       }),
       transformResponse: (response: ServiceResponse<number>) => unwrap(response),
@@ -353,7 +354,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     removeRunArtifact: builder.mutation<void, { id: number; runId: string }>({
       query: ({ id }) => ({
-        handler: "runArtifacts:remove",
+        handler: CHANNELS.runArtifacts.remove,
         args: [id],
       }),
       invalidatesTags: (_result, _error, { runId }) => [
@@ -385,7 +386,7 @@ export const runsApi = baseApi.injectEndpoints({
       }
     >({
       query: (payload) => ({
-        handler: "runs:executeReview",
+        handler: CHANNELS.runs.executeReview,
         args: [payload],
       }),
       transformResponse: (response: ServiceResponse<{ runId: string }>) => unwrap(response),
@@ -394,7 +395,7 @@ export const runsApi = baseApi.injectEndpoints({
 
     getRunTurns: builder.query<RunTurn[], string>({
       query: (runId) => ({
-        handler: "runTurns:getByRun",
+        handler: CHANNELS.runTurns.getByRun,
         args: [runId],
       }),
       transformResponse: (response: ServiceResponse<RunTurn[]>) => unwrap(response),

@@ -1,18 +1,11 @@
 import { ipcMain } from "electron";
 import { workspaceResourcesService } from "./workspaceResources.service";
 import type { AddResourcePayload, RemoveResourcePayload } from "./workspaceResources.dto";
+import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Channel Constants
 // ─────────────────────────────────────────────────────────────
-
-const IPC_CHANNELS = {
-  GET_BY_PROJECT: "projectResources:getByProject",
-  GET_AVAILABLE: "projectResources:getAvailable",
-  ADD_RESOURCE: "projectResources:add",
-  REMOVE_RESOURCE: "projectResources:remove",
-  GET_ISSUES: "projectResources:getIssues",
-} as const;
 
 // ─────────────────────────────────────────────────────────────
 // Register Handlers
@@ -20,35 +13,35 @@ const IPC_CHANNELS = {
 
 export function registerWorkspaceResourcesHandlers(): void {
   ipcMain.handle(
-    IPC_CHANNELS.GET_BY_PROJECT,
+    CHANNELS.projectResources.getByProject,
     async (_event, projectId: string) => {
       return workspaceResourcesService.getByProject(projectId);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.GET_AVAILABLE,
+    CHANNELS.projectResources.getAvailable,
     async (_event, projectId: string) => {
       return workspaceResourcesService.getAvailableResources(projectId);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.ADD_RESOURCE,
+    CHANNELS.projectResources.add,
     async (_event, payload: AddResourcePayload) => {
       return workspaceResourcesService.addResource(payload.projectId, payload.resourceId);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.REMOVE_RESOURCE,
+    CHANNELS.projectResources.remove,
     async (_event, payload: RemoveResourcePayload) => {
       return workspaceResourcesService.removeResource(payload.projectId, payload.resourceId);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.GET_ISSUES,
+    CHANNELS.projectResources.getIssues,
     async (_event, projectId: string) => {
       return workspaceResourcesService.getIssuesByProject(projectId);
     }
@@ -57,9 +50,9 @@ export function registerWorkspaceResourcesHandlers(): void {
 }
 
 export function unregisterWorkspaceResourcesHandlers(): void {
-  ipcMain.removeHandler(IPC_CHANNELS.GET_BY_PROJECT);
-  ipcMain.removeHandler(IPC_CHANNELS.GET_AVAILABLE);
-  ipcMain.removeHandler(IPC_CHANNELS.ADD_RESOURCE);
-  ipcMain.removeHandler(IPC_CHANNELS.REMOVE_RESOURCE);
-  ipcMain.removeHandler(IPC_CHANNELS.GET_ISSUES);
+  ipcMain.removeHandler(CHANNELS.projectResources.getByProject);
+  ipcMain.removeHandler(CHANNELS.projectResources.getAvailable);
+  ipcMain.removeHandler(CHANNELS.projectResources.add);
+  ipcMain.removeHandler(CHANNELS.projectResources.remove);
+  ipcMain.removeHandler(CHANNELS.projectResources.getIssues);
 }

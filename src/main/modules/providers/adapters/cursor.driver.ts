@@ -1,6 +1,22 @@
 // ─────────────────────────────────────────────────────────────
-// Cursor ACP Adapter
-// Implements WorkRunAdapter using `cursor acp` JSON-RPC 2.0 over stdio
+// Cursor ProviderDriver
+//
+// SDK-specific seam for Cursor. Speaks ACP (JSON-RPC 2.0 over stdio) to a
+// `cursor agent acp` subprocess. Wrapped by `createWorkRunAdapter()` in
+// work-run-core.ts to expose the WorkRunAdapter interface.
+//
+// What this file owns:
+//   - The ACP subprocess (CursorAcpServer) — single shared server.
+//   - MainsMcpStdioServer bridge — single shared server.
+//   - Per-run streaming buffers (on the Session object).
+//   - ACP session/update → WorkRunEvent mapping (mapNotification, normalizeToolCall).
+//   - Server-request handlers for permission approval & cursor extensions.
+//   - SDK-shape concerns: session/new, session/load, session/prompt, session/cancel, model/list.
+//
+// What lives in Core:
+//   - runId → session map for abort dispatch
+//   - status emission, artifact collection, sessionId persistence
+//   - cleanup ordering, cancelPendingRequests
 // ─────────────────────────────────────────────────────────────
 
 import { spawn, type ChildProcess } from "node:child_process";
@@ -8,25 +24,23 @@ import os from "node:os";
 import path from "node:path";
 import { findCursorBinaryPath } from "../providers.utils";
 import type {
-  WorkRunAdapter,
-  WorkRunRequest,
-  WorkRunContinueRequest,
-  WorkRunResult,
-  WorkRunUsage,
-  WorkRunEventHandler,
-  WorkRunEvent,
+  AcquiredSession,
   CursorAdapterConfig,
+  DriverOutcome,
   ModelInfo,
+  ProviderDriver,
+  WorkRunContextItem,
+  WorkRunContinueRequest,
+  WorkRunEvent,
+  WorkRunEventHandler,
+  WorkRunRequest,
+  WorkRunUsage,
 } from "../../../../shared/adapter.types";
-import {
-  cancelPendingRequests,
-  requestToolApproval,
-} from "../../runs/user-input-broker";
+import { requestToolApproval } from "../../runs/user-input-broker";
 import { runsRepo } from "../../runs/runs.repo";
 import {
   createLogger,
   appendPromptSections,
-  emitUserPromptArtifact,
   saveAttachments,
   formatContextSection,
 } from "./adapter.shared";
@@ -34,7 +48,7 @@ import { MainsMcpStdioServer } from "./mains-mcp-server";
 import type { MainsToolContext } from "./mains-tools.core";
 
 // ─────────────────────────────────────────────────────────────
-// JSON-RPC Types
+// JSON-RPC types
 // ─────────────────────────────────────────────────────────────
 
 interface JsonRpcRequest {
@@ -70,28 +84,21 @@ function isResponse(msg: unknown): msg is JsonRpcResponse {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Active run state
+// Per-run session state (handed back to Core as the opaque `session`)
 // ─────────────────────────────────────────────────────────────
 
-interface RunState {
-  sessionId: string | null;
-  aborted: boolean;
+interface CursorSession {
+  runId: string;
+  sessionId: string;
   agentMessageBuffer: string;
-  /** Accumulated Cursor agent_thought_chunk text — streamed ephemerally only (not persisted). */
+  /** Streamed ephemerally, never persisted. */
   agentThoughtBuffer: string;
-  currentStreamId: string | null;
-  pendingFlush: WorkRunEvent[];
 }
 
-const activeRuns = new Map<string, RunState>();
-
-// Session ID mapping: runId → cursor sessionId (for resume)
-const sessionIdMap = new Map<string, string>();
-
-const { info: logInfo, error: logError, warn: logWarn } = createLogger("[CursorAdapter]");
+const { info: logInfo, error: logError, warn: logWarn } = createLogger("[CursorDriver]");
 
 // ─────────────────────────────────────────────────────────────
-// ACP Server Process Manager
+// ACP server process manager
 // ─────────────────────────────────────────────────────────────
 
 interface PendingRequest {
@@ -105,7 +112,9 @@ class CursorAcpServer {
   private nextId = 1;
   private pendingRequests = new Map<number | string, PendingRequest>();
   private notificationHandler: ((method: string, params: unknown) => void) | null = null;
-  private serverRequestHandler: ((id: number | string, method: string, params: unknown) => void) | null = null;
+  private serverRequestHandler:
+    | ((id: number | string, method: string, params: unknown) => void)
+    | null = null;
   private onClose: (() => void) | null = null;
   private stderrBuffer = "";
   private jsonBuffer = "";
@@ -131,7 +140,6 @@ class CursorAcpServer {
     this.child.stdout.on("data", (chunk: Buffer) => {
       this.jsonBuffer += chunk.toString();
       this.drainJsonBuffer();
-      // Guard: cap unbounded buffer growth on malformed output.
       if (this.jsonBuffer.length > 32 * 1024 * 1024) {
         logError(
           `jsonBuffer exceeded 32MB (${this.jsonBuffer.length} bytes), resetting`,
@@ -149,10 +157,14 @@ class CursorAcpServer {
 
     this.child.on("close", (code, signal) => {
       const tail = this.stderrBuffer.trim();
-      logInfo(`ACP process exited code=${code} signal=${signal ?? "none"}${tail ? ` stderr:\n${tail}` : " (no stderr)"}`);
+      logInfo(
+        `ACP process exited code=${code} signal=${signal ?? "none"}${tail ? ` stderr:\n${tail}` : " (no stderr)"}`,
+      );
       for (const [, pending] of this.pendingRequests) {
         clearTimeout(pending.timer);
-        pending.reject(new Error(`ACP server exited (code=${code}, signal=${signal ?? "none"})`));
+        pending.reject(
+          new Error(`ACP server exited (code=${code}, signal=${signal ?? "none"})`),
+        );
       }
       this.pendingRequests.clear();
       this.cleanup();
@@ -169,7 +181,9 @@ class CursorAcpServer {
     this.notificationHandler = handler;
   }
 
-  setServerRequestHandler(handler: (id: number | string, method: string, params: unknown) => void): void {
+  setServerRequestHandler(
+    handler: (id: number | string, method: string, params: unknown) => void,
+  ): void {
     this.serverRequestHandler = handler;
   }
 
@@ -183,7 +197,12 @@ class CursorAcpServer {
     }
 
     const reqId = this.nextId++;
-    const message: JsonRpcRequest = { jsonrpc: "2.0", id: reqId, method, ...(params !== undefined ? { params } : {}) };
+    const message: JsonRpcRequest = {
+      jsonrpc: "2.0",
+      id: reqId,
+      method,
+      ...(params !== undefined ? { params } : {}),
+    };
 
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -205,7 +224,11 @@ class CursorAcpServer {
   }
 
   sendNotification(method: string, params?: unknown): void {
-    this.writeMessage({ jsonrpc: "2.0", method, ...(params !== undefined ? { params } : {}) });
+    this.writeMessage({
+      jsonrpc: "2.0",
+      method,
+      ...(params !== undefined ? { params } : {}),
+    });
   }
 
   get isRunning(): boolean {
@@ -226,10 +249,18 @@ class CursorAcpServer {
 
     try {
       child.stdin?.end();
-      try { child.kill("SIGTERM"); } catch { /* already exited */ }
+      try {
+        child.kill("SIGTERM");
+      } catch {
+        /* already exited */
+      }
       await new Promise<void>((resolve) => {
         const killTimer = setTimeout(() => {
-          try { child.kill("SIGKILL"); } catch { /* already exited */ }
+          try {
+            child.kill("SIGKILL");
+          } catch {
+            /* already exited */
+          }
           resolve();
         }, 500);
         child.on("close", () => {
@@ -264,7 +295,9 @@ class CursorAcpServer {
         this.pendingRequests.delete(parsed.id);
         clearTimeout(pending.timer);
         if (parsed.error) {
-          pending.reject(new Error(`${parsed.error.message} (code: ${parsed.error.code})`));
+          pending.reject(
+            new Error(`${parsed.error.message} (code: ${parsed.error.code})`),
+          );
         } else {
           pending.resolve(parsed.result);
         }
@@ -276,9 +309,6 @@ class CursorAcpServer {
     }
   }
 
-  /**
-   * Drain the JSON buffer: extract complete JSON objects using brace-depth counting.
-   */
   private drainJsonBuffer(): void {
     while (this.jsonBuffer.length > 0) {
       const trimStart = this.jsonBuffer.search(/\S/);
@@ -348,12 +378,43 @@ class CursorAcpServer {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Adapter factory
+// Driver factory
 // ─────────────────────────────────────────────────────────────
 
-export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter {
+export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver {
   let acpServer: CursorAcpServer | null = null;
   let mcpServer: MainsMcpStdioServer | null = null;
+
+  // Cross-run memos
+  const sessionIdMap = new Map<string, string>(); // runId → cursor sessionId
+  const usageAccumulator = new Map<
+    string,
+    { inputTokens: number; outputTokens: number; numTurns: number; model: string }
+  >();
+
+  function flushUsage(runId: string): WorkRunUsage | undefined {
+    const acc = usageAccumulator.get(runId);
+    usageAccumulator.delete(runId);
+    if (!acc || (acc.inputTokens === 0 && acc.outputTokens === 0)) {
+      return undefined;
+    }
+    return {
+      inputTokens: acc.inputTokens,
+      outputTokens: acc.outputTokens,
+      numTurns: acc.numTurns,
+      model: acc.model || undefined,
+    };
+  }
+
+  function findCursorBinary(): string {
+    if (config.binary) return config.binary;
+    const resolved = findCursorBinaryPath();
+    if (resolved) return resolved;
+    throw new Error(
+      "Cursor Agent CLI not found. Install it with: curl https://cursor.com/install -fsS | bash\n" +
+        "Or set config.binary to the full path of the `agent` executable.",
+    );
+  }
 
   /**
    * Set up the MCP server (bridge + config file).
@@ -371,51 +432,6 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
     return mcpServer;
   }
 
-  // Usage accumulation per run
-  const usageAccumulator = new Map<string, {
-    inputTokens: number;
-    outputTokens: number;
-    numTurns: number;
-    model: string;
-  }>();
-
-
-  function flushUsage(runId: string): WorkRunUsage | undefined {
-    const acc = usageAccumulator.get(runId);
-    usageAccumulator.delete(runId);
-    if (!acc || (acc.inputTokens === 0 && acc.outputTokens === 0)) {
-      return undefined;
-    }
-    return {
-      inputTokens: acc.inputTokens,
-      outputTokens: acc.outputTokens,
-      numTurns: acc.numTurns,
-      model: acc.model || undefined,
-    };
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // Find Cursor Agent CLI binary
-  // The Cursor CLI binary is called "agent" (not "cursor").
-  // It is installed via: curl https://cursor.com/install -fsS | bash
-  // ─────────────────────────────────────────────────────────────
-
-  function findCursorBinary(): string {
-    if (config.binary) return config.binary;
-
-    const resolved = findCursorBinaryPath();
-    if (resolved) return resolved;
-
-    throw new Error(
-      "Cursor Agent CLI not found. Install it with: curl https://cursor.com/install -fsS | bash\n" +
-      "Or set config.binary to the full path of the `agent` executable."
-    );
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // Ensure ACP server is running
-  // ─────────────────────────────────────────────────────────────
-
   async function ensureServer(): Promise<CursorAcpServer> {
     if (acpServer?.isRunning) return acpServer;
 
@@ -424,7 +440,6 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
 
     const server = new CursorAcpServer();
     const env: Record<string, string> = {};
-
     env.HOME = os.homedir();
 
     const extraPaths = [
@@ -450,14 +465,10 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
       }
     });
 
-    // ACP handshake: initialize → initialized → authenticate
-    const initResult = await server.sendRequest("initialize", {
+    // ACP handshake
+    const initResult = (await server.sendRequest("initialize", {
       protocolVersion: 1,
-      clientInfo: {
-        name: "mains",
-        title: "Mains Desktop",
-        version: "1.0.0",
-      },
+      clientInfo: { name: "mains", title: "Mains Desktop", version: "1.0.0" },
       clientCapabilities: {
         cursorExtensions: {
           askQuestion: true,
@@ -467,10 +478,9 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
           generateImage: true,
         },
       },
-    }) as Record<string, unknown>;
+    })) as Record<string, unknown>;
     server.sendNotification("initialized");
 
-    // Authenticate using the first available auth method
     const authMethods = initResult?.authMethods as Array<{ id: string }> | undefined;
     if (authMethods && authMethods.length > 0) {
       const methodId = authMethods[0].id;
@@ -486,11 +496,6 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
   // Event mapping: ACP session/update notifications → WorkRunEvent
   // ─────────────────────────────────────────────────────────────
 
-  /**
-   * Normalize ACP tool_call data into the format the UI expects.
-   * ACP sends minimal rawInput (often empty {}), with context in title/locations.
-   * The UI renderers expect specific fields like file_path, command, pattern, etc.
-   */
   function normalizeToolCall(
     kind: string | undefined,
     title: string | undefined,
@@ -500,8 +505,6 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
     const input: Record<string, unknown> = { ...rawInput };
     const firstPath = locations?.[0]?.path;
 
-    // ACP provides very little in rawInput (usually empty {}).
-    // Always set _title so the UI can fall back to it when specific fields are missing.
     if (title) input._title = title;
 
     switch (kind) {
@@ -553,7 +556,6 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
       }
       default: {
         if (firstPath) input.file_path = firstPath;
-        // Clean up MCP tool names: "mains-CommitChanges: CommitChanges" → "CommitChanges"
         let name = title ?? kind ?? "Tool";
         const mcpMatch = name.match(/^mains[-_](\w+)(?::\s*\w+)?$/i);
         if (mcpMatch) {
@@ -565,19 +567,29 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
     }
   }
 
-  function mapNotification(method: string, params: unknown, runId: string): WorkRunEvent[] {
+  function mapNotification(
+    method: string,
+    params: unknown,
+    cs: CursorSession,
+  ): WorkRunEvent[] {
     const ts = Date.now();
     const events: WorkRunEvent[] = [];
     const p = params as Record<string, unknown> | undefined;
 
-    // ── Cursor extension notifications (fire-and-forget) ──
-
     if (method === "cursor/update_todos") {
-      const todos = p?.todos as Array<{ id: string; content: string; status: string }> | undefined;
-      const merge = p?.merge as boolean ?? false;
+      const todos = p?.todos as
+        | Array<{ id: string; content: string; status: string }>
+        | undefined;
+      const merge = (p?.merge as boolean) ?? false;
       if (todos && todos.length > 0) {
         const statusIcon = (s: string) =>
-          s === "completed" ? "\u2705" : s === "in_progress" ? "\u23f3" : s === "cancelled" ? "\u274c" : "\u2b1c";
+          s === "completed"
+            ? "✅"
+            : s === "in_progress"
+              ? "⏳"
+              : s === "cancelled"
+                ? "❌"
+                : "⬜";
         const todosText = todos
           .map((t) => `${statusIcon(t.status)} ${t.content}`)
           .join("\n");
@@ -600,16 +612,17 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
     }
 
     if (method === "cursor/task") {
-      const description = p?.description as string ?? "Subagent task";
+      const description = (p?.description as string) ?? "Subagent task";
       const prompt = p?.prompt as string | undefined;
       const subagentType = p?.subagentType as string | { custom: string } | undefined;
       const model = p?.model as string | undefined;
       const agentId = p?.agentId as string | undefined;
       const durationMs = p?.durationMs as number | undefined;
 
-      const typeLabel = typeof subagentType === "object" && subagentType !== null
-        ? (subagentType as { custom: string }).custom
-        : (subagentType as string) ?? "unspecified";
+      const typeLabel =
+        typeof subagentType === "object" && subagentType !== null
+          ? (subagentType as { custom: string }).custom
+          : ((subagentType as string) ?? "unspecified");
       const durationSuffix = durationMs ? ` (${(durationMs / 1000).toFixed(1)}s)` : "";
 
       events.push({
@@ -631,7 +644,7 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
     }
 
     if (method === "cursor/generate_image") {
-      const description = p?.description as string ?? "Generated image";
+      const description = (p?.description as string) ?? "Generated image";
       const filePath = p?.filePath as string | undefined;
       const referenceImagePaths = p?.referenceImagePaths as string[] | undefined;
 
@@ -650,7 +663,6 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
     }
 
     if (method !== "session/update") {
-      // Ignore other non-session notifications silently
       return events;
     }
 
@@ -664,18 +676,15 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
         const content = update.content as Record<string, unknown> | undefined;
         const text = content?.text as string | undefined;
         if (text) {
-          const runState = activeRuns.get(runId);
-          if (runState) {
-            runState.agentMessageBuffer += text;
-            events.push({
-              type: "artifact",
-              kind: "report",
-              content: runState.agentMessageBuffer,
-              metadata: { source: "agent_message_streaming" },
-              ephemeral: true,
-              streamId: `cursor-msg-${runId}`,
-            });
-          }
+          cs.agentMessageBuffer += text;
+          events.push({
+            type: "artifact",
+            kind: "report",
+            content: cs.agentMessageBuffer,
+            metadata: { source: "agent_message_streaming" },
+            ephemeral: true,
+            streamId: `cursor-msg-${cs.runId}`,
+          });
         }
         break;
       }
@@ -684,33 +693,29 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
         const content = update.content as Record<string, unknown> | undefined;
         const text = content?.text as string | undefined;
         if (text) {
-          const runState = activeRuns.get(runId);
-          if (runState) {
-            runState.agentThoughtBuffer += text;
-            events.push({
-              type: "artifact",
-              kind: "report",
-              content: runState.agentThoughtBuffer,
-              metadata: { source: "agent_thought_streaming" },
-              ephemeral: true,
-              streamId: `cursor-think-${runId}`,
-            });
-          }
+          cs.agentThoughtBuffer += text;
+          events.push({
+            type: "artifact",
+            kind: "report",
+            content: cs.agentThoughtBuffer,
+            metadata: { source: "agent_thought_streaming" },
+            ephemeral: true,
+            streamId: `cursor-think-${cs.runId}`,
+          });
         }
         break;
       }
 
       case "tool_call": {
         // Flush agent message buffer before tool events (preserves interleaved order)
-        const rsToolCall = activeRuns.get(runId);
-        if (rsToolCall && rsToolCall.agentMessageBuffer.trim()) {
+        if (cs.agentMessageBuffer.trim()) {
           events.push({
             type: "artifact",
             kind: "report",
-            content: rsToolCall.agentMessageBuffer.trim(),
+            content: cs.agentMessageBuffer.trim(),
             metadata: { source: "agent_message" },
           });
-          rsToolCall.agentMessageBuffer = "";
+          cs.agentMessageBuffer = "";
         }
 
         const toolCallId = update.toolCallId as string | undefined;
@@ -718,28 +723,36 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
         const kind = update.kind as string | undefined;
         const status = update.status as string | undefined;
         const rawInput = update.rawInput as Record<string, unknown> | undefined;
-        const locations = update.locations as Array<{ path?: string; line?: number }> | undefined;
+        const locations = update.locations as
+          | Array<{ path?: string; line?: number }>
+          | undefined;
 
-        // Skip plan-related tool_call updates — handled by cursor/create_plan server request
         if (kind === "create_plan" || kind === "plan" || /create\s*plan/i.test(title ?? "")) break;
+        if (
+          kind === "mcp_tool_call" ||
+          /mcp/i.test(kind ?? "") ||
+          /mcp/i.test(title ?? "") ||
+          /^mains[-_]/i.test(title ?? "")
+        )
+          break;
 
-        // Skip MCP tool_call events — the bridge emits proper events with real tool names
-        if (kind === "mcp_tool_call" || /mcp/i.test(kind ?? "") || /mcp/i.test(title ?? "") || /^mains[-_]/i.test(title ?? "")) break;
-
-        const { toolName, input: normalizedInput } = normalizeToolCall(kind, title, rawInput, locations);
+        const { toolName, input: normalizedInput } = normalizeToolCall(
+          kind,
+          title,
+          rawInput,
+          locations,
+        );
 
         if (status === "pending" || status === "in_progress") {
-          if (rsToolCall) {
-            rsToolCall.agentThoughtBuffer = "";
-            events.push({
-              type: "artifact",
-              kind: "report",
-              content: "",
-              metadata: { source: "agent_thought_streaming" },
-              ephemeral: true,
-              streamId: `cursor-think-${runId}`,
-            });
-          }
+          cs.agentThoughtBuffer = "";
+          events.push({
+            type: "artifact",
+            kind: "report",
+            content: "",
+            metadata: { source: "agent_thought_streaming" },
+            ephemeral: true,
+            streamId: `cursor-think-${cs.runId}`,
+          });
           events.push({
             type: "tool_call",
             toolName,
@@ -758,27 +771,37 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
         const status = update.status as string | undefined;
         const rawOutput = update.rawOutput as unknown;
         const rawInput = update.rawInput as Record<string, unknown> | undefined;
-        const locations = update.locations as Array<{ path?: string; line?: number }> | undefined;
+        const locations = update.locations as
+          | Array<{ path?: string; line?: number }>
+          | undefined;
         const content = update.content as Array<Record<string, unknown>> | undefined;
 
-        // Skip plan-related tool_call updates — handled by cursor/create_plan server request
         if (kind === "create_plan" || kind === "plan" || /create\s*plan/i.test(title ?? "")) break;
+        if (
+          kind === "mcp_tool_call" ||
+          /mcp/i.test(kind ?? "") ||
+          /mcp/i.test(title ?? "") ||
+          /^mains[-_]/i.test(title ?? "")
+        )
+          break;
 
-        // Skip MCP tool_call updates — the bridge emits proper events with real tool names
-        if (kind === "mcp_tool_call" || /mcp/i.test(kind ?? "") || /mcp/i.test(title ?? "") || /^mains[-_]/i.test(title ?? "")) break;
-
-        const { toolName, input: normalizedInput } = normalizeToolCall(kind, title, rawInput, locations);
+        const { toolName, input: normalizedInput } = normalizeToolCall(
+          kind,
+          title,
+          rawInput,
+          locations,
+        );
 
         if (status === "completed" || status === "failed") {
-          // Extract diff block (ACP sends edit results as content: [{type:"diff", path, oldText, newText}])
           const diffBlock = content?.find((c) => c.type === "diff");
           if (diffBlock) {
             if (typeof diffBlock.path === "string") normalizedInput.file_path = diffBlock.path;
-            if (typeof diffBlock.oldText === "string") normalizedInput.old_string = diffBlock.oldText;
-            if (typeof diffBlock.newText === "string") normalizedInput.new_string = diffBlock.newText;
+            if (typeof diffBlock.oldText === "string")
+              normalizedInput.old_string = diffBlock.oldText;
+            if (typeof diffBlock.newText === "string")
+              normalizedInput.new_string = diffBlock.newText;
           }
 
-          // Extract output: try content blocks → rawOutput.content string → rawOutput itself
           let outputText: unknown;
           if (content && content.length > 0) {
             const textParts = content
@@ -787,8 +810,8 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
             outputText = textParts.length > 0 ? textParts.join("\n") : diffBlock ? "" : undefined;
           }
           if (outputText === undefined) {
-            if (rawOutput && typeof rawOutput === "object" && (rawOutput as any).content) {
-              outputText = (rawOutput as any).content;
+            if (rawOutput && typeof rawOutput === "object" && (rawOutput as { content?: unknown }).content) {
+              outputText = (rawOutput as { content: unknown }).content;
             } else {
               outputText = rawOutput;
             }
@@ -839,13 +862,9 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
             ts,
             metadata: { sessionTitle: title },
           });
-          // Persist title to run
-          const runState = activeRuns.get(runId);
-          if (runState?.sessionId) {
-            runsRepo.updateRun(runId, { title }).catch((err) =>
-              logError("Failed to update run title:", err),
-            );
-          }
+          runsRepo.updateRun(cs.runId, { title }).catch((err) =>
+            logError("Failed to update run title:", err),
+          );
         }
         break;
       }
@@ -854,7 +873,6 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
       case "current_mode_update":
       case "config_option_update":
       case "user_message_chunk":
-        // Internal/UI state — no user-visible event needed
         break;
 
       default:
@@ -866,71 +884,53 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
   }
 
   // ─────────────────────────────────────────────────────────────
-  // Run execution helper
+  // Server-request handler — permission approval & cursor extensions
   // ─────────────────────────────────────────────────────────────
 
-  /**
-   * Set up notification/request handlers for streaming events during a prompt.
-   * The prompt itself completes via the session/prompt RPC response (stopReason),
-   * so this only handles side-effects (UI events, permission brokering).
-   */
-  function setupSessionHandlers(
+  function buildServerRequestHandler(
     server: CursorAcpServer,
-    runId: string,
+    cs: CursorSession,
     onEvent: WorkRunEventHandler,
-    collectedArtifacts: Array<{ kind: string; path?: string }>,
-  ): void {
-    const handleNotification = async (method: string, params: unknown) => {
-      const p = params as Record<string, unknown> | undefined;
-      const sessionId = p?.sessionId as string | undefined;
-
-      // Only process updates for our session
-      const runState = activeRuns.get(runId);
-      if (!runState || (sessionId && sessionId !== runState.sessionId)) return;
-
-      const mappedEvents = mapNotification(method, params, runId);
-      for (const mapped of mappedEvents) {
-        await onEvent(mapped);
-
-        if (mapped.type === "artifact" && mapped.kind !== "user-prompt" && !mapped.ephemeral) {
-          collectedArtifacts.push({ kind: mapped.kind, path: mapped.path });
-        }
-      }
-    };
-
-    // Handle server requests — permission approvals (ACP session/request_permission)
-    const handleServerRequest = async (id: number | string, method: string, params: unknown) => {
+  ): (id: number | string, method: string, params: unknown) => Promise<void> {
+    return async (id, method, params) => {
       const p = params as Record<string, unknown> | undefined;
 
       switch (method) {
         case "session/request_permission": {
-
-          // Extract permission options from the request
           const options = p?.options as Array<Record<string, unknown>> | undefined;
-          const allowOnceId = options?.find((o) => o.kind === "allow_once")?.optionId as string ?? "allow-once";
-          const allowAlwaysId = options?.find((o) => o.kind === "allow_always")?.optionId as string ?? "allow-always";
-          const rejectOnceId = options?.find((o) => o.kind === "reject_once")?.optionId as string ?? "reject-once";
+          const allowOnceId =
+            (options?.find((o) => o.kind === "allow_once")?.optionId as string) ??
+            "allow-once";
+          const allowAlwaysId =
+            (options?.find((o) => o.kind === "allow_always")?.optionId as string) ??
+            "allow-always";
+          const rejectOnceId =
+            (options?.find((o) => o.kind === "reject_once")?.optionId as string) ??
+            "reject-once";
 
           const toolCall = p?.toolCall as Record<string, unknown> | undefined;
           const acpKind = toolCall?.kind as string | undefined;
           const acpTitle = toolCall?.title as string | undefined;
           const acpLocations = toolCall?.locations as Array<{ path?: string }> | undefined;
 
-          // Auto-approve Mains MCP tools (CommitChanges, CreatePR, etc.)
           if (acpTitle && /^mains[-_]/i.test(acpTitle)) {
-            server.respondToRequest(id, { outcome: { outcome: "selected", optionId: allowAlwaysId } });
+            server.respondToRequest(id, {
+              outcome: { outcome: "selected", optionId: allowAlwaysId },
+            });
             break;
           }
 
-          // Map ACP kind to UI-friendly tool name and build structured input
           const { toolName: approvalToolName, input: approvalInput } = normalizeToolCall(
-            acpKind, acpTitle, undefined, acpLocations,
+            acpKind,
+            acpTitle,
+            undefined,
+            acpLocations,
           );
 
           try {
             const result = await requestToolApproval({
               requestId: String(id),
-              runId,
+              runId: cs.runId,
               toolName: approvalToolName,
               toolInput: approvalInput,
               kind: "tool_approval",
@@ -938,11 +938,17 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
             });
 
             if (!result.approved) {
-              server.respondToRequest(id, { outcome: { outcome: "selected", optionId: rejectOnceId } });
+              server.respondToRequest(id, {
+                outcome: { outcome: "selected", optionId: rejectOnceId },
+              });
             } else if (result.answer === "acceptForSession") {
-              server.respondToRequest(id, { outcome: { outcome: "selected", optionId: allowAlwaysId } });
+              server.respondToRequest(id, {
+                outcome: { outcome: "selected", optionId: allowAlwaysId },
+              });
             } else {
-              server.respondToRequest(id, { outcome: { outcome: "selected", optionId: allowOnceId } });
+              server.respondToRequest(id, {
+                outcome: { outcome: "selected", optionId: allowOnceId },
+              });
             }
           } catch {
             server.respondToRequest(id, { outcome: { outcome: "cancelled" } });
@@ -955,22 +961,22 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
           const title = p?.title as string | undefined;
 
           if (!questions || questions.length === 0) {
-            server.respondToRequest(id, { outcome: { outcome: "skipped", reason: "No questions provided" } });
+            server.respondToRequest(id, {
+              outcome: { outcome: "skipped", reason: "No questions provided" },
+            });
             break;
           }
 
-          // Map the first question to the existing ask_user broker
-          // (ACP sends an array but typically a single question per request)
           const q = questions[0];
           const qId = q.id as string;
-          const prompt = q.prompt as string ?? title ?? "Question from Cursor";
+          const prompt = (q.prompt as string) ?? title ?? "Question from Cursor";
           const qOptions = q.options as Array<{ id: string; label: string }> | undefined;
-          const allowMultiple = q.allowMultiple as boolean ?? false;
+          const allowMultiple = (q.allowMultiple as boolean) ?? false;
 
           try {
             const result = await requestToolApproval({
               requestId: String(id),
-              runId,
+              runId: cs.runId,
               toolName: title ?? "Question",
               toolInput: {},
               kind: "ask_user",
@@ -983,17 +989,14 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
             if (!result.approved) {
               server.respondToRequest(id, { outcome: { outcome: "cancelled" } });
             } else if (result.answer) {
-              // Map the answer back to ACP format: match selected labels to option IDs
               const answerLabels = result.answer.split(", ");
               const selectedOptionIds = qOptions
-                ? answerLabels
+                ? (answerLabels
                     .map((label) => qOptions.find((o) => o.label === label)?.id)
-                    .filter(Boolean) as string[]
+                    .filter(Boolean) as string[])
                 : [];
 
-              // If no option IDs matched (free text answer), use the answer as-is
               if (selectedOptionIds.length === 0 && qOptions && qOptions.length > 0) {
-                // Try exact match on id as fallback
                 const byId = qOptions.find((o) => answerLabels.includes(o.id));
                 if (byId) selectedOptionIds.push(byId.id);
               }
@@ -1006,8 +1009,9 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
                   },
                 });
               } else {
-                // Free text — pick closest option or skip
-                server.respondToRequest(id, { outcome: { outcome: "skipped", reason: result.answer } });
+                server.respondToRequest(id, {
+                  outcome: { outcome: "skipped", reason: result.answer },
+                });
               }
             } else {
               server.respondToRequest(id, { outcome: { outcome: "skipped" } });
@@ -1022,18 +1026,30 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
           const planName = p?.name as string | undefined;
           const planOverview = p?.overview as string | undefined;
           const planMarkdown = p?.plan as string | undefined;
-          const planTodos = p?.todos as Array<{ id: string; content: string; status: string }> | undefined;
-          const planPhases = p?.phases as Array<{ name: string; todos: Array<{ id: string; content: string; status: string }> }> | undefined;
-          const isProject = p?.isProject as boolean ?? false;
+          const planTodos = p?.todos as
+            | Array<{ id: string; content: string; status: string }>
+            | undefined;
+          const planPhases = p?.phases as
+            | Array<{
+                name: string;
+                todos: Array<{ id: string; content: string; status: string }>;
+              }>
+            | undefined;
+          const isProject = (p?.isProject as boolean) ?? false;
 
-          // Build a rich plan display: header + overview + markdown + todos/phases
           const sections: string[] = [];
           if (planName) sections.push(`## ${planName}`);
           if (planOverview) sections.push(planOverview);
           if (planMarkdown) sections.push(planMarkdown);
 
           const statusIcon = (s: string) =>
-            s === "completed" ? "\u2705" : s === "in_progress" ? "\u23f3" : s === "cancelled" ? "\u274c" : "\u2b1c";
+            s === "completed"
+              ? "✅"
+              : s === "in_progress"
+                ? "⏳"
+                : s === "cancelled"
+                  ? "❌"
+                  : "⬜";
 
           if (planPhases && planPhases.length > 0) {
             for (const phase of planPhases) {
@@ -1051,18 +1067,21 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
 
           const content = sections.join("\n").trim();
 
-          // Emit plan with toolName "Plan" and planStatus "pending" so PlanDisplay
-          // renders with Apply/Dismiss buttons. The session/update "plan" notification
-          // may not always fire, so this is the canonical source.
           if (content) {
-            const planToolCallId = (p?.toolCallId as string | undefined) ?? `cursor-plan-${Date.now()}`;
+            const planToolCallId =
+              (p?.toolCallId as string | undefined) ?? `cursor-plan-${Date.now()}`;
             const startedAt = Date.now();
             await onEvent({
               type: "tool_call",
               toolName: "Plan",
               input: { plan: content },
               startedAt,
-              metadata: { phase: "start", toolCallId: planToolCallId, isProject, cursorExtension: "create_plan" },
+              metadata: {
+                phase: "start",
+                toolCallId: planToolCallId,
+                isProject,
+                cursorExtension: "create_plan",
+              },
             });
             await onEvent({
               type: "tool_call",
@@ -1071,11 +1090,15 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
               output: { planStatus: "pending" },
               startedAt,
               endedAt: Date.now(),
-              metadata: { phase: "complete", toolCallId: planToolCallId, isProject, cursorExtension: "create_plan" },
+              metadata: {
+                phase: "complete",
+                toolCallId: planToolCallId,
+                isProject,
+                cursorExtension: "create_plan",
+              },
             });
           }
 
-          // Auto-accept so the agent proceeds with execution.
           server.respondToRequest(id, { outcome: { outcome: "accepted" } });
           break;
         }
@@ -1087,16 +1110,13 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
         }
       }
     };
-
-    server.setNotificationHandler(handleNotification);
-    server.setServerRequestHandler(handleServerRequest);
   }
 
   // ─────────────────────────────────────────────────────────────
-  // Input building
+  // Prompt building
   // ─────────────────────────────────────────────────────────────
 
-  function buildPrompt(request: WorkRunRequest): string {
+  function buildStartPrompt(request: WorkRunRequest): string {
     const workspaceInfo = `Working directory: ${request.workspace.rootPath}`;
     let prompt: string;
 
@@ -1114,10 +1134,31 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
       runId: request.runId,
     });
 
-    // Instruct the agent to use Mains MCP tools instead of shell commands for guarded actions.
-    prompt += "\n\nIMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the mains MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the mains MCP server instead. Before explicitly adding named packages (for example: npm install axios, pnpm add zod, pip install requests, cargo add serde), you MUST call the CheckPackage tool first to verify package safety. Do NOT call CheckPackage for dependency restore commands with no package names, such as npm install, npm ci, pnpm install, yarn install, or bun install.";
+    prompt +=
+      "\n\nIMPORTANT: Never commit changes using Bash (git add, git commit). If the user asks you to commit, always use the CommitChanges tool from the mains MCP server to stage and commit changes. Similarly, never create pull requests using Bash (gh pr create). Always use the CreatePR tool from the mains MCP server instead. Before explicitly adding named packages (for example: npm install axios, pnpm add zod, pip install requests, cargo add serde), you MUST call the CheckPackage tool first to verify package safety. Do NOT call CheckPackage for dependency restore commands with no package names, such as npm install, npm ci, pnpm install, yarn install, or bun install.";
 
-    // Handle attachments
+    if (request.attachments && request.attachments.length > 0) {
+      const { savedPaths, inlineTexts } = saveAttachments(request.attachments, request.runId);
+      if (inlineTexts.length > 0) {
+        prompt = `${prompt}\n\n---\n\nAttached documents:\n${inlineTexts.join("\n\n")}`;
+      }
+      if (savedPaths.length > 0) {
+        prompt = `${prompt}\n\n---\n\nAttached files:\n${savedPaths.map((p) => `- ${p}`).join("\n")}`;
+      }
+    }
+
+    return prompt;
+  }
+
+  function buildContinuePrompt(request: WorkRunContinueRequest): string {
+    let prompt = request.message;
+    prompt = appendPromptSections(prompt, {
+      contextIssues: request.contextIssues,
+      contextSignals: request.contextSignals,
+      contextFiles: request.contextFiles,
+      runId: request.runId,
+    });
+
     if (request.attachments && request.attachments.length > 0) {
       const { savedPaths, inlineTexts } = saveAttachments(request.attachments, request.runId);
       if (inlineTexts.length > 0) {
@@ -1132,366 +1173,242 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
   }
 
   // ─────────────────────────────────────────────────────────────
-  // WorkRunAdapter implementation
+  // Acquire a session — shared by createSession + resumeSession
+  // ─────────────────────────────────────────────────────────────
+
+  async function configureSession(
+    server: CursorAcpServer,
+    sessionId: string,
+    model: string | undefined,
+    mode: string | undefined,
+  ): Promise<void> {
+    if (model) {
+      try {
+        await server.sendRequest("session/set_config_option", {
+          sessionId,
+          configId: "model",
+          value: model,
+        });
+      } catch {
+        logWarn(`Failed to set model to ${model}, using default`);
+      }
+    }
+    if (mode && mode !== "agent") {
+      try {
+        await server.sendRequest("session/set_mode", {
+          sessionId,
+          modeId: mode,
+        });
+      } catch {
+        logWarn(`Failed to set mode to ${mode}`);
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // ProviderDriver implementation
   // ─────────────────────────────────────────────────────────────
 
   return {
-    async startRun(
-      request: WorkRunRequest,
-      onEvent: WorkRunEventHandler,
-    ): Promise<WorkRunResult> {
-      const { runId, model } = request;
-      const resolvedModel = model || config.defaultModel || undefined;
-      const timeout = config.timeout ?? 600000;
-      const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
+    async createSession(request: WorkRunRequest): Promise<AcquiredSession> {
+      const { runId } = request;
+      const resolvedModel = request.model || config.defaultModel || undefined;
+      const overrideMode = ((request.configSnapshot ?? {}) as Record<string, unknown>).mode;
+      const effectiveMode =
+        (typeof overrideMode === "string" && overrideMode) || config.mode;
 
-      try {
-        await onEvent({ type: "status", status: "running", ts: Date.now() });
+      const mainsCtx: MainsToolContext = {
+        workspaceId: request.workspace.id,
+        rootPath: request.workspace.rootPath,
+        runId,
+      };
+      const mainsMcp = await ensureMcpServer(mainsCtx);
+      const server = await ensureServer();
 
-        // Set up MCP FIRST so .cursor/mcp.json exists before ACP starts.
-        // If ACP was already running, ensureMcpServer() restarts it.
-        const mainsCtx: MainsToolContext = {
-          workspaceId: request.workspace.id,
-          rootPath: request.workspace.rootPath,
-          runId,
-        };
-        const mainsMcp = await ensureMcpServer(mainsCtx);
+      logInfo(
+        `Creating session (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`,
+      );
+      const sessionResult = (await server.sendRequest("session/new", {
+        cwd: request.workspace.rootPath,
+        mcpServers: mainsMcp ? [mainsMcp.mcpConfig] : [],
+      })) as Record<string, unknown>;
+      const sessionId = sessionResult?.sessionId as string | undefined;
 
-        const server = await ensureServer();
-
-        // 1. Create session via session/new
-        logInfo(`Creating session (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
-        const sessionResult = await server.sendRequest("session/new", {
-          cwd: request.workspace.rootPath,
-          mcpServers: mainsMcp ? [mainsMcp.mcpConfig] : [],
-        }) as Record<string, unknown>;
-        const sessionId = sessionResult?.sessionId as string | undefined;
-
-        if (sessionId) {
-          sessionIdMap.set(runId, sessionId);
-          runsRepo.updateRun(runId, { sessionId }).catch((err) =>
-            logError("Failed to persist session ID:", err),
-          );
-        }
-
-        // Set model if specified via session/set_config_option
-        if (resolvedModel && sessionId) {
-          try {
-            await server.sendRequest("session/set_config_option", {
-              sessionId,
-              configId: "model",
-              value: resolvedModel,
-            });
-          } catch {
-            logWarn(`Failed to set model to ${resolvedModel}, using default`);
-          }
-        }
-
-        // Set mode if configured (per-run override wins, e.g. Pulse forces "agent")
-        const overrideMode = ((request.configSnapshot ?? {}) as Record<string, unknown>).mode;
-        const effectiveMode = (typeof overrideMode === "string" && overrideMode) || config.mode;
-        if (effectiveMode && effectiveMode !== "agent" && sessionId) {
-          try {
-            await server.sendRequest("session/set_mode", {
-              sessionId,
-              modeId: effectiveMode,
-            });
-          } catch {
-            logWarn(`Failed to set mode to ${effectiveMode}`);
-          }
-        }
-
-        activeRuns.set(runId, {
-          sessionId: sessionId ?? null,
-          aborted: false,
-          agentMessageBuffer: "",
-          agentThoughtBuffer: "",
-          currentStreamId: null,
-          pendingFlush: [],
-        });
-
-        // Set up streaming event handlers
-        setupSessionHandlers(server, runId, onEvent, collectedArtifacts);
-
-        // Wire MCP bridge events to the run's event handler
-        if (mcpServer) {
-          mcpServer.setEventHandler(onEvent);
-        }
-
-        // Emit user prompt artifact
-        await emitUserPromptArtifact(onEvent, request.goal, {
-          attachments: request.attachments,
-          contextIssues: request.contextIssues,
-          contextSignals: request.contextSignals,
-          contextFiles: request.contextFiles,
-          contextSkills: request.skills,
-        });
-
-        // 2. Send prompt via session/prompt (blocks until completion)
-        const prompt = buildPrompt(request);
-        const promptResult = await server.sendRequest("session/prompt", {
-          sessionId: sessionId ?? "",
-          prompt: [{ type: "text", text: prompt }],
-        }, timeout) as Record<string, unknown>;
-
-        const stopReason = promptResult?.stopReason as string | undefined;
-
-        // Flush remaining agent message buffer
-        const runState = activeRuns.get(runId);
-        if (runState && runState.agentMessageBuffer.trim()) {
-          await onEvent({
-            type: "artifact",
-            kind: "report",
-            content: runState.agentMessageBuffer.trim(),
-            metadata: { source: "agent_message" },
-          });
-          collectedArtifacts.push({ kind: "report" });
-          runState.agentMessageBuffer = "";
-        }
-        if (runState) {
-          runState.agentThoughtBuffer = "";
-          await onEvent({
-            type: "artifact",
-            kind: "report",
-            content: "",
-            metadata: { source: "agent_thought_streaming" },
-            ephemeral: true,
-            streamId: `cursor-think-${runId}`,
-          });
-        }
-
-        const usage = flushUsage(runId);
-        const status = stopReason === "cancelled" ? "canceled"
-          : stopReason === "refusal" ? "failed"
-          : "succeeded";
-        const error = stopReason === "refusal" ? "Agent refused the request"
-          : stopReason === "max_tokens" ? "Response truncated (max tokens)"
-          : undefined;
-
-        await onEvent({ type: "status", status, error, ts: Date.now() });
-
-        return {
-          status,
-          summary: error,
-          artifacts: collectedArtifacts,
-          usage,
-        };
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        logError("startRun failed:", msg);
-        await onEvent({ type: "status", status: "failed", error: msg, ts: Date.now() });
-        flushUsage(runId);
-        return { status: "failed", summary: msg };
-      } finally {
-        activeRuns.delete(runId);
-        cancelPendingRequests(runId);
+      if (!sessionId) {
+        throw new Error("Cursor did not return a sessionId from session/new");
       }
+      sessionIdMap.set(runId, sessionId);
+
+      await configureSession(server, sessionId, resolvedModel, effectiveMode);
+
+      const session: CursorSession = {
+        runId,
+        sessionId,
+        agentMessageBuffer: "",
+        agentThoughtBuffer: "",
+      };
+
+      return {
+        session,
+        prompt: buildStartPrompt(request),
+        sessionId,
+      };
     },
 
-    async continueRun(
-      request: WorkRunContinueRequest,
-      onEvent: WorkRunEventHandler,
-    ): Promise<WorkRunResult> {
-      const { runId, message, model: continueModel } = request;
-      const resolvedContinueModel = continueModel || config.defaultModel || undefined;
-      const timeout = config.timeout ?? 600000;
-      const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
+    async resumeSession(request: WorkRunContinueRequest): Promise<AcquiredSession> {
+      const { runId } = request;
+      const resolvedModel = request.model || config.defaultModel || undefined;
+
+      const mainsCtx: MainsToolContext = {
+        workspaceId: request.workspace.id,
+        rootPath: request.workspace.rootPath,
+        runId,
+      };
+      const mainsMcp = await ensureMcpServer(mainsCtx);
+      const mcpServersConfig = mainsMcp ? [mainsMcp.mcpConfig] : [];
+      const server = await ensureServer();
+
+      let sessionId = sessionIdMap.get(runId);
+      if (!sessionId) {
+        const run = await runsRepo.findRunById(runId);
+        if (run?.sessionId) {
+          sessionId = run.sessionId;
+          sessionIdMap.set(runId, sessionId);
+        }
+      }
+      if (!sessionId) {
+        throw new Error(`No session found for run ${runId}. Cannot resume.`);
+      }
 
       try {
-        await onEvent({ type: "status", status: "running", ts: Date.now() });
-
-        // MCP must be ensured before ACP so the first-run restart path
-        // (ensureMcpServer stops ACP if it was started without MCP config)
-        // doesn't invalidate the server handle we're about to use.
-        const mainsCtx: MainsToolContext = {
-          workspaceId: request.workspace.id,
-          rootPath: request.workspace.rootPath,
-          runId,
-        };
-        const mainsMcp = await ensureMcpServer(mainsCtx);
-        const mcpServersConfig = mainsMcp ? [mainsMcp.mcpConfig] : [];
-
-        const server = await ensureServer();
-
-        let sessionId = sessionIdMap.get(runId);
-        if (!sessionId) {
-          const run = await runsRepo.findRunById(runId);
-          if (run?.sessionId) {
-            sessionId = run.sessionId;
-            sessionIdMap.set(runId, sessionId);
-          }
-        }
-        if (!sessionId) {
-          throw new Error(`No session found for run ${runId}. Cannot resume.`);
-        }
-
-        // Load (resume) the session — replays history then allows new prompts
-        try {
-          await server.sendRequest("session/load", {
+        await server.sendRequest(
+          "session/load",
+          {
             sessionId,
             cwd: request.workspace.rootPath,
             mcpServers: mcpServersConfig,
-          }, 30000);
-        } catch (loadErr) {
-          const errMsg = loadErr instanceof Error ? loadErr.message : String(loadErr);
-          // If load fails, create a new session instead
-          if (/not found|unknown|does not exist/i.test(errMsg)) {
-            logWarn(`Session load failed (${errMsg}), creating new session`);
-            const newResult = await server.sendRequest("session/new", {
-              cwd: request.workspace.rootPath,
-              mcpServers: mcpServersConfig,
-            }) as Record<string, unknown>;
-            const newId = newResult?.sessionId as string | undefined;
-            if (newId) {
-              sessionId = newId;
-              sessionIdMap.set(runId, newId);
-            }
-          } else {
-            throw loadErr;
+          },
+          30000,
+        );
+      } catch (loadErr) {
+        const errMsg = loadErr instanceof Error ? loadErr.message : String(loadErr);
+        if (/not found|unknown|does not exist/i.test(errMsg)) {
+          logWarn(`Session load failed (${errMsg}), creating new session`);
+          const newResult = (await server.sendRequest("session/new", {
+            cwd: request.workspace.rootPath,
+            mcpServers: mcpServersConfig,
+          })) as Record<string, unknown>;
+          const newId = newResult?.sessionId as string | undefined;
+          if (newId) {
+            sessionId = newId;
+            sessionIdMap.set(runId, newId);
           }
+        } else {
+          throw loadErr;
         }
+      }
 
-        // Re-apply model + agent mode after load — session keeps prior ACP settings otherwise,
-        // so toolbar changes mid-run only affected startRun, not continueRun.
-        if (resolvedContinueModel && sessionId) {
+      await configureSession(server, sessionId, resolvedModel, config.mode);
+
+      const session: CursorSession = {
+        runId,
+        sessionId,
+        agentMessageBuffer: "",
+        agentThoughtBuffer: "",
+      };
+
+      return {
+        session,
+        prompt: buildContinuePrompt(request),
+        sessionId,
+      };
+    },
+
+    async executePrompt(
+      session,
+      prompt,
+      onEvent,
+      signal,
+    ): Promise<DriverOutcome> {
+      const cs = session as CursorSession;
+      const timeout = config.timeout ?? 600000;
+
+      const server = acpServer;
+      if (!server || !server.isRunning) {
+        return { status: "failed", summary: "ACP server not running" };
+      }
+
+      // Wire abort: when signal fires, send session/cancel notification
+      const onAbort = () => {
+        if (server.isRunning) {
           try {
-            await server.sendRequest("session/set_config_option", {
-              sessionId,
-              configId: "model",
-              value: resolvedContinueModel,
-            });
-          } catch {
-            logWarn(`Failed to set model to ${resolvedContinueModel} on resume, using session default`);
+            server.sendNotification("session/cancel", { sessionId: cs.sessionId });
+          } catch (err) {
+            logError("Failed to cancel session:", err);
           }
         }
-        if (sessionId && config.mode) {
-          try {
-            await server.sendRequest("session/set_mode", {
-              sessionId,
-              modeId: config.mode,
-            });
-          } catch {
-            logWarn(`Failed to set mode to ${config.mode} on resume`);
-          }
+      };
+      signal.addEventListener("abort", onAbort, { once: true });
+
+      // Wire streaming notification + server-request handlers
+      server.setNotificationHandler((method, params) => {
+        const events = mapNotification(method, params, cs);
+        for (const event of events) {
+          // Best-effort: events emitted from notifications are async-fired; await would
+          // require restructuring drainJsonBuffer. Track promise chain rejections.
+          void Promise.resolve(onEvent(event)).catch((err) =>
+            logError("onEvent threw:", err),
+          );
         }
+      });
+      server.setServerRequestHandler(buildServerRequestHandler(server, cs, onEvent));
 
-        activeRuns.set(runId, {
-          sessionId,
-          aborted: false,
-          agentMessageBuffer: "",
-          agentThoughtBuffer: "",
-          currentStreamId: null,
-          pendingFlush: [],
-        });
+      // Wire MCP bridge events
+      mcpServer?.setEventHandler(onEvent);
 
-        // Set up streaming event handlers
-        setupSessionHandlers(server, runId, onEvent, collectedArtifacts);
-
-        if (mcpServer) {
-          mcpServer.setEventHandler(onEvent);
-        }
-
-        await emitUserPromptArtifact(onEvent, message, {
-          attachments: request.attachments,
-          contextIssues: request.contextIssues,
-          contextSignals: request.contextSignals,
-          contextFiles: request.contextFiles,
-          contextSkills: request.skills,
-        });
-
-        // Build follow-up prompt
-        let prompt = message;
-        prompt = appendPromptSections(prompt, {
-          contextIssues: request.contextIssues,
-          contextSignals: request.contextSignals,
-          contextFiles: request.contextFiles,
-          runId: request.runId,
-        });
-
-        if (request.attachments && request.attachments.length > 0) {
-          const { savedPaths, inlineTexts } = saveAttachments(request.attachments, request.runId);
-          if (inlineTexts.length > 0) {
-            prompt = `${prompt}\n\n---\n\nAttached documents:\n${inlineTexts.join("\n\n")}`;
-          }
-          if (savedPaths.length > 0) {
-            prompt = `${prompt}\n\n---\n\nAttached files:\n${savedPaths.map((p) => `- ${p}`).join("\n")}`;
-          }
-        }
-
-        // Send follow-up prompt to resumed session
-        const promptResult = await server.sendRequest("session/prompt", {
-          sessionId,
-          prompt: [{ type: "text", text: prompt }],
-        }, timeout) as Record<string, unknown>;
+      try {
+        const promptResult = (await server.sendRequest(
+          "session/prompt",
+          {
+            sessionId: cs.sessionId,
+            prompt: [{ type: "text", text: prompt }],
+          },
+          timeout,
+        )) as Record<string, unknown>;
 
         const stopReason = promptResult?.stopReason as string | undefined;
 
         // Flush remaining agent message buffer
-        const runState = activeRuns.get(runId);
-        if (runState && runState.agentMessageBuffer.trim()) {
+        if (cs.agentMessageBuffer.trim()) {
           await onEvent({
             type: "artifact",
             kind: "report",
-            content: runState.agentMessageBuffer.trim(),
+            content: cs.agentMessageBuffer.trim(),
             metadata: { source: "agent_message" },
           });
-          collectedArtifacts.push({ kind: "report" });
-          runState.agentMessageBuffer = "";
+          cs.agentMessageBuffer = "";
         }
-        if (runState) {
-          runState.agentThoughtBuffer = "";
-          await onEvent({
-            type: "artifact",
-            kind: "report",
-            content: "",
-            metadata: { source: "agent_thought_streaming" },
-            ephemeral: true,
-            streamId: `cursor-think-${runId}`,
-          });
-        }
+        cs.agentThoughtBuffer = "";
+        await onEvent({
+          type: "artifact",
+          kind: "report",
+          content: "",
+          metadata: { source: "agent_thought_streaming" },
+          ephemeral: true,
+          streamId: `cursor-think-${cs.runId}`,
+        });
 
-        const usage = flushUsage(runId);
-        const status = stopReason === "cancelled" ? "canceled"
-          : stopReason === "refusal" ? "failed"
-          : "succeeded";
-        const error = stopReason === "refusal" ? "Agent refused the request" : undefined;
-
-        await onEvent({ type: "status", status, error, ts: Date.now() });
-
-        return {
-          status,
-          summary: error,
-          artifacts: collectedArtifacts,
-          usage,
-        };
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        logError("continueRun failed:", msg);
-        await onEvent({ type: "status", status: "failed", error: msg, ts: Date.now() });
-        flushUsage(runId);
-        return { status: "failed", summary: msg };
+        const usage = flushUsage(cs.runId);
+        const { status, summary } = mapStopReasonToOutcome(stopReason);
+        return { status, summary, stopReason, usage };
       } finally {
-        activeRuns.delete(runId);
-        cancelPendingRequests(runId);
+        signal.removeEventListener("abort", onAbort);
       }
     },
 
-    async abortRun(runId: string): Promise<void> {
-      const runState = activeRuns.get(runId);
-      if (!runState) return;
-
-      runState.aborted = true;
-
-      // session/cancel is a notification (no response expected)
-      if (acpServer?.isRunning && runState.sessionId) {
-        try {
-          acpServer.sendNotification("session/cancel", {
-            sessionId: runState.sessionId,
-          });
-        } catch (err) {
-          logError("Failed to cancel session:", err);
-        }
-      }
+    async cleanup(_session): Promise<void> {
+      // Per-run state lives on the Session object Core is about to drop.
+      // Long-lived sessionIdMap memos survive (deleteSession clears them explicitly).
     },
 
     async canResumeSession(runId: string): Promise<boolean> {
@@ -1506,16 +1423,10 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
 
     async deleteSession(runId: string): Promise<void> {
       sessionIdMap.delete(runId);
-      activeRuns.delete(runId);
       usageAccumulator.delete(runId);
     },
 
     async shutdown(): Promise<void> {
-      for (const [runId, state] of activeRuns) {
-        state.aborted = true;
-        cancelPendingRequests(runId);
-      }
-      activeRuns.clear();
       sessionIdMap.clear();
       usageAccumulator.clear();
 
@@ -1534,26 +1445,29 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
 
     async listModels(): Promise<ModelInfo[]> {
       try {
-        // ACP exposes models in session/new response under result.models.availableModels
         const server = await ensureServer();
-        const result = await server.sendRequest("session/new", {
+        const result = (await server.sendRequest("session/new", {
           cwd: os.homedir(),
           mcpServers: [],
-        }) as Record<string, unknown>;
+        })) as Record<string, unknown>;
 
         const modelsObj = result?.models as Record<string, unknown> | undefined;
-        const availableModels = modelsObj?.availableModels as Array<Record<string, unknown>> | undefined;
+        const availableModels = modelsObj?.availableModels as
+          | Array<Record<string, unknown>>
+          | undefined;
         const currentModelId = modelsObj?.currentModelId as string | undefined;
 
         if (!availableModels || !Array.isArray(availableModels)) {
           return [];
         }
 
-        return availableModels.map((m): ModelInfo => ({
-          id: m.modelId as string,
-          displayName: (m.name as string) || (m.modelId as string),
-          isDefault: (m.modelId as string) === (config.defaultModel ?? currentModelId),
-        }));
+        return availableModels.map(
+          (m): ModelInfo => ({
+            id: m.modelId as string,
+            displayName: (m.name as string) || (m.modelId as string),
+            isDefault: (m.modelId as string) === (config.defaultModel ?? currentModelId),
+          }),
+        );
       } catch (error) {
         logError("Failed to list models:", error);
         const msg = error instanceof Error ? error.message : String(error);
@@ -1564,7 +1478,7 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
       }
     },
 
-    async generateTitle(goal: string, context?: import("../../../../shared/adapter.types").WorkRunContextItem[]): Promise<string> {
+    async generateTitle(goal: string, context?: WorkRunContextItem[]): Promise<string> {
       try {
         const binaryPath = findCursorBinary();
 
@@ -1587,28 +1501,46 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
           "",
           `User message: ${goal}`,
           contextSnippet ? `\nContext:\n${contextSnippet}` : "",
-        ].filter(Boolean).join("\n");
+        ]
+          .filter(Boolean)
+          .join("\n");
 
         const titleText = await new Promise<string>((resolve, reject) => {
           const env: Record<string, string | undefined> = {
             ...process.env,
             HOME: os.homedir(),
-            PATH: [path.dirname(binaryPath), path.join(os.homedir(), ".local", "bin"), "/usr/local/bin", "/opt/homebrew/bin", process.env.PATH || ""].join(":"),
+            PATH: [
+              path.dirname(binaryPath),
+              path.join(os.homedir(), ".local", "bin"),
+              "/usr/local/bin",
+              "/opt/homebrew/bin",
+              process.env.PATH || "",
+            ].join(":"),
           };
           if (config.apiKey) env.CURSOR_API_KEY = config.apiKey;
 
-          const child = spawn(binaryPath, [
-            "--print",
-            "--mode", "ask",
-            "--trust",
-            "--output-format", "text",
-            titlePrompt,
-          ], { env, stdio: ["ignore", "pipe", "pipe"], timeout: 15000 });
+          const child = spawn(
+            binaryPath,
+            [
+              "--print",
+              "--mode",
+              "ask",
+              "--trust",
+              "--output-format",
+              "text",
+              titlePrompt,
+            ],
+            { env, stdio: ["ignore", "pipe", "pipe"], timeout: 15000 },
+          );
 
           let stdout = "";
           let stderr = "";
-          child.stdout?.on("data", (d: Buffer) => { stdout += d.toString(); });
-          child.stderr?.on("data", (d: Buffer) => { stderr += d.toString(); });
+          child.stdout?.on("data", (d: Buffer) => {
+            stdout += d.toString();
+          });
+          child.stderr?.on("data", (d: Buffer) => {
+            stderr += d.toString();
+          });
           child.on("close", (code) => {
             if (code === 0 && stdout.trim()) {
               resolve(stdout.trim());
@@ -1636,4 +1568,21 @@ export function createCursorAdapter(config: CursorAdapterConfig): WorkRunAdapter
       }
     },
   };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Pure helpers exported for testing
+// ─────────────────────────────────────────────────────────────
+
+/** Map cursor's stopReason taxonomy to a DriverOutcome. */
+export function mapStopReasonToOutcome(stopReason: string | undefined): {
+  status: DriverOutcome["status"];
+  summary?: string;
+} {
+  if (stopReason === "cancelled") return { status: "canceled" };
+  if (stopReason === "refusal")
+    return { status: "failed", summary: "Agent refused the request" };
+  if (stopReason === "max_tokens")
+    return { status: "succeeded", summary: "Response truncated (max tokens)" };
+  return { status: "succeeded" };
 }

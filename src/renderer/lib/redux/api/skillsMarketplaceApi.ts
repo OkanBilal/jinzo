@@ -1,5 +1,6 @@
 import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 // ─────────────────────────────────────────────────────────────
 // skills.sh API types — mirror src/main/modules/skillsMarketplace/skillsMarketplace.dto.ts
@@ -111,7 +112,7 @@ export const skillsMarketplaceApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     listMarketplaceSkills: builder.query<SkillListResponse, ListArgs | void>({
       query: (args) => ({
-        handler: "skillsMarketplace:list",
+        handler: CHANNELS.skillsMarketplace.list,
         args: [args ?? {}],
       }),
       transformResponse: (response: ServiceResponse<SkillListResponse>) => unwrap(response),
@@ -125,7 +126,7 @@ export const skillsMarketplaceApi = baseApi.injectEndpoints({
 
     searchMarketplaceSkills: builder.query<SkillSearchResponse, SearchArgs>({
       query: (args) => ({
-        handler: "skillsMarketplace:search",
+        handler: CHANNELS.skillsMarketplace.search,
         args: [args],
       }),
       transformResponse: (response: ServiceResponse<SkillSearchResponse>) => unwrap(response),
@@ -135,14 +136,14 @@ export const skillsMarketplaceApi = baseApi.injectEndpoints({
     }),
 
     getCuratedSkills: builder.query<CuratedResponse, void>({
-      query: () => ({ handler: "skillsMarketplace:curated" }),
+      query: () => ({ handler: CHANNELS.skillsMarketplace.curated }),
       transformResponse: (response: ServiceResponse<CuratedResponse>) => unwrap(response),
       providesTags: [{ type: "SkillsMarketplace", id: "curated" }],
     }),
 
     getMarketplaceSkillDetail: builder.query<SkillDetailResponse, SkillRef>({
       query: (ref) => ({
-        handler: "skillsMarketplace:detail",
+        handler: CHANNELS.skillsMarketplace.detail,
         args: [ref],
       }),
       transformResponse: (response: ServiceResponse<SkillDetailResponse>) => unwrap(response),
@@ -153,7 +154,7 @@ export const skillsMarketplaceApi = baseApi.injectEndpoints({
 
     getMarketplaceSkillAudit: builder.query<SkillAuditResponse, SkillRef>({
       query: (ref) => ({
-        handler: "skillsMarketplace:audit",
+        handler: CHANNELS.skillsMarketplace.audit,
         args: [ref],
       }),
       transformResponse: (response: ServiceResponse<SkillAuditResponse>) => unwrap(response),

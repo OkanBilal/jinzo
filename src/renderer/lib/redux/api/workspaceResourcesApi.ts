@@ -1,6 +1,7 @@
 import type { ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 import type { IssueWithEntity } from "./entitiesApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export interface ProjectResource {
   id: string;
@@ -41,7 +42,7 @@ export const projectResourcesApi = baseApi.injectEndpoints({
       string
     >({
       query: (projectId) => ({
-        handler: "projectResources:getByProject",
+        handler: CHANNELS.projectResources.getByProject,
         args: [projectId],
       }),
       transformResponse: (response: ServiceResponse<{ resources: ProjectResourceWithDetails[] }>) =>
@@ -53,7 +54,7 @@ export const projectResourcesApi = baseApi.injectEndpoints({
 
     getAvailableResources: builder.query<AvailableResource[], string>({
       query: (projectId) => ({
-        handler: "projectResources:getAvailable",
+        handler: CHANNELS.projectResources.getAvailable,
         args: [projectId],
       }),
       transformResponse: (response: ServiceResponse<{ resources: AvailableResource[] }>) =>
@@ -66,7 +67,7 @@ export const projectResourcesApi = baseApi.injectEndpoints({
       { projectId: string; resourceId: string }
     >({
       query: (payload) => ({
-        handler: "projectResources:add",
+        handler: CHANNELS.projectResources.add,
         args: [payload],
       }),
       invalidatesTags: (_result, _error, { projectId }) => [
@@ -80,7 +81,7 @@ export const projectResourcesApi = baseApi.injectEndpoints({
       { projectId: string; resourceId: string }
     >({
       query: (payload) => ({
-        handler: "projectResources:remove",
+        handler: CHANNELS.projectResources.remove,
         args: [payload],
       }),
       invalidatesTags: (_result, _error, { projectId }) => [
@@ -91,7 +92,7 @@ export const projectResourcesApi = baseApi.injectEndpoints({
 
     getIssuesByProject: builder.query<ProjectIssue[], string>({
       query: (projectId) => ({
-        handler: "projectResources:getIssues",
+        handler: CHANNELS.projectResources.getIssues,
         args: [projectId],
       }),
       transformResponse: (response: ServiceResponse<{ issues: ProjectIssue[] }>) =>

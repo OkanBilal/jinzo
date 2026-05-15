@@ -76,7 +76,8 @@ async function generateRunTitle(
     } else {
       title = fallbackTitle(goal);
     }
-  } catch {
+  } catch (err) {
+    console.warn(`[RunsService] Title generation failed for ${runId}, using fallback:`, err);
     title = fallbackTitle(goal);
   }
   await runsRepo.updateRun(runId, { title });

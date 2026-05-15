@@ -1,4 +1,5 @@
 import { baseApi } from "./baseApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export type ReviewStatus = "open" | "in_review" | "approved" | "rejected";
 
@@ -39,7 +40,7 @@ export const reviewsApi = baseApi.injectEndpoints({
       { workspaceId: string; limit?: number }
     >({
       query: ({ workspaceId, limit }) => ({
-        handler: "reviews:getByWorkspace",
+        handler: CHANNELS.reviews.getByWorkspace,
         args: [workspaceId, limit],
       }),
       transformResponse: (response: any) => response?.data ?? [],
@@ -48,7 +49,7 @@ export const reviewsApi = baseApi.injectEndpoints({
 
     getReviewById: builder.query<Review, string>({
       query: (id) => ({
-        handler: "reviews:getById",
+        handler: CHANNELS.reviews.getById,
         args: [id],
       }),
       transformResponse: (response: any) => response?.data ?? null,
@@ -57,7 +58,7 @@ export const reviewsApi = baseApi.injectEndpoints({
 
     createReview: builder.mutation<string, CreateReviewPayload>({
       query: (payload) => ({
-        handler: "reviews:create",
+        handler: CHANNELS.reviews.create,
         args: [payload],
       }),
       transformResponse: (response: any) => response?.data,
@@ -69,7 +70,7 @@ export const reviewsApi = baseApi.injectEndpoints({
       { id: string; payload: UpdateReviewPayload }
     >({
       query: ({ id, payload }) => ({
-        handler: "reviews:update",
+        handler: CHANNELS.reviews.update,
         args: [id, payload],
       }),
       transformResponse: (response: any) => response?.data,
@@ -81,7 +82,7 @@ export const reviewsApi = baseApi.injectEndpoints({
 
     deleteReview: builder.mutation<void, string>({
       query: (id) => ({
-        handler: "reviews:delete",
+        handler: CHANNELS.reviews.delete,
         args: [id],
       }),
       invalidatesTags: ["Reviews"],

@@ -1,54 +1,50 @@
 import { ipcMain } from "electron";
 import { reviewsService } from "./reviews.service";
 import type { CreateReviewPayload, UpdateReviewPayload } from "./reviews.dto";
+import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Channel Names
-// ─────────────────────────────────────────────────────────────
-const CHANNELS = {
-  GET_BY_WORKSPACE: "reviews:getByWorkspace",
-  GET_BY_ID: "reviews:getById",
-  CREATE: "reviews:create",
-  UPDATE: "reviews:update",
-  DELETE: "reviews:delete",
-} as const;
-
 // ─────────────────────────────────────────────────────────────
 // IPC Handlers
 // ─────────────────────────────────────────────────────────────
 export function registerReviewsIpc(): void {
   ipcMain.handle(
-    CHANNELS.GET_BY_WORKSPACE,
+    CHANNELS.reviews.getByWorkspace,
     async (_, workspaceId: string, limit?: number) => {
       return reviewsService.getByWorkspace(workspaceId, limit);
     },
   );
 
-  ipcMain.handle(CHANNELS.GET_BY_ID, async (_, id: string) => {
+  ipcMain.handle(CHANNELS.reviews.getById, async (_, id: string) => {
     return reviewsService.getById(id);
   });
 
   ipcMain.handle(
-    CHANNELS.CREATE,
+    CHANNELS.reviews.create,
     async (_, payload: CreateReviewPayload) => {
       return reviewsService.create(payload);
     },
   );
 
   ipcMain.handle(
-    CHANNELS.UPDATE,
+    CHANNELS.reviews.update,
     async (_, id: string, payload: UpdateReviewPayload) => {
       return reviewsService.update(id, payload);
     },
   );
 
-  ipcMain.handle(CHANNELS.DELETE, async (_, id: string) => {
+  ipcMain.handle(CHANNELS.reviews.delete, async (_, id: string) => {
     return reviewsService.delete(id);
   });
 }
 
 export function unregisterReviewsIpc(): void {
-  Object.values(CHANNELS).forEach((channel) => {
-    ipcMain.removeHandler(channel);
-  });
+  [
+    CHANNELS.reviews.getByWorkspace,
+    CHANNELS.reviews.getById,
+    CHANNELS.reviews.create,
+    CHANNELS.reviews.update,
+    CHANNELS.reviews.delete,
+  ].forEach((channel) => ipcMain.removeHandler(channel));
 }

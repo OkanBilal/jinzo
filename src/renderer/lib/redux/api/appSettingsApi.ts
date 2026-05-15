@@ -1,5 +1,6 @@
 import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export interface AppSettings {
   id: string;
@@ -36,7 +37,7 @@ export const appSettingsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAppSettings: builder.query<AppSettings, void>({
       query: () => ({
-        handler: "appSettings:get",
+        handler: CHANNELS.appSettings.get,
       }),
       transformResponse: (response: ServiceResponse<AppSettings>) => unwrap(response),
       providesTags: ["AppSettings"],
@@ -44,7 +45,7 @@ export const appSettingsApi = baseApi.injectEndpoints({
 
     updateAppSettings: builder.mutation<AppSettings, AppSettingsPatch>({
       query: (patch) => ({
-        handler: "appSettings:update",
+        handler: CHANNELS.appSettings.update,
         args: [patch],
       }),
       transformResponse: (response: ServiceResponse<AppSettings>) => unwrap(response),

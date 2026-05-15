@@ -1,5 +1,6 @@
 import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export interface RateLimitWindow {
   usedPercent: number;
@@ -208,7 +209,7 @@ export const providersApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getProviders: builder.query<Provider[], void>({
       query: () => ({
-        handler: "providers:getAll",
+        handler: CHANNELS.providers.getAll,
       }),
       transformResponse: (response: ServiceResponse<Provider[]>) => unwrap(response),
       providesTags: ["Providers"],
@@ -216,7 +217,7 @@ export const providersApi = baseApi.injectEndpoints({
 
     getProviderById: builder.query<Provider, string>({
       query: (id) => ({
-        handler: "providers:getById",
+        handler: CHANNELS.providers.getById,
         args: [id],
       }),
       transformResponse: (response: ServiceResponse<Provider>) => unwrap(response),
@@ -225,7 +226,7 @@ export const providersApi = baseApi.injectEndpoints({
 
     getProvidersByKind: builder.query<Provider[], ProviderKind>({
       query: (kind) => ({
-        handler: "providers:getByKind",
+        handler: CHANNELS.providers.getByKind,
         args: [kind],
       }),
       transformResponse: (response: ServiceResponse<Provider[]>) => unwrap(response),
@@ -234,7 +235,7 @@ export const providersApi = baseApi.injectEndpoints({
 
     getEnabledProviders: builder.query<Provider[], void>({
       query: () => ({
-        handler: "providers:getEnabled",
+        handler: CHANNELS.providers.getEnabled,
       }),
       transformResponse: (response: ServiceResponse<Provider[]>) => unwrap(response),
       providesTags: ["Providers"],
@@ -242,7 +243,7 @@ export const providersApi = baseApi.injectEndpoints({
 
     createProvider: builder.mutation<string, CreateProviderPayload>({
       query: (payload) => ({
-        handler: "providers:create",
+        handler: CHANNELS.providers.create,
         args: [payload],
       }),
       transformResponse: (response: ServiceResponse<string>) => unwrap(response),
@@ -254,7 +255,7 @@ export const providersApi = baseApi.injectEndpoints({
       { id: string; payload: UpdateProviderPayload }
     >({
       query: ({ id, payload }) => ({
-        handler: "providers:update",
+        handler: CHANNELS.providers.update,
         args: [id, payload],
       }),
       transformResponse: (response: ServiceResponse<Provider>) => unwrap(response),
@@ -266,7 +267,7 @@ export const providersApi = baseApi.injectEndpoints({
 
     deleteProvider: builder.mutation<void, string>({
       query: (id) => ({
-        handler: "providers:delete",
+        handler: CHANNELS.providers.delete,
         args: [id],
       }),
       invalidatesTags: ["Providers"],
@@ -274,7 +275,7 @@ export const providersApi = baseApi.injectEndpoints({
 
     enableProvider: builder.mutation<void, string>({
       query: (id) => ({
-        handler: "providers:enable",
+        handler: CHANNELS.providers.enable,
         args: [id],
       }),
       invalidatesTags: (_result, _error, id) => [
@@ -285,7 +286,7 @@ export const providersApi = baseApi.injectEndpoints({
 
     disableProvider: builder.mutation<void, string>({
       query: (id) => ({
-        handler: "providers:disable",
+        handler: CHANNELS.providers.disable,
         args: [id],
       }),
       invalidatesTags: (_result, _error, id) => [
@@ -296,7 +297,7 @@ export const providersApi = baseApi.injectEndpoints({
 
     getProviderModels: builder.query<ModelInfo[], string>({
       query: (id) => ({
-        handler: "providers:getModels",
+        handler: CHANNELS.providers.getModels,
         args: [id],
       }),
       transformResponse: (response: ServiceResponse<ModelInfo[]>) => unwrap(response),
@@ -308,7 +309,7 @@ export const providersApi = baseApi.injectEndpoints({
       { id: string; workspacePath?: string }
     >({
       query: ({ id, workspacePath }) => ({
-        handler: "providers:getCommands",
+        handler: CHANNELS.providers.getCommands,
         args: [id, workspacePath],
       }),
       transformResponse: (response: ServiceResponse<CommandInfo[]>) => unwrap(response),
@@ -322,7 +323,7 @@ export const providersApi = baseApi.injectEndpoints({
       { id: string; workspacePath?: string }
     >({
       query: ({ id, workspacePath }) => ({
-        handler: "providers:getSkills",
+        handler: CHANNELS.providers.getSkills,
         args: [id, workspacePath],
       }),
       transformResponse: (response: ServiceResponse<SkillInfo[]>) => unwrap(response),
@@ -333,7 +334,7 @@ export const providersApi = baseApi.injectEndpoints({
 
     getProviderAccountInfo: builder.query<CodexAccountInfo, string>({
       query: (id) => ({
-        handler: "providers:getAccountInfo",
+        handler: CHANNELS.providers.getAccountInfo,
         args: [id],
       }),
       transformResponse: (response: ServiceResponse<CodexAccountInfo>) =>
@@ -342,7 +343,7 @@ export const providersApi = baseApi.injectEndpoints({
 
     getProviderPlugins: builder.query<PluginListResponse, string>({
       query: (id) => ({
-        handler: "providers:getPlugins",
+        handler: CHANNELS.providers.getPlugins,
         args: [id],
       }),
       transformResponse: (response: ServiceResponse<PluginListResponse>) => unwrap(response),
@@ -354,7 +355,7 @@ export const providersApi = baseApi.injectEndpoints({
       { providerId: string; pluginName: string; marketplacePath: string }
     >({
       query: ({ providerId, pluginName, marketplacePath }) => ({
-        handler: "providers:readPlugin",
+        handler: CHANNELS.providers.readPlugin,
         args: [providerId, pluginName, marketplacePath],
       }),
       transformResponse: (response: ServiceResponse<PluginDetailResponse>) => unwrap(response),
@@ -362,7 +363,7 @@ export const providersApi = baseApi.injectEndpoints({
 
     installProviderPlugin: builder.mutation<void, { providerId: string; pluginId: string }>({
       query: ({ providerId, pluginId }) => ({
-        handler: "providers:installPlugin",
+        handler: CHANNELS.providers.installPlugin,
         args: [providerId, pluginId],
       }),
       transformResponse: (response: ServiceResponse<unknown>) => {
@@ -376,7 +377,7 @@ export const providersApi = baseApi.injectEndpoints({
 
     uninstallProviderPlugin: builder.mutation<void, { providerId: string; pluginId: string }>({
       query: ({ providerId, pluginId }) => ({
-        handler: "providers:uninstallPlugin",
+        handler: CHANNELS.providers.uninstallPlugin,
         args: [providerId, pluginId],
       }),
       transformResponse: (response: ServiceResponse<unknown>) => {
@@ -390,7 +391,7 @@ export const providersApi = baseApi.injectEndpoints({
 
     getProviderRateLimits: builder.query<RateLimitInfo | null, string>({
       query: (id) => ({
-        handler: "providers:getRateLimits",
+        handler: CHANNELS.providers.getRateLimits,
         args: [id],
       }),
       transformResponse: (response: ServiceResponse<RateLimitInfo | null>) =>
@@ -399,7 +400,7 @@ export const providersApi = baseApi.injectEndpoints({
 
     detectInstalledClis: builder.query<DetectedClis, void>({
       query: () => ({
-        handler: "providers:detectInstalled",
+        handler: CHANNELS.providers.detectInstalled,
       }),
       transformResponse: (response: ServiceResponse<DetectedClis>) =>
         response.success

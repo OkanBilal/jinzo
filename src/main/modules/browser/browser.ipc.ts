@@ -2,22 +2,7 @@ import { fail } from "../../../shared/ipc-kit/service-response";
 import { ipcMain } from "electron";
 import { browserService } from "./browser.service";
 import type { BrowserBounds } from "./browser.dto";
-
-const CHANNELS = {
-  ATTACH: "browser:attach",
-  DETACH: "browser:detach",
-  DESTROY: "browser:destroy",
-  SET_BOUNDS: "browser:setBounds",
-  SET_VISIBLE: "browser:setVisible",
-  NAVIGATE: "browser:navigate",
-  BACK: "browser:back",
-  FORWARD: "browser:forward",
-  RELOAD: "browser:reload",
-  STOP: "browser:stop",
-  SET_SELECT_MODE: "browser:setSelectMode",
-  GET_NAV_STATE: "browser:getNavState",
-  DELETE_CAPTURE: "browser:deleteCapture",
-} as const;
+import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 function validBounds(input: unknown): BrowserBounds | null {
   if (!input || typeof input !== "object") return null;
@@ -33,34 +18,34 @@ function validBounds(input: unknown): BrowserBounds | null {
 }
 
 export function registerBrowserIpc(): void {
-  ipcMain.handle(CHANNELS.ATTACH, async (_, payload: unknown) => {
+  ipcMain.handle(CHANNELS.browser.attach, async (_, payload: unknown) => {
     const bounds = validBounds(payload);
     if (!bounds) return fail("Invalid bounds");
     return browserService.attach(bounds);
   });
-  ipcMain.handle(CHANNELS.DETACH, async () => browserService.detach());
-  ipcMain.handle(CHANNELS.DESTROY, async () => browserService.destroy());
-  ipcMain.handle(CHANNELS.SET_BOUNDS, async (_, payload: unknown) => {
+  ipcMain.handle(CHANNELS.browser.detach, async () => browserService.detach());
+  ipcMain.handle(CHANNELS.browser.destroy, async () => browserService.destroy());
+  ipcMain.handle(CHANNELS.browser.setBounds, async (_, payload: unknown) => {
     const bounds = validBounds(payload);
     if (!bounds) return fail("Invalid bounds");
     return browserService.setBounds(bounds);
   });
-  ipcMain.handle(CHANNELS.SET_VISIBLE, async (_, visible: unknown) => {
+  ipcMain.handle(CHANNELS.browser.setVisible, async (_, visible: unknown) => {
     return browserService.setVisible(Boolean(visible));
   });
-  ipcMain.handle(CHANNELS.NAVIGATE, async (_, url: unknown) => {
+  ipcMain.handle(CHANNELS.browser.navigate, async (_, url: unknown) => {
     if (typeof url !== "string") return fail("url must be a string");
     return browserService.navigate(url);
   });
-  ipcMain.handle(CHANNELS.BACK, async () => browserService.goBack());
-  ipcMain.handle(CHANNELS.FORWARD, async () => browserService.goForward());
-  ipcMain.handle(CHANNELS.RELOAD, async () => browserService.reload());
-  ipcMain.handle(CHANNELS.STOP, async () => browserService.stop());
-  ipcMain.handle(CHANNELS.SET_SELECT_MODE, async (_, enabled: unknown) => {
+  ipcMain.handle(CHANNELS.browser.back, async () => browserService.goBack());
+  ipcMain.handle(CHANNELS.browser.forward, async () => browserService.goForward());
+  ipcMain.handle(CHANNELS.browser.reload, async () => browserService.reload());
+  ipcMain.handle(CHANNELS.browser.stop, async () => browserService.stop());
+  ipcMain.handle(CHANNELS.browser.setSelectMode, async (_, enabled: unknown) => {
     return browserService.setSelectMode(Boolean(enabled));
   });
-  ipcMain.handle(CHANNELS.GET_NAV_STATE, async () => browserService.getNavState());
-  ipcMain.handle(CHANNELS.DELETE_CAPTURE, async (_, captureName: unknown) => {
+  ipcMain.handle(CHANNELS.browser.getNavState, async () => browserService.getNavState());
+  ipcMain.handle(CHANNELS.browser.deleteCapture, async (_, captureName: unknown) => {
     if (typeof captureName !== "string") {
       return fail("captureName must be a string");
     }
@@ -69,5 +54,19 @@ export function registerBrowserIpc(): void {
 }
 
 export function unregisterBrowserIpc(): void {
-  Object.values(CHANNELS).forEach((ch) => ipcMain.removeHandler(ch));
+  [
+    CHANNELS.browser.attach,
+    CHANNELS.browser.detach,
+    CHANNELS.browser.destroy,
+    CHANNELS.browser.setBounds,
+    CHANNELS.browser.setVisible,
+    CHANNELS.browser.navigate,
+    CHANNELS.browser.back,
+    CHANNELS.browser.forward,
+    CHANNELS.browser.reload,
+    CHANNELS.browser.stop,
+    CHANNELS.browser.setSelectMode,
+    CHANNELS.browser.getNavState,
+    CHANNELS.browser.deleteCapture,
+  ].forEach((channel) => ipcMain.removeHandler(channel));
 }
