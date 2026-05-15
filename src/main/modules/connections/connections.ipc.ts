@@ -1,124 +1,107 @@
 import { ipcMain } from "electron";
 import { connectionsService } from "./connections.service";
 import type { SaveResourcesPayload } from "./connections.dto";
+import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Channel Constants
-// ─────────────────────────────────────────────────────────────
-const IPC_CHANNELS = {
-  GET_GITHUB_REPOS: "connections:getGithubRepos",
-  GET_LINEAR_TEAMS: "connections:getLinearTeams",
-  GET_JIRA_PROJECTS: "connections:getJiraProjects",
-  GET_ASANA_PROJECTS: "connections:getAsanaProjects",
-  GET_GITLAB_PROJECTS: "connections:getGitlabProjects",
-  GET_TRELLO_BOARDS: "connections:getTrelloBoards",
-  GET_SENTRY_PROJECTS: "connections:getSentryProjects",
-  GET_SOCKETDEV_ORGS: "connections:getSocketDevOrganizations",
-  SAVE_RESOURCES: "connections:saveResources",
-  REMOVE_RESOURCE: "connections:removeResource",
-  GET_BY_PROVIDER: "connections:getByProvider",
-  GET_SELECTED_RESOURCES: "connections:getSelectedResources",
-  DELETE_RESOURCE: "connections:deleteResource",
-  REVOKE: "connections:revoke",
-} as const;
-
 // ─────────────────────────────────────────────────────────────
 // Register Handlers
 // ─────────────────────────────────────────────────────────────
 export function registerConnectionsHandlers(): void {
   ipcMain.handle(
-    IPC_CHANNELS.GET_GITHUB_REPOS,
+    CHANNELS.connections.getGithubRepos,
     async (_event, connectionId: string) => {
       return connectionsService.getGithubRepos(connectionId);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.GET_LINEAR_TEAMS,
+    CHANNELS.connections.getLinearTeams,
     async (_event, connectionId: string) => {
       return connectionsService.getLinearTeams(connectionId);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.GET_JIRA_PROJECTS,
+    CHANNELS.connections.getJiraProjects,
     async (_event, connectionId: string) => {
       return connectionsService.getJiraProjects(connectionId);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.GET_ASANA_PROJECTS,
+    CHANNELS.connections.getAsanaProjects,
     async (_event, connectionId: string) => {
       return connectionsService.getAsanaProjects(connectionId);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.GET_GITLAB_PROJECTS,
+    CHANNELS.connections.getGitlabProjects,
     async (_event, connectionId: string) => {
       return connectionsService.getGitlabProjects(connectionId);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.GET_TRELLO_BOARDS,
+    CHANNELS.connections.getTrelloBoards,
     async (_event, connectionId: string) => {
       return connectionsService.getTrelloBoards(connectionId);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.GET_SENTRY_PROJECTS,
+    CHANNELS.connections.getSentryProjects,
     async (_event, connectionId: string) => {
       return connectionsService.getSentryProjects(connectionId);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.GET_SOCKETDEV_ORGS,
+    CHANNELS.connections.getSocketDevOrganizations,
     async (_event, connectionId: string) => {
       return connectionsService.getSocketDevOrganizations(connectionId);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.SAVE_RESOURCES,
+    CHANNELS.connections.saveResources,
     async (_event, payload: SaveResourcesPayload) => {
       return connectionsService.saveResources(payload);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.REMOVE_RESOURCE,
+    CHANNELS.connections.removeResource,
     async (_event, resourceId: string) => {
       return connectionsService.removeResource(resourceId);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.GET_BY_PROVIDER,
+    CHANNELS.connections.getByProvider,
     async (_event, provider: string) => {
       return connectionsService.getByProvider(provider);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.GET_SELECTED_RESOURCES,
+    CHANNELS.connections.getSelectedResources,
     async (_event, provider: string) => {
       return connectionsService.getSelectedResources(provider);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.DELETE_RESOURCE,
+    CHANNELS.connections.deleteResource,
     async (_event, resourceId: string) => {
       return connectionsService.deleteResource(resourceId);
     }
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.REVOKE,
+    CHANNELS.connections.revoke,
     async (_event, provider: string) => {
       return connectionsService.revoke(provider);
     }
@@ -129,7 +112,20 @@ export function registerConnectionsHandlers(): void {
 // Unregister Handlers
 // ─────────────────────────────────────────────────────────────
 export function unregisterConnectionsHandlers(): void {
-  Object.values(IPC_CHANNELS).forEach((channel) => {
-    ipcMain.removeHandler(channel);
-  });
+  [
+    CHANNELS.connections.getGithubRepos,
+    CHANNELS.connections.getLinearTeams,
+    CHANNELS.connections.getJiraProjects,
+    CHANNELS.connections.getAsanaProjects,
+    CHANNELS.connections.getGitlabProjects,
+    CHANNELS.connections.getTrelloBoards,
+    CHANNELS.connections.getSentryProjects,
+    CHANNELS.connections.getSocketDevOrganizations,
+    CHANNELS.connections.saveResources,
+    CHANNELS.connections.removeResource,
+    CHANNELS.connections.getByProvider,
+    CHANNELS.connections.getSelectedResources,
+    CHANNELS.connections.deleteResource,
+    CHANNELS.connections.revoke,
+  ].forEach((channel) => ipcMain.removeHandler(channel));
 }

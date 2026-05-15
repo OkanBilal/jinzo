@@ -1,4 +1,5 @@
 import { baseApi } from "./baseApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export interface PackageIdentifier {
   name: string;
@@ -62,7 +63,7 @@ export const guardsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getActiveGuard: builder.query<ActiveGuardInfo | null, void>({
       query: () => ({
-        handler: "guards:getActiveGuard",
+        handler: CHANNELS.guards.getActiveGuard,
       }),
       transformResponse: (response: any) =>
         response?.success ? response.data : null,
@@ -70,7 +71,7 @@ export const guardsApi = baseApi.injectEndpoints({
 
     checkPackage: builder.mutation<PackageCheckResult, PackageIdentifier>({
       query: (pkg) => ({
-        handler: "guards:checkPackage",
+        handler: CHANNELS.guards.checkPackage,
         args: [pkg],
       }),
       transformResponse: (response: any) =>
@@ -79,7 +80,7 @@ export const guardsApi = baseApi.injectEndpoints({
 
     checkPackages: builder.mutation<PackageCheckResult[], PackageIdentifier[]>({
       query: (pkgs) => ({
-        handler: "guards:checkPackages",
+        handler: CHANNELS.guards.checkPackages,
         args: [pkgs],
       }),
       transformResponse: (response: any) =>
@@ -88,7 +89,7 @@ export const guardsApi = baseApi.injectEndpoints({
 
     getPackageScore: builder.query<PackageScore, PackageIdentifier>({
       query: (pkg) => ({
-        handler: "guards:getPackageScore",
+        handler: CHANNELS.guards.getPackageScore,
         args: [pkg],
       }),
       transformResponse: (response: any) =>
@@ -100,7 +101,7 @@ export const guardsApi = baseApi.injectEndpoints({
       { workspaceId: string; rootPath: string }
     >({
       query: ({ workspaceId, rootPath }) => ({
-        handler: "guards:scanWorkspace",
+        handler: CHANNELS.guards.scanWorkspace,
         args: [workspaceId, rootPath],
       }),
       transformResponse: (response: any) =>

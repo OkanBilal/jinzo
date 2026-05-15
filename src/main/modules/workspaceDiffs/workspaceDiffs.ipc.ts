@@ -1,50 +1,46 @@
 import { ipcMain } from "electron";
 import { workspaceDiffsService } from "./workspaceDiffs.service";
+import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Channel Names
-// ─────────────────────────────────────────────────────────────
-const CHANNELS = {
-  GET_BY_WORKSPACE: "workspaceDiffs:getByWorkspace",
-  GET_LATEST: "workspaceDiffs:getLatest",
-  GET_LATEST_SUMMARY: "workspaceDiffs:getLatestSummary",
-  GET_BY_RUN: "workspaceDiffs:getByRun",
-  DELETE_LATEST: "workspaceDiffs:deleteLatest",
-} as const;
-
 // ─────────────────────────────────────────────────────────────
 // IPC Handlers
 // ─────────────────────────────────────────────────────────────
 export function registerWorkspaceDiffsIpc(): void {
   ipcMain.handle(
-    CHANNELS.GET_BY_WORKSPACE,
+    CHANNELS.workspaceDiffs.getByWorkspace,
     async (_, workspaceId: string, limit?: number) => {
       return workspaceDiffsService.getByWorkspace(workspaceId, limit);
     },
   );
 
-  ipcMain.handle(CHANNELS.GET_LATEST, async (_, workspaceId: string) => {
+  ipcMain.handle(CHANNELS.workspaceDiffs.getLatest, async (_, workspaceId: string) => {
     return workspaceDiffsService.getLatest(workspaceId);
   });
 
   ipcMain.handle(
-    CHANNELS.GET_LATEST_SUMMARY,
+    CHANNELS.workspaceDiffs.getLatestSummary,
     async (_, workspaceId: string) => {
       return workspaceDiffsService.getLatestSummary(workspaceId);
     },
   );
 
-  ipcMain.handle(CHANNELS.GET_BY_RUN, async (_, runId: string) => {
+  ipcMain.handle(CHANNELS.workspaceDiffs.getByRun, async (_, runId: string) => {
     return workspaceDiffsService.getByRun(runId);
   });
 
-  ipcMain.handle(CHANNELS.DELETE_LATEST, async (_, workspaceId: string) => {
+  ipcMain.handle(CHANNELS.workspaceDiffs.deleteLatest, async (_, workspaceId: string) => {
     return workspaceDiffsService.deleteLatest(workspaceId);
   });
 }
 
 export function unregisterWorkspaceDiffsIpc(): void {
-  Object.values(CHANNELS).forEach((channel) => {
-    ipcMain.removeHandler(channel);
-  });
+  [
+    CHANNELS.workspaceDiffs.getByWorkspace,
+    CHANNELS.workspaceDiffs.getLatest,
+    CHANNELS.workspaceDiffs.getLatestSummary,
+    CHANNELS.workspaceDiffs.getByRun,
+    CHANNELS.workspaceDiffs.deleteLatest,
+  ].forEach((channel) => ipcMain.removeHandler(channel));
 }

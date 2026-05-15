@@ -1,5 +1,6 @@
 import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export type ToolCallStatus = "queued" | "running" | "done" | "error" | "canceled";
 
@@ -45,7 +46,7 @@ export const toolsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getToolCallsByRun: builder.query<ToolCall[], string>({
       query: (runId) => ({
-        handler: "toolCalls:getByRun",
+        handler: CHANNELS.toolCalls.getByRun,
         args: [runId],
       }),
       transformResponse: (response: ServiceResponse<ToolCall[]>) => unwrap(response),
@@ -59,7 +60,7 @@ export const toolsApi = baseApi.injectEndpoints({
       { accountId: string; limit?: number }
     >({
       query: ({ accountId, limit }) => ({
-        handler: "toolCalls:getByAccount",
+        handler: CHANNELS.toolCalls.getByAccount,
         args: [accountId, limit],
       }),
       transformResponse: (response: ServiceResponse<ToolCall[]>) => unwrap(response),
@@ -68,7 +69,7 @@ export const toolsApi = baseApi.injectEndpoints({
 
     createToolCall: builder.mutation<number, CreateToolCallPayload>({
       query: (payload) => ({
-        handler: "toolCalls:create",
+        handler: CHANNELS.toolCalls.create,
         args: [payload],
       }),
       transformResponse: (response: ServiceResponse<number>) => unwrap(response),
@@ -80,7 +81,7 @@ export const toolsApi = baseApi.injectEndpoints({
       { id: number; payload: UpdateToolCallPayload }
     >({
       query: ({ id, payload }) => ({
-        handler: "toolCalls:update",
+        handler: CHANNELS.toolCalls.update,
         args: [id, payload],
       }),
       invalidatesTags: ["ToolCalls"],
@@ -88,7 +89,7 @@ export const toolsApi = baseApi.injectEndpoints({
 
     startToolCall: builder.mutation<void, number>({
       query: (id) => ({
-        handler: "toolCalls:start",
+        handler: CHANNELS.toolCalls.start,
         args: [id],
       }),
       invalidatesTags: ["ToolCalls"],
@@ -99,7 +100,7 @@ export const toolsApi = baseApi.injectEndpoints({
       { id: number; output: Record<string, unknown>; latencyMs?: number }
     >({
       query: ({ id, output, latencyMs }) => ({
-        handler: "toolCalls:complete",
+        handler: CHANNELS.toolCalls.complete,
         args: [id, output, latencyMs],
       }),
       invalidatesTags: ["ToolCalls"],
@@ -107,7 +108,7 @@ export const toolsApi = baseApi.injectEndpoints({
 
     failToolCall: builder.mutation<void, { id: number; error: string }>({
       query: ({ id, error }) => ({
-        handler: "toolCalls:fail",
+        handler: CHANNELS.toolCalls.fail,
         args: [id, error],
       }),
       invalidatesTags: ["ToolCalls"],

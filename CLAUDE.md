@@ -88,13 +88,15 @@ A handful of modules deviate from the canonical 6-file layout — `guards`, `bro
 
 ### IPC Convention
 
-Channel format: `"domain:action"` (e.g. `"entities:getAll"`). Channels must stay in sync across three files — there is no shared registry:
+Channel format: `"domain:action"` (e.g. `"entities:getAll"`). All channels are defined once in `src/shared/ipc-kit/channels.ts` as a typed map (`CHANNELS.entities.getAll`). Main, preload, and renderer all import and reference values from that map — never type the channel string literally. Adding a channel = one edit; renaming = one edit; typo = compile-time error.
 
-1. `src/preload/index.ts` — `ipcRenderer.invoke("domain:action")`
-2. `src/main/modules/{name}/{name}.ipc.ts` — `ipcMain.handle("domain:action")`
-3. `src/renderer/lib/redux/api/{name}Api.ts` — `{ handler: "domain:action" }`
+Sites that reference the registry:
 
-All IPC responses use `ServiceResponse<T>` envelope: `{ success: true, data }` or `{ success: false, error }`.
+1. `src/preload/index.ts` — `ipcRenderer.invoke(CHANNELS.entities.getAll, ...)`
+2. `src/main/modules/{name}/{name}.ipc.ts` — `ipcMain.handle(CHANNELS.entities.getAll, ...)`
+3. `src/renderer/lib/redux/api/{name}Api.ts` — `{ handler: CHANNELS.entities.getAll }`
+
+All IPC responses use `ServiceResponse<T>` envelope: `ok(data)` or `fail(message)` from `src/shared/ipc-kit/service-response`.
 
 ### Data Flow
 

@@ -1,5 +1,6 @@
 import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export interface SyncStats {
   inserted: number;
@@ -25,7 +26,7 @@ export const syncApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     runEntitySync: builder.mutation<SyncResult, string | void>({
       query: (provider) => ({
-        handler: "sync:runEntitySync",
+        handler: CHANNELS.sync.runEntitySync,
         args: provider ? [provider] : [],
       }),
       transformResponse: (response: ServiceResponse<SyncResult>) => unwrap(response),

@@ -1,20 +1,21 @@
 import { ipcMain } from "electron";
 import { updatesService } from "./updates.service";
+import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Handlers - Thin layer, just registers handlers
 // ─────────────────────────────────────────────────────────────
 export function registerUpdatesIpc() {
-  ipcMain.handle("updates:check", () => updatesService.checkForUpdates());
-  ipcMain.handle("updates:download", () => updatesService.downloadUpdate());
-  ipcMain.handle("updates:quitAndInstall", () => updatesService.quitAndInstall());
-  ipcMain.handle("updates:getStatus", () => updatesService.getStatus());
+  ipcMain.handle(CHANNELS.updates.check, () => updatesService.checkForUpdates());
+  ipcMain.handle(CHANNELS.updates.download, () => updatesService.downloadUpdate());
+  ipcMain.handle(CHANNELS.updates.quitAndInstall, () => updatesService.quitAndInstall());
+  ipcMain.handle(CHANNELS.updates.getStatus, () => updatesService.getStatus());
 
 }
 
 export function unregisterUpdatesIpc() {
-  ipcMain.removeHandler("updates:check");
-  ipcMain.removeHandler("updates:download");
-  ipcMain.removeHandler("updates:quitAndInstall");
-  ipcMain.removeHandler("updates:getStatus");
+  ipcMain.removeHandler(CHANNELS.updates.check);
+  ipcMain.removeHandler(CHANNELS.updates.download);
+  ipcMain.removeHandler(CHANNELS.updates.quitAndInstall);
+  ipcMain.removeHandler(CHANNELS.updates.getStatus);
 }

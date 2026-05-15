@@ -1,5 +1,6 @@
 import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export interface Space {
   id: string;
@@ -46,7 +47,7 @@ export const spaceApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getSpaces: builder.query<Space[], void>({
       query: () => ({
-        handler: "space:getAll",
+        handler: CHANNELS.space.getAll,
       }),
       transformResponse: (response: ServiceResponse<Space[]>) => unwrap(response),
       providesTags: ["Spaces"],
@@ -54,7 +55,7 @@ export const spaceApi = baseApi.injectEndpoints({
 
     getSpaceById: builder.query<Space, string>({
       query: (spaceId) => ({
-        handler: "space:getById",
+        handler: CHANNELS.space.getById,
         args: [spaceId],
       }),
       transformResponse: (response: ServiceResponse<Space>) => unwrap(response),
@@ -63,7 +64,7 @@ export const spaceApi = baseApi.injectEndpoints({
 
     createSpace: builder.mutation<Space, CreateSpacePayload>({
       query: (payload) => ({
-        handler: "space:create",
+        handler: CHANNELS.space.create,
         args: [payload],
       }),
       transformResponse: (response: ServiceResponse<Space>) => unwrap(response),
@@ -75,7 +76,7 @@ export const spaceApi = baseApi.injectEndpoints({
       { id: string; payload: UpdateSpacePayload }
     >({
       query: ({ id, payload }) => ({
-        handler: "space:update",
+        handler: CHANNELS.space.update,
         args: [id, payload],
       }),
       transformResponse: (response: ServiceResponse<Space>) => unwrap(response),
@@ -87,7 +88,7 @@ export const spaceApi = baseApi.injectEndpoints({
 
     deleteSpace: builder.mutation<void, string>({
       query: (spaceId) => ({
-        handler: "space:delete",
+        handler: CHANNELS.space.delete,
         args: [spaceId],
       }),
       invalidatesTags: ["Spaces", "AppSettings"],
@@ -95,7 +96,7 @@ export const spaceApi = baseApi.injectEndpoints({
 
     archiveSpace: builder.mutation<void, string>({
       query: (spaceId) => ({
-        handler: "space:archive",
+        handler: CHANNELS.space.archive,
         args: [spaceId],
       }),
       invalidatesTags: ["Spaces"],
@@ -103,7 +104,7 @@ export const spaceApi = baseApi.injectEndpoints({
 
     unarchiveSpace: builder.mutation<void, string>({
       query: (spaceId) => ({
-        handler: "space:unarchive",
+        handler: CHANNELS.space.unarchive,
         args: [spaceId],
       }),
       invalidatesTags: ["Spaces"],

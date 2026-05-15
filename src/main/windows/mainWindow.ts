@@ -1,6 +1,7 @@
 import { app, BrowserWindow, nativeImage, screen, shell } from "electron";
 import path from "path";
 import fs, { existsSync } from "fs";
+import { CHANNELS } from "../../shared/ipc-kit/channels";
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -220,10 +221,10 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
   }
 
   mainWindow.on("enter-full-screen", () => {
-    mainWindow?.webContents.send("app:fullscreenChange", true);
+    mainWindow?.webContents.send(CHANNELS.app.fullscreenChange, true);
   });
   mainWindow.on("leave-full-screen", () => {
-    mainWindow?.webContents.send("app:fullscreenChange", false);
+    mainWindow?.webContents.send(CHANNELS.app.fullscreenChange, false);
   });
 
   mainWindow.on("closed", () => {

@@ -1,5 +1,6 @@
 import { ipcMain } from "electron";
 import { appSettingsService } from "./appSettings.service";
+import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Handlers — call service directly. appSettings has no
@@ -7,13 +8,13 @@ import { appSettingsService } from "./appSettings.service";
 // the service (see CONTEXT.md "App settings").
 // ─────────────────────────────────────────────────────────────
 export function registerAppSettingsIpc() {
-  ipcMain.handle("appSettings:get", () => appSettingsService.getSettings());
-  ipcMain.handle("appSettings:update", (_, patch) =>
+  ipcMain.handle(CHANNELS.appSettings.get, () => appSettingsService.getSettings());
+  ipcMain.handle(CHANNELS.appSettings.update, (_, patch) =>
     appSettingsService.updateSettings(patch),
   );
 }
 
 export function unregisterAppSettingsIpc() {
-  ipcMain.removeHandler("appSettings:get");
-  ipcMain.removeHandler("appSettings:update");
+  ipcMain.removeHandler(CHANNELS.appSettings.get);
+  ipcMain.removeHandler(CHANNELS.appSettings.update);
 }

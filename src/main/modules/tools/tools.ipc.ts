@@ -1,5 +1,6 @@
 import { ipcMain } from "electron";
 import { toolsService } from "./tools.service";
+import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import type {
   CreateToolCallPayload,
   UpdateToolCallPayload,
@@ -8,64 +9,57 @@ import type {
 // ─────────────────────────────────────────────────────────────
 // IPC Channel Names
 // ─────────────────────────────────────────────────────────────
-const CHANNELS = {
-  // Tool Calls
-  TOOL_CALLS_GET_BY_RUN: "toolCalls:getByRun",
-  TOOL_CALLS_GET_BY_ACCOUNT: "toolCalls:getByAccount",
-  TOOL_CALLS_CREATE: "toolCalls:create",
-  TOOL_CALLS_UPDATE: "toolCalls:update",
-  TOOL_CALLS_START: "toolCalls:start",
-  TOOL_CALLS_COMPLETE: "toolCalls:complete",
-  TOOL_CALLS_FAIL: "toolCalls:fail",
-
-} as const;
-
-// ─────────────────────────────────────────────────────────────
 // IPC Handlers
 // ─────────────────────────────────────────────────────────────
 export function registerToolsIpc(): void {
   // Tool Calls
-  ipcMain.handle(CHANNELS.TOOL_CALLS_GET_BY_RUN, async (_, runId: string) => {
+  ipcMain.handle(CHANNELS.toolCalls.getByRun, async (_, runId: string) => {
     return toolsService.getToolCallsByRun(runId);
   });
 
   ipcMain.handle(
-    CHANNELS.TOOL_CALLS_GET_BY_ACCOUNT,
+    CHANNELS.toolCalls.getByAccount,
     async (_, accountId: string, limit?: number) => {
       return toolsService.getToolCallsByAccount(accountId, limit);
     }
   );
 
-  ipcMain.handle(CHANNELS.TOOL_CALLS_CREATE, async (_, payload: CreateToolCallPayload) => {
+  ipcMain.handle(CHANNELS.toolCalls.create, async (_, payload: CreateToolCallPayload) => {
     return toolsService.createToolCall(payload);
   });
 
   ipcMain.handle(
-    CHANNELS.TOOL_CALLS_UPDATE,
+    CHANNELS.toolCalls.update,
     async (_, id: number, payload: UpdateToolCallPayload) => {
       return toolsService.updateToolCall(id, payload);
     }
   );
 
-  ipcMain.handle(CHANNELS.TOOL_CALLS_START, async (_, id: number) => {
+  ipcMain.handle(CHANNELS.toolCalls.start, async (_, id: number) => {
     return toolsService.startToolCall(id);
   });
 
   ipcMain.handle(
-    CHANNELS.TOOL_CALLS_COMPLETE,
+    CHANNELS.toolCalls.complete,
     async (_, id: number, output: Record<string, unknown>, latencyMs?: number) => {
       return toolsService.completeToolCall(id, output, latencyMs);
     }
   );
 
-  ipcMain.handle(CHANNELS.TOOL_CALLS_FAIL, async (_, id: number, error: string) => {
+  ipcMain.handle(CHANNELS.toolCalls.fail, async (_, id: number, error: string) => {
     return toolsService.failToolCall(id, error);
   });
 
 }
 
 export function unregisterToolsIpc(): void {
-  Object.values(CHANNELS).forEach((channel) => {
-    ipcMain.removeHandler(channel);
-  });
+  [
+    CHANNELS.toolCalls.getByRun,
+    CHANNELS.toolCalls.getByAccount,
+    CHANNELS.toolCalls.create,
+    CHANNELS.toolCalls.update,
+    CHANNELS.toolCalls.start,
+    CHANNELS.toolCalls.complete,
+    CHANNELS.toolCalls.fail,
+  ].forEach((channel) => ipcMain.removeHandler(channel));
 }

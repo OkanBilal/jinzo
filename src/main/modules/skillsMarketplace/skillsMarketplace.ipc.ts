@@ -1,39 +1,36 @@
 import { ipcMain } from "electron";
 import { skillsMarketplaceService } from "./skillsMarketplace.service";
 import type { ListArgs, SearchArgs, SkillRef } from "./skillsMarketplace.dto";
-
-const CHANNELS = {
-  LIST: "skillsMarketplace:list",
-  SEARCH: "skillsMarketplace:search",
-  CURATED: "skillsMarketplace:curated",
-  DETAIL: "skillsMarketplace:detail",
-  AUDIT: "skillsMarketplace:audit",
-} as const;
+import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 export function registerSkillsMarketplaceIpc(): void {
-  ipcMain.handle(CHANNELS.LIST, async (_, args: ListArgs = {}) => {
+  ipcMain.handle(CHANNELS.skillsMarketplace.list, async (_, args: ListArgs = {}) => {
     return skillsMarketplaceService.list(args);
   });
 
-  ipcMain.handle(CHANNELS.SEARCH, async (_, args: SearchArgs) => {
+  ipcMain.handle(CHANNELS.skillsMarketplace.search, async (_, args: SearchArgs) => {
     return skillsMarketplaceService.search(args);
   });
 
-  ipcMain.handle(CHANNELS.CURATED, async () => {
+  ipcMain.handle(CHANNELS.skillsMarketplace.curated, async () => {
     return skillsMarketplaceService.curated();
   });
 
-  ipcMain.handle(CHANNELS.DETAIL, async (_, ref: SkillRef) => {
+  ipcMain.handle(CHANNELS.skillsMarketplace.detail, async (_, ref: SkillRef) => {
     return skillsMarketplaceService.detail(ref);
   });
 
-  ipcMain.handle(CHANNELS.AUDIT, async (_, ref: SkillRef) => {
+  ipcMain.handle(CHANNELS.skillsMarketplace.audit, async (_, ref: SkillRef) => {
     return skillsMarketplaceService.audit(ref);
   });
 }
 
 export function unregisterSkillsMarketplaceIpc(): void {
-  Object.values(CHANNELS).forEach((channel) => {
-    ipcMain.removeHandler(channel);
-  });
+  [
+    CHANNELS.skillsMarketplace.list,
+    CHANNELS.skillsMarketplace.search,
+    CHANNELS.skillsMarketplace.curated,
+    CHANNELS.skillsMarketplace.detail,
+    CHANNELS.skillsMarketplace.audit,
+  ].forEach((channel) => ipcMain.removeHandler(channel));
 }

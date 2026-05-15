@@ -79,6 +79,7 @@ export interface DashboardData {
 }
 
 import type { ProviderId } from "../../../../shared/provider-ids";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export type ProviderFilter = "all" | ProviderId;
 
@@ -86,7 +87,7 @@ export const statsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getDashboard: builder.query<DashboardData, ProviderFilter | void>({
       query: (filter) => ({
-        handler: "stats:getDashboard",
+        handler: CHANNELS.stats.getDashboard,
         args: [filter ?? "all"],
       }),
       transformResponse: (response: ServiceResponse<DashboardData>) => unwrap(response),

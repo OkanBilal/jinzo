@@ -1,4 +1,5 @@
 import { baseApi } from "./baseApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export interface Entity {
   id: string;
@@ -91,7 +92,7 @@ export const entitiesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getEntities: builder.query<Entity[], EntityQueryParams>({
       query: (params) => ({
-        handler: "entities:getAll",
+        handler: CHANNELS.entities.getAll,
         args: [params],
       }),
       transformResponse: (response: any) =>
@@ -107,7 +108,7 @@ export const entitiesApi = baseApi.injectEndpoints({
 
     getEntityById: builder.query<Entity | null, string>({
       query: (id) => ({
-        handler: "entities:getById",
+        handler: CHANNELS.entities.getById,
         args: [id],
       }),
       transformResponse: (response: any) =>
@@ -117,7 +118,7 @@ export const entitiesApi = baseApi.injectEndpoints({
 
     createEntity: builder.mutation<Entity, CreateEntityPayload>({
       query: (payload) => ({
-        handler: "entities:create",
+        handler: CHANNELS.entities.create,
         args: [payload],
       }),
       transformResponse: (response: any) =>
@@ -127,7 +128,7 @@ export const entitiesApi = baseApi.injectEndpoints({
 
     updateEntity: builder.mutation<Entity, UpdateEntityPayload>({
       query: (payload) => ({
-        handler: "entities:update",
+        handler: CHANNELS.entities.update,
         args: [payload.id, payload],
       }),
       transformResponse: (response: any) =>
@@ -140,7 +141,7 @@ export const entitiesApi = baseApi.injectEndpoints({
 
     deleteEntity: builder.mutation<boolean, string>({
       query: (id) => ({
-        handler: "entities:delete",
+        handler: CHANNELS.entities.delete,
         args: [id],
       }),
       transformResponse: (response: any) => response.success,
@@ -152,7 +153,7 @@ export const entitiesApi = baseApi.injectEndpoints({
 
     searchEntities: builder.query<Entity[], { query: string; limit?: number }>({
       query: ({ query, limit }) => ({
-        handler: "entities:search",
+        handler: CHANNELS.entities.search,
         args: [query, limit],
       }),
       transformResponse: (response: any) =>
@@ -161,7 +162,7 @@ export const entitiesApi = baseApi.injectEndpoints({
 
     getTasks: builder.query<Task[], { status?: string; limit?: number }>({
       query: (params) => ({
-        handler: "tasks:getAll",
+        handler: CHANNELS.tasks.getAll,
         args: [params],
       }),
       transformResponse: (response: any) =>
@@ -171,7 +172,7 @@ export const entitiesApi = baseApi.injectEndpoints({
 
     getTaskByEntityId: builder.query<Task | null, string>({
       query: (entityId) => ({
-        handler: "tasks:getById",
+        handler: CHANNELS.tasks.getById,
         args: [entityId],
       }),
       transformResponse: (response: any) =>
@@ -186,7 +187,7 @@ export const entitiesApi = baseApi.injectEndpoints({
       { entityId: string; status: string }
     >({
       query: ({ entityId, status }) => ({
-        handler: "tasks:update",
+        handler: CHANNELS.tasks.update,
         args: [entityId, { status }],
       }),
       transformResponse: (response: any) =>
@@ -196,7 +197,7 @@ export const entitiesApi = baseApi.injectEndpoints({
 
     getIssues: builder.query<Issue[], { state?: string; limit?: number }>({
       query: (params) => ({
-        handler: "issues:getAll",
+        handler: CHANNELS.issues.getAll,
         args: [params],
       }),
       transformResponse: (response: any) =>
@@ -206,7 +207,7 @@ export const entitiesApi = baseApi.injectEndpoints({
 
     getIssueByEntityId: builder.query<Issue | null, string>({
       query: (entityId) => ({
-        handler: "issues:getById",
+        handler: CHANNELS.issues.getById,
         args: [entityId],
       }),
       transformResponse: (response: any) =>
@@ -221,7 +222,7 @@ export const entitiesApi = baseApi.injectEndpoints({
       { entityId: string; state: string }
     >({
       query: ({ entityId, state }) => ({
-        handler: "issues:update",
+        handler: CHANNELS.issues.update,
         args: [entityId, { state }],
       }),
       transformResponse: (response: any) =>
@@ -231,7 +232,7 @@ export const entitiesApi = baseApi.injectEndpoints({
 
     getIssuesByRepo: builder.query<IssueWithEntity[], { repo: string }>({
       query: ({ repo }) => ({
-        handler: "issues:getAll",
+        handler: CHANNELS.issues.getAll,
         args: [{ repo }],
       }),
       transformResponse: (response: any) =>

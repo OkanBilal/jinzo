@@ -1,4 +1,5 @@
 import { baseApi } from "./baseApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export type FindingSeverity = "critical" | "warning" | "info";
 
@@ -53,7 +54,7 @@ export const reviewFindingsApi = baseApi.injectEndpoints({
       { workspaceId: string }
     >({
       query: ({ workspaceId }) => ({
-        handler: "reviewFindings:getByWorkspace",
+        handler: CHANNELS.reviewFindings.getByWorkspace,
         args: [workspaceId],
       }),
       transformResponse: (response: any) => response?.data ?? [],
@@ -65,7 +66,7 @@ export const reviewFindingsApi = baseApi.injectEndpoints({
       { reviewId: string; limit?: number }
     >({
       query: ({ reviewId, limit }) => ({
-        handler: "reviewFindings:getByReview",
+        handler: CHANNELS.reviewFindings.getByReview,
         args: [reviewId, limit],
       }),
       transformResponse: (response: any) => response?.data ?? [],
@@ -74,7 +75,7 @@ export const reviewFindingsApi = baseApi.injectEndpoints({
 
     getReviewFindingById: builder.query<ReviewFinding, string>({
       query: (id) => ({
-        handler: "reviewFindings:getById",
+        handler: CHANNELS.reviewFindings.getById,
         args: [id],
       }),
       transformResponse: (response: any) => response?.data ?? null,
@@ -83,7 +84,7 @@ export const reviewFindingsApi = baseApi.injectEndpoints({
 
     createReviewFinding: builder.mutation<string, CreateReviewFindingPayload>({
       query: (payload) => ({
-        handler: "reviewFindings:create",
+        handler: CHANNELS.reviewFindings.create,
         args: [payload],
       }),
       transformResponse: (response: any) => response?.data,
@@ -95,7 +96,7 @@ export const reviewFindingsApi = baseApi.injectEndpoints({
       CreateReviewFindingPayload[]
     >({
       query: (payloads) => ({
-        handler: "reviewFindings:createMany",
+        handler: CHANNELS.reviewFindings.createMany,
         args: [payloads],
       }),
       transformResponse: (response: any) => response?.data,
@@ -107,7 +108,7 @@ export const reviewFindingsApi = baseApi.injectEndpoints({
       { id: string; payload: UpdateReviewFindingPayload }
     >({
       query: ({ id, payload }) => ({
-        handler: "reviewFindings:update",
+        handler: CHANNELS.reviewFindings.update,
         args: [id, payload],
       }),
       transformResponse: (response: any) => response?.data,
@@ -119,7 +120,7 @@ export const reviewFindingsApi = baseApi.injectEndpoints({
 
     deleteReviewFinding: builder.mutation<void, string>({
       query: (id) => ({
-        handler: "reviewFindings:delete",
+        handler: CHANNELS.reviewFindings.delete,
         args: [id],
       }),
       invalidatesTags: ["ReviewFindings"],

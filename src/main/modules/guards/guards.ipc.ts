@@ -5,43 +5,36 @@
 import { ipcMain } from "electron";
 import type { PackageIdentifier } from "./adapters/adapter.types";
 import { guardsService } from "./guards.service";
-
-const CHANNELS = {
-  GET_ACTIVE_GUARD: "guards:getActiveGuard",
-  CHECK_PACKAGE: "guards:checkPackage",
-  CHECK_PACKAGES: "guards:checkPackages",
-  GET_PACKAGE_SCORE: "guards:getPackageScore",
-  SCAN_WORKSPACE: "guards:scanWorkspace",
-} as const;
+import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 export function registerGuardsIpc(): void {
-  ipcMain.handle(CHANNELS.GET_ACTIVE_GUARD, async () => {
+  ipcMain.handle(CHANNELS.guards.getActiveGuard, async () => {
     return guardsService.getActiveGuard();
   });
 
   ipcMain.handle(
-    CHANNELS.CHECK_PACKAGE,
+    CHANNELS.guards.checkPackage,
     async (_, pkg: PackageIdentifier) => {
       return guardsService.checkPackage(pkg);
     },
   );
 
   ipcMain.handle(
-    CHANNELS.CHECK_PACKAGES,
+    CHANNELS.guards.checkPackages,
     async (_, pkgs: PackageIdentifier[]) => {
       return guardsService.checkPackages(pkgs);
     },
   );
 
   ipcMain.handle(
-    CHANNELS.GET_PACKAGE_SCORE,
+    CHANNELS.guards.getPackageScore,
     async (_, pkg: PackageIdentifier) => {
       return guardsService.getPackageScore(pkg);
     },
   );
 
   ipcMain.handle(
-    CHANNELS.SCAN_WORKSPACE,
+    CHANNELS.guards.scanWorkspace,
     async (_, workspaceId: string, rootPath: string) => {
       return guardsService.scanWorkspace(workspaceId, rootPath);
     },
@@ -49,7 +42,11 @@ export function registerGuardsIpc(): void {
 }
 
 export function unregisterGuardsIpc(): void {
-  Object.values(CHANNELS).forEach((channel) => {
-    ipcMain.removeHandler(channel);
-  });
+  [
+    CHANNELS.guards.getActiveGuard,
+    CHANNELS.guards.checkPackage,
+    CHANNELS.guards.checkPackages,
+    CHANNELS.guards.getPackageScore,
+    CHANNELS.guards.scanWorkspace,
+  ].forEach((channel) => ipcMain.removeHandler(channel));
 }

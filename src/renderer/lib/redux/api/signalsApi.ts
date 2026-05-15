@@ -1,6 +1,7 @@
 import type { ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 import type { Entity } from "./entitiesApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export interface SignalRecord {
   entityId: string;
@@ -41,7 +42,7 @@ export const signalsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getSignalsByProject: builder.query<SignalWithEntity[], string>({
       query: (projectId) => ({
-        handler: "signals:getAll",
+        handler: CHANNELS.signals.getAll,
         args: [{ projectId }],
       }),
       transformResponse: (response: ServiceResponse<SignalWithEntity[]>) =>

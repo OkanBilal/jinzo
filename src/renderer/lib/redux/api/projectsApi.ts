@@ -1,5 +1,6 @@
 import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export interface Project {
   id: string;
@@ -57,7 +58,7 @@ export const projectsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getProjects: builder.query<Project[], void>({
       query: () => ({
-        handler: "projects:getAll",
+        handler: CHANNELS.projects.getAll,
       }),
       transformResponse: (response: ServiceResponse<Project[]>) => unwrap(response),
       providesTags: ["Projects"],
@@ -65,7 +66,7 @@ export const projectsApi = baseApi.injectEndpoints({
 
     getProjectById: builder.query<Project, string>({
       query: (id) => ({
-        handler: "projects:getById",
+        handler: CHANNELS.projects.getById,
         args: [id],
       }),
       transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
@@ -74,7 +75,7 @@ export const projectsApi = baseApi.injectEndpoints({
 
     getProjectsByAccount: builder.query<Project[], string>({
       query: (accountId) => ({
-        handler: "projects:getByAccount",
+        handler: CHANNELS.projects.getByAccount,
         args: [accountId],
       }),
       transformResponse: (response: ServiceResponse<Project[]>) => unwrap(response),
@@ -86,7 +87,7 @@ export const projectsApi = baseApi.injectEndpoints({
       { accountId: string; remoteOrigin: string }
     >({
       query: ({ accountId, remoteOrigin }) => ({
-        handler: "projects:findByRemoteOrigin",
+        handler: CHANNELS.projects.findByRemoteOrigin,
         args: [accountId, remoteOrigin],
       }),
       transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
@@ -95,7 +96,7 @@ export const projectsApi = baseApi.injectEndpoints({
 
     findOrCreateProject: builder.mutation<Project, CreateProjectPayload>({
       query: (payload) => ({
-        handler: "projects:findOrCreate",
+        handler: CHANNELS.projects.findOrCreate,
         args: [payload],
       }),
       transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
@@ -104,7 +105,7 @@ export const projectsApi = baseApi.injectEndpoints({
 
     createProject: builder.mutation<Project, CreateProjectPayload>({
       query: (payload) => ({
-        handler: "projects:create",
+        handler: CHANNELS.projects.create,
         args: [payload],
       }),
       transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
@@ -116,7 +117,7 @@ export const projectsApi = baseApi.injectEndpoints({
       { id: string; payload: UpdateProjectPayload }
     >({
       query: ({ id, payload }) => ({
-        handler: "projects:update",
+        handler: CHANNELS.projects.update,
         args: [id, payload],
       }),
       transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
@@ -128,7 +129,7 @@ export const projectsApi = baseApi.injectEndpoints({
 
     removeProject: builder.mutation<void, string>({
       query: (id) => ({
-        handler: "projects:remove",
+        handler: CHANNELS.projects.remove,
         args: [id],
       }),
       invalidatesTags: ["Projects", "Workspaces"],
@@ -136,7 +137,7 @@ export const projectsApi = baseApi.injectEndpoints({
 
     deleteProject: builder.mutation<void, string>({
       query: (id) => ({
-        handler: "projects:delete",
+        handler: CHANNELS.projects.delete,
         args: [id],
       }),
       invalidatesTags: ["Projects"],
@@ -144,7 +145,7 @@ export const projectsApi = baseApi.injectEndpoints({
 
     archiveProject: builder.mutation<Project, string>({
       query: (id) => ({
-        handler: "projects:archive",
+        handler: CHANNELS.projects.archive,
         args: [id],
       }),
       transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
