@@ -175,24 +175,8 @@ const api = {
   // App settings operations
   appSettings: {
     get: () => ipcRenderer.invoke("appSettings:get"),
-    setActiveSpace: (spaceId: string | null) =>
-      ipcRenderer.invoke("appSettings:setActiveSpace", spaceId),
-    setEnableWorktrees: (enabled: boolean) =>
-      ipcRenderer.invoke("appSettings:setEnableWorktrees", enabled),
-    setShowToolCalls: (enabled: boolean) =>
-      ipcRenderer.invoke("appSettings:setShowToolCalls", enabled),
-    setPreventSleepDuringRuns: (enabled: boolean) =>
-      ipcRenderer.invoke("appSettings:setPreventSleepDuringRuns", enabled),
-    setNotifyOnRunComplete: (enabled: boolean) =>
-      ipcRenderer.invoke("appSettings:setNotifyOnRunComplete", enabled),
-    setNotifyOnToolApproval: (enabled: boolean) =>
-      ipcRenderer.invoke("appSettings:setNotifyOnToolApproval", enabled),
-    setShowMenuBarIcon: (enabled: boolean) =>
-      ipcRenderer.invoke("appSettings:setShowMenuBarIcon", enabled),
-    setCommitInstructions: (instructions: string) =>
-      ipcRenderer.invoke("appSettings:setCommitInstructions", instructions),
-    setPrInstructions: (instructions: string) =>
-      ipcRenderer.invoke("appSettings:setPrInstructions", instructions),
+    update: (patch: Record<string, unknown>) =>
+      ipcRenderer.invoke("appSettings:update", patch),
     onSpaceChanged: (
       callback: (data: { activeSpaceId: string | null }) => void,
     ) => {

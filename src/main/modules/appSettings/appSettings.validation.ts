@@ -1,14 +1,31 @@
-// ─────────────────────────────────────────────────────────────
-// Validation
-// ─────────────────────────────────────────────────────────────
-export function validateSpaceId(spaceId: unknown): { value: string | null; error: string | null } {
-  if (spaceId === null || spaceId === undefined) {
-    return { value: null, error: null };
-  }
+import type { AppSettingsPatch } from "./appSettings.dto";
 
-  if (typeof spaceId !== "string") {
-    return { value: null, error: "spaceId must be a string or null" };
-  }
+// ─────────────────────────────────────────────────────────────
+// Mutable fields allowlist. Anything not in this set is silently
+// stripped from incoming patches — guards against callers trying
+// to write id/accountId/createdAt/updatedAt.
+// ─────────────────────────────────────────────────────────────
+const MUTABLE_FIELDS = new Set<keyof AppSettingsPatch>([
+  "activeSpaceId",
+  "enableWorktrees",
+  "showToolCalls",
+  "preventSleepDuringRuns",
+  "notifyOnRunComplete",
+  "notifyOnToolApproval",
+  "showMenuBarIcon",
+  "commitInstructions",
+  "prInstructions",
+]);
 
-  return { value: spaceId, error: null };
+export function sanitizeAppSettingsPatch(
+  patch: unknown,
+): AppSettingsPatch | null {
+  if (!patch || typeof patch !== "object") return null;
+  const out: AppSettingsPatch = {};
+  for (const [key, value] of Object.entries(patch as Record<string, unknown>)) {
+    if (MUTABLE_FIELDS.has(key as keyof AppSettingsPatch)) {
+      (out as Record<string, unknown>)[key] = value;
+    }
+  }
+  return out;
 }

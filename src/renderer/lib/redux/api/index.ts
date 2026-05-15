@@ -110,6 +110,7 @@ export {
   appSettingsApi,
   useGetAppSettingsQuery,
   useLazyGetAppSettingsQuery,
+  useUpdateAppSettingsMutation,
   useSetActiveSpaceMutation,
   useSetEnableWorktreesMutation,
   useSetShowToolCallsMutation,
@@ -120,7 +121,7 @@ export {
   useSetCommitInstructionsMutation,
   useSetPrInstructionsMutation,
 } from "./appSettingsApi";
-export type { AppSettings } from "./appSettingsApi";
+export type { AppSettings, AppSettingsPatch } from "./appSettingsApi";
 
 
 

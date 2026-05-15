@@ -16,6 +16,21 @@ export interface AppSettings {
   updatedAt: number;
 }
 
+export type AppSettingsPatch = Partial<
+  Pick<
+    AppSettings,
+    | "activeSpaceId"
+    | "enableWorktrees"
+    | "showToolCalls"
+    | "preventSleepDuringRuns"
+    | "notifyOnRunComplete"
+    | "notifyOnToolApproval"
+    | "showMenuBarIcon"
+    | "commitInstructions"
+    | "prInstructions"
+  >
+>;
+
 export const appSettingsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAppSettings: builder.query<AppSettings, void>({
@@ -27,90 +42,10 @@ export const appSettingsApi = baseApi.injectEndpoints({
       providesTags: ["AppSettings"],
     }),
 
-    setActiveSpace: builder.mutation<AppSettings, string | null>({
-      query: (spaceId) => ({
-        handler: "appSettings:setActiveSpace",
-        args: [spaceId],
-      }),
-      transformResponse: (response: { success: boolean; data: AppSettings }) =>
-        response.data,
-      invalidatesTags: ["AppSettings"],
-    }),
-
-    setEnableWorktrees: builder.mutation<AppSettings, boolean>({
-      query: (enabled) => ({
-        handler: "appSettings:setEnableWorktrees",
-        args: [enabled],
-      }),
-      transformResponse: (response: { success: boolean; data: AppSettings }) =>
-        response.data,
-      invalidatesTags: ["AppSettings"],
-    }),
-
-    setShowToolCalls: builder.mutation<AppSettings, boolean>({
-      query: (enabled) => ({
-        handler: "appSettings:setShowToolCalls",
-        args: [enabled],
-      }),
-      transformResponse: (response: { success: boolean; data: AppSettings }) =>
-        response.data,
-      invalidatesTags: ["AppSettings"],
-    }),
-
-    setPreventSleepDuringRuns: builder.mutation<AppSettings, boolean>({
-      query: (enabled) => ({
-        handler: "appSettings:setPreventSleepDuringRuns",
-        args: [enabled],
-      }),
-      transformResponse: (response: { success: boolean; data: AppSettings }) =>
-        response.data,
-      invalidatesTags: ["AppSettings"],
-    }),
-
-    setNotifyOnRunComplete: builder.mutation<AppSettings, boolean>({
-      query: (enabled) => ({
-        handler: "appSettings:setNotifyOnRunComplete",
-        args: [enabled],
-      }),
-      transformResponse: (response: { success: boolean; data: AppSettings }) =>
-        response.data,
-      invalidatesTags: ["AppSettings"],
-    }),
-
-    setNotifyOnToolApproval: builder.mutation<AppSettings, boolean>({
-      query: (enabled) => ({
-        handler: "appSettings:setNotifyOnToolApproval",
-        args: [enabled],
-      }),
-      transformResponse: (response: { success: boolean; data: AppSettings }) =>
-        response.data,
-      invalidatesTags: ["AppSettings"],
-    }),
-
-    setShowMenuBarIcon: builder.mutation<AppSettings, boolean>({
-      query: (enabled) => ({
-        handler: "appSettings:setShowMenuBarIcon",
-        args: [enabled],
-      }),
-      transformResponse: (response: { success: boolean; data: AppSettings }) =>
-        response.data,
-      invalidatesTags: ["AppSettings"],
-    }),
-
-    setCommitInstructions: builder.mutation<AppSettings, string>({
-      query: (instructions) => ({
-        handler: "appSettings:setCommitInstructions",
-        args: [instructions],
-      }),
-      transformResponse: (response: { success: boolean; data: AppSettings }) =>
-        response.data,
-      invalidatesTags: ["AppSettings"],
-    }),
-
-    setPrInstructions: builder.mutation<AppSettings, string>({
-      query: (instructions) => ({
-        handler: "appSettings:setPrInstructions",
-        args: [instructions],
+    updateAppSettings: builder.mutation<AppSettings, AppSettingsPatch>({
+      query: (patch) => ({
+        handler: "appSettings:update",
+        args: [patch],
       }),
       transformResponse: (response: { success: boolean; data: AppSettings }) =>
         response.data,
@@ -120,16 +55,36 @@ export const appSettingsApi = baseApi.injectEndpoints({
   overrideExisting: false,
 });
 
-export const {
-  useGetAppSettingsQuery,
-  useLazyGetAppSettingsQuery,
-  useSetActiveSpaceMutation,
-  useSetEnableWorktreesMutation,
-  useSetShowToolCallsMutation,
-  useSetPreventSleepDuringRunsMutation,
-  useSetNotifyOnRunCompleteMutation,
-  useSetNotifyOnToolApprovalMutation,
-  useSetShowMenuBarIconMutation,
-  useSetCommitInstructionsMutation,
-  useSetPrInstructionsMutation,
-} = appSettingsApi;
+export const { useGetAppSettingsQuery, useLazyGetAppSettingsQuery, useUpdateAppSettingsMutation } =
+  appSettingsApi;
+
+// ─────────────────────────────────────────────────────────────
+// Typed wrappers — preserve the per-field hook surface so
+// components don't need to know about the patch shape.
+// Depth lives below; these are sugar.
+// ─────────────────────────────────────────────────────────────
+
+type MutationTuple<TArg> = readonly [
+  (arg: TArg) => ReturnType<ReturnType<typeof useUpdateAppSettingsMutation>[0]>,
+  ReturnType<typeof useUpdateAppSettingsMutation>[1],
+];
+
+function makeFieldHook<K extends keyof AppSettingsPatch>(field: K) {
+  return (): MutationTuple<NonNullable<AppSettingsPatch[K]>> => {
+    const [update, result] = useUpdateAppSettingsMutation();
+    return [(value) => update({ [field]: value } as AppSettingsPatch), result];
+  };
+}
+
+export const useSetActiveSpaceMutation = (): MutationTuple<string | null> => {
+  const [update, result] = useUpdateAppSettingsMutation();
+  return [(value) => update({ activeSpaceId: value }), result];
+};
+export const useSetEnableWorktreesMutation = makeFieldHook("enableWorktrees");
+export const useSetShowToolCallsMutation = makeFieldHook("showToolCalls");
+export const useSetPreventSleepDuringRunsMutation = makeFieldHook("preventSleepDuringRuns");
+export const useSetNotifyOnRunCompleteMutation = makeFieldHook("notifyOnRunComplete");
+export const useSetNotifyOnToolApprovalMutation = makeFieldHook("notifyOnToolApproval");
+export const useSetShowMenuBarIconMutation = makeFieldHook("showMenuBarIcon");
+export const useSetCommitInstructionsMutation = makeFieldHook("commitInstructions");
+export const useSetPrInstructionsMutation = makeFieldHook("prInstructions");

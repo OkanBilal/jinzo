@@ -244,8 +244,10 @@ describe("smoke", () => {
       expect(getResult.data.displayName).toBe("Smoke Test User");
     });
 
-    it("appSettingsService.setActiveSpace changes activeSpaceId", async () => {
-      const result = await appSettingsService.setActiveSpace("copilot");
+    it("appSettingsService.updateSettings changes activeSpaceId", async () => {
+      const result = await appSettingsService.updateSettings({
+        activeSpaceId: "copilot",
+      });
       expect(result.success).toBe(true);
 
       const settings = await appSettingsService.getSettings();
@@ -255,7 +257,7 @@ describe("smoke", () => {
       expect(settings.data.activeSpaceId).toBe("copilot");
 
       // Restore
-      await appSettingsService.setActiveSpace("claude");
+      await appSettingsService.updateSettings({ activeSpaceId: "claude" });
     });
 
     it("spaceService.getById returns specific space", async () => {

@@ -41,11 +41,11 @@ npm run reset           # Rebuild better-sqlite3 + reset dev database
 npm run hard-reset      # Full reset (reset + nuke node_modules + reinstall)
 ```
 
-Tests require `better-sqlite3` to be rebuilt against the local Node ABI — the `test*` scripts handle this automatically, but running `vitest` directly will fail if you skip that step (use `npm rebuild better-sqlite3` first).
+Tests require `better-sqlite3` to be rebuilt against the local Node ABI — the `test*` scripts handle this automatically, but running `vitest` directly will fail if you skip that step (use `npm rebuild better-sqlite3` first). Tests live next to the file under test as `*.test.ts`; vitest config is `vitest.config.mts`.
 
 ## Architecture Overview
 
-Mains is an Electron 41 desktop app (React 19 renderer, SQLite + Drizzle ORM). CommonJS package with ESM Vite configs (`.mjs`).
+Mains is an Electron 41 desktop app (React 19 renderer, SQLite + Drizzle ORM). CommonJS package with ESM Vite configs (`.mjs`). **macOS only** (Apple Silicon and Intel) — Windows and Linux are not supported.
 
 ### Process Boundaries
 
@@ -162,6 +162,9 @@ Domain-specific views on entities:
 - `claude.adapter.ts` — Claude Code CLI via `@anthropic-ai/claude-agent-sdk`
 - `copilot.adapter.ts` — GitHub Copilot CLI via `@github/copilot-sdk`
 - `codex.adapter.ts` — OpenAI Codex CLI
+- `cursor.adapter.ts` — Cursor agent via `@cursor/sdk`
+- `adapter.shared.ts` — common helpers used by every adapter (covered by `adapter.shared.test.ts`)
+- `mains-mcp-server.ts` / `mains-tools.core.ts` — in-process MCP server and tool definitions exposed to agents
 - Event-driven architecture with typed events (log, tool_call, command, artifact, status)
 - Hook system for pre/post tool execution, subagent/teammate coordination
 - Pre-approved tool list (Bash, Read, Glob, Grep, etc.) with interactive approval for others
@@ -241,7 +244,7 @@ Domain-specific views on entities:
 
 - **Redux**: RTK Query with custom `ipcBaseQuery`, `baseApi.injectEndpoints()` per domain
 - **Redux API files** (`src/renderer/lib/redux/api/`): `accountApi`, `appSettingsApi`, `automationsApi`, `connectionsApi`, `connectionStates`, `entitiesApi`, `guardsApi`, `projectsApi`, `providersApi`, `pulseApi`, `reviewFindingsApi`, `reviewsApi`, `runsApi`, `shellApi`, `signalsApi`, `skillsMarketplaceApi`, `spaceApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceActivityApi`, `workspaceDiffsApi`, `workspaceResourcesApi`, `workspacesApi`
-- **Redux slices**: `spaceSlice`, `appSettingsSlice`, `workspaceSlice`
+- **Redux slices**: `appSettingsSlice`, `workspaceSlice` (in `src/renderer/lib/redux/slices/`)
 - **Hooks**: `use-kebab-case.ts` filenames, `useCamelCase` export names
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`
 - **Feature dirs**: `onboarding`, `pulse`, `settings`, `stats`, `workspace`

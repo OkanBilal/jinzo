@@ -6,11 +6,20 @@ import type { appSettings } from "../../db/schema";
 export type AppSettingsRecord = typeof appSettings.$inferSelect;
 
 // ─────────────────────────────────────────────────────────────
-// Request DTOs
+// Patch — only mutable fields. id/accountId/createdAt/updatedAt
+// are owned by the module and stripped from any incoming patch.
 // ─────────────────────────────────────────────────────────────
-export interface SetActiveSpaceRequest {
-  spaceId: string | null;
-}
+export type AppSettingsPatch = Partial<{
+  activeSpaceId: string | null;
+  enableWorktrees: boolean;
+  showToolCalls: boolean;
+  preventSleepDuringRuns: boolean;
+  notifyOnRunComplete: boolean;
+  notifyOnToolApproval: boolean;
+  showMenuBarIcon: boolean;
+  commitInstructions: string;
+  prInstructions: string;
+}>;
 
 // ─────────────────────────────────────────────────────────────
 // Response DTOs
