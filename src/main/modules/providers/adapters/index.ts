@@ -91,8 +91,5 @@ export {
   type SupportedWorkProvider,
 } from "./adapter.factory";
 
-// Adapters
-export { createClaudeAdapter } from "./claude.adapter";
-
 // Shared helpers
 export { couldModifyFiles, FILE_MODIFYING_TOOLS } from "./adapter.shared";

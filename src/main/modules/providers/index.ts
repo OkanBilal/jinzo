@@ -21,7 +21,6 @@ export {
   clearAdapterCache,
   isSupportedWorkProvider,
   SUPPORTED_WORK_PROVIDERS,
-  createClaudeAdapter,
 } from "./adapters";
 
 export type {

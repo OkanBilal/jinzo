@@ -5,8 +5,8 @@
 
 import type { ProviderResponse } from "../providers.dto";
 import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, CursorAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, CodexAccountInfo } from "../../../../shared/adapter.types";
-import { createClaudeAdapter } from "./claude.adapter";
 import { createCodexAdapter } from "./codex.adapter";
+import { createClaudeDriver } from "./claude.driver";
 import { createCopilotDriver } from "./copilot.driver";
 import { createCursorDriver } from "./cursor.driver";
 import { createWorkRunAdapter } from "./work-run-core";
@@ -133,7 +133,7 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
         ...(provider.config as ClaudeCodeAdapterConfig | null),
         defaultModel: provider.defaultModel ?? undefined,
       };
-      adapter = createClaudeAdapter(config);
+      adapter = createWorkRunAdapter(createClaudeDriver(config));
       break;
     }
 
