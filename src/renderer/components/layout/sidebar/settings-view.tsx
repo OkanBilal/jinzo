@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Body, Button } from "@/components/ui";
 import { ChevronUp } from "@/components/ui/icons";
-import { useGetProjectsQuery } from "@/lib/redux/api";
+import { useListProjectsQuery } from "@/lib/redux/api";
 import { parseIcon, type IconComponent } from "@/lib/icon-registry";
 import {
   getSettingsRouteId,
@@ -23,7 +23,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
   const activeSection = getSettingsRouteId(searchParams.get("section"));
   const activeId = searchParams.get("id");
 
-  const { data: projects = [] } = useGetProjectsQuery();
+  const { data: projects = [] } = useListProjectsQuery();
 
   const handleSectionClick = (sectionId: SettingsRouteId) => {
     navigate(`/settings?section=${sectionId}`);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  useGetIssuesByProjectQuery,
+  useListProjectIssuesQuery,
   type ProjectIssue,
 } from "@/lib/redux/api";
 import { IssueListItem } from "./issue-list-item";
@@ -24,7 +24,7 @@ export function IssuesSection({
   onSelectIssue,
   onAddToContext,
 }: IssuesSectionProps) {
-  const { data: issues = [], isLoading } = useGetIssuesByProjectQuery(
+  const { data: issues = [], isLoading } = useListProjectIssuesQuery(
     projectId || "",
     { skip: !projectId }
   );

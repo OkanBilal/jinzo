@@ -122,12 +122,13 @@ const api = {
     scanWorkspace: (workspaceId: string, rootPath: string) =>
       ipcRenderer.invoke(CHANNELS.guards.scanWorkspace, workspaceId, rootPath),
   },
-  // Projects operations
+  // Projects operations (incl. project_resources + linked-issue queries)
   projects: {
-    getAll: () => ipcRenderer.invoke(CHANNELS.projects.getAll),
-    getById: (id: string) => ipcRenderer.invoke(CHANNELS.projects.getById, id),
-    getByAccount: (accountId: string) =>
-      ipcRenderer.invoke(CHANNELS.projects.getByAccount, accountId),
+    // ── lifecycle ──
+    list: () => ipcRenderer.invoke(CHANNELS.projects.list),
+    get: (id: string) => ipcRenderer.invoke(CHANNELS.projects.get, id),
+    listByAccount: (accountId: string) =>
+      ipcRenderer.invoke(CHANNELS.projects.listByAccount, accountId),
     findByRemoteOrigin: (accountId: string, remoteOrigin: string) =>
       ipcRenderer.invoke(CHANNELS.projects.findByRemoteOrigin, accountId, remoteOrigin),
     findOrCreate: (payload: unknown) =>
@@ -139,19 +140,18 @@ const api = {
     remove: (id: string) => ipcRenderer.invoke(CHANNELS.projects.remove, id),
     delete: (id: string) => ipcRenderer.invoke(CHANNELS.projects.delete, id),
     archive: (id: string) => ipcRenderer.invoke(CHANNELS.projects.archive, id),
-  },
-  // Project Resources operations
-  projectResources: {
-    getByProject: (projectId: string) =>
-      ipcRenderer.invoke(CHANNELS.projectResources.getByProject, projectId),
-    getAvailable: (projectId: string) =>
-      ipcRenderer.invoke(CHANNELS.projectResources.getAvailable, projectId),
-    add: (payload: { projectId: string; resourceId: string }) =>
-      ipcRenderer.invoke(CHANNELS.projectResources.add, payload),
-    remove: (payload: { projectId: string; resourceId: string }) =>
-      ipcRenderer.invoke(CHANNELS.projectResources.remove, payload),
-    getIssues: (projectId: string) =>
-      ipcRenderer.invoke(CHANNELS.projectResources.getIssues, projectId),
+    // ── resources ──
+    listResources: (projectId: string) =>
+      ipcRenderer.invoke(CHANNELS.projects.listResources, projectId),
+    listAvailableResources: (projectId: string) =>
+      ipcRenderer.invoke(CHANNELS.projects.listAvailableResources, projectId),
+    addResource: (payload: { projectId: string; resourceId: string }) =>
+      ipcRenderer.invoke(CHANNELS.projects.addResource, payload),
+    removeResource: (payload: { projectId: string; resourceId: string }) =>
+      ipcRenderer.invoke(CHANNELS.projects.removeResource, payload),
+    // ── issues (via linked resources) ──
+    listIssues: (projectId: string) =>
+      ipcRenderer.invoke(CHANNELS.projects.listIssues, projectId),
   },
   // Space operations
   space: {

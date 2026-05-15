@@ -2,6 +2,17 @@
 // Projects Utilities
 // ─────────────────────────────────────────────────────────────
 
+// Resource kinds that may be linked to a project via project_resources.
+export const LINKABLE_KINDS = [
+  "github_repo",
+  "linear_team",
+  "jira_project",
+  "asana_project",
+  "gitlab_project",
+  "trello_board",
+  "sentry_project",
+];
+
 /**
  * Normalize a git remote origin URL to `host/owner/repo` for dedup.
  *

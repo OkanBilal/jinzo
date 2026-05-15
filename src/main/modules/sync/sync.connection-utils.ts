@@ -7,9 +7,9 @@ import { connectionResources } from "../../db/schema";
 // ─────────────────────────────────────────────────────────────
 // The connection_resources table is deliberately not part of the
 // connections aggregate (see ADR-0002) — it is read directly by
-// sync, workspaceResources, and guards. Connection identity and
-// secrets live behind the connections module: callers needing those
-// should import `getConnectionWithSecrets` from "../connections".
+// sync, projects, and guards. Connection identity and secrets live
+// behind the connections module: callers needing those should import
+// `getConnectionWithSecrets` from "../connections".
 
 export async function getSelectedResources(
   connectionId: string,

@@ -56,7 +56,7 @@ Mains is an Electron 41 desktop app (React 19 renderer, SQLite + Drizzle ORM). C
 
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
-- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.signals`, `api.account`, `api.connectionStates`, `api.sync`, `api.connectionCredentials`, `api.connections`, `api.guards`, `api.projects`, `api.projectResources`, `api.seed`, `api.space`, `api.appSettings`, `api.providers`, `api.skillsMarketplace`, `api.toolCalls`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.imageProxy`, `api.shell`, `api.stats`, `api.app`, `api.updates`, `api.browser`, `api.automations`, `api.pulse`
+- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.signals`, `api.account`, `api.connectionStates`, `api.sync`, `api.connectionCredentials`, `api.connections`, `api.guards`, `api.projects`, `api.seed`, `api.space`, `api.appSettings`, `api.providers`, `api.skillsMarketplace`, `api.toolCalls`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.imageProxy`, `api.shell`, `api.stats`, `api.app`, `api.updates`, `api.browser`, `api.automations`, `api.pulse`
 - After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
@@ -82,7 +82,7 @@ Each domain module follows a layered pattern (see `src/main/modules/account/` as
 
 **No controller layer.** Earlier versions had a `{name}.controller.ts` between `ipc.ts` and `service.ts`. It was a pure pass-through — `ipc.ts` now calls `service` directly. Argument unpacking (e.g. `{ projectId, resourceId }` → two args) lives at the `ipc.ts` call site.
 
-All modules: `account`, `appSettings`, `automations`, `browser`, `connectionStates`, `connectionCredentials`, `connections`, `entities`, `fileExplorer`, `git`, `guards`, `imageProxy`, `projects`, `providers`, `pulse`, `reviewFindings`, `reviews`, `runs`, `seed`, `skillsMarketplace`, `space`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
+All modules: `account`, `appSettings`, `automations`, `browser`, `connections`, `entities`, `fileExplorer`, `git`, `guards`, `imageProxy`, `projects`, `providers`, `pulse`, `runs`, `skillsMarketplace`, `space`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspace`
 
 A handful of modules deviate from the canonical 6-file layout — `guards`, `browser`, `skillsMarketplace`, and `terminal` skip the repo/dto layer because they don't own database tables (they wrap external sources, native handles, or HTTP). When adding a module, match a sibling with similar responsibilities rather than blindly copying `account/`.
 
@@ -121,7 +121,6 @@ Core tables:
 - `providers` - Agent runtimes (copilot_cli, claude_code)
 - `projects` - Groups workspaces by shared remote origin (rootPath, branches, scripts)
 - `workspaces` - Local repos with status tracking (backlog → todo → in_progress → in_review → done → canceled → duplicate)
-- `workspaceResources` - Pivot table linking workspaces to connectionResources
 - `entities` - Unified canonical content (tasks, issues, etc.)
 - `connections` / `connectionResources` / `connectionTokens` / `connectionSyncState` - External service connections, encrypted tokens, sync cursors
 - `connectionStates` - Connection integration states (GitHub, GitLab, Linear, Jira, Asana, Trello, Notion — tracks isConnected, features, config)
@@ -132,7 +131,7 @@ Core tables:
 - `workspaceDiffs` - Git diffs captured per workspace/run (base ref, diff text, files, stats)
 - `reviews` - Workspace-level review notes (status: open, in_review, approved, rejected)
 - `reviewFindings` - Individual code review findings linked to reviews
-- `projectResources` - Pivot table linking projects to connectionResources
+- `projectResources` - Pivot table linking projects to connectionResources (owned by the `projects` aggregate module — see CONTEXT.md `### projects`)
 
 Domain-specific views on entities:
 - `tasks` - Actionable tasks (status, priority, due date)
@@ -246,7 +245,7 @@ Domain-specific views on entities:
 ### Frontend Conventions
 
 - **Redux**: RTK Query with custom `ipcBaseQuery`, `baseApi.injectEndpoints()` per domain
-- **Redux API files** (`src/renderer/lib/redux/api/`): `accountApi`, `appSettingsApi`, `automationsApi`, `connectionsApi`, `connectionStates`, `entitiesApi`, `guardsApi`, `projectsApi`, `providersApi`, `pulseApi`, `reviewFindingsApi`, `reviewsApi`, `runsApi`, `shellApi`, `signalsApi`, `skillsMarketplaceApi`, `spaceApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceActivityApi`, `workspaceDiffsApi`, `workspaceResourcesApi`, `workspacesApi`
+- **Redux API files** (`src/renderer/lib/redux/api/`): `accountApi`, `appSettingsApi`, `automationsApi`, `connectionsApi`, `entitiesApi`, `guardsApi`, `projectsApi`, `providersApi`, `pulseApi`, `runsApi`, `shellApi`, `signalsApi`, `skillsMarketplaceApi`, `spaceApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceApi`. The `projectsApi` is an aggregate covering project lifecycle + project resources + issues linked via those resources.
 - **Redux slices**: `appSettingsSlice`, `workspaceSlice` (in `src/renderer/lib/redux/slices/`)
 - **Hooks**: `use-kebab-case.ts` filenames, `useCamelCase` export names
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`

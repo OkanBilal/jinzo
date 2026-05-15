@@ -265,6 +265,25 @@ export const entitiesRepo = {
     return items[0] || null;
   },
 
+  async findIssuesByResourceIds(resourceIds: string[]) {
+    if (resourceIds.length === 0) return [];
+    const db = getDb();
+    return db
+      .select({
+        issue: issues,
+        entity: entities,
+      })
+      .from(issues)
+      .innerJoin(entities, eq(issues.entityId, entities.id))
+      .where(
+        and(
+          eq(entities.isDeleted, false),
+          inArray(entities.resourceId, resourceIds),
+        ),
+      )
+      .orderBy(issues.number);
+  },
+
   async insertIssue(entityId: string, payload: CreateIssuePayload) {
     const db = getDb();
 

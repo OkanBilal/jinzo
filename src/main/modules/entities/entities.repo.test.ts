@@ -1,6 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
-import { createAccount, createEntity, createTask, createIssue, createConnection } from "../../../test/factories";
+import {
+  createAccount,
+  createConnection,
+  createConnectionResource,
+  createEntity,
+  createIssue,
+  createTask,
+} from "../../../test/factories";
 import type { DatabaseInstance } from "../../db/types";
 import type Database from "better-sqlite3";
 
@@ -372,6 +379,68 @@ describe("entitiesRepo", () => {
 
       const result = await entitiesRepo.findAllIssues({ repo: "owner/repo-a" });
       expect(result).toHaveLength(1);
+    });
+  });
+
+  describe("findIssuesByResourceIds", () => {
+    it("returns empty array when no resourceIds given", async () => {
+      const result = await entitiesRepo.findIssuesByResourceIds([]);
+      expect(result).toEqual([]);
+    });
+
+    it("returns issues for entities linked to any of the resourceIds", async () => {
+      const conn = createConnection(db, { id: "conn-1" });
+      createConnectionResource(db, { id: "res-1", connectionId: conn.id });
+      createConnectionResource(db, { id: "res-2", connectionId: conn.id });
+      createConnectionResource(db, { id: "res-3", connectionId: conn.id });
+
+      createIssue(db, {
+        entity: { id: "i1", resourceId: "res-1", title: "First" },
+        issue: { provider: "github", state: "open", number: 1 },
+      });
+      createIssue(db, {
+        entity: { id: "i2", resourceId: "res-2", title: "Second" },
+        issue: { provider: "github", state: "open", number: 2 },
+      });
+      createIssue(db, {
+        entity: { id: "i3", resourceId: "res-3", title: "Other" },
+        issue: { provider: "github", state: "open", number: 3 },
+      });
+
+      const result = await entitiesRepo.findIssuesByResourceIds(["res-1", "res-2"]);
+      expect(result).toHaveLength(2);
+      const titles = result.map((r) => r.entity.title).sort();
+      expect(titles).toEqual(["First", "Second"]);
+    });
+
+    it("excludes deleted entities", async () => {
+      const conn = createConnection(db, { id: "conn-1" });
+      createConnectionResource(db, { id: "res-1", connectionId: conn.id });
+
+      createIssue(db, {
+        entity: { id: "i1", resourceId: "res-1", isDeleted: true },
+        issue: { provider: "github", state: "open" },
+      });
+
+      const result = await entitiesRepo.findIssuesByResourceIds(["res-1"]);
+      expect(result).toHaveLength(0);
+    });
+
+    it("orders by issue number", async () => {
+      const conn = createConnection(db, { id: "conn-1" });
+      createConnectionResource(db, { id: "res-1", connectionId: conn.id });
+
+      createIssue(db, {
+        entity: { id: "i1", resourceId: "res-1" },
+        issue: { provider: "github", state: "open", number: 30 },
+      });
+      createIssue(db, {
+        entity: { id: "i2", resourceId: "res-1" },
+        issue: { provider: "github", state: "open", number: 10 },
+      });
+
+      const result = await entitiesRepo.findIssuesByResourceIds(["res-1"]);
+      expect(result.map((r) => r.issue.number)).toEqual([10, 30]);
     });
   });
 

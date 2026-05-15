@@ -18,7 +18,7 @@ import type { RootState } from "@/lib/redux";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspaceApi";
-import { useGetProjectsQuery, useUpdateWorkspaceMutation } from "@/lib/redux/api";
+import { useListProjectsQuery, useUpdateWorkspaceMutation } from "@/lib/redux/api";
 import { toast } from "@/components/ui";
 import { ProjectIcon } from "./project-icon";
 import { WorkspaceGroupDropdown, type GroupingMode } from "./workspace-group-dropdown";
@@ -130,7 +130,7 @@ export default function WorkspacesList({
   }, [grouping]);
 
   // Project data for icons and grouping
-  const { data: projects = [] } = useGetProjectsQuery();
+  const { data: projects = [] } = useListProjectsQuery();
 
   const projectDataMap = useMemo(() => {
     const map = new Map<string, { name: string; icon: string | null }>();

@@ -65,10 +65,6 @@ import {
 } from "./modules/fileExplorer";
 import { registerGitIpc, unregisterGitIpc } from "./modules/git";
 import {
-  registerWorkspaceResourcesHandlers,
-  unregisterWorkspaceResourcesHandlers,
-} from "./modules/workspaceResources";
-import {
   registerTerminalIpc,
   unregisterTerminalIpc,
   destroyAllTerminals,
@@ -563,7 +559,6 @@ async function initializeApp() {
     registerRunsIpc();
     registerFileExplorerIpc();
     registerGitIpc();
-    registerWorkspaceResourcesHandlers();
     registerTerminalIpc();
     registerImageProxyHandler();
     registerImageProxyIpc();
@@ -859,7 +854,6 @@ async function cleanupApp() {
     unregisterRunsIpc();
     unregisterFileExplorerIpc();
     unregisterGitIpc();
-    unregisterWorkspaceResourcesHandlers();
     unregisterTerminalIpc();
     unregisterImageProxyIpc();
     unregisterStatsIpc();

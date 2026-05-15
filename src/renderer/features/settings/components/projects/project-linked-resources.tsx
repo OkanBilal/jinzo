@@ -1,5 +1,5 @@
 import { Caption, Muted, Button, toast } from "@/components/ui";
-import { useGetProjectResourcesQuery, useRemoveProjectResourceMutation } from "@/lib/redux/api";
+import { useListProjectResourcesQuery, useRemoveProjectResourceMutation } from "@/lib/redux/api";
 import { SettingsSection, SettingsDivider } from "../settings-layout";
 import { Close, Plus } from "@/components/ui/icons";
 import { ResourceIcon } from "@/features/workspace/components/provider-icon";
@@ -11,7 +11,7 @@ interface ProjectLinkedResourcesProps {
 }
 
 export function ProjectLinkedResources({ projectId, onManageClick }: ProjectLinkedResourcesProps) {
-  const { data: linkedResources = [] } = useGetProjectResourcesQuery(projectId);
+  const { data: linkedResources = [] } = useListProjectResourcesQuery(projectId);
   const [removeResource] = useRemoveProjectResourceMutation();
 
   const handleRemove = async (resourceId: string) => {

@@ -50,12 +50,21 @@ _Avoid_: re-splitting into `workspaces` + `workspaceActivity` + `workspaceDiffs`
 
 ### connections
 
-The `connections` module owns three tables: `connections`, `connection_tokens`, `connection_states`. They were previously three separate modules; consolidated because the seam between them was already leaking — `connections.service` imported `decryptSecrets` from the credentials utils, `sync/sync.connection-utils.ts` had grown a full duplicate of `getConnectionWithSecrets`, and `connectionStates.service` was a 46-line pass-through. The `connection_resources` table is deliberately *out* of the aggregate; it is read by `workspaceResources.repo` directly (same shape as `stats` joining `workspace_diffs`).
+The `connections` module owns three tables: `connections`, `connection_tokens`, `connection_states`. They were previously three separate modules; consolidated because the seam between them was already leaking — `connections.service` imported `decryptSecrets` from the credentials utils, `sync/sync.connection-utils.ts` had grown a full duplicate of `getConnectionWithSecrets`, and `connectionStates.service` was a 46-line pass-through. The `connection_resources` table is deliberately *out* of the aggregate; it is read by `projects.repo` directly (same shape as `stats` joining `workspace_diffs`).
 
 IPC channels live under one namespace: the existing `connections:*` channels stay, plus `connections:listStates` and `connections:updateState` (formerly `connectionStates:*`). The renderer has one `connectionsApi.ts` with split RTK Query tag types (`Connection`, `ConnectionState`). The preload collapses to one `window.api.connections` section.
 
 Cross-module readers (`sync`, `guards`) import a single named function — `getConnectionWithSecrets` — from the module's barrel. The crypto helpers (`encryptSecrets`, `decryptSecrets`, `createTokenHash`, `parseProviderCredentials`, `parseConnectionMetadata`) live in `connections.utils.ts` as an internal seam — private to the module, used by its own tests, not re-exported from `index.ts`.
 _Avoid_: re-splitting into `connections` + `connectionStates` + `connectionCredentials`. Avoid importing crypto helpers across modules — call `getConnectionWithSecrets` instead. See ADR-0002.
+
+### projects
+
+The `projects` module owns two tables: `projects`, `project_resources`. The latter was previously its own `workspaceResources/` module — a half-finished rename (IPC channels were already `projectResources:*`, the table was already `project_resources`, but the folder and exports still said `workspaceResources`). Consolidated because the seam between them was vestigial: every method on `workspaceResourcesService` took `projectId` as its first argument, the table is FK'd to `projects`, and no caller outside `projects.ipc` ever needed the resource methods without already having a `projectId` in hand. Applying the deletion test: removing `workspaceResources/` concentrated its five methods directly onto `projects.service` with no logic loss.
+
+IPC channels live under one namespace: `projects:list`, `projects:get`, `projects:create`, `projects:update`, `projects:delete`, `projects:archive`, plus the resource channels `projects:listResources`, `projects:listAvailableResources`, `projects:addResource`, `projects:removeResource`, `projects:listIssues`. The pre-merge `projects:getAll` / `projects:getById` channels rename to `projects:list` / `projects:get` to match the workspace style. The renderer has one `projectsApi.ts` with split RTK Query tag types (`Projects`, `ProjectResources`, `ProjectIssues`) so UI sections still refresh independently.
+
+The cross-aggregate query `projects:listIssues` (issues linked to a project via `project_resources` → `connection_resources` → `entities`) is orchestrated at the service layer, not joined at the repo: `projects.service.listIssues()` calls `projects.repo.listLinkedResourceIds(projectId)` and then `getIssuesByResourceIds(resourceIds)` from the `entities/` barrel. Each repo stays scoped to its own tables — same shape as the `getConnectionWithSecrets` seam in **connections**. The `LINKABLE_KINDS` allowlist lives in `projects.utils.ts`.
+_Avoid_: re-splitting into `projects` + `projectResources` (or re-introducing `workspaceResources/`). Avoid `projects.repo` importing the `entities` or `issues` schema directly — call `getIssuesByResourceIds` from the entities barrel.
 
 ## Flagged ambiguities
 

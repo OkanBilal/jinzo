@@ -20,7 +20,7 @@ import DropdownWrapper from "@/components/ui/dropdown-wrapper";
 import Select from "@/components/ui/select";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { getModelIcon, type ModelIconVariant } from "@/lib/model-icons";
-import { useGetProjectsQuery } from "@/lib/redux/api/projectsApi";
+import { useListProjectsQuery } from "@/lib/redux/api/projectsApi";
 import { useListWorkspacesQuery } from "@/lib/redux/api/workspaceApi";
 import {
   useGetEnabledProvidersQuery,
@@ -165,7 +165,7 @@ export function WorkspacePicker({
   const close = useCallback(() => setOpen(false), []);
   useClickOutside(ref, close);
   const { data: workspaces = [] } = useListWorkspacesQuery();
-  const { data: projects = [] } = useGetProjectsQuery();
+  const { data: projects = [] } = useListProjectsQuery();
   const projectDataMap = useMemo(() => {
     const map = new Map<string, { name: string; icon: string | null }>();
     for (const project of projects) {

@@ -19,6 +19,15 @@ import type {
 } from "./entities.dto";
 
 // ─────────────────────────────────────────────────────────────
+// Cross-module helper: fetch issues whose entity is linked to any of
+// the given connection_resources. The single named seam used by the
+// `projects` aggregate when answering `projects:listIssues`.
+// ─────────────────────────────────────────────────────────────
+export async function getIssuesByResourceIds(resourceIds: string[]) {
+  return entitiesRepo.findIssuesByResourceIds(resourceIds);
+}
+
+// ─────────────────────────────────────────────────────────────
 // Entities Service
 // ─────────────────────────────────────────────────────────────
 export const entitiesService = {
