@@ -153,12 +153,6 @@ const api = {
     getIssues: (projectId: string) =>
       ipcRenderer.invoke(CHANNELS.projectResources.getIssues, projectId),
   },
-  // Seed operations
-  seed: {
-    connectionStates: () => ipcRenderer.invoke(CHANNELS.seed.connectionStates),
-    connections: () => ipcRenderer.invoke(CHANNELS.seed.connections),
-    all: () => ipcRenderer.invoke(CHANNELS.seed.all),
-  },
   // Space operations
   space: {
     getAll: () => ipcRenderer.invoke(CHANNELS.space.getAll),

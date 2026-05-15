@@ -39,7 +39,6 @@ import {
   registerConnectionsHandlers,
   unregisterConnectionsHandlers,
 } from "./modules/connections";
-import { registerSeedIpc, unregisterSeedIpc } from "./modules/seed";
 import { registerSpaceIpc, unregisterSpaceIpc } from "./modules/space";
 import {
   registerAppSettingsIpc,
@@ -555,7 +554,6 @@ async function initializeApp() {
     registerSyncIpc();
     registerEntitiesHandlers();
     registerConnectionsHandlers();
-    registerSeedIpc();
     registerSpaceIpc();
     registerAppSettingsIpc();
     registerProvidersIpc();
@@ -851,7 +849,6 @@ async function cleanupApp() {
     unregisterAccountIpc();
     unregisterAppSettingsIpc();
     unregisterSyncIpc();
-    unregisterSeedIpc();
     unregisterSpaceIpc();
     unregisterConnectionsHandlers();
     unregisterEntitiesHandlers();
