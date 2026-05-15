@@ -4,7 +4,7 @@ import {
   useListWorkspaceActivityQuery,
   useGetAppSettingsQuery,
   useGetWorkspaceQuery,
-  useGetProjectByIdQuery,
+  useGetProjectQuery,
 } from "@/lib/redux/api";
 import type { WorkspaceActivity } from "@/lib/redux/api";
 import { openNoteTab, setPendingGoal, setPendingAutoExecute } from "@/lib/redux/slices/workspaceSlice";
@@ -61,7 +61,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
     skip: !workspaceId,
   });
   const projectId = workspace?.projectId;
-  const { data: project } = useGetProjectByIdQuery(projectId ?? "", {
+  const { data: project } = useGetProjectQuery(projectId ?? "", {
     skip: !projectId,
   });
   const { data: activities = [], isLoading } = useListWorkspaceActivityQuery(

@@ -194,14 +194,17 @@ export type {
   UpdateToolCallPayload,
 } from "./toolsApi";
 
+// Projects aggregate (projects + projectResources + linked issues)
+// Replaces the legacy workspaceResourcesApi.
 export {
   projectsApi,
-  useGetProjectsQuery,
-  useLazyGetProjectsQuery,
-  useGetProjectByIdQuery,
-  useLazyGetProjectByIdQuery,
-  useGetProjectsByAccountQuery,
-  useLazyGetProjectsByAccountQuery,
+  // lifecycle
+  useListProjectsQuery,
+  useLazyListProjectsQuery,
+  useGetProjectQuery,
+  useLazyGetProjectQuery,
+  useListProjectsByAccountQuery,
+  useLazyListProjectsByAccountQuery,
   useFindProjectByRemoteOriginQuery,
   useLazyFindProjectByRemoteOriginQuery,
   useFindOrCreateProjectMutation,
@@ -210,11 +213,23 @@ export {
   useRemoveProjectMutation,
   useDeleteProjectMutation,
   useArchiveProjectMutation,
+  // resources
+  useListProjectResourcesQuery,
+  useListAvailableResourcesQuery,
+  useLazyListAvailableResourcesQuery,
+  useAddProjectResourceMutation,
+  useRemoveProjectResourceMutation,
+  // issues (via linked resources)
+  useListProjectIssuesQuery,
 } from "./projectsApi";
 export type {
   Project,
   CreateProjectPayload,
   UpdateProjectPayload,
+  ProjectResource,
+  ProjectResourceWithDetails,
+  AvailableResource,
+  ProjectIssue,
 } from "./projectsApi";
 
 // Workspace aggregate (workspace + activity + diffs + reviews + findings)
@@ -330,22 +345,6 @@ export type {
   RunTurnStatus,
   ModelUsageEntry,
 } from "./runsApi";
-
-export {
-  projectResourcesApi,
-  useGetProjectResourcesQuery,
-  useGetAvailableResourcesQuery,
-  useLazyGetAvailableResourcesQuery,
-  useAddProjectResourceMutation,
-  useRemoveProjectResourceMutation,
-  useGetIssuesByProjectQuery,
-} from "./workspaceResourcesApi";
-export type {
-  ProjectResource,
-  ProjectResourceWithDetails,
-  AvailableResource,
-  ProjectIssue,
-} from "./workspaceResourcesApi";
 
 export {
   updatesApi,

@@ -120,24 +120,25 @@ export const CHANNELS = {
     getById: "issues:getById",
     update: "issues:update",
   },
-  projectResources: {
-    add: "projectResources:add",
-    getAvailable: "projectResources:getAvailable",
-    getByProject: "projectResources:getByProject",
-    getIssues: "projectResources:getIssues",
-    remove: "projectResources:remove",
-  },
   projects: {
+    // ── lifecycle ──
     archive: "projects:archive",
     create: "projects:create",
     delete: "projects:delete",
     findByRemoteOrigin: "projects:findByRemoteOrigin",
     findOrCreate: "projects:findOrCreate",
-    getAll: "projects:getAll",
-    getByAccount: "projects:getByAccount",
-    getById: "projects:getById",
+    get: "projects:get",
+    list: "projects:list",
+    listByAccount: "projects:listByAccount",
     remove: "projects:remove",
     update: "projects:update",
+    // ── resources ──
+    addResource: "projects:addResource",
+    listAvailableResources: "projects:listAvailableResources",
+    listResources: "projects:listResources",
+    removeResource: "projects:removeResource",
+    // ── issues (via linked resources) ──
+    listIssues: "projects:listIssues",
   },
   providers: {
     create: "providers:create",

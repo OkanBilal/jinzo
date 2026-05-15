@@ -11,7 +11,7 @@ import {
 } from "@/components/ui";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import {
-  useGetAvailableResourcesQuery,
+  useListAvailableResourcesQuery,
   useAddProjectResourceMutation,
   useRemoveProjectResourceMutation,
   type AvailableResource,
@@ -41,7 +41,7 @@ export function LinkResourcesModal({
   const {
     data: resources = [],
     isLoading,
-  } = useGetAvailableResourcesQuery(projectId, {
+  } = useListAvailableResourcesQuery(projectId, {
     skip: !isOpen || !projectId,
     refetchOnMountOrArgChange: true,
   });

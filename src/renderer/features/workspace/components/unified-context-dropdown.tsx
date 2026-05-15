@@ -7,7 +7,7 @@ import { useDropdownKeyboardNavigation } from "@/features/workspace/hooks/use-dr
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
 import type { DirEntry, FileNode } from "@/features/workspace/types/file-explorer";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
-import { useGetIssuesByProjectQuery } from "@/lib/redux/api";
+import { useListProjectIssuesQuery } from "@/lib/redux/api";
 import { ProviderIcon } from "./provider-icon";
 import { useLocalImageUrl } from "@/hooks/use-local-image-url";
 
@@ -265,7 +265,7 @@ export function UnifiedContextDropdown({
     };
   }, [isOpen, workspacePath, dirPath, nameFilter, isWorkspaceFileSearch]);
 
-  const { data: issues = [], isLoading: isLoadingIssues } = useGetIssuesByProjectQuery(projectId ?? "", {
+  const { data: issues = [], isLoading: isLoadingIssues } = useListProjectIssuesQuery(projectId ?? "", {
     skip: !isOpen || !projectId,
   });
 

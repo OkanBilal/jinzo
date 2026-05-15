@@ -1,6 +1,7 @@
 import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
+import type { IssueWithEntity } from "./entitiesApi";
 
 export interface Project {
   id: string;
@@ -54,28 +55,65 @@ export interface UpdateProjectPayload {
   prInstructions?: string;
 }
 
+// ─────────────────────────────────────────────────────────────
+// Project resources (formerly workspaceResourcesApi)
+// ─────────────────────────────────────────────────────────────
+
+export interface ProjectResource {
+  id: string;
+  projectId: string;
+  resourceId: string;
+  createdAt: string;
+}
+
+export interface ProjectResourceWithDetails extends ProjectResource {
+  resource: {
+    id: string;
+    connectionId: string;
+    externalId: string;
+    kind: string;
+    name: string | null;
+    url: string | null;
+    metadata: string | null;
+  };
+}
+
+export interface AvailableResource {
+  id: string;
+  connectionId: string;
+  externalId: string;
+  kind: string;
+  name: string | null;
+  url: string | null;
+  metadata: string | null;
+  isLinked: boolean;
+}
+
+export type ProjectIssue = IssueWithEntity;
+
 export const projectsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getProjects: builder.query<Project[], void>({
+    // ── lifecycle ──
+    listProjects: builder.query<Project[], void>({
       query: () => ({
-        handler: CHANNELS.projects.getAll,
+        handler: CHANNELS.projects.list,
       }),
       transformResponse: (response: ServiceResponse<Project[]>) => unwrap(response),
       providesTags: ["Projects"],
     }),
 
-    getProjectById: builder.query<Project, string>({
+    getProject: builder.query<Project, string>({
       query: (id) => ({
-        handler: CHANNELS.projects.getById,
+        handler: CHANNELS.projects.get,
         args: [id],
       }),
       transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
       providesTags: (_result, _error, id) => [{ type: "Projects", id }],
     }),
 
-    getProjectsByAccount: builder.query<Project[], string>({
+    listProjectsByAccount: builder.query<Project[], string>({
       query: (accountId) => ({
-        handler: CHANNELS.projects.getByAccount,
+        handler: CHANNELS.projects.listByAccount,
         args: [accountId],
       }),
       transformResponse: (response: ServiceResponse<Project[]>) => unwrap(response),
@@ -154,16 +192,81 @@ export const projectsApi = baseApi.injectEndpoints({
         { type: "Projects", id },
       ],
     }),
+
+    // ── resources ──
+    listProjectResources: builder.query<ProjectResourceWithDetails[], string>({
+      query: (projectId) => ({
+        handler: CHANNELS.projects.listResources,
+        args: [projectId],
+      }),
+      transformResponse: (response: ServiceResponse<{ resources: ProjectResourceWithDetails[] }>) =>
+        response.success ? response.data.resources : [],
+      providesTags: (_result, _error, projectId) => [
+        { type: "ProjectResources", id: projectId },
+      ],
+    }),
+
+    listAvailableResources: builder.query<AvailableResource[], string>({
+      query: (projectId) => ({
+        handler: CHANNELS.projects.listAvailableResources,
+        args: [projectId],
+      }),
+      transformResponse: (response: ServiceResponse<{ resources: AvailableResource[] }>) =>
+        response.success ? response.data.resources : [],
+      providesTags: ["ProjectResources"],
+    }),
+
+    addProjectResource: builder.mutation<
+      { success: boolean },
+      { projectId: string; resourceId: string }
+    >({
+      query: (payload) => ({
+        handler: CHANNELS.projects.addResource,
+        args: [payload],
+      }),
+      invalidatesTags: (_result, _error, { projectId }) => [
+        { type: "ProjectResources", id: projectId },
+        { type: "ProjectIssues", id: projectId },
+      ],
+    }),
+
+    removeProjectResource: builder.mutation<
+      { success: boolean },
+      { projectId: string; resourceId: string }
+    >({
+      query: (payload) => ({
+        handler: CHANNELS.projects.removeResource,
+        args: [payload],
+      }),
+      invalidatesTags: (_result, _error, { projectId }) => [
+        { type: "ProjectResources", id: projectId },
+        { type: "ProjectIssues", id: projectId },
+      ],
+    }),
+
+    // ── issues (via linked resources) ──
+    listProjectIssues: builder.query<ProjectIssue[], string>({
+      query: (projectId) => ({
+        handler: CHANNELS.projects.listIssues,
+        args: [projectId],
+      }),
+      transformResponse: (response: ServiceResponse<{ issues: ProjectIssue[] }>) =>
+        response.success ? response.data.issues : [],
+      providesTags: (_result, _error, projectId) => [
+        { type: "ProjectIssues", id: projectId },
+      ],
+    }),
   }),
 });
 
 export const {
-  useGetProjectsQuery,
-  useLazyGetProjectsQuery,
-  useGetProjectByIdQuery,
-  useLazyGetProjectByIdQuery,
-  useGetProjectsByAccountQuery,
-  useLazyGetProjectsByAccountQuery,
+  // lifecycle
+  useListProjectsQuery,
+  useLazyListProjectsQuery,
+  useGetProjectQuery,
+  useLazyGetProjectQuery,
+  useListProjectsByAccountQuery,
+  useLazyListProjectsByAccountQuery,
   useFindProjectByRemoteOriginQuery,
   useLazyFindProjectByRemoteOriginQuery,
   useFindOrCreateProjectMutation,
@@ -172,4 +275,12 @@ export const {
   useRemoveProjectMutation,
   useDeleteProjectMutation,
   useArchiveProjectMutation,
+  // resources
+  useListProjectResourcesQuery,
+  useListAvailableResourcesQuery,
+  useLazyListAvailableResourcesQuery,
+  useAddProjectResourceMutation,
+  useRemoveProjectResourceMutation,
+  // issues
+  useListProjectIssuesQuery,
 } = projectsApi;

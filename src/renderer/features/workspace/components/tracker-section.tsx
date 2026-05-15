@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  useGetIssuesByProjectQuery,
+  useListProjectIssuesQuery,
   useGetSignalsByProjectQuery,
   type ProjectIssue,
   type SignalWithEntity,
@@ -65,7 +65,7 @@ export function TrackerSection({
   onAddSignalToContext,
 }: TrackerSectionProps) {
   const { data: issues = [], isLoading: issuesLoading } =
-    useGetIssuesByProjectQuery(projectId || "", { skip: !projectId });
+    useListProjectIssuesQuery(projectId || "", { skip: !projectId });
 
   const { data: signals = [], isLoading: signalsLoading } =
     useGetSignalsByProjectQuery(projectId || "", { skip: !projectId });

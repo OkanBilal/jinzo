@@ -2,7 +2,7 @@ import { RefObject, useCallback, useMemo } from "react";
 import { Button, DropdownWrapper } from "@/components/ui";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
-import { useGetIssuesByProjectQuery } from "@/lib/redux/api";
+import { useListProjectIssuesQuery } from "@/lib/redux/api";
 import { ProviderIcon } from "./provider-icon";
 import { useDropdownKeyboardNavigation } from "@/features/workspace/hooks/use-dropdown-keyboard-navigation";
 
@@ -28,7 +28,7 @@ export function IssueMentionDropdown({
     if (isOpen) onClose();
   });
 
-  const { data: issues = [], isLoading } = useGetIssuesByProjectQuery(
+  const { data: issues = [], isLoading } = useListProjectIssuesQuery(
     projectId ?? "",
     { skip: !isOpen || !projectId },
   );

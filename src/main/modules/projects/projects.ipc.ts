@@ -1,24 +1,28 @@
 import { ipcMain } from "electron";
 import { projectsService } from "./projects.service";
-import type { CreateProjectPayload, UpdateProjectPayload } from "./projects.dto";
+import type {
+  AddResourcePayload,
+  CreateProjectPayload,
+  RemoveResourcePayload,
+  UpdateProjectPayload,
+} from "./projects.dto";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 // ─────────────────────────────────────────────────────────────
-// IPC Channel Names
-// ─────────────────────────────────────────────────────────────
-// IPC Handlers
+// Projects IPC Handlers
 // ─────────────────────────────────────────────────────────────
 export function registerProjectsIpc(): void {
-  ipcMain.handle(CHANNELS.projects.getAll, async () => {
-    return projectsService.getAll();
+  // ── lifecycle ──
+  ipcMain.handle(CHANNELS.projects.list, async () => {
+    return projectsService.list();
   });
 
-  ipcMain.handle(CHANNELS.projects.getById, async (_, id: string) => {
-    return projectsService.getById(id);
+  ipcMain.handle(CHANNELS.projects.get, async (_, id: string) => {
+    return projectsService.get(id);
   });
 
-  ipcMain.handle(CHANNELS.projects.getByAccount, async (_, accountId: string) => {
-    return projectsService.getByAccountId(accountId);
+  ipcMain.handle(CHANNELS.projects.listByAccount, async (_, accountId: string) => {
+    return projectsService.listByAccount(accountId);
   });
 
   ipcMain.handle(
@@ -51,13 +55,35 @@ export function registerProjectsIpc(): void {
   ipcMain.handle(CHANNELS.projects.archive, async (_, id: string) => {
     return projectsService.archive(id);
   });
+
+  // ── resources ──
+  ipcMain.handle(CHANNELS.projects.listResources, async (_, projectId: string) => {
+    return projectsService.listResources(projectId);
+  });
+
+  ipcMain.handle(CHANNELS.projects.listAvailableResources, async (_, projectId: string) => {
+    return projectsService.listAvailableResources(projectId);
+  });
+
+  ipcMain.handle(CHANNELS.projects.addResource, async (_, payload: AddResourcePayload) => {
+    return projectsService.addResource(payload.projectId, payload.resourceId);
+  });
+
+  ipcMain.handle(CHANNELS.projects.removeResource, async (_, payload: RemoveResourcePayload) => {
+    return projectsService.removeResource(payload.projectId, payload.resourceId);
+  });
+
+  // ── issues (via linked resources) ──
+  ipcMain.handle(CHANNELS.projects.listIssues, async (_, projectId: string) => {
+    return projectsService.listIssues(projectId);
+  });
 }
 
 export function unregisterProjectsIpc(): void {
   [
-    CHANNELS.projects.getAll,
-    CHANNELS.projects.getById,
-    CHANNELS.projects.getByAccount,
+    CHANNELS.projects.list,
+    CHANNELS.projects.get,
+    CHANNELS.projects.listByAccount,
     CHANNELS.projects.findByRemoteOrigin,
     CHANNELS.projects.findOrCreate,
     CHANNELS.projects.create,
@@ -65,5 +91,10 @@ export function unregisterProjectsIpc(): void {
     CHANNELS.projects.remove,
     CHANNELS.projects.delete,
     CHANNELS.projects.archive,
+    CHANNELS.projects.listResources,
+    CHANNELS.projects.listAvailableResources,
+    CHANNELS.projects.addResource,
+    CHANNELS.projects.removeResource,
+    CHANNELS.projects.listIssues,
   ].forEach((channel) => ipcMain.removeHandler(channel));
 }

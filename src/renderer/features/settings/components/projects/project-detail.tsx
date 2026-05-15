@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useReducer, useCallback, useRef } from "r
 import { useSearchParams } from "react-router-dom";
 import { Heading2, Muted, Button, toast, Alert } from "@/components/ui";
 import {
-  useGetProjectByIdQuery,
+  useGetProjectQuery,
   useUpdateProjectMutation,
   useRemoveProjectMutation,
 } from "@/lib/redux/api";
@@ -22,7 +22,7 @@ interface ProjectDetailProps {
 
 export default function ProjectDetail({ id }: ProjectDetailProps) {
   const [, setSearchParams] = useSearchParams();
-  const { data: project, isLoading, refetch } = useGetProjectByIdQuery(id);
+  const { data: project, isLoading, refetch } = useGetProjectQuery(id);
   const [updateProject, { isLoading: saving }] = useUpdateProjectMutation();
   const [removeProject, { isLoading: removing }] = useRemoveProjectMutation();
   const [showRemoveAlert, setShowRemoveAlert] = useState(false);

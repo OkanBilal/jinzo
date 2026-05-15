@@ -207,8 +207,8 @@ describe("smoke", () => {
       }
     });
 
-    it("projectsService.getAll returns empty list (no projects seeded)", async () => {
-      const result = await projectsService.getAll();
+    it("projectsService.list returns empty list (no projects seeded)", async () => {
+      const result = await projectsService.list();
       expect(result.success).toBe(true);
       if (!result.success) return;
 

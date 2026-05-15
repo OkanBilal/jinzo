@@ -1,9 +1,16 @@
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import { safeJsonParse } from "../../db/utils";
-import { projects } from "../../db/schema";
-import type { CreateProjectPayload, UpdateProjectPayload, ProjectResponse } from "./projects.dto";
+import { projects, projectResources, connectionResources } from "../../db/schema";
+import type {
+  AvailableResource,
+  CreateProjectPayload,
+  ProjectResource,
+  ProjectResourceWithDetails,
+  ProjectResponse,
+  UpdateProjectPayload,
+} from "./projects.dto";
 
 // ─────────────────────────────────────────────────────────────
 // Projects Repository
@@ -131,6 +138,108 @@ export const projectsRepo = {
       .set({ isArchived: true, updatedAt: sql`(unixepoch())` })
       .where(eq(projects.id, id));
     return this.findById(id);
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // project_resources (formerly workspaceResources/)
+  // ─────────────────────────────────────────────────────────────
+
+  async listResourcesByProject(projectId: string): Promise<ProjectResourceWithDetails[]> {
+    const db = getDb();
+    return db
+      .select({
+        id: projectResources.id,
+        projectId: projectResources.projectId,
+        resourceId: projectResources.resourceId,
+        createdAt: projectResources.createdAt,
+        resource: {
+          id: connectionResources.id,
+          connectionId: connectionResources.connectionId,
+          externalId: connectionResources.externalId,
+          kind: connectionResources.kind,
+          name: connectionResources.name,
+          url: connectionResources.url,
+          metadata: connectionResources.metadata,
+        },
+      })
+      .from(projectResources)
+      .innerJoin(connectionResources, eq(projectResources.resourceId, connectionResources.id))
+      .where(eq(projectResources.projectId, projectId));
+  },
+
+  async listAvailableResources(projectId: string, kinds: string[]): Promise<AvailableResource[]> {
+    const db = getDb();
+    const allResources = await db
+      .select()
+      .from(connectionResources)
+      .where(
+        and(
+          inArray(connectionResources.kind, kinds),
+          eq(connectionResources.selected, true),
+        ),
+      );
+
+    const linked = await db
+      .select({ resourceId: projectResources.resourceId })
+      .from(projectResources)
+      .where(eq(projectResources.projectId, projectId));
+    const linkedIds = new Set(linked.map((r) => r.resourceId));
+
+    return allResources.map((resource) => ({
+      id: resource.id,
+      connectionId: resource.connectionId,
+      externalId: resource.externalId,
+      kind: resource.kind,
+      name: resource.name,
+      url: resource.url,
+      metadata: resource.metadata,
+      isLinked: linkedIds.has(resource.id),
+    }));
+  },
+
+  async addResource(id: string, projectId: string, resourceId: string): Promise<ProjectResource> {
+    const db = getDb();
+    const [result] = await db
+      .insert(projectResources)
+      .values({ id, projectId, resourceId })
+      .returning();
+    return result;
+  },
+
+  async removeResource(projectId: string, resourceId: string): Promise<void> {
+    const db = getDb();
+    await db
+      .delete(projectResources)
+      .where(
+        and(
+          eq(projectResources.projectId, projectId),
+          eq(projectResources.resourceId, resourceId),
+        ),
+      );
+  },
+
+  async isResourceLinked(projectId: string, resourceId: string): Promise<boolean> {
+    const db = getDb();
+    const rows = await db
+      .select({ id: projectResources.id })
+      .from(projectResources)
+      .where(
+        and(
+          eq(projectResources.projectId, projectId),
+          eq(projectResources.resourceId, resourceId),
+        ),
+      )
+      .limit(1);
+    return rows.length > 0;
+  },
+
+  async listLinkedResourceIds(projectId: string): Promise<string[]> {
+    const db = getDb();
+    const rows = await db
+      .select({ resourceId: projectResources.resourceId })
+      .from(projectResources)
+      .where(eq(projectResources.projectId, projectId));
+    return rows.map((r) => r.resourceId);
   },
 };
 
