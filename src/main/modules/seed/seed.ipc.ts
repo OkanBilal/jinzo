@@ -1,16 +1,16 @@
 import { ipcMain } from "electron";
-import { seedController } from "./seed.controller";
+import { seedService } from "./seed.service";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Handlers - Thin layer, just registers handlers
 // ─────────────────────────────────────────────────────────────
 export function registerSeedIpc() {
-  ipcMain.handle("seed:accounts", () => seedController.seedAccounts());
-  ipcMain.handle("seed:connectionStates", () => seedController.seedConnectionStates());
-  ipcMain.handle("seed:connections", () => seedController.seedConnections());
-  ipcMain.handle("seed:providers", () => seedController.seedProviders());
-  ipcMain.handle("seed:spaces", () => seedController.seedSpaces());
-  ipcMain.handle("seed:all", () => seedController.seedAll());
+  ipcMain.handle("seed:accounts", () => seedService.seedAccounts());
+  ipcMain.handle("seed:connectionStates", () => seedService.seedConnectionStates());
+  ipcMain.handle("seed:connections", () => seedService.seedConnections());
+  ipcMain.handle("seed:providers", () => seedService.seedProviders());
+  ipcMain.handle("seed:spaces", () => seedService.seedSpaces());
+  ipcMain.handle("seed:all", () => seedService.seedAll());
 
 }
 

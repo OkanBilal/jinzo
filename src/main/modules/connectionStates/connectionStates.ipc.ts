@@ -1,12 +1,12 @@
 import { ipcMain } from "electron";
-import { ConnectionStatesController } from "./connectionStates.controller";
+import { connectionStatesService } from "./connectionStates.service";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Handlers - Thin layer, just registers handlers
 // ─────────────────────────────────────────────────────────────
 export function registerConnectionStatesIpc() {
-  ipcMain.handle("connectionStates:getAll", () => ConnectionStatesController.getAll());
-  ipcMain.handle("connectionStates:updateById", (_, id, payload) => ConnectionStatesController.updateById(id, payload));
+  ipcMain.handle("connectionStates:getAll", () => connectionStatesService.getAll());
+  ipcMain.handle("connectionStates:updateById", (_, id, payload) => connectionStatesService.updateById(id, payload));
 
 }
 

@@ -1,5 +1,5 @@
 import { ipcMain } from "electron";
-import { providersController } from "./providers.controller";
+import { providersService } from "./providers.service";
 import type { CreateProviderPayload, UpdateProviderPayload, ProviderKind } from "./providers.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -32,82 +32,82 @@ const CHANNELS = {
 // ─────────────────────────────────────────────────────────────
 export function registerProvidersIpc(): void {
   ipcMain.handle(CHANNELS.GET_ALL, async () => {
-    return providersController.getAll();
+    return providersService.getAll();
   });
 
   ipcMain.handle(CHANNELS.GET_BY_ID, async (_, id: string) => {
-    return providersController.getById(id);
+    return providersService.getById(id);
   });
 
   ipcMain.handle(CHANNELS.GET_BY_KIND, async (_, kind: ProviderKind) => {
-    return providersController.getByKind(kind);
+    return providersService.getByKind(kind);
   });
 
   ipcMain.handle(CHANNELS.GET_ENABLED, async () => {
-    return providersController.getEnabled();
+    return providersService.getEnabled();
   });
 
   ipcMain.handle(CHANNELS.CREATE, async (_, payload: CreateProviderPayload) => {
-    return providersController.create(payload);
+    return providersService.create(payload);
   });
 
   ipcMain.handle(CHANNELS.UPDATE, async (_, id: string, payload: UpdateProviderPayload) => {
-    return providersController.update(id, payload);
+    return providersService.update(id, payload);
   });
 
   ipcMain.handle(CHANNELS.DELETE, async (_, id: string) => {
-    return providersController.delete(id);
+    return providersService.delete(id);
   });
 
   ipcMain.handle(CHANNELS.ENABLE, async (_, id: string) => {
-    return providersController.enable(id);
+    return providersService.enable(id);
   });
 
   ipcMain.handle(CHANNELS.DISABLE, async (_, id: string) => {
-    return providersController.disable(id);
+    return providersService.disable(id);
   });
 
   ipcMain.handle(CHANNELS.GET_MODELS, async (_, id: string) => {
-    return providersController.getModels(id);
+    return providersService.getModels(id);
   });
 
   ipcMain.handle(
     CHANNELS.GET_COMMANDS,
     async (_, id: string, workspacePath?: string) => {
-      return providersController.getCommands(id, workspacePath);
+      return providersService.getCommands(id, workspacePath);
     },
   );
 
   ipcMain.handle(CHANNELS.GET_SKILLS, async (_, id: string, workspacePath?: string) => {
-    return providersController.getSkills(id, workspacePath);
+    return providersService.getSkills(id, workspacePath);
   });
 
   ipcMain.handle(CHANNELS.GET_RATE_LIMITS, async (_, id: string) => {
-    return providersController.getRateLimits(id);
+    return providersService.getRateLimits(id);
   });
 
   ipcMain.handle(CHANNELS.GET_ACCOUNT_INFO, async (_, id: string) => {
-    return providersController.getAccountInfo(id);
+    return providersService.getAccountInfo(id);
   });
 
   ipcMain.handle(CHANNELS.GET_PLUGINS, async (_, id: string) => {
-    return providersController.getPlugins(id);
+    return providersService.getPlugins(id);
   });
 
   ipcMain.handle(CHANNELS.READ_PLUGIN, async (_, id: string, pluginName: string, marketplacePath: string) => {
-    return providersController.readPlugin(id, pluginName, marketplacePath);
+    return providersService.readPlugin(id, pluginName, marketplacePath);
   });
 
   ipcMain.handle(CHANNELS.INSTALL_PLUGIN, async (_, id: string, pluginId: string) => {
-    return providersController.installPlugin(id, pluginId);
+    return providersService.installPlugin(id, pluginId);
   });
 
   ipcMain.handle(CHANNELS.UNINSTALL_PLUGIN, async (_, id: string, pluginId: string) => {
-    return providersController.uninstallPlugin(id, pluginId);
+    return providersService.uninstallPlugin(id, pluginId);
   });
 
   ipcMain.handle(CHANNELS.DETECT_INSTALLED, async () => {
-    return providersController.detectInstalled();
+    return providersService.detectInstalled();
   });
 }
 

@@ -1,5 +1,5 @@
 import { ipcMain } from "electron";
-import { reviewFindingsController } from "./reviewFindings.controller";
+import { reviewFindingsService } from "./reviewFindings.service";
 import type {
   CreateReviewFindingPayload,
   UpdateReviewFindingPayload,
@@ -25,44 +25,44 @@ export function registerReviewFindingsIpc(): void {
   ipcMain.handle(
     CHANNELS.GET_BY_WORKSPACE,
     async (_, workspaceId: string) => {
-      return reviewFindingsController.getByWorkspace(workspaceId);
+      return reviewFindingsService.getByWorkspace(workspaceId);
     },
   );
 
   ipcMain.handle(
     CHANNELS.GET_BY_REVIEW,
     async (_, reviewId: string, limit?: number) => {
-      return reviewFindingsController.getByReview(reviewId, limit);
+      return reviewFindingsService.getByReview(reviewId, limit);
     },
   );
 
   ipcMain.handle(CHANNELS.GET_BY_ID, async (_, id: string) => {
-    return reviewFindingsController.getById(id);
+    return reviewFindingsService.getById(id);
   });
 
   ipcMain.handle(
     CHANNELS.CREATE,
     async (_, payload: CreateReviewFindingPayload) => {
-      return reviewFindingsController.create(payload);
+      return reviewFindingsService.create(payload);
     },
   );
 
   ipcMain.handle(
     CHANNELS.CREATE_MANY,
     async (_, payloads: CreateReviewFindingPayload[]) => {
-      return reviewFindingsController.createMany(payloads);
+      return reviewFindingsService.createMany(payloads);
     },
   );
 
   ipcMain.handle(
     CHANNELS.UPDATE,
     async (_, id: string, payload: UpdateReviewFindingPayload) => {
-      return reviewFindingsController.update(id, payload);
+      return reviewFindingsService.update(id, payload);
     },
   );
 
   ipcMain.handle(CHANNELS.DELETE, async (_, id: string) => {
-    return reviewFindingsController.delete(id);
+    return reviewFindingsService.delete(id);
   });
 }
 

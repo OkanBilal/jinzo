@@ -1,5 +1,5 @@
 import { ipcMain } from "electron";
-import { entitiesController } from "./entities.controller";
+import { entitiesService } from "./entities.service";
 import type {
   CreateEntityPayload,
   UpdateEntityPayload,
@@ -55,42 +55,42 @@ export function registerEntitiesHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.ENTITIES_GET_ALL,
     async (_event, options: EntityQueryOptions = {}) => {
-      return entitiesController.getAll(options);
+      return entitiesService.getAll(options);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.ENTITIES_GET_BY_ID,
     async (_event, id: string) => {
-      return entitiesController.getById(id);
+      return entitiesService.getById(id);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.ENTITIES_CREATE,
     async (_event, payload: CreateEntityPayload) => {
-      return entitiesController.create(payload);
+      return entitiesService.create(payload);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.ENTITIES_UPDATE,
     async (_event, id: string, payload: UpdateEntityPayload) => {
-      return entitiesController.update(id, payload);
+      return entitiesService.update(id, payload);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.ENTITIES_DELETE,
     async (_event, id: string) => {
-      return entitiesController.delete(id);
+      return entitiesService.delete(id);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.ENTITIES_SEARCH,
     async (_event, query: string, options: SearchOptions = {}) => {
-      return entitiesController.search(query, options);
+      return entitiesService.search(query, options);
     }
   );
 
@@ -98,35 +98,35 @@ export function registerEntitiesHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.TASKS_GET_ALL,
     async (_event, options: TaskQueryOptions = {}) => {
-      return entitiesController.getAllTasks(options);
+      return entitiesService.getAllTasks(options);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.TASKS_GET_BY_ID,
     async (_event, entityId: string) => {
-      return entitiesController.getTaskById(entityId);
+      return entitiesService.getTaskById(entityId);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.TASKS_CREATE,
     async (_event, payload: CreateTaskPayload) => {
-      return entitiesController.createTask(payload);
+      return entitiesService.createTask(payload);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.TASKS_UPDATE,
     async (_event, entityId: string, payload: UpdateTaskPayload) => {
-      return entitiesController.updateTask(entityId, payload);
+      return entitiesService.updateTask(entityId, payload);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.TASKS_DELETE,
     async (_event, entityId: string) => {
-      return entitiesController.deleteTask(entityId);
+      return entitiesService.deleteTask(entityId);
     }
   );
 
@@ -134,35 +134,35 @@ export function registerEntitiesHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.ISSUES_GET_ALL,
     async (_event, options: IssueQueryOptions = {}) => {
-      return entitiesController.getAllIssues(options);
+      return entitiesService.getAllIssues(options);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.ISSUES_GET_BY_ID,
     async (_event, entityId: string) => {
-      return entitiesController.getIssueById(entityId);
+      return entitiesService.getIssueById(entityId);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.ISSUES_CREATE,
     async (_event, payload: CreateIssuePayload) => {
-      return entitiesController.createIssue(payload);
+      return entitiesService.createIssue(payload);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.ISSUES_UPDATE,
     async (_event, entityId: string, payload: UpdateIssuePayload) => {
-      return entitiesController.updateIssue(entityId, payload);
+      return entitiesService.updateIssue(entityId, payload);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.ISSUES_DELETE,
     async (_event, entityId: string) => {
-      return entitiesController.deleteIssue(entityId);
+      return entitiesService.deleteIssue(entityId);
     }
   );
 
@@ -170,35 +170,35 @@ export function registerEntitiesHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.SIGNALS_GET_ALL,
     async (_event, options: SignalQueryOptions = {}) => {
-      return entitiesController.getAllSignals(options);
+      return entitiesService.getAllSignals(options);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.SIGNALS_GET_BY_ID,
     async (_event, entityId: string) => {
-      return entitiesController.getSignalById(entityId);
+      return entitiesService.getSignalById(entityId);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.SIGNALS_CREATE,
     async (_event, payload: CreateSignalPayload) => {
-      return entitiesController.createSignal(payload);
+      return entitiesService.createSignal(payload);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.SIGNALS_UPDATE,
     async (_event, entityId: string, payload: UpdateSignalPayload) => {
-      return entitiesController.updateSignal(entityId, payload);
+      return entitiesService.updateSignal(entityId, payload);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.SIGNALS_DELETE,
     async (_event, entityId: string) => {
-      return entitiesController.deleteSignal(entityId);
+      return entitiesService.deleteSignal(entityId);
     }
   );
 

@@ -1,13 +1,13 @@
 import { ipcMain } from "electron";
-import { accountController } from "./account.controller";
+import { accountService } from "./account.service";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Handlers - Thin layer, just registers handlers
 // ─────────────────────────────────────────────────────────────
 export function registerAccountIpc() {
-  ipcMain.handle("account:get", () => accountController.get());
+  ipcMain.handle("account:get", () => accountService.getAccount());
   ipcMain.handle("account:update", (_, payload) =>
-    accountController.update(payload),
+    accountService.updateAccount(payload),
   );
 
 }

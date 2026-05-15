@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
 import { ok } from "../../../shared/ipc-kit/service-response";
-import { runsController } from "./runs.controller";
+import { runsService } from "./runs.service";
 import type {
   CreateRunPayload,
   UpdateRunPayload,
@@ -69,124 +69,124 @@ const CHANNELS = {
 export function registerRunsIpc(): void {
   // Runs
   ipcMain.handle(CHANNELS.RUNS_GET_ALL, async (_, limit?: number) => {
-    return runsController.getAllRuns(limit);
+    return runsService.getAllRuns(limit);
   });
 
   ipcMain.handle(CHANNELS.RUNS_GET_BY_ID, async (_, id: string) => {
-    return runsController.getRunById(id);
+    return runsService.getRunById(id);
   });
 
   ipcMain.handle(CHANNELS.RUNS_GET_BY_ACCOUNT, async (_, accountId: string, limit?: number) => {
-    return runsController.getRunsByAccount(accountId, limit);
+    return runsService.getRunsByAccount(accountId, limit);
   });
 
   ipcMain.handle(CHANNELS.RUNS_GET_BY_WORKSPACE, async (_, workspaceId: string, limit?: number) => {
-    return runsController.getRunsByWorkspace(workspaceId, limit);
+    return runsService.getRunsByWorkspace(workspaceId, limit);
   });
 
   ipcMain.handle(CHANNELS.RUNS_GET_BY_STATUS, async (_, accountId: string, status: RunStatus) => {
-    return runsController.getRunsByStatus(accountId, status);
+    return runsService.getRunsByStatus(accountId, status);
   });
 
   ipcMain.handle(CHANNELS.RUNS_CREATE, async (_, payload: CreateRunPayload) => {
-    return runsController.createRun(payload);
+    return runsService.createRun(payload);
   });
 
   ipcMain.handle(CHANNELS.RUNS_UPDATE, async (_, id: string, payload: UpdateRunPayload) => {
-    return runsController.updateRun(id, payload);
+    return runsService.updateRun(id, payload);
   });
 
   ipcMain.handle(CHANNELS.RUNS_START, async (_, id: string) => {
-    return runsController.startRun(id);
+    return runsService.startRun(id);
   });
 
   ipcMain.handle(CHANNELS.RUNS_COMPLETE, async (_, id: string) => {
-    return runsController.completeRun(id);
+    return runsService.completeRun(id);
   });
 
   ipcMain.handle(CHANNELS.RUNS_FAIL, async (_, id: string, error: string) => {
-    return runsController.failRun(id, error);
+    return runsService.failRun(id, error);
   });
 
   ipcMain.handle(CHANNELS.RUNS_CANCEL, async (_, id: string) => {
-    return runsController.cancelRun(id);
+    return runsService.cancelRun(id);
   });
 
   ipcMain.handle(CHANNELS.RUNS_DELETE, async (_, id: string) => {
-    return runsController.deleteRun(id);
+    return runsService.deleteRun(id);
   });
 
   ipcMain.handle(CHANNELS.RUNS_ARCHIVE, async (_, id: string) => {
-    return runsController.archiveRun(id);
+    return runsService.archiveRun(id);
   });
 
   ipcMain.handle(CHANNELS.RUNS_GET_DETAILS, async (_, runId: string) => {
-    return runsController.getRunDetails(runId);
+    return runsService.getRunDetails(runId);
   });
 
   ipcMain.handle(CHANNELS.RUNS_EXECUTE, async (_, payload: StartRunPayload) => {
-    return runsController.executeRun(payload);
+    return runsService.executeRun(payload);
   });
 
   ipcMain.handle(CHANNELS.RUNS_ABORT, async (_, runId: string) => {
-    return runsController.abortRun(runId);
+    return runsService.abortRun(runId);
   });
 
   ipcMain.handle(CHANNELS.RUNS_CONTINUE, async (_, payload: ContinueRunPayload) => {
-    return runsController.continueRun(payload);
+    return runsService.continueRun(payload);
   });
 
   ipcMain.handle(CHANNELS.RUNS_FORK, async (_, payload: ForkRunPayload) => {
-    return runsController.forkRun(payload);
+    return runsService.forkRun(payload);
   });
 
   ipcMain.handle(CHANNELS.RUNS_EXECUTE_REVIEW, async (_, payload: ReviewRunPayload) => {
-    return runsController.executeReview(payload);
+    return runsService.executeReview(payload);
   });
 
   ipcMain.handle(CHANNELS.RUNS_CAN_RESUME, async (_, runId: string) => {
-    return runsController.canResumeRun(runId);
+    return runsService.canResumeRun(runId);
   });
 
   ipcMain.handle(CHANNELS.RUNS_DELETE_SESSION, async (_, runId: string) => {
-    return runsController.deleteRunSession(runId);
+    return runsService.deleteRunSession(runId);
   });
 
   // Run Context
   ipcMain.handle(CHANNELS.CONTEXT_GET_BY_RUN, async (_, runId: string) => {
-    return runsController.getContextByRun(runId);
+    return runsService.getContextByRun(runId);
   });
 
   ipcMain.handle(CHANNELS.CONTEXT_ADD, async (_, payload: CreateRunContextPayload) => {
-    return runsController.addContext(payload);
+    return runsService.addContext(payload);
   });
 
   ipcMain.handle(CHANNELS.CONTEXT_REMOVE, async (_, id: number) => {
-    return runsController.removeContext(id);
+    return runsService.removeContext(id);
   });
 
   // Run Artifacts
   ipcMain.handle(CHANNELS.ARTIFACTS_GET_BY_RUN, async (_, runId: string) => {
-    return runsController.getArtifactsByRun(runId);
+    return runsService.getArtifactsByRun(runId);
   });
 
   ipcMain.handle(CHANNELS.ARTIFACTS_ADD, async (_, payload: CreateRunArtifactPayload) => {
-    return runsController.addArtifact(payload);
+    return runsService.addArtifact(payload);
   });
 
   ipcMain.handle(CHANNELS.ARTIFACTS_REMOVE, async (_, id: number) => {
-    return runsController.removeArtifact(id);
+    return runsService.removeArtifact(id);
   });
 
 
   // Tool Calls
   ipcMain.handle(CHANNELS.TOOL_CALLS_GET_BY_RUN, async (_, runId: string) => {
-    return runsController.getToolCallsByRun(runId);
+    return runsService.getToolCallsByRun(runId);
   });
 
   // Run Turns
   ipcMain.handle(CHANNELS.TURNS_GET_BY_RUN, async (_, runId: string) => {
-    return runsController.getTurnsByRun(runId);
+    return runsService.getTurnsByRun(runId);
   });
 
   // Tool Approval (interactive)

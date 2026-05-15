@@ -1,5 +1,5 @@
 import { ipcMain } from "electron";
-import { workspaceDiffsController } from "./workspaceDiffs.controller";
+import { workspaceDiffsService } from "./workspaceDiffs.service";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Channel Names
@@ -19,27 +19,27 @@ export function registerWorkspaceDiffsIpc(): void {
   ipcMain.handle(
     CHANNELS.GET_BY_WORKSPACE,
     async (_, workspaceId: string, limit?: number) => {
-      return workspaceDiffsController.getByWorkspace(workspaceId, limit);
+      return workspaceDiffsService.getByWorkspace(workspaceId, limit);
     },
   );
 
   ipcMain.handle(CHANNELS.GET_LATEST, async (_, workspaceId: string) => {
-    return workspaceDiffsController.getLatest(workspaceId);
+    return workspaceDiffsService.getLatest(workspaceId);
   });
 
   ipcMain.handle(
     CHANNELS.GET_LATEST_SUMMARY,
     async (_, workspaceId: string) => {
-      return workspaceDiffsController.getLatestSummary(workspaceId);
+      return workspaceDiffsService.getLatestSummary(workspaceId);
     },
   );
 
   ipcMain.handle(CHANNELS.GET_BY_RUN, async (_, runId: string) => {
-    return workspaceDiffsController.getByRun(runId);
+    return workspaceDiffsService.getByRun(runId);
   });
 
   ipcMain.handle(CHANNELS.DELETE_LATEST, async (_, workspaceId: string) => {
-    return workspaceDiffsController.deleteLatest(workspaceId);
+    return workspaceDiffsService.deleteLatest(workspaceId);
   });
 }
 

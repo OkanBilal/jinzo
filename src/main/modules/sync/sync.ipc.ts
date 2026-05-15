@@ -1,11 +1,11 @@
 import { ipcMain } from "electron";
-import { syncController } from "./sync.controller";
+import { syncService } from "./sync.service";
 
 // ─────────────────────────────────────────────────────────────
 // IPC Handlers - Thin layer, just registers handlers
 // ─────────────────────────────────────────────────────────────
 export function registerSyncIpc() {
-  ipcMain.handle("sync:runEntitySync", (_, provider?: string) => syncController.runEntitySync(provider));
+  ipcMain.handle("sync:runEntitySync", (_, provider?: string) => syncService.runEntitySync(provider));
 
 }
 

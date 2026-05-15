@@ -1,5 +1,5 @@
 import { ipcMain } from "electron";
-import { skillsMarketplaceController } from "./skillsMarketplace.controller";
+import { skillsMarketplaceService } from "./skillsMarketplace.service";
 import type { ListArgs, SearchArgs, SkillRef } from "./skillsMarketplace.dto";
 
 const CHANNELS = {
@@ -12,23 +12,23 @@ const CHANNELS = {
 
 export function registerSkillsMarketplaceIpc(): void {
   ipcMain.handle(CHANNELS.LIST, async (_, args: ListArgs = {}) => {
-    return skillsMarketplaceController.list(args);
+    return skillsMarketplaceService.list(args);
   });
 
   ipcMain.handle(CHANNELS.SEARCH, async (_, args: SearchArgs) => {
-    return skillsMarketplaceController.search(args);
+    return skillsMarketplaceService.search(args);
   });
 
   ipcMain.handle(CHANNELS.CURATED, async () => {
-    return skillsMarketplaceController.curated();
+    return skillsMarketplaceService.curated();
   });
 
   ipcMain.handle(CHANNELS.DETAIL, async (_, ref: SkillRef) => {
-    return skillsMarketplaceController.detail(ref);
+    return skillsMarketplaceService.detail(ref);
   });
 
   ipcMain.handle(CHANNELS.AUDIT, async (_, ref: SkillRef) => {
-    return skillsMarketplaceController.audit(ref);
+    return skillsMarketplaceService.audit(ref);
   });
 }
 

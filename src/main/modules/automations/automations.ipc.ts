@@ -1,5 +1,5 @@
 import { ipcMain } from "electron";
-import { automationsController } from "./automations.controller";
+import { automationsService } from "./automations.service";
 import type { CreateAutomationInput, UpdateAutomationInput } from "./automations.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -7,35 +7,35 @@ import type { CreateAutomationInput, UpdateAutomationInput } from "./automations
 // ─────────────────────────────────────────────────────────────
 export function registerAutomationsIpc() {
   ipcMain.handle("automations:getAll", () =>
-    automationsController.getAll(),
+    automationsService.getAll(),
   );
 
   ipcMain.handle("automations:getById", (_, id: string) =>
-    automationsController.getById(id),
+    automationsService.getById(id),
   );
 
   ipcMain.handle("automations:create", (_, accountId: string, input: CreateAutomationInput) =>
-    automationsController.create(accountId, input),
+    automationsService.create(accountId, input),
   );
 
   ipcMain.handle("automations:update", (_, id: string, input: UpdateAutomationInput) =>
-    automationsController.update(id, input),
+    automationsService.update(id, input),
   );
 
   ipcMain.handle("automations:delete", (_, id: string) =>
-    automationsController.delete(id),
+    automationsService.delete(id),
   );
 
   ipcMain.handle("automations:execute", (_, id: string) =>
-    automationsController.execute(id),
+    automationsService.executeAutomation(id),
   );
 
   ipcMain.handle("automations:getRunHistory", (_, automationId: string, limit?: number) =>
-    automationsController.getRunHistory(automationId, limit),
+    automationsService.getRunHistory(automationId, limit),
   );
 
   ipcMain.handle("automations:getAvailableActions", () =>
-    automationsController.getAvailableActions(),
+    automationsService.getAvailableActions(),
   );
 }
 

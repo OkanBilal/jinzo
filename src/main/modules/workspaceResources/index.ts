@@ -1,4 +1,3 @@
-export { workspaceResourcesController } from "./workspaceResources.controller";
 export { workspaceResourcesService } from "./workspaceResources.service";
 export { workspaceResourcesRepo } from "./workspaceResources.repo";
 export {

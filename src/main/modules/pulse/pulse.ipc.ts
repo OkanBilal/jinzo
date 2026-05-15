@@ -1,30 +1,30 @@
 import { ipcMain } from "electron";
-import { pulseController } from "./pulse.controller";
+import { pulseService } from "./pulse.service";
 import type { CreatePulseInput, UpdatePulseInput } from "./pulse.dto";
 
 export function registerPulseIpc() {
-  ipcMain.handle("pulse:getAll", () => pulseController.getAll());
+  ipcMain.handle("pulse:getAll", () => pulseService.getAll());
 
-  ipcMain.handle("pulse:getById", (_, id: string) => pulseController.getById(id));
+  ipcMain.handle("pulse:getById", (_, id: string) => pulseService.getById(id));
 
   ipcMain.handle(
     "pulse:create",
     (_, accountId: string, input: CreatePulseInput) =>
-      pulseController.create(accountId, input),
+      pulseService.create(accountId, input),
   );
 
   ipcMain.handle(
     "pulse:update",
-    (_, id: string, input: UpdatePulseInput) => pulseController.update(id, input),
+    (_, id: string, input: UpdatePulseInput) => pulseService.update(id, input),
   );
 
-  ipcMain.handle("pulse:delete", (_, id: string) => pulseController.delete(id));
+  ipcMain.handle("pulse:delete", (_, id: string) => pulseService.delete(id));
 
   ipcMain.handle("pulse:toggle", (_, id: string, isActive: boolean) =>
-    pulseController.toggle(id, isActive),
+    pulseService.toggle(id, isActive),
   );
 
-  ipcMain.handle("pulse:runNow", (_, id: string) => pulseController.runNow(id));
+  ipcMain.handle("pulse:runNow", (_, id: string) => pulseService.runNow(id));
 }
 
 export function unregisterPulseIpc() {

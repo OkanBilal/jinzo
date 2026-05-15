@@ -1,6 +1,6 @@
 import { fail } from "../../../shared/ipc-kit/service-response";
 import { ipcMain } from "electron";
-import { browserController } from "./browser.controller";
+import { browserService } from "./browser.service";
 import type { BrowserBounds } from "./browser.dto";
 
 const CHANNELS = {
@@ -36,35 +36,35 @@ export function registerBrowserIpc(): void {
   ipcMain.handle(CHANNELS.ATTACH, async (_, payload: unknown) => {
     const bounds = validBounds(payload);
     if (!bounds) return fail("Invalid bounds");
-    return browserController.attach(bounds);
+    return browserService.attach(bounds);
   });
-  ipcMain.handle(CHANNELS.DETACH, async () => browserController.detach());
-  ipcMain.handle(CHANNELS.DESTROY, async () => browserController.destroy());
+  ipcMain.handle(CHANNELS.DETACH, async () => browserService.detach());
+  ipcMain.handle(CHANNELS.DESTROY, async () => browserService.destroy());
   ipcMain.handle(CHANNELS.SET_BOUNDS, async (_, payload: unknown) => {
     const bounds = validBounds(payload);
     if (!bounds) return fail("Invalid bounds");
-    return browserController.setBounds(bounds);
+    return browserService.setBounds(bounds);
   });
   ipcMain.handle(CHANNELS.SET_VISIBLE, async (_, visible: unknown) => {
-    return browserController.setVisible(Boolean(visible));
+    return browserService.setVisible(Boolean(visible));
   });
   ipcMain.handle(CHANNELS.NAVIGATE, async (_, url: unknown) => {
     if (typeof url !== "string") return fail("url must be a string");
-    return browserController.navigate(url);
+    return browserService.navigate(url);
   });
-  ipcMain.handle(CHANNELS.BACK, async () => browserController.goBack());
-  ipcMain.handle(CHANNELS.FORWARD, async () => browserController.goForward());
-  ipcMain.handle(CHANNELS.RELOAD, async () => browserController.reload());
-  ipcMain.handle(CHANNELS.STOP, async () => browserController.stop());
+  ipcMain.handle(CHANNELS.BACK, async () => browserService.goBack());
+  ipcMain.handle(CHANNELS.FORWARD, async () => browserService.goForward());
+  ipcMain.handle(CHANNELS.RELOAD, async () => browserService.reload());
+  ipcMain.handle(CHANNELS.STOP, async () => browserService.stop());
   ipcMain.handle(CHANNELS.SET_SELECT_MODE, async (_, enabled: unknown) => {
-    return browserController.setSelectMode(Boolean(enabled));
+    return browserService.setSelectMode(Boolean(enabled));
   });
-  ipcMain.handle(CHANNELS.GET_NAV_STATE, async () => browserController.getNavState());
+  ipcMain.handle(CHANNELS.GET_NAV_STATE, async () => browserService.getNavState());
   ipcMain.handle(CHANNELS.DELETE_CAPTURE, async (_, captureName: unknown) => {
     if (typeof captureName !== "string") {
       return fail("captureName must be a string");
     }
-    return browserController.deleteCapture(captureName);
+    return browserService.deleteCapture(captureName);
   });
 }
 

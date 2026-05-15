@@ -1,9 +1,6 @@
 // IPC
 export { registerAutomationsIpc, unregisterAutomationsIpc } from "./automations.ipc";
 
-// Controller
-export { automationsController } from "./automations.controller";
-
 // Service
 export { automationsService } from "./automations.service";
 

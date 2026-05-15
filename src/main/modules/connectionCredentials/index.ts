@@ -4,9 +4,6 @@ export {
   unregisterConnectionCredentialsIpc,
 } from "./connectionCredentials.ipc";
 
-// Controller
-export { connectionCredentialsController } from "./connectionCredentials.controller";
-
 // Service
 export { connectionCredentialsService } from "./connectionCredentials.service";
 

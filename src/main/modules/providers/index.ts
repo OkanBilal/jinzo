@@ -1,5 +1,4 @@
 export { registerProvidersIpc, unregisterProvidersIpc } from "./providers.ipc";
-export { providersController } from "./providers.controller";
 export { providersService } from "./providers.service";
 export { providersRepo } from "./providers.repo";
 export type {

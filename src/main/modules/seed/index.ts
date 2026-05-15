@@ -1,9 +1,6 @@
 // IPC
 export { registerSeedIpc, unregisterSeedIpc } from "./seed.ipc";
 
-// Controller
-export { seedController } from "./seed.controller";
-
 // Service
 export { seedService } from "./seed.service";
 

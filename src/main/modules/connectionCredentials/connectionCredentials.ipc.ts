@@ -1,5 +1,5 @@
 import { ipcMain } from "electron";
-import { connectionCredentialsController } from "./connectionCredentials.controller";
+import { connectionCredentialsService } from "./connectionCredentials.service";
 import type { SaveCredentialsPayload } from "./connectionCredentials.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -10,13 +10,13 @@ export function registerConnectionCredentialsIpc() {
   ipcMain.handle(
     "connections:saveCredentials",
     async (_, payload: SaveCredentialsPayload) => {
-      return connectionCredentialsController.saveCredentials(payload);
+      return connectionCredentialsService.saveCredentials(payload);
     }
   );
 
   // Check if credentials exist for a connection
   ipcMain.handle("connections:checkCredentials", async (_, provider: string) => {
-    return connectionCredentialsController.checkCredentials(provider);
+    return connectionCredentialsService.checkCredentials(provider);
   });
 
 }

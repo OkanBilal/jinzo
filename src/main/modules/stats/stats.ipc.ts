@@ -1,9 +1,9 @@
 import { ipcMain } from "electron";
-import { statsController } from "./stats.controller";
+import { statsService } from "./stats.service";
 
 export function registerStatsIpc(): void {
   ipcMain.handle("stats:getDashboard", async (_event, filter?: string) => {
-    return statsController.getDashboard(filter as any);
+    return statsService.getDashboard(filter as any);
   });
 }
 

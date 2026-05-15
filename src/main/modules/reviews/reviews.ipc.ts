@@ -1,5 +1,5 @@
 import { ipcMain } from "electron";
-import { reviewsController } from "./reviews.controller";
+import { reviewsService } from "./reviews.service";
 import type { CreateReviewPayload, UpdateReviewPayload } from "./reviews.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -20,30 +20,30 @@ export function registerReviewsIpc(): void {
   ipcMain.handle(
     CHANNELS.GET_BY_WORKSPACE,
     async (_, workspaceId: string, limit?: number) => {
-      return reviewsController.getByWorkspace(workspaceId, limit);
+      return reviewsService.getByWorkspace(workspaceId, limit);
     },
   );
 
   ipcMain.handle(CHANNELS.GET_BY_ID, async (_, id: string) => {
-    return reviewsController.getById(id);
+    return reviewsService.getById(id);
   });
 
   ipcMain.handle(
     CHANNELS.CREATE,
     async (_, payload: CreateReviewPayload) => {
-      return reviewsController.create(payload);
+      return reviewsService.create(payload);
     },
   );
 
   ipcMain.handle(
     CHANNELS.UPDATE,
     async (_, id: string, payload: UpdateReviewPayload) => {
-      return reviewsController.update(id, payload);
+      return reviewsService.update(id, payload);
     },
   );
 
   ipcMain.handle(CHANNELS.DELETE, async (_, id: string) => {
-    return reviewsController.delete(id);
+    return reviewsService.delete(id);
   });
 }
 

@@ -71,19 +71,20 @@ Each domain module follows a layered pattern (see `src/main/modules/account/` as
 
 | File | Role |
 |------|------|
-| `{name}.ipc.ts` | `registerXxxIpc()` / `unregisterXxxIpc()` using `ipcMain.handle` |
-| `{name}.controller.ts` | Object literal, returns `Promise<ServiceResponse<T>>` |
-| `{name}.service.ts` | Object literal with business logic, uses `this` for sibling calls |
+| `{name}.ipc.ts` | `registerXxxIpc()` / `unregisterXxxIpc()` using `ipcMain.handle` — calls `xxxService` directly |
+| `{name}.service.ts` | Object literal with business logic, uses `this` for sibling calls. Returns `Promise<ServiceResponse<T>>` constructed via `ok()` / `fail()` from `src/shared/ipc-kit/service-response`. |
 | `{name}.repo.ts` | Object literal, calls `getDb()` per method, Drizzle queries |
-| `{name}.dto.ts` | Types via `typeof table.$inferSelect`, formatter functions |
+| `{name}.dto.ts` | Types via `typeof table.$inferSelect`, formatter functions, re-exports `ServiceResponse` from `src/shared/ipc-kit/service-response` |
 | `{name}.validation.ts` | Hand-rolled allowlist validation (no zod/yup) |
 | `index.ts` | Barrel exports |
 
 **Critical**: All layers are **plain object literals**, never classes. No DI — repos call `getDb()` inline.
 
+**No controller layer.** Earlier versions had a `{name}.controller.ts` between `ipc.ts` and `service.ts`. It was a pure pass-through — `ipc.ts` now calls `service` directly. Argument unpacking (e.g. `{ projectId, resourceId }` → two args) lives at the `ipc.ts` call site.
+
 All modules: `account`, `appSettings`, `automations`, `browser`, `connectionStates`, `connectionCredentials`, `connections`, `entities`, `fileExplorer`, `git`, `guards`, `imageProxy`, `projects`, `providers`, `pulse`, `reviewFindings`, `reviews`, `runs`, `seed`, `skillsMarketplace`, `space`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
 
-A handful of modules deviate from the canonical 7-file layout — `guards`, `browser`, `skillsMarketplace`, and `terminal` skip the repo/dto layer because they don't own database tables (they wrap external sources, native handles, or HTTP). When adding a module, match a sibling with similar responsibilities rather than blindly copying `account/`.
+A handful of modules deviate from the canonical 6-file layout — `guards`, `browser`, `skillsMarketplace`, and `terminal` skip the repo/dto layer because they don't own database tables (they wrap external sources, native handles, or HTTP). When adding a module, match a sibling with similar responsibilities rather than blindly copying `account/`.
 
 ### IPC Convention
 
@@ -98,7 +99,7 @@ All IPC responses use `ServiceResponse<T>` envelope: `{ success: true, data }` o
 ### Data Flow
 
 1. **IPC Communication**: Renderer calls `window.api.namespace.method()` → Preload invokes IPC → Main handles
-2. **Module Flow**: IPC handler → Controller → Service → Repository → Database
+2. **Module Flow**: IPC handler → Service → Repository → Database
 3. **Redux Integration**: `src/renderer/lib/redux/api/baseApi.ts` wraps IPC in RTK Query with custom `ipcBaseQuery` (no HTTP)
 4. **State Management**: RTK Query for server state, Redux slices for UI state (`spaceSlice`, `appSettingsSlice`, `workspaceSlice`)
 

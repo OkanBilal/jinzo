@@ -1,9 +1,6 @@
 // IPC Handlers
 export { registerSpaceIpc, unregisterSpaceIpc } from "./space.ipc";
 
-// Controller
-export { spaceController } from "./space.controller";
-
 // Service
 export { spaceService } from "./space.service";
 

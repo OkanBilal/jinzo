@@ -1,5 +1,5 @@
 import { ipcMain } from "electron";
-import { fileExplorerController } from "./fileExplorer.controller";
+import { fileExplorerService } from "./fileExplorer.service";
 import type {
   ReadDirectoryOptions,
   ReadFileTextOptions,
@@ -25,7 +25,7 @@ const CHANNELS = {
 // ─────────────────────────────────────────────────────────────
 export function registerFileExplorerIpc(): void {
   ipcMain.handle(CHANNELS.READ_DIRECTORY, async (_, options: ReadDirectoryOptions) => {
-    return fileExplorerController.readDirectory(options);
+    return fileExplorerService.readDirectory(options);
   });
 
   ipcMain.handle(
@@ -35,28 +35,28 @@ export function registerFileExplorerIpc(): void {
       dirPath: string,
       options?: { includeHidden?: boolean; excludePatterns?: string[] }
     ) => {
-      return fileExplorerController.readDirectoryShallow(dirPath, options);
+      return fileExplorerService.readDirectoryShallow(dirPath, options);
     }
   );
 
   ipcMain.handle(CHANNELS.GET_PATH_INFO, async (_, targetPath: string) => {
-    return fileExplorerController.getPathInfo(targetPath);
+    return fileExplorerService.getPathInfo(targetPath);
   });
 
   ipcMain.handle(CHANNELS.READ_FILE, async (_, filePath: string) => {
-    return fileExplorerController.readFile(filePath);
+    return fileExplorerService.readFile(filePath);
   });
 
   ipcMain.handle(CHANNELS.READ_FILE_TEXT, async (_, options: ReadFileTextOptions) => {
-    return fileExplorerController.readFileText(options);
+    return fileExplorerService.readFileText(options);
   });
 
   ipcMain.handle(CHANNELS.LIST_DIR, async (_, options: ListDirOptions) => {
-    return fileExplorerController.listDir(options);
+    return fileExplorerService.listDir(options);
   });
 
   ipcMain.handle(CHANNELS.SEARCH_FILES, async (_, options: SearchFilesOptions) => {
-    return fileExplorerController.searchFiles(options);
+    return fileExplorerService.searchFiles(options);
   });
 }
 

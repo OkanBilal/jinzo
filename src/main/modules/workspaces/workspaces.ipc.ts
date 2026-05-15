@@ -1,6 +1,6 @@
 import { ok } from "../../../shared/ipc-kit/service-response";
 import { ipcMain, dialog, BrowserWindow } from "electron";
-import { workspacesController } from "./workspaces.controller";
+import { workspacesService } from "./workspaces.service";
 import type { CreateWorkspacePayload, UpdateWorkspacePayload } from "./workspaces.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -23,35 +23,35 @@ const CHANNELS = {
 // ─────────────────────────────────────────────────────────────
 export function registerWorkspacesIpc(): void {
   ipcMain.handle(CHANNELS.GET_ALL, async () => {
-    return workspacesController.getAll();
+    return workspacesService.getAll();
   });
 
   ipcMain.handle(CHANNELS.GET_BY_ID, async (_, id: string) => {
-    return workspacesController.getById(id);
+    return workspacesService.getById(id);
   });
 
   ipcMain.handle(CHANNELS.GET_BY_ACCOUNT, async (_, accountId: string) => {
-    return workspacesController.getByAccountId(accountId);
+    return workspacesService.getByAccountId(accountId);
   });
 
   ipcMain.handle(CHANNELS.GET_BY_ROOT_PATH, async (_, accountId: string, rootPath: string) => {
-    return workspacesController.getByRootPath(accountId, rootPath);
+    return workspacesService.getByRootPath(accountId, rootPath);
   });
 
   ipcMain.handle(CHANNELS.CREATE, async (_, payload: CreateWorkspacePayload) => {
-    return workspacesController.create(payload);
+    return workspacesService.create(payload);
   });
 
   ipcMain.handle(CHANNELS.UPDATE, async (_, id: string, payload: UpdateWorkspacePayload) => {
-    return workspacesController.update(id, payload);
+    return workspacesService.update(id, payload);
   });
 
   ipcMain.handle(CHANNELS.DELETE, async (_, id: string) => {
-    return workspacesController.delete(id);
+    return workspacesService.delete(id);
   });
 
   ipcMain.handle(CHANNELS.ARCHIVE, async (_, id: string) => {
-    return workspacesController.archive(id);
+    return workspacesService.archive(id);
   });
 
 ipcMain.handle(CHANNELS.SELECT_DIRECTORY, async () => {

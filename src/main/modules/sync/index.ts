@@ -6,9 +6,6 @@
 // IPC
 export { registerSyncIpc, unregisterSyncIpc } from "./sync.ipc";
 
-// Controller
-export { syncController } from "./sync.controller";
-
 // Service
 export { syncService } from "./sync.service";
 

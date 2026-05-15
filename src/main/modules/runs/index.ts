@@ -1,5 +1,4 @@
 export { registerRunsIpc, unregisterRunsIpc } from "./runs.ipc";
-export { runsController } from "./runs.controller";
 export { runsService } from "./runs.service";
 export { runSessionRegistry } from "./run-session-registry";
 export { runsRepo } from "./runs.repo";

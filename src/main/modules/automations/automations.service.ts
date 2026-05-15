@@ -243,8 +243,8 @@ export const automationsService = {
 
   // ── Helpers ──
 
-  getAvailableActions(): string[] {
-    return Object.keys(actionHandlers);
+  getAvailableActions(): ServiceResponse<string[]> {
+    return ok(Object.keys(actionHandlers));
   },
 
   registerAction(action: string, handler: ActionHandler) {

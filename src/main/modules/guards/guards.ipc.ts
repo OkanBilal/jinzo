@@ -4,7 +4,7 @@
 
 import { ipcMain } from "electron";
 import type { PackageIdentifier } from "./adapters/adapter.types";
-import { guardsController } from "./guards.controller";
+import { guardsService } from "./guards.service";
 
 const CHANNELS = {
   GET_ACTIVE_GUARD: "guards:getActiveGuard",
@@ -16,34 +16,34 @@ const CHANNELS = {
 
 export function registerGuardsIpc(): void {
   ipcMain.handle(CHANNELS.GET_ACTIVE_GUARD, async () => {
-    return guardsController.getActiveGuard();
+    return guardsService.getActiveGuard();
   });
 
   ipcMain.handle(
     CHANNELS.CHECK_PACKAGE,
     async (_, pkg: PackageIdentifier) => {
-      return guardsController.checkPackage(pkg);
+      return guardsService.checkPackage(pkg);
     },
   );
 
   ipcMain.handle(
     CHANNELS.CHECK_PACKAGES,
     async (_, pkgs: PackageIdentifier[]) => {
-      return guardsController.checkPackages(pkgs);
+      return guardsService.checkPackages(pkgs);
     },
   );
 
   ipcMain.handle(
     CHANNELS.GET_PACKAGE_SCORE,
     async (_, pkg: PackageIdentifier) => {
-      return guardsController.getPackageScore(pkg);
+      return guardsService.getPackageScore(pkg);
     },
   );
 
   ipcMain.handle(
     CHANNELS.SCAN_WORKSPACE,
     async (_, workspaceId: string, rootPath: string) => {
-      return guardsController.scanWorkspace(workspaceId, rootPath);
+      return guardsService.scanWorkspace(workspaceId, rootPath);
     },
   );
 }

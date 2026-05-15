@@ -1,9 +1,6 @@
 // IPC
 export { registerConnectionStatesIpc, unregisterConnectionStatesIpc } from "./connectionStates.ipc";
 
-// Controller
-export { ConnectionStatesController } from "./connectionStates.controller";
-
 // Service
 export { connectionStatesService } from "./connectionStates.service";
 

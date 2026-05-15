@@ -1,5 +1,5 @@
 import { ipcMain } from "electron";
-import { workspaceResourcesController } from "./workspaceResources.controller";
+import { workspaceResourcesService } from "./workspaceResources.service";
 import type { AddResourcePayload, RemoveResourcePayload } from "./workspaceResources.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -22,35 +22,35 @@ export function registerWorkspaceResourcesHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.GET_BY_PROJECT,
     async (_event, projectId: string) => {
-      return workspaceResourcesController.getByProject(projectId);
+      return workspaceResourcesService.getByProject(projectId);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.GET_AVAILABLE,
     async (_event, projectId: string) => {
-      return workspaceResourcesController.getAvailableResources(projectId);
+      return workspaceResourcesService.getAvailableResources(projectId);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.ADD_RESOURCE,
     async (_event, payload: AddResourcePayload) => {
-      return workspaceResourcesController.addResource(payload);
+      return workspaceResourcesService.addResource(payload.projectId, payload.resourceId);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.REMOVE_RESOURCE,
     async (_event, payload: RemoveResourcePayload) => {
-      return workspaceResourcesController.removeResource(payload);
+      return workspaceResourcesService.removeResource(payload.projectId, payload.resourceId);
     }
   );
 
   ipcMain.handle(
     IPC_CHANNELS.GET_ISSUES,
     async (_event, projectId: string) => {
-      return workspaceResourcesController.getIssuesByProject(projectId);
+      return workspaceResourcesService.getIssuesByProject(projectId);
     }
   );
 

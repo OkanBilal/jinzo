@@ -1,9 +1,6 @@
 // IPC
 export { registerAccountIpc, unregisterAccountIpc } from "./account.ipc";
 
-// Controller
-export { accountController } from "./account.controller";
-
 // Service
 export { accountService } from "./account.service";
 
