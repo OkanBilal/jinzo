@@ -1,4 +1,4 @@
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import {
   connections,
@@ -62,6 +62,13 @@ export const connectionsRepo = {
       .get();
   },
 
+  async findTokensByConnectionId(connectionId: string) {
+    const db = getDb();
+    return db.query.connectionTokens.findMany({
+      where: eq(connectionTokens.connectionId, connectionId),
+    });
+  },
+
   async markTokensNotCurrent(connectionId: string): Promise<void> {
     const db = getDb();
     await db
@@ -69,6 +76,33 @@ export const connectionsRepo = {
       .set({ isCurrent: false })
       .where(eq(connectionTokens.connectionId, connectionId))
       .run();
+  },
+
+  /**
+   * Atomically mark all existing tokens not current and insert a new one as
+   * current. Prevents races where concurrent saves leave multiple current
+   * rows.
+   */
+  rotateToken(data: {
+    connectionId: string;
+    accessTokenEnc: Buffer;
+    refreshTokenEnc: Buffer | null;
+    tokenType: string;
+    expiresAt: Date | null;
+    tokenHash: Buffer;
+    keyVersion: number;
+  }): void {
+    const db = getDb();
+    db.transaction(() => {
+      db.update(connectionTokens)
+        .set({ isCurrent: false })
+        .where(eq(connectionTokens.connectionId, data.connectionId))
+        .run();
+
+      db.insert(connectionTokens)
+        .values({ ...data, isCurrent: true })
+        .run();
+    });
   },
 
   // Resource queries
@@ -210,6 +244,24 @@ export const connectionsRepo = {
   },
 
   // Connection state queries
+  async findAllStates() {
+    const db = getDb();
+    return db
+      .select({
+        id: connectionStates.id,
+        displayName: connectionStates.displayName,
+        iconPath: connectionStates.iconPath,
+        isConnected: connectionStates.isConnected,
+        connectionId: connectionStates.connectionId,
+        category: connectionStates.category,
+        sortOrder: connectionStates.sortOrder,
+        enabledFeatures: connectionStates.enabledFeatures,
+        config: connectionStates.config,
+      })
+      .from(connectionStates)
+      .orderBy(desc(connectionStates.sortOrder));
+  },
+
   async findConnectionState(appId: string) {
     const db = getDb();
     return db.select().from(connectionStates).where(eq(connectionStates.id, appId)).get();
@@ -225,6 +277,22 @@ export const connectionsRepo = {
       .update(connectionStates)
       .set({ isConnected, connectionId, updatedAt: sql`(unixepoch())` })
       .where(eq(connectionStates.id, appId))
+      .run();
+  },
+
+  async updateStateById(
+    id: string,
+    data: { isConnected: boolean; connectionId?: string | null }
+  ): Promise<void> {
+    const db = getDb();
+    await db
+      .update(connectionStates)
+      .set({
+        isConnected: data.isConnected,
+        connectionId: data.connectionId ?? null,
+        updatedAt: sql`(unixepoch())`,
+      })
+      .where(eq(connectionStates.id, id))
       .run();
   },
 

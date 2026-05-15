@@ -58,30 +58,31 @@ const api = {
     get: () => ipcRenderer.invoke(CHANNELS.account.get),
     update: (payload: unknown) => ipcRenderer.invoke(CHANNELS.account.update, payload),
   },
-  // ConnectionStates operations
-  connectionStates: {
-    getAll: () => ipcRenderer.invoke(CHANNELS.connectionStates.getAll),
-    updateById: (
-      id: string,
-      payload: { isConnected: boolean; connectionId?: string | null },
-    ) => ipcRenderer.invoke(CHANNELS.connectionStates.updateById, id, payload),
-  },
   // Sync operations
   sync: {
     runEntitySync: (provider?: string) => ipcRenderer.invoke(CHANNELS.sync.runEntitySync, provider),
   },
-  // Connection credentials operations
-  connectionCredentials: {
-    save: (payload: {
+  // Connections aggregate (identity + tokens + states). See ADR-0002.
+  connections: {
+    // ── integration-state list (Settings page) ──
+    listStates: () => ipcRenderer.invoke(CHANNELS.connections.listStates),
+    updateState: (
+      id: string,
+      payload: { isConnected: boolean; connectionId?: string | null },
+    ) => ipcRenderer.invoke(CHANNELS.connections.updateState, id, payload),
+    // ── credentials ──
+    saveCredentials: (payload: {
       provider: string;
       connectionId: string;
       [key: string]: any;
     }) => ipcRenderer.invoke(CHANNELS.connections.saveCredentials, payload),
-    check: (provider: string) =>
+    checkCredentials: (provider: string) =>
       ipcRenderer.invoke(CHANNELS.connections.checkCredentials, provider),
-  },
-  // Connections operations
-  connections: {
+    // ── identity + resource discovery ──
+    getByProvider: (provider: string) =>
+      ipcRenderer.invoke(CHANNELS.connections.getByProvider, provider),
+    revoke: (provider: string) =>
+      ipcRenderer.invoke(CHANNELS.connections.revoke, provider),
     getGithubRepos: (connectionId: string) =>
       ipcRenderer.invoke(CHANNELS.connections.getGithubRepos, connectionId),
     getLinearTeams: (connectionId: string) =>
@@ -106,10 +107,6 @@ const api = {
     }) => ipcRenderer.invoke(CHANNELS.connections.saveResources, payload),
     deleteResource: (resourceId: string) =>
       ipcRenderer.invoke(CHANNELS.connections.deleteResource, resourceId),
-    revoke: (provider: string) =>
-      ipcRenderer.invoke(CHANNELS.connections.revoke, provider),
-    getByProvider: (provider: string) =>
-      ipcRenderer.invoke(CHANNELS.connections.getByProvider, provider),
     getSelectedResources: (provider: string) =>
       ipcRenderer.invoke(CHANNELS.connections.getSelectedResources, provider),
   },

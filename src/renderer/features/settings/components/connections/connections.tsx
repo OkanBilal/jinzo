@@ -11,10 +11,10 @@ import SentryModal from "./sentry/sentry-modal";
 import SocketDevModal from "./socketdev/socketdev-modal";
 import { useRunEntitySyncMutation } from "@/lib/redux/api/syncApi";
 import { useGetConnectionStatesQuery } from "@/lib/redux/api";
-import type { ConnectionStates } from "@/lib/redux/api/connectionStates";
+import type { ConnectionState } from "@/lib/redux/api";
 import { AsciiSpinner } from "@/components/ui/ascii-spinner";
 
-type ConnectionItem = ConnectionStates;
+type ConnectionItem = ConnectionState;
 
 type CategoryFilter = "all" | "issues" | "monitoring" | "security";
 

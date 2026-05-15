@@ -1,23 +1,22 @@
 export { baseApi } from "./baseApi";
 
 export {
-  connectionStatesApi,
-  useGetConnectionStatesQuery,
-  useUpdateConnectionStatesMutation,
-} from "./connectionStates";
-export type { ConnectionStates, UpdateConnectionStatesPayload } from "./connectionStates";
-
-export {
   accountApi,
   useGetAccountQuery,
   useUpdateAccountMutation,
 } from "./accountApi";
 export type { Account, UpdateAccountPayload } from "./accountApi";
 
+// Connections aggregate (identity + integration state + credentials + per-provider resource discovery).
+// See ADR-0002.
 export {
   connectionsApi,
+  useGetConnectionStatesQuery,
+  useUpdateConnectionStateMutation,
+  useGetConnectionQuery,
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,
+  useRevokeConnectionMutation,
   useLazyGetGitHubReposQuery,
   useLazyGetLinearTeamsQuery,
   useLazyGetJiraProjectsQuery,
@@ -30,10 +29,11 @@ export {
   useLazyGetSelectedResourcesQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
-  useRevokeConnectionMutation,
 } from "./connectionsApi";
 export type {
   Connection,
+  ConnectionState,
+  UpdateConnectionStatePayload,
   GitHubRepo,
   GitLabProject,
   LinearTeam,

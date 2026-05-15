@@ -1,63 +1,15 @@
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { connectionResources, connections, connectionTokens } from "../../db/schema";
-import { decryptSecrets } from "../connectionCredentials/connectionCredentials.utils";
+import { connectionResources } from "../../db/schema";
 
 // ─────────────────────────────────────────────────────────────
-// Connection Queries
+// Selected Resource Reads
 // ─────────────────────────────────────────────────────────────
-export async function getConnectionByProvider(
-  provider: string
-): Promise<{ id: string; metadata?: Record<string, unknown> } | null> {
-  try {
-    const db = getDb();
-    const connection = db
-      .select()
-      .from(connections)
-      .where(eq(connections.provider, provider))
-      .get();
-
-    if (!connection) {
-      console.warn(`No ${provider} connection found`);
-      return null;
-    }
-
-    const metadata = connection.metadata ? JSON.parse(connection.metadata) : {};
-
-    return { id: connection.id, metadata };
-  } catch (error) {
-    console.error(`Error getting ${provider} connection:`, error);
-    return null;
-  }
-}
-
-export async function getConnectionSecrets(
-  connectionId: string
-): Promise<Record<string, string> | null> {
-  try {
-    const db = getDb();
-    const token = db
-      .select()
-      .from(connectionTokens)
-      .where(
-        and(
-          eq(connectionTokens.connectionId, connectionId),
-          eq(connectionTokens.isCurrent, true)
-        )
-      )
-      .get();
-
-    if (!token?.accessTokenEnc) {
-      console.warn(`No active token found for connection ${connectionId}`);
-      return null;
-    }
-
-    return decryptSecrets(token.accessTokenEnc as Buffer);
-  } catch (error) {
-    console.error("Error getting connection secrets:", error);
-    return null;
-  }
-}
+// The connection_resources table is deliberately not part of the
+// connections aggregate (see ADR-0002) — it is read directly by
+// sync, workspaceResources, and guards. Connection identity and
+// secrets live behind the connections module: callers needing those
+// should import `getConnectionWithSecrets` from "../connections".
 
 export async function getSelectedResources(
   connectionId: string,
@@ -101,26 +53,6 @@ export async function getSelectedResources(
     console.error("Error getting selected resources:", error);
     return [];
   }
-}
-
-export async function getConnectionWithSecrets(
-  provider: string
-): Promise<{
-  id: string;
-  secrets: Record<string, string>;
-  metadata?: Record<string, unknown>;
-} | null> {
-  const connection = await getConnectionByProvider(provider);
-  if (!connection) return null;
-
-  const secrets = await getConnectionSecrets(connection.id);
-  if (!secrets) return null;
-
-  return {
-    id: connection.id,
-    secrets,
-    metadata: connection.metadata,
-  };
 }
 
 // ─────────────────────────────────────────────────────────────

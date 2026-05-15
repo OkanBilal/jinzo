@@ -1,7 +1,5 @@
-import {
-  getConnectionWithSecrets,
-  getSelectedResources,
-} from "./sync.connection-utils";
+import { getConnectionWithSecrets } from "../connections";
+import { getSelectedResources } from "./sync.connection-utils";
 import { RESOURCE_FETCHERS } from "./connections";
 import type { EntityInput, ResourceFetcher } from "./sync.dto";
 

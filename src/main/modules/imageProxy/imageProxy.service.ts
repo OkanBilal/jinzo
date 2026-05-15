@@ -1,6 +1,6 @@
 import * as os from "os";
 import * as path from "path";
-import { getConnectionWithSecrets } from "../sync/sync.connection-utils";
+import { getConnectionWithSecrets } from "../connections";
 import { signLocalImagePath } from "./imageProxy.signing";
 
 // ─────────────────────────────────────────────────────────────

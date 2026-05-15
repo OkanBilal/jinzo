@@ -46,10 +46,6 @@ export const CHANNELS = {
     setVisible: "browser:setVisible",
     stop: "browser:stop",
   },
-  connectionStates: {
-    getAll: "connectionStates:getAll",
-    updateById: "connectionStates:updateById",
-  },
   connections: {
     checkCredentials: "connections:checkCredentials",
     deleteResource: "connections:deleteResource",
@@ -63,10 +59,12 @@ export const CHANNELS = {
     getSentryProjects: "connections:getSentryProjects",
     getSocketDevOrganizations: "connections:getSocketDevOrganizations",
     getTrelloBoards: "connections:getTrelloBoards",
+    listStates: "connections:listStates",
     removeResource: "connections:removeResource",
     revoke: "connections:revoke",
     saveCredentials: "connections:saveCredentials",
     saveResources: "connections:saveResources",
+    updateState: "connections:updateState",
   },
   entities: {
     create: "entities:create",
