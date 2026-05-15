@@ -1,112 +1,80 @@
-import type { EntityInput } from "../sync.dto";
-import {
-  getConnectionWithSecrets,
-  getSelectedResources,
-  normalizeLimit,
-  normalizeDateToIso,
-} from "../sync.connection-utils";
+import type {
+  EntityInput,
+  ResourceFetcher,
+  ResourceFetcherArgs,
+} from "../sync.dto";
+import { normalizeLimit, normalizeDateToIso } from "../sync.connection-utils";
 
 const MAX_ITEMS_PER_PAGE = 100;
-const DEFAULT_LIMIT = 5;
 const DEFAULT_DOMAIN = "gitlab.com";
 
-interface GitLabConnection {
-  id: string;
-  token: string;
-  domain: string;
-}
-
-interface GitLabResource {
-  id: string;
-  connectionId: string;
-  externalId: string;
-  name: string;
-  metadata: any;
-}
-
+// ─────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────
 function getBaseUrl(domain: string): string {
   const cleanDomain = domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
   return `https://${cleanDomain}/api/v4`;
 }
 
-async function getConnection(): Promise<GitLabConnection | null> {
-  const connection = await getConnectionWithSecrets("gitlab");
-  if (!connection?.secrets.token) return null;
-
-  const domain = (connection.metadata?.domain as string) || DEFAULT_DOMAIN;
-
-  return {
-    id: connection.id,
-    token: connection.secrets.token,
-    domain,
-  };
-}
-
-async function getSelectedProjects(
-  connectionId: string
-): Promise<GitLabResource[]> {
-  const resources = await getSelectedResources(connectionId, "gitlab_project");
-
-  return resources.map((r) => ({
-    id: r.id,
-    connectionId: r.connectionId,
-    externalId: r.externalId,
-    name: r.name,
-    metadata: r.metadata,
-  }));
-}
-
-function extractLabels(labels: any[]): string[] {
+function extractLabels(labels: unknown): string[] {
   if (!Array.isArray(labels)) return [];
   return labels.filter((s): s is string => typeof s === "string");
 }
 
 /**
- * Resolve relative GitLab image/file URLs to absolute and strip
- * GitLab-flavored `{width=... height=...}` size annotations.
- *
- * `![alt](/uploads/hash/file.png){width=900 height=569}`
- * → `![alt](https://domain/-/project/projectId/uploads/hash/file.png)`
+ * Rewrite relative GitLab image/file URLs to absolute and strip GitLab's
+ * `{width=... height=...}` size annotations so markdown renders correctly.
  */
 function resolveGitlabBody(
   body: string | null,
   domain: string,
-  projectId: string
+  projectId: string,
 ): string | null {
   if (!body) return null;
   const cleanDomain = domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
   return body.replace(
     /!\[([^\]]*)\]\((\/uploads\/[^)]+)\)(\{[^}]*\})?/g,
     (_match, alt, path) =>
-      `![${alt}](https://${cleanDomain}/-/project/${projectId}${path})`
+      `![${alt}](https://${cleanDomain}/-/project/${projectId}${path})`,
   );
 }
 
-export async function fetchGitlabIssues(
-  projectId: string,
-  limit = DEFAULT_LIMIT,
-  connectionId?: string,
-  resourceId?: string,
-  token?: string,
-  domain = DEFAULT_DOMAIN
-): Promise<EntityInput[]> {
-  if (!token) {
-    console.warn("GitLab token not provided. Cannot fetch issues.");
-    return [];
-  }
+function requireToken(secrets: Record<string, string>): string | null {
+  return secrets.token || null;
+}
 
-  const baseUrl = getBaseUrl(domain);
-  const perPage = normalizeLimit(limit, 1, MAX_ITEMS_PER_PAGE);
+function getDomain(metadata: Record<string, unknown>): string {
+  return (metadata.domain as string) || DEFAULT_DOMAIN;
+}
 
-  try {
+// ─────────────────────────────────────────────────────────────
+// Fetchers
+// ─────────────────────────────────────────────────────────────
+export const gitlabIssuesFetcher: ResourceFetcher = {
+  id: "gitlab:issues",
+  provider: "gitlab",
+  resourceKind: "gitlab_project",
+  defaultLimit: 50,
+
+  async fetchForResource({
+    resource,
+    secrets,
+    metadata,
+    limit,
+    connectionId,
+  }: ResourceFetcherArgs): Promise<EntityInput[]> {
+    const token = requireToken(secrets);
+    if (!token) return [];
+
+    const domain = getDomain(metadata);
+    const projectId = resource.externalId;
+    const perPage = normalizeLimit(limit, 1, MAX_ITEMS_PER_PAGE);
+
     const response = await fetch(
-      `${baseUrl}/projects/${encodeURIComponent(projectId)}/issues?state=opened&per_page=${perPage}`,
+      `${getBaseUrl(domain)}/projects/${encodeURIComponent(projectId)}/issues?state=opened&per_page=${perPage}`,
       {
-        headers: {
-          "PRIVATE-TOKEN": token,
-          Accept: "application/json",
-        },
-      }
+        headers: { "PRIVATE-TOKEN": token, Accept: "application/json" },
+      },
     );
 
     if (!response.ok) {
@@ -115,63 +83,65 @@ export async function fetchGitlabIssues(
       return [];
     }
 
-    const issues = (await response.json()) as any;
+    const issues = (await response.json()) as Array<Record<string, unknown>>;
 
-    return issues.map((issue: any): EntityInput => {
-      const labels = extractLabels(issue.labels);
-      const resolvedBody = resolveGitlabBody(issue.description, domain, projectId);
+    return issues.map((issue): EntityInput => {
+      const resolvedBody = resolveGitlabBody(
+        (issue.description as string | null) ?? null,
+        domain,
+        projectId,
+      );
+      const description = issue.description as string | null | undefined;
 
       return {
         kind: "issue",
-        title: issue.title,
-        url: issue.web_url,
+        title: issue.title as string,
+        url: issue.web_url as string,
         body: resolvedBody,
-        summary: issue.description?.substring(0, 500) || null,
-        occurredAt: normalizeDateToIso(issue.created_at),
+        summary: description?.substring(0, 500) || null,
+        occurredAt: normalizeDateToIso(issue.created_at as string),
         externalId: `gitlab:${projectId}#${issue.iid}`,
-        connectionId: connectionId || null,
-        resourceId: resourceId || null,
+        connectionId,
+        resourceId: resource.id,
         metadata: {
           provider: "gitlab",
-          iid: issue.iid,
+          iid: issue.iid as number,
           projectId,
-          labels,
-          state: issue.state,
-          assignee: issue.assignee?.username || null,
+          labels: extractLabels(issue.labels),
+          state: issue.state as string,
+          assignee:
+            (issue.assignee as { username?: string } | null)?.username || null,
         },
       };
     });
-  } catch (error) {
-    console.error(`Failed to fetch GitLab issues for project ${projectId}:`, error);
-    return [];
-  }
-}
+  },
+};
 
-export async function fetchGitlabMergeRequests(
-  projectId: string,
-  limit = DEFAULT_LIMIT,
-  connectionId?: string,
-  resourceId?: string,
-  token?: string,
-  domain = DEFAULT_DOMAIN
-): Promise<EntityInput[]> {
-  if (!token) {
-    console.warn("GitLab token not provided. Cannot fetch merge requests.");
-    return [];
-  }
+export const gitlabMergeRequestsFetcher: ResourceFetcher = {
+  id: "gitlab:merge_requests",
+  provider: "gitlab",
+  resourceKind: "gitlab_project",
+  defaultLimit: 50,
 
-  const baseUrl = getBaseUrl(domain);
-  const perPage = normalizeLimit(limit, 1, MAX_ITEMS_PER_PAGE);
+  async fetchForResource({
+    resource,
+    secrets,
+    metadata,
+    limit,
+    connectionId,
+  }: ResourceFetcherArgs): Promise<EntityInput[]> {
+    const token = requireToken(secrets);
+    if (!token) return [];
 
-  try {
+    const domain = getDomain(metadata);
+    const projectId = resource.externalId;
+    const perPage = normalizeLimit(limit, 1, MAX_ITEMS_PER_PAGE);
+
     const response = await fetch(
-      `${baseUrl}/projects/${encodeURIComponent(projectId)}/merge_requests?state=opened&per_page=${perPage}`,
+      `${getBaseUrl(domain)}/projects/${encodeURIComponent(projectId)}/merge_requests?state=opened&per_page=${perPage}`,
       {
-        headers: {
-          "PRIVATE-TOKEN": token,
-          Accept: "application/json",
-        },
-      }
+        headers: { "PRIVATE-TOKEN": token, Accept: "application/json" },
+      },
     );
 
     if (!response.ok) {
@@ -180,80 +150,39 @@ export async function fetchGitlabMergeRequests(
       return [];
     }
 
-    const mergeRequests = (await response.json()) as any;
+    const mergeRequests = (await response.json()) as Array<
+      Record<string, unknown>
+    >;
 
-    return mergeRequests.map((mr: any): EntityInput => {
-      const labels = extractLabels(mr.labels);
-      const resolvedBody = resolveGitlabBody(mr.description, domain, projectId);
+    return mergeRequests.map((mr): EntityInput => {
+      const resolvedBody = resolveGitlabBody(
+        (mr.description as string | null) ?? null,
+        domain,
+        projectId,
+      );
+      const description = mr.description as string | null | undefined;
 
       return {
         kind: "merge_request",
-        title: mr.title,
-        url: mr.web_url,
+        title: mr.title as string,
+        url: mr.web_url as string,
         body: resolvedBody,
-        summary: mr.description?.substring(0, 500) || null,
-        occurredAt: normalizeDateToIso(mr.created_at),
+        summary: description?.substring(0, 500) || null,
+        occurredAt: normalizeDateToIso(mr.created_at as string),
         externalId: `gitlab:${projectId}!${mr.iid}`,
-        connectionId: connectionId || null,
-        resourceId: resourceId || null,
+        connectionId,
+        resourceId: resource.id,
         metadata: {
           provider: "gitlab",
-          iid: mr.iid,
+          iid: mr.iid as number,
           projectId,
-          labels,
-          state: mr.state,
-          draft: mr.draft ?? false,
-          assignee: mr.assignee?.username || null,
+          labels: extractLabels(mr.labels),
+          state: mr.state as string,
+          draft: (mr.draft as boolean | undefined) ?? false,
+          assignee:
+            (mr.assignee as { username?: string } | null)?.username || null,
         },
       };
     });
-  } catch (error) {
-    console.error(`Failed to fetch GitLab merge requests for project ${projectId}:`, error);
-    return [];
-  }
-}
-
-export async function fetchGitlabFromConnectionResources(
-  issuesPerProject = 10,
-  mrsPerProject = 5
-): Promise<EntityInput[]> {
-  const connection = await getConnection();
-  if (!connection) {
-    console.warn("Skipping GitLab: No active connection found");
-    return [];
-  }
-
-  const projects = await getSelectedProjects(connection.id);
-  if (projects.length === 0) {
-    console.warn("No selected GitLab projects found");
-    return [];
-  }
-
-  const allItems: EntityInput[] = [];
-
-  for (const resource of projects) {
-    const projectId = resource.externalId;
-
-    const issues = await fetchGitlabIssues(
-      projectId,
-      issuesPerProject,
-      connection.id,
-      resource.id,
-      connection.token,
-      connection.domain
-    );
-
-    const mrs = await fetchGitlabMergeRequests(
-      projectId,
-      mrsPerProject,
-      connection.id,
-      resource.id,
-      connection.token,
-      connection.domain
-    );
-
-    allItems.push(...issues, ...mrs);
-  }
-
-  return allItems;
-}
+  },
+};

@@ -1,23 +1,21 @@
 /**
  * Trello Connection Fetcher
  *
- * Fetches cards from Trello using REST API.
- * Authentication uses API Key + Token (query params).
+ * Fetches cards from Trello using REST API v1.
+ * Authentication uses an apiKey + token pair passed as query parameters.
  *
  * Trello-specific assumptions:
- * - Uses Trello REST API v1 (https://api.trello.com/1/)
- * - Credentials stored as: accessToken = token, apiKey in connection metadata
+ * - secrets.token + secrets.apiKey
  * - Boards are stored as connectionResources with kind = "trello_board"
  * - Cards are normalized to EntityInput with provider = "trello" and kind = "issue"
  */
 
-import type { EntityInput } from "../sync.dto";
-import {
-  getConnectionWithSecrets,
-  getSelectedResources,
-  normalizeLimit,
-  normalizeDateToIso,
-} from "../sync.connection-utils";
+import type {
+  EntityInput,
+  ResourceFetcher,
+  ResourceFetcherArgs,
+} from "../sync.dto";
+import { normalizeLimit, normalizeDateToIso } from "../sync.connection-utils";
 
 const TRELLO_BASE_URL = "https://api.trello.com/1";
 const MAX_ITEMS_PER_PAGE = 100;
@@ -26,20 +24,6 @@ const DEFAULT_LIMIT = 50;
 // ─────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────
-
-interface TrelloConnection {
-  id: string;
-  token: string;
-  apiKey: string;
-}
-
-interface TrelloResource {
-  id: string;
-  connectionId: string;
-  externalId: string;
-  name: string;
-  metadata: Record<string, unknown>;
-}
 
 interface TrelloLabel {
   id: string;
@@ -76,150 +60,92 @@ export interface TrelloBoardInfo {
   shortUrl: string;
   closed: boolean;
   desc: string;
-  prefs: {
-    background: string;
-    backgroundColor: string | null;
-  };
-  organization?: {
-    displayName: string;
-  } | null;
+  prefs: { background: string; backgroundColor: string | null };
+  organization?: { displayName: string } | null;
 }
 
 // ─────────────────────────────────────────────────────────────
-// Helper Functions
+// Helpers
 // ─────────────────────────────────────────────────────────────
 
 function buildAuthParams(apiKey: string, token: string): string {
   return `key=${encodeURIComponent(apiKey)}&token=${encodeURIComponent(token)}`;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Connection & Credentials
-// ─────────────────────────────────────────────────────────────
-
-async function getConnection(): Promise<TrelloConnection | null> {
-  const connection = await getConnectionWithSecrets("trello");
-  if (!connection?.secrets.token || !connection?.secrets.apiKey) return null;
-
-  return {
-    id: connection.id,
-    token: connection.secrets.token,
-    apiKey: connection.secrets.apiKey,
-  };
-}
-
-async function getSelectedBoards(
-  connectionId: string
-): Promise<TrelloResource[]> {
-  const resources = await getSelectedResources(connectionId, "trello_board");
-
-  return resources.map((r) => ({
-    id: r.id,
-    connectionId: r.connectionId,
-    externalId: r.externalId,
-    name: r.name,
-    metadata: r.metadata,
-  }));
-}
-
-// ─────────────────────────────────────────────────────────────
-// API Functions
-// ─────────────────────────────────────────────────────────────
-
-/**
- * Fetch available boards from Trello
- */
-export async function fetchTrelloBoards(
-  apiKey: string,
-  token: string
-): Promise<TrelloBoardInfo[]> {
-  try {
-    const authParams = buildAuthParams(apiKey, token);
-    const response = await fetch(
-      `${TRELLO_BASE_URL}/members/me/boards?${authParams}&fields=id,name,shortLink,shortUrl,closed,desc,prefs,organization&filter=open`,
-      { headers: { Accept: "application/json" } }
-    );
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error(`Trello API error (${response.status}):`, error);
-      throw new Error(`Trello API error: ${response.status}`);
-    }
-
-    const boards = (await response.json()) as TrelloBoardInfo[];
-    return boards.filter((b) => !b.closed);
-  } catch (error) {
-    console.error("Failed to fetch Trello boards:", error);
-    throw error;
-  }
-}
-
-/**
- * Fetch lists for a board (used to map card list names)
- */
 async function fetchBoardLists(
   boardId: string,
   apiKey: string,
-  token: string
+  token: string,
 ): Promise<Map<string, string>> {
   try {
     const authParams = buildAuthParams(apiKey, token);
     const response = await fetch(
       `${TRELLO_BASE_URL}/boards/${boardId}/lists?${authParams}&fields=id,name,closed&filter=open`,
-      { headers: { Accept: "application/json" } }
+      { headers: { Accept: "application/json" } },
     );
-
     if (!response.ok) return new Map();
-
     const lists = (await response.json()) as TrelloList[];
-    const listMap = new Map<string, string>();
-    for (const list of lists) {
-      listMap.set(list.id, list.name);
-    }
-    return listMap;
+    const m = new Map<string, string>();
+    for (const list of lists) m.set(list.id, list.name);
+    return m;
   } catch {
     return new Map();
   }
 }
 
-/**
- * Fetch cards from a specific Trello board
- */
-export async function fetchTrelloCards(
-  boardId: string,
-  limit = DEFAULT_LIMIT,
-  connectionId?: string,
-  resourceId?: string,
-  token?: string,
-  apiKey?: string
-): Promise<EntityInput[]> {
-  let actualToken = token;
-  let actualApiKey = apiKey;
-  let actualConnectionId = connectionId;
+// ─────────────────────────────────────────────────────────────
+// Public list-boards helper (used by the connections module)
+// ─────────────────────────────────────────────────────────────
 
-  if (!actualToken || !actualApiKey) {
-    const connection = await getConnection();
-    if (!connection) {
-      console.warn("Trello credentials not configured. Cannot fetch cards.");
-      return [];
-    }
-    actualToken = connection.token;
-    actualApiKey = connection.apiKey;
-    actualConnectionId = actualConnectionId || connection.id;
+export async function fetchTrelloBoards(
+  apiKey: string,
+  token: string,
+): Promise<TrelloBoardInfo[]> {
+  const authParams = buildAuthParams(apiKey, token);
+  const response = await fetch(
+    `${TRELLO_BASE_URL}/members/me/boards?${authParams}&fields=id,name,shortLink,shortUrl,closed,desc,prefs,organization&filter=open`,
+    { headers: { Accept: "application/json" } },
+  );
+  if (!response.ok) {
+    const error = await response.text();
+    console.error(`Trello API error (${response.status}):`, error);
+    throw new Error(`Trello API error: ${response.status}`);
   }
+  const boards = (await response.json()) as TrelloBoardInfo[];
+  return boards.filter((b) => !b.closed);
+}
 
-  const normalizedLimit = normalizeLimit(limit, 1, MAX_ITEMS_PER_PAGE);
-  const authParams = buildAuthParams(actualApiKey!, actualToken!);
+// ─────────────────────────────────────────────────────────────
+// Fetcher
+// ─────────────────────────────────────────────────────────────
 
-  try {
-    // Fetch lists for list name mapping
-    const listMap = await fetchBoardLists(boardId, actualApiKey!, actualToken!);
+export const trelloCardsFetcher: ResourceFetcher = {
+  id: "trello:cards",
+  provider: "trello",
+  resourceKind: "trello_board",
+  defaultLimit: DEFAULT_LIMIT,
 
-    // Fetch open cards from the board
-    const fields = "id,name,desc,shortUrl,idShort,shortLink,dateLastActivity,closed,due,dueComplete,labels,idMembers,idList";
+  async fetchForResource({
+    resource,
+    secrets,
+    limit,
+    connectionId,
+  }: ResourceFetcherArgs): Promise<EntityInput[]> {
+    const token = secrets.token;
+    const apiKey = secrets.apiKey;
+    if (!token || !apiKey) return [];
+
+    const boardId = resource.externalId;
+    const normalizedLimit = normalizeLimit(limit, 1, MAX_ITEMS_PER_PAGE);
+    const authParams = buildAuthParams(apiKey, token);
+
+    const listMap = await fetchBoardLists(boardId, apiKey, token);
+
+    const fields =
+      "id,name,desc,shortUrl,idShort,shortLink,dateLastActivity,closed,due,dueComplete,labels,idMembers,idList";
     const response = await fetch(
       `${TRELLO_BASE_URL}/boards/${boardId}/cards?${authParams}&fields=${fields}&filter=open&limit=${normalizedLimit}`,
-      { headers: { Accept: "application/json" } }
+      { headers: { Accept: "application/json" } },
     );
 
     if (!response.ok) {
@@ -231,7 +157,9 @@ export async function fetchTrelloCards(
     const cards = (await response.json()) as TrelloCard[];
 
     return cards.map((card): EntityInput => {
-      const labelNames = (card.labels || []).map((l) => l.name).filter(Boolean);
+      const labelNames = (card.labels || [])
+        .map((l) => l.name)
+        .filter(Boolean);
       const listName = listMap.get(card.idList) || null;
 
       return {
@@ -242,8 +170,8 @@ export async function fetchTrelloCards(
         summary: card.desc?.substring(0, 500) || null,
         occurredAt: normalizeDateToIso(card.dateLastActivity),
         externalId: `${boardId}#${card.idShort}`,
-        connectionId: actualConnectionId || null,
-        resourceId: resourceId || null,
+        connectionId,
+        resourceId: resource.id,
         metadata: {
           provider: "trello",
           cardId: card.id,
@@ -256,54 +184,11 @@ export async function fetchTrelloCards(
           listName,
           labels: labelNames,
           memberCount: card.idMembers?.length || 0,
-          // For compatibility with existing issue table columns
           repo: boardId,
           number: card.idShort,
           state: card.closed ? "closed" : "open",
         },
       };
     });
-  } catch (error) {
-    console.error(`Failed to fetch Trello cards for board ${boardId}:`, error);
-    return [];
-  }
-}
-
-/**
- * Main entry point: Fetch cards from all selected Trello boards
- */
-export async function fetchTrelloFromConnectionResources(
-  cardsPerBoard = DEFAULT_LIMIT
-): Promise<EntityInput[]> {
-  const connection = await getConnection();
-  if (!connection) {
-    console.warn("⚠️  Skipping Trello: No active connection found");
-    return [];
-  }
-
-  const boards = await getSelectedBoards(connection.id);
-  if (boards.length === 0) {
-    console.warn("⚠️  No selected Trello boards found");
-    return [];
-  }
-
-  const allItems: EntityInput[] = [];
-
-  // Execute sequentially to avoid rate limits
-  for (const resource of boards) {
-    const boardId = resource.externalId;
-
-    const cards = await fetchTrelloCards(
-      boardId,
-      cardsPerBoard,
-      connection.id,
-      resource.id,
-      connection.token,
-      connection.apiKey
-    );
-
-    allItems.push(...cards);
-  }
-
-  return allItems;
-}
+  },
+};
