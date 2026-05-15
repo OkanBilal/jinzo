@@ -1,3 +1,4 @@
+import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 
 export interface WorkspaceDiff {
@@ -50,10 +51,7 @@ export const workspaceDiffsApi = baseApi.injectEndpoints({
         handler: "workspaceDiffs:getByWorkspace",
         args: [workspaceId, limit],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data: WorkspaceDiff[];
-      }) => response.data,
+      transformResponse: (response: ServiceResponse<WorkspaceDiff[]>) => unwrap(response),
       keepUnusedDataFor: 15,
       providesTags: (_result, _error, { workspaceId }) => [
         { type: "WorkspaceDiffs", id: workspaceId },

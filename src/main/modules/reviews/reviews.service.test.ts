@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -39,13 +40,13 @@ describe("reviewsService", () => {
       createReview(db, { workspaceId: ws.id, title: "R2" });
 
       const result = await reviewsService.getByWorkspace("ws-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toHaveLength(2);
     });
 
     it("returns empty for workspace with no reviews", async () => {
       const result = await reviewsService.getByWorkspace("ws-empty");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toEqual([]);
     });
 
@@ -56,7 +57,7 @@ describe("reviewsService", () => {
       createReview(db, { workspaceId: ws2.id, title: "R2" });
 
       const result = await reviewsService.getByWorkspace("ws-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toHaveLength(1);
       expect(result.data![0].title).toBe("R1");
     });
@@ -68,7 +69,7 @@ describe("reviewsService", () => {
       createReview(db, { workspaceId: ws.id, title: "R3" });
 
       const result = await reviewsService.getByWorkspace("ws-1", 2);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toHaveLength(2);
     });
 
@@ -78,7 +79,7 @@ describe("reviewsService", () => {
       );
 
       const result = await reviewsService.getByWorkspace("ws-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get reviews");
     });
   });
@@ -91,7 +92,7 @@ describe("reviewsService", () => {
       createReview(db, { id: "r-1", title: "Test" });
 
       const result = await reviewsService.getById("r-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.title).toBe("Test");
       expect(result.data!.id).toBe("r-1");
     });
@@ -110,7 +111,7 @@ describe("reviewsService", () => {
       });
 
       const result = await reviewsService.getById("r-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.workspaceId).toBe("ws-1");
       expect(result.data!.title).toBe("Full Review");
       expect(result.data!.summary).toBe("A summary");
@@ -123,7 +124,7 @@ describe("reviewsService", () => {
 
     it("returns error when not found", async () => {
       const result = await reviewsService.getById("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Review not found");
     });
 
@@ -133,7 +134,7 @@ describe("reviewsService", () => {
       );
 
       const result = await reviewsService.getById("r-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get review");
     });
   });
@@ -146,7 +147,7 @@ describe("reviewsService", () => {
       const result = await reviewsService.create({
         title: "New Review",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(typeof result.data!).toBe("string");
     });
 
@@ -161,11 +162,11 @@ describe("reviewsService", () => {
         workspaceId: ws.id,
         metadata: { key: "value" },
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       // Verify the created review
       const fetched = await reviewsService.getById(result.data!);
-      expect(fetched.success).toBe(true);
+      assertOk(fetched);
       expect(fetched.data!.title).toBe("Full Review");
       expect(fetched.data!.summary).toBe("A summary");
       expect(fetched.data!.status).toBe("in_review");
@@ -179,7 +180,7 @@ describe("reviewsService", () => {
         id: "custom-id",
         title: "Custom ID Review",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toBe("custom-id");
     });
 
@@ -187,10 +188,11 @@ describe("reviewsService", () => {
       const result = await reviewsService.create({
         title: "Default Status",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
 
-      const fetched = await reviewsService.getById(result.data!);
-      expect(fetched.data!.status).toBe("open");
+      const fetched = await reviewsService.getById(result.data);
+      assertOk(fetched);
+      expect(fetched.data.status).toBe("open");
     });
 
     it("returns error on repo failure", async () => {
@@ -199,7 +201,7 @@ describe("reviewsService", () => {
       );
 
       const result = await reviewsService.create({ title: "Fail" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to create review");
     });
   });
@@ -212,7 +214,7 @@ describe("reviewsService", () => {
       createReview(db, { id: "r-1", title: "Old" });
 
       const result = await reviewsService.update("r-1", { title: "New" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.title).toBe("New");
     });
 
@@ -222,7 +224,7 @@ describe("reviewsService", () => {
       const result = await reviewsService.update("r-1", {
         status: "approved",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.status).toBe("approved");
     });
 
@@ -232,7 +234,7 @@ describe("reviewsService", () => {
       const result = await reviewsService.update("r-1", {
         summary: "New summary",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.summary).toBe("New summary");
     });
 
@@ -242,7 +244,7 @@ describe("reviewsService", () => {
       const result = await reviewsService.update("r-1", {
         metadata: { score: 42 },
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.metadata).toEqual({ score: 42 });
     });
 
@@ -251,7 +253,7 @@ describe("reviewsService", () => {
       const run = createRun(db, { id: "run-1" });
 
       const result = await reviewsService.update("r-1", { runId: run.id });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.runId).toBe("run-1");
     });
 
@@ -263,7 +265,7 @@ describe("reviewsService", () => {
         status: "rejected",
         summary: "Updated summary",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.title).toBe("New");
       expect(result.data!.status).toBe("rejected");
       expect(result.data!.summary).toBe("Updated summary");
@@ -273,7 +275,7 @@ describe("reviewsService", () => {
       const result = await reviewsService.update("nonexistent", {
         title: "X",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Review not found");
     });
 
@@ -283,7 +285,7 @@ describe("reviewsService", () => {
       );
 
       const result = await reviewsService.update("r-1", { title: "Fail" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to update review");
     });
   });
@@ -296,17 +298,17 @@ describe("reviewsService", () => {
       createReview(db, { id: "r-1" });
 
       const result = await reviewsService.delete("r-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       // Verify it is gone
       const fetched = await reviewsService.getById("r-1");
-      expect(fetched.success).toBe(false);
+      assertFail(fetched);
       expect(fetched.error).toBe("Review not found");
     });
 
     it("succeeds even when review does not exist", async () => {
       const result = await reviewsService.delete("nonexistent");
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("returns error on repo failure", async () => {
@@ -315,7 +317,7 @@ describe("reviewsService", () => {
       );
 
       const result = await reviewsService.delete("r-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to delete review");
     });
   });

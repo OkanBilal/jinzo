@@ -54,7 +54,10 @@ export const accountService = {
       const { data, errors } = validateUpdatePayload(payload);
 
       if (Object.keys(errors).length > 0) {
-        return { success: false, errors };
+        const message = Object.entries(errors)
+          .map(([field, msg]) => `${field}: ${msg}`)
+          .join("; ");
+        return { success: false, error: message };
       }
 
       if (Object.keys(data).length === 0) {

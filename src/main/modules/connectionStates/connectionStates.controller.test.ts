@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createConnectionState } from "../../../test/factories";
@@ -26,7 +27,7 @@ describe("ConnectionStatesController", () => {
   describe("getAll", () => {
     it("returns empty array when no connections exist", async () => {
       const result = await ConnectionStatesController.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toEqual([]);
       }
@@ -37,7 +38,7 @@ describe("ConnectionStatesController", () => {
       createConnectionState(db, { id: "linear", displayName: "Linear" });
 
       const result = await ConnectionStatesController.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toHaveLength(2);
       }
@@ -51,17 +52,17 @@ describe("ConnectionStatesController", () => {
       const result = await ConnectionStatesController.updateById("github", {
         isConnected: true,
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("returns error for invalid id", async () => {
       const result = await ConnectionStatesController.updateById(null, { isConnected: true });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
 
     it("returns error for invalid payload", async () => {
       const result = await ConnectionStatesController.updateById("github", null);
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 });

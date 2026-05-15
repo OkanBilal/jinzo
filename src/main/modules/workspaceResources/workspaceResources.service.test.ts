@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -53,13 +54,13 @@ describe("workspaceResourcesService", () => {
       });
 
       const result = await workspaceResourcesService.getByProject("proj-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.resources).toHaveLength(1);
     });
 
     it("returns error when projectId is empty", async () => {
       const result = await workspaceResourcesService.getByProject("");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("projectId is required");
     });
   });
@@ -77,13 +78,13 @@ describe("workspaceResourcesService", () => {
 
       const result =
         await workspaceResourcesService.getAvailableResources("proj-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.resources).toHaveLength(1);
     });
 
     it("returns error when projectId is empty", async () => {
       const result = await workspaceResourcesService.getAvailableResources("");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -97,7 +98,7 @@ describe("workspaceResourcesService", () => {
         "proj-1",
         "res-1",
       );
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.resource.projectId).toBe("proj-1");
     });
 
@@ -114,18 +115,18 @@ describe("workspaceResourcesService", () => {
         "proj-1",
         "res-1",
       );
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Resource is already linked to this project");
     });
 
     it("returns error when projectId is empty", async () => {
       const result = await workspaceResourcesService.addResource("", "res-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
 
     it("returns error when resourceId is empty", async () => {
       const result = await workspaceResourcesService.addResource("proj-1", "");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -143,19 +144,19 @@ describe("workspaceResourcesService", () => {
         "proj-1",
         "res-1",
       );
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("returns error when params are empty", async () => {
       const result = await workspaceResourcesService.removeResource("", "");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
   describe("getIssuesByProject", () => {
     it("returns error when projectId is empty", async () => {
       const result = await workspaceResourcesService.getIssuesByProject("");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
 
     it("returns empty issues when no linked resources", async () => {
@@ -163,7 +164,7 @@ describe("workspaceResourcesService", () => {
 
       const result =
         await workspaceResourcesService.getIssuesByProject("proj-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.issues).toEqual([]);
     });
 
@@ -184,7 +185,7 @@ describe("workspaceResourcesService", () => {
       });
 
       const result = await workspaceResourcesService.getIssuesByProject("proj-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.issues).toHaveLength(1);
       expect(result.data!.issues[0].entity.title).toBe("Bug");
     });
@@ -197,35 +198,35 @@ describe("workspaceResourcesService", () => {
     it("getByProject returns error on failure", async () => {
       vi.spyOn(workspaceResourcesRepo, "findByProject").mockRejectedValueOnce(new Error("db"));
       const result = await workspaceResourcesService.getByProject("proj-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get project resources");
     });
 
     it("getAvailableResources returns error on failure", async () => {
       vi.spyOn(workspaceResourcesRepo, "findAvailableResources").mockRejectedValueOnce(new Error("db"));
       const result = await workspaceResourcesService.getAvailableResources("proj-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get available resources");
     });
 
     it("addResource returns error on failure", async () => {
       vi.spyOn(workspaceResourcesRepo, "isLinked").mockRejectedValueOnce(new Error("db"));
       const result = await workspaceResourcesService.addResource("proj-1", "res-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to add resource to project");
     });
 
     it("removeResource returns error on failure", async () => {
       vi.spyOn(workspaceResourcesRepo, "removeResource").mockRejectedValueOnce(new Error("db"));
       const result = await workspaceResourcesService.removeResource("proj-1", "res-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to remove resource from project");
     });
 
     it("getIssuesByProject returns error on failure", async () => {
       vi.spyOn(workspaceResourcesRepo, "findIssuesByProject").mockRejectedValueOnce(new Error("db"));
       const result = await workspaceResourcesService.getIssuesByProject("proj-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get issues");
     });
   });

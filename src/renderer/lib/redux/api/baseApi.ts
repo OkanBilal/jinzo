@@ -1,31 +1,28 @@
 import { createApi, BaseQueryFn } from '@reduxjs/toolkit/query/react';
+import type { ServiceResponse } from '../../../../shared/ipc-kit/service-response';
 
 const ipcBaseQuery = (): BaseQueryFn<
   {
     handler: string;
     args?: any[];
   },
-  unknown,
+  ServiceResponse<unknown>,
   unknown
 > => async ({ handler, args = [] }) => {
   try {
-    // Split handler into namespace and method (e.g., 'account:get' => ['account', 'get'])
     const [namespace, method] = handler.split(':');
-    
-    // Access the IPC handler through window.api
     const apiNamespace = (window.api as any)[namespace];
-    
+
     if (!apiNamespace || typeof apiNamespace[method] !== 'function') {
       throw new Error(`Handler ${handler} not found`);
     }
-    
-    // Call the IPC handler with provided arguments
-    const result = await apiNamespace[method](...args);
-    
-    if (result && !result.success && result.error) {
+
+    const result: ServiceResponse<unknown> = await apiNamespace[method](...args);
+
+    if (!result.success) {
       return { error: result.error };
     }
-    
+
     return { data: result };
   } catch (error: any) {
     return {

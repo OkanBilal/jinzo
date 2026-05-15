@@ -61,11 +61,8 @@ export interface GitRemote {
   pushUrl: string | undefined;
 }
 
-export interface ServiceResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+import type { ServiceResponse } from "../../../shared/ipc-kit/service-response";
+export type { ServiceResponse };
 
 // ─────────────────────────────────────────────────────────────
 // Git Service
@@ -682,7 +679,7 @@ class GitService {
     try {
       const git = this.getGit(sourcePath);
       await git.raw(["worktree", "remove", worktreePath, "--force"]);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       return {
         success: false,
@@ -701,7 +698,7 @@ class GitService {
       const git = this.getGit(rootPath);
       await git.reset(["--hard", ref]);
       await git.clean("f", ["-d"]);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       return {
         success: false,

@@ -38,18 +38,7 @@ export interface AccountResponse {
   updatedAt: Date | null;
 }
 
-export interface SuccessResponse<T> {
-  success: true;
-  data: T;
-}
-
-export interface ErrorResponse {
-  success: false;
-  error?: string;
-  errors?: Record<string, string>;
-}
-
-export type ServiceResponse<T> = SuccessResponse<T> | ErrorResponse;
+export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";
 
 // ─────────────────────────────────────────────────────────────
 // Formatters

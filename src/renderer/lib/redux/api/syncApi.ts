@@ -1,3 +1,4 @@
+import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 
 export interface SyncStats {
@@ -27,8 +28,7 @@ export const syncApi = baseApi.injectEndpoints({
         handler: "sync:runEntitySync",
         args: provider ? [provider] : [],
       }),
-      transformResponse: (response: { success: boolean; data: SyncResult }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<SyncResult>) => unwrap(response),
       invalidatesTags: ["Entity", "ProjectIssues"],
     }),
   }),

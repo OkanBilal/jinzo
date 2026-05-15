@@ -203,7 +203,7 @@ export const projectsService = {
       // Delete the project from DB
       await projectsRepo.delete(id);
 
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(`[ProjectsService] Failed to remove project ${id}:`, error);
       return { success: false, error: "Failed to remove project" };
@@ -213,7 +213,7 @@ export const projectsService = {
   async delete(id: string): Promise<ServiceResponse<void>> {
     try {
       await projectsRepo.delete(id);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(`[ProjectsService] Failed to delete project ${id}:`, error);
       return { success: false, error: "Failed to delete project" };

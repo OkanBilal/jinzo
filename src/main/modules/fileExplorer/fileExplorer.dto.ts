@@ -51,11 +51,7 @@ export interface ReadDirectoryOptions {
   excludePatterns?: string[]; // Glob patterns to exclude
 }
 
-export interface ServiceResponse<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";
 
 export interface FileTreeResponse {
   root: FileNode;

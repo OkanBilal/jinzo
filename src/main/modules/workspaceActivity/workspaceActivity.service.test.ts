@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -35,7 +36,7 @@ describe("workspaceActivityService", () => {
   describe("getByWorkspace", () => {
     it("returns empty list", async () => {
       const result = await workspaceActivityService.getByWorkspace(wsId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -44,7 +45,7 @@ describe("workspaceActivityService", () => {
       createWorkspaceActivity(db, { workspaceId: wsId, title: "A2" });
 
       const result = await workspaceActivityService.getByWorkspace(wsId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
   });
@@ -57,7 +58,7 @@ describe("workspaceActivityService", () => {
         title: "Initial commit",
       });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(typeof result.data).toBe("string");
     });
   });
@@ -69,7 +70,7 @@ describe("workspaceActivityService", () => {
         { workspaceId: wsId, type: "commit", title: "C2" },
       ]);
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
   });
@@ -79,9 +80,10 @@ describe("workspaceActivityService", () => {
       createWorkspaceActivity(db, { id: "del-1", workspaceId: wsId });
 
       const result = await workspaceActivityService.delete("del-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const check = await workspaceActivityService.getByWorkspace(wsId);
+      assertOk(check);
       expect(check.data).toHaveLength(0);
     });
   });
@@ -98,8 +100,9 @@ describe("workspaceActivityService", () => {
       await new Promise((r) => setTimeout(r, 50));
 
       const result = await workspaceActivityService.getByWorkspace(wsId);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
-      expect(result.data![0].title).toBe("Auto-logged diff");
+      expect(result.data[0].title).toBe("Auto-logged diff");
     });
   });
 
@@ -110,7 +113,7 @@ describe("workspaceActivityService", () => {
     it("getByWorkspace returns error on failure", async () => {
       vi.spyOn(workspaceActivityRepo, "findByWorkspace").mockRejectedValueOnce(new Error("db"));
       const result = await workspaceActivityService.getByWorkspace("ws-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get workspace activity");
     });
 
@@ -121,7 +124,7 @@ describe("workspaceActivityService", () => {
         type: "commit",
         title: "fail",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to create activity");
     });
 
@@ -130,14 +133,14 @@ describe("workspaceActivityService", () => {
       const result = await workspaceActivityService.createMany([
         { workspaceId: wsId, type: "commit", title: "fail" },
       ]);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to create activities");
     });
 
     it("delete returns error on failure", async () => {
       vi.spyOn(workspaceActivityRepo, "remove").mockRejectedValueOnce(new Error("db"));
       const result = await workspaceActivityService.delete("some-id");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to delete activity");
     });
   });

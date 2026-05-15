@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createConnectionState, createConnection } from "../../../test/factories";
@@ -31,7 +32,7 @@ describe("connectionStatesService", () => {
   describe("getAll", () => {
     it("returns empty list when no connection", async () => {
       const result = await connectionStatesService.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toEqual([]);
       }
@@ -42,7 +43,7 @@ describe("connectionStatesService", () => {
       createConnectionState(db, { id: "linear", displayName: "Linear" });
 
       const result = await connectionStatesService.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toHaveLength(2);
       }
@@ -61,7 +62,7 @@ describe("connectionStatesService", () => {
       });
 
       const result = await connectionStatesService.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toHaveLength(1);
         const connection = result.data[0];
@@ -81,7 +82,7 @@ describe("connectionStatesService", () => {
       createConnectionState(db, { id: "mid", displayName: "Mid", sortOrder: 50 });
 
       const result = await connectionStatesService.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data[0].id).toBe("high");
         expect(result.data[1].id).toBe("mid");
@@ -93,7 +94,7 @@ describe("connectionStatesService", () => {
       createConnectionState(db, { id: "minimal" });
 
       const result = await connectionStatesService.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toHaveLength(1);
         const connection = result.data[0];
@@ -116,7 +117,7 @@ describe("connectionStatesService", () => {
         isConnected: true,
         connectionId: "conn-1",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("persists the update in the database", async () => {
@@ -129,7 +130,7 @@ describe("connectionStatesService", () => {
       });
 
       const allResult = await connectionStatesService.getAll();
-      expect(allResult.success).toBe(true);
+      assertOk(allResult);
       if (allResult.success) {
         const connection = allResult.data.find((a) => a.id === "github");
         expect(connection).toBeDefined();
@@ -147,7 +148,7 @@ describe("connectionStatesService", () => {
       });
 
       const allResult = await connectionStatesService.getAll();
-      expect(allResult.success).toBe(true);
+      assertOk(allResult);
       if (allResult.success) {
         const connection = allResult.data.find((a) => a.id === "github");
         expect(connection!.isConnected).toBe(false);
@@ -164,7 +165,7 @@ describe("connectionStatesService", () => {
       });
 
       const allResult = await connectionStatesService.getAll();
-      expect(allResult.success).toBe(true);
+      assertOk(allResult);
       if (allResult.success) {
         const connection = allResult.data.find((a) => a.id === "github");
         // connectionId should be null when not provided (repo uses `data.connectionId || null`)
@@ -176,7 +177,7 @@ describe("connectionStatesService", () => {
       createConnectionState(db, { id: "github" });
 
       const result = await connectionStatesService.updateById("github", { isConnected: true });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toBeNull();
       }
@@ -185,7 +186,7 @@ describe("connectionStatesService", () => {
     // ── Validation: id ──────────────────────────────────────────
     it("rejects invalid id (empty string)", async () => {
       const result = await connectionStatesService.updateById("", { isConnected: true });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Invalid connection ID");
       }
@@ -193,7 +194,7 @@ describe("connectionStatesService", () => {
 
     it("rejects non-string id (number)", async () => {
       const result = await connectionStatesService.updateById(42, { isConnected: true });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Invalid connection ID");
       }
@@ -201,7 +202,7 @@ describe("connectionStatesService", () => {
 
     it("rejects null id", async () => {
       const result = await connectionStatesService.updateById(null, { isConnected: true });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Invalid connection ID");
       }
@@ -209,7 +210,7 @@ describe("connectionStatesService", () => {
 
     it("rejects undefined id", async () => {
       const result = await connectionStatesService.updateById(undefined, { isConnected: true });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Invalid connection ID");
       }
@@ -218,7 +219,7 @@ describe("connectionStatesService", () => {
     // ── Validation: payload ─────────────────────────────────────
     it("rejects null payload", async () => {
       const result = await connectionStatesService.updateById("github", null);
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Invalid payload");
       }
@@ -226,12 +227,12 @@ describe("connectionStatesService", () => {
 
     it("rejects undefined payload", async () => {
       const result = await connectionStatesService.updateById("github", undefined);
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
 
     it("rejects non-object payload (string)", async () => {
       const result = await connectionStatesService.updateById("github", "bad");
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Invalid payload");
       }
@@ -239,14 +240,14 @@ describe("connectionStatesService", () => {
 
     it("rejects non-object payload (number)", async () => {
       const result = await connectionStatesService.updateById("github", 123);
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
 
     it("rejects payload with non-boolean isConnected", async () => {
       const result = await connectionStatesService.updateById("github", {
         isConnected: "yes",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("isConnected must be a boolean");
       }
@@ -256,7 +257,7 @@ describe("connectionStatesService", () => {
       const result = await connectionStatesService.updateById("github", {
         connectionId: "conn-1",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("isConnected must be a boolean");
       }
@@ -270,7 +271,7 @@ describe("connectionStatesService", () => {
         connectionId: 123,
       });
       // Validation passes — connectionId is normalized to null if not a string
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
   });
 
@@ -281,7 +282,7 @@ describe("connectionStatesService", () => {
     it("getAll returns error on repo failure", async () => {
       vi.spyOn(connectionStatesRepo, "findAll").mockRejectedValueOnce(new Error("db crash"));
       const result = await connectionStatesService.getAll();
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Failed to fetch connnectionStates");
       }
@@ -290,7 +291,7 @@ describe("connectionStatesService", () => {
     it("updateById returns error on repo failure", async () => {
       vi.spyOn(connectionStatesRepo, "updateById").mockRejectedValueOnce(new Error("db crash"));
       const result = await connectionStatesService.updateById("github", { isConnected: true });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Failed to update connection state");
       }

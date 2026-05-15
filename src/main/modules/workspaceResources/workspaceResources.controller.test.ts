@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -54,7 +55,7 @@ describe("workspaceResourcesController", () => {
   describe("getByProject", () => {
     it("returns empty resources when none linked", async () => {
       const result = await workspaceResourcesController.getByProject(projectId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.resources).toEqual([]);
     });
 
@@ -62,7 +63,7 @@ describe("workspaceResourcesController", () => {
       createProjectResource(db, { projectId, resourceId });
 
       const result = await workspaceResourcesController.getByProject(projectId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.resources).toHaveLength(1);
       expect(result.data!.resources[0].resourceId).toBe(resourceId);
     });
@@ -72,7 +73,7 @@ describe("workspaceResourcesController", () => {
   describe("getAvailableResources", () => {
     it("returns available resources with isLinked flag", async () => {
       const result = await workspaceResourcesController.getAvailableResources(projectId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.resources.length).toBeGreaterThanOrEqual(1);
 
       const found = result.data!.resources.find((r) => r.id === resourceId);
@@ -84,7 +85,7 @@ describe("workspaceResourcesController", () => {
       createProjectResource(db, { projectId, resourceId });
 
       const result = await workspaceResourcesController.getAvailableResources(projectId);
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const found = result.data!.resources.find((r) => r.id === resourceId);
       expect(found).toBeDefined();
@@ -99,7 +100,7 @@ describe("workspaceResourcesController", () => {
         projectId,
         resourceId,
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.resource.projectId).toBe(projectId);
       expect(result.data!.resource.resourceId).toBe(resourceId);
     });
@@ -111,7 +112,7 @@ describe("workspaceResourcesController", () => {
         projectId,
         resourceId,
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -124,10 +125,11 @@ describe("workspaceResourcesController", () => {
         projectId,
         resourceId,
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const check = await workspaceResourcesController.getByProject(projectId);
-      expect(check.data!.resources).toHaveLength(0);
+      assertOk(check);
+      expect(check.data.resources).toHaveLength(0);
     });
   });
 
@@ -137,7 +139,7 @@ describe("workspaceResourcesController", () => {
       createProjectResource(db, { projectId, resourceId });
 
       const result = await workspaceResourcesController.getIssuesByProject(projectId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.issues).toEqual([]);
     });
 
@@ -158,7 +160,7 @@ describe("workspaceResourcesController", () => {
       });
 
       const result = await workspaceResourcesController.getIssuesByProject(projectId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.issues.length).toBeGreaterThanOrEqual(1);
     });
   });

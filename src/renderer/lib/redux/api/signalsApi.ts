@@ -1,3 +1,4 @@
+import type { ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 import type { Entity } from "./entitiesApi";
 
@@ -43,10 +44,8 @@ export const signalsApi = baseApi.injectEndpoints({
         handler: "signals:getAll",
         args: [{ projectId }],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data?: SignalWithEntity[];
-      }) => (response.success ? (response.data ?? []) : []),
+      transformResponse: (response: ServiceResponse<SignalWithEntity[]>) =>
+        response.success ? response.data : [],
       providesTags: (_result, _error, projectId) => [
         { type: "ProjectSignals", id: projectId },
       ],

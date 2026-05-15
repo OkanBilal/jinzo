@@ -82,7 +82,7 @@ export const FileExplorer = memo(function FileExplorer({
 
         if (cancelled) return;
 
-        if (result.success && result.data) {
+        if (result.success) {
           const rootName = rootPath.split("/").pop() || rootPath;
           const children = result.data.map(dirEntryToFileNode);
 
@@ -105,7 +105,7 @@ export const FileExplorer = memo(function FileExplorer({
             stats: { files: fileCount, directories: dirCount },
           });
         } else {
-          dispatch({ type: "error", error: result.error || "Failed to load directory" });
+          dispatch({ type: "error", error: result.error });
         }
       } catch (err: unknown) {
         if (cancelled) return;
@@ -147,7 +147,7 @@ export const FileExplorer = memo(function FileExplorer({
             excludePatterns,
           });
 
-        if (result.success && result.data) {
+        if (result.success) {
           return result.data.map(dirEntryToFileNode);
         } else {
           console.error("[FileExplorer] Failed to expand:", result.error);

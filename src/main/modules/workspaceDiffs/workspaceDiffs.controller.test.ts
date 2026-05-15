@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -36,7 +37,7 @@ describe("workspaceDiffsController", () => {
   describe("getByWorkspace", () => {
     it("returns empty array when no diffs exist", async () => {
       const result = await workspaceDiffsController.getByWorkspace(wsId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -45,7 +46,7 @@ describe("workspaceDiffsController", () => {
       createWorkspaceDiff(db, { workspaceId: wsId, diffText: "diff 2" });
 
       const result = await workspaceDiffsController.getByWorkspace(wsId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
 
@@ -55,7 +56,7 @@ describe("workspaceDiffsController", () => {
       createWorkspaceDiff(db, { workspaceId: wsId, diffText: "c" });
 
       const result = await workspaceDiffsController.getByWorkspace(wsId, 2);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
   });
@@ -67,14 +68,14 @@ describe("workspaceDiffsController", () => {
       createWorkspaceDiff(db, { workspaceId: wsId, diffText: "latest diff" });
 
       const result = await workspaceDiffsController.getLatest(wsId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBeDefined();
       expect(result.data!.diffText).toBeDefined();
     });
 
     it("returns error when no diffs exist", async () => {
       const result = await workspaceDiffsController.getLatest(wsId);
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -89,14 +90,14 @@ describe("workspaceDiffsController", () => {
       });
 
       const result = await workspaceDiffsController.getByRun(run.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.diffText).toBe("run diff");
       expect(result.data!.runId).toBe(run.id);
     });
 
     it("returns error when no diff for run", async () => {
       const result = await workspaceDiffsController.getByRun("nonexistent-run");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 });

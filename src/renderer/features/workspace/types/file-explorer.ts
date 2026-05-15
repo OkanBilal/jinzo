@@ -36,8 +36,4 @@ export interface FileContentResponse {
   encoding: "utf-8" | "binary";
 }
 
-export interface ServiceResponse<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+export type { ServiceResponse } from "../../../../shared/ipc-kit/service-response";

@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount, createWorkspace, createProject } from "../../../test/factories";
@@ -59,13 +60,13 @@ describe("workspacesService", () => {
     it("returns success with workspaces", async () => {
       createWorkspace(db, { id: "ws1", name: "WS1" });
       const result = await workspacesService.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
     });
 
     it("returns empty array when none", async () => {
       const result = await workspacesService.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
   });
@@ -74,13 +75,13 @@ describe("workspacesService", () => {
     it("returns workspace by id", async () => {
       createWorkspace(db, { id: "ws1", name: "My Workspace" });
       const result = await workspacesService.getById("ws1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.name).toBe("My Workspace");
     });
 
     it("returns error for non-existent", async () => {
       const result = await workspacesService.getById("missing");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Workspace not found");
     });
   });
@@ -89,7 +90,7 @@ describe("workspacesService", () => {
     it("returns workspaces for account", async () => {
       createWorkspace(db, { id: "ws1", accountId: "default" });
       const result = await workspacesService.getByAccountId("default");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
     });
   });
@@ -98,13 +99,13 @@ describe("workspacesService", () => {
     it("returns workspace by root path", async () => {
       createWorkspace(db, { id: "ws1", rootPath: "/projects/my-app" });
       const result = await workspacesService.getByRootPath("default", "/projects/my-app");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.id).toBe("ws1");
     });
 
     it("returns error when not found", async () => {
       const result = await workspacesService.getByRootPath("default", "/missing/path");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -116,7 +117,7 @@ describe("workspacesService", () => {
         rootPath: "/projects/new-ws",
       });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.name).toBe("New Workspace");
       expect(result.data!.id).toBeTruthy();
     });
@@ -130,7 +131,7 @@ describe("workspacesService", () => {
         rootPath: "/projects/existing",
       });
 
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Workspace with this path already exists");
     });
 
@@ -141,7 +142,7 @@ describe("workspacesService", () => {
         rootPath: "/projects/auto-id",
       });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.id).toBeTruthy();
     });
   });
@@ -151,13 +152,13 @@ describe("workspacesService", () => {
       createWorkspace(db, { id: "ws1", name: "Old Name" });
       const result = await workspacesService.update("ws1", { name: "New Name" });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.name).toBe("New Name");
     });
 
     it("returns error for non-existent", async () => {
       const result = await workspacesService.update("missing", { name: "Test" });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -165,10 +166,10 @@ describe("workspacesService", () => {
     it("deletes workspace", async () => {
       createWorkspace(db, { id: "ws1" });
       const result = await workspacesService.delete("ws1");
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const check = await workspacesService.getById("ws1");
-      expect(check.success).toBe(false);
+      assertFail(check);
     });
   });
 
@@ -176,7 +177,7 @@ describe("workspacesService", () => {
     it("updates workspace status", async () => {
       createWorkspace(db, { id: "ws1" });
       const result = await workspacesService.updateStatus("ws1", "in_progress");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.status).toBe("in_progress");
     });
   });
@@ -185,13 +186,13 @@ describe("workspacesService", () => {
     it("archives a workspace", async () => {
       createWorkspace(db, { id: "ws1" });
       const result = await workspacesService.archive("ws1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.isArchived).toBe(true);
     });
 
     it("returns error for non-existent workspace", async () => {
       const result = await workspacesService.archive("missing");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Workspace not found");
     });
 
@@ -204,7 +205,7 @@ describe("workspacesService", () => {
       createWorkspace(db, { id: "ws1", projectId: project.id });
 
       const result = await workspacesService.archive("ws1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       // Script runs fire-and-forget, so we just verify the workspace was archived
     });
   });
@@ -227,7 +228,7 @@ describe("workspacesService", () => {
         projectId: project.id,
       });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.projectId).toBe("p1");
     });
 
@@ -239,7 +240,7 @@ describe("workspacesService", () => {
         rootPath: "/projects/custom-id",
       });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.id).toBe("custom-id");
     });
   });
@@ -251,28 +252,28 @@ describe("workspacesService", () => {
     it("getAll returns error on failure", async () => {
       vi.spyOn(workspacesRepo, "findAll").mockRejectedValueOnce(new Error("db"));
       const result = await workspacesService.getAll();
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get workspaces");
     });
 
     it("getById returns error on failure", async () => {
       vi.spyOn(workspacesRepo, "findById").mockRejectedValueOnce(new Error("db"));
       const result = await workspacesService.getById("ws1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get workspace");
     });
 
     it("getByAccountId returns error on failure", async () => {
       vi.spyOn(workspacesRepo, "findByAccountId").mockRejectedValueOnce(new Error("db"));
       const result = await workspacesService.getByAccountId("default");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get workspaces");
     });
 
     it("getByRootPath returns error on failure", async () => {
       vi.spyOn(workspacesRepo, "findByRootPath").mockRejectedValueOnce(new Error("db"));
       const result = await workspacesService.getByRootPath("default", "/x");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get workspace");
     });
 
@@ -284,28 +285,28 @@ describe("workspacesService", () => {
         name: "Fail",
         rootPath: "/fail",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to create workspace");
     });
 
     it("update returns error on failure", async () => {
       vi.spyOn(workspacesRepo, "update").mockRejectedValueOnce(new Error("db"));
       const result = await workspacesService.update("ws1", { name: "X" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to update workspace");
     });
 
     it("delete returns error on failure", async () => {
       vi.spyOn(workspacesRepo, "delete").mockRejectedValueOnce(new Error("db"));
       const result = await workspacesService.delete("ws1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to delete workspace");
     });
 
     it("archive returns error on failure", async () => {
       vi.spyOn(workspacesRepo, "findById").mockRejectedValueOnce(new Error("db"));
       const result = await workspacesService.archive("ws1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to archive workspace");
     });
   });
@@ -325,7 +326,7 @@ describe("workspacesService", () => {
         rootPath: "/projects/ghost",
       });
 
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to retrieve created workspace");
     });
   });
@@ -339,7 +340,7 @@ describe("workspacesService", () => {
       vi.spyOn(workspacesRepo, "archive").mockResolvedValueOnce(null);
 
       const result = await workspacesService.archive("ws-arch");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to archive workspace");
     });
   });
@@ -361,7 +362,7 @@ describe("workspacesService", () => {
         projectId: project.id,
       });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       // Allow microtasks to flush
       await new Promise((r) => setTimeout(r, 50));
     });
@@ -385,7 +386,7 @@ describe("workspacesService", () => {
         projectId: project.id,
       });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       // Allow fire-and-forget promise chain to resolve
       await new Promise((r) => setTimeout(r, 50));
 
@@ -419,7 +420,7 @@ describe("workspacesService", () => {
         projectId: project.id,
       });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       await new Promise((r) => setTimeout(r, 50));
 
       expect(mockSend).toHaveBeenCalledWith("workspaces:scriptComplete", expect.objectContaining({
@@ -440,7 +441,7 @@ describe("workspacesService", () => {
         projectId: project.id,
       });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       await new Promise((r) => setTimeout(r, 50));
       // No error thrown - the .catch(() => {}) swallows it
     });
@@ -459,7 +460,7 @@ describe("workspacesService", () => {
       createWorkspace(db, { id: "ws-no-arch", projectId: project.id });
 
       const result = await workspacesService.archive("ws-no-arch");
-      expect(result.success).toBe(true);
+      assertOk(result);
       await new Promise((r) => setTimeout(r, 50));
     });
 
@@ -477,7 +478,7 @@ describe("workspacesService", () => {
       createWorkspace(db, { id: "ws-arch-ok", projectId: project.id });
 
       const result = await workspacesService.archive("ws-arch-ok");
-      expect(result.success).toBe(true);
+      assertOk(result);
       await new Promise((r) => setTimeout(r, 50));
 
       expect(mockSend).toHaveBeenCalledWith("workspaces:scriptComplete", expect.objectContaining({
@@ -505,7 +506,7 @@ describe("workspacesService", () => {
       createWorkspace(db, { id: "ws-arch-fail", projectId: project.id });
 
       const result = await workspacesService.archive("ws-arch-fail");
-      expect(result.success).toBe(true);
+      assertOk(result);
       await new Promise((r) => setTimeout(r, 50));
 
       expect(mockSend).toHaveBeenCalledWith("workspaces:scriptComplete", expect.objectContaining({
@@ -521,7 +522,7 @@ describe("workspacesService", () => {
       vi.spyOn(projectsRepo, "findById").mockRejectedValueOnce(new Error("db fail"));
 
       const result = await workspacesService.archive("ws-arch-proj-fail");
-      expect(result.success).toBe(true);
+      assertOk(result);
       await new Promise((r) => setTimeout(r, 50));
       // No error thrown - the .catch(() => {}) swallows it
     });
@@ -552,7 +553,7 @@ describe("workspacesService", () => {
         projectId: project.id,
       });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       await new Promise((r) => setTimeout(r, 50));
 
       expect(mockSend1).toHaveBeenCalledWith("workspaces:scriptComplete", expect.objectContaining({

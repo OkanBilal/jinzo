@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -39,7 +40,7 @@ describe("reviewFindingsController", () => {
   describe("getByWorkspace", () => {
     it("returns empty array when no findings exist", async () => {
       const result = await reviewFindingsController.getByWorkspace(workspaceId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toEqual([]);
       }
@@ -50,7 +51,7 @@ describe("reviewFindingsController", () => {
       createReviewFinding(db, { reviewId, message: "Finding 2" });
 
       const result = await reviewFindingsController.getByWorkspace(workspaceId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toHaveLength(2);
       }
@@ -60,7 +61,7 @@ describe("reviewFindingsController", () => {
   describe("getByReview", () => {
     it("returns empty array when no findings exist for review", async () => {
       const result = await reviewFindingsController.getByReview(reviewId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toEqual([]);
       }
@@ -71,7 +72,7 @@ describe("reviewFindingsController", () => {
       createReviewFinding(db, { reviewId, message: "Finding B" });
 
       const result = await reviewFindingsController.getByReview(reviewId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toHaveLength(2);
       }
@@ -83,7 +84,7 @@ describe("reviewFindingsController", () => {
       createReviewFinding(db, { reviewId, message: "F3" });
 
       const result = await reviewFindingsController.getByReview(reviewId, 2);
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toHaveLength(2);
       }
@@ -100,7 +101,7 @@ describe("reviewFindingsController", () => {
       });
 
       const result = await reviewFindingsController.getById(finding.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data!.id).toBe(finding.id);
         expect(result.data!.message).toBe("Specific finding");
@@ -110,7 +111,7 @@ describe("reviewFindingsController", () => {
 
     it("returns error for non-existent finding", async () => {
       const result = await reviewFindingsController.getById("non-existent-id");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -123,7 +124,7 @@ describe("reviewFindingsController", () => {
         message: "Unused variable",
         reason: "Variable declared but never used",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(typeof result.data).toBe("string");
         expect(result.data!.length).toBeGreaterThan(0);
@@ -139,11 +140,11 @@ describe("reviewFindingsController", () => {
         reason: "Function is too long",
         suggestion: "Split into smaller functions",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         // Verify via getById
         const fetched = await reviewFindingsController.getById(result.data!);
-        expect(fetched.success).toBe(true);
+        assertOk(fetched);
         if (fetched.success) {
           expect(fetched.data!.suggestion).toBe("Split into smaller functions");
         }
@@ -169,7 +170,7 @@ describe("reviewFindingsController", () => {
           reason: "Duplicated logic",
         },
       ]);
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toHaveLength(2);
       }
@@ -188,7 +189,7 @@ describe("reviewFindingsController", () => {
         severity: "critical",
         file: "src/new.ts",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data!.severity).toBe("critical");
         expect(result.data!.file).toBe("src/new.ts");
@@ -199,7 +200,7 @@ describe("reviewFindingsController", () => {
       const result = await reviewFindingsController.update("non-existent-id", {
         severity: "info",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -208,12 +209,12 @@ describe("reviewFindingsController", () => {
       const finding = createReviewFinding(db, { reviewId });
 
       const result = await reviewFindingsController.delete(finding.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("succeeds silently for non-existent finding", async () => {
       const result = await reviewFindingsController.delete("non-existent-id");
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
   });
 });

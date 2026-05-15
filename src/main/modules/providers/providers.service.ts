@@ -93,7 +93,7 @@ export const providersService = {
   async delete(id: string): Promise<ServiceResponse<void>> {
     try {
       await providersRepo.delete(id);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(`[ProvidersService] Failed to delete provider ${id}:`, error);
       return { success: false, error: "Failed to delete provider" };
@@ -103,7 +103,7 @@ export const providersService = {
   async enable(id: string): Promise<ServiceResponse<void>> {
     try {
       await providersRepo.setEnabled(id, true);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(`[ProvidersService] Failed to enable provider ${id}:`, error);
       return { success: false, error: "Failed to enable provider" };
@@ -113,7 +113,7 @@ export const providersService = {
   async disable(id: string): Promise<ServiceResponse<void>> {
     try {
       await providersRepo.setEnabled(id, false);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(`[ProvidersService] Failed to disable provider ${id}:`, error);
       return { success: false, error: "Failed to disable provider" };

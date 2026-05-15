@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount, createProject } from "../../../test/factories";
@@ -28,7 +29,7 @@ describe("projectsController", () => {
   describe("getAll", () => {
     it("returns empty array when no projects exist", async () => {
       const result = await projectsController.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -37,7 +38,7 @@ describe("projectsController", () => {
       createProject(db, { id: "p2", name: "Beta" });
 
       const result = await projectsController.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
   });
@@ -48,13 +49,13 @@ describe("projectsController", () => {
       createProject(db, { id: "p1", name: "My Project" });
 
       const result = await projectsController.getById("p1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.name).toBe("My Project");
     });
 
     it("returns error for non-existent project", async () => {
       const result = await projectsController.getById("missing");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -64,13 +65,13 @@ describe("projectsController", () => {
       createProject(db, { id: "p1", accountId: "default" });
 
       const result = await projectsController.getByAccountId("default");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
     });
 
     it("returns empty array for account with no projects", async () => {
       const result = await projectsController.getByAccountId("default");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
   });
@@ -88,7 +89,7 @@ describe("projectsController", () => {
         "default",
         "https://github.com/test/repo.git",
       );
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.id).toBe("p1");
     });
 
@@ -97,7 +98,7 @@ describe("projectsController", () => {
         "default",
         "github.com/nope/nope",
       );
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -116,7 +117,7 @@ describe("projectsController", () => {
         rootPath: "/tmp/ignored",
         remoteOrigin: "https://github.com/test/repo.git",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.id).toBe("p1");
     });
 
@@ -127,7 +128,7 @@ describe("projectsController", () => {
         rootPath: "/tmp/new",
         remoteOrigin: "github.com/new/repo",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.name).toBe("New Project");
     });
   });
@@ -141,7 +142,7 @@ describe("projectsController", () => {
         rootPath: "/tmp/created",
         remoteOrigin: "github.com/owner/created",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.name).toBe("Created");
     });
 
@@ -157,7 +158,7 @@ describe("projectsController", () => {
         rootPath: "/tmp/dup",
         remoteOrigin: "github.com/dup/repo",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -167,13 +168,13 @@ describe("projectsController", () => {
       createProject(db, { id: "p1", name: "Old Name" });
 
       const result = await projectsController.update("p1", { name: "New Name" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.name).toBe("New Name");
     });
 
     it("returns error for non-existent project", async () => {
       const result = await projectsController.update("missing", { name: "X" });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -183,10 +184,10 @@ describe("projectsController", () => {
       createProject(db, { id: "p1" });
 
       const result = await projectsController.delete("p1");
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const check = await projectsController.getById("p1");
-      expect(check.success).toBe(false);
+      assertFail(check);
     });
   });
 
@@ -196,13 +197,13 @@ describe("projectsController", () => {
       createProject(db, { id: "p1" });
 
       const result = await projectsController.archive("p1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.isArchived).toBe(true);
     });
 
     it("returns error for non-existent project", async () => {
       const result = await projectsController.archive("missing");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 });

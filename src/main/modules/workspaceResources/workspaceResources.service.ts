@@ -95,7 +95,7 @@ export const workspaceResourcesService = {
       }
 
       await workspaceResourcesRepo.removeResource(projectId, resourceId);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error("Error removing resource from project:", error);
       return { success: false, error: "Failed to remove resource from project" };

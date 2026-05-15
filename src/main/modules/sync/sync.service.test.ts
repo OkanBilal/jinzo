@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { syncService } from "./sync.service";
 import * as syncFetchers from "./sync.fetchers";
@@ -73,7 +74,7 @@ describe("syncService", () => {
 
       const result = await syncService.runEntitySync();
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.total).toBe(0);
         expect(result.data.inserted).toBe(0);
@@ -102,7 +103,7 @@ describe("syncService", () => {
 
       const result = await syncService.runEntitySync();
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.total).toBe(3);
         expect(result.data.inserted).toBe(2);
@@ -124,7 +125,7 @@ describe("syncService", () => {
 
       const result = await syncService.runEntitySync();
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.total).toBe(3);
         expect(result.data.inserted).toBe(2);
@@ -148,7 +149,7 @@ describe("syncService", () => {
 
       const result = await syncService.runEntitySync();
 
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Sync job failed");
         expect(result.data!.errors).toBe(1);
@@ -164,7 +165,7 @@ describe("syncService", () => {
 
       const result = await syncService.runEntitySync();
 
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Sync job failed");
         expect(result.data!.errors).toBe(1);

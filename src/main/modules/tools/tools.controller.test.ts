@@ -1,3 +1,4 @@
+import { assertOk } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -35,7 +36,7 @@ describe("toolsController", () => {
       const run = createRun(db, { id: "run-1" });
 
       const res = await toolsController.getToolCallsByRun(run.id);
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toEqual([]);
     });
 
@@ -45,7 +46,7 @@ describe("toolsController", () => {
       createToolCall(db, { runId: run.id, toolName: "Read" });
 
       const res = await toolsController.getToolCallsByRun(run.id);
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toHaveLength(2);
     });
 
@@ -56,7 +57,7 @@ describe("toolsController", () => {
       createToolCall(db, { runId: "run-2", toolName: "Read" });
 
       const res = await toolsController.getToolCallsByRun("run-1");
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toHaveLength(1);
       expect(res.data![0].toolName).toBe("Bash");
     });
@@ -70,7 +71,7 @@ describe("toolsController", () => {
       createToolCall(db, { accountId: "acct-1", toolName: "Read" });
 
       const res = await toolsController.getToolCallsByAccount("acct-1");
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toHaveLength(2);
     });
 
@@ -81,7 +82,7 @@ describe("toolsController", () => {
       createToolCall(db, { accountId: "acct-1", toolName: "Glob" });
 
       const res = await toolsController.getToolCallsByAccount("acct-1", 2);
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toHaveLength(2);
     });
   });
@@ -97,7 +98,7 @@ describe("toolsController", () => {
         runId: run.id,
         toolName: "Bash",
       });
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(typeof res.data).toBe("number");
     });
 
@@ -108,7 +109,7 @@ describe("toolsController", () => {
         accountId: "acct-1",
         toolName: "Read",
       });
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(typeof res.data).toBe("number");
     });
   });
@@ -119,7 +120,7 @@ describe("toolsController", () => {
       const tc = createToolCall(db, { toolName: "Bash" });
 
       const res = await toolsController.updateToolCall(tc.id, { status: "running" });
-      expect(res.success).toBe(true);
+      assertOk(res);
     });
   });
 
@@ -129,11 +130,12 @@ describe("toolsController", () => {
       const tc = createToolCall(db, { toolName: "Bash", status: "queued" });
 
       const res = await toolsController.startToolCall(tc.id);
-      expect(res.success).toBe(true);
+      assertOk(res);
 
       // Verify via getToolCallsByAccount
       const calls = await toolsController.getToolCallsByAccount(tc.accountId);
-      const updated = calls.data!.find((c) => c.id === tc.id);
+      assertOk(calls);
+      const updated = calls.data.find((c) => c.id === tc.id);
       expect(updated!.status).toBe("running");
     });
   });
@@ -144,10 +146,11 @@ describe("toolsController", () => {
       const tc = createToolCall(db, { toolName: "Bash", status: "running" });
 
       const res = await toolsController.completeToolCall(tc.id, { result: "ok" }, 150);
-      expect(res.success).toBe(true);
+      assertOk(res);
 
       const calls = await toolsController.getToolCallsByAccount(tc.accountId);
-      const updated = calls.data!.find((c) => c.id === tc.id);
+      assertOk(calls);
+      const updated = calls.data.find((c) => c.id === tc.id);
       expect(updated!.status).toBe("done");
       expect(updated!.latencyMs).toBe(150);
     });
@@ -156,7 +159,7 @@ describe("toolsController", () => {
       const tc = createToolCall(db, { toolName: "Bash", status: "running" });
 
       const res = await toolsController.completeToolCall(tc.id, { result: "ok" });
-      expect(res.success).toBe(true);
+      assertOk(res);
     });
   });
 
@@ -166,10 +169,11 @@ describe("toolsController", () => {
       const tc = createToolCall(db, { toolName: "Bash", status: "running" });
 
       const res = await toolsController.failToolCall(tc.id, "Something broke");
-      expect(res.success).toBe(true);
+      assertOk(res);
 
       const calls = await toolsController.getToolCallsByAccount(tc.accountId);
-      const updated = calls.data!.find((c) => c.id === tc.id);
+      assertOk(calls);
+      const updated = calls.data.find((c) => c.id === tc.id);
       expect(updated!.status).toBe("error");
       expect(updated!.error).toBe("Something broke");
     });

@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -86,7 +87,7 @@ describe("runsController", () => {
   describe("getAllRuns", () => {
     it("returns empty array", async () => {
       const result = await runsController.getAllRuns();
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -95,7 +96,7 @@ describe("runsController", () => {
       createRun(db, { id: "r2" });
 
       const result = await runsController.getAllRuns();
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
 
@@ -105,7 +106,7 @@ describe("runsController", () => {
       createRun(db, { id: "r3" });
 
       const result = await runsController.getAllRuns(2);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
   });
@@ -114,13 +115,13 @@ describe("runsController", () => {
     it("returns run", async () => {
       createRun(db, { id: "r1" });
       const result = await runsController.getRunById("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.id).toBe("r1");
     });
 
     it("returns error when not found", async () => {
       const result = await runsController.getRunById("nope");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -128,7 +129,7 @@ describe("runsController", () => {
     it("returns runs for account", async () => {
       createRun(db, { id: "r1" });
       const result = await runsController.getRunsByAccount("default");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
     });
   });
@@ -139,7 +140,7 @@ describe("runsController", () => {
       createRun(db, { id: "r1", workspaceId: "ws1" });
 
       const result = await runsController.getRunsByWorkspace("ws1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
     });
   });
@@ -150,7 +151,7 @@ describe("runsController", () => {
       createRun(db, { id: "r2", status: "succeeded" });
 
       const result = await runsController.getRunsByStatus("default", "running");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
     });
   });
@@ -162,7 +163,7 @@ describe("runsController", () => {
         accountId: "default",
         providerId: "copilot_cli",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe("new-run");
     });
   });
@@ -172,7 +173,7 @@ describe("runsController", () => {
       createRun(db, { id: "r1", status: "queued" });
 
       const result = await runsController.updateRun("r1", { status: "running" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.status).toBe("running");
     });
   });
@@ -181,7 +182,7 @@ describe("runsController", () => {
     it("sets status to running", async () => {
       createRun(db, { id: "r1" });
       const result = await runsController.startRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.status).toBe("running");
     });
   });
@@ -190,7 +191,7 @@ describe("runsController", () => {
     it("sets status to succeeded", async () => {
       createRun(db, { id: "r1" });
       const result = await runsController.completeRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.status).toBe("succeeded");
     });
   });
@@ -199,7 +200,7 @@ describe("runsController", () => {
     it("sets status to failed", async () => {
       createRun(db, { id: "r1" });
       const result = await runsController.failRun("r1", "oops");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.status).toBe("failed");
     });
   });
@@ -208,7 +209,7 @@ describe("runsController", () => {
     it("sets status to canceled", async () => {
       createRun(db, { id: "r1" });
       const result = await runsController.cancelRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.status).toBe("canceled");
     });
   });
@@ -217,7 +218,7 @@ describe("runsController", () => {
     it("deletes a run", async () => {
       createRun(db, { id: "r1" });
       const result = await runsController.deleteRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
   });
 
@@ -225,7 +226,7 @@ describe("runsController", () => {
     it("archives a run", async () => {
       createRun(db, { id: "r1" });
       const result = await runsController.archiveRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.isArchived).toBe(true);
     });
   });
@@ -239,7 +240,7 @@ describe("runsController", () => {
       createRunContext(db, { runId: "r1", kind: "file", content: "test.ts" });
 
       const result = await runsController.getContextByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
     });
   });
@@ -248,7 +249,7 @@ describe("runsController", () => {
     it("adds context", async () => {
       createRun(db, { id: "r1" });
       const result = await runsController.addContext({ runId: "r1", kind: "file", content: "f.ts" });
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
   });
 
@@ -257,7 +258,7 @@ describe("runsController", () => {
       createRun(db, { id: "r1" });
       const ctx = createRunContext(db, { runId: "r1", kind: "file", content: "f.ts" });
       const result = await runsController.removeContext(ctx.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
   });
 
@@ -267,7 +268,7 @@ describe("runsController", () => {
       createRunArtifact(db, { runId: "r1", kind: "file", content: "out" });
 
       const result = await runsController.getArtifactsByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
     });
   });
@@ -276,7 +277,7 @@ describe("runsController", () => {
     it("adds artifact", async () => {
       createRun(db, { id: "r1" });
       const result = await runsController.addArtifact({ runId: "r1", kind: "file", content: "x" });
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
   });
 
@@ -285,7 +286,7 @@ describe("runsController", () => {
       createRun(db, { id: "r1" });
       const art = createRunArtifact(db, { runId: "r1", kind: "file", content: "x" });
       const result = await runsController.removeArtifact(art.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
   });
 
@@ -295,7 +296,7 @@ describe("runsController", () => {
       createToolCall(db, { runId: "r1", toolName: "read" });
 
       const result = await runsController.getToolCallsByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
     });
   });
@@ -310,7 +311,7 @@ describe("runsController", () => {
       createRunArtifact(db, { runId: "r1", kind: "log", content: "l" });
 
       const result = await runsController.getRunDetails("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.run.id).toBe("r1");
       expect(result.data!.context).toHaveLength(1);
       expect(result.data!.artifacts).toHaveLength(1);
@@ -318,7 +319,7 @@ describe("runsController", () => {
 
     it("returns error when not found", async () => {
       const result = await runsController.getRunDetails("nope");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -329,7 +330,7 @@ describe("runsController", () => {
       createRunTurn(db, { runId: "r1", turnIndex: 1 });
 
       const result = await runsController.getTurnsByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
   });

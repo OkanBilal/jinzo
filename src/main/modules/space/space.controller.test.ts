@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "./space.dto";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount, createSpace } from "../../../test/factories";
@@ -27,7 +28,7 @@ describe("spaceController", () => {
   describe("getAll", () => {
     it("returns empty array when no spaces exist", async () => {
       const result = await spaceController.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toEqual([]);
       }
@@ -38,7 +39,7 @@ describe("spaceController", () => {
       createSpace(db, { name: "Space B" });
 
       const result = await spaceController.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toHaveLength(2);
       }
@@ -50,7 +51,7 @@ describe("spaceController", () => {
       const space = createSpace(db, { name: "My Space" });
 
       const result = await spaceController.getById(space.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.id).toBe(space.id);
         expect(result.data.name).toBe("My Space");
@@ -59,7 +60,7 @@ describe("spaceController", () => {
 
     it("returns error for non-existent space", async () => {
       const result = await spaceController.getById("non-existent-id");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -69,7 +70,7 @@ describe("spaceController", () => {
         name: "New Space",
         slug: "new-space",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.name).toBe("New Space");
         expect(result.data.slug).toBe("new-space");
@@ -78,12 +79,12 @@ describe("spaceController", () => {
 
     it("returns error for invalid payload", async () => {
       const result = await spaceController.create(null);
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
 
     it("returns error for missing name", async () => {
       const result = await spaceController.create({ slug: "no-name" });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -94,7 +95,7 @@ describe("spaceController", () => {
       const result = await spaceController.update(space.id, {
         name: "Updated Name",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.name).toBe("Updated Name");
       }
@@ -103,7 +104,7 @@ describe("spaceController", () => {
     it("returns error for invalid payload", async () => {
       const space = createSpace(db, {});
       const result = await spaceController.update(space.id, null);
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -112,12 +113,12 @@ describe("spaceController", () => {
       const space = createSpace(db, { name: "To Delete" });
 
       const result = await spaceController.delete(space.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("returns error for non-existent space", async () => {
       const result = await spaceController.delete("non-existent-id");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -126,11 +127,11 @@ describe("spaceController", () => {
       const space = createSpace(db, { name: "To Archive" });
 
       const result = await spaceController.archive(space.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       // Verify the space is now archived via getById
       const fetched = await spaceController.getById(space.id);
-      expect(fetched.success).toBe(true);
+      assertOk(fetched);
       if (fetched.success) {
         expect(fetched.data.isArchived).toBe(true);
       }
@@ -138,7 +139,7 @@ describe("spaceController", () => {
 
     it("returns error for non-existent space", async () => {
       const result = await spaceController.archive("non-existent-id");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 });

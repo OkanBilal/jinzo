@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount, createSpace } from "../../../test/factories";
@@ -55,7 +56,7 @@ describe("appSettingsService", () => {
   describe("getSettings", () => {
     it("returns the default row", async () => {
       const result = await appSettingsService.getSettings();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) expect(result.data.id).toBe("default");
     });
 
@@ -66,7 +67,7 @@ describe("appSettingsService", () => {
       };
       try {
         const result = await appSettingsService.getSettings();
-        expect(result.success).toBe(false);
+        assertFail(result);
         if (!result.success) expect(result.error).toBe("db connection lost");
       } finally {
         appSettingsRepo.findById = original;
@@ -80,7 +81,7 @@ describe("appSettingsService", () => {
       };
       try {
         const result = await appSettingsService.getSettings();
-        expect(result.success).toBe(false);
+        assertFail(result);
         if (!result.success) expect(result.error).toBe("Unknown error");
       } finally {
         appSettingsRepo.findById = original;
@@ -93,7 +94,7 @@ describe("appSettingsService", () => {
       const result = await appSettingsService.updateSettings({
         enableWorktrees: false,
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) expect(result.data.enableWorktrees).toBe(false);
     });
 
@@ -103,7 +104,7 @@ describe("appSettingsService", () => {
         notifyOnRunComplete: false,
         commitInstructions: "Use conventional commits",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.showToolCalls).toBe(false);
         expect(result.data.notifyOnRunComplete).toBe(false);
@@ -116,7 +117,7 @@ describe("appSettingsService", () => {
       const result = await appSettingsService.updateSettings({
         activeSpaceId: space.id,
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) expect(result.data.activeSpaceId).toBe(space.id);
     });
 
@@ -124,7 +125,7 @@ describe("appSettingsService", () => {
       const result = await appSettingsService.updateSettings({
         activeSpaceId: null,
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) expect(result.data.activeSpaceId).toBeNull();
     });
 
@@ -133,7 +134,7 @@ describe("appSettingsService", () => {
         enableWorktrees: false,
         somethingMadeUp: "ignored",
       } as unknown);
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.enableWorktrees).toBe(false);
         expect((result.data as unknown as Record<string, unknown>).somethingMadeUp).toBeUndefined();
@@ -149,7 +150,7 @@ describe("appSettingsService", () => {
         updatedAt: 0,
         enableWorktrees: false,
       } as unknown);
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.id).toBe("default");
         expect(result.data.accountId).toBe("default");
@@ -161,7 +162,7 @@ describe("appSettingsService", () => {
     it("rejects non-object patches", async () => {
       for (const bad of [null, undefined, "string", 42, true]) {
         const result = await appSettingsService.updateSettings(bad);
-        expect(result.success).toBe(false);
+        assertFail(result);
         if (!result.success) expect(result.error).toBe("patch must be an object");
       }
     });
@@ -173,7 +174,7 @@ describe("appSettingsService", () => {
         const result = await appSettingsService.updateSettings({
           enableWorktrees: true,
         });
-        expect(result.success).toBe(false);
+        assertFail(result);
         if (!result.success) expect(result.error).toBe("Failed to update settings");
       } finally {
         appSettingsRepo.update = original;
@@ -189,7 +190,7 @@ describe("appSettingsService", () => {
         const result = await appSettingsService.updateSettings({
           enableWorktrees: true,
         });
-        expect(result.success).toBe(false);
+        assertFail(result);
         if (!result.success) expect(result.error).toBe("update failed");
       } finally {
         appSettingsRepo.update = original;
@@ -205,7 +206,7 @@ describe("appSettingsService", () => {
         const result = await appSettingsService.updateSettings({
           enableWorktrees: true,
         });
-        expect(result.success).toBe(false);
+        assertFail(result);
         if (!result.success) expect(result.error).toBe("Unknown error");
       } finally {
         appSettingsRepo.update = original;

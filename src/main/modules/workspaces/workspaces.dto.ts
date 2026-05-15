@@ -107,11 +107,4 @@ export interface WorkspaceListResponse {
   total: number;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Service Response
-// ─────────────────────────────────────────────────────────────
-export interface ServiceResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";

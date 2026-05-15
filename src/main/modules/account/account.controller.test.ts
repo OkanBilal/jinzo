@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount } from "../../../test/factories";
@@ -26,7 +27,7 @@ describe("accountController", () => {
   describe("get", () => {
     it("returns the default account", async () => {
       const result = await accountController.get();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.id).toBe("default");
       }
@@ -36,7 +37,7 @@ describe("accountController", () => {
       createAccount(db, { id: "default", displayName: "Okan" });
 
       const result = await accountController.get();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.displayName).toBe("Okan");
       }
@@ -50,7 +51,7 @@ describe("accountController", () => {
         bio: "Developer",
       });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.displayName).toBe("New Name");
         expect(result.data.bio).toBe("Developer");
@@ -59,7 +60,7 @@ describe("accountController", () => {
 
     it("returns errors for invalid payload", async () => {
       const result = await accountController.update(null);
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 });

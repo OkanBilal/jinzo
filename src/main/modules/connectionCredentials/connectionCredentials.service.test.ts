@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createConnection, createConnectionState } from "../../../test/factories";
@@ -32,7 +33,7 @@ describe("connectionCredentialsService", () => {
         connectionId: "c1",
         token: "abc",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) expect(result.error).toBe("Provider and connectionId are required");
     });
 
@@ -42,7 +43,7 @@ describe("connectionCredentialsService", () => {
         connectionId: "",
         token: "abc",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) expect(result.error).toBe("Provider and connectionId are required");
     });
 
@@ -54,7 +55,7 @@ describe("connectionCredentialsService", () => {
         connectionId: "c1",
         token: "abc",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) expect(result.error).toContain("Unsupported provider");
     });
 
@@ -66,7 +67,7 @@ describe("connectionCredentialsService", () => {
         connectionId: "c1",
         // token is missing
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) expect(result.error).toContain("token is required");
     });
 
@@ -76,7 +77,7 @@ describe("connectionCredentialsService", () => {
         connectionId: "nonexistent",
         token: "ghp_abc",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) expect(result.error).toBe("Connection not found");
     });
 
@@ -89,7 +90,7 @@ describe("connectionCredentialsService", () => {
         connectionId: "c1",
         token: "ghp_test123",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) expect(result.data.message).toContain("saved successfully");
 
       // Verify token was inserted
@@ -107,7 +108,7 @@ describe("connectionCredentialsService", () => {
         connectionId: "c2",
         apiKey: "lin_api_test",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("saves jira credentials with metadata fields", async () => {
@@ -121,7 +122,7 @@ describe("connectionCredentialsService", () => {
         domain: "mycompany.atlassian.net",
         email: "user@company.com",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       // Verify metadata was updated with domain and email
       const conn = _sqlite.prepare("SELECT * FROM connections WHERE id = 'c3'").get() as any;
@@ -164,7 +165,7 @@ describe("connectionCredentialsService", () => {
         token: "trello_token",
         apiKey: "trello_key",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("returns error when trello apiKey missing", async () => {
@@ -176,7 +177,7 @@ describe("connectionCredentialsService", () => {
         token: "trello_token",
         // apiKey missing
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) expect(result.error).toContain("apiKey is required");
     });
 
@@ -190,7 +191,7 @@ describe("connectionCredentialsService", () => {
         token: "glpat_test123",
         // domain not provided — should use default "gitlab.com"
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const conn = _sqlite.prepare("SELECT * FROM connections WHERE id = 'c5'").get() as any;
       const metadata = JSON.parse(conn.metadata);
@@ -207,7 +208,7 @@ describe("connectionCredentialsService", () => {
         token: "glpat_test123",
         domain: "gitlab.mycompany.com",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const conn = _sqlite.prepare("SELECT * FROM connections WHERE id = 'c6'").get() as any;
       const metadata = JSON.parse(conn.metadata);
@@ -223,7 +224,7 @@ describe("connectionCredentialsService", () => {
         connectionId: "c7",
         accessToken: "asana_token_123",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("preserves existing metadata fields when saving credentials", async () => {
@@ -242,7 +243,7 @@ describe("connectionCredentialsService", () => {
         domain: "test.atlassian.net",
         email: "a@b.com",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const conn = _sqlite.prepare("SELECT * FROM connections WHERE id = 'c8'").get() as any;
       const metadata = JSON.parse(conn.metadata);
@@ -268,7 +269,7 @@ describe("connectionCredentialsService", () => {
         apiToken: "jira_token",
         // domain and email not provided — should fall back to existing metadata values
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const conn = _sqlite.prepare("SELECT * FROM connections WHERE id = 'c9'").get() as any;
       const metadata = JSON.parse(conn.metadata);
@@ -287,7 +288,7 @@ describe("connectionCredentialsService", () => {
         connectionId: "c1",
         token: "ghp_test",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) expect(result.error).toBe("Failed to save credentials");
 
       spy.mockRestore();
@@ -300,13 +301,13 @@ describe("connectionCredentialsService", () => {
   describe("checkCredentials", () => {
     it("returns error when provider is empty", async () => {
       const result = await connectionCredentialsService.checkCredentials("");
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) expect(result.error).toBe("Provider is required");
     });
 
     it("returns error when connection not found", async () => {
       const result = await connectionCredentialsService.checkCredentials("github");
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) expect(result.error).toBe("Connection not found");
     });
 
@@ -314,7 +315,7 @@ describe("connectionCredentialsService", () => {
       createConnection(db, { id: "c1", provider: "github" });
 
       const result = await connectionCredentialsService.checkCredentials("github");
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.hasCredentials).toBe(false);
         expect(result.data.connectionId).toBe("c1");
@@ -333,7 +334,7 @@ describe("connectionCredentialsService", () => {
       });
 
       const result = await connectionCredentialsService.checkCredentials("github");
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.hasCredentials).toBe(true);
         expect(result.data.status).toBe("active");
@@ -344,7 +345,7 @@ describe("connectionCredentialsService", () => {
       const spy = vi.spyOn(connectionCredentialsRepo, "findConnectionByProvider").mockRejectedValueOnce(new Error("DB exploded"));
 
       const result = await connectionCredentialsService.checkCredentials("github");
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) expect(result.error).toBe("Failed to check credentials");
 
       spy.mockRestore();

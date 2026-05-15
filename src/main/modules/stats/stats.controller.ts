@@ -1,11 +1,6 @@
 import { statsService } from "./stats.service";
 import type { DashboardData, ProviderFilter } from "./stats.dto";
-
-interface ServiceResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+import type { ServiceResponse } from "../../../shared/ipc-kit/service-response";
 
 export const statsController = {
   async getDashboard(filter?: ProviderFilter): Promise<ServiceResponse<DashboardData>> {

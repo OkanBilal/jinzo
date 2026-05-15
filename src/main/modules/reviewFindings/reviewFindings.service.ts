@@ -133,7 +133,7 @@ export const reviewFindingsService = {
   async delete(id: string): Promise<ServiceResponse<void>> {
     try {
       await reviewFindingsRepo.remove(id);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(
         `[ReviewFindingsService] Failed to delete finding ${id}:`,

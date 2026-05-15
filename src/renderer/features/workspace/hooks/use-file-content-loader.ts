@@ -49,10 +49,10 @@ export function useFileContentLoader(
 
         if (cancelled) return;
 
-        if (result.success && result.data) {
+        if (result.success) {
           dispatch(setSelectedFileContent(result.data));
         } else {
-          dispatch(setFileContentError(result.error || "Failed to load file"));
+          dispatch(setFileContentError(result.error));
         }
       } catch (err) {
         if (cancelled) return;

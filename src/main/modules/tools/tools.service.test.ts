@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -37,13 +38,13 @@ describe("toolsService", () => {
       createToolCall(db, { runId: run.id, toolName: "Bash" });
 
       const result = await toolsService.getToolCallsByRun("run-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toHaveLength(1);
     });
 
     it("returns empty for run with no tool calls", async () => {
       const result = await toolsService.getToolCallsByRun("run-empty");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toEqual([]);
     });
   });
@@ -54,7 +55,7 @@ describe("toolsService", () => {
       createToolCall(db, { accountId: "default", runId: run.id, toolName: "Read" });
 
       const result = await toolsService.getToolCallsByAccount("default");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toHaveLength(1);
     });
   });
@@ -65,7 +66,7 @@ describe("toolsService", () => {
         accountId: "default",
         toolName: "Bash",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(typeof result.data!).toBe("number");
       expect(result.data!).toBeGreaterThan(0);
     });
@@ -79,7 +80,7 @@ describe("toolsService", () => {
       const result = await toolsService.updateToolCall(tc.id, {
         status: "running",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
   });
 
@@ -89,7 +90,7 @@ describe("toolsService", () => {
       const tc = createToolCall(db, { runId: run.id, toolName: "Bash" });
 
       const result = await toolsService.startToolCall(tc.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const calls = await toolsRepo.findToolCallsByRun("run-1");
       expect(calls[0].status).toBe("running");
@@ -107,7 +108,7 @@ describe("toolsService", () => {
         { stdout: "hello" },
         120,
       );
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const calls = await toolsRepo.findToolCallsByRun("run-1");
       expect(calls[0].status).toBe("done");
@@ -123,7 +124,7 @@ describe("toolsService", () => {
       const tc = createToolCall(db, { runId: run.id, toolName: "Bash" });
 
       const result = await toolsService.failToolCall(tc.id, "Command failed");
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const calls = await toolsRepo.findToolCallsByRun("run-1");
       expect(calls[0].status).toBe("error");
@@ -139,28 +140,28 @@ describe("toolsService", () => {
     it("getToolCallsByRun returns error on failure", async () => {
       vi.spyOn(toolsRepo, "findToolCallsByRun").mockRejectedValueOnce(new Error("db error"));
       const result = await toolsService.getToolCallsByRun("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get tool calls");
     });
 
     it("getToolCallsByAccount returns error on failure", async () => {
       vi.spyOn(toolsRepo, "findToolCallsByAccount").mockRejectedValueOnce(new Error("db error"));
       const result = await toolsService.getToolCallsByAccount("a1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get tool calls");
     });
 
     it("createToolCall returns error on failure", async () => {
       vi.spyOn(toolsRepo, "insertToolCall").mockRejectedValueOnce(new Error("db error"));
       const result = await toolsService.createToolCall({ accountId: "default", toolName: "X" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to create tool call");
     });
 
     it("updateToolCall returns error on failure", async () => {
       vi.spyOn(toolsRepo, "updateToolCall").mockRejectedValueOnce(new Error("db error"));
       const result = await toolsService.updateToolCall(999, { status: "running" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to update tool call");
     });
   });

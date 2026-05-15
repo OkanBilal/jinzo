@@ -1,3 +1,4 @@
+import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 
 export interface AppSettings {
@@ -37,8 +38,7 @@ export const appSettingsApi = baseApi.injectEndpoints({
       query: () => ({
         handler: "appSettings:get",
       }),
-      transformResponse: (response: { success: boolean; data: AppSettings }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<AppSettings>) => unwrap(response),
       providesTags: ["AppSettings"],
     }),
 
@@ -47,8 +47,7 @@ export const appSettingsApi = baseApi.injectEndpoints({
         handler: "appSettings:update",
         args: [patch],
       }),
-      transformResponse: (response: { success: boolean; data: AppSettings }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<AppSettings>) => unwrap(response),
       invalidatesTags: ["AppSettings"],
     }),
   }),

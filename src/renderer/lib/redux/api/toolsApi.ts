@@ -1,3 +1,4 @@
+import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 
 export type ToolCallStatus = "queued" | "running" | "done" | "error" | "canceled";
@@ -47,8 +48,7 @@ export const toolsApi = baseApi.injectEndpoints({
         handler: "toolCalls:getByRun",
         args: [runId],
       }),
-      transformResponse: (response: { success: boolean; data: ToolCall[] }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<ToolCall[]>) => unwrap(response),
       providesTags: (_result, _error, runId) => [
         { type: "ToolCalls", id: runId },
       ],
@@ -62,8 +62,7 @@ export const toolsApi = baseApi.injectEndpoints({
         handler: "toolCalls:getByAccount",
         args: [accountId, limit],
       }),
-      transformResponse: (response: { success: boolean; data: ToolCall[] }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<ToolCall[]>) => unwrap(response),
       providesTags: ["ToolCalls"],
     }),
 
@@ -72,8 +71,7 @@ export const toolsApi = baseApi.injectEndpoints({
         handler: "toolCalls:create",
         args: [payload],
       }),
-      transformResponse: (response: { success: boolean; data: number }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<number>) => unwrap(response),
       invalidatesTags: ["ToolCalls"],
     }),
 

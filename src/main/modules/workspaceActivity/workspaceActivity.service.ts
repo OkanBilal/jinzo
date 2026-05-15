@@ -61,7 +61,7 @@ export const workspaceActivityService = {
   async delete(id: string): Promise<ServiceResponse<void>> {
     try {
       await workspaceActivityRepo.remove(id);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(
         `[WorkspaceActivityService] Failed to delete activity ${id}:`,

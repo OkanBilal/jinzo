@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -106,7 +107,7 @@ describe("runsService", () => {
   describe("getAllRuns", () => {
     it("returns empty array when no runs", async () => {
       const result = await runsService.getAllRuns();
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -115,7 +116,7 @@ describe("runsService", () => {
       createRun(db, { id: "r2" });
 
       const result = await runsService.getAllRuns();
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
 
@@ -125,14 +126,14 @@ describe("runsService", () => {
       createRun(db, { id: "r3" });
 
       const result = await runsService.getAllRuns(2);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
 
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "findAllRuns").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.getAllRuns();
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get runs");
     });
   });
@@ -142,20 +143,20 @@ describe("runsService", () => {
       createRun(db, { id: "r1" });
 
       const result = await runsService.getRunById("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.id).toBe("r1");
     });
 
     it("returns error when not found", async () => {
       const result = await runsService.getRunById("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Run not found");
     });
 
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "findRunById").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.getRunById("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get run");
     });
   });
@@ -165,13 +166,13 @@ describe("runsService", () => {
       createRun(db, { id: "r1", accountId: "default" });
 
       const result = await runsService.getRunsByAccount("default");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
     });
 
     it("returns empty for unknown account", async () => {
       const result = await runsService.getRunsByAccount("unknown");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -181,14 +182,14 @@ describe("runsService", () => {
       createRun(db, { id: "r3", accountId: "default" });
 
       const result = await runsService.getRunsByAccount("default", 2);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
 
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "findRunsByAccount").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.getRunsByAccount("default");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get runs");
     });
   });
@@ -199,20 +200,20 @@ describe("runsService", () => {
       createRun(db, { id: "r1", workspaceId: ws.id });
 
       const result = await runsService.getRunsByWorkspace("ws1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
     });
 
     it("returns empty for unknown workspace", async () => {
       const result = await runsService.getRunsByWorkspace("unknown-ws");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "findRunsByWorkspace").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.getRunsByWorkspace("ws1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get runs");
     });
   });
@@ -223,7 +224,7 @@ describe("runsService", () => {
       createRun(db, { id: "r2", status: "succeeded" });
 
       const result = await runsService.getRunsByStatus("default", "running");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
       expect(result.data![0].id).toBe("r1");
     });
@@ -232,14 +233,14 @@ describe("runsService", () => {
       createRun(db, { id: "r1", status: "running" });
 
       const result = await runsService.getRunsByStatus("default", "failed");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "findRunsByStatus").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.getRunsByStatus("default", "running");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get runs");
     });
   });
@@ -251,7 +252,7 @@ describe("runsService", () => {
         accountId: "default",
         providerId: "copilot_cli",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe("new-run-1");
     });
 
@@ -268,7 +269,7 @@ describe("runsService", () => {
         status: "running",
         systemPrompt: "You are helpful",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe("new-run-2");
     });
 
@@ -279,7 +280,7 @@ describe("runsService", () => {
         accountId: "default",
         providerId: "copilot_cli",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to create run");
     });
   });
@@ -289,13 +290,13 @@ describe("runsService", () => {
       createRun(db, { id: "r1", status: "queued" });
 
       const result = await runsService.updateRun("r1", { status: "running" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.status).toBe("running");
     });
 
     it("returns error for nonexistent run", async () => {
       const result = await runsService.updateRun("nonexistent", { status: "running" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Run not found");
     });
 
@@ -307,7 +308,7 @@ describe("runsService", () => {
         title: "Updated title",
         model: "claude-3",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.status).toBe("running");
       expect(result.data!.title).toBe("Updated title");
       expect(result.data!.model).toBe("claude-3");
@@ -316,7 +317,7 @@ describe("runsService", () => {
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "updateRun").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.updateRun("r1", { status: "running" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to update run");
     });
   });
@@ -326,7 +327,7 @@ describe("runsService", () => {
       createRun(db, { id: "r1", status: "queued" });
 
       const result = await runsService.startRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.status).toBe("running");
     });
 
@@ -334,13 +335,13 @@ describe("runsService", () => {
       createRun(db, { id: "r1", status: "queued" });
 
       const result = await runsService.startRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.startedAt).toBeTruthy();
     });
 
     it("returns error for nonexistent run", async () => {
       const result = await runsService.startRun("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Run not found");
     });
   });
@@ -350,7 +351,7 @@ describe("runsService", () => {
       createRun(db, { id: "r1", status: "running" });
 
       const result = await runsService.completeRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.status).toBe("succeeded");
     });
 
@@ -358,13 +359,13 @@ describe("runsService", () => {
       createRun(db, { id: "r1", status: "running" });
 
       const result = await runsService.completeRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.endedAt).toBeTruthy();
     });
 
     it("returns error for nonexistent run", async () => {
       const result = await runsService.completeRun("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -373,7 +374,7 @@ describe("runsService", () => {
       createRun(db, { id: "r1", status: "running" });
 
       const result = await runsService.failRun("r1", "something broke");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.status).toBe("failed");
       expect(result.data!.lastError).toBe("something broke");
     });
@@ -382,13 +383,13 @@ describe("runsService", () => {
       createRun(db, { id: "r1", status: "running" });
 
       const result = await runsService.failRun("r1", "err");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.endedAt).toBeTruthy();
     });
 
     it("returns error for nonexistent run", async () => {
       const result = await runsService.failRun("nonexistent", "err");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -397,7 +398,7 @@ describe("runsService", () => {
       createRun(db, { id: "r1", status: "running" });
 
       const result = await runsService.cancelRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.status).toBe("canceled");
     });
 
@@ -405,13 +406,13 @@ describe("runsService", () => {
       createRun(db, { id: "r1", status: "running" });
 
       const result = await runsService.cancelRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.endedAt).toBeTruthy();
     });
 
     it("returns error for nonexistent run", async () => {
       const result = await runsService.cancelRun("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -420,21 +421,21 @@ describe("runsService", () => {
       createRun(db, { id: "r1" });
 
       const result = await runsService.deleteRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const check = await runsService.getRunById("r1");
-      expect(check.success).toBe(false);
+      assertFail(check);
     });
 
     it("succeeds even when run does not exist", async () => {
       const result = await runsService.deleteRun("nonexistent");
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "deleteRun").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.deleteRun("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to delete run");
     });
   });
@@ -444,20 +445,20 @@ describe("runsService", () => {
       createRun(db, { id: "r1" });
 
       const result = await runsService.archiveRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.isArchived).toBe(true);
     });
 
     it("returns error for nonexistent run", async () => {
       const result = await runsService.archiveRun("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Run not found");
     });
 
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "archiveRun").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.archiveRun("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to archive run");
     });
   });
@@ -470,7 +471,7 @@ describe("runsService", () => {
       createRun(db, { id: "r1" });
 
       const result = await runsService.getContextByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -479,7 +480,7 @@ describe("runsService", () => {
       createRunContext(db, { runId: "r1", kind: "file", content: "test.ts" });
 
       const result = await runsService.getContextByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
     });
 
@@ -489,14 +490,14 @@ describe("runsService", () => {
       createRunContext(db, { runId: "r1", kind: "note", content: "some note" });
 
       const result = await runsService.getContextByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
 
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "findContextByRun").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.getContextByRun("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get context");
     });
   });
@@ -510,7 +511,7 @@ describe("runsService", () => {
         kind: "file",
         content: "src/test.ts",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(typeof result.data).toBe("number");
     });
 
@@ -523,7 +524,7 @@ describe("runsService", () => {
         content: "a note",
         metadata: { source: "manual" },
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(typeof result.data).toBe("number");
     });
 
@@ -534,7 +535,7 @@ describe("runsService", () => {
         kind: "file",
         content: "test.ts",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to add context");
     });
   });
@@ -545,21 +546,22 @@ describe("runsService", () => {
       const ctx = createRunContext(db, { runId: "r1", kind: "file", content: "test.ts" });
 
       const result = await runsService.removeContext(ctx.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const check = await runsService.getContextByRun("r1");
+      assertOk(check);
       expect(check.data).toEqual([]);
     });
 
     it("succeeds when context does not exist", async () => {
       const result = await runsService.removeContext(99999);
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "deleteContext").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.removeContext(1);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to remove context");
     });
   });
@@ -572,7 +574,7 @@ describe("runsService", () => {
       createRun(db, { id: "r1" });
 
       const result = await runsService.getArtifactsByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -581,7 +583,7 @@ describe("runsService", () => {
       createRunArtifact(db, { runId: "r1", kind: "file", content: "hello" });
 
       const result = await runsService.getArtifactsByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
     });
 
@@ -591,14 +593,14 @@ describe("runsService", () => {
       createRunArtifact(db, { runId: "r1", kind: "log", content: "b" });
 
       const result = await runsService.getArtifactsByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
 
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "findArtifactsByRun").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.getArtifactsByRun("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get artifacts");
     });
   });
@@ -612,7 +614,7 @@ describe("runsService", () => {
         kind: "file",
         content: "console.log('hi')",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(typeof result.data).toBe("number");
     });
 
@@ -625,7 +627,7 @@ describe("runsService", () => {
         path: "/src/index.ts",
         content: "export {}",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(typeof result.data).toBe("number");
     });
 
@@ -636,7 +638,7 @@ describe("runsService", () => {
         kind: "file",
         content: "test",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to add artifact");
     });
   });
@@ -647,21 +649,22 @@ describe("runsService", () => {
       const art = createRunArtifact(db, { runId: "r1", kind: "file", content: "hello" });
 
       const result = await runsService.removeArtifact(art.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const check = await runsService.getArtifactsByRun("r1");
+      assertOk(check);
       expect(check.data).toEqual([]);
     });
 
     it("succeeds when artifact does not exist", async () => {
       const result = await runsService.removeArtifact(99999);
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "deleteArtifact").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.removeArtifact(1);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to remove artifact");
     });
   });
@@ -674,7 +677,7 @@ describe("runsService", () => {
       createRun(db, { id: "r1" });
 
       const result = await runsService.getToolCallsByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -683,7 +686,7 @@ describe("runsService", () => {
       createToolCall(db, { runId: "r1", toolName: "read_file" });
 
       const result = await runsService.getToolCallsByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
     });
 
@@ -693,14 +696,14 @@ describe("runsService", () => {
       createToolCall(db, { runId: "r1", toolName: "write_file" });
 
       const result = await runsService.getToolCallsByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
 
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "findToolCallsByRun").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.getToolCallsByRun("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get tool calls");
     });
   });
@@ -714,7 +717,7 @@ describe("runsService", () => {
         runId: "r1",
         toolName: "write_file",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(typeof result.data).toBe("number");
     });
 
@@ -727,7 +730,7 @@ describe("runsService", () => {
         toolName: "Bash",
         input: { command: "ls" },
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(typeof result.data).toBe("number");
     });
 
@@ -738,7 +741,7 @@ describe("runsService", () => {
         runId: "r1",
         toolName: "write_file",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to add tool call");
     });
   });
@@ -749,7 +752,7 @@ describe("runsService", () => {
       const tc = createToolCall(db, { runId: "r1", toolName: "read_file" });
 
       const result = await runsService.updateToolCall(tc.id, { status: "done" });
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("updates tool call with output and error", async () => {
@@ -761,13 +764,13 @@ describe("runsService", () => {
         error: "file not found",
         output: { stderr: "No such file" },
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "updateToolCall").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.updateToolCall(1, { status: "done" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to update tool call");
     });
   });
@@ -778,7 +781,7 @@ describe("runsService", () => {
   describe("getRunDetails", () => {
     it("returns error for nonexistent run", async () => {
       const result = await runsService.getRunDetails("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Run not found");
     });
 
@@ -790,7 +793,7 @@ describe("runsService", () => {
       createRunTurn(db, { runId: "r1", turnIndex: 0 });
 
       const result = await runsService.getRunDetails("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.run.id).toBe("r1");
       expect(result.data!.context).toHaveLength(1);
       expect(result.data!.artifacts).toHaveLength(1);
@@ -802,7 +805,7 @@ describe("runsService", () => {
       createRun(db, { id: "r1" });
 
       const result = await runsService.getRunDetails("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.run.id).toBe("r1");
       expect(result.data!.context).toEqual([]);
       expect(result.data!.artifacts).toEqual([]);
@@ -813,7 +816,7 @@ describe("runsService", () => {
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "findRunById").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.getRunDetails("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get run details");
     });
   });
@@ -826,7 +829,7 @@ describe("runsService", () => {
       createRun(db, { id: "r1" });
 
       const result = await runsService.getTurnsByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -836,7 +839,7 @@ describe("runsService", () => {
       createRunTurn(db, { runId: "r1", turnIndex: 1 });
 
       const result = await runsService.getTurnsByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
 
@@ -847,7 +850,7 @@ describe("runsService", () => {
       createRunTurn(db, { runId: "r1", turnIndex: 1 });
 
       const result = await runsService.getTurnsByRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data![0].turnIndex).toBe(0);
       expect(result.data![1].turnIndex).toBe(1);
       expect(result.data![2].turnIndex).toBe(2);
@@ -856,7 +859,7 @@ describe("runsService", () => {
     it("returns error when repo throws", async () => {
       vi.spyOn(runsRepo, "findTurnsByRun").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.getTurnsByRun("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get run turns");
     });
   });
@@ -896,7 +899,7 @@ describe("runsService", () => {
         ...basePayload(),
         providerId: "nonexistent",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toContain("not found");
     });
 
@@ -907,7 +910,7 @@ describe("runsService", () => {
         ...basePayload(),
         providerId: "disabled_provider",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toContain("not enabled");
     });
 
@@ -918,7 +921,7 @@ describe("runsService", () => {
         ...basePayload(),
         providerId: "non_runtime",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toContain("not an agent runtime");
     });
 
@@ -929,7 +932,7 @@ describe("runsService", () => {
         ...basePayload(),
         workspaceId: "nonexistent-ws",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toContain("not found");
     });
 
@@ -938,7 +941,7 @@ describe("runsService", () => {
       setupMockAdapter();
 
       const result = await runsService.executeRun(basePayload());
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.runId).toBeTruthy();
       await flushBackground();
     });
@@ -966,7 +969,7 @@ describe("runsService", () => {
           { kind: "note", content: "Focus on perf" },
         ],
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       await flushBackground();
       const ctx = await runsRepo.findContextByRun(result.data!.runId);
@@ -982,7 +985,7 @@ describe("runsService", () => {
       });
 
       const result = await runsService.executeRun(basePayload());
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const run = await runsRepo.findRunById(result.data!.runId);
       expect(run).toBeTruthy();
@@ -998,7 +1001,7 @@ describe("runsService", () => {
       setupMockAdapter();
 
       const result = await runsService.executeRun(basePayload());
-      expect(result.success).toBe(true);
+      assertOk(result);
       await flushBackground();
 
       const run = await runsRepo.findRunById(result.data!.runId);
@@ -1015,7 +1018,7 @@ describe("runsService", () => {
       });
 
       const result = await runsService.executeRun(basePayload());
-      expect(result.success).toBe(true);
+      assertOk(result);
       await flushBackground();
 
       const run = await runsRepo.findRunById(result.data!.runId);
@@ -1032,7 +1035,7 @@ describe("runsService", () => {
       });
 
       const result = await runsService.executeRun(basePayload());
-      expect(result.success).toBe(true);
+      assertOk(result);
       await flushBackground();
 
       const run = await runsRepo.findRunById(result.data!.runId);
@@ -1047,7 +1050,7 @@ describe("runsService", () => {
       });
 
       const result = await runsService.executeRun(basePayload());
-      expect(result.success).toBe(true);
+      assertOk(result);
       await flushBackground();
 
       const run = await runsRepo.findRunById(result.data!.runId);
@@ -1070,7 +1073,7 @@ describe("runsService", () => {
       setupMockAdapter({ generateTitle: undefined });
 
       const result = await runsService.executeRun(basePayload());
-      expect(result.success).toBe(true);
+      assertOk(result);
       await flushBackground();
 
       const run = await runsRepo.findRunById(result.data!.runId);
@@ -1093,7 +1096,7 @@ describe("runsService", () => {
       vi.spyOn(runsRepo, "insertRun").mockRejectedValueOnce(new Error("insert failed"));
 
       const result = await runsService.executeRun(basePayload());
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("insert failed");
     });
   });
@@ -1112,7 +1115,7 @@ describe("runsService", () => {
   describe("abortRun", () => {
     it("returns error when run not found", async () => {
       const result = await runsService.abortRun("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Run not found");
     });
 
@@ -1120,7 +1123,7 @@ describe("runsService", () => {
       createRun(db, { id: "r1", status: "succeeded" });
 
       const result = await runsService.abortRun("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toContain("not running");
     });
 
@@ -1128,7 +1131,7 @@ describe("runsService", () => {
       createRun(db, { id: "r1", status: "queued" });
 
       const result = await runsService.abortRun("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toContain("not running");
     });
 
@@ -1136,7 +1139,7 @@ describe("runsService", () => {
       createRun(db, { id: "r1", status: "failed" });
 
       const result = await runsService.abortRun("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toContain("not running");
     });
 
@@ -1153,7 +1156,7 @@ describe("runsService", () => {
 
       const result = await runsService.abortRun("r1");
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(sessionAbort).toHaveBeenCalledOnce();
       runSessionRegistry.unregister("r1");
     });
@@ -1163,7 +1166,7 @@ describe("runsService", () => {
       // No session registered — DB says running but in-memory state is gone.
 
       const result = await runsService.abortRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const run = await runsRepo.findRunById("r1");
       expect(run!.status).toBe("canceled");
@@ -1173,7 +1176,7 @@ describe("runsService", () => {
     it("returns error on outer catch", async () => {
       vi.spyOn(runsRepo, "findRunById").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.abortRun("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to abort run");
     });
   });
@@ -1184,7 +1187,7 @@ describe("runsService", () => {
   describe("canResumeRun", () => {
     it("returns error when run not found", async () => {
       const result = await runsService.canResumeRun("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Run not found");
     });
 
@@ -1192,7 +1195,7 @@ describe("runsService", () => {
       createRun(db, { id: "r1", status: "running" });
 
       const result = await runsService.canResumeRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe(false);
     });
 
@@ -1200,7 +1203,7 @@ describe("runsService", () => {
       createRun(db, { id: "r1", status: "queued" });
 
       const result = await runsService.canResumeRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe(false);
     });
 
@@ -1213,7 +1216,7 @@ describe("runsService", () => {
       ).mockResolvedValueOnce(null);
 
       const result = await runsService.canResumeRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe(false);
     });
 
@@ -1222,7 +1225,7 @@ describe("runsService", () => {
       vi.mocked(createWorkAdapter).mockReturnValue({} as any);
 
       const result = await runsService.canResumeRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe(false);
     });
 
@@ -1233,7 +1236,7 @@ describe("runsService", () => {
       } as any);
 
       const result = await runsService.canResumeRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe(true);
     });
 
@@ -1244,14 +1247,14 @@ describe("runsService", () => {
       } as any);
 
       const result = await runsService.canResumeRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe(false);
     });
 
     it("returns error on outer catch", async () => {
       vi.spyOn(runsRepo, "findRunById").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.canResumeRun("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to check resume capability");
     });
 
@@ -1262,7 +1265,7 @@ describe("runsService", () => {
       } as any);
 
       const result = await runsService.canResumeRun("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe(true);
     });
   });
@@ -1294,7 +1297,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "keep going",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Run not found");
     });
 
@@ -1307,7 +1310,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "continue",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Run does not belong to this account");
     });
 
@@ -1323,7 +1326,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "continue",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toContain("not found");
     });
 
@@ -1336,7 +1339,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "continue",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toContain("not enabled");
     });
 
@@ -1349,7 +1352,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "continue",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Provider does not support session resumption");
     });
 
@@ -1364,7 +1367,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "continue",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toContain("cannot be resumed");
     });
 
@@ -1378,7 +1381,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "do more",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.runId).toBe("r1");
       expect(result.data!.resumed).toBe(true);
       await flushBackground();
@@ -1480,7 +1483,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "continue",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       await flushBackground();
     });
 
@@ -1494,7 +1497,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "continue",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       await flushBackground();
     });
 
@@ -1517,7 +1520,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "continue",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("update failed");
     });
   });
@@ -1549,7 +1552,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "fork this",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Source run not found");
     });
 
@@ -1562,7 +1565,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "fork",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Source run does not belong to this account");
     });
 
@@ -1578,7 +1581,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "fork",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toContain("not found");
     });
 
@@ -1591,7 +1594,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "fork",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toContain("not enabled");
     });
 
@@ -1604,7 +1607,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "fork",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Provider does not support session forking");
     });
 
@@ -1619,7 +1622,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "fork",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toContain("cannot be forked");
     });
 
@@ -1633,7 +1636,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "fork and continue",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.runId).toBeTruthy();
       expect(result.data!.sourceRunId).toBe("r1");
       await flushBackground();
@@ -1649,7 +1652,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "fork it",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const newRun = await runsRepo.findRunById(result.data!.runId);
       expect(newRun).toBeTruthy();
@@ -1686,7 +1689,8 @@ describe("runsService", () => {
       });
       await flushBackground();
 
-      const run = await runsRepo.findRunById(result.data!.runId);
+      assertOk(result);
+      const run = await runsRepo.findRunById(result.data.runId);
       expect(run!.status).toBe("succeeded");
     });
 
@@ -1704,7 +1708,8 @@ describe("runsService", () => {
       });
       await flushBackground();
 
-      const run = await runsRepo.findRunById(result.data!.runId);
+      assertOk(result);
+      const run = await runsRepo.findRunById(result.data.runId);
       expect(run!.status).toBe("failed");
       expect(run!.lastError).toBe("fork crashed");
     });
@@ -1719,7 +1724,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "fork",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       await flushBackground();
     });
 
@@ -1732,7 +1737,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "fork",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       await flushBackground();
     });
 
@@ -1746,7 +1751,7 @@ describe("runsService", () => {
         accountId: "default",
         message: "fork",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("insert failed");
     });
 
@@ -1782,7 +1787,8 @@ describe("runsService", () => {
       });
       await flushBackground();
 
-      const run = await runsRepo.findRunById(result.data!.runId);
+      assertOk(result);
+      const run = await runsRepo.findRunById(result.data.runId);
       expect(run!.status).toBe("canceled");
     });
   });
@@ -1793,7 +1799,7 @@ describe("runsService", () => {
   describe("deleteRunSession", () => {
     it("returns error when run not found", async () => {
       const result = await runsService.deleteRunSession("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Run not found");
     });
 
@@ -1805,7 +1811,7 @@ describe("runsService", () => {
       ).mockResolvedValueOnce(null);
 
       const result = await runsService.deleteRunSession("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("calls adapter.deleteSession when available", async () => {
@@ -1816,7 +1822,7 @@ describe("runsService", () => {
       vi.mocked(createWorkAdapter).mockReturnValue(mockAdapter as any);
 
       const result = await runsService.deleteRunSession("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(mockAdapter.deleteSession).toHaveBeenCalledWith("r1");
     });
 
@@ -1825,13 +1831,13 @@ describe("runsService", () => {
       vi.mocked(createWorkAdapter).mockReturnValue({} as any);
 
       const result = await runsService.deleteRunSession("r1");
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("returns error on outer catch", async () => {
       vi.spyOn(runsRepo, "findRunById").mockRejectedValueOnce(new Error("db error"));
       const result = await runsService.deleteRunSession("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to delete session");
     });
 
@@ -1842,7 +1848,7 @@ describe("runsService", () => {
       } as any);
 
       const result = await runsService.deleteRunSession("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to delete session");
     });
   });

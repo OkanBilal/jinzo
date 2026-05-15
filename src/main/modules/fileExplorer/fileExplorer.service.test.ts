@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { promises as fs } from "fs";
 import * as path from "path";
@@ -25,7 +26,7 @@ describe("fileExplorerService", () => {
   describe("readDirectory", () => {
     it("reads empty directory", async () => {
       const result = await fileExplorerService.readDirectory({ rootPath: tmpDir });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.totalFiles).toBe(0);
       expect(result.data!.totalDirectories).toBe(0);
       expect(result.data!.root.children).toEqual([]);
@@ -37,7 +38,7 @@ describe("fileExplorerService", () => {
       await fs.writeFile(path.join(tmpDir, "readme.txt"), "hello");
 
       const result = await fileExplorerService.readDirectory({ rootPath: tmpDir });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.totalFiles).toBe(2);
       expect(result.data!.totalDirectories).toBe(1);
       // Directories first, then files
@@ -51,7 +52,7 @@ describe("fileExplorerService", () => {
       await fs.writeFile(path.join(tmpDir, "a", "b", "deep.txt"), "deep");
 
       const result = await fileExplorerService.readDirectory({ rootPath: tmpDir, depth: 1 });
-      expect(result.success).toBe(true);
+      assertOk(result);
       // depth=1 means only read the root level
       const dirA = result.data!.root.children!.find((c) => c.name === "a");
       expect(dirA).toBeDefined();
@@ -63,7 +64,7 @@ describe("fileExplorerService", () => {
       await fs.writeFile(path.join(tmpDir, "visible.txt"), "hi");
 
       const result = await fileExplorerService.readDirectory({ rootPath: tmpDir });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.totalFiles).toBe(1);
       expect(result.data!.root.children![0].name).toBe("visible.txt");
     });
@@ -77,7 +78,7 @@ describe("fileExplorerService", () => {
         includeHidden: true,
         excludePatterns: [],
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.totalFiles).toBe(2);
     });
 
@@ -90,7 +91,7 @@ describe("fileExplorerService", () => {
         includeHidden: true,
         excludePatterns: ["*.log"],
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.totalFiles).toBe(1);
       expect(result.data!.root.children![0].name).toBe("app.ts");
     });
@@ -99,7 +100,7 @@ describe("fileExplorerService", () => {
       const result = await fileExplorerService.readDirectory({
         rootPath: path.join(tmpDir, "nope"),
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Directory does not exist");
     });
 
@@ -108,7 +109,7 @@ describe("fileExplorerService", () => {
       await fs.writeFile(filePath, "hi");
 
       const result = await fileExplorerService.readDirectory({ rootPath: filePath });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Path is not a directory");
     });
 
@@ -116,7 +117,8 @@ describe("fileExplorerService", () => {
       await fs.writeFile(path.join(tmpDir, "test.ts"), "const x = 1;");
 
       const result = await fileExplorerService.readDirectory({ rootPath: tmpDir });
-      const file = result.data!.root.children![0];
+      assertOk(result);
+      const file = result.data.root.children![0];
       expect(file.extension).toBe("ts");
       expect(file.size).toBeGreaterThan(0);
       expect(file.modifiedAt).toBeDefined();
@@ -133,7 +135,7 @@ describe("fileExplorerService", () => {
       await fs.writeFile(path.join(tmpDir, "top.txt"), "t");
 
       const result = await fileExplorerService.readDirectoryShallow(tmpDir);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
 
       const dir = result.data!.find((e) => e.name === "sub");
@@ -146,7 +148,7 @@ describe("fileExplorerService", () => {
       await fs.writeFile(filePath, "x");
 
       const result = await fileExplorerService.readDirectoryShallow(filePath);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Path is not a directory");
     });
 
@@ -154,7 +156,7 @@ describe("fileExplorerService", () => {
       const result = await fileExplorerService.readDirectoryShallow(
         path.join(tmpDir, "nope")
       );
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Directory does not exist");
     });
 
@@ -167,7 +169,7 @@ describe("fileExplorerService", () => {
         includeHidden: true,
         excludePatterns: [],
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const emptyDir = result.data!.find((e) => e.name === "empty-dir");
       const fullDir = result.data!.find((e) => e.name === "full-dir");
@@ -182,7 +184,7 @@ describe("fileExplorerService", () => {
   describe("getPathInfo", () => {
     it("returns info for directory", async () => {
       const result = await fileExplorerService.getPathInfo(tmpDir);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.exists).toBe(true);
       expect(result.data!.isDirectory).toBe(true);
       expect(result.data!.isFile).toBe(false);
@@ -193,7 +195,7 @@ describe("fileExplorerService", () => {
       await fs.writeFile(filePath, "hello");
 
       const result = await fileExplorerService.getPathInfo(filePath);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.exists).toBe(true);
       expect(result.data!.isFile).toBe(true);
       expect(result.data!.isDirectory).toBe(false);
@@ -203,7 +205,7 @@ describe("fileExplorerService", () => {
       const result = await fileExplorerService.getPathInfo(
         path.join(tmpDir, "nope")
       );
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.exists).toBe(false);
     });
   });
@@ -217,7 +219,7 @@ describe("fileExplorerService", () => {
       await fs.writeFile(filePath, "hello world");
 
       const result = await fileExplorerService.readFile(filePath);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe("hello world");
     });
 
@@ -225,7 +227,7 @@ describe("fileExplorerService", () => {
       const result = await fileExplorerService.readFile(
         path.join(tmpDir, "nope.txt")
       );
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("File does not exist");
     });
   });
@@ -242,7 +244,7 @@ describe("fileExplorerService", () => {
         filePath,
         workspaceRoot: tmpDir,
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.content).toBe("const x = 1;");
       expect(result.data!.isBinary).toBe(false);
       expect(result.data!.encoding).toBe("utf-8");
@@ -259,7 +261,7 @@ describe("fileExplorerService", () => {
         filePath: path.join(tmpDir, "..", path.basename(outsideDir), "secret.txt"),
         workspaceRoot: tmpDir,
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Access denied: path is outside workspace");
 
       await fs.rm(outsideDir, { recursive: true, force: true });
@@ -270,7 +272,7 @@ describe("fileExplorerService", () => {
         filePath: "/etc/passwd",
         workspaceRoot: tmpDir,
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Access denied: path is outside workspace");
     });
 
@@ -287,7 +289,7 @@ describe("fileExplorerService", () => {
         filePath: symlinkPath,
         workspaceRoot: tmpDir,
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Access denied: symlink points outside workspace");
 
       await fs.rm(outsideDir, { recursive: true, force: true });
@@ -304,7 +306,7 @@ describe("fileExplorerService", () => {
         filePath: symlinkPath,
         workspaceRoot: tmpDir,
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.content).toBe("real content");
     });
 
@@ -319,7 +321,7 @@ describe("fileExplorerService", () => {
         workspaceRoot: tmpDir,
         maxSizeBytes: 512,
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toContain("File too large");
     });
 
@@ -332,7 +334,7 @@ describe("fileExplorerService", () => {
         workspaceRoot: tmpDir,
         maxSizeBytes: 1024,
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.content).toBe("small");
     });
 
@@ -348,7 +350,7 @@ describe("fileExplorerService", () => {
         filePath,
         workspaceRoot: tmpDir,
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.isBinary).toBe(true);
       expect(result.data!.encoding).toBe("binary");
     });
@@ -362,7 +364,7 @@ describe("fileExplorerService", () => {
         filePath: dirPath,
         workspaceRoot: tmpDir,
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toContain("directory");
     });
 
@@ -372,7 +374,7 @@ describe("fileExplorerService", () => {
         filePath: path.join(tmpDir, "nope.txt"),
         workspaceRoot: tmpDir,
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("File does not exist");
     });
 
@@ -385,7 +387,7 @@ describe("fileExplorerService", () => {
         filePath,
         workspaceRoot: tmpDir,
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.content).toBe("Héllo wörld 日本語 🎉");
       expect(result.data!.isBinary).toBe(false);
     });
@@ -400,7 +402,7 @@ describe("fileExplorerService", () => {
       await fs.writeFile(path.join(tmpDir, "file1.ts"), "code");
 
       const result = await fileExplorerService.listDir({ dirPath: tmpDir, excludePatterns: [] });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
 
       // Directories first
@@ -421,7 +423,7 @@ describe("fileExplorerService", () => {
         includeHidden: true,
         excludePatterns: [],
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const emptyDir = result.data!.find((e) => e.name === "empty");
       const fullDir = result.data!.find((e) => e.name === "full");
@@ -437,7 +439,7 @@ describe("fileExplorerService", () => {
         dirPath: tmpDir,
         excludePatterns: [],
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
       expect(result.data![0].name).toBe("visible.txt");
     });
@@ -446,7 +448,7 @@ describe("fileExplorerService", () => {
       const result = await fileExplorerService.listDir({
         dirPath: path.join(tmpDir, "nope"),
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Directory does not exist");
     });
 
@@ -455,7 +457,7 @@ describe("fileExplorerService", () => {
       await fs.writeFile(filePath, "x");
 
       const result = await fileExplorerService.listDir({ dirPath: filePath });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Path is not a directory");
     });
 
@@ -466,7 +468,8 @@ describe("fileExplorerService", () => {
         dirPath: tmpDir,
         excludePatterns: [],
       });
-      const file = result.data!.find((e) => e.name === "test.js");
+      assertOk(result);
+      const file = result.data.find((e) => e.name === "test.js");
       expect(file!.size).toBeGreaterThan(0);
       expect(file!.hasChildren).toBe(false);
     });

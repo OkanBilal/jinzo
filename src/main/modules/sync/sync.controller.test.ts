@@ -1,3 +1,4 @@
+import { assertOk } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("./sync.service", () => ({
@@ -17,7 +18,7 @@ describe("syncController", () => {
   it("runEntitySync delegates to syncService.runEntitySync", async () => {
     const result = await syncController.runEntitySync("github");
     expect(syncService.runEntitySync).toHaveBeenCalledWith("github");
-    expect(result.success).toBe(true);
+    assertOk(result);
   });
 
   it("runEntitySync passes undefined provider", async () => {

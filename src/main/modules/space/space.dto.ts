@@ -38,6 +38,10 @@ export interface SpaceRecord {
   updatedAt: Date | null;
 }
 
+// NOTE: This module's ServiceResponse intentionally diverges from the
+// canonical envelope in src/shared/ipc-kit/service-response.ts because the
+// failure branch carries per-field validation errors (`errors?: Record<string,
+// string>`) used by space form mutations.
 export interface SuccessResponse<T> {
   success: true;
   data: T;
@@ -50,3 +54,14 @@ export interface ErrorResponse {
 }
 
 export type ServiceResponse<T> = SuccessResponse<T> | ErrorResponse;
+
+export function assertOk<T>(r: ServiceResponse<T>): asserts r is SuccessResponse<T> {
+  if (!r.success) {
+    const detail = r.error ?? (r.errors ? JSON.stringify(r.errors) : "unknown");
+    throw new Error(`Expected ok, got error: ${detail}`);
+  }
+}
+
+export function assertFail<T>(r: ServiceResponse<T>): asserts r is ErrorResponse {
+  if (r.success) throw new Error("Expected failure, got ok");
+}

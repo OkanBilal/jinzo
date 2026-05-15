@@ -13,11 +13,8 @@ import { getActiveGuard, getActiveGuardInfo } from "./adapters/adapter.factory";
 import { parseInstallCommand } from "./guards.utils";
 import { workspaceActivityService } from "../workspaceActivity/workspaceActivity.service";
 
-export interface ServiceResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+import type { ServiceResponse } from "../../../shared/ipc-kit/service-response";
+export type { ServiceResponse };
 
 export const guardsService = {
   /**

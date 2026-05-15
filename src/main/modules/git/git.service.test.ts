@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ─────────────────────────────────────────────────────────────
@@ -58,7 +59,7 @@ describe("GitService", () => {
       mockGitInstance.checkIsRepo.mockResolvedValue(true);
 
       const result = await gitService.isGitRepo(TEST_PATH);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe(true);
     });
 
@@ -66,7 +67,7 @@ describe("GitService", () => {
       mockGitInstance.checkIsRepo.mockResolvedValue(false);
 
       const result = await gitService.isGitRepo(TEST_PATH);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe(false);
     });
 
@@ -74,7 +75,7 @@ describe("GitService", () => {
       mockGitInstance.checkIsRepo.mockRejectedValue(new Error("Not a directory"));
 
       const result = await gitService.isGitRepo(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Not a directory");
     });
 
@@ -82,7 +83,7 @@ describe("GitService", () => {
       mockGitInstance.checkIsRepo.mockRejectedValue("string error");
 
       const result = await gitService.isGitRepo(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to check git repo");
     });
   });
@@ -94,7 +95,7 @@ describe("GitService", () => {
       mockGitInstance.revparse.mockResolvedValue("  main  \n");
 
       const result = await gitService.getCurrentBranch(TEST_PATH);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe("main");
     });
 
@@ -102,7 +103,7 @@ describe("GitService", () => {
       mockGitInstance.revparse.mockRejectedValue(new Error("detached HEAD"));
 
       const result = await gitService.getCurrentBranch(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("detached HEAD");
     });
 
@@ -110,7 +111,7 @@ describe("GitService", () => {
       mockGitInstance.revparse.mockRejectedValue(42);
 
       const result = await gitService.getCurrentBranch(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get current branch");
     });
   });
@@ -130,7 +131,7 @@ describe("GitService", () => {
       mockGitInstance.branch.mockResolvedValue(branchSummary);
 
       const result = await gitService.getBranches(TEST_PATH);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual({
         current: "main",
         all: ["main", "feature/test"],
@@ -142,7 +143,7 @@ describe("GitService", () => {
       mockGitInstance.branch.mockRejectedValue(new Error("git error"));
 
       const result = await gitService.getBranches(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("git error");
     });
 
@@ -150,7 +151,7 @@ describe("GitService", () => {
       mockGitInstance.branch.mockRejectedValue(null);
 
       const result = await gitService.getBranches(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get branches");
     });
   });
@@ -174,7 +175,7 @@ describe("GitService", () => {
       mockGitInstance.status.mockResolvedValue(mockStatus);
 
       const result = await gitService.getStatus(TEST_PATH);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual({
         isClean: false,
         current: "main",
@@ -205,7 +206,7 @@ describe("GitService", () => {
       mockGitInstance.status.mockResolvedValue(mockStatus);
 
       const result = await gitService.getStatus(TEST_PATH);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.isClean).toBe(true);
     });
 
@@ -213,7 +214,7 @@ describe("GitService", () => {
       mockGitInstance.status.mockRejectedValue(new Error("status failed"));
 
       const result = await gitService.getStatus(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("status failed");
     });
 
@@ -221,7 +222,7 @@ describe("GitService", () => {
       mockGitInstance.status.mockRejectedValue(undefined);
 
       const result = await gitService.getStatus(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get git status");
     });
   });
@@ -239,7 +240,7 @@ describe("GitService", () => {
       mockGitInstance.log.mockResolvedValue(mockLog);
 
       const result = await gitService.getLog(TEST_PATH);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
       expect(result.data![0].hash).toBe("abc123");
       expect(result.data![1].message).toBe("second");
@@ -250,7 +251,7 @@ describe("GitService", () => {
       mockGitInstance.log.mockResolvedValue({ all: [] });
 
       const result = await gitService.getLog(TEST_PATH, 5);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
       expect(mockGitInstance.log).toHaveBeenCalledWith({ maxCount: 5 });
     });
@@ -259,7 +260,7 @@ describe("GitService", () => {
       mockGitInstance.log.mockRejectedValue(new Error("log failed"));
 
       const result = await gitService.getLog(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("log failed");
     });
 
@@ -267,7 +268,7 @@ describe("GitService", () => {
       mockGitInstance.log.mockRejectedValue(false);
 
       const result = await gitService.getLog(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get git log");
     });
   });
@@ -283,7 +284,7 @@ describe("GitService", () => {
       mockGitInstance.getRemotes.mockResolvedValue(mockRemotes);
 
       const result = await gitService.getRemotes(TEST_PATH);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([
         { name: "origin", fetchUrl: "https://github.com/user/repo.git", pushUrl: "git@github.com:user/repo.git" },
         { name: "upstream", fetchUrl: "https://github.com/org/repo.git", pushUrl: undefined },
@@ -295,7 +296,7 @@ describe("GitService", () => {
       mockGitInstance.getRemotes.mockResolvedValue([]);
 
       const result = await gitService.getRemotes(TEST_PATH);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -303,7 +304,7 @@ describe("GitService", () => {
       mockGitInstance.getRemotes.mockRejectedValue(new Error("no remotes"));
 
       const result = await gitService.getRemotes(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("no remotes");
     });
 
@@ -311,7 +312,7 @@ describe("GitService", () => {
       mockGitInstance.getRemotes.mockRejectedValue({});
 
       const result = await gitService.getRemotes(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get remotes");
     });
   });
@@ -323,7 +324,7 @@ describe("GitService", () => {
       mockGitInstance.diff.mockResolvedValue("diff --git a/file.ts\n+added line");
 
       const result = await gitService.getDiff(TEST_PATH);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe("diff --git a/file.ts\n+added line");
       expect(mockGitInstance.diff).toHaveBeenCalledWith();
     });
@@ -332,7 +333,7 @@ describe("GitService", () => {
       mockGitInstance.diff.mockResolvedValue("diff for file.ts");
 
       const result = await gitService.getDiff(TEST_PATH, "file.ts");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe("diff for file.ts");
       expect(mockGitInstance.diff).toHaveBeenCalledWith(["file.ts"]);
     });
@@ -341,7 +342,7 @@ describe("GitService", () => {
       mockGitInstance.diff.mockRejectedValue(new Error("diff error"));
 
       const result = await gitService.getDiff(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("diff error");
     });
 
@@ -349,7 +350,7 @@ describe("GitService", () => {
       mockGitInstance.diff.mockRejectedValue(0);
 
       const result = await gitService.getDiff(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get diff");
     });
   });
@@ -361,7 +362,7 @@ describe("GitService", () => {
       mockGitInstance.revparse.mockResolvedValue("abc123def456\n");
 
       const result = await gitService.getHeadSha(TEST_PATH);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe("abc123def456");
       expect(mockGitInstance.revparse).toHaveBeenCalledWith(["HEAD"]);
     });
@@ -370,7 +371,7 @@ describe("GitService", () => {
       mockGitInstance.revparse.mockRejectedValue(new Error("no HEAD"));
 
       const result = await gitService.getHeadSha(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("no HEAD");
     });
 
@@ -378,7 +379,7 @@ describe("GitService", () => {
       mockGitInstance.revparse.mockRejectedValue(null);
 
       const result = await gitService.getHeadSha(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get HEAD sha");
     });
   });
@@ -390,7 +391,7 @@ describe("GitService", () => {
       mockGitInstance.diff.mockResolvedValue("diff since base");
 
       const result = await gitService.getDiffSince(TEST_PATH, "abc123");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe("diff since base");
       expect(mockGitInstance.diff).toHaveBeenCalledWith(["abc123"]);
     });
@@ -399,7 +400,7 @@ describe("GitService", () => {
       mockGitInstance.diff.mockRejectedValue(new Error("bad sha"));
 
       const result = await gitService.getDiffSince(TEST_PATH, "invalid");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("bad sha");
     });
 
@@ -407,7 +408,7 @@ describe("GitService", () => {
       mockGitInstance.diff.mockRejectedValue(undefined);
 
       const result = await gitService.getDiffSince(TEST_PATH, "abc");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get diff since base");
     });
   });
@@ -419,7 +420,7 @@ describe("GitService", () => {
       mockGitInstance.diff.mockResolvedValue("file1.ts\nfile2.ts\nfile3.ts\n");
 
       const result = await gitService.getChangedFilesSince(TEST_PATH, "abc123");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual(["file1.ts", "file2.ts", "file3.ts"]);
       expect(mockGitInstance.diff).toHaveBeenCalledWith(["--name-only", "abc123"]);
     });
@@ -428,7 +429,7 @@ describe("GitService", () => {
       mockGitInstance.diff.mockResolvedValue("  file1.ts  \n\n  file2.ts \n\n");
 
       const result = await gitService.getChangedFilesSince(TEST_PATH, "abc123");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual(["file1.ts", "file2.ts"]);
     });
 
@@ -436,7 +437,7 @@ describe("GitService", () => {
       mockGitInstance.diff.mockResolvedValue("");
 
       const result = await gitService.getChangedFilesSince(TEST_PATH, "abc123");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -444,7 +445,7 @@ describe("GitService", () => {
       mockGitInstance.diff.mockRejectedValue(new Error("diff error"));
 
       const result = await gitService.getChangedFilesSince(TEST_PATH, "abc123");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("diff error");
     });
 
@@ -452,7 +453,7 @@ describe("GitService", () => {
       mockGitInstance.diff.mockRejectedValue(123);
 
       const result = await gitService.getChangedFilesSince(TEST_PATH, "abc");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get changed files");
     });
   });
@@ -464,7 +465,7 @@ describe("GitService", () => {
       mockGitInstance.diff.mockResolvedValue("  3 files changed, 10 insertions(+), 2 deletions(-)  \n");
 
       const result = await gitService.getShortStatSince(TEST_PATH, "abc123");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe("3 files changed, 10 insertions(+), 2 deletions(-)");
       expect(mockGitInstance.diff).toHaveBeenCalledWith(["--shortstat", "abc123"]);
     });
@@ -473,7 +474,7 @@ describe("GitService", () => {
       mockGitInstance.diff.mockRejectedValue(new Error("stat error"));
 
       const result = await gitService.getShortStatSince(TEST_PATH, "abc");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("stat error");
     });
 
@@ -481,7 +482,7 @@ describe("GitService", () => {
       mockGitInstance.diff.mockRejectedValue(null);
 
       const result = await gitService.getShortStatSince(TEST_PATH, "abc");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get shortstat");
     });
   });
@@ -493,7 +494,7 @@ describe("GitService", () => {
       mockGitInstance.raw.mockResolvedValue("new-file.ts\nanother.ts\n");
 
       const result = await gitService.getUntrackedFiles(TEST_PATH);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual(["new-file.ts", "another.ts"]);
       expect(mockGitInstance.raw).toHaveBeenCalledWith(["ls-files", "--others", "--exclude-standard"]);
     });
@@ -502,7 +503,7 @@ describe("GitService", () => {
       mockGitInstance.raw.mockResolvedValue("");
 
       const result = await gitService.getUntrackedFiles(TEST_PATH);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -510,7 +511,7 @@ describe("GitService", () => {
       mockGitInstance.raw.mockRejectedValue(new Error("ls-files error"));
 
       const result = await gitService.getUntrackedFiles(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("ls-files error");
     });
 
@@ -518,7 +519,7 @@ describe("GitService", () => {
       mockGitInstance.raw.mockRejectedValue(undefined);
 
       const result = await gitService.getUntrackedFiles(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get untracked files");
     });
   });
@@ -530,7 +531,7 @@ describe("GitService", () => {
       mockGitInstance.revparse.mockResolvedValue("/home/user/project\n");
 
       const result = await gitService.getRepoRoot(TEST_PATH);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe("/home/user/project");
       expect(mockGitInstance.revparse).toHaveBeenCalledWith(["--show-toplevel"]);
     });
@@ -539,7 +540,7 @@ describe("GitService", () => {
       mockGitInstance.revparse.mockRejectedValue(new Error("not a repo"));
 
       const result = await gitService.getRepoRoot(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("not a repo");
     });
 
@@ -547,7 +548,7 @@ describe("GitService", () => {
       mockGitInstance.revparse.mockRejectedValue(null);
 
       const result = await gitService.getRepoRoot(TEST_PATH);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get repo root");
     });
   });
@@ -570,7 +571,7 @@ describe("GitService", () => {
       mockGitInstance.checkoutLocalBranch.mockResolvedValue(undefined);
 
       const result = await gitService.createBranch(TEST_PATH, "feature/new");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe("feature/new");
       expect(mockGitInstance.checkoutLocalBranch).toHaveBeenCalledWith("feature/new");
     });
@@ -579,7 +580,7 @@ describe("GitService", () => {
       mockGitInstance.checkoutLocalBranch.mockRejectedValue(new Error("branch exists"));
 
       const result = await gitService.createBranch(TEST_PATH, "feature/new");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("branch exists");
     });
 
@@ -587,7 +588,7 @@ describe("GitService", () => {
       mockGitInstance.checkoutLocalBranch.mockRejectedValue(null);
 
       const result = await gitService.createBranch(TEST_PATH, "x");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to create branch");
     });
   });
@@ -599,7 +600,7 @@ describe("GitService", () => {
       mockGitInstance.raw.mockResolvedValue("");
 
       const result = await gitService.createWorktree(TEST_PATH, "/tmp/wt", "feature/new");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe("/tmp/wt");
       expect(mockGitInstance.raw).toHaveBeenCalledWith(["worktree", "add", "/tmp/wt", "feature/new"]);
     });
@@ -608,7 +609,7 @@ describe("GitService", () => {
       mockGitInstance.raw.mockRejectedValue(new Error("worktree error"));
 
       const result = await gitService.createWorktree(TEST_PATH, "/tmp/wt", "branch");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("worktree error");
     });
 
@@ -616,7 +617,7 @@ describe("GitService", () => {
       mockGitInstance.raw.mockRejectedValue(false);
 
       const result = await gitService.createWorktree(TEST_PATH, "/tmp/wt", "b");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to create worktree");
     });
   });
@@ -639,7 +640,7 @@ describe("GitService", () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
       const result = await gitService.importLocalRepo("/source/path");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.baseBranch).toBe("main");
       expect(result.data!.originUrl).toBe("https://github.com/user/repo.git");
       expect(result.data!.branchName).toBeTruthy();
@@ -659,7 +660,7 @@ describe("GitService", () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
 
       const result = await gitService.importLocalRepo("/source/path");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(fs.mkdirSync).toHaveBeenCalledWith(expect.any(String), { recursive: true });
     });
 
@@ -672,7 +673,7 @@ describe("GitService", () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
       const result = await gitService.importLocalRepo("/source/path", "my-project");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.worktreePath).toContain("my-project");
     });
 
@@ -680,7 +681,7 @@ describe("GitService", () => {
       mockGitInstance.checkIsRepo.mockResolvedValue(false);
 
       const result = await gitService.importLocalRepo("/not-a-repo");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Not a git repository");
     });
 
@@ -693,7 +694,7 @@ describe("GitService", () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
       const result = await gitService.importLocalRepo("/source/path");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.originUrl).toBeNull();
     });
 
@@ -708,7 +709,7 @@ describe("GitService", () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
       const result = await gitService.importLocalRepo("/source/path");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.originUrl).toBeNull();
     });
 
@@ -716,7 +717,7 @@ describe("GitService", () => {
       mockGitInstance.checkIsRepo.mockRejectedValue(new Error("disk error"));
 
       const result = await gitService.importLocalRepo("/source/path");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("disk error");
     });
 
@@ -724,7 +725,7 @@ describe("GitService", () => {
       mockGitInstance.checkIsRepo.mockRejectedValue(42);
 
       const result = await gitService.importLocalRepo("/source/path");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to import local repo");
     });
   });
@@ -745,7 +746,7 @@ describe("GitService", () => {
       });
 
       const result = await gitService.importLocalRepoDirect("/source/path");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual({
         branchName: "develop",
         sourcePath: "/source/path",
@@ -761,7 +762,7 @@ describe("GitService", () => {
       mockGitInstance.checkIsRepo.mockResolvedValue(false);
 
       const result = await gitService.importLocalRepoDirect("/not-a-repo");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Not a git repository");
     });
 
@@ -772,7 +773,7 @@ describe("GitService", () => {
       mockGitInstance.status.mockResolvedValue({ tracking: null, ahead: 0, behind: 0 });
 
       const result = await gitService.importLocalRepoDirect("/source/path");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.originUrl).toBeNull();
     });
 
@@ -785,7 +786,7 @@ describe("GitService", () => {
       mockGitInstance.status.mockResolvedValue({ tracking: null, ahead: 0, behind: 0 });
 
       const result = await gitService.importLocalRepoDirect("/source/path");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.originUrl).toBeNull();
     });
 
@@ -798,7 +799,7 @@ describe("GitService", () => {
       mockGitInstance.status.mockResolvedValue({ tracking: null, ahead: 0, behind: 0 });
 
       const result = await gitService.importLocalRepoDirect("/source/path");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.originUrl).toBe("git@github.com:user/repo.git");
     });
 
@@ -806,7 +807,7 @@ describe("GitService", () => {
       mockGitInstance.checkIsRepo.mockRejectedValue(new Error("disk error"));
 
       const result = await gitService.importLocalRepoDirect("/source/path");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("disk error");
     });
 
@@ -814,7 +815,7 @@ describe("GitService", () => {
       mockGitInstance.checkIsRepo.mockRejectedValue(null);
 
       const result = await gitService.importLocalRepoDirect("/source/path");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to import local repo");
     });
   });
@@ -830,7 +831,7 @@ describe("GitService", () => {
         "https://github.com/user/my-repo.git",
         "/tmp/clones"
       );
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.clonedPath).toBe("/tmp/clones/my-repo");
       expect(result.data!.defaultBranch).toBe("main");
       expect(result.data!.originUrl).toBe("https://github.com/user/my-repo.git");
@@ -844,7 +845,7 @@ describe("GitService", () => {
         "https://github.com/user/project.git",
         "/tmp"
       );
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.clonedPath).toBe("/tmp/project");
     });
 
@@ -856,7 +857,7 @@ describe("GitService", () => {
         "https://github.com/user/project",
         "/tmp"
       );
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.clonedPath).toBe("/tmp/project");
     });
 
@@ -867,7 +868,7 @@ describe("GitService", () => {
         "https://github.com/user/repo.git",
         "/tmp"
       );
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("auth failed");
     });
 
@@ -875,7 +876,7 @@ describe("GitService", () => {
       mockGitInstance.clone.mockRejectedValue(undefined);
 
       const result = await gitService.cloneRepo("url", "/tmp");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to clone repository");
     });
   });
@@ -951,7 +952,7 @@ describe("GitService", () => {
       mockGitInstance.raw.mockResolvedValue("");
 
       const result = await gitService.removeWorktree(TEST_PATH, "/tmp/wt");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(mockGitInstance.raw).toHaveBeenCalledWith(["worktree", "remove", "/tmp/wt", "--force"]);
     });
 
@@ -959,7 +960,7 @@ describe("GitService", () => {
       mockGitInstance.raw.mockRejectedValue(new Error("worktree not found"));
 
       const result = await gitService.removeWorktree(TEST_PATH, "/tmp/wt");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("worktree not found");
     });
 
@@ -967,7 +968,7 @@ describe("GitService", () => {
       mockGitInstance.raw.mockRejectedValue(undefined);
 
       const result = await gitService.removeWorktree(TEST_PATH, "/tmp/wt");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to remove worktree");
     });
   });

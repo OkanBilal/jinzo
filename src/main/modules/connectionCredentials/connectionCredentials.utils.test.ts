@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("electron", () => ({
@@ -107,7 +108,7 @@ describe("connectionCredentials.utils", () => {
   describe("parseProviderCredentials", () => {
     it("parses github credentials", () => {
       const result = parseProviderCredentials("github", { token: "gh_abc" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.secrets).toEqual({ token: "gh_abc" });
         expect(result.data.tokensForHash).toEqual(["gh_abc"]);
@@ -116,7 +117,7 @@ describe("connectionCredentials.utils", () => {
 
     it("parses linear credentials", () => {
       const result = parseProviderCredentials("linear", { apiKey: "lin_123" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.secrets).toEqual({ apiKey: "lin_123" });
       }
@@ -124,7 +125,7 @@ describe("connectionCredentials.utils", () => {
 
     it("parses jira credentials", () => {
       const result = parseProviderCredentials("jira", { apiToken: "jira-tok" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.secrets).toEqual({ apiToken: "jira-tok" });
       }
@@ -132,7 +133,7 @@ describe("connectionCredentials.utils", () => {
 
     it("parses gitlab credentials", () => {
       const result = parseProviderCredentials("gitlab", { token: "glpat-xxx" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.secrets).toEqual({ token: "glpat-xxx" });
       }
@@ -140,7 +141,7 @@ describe("connectionCredentials.utils", () => {
 
     it("parses asana credentials", () => {
       const result = parseProviderCredentials("asana", { accessToken: "asana-tok" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.secrets).toEqual({ accessToken: "asana-tok" });
       }
@@ -151,7 +152,7 @@ describe("connectionCredentials.utils", () => {
         token: "trello-tok",
         apiKey: "trello-key",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.secrets).toEqual({ token: "trello-tok", apiKey: "trello-key" });
         expect(result.data.tokensForHash).toEqual(["trello-tok", "trello-key"]);
@@ -160,7 +161,7 @@ describe("connectionCredentials.utils", () => {
 
     it("fails for unsupported provider", () => {
       const result = parseProviderCredentials("unknown", { token: "x" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toContain("Unsupported provider");
       }
@@ -168,7 +169,7 @@ describe("connectionCredentials.utils", () => {
 
     it("fails when required field is missing", () => {
       const result = parseProviderCredentials("github", {});
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toContain("token is required");
       }
@@ -176,12 +177,12 @@ describe("connectionCredentials.utils", () => {
 
     it("fails when required field is not a string", () => {
       const result = parseProviderCredentials("github", { token: 123 });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
 
     it("fails for trello when one of two required fields missing", () => {
       const result = parseProviderCredentials("trello", { token: "tok" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toContain("apiKey is required");
       }

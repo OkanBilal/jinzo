@@ -1,3 +1,4 @@
+import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 
 export interface Project {
@@ -58,8 +59,7 @@ export const projectsApi = baseApi.injectEndpoints({
       query: () => ({
         handler: "projects:getAll",
       }),
-      transformResponse: (response: { success: boolean; data: Project[] }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Project[]>) => unwrap(response),
       providesTags: ["Projects"],
     }),
 
@@ -68,8 +68,7 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: "projects:getById",
         args: [id],
       }),
-      transformResponse: (response: { success: boolean; data: Project }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
       providesTags: (_result, _error, id) => [{ type: "Projects", id }],
     }),
 
@@ -78,8 +77,7 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: "projects:getByAccount",
         args: [accountId],
       }),
-      transformResponse: (response: { success: boolean; data: Project[] }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Project[]>) => unwrap(response),
       providesTags: ["Projects"],
     }),
 
@@ -91,8 +89,7 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: "projects:findByRemoteOrigin",
         args: [accountId, remoteOrigin],
       }),
-      transformResponse: (response: { success: boolean; data: Project }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
       providesTags: ["Projects"],
     }),
 
@@ -101,8 +98,7 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: "projects:findOrCreate",
         args: [payload],
       }),
-      transformResponse: (response: { success: boolean; data: Project }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
       invalidatesTags: ["Projects"],
     }),
 
@@ -111,8 +107,7 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: "projects:create",
         args: [payload],
       }),
-      transformResponse: (response: { success: boolean; data: Project }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
       invalidatesTags: ["Projects"],
     }),
 
@@ -124,8 +119,7 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: "projects:update",
         args: [id, payload],
       }),
-      transformResponse: (response: { success: boolean; data: Project }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
       invalidatesTags: (_result, _error, { id }) => [
         "Projects",
         { type: "Projects", id },
@@ -153,8 +147,7 @@ export const projectsApi = baseApi.injectEndpoints({
         handler: "projects:archive",
         args: [id],
       }),
-      transformResponse: (response: { success: boolean; data: Project }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Project>) => unwrap(response),
       invalidatesTags: (_result, _error, id) => [
         "Projects",
         { type: "Projects", id },

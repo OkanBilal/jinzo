@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount, createWorkspace, createReview } from "../../../test/factories";
@@ -31,7 +32,7 @@ describe("reviewsController", () => {
   describe("getByWorkspace", () => {
     it("returns empty array when no reviews exist", async () => {
       const result = await reviewsController.getByWorkspace(workspaceId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toEqual([]);
       }
@@ -42,7 +43,7 @@ describe("reviewsController", () => {
       createReview(db, { workspaceId, title: "Review 2" });
 
       const result = await reviewsController.getByWorkspace(workspaceId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toHaveLength(2);
       }
@@ -54,7 +55,7 @@ describe("reviewsController", () => {
       createReview(db, { workspaceId, title: "Review 3" });
 
       const result = await reviewsController.getByWorkspace(workspaceId, 2);
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toHaveLength(2);
       }
@@ -66,7 +67,7 @@ describe("reviewsController", () => {
       const review = createReview(db, { workspaceId, title: "My Review" });
 
       const result = await reviewsController.getById(review.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data!.id).toBe(review.id);
         expect(result.data!.title).toBe("My Review");
@@ -75,7 +76,7 @@ describe("reviewsController", () => {
 
     it("returns error for non-existent review", async () => {
       const result = await reviewsController.getById("non-existent-id");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -86,7 +87,7 @@ describe("reviewsController", () => {
         title: "New Review",
         status: "open",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(typeof result.data).toBe("string");
         expect(result.data!.length).toBeGreaterThan(0);
@@ -100,11 +101,11 @@ describe("reviewsController", () => {
         summary: "This is a test summary",
         status: "in_review",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         // Verify the created review via getById
         const fetched = await reviewsController.getById(result.data!);
-        expect(fetched.success).toBe(true);
+        assertOk(fetched);
         if (fetched.success) {
           expect(fetched.data!.summary).toBe("This is a test summary");
           expect(fetched.data!.status).toBe("in_review");
@@ -121,7 +122,7 @@ describe("reviewsController", () => {
         title: "Updated Title",
         status: "approved",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data!.title).toBe("Updated Title");
         expect(result.data!.status).toBe("approved");
@@ -132,7 +133,7 @@ describe("reviewsController", () => {
       const result = await reviewsController.update("non-existent-id", {
         title: "Nope",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -141,12 +142,12 @@ describe("reviewsController", () => {
       const review = createReview(db, { workspaceId, title: "To Delete" });
 
       const result = await reviewsController.delete(review.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("succeeds silently for non-existent review", async () => {
       const result = await reviewsController.delete("non-existent-id");
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
   });
 });

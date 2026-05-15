@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount, createWorkspace } from "../../../test/factories";
@@ -48,7 +49,7 @@ describe("workspacesController", () => {
   describe("getAll", () => {
     it("returns empty array when no workspaces exist", async () => {
       const result = await workspacesController.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -57,7 +58,7 @@ describe("workspacesController", () => {
       createWorkspace(db, { id: "w2", name: "WS Two" });
 
       const result = await workspacesController.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
   });
@@ -68,13 +69,13 @@ describe("workspacesController", () => {
       createWorkspace(db, { id: "w1", name: "My WS" });
 
       const result = await workspacesController.getById("w1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.name).toBe("My WS");
     });
 
     it("returns error for non-existent workspace", async () => {
       const result = await workspacesController.getById("missing");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -84,13 +85,13 @@ describe("workspacesController", () => {
       createWorkspace(db, { id: "w1", accountId: "default" });
 
       const result = await workspacesController.getByAccountId("default");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(1);
     });
 
     it("returns empty array when account has no workspaces", async () => {
       const result = await workspacesController.getByAccountId("default");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
   });
@@ -101,13 +102,13 @@ describe("workspacesController", () => {
       createWorkspace(db, { id: "w1", accountId: "default", rootPath: "/tmp/ws/test" });
 
       const result = await workspacesController.getByRootPath("default", "/tmp/ws/test");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.id).toBe("w1");
     });
 
     it("returns error when not found", async () => {
       const result = await workspacesController.getByRootPath("default", "/nope");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -119,7 +120,7 @@ describe("workspacesController", () => {
         name: "New WS",
         rootPath: "/tmp/ws/new",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.name).toBe("New WS");
     });
 
@@ -131,7 +132,7 @@ describe("workspacesController", () => {
         name: "Dup",
         rootPath: "/tmp/ws/dup",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -141,13 +142,13 @@ describe("workspacesController", () => {
       createWorkspace(db, { id: "w1", name: "Old" });
 
       const result = await workspacesController.update("w1", { name: "Updated" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.name).toBe("Updated");
     });
 
     it("returns error for non-existent workspace", async () => {
       const result = await workspacesController.update("missing", { name: "X" });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -157,10 +158,10 @@ describe("workspacesController", () => {
       createWorkspace(db, { id: "w1" });
 
       const result = await workspacesController.delete("w1");
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const check = await workspacesController.getById("w1");
-      expect(check.success).toBe(false);
+      assertFail(check);
     });
   });
 
@@ -170,13 +171,13 @@ describe("workspacesController", () => {
       createWorkspace(db, { id: "w1" });
 
       const result = await workspacesController.archive("w1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.isArchived).toBe(true);
     });
 
     it("returns error for non-existent workspace", async () => {
       const result = await workspacesController.archive("missing");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 });

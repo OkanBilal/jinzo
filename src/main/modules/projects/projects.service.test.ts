@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount, createProject, createWorkspace, createRun } from "../../../test/factories";
@@ -34,7 +35,7 @@ describe("projectsService", () => {
   describe("getAll", () => {
     it("returns empty list when no projects exist", async () => {
       const result = await projectsService.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toEqual([]);
       }
@@ -45,7 +46,7 @@ describe("projectsService", () => {
       createProject(db, { id: "p2", name: "Project B" });
 
       const result = await projectsService.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toHaveLength(2);
       }
@@ -57,13 +58,13 @@ describe("projectsService", () => {
       createProject(db, { id: "p1", name: "Found" });
 
       const result = await projectsService.getById("p1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.name).toBe("Found");
     });
 
     it("returns error when not found", async () => {
       const result = await projectsService.getById("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Project not found");
       }
@@ -75,7 +76,7 @@ describe("projectsService", () => {
       createProject(db, { id: "p1", accountId: "default" });
 
       const result = await projectsService.getByAccountId("default");
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toHaveLength(1);
       }
@@ -95,13 +96,13 @@ describe("projectsService", () => {
         "default",
         "https://github.com/user/repo.git",
       );
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.id).toBe("p1");
     });
 
     it("returns error when not found", async () => {
       const result = await projectsService.findByRemoteOrigin("default", "github.com/nope/nope");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -114,7 +115,7 @@ describe("projectsService", () => {
         remoteOrigin: "https://github.com/test/new.git",
       });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.name).toBe("New");
       expect(result.data!.remoteOrigin).toBe("github.com/test/new");
     });
@@ -134,7 +135,7 @@ describe("projectsService", () => {
         remoteOrigin: "https://github.com/test/dup.git",
       });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.id).toBe("existing");
       expect(result.data!.name).toBe("Existing");
     });
@@ -149,7 +150,7 @@ describe("projectsService", () => {
         remoteOrigin: "https://github.com/test/created.git",
       });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.name).toBe("Created");
     });
 
@@ -166,7 +167,7 @@ describe("projectsService", () => {
         remoteOrigin: "https://github.com/test/unique.git",
       });
 
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Project with this remote origin already exists");
       }
@@ -178,7 +179,7 @@ describe("projectsService", () => {
       createProject(db, { id: "u1", name: "Old" });
 
       const result = await projectsService.update("u1", { name: "New" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.name).toBe("New");
     });
   });
@@ -188,10 +189,10 @@ describe("projectsService", () => {
       createProject(db, { id: "d1" });
 
       const result = await projectsService.delete("d1");
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const check = await projectsService.getById("d1");
-      expect(check.success).toBe(false);
+      assertFail(check);
     });
   });
 
@@ -200,13 +201,13 @@ describe("projectsService", () => {
       createProject(db, { id: "a1" });
 
       const result = await projectsService.archive("a1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.isArchived).toBe(true);
     });
 
     it("returns error when project not found", async () => {
       const result = await projectsService.archive("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -216,7 +217,7 @@ describe("projectsService", () => {
   describe("remove", () => {
     it("returns error when project not found", async () => {
       const result = await projectsService.remove("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Project not found");
     });
 
@@ -226,11 +227,11 @@ describe("projectsService", () => {
       createRun(db, { id: "r1", workspaceId: "ws1" });
 
       const result = await projectsService.remove("p1");
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       // Project should be gone
       const check = await projectsService.getById("p1");
-      expect(check.success).toBe(false);
+      assertFail(check);
     });
   });
 
@@ -240,7 +241,7 @@ describe("projectsService", () => {
   describe("update - edge cases", () => {
     it("returns error when project not found", async () => {
       const result = await projectsService.update("nonexistent", { name: "X" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Project not found");
     });
   });
@@ -252,28 +253,28 @@ describe("projectsService", () => {
     it("getAll returns error on failure", async () => {
       vi.spyOn(projectsRepo, "findAll").mockRejectedValueOnce(new Error("db"));
       const result = await projectsService.getAll();
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get projects");
     });
 
     it("getById returns error on failure", async () => {
       vi.spyOn(projectsRepo, "findById").mockRejectedValueOnce(new Error("db"));
       const result = await projectsService.getById("p1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get project");
     });
 
     it("getByAccountId returns error on failure", async () => {
       vi.spyOn(projectsRepo, "findByAccountId").mockRejectedValueOnce(new Error("db"));
       const result = await projectsService.getByAccountId("default");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get projects");
     });
 
     it("findByRemoteOrigin returns error on failure", async () => {
       vi.spyOn(projectsRepo, "findByRemoteOrigin").mockRejectedValueOnce(new Error("db"));
       const result = await projectsService.findByRemoteOrigin("default", "github.com/x/y");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to find project");
     });
 
@@ -286,21 +287,21 @@ describe("projectsService", () => {
         rootPath: "/fail",
         remoteOrigin: "github.com/fail/fail",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to create project");
     });
 
     it("delete returns error on failure", async () => {
       vi.spyOn(projectsRepo, "delete").mockRejectedValueOnce(new Error("db"));
       const result = await projectsService.delete("p1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to delete project");
     });
 
     it("archive returns error on failure", async () => {
       vi.spyOn(projectsRepo, "archive").mockRejectedValueOnce(new Error("db"));
       const result = await projectsService.archive("p1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to archive project");
     });
   });

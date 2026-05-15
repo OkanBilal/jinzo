@@ -38,6 +38,4 @@ export type UpdatePulseInput = Partial<
   >
 >;
 
-export type ServiceResponse<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
+export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";

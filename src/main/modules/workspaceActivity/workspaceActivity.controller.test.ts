@@ -1,3 +1,4 @@
+import { assertOk } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -35,7 +36,7 @@ describe("workspaceActivityController", () => {
   describe("getByWorkspace", () => {
     it("returns empty array when no activity exists", async () => {
       const result = await workspaceActivityController.getByWorkspace(wsId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -44,7 +45,7 @@ describe("workspaceActivityController", () => {
       createWorkspaceActivity(db, { workspaceId: wsId, title: "Diff B", type: "diff" });
 
       const result = await workspaceActivityController.getByWorkspace(wsId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
 
@@ -54,7 +55,7 @@ describe("workspaceActivityController", () => {
       createWorkspaceActivity(db, { workspaceId: wsId, title: "C" });
 
       const result = await workspaceActivityController.getByWorkspace(wsId, 2);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
   });
@@ -68,13 +69,14 @@ describe("workspaceActivityController", () => {
         title: "Initial commit",
         summary: "First commit",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(typeof result.data).toBe("string");
 
       // Verify it was persisted
       const list = await workspaceActivityController.getByWorkspace(wsId);
+      assertOk(list);
       expect(list.data).toHaveLength(1);
-      expect(list.data![0].title).toBe("Initial commit");
+      expect(list.data[0].title).toBe("Initial commit");
     });
   });
 
@@ -85,10 +87,11 @@ describe("workspaceActivityController", () => {
         { workspaceId: wsId, type: "commit", title: "Commit 1" },
         { workspaceId: wsId, type: "pr", title: "PR 1" },
       ]);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
 
       const list = await workspaceActivityController.getByWorkspace(wsId);
+      assertOk(list);
       expect(list.data).toHaveLength(2);
     });
   });
@@ -102,9 +105,10 @@ describe("workspaceActivityController", () => {
       });
 
       const result = await workspaceActivityController.delete(activity.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const list = await workspaceActivityController.getByWorkspace(wsId);
+      assertOk(list);
       expect(list.data).toHaveLength(0);
     });
   });

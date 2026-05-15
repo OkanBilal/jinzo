@@ -19,6 +19,4 @@ export type {
   ConnectionStatesResponse,
   UpdateConnectionStatesRequest,
   ServiceResponse,
-  SuccessResponse,
-  ErrorResponse,
 } from "./connectionStates.dto";

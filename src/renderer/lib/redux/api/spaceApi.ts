@@ -1,3 +1,4 @@
+import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 
 export interface Space {
@@ -47,8 +48,7 @@ export const spaceApi = baseApi.injectEndpoints({
       query: () => ({
         handler: "space:getAll",
       }),
-      transformResponse: (response: { success: boolean; data: Space[] }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Space[]>) => unwrap(response),
       providesTags: ["Spaces"],
     }),
 
@@ -57,8 +57,7 @@ export const spaceApi = baseApi.injectEndpoints({
         handler: "space:getById",
         args: [spaceId],
       }),
-      transformResponse: (response: { success: boolean; data: Space }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Space>) => unwrap(response),
       providesTags: (_result, _error, id) => [{ type: "Spaces", id }],
     }),
 
@@ -67,8 +66,7 @@ export const spaceApi = baseApi.injectEndpoints({
         handler: "space:create",
         args: [payload],
       }),
-      transformResponse: (response: { success: boolean; data: Space }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Space>) => unwrap(response),
       invalidatesTags: ["Spaces"],
     }),
 
@@ -80,8 +78,7 @@ export const spaceApi = baseApi.injectEndpoints({
         handler: "space:update",
         args: [id, payload],
       }),
-      transformResponse: (response: { success: boolean; data: Space }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Space>) => unwrap(response),
       invalidatesTags: (_result, _error, { id }) => [
         { type: "Spaces", id },
         "Spaces",

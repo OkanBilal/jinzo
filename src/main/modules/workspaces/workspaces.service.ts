@@ -165,7 +165,7 @@ export const workspacesService = {
   async delete(id: string): Promise<ServiceResponse<void>> {
     try {
       await workspacesRepo.delete(id);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(`[WorkspacesService] Failed to delete workspace ${id}:`, error);
       return { success: false, error: "Failed to delete workspace" };

@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createProvider } from "../../../test/factories";
@@ -36,7 +37,7 @@ describe("providersController", () => {
   describe("getAll", () => {
     it("returns empty array when no providers exist", async () => {
       const res = await providersController.getAll();
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toEqual([]);
     });
 
@@ -45,7 +46,7 @@ describe("providersController", () => {
       createProvider(db, { id: "claude_code", displayName: "Claude", kind: "agent_runtime" });
 
       const res = await providersController.getAll();
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toHaveLength(2);
     });
   });
@@ -56,14 +57,14 @@ describe("providersController", () => {
       createProvider(db, { id: "copilot_cli", displayName: "Copilot" });
 
       const res = await providersController.getById("copilot_cli");
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data!.id).toBe("copilot_cli");
       expect(res.data!.displayName).toBe("Copilot");
     });
 
     it("returns error when not found", async () => {
       const res = await providersController.getById("nonexistent");
-      expect(res.success).toBe(false);
+      assertFail(res);
       expect(res.error).toBeDefined();
     });
   });
@@ -75,7 +76,7 @@ describe("providersController", () => {
       createProvider(db, { id: "p2", kind: "llm_runtime", displayName: "LLM" });
 
       const res = await providersController.getByKind("agent_runtime");
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toHaveLength(1);
       expect(res.data![0].id).toBe("p1");
     });
@@ -88,7 +89,7 @@ describe("providersController", () => {
       createProvider(db, { id: "p2", isEnabled: false, displayName: "Disabled" });
 
       const res = await providersController.getEnabled();
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toHaveLength(1);
       expect(res.data![0].id).toBe("p1");
     });
@@ -102,11 +103,11 @@ describe("providersController", () => {
         kind: "agent_runtime",
         displayName: "New Provider",
       });
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toBe("new_provider");
 
       const fetched = await providersController.getById("new_provider");
-      expect(fetched.success).toBe(true);
+      assertOk(fetched);
       expect(fetched.data!.displayName).toBe("New Provider");
     });
 
@@ -118,7 +119,7 @@ describe("providersController", () => {
         kind: "agent_runtime",
         displayName: "Duplicate",
       });
-      expect(res.success).toBe(false);
+      assertFail(res);
       expect(res.error).toContain("already exists");
     });
   });
@@ -129,13 +130,13 @@ describe("providersController", () => {
       createProvider(db, { id: "p1", displayName: "Old Name" });
 
       const res = await providersController.update("p1", { displayName: "New Name" });
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data!.displayName).toBe("New Name");
     });
 
     it("returns error when provider not found", async () => {
       const res = await providersController.update("nonexistent", { displayName: "X" });
-      expect(res.success).toBe(false);
+      assertFail(res);
     });
   });
 
@@ -145,10 +146,10 @@ describe("providersController", () => {
       createProvider(db, { id: "p1" });
 
       const res = await providersController.delete("p1");
-      expect(res.success).toBe(true);
+      assertOk(res);
 
       const fetched = await providersController.getById("p1");
-      expect(fetched.success).toBe(false);
+      assertFail(fetched);
     });
   });
 
@@ -158,10 +159,11 @@ describe("providersController", () => {
       createProvider(db, { id: "p1", isEnabled: false });
 
       const res = await providersController.enable("p1");
-      expect(res.success).toBe(true);
+      assertOk(res);
 
       const fetched = await providersController.getById("p1");
-      expect(fetched.data!.isEnabled).toBe(true);
+      assertOk(fetched);
+      expect(fetched.data.isEnabled).toBe(true);
     });
   });
 
@@ -170,10 +172,11 @@ describe("providersController", () => {
       createProvider(db, { id: "p1", isEnabled: true });
 
       const res = await providersController.disable("p1");
-      expect(res.success).toBe(true);
+      assertOk(res);
 
       const fetched = await providersController.getById("p1");
-      expect(fetched.data!.isEnabled).toBe(false);
+      assertOk(fetched);
+      expect(fetched.data.isEnabled).toBe(false);
     });
   });
 
@@ -183,7 +186,7 @@ describe("providersController", () => {
       createProvider(db, { id: "p1", isEnabled: true });
 
       const res = await providersController.getModels("p1");
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toEqual([{ id: "gpt-4", name: "GPT-4" }]);
     });
 
@@ -191,13 +194,13 @@ describe("providersController", () => {
       createProvider(db, { id: "p1", isEnabled: false });
 
       const res = await providersController.getModels("p1");
-      expect(res.success).toBe(false);
+      assertFail(res);
       expect(res.error).toContain("not enabled");
     });
 
     it("returns error for nonexistent provider", async () => {
       const res = await providersController.getModels("nonexistent");
-      expect(res.success).toBe(false);
+      assertFail(res);
     });
   });
 
@@ -207,7 +210,7 @@ describe("providersController", () => {
       createProvider(db, { id: "p1", isEnabled: true });
 
       const res = await providersController.getCommands("p1");
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toEqual([{ id: "run", name: "Run" }]);
     });
 
@@ -215,7 +218,7 @@ describe("providersController", () => {
       createProvider(db, { id: "p1", isEnabled: false });
 
       const res = await providersController.getCommands("p1");
-      expect(res.success).toBe(false);
+      assertFail(res);
     });
   });
 
@@ -225,7 +228,7 @@ describe("providersController", () => {
       createProvider(db, { id: "p1", isEnabled: true });
 
       const res = await providersController.getSkills("p1");
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toEqual([{ id: "code", name: "Code" }]);
     });
 
@@ -233,7 +236,7 @@ describe("providersController", () => {
       createProvider(db, { id: "p1", isEnabled: true });
 
       const res = await providersController.getSkills("p1", "/some/path");
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toEqual([{ id: "code", name: "Code" }]);
     });
 
@@ -241,7 +244,7 @@ describe("providersController", () => {
       createProvider(db, { id: "p1", isEnabled: false });
 
       const res = await providersController.getSkills("p1");
-      expect(res.success).toBe(false);
+      assertFail(res);
     });
   });
 });

@@ -99,6 +99,11 @@ export interface ResourceFetcher {
 
 // ─────────────────────────────────────────────────────────────
 // Response Types
+//
+// NOTE: This module's ServiceResponse intentionally diverges from the
+// canonical envelope in src/shared/ipc-kit/service-response.ts because the
+// failure branch carries partial sync stats (`data?: SyncJobResult`) that
+// callers rely on when a sync run completes with errors.
 // ─────────────────────────────────────────────────────────────
 export interface SuccessResponse<T> {
   success: true;

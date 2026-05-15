@@ -118,17 +118,4 @@ export interface SaveResourcesPayload {
   sources?: string[];
 }
 
-// ─────────────────────────────────────────────────────────────
-// Response Types
-// ─────────────────────────────────────────────────────────────
-export interface SuccessResponse<T> {
-  success: true;
-  data: T;
-}
-
-export interface ErrorResponse {
-  success: false;
-  error: string;
-}
-
-export type ServiceResponse<T> = SuccessResponse<T> | ErrorResponse;
+export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";

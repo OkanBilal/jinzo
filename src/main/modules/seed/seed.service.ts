@@ -9,10 +9,10 @@ import type { ServiceResponse } from "./seed.dto";
 // Service - Business Logic
 // ─────────────────────────────────────────────────────────────
 export const seedService = {
-  async seedAccounts(): Promise<ServiceResponse> {
+  async seedAccounts(): Promise<ServiceResponse<string>> {
     try {
       await seedAccountsData();
-      return { success: true, message: "Accounts seeded successfully" };
+      return { success: true, data: "Accounts seeded successfully" };
     } catch (error) {
       console.error("Error seeding accounts:", error);
       return {
@@ -22,10 +22,10 @@ export const seedService = {
     }
   },
 
-  async seedConnectionStates(): Promise<ServiceResponse> {
+  async seedConnectionStates(): Promise<ServiceResponse<string>> {
     try {
       await seedConnectionStates();
-      return { success: true, message: "Connections States seeded successfully" };
+      return { success: true, data: "Connections States seeded successfully" };
     } catch (error) {
       console.error("Error seeding connection states:", error);
       return {
@@ -35,10 +35,10 @@ export const seedService = {
     }
   },
 
-  async seedConnections(): Promise<ServiceResponse> {
+  async seedConnections(): Promise<ServiceResponse<string>> {
     try {
       await seedConnections();
-      return { success: true, message: "Connections States seeded successfully" };
+      return { success: true, data: "Connections States seeded successfully" };
     } catch (error) {
       console.error("Error seeding connections:", error);
       return {
@@ -48,10 +48,10 @@ export const seedService = {
     }
   },
 
-  async seedProviders(): Promise<ServiceResponse> {
+  async seedProviders(): Promise<ServiceResponse<string>> {
     try {
       await seedProvidersData();
-      return { success: true, message: "Providers seeded successfully" };
+      return { success: true, data: "Providers seeded successfully" };
     } catch (error) {
       console.error("Error seeding providers:", error);
       return {
@@ -62,10 +62,10 @@ export const seedService = {
   },
 
 
-  async seedSpaces(): Promise<ServiceResponse> {
+  async seedSpaces(): Promise<ServiceResponse<string>> {
     try {
       await seedSpacesData();
-      return { success: true, message: "Spaces seeded successfully" };
+      return { success: true, data: "Spaces seeded successfully" };
     } catch (error) {
       console.error("Error seeding spaces:", error);
       return {
@@ -75,14 +75,14 @@ export const seedService = {
     }
   },
 
-  async seedAll(): Promise<ServiceResponse> {
+  async seedAll(): Promise<ServiceResponse<string>> {
     try {
       await seedAccountsData(); // MUST be first
       await seedConnectionStates();
       await seedConnections();
       await seedProvidersData();
       await seedSpacesData();
-      return { success: true, message: "All data seeded successfully" };
+      return { success: true, data: "All data seeded successfully" };
     } catch (error) {
       console.error("Error seeding data:", error);
       return {

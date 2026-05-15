@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -36,7 +37,7 @@ describe("workspaceDiffsService", () => {
   describe("getByWorkspace", () => {
     it("returns empty list", async () => {
       const result = await workspaceDiffsService.getByWorkspace(wsId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toEqual([]);
     });
 
@@ -45,7 +46,7 @@ describe("workspaceDiffsService", () => {
       createWorkspaceDiff(db, { workspaceId: wsId });
 
       const result = await workspaceDiffsService.getByWorkspace(wsId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toHaveLength(2);
     });
   });
@@ -53,7 +54,7 @@ describe("workspaceDiffsService", () => {
   describe("getLatest", () => {
     it("returns error when no diffs", async () => {
       const result = await workspaceDiffsService.getLatest(wsId);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("No diff found for this workspace");
     });
 
@@ -61,7 +62,7 @@ describe("workspaceDiffsService", () => {
       createWorkspaceDiff(db, { workspaceId: wsId, diffText: "latest" });
 
       const result = await workspaceDiffsService.getLatest(wsId);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.diffText).toBe("latest");
     });
   });
@@ -69,7 +70,7 @@ describe("workspaceDiffsService", () => {
   describe("getByRun", () => {
     it("returns error when no diff for run", async () => {
       const result = await workspaceDiffsService.getByRun("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("No diff found for this run");
     });
 
@@ -82,7 +83,7 @@ describe("workspaceDiffsService", () => {
       });
 
       const result = await workspaceDiffsService.getByRun(run.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.diffText).toBe("run-diff");
     });
   });
@@ -95,7 +96,7 @@ describe("workspaceDiffsService", () => {
         diffText: "new diff content",
       });
 
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data).toBe("new-diff");
     });
 
@@ -110,7 +111,7 @@ describe("workspaceDiffsService", () => {
         filesJson: '["file.ts"]',
         statsJson: '{"insertions":5}',
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
   });
 
@@ -121,21 +122,21 @@ describe("workspaceDiffsService", () => {
     it("getByWorkspace returns error on failure", async () => {
       vi.spyOn(workspaceDiffsRepo, "findByWorkspace").mockRejectedValueOnce(new Error("db"));
       const result = await workspaceDiffsService.getByWorkspace("ws-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get workspace diffs");
     });
 
     it("getLatest returns error on failure", async () => {
       vi.spyOn(workspaceDiffsRepo, "findLatestByWorkspace").mockRejectedValueOnce(new Error("db"));
       const result = await workspaceDiffsService.getLatest("ws-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get latest workspace diff");
     });
 
     it("getByRun returns error on failure", async () => {
       vi.spyOn(workspaceDiffsRepo, "findByRun").mockRejectedValueOnce(new Error("db"));
       const result = await workspaceDiffsService.getByRun("r1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get run diff");
     });
 
@@ -146,7 +147,7 @@ describe("workspaceDiffsService", () => {
         workspaceId: "ws-1",
         diffText: "x",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to create workspace diff");
     });
   });

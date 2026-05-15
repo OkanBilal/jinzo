@@ -1,3 +1,4 @@
+import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 
 export interface RateLimitWindow {
@@ -209,8 +210,7 @@ export const providersApi = baseApi.injectEndpoints({
       query: () => ({
         handler: "providers:getAll",
       }),
-      transformResponse: (response: { success: boolean; data: Provider[] }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Provider[]>) => unwrap(response),
       providesTags: ["Providers"],
     }),
 
@@ -219,8 +219,7 @@ export const providersApi = baseApi.injectEndpoints({
         handler: "providers:getById",
         args: [id],
       }),
-      transformResponse: (response: { success: boolean; data: Provider }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Provider>) => unwrap(response),
       providesTags: (_result, _error, id) => [{ type: "Providers", id }],
     }),
 
@@ -229,8 +228,7 @@ export const providersApi = baseApi.injectEndpoints({
         handler: "providers:getByKind",
         args: [kind],
       }),
-      transformResponse: (response: { success: boolean; data: Provider[] }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Provider[]>) => unwrap(response),
       providesTags: ["Providers"],
     }),
 
@@ -238,8 +236,7 @@ export const providersApi = baseApi.injectEndpoints({
       query: () => ({
         handler: "providers:getEnabled",
       }),
-      transformResponse: (response: { success: boolean; data: Provider[] }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Provider[]>) => unwrap(response),
       providesTags: ["Providers"],
     }),
 
@@ -248,8 +245,7 @@ export const providersApi = baseApi.injectEndpoints({
         handler: "providers:create",
         args: [payload],
       }),
-      transformResponse: (response: { success: boolean; data: string }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<string>) => unwrap(response),
       invalidatesTags: ["Providers"],
     }),
 
@@ -261,8 +257,7 @@ export const providersApi = baseApi.injectEndpoints({
         handler: "providers:update",
         args: [id, payload],
       }),
-      transformResponse: (response: { success: boolean; data: Provider }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Provider>) => unwrap(response),
       invalidatesTags: (_result, _error, { id }) => [
         "Providers",
         { type: "Providers", id },
@@ -304,16 +299,7 @@ export const providersApi = baseApi.injectEndpoints({
         handler: "providers:getModels",
         args: [id],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data: ModelInfo[];
-        error?: string;
-      }) => {
-        if (!response.success) {
-          throw new Error(response.error || "Failed to get models");
-        }
-        return response.data;
-      },
+      transformResponse: (response: ServiceResponse<ModelInfo[]>) => unwrap(response),
       providesTags: (_result, _error, id) => [{ type: "ProviderModels", id }],
     }),
 
@@ -325,16 +311,7 @@ export const providersApi = baseApi.injectEndpoints({
         handler: "providers:getCommands",
         args: [id, workspacePath],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data: CommandInfo[];
-        error?: string;
-      }) => {
-        if (!response.success) {
-          throw new Error(response.error || "Failed to get commands");
-        }
-        return response.data;
-      },
+      transformResponse: (response: ServiceResponse<CommandInfo[]>) => unwrap(response),
       providesTags: (_result, _error, { id, workspacePath }) => [
         { type: "ProviderCommands", id: `${id}:${workspacePath ?? ""}` },
       ],
@@ -348,16 +325,7 @@ export const providersApi = baseApi.injectEndpoints({
         handler: "providers:getSkills",
         args: [id, workspacePath],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data: SkillInfo[];
-        error?: string;
-      }) => {
-        if (!response.success) {
-          throw new Error(response.error || "Failed to get skills");
-        }
-        return response.data;
-      },
+      transformResponse: (response: ServiceResponse<SkillInfo[]>) => unwrap(response),
       providesTags: (_result, _error, { id, workspacePath }) => [
         { type: "ProviderSkills", id: `${id}:${workspacePath ?? ""}` },
       ],
@@ -368,14 +336,8 @@ export const providersApi = baseApi.injectEndpoints({
         handler: "providers:getAccountInfo",
         args: [id],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data: CodexAccountInfo;
-        error?: string;
-      }) => {
-        if (!response.success) return { account: null, requiresOpenaiAuth: false };
-        return response.data;
-      },
+      transformResponse: (response: ServiceResponse<CodexAccountInfo>) =>
+        response.success ? response.data : { account: null, requiresOpenaiAuth: false },
     }),
 
     getProviderPlugins: builder.query<PluginListResponse, string>({
@@ -383,16 +345,7 @@ export const providersApi = baseApi.injectEndpoints({
         handler: "providers:getPlugins",
         args: [id],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data: PluginListResponse;
-        error?: string;
-      }) => {
-        if (!response.success) {
-          throw new Error(response.error || "Failed to get plugins");
-        }
-        return response.data;
-      },
+      transformResponse: (response: ServiceResponse<PluginListResponse>) => unwrap(response),
       providesTags: (_result, _error, id) => [{ type: "ProviderPlugins", id }],
     }),
 
@@ -404,16 +357,7 @@ export const providersApi = baseApi.injectEndpoints({
         handler: "providers:readPlugin",
         args: [providerId, pluginName, marketplacePath],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data: PluginDetailResponse;
-        error?: string;
-      }) => {
-        if (!response.success) {
-          throw new Error(response.error || "Failed to read plugin");
-        }
-        return response.data;
-      },
+      transformResponse: (response: ServiceResponse<PluginDetailResponse>) => unwrap(response),
     }),
 
     installProviderPlugin: builder.mutation<void, { providerId: string; pluginId: string }>({
@@ -421,10 +365,8 @@ export const providersApi = baseApi.injectEndpoints({
         handler: "providers:installPlugin",
         args: [providerId, pluginId],
       }),
-      transformResponse: (response: { success: boolean; error?: string }) => {
-        if (!response.success) {
-          throw new Error(response.error || "Failed to install plugin");
-        }
+      transformResponse: (response: ServiceResponse<unknown>) => {
+        unwrap(response);
       },
       invalidatesTags: (_r, _e, { providerId }) => [
         { type: "ProviderPlugins", id: providerId },
@@ -437,10 +379,8 @@ export const providersApi = baseApi.injectEndpoints({
         handler: "providers:uninstallPlugin",
         args: [providerId, pluginId],
       }),
-      transformResponse: (response: { success: boolean; error?: string }) => {
-        if (!response.success) {
-          throw new Error(response.error || "Failed to uninstall plugin");
-        }
+      transformResponse: (response: ServiceResponse<unknown>) => {
+        unwrap(response);
       },
       invalidatesTags: (_r, _e, { providerId }) => [
         { type: "ProviderPlugins", id: providerId },
@@ -453,24 +393,18 @@ export const providersApi = baseApi.injectEndpoints({
         handler: "providers:getRateLimits",
         args: [id],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data: RateLimitInfo | null;
-        error?: string;
-      }) => {
-        if (!response.success) return null;
-        return response.data;
-      },
+      transformResponse: (response: ServiceResponse<RateLimitInfo | null>) =>
+        response.success ? response.data : null,
     }),
 
     detectInstalledClis: builder.query<DetectedClis, void>({
       query: () => ({
         handler: "providers:detectInstalled",
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data?: DetectedClis;
-      }) => response.data ?? { claude: false, copilot: false, codex: false, cursor: false },
+      transformResponse: (response: ServiceResponse<DetectedClis>) =>
+        response.success
+          ? response.data
+          : { claude: false, copilot: false, codex: false, cursor: false },
     }),
   }),
 });

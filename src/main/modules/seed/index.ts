@@ -8,4 +8,4 @@ export { seedController } from "./seed.controller";
 export { seedService } from "./seed.service";
 
 // DTOs
-export type { ServiceResponse, SuccessResponse, ErrorResponse } from "./seed.dto";
+export type { ServiceResponse } from "./seed.dto";

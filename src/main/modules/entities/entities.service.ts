@@ -68,7 +68,7 @@ export const entitiesService = {
   async delete(id: string): Promise<ServiceResponse<void>> {
     try {
       await entitiesRepo.softDelete(id);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error("Error deleting entity:", error);
       return { success: false, error: (error as Error).message };
@@ -132,7 +132,7 @@ export const entitiesService = {
   async deleteTask(entityId: string): Promise<ServiceResponse<void>> {
     try {
       await entitiesRepo.softDelete(entityId);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error("Error deleting task:", error);
       return { success: false, error: (error as Error).message };
@@ -186,7 +186,7 @@ export const entitiesService = {
   async deleteIssue(entityId: string): Promise<ServiceResponse<void>> {
     try {
       await entitiesRepo.softDelete(entityId);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error("Error deleting issue:", error);
       return { success: false, error: (error as Error).message };
@@ -240,7 +240,7 @@ export const entitiesService = {
   async deleteSignal(entityId: string): Promise<ServiceResponse<void>> {
     try {
       await entitiesRepo.softDelete(entityId);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error("Error deleting signal:", error);
       return { success: false, error: (error as Error).message };

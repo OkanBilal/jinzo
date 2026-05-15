@@ -70,7 +70,7 @@ export const reviewsService = {
   async delete(id: string): Promise<ServiceResponse<void>> {
     try {
       await reviewsRepo.remove(id);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(`[ReviewsService] Failed to delete review ${id}:`, error);
       return { success: false, error: "Failed to delete review" };

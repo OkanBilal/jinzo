@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -38,7 +39,7 @@ describe("reviewFindingsService", () => {
       createReviewFinding(db, { reviewId: review.id, file: "a.ts" });
 
       const result = await reviewFindingsService.getByWorkspace("ws-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toHaveLength(1);
       expect(result.data![0].file).toBe("a.ts");
     });
@@ -51,7 +52,7 @@ describe("reviewFindingsService", () => {
       createReviewFinding(db, { reviewId: review.id, file: "c.ts" });
 
       const result = await reviewFindingsService.getByWorkspace("ws-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toHaveLength(3);
     });
 
@@ -75,7 +76,7 @@ describe("reviewFindingsService", () => {
       });
 
       const result = await reviewFindingsService.getByWorkspace("ws-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       // Both reviews have same timestamp (created at same unixepoch second)
       // so the filtering keeps findings from whichever review is considered "latest"
       // The important assertion is that it doesn't double-count
@@ -91,14 +92,14 @@ describe("reviewFindingsService", () => {
       createReviewFinding(db, { reviewId: review2.id, file: "b.ts" });
 
       const result = await reviewFindingsService.getByWorkspace("ws-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       // Different files, so both should be kept regardless of review
       expect(result.data!).toHaveLength(2);
     });
 
     it("returns empty for workspace with no findings", async () => {
       const result = await reviewFindingsService.getByWorkspace("ws-empty");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toEqual([]);
     });
 
@@ -108,7 +109,7 @@ describe("reviewFindingsService", () => {
       createReviewFinding(db, { reviewId: review.id, file: "a.ts" });
 
       const result = await reviewFindingsService.getByWorkspace("ws-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       const finding = result.data![0];
       expect(finding).not.toHaveProperty("reviewCreatedAt");
       expect(finding).toHaveProperty("id");
@@ -125,7 +126,7 @@ describe("reviewFindingsService", () => {
       createReviewFinding(db, { reviewId: review2.id, file: "b.ts" });
 
       const result = await reviewFindingsService.getByWorkspace("ws-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toHaveLength(1);
       expect(result.data![0].file).toBe("a.ts");
     });
@@ -140,7 +141,7 @@ describe("reviewFindingsService", () => {
       createReviewFinding(db, { reviewId: review.id });
 
       const result = await reviewFindingsService.getByReview("r-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toHaveLength(1);
     });
 
@@ -151,7 +152,7 @@ describe("reviewFindingsService", () => {
       createReviewFinding(db, { reviewId: review.id, file: "c.ts" });
 
       const result = await reviewFindingsService.getByReview("r-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toHaveLength(3);
     });
 
@@ -162,13 +163,13 @@ describe("reviewFindingsService", () => {
       createReviewFinding(db, { reviewId: review.id, file: "c.ts" });
 
       const result = await reviewFindingsService.getByReview("r-1", 2);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toHaveLength(2);
     });
 
     it("returns empty for review with no findings", async () => {
       const result = await reviewFindingsService.getByReview("r-empty");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toEqual([]);
     });
   });
@@ -186,7 +187,7 @@ describe("reviewFindingsService", () => {
       });
 
       const result = await reviewFindingsService.getById("f-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.message).toBe("Test");
     });
 
@@ -207,7 +208,7 @@ describe("reviewFindingsService", () => {
       });
 
       const result = await reviewFindingsService.getById("f-full");
-      expect(result.success).toBe(true);
+      assertOk(result);
       const finding = result.data!;
       expect(finding.id).toBe("f-full");
       expect(finding.reviewId).toBe("r-1");
@@ -225,7 +226,7 @@ describe("reviewFindingsService", () => {
 
     it("returns error when not found", async () => {
       const result = await reviewFindingsService.getById("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Review finding not found");
     });
   });
@@ -243,12 +244,12 @@ describe("reviewFindingsService", () => {
         message: "Issue",
         reason: "Bug",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(typeof result.data!).toBe("string");
 
       // Verify finding was persisted
       const fetched = await reviewFindingsService.getById(result.data!);
-      expect(fetched.success).toBe(true);
+      assertOk(fetched);
       expect(fetched.data!.file).toBe("app.ts");
       expect(fetched.data!.severity).toBe("warning");
     });
@@ -268,11 +269,11 @@ describe("reviewFindingsService", () => {
         validated: true,
         metadata: { tool: "linter" },
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toBe("custom-id");
 
       const fetched = await reviewFindingsService.getById("custom-id");
-      expect(fetched.success).toBe(true);
+      assertOk(fetched);
       expect(fetched.data!.lineStart).toBe(5);
       expect(fetched.data!.lineEnd).toBe(15);
       expect(fetched.data!.suggestion).toBe("Fix the condition");
@@ -289,10 +290,10 @@ describe("reviewFindingsService", () => {
         message: "Minor note",
         reason: "Style",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const fetched = await reviewFindingsService.getById(result.data!);
-      expect(fetched.success).toBe(true);
+      assertOk(fetched);
       expect(fetched.data!.validated).toBe(false);
       expect(fetched.data!.lineStart).toBeNull();
       expect(fetched.data!.lineEnd).toBeNull();
@@ -323,7 +324,7 @@ describe("reviewFindingsService", () => {
           reason: "R2",
         },
       ]);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toHaveLength(2);
     });
 
@@ -347,14 +348,14 @@ describe("reviewFindingsService", () => {
           reason: "R2",
         },
       ]);
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!).toEqual(["id-a", "id-b"]);
 
       // Verify they were persisted
       const a = await reviewFindingsService.getById("id-a");
       const b = await reviewFindingsService.getById("id-b");
-      expect(a.success).toBe(true);
-      expect(b.success).toBe(true);
+      assertOk(a);
+      assertOk(b);
       expect(a.data!.file).toBe("a.ts");
       expect(b.data!.file).toBe("b.ts");
     });
@@ -372,10 +373,11 @@ describe("reviewFindingsService", () => {
           metadata: { source: "ai" },
         },
       ]);
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       const fetched = await reviewFindingsService.getById("id-meta");
-      expect(fetched.data!.metadata).toEqual({ source: "ai" });
+      assertOk(fetched);
+      expect(fetched.data.metadata).toEqual({ source: "ai" });
     });
   });
 
@@ -394,7 +396,7 @@ describe("reviewFindingsService", () => {
       const result = await reviewFindingsService.update("f-1", {
         severity: "critical",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.severity).toBe("critical");
     });
 
@@ -417,7 +419,7 @@ describe("reviewFindingsService", () => {
         suggestion: "Try this instead",
         validated: true,
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.severity).toBe("warning");
       expect(result.data!.file).toBe("new.ts");
       expect(result.data!.message).toBe("new message");
@@ -437,7 +439,7 @@ describe("reviewFindingsService", () => {
       const result = await reviewFindingsService.update("f-1", {
         metadata: { reviewed: true, score: 95 },
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.metadata).toEqual({ reviewed: true, score: 95 });
     });
 
@@ -452,7 +454,7 @@ describe("reviewFindingsService", () => {
       const result = await reviewFindingsService.update("f-1", {
         metadata: null,
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.metadata).toBeNull();
     });
 
@@ -466,7 +468,7 @@ describe("reviewFindingsService", () => {
       });
 
       const result = await reviewFindingsService.update("f-1", {});
-      expect(result.success).toBe(true);
+      assertOk(result);
       expect(result.data!.severity).toBe("warning");
       expect(result.data!.message).toBe("unchanged");
     });
@@ -475,7 +477,7 @@ describe("reviewFindingsService", () => {
       const result = await reviewFindingsService.update("nonexistent", {
         severity: "info",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Review finding not found");
     });
   });
@@ -489,17 +491,17 @@ describe("reviewFindingsService", () => {
       createReviewFinding(db, { id: "f-1", reviewId: review.id });
 
       const result = await reviewFindingsService.delete("f-1");
-      expect(result.success).toBe(true);
+      assertOk(result);
 
       // Verify it was removed
       const fetched = await reviewFindingsService.getById("f-1");
-      expect(fetched.success).toBe(false);
+      assertFail(fetched);
       expect(fetched.error).toBe("Review finding not found");
     });
 
     it("succeeds even when finding does not exist", async () => {
       const result = await reviewFindingsService.delete("nonexistent");
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
   });
 
@@ -510,21 +512,21 @@ describe("reviewFindingsService", () => {
     it("getByWorkspace returns error on failure", async () => {
       vi.spyOn(reviewFindingsRepo, "findByWorkspace").mockRejectedValueOnce(new Error("db"));
       const result = await reviewFindingsService.getByWorkspace("ws-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get workspace findings");
     });
 
     it("getByReview returns error on failure", async () => {
       vi.spyOn(reviewFindingsRepo, "findByReview").mockRejectedValueOnce(new Error("db"));
       const result = await reviewFindingsService.getByReview("r-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get review findings");
     });
 
     it("getById returns error on failure", async () => {
       vi.spyOn(reviewFindingsRepo, "findById").mockRejectedValueOnce(new Error("db"));
       const result = await reviewFindingsService.getById("f-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to get review finding");
     });
 
@@ -537,7 +539,7 @@ describe("reviewFindingsService", () => {
         message: "m",
         reason: "r",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to create review finding");
     });
 
@@ -552,21 +554,21 @@ describe("reviewFindingsService", () => {
           reason: "r",
         },
       ]);
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to create review findings");
     });
 
     it("update returns error on failure", async () => {
       vi.spyOn(reviewFindingsRepo, "update").mockRejectedValueOnce(new Error("db"));
       const result = await reviewFindingsService.update("f-1", { severity: "info" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to update review finding");
     });
 
     it("delete returns error on failure", async () => {
       vi.spyOn(reviewFindingsRepo, "remove").mockRejectedValueOnce(new Error("db"));
       const result = await reviewFindingsService.delete("f-1");
-      expect(result.success).toBe(false);
+      assertFail(result);
       expect(result.error).toBe("Failed to delete review finding");
     });
   });

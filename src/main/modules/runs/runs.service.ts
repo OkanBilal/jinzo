@@ -254,7 +254,7 @@ export const runsService = {
   async deleteRun(id: string): Promise<ServiceResponse<void>> {
     try {
       await runsRepo.deleteRun(id);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(`[RunsService] Failed to delete run ${id}:`, error);
       return { success: false, error: "Failed to delete run" };
@@ -296,7 +296,7 @@ export const runsService = {
   async removeContext(id: number): Promise<ServiceResponse<void>> {
     try {
       await runsRepo.deleteContext(id);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(`[RunsService] Failed to remove context ${id}:`, error);
       return { success: false, error: "Failed to remove context" };
@@ -327,7 +327,7 @@ export const runsService = {
   async removeArtifact(id: number): Promise<ServiceResponse<void>> {
     try {
       await runsRepo.deleteArtifact(id);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(`[RunsService] Failed to remove artifact ${id}:`, error);
       return { success: false, error: "Failed to remove artifact" };
@@ -361,7 +361,7 @@ export const runsService = {
   ): Promise<ServiceResponse<void>> {
     try {
       await runsRepo.updateToolCall(id, payload);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(`[RunsService] Failed to update tool call ${id}:`, error);
       return { success: false, error: "Failed to update tool call" };
@@ -843,7 +843,7 @@ export const runsService = {
       const session = runSessionRegistry.get(runId);
       if (session) {
         await session.abort();
-        return { success: true };
+        return { success: true, data: undefined };
       }
 
       // DB says running but no live session — process restart edge case.
@@ -853,7 +853,7 @@ export const runsService = {
         lastError: "Run had no live session (likely process restart mid-run)",
       });
       broadcastStatusChangedPreSession(runId, "canceled");
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(`[RunsService] Failed to abort run ${runId}:`, error);
       return { success: false, error: "Failed to abort run" };
@@ -901,13 +901,13 @@ export const runsService = {
       if (!run) return { success: false, error: "Run not found" };
 
       const provider = await providersRepo.findById(run.providerId);
-      if (!provider) return { success: true }; // No provider, nothing to delete
+      if (!provider) return { success: true, data: undefined };
 
       const adapter = createWorkAdapter(provider);
       if (adapter.deleteSession) {
         await adapter.deleteSession(runId);
       }
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(`[RunsService] Failed to delete session for run ${runId}:`, error);
       return { success: false, error: "Failed to delete session" };

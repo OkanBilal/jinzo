@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "./space.dto";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount, createSpace } from "../../../test/factories";
@@ -33,7 +34,7 @@ describe("spaceService", () => {
   describe("getAll", () => {
     it("returns empty list when no spaces", async () => {
       const result = await spaceService.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toEqual([]);
       }
@@ -44,7 +45,7 @@ describe("spaceService", () => {
       createSpace(db, { accountId: "default", name: "B" });
 
       const result = await spaceService.getAll();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data).toHaveLength(2);
       }
@@ -54,7 +55,7 @@ describe("spaceService", () => {
   describe("getById", () => {
     it("returns error when not found", async () => {
       const result = await spaceService.getById("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Space not found");
       }
@@ -64,7 +65,7 @@ describe("spaceService", () => {
       const space = createSpace(db, { accountId: "default", name: "My Space" });
 
       const result = await spaceService.getById(space.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.name).toBe("My Space");
       }
@@ -74,7 +75,7 @@ describe("spaceService", () => {
   describe("create", () => {
     it("creates space with generated slug", async () => {
       const result = await spaceService.create({ name: "Hello World" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.name).toBe("Hello World");
         expect(result.data.slug).toBe("hello-world");
@@ -88,24 +89,24 @@ describe("spaceService", () => {
         name: "Coding",
         slug: "coding",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
 
     it("rejects when name is missing", async () => {
       const result = await spaceService.create({});
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
 
     it("rejects invalid payload types", async () => {
       const result = await spaceService.create({ name: 123 });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
 
     it("auto-increments sortOrder", async () => {
       createSpace(db, { accountId: "default", sortOrder: 5 });
 
       const result = await spaceService.create({ name: "New Space" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.sortOrder).toBe(6);
       }
@@ -117,7 +118,7 @@ describe("spaceService", () => {
       const space = createSpace(db, { accountId: "default", name: "Old" });
 
       const result = await spaceService.update(space.id, { name: "New" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.name).toBe("New");
       }
@@ -125,7 +126,7 @@ describe("spaceService", () => {
 
     it("returns error when space not found", async () => {
       const result = await spaceService.update("nonexistent", { name: "X" });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
 
     it("rejects duplicate slug on update", async () => {
@@ -133,7 +134,7 @@ describe("spaceService", () => {
       const space = createSpace(db, { accountId: "default", slug: "mine" });
 
       const result = await spaceService.update(space.id, { slug: "taken" });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -142,12 +143,12 @@ describe("spaceService", () => {
       const space = createSpace(db, { accountId: "default" });
 
       const result = await spaceService.delete(space.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("returns error when not found", async () => {
       const result = await spaceService.delete("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -156,12 +157,12 @@ describe("spaceService", () => {
       const space = createSpace(db, { accountId: "default" });
 
       const result = await spaceService.archive(space.id);
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
 
     it("returns error when not found", async () => {
       const result = await spaceService.archive("nonexistent");
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -180,7 +181,7 @@ describe("spaceService", () => {
         uiConfig: '{"sidebar":true}',
         sortOrder: 42,
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.description).toBe("A description");
         expect(result.data.model).toBe("claude-opus-4-6");
@@ -194,7 +195,7 @@ describe("spaceService", () => {
         name: "Bad Theme",
         themeConfig: "not-json",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
 
     it("rejects invalid uiConfig JSON", async () => {
@@ -202,12 +203,12 @@ describe("spaceService", () => {
         name: "Bad UI",
         uiConfig: "{broken",
       });
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
 
     it("rejects null payload", async () => {
       const result = await spaceService.create(null);
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
   });
 
@@ -219,7 +220,7 @@ describe("spaceService", () => {
       const space = createSpace(db, { accountId: "default", name: "Old Name", slug: "old-name" });
 
       const result = await spaceService.update(space.id, { name: "New Name" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.slug).toBe("new-name");
       }
@@ -229,7 +230,7 @@ describe("spaceService", () => {
       const space = createSpace(db, { accountId: "default" });
 
       const result = await spaceService.update(space.id, null);
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
 
     it("updates without providing slug uses name to generate slug", async () => {
@@ -237,7 +238,7 @@ describe("spaceService", () => {
 
       // Provide name but no slug - slug should be auto-generated from name
       const result = await spaceService.update(space.id, { name: "Keep", description: "New desc" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.description).toBe("New desc");
       }
@@ -253,7 +254,7 @@ describe("spaceService", () => {
       });
 
       const result = await spaceService.update(space.id, { description: "only desc" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.name).toBe("Original"); // name unchanged
       }
@@ -264,7 +265,7 @@ describe("spaceService", () => {
       const space = createSpace(db, { accountId: "default", slug: "old-slug", name: "My Space" });
 
       const result = await spaceService.update(space.id, { slug: "brand-new-slug", name: "My Space" });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.slug).toBe("brand-new-slug");
       }
@@ -275,7 +276,7 @@ describe("spaceService", () => {
       const space = createSpace(db, { accountId: "default", slug: "my-slug", name: "My Space" });
 
       const result = await spaceService.update(space.id, { slug: "existing-slug", name: "My Space" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect((result as any).errors?.slug).toBe("A space with this slug already exists");
       }
@@ -285,7 +286,7 @@ describe("spaceService", () => {
       const space = createSpace(db, { accountId: "default", name: "Test", slug: "test" });
 
       const result = await spaceService.update(space.id, { name: "Test Updated", slug: "test" });
-      expect(result.success).toBe(true);
+      assertOk(result);
     });
   });
 
@@ -296,7 +297,7 @@ describe("spaceService", () => {
     it("getAll catches Error and returns message", async () => {
       const spy = vi.spyOn(spaceRepo, "findAll").mockRejectedValueOnce(new Error("db failure"));
       const result = await spaceService.getAll();
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("db failure");
       }
@@ -306,7 +307,7 @@ describe("spaceService", () => {
     it("getById catches Error and returns message", async () => {
       const spy = vi.spyOn(spaceRepo, "findById").mockRejectedValueOnce(new Error("db read error"));
       const result = await spaceService.getById("some-id");
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("db read error");
       }
@@ -316,7 +317,7 @@ describe("spaceService", () => {
     it("create catches Error and returns message", async () => {
       const spy = vi.spyOn(spaceRepo, "findBySlug").mockRejectedValueOnce(new Error("slug check failed"));
       const result = await spaceService.create({ name: "Test" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("slug check failed");
       }
@@ -326,7 +327,7 @@ describe("spaceService", () => {
     it("update catches Error and returns message", async () => {
       const spy = vi.spyOn(spaceRepo, "findById").mockRejectedValueOnce(new Error("update db error"));
       const result = await spaceService.update("some-id", { name: "X" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("update db error");
       }
@@ -336,7 +337,7 @@ describe("spaceService", () => {
     it("delete catches Error and returns message", async () => {
       const spy = vi.spyOn(spaceRepo, "findById").mockRejectedValueOnce(new Error("delete db error"));
       const result = await spaceService.delete("some-id");
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("delete db error");
       }
@@ -346,7 +347,7 @@ describe("spaceService", () => {
     it("archive catches Error and returns message", async () => {
       const spy = vi.spyOn(spaceRepo, "findById").mockRejectedValueOnce(new Error("archive db error"));
       const result = await spaceService.archive("some-id");
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("archive db error");
       }
@@ -361,7 +362,7 @@ describe("spaceService", () => {
     it("getAll returns Unknown error for non-Error throw", async () => {
       const spy = vi.spyOn(spaceRepo, "findAll").mockRejectedValueOnce("string error");
       const result = await spaceService.getAll();
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Unknown error");
       }
@@ -371,7 +372,7 @@ describe("spaceService", () => {
     it("getById returns Unknown error for non-Error throw", async () => {
       const spy = vi.spyOn(spaceRepo, "findById").mockRejectedValueOnce(42);
       const result = await spaceService.getById("some-id");
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Unknown error");
       }
@@ -381,7 +382,7 @@ describe("spaceService", () => {
     it("create returns Unknown error for non-Error throw", async () => {
       const spy = vi.spyOn(spaceRepo, "findBySlug").mockRejectedValueOnce(null);
       const result = await spaceService.create({ name: "Test" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Unknown error");
       }
@@ -391,7 +392,7 @@ describe("spaceService", () => {
     it("update returns Unknown error for non-Error throw", async () => {
       const spy = vi.spyOn(spaceRepo, "findById").mockRejectedValueOnce(undefined);
       const result = await spaceService.update("some-id", { name: "X" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Unknown error");
       }
@@ -401,7 +402,7 @@ describe("spaceService", () => {
     it("delete returns Unknown error for non-Error throw", async () => {
       const spy = vi.spyOn(spaceRepo, "findById").mockRejectedValueOnce("boom");
       const result = await spaceService.delete("some-id");
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Unknown error");
       }
@@ -411,7 +412,7 @@ describe("spaceService", () => {
     it("archive returns Unknown error for non-Error throw", async () => {
       const spy = vi.spyOn(spaceRepo, "findById").mockRejectedValueOnce("boom");
       const result = await spaceService.archive("some-id");
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Unknown error");
       }
@@ -426,7 +427,7 @@ describe("spaceService", () => {
     it("create returns error when findById returns null after insert", async () => {
       const findByIdSpy = vi.spyOn(spaceRepo, "findById").mockResolvedValueOnce(undefined);
       const result = await spaceService.create({ name: "Ghost Space" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Failed to create space");
       }
@@ -440,7 +441,7 @@ describe("spaceService", () => {
         errors: {},
       });
       const result = await spaceService.create({ name: "anything" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect((result as any).errors?.name).toBe("Name is required");
       }
@@ -456,7 +457,7 @@ describe("spaceService", () => {
         .mockResolvedValueOnce(undefined);
 
       const result = await spaceService.update(space.id, { name: "Updated" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Failed to update space");
       }

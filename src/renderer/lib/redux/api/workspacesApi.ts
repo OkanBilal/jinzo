@@ -1,3 +1,4 @@
+import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 
 export interface WorkspaceMetadata {
@@ -57,8 +58,7 @@ export const workspacesApi = baseApi.injectEndpoints({
       query: () => ({
         handler: "workspaces:getAll",
       }),
-      transformResponse: (response: { success: boolean; data: Workspace[] }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Workspace[]>) => unwrap(response),
       providesTags: ["Workspaces"],
     }),
 
@@ -67,8 +67,7 @@ export const workspacesApi = baseApi.injectEndpoints({
         handler: "workspaces:getById",
         args: [id],
       }),
-      transformResponse: (response: { success: boolean; data: Workspace }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Workspace>) => unwrap(response),
       providesTags: (_result, _error, id) => [{ type: "Workspaces", id }],
     }),
 
@@ -77,8 +76,7 @@ export const workspacesApi = baseApi.injectEndpoints({
         handler: "workspaces:getByAccount",
         args: [accountId],
       }),
-      transformResponse: (response: { success: boolean; data: Workspace[] }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Workspace[]>) => unwrap(response),
       providesTags: ["Workspaces"],
     }),
 
@@ -90,8 +88,7 @@ export const workspacesApi = baseApi.injectEndpoints({
         handler: "workspaces:getByRootPath",
         args: [accountId, rootPath],
       }),
-      transformResponse: (response: { success: boolean; data: Workspace }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Workspace>) => unwrap(response),
       providesTags: ["Workspaces"],
     }),
 
@@ -100,8 +97,7 @@ export const workspacesApi = baseApi.injectEndpoints({
         handler: "workspaces:create",
         args: [payload],
       }),
-      transformResponse: (response: { success: boolean; data: string }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<string>) => unwrap(response),
       invalidatesTags: ["Workspaces"],
     }),
 
@@ -113,8 +109,7 @@ export const workspacesApi = baseApi.injectEndpoints({
         handler: "workspaces:update",
         args: [id, payload],
       }),
-      transformResponse: (response: { success: boolean; data: Workspace }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Workspace>) => unwrap(response),
       invalidatesTags: (_result, _error, { id }) => [
         "Workspaces",
         { type: "Workspaces", id },
@@ -134,8 +129,7 @@ export const workspacesApi = baseApi.injectEndpoints({
         handler: "workspaces:archive",
         args: [id],
       }),
-      transformResponse: (response: { success: boolean; data: Workspace }) =>
-        response.data,
+      transformResponse: (response: ServiceResponse<Workspace>) => unwrap(response),
       invalidatesTags: (_result, _error, id) => [
         "Workspaces",
         { type: "Workspaces", id },
@@ -146,10 +140,7 @@ export const workspacesApi = baseApi.injectEndpoints({
       query: () => ({
         handler: "workspaces:selectDirectory",
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data: string | null;
-      }) => response.data,
+      transformResponse: (response: ServiceResponse<string | null>) => unwrap(response),
     }),
   }),
 });

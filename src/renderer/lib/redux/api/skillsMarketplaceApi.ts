@@ -1,3 +1,4 @@
+import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 
 // ─────────────────────────────────────────────────────────────
@@ -113,16 +114,7 @@ export const skillsMarketplaceApi = baseApi.injectEndpoints({
         handler: "skillsMarketplace:list",
         args: [args ?? {}],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data: SkillListResponse;
-        error?: string;
-      }) => {
-        if (!response.success) {
-          throw new Error(response.error || "Failed to fetch skills");
-        }
-        return response.data;
-      },
+      transformResponse: (response: ServiceResponse<SkillListResponse>) => unwrap(response),
       providesTags: (_r, _e, args) => [
         {
           type: "SkillsMarketplace",
@@ -136,16 +128,7 @@ export const skillsMarketplaceApi = baseApi.injectEndpoints({
         handler: "skillsMarketplace:search",
         args: [args],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data: SkillSearchResponse;
-        error?: string;
-      }) => {
-        if (!response.success) {
-          throw new Error(response.error || "Failed to search skills");
-        }
-        return response.data;
-      },
+      transformResponse: (response: ServiceResponse<SkillSearchResponse>) => unwrap(response),
       providesTags: (_r, _e, args) => [
         { type: "SkillsMarketplace", id: `search:${args.q}:${args.limit ?? ""}` },
       ],
@@ -153,16 +136,7 @@ export const skillsMarketplaceApi = baseApi.injectEndpoints({
 
     getCuratedSkills: builder.query<CuratedResponse, void>({
       query: () => ({ handler: "skillsMarketplace:curated" }),
-      transformResponse: (response: {
-        success: boolean;
-        data: CuratedResponse;
-        error?: string;
-      }) => {
-        if (!response.success) {
-          throw new Error(response.error || "Failed to fetch curated skills");
-        }
-        return response.data;
-      },
+      transformResponse: (response: ServiceResponse<CuratedResponse>) => unwrap(response),
       providesTags: [{ type: "SkillsMarketplace", id: "curated" }],
     }),
 
@@ -171,16 +145,7 @@ export const skillsMarketplaceApi = baseApi.injectEndpoints({
         handler: "skillsMarketplace:detail",
         args: [ref],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data: SkillDetailResponse;
-        error?: string;
-      }) => {
-        if (!response.success) {
-          throw new Error(response.error || "Failed to fetch skill detail");
-        }
-        return response.data;
-      },
+      transformResponse: (response: ServiceResponse<SkillDetailResponse>) => unwrap(response),
       providesTags: (_r, _e, ref) => [
         { type: "SkillsMarketplace", id: `detail:${ref.source}/${ref.skill}` },
       ],
@@ -191,16 +156,7 @@ export const skillsMarketplaceApi = baseApi.injectEndpoints({
         handler: "skillsMarketplace:audit",
         args: [ref],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data: SkillAuditResponse;
-        error?: string;
-      }) => {
-        if (!response.success) {
-          throw new Error(response.error || "Failed to fetch skill audit");
-        }
-        return response.data;
-      },
+      transformResponse: (response: ServiceResponse<SkillAuditResponse>) => unwrap(response),
       providesTags: (_r, _e, ref) => [
         { type: "SkillsMarketplace", id: `audit:${ref.source}/${ref.skill}` },
       ],

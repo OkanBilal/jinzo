@@ -31,7 +31,7 @@ describe("seedService", () => {
   describe("seedAccounts", () => {
     it("returns success when seeding succeeds", async () => {
       const result = await seedService.seedAccounts();
-      expect(result).toEqual({ success: true, message: "Accounts seeded successfully" });
+      expect(result).toEqual({ success: true, data: "Accounts seeded successfully" });
       expect(seedAccountsData).toHaveBeenCalledOnce();
     });
 
@@ -45,7 +45,7 @@ describe("seedService", () => {
   describe("seedConnectionStates", () => {
     it("returns success when seeding succeeds", async () => {
       const result = await seedService.seedConnectionStates();
-      expect(result).toEqual({ success: true, message: "Connections States seeded successfully" });
+      expect(result).toEqual({ success: true, data: "Connections States seeded successfully" });
       expect(seedConnectionStates).toHaveBeenCalledOnce();
     });
 
@@ -59,7 +59,7 @@ describe("seedService", () => {
   describe("seedConnections", () => {
     it("returns success when seeding succeeds", async () => {
       const result = await seedService.seedConnections();
-      expect(result).toEqual({ success: true, message: "Connections States seeded successfully" });
+      expect(result).toEqual({ success: true, data: "Connections States seeded successfully" });
       expect(seedConnections).toHaveBeenCalledOnce();
     });
 
@@ -73,7 +73,7 @@ describe("seedService", () => {
   describe("seedProviders", () => {
     it("returns success when seeding succeeds", async () => {
       const result = await seedService.seedProviders();
-      expect(result).toEqual({ success: true, message: "Providers seeded successfully" });
+      expect(result).toEqual({ success: true, data: "Providers seeded successfully" });
       expect(seedProvidersData).toHaveBeenCalledOnce();
     });
 
@@ -87,7 +87,7 @@ describe("seedService", () => {
   describe("seedSpaces", () => {
     it("returns success when seeding succeeds", async () => {
       const result = await seedService.seedSpaces();
-      expect(result).toEqual({ success: true, message: "Spaces seeded successfully" });
+      expect(result).toEqual({ success: true, data: "Spaces seeded successfully" });
       expect(seedSpacesData).toHaveBeenCalledOnce();
     });
 
@@ -101,7 +101,7 @@ describe("seedService", () => {
   describe("seedAll", () => {
     it("calls all seed functions in order and returns success", async () => {
       const result = await seedService.seedAll();
-      expect(result).toEqual({ success: true, message: "All data seeded successfully" });
+      expect(result).toEqual({ success: true, data: "All data seeded successfully" });
       expect(seedAccountsData).toHaveBeenCalledOnce();
       expect(seedConnectionStates).toHaveBeenCalledOnce();
       expect(seedConnections).toHaveBeenCalledOnce();

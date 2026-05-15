@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount } from "../../../test/factories";
@@ -43,7 +44,7 @@ describe("accountService", () => {
   describe("getAccount", () => {
     it("returns success response with formatted account", async () => {
       const result = await accountService.getAccount();
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.id).toBe("default");
         // formatAccountResponse defaults
@@ -58,7 +59,7 @@ describe("accountService", () => {
       const result = await accountService.updateAccount({
         displayName: "Updated Name",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.displayName).toBe("Updated Name");
       }
@@ -66,12 +67,12 @@ describe("accountService", () => {
 
     it("returns errors for invalid payload", async () => {
       const result = await accountService.updateAccount(null);
-      expect(result.success).toBe(false);
+      assertFail(result);
     });
 
     it("returns error for empty update", async () => {
       const result = await accountService.updateAccount({});
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("No fields to update");
       }
@@ -81,10 +82,8 @@ describe("accountService", () => {
       const result = await accountService.updateAccount({
         email: "not-an-email",
       });
-      expect(result.success).toBe(false);
-      if (!result.success && result.errors) {
-        expect(result.errors.email).toBe("Invalid email");
-      }
+      assertFail(result);
+      expect(result.error).toContain("email: Invalid email");
     });
 
     it("updates multiple fields", async () => {
@@ -93,7 +92,7 @@ describe("accountService", () => {
         email: "valid@test.com",
         bio: "Hello world",
       });
-      expect(result.success).toBe(true);
+      assertOk(result);
       if (result.success) {
         expect(result.data.displayName).toBe("New Name");
         expect(result.data.email).toBe("valid@test.com");
@@ -108,7 +107,7 @@ describe("accountService", () => {
     it("getAccount returns error on failure", async () => {
       vi.spyOn(accountRepo, "findById").mockRejectedValueOnce(new Error("db"));
       const result = await accountService.getAccount();
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Failed to fetch account");
       }
@@ -117,7 +116,7 @@ describe("accountService", () => {
     it("updateAccount returns error on failure", async () => {
       vi.spyOn(accountRepo, "update").mockRejectedValueOnce(new Error("db"));
       const result = await accountService.updateAccount({ displayName: "X" });
-      expect(result.success).toBe(false);
+      assertFail(result);
       if (!result.success) {
         expect(result.error).toBe("Failed to update account");
       }

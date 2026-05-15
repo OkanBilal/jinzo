@@ -1,3 +1,4 @@
+import type { ServiceResponse } from "../../../../shared/ipc-kit/service-response";
 import { baseApi } from "./baseApi";
 import type { IssueWithEntity } from "./entitiesApi";
 
@@ -43,10 +44,8 @@ export const projectResourcesApi = baseApi.injectEndpoints({
         handler: "projectResources:getByProject",
         args: [projectId],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data?: { resources: ProjectResourceWithDetails[] };
-      }) => (response.success ? (response.data?.resources ?? []) : []),
+      transformResponse: (response: ServiceResponse<{ resources: ProjectResourceWithDetails[] }>) =>
+        response.success ? response.data.resources : [],
       providesTags: (_result, _error, projectId) => [
         { type: "ProjectResources", id: projectId },
       ],
@@ -57,10 +56,8 @@ export const projectResourcesApi = baseApi.injectEndpoints({
         handler: "projectResources:getAvailable",
         args: [projectId],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data?: { resources: AvailableResource[] };
-      }) => (response.success ? (response.data?.resources ?? []) : []),
+      transformResponse: (response: ServiceResponse<{ resources: AvailableResource[] }>) =>
+        response.success ? response.data.resources : [],
       providesTags: ["ProjectResources"],
     }),
 
@@ -97,10 +94,8 @@ export const projectResourcesApi = baseApi.injectEndpoints({
         handler: "projectResources:getIssues",
         args: [projectId],
       }),
-      transformResponse: (response: {
-        success: boolean;
-        data?: { issues: ProjectIssue[] };
-      }) => (response.success ? (response.data?.issues ?? []) : []),
+      transformResponse: (response: ServiceResponse<{ issues: ProjectIssue[] }>) =>
+        response.success ? response.data.issues : [],
       providesTags: (_result, _error, projectId) => [
         { type: "ProjectIssues", id: projectId },
       ],

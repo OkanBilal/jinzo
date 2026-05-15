@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -34,7 +35,7 @@ describe("statsController", () => {
   describe("getDashboard", () => {
     it("returns success with dashboard data when no data exists", async () => {
       const res = await statsController.getDashboard();
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toBeDefined();
       expect(res.data!.summary).toBeDefined();
       expect(res.data!.dailyActivity).toBeDefined();
@@ -55,7 +56,7 @@ describe("statsController", () => {
       createRun(db, { id: "run-2", providerId: "claude_code" });
 
       const res = await statsController.getDashboard();
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toBeDefined();
       expect(res.data!.summary.totalSessions).toBeGreaterThanOrEqual(2);
     });
@@ -68,7 +69,7 @@ describe("statsController", () => {
       createRun(db, { id: "run-2", providerId: "claude_code" });
 
       const res = await statsController.getDashboard("copilot_cli");
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toBeDefined();
     });
 
@@ -80,7 +81,7 @@ describe("statsController", () => {
       createRun(db, { id: "run-2", providerId: "claude_code" });
 
       const res = await statsController.getDashboard("claude_code");
-      expect(res.success).toBe(true);
+      assertOk(res);
       expect(res.data).toBeDefined();
     });
 
@@ -92,8 +93,8 @@ describe("statsController", () => {
       const resAll = await statsController.getDashboard();
       const resExplicit = await statsController.getDashboard("all");
 
-      expect(resAll.success).toBe(true);
-      expect(resExplicit.success).toBe(true);
+      assertOk(resAll);
+      assertOk(resExplicit);
       // Both should return the same summary
       expect(resAll.data!.summary.totalSessions).toBe(resExplicit.data!.summary.totalSessions);
     });
@@ -103,7 +104,7 @@ describe("statsController", () => {
       cleanup();
 
       const res = await statsController.getDashboard();
-      expect(res.success).toBe(false);
+      assertFail(res);
       expect(res.error).toBeDefined();
     });
   });

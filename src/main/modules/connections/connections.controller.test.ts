@@ -1,3 +1,4 @@
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import {
@@ -41,7 +42,7 @@ describe("connectionsController", () => {
       createConnection(db, { id: "conn-gh", provider: "github", type: "oauth" });
 
       const res = await connectionsController.getByProvider("github");
-      expect(res.success).toBe(true);
+      assertOk(res);
       if (res.success) {
         expect(res.data.connection.id).toBe("conn-gh");
         expect(res.data.connection.provider).toBe("github");
@@ -50,13 +51,13 @@ describe("connectionsController", () => {
 
     it("returns error when connection not found", async () => {
       const res = await connectionsController.getByProvider("nonexistent");
-      expect(res.success).toBe(false);
+      assertFail(res);
       if (!res.success) expect(res.error).toContain("not found");
     });
 
     it("returns error for empty provider string", async () => {
       const res = await connectionsController.getByProvider("");
-      expect(res.success).toBe(false);
+      assertFail(res);
     });
   });
 
@@ -74,7 +75,7 @@ describe("connectionsController", () => {
       });
 
       const res = await connectionsController.getSelectedResources("github");
-      expect(res.success).toBe(true);
+      assertOk(res);
       if (res.success) {
         expect((res.data as any).repos).toHaveLength(1);
         expect((res.data as any).connectionId).toBe("conn-gh");
@@ -93,19 +94,19 @@ describe("connectionsController", () => {
       });
 
       const res = await connectionsController.getSelectedResources("github");
-      expect(res.success).toBe(true);
+      assertOk(res);
       if (res.success) expect((res.data as any).repos).toHaveLength(0);
     });
 
     it("returns error for unsupported provider", async () => {
       const res = await connectionsController.getSelectedResources("unknown_provider");
-      expect(res.success).toBe(false);
+      assertFail(res);
       if (!res.success) expect(res.error).toContain("Unsupported");
     });
 
     it("returns error when connection not found", async () => {
       const res = await connectionsController.getSelectedResources("github");
-      expect(res.success).toBe(false);
+      assertFail(res);
       if (!res.success) expect(res.error).toContain("not found");
     });
   });
@@ -135,12 +136,12 @@ describe("connectionsController", () => {
           },
         ],
       });
-      expect(res.success).toBe(true);
+      assertOk(res);
       if (res.success) expect(res.data.count).toBe(1);
 
       // Verify resource was saved
       const selected = await connectionsController.getSelectedResources("github");
-      expect(selected.success).toBe(true);
+      assertOk(selected);
       if (selected.success) expect((selected.data as any).repos).toHaveLength(1);
     });
 
@@ -150,7 +151,7 @@ describe("connectionsController", () => {
         connectionId: "conn-gh",
         resources: [],
       });
-      expect(res.success).toBe(false);
+      assertFail(res);
     });
 
     it("returns error when resources are empty", async () => {
@@ -159,7 +160,7 @@ describe("connectionsController", () => {
         connectionId: "conn-gh",
         resources: [],
       });
-      expect(res.success).toBe(false);
+      assertFail(res);
       if (!res.success) expect(res.error).toContain("required");
     });
 
@@ -169,7 +170,7 @@ describe("connectionsController", () => {
         connectionId: "conn-1",
         resources: [{}],
       });
-      expect(res.success).toBe(false);
+      assertFail(res);
       if (!res.success) expect(res.error).toContain("Unsupported");
     });
   });
@@ -186,19 +187,19 @@ describe("connectionsController", () => {
       });
 
       const res = await connectionsController.removeResource("conn-gh:repo-1");
-      expect(res.success).toBe(true);
+      assertOk(res);
       if (res.success) expect(res.data.message).toContain("removed");
     });
 
     it("returns error for nonexistent resource", async () => {
       const res = await connectionsController.removeResource("nonexistent");
-      expect(res.success).toBe(false);
+      assertFail(res);
       if (!res.success) expect(res.error).toContain("not found");
     });
 
     it("returns error for empty resource id", async () => {
       const res = await connectionsController.removeResource("");
-      expect(res.success).toBe(false);
+      assertFail(res);
     });
   });
 
@@ -214,12 +215,12 @@ describe("connectionsController", () => {
       });
 
       const res = await connectionsController.deleteResource("conn-gh:repo-1");
-      expect(res.success).toBe(true);
+      assertOk(res);
     });
 
     it("returns error for empty resource id", async () => {
       const res = await connectionsController.deleteResource("");
-      expect(res.success).toBe(false);
+      assertFail(res);
     });
   });
 
@@ -230,23 +231,23 @@ describe("connectionsController", () => {
       createConnectionState(db, { id: "github", isConnected: true, connectionId: "conn-gh" });
 
       const res = await connectionsController.revoke("github");
-      expect(res.success).toBe(true);
+      assertOk(res);
 
       // Connection should still exist but be revoked
       const conn = await connectionsController.getByProvider("github");
-      expect(conn.success).toBe(true);
+      assertOk(conn);
       if (conn.success) expect(conn.data.connection.status).toBe("revoked");
     });
 
     it("returns error when connection not found", async () => {
       const res = await connectionsController.revoke("nonexistent");
-      expect(res.success).toBe(false);
+      assertFail(res);
       if (!res.success) expect(res.error).toContain("not found");
     });
 
     it("returns error for empty provider", async () => {
       const res = await connectionsController.revoke("");
-      expect(res.success).toBe(false);
+      assertFail(res);
     });
 
     it("cleans up resources on revoke", async () => {
@@ -261,11 +262,11 @@ describe("connectionsController", () => {
       });
 
       const res = await connectionsController.revoke("github");
-      expect(res.success).toBe(true);
+      assertOk(res);
 
       // Resources should be deleted
       const selected = await connectionsController.getSelectedResources("github");
-      expect(selected.success).toBe(true);
+      assertOk(selected);
       if (selected.success) expect((selected.data as any).repos).toHaveLength(0);
     });
   });

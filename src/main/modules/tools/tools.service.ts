@@ -49,7 +49,7 @@ export const toolsService = {
   async updateToolCall(id: number, payload: UpdateToolCallPayload): Promise<ServiceResponse<void>> {
     try {
       await toolsRepo.updateToolCall(id, payload);
-      return { success: true };
+      return { success: true, data: undefined };
     } catch (error) {
       console.error(`[ToolsService] Failed to update tool call ${id}:`, error);
       return { success: false, error: "Failed to update tool call" };

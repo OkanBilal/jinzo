@@ -15,8 +15,6 @@ export type {
   AppSettingsRecord,
   AppSettingsPatch,
   ServiceResponse,
-  SuccessResponse,
-  ErrorResponse,
 } from "./appSettings.dto";
 
 // Constants

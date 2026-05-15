@@ -531,9 +531,9 @@ export async function handleCheckPackage(
   }));
 
   const result = await guardsService.checkPackages(pkgs);
-  if (!result.success || !result.data) {
+  if (!result.success) {
     return {
-      content: [{ type: "text" as const, text: `Guard check failed: ${result.error || "unknown error"}` }],
+      content: [{ type: "text" as const, text: `Guard check failed: ${result.error}` }],
       isError: true,
     };
   }

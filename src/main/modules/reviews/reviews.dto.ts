@@ -34,12 +34,4 @@ export interface UpdateReviewPayload {
   metadata?: Record<string, unknown>;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Service Response
-// ─────────────────────────────────────────────────────────────
-
-export interface ServiceResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+export type { ServiceResponse } from "../../../shared/ipc-kit/service-response";
