@@ -214,14 +214,6 @@ export const CHANNELS = {
     toolApprovalResponse: "runs:toolApprovalResponse",
     update: "runs:update",
   },
-  seed: {
-    accounts: "seed:accounts",
-    all: "seed:all",
-    connectionStates: "seed:connectionStates",
-    connections: "seed:connections",
-    providers: "seed:providers",
-    spaces: "seed:spaces",
-  },
   shell: {
     getAppsForFile: "shell:getAppsForFile",
     getInstalledApps: "shell:getInstalledApps",

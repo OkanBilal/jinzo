@@ -33,6 +33,10 @@ Each `src/main/modules/{name}/` follows a 6-file layout: `ipc.ts → service.ts 
 
 A module folder may own **more than one table**. The 6-file layout is per module, not per table. When several tables form one conceptual aggregate (see **workspace** below), they live in one folder under the flat 6-file shape, with each layer's file containing all tables' code.
 
+**Seed runner**:
+Initial data seeding is *not* a domain module. It lives in `src/main/db/seeds/` as a versioned, idempotent runner: each `v{N}.ts` exports `run(db)`, the runner tracks `appSettings.seedVersion`, and `db/client.ts` invokes `runSeeds(db)` automatically at database init. The renderer plays no part. There is intentionally no `src/main/modules/seed/` — an earlier IPC-driven seed module was vestigial and was removed. Fixtures live in `src/main/db/data/`; v1.ts imports them.
+_Avoid_: re-introducing an `api.seed.*` IPC surface, putting seed code under `db/queries/` (the directory no longer exists), or routing seeding through a domain module. See ADR-0003.
+
 ## Aggregate modules
 
 ### workspace
