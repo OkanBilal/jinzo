@@ -1,4 +1,4 @@
-import { assertOk, assertFail } from "./space.dto";
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount, createSpace } from "../../../test/factories";
@@ -277,9 +277,7 @@ describe("spaceService", () => {
 
       const result = await spaceService.update(space.id, { slug: "existing-slug", name: "My Space" });
       assertFail(result);
-      if (!result.success) {
-        expect((result as any).errors?.slug).toBe("A space with this slug already exists");
-      }
+      expect(result.error).toBe("slug: A space with this slug already exists");
     });
 
     it("allows same slug when not changing it", async () => {
@@ -442,9 +440,7 @@ describe("spaceService", () => {
       });
       const result = await spaceService.create({ name: "anything" });
       assertFail(result);
-      if (!result.success) {
-        expect((result as any).errors?.name).toBe("Name is required");
-      }
+      expect(result.error).toBe("name: Name is required");
       spy.mockRestore();
     });
 

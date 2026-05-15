@@ -1,5 +1,6 @@
 import { fetchEntitiesByProvider } from "./sync.fetchers";
 import { syncRepo } from "./sync.repo";
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import type { SyncJobResult, SyncJobStats, ServiceResponse } from "./sync.dto";
 
 // ─────────────────────────────────────────────────────────────
@@ -31,19 +32,6 @@ function createSuccessResult(
   };
 }
 
-function createFailureResult(duration: number): SyncJobResult {
-  return {
-    success: false,
-    inserted: 0,
-    updated: 0,
-    skipped: 0,
-    errors: 1,
-    total: 0,
-    duration,
-    stats: { itemsPerSecond: 0 },
-  };
-}
-
 function createEmptyResult(duration: number): SyncJobResult {
   return {
     success: true,
@@ -59,6 +47,10 @@ function createEmptyResult(duration: number): SyncJobResult {
 
 // ─────────────────────────────────────────────────────────────
 // Service - Business Logic
+//
+// "Success" = the orchestration completed. Per-item failures live in
+// `SyncJobResult.errors` (count). "Failure" = the orchestration itself
+// threw before producing a result.
 // ─────────────────────────────────────────────────────────────
 export const syncService = {
   async runEntitySync(provider?: string): Promise<ServiceResponse<SyncJobResult>> {
@@ -88,21 +80,14 @@ export const syncService = {
 
       if (totalEntities === 0) {
         console.warn("⚠️  No entities fetched from sources");
-        const result = createEmptyResult(Date.now() - startTime);
-        return { success: true, data: result };
+        return ok(createEmptyResult(Date.now() - startTime));
       }
 
       const duration = Date.now() - startTime;
-      const result = createSuccessResult(totalStats, totalEntities, duration);
-
-      return { success: true, data: result };
+      return ok(createSuccessResult(totalStats, totalEntities, duration));
     } catch (err) {
       console.error("Sync job failed:", err);
-
-      const duration = Date.now() - startTime;
-      const result = createFailureResult(duration);
-
-      return { success: false, data: result, error: "Sync job failed" };
+      return fail("Sync job failed");
     }
   },
 };

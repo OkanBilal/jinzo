@@ -2,7 +2,14 @@ import { nanoid } from "nanoid";
 import { spaceRepo } from "./space.repo";
 import { ACCOUNT_ID } from "./space.constants";
 import { sanitizeSpacePayload, generateSlug } from "./space.validation";
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import type { SpaceRecord, ServiceResponse } from "./space.dto";
+
+function flattenFieldErrors(errors: Record<string, string>): string {
+  return Object.entries(errors)
+    .map(([field, msg]) => `${field}: ${msg}`)
+    .join("; ");
+}
 
 // ─────────────────────────────────────────────────────────────
 // Space Service
@@ -11,31 +18,21 @@ export const spaceService = {
   async getAll(): Promise<ServiceResponse<SpaceRecord[]>> {
     try {
       const result = await spaceRepo.findAll();
-      return { success: true, data: result };
+      return ok(result);
     } catch (error) {
       console.error("Error fetching spaces:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+      return fail(error instanceof Error ? error.message : "Unknown error");
     }
   },
 
   async getById(spaceId: string): Promise<ServiceResponse<SpaceRecord>> {
     try {
       const result = await spaceRepo.findById(spaceId);
-
-      if (!result) {
-        return { success: false, error: "Space not found" };
-      }
-
-      return { success: true, data: result };
+      if (!result) return fail("Space not found");
+      return ok(result);
     } catch (error) {
       console.error("Error fetching space:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+      return fail(error instanceof Error ? error.message : "Unknown error");
     }
   },
 
@@ -44,11 +41,11 @@ export const spaceService = {
       const { data, errors } = sanitizeSpacePayload(payload);
 
       if (Object.keys(errors).length > 0) {
-        return { success: false, errors };
+        return fail(flattenFieldErrors(errors));
       }
 
       if (!data.name) {
-        return { success: false, errors: { name: "Name is required" } };
+        return fail("name: Name is required");
       }
 
       // Generate slug if not provided
@@ -57,10 +54,7 @@ export const spaceService = {
       // Check if slug already exists
       const existing = await spaceRepo.findBySlug(slug);
       if (existing) {
-        return {
-          success: false,
-          errors: { slug: "A space with this slug already exists" },
-        };
+        return fail("slug: A space with this slug already exists");
       }
 
       // Get next sort order
@@ -83,17 +77,11 @@ export const spaceService = {
       await spaceRepo.create(newSpace);
 
       const created = await spaceRepo.findById(newSpace.id);
-      if (!created) {
-        return { success: false, error: "Failed to create space" };
-      }
-
-      return { success: true, data: created };
+      if (!created) return fail("Failed to create space");
+      return ok(created);
     } catch (error) {
       console.error("Error creating space:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+      return fail(error instanceof Error ? error.message : "Unknown error");
     }
   },
 
@@ -105,23 +93,18 @@ export const spaceService = {
       const { data, errors } = sanitizeSpacePayload(payload);
 
       if (Object.keys(errors).length > 0) {
-        return { success: false, errors };
+        return fail(flattenFieldErrors(errors));
       }
 
       // Check if space exists
       const existing = await spaceRepo.findById(spaceId);
-      if (!existing) {
-        return { success: false, error: "Space not found" };
-      }
+      if (!existing) return fail("Space not found");
 
       // If slug is being changed, check if new slug already exists
       if (data.slug && data.slug !== existing.slug) {
         const slugExists = await spaceRepo.findBySlug(data.slug);
         if (slugExists) {
-          return {
-            success: false,
-            errors: { slug: "A space with this slug already exists" },
-          };
+          return fail("slug: A space with this slug already exists");
         }
       }
 
@@ -135,71 +118,50 @@ export const spaceService = {
       await spaceRepo.update(spaceId, updatePayload);
 
       const updated = await spaceRepo.findById(spaceId);
-      if (!updated) {
-        return { success: false, error: "Failed to update space" };
-      }
-
-      return { success: true, data: updated };
+      if (!updated) return fail("Failed to update space");
+      return ok(updated);
     } catch (error) {
       console.error("Error updating space:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+      return fail(error instanceof Error ? error.message : "Unknown error");
     }
   },
 
   async delete(spaceId: string): Promise<ServiceResponse<void>> {
     try {
       const existing = await spaceRepo.findById(spaceId);
-      if (!existing) {
-        return { success: false, error: "Space not found" };
-      }
+      if (!existing) return fail("Space not found");
 
       await spaceRepo.delete(spaceId);
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       console.error("Error deleting space:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+      return fail(error instanceof Error ? error.message : "Unknown error");
     }
   },
 
   async archive(spaceId: string): Promise<ServiceResponse<void>> {
     try {
       const existing = await spaceRepo.findById(spaceId);
-      if (!existing) {
-        return { success: false, error: "Space not found" };
-      }
+      if (!existing) return fail("Space not found");
 
       await spaceRepo.archive(spaceId);
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       console.error("Error archiving space:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+      return fail(error instanceof Error ? error.message : "Unknown error");
     }
   },
 
   async unarchive(spaceId: string): Promise<ServiceResponse<void>> {
     try {
       const existing = await spaceRepo.findById(spaceId);
-      if (!existing) {
-        return { success: false, error: "Space not found" };
-      }
+      if (!existing) return fail("Space not found");
 
       await spaceRepo.unarchive(spaceId);
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       console.error("Error unarchiving space:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+      return fail(error instanceof Error ? error.message : "Unknown error");
     }
   },
 };

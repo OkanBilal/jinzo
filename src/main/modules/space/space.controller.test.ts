@@ -1,4 +1,4 @@
-import { assertOk, assertFail } from "./space.dto";
+import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTestDb } from "../../../test/setup-db";
 import { createAccount, createSpace } from "../../../test/factories";

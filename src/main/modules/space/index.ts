@@ -22,6 +22,4 @@ export type {
   SanitizedSpaceResult,
   SpaceRecord,
   ServiceResponse,
-  SuccessResponse,
-  ErrorResponse,
 } from "./space.dto";

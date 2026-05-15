@@ -45,8 +45,6 @@ export type {
   EntityQueryParams,
   JSONValue,
   ServiceResponse,
-  SuccessResponse,
-  ErrorResponse,
 } from "./sync.dto";
 
 // Connections

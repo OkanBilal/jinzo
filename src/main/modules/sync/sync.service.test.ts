@@ -150,11 +150,7 @@ describe("syncService", () => {
       const result = await syncService.runEntitySync();
 
       assertFail(result);
-      if (!result.success) {
-        expect(result.error).toBe("Sync job failed");
-        expect(result.data!.errors).toBe(1);
-        expect(result.data!.total).toBe(0);
-      }
+      expect(result.error).toBe("Sync job failed");
     });
 
     it("returns failure result when upsertEntities throws", async () => {
@@ -166,10 +162,7 @@ describe("syncService", () => {
       const result = await syncService.runEntitySync();
 
       assertFail(result);
-      if (!result.success) {
-        expect(result.error).toBe("Sync job failed");
-        expect(result.data!.errors).toBe(1);
-      }
+      expect(result.error).toBe("Sync job failed");
     });
   });
 });
