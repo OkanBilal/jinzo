@@ -241,6 +241,94 @@ const api = {
     fail: (id: number, error: string) =>
       ipcRenderer.invoke(CHANNELS.toolCalls.fail, id, error),
   },
+  // Workspace aggregate (workspaces + activity + diffs + reviews + findings)
+  // See ADR-0001. Old per-table namespaces below are retained through Phase 3
+  // of the consolidation and will be removed once renderer migration completes.
+  workspace: {
+    // ── lifecycle ──
+    list: () => ipcRenderer.invoke(CHANNELS.workspace.list),
+    get: (id: string) => ipcRenderer.invoke(CHANNELS.workspace.get, id),
+    listByAccount: (accountId: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.listByAccount, accountId),
+    getByRootPath: (accountId: string, rootPath: string) =>
+      ipcRenderer.invoke(
+        CHANNELS.workspace.getByRootPath,
+        accountId,
+        rootPath,
+      ),
+    create: (payload: unknown) =>
+      ipcRenderer.invoke(CHANNELS.workspace.create, payload),
+    update: (id: string, payload: unknown) =>
+      ipcRenderer.invoke(CHANNELS.workspace.update, id, payload),
+    delete: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.delete, id),
+    archive: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.archive, id),
+    selectDirectory: () =>
+      ipcRenderer.invoke(CHANNELS.workspace.selectDirectory),
+    onScriptComplete: (
+      callback: (data: {
+        workspaceId: string;
+        script: "setup" | "archive";
+        success: boolean;
+        error?: string;
+      }) => void,
+    ) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on(CHANNELS.workspace.scriptComplete, listener);
+      return () =>
+        ipcRenderer.removeListener(CHANNELS.workspace.scriptComplete, listener);
+    },
+    // ── activity ──
+    listActivity: (workspaceId: string, limit?: number) =>
+      ipcRenderer.invoke(CHANNELS.workspace.listActivity, workspaceId, limit),
+    createActivity: (payload: unknown) =>
+      ipcRenderer.invoke(CHANNELS.workspace.createActivity, payload),
+    createManyActivity: (payloads: unknown) =>
+      ipcRenderer.invoke(CHANNELS.workspace.createManyActivity, payloads),
+    deleteActivity: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.deleteActivity, id),
+    // ── diffs ──
+    listDiffs: (workspaceId: string, limit?: number) =>
+      ipcRenderer.invoke(CHANNELS.workspace.listDiffs, workspaceId, limit),
+    getLatestDiff: (workspaceId: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.getLatestDiff, workspaceId),
+    getLatestDiffSummary: (workspaceId: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.getLatestDiffSummary, workspaceId),
+    getDiffByRun: (runId: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.getDiffByRun, runId),
+    deleteLatestDiff: (workspaceId: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.deleteLatestDiff, workspaceId),
+    // ── reviews ──
+    listReviews: (workspaceId: string, limit?: number) =>
+      ipcRenderer.invoke(CHANNELS.workspace.listReviews, workspaceId, limit),
+    getReview: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.getReview, id),
+    createReview: (payload: unknown) =>
+      ipcRenderer.invoke(CHANNELS.workspace.createReview, payload),
+    updateReview: (id: string, payload: unknown) =>
+      ipcRenderer.invoke(CHANNELS.workspace.updateReview, id, payload),
+    deleteReview: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.deleteReview, id),
+    // ── findings ──
+    listFindings: (reviewId: string, limit?: number) =>
+      ipcRenderer.invoke(CHANNELS.workspace.listFindings, reviewId, limit),
+    listFindingsByWorkspace: (workspaceId: string) =>
+      ipcRenderer.invoke(
+        CHANNELS.workspace.listFindingsByWorkspace,
+        workspaceId,
+      ),
+    getFinding: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.getFinding, id),
+    createFinding: (payload: unknown) =>
+      ipcRenderer.invoke(CHANNELS.workspace.createFinding, payload),
+    createManyFindings: (payloads: unknown) =>
+      ipcRenderer.invoke(CHANNELS.workspace.createManyFindings, payloads),
+    updateFinding: (id: string, payload: unknown) =>
+      ipcRenderer.invoke(CHANNELS.workspace.updateFinding, id, payload),
+    deleteFinding: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.deleteFinding, id),
+  },
   // Workspaces operations
   workspaces: {
     getAll: () => ipcRenderer.invoke(CHANNELS.workspaces.getAll),

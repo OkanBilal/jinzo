@@ -31,6 +31,19 @@ _Avoid_: expect-success, ok-or-throw, getData.
 
 Each `src/main/modules/{name}/` follows a 6-file layout: `ipc.ts → service.ts → repo.ts → dto.ts → validation.ts → index.ts`. Earlier versions had a `controller.ts` between `ipc.ts` and `service.ts` — it was a pure pass-through across all 26 modules and has been removed. `ipc.ts` calls `service` directly; argument unpacking lives at the ipc call site when needed.
 
+A module folder may own **more than one table**. The 6-file layout is per module, not per table. When several tables form one conceptual aggregate (see **workspace** below), they live in one folder under the flat 6-file shape, with each layer's file containing all tables' code.
+
+## Aggregate modules
+
+### workspace
+
+The `workspace` module owns five tables: `workspaces`, `workspace_activity`, `workspace_diffs`, `reviews`, `review_findings`. They were previously five separate modules; consolidated because they always travel together (no cross-workspace consumer of the satellites — `pulse` doesn't read them, `stats` joins `workspace_diffs` directly via its own repo, every renderer consumer is workspace-scoped).
+
+IPC channels live under one namespace: `workspace:get*`, `workspace:getActivity`, `workspace:logActivity`, `workspace:getLatestDiff`, `workspace:listReviews`, `workspace:listFindings`, etc. The renderer has one `workspaceApi.ts` with split RTK Query tag types (`Workspace`, `WorkspaceActivity`, `WorkspaceDiff`, `WorkspaceReview`, `WorkspaceFinding`) so UI sections still refresh independently.
+
+Cross-module writers (drivers, run-session, guards, mains-tools) import a single named function — `logWorkspaceActivity` — from the module's barrel, not the full service surface.
+_Avoid_: re-splitting into `workspaces` + `workspaceActivity` + `workspaceDiffs` + `reviews` + `reviewFindings`. See ADR-0001.
+
 ## Flagged ambiguities
 
 - "ServiceResponse" was historically defined ~27 times across `src/main/modules/*/dto.ts` in two structurally incompatible shapes (discriminated union vs optional-fields object). Resolved: the discriminated union is canonical; every module now re-exports the canonical type (no remaining bespoke envelopes).

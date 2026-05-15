@@ -62,6 +62,10 @@ import {
   registerWorkspacesIpc,
   unregisterWorkspacesIpc,
 } from "./modules/workspaces";
+import {
+  registerWorkspaceIpc,
+  unregisterWorkspaceIpc,
+} from "./modules/workspace";
 import { registerRunsIpc, unregisterRunsIpc } from "./modules/runs";
 import { runSessionRegistry } from "./modules/runs/run-session-registry";
 import { registerReviewsIpc, unregisterReviewsIpc } from "./modules/reviews";
@@ -581,6 +585,7 @@ async function initializeApp() {
     registerProvidersIpc();
     registerToolsIpc();
     registerWorkspacesIpc();
+    registerWorkspaceIpc();
     registerProjectsIpc();
     registerRunsIpc();
     registerFileExplorerIpc();
@@ -884,6 +889,7 @@ async function cleanupApp() {
     unregisterProvidersIpc();
     unregisterToolsIpc();
     unregisterWorkspacesIpc();
+    unregisterWorkspaceIpc();
     unregisterProjectsIpc();
     unregisterRunsIpc();
     unregisterFileExplorerIpc();
