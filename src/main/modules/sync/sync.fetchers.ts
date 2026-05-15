@@ -1,51 +1,83 @@
 import {
-  fetchGitHubFromConnectionResources,
-  fetchLinearFromConnectionResources,
-  fetchJiraFromConnectionResources,
-  fetchAsanaFromConnectionResources,
-  fetchGitlabFromConnectionResources,
-  fetchTrelloFromConnectionResources,
-  fetchSentryFromConnectionResources,
-} from "./connections";
-import type { EntityInput } from "./sync.dto";
+  getConnectionWithSecrets,
+  getSelectedResources,
+} from "./sync.connection-utils";
+import { RESOURCE_FETCHERS } from "./connections";
+import type { EntityInput, ResourceFetcher } from "./sync.dto";
 
-export const FETCH_LIMITS = {
-  GITHUB_ISSUES: 50,
-  GITHUB_PRS: 50,
-  GITLAB_ISSUES: 50,
-  GITLAB_MRS: 50,
-  LINEAR_ISSUES: 50,
-  JIRA_ISSUES: 50,
-  ASANA_TASKS: 50,
-  TRELLO_CARDS: 50,
-  SENTRY_ISSUES: 50,
-} as const;
+// ─────────────────────────────────────────────────────────────
+// Runner — owns connection lookup, resource iteration, and error
+// logging. Each adapter implements only fetchForResource (+ optional
+// fetchAll for providers like Linear that fall back to a global fetch).
+// ─────────────────────────────────────────────────────────────
+async function runFetcher(
+  fetcher: ResourceFetcher,
+  limit: number,
+): Promise<EntityInput[]> {
+  const connection = await getConnectionWithSecrets(fetcher.provider);
+  if (!connection) {
+    return [];
+  }
 
-const PROVIDER_FETCHERS: Record<string, () => Promise<EntityInput[]>> = {
-  github: () =>
-    fetchGitHubFromConnectionResources(
-      FETCH_LIMITS.GITHUB_ISSUES,
-      FETCH_LIMITS.GITHUB_PRS,
-    ),
-  gitlab: () =>
-    fetchGitlabFromConnectionResources(
-      FETCH_LIMITS.GITLAB_ISSUES,
-      FETCH_LIMITS.GITLAB_MRS,
-    ),
-  linear: () => fetchLinearFromConnectionResources(FETCH_LIMITS.LINEAR_ISSUES),
-  jira: () => fetchJiraFromConnectionResources(FETCH_LIMITS.JIRA_ISSUES),
-  asana: () => fetchAsanaFromConnectionResources(FETCH_LIMITS.ASANA_TASKS),
-  trello: () => fetchTrelloFromConnectionResources(FETCH_LIMITS.TRELLO_CARDS),
-  sentry: () => fetchSentryFromConnectionResources(FETCH_LIMITS.SENTRY_ISSUES),
-};
+  const resources = await getSelectedResources(
+    connection.id,
+    fetcher.resourceKind,
+  );
 
-export async function fetchAllEntities(provider?: string): Promise<EntityInput[]> {
-  const entries =
-    provider && PROVIDER_FETCHERS[provider]
-      ? [[provider, PROVIDER_FETCHERS[provider]] as const]
-      : Object.entries(PROVIDER_FETCHERS);
+  if (resources.length === 0) {
+    if (!fetcher.fetchAll) {
+      return [];
+    }
+    try {
+      return await fetcher.fetchAll({
+        secrets: connection.secrets,
+        metadata: connection.metadata ?? {},
+        limit,
+        connectionId: connection.id,
+      });
+    } catch (err) {
+      console.error(`[Sync] ${fetcher.id} fetchAll failed:`, err);
+      return [];
+    }
+  }
 
-  const results = await Promise.allSettled(entries.map(([, fn]) => fn()));
+  const out: EntityInput[] = [];
+  for (const resource of resources) {
+    try {
+      const items = await fetcher.fetchForResource({
+        resource,
+        secrets: connection.secrets,
+        metadata: connection.metadata ?? {},
+        limit,
+        connectionId: connection.id,
+      });
+      out.push(...items);
+    } catch (err) {
+      console.error(
+        `[Sync] ${fetcher.id} failed for resource ${resource.externalId}:`,
+        err,
+      );
+    }
+  }
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Public entry points
+// ─────────────────────────────────────────────────────────────
+function fetchersForProvider(provider?: string): ResourceFetcher[] {
+  if (!provider) return RESOURCE_FETCHERS;
+  const matching = RESOURCE_FETCHERS.filter((f) => f.provider === provider);
+  return matching.length > 0 ? matching : RESOURCE_FETCHERS;
+}
+
+export async function fetchAllEntities(
+  provider?: string,
+): Promise<EntityInput[]> {
+  const fetchers = fetchersForProvider(provider);
+  const results = await Promise.allSettled(
+    fetchers.map((f) => runFetcher(f, f.defaultLimit)),
+  );
 
   const entities: EntityInput[] = [];
   for (let i = 0; i < results.length; i++) {
@@ -53,33 +85,35 @@ export async function fetchAllEntities(provider?: string): Promise<EntityInput[]
     if (result.status === "fulfilled") {
       entities.push(...result.value);
     } else {
-      console.error(`[Sync] Provider "${entries[i][0]}" failed:`, result.reason);
+      console.error(`[Sync] ${fetchers[i].id} failed:`, result.reason);
     }
   }
 
-  console.log(`[Sync] Fetched ${entities.length} entities from ${entries.length} sources${provider ? ` (provider: ${provider})` : ""}`);
+  console.log(
+    `[Sync] Fetched ${entities.length} entities from ${fetchers.length} fetchers${provider ? ` (provider: ${provider})` : ""}`,
+  );
   return entities;
 }
 
 /**
- * Fetch entities provider-by-provider and yield each batch as soon as it's
- * available. Callers can persist each batch and release it from memory before
- * the next provider starts, avoiding a single giant in-memory array.
+ * Yield each fetcher's batch as it completes. The service consumes this
+ * generator and persists each batch immediately, so we never hold every
+ * provider's payload in memory simultaneously.
  */
 export async function* fetchEntitiesByProvider(
   provider?: string,
 ): AsyncGenerator<{ provider: string; entities: EntityInput[] }> {
-  const entries =
-    provider && PROVIDER_FETCHERS[provider]
-      ? [[provider, PROVIDER_FETCHERS[provider]] as const]
-      : Object.entries(PROVIDER_FETCHERS);
+  const fetchers = fetchersForProvider(provider);
 
-  for (const [name, fn] of entries) {
+  for (const fetcher of fetchers) {
     try {
-      const entities = await fn();
-      yield { provider: name, entities };
+      const entities = await runFetcher(fetcher, fetcher.defaultLimit);
+      yield { provider: fetcher.id, entities };
     } catch (err) {
-      console.error(`[Sync] Provider "${name}" failed:`, err);
+      console.error(`[Sync] ${fetcher.id} failed:`, err);
     }
   }
 }
+
+// Re-export the registry for tests / introspection.
+export { RESOURCE_FETCHERS };

@@ -1,175 +1,239 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("./connections", () => ({
-  fetchGitHubFromConnectionResources: vi.fn(),
-  fetchLinearFromConnectionResources: vi.fn(),
-  fetchJiraFromConnectionResources: vi.fn(),
-  fetchAsanaFromConnectionResources: vi.fn(),
-  fetchGitlabFromConnectionResources: vi.fn(),
-  fetchTrelloFromConnectionResources: vi.fn(),
-  fetchSentryFromConnectionResources: vi.fn(),
+import type { ResourceFetcher, EntityInput } from "./sync.dto";
+
+// ─────────────────────────────────────────────────────────────
+// Stub the runtime registry + connection-utils so the runner can
+// be exercised in isolation. Each test sets the fetcher list and
+// connection state through these mocks.
+// ─────────────────────────────────────────────────────────────
+
+const mockGetConnectionWithSecrets = vi.fn();
+const mockGetSelectedResources = vi.fn();
+
+vi.mock("./sync.connection-utils", () => ({
+  getConnectionWithSecrets: (...args: unknown[]) =>
+    mockGetConnectionWithSecrets(...args),
+  getSelectedResources: (...args: unknown[]) =>
+    mockGetSelectedResources(...args),
 }));
 
-import { fetchAllEntities, FETCH_LIMITS } from "./sync.fetchers";
-import {
-  fetchGitHubFromConnectionResources,
-  fetchLinearFromConnectionResources,
-  fetchJiraFromConnectionResources,
-  fetchAsanaFromConnectionResources,
-  fetchGitlabFromConnectionResources,
-  fetchTrelloFromConnectionResources,
-  fetchSentryFromConnectionResources,
-} from "./connections";
-import type { EntityInput } from "./sync.dto";
+const fakeFetchers: ResourceFetcher[] = [];
+vi.mock("./connections", () => ({
+  get RESOURCE_FETCHERS() {
+    return fakeFetchers;
+  },
+}));
 
-const mockEntity = (id: string): EntityInput => ({
-  kind: "issue",
-  title: `Entity ${id}`,
-  url: `https://example.com/${id}`,
-  body: null,
-  summary: null,
-  occurredAt: new Date().toISOString(),
-  resourceId: id,
+import { fetchAllEntities, fetchEntitiesByProvider } from "./sync.fetchers";
+
+function makeFetcher(
+  id: string,
+  provider: string,
+  options: {
+    forResource?: ResourceFetcher["fetchForResource"];
+    fetchAll?: ResourceFetcher["fetchAll"];
+    resourceKind?: string;
+    defaultLimit?: number;
+  } = {},
+): ResourceFetcher {
+  return {
+    id,
+    provider,
+    resourceKind: options.resourceKind ?? `${provider}_resource`,
+    defaultLimit: options.defaultLimit ?? 25,
+    fetchForResource: options.forResource ?? (async () => []),
+    fetchAll: options.fetchAll,
+  };
+}
+
+function entity(id: string): EntityInput {
+  return {
+    kind: "issue",
+    title: id,
+    url: `https://example.com/${id}`,
+    body: null,
+    summary: null,
+    occurredAt: "2025-01-01T00:00:00Z",
+  };
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  fakeFetchers.length = 0;
 });
 
-describe("sync.fetchers", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Default: all fetchers return empty
-    vi.mocked(fetchGitHubFromConnectionResources).mockResolvedValue([]);
-    vi.mocked(fetchLinearFromConnectionResources).mockResolvedValue([]);
-    vi.mocked(fetchJiraFromConnectionResources).mockResolvedValue([]);
-    vi.mocked(fetchAsanaFromConnectionResources).mockResolvedValue([]);
-    vi.mocked(fetchGitlabFromConnectionResources).mockResolvedValue([]);
-    vi.mocked(fetchTrelloFromConnectionResources).mockResolvedValue([]);
-    vi.mocked(fetchSentryFromConnectionResources).mockResolvedValue([]);
+describe("runner — fetchAllEntities", () => {
+  it("returns [] for a fetcher whose provider has no connection", async () => {
+    fakeFetchers.push(makeFetcher("ghost:x", "ghost"));
+    mockGetConnectionWithSecrets.mockResolvedValue(null);
+
+    const result = await fetchAllEntities();
+    expect(result).toEqual([]);
   });
 
-  describe("FETCH_LIMITS", () => {
-    it("has correct default limits", () => {
-      expect(FETCH_LIMITS.GITHUB_ISSUES).toBe(50);
-      expect(FETCH_LIMITS.GITHUB_PRS).toBe(50);
-      expect(FETCH_LIMITS.GITLAB_ISSUES).toBe(50);
-      expect(FETCH_LIMITS.GITLAB_MRS).toBe(50);
-      expect(FETCH_LIMITS.LINEAR_ISSUES).toBe(50);
-      expect(FETCH_LIMITS.JIRA_ISSUES).toBe(50);
-      expect(FETCH_LIMITS.ASANA_TASKS).toBe(50);
-      expect(FETCH_LIMITS.TRELLO_CARDS).toBe(50);
-      expect(FETCH_LIMITS.SENTRY_ISSUES).toBe(50);
+  it("iterates selected resources and accumulates entities", async () => {
+    const forResource = vi.fn(async ({ resource }) => [entity(`${resource.id}-a`)]);
+    fakeFetchers.push(makeFetcher("acme:items", "acme", { forResource }));
+
+    mockGetConnectionWithSecrets.mockResolvedValue({
+      id: "conn-1",
+      secrets: { token: "t" },
+      metadata: {},
     });
+    mockGetSelectedResources.mockResolvedValue([
+      { id: "r1", externalId: "x1", connectionId: "conn-1", name: "x1", kind: "acme_resource", metadata: {} },
+      { id: "r2", externalId: "x2", connectionId: "conn-1", name: "x2", kind: "acme_resource", metadata: {} },
+    ]);
+
+    const result = await fetchAllEntities();
+    expect(forResource).toHaveBeenCalledTimes(2);
+    expect(result.map((e) => e.title)).toEqual(["r1-a", "r2-a"]);
   });
 
-  describe("fetchAllEntities", () => {
-    it("calls all 7 fetchers when no provider specified", async () => {
-      const result = await fetchAllEntities();
-      expect(result).toEqual([]);
-      expect(fetchGitHubFromConnectionResources).toHaveBeenCalledOnce();
-      expect(fetchGitlabFromConnectionResources).toHaveBeenCalledOnce();
-      expect(fetchLinearFromConnectionResources).toHaveBeenCalledOnce();
-      expect(fetchJiraFromConnectionResources).toHaveBeenCalledOnce();
-      expect(fetchAsanaFromConnectionResources).toHaveBeenCalledOnce();
-      expect(fetchTrelloFromConnectionResources).toHaveBeenCalledOnce();
-      expect(fetchSentryFromConnectionResources).toHaveBeenCalledOnce();
+  it("uses fetchAll when no resources are selected and the fetcher opts in", async () => {
+    const fetchAll = vi.fn().mockResolvedValue([entity("all-1")]);
+    fakeFetchers.push(makeFetcher("linear:issues", "linear", { fetchAll }));
+
+    mockGetConnectionWithSecrets.mockResolvedValue({
+      id: "conn-1",
+      secrets: { apiKey: "k" },
     });
+    mockGetSelectedResources.mockResolvedValue([]);
 
-    it("passes correct limits to github fetcher", async () => {
-      await fetchAllEntities("github");
-      expect(fetchGitHubFromConnectionResources).toHaveBeenCalledWith(50, 50);
+    const result = await fetchAllEntities();
+    expect(fetchAll).toHaveBeenCalledOnce();
+    expect(result).toEqual([entity("all-1")]);
+  });
+
+  it("returns [] when no resources selected and fetcher has no fetchAll", async () => {
+    fakeFetchers.push(makeFetcher("github:issues", "github"));
+
+    mockGetConnectionWithSecrets.mockResolvedValue({
+      id: "conn-1",
+      secrets: { token: "t" },
     });
+    mockGetSelectedResources.mockResolvedValue([]);
 
-    it("passes correct limits to gitlab fetcher", async () => {
-      await fetchAllEntities("gitlab");
-      expect(fetchGitlabFromConnectionResources).toHaveBeenCalledWith(50, 50);
+    const result = await fetchAllEntities();
+    expect(result).toEqual([]);
+  });
+
+  it("survives one resource throwing without dropping the rest", async () => {
+    const forResource = vi.fn(async ({ resource }) => {
+      if (resource.id === "r-bad") throw new Error("boom");
+      return [entity(resource.id)];
     });
+    fakeFetchers.push(makeFetcher("acme:items", "acme", { forResource }));
 
-    it("passes correct limit to linear fetcher", async () => {
-      await fetchAllEntities("linear");
-      expect(fetchLinearFromConnectionResources).toHaveBeenCalledWith(50);
-    });
+    mockGetConnectionWithSecrets.mockResolvedValue({ id: "conn", secrets: {} });
+    mockGetSelectedResources.mockResolvedValue([
+      { id: "r-ok", externalId: "ok", connectionId: "conn", name: "ok", kind: "acme_resource", metadata: {} },
+      { id: "r-bad", externalId: "bad", connectionId: "conn", name: "bad", kind: "acme_resource", metadata: {} },
+      { id: "r-ok2", externalId: "ok2", connectionId: "conn", name: "ok2", kind: "acme_resource", metadata: {} },
+    ]);
 
-    it("passes correct limit to jira fetcher", async () => {
-      await fetchAllEntities("jira");
-      expect(fetchJiraFromConnectionResources).toHaveBeenCalledWith(50);
-    });
+    const result = await fetchAllEntities();
+    expect(result.map((e) => e.title)).toEqual(["r-ok", "r-ok2"]);
+  });
 
-    it("passes correct limit to asana fetcher", async () => {
-      await fetchAllEntities("asana");
-      expect(fetchAsanaFromConnectionResources).toHaveBeenCalledWith(50);
-    });
+  it("survives one fetcher rejecting without dropping siblings", async () => {
+    const happy = vi.fn().mockResolvedValue([entity("happy-1")]);
+    fakeFetchers.push(
+      makeFetcher("broken:x", "broken", {
+        forResource: vi.fn().mockRejectedValue(new Error("provider down")),
+      }),
+    );
+    fakeFetchers.push(makeFetcher("happy:y", "happy", { forResource: happy }));
 
-    it("passes correct limit to trello fetcher", async () => {
-      await fetchAllEntities("trello");
-      expect(fetchTrelloFromConnectionResources).toHaveBeenCalledWith(50);
-    });
+    mockGetConnectionWithSecrets.mockResolvedValue({ id: "conn", secrets: {} });
+    mockGetSelectedResources.mockResolvedValue([
+      { id: "r1", externalId: "x", connectionId: "conn", name: "x", kind: "k", metadata: {} },
+    ]);
 
-    it("only calls specified provider fetcher", async () => {
-      await fetchAllEntities("github");
-      expect(fetchGitHubFromConnectionResources).toHaveBeenCalledOnce();
-      expect(fetchLinearFromConnectionResources).not.toHaveBeenCalled();
-      expect(fetchJiraFromConnectionResources).not.toHaveBeenCalled();
-      expect(fetchAsanaFromConnectionResources).not.toHaveBeenCalled();
-      expect(fetchGitlabFromConnectionResources).not.toHaveBeenCalled();
-      expect(fetchTrelloFromConnectionResources).not.toHaveBeenCalled();
-      expect(fetchSentryFromConnectionResources).not.toHaveBeenCalled();
-    });
+    const result = await fetchAllEntities();
+    expect(result).toEqual([entity("happy-1")]);
+  });
 
-    it("passes correct limit to sentry fetcher", async () => {
-      await fetchAllEntities("sentry");
-      expect(fetchSentryFromConnectionResources).toHaveBeenCalledWith(50);
-    });
+  it("filters fetchers when a provider is specified", async () => {
+    const ghForResource = vi.fn().mockResolvedValue([entity("gh")]);
+    const lnForResource = vi.fn().mockResolvedValue([entity("ln")]);
+    fakeFetchers.push(makeFetcher("github:issues", "github", { forResource: ghForResource }));
+    fakeFetchers.push(makeFetcher("linear:issues", "linear", { forResource: lnForResource }));
 
-    it("falls back to all fetchers for unknown provider", async () => {
-      const result = await fetchAllEntities("unknown_provider");
-      expect(result).toEqual([]);
-      expect(fetchGitHubFromConnectionResources).toHaveBeenCalledOnce();
-      expect(fetchLinearFromConnectionResources).toHaveBeenCalledOnce();
-    });
+    mockGetConnectionWithSecrets.mockResolvedValue({ id: "conn", secrets: {} });
+    mockGetSelectedResources.mockResolvedValue([
+      { id: "r", externalId: "x", connectionId: "conn", name: "x", kind: "k", metadata: {} },
+    ]);
 
-    it("flattens results from multiple fetchers", async () => {
-      vi.mocked(fetchGitHubFromConnectionResources).mockResolvedValue([mockEntity("gh-1")]);
-      vi.mocked(fetchLinearFromConnectionResources).mockResolvedValue([mockEntity("ln-1"), mockEntity("ln-2")]);
+    await fetchAllEntities("github");
+    expect(ghForResource).toHaveBeenCalledOnce();
+    expect(lnForResource).not.toHaveBeenCalled();
+  });
 
-      const result = await fetchAllEntities();
-      expect(result).toHaveLength(3);
-      expect(result.map((e) => e.resourceId)).toEqual(["gh-1", "ln-1", "ln-2"]);
-    });
+  it("falls back to all fetchers for an unknown provider name", async () => {
+    const fn1 = vi.fn().mockResolvedValue([]);
+    const fn2 = vi.fn().mockResolvedValue([]);
+    fakeFetchers.push(makeFetcher("a:x", "a", { forResource: fn1 }));
+    fakeFetchers.push(makeFetcher("b:y", "b", { forResource: fn2 }));
 
-    it("returns entities from single provider", async () => {
-      vi.mocked(fetchGitHubFromConnectionResources).mockResolvedValue([
-        mockEntity("gh-1"),
-        mockEntity("gh-2"),
-      ]);
+    mockGetConnectionWithSecrets.mockResolvedValue({ id: "conn", secrets: {} });
+    mockGetSelectedResources.mockResolvedValue([
+      { id: "r", externalId: "x", connectionId: "conn", name: "x", kind: "k", metadata: {} },
+    ]);
 
-      const result = await fetchAllEntities("github");
-      expect(result).toHaveLength(2);
-    });
+    await fetchAllEntities("totally_unknown");
+    expect(fn1).toHaveBeenCalled();
+    expect(fn2).toHaveBeenCalled();
+  });
 
-    it("returns empty array when all fetchers return empty", async () => {
-      const result = await fetchAllEntities();
-      expect(result).toEqual([]);
-    });
+  it("passes the fetcher's defaultLimit through to fetchForResource", async () => {
+    const forResource = vi.fn().mockResolvedValue([]);
+    fakeFetchers.push(
+      makeFetcher("acme:items", "acme", { forResource, defaultLimit: 73 }),
+    );
+    mockGetConnectionWithSecrets.mockResolvedValue({ id: "conn", secrets: {} });
+    mockGetSelectedResources.mockResolvedValue([
+      { id: "r1", externalId: "x", connectionId: "conn", name: "x", kind: "k", metadata: {} },
+    ]);
 
-    it("returns empty array when a single-provider fetcher fails", async () => {
-      vi.mocked(fetchGitHubFromConnectionResources).mockRejectedValue(new Error("API rate limit"));
+    await fetchAllEntities();
+    expect(forResource).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 73 }),
+    );
+  });
+});
 
-      const result = await fetchAllEntities("github");
-      expect(result).toEqual([]);
-    });
+describe("runner — fetchEntitiesByProvider generator", () => {
+  it("yields one batch per fetcher", async () => {
+    fakeFetchers.push(
+      makeFetcher("a:x", "a", { forResource: vi.fn().mockResolvedValue([entity("a")]) }),
+    );
+    fakeFetchers.push(
+      makeFetcher("b:y", "b", { forResource: vi.fn().mockResolvedValue([entity("b")]) }),
+    );
+    mockGetConnectionWithSecrets.mockResolvedValue({ id: "conn", secrets: {} });
+    mockGetSelectedResources.mockResolvedValue([
+      { id: "r", externalId: "x", connectionId: "conn", name: "x", kind: "k", metadata: {} },
+    ]);
 
-    it("returns results from successful providers when one fails", async () => {
-      const linearEntity = mockEntity("linear-ok");
-      vi.mocked(fetchLinearFromConnectionResources).mockResolvedValue([linearEntity]);
-      vi.mocked(fetchJiraFromConnectionResources).mockRejectedValue(new Error("Jira down"));
+    const batches: Array<{ provider: string; count: number }> = [];
+    for await (const batch of fetchEntitiesByProvider()) {
+      batches.push({ provider: batch.provider, count: batch.entities.length });
+    }
+    expect(batches).toEqual([
+      { provider: "a:x", count: 1 },
+      { provider: "b:y", count: 1 },
+    ]);
+  });
+});
 
-      const result = await fetchAllEntities();
-      expect(result).toContainEqual(linearEntity);
-    });
-
-    it("handles non-Error rejection values gracefully", async () => {
-      vi.mocked(fetchAsanaFromConnectionResources).mockRejectedValue("string error");
-
-      const result = await fetchAllEntities("asana");
-      expect(result).toEqual([]);
-    });
+describe("registry shape (smoke)", () => {
+  it("imports the real registry without errors", async () => {
+    const mod = await vi.importActual<{ RESOURCE_FETCHERS: ResourceFetcher[] }>(
+      "./connections",
+    );
+    expect(mod.RESOURCE_FETCHERS.length).toBeGreaterThan(0);
+    expect(mod.RESOURCE_FETCHERS.every((f) => !!f.id && !!f.provider)).toBe(true);
   });
 });
