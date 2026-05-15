@@ -92,7 +92,6 @@ export {
 } from "./adapter.factory";
 
 // Adapters
-export { createCopilotAdapter } from "./copilot.adapter";
 export { createClaudeAdapter } from "./claude.adapter";
 
 // Shared helpers

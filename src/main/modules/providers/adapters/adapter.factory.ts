@@ -5,9 +5,9 @@
 
 import type { ProviderResponse } from "../providers.dto";
 import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, CursorAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, CodexAccountInfo } from "../../../../shared/adapter.types";
-import { createCopilotAdapter } from "./copilot.adapter";
 import { createClaudeAdapter } from "./claude.adapter";
 import { createCodexAdapter } from "./codex.adapter";
+import { createCopilotDriver } from "./copilot.driver";
 import { createCursorDriver } from "./cursor.driver";
 import { createWorkRunAdapter } from "./work-run-core";
 import { findCopilotCliPath } from "../providers.utils";
@@ -124,7 +124,7 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
           config.binary = resolvedPath;
         }
       }
-      adapter = createCopilotAdapter(config);
+      adapter = createWorkRunAdapter(createCopilotDriver(config));
       break;
     }
 
