@@ -8,7 +8,8 @@ import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, Cod
 import { createCopilotAdapter } from "./copilot.adapter";
 import { createClaudeAdapter } from "./claude.adapter";
 import { createCodexAdapter } from "./codex.adapter";
-import { createCursorAdapter } from "./cursor.adapter";
+import { createCursorDriver } from "./cursor.driver";
+import { createWorkRunAdapter } from "./work-run-core";
 import { findCopilotCliPath } from "../providers.utils";
 import {
   PROVIDER_IDS,
@@ -150,7 +151,7 @@ export function createWorkAdapter(provider: ProviderResponse): WorkRunAdapter {
         ...(provider.config as CursorAdapterConfig | null),
         defaultModel: provider.defaultModel ?? undefined,
       };
-      adapter = createCursorAdapter(config);
+      adapter = createWorkRunAdapter(createCursorDriver(config));
       break;
     }
 
