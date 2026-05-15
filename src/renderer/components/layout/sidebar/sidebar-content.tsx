@@ -1,6 +1,6 @@
 import type { CSSProperties, MouseEvent } from "react";
 import WorkspacesList from "./workspace-list";
-import type { Workspace as WorkspaceResponse } from "@/lib/redux/api/workspacesApi";
+import type { Workspace as WorkspaceResponse } from "@/lib/redux/api/workspaceApi";
 
 const EMPTY_WORKSPACES: WorkspaceResponse[] = [];
 

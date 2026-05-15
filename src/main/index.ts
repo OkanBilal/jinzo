@@ -59,28 +59,11 @@ import {
 import { augmentPathForPackagedApp } from "./modules/providers/providers.utils";
 import { registerToolsIpc, unregisterToolsIpc } from "./modules/tools";
 import {
-  registerWorkspacesIpc,
-  unregisterWorkspacesIpc,
-} from "./modules/workspaces";
-import {
   registerWorkspaceIpc,
   unregisterWorkspaceIpc,
 } from "./modules/workspace";
 import { registerRunsIpc, unregisterRunsIpc } from "./modules/runs";
 import { runSessionRegistry } from "./modules/runs/run-session-registry";
-import { registerReviewsIpc, unregisterReviewsIpc } from "./modules/reviews";
-import {
-  registerReviewFindingsIpc,
-  unregisterReviewFindingsIpc,
-} from "./modules/reviewFindings";
-import {
-  registerWorkspaceDiffsIpc,
-  unregisterWorkspaceDiffsIpc,
-} from "./modules/workspaceDiffs";
-import {
-  registerWorkspaceActivityIpc,
-  unregisterWorkspaceActivityIpc,
-} from "./modules/workspaceActivity";
 import { registerProjectsIpc, unregisterProjectsIpc } from "./modules/projects";
 import {
   registerFileExplorerIpc,
@@ -584,7 +567,6 @@ async function initializeApp() {
     registerAppSettingsIpc();
     registerProvidersIpc();
     registerToolsIpc();
-    registerWorkspacesIpc();
     registerWorkspaceIpc();
     registerProjectsIpc();
     registerRunsIpc();
@@ -592,10 +574,6 @@ async function initializeApp() {
     registerGitIpc();
     registerWorkspaceResourcesHandlers();
     registerTerminalIpc();
-    registerReviewsIpc();
-    registerReviewFindingsIpc();
-    registerWorkspaceDiffsIpc();
-    registerWorkspaceActivityIpc();
     registerImageProxyHandler();
     registerImageProxyIpc();
     registerStatsIpc();
@@ -888,7 +866,6 @@ async function cleanupApp() {
     unregisterEntitiesHandlers();
     unregisterProvidersIpc();
     unregisterToolsIpc();
-    unregisterWorkspacesIpc();
     unregisterWorkspaceIpc();
     unregisterProjectsIpc();
     unregisterRunsIpc();
@@ -896,10 +873,6 @@ async function cleanupApp() {
     unregisterGitIpc();
     unregisterWorkspaceResourcesHandlers();
     unregisterTerminalIpc();
-    unregisterReviewsIpc();
-    unregisterReviewFindingsIpc();
-    unregisterWorkspaceDiffsIpc();
-    unregisterWorkspaceActivityIpc();
     unregisterImageProxyIpc();
     unregisterStatsIpc();
     unregisterUpdatesIpc();

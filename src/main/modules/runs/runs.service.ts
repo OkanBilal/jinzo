@@ -4,7 +4,7 @@ import { createHash } from "crypto";
 
 import { runsRepo } from "./runs.repo";
 import { providersRepo } from "../providers/providers.repo";
-import { workspacesRepo } from "../workspaces/workspaces.repo";
+import { workspaceRepo } from "../workspace";
 import {
   createWorkAdapter,
   type WorkRunContextItem,
@@ -415,12 +415,12 @@ export const runsService = {
         };
       }
 
-      const workspace = await workspacesRepo.findById(payload.workspaceId);
+      const workspace = await workspaceRepo.findById(payload.workspaceId);
       if (!workspace) {
         return fail(`Workspace "${payload.workspaceId}" not found`);
       }
 
-      await workspacesRepo.update(payload.workspaceId, { status: "in_progress" });
+      await workspaceRepo.update(payload.workspaceId, { status: "in_progress" });
 
       await runsRepo.insertRun({
         id: runId,
@@ -521,12 +521,12 @@ export const runsService = {
         };
       }
 
-      const workspace = await workspacesRepo.findById(payload.workspaceId);
+      const workspace = await workspaceRepo.findById(payload.workspaceId);
       if (!workspace) {
         return fail(`Workspace "${payload.workspaceId}" not found`);
       }
 
-      await workspacesRepo.update(payload.workspaceId, { status: "in_review" });
+      await workspaceRepo.update(payload.workspaceId, { status: "in_review" });
 
       const goalDescription = `Review ${
         payload.target.type === "uncommittedChanges"
@@ -633,7 +633,7 @@ export const runsService = {
       }
 
       const workspace = run.workspaceId
-        ? await workspacesRepo.findById(run.workspaceId)
+        ? await workspaceRepo.findById(run.workspaceId)
         : null;
 
       const adapter = createWorkAdapter(provider);
@@ -657,7 +657,7 @@ export const runsService = {
       );
 
       if (workspace) {
-        await workspacesRepo.update(workspace.id, { status: "in_progress" });
+        await workspaceRepo.update(workspace.id, { status: "in_progress" });
       }
 
       await runsRepo.updateRun(runId, {
@@ -748,7 +748,7 @@ export const runsService = {
       }
 
       const workspace = sourceRun.workspaceId
-        ? await workspacesRepo.findById(sourceRun.workspaceId)
+        ? await workspaceRepo.findById(sourceRun.workspaceId)
         : null;
 
       const adapter = createWorkAdapter(provider);
@@ -766,7 +766,7 @@ export const runsService = {
       }
 
       if (workspace) {
-        await workspacesRepo.update(workspace.id, { status: "in_progress" });
+        await workspaceRepo.update(workspace.id, { status: "in_progress" });
       }
 
       await runsRepo.insertRun({

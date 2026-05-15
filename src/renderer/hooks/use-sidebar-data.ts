@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import {
   useGetConnectionStatesQuery,
   useGetAccountQuery,
-  useGetWorkspacesQuery,
+  useListWorkspacesQuery,
 } from "@/lib/redux/api";
 import type { SidebarConfig } from "@/hooks/use-sidebar-config";
 
@@ -19,7 +19,7 @@ export function useSidebarData({ searchQuery, sidebarConfig }: UseSidebarDataOpt
 
   // Workspaces for workspace mode
   const { data: workspaces = [], isLoading: isLoadingWorkspaces } =
-    useGetWorkspacesQuery(undefined, {
+    useListWorkspacesQuery(undefined, {
       skip: sidebarConfig.itemType !== "workspace",
     });
 

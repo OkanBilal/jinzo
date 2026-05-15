@@ -12,9 +12,7 @@ import { runsRepo } from "./runs.repo";
 import { providersRepo } from "../providers/providers.repo";
 import { appSettingsRepo } from "../appSettings/appSettings.repo";
 import { gitService } from "../git/git.service";
-import { workspaceDiffsService } from "../workspaceDiffs/workspaceDiffs.service";
-import { workspaceDiffsRepo } from "../workspaceDiffs/workspaceDiffs.repo";
-import { workspaceActivityService } from "../workspaceActivity/workspaceActivity.service";
+import { workspaceService, workspaceRepo, logWorkspaceActivity } from "../workspace";
 import { createWorkAdapter } from "../providers/adapters";
 import { runSessionRegistry } from "./run-session-registry";
 
@@ -395,7 +393,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   }
 
   async function upsertDiff(snapshot: DiffSnapshot): Promise<void> {
-    const existing = await workspaceDiffsRepo.findByRun(runId);
+    const existing = await workspaceRepo.findDiffByRun(runId);
     const filesJson = JSON.stringify(snapshot.files);
     const statsJson = JSON.stringify({
       shortstat: snapshot.shortstat,
@@ -403,7 +401,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
       newFiles: snapshot.untrackedFiles.length,
     });
     if (existing) {
-      await workspaceDiffsRepo.updateDiff(existing.id, {
+      await workspaceRepo.updateDiff(existing.id, {
         diffText: snapshot.diffText,
         filesJson,
         statsJson,
@@ -411,8 +409,8 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
       });
     } else {
       // First persisted diff for this run — wipe the workspace's prior (stale) row.
-      await workspaceDiffsRepo.deleteLatestByWorkspace(workspace.id);
-      await workspaceDiffsService.createDiff({
+      await workspaceRepo.deleteLatestDiffByWorkspace(workspace.id);
+      await workspaceService.createDiff({
         id: generateUuid(),
         workspaceId: workspace.id,
         runId,
@@ -428,7 +426,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   async function recomputeLiveDiff(): Promise<void> {
     const snapshot = await buildDiffSnapshot();
     if (!snapshot || snapshot.files.length === 0) return;
-    const existing = await workspaceDiffsRepo.findByRun(runId);
+    const existing = await workspaceRepo.findDiffByRun(runId);
     if (existing && hashContent(existing.diffText) === hashContent(snapshot.diffText)) {
       return;
     }
@@ -482,7 +480,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
     try {
       // Incremental file count vs a prior diff sharing the same baseRef (not our own
       // live row): activity log reflects only what changed since the last snapshot.
-      const recentDiffs = await workspaceDiffsRepo.findByWorkspace(workspace.id, 10);
+      const recentDiffs = await workspaceRepo.findDiffsByWorkspace(workspace.id, 10);
       let incrementalFileCount = snapshot.files.length;
       let incrementalFileNames: string[] = snapshot.files;
       const prevDiffWithSameBase = recentDiffs.find(
@@ -504,7 +502,7 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
 
       if (incrementalFileCount > 0) {
         const summaryLines = incrementalFileNames.map((f) => f.split("/").pop() ?? f).join(", ");
-        workspaceActivityService.log({
+        logWorkspaceActivity({
           workspaceId: workspace.id,
           type: "diff",
           title: `${incrementalFileCount} file${incrementalFileCount === 1 ? "" : "s"} changed`,

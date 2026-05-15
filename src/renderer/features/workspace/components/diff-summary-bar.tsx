@@ -3,7 +3,7 @@ import { useDispatch } from "react-redux";
 import NumberFlow from "@number-flow/react";
 import {
   useGetLatestWorkspaceDiffQuery,
-  workspaceDiffsApi,
+  workspaceApi,
   type WorkspaceDiff,
 } from "@/lib/redux/api";
 import { ArrowUp, Close } from "@/components/ui/icons";
@@ -78,8 +78,8 @@ export function DiffSummaryBar({
     try {
       const result = await window.api.git.resetHard(rootPath, diff.baseRef);
       if (result.success) {
-        await window.api.workspaceDiffs.deleteLatest(workspaceId);
-        dispatch(workspaceDiffsApi.util.invalidateTags(["WorkspaceDiffs"]));
+        await window.api.workspace.deleteLatestDiff(workspaceId);
+        dispatch(workspaceApi.util.invalidateTags(["WorkspaceDiffs"]));
         toast.success("Changes reverted successfully");
       }
     } finally {

@@ -2,7 +2,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { markdownComponents } from "@/components/markdown-components";
-import { useGetReviewByIdQuery } from "@/lib/redux/api";
+import { useGetReviewQuery } from "@/lib/redux/api";
 import { Heading2 } from "@/components/ui";
 
 interface NoteTabContentProps {
@@ -11,7 +11,7 @@ interface NoteTabContentProps {
 
 
 export function NoteTabContent({ reviewId }: NoteTabContentProps) {
-  const { data: review, isLoading } = useGetReviewByIdQuery(reviewId);
+  const { data: review, isLoading } = useGetReviewQuery(reviewId);
 
   if (isLoading) {
     return (

@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   useSetActiveSpaceMutation,
   useCreateWorkspaceMutation,
-  useSelectDirectoryMutation,
+  useSelectWorkspaceDirectoryMutation,
   useGetAccountQuery,
   useGetAppSettingsQuery,
   useFindOrCreateProjectMutation,
@@ -29,7 +29,7 @@ export function useSidebarActions() {
 
   const [setActiveSpace] = useSetActiveSpaceMutation();
   const [createWorkspace] = useCreateWorkspaceMutation();
-  const [selectDirectory] = useSelectDirectoryMutation();
+  const [selectDirectory] = useSelectWorkspaceDirectoryMutation();
   const [findOrCreateProject] = useFindOrCreateProjectMutation();
   const [updateProject] = useUpdateProjectMutation();
 

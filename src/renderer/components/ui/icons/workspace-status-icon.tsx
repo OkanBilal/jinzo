@@ -1,5 +1,5 @@
 import { SVGProps, ReactElement } from "react";
-import type { WorkspaceStatus } from "@/lib/redux/api/workspacesApi";
+import type { WorkspaceStatus } from "@/lib/redux/api/workspaceApi";
 import StatusBacklog from "./status-backlog";
 import StatusTodo from "./status-todo";
 import StatusInProgress from "./status-in-progress";

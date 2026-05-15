@@ -59,25 +59,17 @@ vi.mock("../git/git.service", () => ({
   },
 }));
 
-vi.mock("../workspaceDiffs/workspaceDiffs.service", () => ({
-  workspaceDiffsService: {
+vi.mock("../workspace", () => ({
+  workspaceService: {
     createDiff: vi.fn().mockResolvedValue({ success: true, data: "diff-id" }),
   },
-}));
-
-vi.mock("../workspaceDiffs/workspaceDiffs.repo", () => ({
-  workspaceDiffsRepo: {
-    findByWorkspace: vi.fn().mockResolvedValue([]),
-    findByRun: vi.fn().mockResolvedValue(null),
+  workspaceRepo: {
+    findDiffsByWorkspace: vi.fn().mockResolvedValue([]),
+    findDiffByRun: vi.fn().mockResolvedValue(null),
     updateDiff: vi.fn(),
-    deleteLatestByWorkspace: vi.fn(),
+    deleteLatestDiffByWorkspace: vi.fn(),
   },
-}));
-
-vi.mock("../workspaceActivity/workspaceActivity.service", () => ({
-  workspaceActivityService: {
-    log: vi.fn(),
-  },
+  logWorkspaceActivity: vi.fn(),
 }));
 
 import { createRunSession } from "./run-session";

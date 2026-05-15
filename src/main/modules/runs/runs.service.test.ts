@@ -65,23 +65,25 @@ vi.mock("../git/git.service", () => ({
   },
 }));
 
-vi.mock("../workspaceDiffs/workspaceDiffs.service", () => ({
-  workspaceDiffsService: {
-    createDiff: vi.fn().mockResolvedValue({ success: true, data: "diff-id" }),
-  },
-}));
-
-vi.mock("../workspaceDiffs/workspaceDiffs.repo", () => ({
-  workspaceDiffsRepo: {
-    findByWorkspace: vi.fn().mockResolvedValue([]),
-  },
-}));
-
-vi.mock("../workspaceActivity/workspaceActivity.service", () => ({
-  workspaceActivityService: {
-    log: vi.fn(),
-  },
-}));
+// Mock only the fire-and-forget side of the workspace aggregate.
+// workspaceRepo runs against the real test DB so runs.service can find/update
+// workspaces created via createWorkspace(...). createDiff and logWorkspaceActivity
+// are stubbed so the diff/activity side effects don't try to do real work.
+vi.mock("../workspace", async () => {
+  const actual = await vi.importActual<typeof import("../workspace")>(
+    "../workspace",
+  );
+  return {
+    ...actual,
+    workspaceService: {
+      ...actual.workspaceService,
+      createDiff: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: "diff-id" }),
+    },
+    logWorkspaceActivity: vi.fn(),
+  };
+});
 
 import { runsService } from "./runs.service";
 import { runsRepo } from "./runs.repo";

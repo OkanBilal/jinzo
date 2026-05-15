@@ -3,7 +3,7 @@ import type { Run, RunEvent } from "../types";
 import type { RunTurn } from "@/lib/redux/api";
 import { toast } from "@/components/ui";
 import { useAppDispatch } from "@/lib/redux/hooks";
-import { runsApi, workspacesApi, reviewsApi, reviewFindingsApi, workspaceDiffsApi } from "@/lib/redux/api";
+import { runsApi, workspaceApi } from "@/lib/redux/api";
 import { mapArtifactToEvent, mapToolCallToEvent } from "../utils/run-event-mappers";
 import { useStreamingEvents } from "./use-streaming-events";
 
@@ -229,7 +229,7 @@ export function useWorkspaceRuns(
       const newId = runResult.data.id;
       setRuns((prev) => [runResult.data, ...prev]);
       setActiveRunId(newId);
-      dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
+      dispatch(workspaceApi.util.invalidateTags(["Workspaces"]));
       lastCommitCountRef.current = 0;
       const allowed = touchRun(newId);
       setRunEvents((prev) =>
@@ -269,7 +269,7 @@ export function useWorkspaceRuns(
         ).length;
         if (commitCount > lastCommitCountRef.current) {
           lastCommitCountRef.current = commitCount;
-          dispatch(workspaceDiffsApi.util.invalidateTags(["WorkspaceDiffs"]));
+          dispatch(workspaceApi.util.invalidateTags(["WorkspaceDiffs"]));
         }
       }
 
@@ -373,9 +373,9 @@ export function useWorkspaceRuns(
     }
 
     dispatch(runsApi.util.invalidateTags(["Runs", "WorkspaceDiffs"]));
-    dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
-    dispatch(reviewsApi.util.invalidateTags(["Reviews"]));
-    dispatch(reviewFindingsApi.util.invalidateTags(["ReviewFindings"]));
+    dispatch(workspaceApi.util.invalidateTags(["Workspaces"]));
+    dispatch(workspaceApi.util.invalidateTags(["Reviews"]));
+    dispatch(workspaceApi.util.invalidateTags(["ReviewFindings"]));
   }, [dispatch]);
 
   // Push subscription: main broadcasts after each persisted event and on
@@ -411,7 +411,7 @@ export function useWorkspaceRuns(
     const offDiff = window.api.runs.onDiffUpdated(({ runId, workspaceId }) => {
       if (runId !== activeRunId) return;
       dispatch(
-        workspaceDiffsApi.util.invalidateTags([
+        workspaceApi.util.invalidateTags([
           { type: "WorkspaceDiffs", id: workspaceId },
         ]),
       );
@@ -637,7 +637,7 @@ export function useWorkspaceRuns(
 
       void loadRunDetails(runId);
 
-      dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
+      dispatch(workspaceApi.util.invalidateTags(["Workspaces"]));
       return true;
     }, false, "Failed to continue run");
   }, [runOperation, dispatch, loadRunDetails]);

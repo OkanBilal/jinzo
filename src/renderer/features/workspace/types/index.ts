@@ -1,5 +1,5 @@
 // Re-export Workspace and Provider from API modules as single source of truth
-export type { Workspace } from "@/lib/redux/api/workspacesApi";
+export type { Workspace } from "@/lib/redux/api/workspaceApi";
 export type { Provider } from "@/lib/redux/api/providersApi";
 
 export interface RunEvent {

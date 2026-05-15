@@ -4,7 +4,7 @@
 
 import { runsService } from "../../modules/runs";
 import { providersRepo } from "../../modules/providers/providers.repo";
-import { workspacesRepo } from "../../modules/workspaces/workspaces.repo";
+import { workspaceRepo } from "../../modules/workspace";
 import {
   createWorkAdapter,
   isSupportedWorkProvider,
@@ -66,7 +66,7 @@ export async function dispatchRun(request: DispatchRunRequest): Promise<Dispatch
   }
 
   // 2. Load workspace
-  const workspace = await workspacesRepo.findById(request.workspaceId);
+  const workspace = await workspaceRepo.findById(request.workspaceId);
   if (!workspace) {
     throw new Error(`Workspace "${request.workspaceId}" not found`);
   }
@@ -217,7 +217,7 @@ async function dispatchRunInternal(
   }
 
   // 2. Load workspace
-  const workspace = await workspacesRepo.findById(request.workspaceId);
+  const workspace = await workspaceRepo.findById(request.workspaceId);
   if (!workspace) {
     throw new Error(`Workspace "${request.workspaceId}" not found`);
   }

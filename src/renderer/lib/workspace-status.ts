@@ -1,4 +1,4 @@
-import type { WorkspaceStatus } from "@/lib/redux/api/workspacesApi";
+import type { WorkspaceStatus } from "@/lib/redux/api/workspaceApi";
 
 interface WorkspaceStatusConfig {
   label: string;

@@ -329,27 +329,6 @@ const api = {
     deleteFinding: (id: string) =>
       ipcRenderer.invoke(CHANNELS.workspace.deleteFinding, id),
   },
-  // Workspaces operations
-  workspaces: {
-    getAll: () => ipcRenderer.invoke(CHANNELS.workspaces.getAll),
-    getById: (id: string) => ipcRenderer.invoke(CHANNELS.workspaces.getById, id),
-    getByAccount: (accountId: string) =>
-      ipcRenderer.invoke(CHANNELS.workspaces.getByAccount, accountId),
-    getByRootPath: (accountId: string, rootPath: string) =>
-      ipcRenderer.invoke(CHANNELS.workspaces.getByRootPath, accountId, rootPath),
-    create: (payload: unknown) =>
-      ipcRenderer.invoke(CHANNELS.workspaces.create, payload),
-    update: (id: string, payload: unknown) =>
-      ipcRenderer.invoke(CHANNELS.workspaces.update, id, payload),
-    delete: (id: string) => ipcRenderer.invoke(CHANNELS.workspaces.delete, id),
-    archive: (id: string) => ipcRenderer.invoke(CHANNELS.workspaces.archive, id),
-    selectDirectory: () => ipcRenderer.invoke(CHANNELS.workspaces.selectDirectory),
-    onScriptComplete: (callback: (data: { workspaceId: string; script: string; success: boolean; error?: string }) => void) => {
-      const listener = (_: any, data: { workspaceId: string; script: string; success: boolean; error?: string }) => callback(data);
-      ipcRenderer.on(CHANNELS.workspaces.scriptComplete, listener);
-      return () => ipcRenderer.removeListener(CHANNELS.workspaces.scriptComplete, listener);
-    },
-  },
   // Runs operations
   runs: {
     getAll: (limit?: number) => ipcRenderer.invoke(CHANNELS.runs.getAll, limit),
@@ -488,60 +467,6 @@ const api = {
       ipcRenderer.on(CHANNELS.runs.diffUpdated, listener);
       return () => ipcRenderer.removeListener(CHANNELS.runs.diffUpdated, listener);
     },
-  },
-  // Reviews operations
-  reviews: {
-    getByWorkspace: (workspaceId: string, limit?: number) =>
-      ipcRenderer.invoke(CHANNELS.reviews.getByWorkspace, workspaceId, limit),
-    getById: (id: string) =>
-      ipcRenderer.invoke(CHANNELS.reviews.getById, id),
-    create: (payload: unknown) =>
-      ipcRenderer.invoke(CHANNELS.reviews.create, payload),
-    update: (id: string, payload: unknown) =>
-      ipcRenderer.invoke(CHANNELS.reviews.update, id, payload),
-    delete: (id: string) =>
-      ipcRenderer.invoke(CHANNELS.reviews.delete, id),
-  },
-  // Review findings operations
-  reviewFindings: {
-    getByWorkspace: (workspaceId: string) =>
-      ipcRenderer.invoke(CHANNELS.reviewFindings.getByWorkspace, workspaceId),
-    getByReview: (reviewId: string, limit?: number) =>
-      ipcRenderer.invoke(CHANNELS.reviewFindings.getByReview, reviewId, limit),
-    getById: (id: string) =>
-      ipcRenderer.invoke(CHANNELS.reviewFindings.getById, id),
-    create: (payload: unknown) =>
-      ipcRenderer.invoke(CHANNELS.reviewFindings.create, payload),
-    createMany: (payloads: unknown) =>
-      ipcRenderer.invoke(CHANNELS.reviewFindings.createMany, payloads),
-    update: (id: string, payload: unknown) =>
-      ipcRenderer.invoke(CHANNELS.reviewFindings.update, id, payload),
-    delete: (id: string) =>
-      ipcRenderer.invoke(CHANNELS.reviewFindings.delete, id),
-  },
-  // Workspace diff operations
-  workspaceDiffs: {
-    getByWorkspace: (workspaceId: string, limit?: number) =>
-      ipcRenderer.invoke(CHANNELS.workspaceDiffs.getByWorkspace, workspaceId, limit),
-    getLatest: (workspaceId: string) =>
-      ipcRenderer.invoke(CHANNELS.workspaceDiffs.getLatest, workspaceId),
-    getLatestSummary: (workspaceId: string) =>
-      ipcRenderer.invoke(CHANNELS.workspaceDiffs.getLatestSummary, workspaceId),
-    getByRun: (runId: string) =>
-      ipcRenderer.invoke(CHANNELS.workspaceDiffs.getByRun, runId),
-    deleteLatest: (workspaceId: string) =>
-      ipcRenderer.invoke(CHANNELS.workspaceDiffs.deleteLatest, workspaceId),
-  },
-  // Workspace activity operations
-  workspaceActivity: {
-    getByWorkspace: (workspaceId: string, limit?: number) =>
-      ipcRenderer.invoke(CHANNELS.workspaceActivity.getByWorkspace, workspaceId, limit),
-    create: (payload: unknown) =>
-      ipcRenderer.invoke(CHANNELS.workspaceActivity.create, payload),
-    createMany: (payloads: unknown) =>
-      ipcRenderer.invoke(CHANNELS.workspaceActivity.createMany, payloads),
-    delete: (id: string) =>
-      ipcRenderer.invoke(CHANNELS.workspaceActivity.delete, id),
   },
   // Run context operations
   runContext: {

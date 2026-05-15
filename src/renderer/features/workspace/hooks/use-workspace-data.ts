@@ -2,9 +2,9 @@ import { useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
-  useGetWorkspacesQuery,
-  useGetWorkspaceByIdQuery,
-} from "@/lib/redux/api/workspacesApi";
+  useListWorkspacesQuery,
+  useGetWorkspaceQuery,
+} from "@/lib/redux/api/workspaceApi";
 import { useGetProvidersByKindQuery } from "@/lib/redux/api/providersApi";
 import type { RootState } from "@/lib/redux";
 
@@ -20,7 +20,7 @@ export function useWorkspaceData(providerId?: string) {
   const [userSelectedProvider, setSelectedProvider] =
     useState<string | null>(null);
 
-  const { data: workspaces = [] } = useGetWorkspacesQuery();
+  const { data: workspaces = [] } = useListWorkspacesQuery();
 
   const { data: allProviders = EMPTY_PROVIDERS } =
     useGetProvidersByKindQuery("agent_runtime");
@@ -40,7 +40,7 @@ export function useWorkspaceData(providerId?: string) {
     return workspaces.length > 0 ? workspaces[0].id : undefined;
   }, [workspaceId, providerId, savedWorkspaceIdByProvider, workspaces]);
 
-  const { data: fetchedWorkspace } = useGetWorkspaceByIdQuery(effectiveWorkspaceId!, {
+  const { data: fetchedWorkspace } = useGetWorkspaceQuery(effectiveWorkspaceId!, {
     skip: !effectiveWorkspaceId,
   });
 

@@ -26,11 +26,11 @@ import {
   Edit,
 } from "@/components/ui/icons";
 import { useGetInstalledAppsQuery } from "@/lib/redux/api";
-import { useGetLatestWorkspaceDiffSummaryQuery } from "@/lib/redux/api/workspaceDiffsApi";
+import { useGetLatestWorkspaceDiffSummaryQuery } from "@/lib/redux/api/workspaceApi";
 //import { formatDate } from "@/lib/format-date";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
-import type { WorkspaceStatus } from "@/lib/redux/api/workspacesApi";
+import type { WorkspaceStatus } from "@/lib/redux/api/workspaceApi";
 
 type GroupingMode = "none" | "status" | "project";
 
