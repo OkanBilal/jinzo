@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import {
   useGetLatestWorkspaceDiffQuery,
-  useGetReviewFindingsByWorkspaceQuery,
-  useGetWorkspaceByIdQuery,
+  useListReviewFindingsByWorkspaceQuery,
+  useGetWorkspaceQuery,
   type WorkspaceDiff,
   type FindingSeverity,
 } from "@/lib/redux/api";
@@ -93,12 +93,12 @@ export function DiffSection({
     [diffText],
   );
 
-  const { data: allFindings } = useGetReviewFindingsByWorkspaceQuery(
+  const { data: allFindings } = useListReviewFindingsByWorkspaceQuery(
     { workspaceId },
     { skip: !workspaceId },
   );
 
-  const { data: workspace } = useGetWorkspaceByIdQuery(workspaceId, { skip: !workspaceId });
+  const { data: workspace } = useGetWorkspaceQuery(workspaceId, { skip: !workspaceId });
 
   const diffFiles = diff?.files;
   const findingsByFile = useMemo(() => {

@@ -21,7 +21,7 @@ import Select from "@/components/ui/select";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { getModelIcon, type ModelIconVariant } from "@/lib/model-icons";
 import { useGetProjectsQuery } from "@/lib/redux/api/projectsApi";
-import { useGetWorkspacesQuery } from "@/lib/redux/api/workspacesApi";
+import { useListWorkspacesQuery } from "@/lib/redux/api/workspaceApi";
 import {
   useGetEnabledProvidersQuery,
   useGetProviderModelsQuery,
@@ -33,7 +33,7 @@ import {
   WEEK_DAYS,
 } from "../utils/format-schedule";
 import type { PulseFrequency } from "@/lib/redux/api/pulseApi";
-import type { Workspace } from "@/lib/redux/api/workspacesApi";
+import type { Workspace } from "@/lib/redux/api/workspaceApi";
 import {
   PROVIDER_IDS,
   type ProviderId,
@@ -164,7 +164,7 @@ export function WorkspacePicker({
   const ref = useRef<HTMLDivElement>(null);
   const close = useCallback(() => setOpen(false), []);
   useClickOutside(ref, close);
-  const { data: workspaces = [] } = useGetWorkspacesQuery();
+  const { data: workspaces = [] } = useListWorkspacesQuery();
   const { data: projects = [] } = useGetProjectsQuery();
   const projectDataMap = useMemo(() => {
     const map = new Map<string, { name: string; icon: string | null }>();

@@ -11,7 +11,7 @@ import type {
 } from "./adapters/adapter.types";
 import { getActiveGuard, getActiveGuardInfo } from "./adapters/adapter.factory";
 import { parseInstallCommand } from "./guards.utils";
-import { workspaceActivityService } from "../workspaceActivity/workspaceActivity.service";
+import { logWorkspaceActivity } from "../workspace";
 
 import { ok, fail, type ServiceResponse } from "../../../shared/ipc-kit/service-response";
 export type { ServiceResponse };
@@ -143,7 +143,7 @@ export const guardsService = {
           { total: 0, critical: 0, high: 0, medium: 0, low: 0, safe: 0 },
         );
 
-        workspaceActivityService.log({
+        logWorkspaceActivity({
           workspaceId,
           type: "finding",
           title: `Dependency scan: ${totalSummary.total} packages`,

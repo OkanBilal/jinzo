@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { FileExplorer } from "@/features/workspace/components/file-explorer";
 import type { FileNode } from "@/features/workspace/types/file-explorer";
 import {
-  useGetWorkspaceByIdQuery,
+  useGetWorkspaceQuery,
   useGetLatestWorkspaceDiffSummaryQuery,
 } from "@/lib/redux/api";
 import type { ProjectIssue, SignalWithEntity } from "@/lib/redux/api";
@@ -41,7 +41,7 @@ export function WorkspaceSidebar() {
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
 
   // Get workspace data from the selected workspace ID
-  const { data: workspace } = useGetWorkspaceByIdQuery(workspaceId || "", {
+  const { data: workspace } = useGetWorkspaceQuery(workspaceId || "", {
     skip: !workspaceId,
   });
 

@@ -39,7 +39,7 @@ export default function CloneRepoModal({
 
   const handleBrowse = async () => {
     try {
-      const result = await window.api.workspaces.selectDirectory();
+      const result = await window.api.workspace.selectDirectory();
       if (result?.success && result.data) {
         setClonePath(result.data);
       }

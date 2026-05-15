@@ -8,13 +8,9 @@
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { workspaceDiffsRepo } from "../../workspaceDiffs/workspaceDiffs.repo";
-import { reviewsRepo } from "../../reviews/reviews.repo";
-import { reviewFindingsRepo } from "../../reviewFindings/reviewFindings.repo";
-import { workspaceActivityService } from "../../workspaceActivity/workspaceActivity.service";
+import { workspaceRepo, logWorkspaceActivity } from "../../workspace";
 import { runSessionRegistry } from "../../runs/run-session-registry";
 import { gitService } from "../../git/git.service";
-import { workspacesRepo } from "../../workspaces/workspaces.repo";
 import { projectsRepo } from "../../projects/projects.repo";
 import { appSettingsRepo } from "../../appSettings/appSettings.repo";
 import { SETTINGS_ID } from "../../appSettings/appSettings.constants";
@@ -72,8 +68,8 @@ export async function handleGetWorkspaceDiff(
   }
 
   const row = args.runId
-    ? await workspaceDiffsRepo.findByRun(args.runId)
-    : await workspaceDiffsRepo.findLatestByWorkspace(ctx.workspaceId!);
+    ? await workspaceRepo.findDiffByRun(args.runId)
+    : await workspaceRepo.findLatestDiffByWorkspace(ctx.workspaceId!);
 
   if (!row) {
     return { content: [{ type: "text" as const, text: "No diff found" }] };
@@ -93,7 +89,7 @@ export async function handleSaveReview(
   },
   ctx: MainsToolContext,
 ) {
-  const reviewId = await reviewsRepo.insert({
+  const reviewId = await workspaceRepo.insertReview({
     workspaceId: ctx.workspaceId ?? undefined,
     title: args.title,
     summary: args.summary,
@@ -103,7 +99,7 @@ export async function handleSaveReview(
   });
 
   if (ctx.workspaceId) {
-    workspaceActivityService.log({
+    logWorkspaceActivity({
       workspaceId: ctx.workspaceId,
       type: "review",
       title: args.title,
@@ -131,7 +127,7 @@ export async function handleSaveFinding(
   },
   ctx: MainsToolContext,
 ) {
-  const findingId = await reviewFindingsRepo.insert({
+  const findingId = await workspaceRepo.insertFinding({
     reviewId: args.reviewId,
     severity: args.severity as any,
     file: args.file,
@@ -144,7 +140,7 @@ export async function handleSaveFinding(
   });
 
   if (ctx.workspaceId) {
-    workspaceActivityService.log({
+    logWorkspaceActivity({
       workspaceId: ctx.workspaceId,
       type: "finding",
       title: `Finding in ${args.file}`,
@@ -182,7 +178,7 @@ export async function handleSaveFindings(
   },
   ctx: MainsToolContext,
 ) {
-  const findingIds = await reviewFindingsRepo.insertMany(
+  const findingIds = await workspaceRepo.insertManyFindings(
     args.findings.map((f) => ({
       reviewId: args.reviewId,
       severity: f.severity as any,
@@ -197,7 +193,7 @@ export async function handleSaveFindings(
   );
 
   if (ctx.workspaceId) {
-    workspaceActivityService.log({
+    logWorkspaceActivity({
       workspaceId: ctx.workspaceId,
       type: "finding",
       title: `${args.findings.length} finding${args.findings.length === 1 ? "" : "s"} saved`,
@@ -237,7 +233,7 @@ export async function handleCommitChanges(
     // Fetch commit instructions (project-level > app-level)
     let commitInstructions: string | null = null;
     if (ctx.workspaceId) {
-      const workspace = await workspacesRepo.findById(ctx.workspaceId);
+      const workspace = await workspaceRepo.findById(ctx.workspaceId);
       if (workspace?.projectId) {
         const project = await projectsRepo.findById(workspace.projectId);
         commitInstructions = project?.commitInstructions ?? null;
@@ -291,9 +287,9 @@ export async function handleCommitChanges(
         ? (untrackedResult.data ?? [])
         : [];
 
-      await workspaceDiffsRepo.deleteByWorkspace(ctx.workspaceId);
+      await workspaceRepo.deleteDiffsByWorkspace(ctx.workspaceId);
       if (untrackedFiles.length > 0 || diffText) {
-        await workspaceDiffsRepo.insertDiff({
+        await workspaceRepo.insertDiff({
           id: crypto.randomUUID(),
           workspaceId: ctx.workspaceId,
           runId: ctx.runId ?? undefined,
@@ -315,11 +311,11 @@ export async function handleCommitChanges(
 
     // Clear review findings for this workspace — committed code is accepted
     if (ctx.workspaceId) {
-      await reviewFindingsRepo.removeByWorkspace(ctx.workspaceId);
+      await workspaceRepo.deleteFindingsByWorkspace(ctx.workspaceId);
     }
 
     if (ctx.workspaceId) {
-      workspaceActivityService.log({
+      logWorkspaceActivity({
         workspaceId: ctx.workspaceId,
         type: "commit",
         title: args.message,
@@ -369,7 +365,7 @@ export async function handleCreatePR(
     // Fetch project and verify remote origin
     let prInstructions: string | null = null;
     if (ctx.workspaceId) {
-      const workspace = await workspacesRepo.findById(ctx.workspaceId);
+      const workspace = await workspaceRepo.findById(ctx.workspaceId);
       if (workspace?.projectId) {
         const project = await projectsRepo.findById(workspace.projectId);
         prInstructions = project?.prInstructions ?? null;
@@ -449,7 +445,7 @@ export async function handleCreatePR(
     const prUrl = output.match(/https:\/\/github\.com\/[^\s]+/)?.[0];
 
     if (ctx.workspaceId) {
-      workspaceActivityService.log({
+      logWorkspaceActivity({
         workspaceId: ctx.workspaceId,
         type: "pr",
         title: args.title,

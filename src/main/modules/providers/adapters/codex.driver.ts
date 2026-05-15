@@ -50,9 +50,7 @@ import {
   requestToolApproval,
 } from "../../runs/user-input-broker";
 import { runsRepo } from "../../runs/runs.repo";
-import { reviewsRepo } from "../../reviews/reviews.repo";
-import { reviewFindingsRepo } from "../../reviewFindings/reviewFindings.repo";
-import { workspaceActivityService } from "../../workspaceActivity/workspaceActivity.service";
+import { workspaceRepo, logWorkspaceActivity } from "../../workspace";
 import {
   createLogger,
   safeJson,
@@ -2253,7 +2251,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
                   const summary = reviewText;
 
                   // Create review record
-                  const reviewId = await reviewsRepo.insert({
+                  const reviewId = await workspaceRepo.insertReview({
                     workspaceId: run.workspaceId,
                     title: "Code Review",
                     summary,
@@ -2270,17 +2268,17 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
                     message: f.message,
                     reason: f.reason,
                   }));
-                  await reviewFindingsRepo.insertMany(findingPayloads);
+                  await workspaceRepo.insertManyFindings(findingPayloads);
 
                   // Log activity
-                  workspaceActivityService.log({
+                  logWorkspaceActivity({
                     workspaceId: run.workspaceId,
                     type: "review",
                     title: "Code Review",
                     summary,
                     refId: reviewId,
                   });
-                  workspaceActivityService.log({
+                  logWorkspaceActivity({
                     workspaceId: run.workspaceId,
                     type: "finding",
                     title: `${parsedFindings.length} finding(s) saved`,

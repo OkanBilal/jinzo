@@ -4,7 +4,7 @@ import {
   setSelectedFile,
   setActiveTab,
 } from "@/lib/redux/slices/workspaceSlice";
-import { useGetWorkspaceByIdQuery } from "@/lib/redux/api";
+import { useGetWorkspaceQuery } from "@/lib/redux/api";
 import type { RootState } from "@/lib/redux";
 import type { FileNode } from "@/features/workspace/types/file-explorer";
 
@@ -14,7 +14,7 @@ export function useOpenFileInEditor() {
   const workspaceId = useSelector(
     (s: RootState) => s.workspace.activeWorkspaceId,
   );
-  const { data: workspace } = useGetWorkspaceByIdQuery(workspaceId || "", {
+  const { data: workspace } = useGetWorkspaceQuery(workspaceId || "", {
     skip: !workspaceId,
   });
   const rootPath = workspace?.rootPath;

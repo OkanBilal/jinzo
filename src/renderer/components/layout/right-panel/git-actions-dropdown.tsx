@@ -4,7 +4,7 @@ import { Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
 import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks";
 import {
   useGetLatestWorkspaceDiffSummaryQuery,
-  useGetWorkspaceActivityQuery,
+  useListWorkspaceActivityQuery,
 } from "@/lib/redux/api";
 import {
   setPendingGoal,
@@ -26,7 +26,7 @@ export function GitActionsDropdown() {
     { skip: !activeWorkspaceId },
   );
 
-  const { data: activities = [] } = useGetWorkspaceActivityQuery(
+  const { data: activities = [] } = useListWorkspaceActivityQuery(
     { workspaceId: activeWorkspaceId! },
     { skip: !activeWorkspaceId, pollingInterval: 15000 },
   );

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import {
-  useGetWorkspaceActivityQuery,
+  useListWorkspaceActivityQuery,
   useGetAppSettingsQuery,
-  useGetWorkspaceByIdQuery,
+  useGetWorkspaceQuery,
   useGetProjectByIdQuery,
 } from "@/lib/redux/api";
 import type { WorkspaceActivity } from "@/lib/redux/api";
@@ -57,14 +57,14 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
   const dispatch = useDispatch();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const { data: appSettings } = useGetAppSettingsQuery();
-  const { data: workspace } = useGetWorkspaceByIdQuery(workspaceId, {
+  const { data: workspace } = useGetWorkspaceQuery(workspaceId, {
     skip: !workspaceId,
   });
   const projectId = workspace?.projectId;
   const { data: project } = useGetProjectByIdQuery(projectId ?? "", {
     skip: !projectId,
   });
-  const { data: activities = [], isLoading } = useGetWorkspaceActivityQuery(
+  const { data: activities = [], isLoading } = useListWorkspaceActivityQuery(
     { workspaceId },
     { pollingInterval: 15000, refetchOnFocus: true },
   );

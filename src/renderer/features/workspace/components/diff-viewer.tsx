@@ -2,8 +2,8 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { PatchDiff, type DiffLineAnnotation } from "@pierre/diffs/react";
 import {
-  useGetReviewFindingsByWorkspaceQuery,
-  useGetWorkspaceByIdQuery,
+  useListReviewFindingsByWorkspaceQuery,
+  useGetWorkspaceQuery,
   useUpdateReviewFindingMutation,
 } from "@/lib/redux/api";
 import { setPendingGoal, setPendingAutoExecute } from "@/lib/redux/slices/workspaceSlice";
@@ -193,12 +193,12 @@ export function DiffViewer({
   const dispatch = useDispatch();
   const [updateFinding] = useUpdateReviewFindingMutation();
 
-  const { data: allFindings } = useGetReviewFindingsByWorkspaceQuery(
+  const { data: allFindings } = useListReviewFindingsByWorkspaceQuery(
     { workspaceId: workspaceId! },
     { skip: !workspaceId },
   );
 
-  const { data: workspace } = useGetWorkspaceByIdQuery(workspaceId!, { skip: !workspaceId });
+  const { data: workspace } = useGetWorkspaceQuery(workspaceId!, { skip: !workspaceId });
 
   const fileFindings = useMemo(() => {
     if (!allFindings || !filePath) return [];

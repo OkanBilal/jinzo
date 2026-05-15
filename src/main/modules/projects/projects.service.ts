@@ -3,9 +3,8 @@ import { randomUUID } from "crypto";
 import * as fs from "fs";
 import { projectsRepo } from "./projects.repo";
 import { normalizeRemoteOrigin } from "./projects.utils";
-import { workspacesRepo } from "../workspaces/workspaces.repo";
+import { workspaceRepo } from "../workspace";
 import { runsRepo } from "../runs/runs.repo";
-import { reviewsRepo } from "../reviews/reviews.repo";
 import { gitService } from "../git/git.service";
 import type {
   CreateProjectPayload,
@@ -160,7 +159,7 @@ export const projectsService = {
       }
 
       // Find all workspaces belonging to this project
-      const projectWorkspaces = await workspacesRepo.findByProjectId(id);
+      const projectWorkspaces = await workspaceRepo.findByProjectId(id);
 
       // Remove worktrees for each workspace
       for (const ws of projectWorkspaces) {
@@ -195,11 +194,11 @@ export const projectsService = {
       // Delete runs, reviews for each workspace (these are set null on workspace delete, not cascade)
       for (const ws of projectWorkspaces) {
         await runsRepo.deleteRunsByWorkspaceId(ws.id);
-        await reviewsRepo.deleteByWorkspaceId(ws.id);
+        await workspaceRepo.deleteReviewsByWorkspace(ws.id);
       }
 
       // Delete all workspaces from DB (cascades: workspaceDiffs)
-      await workspacesRepo.deleteByProjectId(id);
+      await workspaceRepo.deleteByProjectId(id);
 
       // Delete the project from DB
       await projectsRepo.delete(id);

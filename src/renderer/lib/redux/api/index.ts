@@ -217,28 +217,70 @@ export type {
   UpdateProjectPayload,
 } from "./projectsApi";
 
+// Workspace aggregate (workspace + activity + diffs + reviews + findings)
+// Replaces 5 legacy api files; see ADR-0001.
 export {
-  workspacesApi,
-  useGetWorkspacesQuery,
-  useLazyGetWorkspacesQuery,
-  useGetWorkspaceByIdQuery,
-  useLazyGetWorkspaceByIdQuery,
-  useGetWorkspacesByAccountQuery,
-  useLazyGetWorkspacesByAccountQuery,
+  workspaceApi,
+  // workspace lifecycle
+  useListWorkspacesQuery,
+  useLazyListWorkspacesQuery,
+  useGetWorkspaceQuery,
+  useLazyGetWorkspaceQuery,
+  useListWorkspacesByAccountQuery,
+  useLazyListWorkspacesByAccountQuery,
   useGetWorkspaceByRootPathQuery,
   useLazyGetWorkspaceByRootPathQuery,
   useCreateWorkspaceMutation,
   useUpdateWorkspaceMutation,
   useDeleteWorkspaceMutation,
   useArchiveWorkspaceMutation,
-  useSelectDirectoryMutation,
-} from "./workspacesApi";
+  useSelectWorkspaceDirectoryMutation,
+  // activity
+  useListWorkspaceActivityQuery,
+  useCreateWorkspaceActivityMutation,
+  useDeleteWorkspaceActivityMutation,
+  // diffs
+  useGetLatestWorkspaceDiffQuery,
+  useLazyGetLatestWorkspaceDiffQuery,
+  useGetLatestWorkspaceDiffSummaryQuery,
+  useLazyGetLatestWorkspaceDiffSummaryQuery,
+  useListWorkspaceDiffsQuery,
+  useLazyListWorkspaceDiffsQuery,
+  // reviews
+  useListReviewsByWorkspaceQuery,
+  useGetReviewQuery,
+  useCreateReviewMutation,
+  useUpdateReviewMutation,
+  useDeleteReviewMutation,
+  // findings
+  useListReviewFindingsByWorkspaceQuery,
+  useListReviewFindingsByReviewQuery,
+  useGetReviewFindingQuery,
+  useCreateReviewFindingMutation,
+  useCreateReviewFindingsMutation,
+  useUpdateReviewFindingMutation,
+  useDeleteReviewFindingMutation,
+} from "./workspaceApi";
 export type {
   Workspace,
   WorkspaceMetadata,
+  WorkspaceStatus,
   CreateWorkspacePayload,
   UpdateWorkspacePayload,
-} from "./workspacesApi";
+  WorkspaceActivity,
+  ActivityType,
+  CreateWorkspaceActivityPayload,
+  WorkspaceDiff,
+  WorkspaceDiffSummary,
+  Review,
+  ReviewStatus,
+  CreateReviewPayload,
+  UpdateReviewPayload,
+  ReviewFinding,
+  FindingSeverity,
+  CreateReviewFindingPayload,
+  UpdateReviewFindingPayload,
+} from "./workspaceApi";
 
 export {
   runsApi,
@@ -290,35 +332,6 @@ export type {
 } from "./runsApi";
 
 export {
-  workspaceDiffsApi,
-  useGetLatestWorkspaceDiffQuery,
-  useLazyGetLatestWorkspaceDiffQuery,
-  useGetLatestWorkspaceDiffSummaryQuery,
-  useLazyGetLatestWorkspaceDiffSummaryQuery,
-  useGetWorkspaceDiffsQuery,
-  useLazyGetWorkspaceDiffsQuery,
-} from "./workspaceDiffsApi";
-export type {
-  WorkspaceDiff,
-  WorkspaceDiffSummary,
-} from "./workspaceDiffsApi";
-
-export {
-  reviewsApi,
-  useGetReviewsByWorkspaceQuery,
-  useGetReviewByIdQuery,
-  useCreateReviewMutation,
-  useUpdateReviewMutation,
-  useDeleteReviewMutation,
-} from "./reviewsApi";
-export type {
-  Review,
-  ReviewStatus,
-  CreateReviewPayload,
-  UpdateReviewPayload,
-} from "./reviewsApi";
-
-export {
   projectResourcesApi,
   useGetProjectResourcesQuery,
   useGetAvailableResourcesQuery,
@@ -354,35 +367,6 @@ export {
   useLazyGetAppsForFileQuery,
 } from "./shellApi";
 export type { InstalledApp, FileHandlerApp } from "./shellApi";
-
-export {
-  reviewFindingsApi,
-  useGetReviewFindingsByWorkspaceQuery,
-  useGetReviewFindingsByReviewQuery,
-  useGetReviewFindingByIdQuery,
-  useCreateReviewFindingMutation,
-  useCreateReviewFindingsMutation,
-  useUpdateReviewFindingMutation,
-  useDeleteReviewFindingMutation,
-} from "./reviewFindingsApi";
-export type {
-  ReviewFinding,
-  FindingSeverity,
-  CreateReviewFindingPayload,
-  UpdateReviewFindingPayload,
-} from "./reviewFindingsApi";
-
-export {
-  workspaceActivityApi,
-  useGetWorkspaceActivityQuery,
-  useCreateWorkspaceActivityMutation,
-  useDeleteWorkspaceActivityMutation,
-} from "./workspaceActivityApi";
-export type {
-  WorkspaceActivity,
-  ActivityType,
-  CreateWorkspaceActivityPayload,
-} from "./workspaceActivityApi";
 
 export {
   statsApi,

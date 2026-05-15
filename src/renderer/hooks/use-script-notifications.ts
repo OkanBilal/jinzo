@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useAppDispatch } from "@/lib/redux/hooks";
-import { workspacesApi } from "@/lib/redux/api/workspacesApi";
+import { workspaceApi } from "@/lib/redux/api/workspaceApi";
 import { toast } from "@/components/ui";
 
 /**
@@ -11,8 +11,8 @@ export function useScriptNotifications(): void {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    const unsubscribe = window.api.workspaces.onScriptComplete((data) => {
-      dispatch(workspacesApi.util.invalidateTags(["Workspaces"]));
+    const unsubscribe = window.api.workspace.onScriptComplete((data) => {
+      dispatch(workspaceApi.util.invalidateTags(["Workspaces"]));
 
       if (!data.success) {
         toast.error(`${data.script === "setup" ? "Setup" : "Archive"} script failed${data.error ? `: ${data.error}` : ""}`);

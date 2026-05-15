@@ -31,7 +31,7 @@ import { spaceService } from "../main/modules/space/space.service";
 import { providersService } from "../main/modules/providers/providers.service";
 import { connectionStatesService } from "../main/modules/connectionStates/connectionStates.service";
 import { projectsService } from "../main/modules/projects/projects.service";
-import { workspacesService } from "../main/modules/workspaces/workspaces.service";
+import { workspaceService } from "../main/modules/workspace";
 import { entitiesService } from "../main/modules/entities/entities.service";
 
 // ─────────────────────────────────────────────────────────────
@@ -215,8 +215,8 @@ describe("smoke", () => {
       expect(result.data).toEqual([]);
     });
 
-    it("workspacesService.getAll returns empty list (no workspaces seeded)", async () => {
-      const result = await workspacesService.getAll();
+    it("workspaceService.list returns empty list (no workspaces seeded)", async () => {
+      const result = await workspaceService.list();
       expect(result.success).toBe(true);
       if (!result.success) return;
 

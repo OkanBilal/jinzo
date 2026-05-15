@@ -7,7 +7,7 @@ import {
   useTogglePulseMutation,
   type Pulse,
 } from "@/lib/redux/api/pulseApi";
-import { useGetWorkspacesQuery } from "@/lib/redux/api/workspacesApi";
+import { useListWorkspacesQuery } from "@/lib/redux/api/workspaceApi";
 import { formatSchedule } from "../utils/format-schedule";
 
 interface PulseListProps {
@@ -16,7 +16,7 @@ interface PulseListProps {
 
 export function PulseList({ onEdit }: PulseListProps) {
   const { data: pulses = [], isLoading } = useGetPulsesQuery();
-  const { data: workspaces = [] } = useGetWorkspacesQuery();
+  const { data: workspaces = [] } = useListWorkspacesQuery();
   const [togglePulse] = useTogglePulseMutation();
   const [deletePulse] = useDeletePulseMutation();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
