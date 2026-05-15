@@ -1,6 +1,21 @@
 // ─────────────────────────────────────────────────────────────
-// OpenAI Codex App-Server Adapter
-// Implements WorkRunAdapter using `codex app-server` JSON-RPC over stdio
+// OpenAI Codex ProviderDriver
+//
+// SDK-specific seam for `codex app-server` (JSON-RPC over stdio). Wrapped by
+// `createWorkRunAdapter()` in work-run-core.ts to expose the WorkRunAdapter
+// interface.
+//
+// Codex is the only driver that exercises all four acquisition verbs
+// (createSession + resumeSession + forkSession + reviewSession). Each acquires
+// a thread via `thread/start|resume|fork`; `executePrompt` then sends the
+// turn (`turn/start` for chat, `review/start` for review) and awaits
+// completion via `waitForTurnCompletion`.
+//
+// Per-run state (streaming buffers, fileChange tracking, sub-agent metadata)
+// stays in the factory-closure `activeRuns` Map keyed by runId — the
+// notification handler reads it via runId from the closure. CodexSession is
+// a thin wrapper carrying runId + a `startTurn` callback that fires the
+// right `turn/start` or `review/start` request.
 // ─────────────────────────────────────────────────────────────
 
 import { spawn, type ChildProcess } from "node:child_process";
@@ -11,23 +26,24 @@ import path from "node:path";
 import { shell } from "electron";
 import { findCodexBinaryPath } from "../providers.utils";
 import type {
-  WorkRunAdapter,
-  WorkRunRequest,
-  WorkRunContinueRequest,
-  WorkRunForkRequest,
-  WorkRunReviewRequest,
-  WorkRunResult,
-  WorkRunUsage,
-  WorkRunEventHandler,
-  WorkRunEvent,
-  CodexAdapterConfig,
-  ModelInfo,
-  PluginListResponse,
-  PluginInfo,
-  PluginDetail,
-  MarketplaceInfo,
+  AcquiredSession,
   CodexAccountInfo,
+  CodexAdapterConfig,
+  DriverOutcome,
+  MarketplaceInfo,
+  ModelInfo,
+  PluginDetail,
+  PluginInfo,
+  PluginListResponse,
+  ProviderDriver,
   WorkRunContextItem,
+  WorkRunContinueRequest,
+  WorkRunEvent,
+  WorkRunEventHandler,
+  WorkRunForkRequest,
+  WorkRunRequest,
+  WorkRunReviewRequest,
+  WorkRunUsage,
 } from "../../../../shared/adapter.types";
 import {
   cancelPendingRequests,
@@ -43,7 +59,6 @@ import {
   extractArtifactsFromToolOutput,
   formatContextSection,
   appendPromptSections,
-  emitUserPromptArtifact,
   saveAttachments,
 } from "./adapter.shared";
 import type { MainsToolContext } from "./mains-tools.core";
@@ -113,7 +128,7 @@ interface Usage {
 
 const VALID_SANDBOX_MODES = new Set(["read-only", "workspace-write", "danger-full-access"]);
 
-function mapSandboxMode(mode?: string): "read-only" | "workspace-write" | "danger-full-access" {
+export function mapSandboxMode(mode?: string): "read-only" | "workspace-write" | "danger-full-access" {
   return mode && VALID_SANDBOX_MODES.has(mode)
     ? (mode as "read-only" | "workspace-write" | "danger-full-access")
     : "workspace-write";
@@ -161,7 +176,7 @@ function buildCodexConfigOverrides(networkAccess: boolean): Record<string, unkno
  * `developer_instructions: null`. The Plan preset uses medium reasoning
  * effort by default; if the caller has an explicit effort, we forward that.
  */
-function buildCollaborationMode(
+export function buildCollaborationMode(
   planEnabled: boolean,
   model: string | undefined,
   effort: string | undefined,
@@ -205,7 +220,7 @@ const PRIORITY_MAP: Record<string, "critical" | "warning" | "info"> = {
  *   - [P1] Title — /path/to/file.ts:50-51
  *     Description text spanning one or more lines...
  */
-function parseCodexReviewFindings(reviewText: string): ParsedReviewFinding[] {
+export function parseCodexReviewFindings(reviewText: string): ParsedReviewFinding[] {
   try {
     if (!reviewText || typeof reviewText !== "string") return [];
 
@@ -390,7 +405,7 @@ const noopServerRequestHandler = (id: number | string, _method: string, _params:
   void id;
 };
 
-const { info: logInfo, error: logError, warn: logWarn } = createLogger("[CodexAdapter]");
+const { info: logInfo, error: logError, warn: logWarn } = createLogger("[CodexDriver]");
 
 // ─────────────────────────────────────────────────────────────
 // App Server Process Manager
@@ -767,14 +782,35 @@ function fileToDataUrl(filePath: string | undefined | null): string | undefined 
 }
 
 /**
- * Creates a Codex adapter using `codex app-server` JSON-RPC protocol.
- * This approach spawns `codex app-server` as a subprocess and communicates
- * via newline-delimited JSON-RPC over stdin/stdout.
+ * Per-run session state handed back to Core as opaque `session`.
+ * The runId is the only thing Core sees; everything else lives on the
+ * factory-closure `activeRuns` map under the same runId.
+ */
+interface CodexSession {
+  runId: string;
+  /** Send the SDK request that kicks off the turn (`turn/start` or `review/start`). */
+  startTurn: () => Promise<void>;
+  /** Optional model name used for usage tracking inside `waitForTurnCompletion`. */
+  model: string | undefined;
+  /** Per-call timeout passed through to `waitForTurnCompletion`. */
+  timeout: number;
+  /**
+   * Optional event the driver wants emitted right before `startTurn`. Used by
+   * `reviewSession` to surface a custom user-prompt artifact (Core skips the
+   * generic one for review verbs since `WorkRunReviewRequest` has no message).
+   */
+  preExecuteEvent?: WorkRunEvent;
+}
+
+/**
+ * Creates a Codex driver using `codex app-server` JSON-RPC protocol.
+ * Spawns `codex app-server` as a subprocess and communicates via
+ * newline-delimited JSON-RPC over stdin/stdout.
  *
  * Key advantage over @openai/codex-sdk: model selection works per-turn,
  * bypassing ~/.codex/config.toml precedence issues.
  */
-export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
+export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
   let appServer: CodexAppServer | null = null;
   const titleGenerationModel = "gpt-5.4-mini";
 
@@ -2490,7 +2526,6 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
     runId: string,
     model: string | undefined,
     onEvent: WorkRunEventHandler,
-    collectedArtifacts: Array<{ kind: string; path?: string }>,
     timeout: number,
   ): Promise<{ status: "succeeded" | "failed" | "canceled"; error?: string }> {
     return new Promise((resolve) => {
@@ -2528,15 +2563,13 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
           return;
         }
 
-        // Emit any pending flushed messages (from itemId changes in agentMessage/delta)
+        // Emit any pending flushed messages (from itemId changes in agentMessage/delta).
+        // Artifact collection happens at the Core layer (wrapped onEvent) — we just emit.
         const currentRunState = activeRuns.get(runId);
         if (currentRunState && currentRunState.pendingFlush.length > 0) {
           const flushed = currentRunState.pendingFlush.splice(0);
           for (const evt of flushed) {
             await onEvent(evt);
-            if (evt.type === "artifact") {
-              collectedArtifacts.push({ kind: evt.kind, path: evt.path });
-            }
           }
         }
 
@@ -2552,17 +2585,12 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
         for (const mapped of mappedEvents) {
           await onEvent(mapped);
 
-          if (mapped.type === "artifact" && mapped.kind !== "user-prompt") {
-            collectedArtifacts.push({ kind: mapped.kind, path: mapped.path });
-          }
-
+          // Tool-completion outputs may carry file/patch artifacts — extract and re-emit.
+          // Core's wrapped onEvent collects them.
           if (mapped.type === "tool_call" && mapped.output && mapped.metadata?.phase === "complete") {
             const extracted = extractArtifactsFromToolOutput(mapped.toolName, mapped.output);
             for (const art of extracted) {
               await onEvent(art);
-              if (art.type === "artifact") {
-                collectedArtifacts.push({ kind: art.kind, path: art.path });
-              }
             }
           }
         }
@@ -2949,497 +2977,409 @@ export function createCodexAdapter(config: CodexAdapterConfig): WorkRunAdapter {
   // ─────────────────────────────────────────────────────────────
 
   return {
-    async startRun(
-      request: WorkRunRequest,
-      onEvent: WorkRunEventHandler,
-    ): Promise<WorkRunResult> {
+    async createSession(request: WorkRunRequest): Promise<AcquiredSession> {
       const { runId, model } = request;
       const resolvedModel = model || config.defaultModel || undefined;
       const timeout = config.timeout ?? 600000;
-      const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
+
+      const server = await ensureServer();
+
+      const approvalPolicy = config.approvalMode ?? "on-request";
+      const overrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
+      const overrideSandboxMode = typeof overrides.sandboxMode === "string"
+        ? (overrides.sandboxMode as CodexAdapterConfig["sandboxMode"])
+        : undefined;
+      const overrideEffort = typeof overrides.modelReasoningEffort === "string"
+        ? (overrides.modelReasoningEffort as string)
+        : typeof overrides.effortLevel === "string" && overrides.effortLevel
+          ? (overrides.effortLevel as string)
+          : undefined;
+      const outputSchema = resolveOutputSchema(config);
+      const overrideServiceTier = typeof overrides.serviceTier === "string" && overrides.serviceTier
+        ? (overrides.serviceTier as string)
+        : undefined;
+      const overridePlanMode = typeof overrides.planMode === "boolean"
+        ? (overrides.planMode as boolean)
+        : undefined;
+      const sandbox = mapSandboxMode(overrideSandboxMode ?? config.sandboxMode);
+      const personality = config.personality ?? "none";
+
+      const networkAccess = config.networkAccessEnabled !== false;
+      const threadStartParams: Record<string, unknown> = {
+        cwd: request.workspace.rootPath,
+        approvalPolicy,
+        sandbox,
+        personality,
+        ...(resolvedModel ? { model: resolvedModel } : {}),
+        config: buildCodexConfigOverrides(networkAccess),
+        dynamicTools: MAINS_DYNAMIC_TOOLS,
+      };
+
+      logInfo(`Starting thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
+      const threadResult = await server.sendRequest("thread/start", threadStartParams) as Record<string, unknown>;
+      const thread = threadResult?.thread as Record<string, unknown> | undefined;
+      const threadId = (thread?.id ?? threadResult?.threadId) as string | undefined;
+
+      if (threadId) sessionIdMap.set(runId, threadId);
+
+      const mainsCtx: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
+      activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), planBuffers: new Map(), subAgents: new Map() });
+
+      const turnInput = buildTurnInput(request);
+      const effort = overrideEffort ?? config.modelReasoningEffort;
+      const serviceTier = overrideServiceTier ?? config.serviceTier;
+      const planEnabled = overridePlanMode ?? config.planMode ?? false;
+      const collaborationMode = buildCollaborationMode(planEnabled, resolvedModel, effort);
+      const turnStartParams: Record<string, unknown> = {
+        threadId: threadId ?? "",
+        input: turnInput,
+        ...(resolvedModel ? { model: resolvedModel } : {}),
+        ...(effort ? { effort } : {}),
+        ...(serviceTier ? { serviceTier } : {}),
+        ...(outputSchema ? { output_schema: outputSchema } : {}),
+        ...(collaborationMode ? { collaborationMode } : {}),
+      };
+
+      const startTurn = async () => {
+        await server.sendRequest("turn/start", turnStartParams);
+      };
+
+      const session: CodexSession = { runId, startTurn, model: resolvedModel, timeout };
+      return { session, prompt: request.goal, sessionId: threadId };
+    },
+
+    async resumeSession(request: WorkRunContinueRequest): Promise<AcquiredSession> {
+      const { runId, message } = request;
+      const resolvedModel = request.model || config.defaultModel || undefined;
+      const timeout = config.timeout ?? 600000;
+
+      const server = await ensureServer();
+
+      let threadId = sessionIdMap.get(runId);
+      if (!threadId) {
+        // DB fallback: session may have been lost from memory (app restart)
+        const run = await runsRepo.findRunById(runId);
+        if (run?.sessionId) {
+          threadId = run.sessionId;
+          sessionIdMap.set(runId, threadId);
+        }
+      }
+      if (!threadId) {
+        throw new Error(`No session found for run ${runId}. Cannot resume.`);
+      }
+
+      const approvalPolicy = config.approvalMode ?? "on-request";
+      const sandbox = mapSandboxMode(config.sandboxMode);
+      const personality = config.personality ?? "none";
+      const networkAccess = config.networkAccessEnabled !== false;
 
       try {
-        await onEvent({ type: "status", status: "running", ts: Date.now() });
-
-        const server = await ensureServer();
-
-        const approvalPolicy = config.approvalMode ?? "on-request";
-        // Per-run override (e.g. Pulse forces sandboxMode="workspace-write")
-        const overrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
-        const overrideSandboxMode = typeof overrides.sandboxMode === "string"
-          ? (overrides.sandboxMode as CodexAdapterConfig["sandboxMode"])
-          : undefined;
-        const overrideEffort = typeof overrides.modelReasoningEffort === "string"
-          ? (overrides.modelReasoningEffort as string)
-          : typeof overrides.effortLevel === "string" && overrides.effortLevel
-            ? (overrides.effortLevel as string)
-            : undefined;
-        const outputSchema = resolveOutputSchema(config);
-        const overrideServiceTier = typeof overrides.serviceTier === "string" && overrides.serviceTier
-          ? (overrides.serviceTier as string)
-          : undefined;
-        const overridePlanMode = typeof overrides.planMode === "boolean"
-          ? (overrides.planMode as boolean)
-          : undefined;
-        const sandbox = mapSandboxMode(overrideSandboxMode ?? config.sandboxMode);
-        const personality = config.personality ?? "none";
-
-        // Start thread (cwd passed per-thread, not per-server)
-        const networkAccess = config.networkAccessEnabled !== false;
-        const threadStartParams: Record<string, unknown> = {
+        await server.sendRequest("thread/resume", {
+          threadId,
           cwd: request.workspace.rootPath,
           approvalPolicy,
           sandbox,
           personality,
           ...(resolvedModel ? { model: resolvedModel } : {}),
           config: buildCodexConfigOverrides(networkAccess),
-          dynamicTools: MAINS_DYNAMIC_TOOLS,
-        };
-
-        logInfo(`Starting thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
-        const threadResult = await server.sendRequest("thread/start", threadStartParams) as Record<string, unknown>;
-        const thread = threadResult?.thread as Record<string, unknown> | undefined;
-        const threadId = (thread?.id ?? threadResult?.threadId) as string | undefined;
-
-        if (threadId) {
-          sessionIdMap.set(runId, threadId);
-          // Persist to DB for resume after app restart
-          runsRepo.updateRun(runId, { sessionId: threadId }).catch((err) =>
-            logError("Failed to persist session ID:", err),
-          );
-        }
-
-        const mainsCtx: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), planBuffers: new Map(), subAgents: new Map() });
-
-        // Emit user prompt artifact
-        await emitUserPromptArtifact(onEvent, request.goal, {
-          attachments: request.attachments,
-          contextIssues: request.contextIssues,
-          contextSignals: request.contextSignals,
-          contextFiles: request.contextFiles,
-          contextSkills: request.skills,
         });
-
-        // 2. Start turn
-        const turnInput = buildTurnInput(request);
-        const effort = overrideEffort ?? config.modelReasoningEffort;
-        const serviceTier = overrideServiceTier ?? config.serviceTier;
-        const planEnabled = overridePlanMode ?? config.planMode ?? false;
-        const collaborationMode = buildCollaborationMode(planEnabled, resolvedModel, effort);
-        const turnStartParams: Record<string, unknown> = {
-          threadId: threadId ?? "",
-          input: turnInput,
-          ...(resolvedModel ? { model: resolvedModel } : {}),
-          ...(effort ? { effort } : {}),
-          ...(serviceTier ? { serviceTier } : {}),
-          ...(outputSchema ? { output_schema: outputSchema } : {}),
-          ...(collaborationMode ? { collaborationMode } : {}),
-        };
-
-        await server.sendRequest("turn/start", turnStartParams);
-
-        // 3. Wait for turn completion (events flow via notification handler)
-        const result = await waitForTurnCompletion(server, runId, resolvedModel, onEvent, collectedArtifacts, timeout);
-
-        const usage = flushUsage(runId);
-
-        await onEvent({ type: "status", status: result.status, error: result.error, ts: Date.now() });
-
-        return {
-          status: result.status,
-          summary: result.error,
-          artifacts: collectedArtifacts,
-          usage,
-        };
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        logError("startRun failed:", msg);
-        await onEvent({ type: "status", status: "failed", error: msg, ts: Date.now() });
-        flushUsage(runId);
-        return { status: "failed", summary: msg };
-      } finally {
-        activeRuns.delete(runId);
-        cancelPendingRequests(runId);
-      }
-    },
-
-    async continueRun(
-      request: WorkRunContinueRequest,
-      onEvent: WorkRunEventHandler,
-    ): Promise<WorkRunResult> {
-      const { runId, message } = request;
-      const resolvedModel = request.model || config.defaultModel || undefined;
-      const timeout = config.timeout ?? 600000;
-      const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
-
-      try {
-        await onEvent({ type: "status", status: "running", ts: Date.now() });
-
-        const server = await ensureServer();
-
-        let threadId = sessionIdMap.get(runId);
-        if (!threadId) {
-          // DB fallback: session may have been lost from memory (app restart)
-          const run = await runsRepo.findRunById(runId);
-          if (run?.sessionId) {
-            threadId = run.sessionId;
-            sessionIdMap.set(runId, threadId);
-          }
-        }
-        if (!threadId) {
-          throw new Error(`No session found for run ${runId}. Cannot resume.`);
-        }
-
-        const approvalPolicy = config.approvalMode ?? "on-request";
-        const sandbox = mapSandboxMode(config.sandboxMode);
-        const personality = config.personality ?? "none";
-        const networkAccess = config.networkAccessEnabled !== false;
-
-        // 1. Resume thread
-        try {
-          await server.sendRequest("thread/resume", {
-            threadId,
+      } catch (resumeError) {
+        const errMsg = resumeError instanceof Error ? resumeError.message : String(resumeError);
+        if (/not found|missing thread|unknown thread|does not exist/i.test(errMsg)) {
+          logWarn(`Thread resume failed (${errMsg}), starting new thread`);
+          const threadResult = await server.sendRequest("thread/start", {
             cwd: request.workspace.rootPath,
             approvalPolicy,
             sandbox,
             personality,
             ...(resolvedModel ? { model: resolvedModel } : {}),
             config: buildCodexConfigOverrides(networkAccess),
-          });
-        } catch (resumeError) {
-          const errMsg = resumeError instanceof Error ? resumeError.message : String(resumeError);
-          // If resume fails with "not found", start a new thread
-          if (/not found|missing thread|unknown thread|does not exist/i.test(errMsg)) {
-            logWarn(`Thread resume failed (${errMsg}), starting new thread`);
-            const threadResult = await server.sendRequest("thread/start", {
-              cwd: request.workspace.rootPath,
-              approvalPolicy,
-              sandbox,
-              personality,
-              ...(resolvedModel ? { model: resolvedModel } : {}),
-              config: buildCodexConfigOverrides(networkAccess),
-              dynamicTools: MAINS_DYNAMIC_TOOLS,
-            }) as Record<string, unknown>;
-            const newThreadId = (threadResult?.thread as Record<string, unknown>)?.id as string ??
-                            threadResult?.threadId as string;
-            if (newThreadId) sessionIdMap.set(runId, newThreadId);
-          } else {
-            throw resumeError;
+            dynamicTools: MAINS_DYNAMIC_TOOLS,
+          }) as Record<string, unknown>;
+          const newThreadId = (threadResult?.thread as Record<string, unknown>)?.id as string ??
+                          threadResult?.threadId as string;
+          if (newThreadId) {
+            sessionIdMap.set(runId, newThreadId);
+            threadId = newThreadId;
           }
+        } else {
+          throw resumeError;
         }
-
-        const mainsCtxContinue: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxContinue, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), planBuffers: new Map(), subAgents: new Map() });
-
-        await emitUserPromptArtifact(onEvent, message, {
-          attachments: request.attachments,
-          contextIssues: request.contextIssues,
-          contextSignals: request.contextSignals,
-          contextFiles: request.contextFiles,
-          contextSkills: request.skills,
-        });
-
-        // 2. Start turn with the follow-up message
-        const currentThreadId = sessionIdMap.get(runId) ?? threadId;
-        const turnInput = buildContinueTurnInput(message, request);
-
-        const continueOutputSchema = resolveOutputSchema(config);
-        const continueCollaborationMode = buildCollaborationMode(
-          config.planMode ?? false,
-          resolvedModel,
-          config.modelReasoningEffort,
-          /*forceReset*/ true,
-        );
-        await server.sendRequest("turn/start", {
-          threadId: currentThreadId,
-          input: turnInput,
-          ...(resolvedModel ? { model: resolvedModel } : {}),
-          ...(config.modelReasoningEffort ? { effort: config.modelReasoningEffort } : {}),
-          ...(config.serviceTier ? { serviceTier: config.serviceTier } : {}),
-          ...(continueOutputSchema ? { output_schema: continueOutputSchema } : {}),
-          ...(continueCollaborationMode ? { collaborationMode: continueCollaborationMode } : {}),
-        });
-
-        // 3. Wait for turn completion
-        const result = await waitForTurnCompletion(server, runId, resolvedModel, onEvent, collectedArtifacts, timeout);
-
-        const usage = flushUsage(runId);
-
-        await onEvent({ type: "status", status: result.status, error: result.error, ts: Date.now() });
-
-        return {
-          status: result.status,
-          summary: result.error,
-          artifacts: collectedArtifacts,
-          usage,
-        };
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        logError("continueRun failed:", msg);
-        await onEvent({ type: "status", status: "failed", error: msg, ts: Date.now() });
-        flushUsage(runId);
-        return { status: "failed", summary: msg };
-      } finally {
-        activeRuns.delete(runId);
-        cancelPendingRequests(runId);
       }
+
+      const mainsCtxContinue: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
+      activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxContinue, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), planBuffers: new Map(), subAgents: new Map() });
+
+      const currentThreadId = sessionIdMap.get(runId) ?? threadId;
+      const turnInput = buildContinueTurnInput(message, request);
+
+      const continueOutputSchema = resolveOutputSchema(config);
+      const continueCollaborationMode = buildCollaborationMode(
+        config.planMode ?? false,
+        resolvedModel,
+        config.modelReasoningEffort,
+        /*forceReset*/ true,
+      );
+      const turnStartParams = {
+        threadId: currentThreadId,
+        input: turnInput,
+        ...(resolvedModel ? { model: resolvedModel } : {}),
+        ...(config.modelReasoningEffort ? { effort: config.modelReasoningEffort } : {}),
+        ...(config.serviceTier ? { serviceTier: config.serviceTier } : {}),
+        ...(continueOutputSchema ? { output_schema: continueOutputSchema } : {}),
+        ...(continueCollaborationMode ? { collaborationMode: continueCollaborationMode } : {}),
+      };
+      const startTurn = async () => {
+        await server.sendRequest("turn/start", turnStartParams);
+      };
+
+      const session: CodexSession = { runId, startTurn, model: resolvedModel, timeout };
+      return { session, prompt: message, sessionId: threadId };
     },
 
-    async forkRun(
-      request: WorkRunForkRequest,
-      onEvent: WorkRunEventHandler,
-    ): Promise<WorkRunResult> {
+    async forkSession(request: WorkRunForkRequest): Promise<AcquiredSession> {
       const { runId, sourceRunId, message } = request;
       const resolvedModel = request.model || config.defaultModel || undefined;
       const timeout = config.timeout ?? 600000;
-      const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
 
-      try {
-        await onEvent({ type: "status", status: "running", ts: Date.now() });
-        logInfo(`Forking session from run ${sourceRunId} into new run ${runId}`);
+      logInfo(`Forking session from run ${sourceRunId} into new run ${runId}`);
 
-        const server = await ensureServer();
+      const server = await ensureServer();
 
-        // Resolve source thread ID
-        let sourceThreadId = sessionIdMap.get(sourceRunId);
-        if (!sourceThreadId) {
-          const sourceRun = await runsRepo.findRunById(sourceRunId);
-          if (sourceRun?.sessionId) {
-            sourceThreadId = sourceRun.sessionId;
-            sessionIdMap.set(sourceRunId, sourceThreadId);
-          }
+      let sourceThreadId = sessionIdMap.get(sourceRunId);
+      if (!sourceThreadId) {
+        const sourceRun = await runsRepo.findRunById(sourceRunId);
+        if (sourceRun?.sessionId) {
+          sourceThreadId = sourceRun.sessionId;
+          sessionIdMap.set(sourceRunId, sourceThreadId);
         }
-        if (!sourceThreadId) {
-          throw new Error(`No session found for source run ${sourceRunId}. Cannot fork.`);
-        }
-
-        const approvalPolicy = config.approvalMode ?? "on-request";
-        const sandbox = mapSandboxMode(config.sandboxMode);
-        const personality = config.personality ?? "none";
-        const networkAccess = config.networkAccessEnabled !== false;
-
-        // 1. Fork thread via thread/fork
-        const forkResult = await server.sendRequest("thread/fork", {
-          threadId: sourceThreadId,
-          cwd: request.workspace.rootPath,
-          approvalPolicy,
-          sandbox,
-          personality,
-          ...(resolvedModel ? { model: resolvedModel } : {}),
-          config: buildCodexConfigOverrides(networkAccess),
-        }) as Record<string, unknown>;
-
-        const forkedThread = forkResult?.thread as Record<string, unknown> | undefined;
-        const forkedThreadId = (forkedThread?.id ?? forkResult?.threadId) as string | undefined;
-
-        if (!forkedThreadId) {
-          throw new Error("thread/fork did not return a new thread ID");
-        }
-
-        sessionIdMap.set(runId, forkedThreadId);
-        runsRepo.updateRun(runId, { sessionId: forkedThreadId }).catch((err) =>
-          logError("Failed to persist forked session ID:", err),
-        );
-
-        const mainsCtxFork: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, {
-          threadId: forkedThreadId,
-          turnId: null,
-          aborted: false,
-          currentMessageItemId: null,
-          agentMessageBuffer: "",
-          pendingFlush: [],
-          mainsCtx: mainsCtxFork,
-          fileChangeBuffers: new Map(),
-          fileChangeItems: new Map(),
-          commandOutputBuffers: new Map(),
-          emittedImagePaths: new Set(),
-          planBuffers: new Map(),
-          subAgents: new Map(),
-        });
-
-        // Emit user prompt artifact
-        await emitUserPromptArtifact(onEvent, message, {
-          attachments: request.attachments,
-        });
-
-        // 2. Start turn on the forked thread
-        const turnInput = buildContinueTurnInput(message, {
-          runId,
-          message,
-          workspace: request.workspace,
-          attachments: request.attachments,
-        } as WorkRunContinueRequest);
-
-        const forkOutputSchema = resolveOutputSchema(config);
-        const forkCollaborationMode = buildCollaborationMode(
-          config.planMode ?? false,
-          resolvedModel,
-          config.modelReasoningEffort,
-          /*forceReset*/ true,
-        );
-        await server.sendRequest("turn/start", {
-          threadId: forkedThreadId,
-          input: turnInput,
-          ...(resolvedModel ? { model: resolvedModel } : {}),
-          ...(config.modelReasoningEffort ? { effort: config.modelReasoningEffort } : {}),
-          ...(config.serviceTier ? { serviceTier: config.serviceTier } : {}),
-          ...(forkOutputSchema ? { output_schema: forkOutputSchema } : {}),
-          ...(forkCollaborationMode ? { collaborationMode: forkCollaborationMode } : {}),
-        });
-
-        // 3. Wait for turn completion
-        const result = await waitForTurnCompletion(server, runId, resolvedModel, onEvent, collectedArtifacts, timeout);
-
-        const usage = flushUsage(runId);
-
-        await onEvent({ type: "status", status: result.status, error: result.error, ts: Date.now() });
-
-        return {
-          status: result.status,
-          summary: result.error,
-          artifacts: collectedArtifacts,
-          usage,
-        };
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        logError("forkRun failed:", msg);
-        await onEvent({ type: "status", status: "failed", error: msg, ts: Date.now() });
-        flushUsage(runId);
-        return { status: "failed", summary: msg };
-      } finally {
-        activeRuns.delete(runId);
-        cancelPendingRequests(runId);
       }
+      if (!sourceThreadId) {
+        throw new Error(`No session found for source run ${sourceRunId}. Cannot fork.`);
+      }
+
+      const approvalPolicy = config.approvalMode ?? "on-request";
+      const sandbox = mapSandboxMode(config.sandboxMode);
+      const personality = config.personality ?? "none";
+      const networkAccess = config.networkAccessEnabled !== false;
+
+      const forkResult = await server.sendRequest("thread/fork", {
+        threadId: sourceThreadId,
+        cwd: request.workspace.rootPath,
+        approvalPolicy,
+        sandbox,
+        personality,
+        ...(resolvedModel ? { model: resolvedModel } : {}),
+        config: buildCodexConfigOverrides(networkAccess),
+      }) as Record<string, unknown>;
+
+      const forkedThread = forkResult?.thread as Record<string, unknown> | undefined;
+      const forkedThreadId = (forkedThread?.id ?? forkResult?.threadId) as string | undefined;
+
+      if (!forkedThreadId) {
+        throw new Error("thread/fork did not return a new thread ID");
+      }
+
+      sessionIdMap.set(runId, forkedThreadId);
+
+      const mainsCtxFork: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
+      activeRuns.set(runId, {
+        threadId: forkedThreadId,
+        turnId: null,
+        aborted: false,
+        currentMessageItemId: null,
+        agentMessageBuffer: "",
+        pendingFlush: [],
+        mainsCtx: mainsCtxFork,
+        fileChangeBuffers: new Map(),
+        fileChangeItems: new Map(),
+        commandOutputBuffers: new Map(),
+        emittedImagePaths: new Set(),
+        planBuffers: new Map(),
+        subAgents: new Map(),
+      });
+
+      const turnInput = buildContinueTurnInput(message, {
+        runId,
+        message,
+        workspace: request.workspace,
+        attachments: request.attachments,
+      } as WorkRunContinueRequest);
+
+      const forkOutputSchema = resolveOutputSchema(config);
+      const forkCollaborationMode = buildCollaborationMode(
+        config.planMode ?? false,
+        resolvedModel,
+        config.modelReasoningEffort,
+        /*forceReset*/ true,
+      );
+      const turnStartParams = {
+        threadId: forkedThreadId,
+        input: turnInput,
+        ...(resolvedModel ? { model: resolvedModel } : {}),
+        ...(config.modelReasoningEffort ? { effort: config.modelReasoningEffort } : {}),
+        ...(config.serviceTier ? { serviceTier: config.serviceTier } : {}),
+        ...(forkOutputSchema ? { output_schema: forkOutputSchema } : {}),
+        ...(forkCollaborationMode ? { collaborationMode: forkCollaborationMode } : {}),
+      };
+      const startTurn = async () => {
+        await server.sendRequest("turn/start", turnStartParams);
+      };
+
+      const session: CodexSession = { runId, startTurn, model: resolvedModel, timeout };
+      return { session, prompt: message, sessionId: forkedThreadId };
     },
 
-    async reviewRun(
-      request: WorkRunReviewRequest,
-      onEvent: WorkRunEventHandler,
-    ): Promise<WorkRunResult> {
+    async reviewSession(request: WorkRunReviewRequest): Promise<AcquiredSession> {
       const { runId } = request;
       const resolvedModel = request.model || config.defaultModel || undefined;
       const timeout = config.timeout ?? 600000;
-      const collectedArtifacts: Array<{ kind: string; path?: string }> = [];
 
-      try {
-        await onEvent({ type: "status", status: "running", ts: Date.now() });
+      const server = await ensureServer();
 
-        const server = await ensureServer();
+      const approvalPolicy = config.approvalMode ?? "on-request";
+      const sandbox = mapSandboxMode(config.sandboxMode);
+      const personality = config.personality ?? "none";
 
-        const approvalPolicy = config.approvalMode ?? "on-request";
-        const sandbox = mapSandboxMode(config.sandboxMode);
-        const personality = config.personality ?? "none";
+      const networkAccess = config.networkAccessEnabled !== false;
+      const threadStartParams: Record<string, unknown> = {
+        cwd: request.workspace.rootPath,
+        approvalPolicy,
+        sandbox,
+        personality,
+        ...(resolvedModel ? { model: resolvedModel } : {}),
+        config: buildCodexConfigOverrides(networkAccess),
+        dynamicTools: MAINS_DYNAMIC_TOOLS,
+      };
 
-        // 1. Start thread
-        const networkAccess = config.networkAccessEnabled !== false;
-        const threadStartParams: Record<string, unknown> = {
-          cwd: request.workspace.rootPath,
-          approvalPolicy,
-          sandbox,
-          personality,
-          ...(resolvedModel ? { model: resolvedModel } : {}),
-          config: buildCodexConfigOverrides(networkAccess),
-          dynamicTools: MAINS_DYNAMIC_TOOLS,
-        };
+      logInfo(`Starting review thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
+      const threadResult = await server.sendRequest("thread/start", threadStartParams) as Record<string, unknown>;
+      const thread = threadResult?.thread as Record<string, unknown> | undefined;
+      const threadId = (thread?.id ?? threadResult?.threadId) as string | undefined;
 
-        logInfo(`Starting review thread (model: ${resolvedModel || "default"}, cwd: ${request.workspace.rootPath})`);
-        const threadResult = await server.sendRequest("thread/start", threadStartParams) as Record<string, unknown>;
-        const thread = threadResult?.thread as Record<string, unknown> | undefined;
-        const threadId = (thread?.id ?? threadResult?.threadId) as string | undefined;
+      if (threadId) sessionIdMap.set(runId, threadId);
 
-        if (threadId) {
-          sessionIdMap.set(runId, threadId);
-          runsRepo.updateRun(runId, { sessionId: threadId }).catch((err) =>
-            logError("Failed to persist session ID:", err),
-          );
-        }
+      const mainsCtxReview: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
+      activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxReview, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), planBuffers: new Map(), subAgents: new Map() });
 
-        const mainsCtxReview: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-        activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxReview, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), planBuffers: new Map(), subAgents: new Map() });
+      const target: Record<string, unknown> = { type: request.target.type };
+      if (request.target.type === "baseBranch" && request.target.branch) {
+        target.branch = request.target.branch;
+      } else if (request.target.type === "commit") {
+        if (request.target.sha) target.sha = request.target.sha;
+        if (request.target.title) target.title = request.target.title;
+      } else if (request.target.type === "custom" && request.target.instructions) {
+        target.instructions = request.target.instructions;
+      }
 
-        // Emit review user-prompt artifact
-        const targetLabel =
-          request.target.type === "uncommittedChanges" ? "Review uncommitted changes" :
-          request.target.type === "baseBranch" ? `Changes vs ${request.target.branch ?? "base branch"}` :
-          request.target.type === "commit" ? `Commit ${request.target.sha?.substring(0, 7) ?? ""}${request.target.title ? ` — ${request.target.title}` : ""}` :
-          "Code Changes";
-        await onEvent({
-          type: "artifact",
-          kind: "user-prompt",
-          content: `${targetLabel}`,
-          metadata: {
-            source: "user",
-            isReview: true,
-            reviewTarget: request.target.type,
-            delivery: request.delivery ?? "inline",
-          },
-        });
+      const reviewStartParams: Record<string, unknown> = {
+        threadId: threadId ?? "",
+        target,
+        ...(request.delivery ? { delivery: request.delivery } : {}),
+        ...(resolvedModel ? { model: resolvedModel } : {}),
+      };
 
-        // 2. Build review target
-        const target: Record<string, unknown> = { type: request.target.type };
-        if (request.target.type === "baseBranch" && request.target.branch) {
-          target.branch = request.target.branch;
-        } else if (request.target.type === "commit") {
-          if (request.target.sha) target.sha = request.target.sha;
-          if (request.target.title) target.title = request.target.title;
-        } else if (request.target.type === "custom" && request.target.instructions) {
-          target.instructions = request.target.instructions;
-        }
-
-        // 3. Start review (uses review/start instead of turn/start)
-        const reviewStartParams: Record<string, unknown> = {
-          threadId: threadId ?? "",
-          target,
-          ...(request.delivery ? { delivery: request.delivery } : {}),
-          ...(resolvedModel ? { model: resolvedModel } : {}),
-        };
-
+      const startTurn = async () => {
         logInfo(`Starting review: target=${request.target.type}, delivery=${request.delivery ?? "inline"}`);
         await server.sendRequest("review/start", reviewStartParams);
+      };
 
-        // 4. Wait for turn completion (review emits standard turn lifecycle events)
-        const result = await waitForTurnCompletion(server, runId, resolvedModel, onEvent, collectedArtifacts, timeout);
+      // Review verbs don't carry a user-message string, so Core skips the
+      // generic user-prompt artifact. Emit a custom one carrying the review
+      // target description right before startTurn.
+      const targetLabel =
+        request.target.type === "uncommittedChanges"
+          ? "Review uncommitted changes"
+          : request.target.type === "baseBranch"
+            ? `Changes vs ${request.target.branch ?? "base branch"}`
+            : request.target.type === "commit"
+              ? `Commit ${request.target.sha?.substring(0, 7) ?? ""}${request.target.title ? ` — ${request.target.title}` : ""}`
+              : "Code Changes";
+      const preExecuteEvent: WorkRunEvent = {
+        type: "artifact",
+        kind: "user-prompt",
+        content: targetLabel,
+        metadata: {
+          source: "user",
+          isReview: true,
+          reviewTarget: request.target.type,
+          delivery: request.delivery ?? "inline",
+        },
+      };
 
-        const usage = flushUsage(runId);
+      const session: CodexSession = {
+        runId,
+        startTurn,
+        model: resolvedModel,
+        timeout,
+        preExecuteEvent,
+      };
+      return { session, prompt: "", sessionId: threadId };
+    },
 
-        await onEvent({ type: "status", status: result.status, error: result.error, ts: Date.now() });
+    async executePrompt(
+      sessionParam,
+      _prompt,
+      onEvent,
+      signal,
+    ): Promise<DriverOutcome> {
+      const cs = sessionParam as CodexSession;
+
+      // Wire abort: when signal fires, interrupt the current turn via the SDK.
+      const onAbort = () => {
+        const runState = activeRuns.get(cs.runId);
+        if (runState) runState.aborted = true;
+        if (
+          appServer?.isRunning &&
+          runState?.threadId &&
+          runState?.turnId
+        ) {
+          appServer
+            .sendRequest("turn/interrupt", {
+              threadId: runState.threadId,
+              turnId: runState.turnId,
+            })
+            .catch((err) => logError("Failed to interrupt turn:", err));
+        }
+      };
+      signal.addEventListener("abort", onAbort, { once: true });
+
+      try {
+        if (!appServer?.isRunning) {
+          throw new Error("Codex app-server is not running");
+        }
+
+        if (cs.preExecuteEvent) {
+          await onEvent(cs.preExecuteEvent);
+        }
+
+        await cs.startTurn();
+        const result = await waitForTurnCompletion(
+          appServer,
+          cs.runId,
+          cs.model,
+          onEvent,
+          cs.timeout,
+        );
 
         return {
           status: result.status,
           summary: result.error,
-          artifacts: collectedArtifacts,
-          usage,
+          usage: flushUsage(cs.runId),
         };
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        logError("reviewRun failed:", msg);
-        await onEvent({ type: "status", status: "failed", error: msg, ts: Date.now() });
-        flushUsage(runId);
+        logError("executePrompt failed:", msg);
+        flushUsage(cs.runId);
         return { status: "failed", summary: msg };
       } finally {
-        activeRuns.delete(runId);
-        cancelPendingRequests(runId);
+        signal.removeEventListener("abort", onAbort);
       }
     },
 
-    async abortRun(runId: string): Promise<void> {
-      const runState = activeRuns.get(runId);
-      if (!runState) return;
-
-      runState.aborted = true;
-
-      if (appServer?.isRunning && runState.threadId && runState.turnId) {
-        try {
-          await appServer.sendRequest("turn/interrupt", {
-            threadId: runState.threadId,
-            turnId: runState.turnId,
-          });
-        } catch (err) {
-          logError("Failed to interrupt turn:", err);
-        }
-      }
+    async cleanup(sessionParam): Promise<void> {
+      const cs = sessionParam as CodexSession;
+      activeRuns.delete(cs.runId);
     },
 
     async canResumeSession(runId: string): Promise<boolean> {
