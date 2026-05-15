@@ -6,11 +6,8 @@
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../../../db/client";
 import { connectionStates } from "../../../db/schema";
-import {
-  getConnectionByProvider,
-  getConnectionSecrets,
-  getSelectedResources,
-} from "../../sync/sync.connection-utils";
+import { getConnectionWithSecrets } from "../../connections";
+import { getSelectedResources } from "../../sync/sync.connection-utils";
 import type { GuardAdapter, GuardConfig } from "./adapter.types";
 import { createSocketDevAdapter } from "./socketdev.adapter";
 
@@ -36,17 +33,14 @@ export async function createGuardAdapter(
   const cached = adapterCache.get(providerId);
   if (cached) return cached;
 
-  const connection = await getConnectionByProvider(providerId);
+  const connection = await getConnectionWithSecrets(providerId);
   if (!connection) return null;
-
-  const secrets = await getConnectionSecrets(connection.id);
-  if (!secrets) return null;
 
   let adapter: GuardAdapter;
 
   switch (providerId) {
     case "socketdev": {
-      const apiToken = secrets.apiToken;
+      const apiToken = connection.secrets.apiToken;
       if (!apiToken) return null;
 
       // Get selected organization slug

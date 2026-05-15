@@ -5,8 +5,15 @@ import { connectionsRepo } from "./connections.repo";
 import {
   parseConnectionMetadata,
   parseResourceMetadata,
+  encryptSecrets,
+  decryptSecrets,
+  createTokenHash,
+  parseProviderCredentials,
 } from "./connections.utils";
-import { decryptSecrets } from "../connectionCredentials/connectionCredentials.utils";
+import {
+  validateConnectionStateId,
+  validateUpdateStatePayload,
+} from "./connections.validation";
 import type {
   GithubRepo,
   LinearTeam,
@@ -17,8 +24,51 @@ import type {
   SentryProject,
   SocketDevOrganization,
   SaveResourcesPayload,
+  SaveCredentialsPayload,
+  SaveCredentialsResult,
+  CredentialsCheckResult,
+  ConnectionStateResponse,
   ServiceResponse,
 } from "./connections.dto";
+
+// ─────────────────────────────────────────────────────────────
+// Non-secret metadata fields per provider
+// ─────────────────────────────────────────────────────────────
+const PROVIDER_METADATA_FIELDS: Record<string, string[]> = {
+  jira: ["domain", "email"],
+  gitlab: ["domain"],
+  sentry: ["organization"],
+  socketdev: ["organization"],
+};
+
+const PROVIDER_METADATA_DEFAULTS: Record<string, Record<string, string>> = {
+  gitlab: { domain: "gitlab.com" },
+};
+
+// ─────────────────────────────────────────────────────────────
+// Cross-module helper: hand callers a connection + decrypted secrets.
+// Exported from index.ts as the single named entry point used by
+// sync, guards, and imageProxy. Internal callers in this service use
+// `getConnectionAndSecrets` below, which also surfaces the typed
+// connection row for follow-up queries on metadata.
+// ─────────────────────────────────────────────────────────────
+export async function getConnectionWithSecrets(provider: string): Promise<{
+  id: string;
+  secrets: Record<string, string>;
+  metadata: Record<string, unknown>;
+} | null> {
+  const connection = await connectionsRepo.findByProvider(provider);
+  if (!connection) return null;
+
+  const token = await connectionsRepo.findCurrentToken(connection.id);
+  if (!token?.accessTokenEnc) return null;
+
+  return {
+    id: connection.id,
+    secrets: decryptSecrets(token.accessTokenEnc as Buffer),
+    metadata: parseConnectionMetadata(connection.metadata),
+  };
+}
 
 // ─────────────────────────────────────────────────────────────
 // Helpers
@@ -691,6 +741,126 @@ export const connectionsService = {
     } catch (error) {
       console.error("Error revoking connection:", error);
       return fail("Failed to revoke connection");
+    }
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // Connection states (the integration metadata table that powers
+  // the Settings page list of supported providers).
+  // ─────────────────────────────────────────────────────────────
+  async listStates(): Promise<ServiceResponse<ConnectionStateResponse[]>> {
+    try {
+      const states = await connectionsRepo.findAllStates();
+      return ok(states);
+    } catch (error) {
+      console.error("Error fetching connection states:", error);
+      return fail("Failed to fetch connection states");
+    }
+  },
+
+  async updateState(id: unknown, payload: unknown): Promise<ServiceResponse<null>> {
+    try {
+      const idError = validateConnectionStateId(id);
+      if (idError) return fail(idError);
+
+      const { data, error } = validateUpdateStatePayload(payload);
+      if (error || !data) return fail(error ?? "Invalid payload");
+
+      await connectionsRepo.updateStateById(id as string, data);
+      return ok(null);
+    } catch (error) {
+      console.error("Error updating connection state:", error);
+      return fail("Failed to update connection state");
+    }
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // Credentials: save (with token rotation) and check.
+  // ─────────────────────────────────────────────────────────────
+  async saveCredentials(
+    payload: SaveCredentialsPayload
+  ): Promise<ServiceResponse<SaveCredentialsResult>> {
+    try {
+      const { provider, connectionId, ...credentials } = payload;
+
+      if (!provider || !connectionId) {
+        return fail("Provider and connectionId are required");
+      }
+
+      const parseResult = parseProviderCredentials(provider, credentials);
+      if (!parseResult.success) {
+        return fail(parseResult.error);
+      }
+
+      const { secrets, tokensForHash } = parseResult.data;
+
+      const connection = await connectionsRepo.findById(connectionId);
+      if (!connection) return fail("Connection not found");
+
+      const tokenHash = createTokenHash(tokensForHash);
+      const encryptedSecrets = encryptSecrets(secrets);
+
+      connectionsRepo.rotateToken({
+        connectionId,
+        accessTokenEnc: encryptedSecrets,
+        refreshTokenEnc: null,
+        tokenType: "bearer",
+        expiresAt: null,
+        tokenHash,
+        keyVersion: 1,
+      });
+
+      const currentMetadata = parseConnectionMetadata(connection.metadata);
+      const updatedMetadata: Record<string, unknown> = {
+        ...currentMetadata,
+        lastCredentialUpdate: new Date().toISOString(),
+      };
+
+      const metadataFields = PROVIDER_METADATA_FIELDS[provider];
+      if (metadataFields) {
+        const defaults = PROVIDER_METADATA_DEFAULTS[provider] || {};
+        for (const field of metadataFields) {
+          const value = (payload as Record<string, unknown>)[field];
+          updatedMetadata[field] =
+            value || defaults[field] || updatedMetadata[field];
+        }
+      }
+
+      await connectionsRepo.updateStatus(
+        connectionId,
+        "active",
+        JSON.stringify(updatedMetadata)
+      );
+
+      await connectionsRepo.updateConnectionState(provider, true, connectionId);
+
+      return ok({ message: "Credentials saved successfully" });
+    } catch (error) {
+      console.error("Error saving credentials:", error);
+      return fail("Failed to save credentials");
+    }
+  },
+
+  async checkCredentials(
+    provider: string
+  ): Promise<ServiceResponse<CredentialsCheckResult>> {
+    try {
+      if (!provider) return fail("Provider is required");
+
+      const connection = await connectionsRepo.findByProvider(provider);
+      if (!connection) return fail("Connection not found");
+
+      const tokens = await connectionsRepo.findTokensByConnectionId(connection.id);
+      const hasCredentials = tokens && tokens.length > 0;
+
+      return ok({
+        hasCredentials,
+        status: connection.status,
+        connectionId: connection.id,
+      });
+    } catch (error) {
+      console.error("Error checking credentials:", error);
+      return fail("Failed to check credentials");
     }
   },
 };

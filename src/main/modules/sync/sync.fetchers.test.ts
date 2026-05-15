@@ -11,9 +11,12 @@ import type { ResourceFetcher, EntityInput } from "./sync.dto";
 const mockGetConnectionWithSecrets = vi.fn();
 const mockGetSelectedResources = vi.fn();
 
-vi.mock("./sync.connection-utils", () => ({
+vi.mock("../connections", () => ({
   getConnectionWithSecrets: (...args: unknown[]) =>
     mockGetConnectionWithSecrets(...args),
+}));
+
+vi.mock("./sync.connection-utils", () => ({
   getSelectedResources: (...args: unknown[]) =>
     mockGetSelectedResources(...args),
 }));

@@ -2,12 +2,39 @@ import { baseApi } from './baseApi';
 import { syncApi } from './syncApi';
 import { toast } from '@/components/ui';
 
+// ─────────────────────────────────────────────────────────────
+// Connection identity + integration state
+// ─────────────────────────────────────────────────────────────
+
+/** A row in the connections table — one external account. */
 export interface Connection {
   id: string;
   provider: string;
   status: string;
   metadata?: any;
 }
+
+/** A row in the connection_states table — one supported integration shown on the Settings page. */
+export interface ConnectionState {
+  id: string;
+  displayName: string;
+  iconPath: string;
+  isConnected: boolean;
+  connectionId: string | null;
+  category: string;
+  sortOrder: number;
+  enabledFeatures: string | null;
+  config: string | null;
+}
+
+export interface UpdateConnectionStatePayload {
+  isConnected: boolean;
+  connectionId?: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Resource types per provider
+// ─────────────────────────────────────────────────────────────
 
 export interface GitHubRepo {
   id: number;
@@ -146,6 +173,10 @@ export interface SelectedSocketDevOrganization {
   metadata: any;
 }
 
+// ─────────────────────────────────────────────────────────────
+// Payload types
+// ─────────────────────────────────────────────────────────────
+
 export interface SaveCredentialsPayload {
   provider: string;
   connectionId: string;
@@ -167,27 +198,67 @@ export interface SaveResourcesPayload {
   resources: any[];
 }
 
+// ─────────────────────────────────────────────────────────────
+// Endpoints
+// ─────────────────────────────────────────────────────────────
+// Split RTK Query tag types so the Settings integration list
+// (`ConnectionState`) refreshes independently from per-connection
+// queries (`Connection`). See ADR-0002.
+// ─────────────────────────────────────────────────────────────
 export const connectionsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
 
+    // ── integration-state list (Settings page) ──
+    getConnectionStates: builder.query<ConnectionState[], void>({
+      query: () => ({
+        handler: 'connections:listStates',
+      }),
+      transformResponse: (response: any) => response.success ? response.data : [],
+      providesTags: ['ConnectionState'],
+    }),
+
+    updateConnectionState: builder.mutation<
+      { success: boolean },
+      { id: string } & UpdateConnectionStatePayload
+    >({
+      query: ({ id, ...body }) => ({
+        handler: 'connections:updateState',
+        args: [id, body],
+      }),
+      invalidatesTags: ['ConnectionState'],
+    }),
+
+    // ── identity ──
     getConnection: builder.query<{ success: boolean; connection: Connection }, string>({
       query: (provider) => ({
         handler: 'connections:getByProvider',
         args: [provider],
       }),
       transformResponse: (response: any) => response.success ? { success: true, connection: response.data.connection } : { success: false, connection: null as any },
-      providesTags: ['ConnectionStates'],
+      providesTags: ['Connection'],
     }),
 
     saveCredentials: builder.mutation<{ success: boolean }, SaveCredentialsPayload>({
       query: (body) => ({
-        handler: 'connectionCredentials:save',
+        handler: 'connections:saveCredentials',
         args: [body],
       }),
       transformResponse: (response: any) => ({ success: response.success }),
-      invalidatesTags: ['ConnectionStates'],
+      // Saving credentials flips `isConnected` in connection_states AND mints
+      // a new connection row, so both tag families must refresh.
+      invalidatesTags: ['Connection', 'ConnectionState'],
     }),
 
+    revokeConnection: builder.mutation<{ success: boolean }, string>({
+      query: (provider) => ({
+        handler: 'connections:revoke',
+        args: [provider],
+      }),
+      transformResponse: (response: any) => ({ success: response.success }),
+      invalidatesTags: ['Connection', 'ConnectionState'],
+    }),
+
+    // ── per-provider resource discovery ──
     getGitHubRepos: builder.query<{ success: boolean; repos: GitHubRepo[] }, string>({
       query: (connectionId) => ({
         handler: 'connections:getGithubRepos',
@@ -272,7 +343,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         const items = (Object.values(rest)[0] as any[]) ?? [];
         return { success: true, items, connectionId };
       },
-      providesTags: ['ConnectionStates'],
+      providesTags: ['Connection'],
     }),
 
     saveResources: builder.mutation<{ success: boolean }, SaveResourcesPayload>({
@@ -281,7 +352,7 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [body],
       }),
       transformResponse: (response: any) => ({ success: response.success }),
-      invalidatesTags: ['ConnectionStates'],
+      invalidatesTags: ['Connection'],
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
@@ -303,25 +374,19 @@ export const connectionsApi = baseApi.injectEndpoints({
         args: [resourceId],
       }),
       transformResponse: (response: any) => ({ success: response.success }),
-      invalidatesTags: ['ConnectionStates'],
-    }),
-
-    revokeConnection: builder.mutation<{ success: boolean }, string>({
-      query: (provider) => ({
-        handler: 'connections:revoke',
-        args: [provider],
-      }),
-      transformResponse: (response: any) => ({ success: response.success }),
-      invalidatesTags: ['ConnectionStates'],
+      invalidatesTags: ['Connection'],
     }),
   }),
   overrideExisting: false,
 });
 
 export const {
+  useGetConnectionStatesQuery,
+  useUpdateConnectionStateMutation,
   useGetConnectionQuery,
   useLazyGetConnectionQuery,
   useSaveCredentialsMutation,
+  useRevokeConnectionMutation,
   useLazyGetGitHubReposQuery,
   useLazyGetLinearTeamsQuery,
   useLazyGetJiraProjectsQuery,
@@ -334,5 +399,4 @@ export const {
   useLazyGetSelectedResourcesQuery,
   useSaveResourcesMutation,
   useDeleteResourceMutation,
-  useRevokeConnectionMutation,
 } = connectionsApi;

@@ -29,7 +29,7 @@ import { accountService } from "../main/modules/account/account.service";
 import { appSettingsService } from "../main/modules/appSettings/appSettings.service";
 import { spaceService } from "../main/modules/space/space.service";
 import { providersService } from "../main/modules/providers/providers.service";
-import { connectionStatesService } from "../main/modules/connectionStates/connectionStates.service";
+import { connectionsService } from "../main/modules/connections/connections.service";
 import { projectsService } from "../main/modules/projects/projects.service";
 import { workspaceService } from "../main/modules/workspace";
 import { entitiesService } from "../main/modules/entities/entities.service";
@@ -117,7 +117,7 @@ describe("smoke", () => {
     });
 
     it("seeds connection states for all integrations", async () => {
-      const result = await connectionStatesService.getAll();
+      const result = await connectionsService.listStates();
       expect(result.success).toBe(true);
       if (!result.success) return;
 

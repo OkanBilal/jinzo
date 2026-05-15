@@ -109,6 +109,61 @@ export interface ConnectionResource {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Connection State Types
+// ─────────────────────────────────────────────────────────────
+import type { connectionStates } from "../../db/schema";
+
+export type ConnectionStateRecord = typeof connectionStates.$inferSelect;
+
+export interface ConnectionStateResponse {
+  id: string;
+  displayName: string | null;
+  iconPath: string | null;
+  isConnected: boolean;
+  connectionId: string | null;
+  category: string | null;
+  sortOrder: number;
+  enabledFeatures: string | null;
+  config: string | null;
+}
+
+export interface UpdateConnectionStateRequest {
+  isConnected: boolean;
+  connectionId?: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Credential Types
+// ─────────────────────────────────────────────────────────────
+export interface SaveCredentialsPayload {
+  provider: string;
+  connectionId: string;
+  // Provider-specific fields
+  token?: string;
+  apiKey?: string;
+  accessToken?: string;
+  apiToken?: string;
+  domain?: string;
+  email?: string;
+  [key: string]: unknown;
+}
+
+export interface ParsedCredentials {
+  secrets: Record<string, string>;
+  tokensForHash: string[];
+}
+
+export interface CredentialsCheckResult {
+  hasCredentials: boolean;
+  status: string;
+  connectionId: string;
+}
+
+export interface SaveCredentialsResult {
+  message: string;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Payload Types
 // ─────────────────────────────────────────────────────────────
 export interface SaveResourcesPayload {

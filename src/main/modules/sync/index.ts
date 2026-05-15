@@ -23,12 +23,11 @@ export {
   formatDuration,
 } from "./sync.helpers";
 
-// Connection Utils
+// Connection-resource reads + sync-side utilities.
+// Connection identity / secrets live behind the connections module —
+// callers import `getConnectionWithSecrets` from "../connections".
 export {
-  getConnectionByProvider,
-  getConnectionSecrets,
   getSelectedResources,
-  getConnectionWithSecrets,
   normalizeLimit,
   normalizeDateToIso,
   safeJsonParse,

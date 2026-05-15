@@ -44,6 +44,15 @@ IPC channels live under one namespace: `workspace:get*`, `workspace:getActivity`
 Cross-module writers (drivers, run-session, guards, mains-tools) import a single named function — `logWorkspaceActivity` — from the module's barrel, not the full service surface.
 _Avoid_: re-splitting into `workspaces` + `workspaceActivity` + `workspaceDiffs` + `reviews` + `reviewFindings`. See ADR-0001.
 
+### connections
+
+The `connections` module owns three tables: `connections`, `connection_tokens`, `connection_states`. They were previously three separate modules; consolidated because the seam between them was already leaking — `connections.service` imported `decryptSecrets` from the credentials utils, `sync/sync.connection-utils.ts` had grown a full duplicate of `getConnectionWithSecrets`, and `connectionStates.service` was a 46-line pass-through. The `connection_resources` table is deliberately *out* of the aggregate; it is read by `workspaceResources.repo` directly (same shape as `stats` joining `workspace_diffs`).
+
+IPC channels live under one namespace: the existing `connections:*` channels stay, plus `connections:listStates` and `connections:updateState` (formerly `connectionStates:*`). The renderer has one `connectionsApi.ts` with split RTK Query tag types (`Connection`, `ConnectionState`). The preload collapses to one `window.api.connections` section.
+
+Cross-module readers (`sync`, `guards`) import a single named function — `getConnectionWithSecrets` — from the module's barrel. The crypto helpers (`encryptSecrets`, `decryptSecrets`, `createTokenHash`, `parseProviderCredentials`, `parseConnectionMetadata`) live in `connections.utils.ts` as an internal seam — private to the module, used by its own tests, not re-exported from `index.ts`.
+_Avoid_: re-splitting into `connections` + `connectionStates` + `connectionCredentials`. Avoid importing crypto helpers across modules — call `getConnectionWithSecrets` instead. See ADR-0002.
+
 ## Flagged ambiguities
 
 - "ServiceResponse" was historically defined ~27 times across `src/main/modules/*/dto.ts` in two structurally incompatible shapes (discriminated union vs optional-fields object). Resolved: the discriminated union is canonical; every module now re-exports the canonical type (no remaining bespoke envelopes).

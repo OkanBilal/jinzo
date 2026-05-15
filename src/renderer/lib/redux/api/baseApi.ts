@@ -43,11 +43,11 @@ export const baseApi = createApi({
   refetchOnFocus: true,
   refetchOnReconnect: true,
   tagTypes: [
-    'ConnectionStates',
+    'ConnectionState',
+    'Connection',
     'Entity',
     'Task',
     'Issue',
-    'Connections',
     'Account',
     'Spaces',
     'AppSettings',

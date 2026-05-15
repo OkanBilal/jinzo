@@ -1,14 +1,40 @@
 import { ipcMain } from "electron";
 import { connectionsService } from "./connections.service";
-import type { SaveResourcesPayload } from "./connections.dto";
+import type {
+  SaveResourcesPayload,
+  SaveCredentialsPayload,
+} from "./connections.dto";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
-// ─────────────────────────────────────────────────────────────
-// IPC Channel Constants
 // ─────────────────────────────────────────────────────────────
 // Register Handlers
 // ─────────────────────────────────────────────────────────────
 export function registerConnectionsHandlers(): void {
+  ipcMain.handle(CHANNELS.connections.listStates, () =>
+    connectionsService.listStates(),
+  );
+
+  ipcMain.handle(
+    CHANNELS.connections.updateState,
+    async (_event, id: unknown, payload: unknown) => {
+      return connectionsService.updateState(id, payload);
+    },
+  );
+
+  ipcMain.handle(
+    CHANNELS.connections.saveCredentials,
+    async (_event, payload: SaveCredentialsPayload) => {
+      return connectionsService.saveCredentials(payload);
+    },
+  );
+
+  ipcMain.handle(
+    CHANNELS.connections.checkCredentials,
+    async (_event, provider: string) => {
+      return connectionsService.checkCredentials(provider);
+    },
+  );
+
   ipcMain.handle(
     CHANNELS.connections.getGithubRepos,
     async (_event, connectionId: string) => {
@@ -113,6 +139,10 @@ export function registerConnectionsHandlers(): void {
 // ─────────────────────────────────────────────────────────────
 export function unregisterConnectionsHandlers(): void {
   [
+    CHANNELS.connections.listStates,
+    CHANNELS.connections.updateState,
+    CHANNELS.connections.saveCredentials,
+    CHANNELS.connections.checkCredentials,
     CHANNELS.connections.getGithubRepos,
     CHANNELS.connections.getLinearTeams,
     CHANNELS.connections.getJiraProjects,
