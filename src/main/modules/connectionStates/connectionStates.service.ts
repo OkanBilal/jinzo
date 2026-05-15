@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { connectionStatesRepo } from "./connectionStates.repo";
 import { validateConnectionId, validateUpdatePayload } from "./connectionStates.validation";
 import type { ConnectionStatesResponse, ServiceResponse } from "./connectionStates.dto";
@@ -12,10 +13,10 @@ export const connectionStatesService = {
   async getAll(): Promise<ServiceResponse<ConnectionStatesResponse[]>> {
     try {
       const connnectionStates = await connectionStatesRepo.findAll();
-      return { success: true, data: connnectionStates };
+      return ok(connnectionStates);
     } catch (error) {
       console.error("Error fetching connnectionStates:", error);
-      return { success: false, error: "Failed to fetch connnectionStates" };
+      return fail("Failed to fetch connnectionStates");
     }
   },
 
@@ -26,20 +27,20 @@ export const connectionStatesService = {
     try {
       const idError = validateConnectionId(id);
       if (idError) {
-        return { success: false, error: idError };
+        return fail(idError);
       }
 
       const { data, error } = validateUpdatePayload(payload);
       if (error || !data) {
-        return { success: false, error: error ?? "Invalid payload" };
+        return fail(error ?? "Invalid payload");
       }
 
       await connectionStatesRepo.updateById(id as string, data);
 
-      return { success: true, data: null };
+      return ok(null);
     } catch (error) {
       console.error("Error updating connection state:", error);
-      return { success: false, error: "Failed to update connection state" };
+      return fail("Failed to update connection state");
     }
   },
 };

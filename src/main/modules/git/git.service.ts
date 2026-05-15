@@ -61,7 +61,7 @@ export interface GitRemote {
   pushUrl: string | undefined;
 }
 
-import type { ServiceResponse } from "../../../shared/ipc-kit/service-response";
+import { ok, fail, type ServiceResponse } from "../../../shared/ipc-kit/service-response";
 export type { ServiceResponse };
 
 // ─────────────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ class GitService {
     try {
       const git = this.getGit(rootPath);
       const isRepo = await git.checkIsRepo();
-      return { success: true, data: isRepo };
+      return ok(isRepo);
     } catch (error) {
       return {
         success: false,
@@ -96,7 +96,7 @@ class GitService {
     try {
       const git = this.getGit(rootPath);
       const branch = await git.revparse(["--abbrev-ref", "HEAD"]);
-      return { success: true, data: branch.trim() };
+      return ok(branch.trim());
     } catch (error) {
       return {
         success: false,
@@ -178,7 +178,7 @@ class GitService {
         author_email: entry.author_email,
       }));
 
-      return { success: true, data: entries };
+      return ok(entries);
     } catch (error) {
       return {
         success: false,
@@ -201,7 +201,7 @@ class GitService {
         pushUrl: remote.refs.push,
       }));
 
-      return { success: true, data: result };
+      return ok(result);
     } catch (error) {
       return {
         success: false,
@@ -223,7 +223,7 @@ class GitService {
         ? await git.diff([filePath])
         : await git.diff();
 
-      return { success: true, data: diff };
+      return ok(diff);
     } catch (error) {
       return {
         success: false,
@@ -239,7 +239,7 @@ class GitService {
     try {
       const git = this.getGit(rootPath);
       const sha = await git.revparse(["HEAD"]);
-      return { success: true, data: sha.trim() };
+      return ok(sha.trim());
     } catch (error) {
       return {
         success: false,
@@ -258,7 +258,7 @@ class GitService {
     try {
       const git = this.getGit(rootPath);
       const diff = await git.diff([baseSha]);
-      return { success: true, data: diff };
+      return ok(diff);
     } catch (error) {
       return {
         success: false,
@@ -281,7 +281,7 @@ class GitService {
         .split("\n")
         .map((f) => f.trim())
         .filter(Boolean);
-      return { success: true, data: files };
+      return ok(files);
     } catch (error) {
       return {
         success: false,
@@ -300,7 +300,7 @@ class GitService {
     try {
       const git = this.getGit(rootPath);
       const stat = await git.diff(["--shortstat", baseSha]);
-      return { success: true, data: stat.trim() };
+      return ok(stat.trim());
     } catch (error) {
       return {
         success: false,
@@ -320,7 +320,7 @@ class GitService {
         .split("\n")
         .map((f) => f.trim())
         .filter(Boolean);
-      return { success: true, data: files };
+      return ok(files);
     } catch (error) {
       return {
         success: false,
@@ -336,7 +336,7 @@ class GitService {
     try {
       const git = this.getGit(rootPath);
       const root = await git.revparse(["--show-toplevel"]);
-      return { success: true, data: root.trim() };
+      return ok(root.trim());
     } catch (error) {
       return {
         success: false,
@@ -375,7 +375,7 @@ class GitService {
     try {
       const git = this.getGit(rootPath);
       await git.checkoutLocalBranch(branchName);
-      return { success: true, data: branchName };
+      return ok(branchName);
     } catch (error) {
       return {
         success: false,
@@ -395,7 +395,7 @@ class GitService {
     try {
       const git = this.getGit(rootPath);
       await git.raw(["worktree", "add", worktreePath, branchName]);
-      return { success: true, data: worktreePath };
+      return ok(worktreePath);
     } catch (error) {
       return {
         success: false,
@@ -416,7 +416,7 @@ class GitService {
       // 1. Validate it's a git repo
       const isRepo = await git.checkIsRepo();
       if (!isRepo) {
-        return { success: false, error: "Not a git repository" };
+        return fail("Not a git repository");
       }
 
       // 2. Get current branch (baseBranch)
@@ -491,7 +491,7 @@ class GitService {
       // 1. Validate it's a git repo
       const isRepo = await git.checkIsRepo();
       if (!isRepo) {
-        return { success: false, error: "Not a git repository" };
+        return fail("Not a git repository");
       }
 
       // 2. Get current branch
@@ -545,7 +545,7 @@ class GitService {
     let createdFolder = false;
     try {
       if (fs.existsSync(rootPath)) {
-        return { success: false, error: "Folder already exists" };
+        return fail("Folder already exists");
       }
       fs.mkdirSync(rootPath, { recursive: false });
       createdFolder = true;
@@ -570,7 +570,7 @@ class GitService {
         ]);
       }
 
-      return { success: true, data: { rootPath, defaultBranch: "main" } };
+      return ok({ rootPath, defaultBranch: "main" });
     } catch (error) {
       if (createdFolder) {
         try {
@@ -660,7 +660,7 @@ class GitService {
     try {
       const git = this.getGit(rootPath);
       await git.raw(["branch", "-m", oldName, newName]);
-      return { success: true, data: newName };
+      return ok(newName);
     } catch (error) {
       return {
         success: false,
@@ -679,7 +679,7 @@ class GitService {
     try {
       const git = this.getGit(sourcePath);
       await git.raw(["worktree", "remove", worktreePath, "--force"]);
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       return {
         success: false,
@@ -698,7 +698,7 @@ class GitService {
       const git = this.getGit(rootPath);
       await git.reset(["--hard", ref]);
       await git.clean("f", ["-d"]);
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       return {
         success: false,

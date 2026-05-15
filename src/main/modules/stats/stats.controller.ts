@@ -1,18 +1,15 @@
 import { statsService } from "./stats.service";
 import type { DashboardData, ProviderFilter } from "./stats.dto";
-import type { ServiceResponse } from "../../../shared/ipc-kit/service-response";
+import { ok, fail, type ServiceResponse } from "../../../shared/ipc-kit/service-response";
 
 export const statsController = {
   async getDashboard(filter?: ProviderFilter): Promise<ServiceResponse<DashboardData>> {
     try {
       const data = await statsService.getDashboard(filter ?? "all");
-      return { success: true, data };
+      return ok(data);
     } catch (error) {
       console.error("[StatsController] Failed to get dashboard:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to get dashboard data",
-      };
+      return fail(error instanceof Error ? error.message : "Failed to get dashboard data");
     }
   },
 };

@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { workspaceActivityRepo } from "./workspaceActivity.repo";
 import type {
   CreateActivityPayload,
@@ -18,13 +19,13 @@ export const workspaceActivityService = {
         workspaceId,
         limit,
       );
-      return { success: true, data: activities };
+      return ok(activities);
     } catch (error) {
       console.error(
         `[WorkspaceActivityService] Failed to get activity for workspace ${workspaceId}:`,
         error,
       );
-      return { success: false, error: "Failed to get workspace activity" };
+      return fail("Failed to get workspace activity");
     }
   },
 
@@ -33,13 +34,13 @@ export const workspaceActivityService = {
   ): Promise<ServiceResponse<string>> {
     try {
       const id = await workspaceActivityRepo.insert(payload);
-      return { success: true, data: id };
+      return ok(id);
     } catch (error) {
       console.error(
         "[WorkspaceActivityService] Failed to create activity:",
         error,
       );
-      return { success: false, error: "Failed to create activity" };
+      return fail("Failed to create activity");
     }
   },
 
@@ -48,26 +49,26 @@ export const workspaceActivityService = {
   ): Promise<ServiceResponse<string[]>> {
     try {
       const ids = await workspaceActivityRepo.insertMany(payloads);
-      return { success: true, data: ids };
+      return ok(ids);
     } catch (error) {
       console.error(
         "[WorkspaceActivityService] Failed to create activities:",
         error,
       );
-      return { success: false, error: "Failed to create activities" };
+      return fail("Failed to create activities");
     }
   },
 
   async delete(id: string): Promise<ServiceResponse<void>> {
     try {
       await workspaceActivityRepo.remove(id);
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       console.error(
         `[WorkspaceActivityService] Failed to delete activity ${id}:`,
         error,
       );
-      return { success: false, error: "Failed to delete activity" };
+      return fail("Failed to delete activity");
     }
   },
 

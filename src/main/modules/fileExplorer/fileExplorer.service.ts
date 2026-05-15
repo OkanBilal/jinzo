@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { promises as fs } from "fs";
 import * as path from "path";
 import type {
@@ -170,7 +171,7 @@ export const fileExplorerService = {
       // Validate root path exists and is a directory
       const rootStat = await fs.stat(rootPath);
       if (!rootStat.isDirectory()) {
-        return { success: false, error: "Path is not a directory" };
+        return fail("Path is not a directory");
       }
 
       const stats = { files: 0, directories: 0, truncated: false };
@@ -212,12 +213,12 @@ export const fileExplorerService = {
     } catch (error) {
       console.error("[FileExplorer] Failed to read directory:", error);
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        return { success: false, error: "Directory does not exist" };
+        return fail("Directory does not exist");
       }
       if ((error as NodeJS.ErrnoException).code === "EACCES") {
-        return { success: false, error: "Permission denied" };
+        return fail("Permission denied");
       }
-      return { success: false, error: "Failed to read directory" };
+      return fail("Failed to read directory");
     }
   },
 
@@ -236,7 +237,7 @@ export const fileExplorerService = {
     try {
       const dirStat = await fs.stat(dirPath);
       if (!dirStat.isDirectory()) {
-        return { success: false, error: "Path is not a directory" };
+        return fail("Path is not a directory");
       }
 
       const entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -299,16 +300,16 @@ export const fileExplorerService = {
         }
       }
 
-      return { success: true, data: children };
+      return ok(children);
     } catch (error) {
       console.error("[FileExplorer] Failed to read directory shallow:", error);
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        return { success: false, error: "Directory does not exist" };
+        return fail("Directory does not exist");
       }
       if ((error as NodeJS.ErrnoException).code === "EACCES") {
-        return { success: false, error: "Permission denied" };
+        return fail("Permission denied");
       }
-      return { success: false, error: "Failed to read directory" };
+      return fail("Failed to read directory");
     }
   },
 
@@ -335,7 +336,7 @@ export const fileExplorerService = {
           data: { exists: false, isDirectory: false, isFile: false },
         };
       }
-      return { success: false, error: "Failed to get path info" };
+      return fail("Failed to get path info");
     }
   },
 
@@ -345,16 +346,16 @@ export const fileExplorerService = {
   async readFile(filePath: string): Promise<ServiceResponse<string>> {
     try {
       const content = await fs.readFile(filePath, "utf-8");
-      return { success: true, data: content };
+      return ok(content);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        return { success: false, error: "File does not exist" };
+        return fail("File does not exist");
       }
       console.error("[FileExplorer] Failed to read file:", error);
       if ((error as NodeJS.ErrnoException).code === "EACCES") {
-        return { success: false, error: "Permission denied" };
+        return fail("Permission denied");
       }
-      return { success: false, error: "Failed to read file" };
+      return fail("Failed to read file");
     }
   },
 
@@ -399,7 +400,7 @@ export const fileExplorerService = {
         realPath = await fs.realpath(normalizedPath);
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-          return { success: false, error: "File does not exist" };
+          return fail("File does not exist");
         }
         throw error;
       }
@@ -421,13 +422,13 @@ export const fileExplorerService = {
 
       if (!stats.isFile()) {
         if (stats.isDirectory()) {
-          return { success: false, error: "Cannot read directory as file" };
+          return fail("Cannot read directory as file");
         }
         if (stats.isSymbolicLink()) {
           // Should not reach here after realpath, but safety check
-          return { success: false, error: "Cannot read symbolic link" };
+          return fail("Cannot read symbolic link");
         }
-        return { success: false, error: "Cannot read non-regular file" };
+        return fail("Cannot read non-regular file");
       }
 
       // 6. Check file size
@@ -513,16 +514,16 @@ export const fileExplorerService = {
       const errCode = (error as NodeJS.ErrnoException).code;
 
       if (errCode === "ENOENT") {
-        return { success: false, error: "File does not exist" };
+        return fail("File does not exist");
       }
       if (errCode === "EACCES") {
-        return { success: false, error: "Permission denied" };
+        return fail("Permission denied");
       }
       if (errCode === "EISDIR") {
-        return { success: false, error: "Cannot read directory as file" };
+        return fail("Cannot read directory as file");
       }
 
-      return { success: false, error: "Failed to read file" };
+      return fail("Failed to read file");
     }
   },
 
@@ -543,7 +544,7 @@ export const fileExplorerService = {
     } = options;
 
     const needle = query.toLowerCase();
-    if (!needle) return { success: true, data: [] };
+    if (!needle) return ok([]);
 
     const normalizedRoot = rootPath.replace(/\/$/, "");
     const rootPrefix = normalizedRoot + path.sep;
@@ -589,20 +590,20 @@ export const fileExplorerService = {
     try {
       const rootStat = await fs.stat(rootPath);
       if (!rootStat.isDirectory()) {
-        return { success: false, error: "Path is not a directory" };
+        return fail("Path is not a directory");
       }
       await walk(rootPath);
-      return { success: true, data: results };
+      return ok(results);
     } catch (error) {
       const errCode = (error as NodeJS.ErrnoException).code;
       if (errCode === "ENOENT") {
-        return { success: false, error: "Directory does not exist" };
+        return fail("Directory does not exist");
       }
       if (errCode === "EACCES") {
-        return { success: false, error: "Permission denied" };
+        return fail("Permission denied");
       }
       console.error("[FileExplorer] searchFiles failed:", error);
-      return { success: false, error: "Failed to search files" };
+      return fail("Failed to search files");
     }
   },
 
@@ -620,7 +621,7 @@ export const fileExplorerService = {
       // Verify it's a directory
       const dirStat = await fs.stat(resolvedPath);
       if (!dirStat.isDirectory()) {
-        return { success: false, error: "Path is not a directory" };
+        return fail("Path is not a directory");
       }
 
       // Read directory entries
@@ -688,18 +689,18 @@ export const fileExplorerService = {
         }
       }
 
-      return { success: true, data: results };
+      return ok(results);
     } catch (error) {
       const errCode = (error as NodeJS.ErrnoException).code;
       console.error(`[FileExplorer] listDir failed for ${resolvedPath}:`, error);
 
       if (errCode === "ENOENT") {
-        return { success: false, error: "Directory does not exist" };
+        return fail("Directory does not exist");
       }
       if (errCode === "EACCES") {
-        return { success: false, error: "Permission denied" };
+        return fail("Permission denied");
       }
-      return { success: false, error: `Failed to list directory: ${errCode || "unknown"}` };
+      return fail(`Failed to list directory: ${errCode || "unknown"}`);
     }
   },
 };

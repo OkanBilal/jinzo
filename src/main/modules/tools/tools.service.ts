@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { toolsRepo } from "./tools.repo";
 import type {
   CreateToolCallPayload,
@@ -16,10 +17,10 @@ export const toolsService = {
   async getToolCallsByRun(runId: string): Promise<ServiceResponse<ToolCallResponse[]>> {
     try {
       const calls = await toolsRepo.findToolCallsByRun(runId);
-      return { success: true, data: calls };
+      return ok(calls);
     } catch (error) {
       console.error(`[ToolsService] Failed to get tool calls for run ${runId}:`, error);
-      return { success: false, error: "Failed to get tool calls" };
+      return fail("Failed to get tool calls");
     }
   },
 
@@ -29,30 +30,30 @@ export const toolsService = {
   ): Promise<ServiceResponse<ToolCallResponse[]>> {
     try {
       const calls = await toolsRepo.findToolCallsByAccount(accountId, limit);
-      return { success: true, data: calls };
+      return ok(calls);
     } catch (error) {
       console.error(`[ToolsService] Failed to get tool calls for account ${accountId}:`, error);
-      return { success: false, error: "Failed to get tool calls" };
+      return fail("Failed to get tool calls");
     }
   },
 
   async createToolCall(payload: CreateToolCallPayload): Promise<ServiceResponse<number>> {
     try {
       const id = await toolsRepo.insertToolCall(payload);
-      return { success: true, data: id };
+      return ok(id);
     } catch (error) {
       console.error("[ToolsService] Failed to create tool call:", error);
-      return { success: false, error: "Failed to create tool call" };
+      return fail("Failed to create tool call");
     }
   },
 
   async updateToolCall(id: number, payload: UpdateToolCallPayload): Promise<ServiceResponse<void>> {
     try {
       await toolsRepo.updateToolCall(id, payload);
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       console.error(`[ToolsService] Failed to update tool call ${id}:`, error);
-      return { success: false, error: "Failed to update tool call" };
+      return fail("Failed to update tool call");
     }
   },
 

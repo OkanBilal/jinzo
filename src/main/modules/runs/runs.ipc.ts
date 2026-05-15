@@ -1,4 +1,5 @@
 import { ipcMain } from "electron";
+import { ok } from "../../../shared/ipc-kit/service-response";
 import { runsController } from "./runs.controller";
 import type {
   CreateRunPayload,
@@ -193,7 +194,7 @@ export function registerRunsIpc(): void {
     CHANNELS.RUNS_TOOL_APPROVAL_RESPONSE,
     async (_, response: ToolApprovalResponse) => {
       handleToolApprovalResponse(response);
-      return { success: true };
+      return ok(undefined);
     },
   );
 }

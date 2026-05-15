@@ -1,3 +1,4 @@
+import { fail } from "../../../shared/ipc-kit/service-response";
 import { connectionCredentialsRepo } from "./connectionCredentials.repo";
 import {
   encryptSecrets,
@@ -55,14 +56,14 @@ export const connectionCredentialsService = {
 
       const parseResult = parseProviderCredentials(provider, credentials);
       if (!parseResult.success) {
-        return { success: false, error: parseResult.error };
+        return fail(parseResult.error);
       }
 
       const { secrets, tokensForHash } = parseResult.data;
 
       const connection = await connectionCredentialsRepo.findConnectionById(connectionId);
       if (!connection) {
-        return { success: false, error: "Connection not found" };
+        return fail("Connection not found");
       }
 
       // Encrypt all secrets as a single JSON blob
@@ -114,7 +115,7 @@ export const connectionCredentialsService = {
       };
     } catch (error) {
       console.error("Error saving credentials:", error);
-      return { success: false, error: "Failed to save credentials" };
+      return fail("Failed to save credentials");
     }
   },
 
@@ -123,12 +124,12 @@ export const connectionCredentialsService = {
   ): Promise<ServiceResponse<CredentialsCheckResult>> {
     try {
       if (!provider) {
-        return { success: false, error: "Provider is required" };
+        return fail("Provider is required");
       }
 
       const connection = await connectionCredentialsRepo.findConnectionByProvider(provider);
       if (!connection) {
-        return { success: false, error: "Connection not found" };
+        return fail("Connection not found");
       }
 
       const tokens = await connectionCredentialsRepo.findTokensByConnectionId(connection.id);
@@ -144,7 +145,7 @@ export const connectionCredentialsService = {
       };
     } catch (error) {
       console.error("Error checking credentials:", error);
-      return { success: false, error: "Failed to check credentials" };
+      return fail("Failed to check credentials");
     }
   },
 };

@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import {
   app,
   BrowserWindow,
@@ -355,7 +356,7 @@ export const browserService = {
 
   async attach(bounds: BrowserBounds): Promise<ServiceResponse<BrowserNavState>> {
     const host = this._findHost();
-    if (!host) return { success: false, error: "No active window" };
+    if (!host) return fail("No active window");
 
     const view = this._ensureView();
     this.host = host;
@@ -380,7 +381,7 @@ export const browserService = {
       canGoForward: wc.navigationHistory?.canGoForward?.() ?? false,
       isLoading: wc.isLoading(),
     };
-    return { success: true, data: state };
+    return ok(state);
   },
 
   detach(): ServiceResponse<null> {
@@ -396,7 +397,7 @@ export const browserService = {
     this.visible = false;
     if (this.selectMode) this.setSelectMode(false);
     this._scheduleIdlePark();
-    return { success: true, data: null };
+    return ok(null);
   },
 
   destroy(): ServiceResponse<null> {
@@ -413,29 +414,29 @@ export const browserService = {
     this.host = null;
     this.bounds = null;
     this.selectMode = false;
-    return { success: true, data: null };
+    return ok(null);
   },
 
   deleteCapture(captureName: string): ServiceResponse<null> {
     if (!captureName || typeof captureName !== "string") {
-      return { success: false, error: "captureName required" };
+      return fail("captureName required");
     }
     if (captureName.includes("/") || captureName.includes("\\") || captureName.includes("..")) {
-      return { success: false, error: "Invalid capture name" };
+      return fail("Invalid capture name");
     }
     const base = cacheDir();
     const target = path.resolve(path.join(base, captureName));
     const resolvedBase = path.resolve(base);
     if (!target.startsWith(resolvedBase + path.sep)) {
-      return { success: false, error: "Path escape denied" };
+      return fail("Path escape denied");
     }
     safeUnlink(target);
-    return { success: true, data: null };
+    return ok(null);
   },
 
   setBounds(bounds: BrowserBounds): ServiceResponse<null> {
     const view = this.view;
-    if (!view || view.webContents.isDestroyed()) return { success: false, error: "No browser view" };
+    if (!view || view.webContents.isDestroyed()) return fail("No browser view");
     const rect: Rectangle = {
       x: Math.max(0, Math.floor(bounds.x)),
       y: Math.max(0, Math.floor(bounds.y)),
@@ -446,14 +447,14 @@ export const browserService = {
       view.setBounds(rect);
       this.bounds = rect;
     } catch (err) {
-      return { success: false, error: (err as Error).message };
+      return fail((err as Error).message);
     }
-    return { success: true, data: null };
+    return ok(null);
   },
 
   setVisible(visible: boolean): ServiceResponse<null> {
     const view = this.view;
-    if (!view || view.webContents.isDestroyed()) return { success: true, data: null };
+    if (!view || view.webContents.isDestroyed()) return ok(null);
     try {
       view.setVisible?.(visible);
     } catch {
@@ -466,7 +467,7 @@ export const browserService = {
     } else {
       this._scheduleIdlePark();
     }
-    return { success: true, data: null };
+    return ok(null);
   },
 
   async navigate(rawUrl: string): Promise<ServiceResponse<null>> {
@@ -478,74 +479,74 @@ export const browserService = {
       // loadURL rejects on abort/redirect; surface benign errors quietly
       const msg = (err as Error)?.message || "";
       if (!/ERR_ABORTED/.test(msg)) {
-        return { success: false, error: msg };
+        return fail(msg);
       }
     }
     this._emitNav();
-    return { success: true, data: null };
+    return ok(null);
   },
 
   async goBack(): Promise<ServiceResponse<null>> {
     const wc = this.view?.webContents;
-    if (!wc || wc.isDestroyed()) return { success: false, error: "No browser view" };
+    if (!wc || wc.isDestroyed()) return fail("No browser view");
     try {
       if (wc.navigationHistory?.canGoBack?.()) wc.navigationHistory.goBack();
       else if ((wc as any).canGoBack?.()) (wc as any).goBack();
     } catch (err) {
-      return { success: false, error: (err as Error).message };
+      return fail((err as Error).message);
     }
     this._emitNav();
-    return { success: true, data: null };
+    return ok(null);
   },
 
   async goForward(): Promise<ServiceResponse<null>> {
     const wc = this.view?.webContents;
-    if (!wc || wc.isDestroyed()) return { success: false, error: "No browser view" };
+    if (!wc || wc.isDestroyed()) return fail("No browser view");
     try {
       if (wc.navigationHistory?.canGoForward?.()) wc.navigationHistory.goForward();
       else if ((wc as any).canGoForward?.()) (wc as any).goForward();
     } catch (err) {
-      return { success: false, error: (err as Error).message };
+      return fail((err as Error).message);
     }
     this._emitNav();
-    return { success: true, data: null };
+    return ok(null);
   },
 
   async reload(): Promise<ServiceResponse<null>> {
     const wc = this.view?.webContents;
-    if (!wc || wc.isDestroyed()) return { success: false, error: "No browser view" };
+    if (!wc || wc.isDestroyed()) return fail("No browser view");
     try {
       wc.reload();
     } catch (err) {
-      return { success: false, error: (err as Error).message };
+      return fail((err as Error).message);
     }
-    return { success: true, data: null };
+    return ok(null);
   },
 
   async stop(): Promise<ServiceResponse<null>> {
     const wc = this.view?.webContents;
-    if (!wc || wc.isDestroyed()) return { success: true, data: null };
+    if (!wc || wc.isDestroyed()) return ok(null);
     try {
       wc.stop();
     } catch {
       // ignore
     }
-    return { success: true, data: null };
+    return ok(null);
   },
 
   async setSelectMode(enabled: boolean): Promise<ServiceResponse<{ enabled: boolean }>> {
     const wc = this.view?.webContents;
     if (!wc || wc.isDestroyed()) {
       this.selectMode = false;
-      return { success: false, error: "No browser view" };
+      return fail("No browser view");
     }
     try {
       await wc.executeJavaScript(buildInspectorScript(enabled), true);
       this.selectMode = enabled;
       this._sendToRenderer("browser:selectModeChanged", { enabled });
-      return { success: true, data: { enabled } };
+      return ok({ enabled });
     } catch (err) {
-      return { success: false, error: (err as Error).message };
+      return fail((err as Error).message);
     }
   },
 

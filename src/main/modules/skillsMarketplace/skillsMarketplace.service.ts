@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import type {
   ServiceResponse,
   ListArgs,
@@ -19,16 +20,13 @@ async function request<T>(path: string): Promise<ServiceResponse<T>> {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      return {
-        success: false,
-        error: `skills.sh ${res.status}: ${text || res.statusText}`,
-      };
+      return fail(`skills.sh ${res.status}: ${text || res.statusText}`);
     }
     const data = (await res.json()) as T;
-    return { success: true, data };
+    return ok(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return { success: false, error: message };
+    return fail(message);
   }
 }
 
@@ -55,7 +53,7 @@ export const skillsMarketplaceService = {
   async search(args: SearchArgs): Promise<ServiceResponse<SkillSearchResponse>> {
     const q = (args.q ?? "").trim();
     if (q.length < 2) {
-      return { success: false, error: "Query must be at least 2 characters" };
+      return fail("Query must be at least 2 characters");
     }
     const qs = buildQuery({ q, limit: args.limit });
     return request<SkillSearchResponse>(`/skills/search${qs}`);

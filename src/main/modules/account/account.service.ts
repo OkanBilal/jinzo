@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { ACCOUNT_ID } from "./account.constants";
 import { accountRepo } from "./account.repo";
 import { validateUpdatePayload } from "./account.validation";
@@ -39,10 +40,10 @@ export const accountService = {
   async getAccount(): Promise<ServiceResponse<AccountResponse>> {
     try {
       const account = await this.ensureAccount();
-      return { success: true, data: formatAccountResponse(account) };
+      return ok(formatAccountResponse(account));
     } catch (error) {
       console.error("Failed to fetch account:", error);
-      return { success: false, error: "Failed to fetch account" };
+      return fail("Failed to fetch account");
     }
   },
 
@@ -57,21 +58,21 @@ export const accountService = {
         const message = Object.entries(errors)
           .map(([field, msg]) => `${field}: ${msg}`)
           .join("; ");
-        return { success: false, error: message };
+        return fail(message);
       }
 
       if (Object.keys(data).length === 0) {
-        return { success: false, error: "No fields to update" };
+        return fail("No fields to update");
       }
 
       await this.ensureAccount();
 
       const updated = await accountRepo.update(ACCOUNT_ID, data);
 
-      return { success: true, data: formatAccountResponse(updated) };
+      return ok(formatAccountResponse(updated));
     } catch (error) {
       console.error("Failed to update account:", error);
-      return { success: false, error: "Failed to update account" };
+      return fail("Failed to update account");
     }
   },
 };

@@ -1,3 +1,4 @@
+import { ok } from "../../../shared/ipc-kit/service-response";
 import { ipcMain, dialog, BrowserWindow } from "electron";
 import { workspacesController } from "./workspaces.controller";
 import type { CreateWorkspacePayload, UpdateWorkspacePayload } from "./workspaces.dto";
@@ -69,10 +70,10 @@ ipcMain.handle(CHANNELS.SELECT_DIRECTORY, async () => {
       });
 
   if (result.canceled || result.filePaths.length === 0) {
-    return { success: true, data: null };
+    return ok(null);
   }
 
-  return { success: true, data: result.filePaths[0] };
+  return ok(result.filePaths[0]);
 });
 }
 

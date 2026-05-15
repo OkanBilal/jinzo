@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { app, autoUpdater, BrowserWindow } from "electron";
 import { updateElectronApp, UpdateSourceType } from "update-electron-app";
 import type {
@@ -74,12 +75,12 @@ export const updatesService = {
   async checkForUpdates(): Promise<ServiceResponse<UpdateState>> {
     if (!app.isPackaged) {
       this._state = { status: "not-available", info: null, progress: null, error: null };
-      return { success: true, data: this._state };
+      return ok(this._state);
     }
 
     try {
       autoUpdater.checkForUpdates();
-      return { success: true, data: this._state };
+      return ok(this._state);
     } catch (err: any) {
       this._updateState({
         status: "error",
@@ -87,25 +88,25 @@ export const updatesService = {
         progress: null,
         error: err.message || "Failed to check for updates",
       });
-      return { success: true, data: this._state };
+      return ok(this._state);
     }
   },
 
   async downloadUpdate(): Promise<ServiceResponse<UpdateState>> {
-    return { success: true, data: this._state };
+    return ok(this._state);
   },
 
   quitAndInstall(): ServiceResponse<null> {
     if (!app.isPackaged) {
-      return { success: false, error: "Cannot install updates in development mode" };
+      return fail("Cannot install updates in development mode");
     }
 
     autoUpdater.quitAndInstall();
-    return { success: true, data: null };
+    return ok(null);
   },
 
   getStatus(): ServiceResponse<UpdateState> {
-    return { success: true, data: { ...this._state } };
+    return ok({ ...this._state });
   },
 
   _updateState(newState: UpdateState) {

@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { workspaceDiffsRepo } from "./workspaceDiffs.repo";
 import type {
   WorkspaceDiffResponse,
@@ -15,13 +16,13 @@ export const workspaceDiffsService = {
   ): Promise<ServiceResponse<WorkspaceDiffResponse[]>> {
     try {
       const diffs = await workspaceDiffsRepo.findByWorkspace(workspaceId, limit);
-      return { success: true, data: diffs };
+      return ok(diffs);
     } catch (error) {
       console.error(
         `[WorkspaceDiffsService] Failed to get diffs for workspace ${workspaceId}:`,
         error,
       );
-      return { success: false, error: "Failed to get workspace diffs" };
+      return fail("Failed to get workspace diffs");
     }
   },
 
@@ -31,15 +32,15 @@ export const workspaceDiffsService = {
     try {
       const diff = await workspaceDiffsRepo.findLatestByWorkspace(workspaceId);
       if (!diff) {
-        return { success: false, error: "No diff found for this workspace" };
+        return fail("No diff found for this workspace");
       }
-      return { success: true, data: diff };
+      return ok(diff);
     } catch (error) {
       console.error(
         `[WorkspaceDiffsService] Failed to get latest diff for workspace ${workspaceId}:`,
         error,
       );
-      return { success: false, error: "Failed to get latest workspace diff" };
+      return fail("Failed to get latest workspace diff");
     }
   },
 
@@ -50,9 +51,9 @@ export const workspaceDiffsService = {
       const diff =
         await workspaceDiffsRepo.findLatestSummaryByWorkspace(workspaceId);
       if (!diff) {
-        return { success: false, error: "No diff found for this workspace" };
+        return fail("No diff found for this workspace");
       }
-      return { success: true, data: diff };
+      return ok(diff);
     } catch (error) {
       console.error(
         `[WorkspaceDiffsService] Failed to get latest diff summary for workspace ${workspaceId}:`,
@@ -71,15 +72,15 @@ export const workspaceDiffsService = {
     try {
       const diff = await workspaceDiffsRepo.findByRun(runId);
       if (!diff) {
-        return { success: false, error: "No diff found for this run" };
+        return fail("No diff found for this run");
       }
-      return { success: true, data: diff };
+      return ok(diff);
     } catch (error) {
       console.error(
         `[WorkspaceDiffsService] Failed to get diff for run ${runId}:`,
         error,
       );
-      return { success: false, error: "Failed to get run diff" };
+      return fail("Failed to get run diff");
     }
   },
 
@@ -88,13 +89,13 @@ export const workspaceDiffsService = {
   ): Promise<ServiceResponse<void>> {
     try {
       await workspaceDiffsRepo.deleteLatestByWorkspace(workspaceId);
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       console.error(
         `[WorkspaceDiffsService] Failed to delete latest diff for workspace ${workspaceId}:`,
         error,
       );
-      return { success: false, error: "Failed to delete latest workspace diff" };
+      return fail("Failed to delete latest workspace diff");
     }
   },
 
@@ -109,10 +110,10 @@ export const workspaceDiffsService = {
   }): Promise<ServiceResponse<string>> {
     try {
       const id = await workspaceDiffsRepo.insertDiff(payload);
-      return { success: true, data: id };
+      return ok(id);
     } catch (error) {
       console.error("[WorkspaceDiffsService] Failed to create diff:", error);
-      return { success: false, error: "Failed to create workspace diff" };
+      return fail("Failed to create workspace diff");
     }
   },
 };

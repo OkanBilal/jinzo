@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { reviewsRepo } from "./reviews.repo";
 import type {
   CreateReviewPayload,
@@ -16,13 +17,13 @@ export const reviewsService = {
   ): Promise<ServiceResponse<ReviewResponse[]>> {
     try {
       const reviews = await reviewsRepo.findByWorkspace(workspaceId, limit);
-      return { success: true, data: reviews };
+      return ok(reviews);
     } catch (error) {
       console.error(
         `[ReviewsService] Failed to get reviews for workspace ${workspaceId}:`,
         error,
       );
-      return { success: false, error: "Failed to get reviews" };
+      return fail("Failed to get reviews");
     }
   },
 
@@ -30,12 +31,12 @@ export const reviewsService = {
     try {
       const review = await reviewsRepo.findById(id);
       if (!review) {
-        return { success: false, error: "Review not found" };
+        return fail("Review not found");
       }
-      return { success: true, data: review };
+      return ok(review);
     } catch (error) {
       console.error(`[ReviewsService] Failed to get review ${id}:`, error);
-      return { success: false, error: "Failed to get review" };
+      return fail("Failed to get review");
     }
   },
 
@@ -44,10 +45,10 @@ export const reviewsService = {
   ): Promise<ServiceResponse<string>> {
     try {
       const id = await reviewsRepo.insert(payload);
-      return { success: true, data: id };
+      return ok(id);
     } catch (error) {
       console.error("[ReviewsService] Failed to create review:", error);
-      return { success: false, error: "Failed to create review" };
+      return fail("Failed to create review");
     }
   },
 
@@ -58,22 +59,22 @@ export const reviewsService = {
     try {
       const updated = await reviewsRepo.update(id, payload);
       if (!updated) {
-        return { success: false, error: "Review not found" };
+        return fail("Review not found");
       }
-      return { success: true, data: updated };
+      return ok(updated);
     } catch (error) {
       console.error(`[ReviewsService] Failed to update review ${id}:`, error);
-      return { success: false, error: "Failed to update review" };
+      return fail("Failed to update review");
     }
   },
 
   async delete(id: string): Promise<ServiceResponse<void>> {
     try {
       await reviewsRepo.remove(id);
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       console.error(`[ReviewsService] Failed to delete review ${id}:`, error);
-      return { success: false, error: "Failed to delete review" };
+      return fail("Failed to delete review");
     }
   },
 };

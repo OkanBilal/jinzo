@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { workspaceResourcesRepo } from "./workspaceResources.repo";
 import type {
   ServiceResponse,
@@ -22,14 +23,14 @@ export const workspaceResourcesService = {
   ): Promise<ServiceResponse<{ resources: ProjectResourceWithDetails[] }>> {
     try {
       if (!projectId) {
-        return { success: false, error: "projectId is required" };
+        return fail("projectId is required");
       }
 
       const resources = await workspaceResourcesRepo.findByProject(projectId);
-      return { success: true, data: { resources } };
+      return ok({ resources });
     } catch (error) {
       console.error("Error getting project resources:", error);
-      return { success: false, error: "Failed to get project resources" };
+      return fail("Failed to get project resources");
     }
   },
 
@@ -41,17 +42,17 @@ export const workspaceResourcesService = {
   ): Promise<ServiceResponse<{ resources: AvailableResource[] }>> {
     try {
       if (!projectId) {
-        return { success: false, error: "projectId is required" };
+        return fail("projectId is required");
       }
 
       const resources = await workspaceResourcesRepo.findAvailableResources(
         projectId,
         LINKABLE_KINDS
       );
-      return { success: true, data: { resources } };
+      return ok({ resources });
     } catch (error) {
       console.error("Error getting available resources:", error);
-      return { success: false, error: "Failed to get available resources" };
+      return fail("Failed to get available resources");
     }
   },
 
@@ -64,21 +65,21 @@ export const workspaceResourcesService = {
   ): Promise<ServiceResponse<{ resource: ProjectResource }>> {
     try {
       if (!projectId || !resourceId) {
-        return { success: false, error: "projectId and resourceId are required" };
+        return fail("projectId and resourceId are required");
       }
 
       // Check if already linked
       const isLinked = await workspaceResourcesRepo.isLinked(projectId, resourceId);
       if (isLinked) {
-        return { success: false, error: "Resource is already linked to this project" };
+        return fail("Resource is already linked to this project");
       }
 
       const id = crypto.randomUUID();
       const resource = await workspaceResourcesRepo.addResource(id, projectId, resourceId);
-      return { success: true, data: { resource } };
+      return ok({ resource });
     } catch (error) {
       console.error("Error adding resource to project:", error);
-      return { success: false, error: "Failed to add resource to project" };
+      return fail("Failed to add resource to project");
     }
   },
 
@@ -91,14 +92,14 @@ export const workspaceResourcesService = {
   ): Promise<ServiceResponse<void>> {
     try {
       if (!projectId || !resourceId) {
-        return { success: false, error: "projectId and resourceId are required" };
+        return fail("projectId and resourceId are required");
       }
 
       await workspaceResourcesRepo.removeResource(projectId, resourceId);
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       console.error("Error removing resource from project:", error);
-      return { success: false, error: "Failed to remove resource from project" };
+      return fail("Failed to remove resource from project");
     }
   },
 
@@ -110,7 +111,7 @@ export const workspaceResourcesService = {
   ): Promise<ServiceResponse<{ issues: any[] }>> {
     try {
       if (!projectId) {
-        return { success: false, error: "projectId is required" };
+        return fail("projectId is required");
       }
 
       const issues = await workspaceResourcesRepo.findIssuesByProject(projectId);
@@ -130,10 +131,10 @@ export const workspaceResourcesService = {
         },
       }));
 
-      return { success: true, data: { issues: serializedIssues } };
+      return ok({ issues: serializedIssues });
     } catch (error) {
       console.error("Error getting issues by project:", error);
-      return { success: false, error: "Failed to get issues" };
+      return fail("Failed to get issues");
     }
   },
 };

@@ -1,3 +1,4 @@
+import { ok } from "../../../shared/ipc-kit/service-response";
 import { ipcMain } from "electron";
 import { gitService } from "./git.service";
 
@@ -95,7 +96,7 @@ export function registerGitIpc(): void {
   );
 
   ipcMain.handle(CHANNELS.GET_WORKTREES_DIR, async () => {
-    return { success: true, data: gitService.getWorktreesDir() };
+    return ok(gitService.getWorktreesDir());
   });
 
   ipcMain.handle(CHANNELS.CLONE_REPO, async (_, url: string, targetPath: string) => {

@@ -1,3 +1,4 @@
+import { fail } from "../../../shared/ipc-kit/service-response";
 import { ipcMain } from "electron";
 import { browserController } from "./browser.controller";
 import type { BrowserBounds } from "./browser.dto";
@@ -34,21 +35,21 @@ function validBounds(input: unknown): BrowserBounds | null {
 export function registerBrowserIpc(): void {
   ipcMain.handle(CHANNELS.ATTACH, async (_, payload: unknown) => {
     const bounds = validBounds(payload);
-    if (!bounds) return { success: false, error: "Invalid bounds" };
+    if (!bounds) return fail("Invalid bounds");
     return browserController.attach(bounds);
   });
   ipcMain.handle(CHANNELS.DETACH, async () => browserController.detach());
   ipcMain.handle(CHANNELS.DESTROY, async () => browserController.destroy());
   ipcMain.handle(CHANNELS.SET_BOUNDS, async (_, payload: unknown) => {
     const bounds = validBounds(payload);
-    if (!bounds) return { success: false, error: "Invalid bounds" };
+    if (!bounds) return fail("Invalid bounds");
     return browserController.setBounds(bounds);
   });
   ipcMain.handle(CHANNELS.SET_VISIBLE, async (_, visible: unknown) => {
     return browserController.setVisible(Boolean(visible));
   });
   ipcMain.handle(CHANNELS.NAVIGATE, async (_, url: unknown) => {
-    if (typeof url !== "string") return { success: false, error: "url must be a string" };
+    if (typeof url !== "string") return fail("url must be a string");
     return browserController.navigate(url);
   });
   ipcMain.handle(CHANNELS.BACK, async () => browserController.goBack());
@@ -61,7 +62,7 @@ export function registerBrowserIpc(): void {
   ipcMain.handle(CHANNELS.GET_NAV_STATE, async () => browserController.getNavState());
   ipcMain.handle(CHANNELS.DELETE_CAPTURE, async (_, captureName: unknown) => {
     if (typeof captureName !== "string") {
-      return { success: false, error: "captureName must be a string" };
+      return fail("captureName must be a string");
     }
     return browserController.deleteCapture(captureName);
   });

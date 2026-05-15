@@ -1,3 +1,4 @@
+import { ok } from "../../../shared/ipc-kit/service-response";
 import { seedAccountsData } from "../../db/queries/seed-accounts";
 import { seedConnectionStates } from "../../db/queries/seed-connectionStates";
 import { seedConnections } from "../../db/queries/seed-connections";
@@ -12,7 +13,7 @@ export const seedService = {
   async seedAccounts(): Promise<ServiceResponse<string>> {
     try {
       await seedAccountsData();
-      return { success: true, data: "Accounts seeded successfully" };
+      return ok("Accounts seeded successfully");
     } catch (error) {
       console.error("Error seeding accounts:", error);
       return {
@@ -25,7 +26,7 @@ export const seedService = {
   async seedConnectionStates(): Promise<ServiceResponse<string>> {
     try {
       await seedConnectionStates();
-      return { success: true, data: "Connections States seeded successfully" };
+      return ok("Connections States seeded successfully");
     } catch (error) {
       console.error("Error seeding connection states:", error);
       return {
@@ -38,7 +39,7 @@ export const seedService = {
   async seedConnections(): Promise<ServiceResponse<string>> {
     try {
       await seedConnections();
-      return { success: true, data: "Connections States seeded successfully" };
+      return ok("Connections States seeded successfully");
     } catch (error) {
       console.error("Error seeding connections:", error);
       return {
@@ -51,7 +52,7 @@ export const seedService = {
   async seedProviders(): Promise<ServiceResponse<string>> {
     try {
       await seedProvidersData();
-      return { success: true, data: "Providers seeded successfully" };
+      return ok("Providers seeded successfully");
     } catch (error) {
       console.error("Error seeding providers:", error);
       return {
@@ -65,7 +66,7 @@ export const seedService = {
   async seedSpaces(): Promise<ServiceResponse<string>> {
     try {
       await seedSpacesData();
-      return { success: true, data: "Spaces seeded successfully" };
+      return ok("Spaces seeded successfully");
     } catch (error) {
       console.error("Error seeding spaces:", error);
       return {
@@ -82,7 +83,7 @@ export const seedService = {
       await seedConnections();
       await seedProvidersData();
       await seedSpacesData();
-      return { success: true, data: "All data seeded successfully" };
+      return ok("All data seeded successfully");
     } catch (error) {
       console.error("Error seeding data:", error);
       return {

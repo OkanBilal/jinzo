@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { ipcMain, BrowserWindow } from "electron";
 import { terminalService } from "./terminal.service";
 
@@ -23,30 +24,30 @@ export function registerTerminalIpc(): void {
           }
         });
 
-        return { success: true };
+        return ok(undefined);
       } catch (err) {
         console.error("[Terminal] Failed to create terminal:", err);
-        return { success: false, error: err instanceof Error ? err.message : "Failed to create terminal" };
+        return fail(err instanceof Error ? err.message : "Failed to create terminal");
       }
     },
   );
 
   ipcMain.handle(CHANNELS.WRITE, async (_, id: string, data: string) => {
     terminalService.write(id, data);
-    return { success: true };
+    return ok(undefined);
   });
 
   ipcMain.handle(
     CHANNELS.RESIZE,
     async (_, id: string, cols: number, rows: number) => {
       terminalService.resize(id, cols, rows);
-      return { success: true };
+      return ok(undefined);
     },
   );
 
   ipcMain.handle(CHANNELS.DESTROY, async (_, id: string) => {
     terminalService.destroy(id);
-    return { success: true };
+    return ok(undefined);
   });
 }
 

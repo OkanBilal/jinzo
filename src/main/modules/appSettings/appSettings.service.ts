@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { ACCOUNT_ID, SETTINGS_ID } from "./appSettings.constants";
 import { appSettingsRepo } from "./appSettings.repo";
 import { sanitizeAppSettingsPatch } from "./appSettings.validation";
@@ -24,7 +25,7 @@ export const appSettingsService = {
   async getSettings(): Promise<ServiceResponse<AppSettingsRecord>> {
     try {
       const settings = await this.ensureSettings();
-      return { success: true, data: settings };
+      return ok(settings);
     } catch (error) {
       console.error("Error fetching app settings:", error);
       return {
@@ -40,15 +41,15 @@ export const appSettingsService = {
     try {
       const sanitized = sanitizeAppSettingsPatch(patch);
       if (!sanitized) {
-        return { success: false, error: "patch must be an object" };
+        return fail("patch must be an object");
       }
 
       await this.ensureSettings();
       const updated = await appSettingsRepo.update(SETTINGS_ID, sanitized);
       if (!updated) {
-        return { success: false, error: "Failed to update settings" };
+        return fail("Failed to update settings");
       }
-      return { success: true, data: updated };
+      return ok(updated);
     } catch (error) {
       console.error("Error updating app settings:", error);
       return {

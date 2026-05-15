@@ -1,3 +1,4 @@
+import { fail } from "../../../shared/ipc-kit/service-response";
 import crypto from "crypto";
 import os from "os";
 import { safeStorage } from "electron";
@@ -140,7 +141,7 @@ export function parseProviderCredentials(
 
   const config = PROVIDER_SECRET_FIELDS[provider];
   if (!config) {
-    return { success: false, error: `Unsupported provider: ${provider}` };
+    return fail(`Unsupported provider: ${provider}`);
   }
 
   const secrets: Record<string, string> = {};
@@ -149,7 +150,7 @@ export function parseProviderCredentials(
   for (const field of config.required) {
     const value = credentials[field];
     if (!value || typeof value !== "string") {
-      return { success: false, error: `${field} is required` };
+      return fail(`${field} is required`);
     }
     secrets[field] = value;
     allValues.push(value);

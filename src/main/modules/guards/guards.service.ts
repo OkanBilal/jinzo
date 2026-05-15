@@ -13,7 +13,7 @@ import { getActiveGuard, getActiveGuardInfo } from "./adapters/adapter.factory";
 import { parseInstallCommand } from "./guards.utils";
 import { workspaceActivityService } from "../workspaceActivity/workspaceActivity.service";
 
-import type { ServiceResponse } from "../../../shared/ipc-kit/service-response";
+import { ok, fail, type ServiceResponse } from "../../../shared/ipc-kit/service-response";
 export type { ServiceResponse };
 
 export const guardsService = {
@@ -22,7 +22,7 @@ export const guardsService = {
    */
   getActiveGuard(): ServiceResponse<{ id: string; displayName: string } | null> {
     const info = getActiveGuardInfo();
-    return { success: true, data: info };
+    return ok(info);
   },
 
   /**
@@ -32,14 +32,14 @@ export const guardsService = {
     try {
       const adapter = await getActiveGuard();
       if (!adapter) {
-        return { success: false, error: "No guard service is connected" };
+        return fail("No guard service is connected");
       }
 
       const result = await adapter.checkPackage(pkg);
-      return { success: true, data: result };
+      return ok(result);
     } catch (error: any) {
       console.error("[Guards] checkPackage failed:", error);
-      return { success: false, error: error?.message || "Failed to check package" };
+      return fail(error?.message || "Failed to check package");
     }
   },
 
@@ -50,14 +50,14 @@ export const guardsService = {
     try {
       const adapter = await getActiveGuard();
       if (!adapter) {
-        return { success: false, error: "No guard service is connected" };
+        return fail("No guard service is connected");
       }
 
       const results = await adapter.checkPackages(pkgs);
-      return { success: true, data: results };
+      return ok(results);
     } catch (error: any) {
       console.error("[Guards] checkPackages failed:", error);
-      return { success: false, error: error?.message || "Failed to check packages" };
+      return fail(error?.message || "Failed to check packages");
     }
   },
 
@@ -68,14 +68,14 @@ export const guardsService = {
     try {
       const adapter = await getActiveGuard();
       if (!adapter) {
-        return { success: false, error: "No guard service is connected" };
+        return fail("No guard service is connected");
       }
 
       const score = await adapter.getPackageScore(pkg);
-      return { success: true, data: score };
+      return ok(score);
     } catch (error: any) {
       console.error("[Guards] getPackageScore failed:", error);
-      return { success: false, error: error?.message || "Failed to get package score" };
+      return fail(error?.message || "Failed to get package score");
     }
   },
 
@@ -124,7 +124,7 @@ export const guardsService = {
     try {
       const adapter = await getActiveGuard();
       if (!adapter) {
-        return { success: false, error: "No guard service is connected" };
+        return fail("No guard service is connected");
       }
 
       const results = await adapter.scanProject(rootPath);
@@ -156,10 +156,10 @@ export const guardsService = {
         });
       }
 
-      return { success: true, data: results };
+      return ok(results);
     } catch (error: any) {
       console.error("[Guards] scanWorkspace failed:", error);
-      return { success: false, error: error?.message || "Failed to scan workspace" };
+      return fail(error?.message || "Failed to scan workspace");
     }
   },
 

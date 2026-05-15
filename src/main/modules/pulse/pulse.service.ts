@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { pulseRepo } from "./pulse.repo";
 import { validateCreate, validateUpdate } from "./pulse.validation";
 import { runsService } from "../runs/runs.service";
@@ -151,41 +152,41 @@ export const pulseService = {
 
   getAll(): ServiceResponse<Pulse[]> {
     try {
-      return { success: true, data: pulseRepo.findAll() };
+      return ok(pulseRepo.findAll());
     } catch (err: any) {
-      return { success: false, error: err.message };
+      return fail(err.message);
     }
   },
 
   getById(id: string): ServiceResponse<Pulse | null> {
     try {
-      return { success: true, data: pulseRepo.findById(id) ?? null };
+      return ok(pulseRepo.findById(id) ?? null);
     } catch (err: any) {
-      return { success: false, error: err.message };
+      return fail(err.message);
     }
   },
 
   create(accountId: string, input: CreatePulseInput): ServiceResponse<Pulse> {
     try {
       const validationError = validateCreate(input);
-      if (validationError) return { success: false, error: validationError };
+      if (validationError) return fail(validationError);
 
       const nextRunAt = computeNextRunAt(input, new Date());
       const pulse = pulseRepo.create(accountId, input, nextRunAt);
       scheduleNext();
-      return { success: true, data: pulse };
+      return ok(pulse);
     } catch (err: any) {
-      return { success: false, error: err.message };
+      return fail(err.message);
     }
   },
 
   update(id: string, input: UpdatePulseInput): ServiceResponse<Pulse | null> {
     try {
       const validationError = validateUpdate(input);
-      if (validationError) return { success: false, error: validationError };
+      if (validationError) return fail(validationError);
 
       const existing = pulseRepo.findById(id);
-      if (!existing) return { success: false, error: "Pulse not found" };
+      if (!existing) return fail("Pulse not found");
 
       // Recompute nextRunAt if any scheduling field changed
       const scheduleChanged =
@@ -201,9 +202,9 @@ export const pulseService = {
 
       const pulse = pulseRepo.update(id, input, nextRunAt);
       scheduleNext();
-      return { success: true, data: pulse ?? null };
+      return ok(pulse ?? null);
     } catch (err: any) {
-      return { success: false, error: err.message };
+      return fail(err.message);
     }
   },
 
@@ -211,9 +212,9 @@ export const pulseService = {
     try {
       pulseRepo.delete(id);
       scheduleNext();
-      return { success: true, data: null };
+      return ok(null);
     } catch (err: any) {
-      return { success: false, error: err.message };
+      return fail(err.message);
     }
   },
 
@@ -225,7 +226,7 @@ export const pulseService = {
 
   async executePulse(id: string): Promise<ServiceResponse<Pulse | null>> {
     const pulse = pulseRepo.findById(id);
-    if (!pulse) return { success: false, error: "Pulse not found" };
+    if (!pulse) return fail("Pulse not found");
 
     const now = new Date();
     const nextRunAt = computeNextRunAt(pulse, now);
@@ -253,7 +254,7 @@ export const pulseService = {
         const errMsg = result.error ?? "Run failed";
         pulseRepo.markRun(id, { lastRunAt: now, nextRunAt, lastError: errMsg });
         scheduleNext();
-        return { success: false, error: errMsg };
+        return fail(errMsg);
       }
 
       pulseRepo.markRun(id, {
@@ -263,12 +264,12 @@ export const pulseService = {
         lastError: null,
       });
       scheduleNext();
-      return { success: true, data: pulseRepo.findById(id) ?? null };
+      return ok(pulseRepo.findById(id) ?? null);
     } catch (err: any) {
       const message = err?.message ?? String(err);
       pulseRepo.markRun(id, { lastRunAt: now, nextRunAt, lastError: message });
       scheduleNext();
-      return { success: false, error: message };
+      return fail(message);
     }
   },
 

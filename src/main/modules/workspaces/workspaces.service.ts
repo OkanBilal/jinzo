@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { randomUUID } from "crypto";
 import { execFile } from "child_process";
 import { existsSync } from "fs";
@@ -54,10 +55,10 @@ export const workspacesService = {
   async getAll(): Promise<ServiceResponse<WorkspaceResponse[]>> {
     try {
       const workspaces = await workspacesRepo.findAll();
-      return { success: true, data: workspaces };
+      return ok(workspaces);
     } catch (error) {
       console.error("[WorkspacesService] Failed to get all workspaces:", error);
-      return { success: false, error: "Failed to get workspaces" };
+      return fail("Failed to get workspaces");
     }
   },
 
@@ -65,22 +66,22 @@ export const workspacesService = {
     try {
       const workspace = await workspacesRepo.findById(id);
       if (!workspace) {
-        return { success: false, error: "Workspace not found" };
+        return fail("Workspace not found");
       }
-      return { success: true, data: workspace };
+      return ok(workspace);
     } catch (error) {
       console.error(`[WorkspacesService] Failed to get workspace ${id}:`, error);
-      return { success: false, error: "Failed to get workspace" };
+      return fail("Failed to get workspace");
     }
   },
 
   async getByAccountId(accountId: string): Promise<ServiceResponse<WorkspaceResponse[]>> {
     try {
       const workspaces = await workspacesRepo.findByAccountId(accountId);
-      return { success: true, data: workspaces };
+      return ok(workspaces);
     } catch (error) {
       console.error(`[WorkspacesService] Failed to get workspaces for account ${accountId}:`, error);
-      return { success: false, error: "Failed to get workspaces" };
+      return fail("Failed to get workspaces");
     }
   },
 
@@ -91,12 +92,12 @@ export const workspacesService = {
     try {
       const workspace = await workspacesRepo.findByRootPath(accountId, rootPath);
       if (!workspace) {
-        return { success: false, error: "Workspace not found" };
+        return fail("Workspace not found");
       }
-      return { success: true, data: workspace };
+      return ok(workspace);
     } catch (error) {
       console.error(`[WorkspacesService] Failed to get workspace by path:`, error);
-      return { success: false, error: "Failed to get workspace" };
+      return fail("Failed to get workspace");
     }
   },
 
@@ -105,7 +106,7 @@ export const workspacesService = {
       // Check if workspace with same path exists
       const existing = await workspacesRepo.findByRootPath(payload.accountId, payload.rootPath);
       if (existing) {
-        return { success: false, error: "Workspace with this path already exists" };
+        return fail("Workspace with this path already exists");
       }
 
       // Generate ID if not provided
@@ -117,7 +118,7 @@ export const workspacesService = {
       const id = await workspacesRepo.insert(workspacePayload);
       const workspace = await workspacesRepo.findById(id);
       if (!workspace) {
-        return { success: false, error: "Failed to retrieve created workspace" };
+        return fail("Failed to retrieve created workspace");
       }
 
       // Fire-and-forget: run project setupScript in background
@@ -139,10 +140,10 @@ export const workspacesService = {
         }).catch(() => {});
       }
 
-      return { success: true, data: workspace };
+      return ok(workspace);
     } catch (error) {
       console.error("[WorkspacesService] Failed to create workspace:", error);
-      return { success: false, error: "Failed to create workspace" };
+      return fail("Failed to create workspace");
     }
   },
 
@@ -153,22 +154,22 @@ export const workspacesService = {
     try {
       const updated = await workspacesRepo.update(id, payload);
       if (!updated) {
-        return { success: false, error: "Workspace not found" };
+        return fail("Workspace not found");
       }
-      return { success: true, data: updated };
+      return ok(updated);
     } catch (error) {
       console.error(`[WorkspacesService] Failed to update workspace ${id}:`, error);
-      return { success: false, error: "Failed to update workspace" };
+      return fail("Failed to update workspace");
     }
   },
 
   async delete(id: string): Promise<ServiceResponse<void>> {
     try {
       await workspacesRepo.delete(id);
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       console.error(`[WorkspacesService] Failed to delete workspace ${id}:`, error);
-      return { success: false, error: "Failed to delete workspace" };
+      return fail("Failed to delete workspace");
     }
   },
 
@@ -183,12 +184,12 @@ export const workspacesService = {
     try {
       const workspace = await workspacesRepo.findById(id);
       if (!workspace) {
-        return { success: false, error: "Workspace not found" };
+        return fail("Workspace not found");
       }
 
       const archived = await workspacesRepo.archive(id);
       if (!archived) {
-        return { success: false, error: "Failed to archive workspace" };
+        return fail("Failed to archive workspace");
       }
 
       // Fire-and-forget: run project archiveScript in background
@@ -210,10 +211,10 @@ export const workspacesService = {
         }).catch(() => {});
       }
 
-      return { success: true, data: archived };
+      return ok(archived);
     } catch (error) {
       console.error(`[WorkspacesService] Failed to archive workspace ${id}:`, error);
-      return { success: false, error: "Failed to archive workspace" };
+      return fail("Failed to archive workspace");
     }
   },
 };

@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { automationsRepo } from "./automations.repo";
 import { syncService } from "../sync/sync.service";
 import type {
@@ -121,50 +122,50 @@ export const automationsService = {
 
   getAll(): ServiceResponse<Automation[]> {
     try {
-      return { success: true, data: automationsRepo.findAll() };
+      return ok(automationsRepo.findAll());
     } catch (err: any) {
-      return { success: false, error: err.message };
+      return fail(err.message);
     }
   },
 
   getById(id: string): ServiceResponse<Automation | null> {
     try {
-      return { success: true, data: automationsRepo.findById(id) ?? null };
+      return ok(automationsRepo.findById(id) ?? null);
     } catch (err: any) {
-      return { success: false, error: err.message };
+      return fail(err.message);
     }
   },
 
   create(accountId: string, input: CreateAutomationInput): ServiceResponse<Automation> {
     try {
       if (!actionHandlers[input.action]) {
-        return { success: false, error: `Unknown action: ${input.action}` };
+        return fail(`Unknown action: ${input.action}`);
       }
       if (input.intervalMinutes < 1) {
-        return { success: false, error: "Interval must be at least 1 minute" };
+        return fail("Interval must be at least 1 minute");
       }
 
       const automation = automationsRepo.create(accountId, input);
       scheduleNext(automation);
 
-      return { success: true, data: automation };
+      return ok(automation);
     } catch (err: any) {
-      return { success: false, error: err.message };
+      return fail(err.message);
     }
   },
 
   update(id: string, input: UpdateAutomationInput): ServiceResponse<Automation | null> {
     try {
       if (input.action && !actionHandlers[input.action]) {
-        return { success: false, error: `Unknown action: ${input.action}` };
+        return fail(`Unknown action: ${input.action}`);
       }
       if (input.intervalMinutes !== undefined && input.intervalMinutes < 1) {
-        return { success: false, error: "Interval must be at least 1 minute" };
+        return fail("Interval must be at least 1 minute");
       }
 
       const automation = automationsRepo.update(id, input);
       if (!automation) {
-        return { success: false, error: "Automation not found" };
+        return fail("Automation not found");
       }
 
       // Reschedule or cancel
@@ -174,9 +175,9 @@ export const automationsService = {
         cancelTimer(id);
       }
 
-      return { success: true, data: automation };
+      return ok(automation);
     } catch (err: any) {
-      return { success: false, error: err.message };
+      return fail(err.message);
     }
   },
 
@@ -184,9 +185,9 @@ export const automationsService = {
     try {
       cancelTimer(id);
       automationsRepo.delete(id);
-      return { success: true, data: null };
+      return ok(null);
     } catch (err: any) {
-      return { success: false, error: err.message };
+      return fail(err.message);
     }
   },
 
@@ -195,12 +196,12 @@ export const automationsService = {
   async executeAutomation(id: string): Promise<ServiceResponse<AutomationRun | null>> {
     const automation = automationsRepo.findById(id);
     if (!automation) {
-      return { success: false, error: "Automation not found" };
+      return fail("Automation not found");
     }
 
     const handler = actionHandlers[automation.action];
     if (!handler) {
-      return { success: false, error: `No handler for action: ${automation.action}` };
+      return fail(`No handler for action: ${automation.action}`);
     }
 
     const runId = automationsRepo.createRun(id);
@@ -215,7 +216,7 @@ export const automationsService = {
       if (updated) scheduleNext(updated);
 
       const runs = automationsRepo.getRunsByAutomation(id, 1);
-      return { success: true, data: runs[0] ?? null };
+      return ok(runs[0] ?? null);
     } catch (err: any) {
       const errorMsg = err.message || "Unknown error";
       automationsRepo.completeRun(runId, "error", undefined, errorMsg);
@@ -226,7 +227,7 @@ export const automationsService = {
       if (updated) scheduleNext(updated);
 
       const runs = automationsRepo.getRunsByAutomation(id, 1);
-      return { success: true, data: runs[0] ?? null };
+      return ok(runs[0] ?? null);
     }
   },
 
@@ -234,9 +235,9 @@ export const automationsService = {
 
   getRunHistory(automationId: string, limit = 20): ServiceResponse<AutomationRun[]> {
     try {
-      return { success: true, data: automationsRepo.getRunsByAutomation(automationId, limit) };
+      return ok(automationsRepo.getRunsByAutomation(automationId, limit));
     } catch (err: any) {
-      return { success: false, error: err.message };
+      return fail(err.message);
     }
   },
 

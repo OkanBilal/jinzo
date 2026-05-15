@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { randomUUID } from "crypto";
 import * as fs from "fs";
 import { projectsRepo } from "./projects.repo";
@@ -20,10 +21,10 @@ export const projectsService = {
   async getAll(): Promise<ServiceResponse<ProjectResponse[]>> {
     try {
       const projects = await projectsRepo.findAll();
-      return { success: true, data: projects };
+      return ok(projects);
     } catch (error) {
       console.error("[ProjectsService] Failed to get all projects:", error);
-      return { success: false, error: "Failed to get projects" };
+      return fail("Failed to get projects");
     }
   },
 
@@ -31,22 +32,22 @@ export const projectsService = {
     try {
       const project = await projectsRepo.findById(id);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return fail("Project not found");
       }
-      return { success: true, data: project };
+      return ok(project);
     } catch (error) {
       console.error(`[ProjectsService] Failed to get project ${id}:`, error);
-      return { success: false, error: "Failed to get project" };
+      return fail("Failed to get project");
     }
   },
 
   async getByAccountId(accountId: string): Promise<ServiceResponse<ProjectResponse[]>> {
     try {
       const projects = await projectsRepo.findByAccountId(accountId);
-      return { success: true, data: projects };
+      return ok(projects);
     } catch (error) {
       console.error(`[ProjectsService] Failed to get projects for account ${accountId}:`, error);
-      return { success: false, error: "Failed to get projects" };
+      return fail("Failed to get projects");
     }
   },
 
@@ -58,12 +59,12 @@ export const projectsService = {
       const normalized = normalizeRemoteOrigin(remoteOrigin);
       const project = await projectsRepo.findByRemoteOrigin(accountId, normalized);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return fail("Project not found");
       }
-      return { success: true, data: project };
+      return ok(project);
     } catch (error) {
       console.error("[ProjectsService] Failed to find project by remote origin:", error);
-      return { success: false, error: "Failed to find project" };
+      return fail("Failed to find project");
     }
   },
 
@@ -78,7 +79,7 @@ export const projectsService = {
         ? await projectsRepo.findByRemoteOrigin(payload.accountId, normalized)
         : await projectsRepo.findByAccountAndRootPath(payload.accountId, payload.rootPath);
       if (existing) {
-        return { success: true, data: existing };
+        return ok(existing);
       }
 
       const id = payload.id || randomUUID();
@@ -90,12 +91,12 @@ export const projectsService = {
 
       const project = await projectsRepo.findById(id);
       if (!project) {
-        return { success: false, error: "Failed to retrieve created project" };
+        return fail("Failed to retrieve created project");
       }
-      return { success: true, data: project };
+      return ok(project);
     } catch (error) {
       console.error("[ProjectsService] Failed to find or create project:", error);
-      return { success: false, error: "Failed to find or create project" };
+      return fail("Failed to find or create project");
     }
   },
 
@@ -126,12 +127,12 @@ export const projectsService = {
 
       const project = await projectsRepo.findById(id);
       if (!project) {
-        return { success: false, error: "Failed to retrieve created project" };
+        return fail("Failed to retrieve created project");
       }
-      return { success: true, data: project };
+      return ok(project);
     } catch (error) {
       console.error("[ProjectsService] Failed to create project:", error);
-      return { success: false, error: "Failed to create project" };
+      return fail("Failed to create project");
     }
   },
 
@@ -142,12 +143,12 @@ export const projectsService = {
     try {
       const updated = await projectsRepo.update(id, payload);
       if (!updated) {
-        return { success: false, error: "Project not found" };
+        return fail("Project not found");
       }
-      return { success: true, data: updated };
+      return ok(updated);
     } catch (error) {
       console.error(`[ProjectsService] Failed to update project ${id}:`, error);
-      return { success: false, error: "Failed to update project" };
+      return fail("Failed to update project");
     }
   },
 
@@ -155,7 +156,7 @@ export const projectsService = {
     try {
       const project = await projectsRepo.findById(id);
       if (!project) {
-        return { success: false, error: "Project not found" };
+        return fail("Project not found");
       }
 
       // Find all workspaces belonging to this project
@@ -203,20 +204,20 @@ export const projectsService = {
       // Delete the project from DB
       await projectsRepo.delete(id);
 
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       console.error(`[ProjectsService] Failed to remove project ${id}:`, error);
-      return { success: false, error: "Failed to remove project" };
+      return fail("Failed to remove project");
     }
   },
 
   async delete(id: string): Promise<ServiceResponse<void>> {
     try {
       await projectsRepo.delete(id);
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       console.error(`[ProjectsService] Failed to delete project ${id}:`, error);
-      return { success: false, error: "Failed to delete project" };
+      return fail("Failed to delete project");
     }
   },
 
@@ -224,12 +225,12 @@ export const projectsService = {
     try {
       const archived = await projectsRepo.archive(id);
       if (!archived) {
-        return { success: false, error: "Project not found" };
+        return fail("Project not found");
       }
-      return { success: true, data: archived };
+      return ok(archived);
     } catch (error) {
       console.error(`[ProjectsService] Failed to archive project ${id}:`, error);
-      return { success: false, error: "Failed to archive project" };
+      return fail("Failed to archive project");
     }
   },
 };

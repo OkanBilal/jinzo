@@ -1,3 +1,4 @@
+import { ok } from "../../../shared/ipc-kit/service-response";
 import { automationsService } from "./automations.service";
 import type {
   Automation,
@@ -40,6 +41,6 @@ export const automationsController = {
   },
 
   getAvailableActions(): ServiceResponse<string[]> {
-    return { success: true, data: automationsService.getAvailableActions() };
+    return ok(automationsService.getAvailableActions());
   },
 };

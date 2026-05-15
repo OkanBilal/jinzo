@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { Octokit } from "@octokit/rest";
 import { LinearClient } from "@linear/sdk";
 import { connectionsRepo } from "./connections.repo";
@@ -191,10 +192,10 @@ export const connectionsService = {
   // GitHub
   async getGithubRepos(connectionId: string): Promise<ServiceResponse<{ repos: GithubRepo[] }>> {
     try {
-      if (!connectionId) return { success: false, error: "connectionId is required" };
+      if (!connectionId) return fail("connectionId is required");
 
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return { success: false, error: result.error };
+      if (!result.ok) return fail(result.error);
 
       const octokit = new Octokit({ auth: result.secrets.token });
       const { data: repos } = await octokit.repos.listForAuthenticatedUser({
@@ -218,20 +219,20 @@ export const connectionsService = {
         updatedAt: repo.updated_at,
       }));
 
-      return { success: true, data: { repos: formattedRepos } };
+      return ok({ repos: formattedRepos });
     } catch (error) {
       console.error("Error fetching GitHub repos:", error);
-      return { success: false, error: "Failed to fetch repositories" };
+      return fail("Failed to fetch repositories");
     }
   },
 
   // Linear
   async getLinearTeams(connectionId: string): Promise<ServiceResponse<{ teams: LinearTeam[] }>> {
     try {
-      if (!connectionId) return { success: false, error: "connectionId is required" };
+      if (!connectionId) return fail("connectionId is required");
 
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return { success: false, error: result.error };
+      if (!result.ok) return fail(result.error);
 
       const linearClient = new LinearClient({ apiKey: result.secrets.apiKey });
       const [teamsConnection, organization] = await Promise.all([linearClient.teams(), linearClient.organization]);
@@ -249,28 +250,28 @@ export const connectionsService = {
         url: `https://linear.app/${orgUrlKey}/team/${team.key}`,
       }));
 
-      return { success: true, data: { teams: formattedTeams } };
+      return ok({ teams: formattedTeams });
     } catch (error: any) {
       console.error("Error fetching Linear teams:", error);
       console.error("Linear error details:", { message: error?.message, type: error?.type, errors: error?.errors });
-      return { success: false, error: error?.message || "Failed to fetch teams" };
+      return fail(error?.message || "Failed to fetch teams");
     }
   },
 
   // Jira
   async getJiraProjects(connectionId: string): Promise<ServiceResponse<{ projects: JiraProject[] }>> {
     try {
-      if (!connectionId) return { success: false, error: "connectionId is required" };
+      if (!connectionId) return fail("connectionId is required");
 
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return { success: false, error: result.error };
+      if (!result.ok) return fail(result.error);
 
       const metadata = result.connection.metadata ? JSON.parse(result.connection.metadata) : {};
       const domain = metadata.domain as string;
       const email = metadata.email as string;
 
       if (!domain || !email) {
-        return { success: false, error: "Jira domain and email are required in connection metadata" };
+        return fail("Jira domain and email are required in connection metadata");
       }
 
       const credentials = Buffer.from(`${email}:${result.secrets.apiToken}`).toString("base64");
@@ -283,7 +284,7 @@ export const connectionsService = {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Jira API error (${response.status}):`, errorText);
-        return { success: false, error: `Jira API error: ${response.status}` };
+        return fail(`Jira API error: ${response.status}`);
       }
 
       const data: any = await response.json();
@@ -301,20 +302,20 @@ export const connectionsService = {
         })
       );
 
-      return { success: true, data: { projects: formattedProjects } };
+      return ok({ projects: formattedProjects });
     } catch (error: any) {
       console.error("Error fetching Jira projects:", error);
-      return { success: false, error: error?.message || "Failed to fetch projects" };
+      return fail(error?.message || "Failed to fetch projects");
     }
   },
 
   // Asana
   async getAsanaProjects(connectionId: string): Promise<ServiceResponse<{ projects: AsanaProject[] }>> {
     try {
-      if (!connectionId) return { success: false, error: "connectionId is required" };
+      if (!connectionId) return fail("connectionId is required");
 
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return { success: false, error: result.error };
+      if (!result.ok) return fail(result.error);
 
       const headers = { Authorization: `Bearer ${result.secrets.accessToken}`, Accept: "application/json" };
 
@@ -323,13 +324,13 @@ export const connectionsService = {
       if (!workspacesResponse.ok) {
         const errorText = await workspacesResponse.text();
         console.error(`Asana API error fetching workspaces (${workspacesResponse.status}):`, errorText);
-        return { success: false, error: `Asana API error: ${workspacesResponse.status}` };
+        return fail(`Asana API error: ${workspacesResponse.status}`);
       }
 
       const workspacesData: any = await workspacesResponse.json();
       const workspaces = workspacesData.data || [];
 
-      if (workspaces.length === 0) return { success: true, data: { projects: [] } };
+      if (workspaces.length === 0) return ok({ projects: [] });
 
       const allProjects: AsanaProject[] = [];
 
@@ -368,20 +369,20 @@ export const connectionsService = {
         allProjects.push(...projects);
       }
 
-      return { success: true, data: { projects: allProjects } };
+      return ok({ projects: allProjects });
     } catch (error: any) {
       console.error("Error fetching Asana projects:", error);
-      return { success: false, error: error?.message || "Failed to fetch projects" };
+      return fail(error?.message || "Failed to fetch projects");
     }
   },
 
   // GitLab
   async getGitlabProjects(connectionId: string): Promise<ServiceResponse<{ projects: GitlabProject[] }>> {
     try {
-      if (!connectionId) return { success: false, error: "connectionId is required" };
+      if (!connectionId) return fail("connectionId is required");
 
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return { success: false, error: result.error };
+      if (!result.ok) return fail(result.error);
 
       const metadata = result.connection.metadata ? JSON.parse(result.connection.metadata) : {};
       const domain = (metadata.domain as string) || "gitlab.com";
@@ -396,7 +397,7 @@ export const connectionsService = {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`GitLab API error (${response.status}):`, errorText);
-        return { success: false, error: `GitLab API error: ${response.status}` };
+        return fail(`GitLab API error: ${response.status}`);
       }
 
       const data: any = await response.json();
@@ -416,25 +417,25 @@ export const connectionsService = {
         })
       );
 
-      return { success: true, data: { projects: formattedProjects } };
+      return ok({ projects: formattedProjects });
     } catch (error: any) {
       console.error("Error fetching GitLab projects:", error);
-      return { success: false, error: error?.message || "Failed to fetch projects" };
+      return fail(error?.message || "Failed to fetch projects");
     }
   },
 
   // Trello
   async getTrelloBoards(connectionId: string): Promise<ServiceResponse<{ boards: TrelloBoard[] }>> {
     try {
-      if (!connectionId) return { success: false, error: "connectionId is required" };
+      if (!connectionId) return fail("connectionId is required");
 
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return { success: false, error: result.error };
+      if (!result.ok) return fail(result.error);
 
       const { apiKey, token } = result.secrets;
 
       if (!apiKey || !token) {
-        return { success: false, error: "Trello API key and token are required" };
+        return fail("Trello API key and token are required");
       }
 
       const authParams = `key=${encodeURIComponent(apiKey)}&token=${encodeURIComponent(token)}`;
@@ -446,7 +447,7 @@ export const connectionsService = {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Trello API error (${response.status}):`, errorText);
-        return { success: false, error: `Trello API error: ${response.status}` };
+        return fail(`Trello API error: ${response.status}`);
       }
 
       const data: any = await response.json();
@@ -463,26 +464,26 @@ export const connectionsService = {
           url: board.shortUrl as string,
         }));
 
-      return { success: true, data: { boards: formattedBoards } };
+      return ok({ boards: formattedBoards });
     } catch (error: any) {
       console.error("Error fetching Trello boards:", error);
-      return { success: false, error: error?.message || "Failed to fetch boards" };
+      return fail(error?.message || "Failed to fetch boards");
     }
   },
 
   // Sentry
   async getSentryProjects(connectionId: string): Promise<ServiceResponse<{ projects: SentryProject[] }>> {
     try {
-      if (!connectionId) return { success: false, error: "connectionId is required" };
+      if (!connectionId) return fail("connectionId is required");
 
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return { success: false, error: result.error };
+      if (!result.ok) return fail(result.error);
 
       const metadata = result.connection.metadata ? JSON.parse(result.connection.metadata) : {};
       const organization = metadata.organization as string;
 
       if (!organization) {
-        return { success: false, error: "Sentry organization slug is required" };
+        return fail("Sentry organization slug is required");
       }
 
       const response = await fetch(
@@ -493,7 +494,7 @@ export const connectionsService = {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Sentry API error (${response.status}):`, errorText);
-        return { success: false, error: `Sentry API error: ${response.status}` };
+        return fail(`Sentry API error: ${response.status}`);
       }
 
       const data: any = await response.json();
@@ -509,20 +510,20 @@ export const connectionsService = {
         })
       );
 
-      return { success: true, data: { projects: formattedProjects } };
+      return ok({ projects: formattedProjects });
     } catch (error: any) {
       console.error("Error fetching Sentry projects:", error);
-      return { success: false, error: error?.message || "Failed to fetch Sentry projects" };
+      return fail(error?.message || "Failed to fetch Sentry projects");
     }
   },
 
   // Socket.dev
   async getSocketDevOrganizations(connectionId: string): Promise<ServiceResponse<{ organizations: SocketDevOrganization[] }>> {
     try {
-      if (!connectionId) return { success: false, error: "connectionId is required" };
+      if (!connectionId) return fail("connectionId is required");
 
       const result = await getConnectionAndSecrets(connectionId);
-      if (!result.ok) return { success: false, error: result.error };
+      if (!result.ok) return fail(result.error);
 
       const response = await fetch(
         "https://api.socket.dev/v0/organizations",
@@ -532,7 +533,7 @@ export const connectionsService = {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Socket.dev API error (${response.status}):`, errorText);
-        return { success: false, error: `Socket.dev API error: ${response.status}` };
+        return fail(`Socket.dev API error: ${response.status}`);
       }
 
       const data: any = await response.json();
@@ -546,10 +547,10 @@ export const connectionsService = {
         })
       );
 
-      return { success: true, data: { organizations: formattedOrgs } };
+      return ok({ organizations: formattedOrgs });
     } catch (error: any) {
       console.error("Error fetching Socket.dev organizations:", error);
-      return { success: false, error: error?.message || "Failed to fetch Socket.dev organizations" };
+      return fail(error?.message || "Failed to fetch Socket.dev organizations");
     }
   },
 
@@ -561,13 +562,13 @@ export const connectionsService = {
       const { provider, connectionId, resources } = payload;
 
       if (!provider || !connectionId) {
-        return { success: false, error: "Provider and connectionId are required" };
+        return fail("Provider and connectionId are required");
       }
 
       const mapper = RESOURCE_MAPPERS[provider];
-      if (!mapper) return { success: false, error: `Unsupported provider: ${provider}` };
+      if (!mapper) return fail(`Unsupported provider: ${provider}`);
 
-      if (!resources?.length) return { success: false, error: "Resources are required" };
+      if (!resources?.length) return fail("Resources are required");
 
       for (const resource of resources) {
         await upsertConnectionResource({ connectionId, ...mapper(resource) });
@@ -579,24 +580,24 @@ export const connectionsService = {
       };
     } catch (error) {
       console.error("Error saving resources:", error);
-      return { success: false, error: "Failed to save resources" };
+      return fail("Failed to save resources");
     }
   },
 
   // Remove resource
   async removeResource(resourceId: string): Promise<ServiceResponse<{ message: string }>> {
     try {
-      if (!resourceId) return { success: false, error: "Resource ID is required" };
+      if (!resourceId) return fail("Resource ID is required");
 
       const decodedResourceId = decodeURIComponent(resourceId);
       const rows = await connectionsRepo.deleteResource(decodedResourceId);
 
-      if (rows.length === 0) return { success: false, error: "Resource not found" };
+      if (rows.length === 0) return fail("Resource not found");
 
-      return { success: true, data: { message: "Resource removed successfully" } };
+      return ok({ message: "Resource removed successfully" });
     } catch (error) {
       console.error("Error removing resource:", error);
-      return { success: false, error: "Failed to remove resource" };
+      return fail("Failed to remove resource");
     }
   },
 
@@ -613,10 +614,10 @@ export const connectionsService = {
     }>
   > {
     try {
-      if (!provider) return { success: false, error: "Provider is required" };
+      if (!provider) return fail("Provider is required");
 
       const connection = await connectionsRepo.findByProvider(provider);
-      if (!connection) return { success: false, error: `${provider} connection not found` };
+      if (!connection) return fail(`${provider} connection not found`);
 
       return {
         success: true,
@@ -632,20 +633,20 @@ export const connectionsService = {
       };
     } catch (error) {
       console.error("Error fetching connection:", error);
-      return { success: false, error: "Failed to fetch connection" };
+      return fail("Failed to fetch connection");
     }
   },
 
   // Get selected resources
   async getSelectedResources(provider: string): Promise<ServiceResponse<unknown>> {
     try {
-      if (!provider) return { success: false, error: "Provider is required" };
+      if (!provider) return fail("Provider is required");
 
       const config = SELECTED_RESOURCE_CONFIGS[provider];
-      if (!config) return { success: false, error: `Unsupported provider: ${provider}` };
+      if (!config) return fail(`Unsupported provider: ${provider}`);
 
       const connection = await connectionsRepo.findByProvider(provider);
-      if (!connection) return { success: false, error: `${provider} connection not found` };
+      if (!connection) return fail(`${provider} connection not found`);
 
       const resources = await connectionsRepo.findResourcesByConnectionAndKind(connection.id, config.kind, true);
 
@@ -655,30 +656,30 @@ export const connectionsService = {
       };
     } catch (error) {
       console.error("Error fetching selected resources:", error);
-      return { success: false, error: "Failed to fetch selected resources" };
+      return fail("Failed to fetch selected resources");
     }
   },
 
   // Delete resource
   async deleteResource(resourceId: string): Promise<ServiceResponse<void>> {
     try {
-      if (!resourceId) return { success: false, error: "Resource ID is required" };
+      if (!resourceId) return fail("Resource ID is required");
 
       await connectionsRepo.deleteResource(resourceId);
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       console.error("Error deleting resource:", error);
-      return { success: false, error: "Failed to delete resource" };
+      return fail("Failed to delete resource");
     }
   },
 
   // Revoke connection
   async revoke(provider: string): Promise<ServiceResponse<void>> {
     try {
-      if (!provider) return { success: false, error: "Provider is required" };
+      if (!provider) return fail("Provider is required");
 
       const connection = await connectionsRepo.findByProvider(provider);
-      if (!connection) return { success: false, error: `${provider} connection not found` };
+      if (!connection) return fail(`${provider} connection not found`);
 
       await connectionsRepo.updateStatus(connection.id, "revoked", connection.metadata || "{}");
       await connectionsRepo.markTokensNotCurrent(connection.id);
@@ -686,10 +687,10 @@ export const connectionsService = {
       await connectionsRepo.deleteResourcesByConnectionId(connection.id);
       await connectionsRepo.updateConnectionState(provider, false, null);
 
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       console.error("Error revoking connection:", error);
-      return { success: false, error: "Failed to revoke connection" };
+      return fail("Failed to revoke connection");
     }
   },
 };

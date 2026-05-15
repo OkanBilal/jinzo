@@ -1,3 +1,4 @@
+import { ok, fail } from "../../../shared/ipc-kit/service-response";
 import { reviewFindingsRepo } from "./reviewFindings.repo";
 import type {
   CreateReviewFindingPayload,
@@ -37,13 +38,13 @@ export const reviewFindingsService = {
         .filter((f) => latestReviewByFile.get(f.file) === f.reviewId)
         .map(({ reviewCreatedAt: _, ...rest }) => rest);
 
-      return { success: true, data: filtered };
+      return ok(filtered);
     } catch (error) {
       console.error(
         `[ReviewFindingsService] Failed to get findings for workspace ${workspaceId}:`,
         error,
       );
-      return { success: false, error: "Failed to get workspace findings" };
+      return fail("Failed to get workspace findings");
     }
   },
 
@@ -53,13 +54,13 @@ export const reviewFindingsService = {
   ): Promise<ServiceResponse<ReviewFindingResponse[]>> {
     try {
       const findings = await reviewFindingsRepo.findByReview(reviewId, limit);
-      return { success: true, data: findings };
+      return ok(findings);
     } catch (error) {
       console.error(
         `[ReviewFindingsService] Failed to get findings for review ${reviewId}:`,
         error,
       );
-      return { success: false, error: "Failed to get review findings" };
+      return fail("Failed to get review findings");
     }
   },
 
@@ -69,15 +70,15 @@ export const reviewFindingsService = {
     try {
       const finding = await reviewFindingsRepo.findById(id);
       if (!finding) {
-        return { success: false, error: "Review finding not found" };
+        return fail("Review finding not found");
       }
-      return { success: true, data: finding };
+      return ok(finding);
     } catch (error) {
       console.error(
         `[ReviewFindingsService] Failed to get finding ${id}:`,
         error,
       );
-      return { success: false, error: "Failed to get review finding" };
+      return fail("Failed to get review finding");
     }
   },
 
@@ -86,13 +87,13 @@ export const reviewFindingsService = {
   ): Promise<ServiceResponse<string>> {
     try {
       const id = await reviewFindingsRepo.insert(payload);
-      return { success: true, data: id };
+      return ok(id);
     } catch (error) {
       console.error(
         "[ReviewFindingsService] Failed to create finding:",
         error,
       );
-      return { success: false, error: "Failed to create review finding" };
+      return fail("Failed to create review finding");
     }
   },
 
@@ -101,13 +102,13 @@ export const reviewFindingsService = {
   ): Promise<ServiceResponse<string[]>> {
     try {
       const ids = await reviewFindingsRepo.insertMany(payloads);
-      return { success: true, data: ids };
+      return ok(ids);
     } catch (error) {
       console.error(
         "[ReviewFindingsService] Failed to create findings:",
         error,
       );
-      return { success: false, error: "Failed to create review findings" };
+      return fail("Failed to create review findings");
     }
   },
 
@@ -118,28 +119,28 @@ export const reviewFindingsService = {
     try {
       const updated = await reviewFindingsRepo.update(id, payload);
       if (!updated) {
-        return { success: false, error: "Review finding not found" };
+        return fail("Review finding not found");
       }
-      return { success: true, data: updated };
+      return ok(updated);
     } catch (error) {
       console.error(
         `[ReviewFindingsService] Failed to update finding ${id}:`,
         error,
       );
-      return { success: false, error: "Failed to update review finding" };
+      return fail("Failed to update review finding");
     }
   },
 
   async delete(id: string): Promise<ServiceResponse<void>> {
     try {
       await reviewFindingsRepo.remove(id);
-      return { success: true, data: undefined };
+      return ok(undefined);
     } catch (error) {
       console.error(
         `[ReviewFindingsService] Failed to delete finding ${id}:`,
         error,
       );
-      return { success: false, error: "Failed to delete review finding" };
+      return fail("Failed to delete review finding");
     }
   },
 };
