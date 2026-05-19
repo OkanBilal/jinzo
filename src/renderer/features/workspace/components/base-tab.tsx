@@ -67,7 +67,7 @@ export function BaseTab({
         isActive ? "text-primary-900 dark:text-primary-200" : "text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200"
       }`}>
         {typeof label === "string" ? (
-          <span className="text-xs font-medium">{label}</span>
+          <span className="text-xs font-medium tracking-tight">{label}</span>
         ) : (
           label
         )}

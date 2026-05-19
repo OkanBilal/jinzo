@@ -17,6 +17,11 @@ import { ThemePicker } from "./theme-picker";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
 import { Refresh } from "@/components/ui/icons";
 import { AsciiSpinner } from "@/components/ui/ascii-spinner";
+import {
+  AgentCard,
+  AGENT_CHOICES,
+} from "@/features/onboarding/components/agent-card";
+import { useAgentSpaces } from "@/features/onboarding/hooks/use-agent-spaces";
 
 function UpdateButton({
   state,
@@ -164,6 +169,32 @@ function MenuBarIconToggle() {
   );
 }
 
+function AgentsSection() {
+  const { visibleAgentCount, spacesBySlug, toggleAgent } = useAgentSpaces({
+    navigateOnSwitch: false,
+  });
+
+  return (
+    <div className="flex gap-3">
+      {AGENT_CHOICES.map(({ slug, label, Icon }) => {
+        const space = spacesBySlug.get(slug);
+        const isSelected = !!space && !space.isArchived;
+        const cannotArchiveLast = isSelected && visibleAgentCount <= 1;
+        return (
+          <AgentCard
+            key={slug}
+            label={label}
+            Icon={Icon}
+            isSelected={isSelected}
+            disabled={!space || cannotArchiveLast}
+            onClick={() => toggleAgent(slug)}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 function NotifyToolApprovalToggle() {
   const { data: settings } = useGetAppSettingsQuery();
   const [setNotifyOnToolApproval] = useSetNotifyOnToolApprovalMutation();
@@ -212,6 +243,15 @@ export default function GeneralSettings() {
               toast.success(`Theme changed to ${labelMap[value]}`);
             }}
           />
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection title="Agents">
+        <SettingsRow
+          title="Active agents"
+          description="Enable or disable agent runtimes"
+        >
+          <AgentsSection />
         </SettingsRow>
       </SettingsSection>
 

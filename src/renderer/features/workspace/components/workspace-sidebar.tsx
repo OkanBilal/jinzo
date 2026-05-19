@@ -28,6 +28,7 @@ import {
 } from "@/features/workspace/utils/repo-utils";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { Button } from "@/components/ui";
+import { ActivitySection } from "./activity-section";
 
 type SidebarTab = "files" | "changes" | "reviews";
 
@@ -173,11 +174,11 @@ export function WorkspaceSidebar() {
       <div className="shrink-0 py-2 mt-8 px-3">
         <div className="relative flex items-center p-0.5 rounded-xl bg-primary/50  dark:bg-primary/5">
           <div
-            className={`absolute top-0.5 bottom-0.5 rounded-lg dark:bg-primary/10 bg-primary  transition-transform duration-200 ease-out`}
+            className={`absolute top-0.5 bottom-0.5 rounded-[10px] dark:bg-primary/10 bg-primary  transition-transform duration-200 ease-out`}
             style={{
-              width: "calc((100% - 0.75rem) / 2)",
+              width: "calc((100% - 0.75rem) / 3)",
               left: "0.125rem",
-              transform: `translateX(calc(${tabIndex} * (100% + 0.5rem)))`,
+              transform: `translateX(calc(${tabIndex} * (100% + 0.25rem)))`,
             }}
           />
           <Button
@@ -199,6 +200,16 @@ export function WorkspaceSidebar() {
             }`}
           >
             Changes{changedFilesCount > 0 && ` (${changedFilesCount})`}
+          </Button>
+          <Button
+            onClick={() => setSidebarTab("reviews")}
+            className={`relative z-(--z-base) flex-1 text-xs font-medium py-1 px-2 rounded-lg transition-colors ${
+              sidebarTab === "reviews"
+                ? "text-primary-900 dark:text-primary-100"
+                : "text-primary-800 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
+            }`}
+          >
+            Activity
           </Button>
         </div>
       </div>
@@ -236,7 +247,7 @@ export function WorkspaceSidebar() {
             onSelectDiffFile={handleSelectDiffFile}
           />
         </div>
-      ) : null}
+      ) :  <ActivitySection workspaceId={workspaceId} />}
     </div>
   );
 }

@@ -116,7 +116,7 @@ export function RunTab({ run, isActive, isFirst, onClick, onClose, onRename, tit
       maxLength={50}
     />
   ) : (
-    <AnimatedTitle title={title} className="text-xs text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200 font-medium truncate flex-1" />
+    <AnimatedTitle title={title} className="text-xs font-medium tracking-tight text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200 truncate flex-1" />
   );
 
   return (

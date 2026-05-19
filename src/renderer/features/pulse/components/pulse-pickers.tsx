@@ -19,7 +19,11 @@ import { ProjectIcon } from "@/components/layout/sidebar/project-icon";
 import DropdownWrapper from "@/components/ui/dropdown-wrapper";
 import Select from "@/components/ui/select";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { getModelIcon, type ModelIconVariant } from "@/lib/model-icons";
+import {
+  getModelIcon,
+  getModelPrettyName,
+  type ModelIconVariant,
+} from "@/lib/model-icons";
 import { useListProjectsQuery } from "@/lib/redux/api/projectsApi";
 import { useListWorkspacesQuery } from "@/lib/redux/api/workspaceApi";
 import {
@@ -323,6 +327,9 @@ export function ModelPicker({
           : providerId === PROVIDER_IDS.cursor
             ? "cursor"
             : undefined;
+  const selectedDisplay = selected
+    ? getModelPrettyName(selected, variant)
+    : undefined;
 
   return (
     <div className="relative" ref={ref}>
@@ -333,13 +340,13 @@ export function ModelPicker({
         onClick={() => setOpen((v) => !v)}
         className={`${triggerClass} ${!providerId ? "opacity-40 cursor-not-allowed" : ""}`}
       >
-        {selected ? (
-          getModelIcon(selected.displayName, variant)
+        {selectedDisplay ? (
+          getModelIcon(selectedDisplay, variant)
         ) : (
           <Bot className="size-4" />
         )}
         <span className="truncate max-w-[140px]">
-          {selected?.displayName ?? "Model"}
+          {selectedDisplay ?? "Model"}
         </span>
         <ArrowUp className="size-3.5 rotate-180" />
       </Button>
@@ -350,24 +357,27 @@ export function ModelPicker({
           </div>
         )}
         <div className="max-h-64 overflow-auto noscrollbar">
-          {models.map((m) => (
-            <Button
-              key={m.id}
-              type="button"
-              onClick={() => {
-                onChange(m.id, m.supportedEffortLevels);
-                setOpen(false);
-              }}
-              className={`w-full flex items-center gap-2 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-xl last:rounded-b-xl ${
-                value === m.id
-                  ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
-                  : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
-              }`}
-            >
-              {getModelIcon(m.displayName, variant)}
-              <span className="truncate">{m.displayName}</span>
-            </Button>
-          ))}
+          {models.map((m) => {
+            const displayName = getModelPrettyName(m, variant);
+            return (
+              <Button
+                key={m.id}
+                type="button"
+                onClick={() => {
+                  onChange(m.id, m.supportedEffortLevels);
+                  setOpen(false);
+                }}
+                className={`w-full flex items-center gap-2 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors first:rounded-t-xl last:rounded-b-xl ${
+                  value === m.id
+                    ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
+                    : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
+                }`}
+              >
+                {getModelIcon(displayName, variant)}
+                <span className="truncate">{displayName}</span>
+              </Button>
+            );
+          })}
         </div>
       </DropdownWrapper>
     </div>

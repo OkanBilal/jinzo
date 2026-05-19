@@ -91,14 +91,19 @@ function expandStructuredHunkLine(line: string): string[] {
   return segs.map((seg) => (seg === "" ? " " : ` ${seg}`));
 }
 
-function structuredPatchToUnifiedDiff(hunks: StructuredHunk[], fileName: string): string {
+function structuredPatchToUnifiedDiff(
+  hunks: StructuredHunk[],
+  fileName: string,
+): string {
   const parts = [
     `diff --git a/${fileName} b/${fileName}`,
     `--- a/${fileName}`,
     `+++ b/${fileName}`,
   ];
   for (const h of hunks) {
-    parts.push(`@@ -${h.oldStart},${h.oldLines} +${h.newStart},${h.newLines} @@`);
+    parts.push(
+      `@@ -${h.oldStart},${h.oldLines} +${h.newStart},${h.newLines} @@`,
+    );
     for (const line of h.lines) {
       parts.push(...expandStructuredHunkLine(line));
     }
@@ -106,7 +111,10 @@ function structuredPatchToUnifiedDiff(hunks: StructuredHunk[], fileName: string)
   return parts.join("\n");
 }
 
-function countStructuredPatchChanges(hunks: StructuredHunk[]): { added: number; removed: number } {
+function countStructuredPatchChanges(hunks: StructuredHunk[]): {
+  added: number;
+  removed: number;
+} {
   let added = 0;
   let removed = 0;
   for (const h of hunks) {
@@ -118,29 +126,42 @@ function countStructuredPatchChanges(hunks: StructuredHunk[]): { added: number; 
   return { added, removed };
 }
 
-export function WriteDisplay({ params, output }: { params: WriteParams; output?: unknown }) {
+export function WriteDisplay({
+  params,
+  output,
+}: {
+  params: WriteParams;
+  output?: unknown;
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
   const isDarkMode = document.documentElement.classList.contains("dark");
   const openFile = useOpenFileInEditor();
 
-  const parsedPatch = useMemo(() => parseStructuredPatchOutput(output), [output]);
+  const parsedPatch = useMemo(
+    () => parseStructuredPatchOutput(output),
+    [output],
+  );
 
   const filePath =
-    params.file_path ??
-    params.path ??
-    parsedPatch?.outputFilePath ??
-    "";
-  const content =
-    params.content ?? extractDetailedContent(output) ?? "";
+    params.file_path ?? params.path ?? parsedPatch?.outputFilePath ?? "";
+  const content = params.content ?? extractDetailedContent(output) ?? "";
   const fileName = filePath.split("/").pop() || filePath || "file";
   const fileExt = (() => {
     const dotIdx = fileName.lastIndexOf(".");
     return dotIdx > 0 ? fileName.slice(dotIdx + 1) : undefined;
   })();
 
-  const { unifiedDiff, added, removed, lineCount, hasDiff } = useMemo(() => {
+  const {
+    unifiedDiff,
+    // added,
+    // removed,
+    // lineCount,
+    hasDiff,
+  } = useMemo(() => {
     if (parsedPatch) {
-      const { added: a, removed: r } = countStructuredPatchChanges(parsedPatch.hunks);
+      const { added: a, removed: r } = countStructuredPatchChanges(
+        parsedPatch.hunks,
+      );
       const raw = structuredPatchToUnifiedDiff(parsedPatch.hunks, fileName);
       return {
         unifiedDiff: normalizePatchForPatchDiff(raw, filePath || undefined),
@@ -151,10 +172,18 @@ export function WriteDisplay({ params, output }: { params: WriteParams; output?:
       };
     }
     if (!content) {
-      return { unifiedDiff: "", added: 0, removed: 0, lineCount: 0, hasDiff: false };
+      return {
+        unifiedDiff: "",
+        added: 0,
+        removed: 0,
+        lineCount: 0,
+        hasDiff: false,
+      };
     }
     const lines = content.split("\n");
-    const addedLines = lines.flatMap((l) => l.split("\n").map((seg) => `+${seg}`));
+    const addedLines = lines.flatMap((l) =>
+      l.split("\n").map((seg) => `+${seg}`),
+    );
     const raw = [
       `diff --git a/${fileName} b/${fileName}`,
       `new file mode 100644`,
@@ -200,7 +229,7 @@ export function WriteDisplay({ params, output }: { params: WriteParams; output?:
           )}
           <span className="truncate">{fileName}</span>
         </span>
-        {parsedPatch ? (
+        {/* {parsedPatch ? (
           (added > 0 || removed > 0) && (
             <span className="text-primary-500 text-xs shrink-0 group-hover:text-primary-950 group-hover:dark:text-primary">
               {added > 0 && (
@@ -218,7 +247,7 @@ export function WriteDisplay({ params, output }: { params: WriteParams; output?:
               +{lineCount}
             </span>
           )
-        )}
+        )} */}
       </ToolHeader>
 
       {unifiedDiff && (
@@ -229,7 +258,12 @@ export function WriteDisplay({ params, output }: { params: WriteParams; output?:
           <div className="max-h-80 overflow-y-auto noscrollbar p-0.5">
             <PatchDiff
               patch={unifiedDiff}
-              style={{ "--diffs-font-size": "12px", "--diffs-font-family": "'Geist Mono', monospace" } as React.CSSProperties}
+              style={
+                {
+                  "--diffs-font-size": "12px",
+                  "--diffs-font-family": "'Geist Mono', monospace",
+                } as React.CSSProperties
+              }
               options={{
                 theme: isDarkMode ? "pierre-dark" : "pierre-light",
                 themeType: isDarkMode ? "dark" : "light",

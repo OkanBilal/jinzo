@@ -1,5 +1,9 @@
 export { registerWorkspaceIpc, unregisterWorkspaceIpc } from "./workspace.ipc";
-export { workspaceService, logWorkspaceActivity } from "./workspace.service";
+export {
+  workspaceService,
+  logWorkspaceActivity,
+  emitFindingsChanged,
+} from "./workspace.service";
 export { workspaceRepo } from "./workspace.repo";
 export type {
   // workspace

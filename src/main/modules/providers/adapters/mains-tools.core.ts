@@ -8,7 +8,11 @@
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { workspaceRepo, logWorkspaceActivity } from "../../workspace";
+import {
+  workspaceRepo,
+  logWorkspaceActivity,
+  emitFindingsChanged,
+} from "../../workspace";
 import { runSessionRegistry } from "../../runs/run-session-registry";
 import { gitService } from "../../git/git.service";
 import { projectsRepo } from "../../projects/projects.repo";
@@ -155,6 +159,7 @@ export async function handleSaveFinding(
         hasSuggestion: !!args.suggestion,
       },
     });
+    emitFindingsChanged(ctx.workspaceId);
   }
 
   return {
@@ -207,6 +212,7 @@ export async function handleSaveFindings(
         info: args.findings.filter((f) => f.severity === "info").length,
       },
     });
+    emitFindingsChanged(ctx.workspaceId);
   }
 
   return {

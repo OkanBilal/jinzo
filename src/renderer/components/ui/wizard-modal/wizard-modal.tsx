@@ -229,7 +229,7 @@ export function WizardModal<
             : undefined,
         }}
       >
-        <div className="flex items-center justify-between pl-4 pr-3 pt-4">
+        <div className="relative z-10 flex items-center justify-between pl-4 pr-3 pt-4">
           <div className="flex min-h-9 items-center gap-2">
             {displayTitleIcon != null ? (
               <span

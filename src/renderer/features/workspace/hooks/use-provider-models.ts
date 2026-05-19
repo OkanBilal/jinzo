@@ -5,16 +5,10 @@ import {
   useGetProviderSkillsQuery,
   useGetProviderByIdQuery,
   useUpdateProviderMutation,
-  type ModelInfo,
 } from "@/lib/redux/api/providersApi";
 import { setWorkspaceModel } from "@/lib/redux/slices/workspaceSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
-
-function getModelPrettyName(model: ModelInfo, variant: string): string {
-  if (variant !== "claude" || !model.description) return model.displayName;
-  const firstPart = model.description.split("·")[0].trim();
-  return firstPart.replace(/ with 1M context$/, " [1M]");
-}
+import { getModelPrettyName } from "@/lib/model-icons";
 
 export function useProviderModels(
   activeProviderId: string,

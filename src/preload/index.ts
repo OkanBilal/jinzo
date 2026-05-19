@@ -270,6 +270,17 @@ const api = {
       return () =>
         ipcRenderer.removeListener(CHANNELS.workspace.scriptComplete, listener);
     },
+    onFindingsChanged: (
+      callback: (data: { workspaceId: string }) => void,
+    ) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on(CHANNELS.workspace.findingsChanged, listener);
+      return () =>
+        ipcRenderer.removeListener(
+          CHANNELS.workspace.findingsChanged,
+          listener,
+        );
+    },
     // ── activity ──
     listActivity: (workspaceId: string, limit?: number) =>
       ipcRenderer.invoke(CHANNELS.workspace.listActivity, workspaceId, limit),

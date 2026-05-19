@@ -44,8 +44,8 @@ export function EditDisplay({
   })();
   const {
     lines: patchLines,
-    added,
-    removed,
+    // added,
+    // removed,
   } = useMemo(() => parsePatch(output, params), [output, params]);
   const hasDiff = patchLines.length > 0;
 
@@ -83,7 +83,7 @@ export function EditDisplay({
           )}
           <span className="truncate">{fileName}</span>
         </span>
-        {(added > 0 || removed > 0) && (
+        {/* {(added > 0 || removed > 0) && (
           <span className="text-primary-500 text-xs shrink-0 group-hover:text-primary-950 group-hover:dark:text-primary">
             {added > 0 && (
               <span className="text-green-600 dark:text-green-400">
@@ -95,7 +95,7 @@ export function EditDisplay({
               <span className="text-red-500 dark:text-red-400">-{removed}</span>
             )}
           </span>
-        )}
+        )} */}
       </ToolHeader>
 
       {hasDiff && (

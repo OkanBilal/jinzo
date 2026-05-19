@@ -21,6 +21,7 @@ import { ClaudeSetupStep } from "./claude-setup-step";
 import { CodexSetupStep } from "./codex-setup-step";
 import { CopilotSetupStep } from "./copilot-setup-step";
 import { CursorSetupStep } from "./cursor-setup-step";
+import { IntroStep } from "./intro-step";
 import { WelcomeStep } from "./welcome-step";
 
 interface OnboardingModalProps {
@@ -78,6 +79,11 @@ export function OnboardingModal({ open }: OnboardingModalProps) {
   }, [dispatch]);
 
   const steps: WizardStep[] = useMemo(() => {
+    const introStep: WizardStep = {
+      id: "intro",
+      render: () => <IntroStep />,
+    };
+
     const welcomeStep: WizardStep = {
       id: "welcome",
       render: () => <WelcomeStep />,
@@ -105,7 +111,7 @@ export function OnboardingModal({ open }: OnboardingModalProps) {
       };
     });
 
-    return [welcomeStep, ...providerSteps];
+    return [introStep, welcomeStep, ...providerSteps];
   }, [spaces, detectedClis]);
 
   return (

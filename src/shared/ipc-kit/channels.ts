@@ -316,6 +316,7 @@ export const CHANNELS = {
     createFinding: "workspace:createFinding",
     createManyFindings: "workspace:createManyFindings",
     deleteFinding: "workspace:deleteFinding",
+    findingsChanged: "workspace:findingsChanged",
     getFinding: "workspace:getFinding",
     listFindings: "workspace:listFindings",
     listFindingsByWorkspace: "workspace:listFindingsByWorkspace",

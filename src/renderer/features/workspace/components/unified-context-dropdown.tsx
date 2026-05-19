@@ -61,6 +61,20 @@ function workspaceRelativeDir(fullPath: string, workspacePath?: string): string 
   return rel.includes("/") ? rel.slice(0, rel.lastIndexOf("/")) : "";
 }
 
+function abbreviateHome(path: string): string {
+  return path.replace(/^\/Users\/[^/]+\//, "~/");
+}
+
+function formatFileLocation(fullPath: string, workspacePath?: string): string | null {
+  const rel = workspaceRelativeDir(fullPath, workspacePath);
+  if (rel) return rel;
+  if (workspacePath && fullPath.startsWith(workspacePath.replace(/\/$/, ""))) {
+    return null;
+  }
+  const dir = fullPath.includes("/") ? fullPath.slice(0, fullPath.lastIndexOf("/")) : fullPath;
+  return abbreviateHome(dir);
+}
+
 const WORKSPACE_SEARCH_DEBOUNCE_MS = 320;
 const MAX_WORKSPACE_FILE_MATCHES = 150;
 
@@ -523,11 +537,15 @@ export function UnifiedContextDropdown({
                             />
                             <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                               <span className="truncate font-medium text-xs">{entry.name}</span>
-                              {entry.type !== "directory" && (
-                                <span className="text-xs text-primary-500 dark:text-primary-400 truncate">
-                                  {workspaceRelativeDir(entry.fullPath, workspacePath) || entry.fullPath}
-                                </span>
-                              )}
+                              {entry.type !== "directory" &&
+                                (() => {
+                                  const loc = formatFileLocation(entry.fullPath, workspacePath);
+                                  return loc ? (
+                                    <span className="text-xs text-primary-500 dark:text-primary-400 truncate">
+                                      {loc}
+                                    </span>
+                                  ) : null;
+                                })()}
                             </div>
                             {entry.type === "directory" && (
                               <span className="ml-auto text-xs text-primary-500 dark:text-primary-400 shrink-0">/</span>

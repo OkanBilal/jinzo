@@ -87,6 +87,18 @@ export function logWorkspaceActivity(payload: CreateActivityPayload): void {
   });
 }
 
+/**
+ * Notifies renderers that findings have changed for a workspace so RTK Query
+ * caches (ReviewFindings, WorkspaceActivity) can invalidate. Safe to call from
+ * any main-process context that mutates findings outside the IPC mutation path.
+ */
+export function emitFindingsChanged(workspaceId: string | undefined): void {
+  if (!workspaceId) return;
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send(CHANNELS.workspace.findingsChanged, { workspaceId });
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
 // Workspace aggregate service
 // ─────────────────────────────────────────────────────────────

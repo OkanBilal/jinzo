@@ -164,9 +164,9 @@ export function ContextChips({
             {contextIssues.map((issue) => (
               <div
                 key={issue.entityId}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-primary-200/40 dark:bg-primary-200/20 text-primary-800 dark:text-primary-100`}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-700`}
               >
-                <ProviderIcon provider={issue.provider} className="w-3 h-3" fallback="text" />
+                <ProviderIcon provider={issue.provider} className="size-4" fallback="text" />
                 <span className="truncate max-w-37.5">{issue.title}</span>
                 {onRemoveContextIssue && (
                   <button
@@ -183,7 +183,7 @@ export function ContextChips({
             {contextSignals.map((signal) => (
               <div
                 key={signal.entityId}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-100"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-700"
               >
                 <ProviderIcon provider={signal.source} className="w-3 h-3" fallback="text" />
                 <span className="truncate max-w-37.5">{signal.title}</span>
@@ -213,17 +213,17 @@ export function ContextChips({
                   tabIndex={0}
                   onClick={() => setPreviewId(sel.id)}
                   onKeyDown={(e) => e.key === "Enter" && setPreviewId(sel.id)}
-                  className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full text-xs bg-primary-200 dark:bg-primary/10 text-primary-700 dark:text-primary-300 cursor-pointer hover:bg-primary-300 dark:hover:bg-primary/20 transition-colors"
+                  className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-lg text-xs bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-700 cursor-pointer"
                   title={`Click to preview · ${sel.title || sel.url} — ${sel.selector}`}
                 >
                   {thumb ? (
                     <img
                       src={thumb}
                       alt=""
-                      className="w-5 h-5 rounded-lg object-cover border border-primary-300/60 dark:border-primary-700/60"
+                      className="size-4 rounded-md object-cover"
                     />
                   ) : (
-                    <Web className="w-3 h-3" />
+                    <Web className="size-3" />
                   )}
                   <span className="truncate max-w-44">
                     <span className="font-medium">{summary}</span>
