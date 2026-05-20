@@ -136,7 +136,11 @@ export function groupConsecutiveToolCalls(events: RunEvent[]): ToolSubGroup[] {
   for (const event of processedEvents) {
     const resolved = resolveTool(event.content);
 
-    if (resolved.isSpecialGroup) {
+    // MCP vendor tools render their own header (with input preview) via
+    // `McpDisplay`, so collapsing consecutive calls into a single accordion
+    // hides the per-call input. Keep each MCP call as its own sub-group.
+    const isStandalone = resolved.isSpecialGroup || resolved.vendorId !== undefined;
+    if (isStandalone) {
       flushGroup();
       subGroups.push({
         id: `subgroup-${event.id}`,

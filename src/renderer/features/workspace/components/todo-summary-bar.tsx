@@ -13,12 +13,17 @@ interface TodoSummaryBarProps {
  *
  * Each TodoWrite call carries a full plan snapshot in `metadata.input.todos`
  * (or `params.todos` when adapters parse via content). The latest entry wins.
+ *
+ * Fallback: claude_code does not emit a full TodoWrite snapshot — it emits
+ * one `TaskCreate` per item followed by `TaskUpdate` calls keyed by 1-based
+ * `taskId`. When no TodoWrite is found we aggregate those into the same
+ * `TodoItem[]` shape so the bar renders identically across providers.
  */
 function findLatestTodoSnapshot(events: RunEvent[]): TodoItem[] | null {
   for (let i = events.length - 1; i >= 0; i--) {
     const event = events[i];
     if (event.type !== "tool_call") continue;
-    if (resolveTool(event.content).groupKey !== "todowrite") continue;
+    if (resolveTool(event.content).displayName !== "TodoWrite") continue;
 
     const metadataInput = event.metadata?.input as
       | Record<string, unknown>
@@ -41,7 +46,67 @@ function findLatestTodoSnapshot(events: RunEvent[]): TodoItem[] | null {
       }
     }
   }
+
+  return buildClaudeTaskSnapshot(events);
+}
+
+function parseEventInput(event: RunEvent): Record<string, unknown> | null {
+  const raw = event.metadata?.input;
+  if (raw && typeof raw === "object") return raw as Record<string, unknown>;
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      // fall through to content parse
+    }
+  }
+  const colonIdx = event.content.indexOf(":");
+  if (colonIdx > 0) {
+    try {
+      return JSON.parse(event.content.slice(colonIdx + 1).trim()) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
   return null;
+}
+
+function buildClaudeTaskSnapshot(events: RunEvent[]): TodoItem[] | null {
+  const todos: TodoItem[] = [];
+
+  for (const event of events) {
+    if (event.type !== "tool_call") continue;
+    const name = resolveTool(event.content).displayName;
+    if (name !== "TaskCreate" && name !== "TaskUpdate") continue;
+
+    const input = parseEventInput(event);
+    if (!input) continue;
+
+    if (name === "TaskCreate") {
+      const subject = typeof input.subject === "string" ? input.subject : "";
+      if (subject.length === 0) continue;
+      const activeForm =
+        typeof input.activeForm === "string" ? input.activeForm : undefined;
+      todos.push({ content: subject, status: "pending", activeForm });
+      continue;
+    }
+
+    const taskIdRaw = input.taskId;
+    const idx =
+      typeof taskIdRaw === "string"
+        ? parseInt(taskIdRaw, 10) - 1
+        : typeof taskIdRaw === "number"
+          ? taskIdRaw - 1
+          : NaN;
+    if (!Number.isFinite(idx) || idx < 0 || idx >= todos.length) continue;
+
+    const status = input.status;
+    if (status === "in_progress" || status === "completed" || status === "pending") {
+      todos[idx] = { ...todos[idx], status };
+    }
+  }
+
+  return todos.length > 0 ? todos : null;
 }
 
 /**
@@ -49,6 +114,9 @@ function findLatestTodoSnapshot(events: RunEvent[]): TodoItem[] | null {
  * tasks completed" card. Replaces the per-call TodoWrite cards in the message
  * timeline (those are filtered out by `groupConsecutiveToolCalls`) so users
  * see one continuously-updated plan instead of repeating snapshots.
+ *
+ * Lifecycle: the parent only mounts this bar while the active run is running.
+ * When the run finishes, the bar unmounts on its own — no dismiss state needed.
  */
 export function TodoSummaryBar({ events }: TodoSummaryBarProps) {
   const [isExpanded, setIsExpanded] = useState(false);

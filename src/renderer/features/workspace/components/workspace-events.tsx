@@ -724,9 +724,12 @@ export function WorkspaceEvents({
     [currentEvents],
   );
 
-  // Filter out tool_calls groups when setting is off
+  // Filter out tool_calls groups when setting is off — except plan groups, which stay visible
+  // so Apply / Dismiss remain accessible regardless of the toggle.
   const eventGroups = useMemo(
-    () => showToolCalls ? allEventGroups : allEventGroups.filter((g) => g.type !== "tool_calls"),
+    () => showToolCalls
+      ? allEventGroups
+      : allEventGroups.filter((g) => g.type !== "tool_calls" || isPlanToolCallGroup(g)),
     [allEventGroups, showToolCalls],
   );
 

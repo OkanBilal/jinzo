@@ -55,50 +55,57 @@ function McpOutputCodeBlocks({ rawTexts }: { rawTexts: string[] }) {
   );
 }
 
-export function McpDisplay({ displayName, icon, params, output, isCompact = false }: McpDisplayProps) {
+/**
+ * Compact, single-line preview of the input params shown next to the verb in
+ * the header. Picks string-ish values, joins with " · ", truncates long ones.
+ */
+// function summarizeInput(params: Record<string, unknown> | null): string {
+//   if (!params) return "";
+//   const parts: string[] = [];
+//   for (const [key, value] of Object.entries(params)) {
+//     if (key === "content" && Array.isArray(value)) continue;
+//     if (typeof value === "string") {
+//       const trimmed = value.trim();
+//       if (trimmed) parts.push(trimmed);
+//     } else if (typeof value === "number" || typeof value === "boolean") {
+//       parts.push(String(value));
+//     } else if (Array.isArray(value) && value.length > 0) {
+//       const flat = value
+//         .filter((v) => typeof v === "string" || typeof v === "number")
+//         .slice(0, 3)
+//         .join(", ");
+//       if (flat) parts.push(flat);
+//     }
+//     if (parts.length >= 2) break;
+//   }
+//   return parts.join(" · ");
+// }
+
+export function McpDisplay({ displayName, icon, output, isCompact = false }: McpDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const resolvedIcon = icon ?? resolveTool(displayName).icon;
 
-  const textsFromMetadata = extractMcpContentTexts(output);
-  const textsFromParams =
-    textsFromMetadata.length === 0 ? extractMcpContentTexts(params) : [];
-  const codeSegments =
-    textsFromMetadata.length > 0 ? textsFromMetadata : textsFromParams;
-  const hideParamsContentRow =
-    codeSegments.length > 0 &&
-    textsFromMetadata.length === 0 &&
-    textsFromParams.length > 0;
-
-  const paramKeys = params ? Object.keys(params) : [];
-  const visibleParamKeys = hideParamsContentRow
-    ? paramKeys.filter((k) => k !== "content")
-    : paramKeys;
-
-  const hasExpandedParams = visibleParamKeys.length > 0;
-  const hasCodeBodies = codeSegments.length > 0;
-  const canExpand = hasExpandedParams || hasCodeBodies;
+  const outputTexts = extractMcpContentTexts(output);
+  //const inputSummary = summarizeInput(params);
+  const hasOutput = outputTexts.length > 0;
 
   return (
     <div>
       <ToolHeader
         icon={resolvedIcon}
         verb={displayName}
-        hasDetails={canExpand}
+        hasDetails={hasOutput}
         isExpanded={isExpanded}
         onToggle={() => setIsExpanded((v) => !v)}
         isCompact={isCompact}
-      />
+      >
 
-      {canExpand && (
+      </ToolHeader>
+
+      {hasOutput && (
         <ToolCollapse isExpanded={isExpanded}>
-          <div className="space-y-2 pt-1">
-            {hasCodeBodies && (
-              <div>
-                <div className="mt-1">
-                  <McpOutputCodeBlocks rawTexts={codeSegments} />
-                </div>
-              </div>
-            )}
+          <div className="pt-1">
+            <McpOutputCodeBlocks rawTexts={outputTexts} />
           </div>
         </ToolCollapse>
       )}

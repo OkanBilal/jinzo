@@ -244,7 +244,7 @@ export function WorkspaceProviderPage({
           />
         )}
       </div>
-      {ws.showEmptyState || ws.showNewRunTab ? null : (
+      {ws.showEmptyState || ws.showNewRunTab || !ws.isLoading ? null : (
       <TodoSummaryBar events={ws.currentEvents} />
       )}
 

@@ -190,6 +190,26 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     aliases: ["todowrite", "todo_write"],
     isSpecialGroup: true,
   },
+  // claude_code emits TaskCreate (one call per item) + TaskUpdate (taskId/status)
+  // instead of a single full-snapshot TodoWrite. Share the `todowrite` groupKey
+  // so `stripTodoWriteEvents` strips them from the timeline and the
+  // `TodoSummaryBar` aggregator picks them up as the source of truth.
+  {
+    displayName: "TaskCreate",
+    groupKey: "todowrite",
+    category: "Todo",
+    icon: <Check className="size-4" />,
+    aliases: ["taskcreate"],
+    isSpecialGroup: true,
+  },
+  {
+    displayName: "TaskUpdate",
+    groupKey: "todowrite",
+    category: "Todo",
+    icon: <Check className="size-4" />,
+    aliases: ["taskupdate"],
+    isSpecialGroup: true,
+  },
   {
     displayName: "Task",
     groupKey: "task",

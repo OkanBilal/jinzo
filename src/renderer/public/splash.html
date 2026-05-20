@@ -29,156 +29,27 @@
       background: rgba(4, 4, 4, 0.7);
     }
 
-    canvas {
-      display: block;
+    .logo {
+      width: 40px;
+      height: auto;
+      color: rgb(135, 133, 128);
     }
 
     @media (prefers-color-scheme: light) {
       .splash-container {
         background: rgba(250, 250, 250, 0.7);
       }
+      .logo {
+        color: rgb(100, 100, 100);
+      }
     }
   </style>
 </head>
 <body>
   <div class="splash-container">
-    <canvas id="particleCanvas" width="280" height="200"></canvas>
+    <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 438 764" fill="none">
+      <path fill="currentColor" d="m125.28 194.4 249.12-144c16.32-9.6 30.72-10.8 43.2-3.6 12.96 7.2 19.44 20.4 19.44 39.6v460.8l-62.64 36V122.4l-93.6 54v460.8l-62.64 36V212.4l-92.88 54v460.8l-62.64 36V302.4c0-12.96 2.88-26.4 8.64-40.32 5.76-14.4 13.44-27.6 23.04-39.6 9.6-12.48 19.92-21.84 30.96-28.08Zm249.12-72v460.8l-62.64-36V86.4l62.64 36Zm-156.24 90v460.8l-61.92-36V176.4l61.92 36ZM417.6 46.8c-12.48-7.2-26.88-6-43.2 3.6l-249.12 144c-11.04 6.24-21.36 15.6-30.96 28.08-9.6 12-17.28 25.2-23.04 39.6-5.76 13.92-8.64 27.36-8.64 40.32v460.8L0 727.2V266.4c0-12.96 2.88-26.4 8.64-40.32 5.76-14.4 13.44-27.6 23.04-39.6 9.6-12.48 19.92-21.84 30.96-28.08l249.12-144c16.8-9.6 31.44-10.8 43.92-3.6l61.92 36Z"/>
+    </svg>
   </div>
-
-  <script>
-    // --- Particle logo ---
-    // Path/viewBox kept in sync with src/renderer/components/ui/icons/mains.tsx.
-    const MAINS_PATH = "m125.28 194.4 249.12-144c16.32-9.6 30.72-10.8 43.2-3.6 12.96 7.2 19.44 20.4 19.44 39.6v460.8l-62.64 36V122.4l-93.6 54v460.8l-62.64 36V212.4l-92.88 54v460.8l-62.64 36V302.4c0-12.96 2.88-26.4 8.64-40.32 5.76-14.4 13.44-27.6 23.04-39.6 9.6-12.48 19.92-21.84 30.96-28.08Zm249.12-72v460.8l-62.64-36V86.4l62.64 36Zm-156.24 90v460.8l-61.92-36V176.4l61.92 36ZM417.6 46.8c-12.48-7.2-26.88-6-43.2 3.6l-249.12 144c-11.04 6.24-21.36 15.6-30.96 28.08-9.6 12-17.28 25.2-23.04 39.6-5.76 13.92-8.64 27.36-8.64 40.32v460.8L0 727.2V266.4c0-12.96 2.88-26.4 8.64-40.32 5.76-14.4 13.44-27.6 23.04-39.6 9.6-12.48 19.92-21.84 30.96-28.08l249.12-144c16.8-9.6 31.44-10.8 43.92-3.6l61.92 36Z";
-    const MAINS_VIEWBOX = "0 0 438 764";
-
-    const LOGO_SIZE = 120;
-    const PARTICLE_GAP = 2;
-    const PARTICLE_SIZE = 1;
-    const IDLE_AMPLITUDE = 1;
-    const IDLE_SPEED = 0.05;
-    const RETURN_SPEED = 0.08;
-    const FRICTION = 0.82;
-    const MOUSE_RADIUS = 30;
-    const MOUSE_FORCE = 3;
-
-    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const PARTICLE_COLOR = isDark ? [135, 133, 128] : [100, 100, 100];
-
-    const canvas = document.getElementById('particleCanvas');
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    const displayW = 280;
-    const displayH = 200;
-    canvas.width = displayW * dpr;
-    canvas.height = displayH * dpr;
-    canvas.style.width = displayW + 'px';
-    canvas.style.height = displayH + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    function renderLogoOffscreen() {
-      const off = document.createElement('canvas');
-      off.width = LOGO_SIZE;
-      off.height = LOGO_SIZE;
-      const c = off.getContext('2d');
-
-      const parts = MAINS_VIEWBOX.split(' ').map(Number);
-      const vx = parts[0], vy = parts[1], vw = parts[2], vh = parts[3];
-      const scale = LOGO_SIZE / Math.max(vw, vh);
-
-      c.save();
-      c.translate(-vx * scale, -vy * scale);
-      c.scale(scale, scale);
-      c.fillStyle = '#000';
-      c.fill(new Path2D(MAINS_PATH));
-      c.restore();
-      return off;
-    }
-
-    function samplePixels(srcCanvas, gap) {
-      const c = srcCanvas.getContext('2d');
-      const imgData = c.getImageData(0, 0, srcCanvas.width, srcCanvas.height);
-      const pts = [];
-      for (let y = 0; y < srcCanvas.height; y += gap) {
-        for (let x = 0; x < srcCanvas.width; x += gap) {
-          const i = (y * srcCanvas.width + x) * 4;
-          if (imgData.data[i + 3] > 128) pts.push({ x, y });
-        }
-      }
-      return pts;
-    }
-
-    const logoCanvas = renderLogoOffscreen();
-    const logoPixels = samplePixels(logoCanvas, PARTICLE_GAP);
-
-    const offsetX = (displayW - LOGO_SIZE) / 2;
-    const offsetY = (displayH - LOGO_SIZE) / 2;
-
-    const particles = logoPixels.map(p => ({
-      x: p.x + offsetX,
-      y: p.y + offsetY,
-      homeX: p.x + offsetX,
-      homeY: p.y + offsetY,
-      vx: 0,
-      vy: 0,
-      phase: Math.random() * Math.PI * 2,
-      freq: 0.8 + Math.random() * 0.4
-    }));
-
-    const mouse = { x: 0, y: 0, present: false };
-    canvas.addEventListener('mousemove', e => {
-      const rect = canvas.getBoundingClientRect();
-      mouse.x = e.clientX - rect.left;
-      mouse.y = e.clientY - rect.top;
-    });
-    canvas.addEventListener('mouseenter', () => { mouse.present = true; });
-    canvas.addEventListener('mouseleave', () => { mouse.present = false; });
-
-    let t = 0;
-    const r = PARTICLE_COLOR[0], g = PARTICLE_COLOR[1], b = PARTICLE_COLOR[2];
-
-    function animate() {
-      ctx.clearRect(0, 0, displayW, displayH);
-      t += IDLE_SPEED;
-
-      for (const p of particles) {
-        const idleX = Math.sin(t * p.freq + p.phase) * IDLE_AMPLITUDE;
-        const idleY = Math.cos(t * p.freq * 0.7 + p.phase + 1) * IDLE_AMPLITUDE * 0.6;
-
-        if (mouse.present) {
-          const dx = p.x - mouse.x;
-          const dy = p.y - mouse.y;
-          const distSq = dx * dx + dy * dy;
-          const radiusSq = MOUSE_RADIUS * MOUSE_RADIUS;
-
-          if (distSq < radiusSq && distSq > 0.1) {
-            const dist = Math.sqrt(distSq);
-            const tt = 1 - dist / MOUSE_RADIUS;
-            const strength = tt * tt * tt;
-            p.vx += (dx / dist) * strength * MOUSE_FORCE;
-            p.vy += (dy / dist) * strength * MOUSE_FORCE;
-          }
-        }
-
-        p.vx += (p.homeX + idleX - p.x) * RETURN_SPEED;
-        p.vy += (p.homeY + idleY - p.y) * RETURN_SPEED;
-        p.vx *= FRICTION;
-        p.vy *= FRICTION;
-        p.x += p.vx;
-        p.y += p.vy;
-
-        const dx2 = p.x - p.homeX;
-        const dy2 = p.y - p.homeY;
-        const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-        const alpha = Math.max(0.3, 1 - dist2 * 0.03);
-
-        ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
-        ctx.fillRect(p.x - PARTICLE_SIZE * 0.5, p.y - PARTICLE_SIZE * 0.5, PARTICLE_SIZE, PARTICLE_SIZE);
-      }
-
-      requestAnimationFrame(animate);
-    }
-
-    requestAnimationFrame(animate);
-  </script>
 </body>
 </html>
