@@ -730,6 +730,26 @@ function findImagePathsInValue(value: unknown): string[] {
   return out;
 }
 
+/**
+ * Only surface images that come from Codex's own generated_images dir or live
+ * inside the active workspace. Random PNG path references picked up from grep
+ * / file reads (e.g. icons in the codebase) would otherwise produce noisy
+ * artifact cards.
+ */
+function isAllowedImagePath(resolved: string, workspaceRoot: string | null): boolean {
+  const codexGenDir = path.join(os.homedir(), ".codex", "generated_images");
+  if (resolved === codexGenDir || resolved.startsWith(codexGenDir + path.sep)) {
+    return true;
+  }
+  if (workspaceRoot) {
+    const root = path.resolve(workspaceRoot);
+    if (resolved === root || resolved.startsWith(root + path.sep)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function emitImageArtifacts(
   events: WorkRunEvent[],
   runId: string | undefined,
@@ -744,6 +764,7 @@ function emitImageArtifacts(
     if (!path.isAbsolute(expanded)) continue;
     const resolved = path.resolve(expanded);
     if (rs.emittedImagePaths.has(resolved)) continue;
+    if (!isAllowedImagePath(resolved, rs.mainsCtx.rootPath)) continue;
     try {
       const stat = fs.lstatSync(resolved);
       if (stat.isSymbolicLink() || !stat.isFile()) continue;

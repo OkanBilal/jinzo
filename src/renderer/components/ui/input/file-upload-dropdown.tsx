@@ -23,7 +23,7 @@ export const FILE_TYPES = {
 } as const;
 
 /** Beyond this many consecutive items of the same type, show one grouped chip + menu. */
-const MAX_INLINE_PER_BLOCK = 2;
+const MAX_INLINE_PER_BLOCK = 1;
 
 type FileSegment =
   | { kind: "documents"; indices: number[] }

@@ -30,7 +30,8 @@ export default function DropdownWrapper({
   useFixedBackground = false,
 }: DropdownWrapperProps) {
   const [coords, setCoords] = useState<{
-    top: number;
+    top: number | null;
+    bottom: number | null;
     left: number;
     width: number;
   } | null>(null);
@@ -52,7 +53,8 @@ export default function DropdownWrapper({
     if (isOpen && usePortal && triggerRef?.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       setCoords({
-        top: openUpward ? rect.top - 8 : rect.bottom + 8,
+        top: openUpward ? null : rect.bottom + 8,
+        bottom: openUpward ? window.innerHeight - rect.top + 8 : null,
         left: position === "right" ? rect.right : rect.left,
         width: rect.width,
       });
@@ -112,14 +114,14 @@ export default function DropdownWrapper({
             : "top left",
         ...(usePortal && coords
           ? {
-              top: `${coords.top}px`,
+              top: coords.top !== null ? `${coords.top}px` : "auto",
+              bottom: coords.bottom !== null ? `${coords.bottom}px` : "auto",
               left: position === "right" ? "auto" : `${coords.left}px`,
               right:
                 position === "right"
                   ? `${window.innerWidth - coords.left - coords.width}px`
                   : "auto",
               ...(matchTriggerWidth ? { width: coords.width } : {}),
-              transform: openUpward ? "translateY(-100%)" : "none",
             }
           : {}),
       }}
