@@ -1125,7 +1125,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       signal,
     ): Promise<DriverOutcome> {
       const cs = session as CopilotSession;
-      const timeout = config.timeout ?? 300000;
+      const timeout = config.timeout ?? 3_600_000;
 
       // Wire abort: when signal fires, ask SDK to abort
       const onAbort = () => {

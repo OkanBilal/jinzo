@@ -44,7 +44,6 @@ export function useFileContentLoader(
         const result: ServiceResponse<FileContentResponse> =
           await window.api.fileExplorer.readFileText({
             filePath,
-            workspaceRoot: rootPath!,
           });
 
         if (cancelled) return;

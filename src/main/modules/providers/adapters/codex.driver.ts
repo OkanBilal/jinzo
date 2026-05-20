@@ -2720,6 +2720,11 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
                 : "Edit")
               : "FileChange";
 
+            const kindLabel = (k: string): string =>
+              k === "delete" ? "Delete"
+              : k === "add" || k === "create" ? "Add"
+              : "Edit";
+
             const toolInput: Record<string, unknown> = single
               ? {
                   file_path: single.path,
@@ -2727,8 +2732,13 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
                   ...(reason ? { description: reason } : {}),
                 }
               : {
-                  files: cached?.map((c) => ({ path: c.path, kind: c.kind })) ?? [],
-                  ...(reason ? { description: reason } : {}),
+                  _meta: {
+                    tool_params_display: (cached ?? []).map((c) => ({
+                      display_name: kindLabel(c.kind),
+                      value: c.path,
+                    })),
+                    ...(reason ? { subtitle: reason } : {}),
+                  },
                 };
 
             try {
@@ -2978,7 +2988,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     async createSession(request: WorkRunRequest): Promise<AcquiredSession> {
       const { runId, model } = request;
       const resolvedModel = model || config.defaultModel || undefined;
-      const timeout = config.timeout ?? 600000;
+      const timeout = config.timeout ?? 3_600_000;
 
       const server = await ensureServer();
 
@@ -3049,7 +3059,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     async resumeSession(request: WorkRunContinueRequest): Promise<AcquiredSession> {
       const { runId, message } = request;
       const resolvedModel = request.model || config.defaultModel || undefined;
-      const timeout = config.timeout ?? 600000;
+      const timeout = config.timeout ?? 3_600_000;
 
       const server = await ensureServer();
 
@@ -3138,7 +3148,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     async forkSession(request: WorkRunForkRequest): Promise<AcquiredSession> {
       const { runId, sourceRunId, message } = request;
       const resolvedModel = request.model || config.defaultModel || undefined;
-      const timeout = config.timeout ?? 600000;
+      const timeout = config.timeout ?? 3_600_000;
 
       logInfo(`Forking session from run ${sourceRunId} into new run ${runId}`);
 
@@ -3231,7 +3241,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     async reviewSession(request: WorkRunReviewRequest): Promise<AcquiredSession> {
       const { runId } = request;
       const resolvedModel = request.model || config.defaultModel || undefined;
-      const timeout = config.timeout ?? 600000;
+      const timeout = config.timeout ?? 3_600_000;
 
       const server = await ensureServer();
 

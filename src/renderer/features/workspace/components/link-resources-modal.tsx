@@ -222,13 +222,13 @@ export function LinkResourcesModal({
                 </BodyMedium>
                 <Caption className="text-primary-400 dark:text-primary-500 mt-1 block">
                   Connect apps in{" "}
-                  <button
+                  <Button
                     type="button"
                     onClick={goToApps}
                     className="underline dark:hover:text-primary-300 hover:text-primary-600 transition-colors cursor-pointer"
                   >
                     settings
-                  </button>{" "}
+                  </Button>{" "}
                   first
                 </Caption>
               </div>

@@ -3,6 +3,7 @@ import { ArrowUp } from "@/components/ui/icons";
 import { groupConsecutiveToolCalls } from "../../utils/group-tool-calls";
 import { ToolSubGroupAccordion } from "./tool-sub-group-accordion";
 import type { EventGroup } from "../../utils/group-events";
+import { Button } from "@/components/ui";
 
 interface ToolCallGroupProps {
   group: EventGroup;
@@ -36,7 +37,7 @@ export function ToolCallGroup({
 
   return (
     <div className="mb-2">
-      <button
+      <Button
         onClick={() => setExpandedOverride(!isExpanded)}
         className="group w-full flex items-center gap-1 mb-1 text-s font-sans cursor-pointer"
       >
@@ -59,7 +60,7 @@ export function ToolCallGroup({
             Running
           </span>
         )} */}
-      </button>
+      </Button>
 
       <div className={`grid transition-all duration-200 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
         <div className="min-h-0 overflow-hidden">

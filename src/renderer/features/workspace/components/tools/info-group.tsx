@@ -7,7 +7,7 @@ import { Code } from "@/components/ui/icons/space";
 import { Picture, Document, Codex, Close, Sparkles, External, ArrowUp } from "@/components/ui/icons";
 import { ProviderIcon } from "../provider-icon";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
+import { Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
 import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
 import { useLocalImageUrl } from "@/hooks/use-local-image-url";
 
@@ -195,12 +195,12 @@ function ImagePreviewModal({ name, dataUrl, onClose }: { name: string; dataUrl: 
       <div className="relative flex flex-col glass-morphism rounded-xl shadow-2xl max-w-xl w-full mx-4 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary-200 dark:border-primary-800">
           <span className="text-xs font-mono text-primary-600 dark:text-primary-400 truncate">{name}</span>
-          <button
+          <Button
             onClick={onClose}
             className="ml-3 shrink-0 p-1 rounded-md hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
           >
             <Close className="w-3.5 h-3.5 text-primary-500" />
-          </button>
+          </Button>
         </div>
         <div className="bg-primary-100 dark:bg-primary-900 flex items-center justify-center p-2">
           <img src={dataUrl} alt={name} className="max-h-[70vh] max-w-full object-contain rounded" />
@@ -343,7 +343,7 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                     att.dataUrl ||
                     (att.captureName ? `mains-capture://cap/${att.captureName}` : undefined);
                   return att.type === "image" && imgSrc ? (
-                    <button
+                    <Button
                       key={att.name}
                       onClick={() => setPreviewAtt({ name: att.name, dataUrl: imgSrc })}
                       className="flex items-center gap-1.5 pl-2 pr-2 py-1 rounded-xl bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-100 hover:bg-primary-100 dark:hover:bg-primary-700/30 transition-colors cursor-pointer"
@@ -357,7 +357,7 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                       <span className="text-primary-700 dark:text-primary-200 truncate max-w-40">
                         {att.name}
                       </span>
-                    </button>
+                    </Button>
                   ) : (
                     <div
                       key={att.name}
@@ -484,7 +484,7 @@ function ImageArtifact({
       className="relative flex items-center gap-3 w-full max-w-xl rounded-2xl bg-primary-50 dark:bg-primary-900/85 px-3 py-2.5 shadow-sm"
       title={absPath}
     >
-      <button
+      <Button
         type="button"
         onClick={openInMains}
         className="shrink-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary-400 overflow-hidden"
@@ -504,8 +504,8 @@ function ImageArtifact({
             <Picture className="size-5 text-primary-100 dark:text-primary-200" />
           )}
         </div>
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
         onClick={openInMains}
         className="flex-1 min-w-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded-md"
@@ -516,8 +516,8 @@ function ImageArtifact({
         <div className="text-xs text-primary-500 dark:text-primary-400 mt-0.5">
           Image{ext ? ` · ${ext}` : ""}
         </div>
-      </button>
-      <button
+      </Button>
+      <Button
         ref={openBtnRef}
         type="button"
         onClick={openMenu}
@@ -525,7 +525,7 @@ function ImageArtifact({
       >
         Open
         <ArrowUp className="size-3.5  rotate-180" />
-      </button>
+      </Button>
       <DropdownMenu
         isOpen={menuOpen}
         position={menuPos}
@@ -577,7 +577,7 @@ function InlineMarkdownImage({
   const url = useLocalImageUrl(abs);
   if (!url) return null;
   return (
-    <button
+    <Button
       type="button"
       onClick={() => onPreview({ name, dataUrl: url })}
       className="block w-full overflow-hidden rounded-xl border border-primary-200/40 dark:border-primary-700/40 bg-primary-100 dark:bg-primary-900 cursor-pointer"
@@ -590,7 +590,7 @@ function InlineMarkdownImage({
         loading="lazy"
         onError={onError}
       />
-    </button>
+    </Button>
   );
 }
 

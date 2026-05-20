@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { cn } from "../../lib/cn";
+import { Button } from "./button";
 
 export interface SegmentedTabOption<T extends string> {
   value: T;
@@ -116,7 +117,7 @@ export function SegmentedTabs<T extends string>({
         />
       )}
       {options.map((opt) => (
-        <button
+        <Button
           key={opt.value}
           ref={(el) => {
             if (el) tabRefs.current.set(opt.value, el);
@@ -127,7 +128,7 @@ export function SegmentedTabs<T extends string>({
           className={tabClass(value === opt.value)}
         >
           {opt.label}
-        </button>
+        </Button>
       ))}
     </div>
   );

@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui";
 import { Close } from "@/components/ui/icons";
 import { useAppSelector } from "@/lib/redux/hooks";
 
@@ -125,12 +126,12 @@ function CloseOverlay({
           />
         </>
       )}
-      <button
+      <Button
         onClick={onClose}
         className="relative z-(--z-base) p-1 hover:bg-primary/5 cursor-pointer rounded transition-all pointer-events-auto"
       >
         {closeIcon || <Close className="size-3.25 text-primary-900 dark:text-primary hover:text-primary-900 dark:hover:text-primary-200" />}
-      </button>
+      </Button>
     </div>
   );
 }

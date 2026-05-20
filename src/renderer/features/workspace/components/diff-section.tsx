@@ -158,7 +158,6 @@ export function DiffSection({
     try {
       const result = await window.api.fileExplorer.readFileText({
         filePath: `${workspace.rootPath}/${filePath}`,
-        workspaceRoot: workspace.rootPath,
       });
       if (!result.success || !result.data || result.data.isBinary) return;
 

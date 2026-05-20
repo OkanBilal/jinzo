@@ -51,13 +51,13 @@ export function CliSetupStep({
 
       <Text variant="mutedSmall">
         {helpText}{" "}
-        <button
+        <Button
           type="button"
           onClick={() => window.api.shell.openExternal(helpLinkUrl)}
           className="text-primary-600 dark:text-primary-400 underline cursor-pointer"
         >
           {helpLinkLabel}
-        </button>
+        </Button>
       </Text>
 
       <div className={`flex ${showBack ? "justify-between" : "justify-end"} pt-2`}>

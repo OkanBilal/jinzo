@@ -392,7 +392,7 @@ export default function SkillsMarketplace() {
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex gap-1">
           {VIEWS.map((v) => (
-            <button
+            <Button
               key={v.value}
               onClick={() => setActiveView(v.value)}
               className={`px-2.5 py-1 text-sm rounded-xl transition-colors cursor-pointer ${
@@ -402,7 +402,7 @@ export default function SkillsMarketplace() {
               }`}
             >
               {v.label}
-            </button>
+            </Button>
           ))}
         </div>
         <div className="relative w-56">

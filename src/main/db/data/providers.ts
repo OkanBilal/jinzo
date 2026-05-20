@@ -11,7 +11,7 @@ export const seedProviders: CreateProviderPayload[] = [
     defaultModel: "claude-opus-4-6",
     config: {
       transport: "stdio" as const,
-      timeout: 600000,
+      timeout: 3_600_000,
       logLevel: "info" as const,
       autoRestart: false,
     },
@@ -31,7 +31,7 @@ export const seedProviders: CreateProviderPayload[] = [
     isEnabled: true,
     defaultModel: "claude-opus-4-6",
     config: {
-      timeout: 600000,
+      timeout: 3_600_000,
       apiKey: process.env.ANTHROPIC_API_KEY,
       permissionMode: "default",
     },
@@ -52,7 +52,7 @@ export const seedProviders: CreateProviderPayload[] = [
     isEnabled: true,
     defaultModel: "gpt-5.4",
     config: {
-      timeout: 600000,
+      timeout: 3_600_000,
       approvalMode: "on-request",
       sandboxMode: "workspace-write",
       networkAccessEnabled: true,
@@ -74,7 +74,7 @@ export const seedProviders: CreateProviderPayload[] = [
     kind: "agent_runtime",
     displayName: "Cursor (ACP/CLI)",
     isEnabled: true,
-    defaultModel: "composer-2",
+    defaultModel: "composer-2.5[fast=true]",
     config: {
       timeout: 600000,
       mode: "agent",

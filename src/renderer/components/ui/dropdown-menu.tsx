@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
 import { useEscapeKey } from "@/hooks/use-escape-key";
 import { ArrowUp, Selected } from "./icons";
+import { Button } from "./button";
 
 // Context to let parent DropdownMenu know about submenu portals
 const DropdownContext = createContext<{
@@ -241,7 +242,7 @@ export function DropdownMenuItem({
   };
 
   return (
-    <button
+    <Button
       onClick={onClick}
       disabled={disabled}
       className={cn(
@@ -257,6 +258,6 @@ export function DropdownMenuItem({
 
       )}
       {children}
-    </button>
+    </Button>
   );
 }

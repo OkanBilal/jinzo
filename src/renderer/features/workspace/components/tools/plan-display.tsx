@@ -62,10 +62,8 @@ export function PlanDisplay({ event, onApplyPlan }: PlanDisplayProps) {
   const isPending = status === "pending";
 
   return (
-    <div className="overflow-hidden rounded-xl glass-morphism flex flex-col my-4">
-      {/* Header — badge + collapse toggle */}
-      <button
-        type="button"
+    <div className="overflow-hidden rounded-2xl glass-morphism flex flex-col my-4">
+      <Button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center gap-2 px-4 py-2.5 cursor-pointer hover:bg-primary-100/50 dark:hover:bg-primary-500/10 transition-colors"
       >
@@ -86,7 +84,7 @@ export function PlanDisplay({ event, onApplyPlan }: PlanDisplayProps) {
         <ArrowUp
           className={`size-3 text-primary-500 ml-auto transition-transform ${isExpanded ? "rotate-180" : "rotate-90"}`}
         />
-      </button>
+      </Button>
 
       {/* Content — collapsible */}
       {isExpanded && (

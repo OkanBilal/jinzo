@@ -7,6 +7,7 @@ import type {
 } from "@/lib/redux/slices/workspaceSlice";
 import { Close, Web } from "@/components/ui/icons";
 import { ProviderIcon } from "./provider-icon";
+import { Button } from "@/components/ui";
 
 interface ContextChipsProps {
   contextIssues: ContextIssue[];
@@ -76,12 +77,12 @@ function BrowserSelectionPreview({
               </p>
             </div>
           </div>
-          <button
+          <Button
             onClick={onClose}
             className="ml-3 shrink-0 p-1 rounded-md hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors cursor-pointer"
           >
             <Close className="w-3.5 h-3.5 text-primary-500" />
-          </button>
+          </Button>
         </div>
 
         {/* Screenshot */}
@@ -169,13 +170,13 @@ export function ContextChips({
                 <ProviderIcon provider={issue.provider} className="size-4" fallback="text" />
                 <span className="truncate max-w-37.5">{issue.title}</span>
                 {onRemoveContextIssue && (
-                  <button
+                  <Button
                     onClick={() => onRemoveContextIssue(issue.entityId)}
                     className="w-4 h-4 flex items-center justify-center rounded p-0.5  transition-colors"
                     title="Remove from context"
                   >
                     <Close className="w-3 h-3" />
-                  </button>
+                  </Button>
                 )}
               </div>
             ))}
@@ -188,13 +189,13 @@ export function ContextChips({
                 <ProviderIcon provider={signal.source} className="w-3 h-3" fallback="text" />
                 <span className="truncate max-w-37.5">{signal.title}</span>
                 {onRemoveContextSignal && (
-                  <button
+                  <Button
                     onClick={() => onRemoveContextSignal(signal.entityId)}
                     className="w-4 h-4 flex items-center justify-center rounded p-0.5 transition-colors"
                     title="Remove from context"
                   >
                     <Close className="w-3 h-3" />
-                  </button>
+                  </Button>
                 )}
               </div>
             ))}
@@ -230,7 +231,7 @@ export function ContextChips({
                     <span className="opacity-60"> · {hostname(sel.url)}</span>
                   </span>
                   {onRemoveContextBrowserSelection && (
-                    <button
+                    <Button
                       onClick={(e) => {
                         e.stopPropagation();
                         onRemoveContextBrowserSelection(sel.id);
@@ -239,7 +240,7 @@ export function ContextChips({
                       title="Remove from context"
                     >
                       <Close className="w-3 h-3" />
-                    </button>
+                    </Button>
                   )}
                 </div>
               );

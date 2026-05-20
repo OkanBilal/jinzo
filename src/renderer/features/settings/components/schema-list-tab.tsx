@@ -57,7 +57,7 @@ export function SchemaListTab({
     <>
       <div className="p-4 pt-0">
         <div className="h-78 overflow-y-auto space-y-1">
-          <button
+          <Button
             onClick={() => onSelectSchema(null)}
             className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left text-sm transition-colors cursor-pointer ${
               selectedId === null
@@ -67,7 +67,7 @@ export function SchemaListTab({
           >
             <RadioDot active={selectedId === null} />
             <span>Do not use structured output</span>
-          </button>
+          </Button>
 
           {sortedEntries.map((entry) => (
             <div
@@ -78,7 +78,7 @@ export function SchemaListTab({
                   : "text-primary-600 dark:text-primary-400 hover:bg-primary-950/5 dark:hover:bg-primary/5"
               }`}
             >
-              <button
+              <Button
                 onClick={() => onSelectSchema(entry.id)}
                 className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer"
               >
@@ -98,7 +98,7 @@ export function SchemaListTab({
                 ) : (
                   <span className="truncate">{entry.name}</span>
                 )}
-              </button>
+              </Button>
 
               <div className="hidden group-hover:flex items-center gap-1 shrink-0">
                 <Button

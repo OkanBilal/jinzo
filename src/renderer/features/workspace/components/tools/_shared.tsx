@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { ArrowUp } from "@/components/ui/icons";
+import { Button } from "@/components/ui";
 
 interface ToolHeaderProps {
   /** Tool icon (e.g. <Bash />, <Glob />). Hidden when `isCompact`. */
@@ -31,7 +32,7 @@ export function ToolHeader({
   children,
 }: ToolHeaderProps) {
   return (
-    <button
+    <Button
       type="button"
       onClick={() => hasDetails && onToggle()}
       className={`group w-full min-w-0 flex items-center gap-1 py-1 text-s font-sans ${
@@ -56,7 +57,7 @@ export function ToolHeader({
           }`}
         />
       )}
-    </button>
+    </Button>
   );
 }
 

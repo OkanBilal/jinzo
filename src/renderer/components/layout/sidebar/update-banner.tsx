@@ -36,13 +36,13 @@ export function UpdateBanner() {
                 ? `${state.info.version} ready`
                 : "Update ready")}
           </p>
-          <button
+          <Button
             type="button"
             onClick={() => setDismissed(true)}
             className="p-0.5 rounded-md hover:bg-primary-200/50 dark:hover:bg-primary/10 transition-colors text-primary-500 dark:text-primary-400 cursor-pointer"
           >
             <Close className="size-3" />
-          </button>
+          </Button>
         </div>
 
         {state.status === "downloaded" && (

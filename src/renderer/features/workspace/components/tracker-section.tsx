@@ -144,7 +144,7 @@ export function TrackerSection({
           {/* Filter pills */}
           <div className="flex items-center gap-1 px-1 pt-1 pb-1.5">
             {filters.map((f) => (
-              <button
+              <Button
                 key={f.value}
                 onClick={() =>
                   setState((prev) => ({ ...prev, filter: f.value }))
@@ -156,7 +156,7 @@ export function TrackerSection({
                 }`}
               >
                 {f.label}
-              </button>
+              </Button>
             ))}
           </div>
 

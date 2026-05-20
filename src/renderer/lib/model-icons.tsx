@@ -14,7 +14,8 @@ export type ModelIconVariant = "claude" | "copilot" | "codex" | "cursor";
 
 function formatCursorModelName(model: string): string {
   if (model === "default") return "Default";
-  if (model === "composer-2") return "Composer 2 (Fast)";
+  if (model === "composer-2" ) return "Composer 2 (Fast)";
+  if (model === "composer-2.5") return "Composer 2.5 (Fast)";
 
   const BRANDS: Record<string, string> = {
     gpt: "GPT",

@@ -360,41 +360,21 @@ export const fileExplorerService = {
   },
 
   /**
-   * Read file text with full security validation:
-   * - Validates path is within workspace root
-   * - Resolves realpath to prevent symlink escapes
-   * - Blocks path traversal attempts
-   * - Only allows regular files (not directories, devices, etc.)
-   * - Enforces file size limit
-   * - Handles binary/non-UTF8 content
+   * Read file text. Single-user desktop app — the agent already has the
+   * user's full filesystem access, so the renderer can preview anywhere
+   * too. Keeps regular-file / size / binary safeguards.
    */
   async readFileText(
     options: ReadFileTextOptions
   ): Promise<ServiceResponse<FileContentResponse>> {
     const {
       filePath,
-      workspaceRoot,
       maxSizeBytes = MAX_FILE_SIZE_BYTES,
     } = options;
 
     try {
-      // 1. Normalize and validate paths
-      const normalizedRoot = path.resolve(workspaceRoot);
       const normalizedPath = path.resolve(filePath);
 
-      // 2. Check for path traversal attempts (before resolving symlinks)
-      if (!normalizedPath.startsWith(normalizedRoot + path.sep) &&
-          normalizedPath !== normalizedRoot) {
-        console.warn(
-          `[FileExplorer] Path traversal blocked: ${filePath} outside ${workspaceRoot}`
-        );
-        return {
-          success: false,
-          error: "Access denied: path is outside workspace",
-        };
-      }
-
-      // 3. Resolve realpath to follow symlinks and check the actual location
       let realPath: string;
       try {
         realPath = await fs.realpath(normalizedPath);
@@ -405,19 +385,7 @@ export const fileExplorerService = {
         throw error;
       }
 
-      // 4. Validate realpath is still within workspace (prevent symlink escapes)
-      const realRoot = await fs.realpath(normalizedRoot).catch(() => normalizedRoot);
-      if (!realPath.startsWith(realRoot + path.sep) && realPath !== realRoot) {
-        console.warn(
-          `[FileExplorer] Symlink escape blocked: ${filePath} resolves to ${realPath} outside ${realRoot}`
-        );
-        return {
-          success: false,
-          error: "Access denied: symlink points outside workspace",
-        };
-      }
-
-      // 5. Get file stats and validate it's a regular file
+      // Get file stats and validate it's a regular file
       const stats = await fs.lstat(realPath);
 
       if (!stats.isFile()) {
@@ -431,7 +399,7 @@ export const fileExplorerService = {
         return fail("Cannot read non-regular file");
       }
 
-      // 6. Check file size
+      // Check file size
       if (stats.size > maxSizeBytes) {
         const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
         const limitMB = (maxSizeBytes / (1024 * 1024)).toFixed(0);
@@ -441,10 +409,10 @@ export const fileExplorerService = {
         };
       }
 
-      // 7. Read file content
+      // Read file content
       const buffer = await fs.readFile(realPath);
 
-      // 8. Check for binary content (look for null bytes in first 8KB)
+      // Check for binary content (look for null bytes in first 8KB)
       const sampleSize = Math.min(buffer.length, 8192);
       let isBinary = false;
       for (let i = 0; i < sampleSize; i++) {
@@ -466,7 +434,7 @@ export const fileExplorerService = {
         };
       }
 
-      // 9. Decode as UTF-8 and validate
+      // Decode as UTF-8 and validate
       let content: string;
       try {
         content = buffer.toString("utf-8");

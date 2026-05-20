@@ -673,7 +673,7 @@ export default function CodexPlugins() {
       {/* Category filter + search */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex gap-1">
-          <button
+          <Button
             onClick={() => setCategoryFilter(null)}
             className={`px-2.5 py-1 text-sm rounded-xl transition-colors cursor-pointer ${
               !categoryFilter
@@ -682,9 +682,9 @@ export default function CodexPlugins() {
             }`}
           >
             All
-          </button>
+          </Button>
           {categories.map((cat) => (
-            <button
+            <Button
               key={cat}
               onClick={() =>
                 setCategoryFilter(cat === categoryFilter ? null : cat)
@@ -696,7 +696,7 @@ export default function CodexPlugins() {
               }`}
             >
               {cat}
-            </button>
+            </Button>
           ))}
         </div>
         <div className="relative w-56">

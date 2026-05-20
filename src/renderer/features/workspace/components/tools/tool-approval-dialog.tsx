@@ -231,7 +231,7 @@ export function ToolApprovalDialog({
               {request.options.map((opt) => {
                 const isSelected = selectedOptions.includes(opt.label);
                 return (
-                  <button
+                  <Button
                     key={opt.label}
                     type="button"
                     onClick={() => toggleOption(opt.label)}
@@ -271,7 +271,7 @@ export function ToolApprovalDialog({
                         </p>
                       )}
                     </div>
-                  </button>
+                  </Button>
                 );
               })}
             </div>
@@ -424,8 +424,7 @@ export function ToolApprovalDialog({
                   </div>
                 )}
                 {hiddenCount > 0 && (
-                  <button
-                    type="button"
+                  <Button
                     aria-expanded={showAllParams}
                     onClick={() => setShowAllParams((v) => !v)}
                     className="mt-1 inline-flex items-center gap-1 text-xs text-primary-500 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-200"
@@ -441,7 +440,7 @@ export function ToolApprovalDialog({
                       }`}
                       aria-hidden
                     />
-                  </button>
+                  </Button>
                 )}
               </div>
             )}

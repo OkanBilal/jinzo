@@ -98,7 +98,7 @@ export function DiffSummaryBar({
       <div className="rounded-2xl glass-morphism  overflow-hidden">
         {/* Header row */}
         <div className="flex items-center gap-2 px-4 py-2">
-          <button
+          <Button
             onClick={() => {
               setIsExpanded((v) => {
                 if (v) setSelectedFile(null);
@@ -129,7 +129,7 @@ export function DiffSummaryBar({
                 />
               )}
             </span>
-          </button>
+          </Button>
 
           <div className="flex items-center gap-1.5 shrink-0">
             <Button
@@ -169,7 +169,7 @@ export function DiffSummaryBar({
                   const ext = fileName.includes(".") ? fileName.split(".").pop() : undefined;
                   const isSelected = selectedFile === filePath;
                   return (
-                    <button
+                    <Button
                       key={filePath}
                       onClick={() => handleFileClick(filePath)}
                       className={`w-full flex items-center gap-2 py-0.5 px-1 rounded text-xs font-sans cursor-pointer transition-colors ${
@@ -204,7 +204,7 @@ export function DiffSummaryBar({
                           )}
                         </span>
                       )}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -225,12 +225,12 @@ export function DiffSummaryBar({
                 <span className="text-xs font-medium text-primary-600 dark:text-primary-400 truncate">
                   {renderedFile}
                 </span>
-                <button
+                <Button
                   onClick={() => setSelectedFile(null)}
                   className="p-0.5 rounded hover:bg-primary-100 dark:hover:bg-primary-800 cursor-pointer"
                 >
                   <Close className="size-3 text-primary-500" />
-                </button>
+                </Button>
               </div>
               <div className="max-h-80 overflow-auto">
                 {/* Only mount DiffViewer when the bar is actually open AND a

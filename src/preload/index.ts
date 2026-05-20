@@ -505,13 +505,12 @@ const api = {
     readFile: (filePath: string) =>
       ipcRenderer.invoke(CHANNELS.fileExplorer.readFile, filePath),
     /**
-     * Securely read file text within a workspace boundary.
-     * Enforces path traversal protection, symlink escape prevention,
-     * file size limits (2MB), and binary file detection.
+     * Read file text. Enforces regular-file, 2MB size limit, and binary
+     * detection. No workspace boundary — the agent already has full
+     * filesystem access so the renderer can preview anywhere.
      */
     readFileText: (options: {
       filePath: string;
-      workspaceRoot: string;
       maxSizeBytes?: number;
     }) => ipcRenderer.invoke(CHANNELS.fileExplorer.readFileText, options),
     /**

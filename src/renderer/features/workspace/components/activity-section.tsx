@@ -143,7 +143,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
               </div>
 
               {/* Content */}
-              <button
+              <Button
                 onClick={() => {
                   if (isClickable) {
                     dispatch(
@@ -205,7 +205,7 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
                     }`}
                   />
                 )}
-              </button>
+              </Button>
             </div>
           );
         })}

@@ -13,6 +13,7 @@ import { normalizePath, pathsMatch } from "../utils/path-utils";
 import type { FileContentResponse, ServiceResponse } from "@/features/workspace/types/file-explorer";
 import { ImagePreviewModal } from "./image-preview-modal";
 import { useLocalImageUrl } from "@/hooks/use-local-image-url";
+import { Button } from "@/components/ui";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp", "gif"]);
 
@@ -37,7 +38,7 @@ function ImageDiffView({ absPath, fileName }: { absPath: string; fileName: strin
             <div className="mt-1 font-mono opacity-60">{absPath}</div>
           </div>
         ) : url ? (
-          <button
+          <Button
             type="button"
             onClick={() => setPreviewOpen(true)}
             className="block w-full overflow-hidden  cursor-pointer"
@@ -52,7 +53,7 @@ function ImageDiffView({ absPath, fileName }: { absPath: string; fileName: strin
                 setError(`Failed to load (src=${(e.currentTarget as HTMLImageElement).src})`);
               }}
             />
-          </button>
+          </Button>
         ) : null}
         {previewOpen && url && (
           <ImagePreviewModal name={fileName} src={url} onClose={() => setPreviewOpen(false)} />
@@ -146,20 +147,20 @@ function makeFindingAnnotation({ colors, textColor, mutedColor, suggestionColor,
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <button
+                  <Button
                     onClick={() => onApprove(f.id)}
                     className="px-2 cursor-pointer py-0.5 text-xxs rounded-sm font-medium transition-colors"
                     style={{ backgroundColor: "#16a34a22", color: "#22c55e" }}
                   >
                     ✓ Approve
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => onFix(f)}
                     className="px-2 cursor-pointer py-0.5 text-xxs rounded-sm font-medium transition-colors"
                     style={{ backgroundColor: "#3b82f622", color: "#60a5fa" }}
                   >
                     Fix
-                  </button>
+                  </Button>
                 </div>
               </div>
               {f.reason && (
@@ -227,7 +228,7 @@ export function DiffViewer({
 
     let cancelled = false;
     window.api.fileExplorer
-      .readFileText({ filePath: `${workspace.rootPath}/${filePath}`, workspaceRoot: workspace.rootPath })
+      .readFileText({ filePath: `${workspace.rootPath}/${filePath}` })
       .then((result: ServiceResponse<FileContentResponse>) => {
         if (!cancelled && result.success && result.data && !result.data.isBinary) {
           setFileLinesCache({

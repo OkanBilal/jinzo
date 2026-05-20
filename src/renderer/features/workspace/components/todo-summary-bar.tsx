@@ -3,6 +3,7 @@ import type { RunEvent } from "../types";
 import { resolveTool } from "../utils/resolve-tool";
 import { ArrowUp, Check } from "@/components/ui/icons";
 import type { TodoItem } from "./tools/todo-list-display";
+import { Button } from "@/components/ui";
 
 interface TodoSummaryBarProps {
   events: RunEvent[];
@@ -131,7 +132,7 @@ export function TodoSummaryBar({ events }: TodoSummaryBarProps) {
   return (
     <div className="w-200 mx-auto mb-1">
       <div className="rounded-2xl glass-morphism overflow-hidden">
-        <button
+        <Button
           onClick={() => setIsExpanded((v) => !v)}
           className="group flex items-center gap-2 w-full px-4 py-3 cursor-pointer"
         >
@@ -147,7 +148,7 @@ export function TodoSummaryBar({ events }: TodoSummaryBarProps) {
               • {inProgress.content}
             </span>
           )}
-        </button>
+        </Button>
 
         <div
           className="grid transition-[grid-template-rows] duration-200 ease-out"

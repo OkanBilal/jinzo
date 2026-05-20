@@ -1331,7 +1331,7 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
       signal,
     ): Promise<DriverOutcome> {
       const cs = session as CursorSession;
-      const timeout = config.timeout ?? 600000;
+      const timeout = config.timeout ?? 3_600_000;
 
       const server = acpServer;
       if (!server || !server.isRunning) {

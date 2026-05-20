@@ -7,6 +7,7 @@ import {
   Mcp,
   PullRequest,
 } from "@/components/ui/icons";
+import { Button } from "@/components/ui";
 
 type SuggestionAction =
   | { type: "prompt"; value: string }
@@ -166,14 +167,14 @@ export function SpaceSuggestions({
             {index > 0 && (
               <div className="border-t border-primary-200/60 dark:border-primary-800/50" />
             )}
-            <button
+            <Button
               type="button"
               onClick={() => handleClick(suggestion)}
               className="group flex items-center gap-2 py-2 text-s text-left text-primary-600 dark:text-primary-300 hover:text-primary-900 dark:hover:text-primary transition-colors cursor-pointer"
             >
               <IconComp className="size-3.5 shrink-0 text-primary-500 dark:text-primary-400 group-hover:text-primary-900 dark:group-hover:text-primary" />
               <span className="truncate">{suggestion.label}</span>
-            </button>
+            </Button>
           </Fragment>
         );
       })}

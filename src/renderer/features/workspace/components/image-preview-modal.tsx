@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Close } from "@/components/ui/icons";
+import { Button } from "@/components/ui";
 
 interface ImagePreviewModalProps {
   name: string;
@@ -31,12 +32,12 @@ export function ImagePreviewModal({ name, src, onClose }: ImagePreviewModalProps
           <span className="text-xs font-mono text-primary-600 dark:text-primary-400 truncate">
             {name}
           </span>
-          <button
+          <Button
             onClick={onClose}
             className="ml-3 shrink-0 p-1 rounded-md hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
           >
             <Close className="w-3.5 h-3.5 text-primary-500" />
-          </button>
+          </Button>
         </div>
         <div className="bg-primary-100 dark:bg-primary-900 flex items-center justify-center p-2">
           <img

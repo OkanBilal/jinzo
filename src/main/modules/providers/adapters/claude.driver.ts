@@ -1464,7 +1464,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       signal,
     ): Promise<DriverOutcome> {
       const cs = sessionParam as ClaudeSession;
-      const timeout = config.timeout ?? 6_000_000;
+      const timeout = config.timeout ?? 3_600_000;
       if (!queryFn) throw new Error("Claude SDK not properly initialized");
 
       // Wire the incoming AbortSignal to fire BOTH the SDK's AbortController and query.interrupt().

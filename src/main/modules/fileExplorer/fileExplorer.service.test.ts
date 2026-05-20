@@ -233,17 +233,14 @@ describe("fileExplorerService", () => {
   });
 
   // ─────────────────────────────────────────────────────────────
-  // readFileText (SECURITY TESTS)
+  // readFileText
   // ─────────────────────────────────────────────────────────────
   describe("readFileText", () => {
-    it("reads a valid file within workspace", async () => {
+    it("reads a valid file", async () => {
       const filePath = path.join(tmpDir, "code.ts");
       await fs.writeFile(filePath, "const x = 1;");
 
-      const result = await fileExplorerService.readFileText({
-        filePath,
-        workspaceRoot: tmpDir,
-      });
+      const result = await fileExplorerService.readFileText({ filePath });
       assertOk(result);
       expect(result.data!.content).toBe("const x = 1;");
       expect(result.data!.isBinary).toBe(false);
@@ -251,74 +248,44 @@ describe("fileExplorerService", () => {
       expect(result.data!.size).toBeGreaterThan(0);
     });
 
-    // ── Path traversal prevention ──
-    it("blocks path traversal with ../", async () => {
-      // Create a file outside the workspace
+    it("reads a file outside the workspace dir", async () => {
       const outsideDir = await makeTmpDir();
-      await fs.writeFile(path.join(outsideDir, "secret.txt"), "secret");
+      const outsidePath = path.join(outsideDir, "external.txt");
+      await fs.writeFile(outsidePath, "external content");
 
       const result = await fileExplorerService.readFileText({
-        filePath: path.join(tmpDir, "..", path.basename(outsideDir), "secret.txt"),
-        workspaceRoot: tmpDir,
+        filePath: outsidePath,
       });
-      assertFail(result);
-      expect(result.error).toBe("Access denied: path is outside workspace");
+      assertOk(result);
+      expect(result.data!.content).toBe("external content");
 
       await fs.rm(outsideDir, { recursive: true, force: true });
     });
 
-    it("blocks absolute path outside workspace", async () => {
-      const result = await fileExplorerService.readFileText({
-        filePath: "/etc/passwd",
-        workspaceRoot: tmpDir,
-      });
-      assertFail(result);
-      expect(result.error).toBe("Access denied: path is outside workspace");
-    });
-
-    // ── Symlink escape prevention ──
-    it("blocks symlink that escapes workspace", async () => {
+    it("follows symlinks (including those pointing outside)", async () => {
       const outsideDir = await makeTmpDir();
-      const outsideFile = path.join(outsideDir, "secret.txt");
-      await fs.writeFile(outsideFile, "secret data");
+      const outsideFile = path.join(outsideDir, "target.txt");
+      await fs.writeFile(outsideFile, "linked content");
 
-      const symlinkPath = path.join(tmpDir, "escape-link");
+      const symlinkPath = path.join(tmpDir, "link");
       await fs.symlink(outsideFile, symlinkPath);
 
       const result = await fileExplorerService.readFileText({
         filePath: symlinkPath,
-        workspaceRoot: tmpDir,
-      });
-      assertFail(result);
-      expect(result.error).toBe("Access denied: symlink points outside workspace");
-
-      await fs.rm(outsideDir, { recursive: true, force: true });
-    });
-
-    it("allows symlink within workspace", async () => {
-      const realFile = path.join(tmpDir, "real.txt");
-      await fs.writeFile(realFile, "real content");
-
-      const symlinkPath = path.join(tmpDir, "link.txt");
-      await fs.symlink(realFile, symlinkPath);
-
-      const result = await fileExplorerService.readFileText({
-        filePath: symlinkPath,
-        workspaceRoot: tmpDir,
       });
       assertOk(result);
-      expect(result.data!.content).toBe("real content");
+      expect(result.data!.content).toBe("linked content");
+
+      await fs.rm(outsideDir, { recursive: true, force: true });
     });
 
     // ── File size limits ──
     it("blocks files exceeding size limit", async () => {
       const filePath = path.join(tmpDir, "big.txt");
-      // Create a file bigger than custom limit
       await fs.writeFile(filePath, "x".repeat(1024));
 
       const result = await fileExplorerService.readFileText({
         filePath,
-        workspaceRoot: tmpDir,
         maxSizeBytes: 512,
       });
       assertFail(result);
@@ -331,7 +298,6 @@ describe("fileExplorerService", () => {
 
       const result = await fileExplorerService.readFileText({
         filePath,
-        workspaceRoot: tmpDir,
         maxSizeBytes: 1024,
       });
       assertOk(result);
@@ -346,10 +312,7 @@ describe("fileExplorerService", () => {
       buf.write("hello", 0);
       await fs.writeFile(filePath, buf);
 
-      const result = await fileExplorerService.readFileText({
-        filePath,
-        workspaceRoot: tmpDir,
-      });
+      const result = await fileExplorerService.readFileText({ filePath });
       assertOk(result);
       expect(result.data!.isBinary).toBe(true);
       expect(result.data!.encoding).toBe("binary");
@@ -362,7 +325,6 @@ describe("fileExplorerService", () => {
 
       const result = await fileExplorerService.readFileText({
         filePath: dirPath,
-        workspaceRoot: tmpDir,
       });
       assertFail(result);
       expect(result.error).toContain("directory");
@@ -372,7 +334,6 @@ describe("fileExplorerService", () => {
     it("returns error for non-existent file", async () => {
       const result = await fileExplorerService.readFileText({
         filePath: path.join(tmpDir, "nope.txt"),
-        workspaceRoot: tmpDir,
       });
       assertFail(result);
       expect(result.error).toBe("File does not exist");
@@ -383,10 +344,7 @@ describe("fileExplorerService", () => {
       const filePath = path.join(tmpDir, "unicode.txt");
       await fs.writeFile(filePath, "Héllo wörld 日本語 🎉");
 
-      const result = await fileExplorerService.readFileText({
-        filePath,
-        workspaceRoot: tmpDir,
-      });
+      const result = await fileExplorerService.readFileText({ filePath });
       assertOk(result);
       expect(result.data!.content).toBe("Héllo wörld 日本語 🎉");
       expect(result.data!.isBinary).toBe(false);

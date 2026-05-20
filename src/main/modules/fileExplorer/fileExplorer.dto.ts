@@ -70,7 +70,6 @@ export interface FileContentResponse {
 // Read file text options
 export interface ReadFileTextOptions {
   filePath: string;
-  workspaceRoot: string;
   maxSizeBytes?: number; // Default 2MB
 }
 

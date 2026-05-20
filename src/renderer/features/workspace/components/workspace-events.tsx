@@ -609,7 +609,7 @@ function AgentTurnMessagesAccordion({
       >
         <div className="min-h-0 overflow-hidden">
           <div className="border-b border-primary-200/50 dark:border-primary-800/50 pb-1">
-            <button
+            <Button
               type="button"
               onClick={() => setOpen((v) => !v)}
               className="group w-full flex flex-wrap items-center gap-x-1 gap-y-0.5 text-left text-s text-primary-600 dark:text-primary-400 font-sans cursor-pointer hover:text-primary-800 dark:hover:text-primary-200 transition-colors"
@@ -618,7 +618,7 @@ function AgentTurnMessagesAccordion({
               <ArrowUp
                 className={`size-3.5 shrink-0 opacity-70 transition-transform duration-300 ease-out ${open ? "rotate-180" : "rotate-90"}`}
               />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -702,8 +702,9 @@ export function WorkspaceEvents({
     ? signalTabs.find((t) => t.signal.entityId === getSignalEntityId(activeTab))
     : null;
   const activeNoteId = isNoteActive ? getNoteId(activeTab) : null;
-  const hasRunContent =
-    !isEditorActive && !isIssueActive && !isSignalActive && !isNoteActive && !isNewRunActive && currentEvents.length > 0;
+  const isRunTabActive =
+    !isEditorActive && !isIssueActive && !isSignalActive && !isNoteActive && !isNewRunActive;
+  const hasRunContent = isRunTabActive && currentEvents.length > 0;
 
   // Check if current run is still running
   const activeRun = runs.find((r) => r.id === activeTab);
@@ -879,22 +880,26 @@ export function WorkspaceEvents({
     return last ? last.content.slice("[thinking] ".length) : undefined;
   }, [currentEvents]);
 
+  // Run content stays mounted whenever there are events for the active run,
+  // just hidden when a non-run tab is active. Preserves accordion open state,
+  // scroll position, and other local UI state across tab switches.
+  const showEmpty = isRunTabActive && currentEvents.length === 0;
+
   return (
     <div className=" text-sm h-full flex flex-col">
       {/* Content area */}
       <div className="flex-1 min-h-0 overflow-hidden relative">
-        {isNewRunActive ? (
+        {isNewRunActive && (
           <div className="h-full min-h-0 shrink-0" aria-hidden />
-        ) : isEditorActive ? (
-          <EditorContent className="h-full" />
-        ) : isIssueActive && activeIssue ? (
-          <IssueTabContent issue={activeIssue} />
-        ) : isSignalActive && activeSignal ? (
-          <SignalTabContent signal={activeSignal} />
-        ) : isNoteActive && activeNoteId ? (
-          <NoteTabContent reviewId={activeNoteId} />
-        ) : hasRunContent ? (
-          <div className="h-full overflow-y-auto noscrollbar">
+        )}
+        {isEditorActive && <EditorContent className="h-full" />}
+        {isIssueActive && activeIssue && <IssueTabContent issue={activeIssue} />}
+        {isSignalActive && activeSignal && <SignalTabContent signal={activeSignal} />}
+        {isNoteActive && activeNoteId && <NoteTabContent reviewId={activeNoteId} />}
+        {currentEvents.length > 0 && (
+          <div
+            className={`h-full overflow-y-auto noscrollbar ${isRunTabActive ? "" : "hidden"}`}
+          >
             <div className="min-h-75 max-w-210 mx-auto space-y-4 pt-12 pb-24 px-4">
               {turnRenderRows.map((row, rowIndex) => {
                 if (row.kind === "flat") {
@@ -935,9 +940,8 @@ export function WorkspaceEvents({
               <div ref={eventsEndRef} />
             </div>
           </div>
-        ) : (
-          <WorkspaceEmptyState workspace={currentWorkspace} />
         )}
+        {showEmpty && <WorkspaceEmptyState workspace={currentWorkspace} />}
         {/* Top/bottom fade overlays — only shown on run content (chat), not on editor/issue/note tabs.
             `hasRunContent` already excludes editor/issue/signal/note/new-run tabs, so no extra guards needed. */}
         {hasRunContent && (
