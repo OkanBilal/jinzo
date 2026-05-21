@@ -21,6 +21,16 @@ jobs:
         arch: [arm64, x64]
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Ensure tag is from main
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor ${{ github.sha }} origin/main; then
+            echo "This tag is not on main. Release is blocked."
+            exit 1
+          fi
 
       - uses: actions/setup-node@v5
         with:

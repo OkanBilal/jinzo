@@ -93,6 +93,19 @@ interface CursorSession {
   agentMessageBuffer: string;
   /** Streamed ephemerally, never persisted. */
   agentThoughtBuffer: string;
+  /**
+   * ACP `tool_call_update` notifications are deltas — only changed fields
+   * are present (per spec: "All fields except toolCallId are optional in
+   * updates"). We cache the start payload here so the complete branch can
+   * restore toolName/input when those fields aren't re-sent.
+   */
+  toolCallCache: Map<string, { toolName: string; input: Record<string, unknown> }>;
+  /**
+   * Tool call IDs we deliberately skipped (e.g. cursor extension TODOs,
+   * create_plan, MCP). Their `tool_call_update` deltas must also be skipped,
+   * even when title/kind aren't re-sent and we can't pattern-match again.
+   */
+  skippedToolCallIds: Set<string>;
 }
 
 const { info: logInfo, error: logError, warn: logWarn } = createLogger("[CursorDriver]");
@@ -496,6 +509,32 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
   // Event mapping: ACP session/update notifications → WorkRunEvent
   // ─────────────────────────────────────────────────────────────
 
+  /**
+   * Tool calls we suppress on the standard session/update channel because
+   * they're either richer on a cursor extension method, or aren't real
+   * tool invocations from the user's perspective:
+   *   - create_plan: surfaced via cursor/create_plan server-request.
+   *   - update_todos: surfaced via cursor/update_todos notification.
+   *   - mcp_tool_call / mains-*: in-process MCP bridge tracks these itself.
+   */
+  function shouldSkipToolCall(kind: string | undefined, title: string | undefined): boolean {
+    if (kind === "create_plan" || kind === "plan" || /create\s*plan/i.test(title ?? "")) {
+      return true;
+    }
+    if (kind === "update_todos" || /^update\s*todos?$/i.test(title ?? "")) {
+      return true;
+    }
+    if (
+      kind === "mcp_tool_call" ||
+      /mcp/i.test(kind ?? "") ||
+      /mcp/i.test(title ?? "") ||
+      /^mains[-_]/i.test(title ?? "")
+    ) {
+      return true;
+    }
+    return false;
+  }
+
   function normalizeToolCall(
     kind: string | undefined,
     title: string | undefined,
@@ -593,6 +632,22 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         const todosText = todos
           .map((t) => `${statusIcon(t.status)} ${t.content}`)
           .join("\n");
+        // Emit start+complete pair: projectToolCall drops complete events
+        // without a matching start, so the row would never persist otherwise.
+        const extToolCallId = `cursor-todos-${cs.runId}-${ts}`;
+        events.push({
+          type: "tool_call",
+          toolName: "Todos",
+          input: { todos: todosText, merge },
+          startedAt: ts,
+          metadata: {
+            phase: "start",
+            toolCallId: extToolCallId,
+            cursorExtension: "update_todos",
+            merge,
+            todoItems: todos,
+          },
+        });
         events.push({
           type: "tool_call",
           toolName: "Todos",
@@ -602,6 +657,7 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
           endedAt: ts,
           metadata: {
             phase: "complete",
+            toolCallId: extToolCallId,
             cursorExtension: "update_todos",
             merge,
             todoItems: todos,
@@ -727,14 +783,10 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
           | Array<{ path?: string; line?: number }>
           | undefined;
 
-        if (kind === "create_plan" || kind === "plan" || /create\s*plan/i.test(title ?? "")) break;
-        if (
-          kind === "mcp_tool_call" ||
-          /mcp/i.test(kind ?? "") ||
-          /mcp/i.test(title ?? "") ||
-          /^mains[-_]/i.test(title ?? "")
-        )
+        if (shouldSkipToolCall(kind, title)) {
+          if (toolCallId) cs.skippedToolCallIds.add(toolCallId);
           break;
+        }
 
         const { toolName, input: normalizedInput } = normalizeToolCall(
           kind,
@@ -744,6 +796,9 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         );
 
         if (status === "pending" || status === "in_progress") {
+          if (toolCallId) {
+            cs.toolCallCache.set(toolCallId, { toolName, input: normalizedInput });
+          }
           cs.agentThoughtBuffer = "";
           events.push({
             type: "artifact",
@@ -776,14 +831,16 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
           | undefined;
         const content = update.content as Array<Record<string, unknown>> | undefined;
 
-        if (kind === "create_plan" || kind === "plan" || /create\s*plan/i.test(title ?? "")) break;
-        if (
-          kind === "mcp_tool_call" ||
-          /mcp/i.test(kind ?? "") ||
-          /mcp/i.test(title ?? "") ||
-          /^mains[-_]/i.test(title ?? "")
-        )
+        // Skip deltas for tool calls whose start was deliberately suppressed
+        // (TODOs handled via extension, create_plan, MCP). Title/kind may be
+        // absent on the delta — fall back to the cached set keyed by ID.
+        if (toolCallId && cs.skippedToolCallIds.has(toolCallId)) {
+          if (status === "completed" || status === "failed") {
+            cs.skippedToolCallIds.delete(toolCallId);
+          }
           break;
+        }
+        if (shouldSkipToolCall(kind, title)) break;
 
         const { toolName, input: normalizedInput } = normalizeToolCall(
           kind,
@@ -793,6 +850,7 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         );
 
         if (status === "completed" || status === "failed") {
+          const cached = toolCallId ? cs.toolCallCache.get(toolCallId) : undefined;
           const diffBlock = content?.find((c) => c.type === "diff");
           if (diffBlock) {
             if (typeof diffBlock.path === "string") normalizedInput.file_path = diffBlock.path;
@@ -801,6 +859,24 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
             if (typeof diffBlock.newText === "string")
               normalizedInput.new_string = diffBlock.newText;
           }
+
+          // ACP `tool_call_update` is a delta — only changed fields are
+          // re-sent. If none of the input-bearing fields are present, leave
+          // `input` undefined so the start-time value is preserved in DB.
+          const hasInputDelta =
+            rawInput !== undefined ||
+            title !== undefined ||
+            kind !== undefined ||
+            locations?.[0]?.path !== undefined ||
+            diffBlock !== undefined;
+          const finalInput = hasInputDelta
+            ? { ...(cached?.input ?? {}), ...normalizedInput }
+            : undefined;
+          // Likewise restore toolName from cache when delta omits kind/title.
+          const finalToolName =
+            kind !== undefined || title !== undefined
+              ? toolName
+              : (cached?.toolName ?? toolName);
 
           let outputText: unknown;
           if (content && content.length > 0) {
@@ -819,13 +895,23 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
 
           events.push({
             type: "tool_call",
-            toolName,
-            input: normalizedInput,
+            toolName: finalToolName,
+            input: finalInput,
             output: outputText,
-            error: status === "failed" ? (title ?? "Tool call failed") : undefined,
+            error:
+              status === "failed"
+                ? (title ?? cached?.toolName ?? "Tool call failed")
+                : undefined,
             endedAt: ts,
-            metadata: { phase: "complete", toolCallId, title, kind },
+            metadata: {
+              phase: "complete",
+              toolCallId,
+              title: title ?? cached?.toolName,
+              kind,
+            },
           });
+
+          if (toolCallId) cs.toolCallCache.delete(toolCallId);
         }
         break;
       }
@@ -1246,6 +1332,8 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         sessionId,
         agentMessageBuffer: "",
         agentThoughtBuffer: "",
+        toolCallCache: new Map(),
+        skippedToolCallIds: new Set(),
       };
 
       return {
@@ -1315,6 +1403,8 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         sessionId,
         agentMessageBuffer: "",
         agentThoughtBuffer: "",
+        toolCallCache: new Map(),
+        skippedToolCallIds: new Set(),
       };
 
       return {

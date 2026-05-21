@@ -58,7 +58,7 @@ function WorkspaceGroupSection({
   }, [expanded, storageKey]);
 
   return (
-    <div className="mb-1">
+    <div className="mb-0.5">
       <Button
         type="button"
         onClick={() => setExpanded((v) => !v)}
@@ -169,20 +169,13 @@ export default function WorkspacesList({
     navigate(`${basePath}/${workspace.id}`);
   };
 
-  const formatWorkspaceName = (workspace: WorkspaceResponse): string => {
-    if (workspace.repoUrl) {
-      const match = workspace.repoUrl.match(/github\.com[/:]([^/]+\/[^/.]+)/);
-      if (match) return match[1];
-    }
-    return workspace.name;
-  };
 
   const handleLinkIssues = (workspace: WorkspaceResponse) => {
     if (!workspace.projectId) return;
     setLinkModalState({
       isOpen: true,
       projectId: workspace.projectId,
-      workspaceName: formatWorkspaceName(workspace),
+      workspaceName: workspace.name,
     });
   };
 
@@ -303,7 +296,7 @@ export default function WorkspacesList({
       <WorkspaceItem
         key={workspace.id}
         id={workspace.id}
-        name={formatWorkspaceName(workspace)}
+        name={workspace.name}
         rootPath={workspace.rootPath}
         status={workspace.status}
         branch={workspace.defaultBranch}
@@ -345,7 +338,7 @@ export default function WorkspacesList({
         // tabIndex={0}
         // onClick={() => setIsExpanded(!isExpanded)}
         // onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsExpanded(!isExpanded); } }}
-        className="w-full flex items-center justify-between transition-all duration-200 bg-transparent   px-2 py-0.5 mb-1 rounded-lg "
+        className="w-full flex items-center justify-between transition-all duration-200 bg-transparent  px-2 py-0.5 rounded-lg "
       >
         <Caption className="text-primary-900 dark:text-primary-100 font-medium">
           Workspaces
@@ -371,14 +364,14 @@ export default function WorkspacesList({
         }`}
       >
         {grouping === "none" ? (
-          <div className="flex flex-col space-y-1">
+          <div className="flex flex-col space-y-0.5">
             {sortedWorkspaces.map(renderWorkspaceItem)}
           </div>
         ) : (
           <div className="flex flex-col ">
             {groups.map((group) => (
               <WorkspaceGroupSection key={group.key} group={group}>
-                <div className="flex flex-col space-y-1 pl-1 pr-1">
+                <div className="flex flex-col space-y-0.5  pr-1">
                   {group.workspaces.map(renderWorkspaceItem)}
                 </div>
               </WorkspaceGroupSection>

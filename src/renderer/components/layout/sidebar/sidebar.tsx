@@ -35,6 +35,7 @@ import { useSidebarActions } from "@/hooks/use-sidebar-actions";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { useActiveSpace } from "@/hooks/use-active-space";
 import { useScriptNotifications } from "@/hooks/use-script-notifications";
+import { useSidebarSpaceSwipe } from "@/hooks/use-sidebar-space-swipe";
 import { UpdateBanner } from "./update-banner";
 import { Button } from "@/components/ui/button";
 import { Body, Tooltip } from "@/components/ui";
@@ -49,7 +50,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const sidebarConfig = useSidebarConfig();
-  const { spaces, activeSpaceId, activeSpaceAgentSlug } = useActiveSpace();
+  const { spaces, activeSpaceId, activeSpaceAgentSlug } =
+    useActiveSpace();
 
   const {
     searchQuery,
@@ -129,6 +131,12 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const deleteWorkspace = useDeleteWorkspace();
   const archiveWorkspace = useArchiveWorkspace();
 
+  const swipeRef = useSidebarSpaceSwipe({
+    spaces,
+    activeSpaceId,
+    onSpaceChange: handleSpaceChange,
+  });
+
   // Suppress unused variable warning for handleRefreshConnections
   void handleRefreshConnections;
 
@@ -149,6 +157,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   return (
     <>
       <aside
+        ref={swipeRef}
         className="fixed top-0 bottom-0 left-0 z-(--z-sidebar) transition-all duration-300"
         style={{
           width: sidebarConfig.width,
@@ -158,6 +167,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         role="complementary"
         aria-label="Workspace sidebar"
       >
+        {/* <SpaceSwitchIndicator activeSpace={activeSpace} /> */}
         {isSettingsOpen ? (
           <SettingsView onClose={handleCloseSettings} />
         ) : isCreatingSpace ? (

@@ -22,7 +22,7 @@ export const CURSOR_MODES: readonly ModeOption<CursorMode>[] = [
     value: "ask",
     label: "Ask",
     shortLabel: "Ask",
-    description: "Answer questions without taking action",
+    description: "Ask before changes",
   },
   {
     value: "agent",

@@ -1,9 +1,9 @@
 import { lazy, type ComponentType, type ElementType } from "react";
 import {
-  Apps,
   Branch,
   Chart,
   Codex,
+  Connect,
   CopilotStatic,
   Cursor,
   General,
@@ -68,7 +68,7 @@ export type SettingsNavItem = {
 export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { id: "general", label: "General", icon: General, showInNav: true, Component: GeneralSettings },
   { id: "git", label: "Git", icon: Branch, showInNav: true, Component: GitSettings },
-  { id: "connections", label: "Connections", icon: Apps, showInNav: true, Component: ConnectionsSettings },
+  { id: "connections", label: "Connections", icon: Connect, showInNav: true, Component: ConnectionsSettings },
   { id: "dashboard", label: "Dashboard", icon: Chart, showInNav: true, Component: DashboardPage },
 
   { id: "claude", label: "Claude", icon: Claude, Component: ClaudeSettings },

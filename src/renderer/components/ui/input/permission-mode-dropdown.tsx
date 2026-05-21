@@ -148,7 +148,7 @@ export function PermissionModeDropdown({
         className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-sm transition-all cursor-pointer hover:bg-primary-200/30 animate-blur-reveal dark:hover:bg-primary-800  ${
           permissionMode === "bypassPermissions" ||
           permissionMode === "danger-full-access"
-            ? "dark:bg-yellow-100/10 hover:bg-yellow-500/30  bg-yellow-400/30 text-yellow-600 dark:text-yellow-200"
+            ? "dark:bg-yellow-300/10 hover:dark:bg-yellow-300/10 hover:bg-yellow-400/30  bg-yellow-400/30 text-yellow-600 dark:text-yellow-300"
             : permissionMode !== "default"
               ? " text-primary-700 dark:text-primary-300"
               : "text-primary-700 dark:text-primary-300 "
@@ -187,7 +187,7 @@ export function PermissionModeDropdown({
             />
             <div className="flex flex-col flex-1 min-w-0">
               <Body className="text-s mb-0.5">{mode.label}</Body>
-              <span className="text-xs text-primary-500  ">
+              <span className="text-xs  text-primary-500  ">
                 {mode.description}
               </span>
             </div>

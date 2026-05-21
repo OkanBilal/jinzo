@@ -18,13 +18,13 @@ export function ProjectIcon({
     }
     if (parsed.type === "emoji") {
       return (
-        <span className="text-xs leading-none">{parsed.value as string}</span>
+        <span className="text-xs ">{parsed.value as string}</span>
       );
     }
   }
   const initial = (projectName?.[0] ?? "P").toUpperCase();
   return (
-    <div className="size-3.5 rounded-md flex items-center font-mono justify-center text-t font-medium text-primary-700 dark:text-primary-200 border border-primary-700 dark:border-primary-200">
+    <div className="size-4 rounded-md flex items-center font-mono justify-center text-t font-medium text-primary-950 dark:text-primary-200 border border-primary-950/50 dark:border-primary/10">
       {initial}
     </div>
   );

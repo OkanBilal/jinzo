@@ -170,31 +170,29 @@ export default function WorkspaceItem({
             onClick?.();
           }
         }}
-        className={`block px-2.5 py-1.5
-          rounded-xl transition-all duration-200 ease-out cursor-pointer ${
+        className={`block  py-1.5
+           transition-all duration-200 ease-out cursor-pointer ${grouping !== "project" ? "rounded-xl px-2" : "rounded-[10px] px-2"} ${
             isActive
               ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
               : "bg-transparent group-hover:bg-primary/50 dark:group-hover:bg-primary/5"
           }`}
       >
         <div className="flex flex-col ">
-          <div className="flex items-center gap-1 min-w-0 flex-1 mb-0.5">
+          <div className="flex items-center gap-1 min-w-0 flex-1 mb-0.5 ">
             {grouping !== "project" && (
-              <span className="shrink-0 ">
+              <><span className="shrink-0 ">
                 {projectIcon ?? (
                   <Branch className="size-3.5 text-primary-800 dark:text-primary-400" />
                 )}
-              </span>
+              </span><span
+                className={`truncate text-s font-medium ${isActive
+                    ? "text-primary-800 dark:text-primary"
+                    : "text-primary-800 dark:text-primary-100"}`}
+              >
+                  {name}
+                </span></>
             )}
-            <span
-              className={`truncate text-s font-medium ${
-                isActive
-                  ? "text-primary-800 dark:text-primary"
-                  : "text-primary-800 dark:text-primary-100"
-              }`}
-            >
-              {name}
-            </span>
+
           </div>
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5">
@@ -215,7 +213,7 @@ export default function WorkspaceItem({
               )}
               {branch && !isRenamingBranch && (
                 <Muted
-                  className={`text-xs  text-primary-900 dark:text-primary-200 truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
+                  className={`text-xs text-primary-900 dark:text-primary-200 truncate ${grouping === "status" ? "-ml-1.5" : ""}`}
                 >
                   {branch}
                 </Muted>

@@ -269,15 +269,15 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   }
 
   return (
-    <div className="py-0.5 hover:bg-primary-50 dark:hover:bg-primary/5 rounded">
+    <div className="py-0.5 text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary  rounded">
       <div className="flex items-center gap-2 text-s font-sans">
-        <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary">
+        <span className="">
           {resolved.icon}
         </span>
-        <span className="text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary font-medium">
+        <span className=" font-medium">
           {resolved.displayName}
         </span>
-        <span className="text-primary-500 truncate">{summary}</span>
+        <span className=" truncate">{summary}</span>
       </div>
     </div>
   );

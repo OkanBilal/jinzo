@@ -38,7 +38,7 @@ export default function SpaceIconPicker({
   iconMode,
   isOpen,
   previewBackground,
-  useFixedBackground = false,
+  useFixedBackground = true,
   onToggle,
   onSelectEmoji,
   onSelectIcon,
@@ -152,7 +152,7 @@ export default function SpaceIconPicker({
               >
                 <EmojiPicker.Search
                   placeholder="Search emoji..."
-                  className="w-full mb-2 px-2 py-1.5 dark:placeholder:text-primary-200 placeholder:text-primary-700 bg-primary-950/5 dark:bg-primary/10 rounded-xl text-sm outline-none focus:bg-primary-950/10 dark:focus:bg-primary/10 border border-primary-950/10 dark:border-primary/10"
+                  className="w-full mb-2 px-2 py-1.5 dark:text-primary-200 text-primary-700 dark:placeholder:text-primary-200 placeholder:text-primary-700 bg-primary-950/5 dark:bg-primary/10 rounded-xl text-sm outline-none focus:bg-primary-950/10 dark:focus:bg-primary/10 border border-primary-950/10 dark:border-primary/10"
                 />
                 <EmojiPicker.Viewport className="h-64 overflow-y-auto w-full noscrollbar">
                   <EmojiPicker.Loading>
