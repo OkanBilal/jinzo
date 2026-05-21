@@ -28,7 +28,7 @@ export interface ResolvedTool {
   verb?: string;
   /** Entity extracted from the MCP tool name (e.g. "issues"). */
   entity?: string;
-  /** True for tools that should always start a fresh group (Task, TodoWrite). */
+  /** True for tools that should always start a fresh group (Task, TaskCreate/TaskUpdate). */
   isSpecialGroup: boolean;
   /** True when this tool resolved to a built-in entry. */
   isBuiltin: boolean;

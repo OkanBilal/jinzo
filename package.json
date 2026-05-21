@@ -98,8 +98,8 @@
     "vitest": "^4.1.1"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.132",
-    "@anthropic-ai/sdk": "^0.81.0",
+    "@anthropic-ai/claude-agent-sdk": "^0.3.146",
+    "@anthropic-ai/sdk": "^0.97.1",
     "@cursor/sdk": "^1.0.12",
     "@github/copilot-sdk": "^0.3.0",
     "@linear/sdk": "^83.0.0",
@@ -129,7 +129,8 @@
     "remark-gfm": "^4.0.1",
     "simple-git": "^3.33.0",
     "tailwind-merge": "^3.5.0",
-    "update-electron-app": "^3.1.2"
+    "update-electron-app": "^3.1.2",
+    "zod": "^4.4.3"
   },
   "overrides": {
     "tar": "^7.5.6",

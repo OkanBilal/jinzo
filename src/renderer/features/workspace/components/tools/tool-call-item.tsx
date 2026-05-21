@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import type { RunEvent } from "../../types";
 import { parseToolContent, type ParsedToolContent } from "../../utils/parse-tool-content";
 import { resolveTool } from "../../utils/resolve-tool";
-import { TodoListDisplay, type TodoItem } from "./todo-list-display";
 import { TaskDisplay, type TaskParams } from "./task-display";
 import { PlanDisplay } from "./plan-display";
 import { WriteDisplay, type WriteParams } from "./write-display";
@@ -118,13 +117,6 @@ function byDisplayName<T>(
 const summaryAs = (key: string) => (ctx: Ctx) => ({ [key]: ctx.summary }) as never;
 
 const DISPATCH: Renderer[] = [
-  // TodoWrite — only matches when `todos` is a real array; otherwise falls through.
-  (ctx) => {
-    if (ctx.toolNameLower !== "todowrite") return null;
-    const todos = ctx.metadataInput?.todos ?? ctx.params?.todos;
-    return Array.isArray(todos) ? <TodoListDisplay todos={todos as TodoItem[]} /> : null;
-  },
-
   // Plan / ExitPlanMode — PlanDisplay needs the raw event, not params.
   (ctx) =>
     ctx.toolNameLower === "plan" ||

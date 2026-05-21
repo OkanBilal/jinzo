@@ -65,7 +65,7 @@ export interface BuiltinTool {
   aliases: string[];
   /**
    * `true` for tools that should always start a new group on their own
-   * (Task, TodoWrite). Mirrors the legacy `isSpecial` behavior.
+   * (Task, TaskCreate/TaskUpdate). Mirrors the legacy `isSpecial` behavior.
    */
   isSpecialGroup?: boolean;
 }
@@ -179,24 +179,17 @@ export const VENDORS: VendorInfo[] = [
 /**
  * Built-in (non-MCP) tools. Order is significant for the contains-fallback
  * resolution path — more specific aliases must come before less specific ones
- * (e.g. `todowrite` before `todo`, `webfetch` before `fetch`).
+ * (e.g. `webfetch` before `fetch`).
  */
 export const BUILTIN_TOOLS: BuiltinTool[] = [
-  {
-    displayName: "TodoWrite",
-    groupKey: "todowrite",
-    category: "Todo",
-    icon: <Check className="size-4" />,
-    aliases: ["todowrite", "todo_write"],
-    isSpecialGroup: true,
-  },
-  // claude_code emits TaskCreate (one call per item) + TaskUpdate (taskId/status)
-  // instead of a single full-snapshot TodoWrite. Share the `todowrite` groupKey
-  // so `stripTodoWriteEvents` strips them from the timeline and the
+  // Task plan tools — claude_code emits TaskCreate (one call per item) +
+  // TaskUpdate (taskId/status). They share the `task-plan` groupKey so
+  // `stripTaskPlanEvents` strips them from the timeline and the
   // `TodoSummaryBar` aggregator picks them up as the source of truth.
+  // TaskGet / TaskList are read-only queries → own keys, not isSpecialGroup.
   {
     displayName: "TaskCreate",
-    groupKey: "todowrite",
+    groupKey: "task-plan",
     category: "Todo",
     icon: <Check className="size-4" />,
     aliases: ["taskcreate"],
@@ -204,11 +197,25 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
   },
   {
     displayName: "TaskUpdate",
-    groupKey: "todowrite",
+    groupKey: "task-plan",
     category: "Todo",
     icon: <Check className="size-4" />,
     aliases: ["taskupdate"],
     isSpecialGroup: true,
+  },
+  {
+    displayName: "TaskGet",
+    groupKey: "taskget",
+    category: "Todo",
+    icon: <Read className="size-4" />,
+    aliases: ["taskget"],
+  },
+  {
+    displayName: "TaskList",
+    groupKey: "tasklist",
+    category: "Todo",
+    icon: <Search className="size-3.5" />,
+    aliases: ["tasklist"],
   },
   {
     displayName: "Task",

@@ -73,7 +73,6 @@ export const DEFAULT_ALLOWED_TOOLS = [
   "TaskList",
   "TaskGet",
   "TaskUpdate",
-  "TodoWrite",
   "ExitPlanMode",
   "EnterPlanMode",
   "ListMcpResources",

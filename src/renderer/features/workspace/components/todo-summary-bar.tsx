@@ -2,53 +2,16 @@ import { useMemo, useState } from "react";
 import type { RunEvent } from "../types";
 import { resolveTool } from "../utils/resolve-tool";
 import { ArrowUp, Check } from "@/components/ui/icons";
-import type { TodoItem } from "./tools/todo-list-display";
 import { Button } from "@/components/ui";
 
 interface TodoSummaryBarProps {
   events: RunEvent[];
 }
 
-/**
- * Pull the most recent TodoWrite snapshot from the timeline.
- *
- * Each TodoWrite call carries a full plan snapshot in `metadata.input.todos`
- * (or `params.todos` when adapters parse via content). The latest entry wins.
- *
- * Fallback: claude_code does not emit a full TodoWrite snapshot — it emits
- * one `TaskCreate` per item followed by `TaskUpdate` calls keyed by 1-based
- * `taskId`. When no TodoWrite is found we aggregate those into the same
- * `TodoItem[]` shape so the bar renders identically across providers.
- */
-function findLatestTodoSnapshot(events: RunEvent[]): TodoItem[] | null {
-  for (let i = events.length - 1; i >= 0; i--) {
-    const event = events[i];
-    if (event.type !== "tool_call") continue;
-    if (resolveTool(event.content).displayName !== "TodoWrite") continue;
-
-    const metadataInput = event.metadata?.input as
-      | Record<string, unknown>
-      | undefined;
-    const todosFromMeta = metadataInput?.todos;
-    if (Array.isArray(todosFromMeta) && todosFromMeta.length > 0) {
-      return todosFromMeta as TodoItem[];
-    }
-
-    // Fallback: parse `TodoWrite: { ... }` content payload when metadata is missing.
-    const colonIdx = event.content.indexOf(":");
-    if (colonIdx > 0) {
-      try {
-        const parsed = JSON.parse(event.content.slice(colonIdx + 1).trim());
-        if (Array.isArray(parsed?.todos) && parsed.todos.length > 0) {
-          return parsed.todos as TodoItem[];
-        }
-      } catch {
-        // ignore — no parseable todos
-      }
-    }
-  }
-
-  return buildClaudeTaskSnapshot(events);
+interface TodoItem {
+  content: string;
+  status: "completed" | "in_progress" | "pending";
+  activeForm?: string;
 }
 
 function parseEventInput(event: RunEvent): Record<string, unknown> | null {
@@ -72,7 +35,12 @@ function parseEventInput(event: RunEvent): Record<string, unknown> | null {
   return null;
 }
 
-function buildClaudeTaskSnapshot(events: RunEvent[]): TodoItem[] | null {
+/**
+ * Aggregate TaskCreate (one call per item) + TaskUpdate (taskId/status) calls
+ * into a single `TodoItem[]` snapshot. The 1-based `taskId` indexes into the
+ * accumulated array.
+ */
+function buildTaskSnapshot(events: RunEvent[]): TodoItem[] | null {
   const todos: TodoItem[] = [];
 
   for (const event of events) {
@@ -111,8 +79,8 @@ function buildClaudeTaskSnapshot(events: RunEvent[]): TodoItem[] | null {
 }
 
 /**
- * Sticky widget rendered above the input that mirrors Codex's "X out of Y
- * tasks completed" card. Replaces the per-call TodoWrite cards in the message
+ * Sticky widget rendered above the input that shows "X out of Y tasks
+ * completed". Replaces the per-call TaskCreate/TaskUpdate cards in the message
  * timeline (those are filtered out by `groupConsecutiveToolCalls`) so users
  * see one continuously-updated plan instead of repeating snapshots.
  *
@@ -122,7 +90,7 @@ function buildClaudeTaskSnapshot(events: RunEvent[]): TodoItem[] | null {
 export function TodoSummaryBar({ events }: TodoSummaryBarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const todos = useMemo(() => findLatestTodoSnapshot(events), [events]);
+  const todos = useMemo(() => buildTaskSnapshot(events), [events]);
 
   if (!todos || todos.length === 0) return null;
 
