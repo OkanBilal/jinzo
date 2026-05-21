@@ -119,7 +119,6 @@ function RunDetailSelect() {
 
   return (
     <Select
-      useFixedBackground={true}
       value={value}
       options={RUN_DETAIL_OPTIONS}
       onChange={(val) => {

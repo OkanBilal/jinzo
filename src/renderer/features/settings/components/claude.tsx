@@ -72,7 +72,6 @@ export default function ClaudeSettings(
           description="Controls how the agent handles tool permissions during runs."
         >
           <Select
-          useFixedBackground={true}
             value={permissionMode}
             options={SETTINGS_PERMISSION_MODES}
             onChange={handlePermissionModeChange}

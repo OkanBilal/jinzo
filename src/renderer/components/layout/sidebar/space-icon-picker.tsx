@@ -23,8 +23,6 @@ interface SpaceIconPickerProps {
   icon: string;
   iconMode: IconPickerMode;
   isOpen: boolean;
-  previewBackground?: string;
-  useFixedBackground?: boolean;
   onToggle: () => void;
   onSelectEmoji: (emoji: string) => void;
   onSelectIcon: (name: string) => void;
@@ -37,8 +35,6 @@ export default function SpaceIconPicker({
   icon,
   iconMode,
   isOpen,
-  previewBackground,
-  useFixedBackground = true,
   onToggle,
   onSelectEmoji,
   onSelectIcon,
@@ -47,13 +43,6 @@ export default function SpaceIconPicker({
   onClear,
 }: SpaceIconPickerProps) {
   const pickerRef = useRef<HTMLDivElement>(null);
-
-  const fixedBackgroundClass = useFixedBackground
-    ? "bg-linear-to-b from-primary to-primary-50 dark:from-primary-900 dark:to-primary-950"
-    : "";
-  const backgroundStyle = useFixedBackground
-    ? undefined
-    : { background: previewBackground };
 
   useClickOutside(pickerRef, () => {
     if (isOpen) onClose();
@@ -117,8 +106,8 @@ export default function SpaceIconPicker({
         className={`absolute top-full left-0 right-0 z-(--z-overlay)
             border border-t-0 border-primary-950/10 dark:border-primary/10
             rounded-b-xl shadow-lg overflow-hidden
-            ${isOpen ? "animate-dropdown-in" : "invisible pointer-events-none"} ${fixedBackgroundClass}`}
-        style={backgroundStyle}
+            ${isOpen ? "animate-dropdown-in" : "invisible pointer-events-none"}
+            bg-linear-to-b from-primary to-primary-50 dark:from-primary-900 dark:to-primary-950`}
       >
           <div className="flex border-b border-primary-950/10 dark:border-primary/10">
             <Button
@@ -171,7 +160,6 @@ export default function SpaceIconPicker({
                       CategoryHeader: ({ ...props }) => (
                         <div
                           className="px-2 pt-0 pb-1.5 font-medium text-primary-600 dark:text-primary-400 text-xs"
-                          style={backgroundStyle}
                           {...props}
                         >
                           {/* {category.label} */}

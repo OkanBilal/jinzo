@@ -29,7 +29,6 @@ export default function CursorSettings(
       <SettingsSection title="Configuration">
         <SettingsRow title="Mode" description="How Cursor operates during runs">
           <Select
-            useFixedBackground
             value={mode}
             onChange={(value) =>
               updateConfig({ mode: value as CursorAdapterConfig["mode"] })

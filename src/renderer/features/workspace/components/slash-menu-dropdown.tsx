@@ -64,7 +64,6 @@ export function SlashMenuDropdown({
         isOpen={isOpen}
         openUpward={true}
         minWidth="min-w-64"
-        useFixedBackground={true}
       >
         <div className="max-h-80 max-w-100 overflow-auto noscrollbar">
           {isLoadingCommands ? (

@@ -6,7 +6,6 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { useDropdownBackground } from "@/hooks/use-dropdown-background";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { Button } from "./button";
 import { Caption } from "./text";
@@ -24,7 +23,6 @@ interface SelectProps<T extends string = string> {
   options: SelectOption<T>[];
   onChange: (value: T) => void;
   placeholder?: string;
-  useFixedBackground?: boolean;
   title?: string;
 }
 
@@ -33,7 +31,6 @@ export default function Select<T extends string = string>({
   options,
   onChange,
   placeholder = "Select an option",
-  useFixedBackground = false,
   title,
 }: SelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
@@ -112,11 +109,6 @@ export default function Select<T extends string = string>({
   );
 
   const selectedOption = options.find((opt) => opt.value === value);
-  const dropdownBackground = useDropdownBackground(0.98, useFixedBackground);
-
-  const fixedBackgroundClass = useFixedBackground
-    ? "bg-linear-to-b from-primary to-primary-50 dark:from-primary-900 dark:to-primary-950"
-    : "";
 
   return (
     <div ref={containerRef} className="relative">
@@ -170,9 +162,9 @@ export default function Select<T extends string = string>({
             border border-t-0 border-primary-950/10 dark:border-primary/10
             rounded-b-xl shadow-lg overflow-hidden
             ${isOpen && animateIn ? "animate-dropdown-in" : "dropdown-prewarm"}
-            origin-top ${fixedBackgroundClass}`}
+            origin-top
+            bg-linear-to-b from-primary to-primary-50 dark:from-primary-900 dark:to-primary-950`}
           style={{
-            background: dropdownBackground,
             top: dropdownPosition.top,
             left: dropdownPosition.left,
             width: dropdownPosition.width,

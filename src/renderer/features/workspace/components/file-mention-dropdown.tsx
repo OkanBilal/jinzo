@@ -152,7 +152,6 @@ export function FileMentionDropdown({
         isOpen={isOpen}
         openUpward={true}
         minWidth="min-w-72"
-        useFixedBackground={true}
       >
         <div className="max-h-80 max-w-100 overflow-auto noscrollbar">
           {dirPath && (

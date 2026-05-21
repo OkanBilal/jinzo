@@ -42,7 +42,6 @@ function PropertyRow({
       </div>
       <div className="w-51.5 shrink-0">
         <Select
-          useFixedBackground={true}
           value={property.type}
           options={typeOptions}
           onChange={(val) => onUpdate({ type: val as SchemaProperty["type"] })}

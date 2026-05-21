@@ -19,14 +19,13 @@ const solid = (light: string, dark: string): ThemeColor => ({
 
 export const solidColors: ThemeColor[] = [
   { ...solid("#ffffff40", "#00000070"), name: "Rose Quartz" },
-  { ...solid("#EEEEEE", "#1c1c1cf5"), name: "Light Brown" },
-  { ...solid("#C6E1D4", "#12221cf5"), name: "Light Green" },
-  { ...solid("#C5DEEE", "#122028f5"), name: "Light Blue" },
-  { ...solid("#D6D4E8", "#21202Df5"), name: "Light Purple" },
-  { ...solid("#F1DFC4", "#332715f5"), name: "Light Yellow" },
-  { ...solid("#EFD3D8", "#321F23f5"), name: "Light Pink" },
-  { ...solid("#F3D0D2", "#341E20f5"), name: "Light Gray" },
-  { ...solid("#F2D2C7", "#331F18f5"), name: "Light Red" },
+  { ...solid("#EEEEEEe6", "#121212e6"), name: "Light Brown" },
+  { ...solid("#C6E1D4e6", "#0e1a16e6"), name: "Light Green" },
+  { ...solid("#C5DEEEe6", "#0d171de6"), name: "Light Blue" },
+  { ...solid("#D6D4E8e6", "#181720e6"), name: "Light Purple" },
+  { ...solid("#F1DFC4e6", "#1b140ae6"), name: "Light Yellow" },
+  { ...solid("#EFD3D8e6", "#160e10e6"), name: "Light Pink" },
+  { ...solid("#F2D2C7e6", "#231212e6"), name: "Light Red" },
 ];
 
 /**

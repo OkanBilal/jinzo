@@ -110,7 +110,6 @@ export function SkillMentionDropdown({
         isOpen={isOpen}
         openUpward={true}
         minWidth="min-w-64"
-        useFixedBackground={true}
       >
         <div className="max-h-80 max-w-100 overflow-auto noscrollbar">
           <div className="px-3 pt-2 pb-1 flex items-center gap-1.5 text-primary-400 dark:text-primary-500">

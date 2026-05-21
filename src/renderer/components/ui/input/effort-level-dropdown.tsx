@@ -89,7 +89,6 @@ export function EffortLevelDropdown({
         isOpen={isOpen}
         openUpward={true}
         minWidth="min-w-32"
-        useFixedBackground={true}
       >
         {variant !== "codex" && (
           <Button

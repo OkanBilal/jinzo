@@ -444,7 +444,6 @@ export function UnifiedContextDropdown({
         isOpen={isOpen}
         openUpward={true}
         minWidth="min-w-[22rem]"
-        useFixedBackground={true}
       >
         <div className="max-h-96 max-w-115 overflow-auto noscrollbar">
           {dirPath && (

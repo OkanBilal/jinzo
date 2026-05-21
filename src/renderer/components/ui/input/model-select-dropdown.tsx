@@ -78,7 +78,6 @@ export function ModelSelectDropdown({
         isOpen={isOpen}
         openUpward={openUpward}
         minWidth="min-w-48"
-        useFixedBackground={true}
       >
         <div className="max-h-80 overflow-auto noscrollbar ">
           {modelList.map((m) => {

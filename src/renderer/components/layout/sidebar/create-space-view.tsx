@@ -168,7 +168,6 @@ export default function CreateSpaceView({
           icon={icon}
           iconMode={iconMode}
           isOpen={isEmojiPickerOpen}
-          previewBackground={currentVariant.preview}
           onToggle={() => updateState({ isEmojiPickerOpen: !isEmojiPickerOpen })}
           onSelectEmoji={(emoji) => updateState({ icon: emoji, isEmojiPickerOpen: false })}
           onSelectIcon={(name) => updateState({ icon: name, isEmojiPickerOpen: false })}

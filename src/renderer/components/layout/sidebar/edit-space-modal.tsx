@@ -227,7 +227,6 @@ export default function EditSpaceModal({
             icon={icon}
             iconMode={iconMode}
             isOpen={isEmojiPickerOpen}
-            previewBackground={currentVariant.preview}
             onToggle={() => updateState({ isEmojiPickerOpen: !isEmojiPickerOpen })}
             onSelectEmoji={(emoji) => updateState({ icon: emoji, isEmojiPickerOpen: false })}
             onSelectIcon={(iconName) => updateState({ icon: iconName, isEmojiPickerOpen: false })}

@@ -164,7 +164,6 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
           description="Choose an emoji or icon for this project."
         >
           <SpaceIconPicker
-            useFixedBackground
             icon={icon}
             iconMode={iconMode}
             isOpen={isIconPickerOpen}

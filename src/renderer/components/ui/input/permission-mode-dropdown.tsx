@@ -163,7 +163,6 @@ export function PermissionModeDropdown({
         isOpen={isOpen}
         openUpward={true}
         minWidth="min-w-64"
-        useFixedBackground={true}
       >
         {modes.map((mode) => (
           <Button

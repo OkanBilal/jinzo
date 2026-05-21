@@ -70,7 +70,6 @@ export function IssueMentionDropdown({
         isOpen={isOpen}
         openUpward={true}
         minWidth="min-w-80"
-        useFixedBackground={true}
       >
         <div className="max-h-80 max-w-110 overflow-auto noscrollbar">
           <div className="px-3 pt-2 pb-1 text-xs font-medium text-primary-400 dark:text-primary-500">

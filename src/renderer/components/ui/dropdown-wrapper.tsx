@@ -1,7 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
-import { useDropdownBackground } from "@/hooks/use-dropdown-background";
 
 interface DropdownWrapperProps {
   isOpen: boolean;
@@ -14,7 +13,6 @@ interface DropdownWrapperProps {
   dropdownRef?: React.RefObject<HTMLDivElement | null>;
   /** When portal + anchored: set false so panel can grow beyond trigger width (e.g. menus with min-width). */
   matchTriggerWidth?: boolean;
-  useFixedBackground?: boolean;
 }
 
 export default function DropdownWrapper({
@@ -27,7 +25,6 @@ export default function DropdownWrapper({
   triggerRef,
   dropdownRef: externalDropdownRef,
   matchTriggerWidth = true,
-  useFixedBackground = false,
 }: DropdownWrapperProps) {
   const [coords, setCoords] = useState<{
     top: number | null;
@@ -77,12 +74,6 @@ export default function DropdownWrapper({
     };
   }, [isOpen]);
 
-  const dropdownBackground = useDropdownBackground(undefined, useFixedBackground);
-
-  const fixedBackgroundClass = useFixedBackground
-    ? "bg-linear-to-b from-primary/90 to-primary-50/80 dark:from-primary-900 dark:to-primary-800"
-    : "";
-
   // Portal mode: wait for coords before rendering
   if (usePortal && isOpen && !coords) return null;
 
@@ -99,12 +90,11 @@ export default function DropdownWrapper({
         !usePortal && positionClass,
         !usePortal && verticalClass,
         minWidth,
-        fixedBackgroundClass,
+        "bg-linear-to-b from-primary/90 to-primary-50/80 dark:from-primary-900 dark:to-primary-800",
         "z-(--z-dropdown) glass-morphism rounded-2xl",
         hiddenClass,
       )}
       style={{
-        background: dropdownBackground,
         transformOrigin: openUpward
           ? position === "right"
             ? "bottom right"

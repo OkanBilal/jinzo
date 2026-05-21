@@ -216,7 +216,6 @@ export default function CodexSettings(
                 APPROVAL_OPTIONS.find((o) => o.value === value)?.label ?? value;
               toast.success(`Approval: ${label}`);
             }}
-            useFixedBackground
           />
         </SettingsRow>
         <SettingsDivider />
@@ -233,7 +232,6 @@ export default function CodexSettings(
                 SANDBOX_OPTIONS.find((o) => o.value === value)?.label ?? value;
               toast.success(`Sandbox: ${label}`);
             }}
-            useFixedBackground
           />
         </SettingsRow>
         <SettingsDivider />
@@ -265,7 +263,6 @@ export default function CodexSettings(
                 PERSONALITY_OPTIONS.find((o) => o.value === value)?.label ?? value;
               toast.success(`Personality: ${label}`);
             }}
-            useFixedBackground
           />
         </SettingsRow>
         <SettingsDivider />

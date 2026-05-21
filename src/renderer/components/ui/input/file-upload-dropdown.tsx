@@ -143,7 +143,6 @@ function ImageGroupChip({
       <DropdownWrapper
         isOpen={menuOpen}
         openUpward={openUpward}
-        useFixedBackground={true}
         minWidth="min-w-56"
         usePortal
         triggerRef={groupRef}
@@ -261,7 +260,6 @@ function DocumentGroupChip({
       <DropdownWrapper
         isOpen={menuOpen}
         openUpward={openUpward}
-        useFixedBackground={true}
         minWidth="min-w-56"
         usePortal
         triggerRef={groupRef}
@@ -510,7 +508,6 @@ export function FileUploadDropdown({
       <DropdownWrapper
         isOpen={isOpen}
         openUpward={openUpward}
-        useFixedBackground={true}
       >
         {[
           { label: "Images", Icon: Picture, onClick: onImageUpload },

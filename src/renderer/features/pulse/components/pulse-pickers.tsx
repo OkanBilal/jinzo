@@ -201,7 +201,7 @@ export function WorkspacePicker({
         )}
         <ArrowUp className="size-3.5 rotate-180 " />
       </Button>
-      <DropdownWrapper isOpen={open} minWidth="min-w-44" useFixedBackground>
+      <DropdownWrapper isOpen={open} minWidth="min-w-44">
         {active.length === 0 && (
           <div className="px-3 py-2 text-xs text-primary-500">
             No active workspaces
@@ -269,7 +269,7 @@ export function ProviderPicker({
         <span>{selected ? PROVIDER_LABELS[selected.id] ?? selected.displayName : "Provider"}</span>
         <ArrowUp className="size-3.5 rotate-180 " />
       </Button>
-      <DropdownWrapper isOpen={open} minWidth="min-w-44" useFixedBackground>
+      <DropdownWrapper isOpen={open} minWidth="min-w-44">
         {eligible.length === 0 && (
           <div className="px-3 py-2 text-xs text-primary-500">
             No enabled providers
@@ -350,7 +350,7 @@ export function ModelPicker({
         </span>
         <ArrowUp className="size-3.5 rotate-180" />
       </Button>
-      <DropdownWrapper isOpen={open} minWidth="min-w-56" useFixedBackground>
+      <DropdownWrapper isOpen={open} minWidth="min-w-56">
         {models.length === 0 && (
           <div className="px-3 py-2 text-xs text-primary-500">
             {providerId ? "Loading models…" : "Select a provider first"}
@@ -445,7 +445,7 @@ export function SchedulePicker({
         </span>
         <ArrowUp className="size-3.5 rotate-180 opacity-60" />
       </Button>
-      <DropdownWrapper isOpen={open} minWidth="min-w-44" useFixedBackground>
+      <DropdownWrapper isOpen={open} minWidth="min-w-44">
         <div className="p-3 space-y-3">
           {/* Frequency */}
           <div>
@@ -456,7 +456,6 @@ export function SchedulePicker({
               value={frequency}
               options={FREQUENCY_OPTIONS}
               onChange={(val) => update({ frequency: val })}
-              useFixedBackground
             />
           </div>
 
@@ -470,7 +469,6 @@ export function SchedulePicker({
                 value={String(dayOfWeek ?? 1)}
                 options={DAY_OPTIONS}
                 onChange={(val) => update({ dayOfWeek: Number(val) })}
-                useFixedBackground
               />
             </div>
           )}
@@ -488,7 +486,6 @@ export function SchedulePicker({
                   const [h, m] = val.split(":").map(Number);
                   update({ hour: h, minute: m });
                 }}
-                useFixedBackground
               />
             </div>
           )}
@@ -573,7 +570,7 @@ export function PulseEffortPicker({
         </span>
         <ArrowUp className="size-3.5 rotate-180" />
       </Button>
-      <DropdownWrapper isOpen={open} minWidth="min-w-32" useFixedBackground>
+      <DropdownWrapper isOpen={open} minWidth="min-w-32">
         {variant !== "codex" && (
           <Button
             type="button"
