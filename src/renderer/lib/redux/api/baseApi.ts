@@ -76,7 +76,6 @@ export const baseApi = createApi({
     'Automations',
     'Pulse',
     'ProjectSignals',
-    'SkillsMarketplace',
   ],
   endpoints: () => ({}),
 });

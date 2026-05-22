@@ -1,6 +1,23 @@
 import { useEffect, useReducer } from "react";
 
-const ASCII_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const ASCII_FRAMES = [
+  "⠀",
+  "⠁",
+  "⠃",
+  "⠇",
+  "⠏",
+  "⠟",
+  "⠿",
+  "⣿",
+  "⣿",
+  "⠿",
+  "⠟",
+  "⠏",
+  "⠇",
+  "⠃",
+  "⠁",
+  "⠀",
+];
 
 const MODEL_LOADER_WORDS = [
   "Models are waking up",
@@ -13,7 +30,6 @@ const MODEL_LOADER_WORDS = [
   "Feeding the tokens",
   "Activating the transformers",
   "Booting up the model",
-
 ];
 
 type LoaderState = { frameIndex: number; wordIndex: number };
@@ -21,7 +37,10 @@ type LoaderAction = { type: "tick" } | { type: "randomize" };
 
 function loaderReducer(state: LoaderState, action: LoaderAction): LoaderState {
   if (action.type === "randomize") {
-    return { ...state, wordIndex: Math.floor(Math.random() * MODEL_LOADER_WORDS.length) };
+    return {
+      ...state,
+      wordIndex: Math.floor(Math.random() * MODEL_LOADER_WORDS.length),
+    };
   }
   const nextFrame = (state.frameIndex + 1) % ASCII_FRAMES.length;
   // Cycle word every full spinner rotation
@@ -46,16 +65,12 @@ export function ModelLoader() {
     return () => clearInterval(id);
   }, []);
 
-
-
   return (
     <span className="inline-flex items-center gap-1.5">
       <span className="font-mono text-sm text-primary-900 dark:text-primary-400">
         {ASCII_FRAMES[state.frameIndex]}
       </span>
-      <span className="shine-text text-sm">
-        Loading models...
-      </span>
+      <span className="shine-text text-sm">Loading models...</span>
     </span>
   );
 }

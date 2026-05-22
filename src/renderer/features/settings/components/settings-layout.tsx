@@ -66,7 +66,7 @@ export function SettingsSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-4">
+    <div className="mb-8">
       {title && (
         <h3 className="text-sm font-medium text-primary-900 dark:text-primary-200 mb-3">
           {title}

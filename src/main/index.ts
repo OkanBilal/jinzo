@@ -107,10 +107,6 @@ import {
   browserService,
 } from "./modules/browser";
 import { CHANNELS } from "../shared/ipc-kit/channels";
-import {
-  registerSkillsMarketplaceIpc,
-  unregisterSkillsMarketplaceIpc,
-} from "./modules/skillsMarketplace";
 
 // ─────────────────────────────────────────────────────────────
 // Installed app detection (macOS)
@@ -569,7 +565,6 @@ async function initializeApp() {
     registerPulseIpc();
     registerGuardsIpc();
     registerBrowserIpc();
-    registerSkillsMarketplaceIpc();
     automationsService.start();
     pulseService.start();
 
@@ -866,7 +861,6 @@ async function cleanupApp() {
     await shutdownAllGuardAdapters();
     try { browserService.destroy(); } catch { /* ignore */ }
     unregisterBrowserIpc();
-    unregisterSkillsMarketplaceIpc();
     ipcMain.removeHandler(CHANNELS.shell.openExternal);
     ipcMain.removeHandler(CHANNELS.shell.openPath);
     ipcMain.removeHandler(CHANNELS.shell.openInApp);

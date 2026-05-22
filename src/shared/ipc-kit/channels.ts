@@ -230,13 +230,6 @@ export const CHANNELS = {
     getById: "signals:getById",
     update: "signals:update",
   },
-  skillsMarketplace: {
-    audit: "skillsMarketplace:audit",
-    curated: "skillsMarketplace:curated",
-    detail: "skillsMarketplace:detail",
-    list: "skillsMarketplace:list",
-    search: "skillsMarketplace:search",
-  },
   space: {
     archive: "space:archive",
     changed: "space:changed",

@@ -447,25 +447,3 @@ export type {
   UpdatePulseInput,
 } from "./pulseApi";
 
-export {
-  skillsMarketplaceApi,
-  useListMarketplaceSkillsQuery,
-  useLazyListMarketplaceSkillsQuery,
-  useSearchMarketplaceSkillsQuery,
-  useLazySearchMarketplaceSkillsQuery,
-  useGetCuratedSkillsQuery,
-  useGetMarketplaceSkillDetailQuery,
-  useGetMarketplaceSkillAuditQuery,
-} from "./skillsMarketplaceApi";
-export type {
-  SkillView,
-  SkillSummary,
-  SkillListResponse,
-  SkillSearchResponse,
-  CuratedGroup,
-  CuratedResponse,
-  SkillDetailResponse,
-  SkillFile,
-  SkillAuditEntry,
-  SkillAuditResponse,
-} from "./skillsMarketplaceApi";
