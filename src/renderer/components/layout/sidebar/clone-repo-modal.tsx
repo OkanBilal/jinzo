@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Body, Caption, Button } from "@/components/ui";
+import { Caption, Button, BodyMedium } from "@/components/ui";
 
 interface CloneRepoModalProps {
   isOpen: boolean;
@@ -67,14 +67,14 @@ export default function CloneRepoModal({
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
-        <Body className="text-primary-900 dark:text-primary-100 font-semibold mb-4">
+        <BodyMedium className="mb-2">
           Clone Repository
-        </Body>
+        </BodyMedium>
 
         <div className="space-y-4">
           {/* Git URL */}
           <div>
-            <Caption className="text-primary-700 dark:text-primary-300 mb-1.5 block font-medium">
+            <Caption className="mb-1.5 block">
               Git URL
             </Caption>
             <input
@@ -91,7 +91,7 @@ export default function CloneRepoModal({
 
           {/* Clone Location */}
           <div>
-            <Caption className="text-primary-700 dark:text-primary-300 mb-1.5 block font-medium">
+            <Caption className="mb-1.5 block">
               Clone Location
             </Caption>
             <div className="flex gap-2">

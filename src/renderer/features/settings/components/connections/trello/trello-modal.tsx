@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Body } from "@/components/ui";
+import { Body, Caption } from "@/components/ui";
 import { useLazyGetTrelloBoardsQuery } from "@/lib/redux/api";
 import {
   ResourceWizardModal,
@@ -81,9 +81,9 @@ const CONFIG: ResourceWizardConfig = {
     <div className="flex items-center gap-2">
       <Body>{board.name}</Body>
       {board.organizationName && (
-        <span className="text-xs text-primary-500">
+        <Caption>
           {board.organizationName}
-        </span>
+        </Caption>
       )}
     </div>
   ),
@@ -92,9 +92,9 @@ const CONFIG: ResourceWizardConfig = {
       <div className="flex items-center gap-2">
         <Body>{resource.name}</Body>
         {resource.metadata?.organizationName && (
-          <span className="text-xs text-primary-500">
+          <Caption>
             {resource.metadata.organizationName}
-          </span>
+          </Caption>
         )}
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Body, Button, toast } from "@/components/ui";
+import { BodyMedium, Button, toast } from "@/components/ui";
 import {
   useCreateSpaceMutation,
   useSetActiveSpaceMutation,
@@ -124,9 +124,9 @@ export default function PresetSpacesView({
       style={{ animation: "slide-fade-down 300ms ease-in-out" }}
     >
       <div className="flex flex-col items-center pt-12 px-3">
-        <Body className="text-center text-base text-primary-800 dark:text-primary">
+        <BodyMedium className="text-center">
           Preset Spaces
-        </Body>
+        </BodyMedium>
       </div>
 
       <div className="flex-1 px-3 py-2 noscrollbar">

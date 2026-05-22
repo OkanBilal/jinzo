@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Body } from "@/components/ui";
+import { Body, Caption } from "@/components/ui";
 import { useLazyGetSocketDevOrganizationsQuery } from "@/lib/redux/api";
 import {
   ResourceWizardModal,
@@ -69,9 +69,9 @@ const CONFIG: ResourceWizardConfig = {
     <div className="flex items-center gap-2">
       <Body>{org.name}</Body>
       {org.plan && (
-        <span className="text-xs text-primary-500 dark:text-primary-600">
+        <Caption>
           {org.plan}
-        </span>
+        </Caption>
       )}
     </div>
   ),
@@ -80,9 +80,9 @@ const CONFIG: ResourceWizardConfig = {
       <div className="flex items-center gap-2">
         <Body>{resource.name}</Body>
         {resource.metadata?.plan && (
-          <span className="text-xs text-primary-500 dark:text-primary-600">
+          <Caption>
             {resource.metadata.plan}
-          </span>
+          </Caption>
         )}
       </div>
     </div>

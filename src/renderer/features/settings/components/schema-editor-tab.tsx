@@ -112,7 +112,7 @@ export function SchemaEditorTab({
     <>
       <div className="p-4 pt-0">
         <div className="h-78 overflow-y-auto overflow-x-visible">
-          <Body className="mt-2 mb-2">Name</Body>
+          <Body className="my-2">Name</Body>
           <Input
             type="text"
             value={editorName}

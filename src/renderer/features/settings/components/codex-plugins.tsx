@@ -251,7 +251,7 @@ function PluginDetail({
       {/* Long description */}
       {(detail?.description || iface?.longDescription) && (
         <div className="mb-8">
-          <Body className="text-primary-700 dark:text-primary-300 whitespace-pre-wrap">
+          <Body className="whitespace-pre-wrap">
             {detail?.description || iface?.longDescription}
           </Body>
         </div>

@@ -38,7 +38,7 @@ import { useScriptNotifications } from "@/hooks/use-script-notifications";
 import { useSidebarSpaceSwipe } from "@/hooks/use-sidebar-space-swipe";
 import { UpdateBanner } from "./update-banner";
 import { Button } from "@/components/ui/button";
-import { Body, Tooltip } from "@/components/ui";
+import { BodyMedium, Tooltip } from "@/components/ui";
 
 const CLAUDE_PLUGINS_URL = "https://claude.com/plugins#plugins";
 
@@ -254,15 +254,15 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                       : "text-primary-900 dark:text-primary-200"
                   }`}
                 />
-                <Body
-                  className={`text-s font-medium ${
+                <BodyMedium
+                  className={`text-s ${
                     isPulseRoute
                       ? "text-primary-950 dark:text-primary"
                       : "text-primary-900 dark:text-primary-100"
                   }`}
                 >
                   Pulse
-                </Body>
+                </BodyMedium>
               </Button>
             </div>
             <div className="px-3 mb-2">
@@ -291,15 +291,15 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                             : "text-primary-900 dark:text-primary-200"
                         }`}
                       />
-                      <Body
-                        className={`text-s font-medium flex-1 text-left ${
+                      <BodyMedium
+                        className={`text-s flex-1 text-left ${
                           isPluginsRoute
                             ? "text-primary-950 dark:text-primary"
                             : "text-primary-900 dark:text-primary-100"
                         }`}
                       >
                         Plugins
-                      </Body>
+                      </BodyMedium>
                     </Button>
                   </span>
                 </Tooltip>
@@ -329,15 +329,15 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                         : "text-primary-900 dark:text-primary-200"
                     }`}
                   />
-                  <Body
-                    className={`text-s font-medium flex-1 text-left ${
+                  <BodyMedium
+                    className={`text-s flex-1 text-left ${
                       isPluginsRoute
                         ? "text-primary-950 dark:text-primary"
                         : "text-primary-900 dark:text-primary-100"
                     }`}
                   >
                     Plugins
-                  </Body>
+                  </BodyMedium>
                   {pluginsUseClaudeExternalUrl ? (
                     <External
                       className={`w-3.5 h-3.5 shrink-0 ${
@@ -372,15 +372,15 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                       : "text-primary-900 dark:text-primary-200"
                   }`}
                 />
-                <Body
-                  className={`text-s font-medium flex-1 text-left ${
+                <BodyMedium
+                  className={`text-s flex-1 text-left ${
                     isRelayRoute
                       ? "text-primary-950 dark:text-primary"
                       : "text-primary-900 dark:text-primary-100"
                   }`}
                 >
                   Relay
-                </Body>
+                </BodyMedium>
                 <span
                   className={`shrink-0 text-[10px] uppercase px-1.5 py-px rounded-md ${
                     isRelayRoute

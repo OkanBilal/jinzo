@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Body, Caption, Button } from "@/components/ui";
+import { Caption, Button, BodyMedium } from "@/components/ui";
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -59,13 +59,13 @@ export default function CreateProjectModal({
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
-        <Body className="text-primary-900 dark:text-primary-100 font-semibold mb-4">
+        <BodyMedium className="mb-2">
           Create New Project
-        </Body>
+        </BodyMedium>
 
         <div className="space-y-4">
           <div>
-            <Caption className="text-primary-700 dark:text-primary-300 mb-1.5 block font-medium">
+            <Caption className=" mb-1.5 block">
               Project Name
             </Caption>
             <input
@@ -79,7 +79,7 @@ export default function CreateProjectModal({
                 if (e.key === "Enter") handleSubmit();
               }}
             />
-            <Caption className="text-primary-500 dark:text-primary-400 mt-1.5 block">
+            <Caption className=" mt-1.5 block">
               Will be created at ~/Desktop/{trimmed || "<name>"} on the main branch.
             </Caption>
           </div>

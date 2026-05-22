@@ -239,9 +239,9 @@ export default function WorkspaceItem({
                 </span>
               )}
               {updatedAt && (
-                <Muted className="text-xs text-primary-900 dark:text-primary-200 truncate">
+                <Caption>
                   {formatDate(new Date(updatedAt).toISOString())}
-                </Muted>
+                </Caption>
               )} */}
             </div>
           </div>

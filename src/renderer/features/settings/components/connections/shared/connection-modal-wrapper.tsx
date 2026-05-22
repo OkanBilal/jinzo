@@ -1,4 +1,4 @@
-import { Button, Text, Muted } from "@/components/ui";
+import { Button, Muted, Heading3 } from "@/components/ui";
 import { Close } from "@/components/ui/icons";
 interface ConnectionModalWrapperProps {
   open: boolean;
@@ -34,7 +34,7 @@ export function ConnectionModalWrapper({
               width={256}
               height={256}
             />
-            <Text variant="h3">{appName}</Text>
+            <Heading3>{appName}</Heading3>
           </div>
           <Button
             onClick={onClose}

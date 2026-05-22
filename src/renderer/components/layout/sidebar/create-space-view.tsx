@@ -1,5 +1,5 @@
 import { useReducer, useEffect, useRef } from "react";
-import { Text, Heading3, Input, Button, toast } from "@/components/ui";
+import { Heading3, Input, Button, toast, Caption } from "@/components/ui";
 import {
   useCreateSpaceMutation,
   useSetActiveSpaceMutation,
@@ -140,7 +140,7 @@ export default function CreateSpaceView({
         >
           <SpacePreviewIcon icon={icon} iconMode={iconMode} />
         </div>
-        <Heading3 className="text-center text-primary-800 dark:text-primary">
+        <Heading3 className="text-center">
           {name || "Create Space"}{" "}
         </Heading3>
       </div>
@@ -176,9 +176,9 @@ export default function CreateSpaceView({
         />
 
         <div className="space-y-2">
-          <Text className="text-xs text-primary-500 dark:text-primary-400">
+          <Caption>
             System Prompt
-          </Text>
+          </Caption>
           <textarea
             value={systemPrompt}
             onChange={(e) => updateState({ systemPrompt: e.target.value })}

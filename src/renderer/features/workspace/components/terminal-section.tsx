@@ -1,5 +1,5 @@
 import { Close, Bash } from "@/components/ui/icons";
-import { Body, Button } from "@/components/ui";
+import { BodyMedium, Button } from "@/components/ui";
 import { XtermTerminal } from "./xterm-terminal";
 
 interface TerminalSectionProps {
@@ -25,9 +25,9 @@ export function TerminalSection({
       <div className="flex items-center justify-between px-3 py-1.5">
         <div className="flex items-center gap-2">
           <Bash className="size-3 text-primary-500 dark:text-primary-300" />
-          <Body className="text-primary-600 dark:text-primary-200 font-medium text-s">
+          <BodyMedium>
             Terminal
-          </Body>
+          </BodyMedium>
         </div>
         {onClose && (
           <Button

@@ -33,7 +33,7 @@ export function SignalTabContent({ signal }: SignalTabContentProps) {
       <div className="max-w-210 mx-auto pt-12 pb-24 px-6 space-y-6">
         <div className="space-y-3">
           {/* Title */}
-          <Heading2 className="text-xl font-semibold text-primary-900 dark:text-primary-100">
+          <Heading2>
             {title}
           </Heading2>
 

@@ -32,9 +32,9 @@ const variantStyles: Record<TextVariant, string> = {
   h2: "text-2xl font-medium text-primary-900 dark:text-primary-100",
   h3: "text-lg font-medium text-primary-900 dark:text-primary-100",
 
-  body: "text-sm text-primary-900 dark:text-primary-200",
-  bodyMedium: "text-sm font-medium text-primary-500 dark:text-primary-100",
-  bodySmall: "text-xs text-primary-700 dark:text-primary-200",
+  body: "text-sm text-primary-900 dark:text-primary-100",
+  bodyMedium: "text-sm font-medium text-primary-900 dark:text-primary-100",
+  bodySmall: "text-xs text-primary-900 dark:text-primary-100",
 
   muted: "text-sm text-primary-600 dark:text-primary-400",
   mutedSmall: "text-xs text-primary-500 dark:text-primary-400",
@@ -49,7 +49,7 @@ const variantStyles: Record<TextVariant, string> = {
   error: "text-sm text-red-600 dark:text-red-400",
   errorSmall: "text-xs text-red-600 dark:text-red-400",
 
-  caption: "text-xs text-primary-500 dark:text-primary-400",
+  caption: "text-xs text-primary-700 dark:text-primary-400",
   timestamp: "text-xs text-primary-600 dark:text-primary-300 font-medium",
 };
 
@@ -147,6 +147,16 @@ const BodyMedium = ({
   </Text>
 );
 
+const BodySmall = ({
+  children,
+  className,
+  align,
+  ...props
+}: Omit<TextProps, "variant">) => (
+  <Text variant="bodySmall" className={className} align={align} {...props}>
+    {children}
+  </Text>
+);
 const Muted = ({
   children,
   className,
@@ -154,6 +164,17 @@ const Muted = ({
   ...props
 }: Omit<TextProps, "variant">) => (
   <Text variant="muted" className={className} align={align} {...props}>
+    {children}
+  </Text>
+);
+
+const MutedSmall = ({
+  children,
+  className,
+  align,
+  ...props
+}: Omit<TextProps, "variant">) => (
+  <Text variant="mutedSmall" className={className} align={align} {...props}>
     {children}
   </Text>
 );
@@ -169,6 +190,16 @@ const Label = ({
   </Text>
 );
 
+const LabelSmall = ({
+  children,
+  className,
+  align,
+  ...props
+}: Omit<TextProps, "variant">) => (
+  <Text variant="labelSmall" className={className} align={align} {...props}>
+    {children}
+  </Text>
+);
 const ErrorText = ({
   children,
   className,
@@ -208,8 +239,11 @@ export {
   Heading3,
   Body,
   BodyMedium,
+  BodySmall,
   Muted,
+  MutedSmall,
   Label,
+  LabelSmall,
   ErrorText,
   Caption,
   Timestamp,

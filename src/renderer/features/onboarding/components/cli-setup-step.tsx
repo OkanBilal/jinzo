@@ -1,6 +1,7 @@
 import { Fragment } from "react";
-import { Text, Button, useWizard } from "@/components/ui";
+import { Button, useWizard, Muted, Label } from "@/components/ui";
 import { CopyButton } from "@/components/ui/copy-button";
+import { MutedSmall } from "@/components/ui/text";
 
 interface CommandSection {
   label: string;
@@ -28,12 +29,12 @@ export function CliSetupStep({
 
   return (
     <div className="space-y-4">
-      <Text variant="muted">{intro}</Text>
+      <Muted>{intro}</Muted>
 
       <div className="space-y-2 rounded-2xl bg-primary-100/50 dark:bg-primary-900 py-4">
         {sections.map((section) => (
           <Fragment key={section.label}>
-            <Text variant="label">{section.label}</Text>
+            <Label>{section.label}</Label>
             {section.commands.map((command) => (
               <div
                 key={command}
@@ -49,7 +50,7 @@ export function CliSetupStep({
         ))}
       </div>
 
-      <Text variant="mutedSmall">
+      <MutedSmall>
         {helpText}{" "}
         <Button
           type="button"
@@ -58,7 +59,7 @@ export function CliSetupStep({
         >
           {helpLinkLabel}
         </Button>
-      </Text>
+      </MutedSmall>
 
       <div className={`flex ${showBack ? "justify-between" : "justify-end"} pt-2`}>
         {showBack && (

@@ -7,7 +7,7 @@ import {
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { Button, Caption } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { ArrowUp } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
 import type { Workspace as WorkspaceResponse } from "@/lib/redux/api/workspaceApi";
@@ -22,6 +22,7 @@ import { useListProjectsQuery, useUpdateWorkspaceMutation } from "@/lib/redux/ap
 import { toast } from "@/components/ui";
 import { ProjectIcon } from "./project-icon";
 import { WorkspaceGroupDropdown, type GroupingMode } from "./workspace-group-dropdown";
+import { BodySmall } from "@/components/ui/text";
 
 type WorkspaceGroup = {
   key: string;
@@ -148,9 +149,9 @@ export default function WorkspacesList({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-16">
-        <Caption className="text-primary-800 dark:text-primary-200 font-medium">
+        <BodySmall>
           Loading...
-        </Caption>
+        </BodySmall>
       </div>
     );
   }
@@ -158,9 +159,9 @@ export default function WorkspacesList({
   if (workspaces.length === 0) {
     return (
       <div className="flex items-center justify-center h-16">
-        <Caption className="text-primary-800 dark:text-primary-200 font-medium">
+        <BodySmall>
           No projects yet
-        </Caption>
+        </BodySmall>
       </div>
     );
   }
@@ -340,9 +341,9 @@ export default function WorkspacesList({
         // onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsExpanded(!isExpanded); } }}
         className="w-full flex items-center justify-between transition-all duration-200 bg-transparent  px-2 py-0.5 rounded-lg "
       >
-        <Caption className="text-primary-900 dark:text-primary-100 font-medium">
+        <BodySmall>
           Workspaces
-        </Caption>
+        </BodySmall>
         <div className="flex items-center ">
           <div className="-mr-1" role="presentation" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <WorkspaceGroupDropdown

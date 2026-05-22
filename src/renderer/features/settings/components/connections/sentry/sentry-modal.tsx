@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Body } from "@/components/ui";
+import { Body, Caption } from "@/components/ui";
 import { useLazyGetSentryProjectsQuery } from "@/lib/redux/api";
 import {
   ResourceWizardModal,
@@ -83,9 +83,9 @@ const CONFIG: ResourceWizardConfig = {
     <div className="flex items-center gap-2">
       <Body>{project.name}</Body>
       {project.platform && (
-        <span className="text-xs text-primary-500 dark:text-primary-600">
+        <Caption>
           {project.platform}
-        </span>
+        </Caption>
       )}
     </div>
   ),
@@ -94,9 +94,9 @@ const CONFIG: ResourceWizardConfig = {
       <div className="flex items-center gap-2">
         <Body>{resource.name}</Body>
         {resource.metadata?.platform && (
-          <span className="text-xs text-primary-500 dark:text-primary-600">
+          <Caption>
             {resource.metadata.platform}
-          </span>
+          </Caption>
         )}
       </div>
     </div>

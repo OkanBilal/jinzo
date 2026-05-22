@@ -1,4 +1,4 @@
-import { Caption, Body } from "@/components/ui";
+import { BodyMedium, Text } from "@/components/ui";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 
 interface UserProfileProps {
@@ -37,14 +37,14 @@ export default function UserProfile({
         />
       ) : (
         <div className="size-6 rounded-full bg-primary/20 dark:bg-primary/5 flex items-center justify-center ml-1">
-          <Caption className="text-primary-900 dark:text-primary-200 text-t font-medium">
+          <Text className="text-t">
             {getInitials(displayName || "")}
-          </Caption>
+          </Text>
         </div>
       )}
-      <Body className="font-medium text-primary-900 dark:text-primary-100 truncate whitespace-nowrap">
+      <BodyMedium className="truncate whitespace-nowrap">
         {displayName || "Mains"}
-      </Body>
+      </BodyMedium>
     </div>
   );
 }

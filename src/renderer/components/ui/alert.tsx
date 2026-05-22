@@ -1,4 +1,4 @@
-import Text, { Body } from "./text";
+import { BodyMedium, Label } from "./text";
 import { Button } from "./button";
 
 interface AlertProps {
@@ -27,7 +27,7 @@ export default function Alert({
 
   return (
     <div
-      className="fixed inset-0 z-(--z-overlay) flex items-center justify-center bg-primary-950/55 "
+      className="fixed inset-0 z-(--z-overlay) flex items-center justify-center bg-primary-950/50 "
       role="presentation"
       onClick={onSecondary}
     >
@@ -37,12 +37,12 @@ export default function Alert({
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
-        <Body className="text-primary-900 dark:text-primary-100 font-semibold mb-3 ">
+        <BodyMedium className="mb-3 ">
           {title}
-        </Body>
-        <Text className="text-primary-700 text-sm dark:text-primary-400 ">
+        </BodyMedium>
+        <Label>
           {description}
-        </Text>
+        </Label>
         <div className="flex gap-3 mt-4">
           <Button
             className="flex-1 rounded-full font-semibold"

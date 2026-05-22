@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { Text, Muted, Button } from "@/components/ui";
+import { Muted, Button, Heading3 } from "@/components/ui";
 
 interface RevokeConfirmModalProps {
   onConfirm: () => void;
@@ -23,9 +23,9 @@ export function RevokeConfirmModal({
       <div className="absolute inset-0 bg-primary-950/50" role="presentation" onClick={onCancel} />
       <div className="relative w-full max-w-md glass-morphism rounded-2xl overflow-hidden">
         <div className="p-6">
-          <Text variant="h3" className="mb-3">
+          <Heading3 className="mb-3">
             Revoke {appName} Access?
-          </Text>
+          </Heading3>
           <Muted className="mb-6">{description || defaultDescription}</Muted>
 
           <div className="flex gap-3 justify-end">

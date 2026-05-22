@@ -1,11 +1,12 @@
 import { useMemo } from "react";
-import { Body, Caption, Toggle, Text, SegmentedTabs } from "@/components/ui";
+import { Body, Caption, Toggle, SegmentedTabs } from "@/components/ui";
 import {
   useGetAutomationsQuery,
   useCreateAutomationMutation,
   useUpdateAutomationMutation,
   useDeleteAutomationMutation,
 } from "@/lib/redux/api";
+import { MutedSmall } from "@/components/ui/text";
 
 interface AutoSyncSectionProps {
   provider: string;
@@ -86,12 +87,12 @@ export function AutoSyncSection({
     <div className="space-y-4">
       <div className="flex items-center justify-between ">
         <div>
-          <Body className="text-primary-900 dark:text-primary-100">
+          <Body>
             Auto Sync
           </Body>
-          <Text variant="mutedSmall" >
+          <MutedSmall>
             Automatically sync {providerLabel} data on a schedule
-          </Text>
+          </MutedSmall>
         </div>
         <Toggle
           enabled={isEnabled ?? false}
@@ -115,7 +116,7 @@ export function AutoSyncSection({
             />
           </div>
           {syncAutomation?.lastRunAt && (
-            <Caption className="text-primary-500">
+            <Caption>
               Last synced: {formatTimeAgo(syncAutomation.lastRunAt)}
             </Caption>
           )}

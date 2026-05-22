@@ -14,7 +14,7 @@ import { WizardProvider, type WizardContextValue } from "./wizard-context";
 import { usePrefersReducedMotion } from "../../../hooks/use-prefers-reduced-motion";
 import { Button } from "../button";
 import { Close } from "../icons";
-import Text from "../text";
+import { Heading3 } from "../text";
 import { wizardReducer, resolveInitialStep } from "./wizard-reducer";
 import { useWizardEscape, useWizardFocusTrap } from "./use-wizard-keyboard";
 import { useWizardAnimation } from "./use-wizard-animation";
@@ -250,7 +250,7 @@ export function WizardModal<
               )
             )}
             <span id="wizard-title">
-              <Text variant="h3" className="text-primary-900 dark:text-primary-200">{displayTitle}</Text>
+              <Heading3>{displayTitle}</Heading3>
             </span>
           </div>
           <Button

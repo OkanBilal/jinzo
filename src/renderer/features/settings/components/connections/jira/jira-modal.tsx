@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Body } from "@/components/ui";
+import { Body, Caption } from "@/components/ui";
 import { useLazyGetJiraProjectsQuery } from "@/lib/redux/api";
 import {
   ResourceWizardModal,
@@ -87,14 +87,14 @@ const CONFIG: ResourceWizardConfig = {
   renderItemForSelect: (project) => (
     <div className="flex items-center gap-2">
       <Body>{project.name}</Body>
-      <span className="text-xs text-primary-500">{project.key}</span>
+      <Caption>{project.key}</Caption>
     </div>
   ),
   renderItemForManage: (resource) => (
     <div className="flex-1">
       <div className="flex items-center gap-2">
         <Body>{resource.name}</Body>
-        <span className="text-xs text-primary-500">{resource.key}</span>
+        <Caption>{resource.key}</Caption>
       </div>
     </div>
   ),

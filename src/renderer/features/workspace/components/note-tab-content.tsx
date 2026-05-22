@@ -37,7 +37,7 @@ export function NoteTabContent({ reviewId }: NoteTabContentProps) {
     <div className="h-full overflow-y-auto noscrollbar">
       <div className="max-w-210 mx-auto pt-12 pb-24 px-6 space-y-6">
         <div className="space-y-3">
-          <Heading2 className="text-xl font-semibold text-primary-900 dark:text-primary-100">
+          <Heading2>
             {review.title}
           </Heading2>
 

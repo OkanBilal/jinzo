@@ -1,5 +1,5 @@
 import { Close } from "@/components/ui/icons";
-import { Button, Text } from "@/components/ui";
+import { Body, Button } from "@/components/ui";
 
 type Tab = "schemas" | "editor";
 
@@ -23,7 +23,7 @@ export function SchemaModalHeader({
   return (
     <div className="flex items-center justify-between p-6">
       <div className="flex items-center gap-4">
-        <Text variant="body" className="font-medium text-base">Structured outputs</Text>
+        <Body>Structured outputs</Body>
         <div className="relative flex items-center rounded-[10px] bg-primary-200/40 dark:bg-primary-200/5 px-0.25">
           <div
             className="absolute top-0.5 h-[calc(100%-3.5px)] w-[calc(50%-1px)] rounded-[10px] bg-primary-300/40 dark:bg-primary/10 transition-transform duration-200 ease-out"

@@ -27,7 +27,7 @@ export function ProjectLinkedResources({ projectId, onManageClick }: ProjectLink
     <SettingsSection title="Linked Resources">
       {linkedResources.length === 0 ? (
         <div className="py-5">
-          <Muted className="text-sm">No resources linked to this project.</Muted>
+          <Muted>No resources linked to this project.</Muted>
         </div>
       ) : (
         <div>
@@ -43,7 +43,7 @@ export function ProjectLinkedResources({ projectId, onManageClick }: ProjectLink
                     {r.resource.name || r.resource.externalId}
                   </span>
                   {r.resource.externalId !== r.resource.name && (
-                    <Caption className="text-primary-400 dark:text-primary-500 truncate block">
+                    <Caption className="truncate block">
                       {r.resource.externalId}
                     </Caption>
                   )}

@@ -3,7 +3,7 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { markdownComponents } from "@/components/markdown-components";
 import type { IssueWithEntity } from "@/lib/redux/api";
-import { Heading2, Button } from "@/components/ui";
+import { Heading2, Button, Caption } from "@/components/ui";
 
 interface IssueTabContentProps {
   issue: IssueWithEntity;
@@ -30,10 +30,10 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
       <div className="max-w-210 mx-auto pt-12 pb-24 px-6 space-y-6">
         <div className="space-y-3">
           {/* Title */}
-          <Heading2 className="text-xl font-semibold text-primary-900 dark:text-primary-100">
+          <Heading2>
             {title}{" "}
             {iss.number != null && (
-              <span className="font-mono">#{iss.number}</span>
+              <Caption className="font-mono">#{iss.number}</Caption>
             )}
           </Heading2>
 

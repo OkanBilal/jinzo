@@ -1,5 +1,5 @@
 import { Component, ReactNode } from "react";
-import Text from "./text";
+import { Heading3, Muted } from "./text";
 import { Button } from "./button";
 
 interface ErrorFallbackProps {
@@ -16,12 +16,12 @@ function ErrorFallback({ error, resetError, level }: ErrorFallbackProps) {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-8">
       <div className="flex flex-col items-center gap-3 text-center">
-        <Text variant="h3">Something went wrong</Text>
-        <Text variant="muted" className="max-w-md">
+        <Heading3>Something went wrong</Heading3>
+        <Muted className="max-w-md">
           {level === "app"
             ? "The application encountered an unexpected error. Try reloading the app."
             : "This section encountered an error. You can try again or navigate elsewhere."}
-        </Text>
+        </Muted>
       </div>
 
       <details className="max-w-lg rounded-xl bg-primary-100 dark:bg-primary-900 p-4 text-left">

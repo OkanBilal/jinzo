@@ -6,7 +6,7 @@ import { PulseList } from "@/features/pulse/components/pulse-list";
 import { PulseModal } from "@/features/pulse/components/pulse-modal";
 import { PulseTemplates } from "@/features/pulse/components/pulse-templates";
 import type { PulseTemplate } from "@/features/pulse/templates";
-import { Heading2 } from "@/components/ui";
+import { Heading2, Muted } from "@/components/ui";
 import { PageShell } from "@/components/layout/page-shell";
 
 export default function PulsePage() {
@@ -44,9 +44,9 @@ export default function PulsePage() {
       <header className="flex items-start justify-between mb-8">
         <div>
           <Heading2>Pulse</Heading2>
-          <p className="text-sm text-primary-500 mt-1">
+          <Muted className="mt-1">
             Pulse keeps your work in motion with scheduled, automated runs.
-          </p>
+          </Muted>
         </div>
         <Button
           type="button"

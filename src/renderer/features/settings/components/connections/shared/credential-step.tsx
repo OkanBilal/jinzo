@@ -1,4 +1,4 @@
-import { Text, Muted, ErrorText, Caption, Button, Input } from "@/components/ui";
+import { Muted, ErrorText, Caption, Button, Input, Label } from "@/components/ui";
 
 interface CredentialField {
   id: string;
@@ -47,7 +47,7 @@ export function CredentialStep({
       {fields.map((field, index) => (
         <div key={field.id}>
           <label htmlFor={field.id} className="block mb-2 ml-1">
-            <Text variant="label" className="text-xs">{field.label}</Text>
+            <Label>{field.label}</Label>
           </label>
           <Input
             id={field.id}

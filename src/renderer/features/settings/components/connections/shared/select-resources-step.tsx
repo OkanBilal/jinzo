@@ -95,7 +95,7 @@ export function SelectResourcesStep<T extends SelectableResource>({
 
       <div className="max-h-52 overflow-y-auto border border-primary-200/50 dark:border-primary-800/40 rounded-xl">
         {resources.length === 0 ? (
-          <div className="p-8 text-center text-primary-500 dark:text-primary-400">
+          <div className="p-8 text-center">
             <Body>{emptyMessage}</Body>
           </div>
         ) : (

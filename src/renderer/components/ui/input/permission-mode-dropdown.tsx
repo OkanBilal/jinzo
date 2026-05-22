@@ -2,7 +2,7 @@ import { RefObject } from "react";
 import { Plan, Lock, Edit, DontAsk, Danger, ArrowUp, Infinite } from "../icons";
 import DropdownWrapper from "../dropdown-wrapper";
 import { Button } from "../button";
-import { Body } from "../text";
+import { Body, Caption } from "../text";
 import {
   CURSOR_MODES as CURSOR_MODE_DEFS,
   CODEX_SANDBOX_MODES as CODEX_SANDBOX_MODE_DEFS,
@@ -185,10 +185,10 @@ export function PermissionModeDropdown({
               className="size-3.5 shrink-0"
             />
             <div className="flex flex-col flex-1 min-w-0">
-              <Body className="text-s mb-0.5">{mode.label}</Body>
-              <span className="text-xs  text-primary-500  ">
+              <Body className="mb-0.5">{mode.label}</Body>
+              <Caption>
                 {mode.description}
-              </span>
+              </Caption>
             </div>
           </Button>
         ))}
@@ -211,10 +211,10 @@ export function PermissionModeDropdown({
           >
             <Plan className="size-3.5 shrink-0" />
             <div className="flex flex-col flex-1 min-w-0">
-              <Body className="text-s mb-0.5">Plan Mode</Body>
-              <span className="text-xs text-primary-500">
+              <Body className="mb-0.5">Plan Mode</Body>
+              <Caption>
                 Plan before changes
-              </span>
+              </Caption>
             </div>
             <PlanToggleSwitch checked={planMode} />
           </div>

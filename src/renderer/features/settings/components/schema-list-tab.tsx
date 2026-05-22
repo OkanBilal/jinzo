@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 import { Trash, Edit, Duplicate } from "@/components/ui/icons";
-import { Muted, Input, Button } from "@/components/ui";
+import { Input, Button, Caption } from "@/components/ui";
 import type { StructuredOutputEntry } from "../../../../shared/adapter.types";
 
 function RadioDot({ active }: { active: boolean }) {
@@ -130,9 +130,9 @@ export function SchemaListTab({
           ))}
 
           {sortedEntries.length === 0 && (
-            <Muted className="text-xs px-3 py-4 text-center">
+            <Caption className="px-3 py-4 text-center">
               No schemas yet. Create one using the editor tab.
-            </Muted>
+            </Caption>
           )}
         </div>
       </div>

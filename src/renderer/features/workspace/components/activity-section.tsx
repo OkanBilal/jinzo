@@ -9,7 +9,7 @@ import {
 import type { WorkspaceActivity } from "@/lib/redux/api";
 import { openNoteTab, setPendingGoal, setPendingAutoExecute } from "@/lib/redux/slices/workspaceSlice";
 import { Note, PullRequest, Diff, Commit, CircleDot, ArrowUp } from "@/components/ui/icons";
-import { Button, Body } from "@/components/ui";
+import { Button, Caption } from "@/components/ui";
 import { formatDate } from "@/lib/format-date";
 
 interface ActivitySectionProps {
@@ -90,10 +90,10 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-2 px-4 text-center">
-          <Note className="w-4 h-4 dark:text-primary-300 text-primary-700" />
-          <Body className="text-xxs font-medium text-primary-700 dark:text-primary-300">
+          <Note className="w-4 h-4 dark:text-primary-400 text-primary-700" />
+          <Caption>
             No activity yet.
-          </Body>
+          </Caption>
         </div>
       </div>
     );

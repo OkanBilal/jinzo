@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Body } from "@/components/ui";
+import { Body, Caption } from "@/components/ui";
 import { useLazyGetAsanaProjectsQuery } from "@/lib/redux/api";
 import {
   ResourceWizardModal,
@@ -68,7 +68,7 @@ const CONFIG: ResourceWizardConfig = {
     <div className="flex items-center gap-2">
       <Body>{project.name}</Body>
       {project.workspaceName && (
-        <span className="text-xs text-primary-500">{project.workspaceName}</span>
+        <Caption>{project.workspaceName}</Caption>
       )}
     </div>
   ),
@@ -77,9 +77,9 @@ const CONFIG: ResourceWizardConfig = {
       <div className="flex items-center gap-2">
         <Body>{resource.name}</Body>
         {resource.metadata?.workspaceName && (
-          <span className="text-xs text-primary-500">
+          <Caption>
             {resource.metadata.workspaceName}
-          </span>
+          </Caption>
         )}
       </div>
     </div>

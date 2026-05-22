@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import NumberFlow from "@number-flow/react";
-import { Text } from "@/components/ui";
+import { Caption, Heading2 } from "@/components/ui";
 import type { DashboardSummary } from "@/lib/redux/api";
 
 interface SummaryCardsProps {
@@ -28,7 +28,7 @@ export default function SummaryCards({ summary }: SummaryCardsProps) {
           key={card.label}
           className="rounded-3xl glass-morphism px-4 py-3.5 text-center"
         >
-          <Text variant="h2" className="text-xl tracking-tight">
+          <Heading2>
             <NumberFlow
               value={mounted ? card.value : 0}
               format={
@@ -39,10 +39,10 @@ export default function SummaryCards({ summary }: SummaryCardsProps) {
               transformTiming={{ duration: 600, easing: "ease-out" }}
               spinTiming={{ duration: 600, easing: "ease-out" }}
             />
-          </Text>
-          <Text variant="caption" className="font-medium mb-1">
+          </Heading2>
+          <Caption>
             {card.label}
-          </Text>
+          </Caption>
         </div>
       ))}
     </div>

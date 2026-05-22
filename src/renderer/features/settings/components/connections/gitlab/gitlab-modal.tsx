@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Body } from "@/components/ui";
+import { Body, Caption } from "@/components/ui";
 import LockIcon from "@/components/ui/icons/lock";
 import { useLazyGetGitLabProjectsQuery } from "@/lib/redux/api";
 import {
@@ -97,7 +97,7 @@ const CONFIG: ResourceWizardConfig = {
         (project.visibility === "private" ? (
           <LockIcon className="w-3 h-3 text-primary-500" />
         ) : (
-          <span className="text-xs text-primary-500">{project.visibility}</span>
+          <Caption>{project.visibility}</Caption>
         ))}
     </div>
   ),
@@ -111,7 +111,7 @@ const CONFIG: ResourceWizardConfig = {
             (visibility === "private" ? (
               <LockIcon className="w-3 h-3 text-primary-500" />
             ) : (
-              <span className="text-xs text-primary-500">{visibility}</span>
+              <Caption>{visibility}</Caption>
             ))}
         </div>
       </div>

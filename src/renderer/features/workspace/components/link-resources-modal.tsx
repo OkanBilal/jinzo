@@ -162,12 +162,11 @@ export function LinkResourcesModal({
         <div className="flex-1 min-w-0">
           <div className="flex gap-2 items-center">
             <BodyMedium
-              className={`truncate font-medium ${selected ? "text-primary-900 dark:text-primary-100" : ""}`}
             >
               {resource.name || resource.externalId}
             </BodyMedium>
             {resource.externalId !== resource.name && (
-              <Caption className="text-primary-400 dark:text-primary-500 truncate block mt-0.5">
+              <Caption className="truncate block mt-0.5">
                 {resource.externalId}
               </Caption>
             )}
@@ -196,7 +195,7 @@ export function LinkResourcesModal({
       >
         {/* Header */}
         <div className="px-6 pt-6 pb-4">
-          <Heading3 className="text-primary-900 dark:text-primary-50">
+          <Heading3>
             Link Resources
           </Heading3>
         </div>
@@ -217,10 +216,10 @@ export function LinkResourcesModal({
             ) : resources.length === 0 ? (
               <div className="p-8 text-center flex flex-col items-center">
                 <Connect className="size-6 mb-3 text-primary-400 dark:text-primary-700" />
-                <BodyMedium className="text-primary-600 dark:text-primary-300">
+                <BodyMedium>
                   No resources available
                 </BodyMedium>
-                <Caption className="text-primary-400 dark:text-primary-500 mt-1 block">
+                <Caption className="mt-1 block">
                   Connect apps in{" "}
                   <Button
                     type="button"

@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Body } from "@/components/ui";
+import { Body, Caption } from "@/components/ui";
 import { useLazyGetLinearTeamsQuery } from "@/lib/redux/api";
 import {
   ResourceWizardModal,
@@ -68,9 +68,9 @@ const CONFIG: ResourceWizardConfig = {
     <div className="flex items-center gap-2">
       <Body>{team.name}</Body>
       {team.description && (
-        <span className="text-xs text-primary-500 truncate max-w-50">
+        <Caption className="truncate">
           {team.description}
-        </span>
+        </Caption>
       )}
     </div>
   ),

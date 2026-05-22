@@ -17,7 +17,7 @@ import {
   Chat,
   Codex,
 } from "@/components/ui/icons";
-import { Body, Button } from "@/components/ui";
+import { Button, Caption } from "@/components/ui";
 import { buildSyntheticDiff } from "../utils/expand-diff";
 import { parseFileDiffSegment, parsePerFileStats } from "../utils/parse-diff";
 import { normalizePath, pathsMatch } from "../utils/path-utils";
@@ -191,10 +191,10 @@ export function DiffSection({
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-2 px-4 text-center">
-          <Diff className="w-4 h-4 dark:text-primary-300 text-primary-700" />
-          <Body className="text-xxs font-medium text-primary-700 dark:text-primary-300">
+          <Diff className="w-4 h-4 dark:text-primary-400 text-primary-700" />
+          <Caption>
             No changes detected.
-          </Body>
+          </Caption>
         </div>
       </div>
     );

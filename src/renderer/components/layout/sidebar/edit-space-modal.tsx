@@ -1,6 +1,6 @@
 import { useReducer, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Text, Heading3, Input, Button, toast } from "@/components/ui";
+import { Heading3, Input, Button, toast, Caption } from "@/components/ui";
 import { useUpdateSpaceMutation } from "@/lib/redux/api";
 import type { Space } from "@/lib/redux/api";
 import { useDarkMode } from "@/hooks/use-dark-mode";
@@ -198,7 +198,7 @@ export default function EditSpaceModal({
           >
             <EditSpacePreviewIcon icon={icon} iconMode={iconMode} />
           </div>
-          <Heading3 className="text-center text-primary-800 dark:text-primary">
+          <Heading3 className="text-center">
             Edit Space
           </Heading3>
         </div>
@@ -235,9 +235,9 @@ export default function EditSpaceModal({
           />
 
           <div className="space-y-2">
-            <Text className="text-xs text-primary-500 dark:text-primary-400">
+            <Caption>
               System Prompt
-            </Text>
+            </Caption>
             <textarea
               value={systemPrompt}
               onChange={(e) => updateState({ systemPrompt: e.target.value })}

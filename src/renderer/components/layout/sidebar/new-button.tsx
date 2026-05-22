@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Body, Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
+import { BodyMedium, Button, Caption, DropdownMenu, DropdownMenuItem } from "@/components/ui";
 
 interface NewButtonProps {
   onClick: () => void;
@@ -76,12 +76,12 @@ export default function NewButton({
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         {icon}
-        <Body className="text-primary-900 dark:text-primary-100 text-s font-medium">
+        <BodyMedium className="text-s">
           {actionPrefix} {title}
-        </Body>
-        <Body className="ml-auto text-primary-900 dark:text-primary-200 text-xs!">
+        </BodyMedium>
+        <Caption className="ml-auto">
           ⌘ N
-        </Body>
+        </Caption>
       </Button>
 
       {dropdownItems && (
