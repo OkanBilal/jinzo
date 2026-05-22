@@ -1,7 +1,6 @@
 import { Fragment } from "react";
 import { Button, useWizard, Muted, Label } from "@/components/ui";
 import { CopyButton } from "@/components/ui/copy-button";
-import { MutedSmall } from "@/components/ui/text";
 
 interface CommandSection {
   label: string;
@@ -50,7 +49,7 @@ export function CliSetupStep({
         ))}
       </div>
 
-      <MutedSmall>
+      <Muted className="text-xs">
         {helpText}{" "}
         <Button
           type="button"
@@ -59,7 +58,7 @@ export function CliSetupStep({
         >
           {helpLinkLabel}
         </Button>
-      </MutedSmall>
+      </Muted>
 
       <div className={`flex ${showBack ? "justify-between" : "justify-end"} pt-2`}>
         {showBack && (

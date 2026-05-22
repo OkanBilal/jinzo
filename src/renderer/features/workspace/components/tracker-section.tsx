@@ -9,7 +9,7 @@ import { IssueListItem } from "./issue-list-item";
 import { SignalListItem } from "./signal-list-item";
 import { ArrowUp } from "@/components/ui/icons";
 import { Button } from "@/components/ui";
-import { BodySmall } from "@/components/ui/text";
+import { Body } from "@/components/ui/text";
 
 type TrackerFilter = "all" | "issues" | "signals";
 
@@ -123,9 +123,9 @@ export function TrackerSection({
             expanded ? "rotate-180" : "rotate-90"
           }`}
         />
-        <BodySmall>
+          <Body className="text-xs">
           Linked  Resources
-        </BodySmall>
+        </Body>
         {totalCount > 0 ? (
           <span className="text-t text-primary-800 dark:text-primary-200 ml-auto mr-1 tabular-nums">
             {totalCount}

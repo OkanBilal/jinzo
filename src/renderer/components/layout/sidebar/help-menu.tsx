@@ -1,5 +1,5 @@
 import { BookOpen, Feed, External, Bug } from "@/components/ui/icons";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
+import { Body, DropdownMenu, DropdownMenuItem } from "@/components/ui";
 
 interface HelpMenuProps {
   isOpen: boolean;
@@ -30,15 +30,15 @@ export default function HelpMenu({ isOpen, position, onClose }: HelpMenuProps) {
           onClick={() => handleOpenExternal("https://github.com/OkanBilal/mains/issues")}
         >
           <Bug className="size-4 shrink-0" />
-          <span className="flex-1 text-left">Report an Issue</span>
-          <External className="size-3 text-primary-400" />
+          <Body className="flex-1 text-left">Report an Issue</Body>
+          <External className="size-3 text-primary-900 dark:text-primary-100" />
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => handleOpenExternal("https://docs.mains.dev")}
         >
           <BookOpen className="size-4 shrink-0" />
-          <span className="flex-1 text-left">Docs</span>
-          <External className="size-3 text-primary-400" />
+          <Body className="flex-1 text-left">Docs</Body>
+          <External className="size-3 text-primary-900 dark:text-primary-100" />
         </DropdownMenuItem>
 
         <DropdownMenuItem
@@ -49,8 +49,8 @@ export default function HelpMenu({ isOpen, position, onClose }: HelpMenuProps) {
           }
         >
           <Feed className="size-4 shrink-0" />
-          <span className="flex-1 text-left">Changelog</span>
-          <External className="size-3 text-primary-400" />
+          <Body className="flex-1 text-left">Changelog</Body>
+          <External className="size-3 text-primary-900 dark:text-primary-100" />
         </DropdownMenuItem>
       </div>
     </DropdownMenu>

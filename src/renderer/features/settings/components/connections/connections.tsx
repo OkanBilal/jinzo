@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Text, Button, SegmentedTabs, toast } from "@/components/ui";
+import { Text, Button, SegmentedTabs, toast, Body } from "@/components/ui";
 import { SettingsPageShell } from "../settings-layout";
 import AsanaModal from "./asana/asana-modal";
 import GitHubModal from "./github/github-modal";
@@ -116,9 +116,9 @@ export default function ConnectionsSettings() {
       {/* Connected */}
       {connectedFiltered.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100 mb-3">
+          <Body className="font-medium mb-3">
             Connected
-          </h3>
+          </Body>
           <div className="grid grid-cols-2 gap-6">
             {connectedFiltered.map((connection) => (
               <ConnectionCard
@@ -135,9 +135,9 @@ export default function ConnectionsSettings() {
       {/* Available */}
       {notConnectedFiltered.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100 mb-3">
+          <Body className="font-medium mb-3">
             Available
-          </h3>
+          </Body>
           <div className="grid grid-cols-2 gap-6 pb-12">
             {notConnectedFiltered.map((connection) => (
               <ConnectionCard

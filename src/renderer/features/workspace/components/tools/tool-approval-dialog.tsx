@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { ArrowUp, Question } from "@/components/ui/icons";
-import { Button, Checkbox } from "@/components/ui";
+import { Body, Button, Caption, Checkbox, Text } from "@/components/ui";
 import type { ToolApprovalRequest } from "../../hooks";
 import { ToolInputPreview } from "./tool-input-preview";
 import { resolveTool } from "../../utils/resolve-tool";
@@ -220,9 +220,9 @@ export function ToolApprovalDialog({
                   </span>
                 </div>
               )}
-              <p className="text-sm font-medium leading-snug text-primary-900 dark:text-primary-100">
+              <Body className="leading-snug font-medium">
                 {request.question || "The agent is asking a question."}
-              </p>
+              </Body>
             </div>
           </div>
 
@@ -266,9 +266,9 @@ export function ToolApprovalDialog({
                         {opt.label}
                       </span>
                       {opt.description && (
-                        <p className="mt-1 text-xxs leading-relaxed text-primary-600 dark:text-primary-400">
+                        <Text className="mt-1 text-xxs leading-relaxed text-primary-600 dark:text-primary-400">
                           {opt.description}
-                        </p>
+                        </Text>
                       )}
                     </div>
                   </Button>
@@ -368,13 +368,13 @@ export function ToolApprovalDialog({
         </div>
 
         <div className="px-4 pb-3 pt-0.5">
-          <p className="text-sm font-semibold leading-snug text-primary-900 dark:text-primary-100">
+          <Body className="font-medium leading-snug">
             {message}
-          </p>
+          </Body>
           {subtitle && (
-            <p className="mt-1.5 text-xs leading-relaxed text-primary-500 dark:text-primary-400">
+            <Caption className="mt-1.5">
               {subtitle}
-            </p>
+            </Caption>
           )}
         </div>
 

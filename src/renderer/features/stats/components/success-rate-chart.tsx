@@ -1,4 +1,4 @@
-import { ChartCard, BarChart, BarLabels } from "@/components/ui";
+import { ChartCard, BarChart, BarLabels, Heading2 } from "@/components/ui";
 import { Check } from "@/components/ui/icons";
 import type { StatusBreakdown } from "@/lib/redux/api";
 
@@ -61,9 +61,9 @@ export default function SuccessRateChart({ data }: SuccessRateChartProps) {
         ) : undefined
       }
     >
-      <p className="text-2xl font-semibold text-primary-900 dark:text-primary-100 tracking-tight mb-4">
+      <Heading2 className="mb-4">
         {rate}%
-      </p>
+      </Heading2>
 
       <BarChart
         height={120}

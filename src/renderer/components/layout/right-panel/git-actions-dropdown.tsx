@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback } from "react";
 import { Commit, PullRequest, ArrowUp, Branch } from "@/components/ui/icons";
-import { Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
+import { Button, Caption, DropdownMenu, DropdownMenuItem } from "@/components/ui";
 import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks";
 import {
   useGetLatestWorkspaceDiffSummaryQuery,
@@ -63,7 +63,7 @@ export function GitActionsDropdown() {
         className="flex items-center gap-1 px-1.5 py-1.25 rounded-lg cursor-pointer text-primary-700 dark:text-primary-300 hover:bg-primary-100/80 dark:hover:bg-primary/10 transition-all duration-300 ease-out"
       >
         <Branch className="size-3.5" />
-        <span className="text-xs font-medium">Git</span>
+        <Caption>Git</Caption>
         <ArrowUp
           className={`size-3 transition-transform duration-200 rotate-180`}
         />
@@ -76,16 +76,16 @@ export function GitActionsDropdown() {
         minWidth={160}
         origin="top-right"
       >
-        <div className="px-3 py-1.5 text-xs font-medium text-primary-700 dark:text-primary-300">
+        <Caption className="px-3 py-1.5">
           Git actions
-        </div>
+        </Caption>
         <DropdownMenuItem onClick={handleCommit} disabled={!hasDiff}>
           <Commit className="size-4" />
-          <span>Commit</span>
+          <Caption>Commit</Caption>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleCreatePR} disabled={!hasCommit}>
           <PullRequest className="size-4" />
-          <span>Create PR</span>
+          <Caption>Create PR</Caption>
         </DropdownMenuItem>
       </DropdownMenu>
     </>

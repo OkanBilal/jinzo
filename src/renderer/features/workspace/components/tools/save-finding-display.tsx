@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Mains } from "@/components/ui/icons";
 import { ToolHeader, ToolCollapse } from "./_shared";
+import { Text, Tiny } from "@/components/ui";
 
 interface Finding {
   severity?: string;
@@ -96,10 +97,10 @@ export function SaveFindingDisplay({
                   )}
                 </div>
                 {f.message && (
-                  <p className="text-s text-primary-950 dark:text-primary">{f.message}</p>
+                  <Tiny className="whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2">{f.message}</Tiny>
                 )}
                 {f.suggestion && (
-                  <p className="text-xs text-green-600 dark:text-green-400">{f.suggestion}</p>
+                  <Text className="text-xs text-green-600 dark:text-green-400">{f.suggestion}</Text>
                 )}
               </div>
             ))}

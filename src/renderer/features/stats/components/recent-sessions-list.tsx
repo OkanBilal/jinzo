@@ -1,4 +1,4 @@
-import { ChartCard } from "@/components/ui";
+import { Caption, ChartCard } from "@/components/ui";
 import { Chat } from "@/components/ui/icons";
 import type { RecentSession } from "@/lib/redux/api";
 
@@ -42,30 +42,30 @@ export default function RecentSessionsList({ sessions }: RecentSessionsListProps
         {sessions.map((s) => (
           <div
             key={s.runId}
-            className="flex items-center gap-2.5 py-1.5 text-xs"
+            className="flex items-center gap-2.5 py-1.5"
           >
             <div
               className="w-2 h-2 rounded-full shrink-0"
               style={{ backgroundColor: PROVIDER_COLORS[s.providerId] ?? "var(--color-primary-500)" }}
             />
             <div className="flex-1 min-w-0">
-              <p className="text-primary-800 dark:text-primary-200 truncate">
+              <Caption>
                 {s.title ?? s.goal ?? "Untitled run"}
-              </p>
+              </Caption>
               <div className="flex items-center gap-2 mt-0.5">
                 {s.projectName && (
-                  <span className="text-primary-400 dark:text-primary-500 truncate">
+                  <Caption>
                     {s.projectName}
-                  </span>
+                  </Caption>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-3 shrink-0 text-primary-400 dark:text-primary-500">
               {s.durationMs !== null && (
-                <span>{formatDuration(s.durationMs)}</span>
+                <Caption>{formatDuration(s.durationMs)}</Caption>
               )}
               {s.totalCostUsd !== null && s.totalCostUsd > 0 && (
-                <span>{formatCost(s.totalCostUsd)}</span>
+                <Caption>{formatCost(s.totalCostUsd)}</Caption>
               )}
             </div>
           </div>

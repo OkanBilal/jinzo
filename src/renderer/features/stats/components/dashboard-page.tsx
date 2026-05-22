@@ -7,7 +7,7 @@ import HourHeatmap from "./hour-heatmap";
 import CostByModelChart from "./cost-by-model-chart";
 import ToolUsageChart from "./tool-usage-chart";
 import RecentSessionsList from "./recent-sessions-list";
-import { Heading2, SegmentedTabs } from "@/components/ui";
+import { Caption, Heading2, SegmentedTabs } from "@/components/ui";
 import SuccessRateChart from "./success-rate-chart";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
@@ -41,9 +41,9 @@ export default function DashboardPage() {
 
   if (isError || !data) {
     return (
-      <p className="text-sm text-primary-500 dark:text-primary-400">
+      <Caption>
         Failed to load dashboard data.
-      </p>
+      </Caption>
     );
   }
 

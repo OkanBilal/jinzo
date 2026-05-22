@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Mains } from "@/components/ui/icons";
 import { ToolHeader, ToolCollapse } from "./_shared";
+import { Tiny } from "@/components/ui";
 
 export interface CommitParams {
   message?: string;
@@ -51,9 +52,9 @@ export function CommitDisplay({
               </div>
             )}
             {params.message && (
-              <p className="text-s text-primary-950 dark:text-primary whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2">
+              <Tiny className="whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2">
                 {params.message}
-              </p>
+              </Tiny>
             )}
           </div>
         </ToolCollapse>

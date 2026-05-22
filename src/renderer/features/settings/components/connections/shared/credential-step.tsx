@@ -59,7 +59,7 @@ export function CredentialStep({
             onKeyDown={index === fields.length - 1 ? handleKeyDown : undefined}
           />
           {field.helperText && (
-            <p className="text-xs text-primary-500 dark:text-primary-400 mt-1">{field.helperText}</p>
+            <Caption className="mt-1">{field.helperText}</Caption>
           )}
         </div>
       ))}

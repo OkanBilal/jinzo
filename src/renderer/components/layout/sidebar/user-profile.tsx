@@ -1,4 +1,4 @@
-import { BodyMedium, Text } from "@/components/ui";
+import { Body, Text } from "@/components/ui";
 import { proxiedImageSrc } from "@/lib/proxied-image-src";
 
 interface UserProfileProps {
@@ -42,9 +42,9 @@ export default function UserProfile({
           </Text>
         </div>
       )}
-      <BodyMedium className="truncate whitespace-nowrap">
+      <Body className="truncate whitespace-nowrap font-medium">
         {displayName || "Mains"}
-      </BodyMedium>
+      </Body>
     </div>
   );
 }

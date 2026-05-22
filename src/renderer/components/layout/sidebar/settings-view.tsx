@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { BodyMedium, Button } from "@/components/ui";
+import { Body, Button } from "@/components/ui";
 import { ChevronUp } from "@/components/ui/icons";
 import { useListProjectsQuery } from "@/lib/redux/api";
 import { parseIcon, type IconComponent } from "@/lib/icon-registry";
@@ -37,9 +37,9 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
       }}
     >
       <div className="flex flex-col items-start pt-12 pb-1 px-4">
-        <BodyMedium className="text-left">
+        <Body className="text-left font-medium">
           Settings
-        </BodyMedium>
+        </Body>
       </div>
 
       <div className="flex-1 px-3 mb-1 overflow-y-auto noscrollbar">
@@ -145,9 +145,9 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
           <ChevronUp className="size-4 rotate-270 text-primary-900 dark:text-primary-200" />
-          <BodyMedium>
+          <Body className="font-medium">
             Return
-          </BodyMedium>
+          </Body>
         </Button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { Button, useWizard } from "@/components/ui";
+import { Body, Button, Heading1, useWizard } from "@/components/ui";
 import { ChevronUp, Mains } from "@/components/ui/icons";
 
 export function IntroStep() {
@@ -16,19 +16,19 @@ export function IntroStep() {
         <span className="text-xxs uppercase tracking-[0.18em] font-medium text-primary-500 dark:text-primary-400">
           v{__APP_VERSION__ ?? "0.2.1"}
         </span>
-        <h1 className="text-3xl font-serif tracking-tight text-primary-900 dark:text-primary-50 leading-tight">
+        <Heading1>
           Welcome to Mains
-        </h1>
-        <p className="text-sm text-primary-600 dark:text-primary-400 leading-relaxed max-w-md">
+        </Heading1>
+        <Body className="max-w-md">
           Your AI-powered workspace where ideas rise like mountains and flow
           like water. Let&apos;s get you set up.
-        </p>
+        </Body>
       </div>
 
       <div className="flex items-center justify-between px-6 pb-6 pt-2">
         <div/>
 
-      
+
         <Button
           variant="submit"
           onClick={goNext}

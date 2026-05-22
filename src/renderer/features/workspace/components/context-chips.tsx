@@ -8,6 +8,7 @@ import type {
 import { Close, Web } from "@/components/ui/icons";
 import { ProviderIcon } from "./provider-icon";
 import { Button } from "@/components/ui";
+import { Body } from "@/components/ui/text";
 
 interface ContextChipsProps {
   contextIssues: ContextIssue[];
@@ -68,13 +69,13 @@ function BrowserSelectionPreview({
           <div className="flex items-center gap-2 min-w-0">
             <Web className="w-3.5 h-3.5 shrink-0 text-primary-800 dark:text-primary-100" />
             <div className="min-w-0">
-              <p className="text-xs font-medium text-primary-900 dark:text-primary-100 truncate">
+              <Body className="text-xs">
                 {summary}
-              </p>
-              <p className="text-xs text-primary-500 dark:text-primary-400 truncate">
+              </Body>
+              <Body className="text-xs opacity-60">
                 {hostname(sel.url)}
-                {sel.selector && <span className="opacity-60"> · {sel.selector}</span>}
-              </p>
+                {sel.selector && <Body className="text-xs opacity-60"> · {sel.selector}</Body>}
+              </Body>
             </div>
           </div>
           <Button
@@ -121,14 +122,14 @@ function BrowserSelectionPreview({
         {(sel.text || sel.sourceFile) && (
           <div className="px-4 py-2.5 border-t border-primary-200 dark:border-primary-800 space-y-1">
             {sel.sourceFile && (
-              <p className="text-xs text-primary-500 dark:text-primary-400 font-mono truncate">
+              <Body className="text-xs">
                 {sel.sourceFile}
-              </p>
+              </Body>
             )}
             {sel.text && (
-              <p className="text-xs text-primary-700 dark:text-primary-300 line-clamp-2">
+              <Body className="text-xs">
                 {sel.text}
-              </p>
+              </Body>
             )}
           </div>
         )}

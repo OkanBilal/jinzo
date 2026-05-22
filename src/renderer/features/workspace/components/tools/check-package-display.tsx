@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Mains } from "@/components/ui/icons";
 import { ToolHeader, ToolCollapse } from "./_shared";
+import { Tiny } from "@/components/ui";
 
 interface PackageInfo {
   name: string;
@@ -98,9 +99,9 @@ export function CheckPackageDisplay({
               ))
             )}
             {outputText && results.length === 0 && (
-              <p className="text-s text-primary-600 dark:text-primary-400 whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 mt-1">
+              <Tiny className="whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2 mt-1">
                 {outputText}
-              </p>
+              </Tiny>
             )}
           </div>
         </ToolCollapse>

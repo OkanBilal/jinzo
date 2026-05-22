@@ -13,12 +13,11 @@ export {
   Heading2,
   Heading3,
   Body,
-  BodyMedium,
   Muted,
   Label,
   ErrorText,
   Caption,
-  Timestamp,
+  Tiny,
 } from "./text";
 export type { TextProps, TextVariant } from "./text";
 

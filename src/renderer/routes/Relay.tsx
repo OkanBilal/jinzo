@@ -1,4 +1,4 @@
-import { Heading2 } from "@/components/ui";
+import { Body, Heading2 } from "@/components/ui";
 import { PageShell } from "@/components/layout/page-shell";
 
 export default function RelayPage() {
@@ -6,9 +6,9 @@ export default function RelayPage() {
     <PageShell bottomPadded>
       <header>
         <Heading2>Relay</Heading2>
-        <p className="text-sm text-primary-500 mt-1">
+        <Body className="mt-1">
           Coming soon — remote control and handoff between this app and your agents or other machines.
-        </p>
+        </Body>
       </header>
     </PageShell>
   );

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Caption, Button, BodyMedium } from "@/components/ui";
+import { Caption, Button, Body } from "@/components/ui";
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -59,9 +59,9 @@ export default function CreateProjectModal({
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
-        <BodyMedium className="mb-2">
+        <Body className="mb-2 font-medium">
           Create New Project
-        </BodyMedium>
+        </Body>
 
         <div className="space-y-4">
           <div>

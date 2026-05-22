@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import NumberFlow from "@number-flow/react";
-import { BodySmall } from "./text";
+import { Body } from "./text";
 
 interface SliderProps {
   value: number;
@@ -114,14 +114,14 @@ export function Slider({
       {(minLabel || maxLabel) && (
         <div className="flex justify-between">
           {minLabel && (
-            <BodySmall>
+            <Body className="text-xs">
               {minLabel}
-            </BodySmall>
+            </Body>
           )}
           {maxLabel && (
-            <BodySmall>
+            <Body className="text-xs">
               {maxLabel}
-            </BodySmall>
+            </Body>
           )}
         </div>
       )}

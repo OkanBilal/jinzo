@@ -1,6 +1,6 @@
 import { Preset } from "@/components/ui/icons";
 import { Bolt } from "@/components/ui/icons/space";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui";
+import { Caption, DropdownMenu, DropdownMenuItem } from "@/components/ui";
 
 interface CreateSpaceMenuProps {
   isOpen: boolean;
@@ -36,7 +36,7 @@ export default function CreateSpaceMenu({
         }}
       >
         <Bolt className="size-4" />
-        <span>Create Space</span>
+        <Caption>Create Space</Caption>
       </DropdownMenuItem>
       <DropdownMenuItem
         onClick={() => {
@@ -45,7 +45,7 @@ export default function CreateSpaceMenu({
         }}
       >
         <Preset className="size-4" />
-        <span>Choose Space</span>
+        <Caption>Choose Space</Caption>
       </DropdownMenuItem>
     </DropdownMenu>
   );

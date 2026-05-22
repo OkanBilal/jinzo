@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Toggle, useWizard } from "@/components/ui";
+import { Button, Caption, Heading3, Toggle, useWizard } from "@/components/ui";
 import { ChevronUp } from "@/components/ui/icons";
 import { getSpaceDefaultRoute } from "@/lib/route-utils";
 import {
@@ -15,6 +15,7 @@ import { ThemePicker } from "@/features/settings/components/theme-picker";
 import { type OnboardingAgentSlug } from "../onboarding-agents";
 import { AgentCard, AGENT_CHOICES } from "./agent-card";
 import { useAgentSpaces } from "../hooks/use-agent-spaces";
+import { Tiny } from "@/components/ui/text";
 
 const NOTIFICATION_CHOICES: {
   key: "notifyOnRunComplete" | "notifyOnToolApproval";
@@ -100,21 +101,21 @@ export function WelcomeStep() {
   return (
     <div className="space-y-4 -mt-8">
       <div className="space-y-1 ">
-        <h1 className="text-xl font-serif tracking-tight text-primary-900 dark:text-primary-100 leading-tight">
+        <Heading3>
           Welcome to Mains
-        </h1>
-        <p className="text-s text-primary-600 dark:text-primary-400 leading-relaxed">
+        </Heading3>
+        <Caption className="leading-relaxed">
           Your AI-powered workspace where ideas rise like mountains and flow
           like water.
-        </p>
+        </Caption>
       </div>
 
 
       <div className="space-y-2 mt-8">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-s text-primary-900 dark:text-primary-100">
+          <Tiny>
             Theme
-          </h2>
+          </Tiny>
         </div>
         <div className="flex justify-center w-full">
           <ThemePicker size="lg" />
@@ -123,9 +124,9 @@ export function WelcomeStep() {
 
       <div className="space-y-2 mt-8">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-s text-primary-900 dark:text-primary-100">
+          <Tiny>
             Pick your agents
-          </h2>
+          </Tiny>
 
         </div>
         <div className="flex gap-3">
@@ -150,9 +151,9 @@ export function WelcomeStep() {
 
       <div className="space-y-2 mt-8 mb-8">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-s text-primary-900 dark:text-primary-100">
+          <Tiny>
             Notifications
-          </h2>
+          </Tiny>
 
         </div>
         <div className="space-y-1">

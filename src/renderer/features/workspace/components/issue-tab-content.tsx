@@ -3,7 +3,7 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { markdownComponents } from "@/components/markdown-components";
 import type { IssueWithEntity } from "@/lib/redux/api";
-import { Heading2, Button, Caption } from "@/components/ui";
+import { Heading2, Button, Caption, Text } from "@/components/ui";
 
 interface IssueTabContentProps {
   issue: IssueWithEntity;
@@ -90,14 +90,14 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
               </ReactMarkdown>
             </div>
           ) : (
-            <p className="text-sm text-primary-400 dark:text-primary-500">
+            <Caption>
               Details not synced yet or no description provided.
-            </p>
+            </Caption>
           )}
         </div>
         {entity.url && (
           <div>
-            <p className="mt-0.5">
+            <Text className="mt-0.5">
               <Button
                 variant="frosted"
                 className=" px-3 py-2.5 dark:text-primary-200 font-medium  rounded-xl"
@@ -117,7 +117,7 @@ export function IssueTabContent({ issue }: IssueTabContentProps) {
                             ? "View on Trello"
                         : "View on Provider"}
               </Button>
-            </p>
+            </Text>
           </div>
         )}
       </div>

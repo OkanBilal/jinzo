@@ -1,5 +1,5 @@
-import { BodyMedium, Label } from "./text";
-import { Button } from "./button";
+import { Body, Label } from "./text";
+import { Button } from "@/components/ui/button";
 
 interface AlertProps {
   isOpen: boolean;
@@ -37,9 +37,9 @@ export default function Alert({
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
-        <BodyMedium className="mb-3 ">
+        <Body className="mb-3 font-medium">
           {title}
-        </BodyMedium>
+        </Body>
         <Label>
           {description}
         </Label>

@@ -2,12 +2,12 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
-  BodyMedium,
   Caption,
   Heading3,
   Button,
   Checkbox,
   toast,
+  Body,
 } from "@/components/ui";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import {
@@ -161,10 +161,10 @@ export function LinkResourcesModal({
         <span className="text-primary-500 dark:text-primary-400">{icon}</span>
         <div className="flex-1 min-w-0">
           <div className="flex gap-2 items-center">
-            <BodyMedium
+            <Body className="font-medium"
             >
               {resource.name || resource.externalId}
-            </BodyMedium>
+            </Body>
             {resource.externalId !== resource.name && (
               <Caption className="truncate block mt-0.5">
                 {resource.externalId}
@@ -216,9 +216,9 @@ export function LinkResourcesModal({
             ) : resources.length === 0 ? (
               <div className="p-8 text-center flex flex-col items-center">
                 <Connect className="size-6 mb-3 text-primary-400 dark:text-primary-700" />
-                <BodyMedium>
+                <Body className="font-medium">
                   No resources available
-                </BodyMedium>
+                </Body>
                 <Caption className="mt-1 block">
                   Connect apps in{" "}
                   <Button

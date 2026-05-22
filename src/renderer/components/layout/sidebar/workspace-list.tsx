@@ -22,7 +22,7 @@ import { useListProjectsQuery, useUpdateWorkspaceMutation } from "@/lib/redux/ap
 import { toast } from "@/components/ui";
 import { ProjectIcon } from "./project-icon";
 import { WorkspaceGroupDropdown, type GroupingMode } from "./workspace-group-dropdown";
-import { BodySmall } from "@/components/ui/text";
+import { Body } from "@/components/ui/text";
 
 type WorkspaceGroup = {
   key: string;
@@ -149,9 +149,9 @@ export default function WorkspacesList({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-16">
-        <BodySmall>
+        <Body className="text-xs">
           Loading...
-        </BodySmall>
+        </Body>
       </div>
     );
   }
@@ -159,9 +159,9 @@ export default function WorkspacesList({
   if (workspaces.length === 0) {
     return (
       <div className="flex items-center justify-center h-16">
-        <BodySmall>
+        <Body className="text-xs">
           No projects yet
-        </BodySmall>
+        </Body>
       </div>
     );
   }
@@ -341,9 +341,9 @@ export default function WorkspacesList({
         // onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsExpanded(!isExpanded); } }}
         className="w-full flex items-center justify-between transition-all duration-200 bg-transparent  px-2 py-0.5 rounded-lg "
       >
-        <BodySmall>
+        <Body className="text-xs">
           Workspaces
-        </BodySmall>
+        </Body>
         <div className="flex items-center ">
           <div className="-mr-1" role="presentation" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <WorkspaceGroupDropdown

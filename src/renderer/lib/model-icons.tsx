@@ -6,6 +6,7 @@ import {
   Gpt,
   Grok,
   Kimi,
+  Mains,
   Meta,
 } from "@/components/ui/icons";
 import { Claude } from "@/components/ui/icons/space";
@@ -81,15 +82,6 @@ export function getModelIcon(modelName: string, variant?: ModelIconVariant) {
   if (name.includes("llama")) {
     return <Meta className="size-3.5" />;
   }
-  if (name.includes("gemma")) {
-    return <span className="text-base">💎</span>;
-  }
-  if (name.includes("mistral")) {
-    return <span className="text-base">🌀</span>;
-  }
-  if (name.includes("qwen")) {
-    return <span className="text-base">🌐</span>;
-  }
   if (
     name.includes("opus") ||
     name.includes("sonnet") ||
@@ -122,5 +114,5 @@ export function getModelIcon(modelName: string, variant?: ModelIconVariant) {
     return <Kimi className="size-3.5" />;
   }
   // Default icon
-  return <span className="text-base">⚡</span>;
+  return <Mains className="size-3.5" />;
 }

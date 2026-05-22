@@ -6,19 +6,13 @@ export type TextVariant =
   | "h2"
   | "h3"
   | "body"
-  | "bodyMedium"
-  | "bodySmall"
   | "muted"
-  | "mutedSmall"
   | "label"
-  | "labelSmall"
   | "button"
   | "buttonSmall"
   | "error"
-  | "errorSmall"
   | "caption"
-  | "timestamp";
-
+  | "tiny"
 export interface TextProps {
   variant?: TextVariant;
   children: ReactNode;
@@ -28,29 +22,24 @@ export interface TextProps {
 }
 
 const variantStyles: Record<TextVariant, string> = {
-  h1: "text-3xl tracking-tight dark:text-primary-100 text-primary-950 font-medium",
-  h2: "text-2xl font-medium text-primary-900 dark:text-primary-100",
-  h3: "text-lg font-medium text-primary-900 dark:text-primary-100",
+  h1: "text-3xl text-primary-950 dark:text-primary-100",
+  h2: "text-2xl text-primary-950 dark:text-primary-100",
+  h3: "text-xl text-primary-950 dark:text-primary-100",
 
   body: "text-sm text-primary-900 dark:text-primary-100",
-  bodyMedium: "text-sm font-medium text-primary-900 dark:text-primary-100",
-  bodySmall: "text-xs text-primary-900 dark:text-primary-100",
 
-  muted: "text-sm text-primary-600 dark:text-primary-400",
-  mutedSmall: "text-xs text-primary-500 dark:text-primary-400",
+  muted: "text-sm text-primary-700 dark:text-primary-300",
 
   label: "text-sm font-medium text-primary-700 dark:text-primary-300",
-  labelSmall:
-    "text-xs font-semibold text-primary-700 dark:text-primary-400 uppercase tracking-wide",
 
   button: "text-sm font-medium",
   buttonSmall: "text-xs font-medium",
 
-  error: "text-sm text-red-600 dark:text-red-400",
-  errorSmall: "text-xs text-red-600 dark:text-red-400",
+  error: "text-sm text-red-700 dark:text-red-300",
 
-  caption: "text-xs text-primary-700 dark:text-primary-400",
-  timestamp: "text-xs text-primary-600 dark:text-primary-300 font-medium",
+  caption: "text-xs text-primary-700 dark:text-primary-300",
+
+  tiny: "text-s text-primary-900 dark:text-primary-100",
 };
 
 const defaultElements: Record<TextVariant, ElementType> = {
@@ -58,18 +47,13 @@ const defaultElements: Record<TextVariant, ElementType> = {
   h2: "h2",
   h3: "h3",
   body: "p",
-  bodyMedium: "p",
-  bodySmall: "span",
   muted: "p",
-  mutedSmall: "span",
   label: "label",
-  labelSmall: "span",
   button: "span",
   buttonSmall: "span",
   error: "p",
-  errorSmall: "span",
   caption: "span",
-  timestamp: "span",
+  tiny: "span",
 };
 
 export default function Text({
@@ -136,27 +120,6 @@ const Body = ({
   </Text>
 );
 
-const BodyMedium = ({
-  children,
-  className,
-  align,
-  ...props
-}: Omit<TextProps, "variant">) => (
-  <Text variant="bodyMedium" className={className} align={align} {...props}>
-    {children}
-  </Text>
-);
-
-const BodySmall = ({
-  children,
-  className,
-  align,
-  ...props
-}: Omit<TextProps, "variant">) => (
-  <Text variant="bodySmall" className={className} align={align} {...props}>
-    {children}
-  </Text>
-);
 const Muted = ({
   children,
   className,
@@ -164,17 +127,6 @@ const Muted = ({
   ...props
 }: Omit<TextProps, "variant">) => (
   <Text variant="muted" className={className} align={align} {...props}>
-    {children}
-  </Text>
-);
-
-const MutedSmall = ({
-  children,
-  className,
-  align,
-  ...props
-}: Omit<TextProps, "variant">) => (
-  <Text variant="mutedSmall" className={className} align={align} {...props}>
     {children}
   </Text>
 );
@@ -190,16 +142,6 @@ const Label = ({
   </Text>
 );
 
-const LabelSmall = ({
-  children,
-  className,
-  align,
-  ...props
-}: Omit<TextProps, "variant">) => (
-  <Text variant="labelSmall" className={className} align={align} {...props}>
-    {children}
-  </Text>
-);
 const ErrorText = ({
   children,
   className,
@@ -222,29 +164,24 @@ const Caption = ({
   </Text>
 );
 
-const Timestamp = ({
+const Tiny = ({
   children,
   className,
   align,
   ...props
 }: Omit<TextProps, "variant">) => (
-  <Text variant="timestamp" className={className} align={align} {...props}>
+  <Text variant="tiny" className={className} align={align} {...props}>
     {children}
   </Text>
 );
-
 export {
   Heading1,
   Heading2,
   Heading3,
   Body,
-  BodyMedium,
-  BodySmall,
   Muted,
-  MutedSmall,
   Label,
-  LabelSmall,
   ErrorText,
   Caption,
-  Timestamp,
+  Tiny,
 };

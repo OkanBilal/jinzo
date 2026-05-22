@@ -6,7 +6,7 @@ import {
 import { IssueListItem } from "./issue-list-item";
 import { ArrowUp } from "@/components/ui/icons";
 import { Button } from "@/components/ui";
-import { BodySmall } from "@/components/ui/text";
+import { Body } from "@/components/ui/text";
 
 interface IssuesSectionProps {
   projectId: string | undefined;
@@ -65,9 +65,9 @@ export function IssuesSection({
         <ArrowUp
           className={`w-3 h-3 transform text-primary-900 dark:text-primary transition-transform ${expanded ? "rotate-180" : "rotate-90"}`}
         />
-        <BodySmall>
+        <Body className="text-xs">
           Issues
-        </BodySmall>
+        </Body>
         {issueCount > 0 ? (
           <span className="text-t text-primary-800 dark:text-primary-200 ml-auto mr-1 tabular-nums">
             {issueCount}

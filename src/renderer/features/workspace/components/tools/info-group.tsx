@@ -4,10 +4,24 @@ import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/components/markdown-components";
 import type { EventGroup } from "../../utils/group-events";
 import { Code } from "@/components/ui/icons/space";
-import { Picture, Document, Codex, Close, Sparkles, External, ArrowUp } from "@/components/ui/icons";
+import {
+  Picture,
+  Document,
+  Codex,
+  Close,
+  Sparkles,
+  External,
+  ArrowUp,
+} from "@/components/ui/icons";
 import { ProviderIcon } from "../provider-icon";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
-import { Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
+import {
+  Body,
+  Button,
+  DropdownMenu,
+  DropdownMenuItem,
+  Text,
+} from "@/components/ui";
 import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
 import { useLocalImageUrl } from "@/hooks/use-local-image-url";
 
@@ -30,7 +44,10 @@ function extractImagePaths(text: string): string[] {
   return out;
 }
 
-function resolveImagePath(rawPath: string, workspaceRoot?: string): string | null {
+function resolveImagePath(
+  rawPath: string,
+  workspaceRoot?: string,
+): string | null {
   if (!rawPath) return null;
   if (rawPath.startsWith("~")) return rawPath;
   if (rawPath.startsWith("/")) return rawPath;
@@ -61,7 +78,9 @@ function PromptSkillChipIcon({ skill }: { skill: PromptSkillMeta }) {
         src={resolved}
         alt=""
         className="w-3 h-3 rounded shrink-0 object-contain"
-        style={skill.brandColor ? { backgroundColor: skill.brandColor } : undefined}
+        style={
+          skill.brandColor ? { backgroundColor: skill.brandColor } : undefined
+        }
         onError={() => setFailed(true)}
       />
     );
@@ -93,14 +112,20 @@ interface PromptFileMeta {
 function PromptFileInlineChip({ file }: { file: PromptFileMeta }) {
   const dotIdx = file.basename.lastIndexOf(".");
   const extension =
-    dotIdx > 0 && dotIdx < file.basename.length - 1 ? file.basename.slice(dotIdx + 1) : undefined;
+    dotIdx > 0 && dotIdx < file.basename.length - 1
+      ? file.basename.slice(dotIdx + 1)
+      : undefined;
   return (
     <span
       className="inline-flex align-middle items-center gap-1 px-1.5 mb-0.5 h-6 mx-0.5 rounded-lg text-xs font-medium leading-none select-none bg-primary dark:bg-primary-300/10 dark:text-primary-200 text-primary-800 "
       title={file.fullPath}
     >
       <span className="inline-flex items-center justify-center size-3.5 shrink-0">
-        <FileIconComponent extension={extension} fileName={file.basename} className="size-3.5" />
+        <FileIconComponent
+          extension={extension}
+          fileName={file.basename}
+          className="size-3.5"
+        />
       </span>
       <span className="leading-none">{file.basename}</span>
     </span>
@@ -147,7 +172,9 @@ function renderMessageWithChips(
   let match: RegExpExecArray | null;
   while ((match = re.exec(message)) !== null) {
     if (match.index > lastIdx) {
-      out.push(<span key={`t${key++}`}>{message.slice(lastIdx, match.index)}</span>);
+      out.push(
+        <span key={`t${key++}`}>{message.slice(lastIdx, match.index)}</span>,
+      );
     }
     const skillName = match.groups?.skill;
     const filePath = match.groups?.file;
@@ -177,11 +204,21 @@ function renderMessageWithChips(
   return out;
 }
 
-function ImagePreviewModal({ name, dataUrl, onClose }: { name: string; dataUrl: string; onClose: () => void }) {
+function ImagePreviewModal({
+  name,
+  dataUrl,
+  onClose,
+}: {
+  name: string;
+  dataUrl: string;
+  onClose: () => void;
+}) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
@@ -190,11 +227,15 @@ function ImagePreviewModal({ name, dataUrl, onClose }: { name: string; dataUrl: 
     <div
       ref={overlayRef}
       className="fixed inset-0 z-9999 flex items-center justify-center bg-black/70 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+      onClick={(e) => {
+        if (e.target === overlayRef.current) onClose();
+      }}
     >
       <div className="relative flex flex-col glass-morphism rounded-xl shadow-2xl max-w-xl w-full mx-4 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary-200 dark:border-primary-800">
-          <span className="text-xs font-mono text-primary-600 dark:text-primary-400 truncate">{name}</span>
+          <span className="text-xs font-mono text-primary-600 dark:text-primary-400 truncate">
+            {name}
+          </span>
           <Button
             onClick={onClose}
             className="ml-3 shrink-0 p-1 rounded-md hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
@@ -203,7 +244,11 @@ function ImagePreviewModal({ name, dataUrl, onClose }: { name: string; dataUrl: 
           </Button>
         </div>
         <div className="bg-primary-100 dark:bg-primary-900 flex items-center justify-center p-2">
-          <img src={dataUrl} alt={name} className="max-h-[70vh] max-w-full object-contain rounded" />
+          <img
+            src={dataUrl}
+            alt={name}
+            className="max-h-[70vh] max-w-full object-contain rounded"
+          />
         </div>
       </div>
     </div>
@@ -217,7 +262,10 @@ interface InfoGroupProps {
 
 export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
   const event = group.events[0];
-  const [previewAtt, setPreviewAtt] = useState<{ name: string; dataUrl: string } | null>(null);
+  const [previewAtt, setPreviewAtt] = useState<{
+    name: string;
+    dataUrl: string;
+  } | null>(null);
   if (!event) return null;
 
   if (event.type === "artifact" && event.metadata?.kind === "user-prompt") {
@@ -233,7 +281,9 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
       level: string;
       title: string;
     }>;
-    const files = ((event.metadata?.files ?? []) as Array<{ path: string }>).map((f) => {
+    const files = (
+      (event.metadata?.files ?? []) as Array<{ path: string }>
+    ).map((f) => {
       const lastSlash = f.path.lastIndexOf("/");
       const fileName = f.path.substring(lastSlash + 1);
       const dir = f.path.substring(0, lastSlash);
@@ -258,9 +308,13 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
     if (isReview) {
       const reviewTarget = event.metadata?.reviewTarget as string | undefined;
       const targetLabel =
-        reviewTarget === "uncommittedChanges" ? "Uncommitted Changes" :
-        reviewTarget === "baseBranch" ? "Branch Diff" :
-        reviewTarget === "commit" ? "Commit" : "Code";
+        reviewTarget === "uncommittedChanges"
+          ? "Uncommitted Changes"
+          : reviewTarget === "baseBranch"
+            ? "Branch Diff"
+            : reviewTarget === "commit"
+              ? "Commit"
+              : "Code";
 
       return (
         <div className="w-full overflow-hidden">
@@ -270,11 +324,15 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                 <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
                   <Codex className="size-3.5 shrink-0" />
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-blue-600 dark:text-blue-300/70">{targetLabel}</span>
+                    <span className="text-xs text-blue-600 dark:text-blue-300/70">
+                      {targetLabel}
+                    </span>
                   </div>
                 </div>
                 {message && (
-                  <p className="text-xs text-blue-900 dark:text-blue-100 mt-1.5">{message}</p>
+                  <Text className="text-xs text-blue-900 dark:text-blue-100 mt-1.5">
+                    {message}
+                  </Text>
                 )}
               </div>
             </div>
@@ -284,15 +342,22 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
     }
 
     const matchedFilePaths = new Set<string>();
-    const renderedMessage = renderMessageWithChips(message, skills, files, matchedFilePaths);
-    const externalFiles = files.filter((f) => !matchedFilePaths.has(f.fullPath));
+    const renderedMessage = renderMessageWithChips(
+      message,
+      skills,
+      files,
+      matchedFilePaths,
+    );
+    const externalFiles = files.filter(
+      (f) => !matchedFilePaths.has(f.fullPath),
+    );
     return (
       <div className="w-full overflow-hidden">
         <div className="w-full py-2 flex justify-end">
           <div className="flex flex-col items-end gap-2 max-w-[80%]">
             <div className="px-3.5 py-2 rounded-2xl bg-primary-50 dark:bg-primary/5 ">
-              <div className="text-primary-950 dark:text-primary">
-                <p className="text-sm whitespace-pre-wrap">{renderedMessage}</p>
+              <div>
+                <Body className="whitespace-pre-wrap">{renderedMessage}</Body>
               </div>
             </div>
             {previewAtt && (
@@ -302,16 +367,24 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                 onClose={() => setPreviewAtt(null)}
               />
             )}
-            {(externalFiles.length > 0 || attachments.length > 0 || issues.length > 0 || signals.length > 0) && (
+            {(externalFiles.length > 0 ||
+              attachments.length > 0 ||
+              issues.length > 0 ||
+              signals.length > 0) && (
               <div className="flex flex-wrap gap-1.5 justify-end">
                 {issues.map((issue) => (
                   <div
                     key={`${issue.provider}-${issue.number ?? issue.title}`}
                     className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-primary-200/40 dark:bg-primary-200/20 text-primary-800 dark:text-primary-100`}
                   >
-                    <ProviderIcon provider={issue.provider} className="w-3 h-3" fallback="text" />
+                    <ProviderIcon
+                      provider={issue.provider}
+                      className="w-3 h-3"
+                      fallback="text"
+                    />
                     <span className="truncate max-w-60">
-                      {issue.number ? `#${issue.number} ` : ""}{issue.title}
+                      {issue.number ? `#${issue.number} ` : ""}
+                      {issue.title}
                     </span>
                   </div>
                 ))}
@@ -320,10 +393,12 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                     key={`${signal.source}-${signal.title}`}
                     className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-100"
                   >
-                    <ProviderIcon provider={signal.source} className="w-3 h-3" fallback="text" />
-                    <span className="truncate max-w-60">
-                      {signal.title}
-                    </span>
+                    <ProviderIcon
+                      provider={signal.source}
+                      className="w-3 h-3"
+                      fallback="text"
+                    />
+                    <span className="truncate max-w-60">{signal.title}</span>
                   </div>
                 ))}
                 {externalFiles.map((file) => (
@@ -341,11 +416,15 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                 {attachments.map((att) => {
                   const imgSrc =
                     att.dataUrl ||
-                    (att.captureName ? `mains-capture://cap/${att.captureName}` : undefined);
+                    (att.captureName
+                      ? `mains-capture://cap/${att.captureName}`
+                      : undefined);
                   return att.type === "image" && imgSrc ? (
                     <Button
                       key={att.name}
-                      onClick={() => setPreviewAtt({ name: att.name, dataUrl: imgSrc })}
+                      onClick={() =>
+                        setPreviewAtt({ name: att.name, dataUrl: imgSrc })
+                      }
                       className="flex items-center gap-1.5 pl-2 pr-2 py-1 rounded-xl bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-100 hover:bg-primary-100 dark:hover:bg-primary-700/30 transition-colors cursor-pointer"
                       title={`Click to preview · ${att.name}`}
                     >
@@ -390,10 +469,18 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
   if (event.type === "artifact" && event.metadata?.kind === "image") {
     const absPath = (event.metadata?.path as string | undefined) ?? "";
     if (!absPath) return null;
-    const fileName = (event.metadata?.fileName as string | undefined) ?? absPath.split("/").pop() ?? "image";
+    const fileName =
+      (event.metadata?.fileName as string | undefined) ??
+      absPath.split("/").pop() ??
+      "image";
     return (
       <div className="overflow-hidden">
-        <ImageArtifact key={absPath} absPath={absPath} fileName={fileName} onPreview={setPreviewAtt} />
+        <ImageArtifact
+          key={absPath}
+          absPath={absPath}
+          fileName={fileName}
+          onPreview={setPreviewAtt}
+        />
         {previewAtt && (
           <ImagePreviewModal
             name={previewAtt.name}
@@ -443,10 +530,12 @@ function ImageArtifact({
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
   const openBtnRef = useRef<HTMLButtonElement>(null);
-  const [fetchApps, { data: handlerApps = [], isFetching }] = useLazyGetAppsForFileQuery();
+  const [fetchApps, { data: handlerApps = [], isFetching }] =
+    useLazyGetAppsForFileQuery();
 
-  const ext =
-    fileName.includes(".") ? (fileName.split(".").pop() ?? "").toUpperCase() : "";
+  const ext = fileName.includes(".")
+    ? (fileName.split(".").pop() ?? "").toUpperCase()
+    : "";
 
   useEffect(() => {
     if (menuOpen) {
@@ -472,7 +561,6 @@ function ImageArtifact({
     }
     setMenuOpen(true);
   };
-
 
   const openWithBundle = (bundleId: string) => {
     setMenuOpen(false);
@@ -608,7 +696,8 @@ function ArtifactBody({
   workspaceRootPath?: string;
 }) {
   const resolvedImages = useMemo(() => {
-    const out: Array<{ key: string; raw: string; abs: string; name: string }> = [];
+    const out: Array<{ key: string; raw: string; abs: string; name: string }> =
+      [];
     const seen = new Set<string>();
     for (const raw of extractImagePaths(content)) {
       const abs = resolveImagePath(raw, workspaceRootPath);
@@ -626,7 +715,9 @@ function ArtifactBody({
   // etc.) the protocol returns 404 and the browser falls back to a broken
   // image glyph. Mirrors ImageArtifact's onError behavior.
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
-  const visibleImages = resolvedImages.filter((img) => !failedImages.has(img.key));
+  const visibleImages = resolvedImages.filter(
+    (img) => !failedImages.has(img.key),
+  );
 
   return (
     <div className="overflow-hidden">
@@ -670,5 +761,3 @@ function ArtifactBody({
     </div>
   );
 }
-
-

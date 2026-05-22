@@ -714,9 +714,9 @@ export default function CodexPlugins() {
       {/* Featured */}
       {featured.length > 0 && !categoryFilter && (
         <div className="mb-6">
-          <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100 mb-3">
+          <Body className=" font-medium mb-3">
             Featured
-          </h3>
+          </Body>
           <div className="grid grid-cols-2 gap-8">
             {featured.map((p) => (
               <PluginCard
@@ -737,9 +737,9 @@ export default function CodexPlugins() {
       {/* Grouped by category */}
       {grouped.map(([category, plugins]) => (
         <div key={category} className="mb-6">
-          <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100 mb-3">
+          <Body className=" font-medium mb-3">
             {category}
-          </h3>
+          </Body>
           <div className="grid grid-cols-2 gap-8">
             {plugins.map((p) => (
               <PluginCard

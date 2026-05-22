@@ -9,6 +9,7 @@ import {
 } from "@/lib/redux/api/pulseApi";
 import { useListWorkspacesQuery } from "@/lib/redux/api/workspaceApi";
 import { formatSchedule } from "../utils/format-schedule";
+import { Body } from "@/components/ui";
 
 interface PulseListProps {
   onEdit: (pulse: Pulse) => void;
@@ -33,9 +34,9 @@ export function PulseList({ onEdit }: PulseListProps) {
 
   return (
     <section>
-      <h2 className="text-base font-medium text-primary-900 dark:text-primary-100 mb-3 pb-2 border-b border-primary-200/40 dark:border-primary-800/60">
+      <Body className=" font-medium mb-3 pb-2 border-b border-primary-200/40 dark:border-primary-800/60">
         Current
-      </h2>
+      </Body>
       <ul className="">
         {pulses.map((pulse) => {
           const workspace = workspaces.find((w) => w.id === pulse.workspaceId);

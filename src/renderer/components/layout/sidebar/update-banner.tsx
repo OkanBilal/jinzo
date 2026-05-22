@@ -3,6 +3,7 @@ import { useAutoUpdate } from "@/hooks/use-auto-update";
 import { Button } from "@/components/ui";
 import { Close } from "@/components/ui/icons";
 import { AsciiSpinner } from "@/components/ui/ascii-spinner";
+import { Body } from "@/components/ui/text";
 
 export function UpdateBanner() {
   const { state, install } = useAutoUpdate();
@@ -23,7 +24,7 @@ export function UpdateBanner() {
       <div className="px-3 py-2.5 space-y-2">
         <div className="flex items-center justify-between">
           <div />
-          <p className="text-xs font-medium text-primary-700 dark:text-primary-200">
+          <Body className="text-xs">
             {(state.status === "available" ||
               state.status === "downloading") && (
               <>
@@ -35,7 +36,7 @@ export function UpdateBanner() {
               (state.info?.version
                 ? `${state.info.version} ready`
                 : "Update ready")}
-          </p>
+          </Body>
           <Button
             type="button"
             onClick={() => setDismissed(true)}

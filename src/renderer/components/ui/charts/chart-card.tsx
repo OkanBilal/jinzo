@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { Caption } from "../text";
 
 interface ChartCardProps {
   title?: string;
@@ -32,23 +33,23 @@ export default function ChartCard({
       {title && (
         headerRight ? (
           <div className="flex items-start justify-between mb-1">
-            <p className="text-xs font-medium text-primary-500 dark:text-primary-400 flex items-center gap-1.5">
+            <Caption className="gap-1.5 flex items-center">
               {Icon && <Icon className="w-3 h-3" />}
               {title}
-            </p>
+            </Caption>
             {headerRight}
           </div>
         ) : (
-          <p className="text-xs font-medium text-primary-500 dark:text-primary-400 mb-3 flex items-center gap-1.5">
+          <Caption className="mb-3 flex items-center gap-1.5">
             {Icon && <Icon className="w-3 h-3" />}
             {title}
-          </p>
+          </Caption>
         )
       )}
       {isEmpty ? (
         <div
           className={cn(
-            "flex items-center justify-center text-sm text-primary-400 dark:text-primary-500",
+            "flex items-center justify-center text-xs text-primary-400 dark:text-primary-500",
             emptyHeight,
           )}
         >

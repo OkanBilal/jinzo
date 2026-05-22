@@ -3,7 +3,7 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { markdownComponents } from "@/components/markdown-components";
 import { useGetReviewQuery } from "@/lib/redux/api";
-import { Heading2 } from "@/components/ui";
+import { Body, Heading2 } from "@/components/ui";
 
 interface NoteTabContentProps {
   reviewId: string;
@@ -72,9 +72,9 @@ export function NoteTabContent({ reviewId }: NoteTabContentProps) {
               </ReactMarkdown>
             </div>
           ) : (
-            <p className="text-sm text-primary-400 dark:text-primary-500">
+            <Body>
               No summary provided.
-            </p>
+            </Body>
           )}
         </div>
       </div>

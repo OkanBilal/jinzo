@@ -1,3 +1,4 @@
+import { Body } from "@/components/ui";
 import { PULSE_CATEGORIES, PULSE_TEMPLATES, type PulseTemplate } from "../templates";
 
 export function PulseTemplates({
@@ -12,9 +13,9 @@ export function PulseTemplates({
         if (items.length === 0) return null;
         return (
           <section key={cat.id}>
-            <h3 className="text-sm font-medium text-primary-900 dark:text-primary-100 mb-3">
+            <Body className=" font-medium mb-3">
               {cat.label}
-            </h3>
+            </Body>
             <div className="grid grid-cols-2 gap-8">
               {items.map((tpl) => (
                 <div

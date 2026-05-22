@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Heading2, Heading3, Muted } from "@/components/ui";
+import { Body, Caption, Heading2, Heading3, Muted } from "@/components/ui";
 
 export function SettingsPageShell({
   title,
@@ -68,9 +68,9 @@ export function SettingsSection({
   return (
     <div className="mb-8">
       {title && (
-        <h3 className="text-sm font-medium text-primary-900 dark:text-primary-200 mb-3">
+        <Body className="font-medium mb-3">
           {title}
-        </h3>
+        </Body>
       )}
       <div className="rounded-3xl glass-morphism px-4 py-1">
         {children}
@@ -94,13 +94,13 @@ export function SettingsRow({
     return (
       <div className="flex items-start justify-between py-5 gap-8">
         <div className="shrink-0 w-80">
-          <h3 className="text-sm font-medium text-primary-900 mb-1 dark:text-primary-200">
+          <Body className="font-medium mb-1">
             {title}
-          </h3>
+          </Body>
           {description && (
-            <p className="text-s text-primary-500 dark:text-primary-500 mt-1">
+            <Caption className="mt-1">
               {description}
-            </p>
+            </Caption>
           )}
         </div>
         <div className="flex-1 text-right flex justify-end">{children}</div>
@@ -111,13 +111,13 @@ export function SettingsRow({
   return (
     <div className="flex items-center justify-between py-3">
       <div className="flex-1 pr-8">
-        <h3 className="text-sm text-primary-900 font-medium mb-1 dark:text-primary-200">
+        <Body className="font-medium mb-1">
           {title}
-        </h3>
+        </Body>
         {description && (
-          <p className="text-xs text-primary-500 dark:text-primary-500 ">
+          <Caption>
             {description}
-          </p>
+          </Caption>
         )}
       </div>
       <div className="shrink-0">{children}</div>

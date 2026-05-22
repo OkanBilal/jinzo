@@ -1,4 +1,4 @@
-import { ChartCard } from "@/components/ui";
+import { Caption, ChartCard, Heading3 } from "@/components/ui";
 import type { CodeActivityStats as CodeActivityData } from "@/lib/redux/api";
 
 interface CodeActivityStatsProps {
@@ -16,12 +16,12 @@ export default function CodeActivityStats({ data }: CodeActivityStatsProps) {
       <div className="flex gap-6">
         {items.map((item) => (
           <div key={item.label}>
-            <p className="text-lg font-semibold text-primary-900 dark:text-primary-100">
+            <Heading3>
               {item.value}
-            </p>
-            <p className="text-xs text-primary-500 dark:text-primary-400">
+            </Heading3>
+            <Caption>
               {item.label}
-            </p>
+            </Caption>
           </div>
         ))}
       </div>

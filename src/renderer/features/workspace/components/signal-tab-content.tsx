@@ -3,7 +3,7 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { markdownComponents } from "@/components/markdown-components";
 import type { SignalWithEntity } from "@/lib/redux/api";
-import { Heading2, Button } from "@/components/ui";
+import { Heading2, Button, Body, Text } from "@/components/ui";
 
 interface SignalTabContentProps {
   signal: SignalWithEntity;
@@ -12,15 +12,19 @@ interface SignalTabContentProps {
 const levelColors: Record<string, string> = {
   fatal: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
   critical: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
-  error: "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400",
-  warning: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400",
+  error:
+    "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400",
+  warning:
+    "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400",
   info: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400",
 };
 
 const stateColors: Record<string, string> = {
   open: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
-  resolved: "bg-primary-100 dark:bg-primary-800 text-primary-600 dark:text-primary-400",
-  ignored: "bg-primary-100 dark:bg-primary-800 text-primary-500 dark:text-primary-500",
+  resolved:
+    "bg-primary-100 dark:bg-primary-800 text-primary-600 dark:text-primary-400",
+  ignored:
+    "bg-primary-100 dark:bg-primary-800 text-primary-500 dark:text-primary-500",
   regressed: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
 };
 
@@ -33,9 +37,7 @@ export function SignalTabContent({ signal }: SignalTabContentProps) {
       <div className="max-w-210 mx-auto pt-12 pb-24 px-6 space-y-6">
         <div className="space-y-3">
           {/* Title */}
-          <Heading2>
-            {title}
-          </Heading2>
+          <Heading2>{title}</Heading2>
 
           {/* Badges */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -53,7 +55,11 @@ export function SignalTabContent({ signal }: SignalTabContentProps) {
             >
               <span
                 className={`w-2 h-2 rounded-full ${
-                  sig.state === "open" ? "bg-green-500" : sig.state === "regressed" ? "bg-red-500" : "bg-primary-400"
+                  sig.state === "open"
+                    ? "bg-green-500"
+                    : sig.state === "regressed"
+                      ? "bg-red-500"
+                      : "bg-primary-400"
                 }`}
               />
               {sig.state}
@@ -67,21 +73,33 @@ export function SignalTabContent({ signal }: SignalTabContentProps) {
         {/* Meta info */}
         <div className="flex items-center gap-4 flex-wrap text-sm text-primary-500 dark:text-primary-400">
           <span>
-            Source: <span className="font-medium text-primary-700 dark:text-primary-300 capitalize">{sig.source}</span>
+            Source:{" "}
+            <span className="font-medium text-primary-700 dark:text-primary-300 capitalize">
+              {sig.source}
+            </span>
           </span>
           {sig.eventCount > 1 && (
             <span>
-              Events: <span className="font-medium text-primary-700 dark:text-primary-300 tabular-nums">{sig.eventCount}</span>
+              Events:{" "}
+              <span className="font-medium text-primary-700 dark:text-primary-300 tabular-nums">
+                {sig.eventCount}
+              </span>
             </span>
           )}
           {sig.affectedUsers != null && sig.affectedUsers > 0 && (
             <span>
-              Affected users: <span className="font-medium text-primary-700 dark:text-primary-300 tabular-nums">{sig.affectedUsers}</span>
+              Affected users:{" "}
+              <span className="font-medium text-primary-700 dark:text-primary-300 tabular-nums">
+                {sig.affectedUsers}
+              </span>
             </span>
           )}
           {sig.assignee && (
             <span>
-              Assigned to <span className="font-medium text-primary-700 dark:text-primary-300">{sig.assignee}</span>
+              Assigned to{" "}
+              <span className="font-medium text-primary-700 dark:text-primary-300">
+                {sig.assignee}
+              </span>
             </span>
           )}
         </div>
@@ -90,7 +108,9 @@ export function SignalTabContent({ signal }: SignalTabContentProps) {
         {sig.file && (
           <div className="text-sm text-primary-500 dark:text-primary-400">
             <span className="font-mono text-xs bg-primary-100 dark:bg-primary-800 px-2 py-1 rounded">
-              {sig.file}{sig.function ? `:${sig.function}` : ""}{sig.line ? `:${sig.line}` : ""}
+              {sig.file}
+              {sig.function ? `:${sig.function}` : ""}
+              {sig.line ? `:${sig.line}` : ""}
             </span>
           </div>
         )}
@@ -108,16 +128,16 @@ export function SignalTabContent({ signal }: SignalTabContentProps) {
               </ReactMarkdown>
             </div>
           ) : (
-            <p className="text-sm text-primary-400 dark:text-primary-500">
-              No description provided.
-            </p>
+            <Body>No description provided.</Body>
           )}
         </div>
 
         {/* Stack trace */}
         {sig.stackTrace && (
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-primary-700 dark:text-primary-300">Stack Trace</h3>
+            <Body className="font-medium text-primary-700 dark:text-primary-300">
+              Stack Trace
+            </Body>
             <pre className="text-xs font-mono bg-primary-50 dark:bg-primary-800 p-4 rounded-xl overflow-x-auto text-primary-700 dark:text-primary-300 whitespace-pre-wrap">
               {sig.stackTrace}
             </pre>
@@ -126,15 +146,16 @@ export function SignalTabContent({ signal }: SignalTabContentProps) {
 
         {entity.url && (
           <div>
-            <p className="mt-0.5">
+            <Text className="mt-0.5">
               <Button
                 variant="frosted"
                 className="px-3 py-2.5 dark:text-primary-200 font-medium rounded-xl"
                 onClick={() => window.api.shell.openExternal(entity.url!)}
               >
-                View on {sig.source.charAt(0).toUpperCase() + sig.source.slice(1)}
+                View on{" "}
+                {sig.source.charAt(0).toUpperCase() + sig.source.slice(1)}
               </Button>
-            </p>
+            </Text>
           </div>
         )}
       </div>
