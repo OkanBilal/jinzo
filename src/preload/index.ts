@@ -289,6 +289,8 @@ const api = {
       ipcRenderer.invoke(CHANNELS.workspace.getDiffByRun, runId),
     deleteLatestDiff: (workspaceId: string) =>
       ipcRenderer.invoke(CHANNELS.workspace.deleteLatestDiff, workspaceId),
+    resyncDiff: (workspaceId: string) =>
+      ipcRenderer.invoke(CHANNELS.workspace.resyncDiff, workspaceId),
     // ── reviews ──
     listReviews: (workspaceId: string, limit?: number) =>
       ipcRenderer.invoke(CHANNELS.workspace.listReviews, workspaceId, limit),

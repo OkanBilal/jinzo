@@ -299,6 +299,7 @@ export const CHANNELS = {
     getLatestDiff: "workspace:getLatestDiff",
     getLatestDiffSummary: "workspace:getLatestDiffSummary",
     listDiffs: "workspace:listDiffs",
+    resyncDiff: "workspace:resyncDiff",
     // ── reviews ──
     createReview: "workspace:createReview",
     deleteReview: "workspace:deleteReview",

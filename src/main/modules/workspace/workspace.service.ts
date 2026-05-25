@@ -7,6 +7,8 @@ import { BrowserWindow } from "electron";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import { workspaceRepo } from "./workspace.repo";
 import { projectsRepo } from "../projects/projects.repo";
+import { gitService } from "../git/git.service";
+import { buildDiffSnapshot } from "./workspace-diff-snapshot";
 import type {
   CreateWorkspacePayload,
   UpdateWorkspacePayload,
@@ -459,6 +461,94 @@ export const workspaceService = {
     } catch (error) {
       console.error("[WorkspaceService] Failed to create diff:", error);
       return fail("Failed to create workspace diff");
+    }
+  },
+
+  /**
+   * Re-snapshot the workspace's working tree against its baseRef (or HEAD if
+   * none has been captured yet) and reconcile the latest diff row:
+   *   - clean tree → delete the latest row
+   *   - dirty tree → update the latest row (or insert if none exists)
+   *
+   * Mirrors the snapshot logic in run-session.ts so the user can manually
+   * pick up external git activity (commits made in another IDE, branch
+   * switches) without starting a new run.
+   *
+   * Returns the resulting diff summary (or null when the tree is clean).
+   */
+  async resyncDiff(
+    workspaceId: string,
+  ): Promise<ServiceResponse<WorkspaceDiffSummaryResponse | null>> {
+    try {
+      const workspace = await workspaceRepo.findById(workspaceId);
+      if (!workspace) return fail("Workspace not found");
+
+      const existing = await workspaceRepo.findLatestDiffByWorkspace(workspaceId);
+
+      let baseRef = existing?.baseRef ?? null;
+      if (!baseRef) {
+        const headResult = await gitService.getHeadSha(workspace.rootPath);
+        if (headResult.success && headResult.data) {
+          baseRef = headResult.data;
+        }
+      }
+
+      // No baseRef means it's not a git repo (or git failed). Drop any stale
+      // row defensively, then bail.
+      if (!baseRef) {
+        if (existing) {
+          await workspaceRepo.deleteLatestDiffByWorkspace(workspaceId);
+        }
+        return ok(null);
+      }
+
+      const snapshot = await buildDiffSnapshot({
+        rootPath: workspace.rootPath,
+        baseRef,
+      });
+      if (!snapshot) return fail("Failed to compute diff");
+
+      if (snapshot.files.length === 0) {
+        if (existing) {
+          await workspaceRepo.deleteLatestDiffByWorkspace(workspaceId);
+        }
+        return ok(null);
+      }
+
+      const filesJson = JSON.stringify(snapshot.files);
+      const statsJson = JSON.stringify({
+        shortstat: snapshot.shortstat,
+        files: snapshot.files.length,
+        newFiles: snapshot.untrackedFiles.length,
+      });
+
+      if (existing) {
+        await workspaceRepo.updateDiff(existing.id, {
+          diffText: snapshot.diffText,
+          filesJson,
+          statsJson,
+          baseRef: snapshot.baseRef,
+        });
+      } else {
+        await workspaceRepo.insertDiff({
+          id: randomUUID(),
+          workspaceId,
+          baseRef: snapshot.baseRef,
+          diffText: snapshot.diffText,
+          filesJson,
+          statsJson,
+        });
+      }
+
+      const summary =
+        await workspaceRepo.findLatestDiffSummaryByWorkspace(workspaceId);
+      return ok(summary);
+    } catch (error) {
+      console.error(
+        `[WorkspaceService] Failed to resync diff for workspace ${workspaceId}:`,
+        error,
+      );
+      return fail("Failed to resync workspace diff");
     }
   },
 

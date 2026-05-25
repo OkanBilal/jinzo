@@ -127,6 +127,11 @@ export function registerWorkspaceIpc(): void {
       workspaceService.deleteLatestDiff(workspaceId),
   );
 
+  ipcMain.handle(
+    CHANNELS.workspace.resyncDiff,
+    async (_, workspaceId: string) => workspaceService.resyncDiff(workspaceId),
+  );
+
   // ── reviews ──
   ipcMain.handle(
     CHANNELS.workspace.listReviews,
@@ -217,6 +222,7 @@ export function unregisterWorkspaceIpc(): void {
     CHANNELS.workspace.getLatestDiffSummary,
     CHANNELS.workspace.getDiffByRun,
     CHANNELS.workspace.deleteLatestDiff,
+    CHANNELS.workspace.resyncDiff,
     // reviews
     CHANNELS.workspace.listReviews,
     CHANNELS.workspace.getReview,

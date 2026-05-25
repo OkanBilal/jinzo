@@ -261,6 +261,7 @@ export {
   useLazyGetLatestWorkspaceDiffSummaryQuery,
   useListWorkspaceDiffsQuery,
   useLazyListWorkspaceDiffsQuery,
+  useResyncWorkspaceDiffMutation,
   // reviews
   useListReviewsByWorkspaceQuery,
   useGetReviewQuery,

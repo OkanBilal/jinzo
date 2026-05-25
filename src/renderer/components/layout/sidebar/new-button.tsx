@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Body, Button, Caption, DropdownMenu, DropdownMenuItem } from "@/components/ui";
+import { Body, Button, Caption, DropdownMenu, DropdownMenuItem, Text } from "@/components/ui";
 
 interface NewButtonProps {
   onClick: () => void;
@@ -100,7 +100,7 @@ export default function NewButton({
               }}
             >
               {item.icon}
-              <Caption className="flex-1 text-left">{item.label}</Caption>
+              <Text className="flex-1 text-left text-s">{item.label}</Text>
               {item.shortcutLabel && (
                 <Caption className="">
                   {item.shortcutLabel}

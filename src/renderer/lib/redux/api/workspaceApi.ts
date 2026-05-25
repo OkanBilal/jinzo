@@ -382,6 +382,22 @@ export const workspaceApi = baseApi.injectEndpoints({
       ],
     }),
 
+    // Manual diff refresh — recomputes the workspace's diff against its
+    // baseRef (or HEAD) and reconciles the latest diff row. Returns the
+    // updated summary, or null when the working tree is clean.
+    resyncWorkspaceDiff: builder.mutation<WorkspaceDiffSummary | null, string>({
+      query: (workspaceId) => ({
+        handler: CHANNELS.workspace.resyncDiff,
+        args: [workspaceId],
+      }),
+      transformResponse: (
+        response: ServiceResponse<WorkspaceDiffSummary | null>,
+      ) => unwrap(response),
+      invalidatesTags: (_result, _error, workspaceId) => [
+        { type: "WorkspaceDiffs", id: workspaceId },
+      ],
+    }),
+
     // ── Reviews ──
     listReviewsByWorkspace: builder.query<
       Review[],
@@ -542,6 +558,7 @@ export const {
   useLazyGetLatestWorkspaceDiffSummaryQuery,
   useListWorkspaceDiffsQuery,
   useLazyListWorkspaceDiffsQuery,
+  useResyncWorkspaceDiffMutation,
   // reviews
   useListReviewsByWorkspaceQuery,
   useGetReviewQuery,

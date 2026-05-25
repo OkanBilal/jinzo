@@ -8,7 +8,7 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { Button } from "@/components/ui";
-import { ArrowUp } from "@/components/ui/icons";
+import { ArrowUp, Plus } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
 import type { Workspace as WorkspaceResponse } from "@/lib/redux/api/workspaceApi";
 import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
@@ -18,7 +18,14 @@ import type { RootState } from "@/lib/redux";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspaceApi";
-import { useListProjectsQuery, useUpdateWorkspaceMutation } from "@/lib/redux/api";
+import {
+  useListProjectsQuery,
+  useUpdateWorkspaceMutation,
+  useCreateWorkspaceMutation,
+  useUpdateProjectMutation,
+  useGetAccountQuery,
+} from "@/lib/redux/api";
+import type { Project } from "@/lib/redux/api/projectsApi";
 import { toast } from "@/components/ui";
 import { ProjectIcon } from "./project-icon";
 import { WorkspaceGroupDropdown, type GroupingMode } from "./workspace-group-dropdown";
@@ -29,6 +36,7 @@ type WorkspaceGroup = {
   label: string;
   icon?: ReactNode;
   workspaces: WorkspaceResponse[];
+  project?: Project;
 };
 
 const STATUS_ORDER: WorkspaceStatus[] = [
@@ -43,9 +51,11 @@ const STATUS_ORDER: WorkspaceStatus[] = [
 
 function WorkspaceGroupSection({
   group,
+  onCreateWorktree,
   children,
 }: {
   group: WorkspaceGroup;
+  onCreateWorktree?: () => void;
   children: ReactNode;
 }) {
   const storageKey = `workspace-group-expanded-${group.key}`;
@@ -60,9 +70,16 @@ function WorkspaceGroupSection({
 
   return (
     <div className="mb-0.5">
-      <Button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setExpanded((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setExpanded((v) => !v);
+          }
+        }}
         className="group/section w-full flex items-center gap-1.5 px-2 py-1 mb-0.5 rounded-lg cursor-pointer hover:bg-primary/50 dark:hover:bg-primary/5 transition-colors"
       >
         {group.icon && <span className="shrink-0 text-xs">{group.icon}</span>}
@@ -73,13 +90,26 @@ function WorkspaceGroupSection({
           <span className="text-t text-primary-900 dark:text-primary-200 tabular-nums group-hover/section:hidden">
             {group.workspaces.length}
           </span>
+          {onCreateWorktree && (
+            <Button
+              tooltip="Create new worktree"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCreateWorktree();
+              }}
+              className="hidden group-hover/section:flex items-center p-0.5 cursor-pointer rounded-md"
+              aria-label="Create new worktree"
+            >
+              <Plus className="w-3 h-3 text-primary-900 dark:text-primary-200 hover:text-primary-950 dark:hover:text-primary-100" />
+            </Button>
+          )}
           <ArrowUp
             className={`w-3 h-3 -mr-1 text-primary-900 dark:text-primary-200 transition-transform duration-200 hidden group-hover/section:block ${
               expanded ? "rotate-180" : "rotate-90"
             }`}
           />
         </div>
-      </Button>
+      </div>
       <div
         className={`grid transition-[grid-template-rows] duration-300 ease-out ${
           expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
@@ -115,6 +145,9 @@ export default function WorkspacesList({
   const location = useLocation();
   const { defaultRoute: spaceDefaultRoute } = useSidebarConfig();
   const [updateWorkspace] = useUpdateWorkspaceMutation();
+  const [createWorkspace] = useCreateWorkspaceMutation();
+  const [updateProject] = useUpdateProjectMutation();
+  const { data: account } = useGetAccountQuery();
   const activeWorkspaceId = useSelector(
     (state: RootState) => state.workspace.activeWorkspaceId,
   );
@@ -134,9 +167,9 @@ export default function WorkspacesList({
   const { data: projects = [] } = useListProjectsQuery();
 
   const projectDataMap = useMemo(() => {
-    const map = new Map<string, { name: string; icon: string | null }>();
+    const map = new Map<string, Project>();
     for (const project of projects) {
-      map.set(project.id, { name: project.name, icon: project.icon });
+      map.set(project.id, project);
     }
     return map;
   }, [projects]);
@@ -178,6 +211,76 @@ export default function WorkspacesList({
       projectId: workspace.projectId,
       workspaceName: workspace.name,
     });
+  };
+
+  const handleCreateWorktreeForProject = async (project: Project) => {
+    try {
+      const importResult = await window.api.git.importLocalRepo(
+        project.rootPath,
+        project.name,
+      );
+
+      if (!importResult.success || !importResult.data) {
+        throw new Error(importResult.error || "Failed to create worktree");
+      }
+
+      const {
+        branchName,
+        worktreePath,
+        worktreeName,
+        baseBranch,
+        tracking,
+        ahead,
+        behind,
+      } = importResult.data;
+
+      if (!project.workspacesPath) {
+        const workspacesPath = worktreePath.substring(
+          0,
+          worktreePath.lastIndexOf("/"),
+        );
+        await updateProject({
+          id: project.id,
+          payload: { workspacesPath },
+        });
+      }
+
+      const workspaceId = crypto.randomUUID();
+      const metadata = {
+        isGitRepo: true,
+        tracking,
+        ahead,
+        behind,
+        worktree: {
+          enabled: true as const,
+          name: worktreeName,
+          path: worktreePath,
+          sourcePath: project.rootPath,
+          branch: branchName,
+        },
+        origin: project.remoteOrigin ? { url: project.remoteOrigin } : undefined,
+        baseBranch,
+      };
+
+      await createWorkspace({
+        id: workspaceId,
+        accountId: account?.id || "default",
+        name: project.name,
+        rootPath: worktreePath,
+        repoUrl: project.remoteOrigin || undefined,
+        defaultBranch: branchName,
+        metadata,
+        projectId: project.id,
+      }).unwrap();
+
+      toast.success("Worktree created");
+      navigate(`${basePath}/${workspaceId}`);
+    } catch (error) {
+      console.error("Failed to create worktree:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create worktree",
+      );
+    }
   };
 
   const handleRenameBranch = async (workspace: WorkspaceResponse, newBranchName: string) => {
@@ -269,6 +372,7 @@ export default function WorkspacesList({
           label: projectName,
           icon: <ProjectIcon icon={data?.icon ?? null} projectName={projectName} />,
           workspaces: wsList,
+          project: data,
         });
       }
       const ungrouped = byProject.get(null);
@@ -371,7 +475,15 @@ export default function WorkspacesList({
         ) : (
           <div className="flex flex-col ">
             {groups.map((group) => (
-              <WorkspaceGroupSection key={group.key} group={group}>
+              <WorkspaceGroupSection
+                key={group.key}
+                group={group}
+                onCreateWorktree={
+                  group.project
+                    ? () => handleCreateWorktreeForProject(group.project!)
+                    : undefined
+                }
+              >
                 <div className="flex flex-col space-y-0.5  pr-1">
                   {group.workspaces.map(renderWorkspaceItem)}
                 </div>

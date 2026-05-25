@@ -69,12 +69,13 @@ export function WorkspaceEmptyState({
   };
 
   if (presentation === "headline") {
+    const customizerEase = "cubic-bezier(0.22, 1, 0.36, 1)";
+    const customizerDuration = "650ms";
 
     return (
       <div className="flex flex-col items-center py-2 text-center shrink-0 w-full max-w-200">
         <Button
-        tooltip="Customize space"
-        
+          tooltip="Customize space"
           variant="bare"
           onClick={onToggleCustomize}
           aria-label={
@@ -89,29 +90,26 @@ export function WorkspaceEmptyState({
         </Button>
 
         <div
-          className="grid w-full transition-[grid-template-rows,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0.24,1)]"
-          style={{
-            gridTemplateRows: isCustomizing ? "0fr" : "1fr",
-            opacity: isCustomizing ? 0 : 1,
-          }}
-        >
-          <div className="overflow-hidden" />
-        </div>
-
-        <div
-          className="grid w-full transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.32,0.72,0.24,1)]"
+          className="grid w-full transition-[grid-template-rows] will-change-[grid-template-rows]"
           style={{
             gridTemplateRows: isCustomizing ? "1fr" : "0fr",
+            transitionDuration: customizerDuration,
+            transitionTimingFunction: customizerEase,
           }}
         >
           <div className="overflow-hidden">
             {activeSpace ? (
               <div
-                className={`flex flex-col items-stretch py-4 text-left transition-[opacity,transform,filter] duration-500 ease-[cubic-bezier(0.32,0.72,0.24,1)] ${
+                aria-hidden={!isCustomizing}
+                className={`flex flex-col items-stretch py-4 text-left transition-[opacity,transform,filter] transform-gpu ${
                   isCustomizing
-                    ? "opacity-100 translate-y-0 blur-0 delay-100"
-                    : "opacity-0 -translate-y-2 blur-sm"
+                    ? "opacity-100 translate-y-0 blur-0"
+                    : "opacity-0 -translate-y-2 blur-sm pointer-events-none"
                 }`}
+                style={{
+                  transitionDuration: customizerDuration,
+                  transitionTimingFunction: customizerEase,
+                }}
               >
                 <div className="flex justify-center pb-8">
                   <SpaceThemePicker

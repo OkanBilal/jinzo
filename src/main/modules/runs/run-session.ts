@@ -1,7 +1,4 @@
 import { BrowserWindow, Notification, powerSaveBlocker } from "electron";
-import { createHash } from "crypto";
-import fs from "fs";
-import path from "path";
 
 import {
   couldModifyFiles,
@@ -13,6 +10,11 @@ import { providersRepo } from "../providers/providers.repo";
 import { appSettingsRepo } from "../appSettings/appSettings.repo";
 import { gitService } from "../git/git.service";
 import { workspaceService, workspaceRepo, logWorkspaceActivity } from "../workspace";
+import {
+  buildDiffSnapshot,
+  hashContent,
+  type DiffSnapshot,
+} from "../workspace/workspace-diff-snapshot";
 import { createWorkAdapter } from "../providers/adapters";
 import { runSessionRegistry } from "./run-session-registry";
 
@@ -22,7 +24,6 @@ import { runSessionRegistry } from "./run-session-registry";
 
 const LIVE_DIFF_DEBOUNCE_MS = 300;
 const FORCE_FINALIZE_TIMEOUT_MS = 30_000;
-const MAX_UNTRACKED_INLINE_BYTES = 256 * 1024;
 
 // ─────────────────────────────────────────────────────────────
 // File-level utilities (pure)
@@ -34,10 +35,6 @@ function generateUuid(): string {
     const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
-}
-
-function hashContent(content: string): string {
-  return createHash("sha256").update(content).digest("hex").substring(0, 16);
 }
 
 /**
@@ -60,45 +57,11 @@ function buildPerFileDiffHashes(diffText: string): Map<string, string> {
   return result;
 }
 
-/**
- * Merge untracked file stats into a git shortstat string.
- * git diff --shortstat only covers tracked files; new files are added here.
- */
-function mergeUntrackedIntoShortstat(
-  shortstat: string,
-  newFileCount: number,
-  newInsertions: number,
-): string {
-  if (newFileCount === 0 && newInsertions === 0) return shortstat;
-  const existingFiles = parseInt(shortstat.match(/(\d+) file/)?.[1] ?? "0", 10);
-  const existingInsertions = parseInt(shortstat.match(/(\d+) insertion/)?.[1] ?? "0", 10);
-  const existingDeletions = parseInt(shortstat.match(/(\d+) deletion/)?.[1] ?? "0", 10);
-  const totalFiles = existingFiles + newFileCount;
-  const totalInsertions = existingInsertions + newInsertions;
-  const parts: string[] = [];
-  parts.push(`${totalFiles} file${totalFiles !== 1 ? "s" : ""} changed`);
-  if (totalInsertions > 0) {
-    parts.push(`${totalInsertions} insertion${totalInsertions !== 1 ? "s" : ""}(+)`);
-  }
-  if (existingDeletions > 0) {
-    parts.push(`${existingDeletions} deletion${existingDeletions !== 1 ? "s" : ""}(-)`);
-  }
-  return parts.join(", ");
-}
-
 // Local broadcast helper. Extracted to runs.broadcasts.ts in a follow-up PR.
 function broadcastToWindows(channel: string, payload: unknown): void {
   for (const win of BrowserWindow.getAllWindows()) {
     if (!win.isDestroyed()) win.webContents.send(channel, payload);
   }
-}
-
-interface DiffSnapshot {
-  baseRef: string;
-  diffText: string;
-  files: string[];
-  untrackedFiles: string[];
-  shortstat: string;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -328,68 +291,9 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   }
 
   // ─── Diff snapshotting ───
-  async function buildDiffSnapshot(): Promise<DiffSnapshot | null> {
+  async function snapshotCurrentDiff(): Promise<DiffSnapshot | null> {
     if (!baseRef) return null;
-    try {
-      const [diffResult, filesResult, statResult, untrackedResult] = await Promise.all([
-        gitService.getDiffSince(workspace.rootPath, baseRef),
-        gitService.getChangedFilesSince(workspace.rootPath, baseRef),
-        gitService.getShortStatSince(workspace.rootPath, baseRef),
-        gitService.getUntrackedFiles(workspace.rootPath),
-      ]);
-      let diffText = diffResult.success ? (diffResult.data ?? "") : "";
-      const trackedFiles = filesResult.success ? (filesResult.data ?? []) : [];
-      const untrackedFiles = untrackedResult.success ? (untrackedResult.data ?? []) : [];
-      let shortstat = statResult.success ? (statResult.data ?? "") : "";
-
-      const files = [...new Set([...trackedFiles, ...untrackedFiles])];
-
-      // Inline untracked file content as synthetic diff hunks.
-      let untrackedInsertions = 0;
-      if (untrackedFiles.length > 0) {
-        const untrackedDiffs: string[] = [];
-        for (const filePath of untrackedFiles) {
-          const fullPath = path.join(workspace.rootPath, filePath);
-          try {
-            const stat = fs.statSync(fullPath);
-            if (stat.size > MAX_UNTRACKED_INLINE_BYTES) {
-              untrackedDiffs.push(
-                `diff --git a/${filePath} b/${filePath}\nnew file\nBinary or large file (${stat.size} bytes)`,
-              );
-              continue;
-            }
-            const content = fs.readFileSync(fullPath, "utf-8");
-            const lines = content.split("\n");
-            untrackedInsertions += lines.length;
-            const diffHeader = [
-              `diff --git a/${filePath} b/${filePath}`,
-              `new file mode 100644`,
-              `--- /dev/null`,
-              `+++ b/${filePath}`,
-              `@@ -0,0 +1,${lines.length} @@`,
-            ].join("\n");
-            const diffBody = lines.map((l) => `+${l}`).join("\n");
-            untrackedDiffs.push(`${diffHeader}\n${diffBody}`);
-          } catch {
-            untrackedDiffs.push(
-              `diff --git a/${filePath} b/${filePath}\nnew file\n(could not read file)`,
-            );
-          }
-        }
-        if (untrackedDiffs.length > 0) {
-          diffText = diffText ? `${diffText}\n${untrackedDiffs.join("\n")}` : untrackedDiffs.join("\n");
-        }
-      }
-
-      if (untrackedInsertions > 0) {
-        shortstat = mergeUntrackedIntoShortstat(shortstat, untrackedFiles.length, untrackedInsertions);
-      }
-
-      return { baseRef, diffText, files, untrackedFiles, shortstat };
-    } catch (err) {
-      console.error(`[RunSession ${runId}] buildDiffSnapshot failed:`, err);
-      return null;
-    }
+    return buildDiffSnapshot({ rootPath: workspace.rootPath, baseRef });
   }
 
   async function upsertDiff(snapshot: DiffSnapshot): Promise<void> {
@@ -422,10 +326,31 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
     }
   }
 
+  /**
+   * Drop the workspace's latest diff row when the working tree is clean against
+   * the current baseRef. Covers the case where the user committed externally
+   * (or otherwise resolved changes) between runs, leaving a stale diff row
+   * pointing at a now-merged baseRef.
+   */
+  async function clearStaleWorkspaceDiff(): Promise<void> {
+    const latest = await workspaceRepo.findLatestDiffByWorkspace(workspace.id);
+    if (!latest) return;
+    await workspaceRepo.deleteLatestDiffByWorkspace(workspace.id);
+    broadcastDiffUpdated();
+  }
+
   // ─── Live diff scheduler ───
   async function recomputeLiveDiff(): Promise<void> {
-    const snapshot = await buildDiffSnapshot();
-    if (!snapshot || snapshot.files.length === 0) return;
+    const snapshot = await snapshotCurrentDiff();
+    if (!snapshot) return;
+    if (snapshot.files.length === 0) {
+      try {
+        await clearStaleWorkspaceDiff();
+      } catch (err) {
+        console.error(`[RunSession ${runId}] clearStaleWorkspaceDiff failed:`, err);
+      }
+      return;
+    }
     const existing = await workspaceRepo.findDiffByRun(runId);
     if (existing && hashContent(existing.diffText) === hashContent(snapshot.diffText)) {
       return;
@@ -474,8 +399,16 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   // ─── Final diff persistence at completion ───
   async function persistFinalDiff(): Promise<void> {
     clearLiveDiffSchedule();
-    const snapshot = await buildDiffSnapshot();
-    if (!snapshot || snapshot.files.length === 0) return;
+    const snapshot = await snapshotCurrentDiff();
+    if (!snapshot) return;
+    if (snapshot.files.length === 0) {
+      try {
+        await clearStaleWorkspaceDiff();
+      } catch (err) {
+        console.error(`[RunSession ${runId}] clearStaleWorkspaceDiff failed:`, err);
+      }
+      return;
+    }
 
     try {
       // Incremental file count vs a prior diff sharing the same baseRef (not our own
