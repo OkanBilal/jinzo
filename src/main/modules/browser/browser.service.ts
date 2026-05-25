@@ -183,13 +183,8 @@ export const browserService = {
     wc.on("did-start-loading", emitNav);
     wc.on("did-stop-loading", emitNav);
 
-    wc.on("console-message", (details: any, _level?: number, legacyMessage?: string) => {
-      const message: string =
-        typeof details === "object" && details && typeof details.message === "string"
-          ? details.message
-          : typeof legacyMessage === "string"
-            ? legacyMessage
-            : "";
+    wc.on("console-message", (event) => {
+      const message = event.message;
       if (!message.startsWith(INSPECTOR_SENTINEL)) return;
       const raw = message.slice(INSPECTOR_SENTINEL.length);
       try {
