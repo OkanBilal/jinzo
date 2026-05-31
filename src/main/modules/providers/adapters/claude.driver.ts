@@ -151,8 +151,11 @@ interface SDKOptions {
   settingSources?: Array<"user" | "project" | "local">;
   hooks?: SDKHooksConfig;
   mcpServers?: Record<string, McpServerConfig>;
-  thinking?: { type: "adaptive" } | { type: "disabled" };
-  effort?: "low" | "medium" | "high" | "max";
+  thinking?:
+    | { type: "adaptive" }
+    | { type: "enabled"; budgetTokens?: number }
+    | { type: "disabled" };
+  effort?: ("low" | "medium" | "high" | "xhigh" | "max") | number;
   settings?: Record<string, unknown>;
   promptSuggestions?: boolean;
   includePartialMessages?: boolean;
@@ -238,7 +241,7 @@ type SDKResultMessage = SDKResultSuccess | SDKResultError;
 
 interface SDKSystemMessage {
   type: "system";
-  subtype: "init" | "compact_boundary";
+  subtype: "init" | "compact_boundary" | "api_retry" | "status";
   uuid: string;
   session_id: string;
   model?: string;
@@ -253,6 +256,32 @@ interface SDKSystemMessage {
   slash_commands?: string[];
   output_style?: string;
   skills?: string[];
+  // subtype: "compact_boundary"
+  compact_metadata?: {
+    trigger: "manual" | "auto";
+    pre_tokens: number;
+    post_tokens?: number;
+    duration_ms?: number;
+  };
+  // subtype: "api_retry"
+  attempt?: number;
+  max_retries?: number;
+  retry_delay_ms?: number;
+  error_status?: number | null;
+}
+
+interface SDKRateLimitInfo {
+  status: "allowed" | "allowed_warning" | "rejected";
+  resetsAt?: number;
+  rateLimitType?: "five_hour" | "seven_day" | "seven_day_opus" | "seven_day_sonnet" | "overage";
+  utilization?: number;
+}
+
+interface SDKRateLimitEvent {
+  type: "rate_limit_event";
+  rate_limit_info: SDKRateLimitInfo;
+  uuid: string;
+  session_id: string;
 }
 
 interface SDKRawStreamEvent {
@@ -283,6 +312,7 @@ type SDKMessage =
   | SDKUserMessage
   | SDKResultMessage
   | SDKSystemMessage
+  | SDKRateLimitEvent
   | SDKPartialAssistantMessage
   | { type: string; session_id?: string; [key: string]: unknown };
 
@@ -292,7 +322,7 @@ interface SDKModelInfo {
   description: string;
   supportsFastMode?: boolean;
   supportsEffort?: boolean;
-  supportedEffortLevels?: ("low" | "medium" | "high" | "max")[];
+  supportedEffortLevels?: ("low" | "medium" | "high" | "xhigh" | "max")[];
   supportsAutoMode?: boolean;
   supportsAdaptiveThinking?: boolean;
 }
@@ -314,7 +344,7 @@ interface SDKInitializationResult {
 
 interface SDKQuery extends AsyncGenerator<SDKMessage, void> {
   interrupt(): Promise<void>;
-  rewindFiles(userMessageUuid: string): Promise<void>;
+  rewindFiles(userMessageUuid: string, options?: { dryRun?: boolean }): Promise<unknown>;
   setPermissionMode(mode: string): Promise<void>;
   setModel(model?: string): Promise<void>;
   setMaxThinkingTokens(maxThinkingTokens: number | null): Promise<void>;
@@ -895,7 +925,16 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       }
     }
 
-    options.thinking = config.thinkingMode ? { type: "adaptive" } : { type: "disabled" };
+    if (config.thinkingMode) {
+      // A fixed token budget takes precedence over adaptive thinking. Useful on
+      // models without adaptive support, or to cap cost/latency.
+      options.thinking =
+        typeof config.thinkingBudgetTokens === "number" && config.thinkingBudgetTokens > 0
+          ? { type: "enabled", budgetTokens: config.thinkingBudgetTokens }
+          : { type: "adaptive" };
+    } else {
+      options.thinking = { type: "disabled" };
+    }
     if (config.thinkingMode && config.effortLevel) {
       options.effort = config.effortLevel;
     }
@@ -1062,6 +1101,71 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
             level: "start",
             ts,
           });
+        } else if (systemMsg.subtype === "compact_boundary") {
+          const meta = systemMsg.compact_metadata;
+          const trigger = meta?.trigger ?? "auto";
+          const pre = meta?.pre_tokens;
+          const post = meta?.post_tokens;
+          const tokenPart =
+            typeof pre === "number"
+              ? ` (${pre.toLocaleString()}${typeof post === "number" ? ` → ${post.toLocaleString()}` : ""} tokens)`
+              : "";
+          events.push({
+            type: "log",
+            message: `[context] Conversation compacted${tokenPart} — ${trigger} trigger`,
+            level: "info",
+            ts,
+            metadata: { source: "compact_boundary", ...meta },
+          });
+        } else if (systemMsg.subtype === "api_retry") {
+          const attempt = systemMsg.attempt;
+          const maxRetries = systemMsg.max_retries;
+          const delayMs = systemMsg.retry_delay_ms;
+          const attemptPart =
+            typeof attempt === "number" && typeof maxRetries === "number"
+              ? ` (${attempt}/${maxRetries})`
+              : "";
+          const delayPart =
+            typeof delayMs === "number" ? ` — retrying in ${Math.round(delayMs / 1000)}s` : "";
+          const statusPart =
+            systemMsg.error_status != null ? ` [HTTP ${systemMsg.error_status}]` : "";
+          events.push({
+            type: "log",
+            message: `[api] Request failed${statusPart}${attemptPart}${delayPart}`,
+            level: "warn",
+            ts,
+            metadata: {
+              source: "api_retry",
+              attempt,
+              maxRetries,
+              retryDelayMs: delayMs,
+              errorStatus: systemMsg.error_status,
+            },
+          });
+        }
+        break;
+      }
+
+      case "rate_limit_event": {
+        const rl = (msg as SDKRateLimitEvent).rate_limit_info;
+        if (rl) {
+          const util =
+            typeof rl.utilization === "number" ? ` (${Math.round(rl.utilization * 100)}% used)` : "";
+          const resets =
+            typeof rl.resetsAt === "number"
+              ? ` — resets ${new Date(rl.resetsAt * 1000).toLocaleTimeString()}`
+              : "";
+          const scope = rl.rateLimitType ? ` [${rl.rateLimitType}]` : "";
+          // Only surface warnings/rejections; "allowed" is the silent happy path.
+          if (rl.status !== "allowed") {
+            events.push({
+              type: "log",
+              message: `[rate-limit] ${rl.status === "rejected" ? "Rate limit reached" : "Approaching rate limit"}${scope}${util}${resets}`,
+              level: rl.status === "rejected" ? "error" : "warn",
+              ts,
+              metadata: { source: "rate_limit_event", ...rl },
+            });
+          }
         }
         break;
       }
@@ -1530,6 +1634,11 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
                 cacheRead = 0,
                 cacheWrite = 0;
               let primaryModel: string | undefined;
+              // Context meter: track the model entry with the largest window (the
+              // main conversation model, not haiku subagents) to estimate fill.
+              let ctxModel: string | undefined;
+              let ctxTokens = 0;
+              let ctxWindow = 0;
               if (resultMsg.modelUsage) {
                 for (const [modelName, usage] of Object.entries(resultMsg.modelUsage)) {
                   inputTokens += usage.inputTokens;
@@ -1537,6 +1646,18 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
                   cacheRead += usage.cacheReadInputTokens;
                   cacheWrite += usage.cacheCreationInputTokens;
                   if (!primaryModel) primaryModel = modelName;
+                  const window = usage.contextWindow ?? 0;
+                  if (window > ctxWindow) {
+                    ctxWindow = window;
+                    ctxModel = modelName;
+                    // Occupied context ≈ everything that fed the final request plus
+                    // the response just generated (which carries into the next turn).
+                    ctxTokens =
+                      (usage.inputTokens ?? 0) +
+                      (usage.cacheReadInputTokens ?? 0) +
+                      (usage.cacheCreationInputTokens ?? 0) +
+                      (usage.outputTokens ?? 0);
+                  }
                 }
               }
 
@@ -1551,6 +1672,21 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
                 model: primaryModel,
                 modelUsage: resultMsg.modelUsage,
               };
+
+              // Derive the context-window snapshot from usage data rather than the
+              // SDK's getContextUsage() control request — the latter races the
+              // query teardown in single-prompt mode ("Query closed before response").
+              if (ctxWindow > 0 && ctxTokens > 0) {
+                const total = Math.min(ctxTokens, ctxWindow);
+                await onEvent({
+                  type: "context_usage",
+                  totalTokens: total,
+                  maxTokens: ctxWindow,
+                  percentage: (total / ctxWindow) * 100,
+                  model: ctxModel ?? primaryModel,
+                  ts: Date.now(),
+                });
+              }
             }
 
             const events = mapSDKMessage(msg, cs);
@@ -1683,10 +1819,10 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
 
         const models: ModelInfo[] = sdkModels.map((sdkModel, index) => {
           // SDK's .d.ts declares supportsFastMode but the runtime payload doesn't include it.
-          // Fast mode is currently meaningful only on opus-4-6; this fallback lights it up
+          // Fast mode is currently meaningful only on opus; this fallback lights it up
           // automatically when the SDK starts surfacing the field.
           const id = sdkModel.value;
-          const fallbackFastMode = id === "claude-opus-4-6" || id === "opus-4-6";
+          const fallbackFastMode = id === "opus[1m]";
           return {
             id,
             displayName: sdkModel.displayName,
@@ -2033,9 +2169,9 @@ function isValidMcpServerConfig(cfg: unknown): boolean {
 function getDefaultModels(defaultModel?: string): ModelInfo[] {
   return [
     {
-      id: "claude-sonnet-4-6",
+      id: "sonnet",
       displayName: "Claude Sonnet 4.6",
-      isDefault: defaultModel === "claude-sonnet-4-6" || !defaultModel,
+      isDefault: defaultModel === "sonnet" || !defaultModel,
       capabilities: { streaming: true, vision: true, functionCalling: true },
       contextWindow: 200000,
       supportsFastMode: true,
@@ -2043,9 +2179,9 @@ function getDefaultModels(defaultModel?: string): ModelInfo[] {
       supportedEffortLevels: ["low", "medium", "high"],
     },
     {
-      id: "claude-opus-4-6",
-      displayName: "Claude Opus 4.6",
-      isDefault: defaultModel === "claude-opus-4-6",
+      id: "opus[1m]",
+      displayName: "Claude Opus 4.8",
+      isDefault: defaultModel === "opus[1m]",
       capabilities: { streaming: true, vision: true, functionCalling: true, reasoning: true },
       contextWindow: 200000,
       supportsFastMode: true,
@@ -2053,9 +2189,9 @@ function getDefaultModels(defaultModel?: string): ModelInfo[] {
       supportedEffortLevels: ["low", "medium", "high", "max"],
     },
     {
-      id: "claude-haiku-4-5",
+      id: "haiku",
       displayName: "Claude Haiku 4.5",
-      isDefault: defaultModel === "claude-haiku-4-5" || !defaultModel,
+      isDefault: defaultModel === "haiku" || !defaultModel,
       capabilities: { streaming: true, vision: true, functionCalling: true },
       contextWindow: 128000,
       supportsFastMode: false,

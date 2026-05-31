@@ -153,6 +153,9 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   function broadcastEphemeralEvent(event: unknown): void {
     broadcastToWindows("runs:ephemeralEvent", { runId, event, ts: Date.now() });
   }
+  function broadcastContextUsage(event: Extract<WorkRunEvent, { type: "context_usage" }>): void {
+    broadcastToWindows("runs:contextUsage", { runId, event, ts: Date.now() });
+  }
 
   // ─── OS notification ───
   async function sendNotification(status: string): Promise<void> {
@@ -596,6 +599,10 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
         break;
       case "status":
         console.log(`[RunSession ${runId}] status event: ${event.status}`);
+        break;
+      case "context_usage":
+        // Renderer-only live indicator; never persisted.
+        broadcastContextUsage(event);
         break;
       // WorkRunSubagentEvent currently has no projection — matches legacy behavior.
     }

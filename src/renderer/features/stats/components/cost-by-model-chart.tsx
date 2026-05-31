@@ -10,7 +10,7 @@ interface CostByModelChartProps {
 const BAR_COLORS = ["#A34D35", "#D97757", "#F0B9A5", "#B25A3F", "#F0B9A5", "#A34D35"];
 
 const MODEL_LABELS: Record<string, string> = {
-  default: "Opus 4.6",
+  default: "Opus 4.8",
   sonnet: "Sonnet 4.6",
   haiku: "Haiku 4.5",
 };
