@@ -174,6 +174,29 @@ export interface WorkRunPromptSuggestionEvent {
 }
 
 /**
+ * Context-window usage snapshot, emitted at turn boundaries. Renderer-only
+ * (ephemeral): used to drive a live context-fill indicator. Not persisted.
+ */
+export interface WorkRunContextUsageEvent {
+  type: "context_usage";
+  /** Tokens currently occupying the context window. */
+  totalTokens: number;
+  /** Effective context window size for the active model. */
+  maxTokens: number;
+  /** 0–100 fill percentage (as reported by the SDK). */
+  percentage: number;
+  /** Model the snapshot was computed for. */
+  model?: string;
+  /** Whether auto-compaction is enabled for the session. */
+  isAutoCompactEnabled?: boolean;
+  /** Token count at which auto-compaction triggers, when known. */
+  autoCompactThreshold?: number;
+  /** Per-category breakdown (name/tokens/color) for a detailed view. */
+  categories?: { name: string; tokens: number; color: string }[];
+  ts?: number;
+}
+
+/**
  * Union of all possible events emitted during a work run
  */
 export type WorkRunEvent =
@@ -182,7 +205,8 @@ export type WorkRunEvent =
   | WorkRunArtifactEvent
   | WorkRunStatusEvent
   | WorkRunSubagentEvent
-  | WorkRunPromptSuggestionEvent;
+  | WorkRunPromptSuggestionEvent
+  | WorkRunContextUsageEvent;
 
 /**
  * Artifact summary in the result
@@ -748,10 +772,16 @@ export interface ClaudeCodeAdapterConfig {
   structuredOutputsSelectedId?: string | null;
   /** When true, enables adaptive thinking (extended reasoning) */
   thinkingMode?: boolean;
+  /**
+   * Fixed thinking-token budget (requires thinkingMode). When set, the adapter
+   * uses `thinking: { type: "enabled", budgetTokens }` instead of adaptive
+   * thinking. Useful on models without adaptive support, or to cap cost/latency.
+   */
+  thinkingBudgetTokens?: number;
   /** When true, enables fast mode (faster output, same model) */
   fastMode?: boolean;
   /** Effort level for thinking depth (requires thinkingMode) */
-  effortLevel?: "low" | "medium" | "high" | "max";
+  effortLevel?: "low" | "medium" | "high" | "xhigh" | "max";
 }
 
 /**

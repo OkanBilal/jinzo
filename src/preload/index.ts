@@ -439,6 +439,28 @@ const api = {
       ipcRenderer.on(CHANNELS.runs.ephemeralEvent, listener);
       return () => ipcRenderer.removeListener(CHANNELS.runs.ephemeralEvent, listener);
     },
+    // Live context-window usage snapshots (ephemeral — pushed at turn boundaries, not persisted).
+    onContextUsage: (
+      callback: (data: {
+        runId: string;
+        event: {
+          type: "context_usage";
+          totalTokens: number;
+          maxTokens: number;
+          percentage: number;
+          model?: string;
+          isAutoCompactEnabled?: boolean;
+          autoCompactThreshold?: number;
+          categories?: { name: string; tokens: number; color: string }[];
+          ts?: number;
+        };
+        ts: number;
+      }) => void,
+    ) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on(CHANNELS.runs.contextUsage, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.runs.contextUsage, listener);
+    },
     // Fired after each persisted run event (log / tool_call / artifact / prompt_suggestion).
     // Renderer debounces and refetches run details — keeps the UI in sync without polling.
     onEventPersisted: (callback: (data: { runId: string; ts: number }) => void) => {

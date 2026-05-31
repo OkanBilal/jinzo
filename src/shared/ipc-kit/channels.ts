@@ -192,6 +192,7 @@ export const CHANNELS = {
     canResume: "runs:canResume",
     cancel: "runs:cancel",
     complete: "runs:complete",
+    contextUsage: "runs:contextUsage",
     continue: "runs:continue",
     create: "runs:create",
     delete: "runs:delete",

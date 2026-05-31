@@ -17,6 +17,8 @@ import { IssueMentionDropdown } from "@/features/workspace/components/issue-ment
 import type { IssueWithEntity } from "@/lib/redux/api/entitiesApi";
 import { ContextChips } from "./context-chips";
 import { InputToolbar } from "./input-toolbar";
+import { ContextUsageRing } from "./context-usage-meter";
+import { useContextUsage } from "../hooks/use-context-usage";
 import { useProviderModels } from "../hooks/use-provider-models";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
@@ -186,6 +188,8 @@ export function WorkspaceInput({
     externalOnModelChange,
     workspacePath,
   );
+
+  const contextUsage = useContextUsage(activeRun?.id ?? null);
 
   // Cmd+P to focus input
   useEffect(() => {
@@ -585,7 +589,7 @@ export function WorkspaceInput({
       )}
 
     <div
-      className={`w-200 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism
+      className={`relative w-200 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism
         cursor-pointer transition-all
         ${layout === "default" ? "mb-4" : ""}
         ${isFileDragOver ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-background" : ""}`}
@@ -594,6 +598,11 @@ export function WorkspaceInput({
       onDragOver={handleWrapperDragOver}
       onDrop={handleWrapperDrop}
     >
+      {contextUsage && (
+        <div className="absolute left-full bottom-2.5 ml-3 z-10">
+          <ContextUsageRing usage={contextUsage} />
+        </div>
+      )}
       <ContextChips
         contextIssues={contextIssues}
         contextSignals={contextSignals}
