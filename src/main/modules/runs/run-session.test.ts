@@ -77,6 +77,7 @@ import { runSessionRegistry } from "./run-session-registry";
 import { runsRepo } from "./runs.repo";
 import { createWorkAdapter, couldModifyFiles } from "../providers/adapters";
 import { gitService } from "../git/git.service";
+import { logWorkspaceActivity } from "../workspace";
 
 describe("RunSession", () => {
   beforeEach(() => {
@@ -679,6 +680,103 @@ describe("RunSession", () => {
       await session.finalize({ status: "succeeded" });
 
       expect(() => session.updateBaseRef("new-sha")).not.toThrow();
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // persistFinalDiff — incremental "files changed" activity
+  // ─────────────────────────────────────────────────────────────
+  describe("persistFinalDiff — incremental activity", () => {
+    // Synthetic per-file diff chunk, terminated with a newline like real git
+    // output so its hash is stable regardless of whether other files follow.
+    const fileDiff = (name: string, body: string) =>
+      `diff --git a/${name} b/${name}\nindex 000..111 100644\n--- a/${name}\n+++ b/${name}\n@@ -1 +1 @@\n${body}\n`;
+
+    const diffActivities = () =>
+      vi
+        .mocked(logWorkspaceActivity)
+        .mock.calls.filter(([p]) => p.type === "diff")
+        .map(([p]) => p);
+
+    it("does not re-log pre-existing changes when the run touches nothing", async () => {
+      // a.ts is already dirty at run start; the run changes nothing.
+      vi.mocked(gitService.getHeadSha).mockResolvedValue({ success: true, data: "sha1" });
+      vi.mocked(gitService.getDiffSince).mockResolvedValue({
+        success: true,
+        data: fileDiff("a.ts", "+x"),
+      });
+      vi.mocked(gitService.getChangedFilesSince).mockResolvedValue({
+        success: true,
+        data: ["a.ts"],
+      });
+      vi.mocked(gitService.getShortStatSince).mockResolvedValue({
+        success: true,
+        data: "1 file changed",
+      });
+      vi.mocked(gitService.getUntrackedFiles).mockResolvedValue({ success: true, data: [] });
+
+      const session = makeSession();
+      await flushBackground(); // captureBaseRef snapshots the pre-existing diff
+
+      await session.finalize({ status: "succeeded" });
+
+      expect(diffActivities()).toHaveLength(0);
+    });
+
+    it("logs only the files changed since run start", async () => {
+      // Run start: a.ts dirty. Run end: a.ts unchanged, b.ts newly changed.
+      vi.mocked(gitService.getHeadSha).mockResolvedValue({ success: true, data: "sha1" });
+      vi.mocked(gitService.getDiffSince)
+        .mockResolvedValueOnce({ success: true, data: fileDiff("a.ts", "+x") })
+        .mockResolvedValue({
+          success: true,
+          data: `${fileDiff("a.ts", "+x")}${fileDiff("b.ts", "+y")}`,
+        });
+      vi.mocked(gitService.getChangedFilesSince)
+        .mockResolvedValueOnce({ success: true, data: ["a.ts"] })
+        .mockResolvedValue({ success: true, data: ["a.ts", "b.ts"] });
+      vi.mocked(gitService.getShortStatSince).mockResolvedValue({
+        success: true,
+        data: "2 files changed",
+      });
+      vi.mocked(gitService.getUntrackedFiles).mockResolvedValue({ success: true, data: [] });
+
+      const session = makeSession();
+      await flushBackground();
+
+      await session.finalize({ status: "succeeded" });
+
+      const activities = diffActivities();
+      expect(activities).toHaveLength(1);
+      expect(activities[0].title).toBe("1 file changed");
+      expect((activities[0].metadata as any).fileNames).toEqual(["b.ts"]);
+    });
+
+    it("skips the activity log when the run-start baseline could not be captured", async () => {
+      // getHeadSha succeeds (baseRef is set) but the run-start snapshot fails, so
+      // initialDiffHashes stays null — "baseline unknown", not "clean tree". We
+      // must NOT attribute the now-dirty a.ts to this run; an empty-Map fallback
+      // would have logged it as a spurious "1 file changed".
+      vi.mocked(gitService.getHeadSha).mockResolvedValue({ success: true, data: "sha1" });
+      vi.mocked(gitService.getDiffSince)
+        .mockRejectedValueOnce(new Error("git boom")) // run-start snapshot fails → null baseline
+        .mockResolvedValue({ success: true, data: fileDiff("a.ts", "+x") }); // finalize snapshot
+      vi.mocked(gitService.getChangedFilesSince).mockResolvedValue({
+        success: true,
+        data: ["a.ts"],
+      });
+      vi.mocked(gitService.getShortStatSince).mockResolvedValue({
+        success: true,
+        data: "1 file changed",
+      });
+      vi.mocked(gitService.getUntrackedFiles).mockResolvedValue({ success: true, data: [] });
+
+      const session = makeSession();
+      await flushBackground();
+
+      await session.finalize({ status: "succeeded" });
+
+      expect(diffActivities()).toHaveLength(0);
     });
   });
 });
