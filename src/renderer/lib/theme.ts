@@ -1,6 +1,6 @@
 const COLORS = {
   light: {
-    background: "#ffffff40",
+    background: "#ffffffb3",
     dropdown: "rgb(255 255 255)",
   },
   dark: {

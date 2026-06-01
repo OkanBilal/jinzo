@@ -23,8 +23,13 @@ export function ToggleButton({
   const activeWorkspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId);
   return (
     <div
+      data-layout-toggle
       className="fixed z-(--z-panel-toggle) flex items-center gap-1.5 top-2.75 transition-[right] duration-300 ease-out"
-      style={{ right: browserOpen ? "calc(38rem + 0.75rem)" : "0.8125rem" }}
+      style={{
+        right: browserOpen
+          ? "calc(var(--browser-panel-width) + 0.75rem)"
+          : "0.8125rem",
+      }}
     >
       <GitActionsDropdown />
       <div className="h-4 w-px bg-primary-700/40 dark:bg-primary-700/40" />

@@ -1,4 +1,14 @@
 import { PANEL_COMPONENTS, DEFAULT_PANEL_COMPONENT } from "./panel-components";
+import { ResizeHandle } from "@/components/layout/resize-handle";
+import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks";
+import { setRightPanelWidth } from "@/lib/redux/slices/appSettingsSlice";
+import { setLayoutWidthVar } from "@/hooks/use-layout-width-vars";
+import {
+  PANEL_WIDTH_VAR,
+  PANEL_WIDTH_MIN,
+  PANEL_WIDTH_MAX,
+  PANEL_WIDTH_DEFAULT,
+} from "@/lib/layout";
 
 interface PanelProps {
   isVisible: boolean;
@@ -9,6 +19,8 @@ interface PanelProps {
 
 export function Panel({ isVisible, isAnimatedIn, width, component }: PanelProps) {
   const PanelContent = PANEL_COMPONENTS[component] || DEFAULT_PANEL_COMPONENT;
+  const dispatch = useAppDispatch();
+  const rightPanelWidth = useAppSelector((s) => s.appSettings.rightPanelWidth);
 
   if (!isVisible) return null;
 
@@ -23,6 +35,17 @@ export function Panel({ isVisible, isAnimatedIn, width, component }: PanelProps)
       role="complementary"
       aria-label="Right panel"
     >
+      <ResizeHandle
+        edge="left"
+        value={rightPanelWidth}
+        min={PANEL_WIDTH_MIN}
+        max={PANEL_WIDTH_MAX}
+        computeWidth={(clientX) => window.innerWidth - clientX}
+        onPreview={(w) => setLayoutWidthVar(PANEL_WIDTH_VAR, w)}
+        onCommit={(w) => dispatch(setRightPanelWidth(w))}
+        onReset={() => dispatch(setRightPanelWidth(PANEL_WIDTH_DEFAULT))}
+        ariaLabel="Resize panel"
+      />
       <PanelContent />
     </div>
   );

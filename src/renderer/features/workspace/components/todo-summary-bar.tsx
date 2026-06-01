@@ -98,7 +98,7 @@ export function TodoSummaryBar({ events }: TodoSummaryBarProps) {
   const inProgress = todos.find((t) => t.status === "in_progress");
 
   return (
-    <div className="w-200 mx-auto mb-1">
+    <div className="w-full max-w-200 mx-auto mb-1">
       <div className="rounded-2xl glass-morphism overflow-hidden">
         <Button
           onClick={() => setIsExpanded((v) => !v)}

@@ -7,11 +7,10 @@ import {
   MainLayout,
   MainContent,
 } from "./components/layout/main";
-import { useLayoutConfig } from "./hooks/use-layout-config";
 import { shouldHideRightPanel } from "./lib/layout";
 import { useBottomTerminal, BottomTerminalProvider } from "./hooks/use-bottom-terminal";
 import { useBrowserPanel, BrowserPanelProvider } from "./hooks/use-browser-panel";
-import { BrowserPanel, BROWSER_PANEL_WIDTH } from "./features/workspace/components/browser-panel";
+import { BrowserPanel } from "./features/workspace/components/browser-panel";
 import { useWorkspaceVariant } from "./hooks/use-workspace-variant";
 import { ReduxProvider } from "./providers/redux-provider";
 import { Toaster } from "./components/ui/toast/Toaster";
@@ -21,6 +20,12 @@ import { SidebarToggleButton } from "./components/layout/sidebar/sidebar-toggle-
 import { OnboardingModal } from "./features/onboarding/components/onboarding-modal";
 import { ErrorBoundary } from "./components/ui/error-boundary";
 import { MainHeaderProvider } from "./hooks/use-main-header";
+import { useLayoutWidthVars } from "./hooks/use-layout-width-vars";
+
+/** Layout widths live in CSS (`--sidebar-width`, `--panel-width`, `--browser-panel-width`) — see index.css. */
+const SIDEBAR_WIDTH = "var(--sidebar-width)";
+const RIGHT_PANEL_WIDTH = "var(--panel-width)";
+const BROWSER_PANEL_WIDTH = "var(--browser-panel-width)";
 
 function useDropdownAnimationPrewarm() {
   useEffect(() => {
@@ -39,7 +44,7 @@ function useDropdownAnimationPrewarm() {
 
 function AppContent() {
   useDropdownAnimationPrewarm();
-  const { mainMarginLeft, rightPanelWidth } = useLayoutConfig();
+  useLayoutWidthVars();
   const location = useLocation();
   const hideRightPanel = shouldHideRightPanel(location.pathname);
   const variant = useWorkspaceVariant();
@@ -67,12 +72,12 @@ function AppContent() {
         />
         <Sidebar collapsed={sidebarCollapsed} />
         <MainContent
-          marginLeft={sidebarCollapsed ? "0.375rem" : mainMarginLeft}
+          marginLeft={sidebarCollapsed ? "0.375rem" : SIDEBAR_WIDTH}
           marginRight={
             browserPanel.isOpen
               ? BROWSER_PANEL_WIDTH
               : !hideRightPanel && isRightPanelOpen
-                ? rightPanelWidth
+                ? RIGHT_PANEL_WIDTH
                 : "0.375rem"
           }
           hasRightPanel={!hideRightPanel && !isRightPanelOpen && !browserPanel.isOpen}
@@ -90,7 +95,7 @@ function AppContent() {
               if (open) browserPanel.close();
               dispatch(setRightPanelOpen(open));
             }}
-            width={rightPanelWidth}
+            width={RIGHT_PANEL_WIDTH}
             terminalOpen={showTerminalToggle ? bottomTerminal.isOpen : undefined}
             onTerminalToggle={showTerminalToggle ? bottomTerminal.toggle : undefined}
             browserOpen={showBrowserToggle ? browserPanel.isOpen : undefined}

@@ -258,7 +258,8 @@ html:not(.app-ready) *::after {
 
   /* Layout */
   --sidebar-width: 18rem;
-  --panel-width: 18rem;
+  --panel-width: 22rem;
+  --browser-panel-width: 38rem;
   --drag-region-height: 1rem;
   --dropdown-min-width: 140px;
 
@@ -285,6 +286,21 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* While a layout handle is being dragged, suspend the sidebar/main width &
+   margin transitions so the resize tracks the pointer 1:1 instead of lagging. */
+body[data-resizing] {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+body[data-resizing] aside,
+body[data-resizing] main,
+body[data-resizing] [data-layout-toggle] {
+  transition: none !important;
+}
+body[data-resizing] iframe {
+  pointer-events: none !important;
 }
 
 @keyframes blink {

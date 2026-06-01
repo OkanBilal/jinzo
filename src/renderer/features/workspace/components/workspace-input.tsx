@@ -572,7 +572,7 @@ export function WorkspaceInput({
   return (
     <>
           {authErrorMessage && (
-        <div className="w-200 mx-auto  px-3 py-2 rounded-xl text-yellow-500/80 bg-yellow-500/10  dark:bg-yellow-300/10  dark:text-yellow-200/80 text-xs flex items-center justify-between">
+        <div className="w-full max-w-200 mx-auto  px-3 py-2 rounded-xl text-yellow-500/80 bg-yellow-500/10  dark:bg-yellow-300/10  dark:text-yellow-200/80 text-xs flex items-center justify-between">
           <span>
             <span className="font-medium">Auth required:</span>{" "}
             {authErrorMessage}
@@ -590,7 +590,7 @@ export function WorkspaceInput({
       )}
 
     <div
-      className={`relative w-200 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism
+      className={`relative w-full max-w-200 mx-auto flex flex-col pb-2 rounded-3xl glass-morphism
         cursor-pointer transition-all
         ${layout === "default" ? "mb-4" : ""}
         ${isFileDragOver ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-background" : ""}`}

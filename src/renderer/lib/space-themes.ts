@@ -18,7 +18,7 @@ const solid = (light: string, dark: string): ThemeColor => ({
 });
 
 export const solidColors: ThemeColor[] = [
-  { ...solid("#ffffff40", "#00000070"), name: "Rose Quartz" },
+  { ...solid("#ffffffb3", "#00000070"), name: "Rose Quartz" },
   { ...solid("#EEEEEEe6", "#121212e6"), name: "Light Brown" },
   { ...solid("#C6E1D4e6", "#0e1a16e6"), name: "Light Green" },
   { ...solid("#C5DEEEe6", "#0d171de6"), name: "Light Blue" },

@@ -39,7 +39,7 @@ export function PRDisplay({
         )}
         {params.base && (
           <span className="text-primary-500 shrink-0 group-hover:text-primary-950 group-hover:dark:text-primary">
-            → {params.base}
+           {params.base}
           </span>
         )}
         <span className="text-primary-500 truncate group-hover:text-primary-950 group-hover:dark:text-primary">

@@ -39,6 +39,16 @@ import { useSidebarSpaceSwipe } from "@/hooks/use-sidebar-space-swipe";
 import { UpdateBanner } from "./update-banner";
 import { Button } from "@/components/ui/button";
 import { Body, Tooltip } from "@/components/ui";
+import { ResizeHandle } from "@/components/layout/resize-handle";
+import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks";
+import { setSidebarWidth } from "@/lib/redux/slices/appSettingsSlice";
+import { setLayoutWidthVar } from "@/hooks/use-layout-width-vars";
+import {
+  SIDEBAR_WIDTH_VAR,
+  SIDEBAR_WIDTH_MIN,
+  SIDEBAR_WIDTH_MAX,
+  SIDEBAR_WIDTH_DEFAULT,
+} from "@/lib/layout";
 
 const CLAUDE_PLUGINS_URL = "https://claude.com/plugins#plugins";
 
@@ -49,6 +59,8 @@ interface SidebarProps {
 export default function Sidebar({ collapsed }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useAppDispatch();
+  const sidebarWidth = useAppSelector((s) => s.appSettings.sidebarWidth);
   const sidebarConfig = useSidebarConfig();
   const { spaces, activeSpaceId, activeSpaceAgentSlug } =
     useActiveSpace();
@@ -160,7 +172,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         ref={swipeRef}
         className="fixed top-0 bottom-0 left-0 z-(--z-sidebar) transition-all duration-300"
         style={{
-          width: sidebarConfig.width,
+          width: "var(--sidebar-width)",
           transform: collapsed ? "translateX(-100%)" : "translateX(0)",
           opacity: collapsed ? 0 : 1,
         }}
@@ -340,7 +352,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   </Body>
                   {pluginsUseClaudeExternalUrl ? (
                     <External
-                      className={`w-3.5 h-3.5 shrink-0 ${
+                      className={`w-3.5 h-3.5 -mr-1 shrink-0 ${
                         isPluginsRoute
                           ? "text-primary-950 dark:text-primary"
                           : "text-primary-900 dark:text-primary-200"
@@ -410,6 +422,19 @@ export default function Sidebar({ collapsed }: SidebarProps) {
             />
           </div>
         )}
+        {!collapsed && (
+          <ResizeHandle
+            edge="right"
+            value={sidebarWidth}
+            min={SIDEBAR_WIDTH_MIN}
+            max={SIDEBAR_WIDTH_MAX}
+            computeWidth={(clientX) => clientX}
+            onPreview={(w) => setLayoutWidthVar(SIDEBAR_WIDTH_VAR, w)}
+            onCommit={(w) => dispatch(setSidebarWidth(w))}
+            onReset={() => dispatch(setSidebarWidth(SIDEBAR_WIDTH_DEFAULT))}
+            ariaLabel="Resize sidebar"
+          />
+        )}
       </aside>
 
       <DeleteConfirmationModal
@@ -434,7 +459,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         isOpen={editModalState.isOpen}
         space={editModalState.space}
         onClose={handleCloseEditModal}
-        sidebarWidth={sidebarConfig.width}
+        sidebarWidth="var(--sidebar-width)"
       />
 
       <DeleteSpaceModal

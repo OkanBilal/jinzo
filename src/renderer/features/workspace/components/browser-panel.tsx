@@ -19,8 +19,23 @@ import {
   Crop,
 } from "@/components/ui/icons";
 import { useBrowserPanel } from "@/hooks/use-browser-panel";
+import { useAppSelector } from "@/lib/redux/hooks";
+import { setBrowserPanelWidth } from "@/lib/redux/slices/appSettingsSlice";
+import { setLayoutWidthVar } from "@/hooks/use-layout-width-vars";
+import { ResizeHandle } from "@/components/layout/resize-handle";
+import {
+  BROWSER_PANEL_WIDTH_VAR,
+  BROWSER_PANEL_WIDTH_MIN,
+  BROWSER_PANEL_WIDTH_MAX,
+  BROWSER_PANEL_WIDTH_DEFAULT,
+} from "@/lib/layout";
 
-export const BROWSER_PANEL_WIDTH = "38rem";
+/**
+ * The native browser view is inset from the panel's left edge by this much so
+ * the resize handle's column stays clear of it (the native view paints above
+ * the DOM, so anything it covers can't be grabbed).
+ */
+const RESIZE_HANDLE_WIDTH = 8;
 
 interface BrowserApi {
   attach: (bounds: {
@@ -87,6 +102,7 @@ export function BrowserPanel() {
   );
 
   const api = getBrowserApi();
+  const browserPanelWidth = useAppSelector((s) => s.appSettings.browserPanelWidth);
 
   // Drive animation state from isOpen
   useEffect(() => {
@@ -113,9 +129,9 @@ export function BrowserPanel() {
     if (!node || !api) return;
     const rect = node.getBoundingClientRect();
     api.setBounds({
-      x: Math.max(0, Math.round(rect.left)),
+      x: Math.max(0, Math.round(rect.left)) + RESIZE_HANDLE_WIDTH,
       y: Math.max(0, Math.round(rect.top)),
-      width: Math.max(1, Math.round(rect.width)),
+      width: Math.max(1, Math.round(rect.width) - RESIZE_HANDLE_WIDTH),
       height: Math.max(1, Math.round(rect.height)),
     });
   }, [api]);
@@ -140,9 +156,9 @@ export function BrowserPanel() {
       const rect = node.getBoundingClientRect();
       api
         .attach({
-          x: Math.max(0, Math.round(rect.left)),
+          x: Math.max(0, Math.round(rect.left)) + RESIZE_HANDLE_WIDTH,
           y: Math.max(0, Math.round(rect.top)),
-          width: Math.max(1, Math.round(rect.width)),
+          width: Math.max(1, Math.round(rect.width) - RESIZE_HANDLE_WIDTH),
           height: Math.max(1, Math.round(rect.height)),
         })
         .then(() => {
@@ -251,7 +267,7 @@ export function BrowserPanel() {
     return (
       <div
         className="fixed top-0 bottom-0 right-0 z-(--z-overlay) flex items-center justify-center  bg-primary-50 dark:bg-primary-950 border-l border-primary-200 dark:border-primary-800"
-        style={{ width: BROWSER_PANEL_WIDTH }}
+        style={{ width: "var(--browser-panel-width)" }}
       >
         <div className="text-primary-800 dark:text-primary-200 text-sm">
           Browser panel is unavailable in this build.
@@ -262,15 +278,31 @@ export function BrowserPanel() {
 
   return (
     <div
-      className="fixed top-1.25 bottom-1.25 right-1.25 dark:bg-primary-950 bg-primary rounded-tr-xl  z-9999 flex flex-col border-l border-primary-200/70 dark:border-primary-800/50 transition-all duration-300 ease-out overflow-hidden"
+      className="fixed top-1.25 bottom-1.25 right-1.25 dark:bg-primary-950 bg-primary rounded-tr-xl  z-9999 flex flex-col border-l border-primary-200/70 dark:border-primary-800/50 transition-[transform,opacity] duration-300 ease-out overflow-hidden"
       style={{
-        width: BROWSER_PANEL_WIDTH,
+        width: "var(--browser-panel-width)",
         transform: isAnimatedIn ? "translateX(0)" : "translateX(100%)",
         opacity: isAnimatedIn ? 1 : 0,
       }}
       role="complementary"
       aria-label="Embedded browser"
     >
+      <ResizeHandle
+        edge="left"
+        value={browserPanelWidth}
+        min={BROWSER_PANEL_WIDTH_MIN}
+        max={BROWSER_PANEL_WIDTH_MAX}
+        computeWidth={(clientX) => window.innerWidth - clientX}
+        onPreview={(w) => setLayoutWidthVar(BROWSER_PANEL_WIDTH_VAR, w)}
+        onCommit={(w) => dispatch(setBrowserPanelWidth(w))}
+        onReset={() => dispatch(setBrowserPanelWidth(BROWSER_PANEL_WIDTH_DEFAULT))}
+        onDragStart={() => void api.setVisible(false)}
+        onDragEnd={() => {
+          void api.setVisible(true);
+          syncBounds();
+        }}
+        ariaLabel="Resize browser panel"
+      />
       {/* Toolbar */}
       <div className="flex items-center gap-1 px-2 py-1.5 border-b border-primary-200/60 dark:border-primary-800/50 ">
         <Button

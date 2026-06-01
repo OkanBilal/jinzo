@@ -5,18 +5,12 @@
  */
 
 export interface ParsedSidebarConfig {
-  width?: string;
   title?: string;
   itemType?: string;
   defaultRoute?: string;
 }
 
-export interface ParsedMainConfig {
-  margin?: string;
-}
-
 export interface ParsedRightPanelConfig {
-  width?: string;
   component?: string;
 }
 
@@ -27,7 +21,6 @@ export interface ParsedRightPanelConfig {
  */
 export interface ParsedUiConfig {
   sidebar?: ParsedSidebarConfig;
-  main?: ParsedMainConfig;
   rightPanel?: ParsedRightPanelConfig;
 }
 
