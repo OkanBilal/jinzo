@@ -187,15 +187,33 @@ export interface PluginDetailResponse {
   mcpServers: string[];
 }
 
-export interface CodexAccountInfo {
+export interface AccountInfo {
   account: {
     type: "apiKey";
   } | {
     type: "chatgpt";
     email: string;
     planType: string;
+  } | {
+    type: "cursor";
+    email: string;
+    planType: string;
+  } | {
+    type: "claude";
+    email: string;
+    planType: string;
   } | null;
   requiresOpenaiAuth: boolean;
+  cli?: {
+    version: string | null;
+    channel: string | null;
+    outdated: boolean;
+  };
+}
+
+export interface CliUpdateResult {
+  success: boolean;
+  output: string;
 }
 
 export interface DetectedClis {
@@ -332,13 +350,24 @@ export const providersApi = baseApi.injectEndpoints({
       ],
     }),
 
-    getProviderAccountInfo: builder.query<CodexAccountInfo, string>({
+    getProviderAccountInfo: builder.query<AccountInfo, string>({
       query: (id) => ({
         handler: CHANNELS.providers.getAccountInfo,
         args: [id],
       }),
-      transformResponse: (response: ServiceResponse<CodexAccountInfo>) =>
+      transformResponse: (response: ServiceResponse<AccountInfo>) =>
         response.success ? response.data : { account: null, requiresOpenaiAuth: false },
+      providesTags: (_result, _error, id) => [{ type: "ProviderAccountInfo", id }],
+    }),
+
+    updateProviderCli: builder.mutation<CliUpdateResult, string>({
+      query: (id) => ({
+        handler: CHANNELS.providers.updateCli,
+        args: [id],
+      }),
+      transformResponse: (response: ServiceResponse<CliUpdateResult>) => unwrap(response),
+      // After updating, the version/account info may change — refetch it.
+      invalidatesTags: (_result, _error, id) => [{ type: "ProviderAccountInfo", id }],
     }),
 
     getProviderPlugins: builder.query<PluginListResponse, string>({
@@ -431,6 +460,7 @@ export const {
   useGetProviderSkillsQuery,
   useLazyGetProviderSkillsQuery,
   useGetProviderAccountInfoQuery,
+  useUpdateProviderCliMutation,
   useGetProviderPluginsQuery,
   useReadProviderPluginQuery,
   useInstallProviderPluginMutation,

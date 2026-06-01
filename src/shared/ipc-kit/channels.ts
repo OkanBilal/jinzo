@@ -153,6 +153,8 @@ export const CHANNELS = {
     getCommands: "providers:getCommands",
     getEnabled: "providers:getEnabled",
     getModels: "providers:getModels",
+    /** Push: emitted when async model-capability discovery enriches the model list. */
+    modelsUpdated: "providers:modelsUpdated",
     getPlugins: "providers:getPlugins",
     getRateLimits: "providers:getRateLimits",
     getSkills: "providers:getSkills",
@@ -160,6 +162,7 @@ export const CHANNELS = {
     readPlugin: "providers:readPlugin",
     uninstallPlugin: "providers:uninstallPlugin",
     update: "providers:update",
+    updateCli: "providers:updateCli",
   },
   pulse: {
     create: "pulse:create",

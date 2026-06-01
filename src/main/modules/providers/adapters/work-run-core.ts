@@ -213,6 +213,7 @@ export function createWorkRunAdapter(driver: ProviderDriver): WorkRunAdapter {
     adapter.getRateLimits = driver.getRateLimits.bind(driver);
   if (driver.getAccountInfo)
     adapter.getAccountInfo = driver.getAccountInfo.bind(driver);
+  if (driver.updateCli) adapter.updateCli = driver.updateCli.bind(driver);
   if (driver.listPlugins) adapter.listPlugins = driver.listPlugins.bind(driver);
   if (driver.readPlugin) adapter.readPlugin = driver.readPlugin.bind(driver);
   if (driver.installPlugin)

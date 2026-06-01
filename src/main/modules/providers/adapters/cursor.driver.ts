@@ -22,9 +22,15 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
+import fs from "node:fs";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
+import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 import { findCursorBinaryPath } from "../providers.utils";
 import type {
   AcquiredSession,
+  CliUpdateResult,
+  AccountInfo,
+  CommandInfo,
   CursorAdapterConfig,
   DriverOutcome,
   ModelInfo,
@@ -33,8 +39,8 @@ import type {
   WorkRunContinueRequest,
   WorkRunEvent,
   WorkRunEventHandler,
+  WorkRunForkRequest,
   WorkRunRequest,
-  WorkRunUsage,
 } from "../../../../shared/adapter.types";
 import { requestToolApproval } from "../../runs/user-input-broker";
 import { runsRepo } from "../../runs/runs.repo";
@@ -391,6 +397,278 @@ class CursorAcpServer {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Parameterized model picker — config option parsing
+//
+// When the client advertises `_meta.parameterizedModelPicker: true` in the ACP
+// `initialize` handshake, `cursor agent` returns a `configOptions` array on the
+// `session/new` and `session/set_config_option` responses. Each entry is a
+// `select`/`boolean` describing a tunable: the active model, reasoning effort,
+// context window, fast mode, thinking. We mine these to (a) surface effort
+// levels in the model picker and (b) push the user's effort/fast/thinking
+// choices back via `session/set_config_option`. Mirrors t3code's CursorProvider
+// parsing (apps/server/src/provider/Layers/CursorProvider.ts).
+// ─────────────────────────────────────────────────────────────
+
+export type CursorEffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
+
+/** A single ACP session config option (select/boolean tunable). */
+export interface CursorConfigOption {
+  id: string;
+  name?: string;
+  category?: string;
+  type?: string;
+  currentValue?: unknown;
+  options?: Array<
+    | { value?: string; name?: string; label?: string }
+    | { options?: Array<{ value?: string; name?: string; label?: string }> }
+  >;
+}
+
+interface CursorSelectChoice {
+  value: string;
+  name: string;
+}
+
+/** The user's tunable selections, resolved from per-run snapshot + provider config. */
+export interface CursorSelection {
+  effort?: string;
+  fastMode?: boolean;
+  thinking?: boolean;
+}
+
+/** Flatten a `select` config option's (possibly grouped) choices to `{value, name}`. */
+export function flattenCursorSelectOptions(
+  option: CursorConfigOption | undefined,
+): CursorSelectChoice[] {
+  if (!option || option.type !== "select" || !Array.isArray(option.options)) return [];
+  const out: CursorSelectChoice[] = [];
+  for (const entry of option.options) {
+    if (!entry || typeof entry !== "object") continue;
+    if ("value" in entry && typeof entry.value === "string") {
+      const name = entry.name ?? entry.label ?? entry.value;
+      out.push({ value: entry.value.trim(), name: name.trim() });
+      continue;
+    }
+    if ("options" in entry && Array.isArray(entry.options)) {
+      for (const nested of entry.options) {
+        if (nested && typeof nested === "object" && typeof nested.value === "string") {
+          const name = nested.name ?? nested.label ?? nested.value;
+          out.push({ value: nested.value.trim(), name: name.trim() });
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/** Normalize a cursor reasoning token to mains' canonical effort vocabulary. */
+export function normalizeCursorReasoning(value: unknown): CursorEffortLevel | undefined {
+  const n = typeof value === "string" ? value.trim().toLowerCase() : "";
+  switch (n) {
+    case "low":
+    case "medium":
+    case "high":
+    case "max":
+      return n;
+    case "xhigh":
+    case "extra-high":
+    case "extra high":
+      return "xhigh";
+    default:
+      return undefined;
+  }
+}
+
+function configOptionCategory(o: CursorConfigOption): string {
+  return (o.category ?? "").trim().toLowerCase();
+}
+
+function idOrNameMatches(o: CursorConfigOption, ...keywords: string[]): boolean {
+  const id = o.id.trim().toLowerCase();
+  const name = (o.name ?? "").trim().toLowerCase();
+  return keywords.some((k) => id === k || name === k || name.includes(k));
+}
+
+export function findCursorModelOption(
+  opts: CursorConfigOption[],
+): CursorConfigOption | undefined {
+  return opts.find((o) => o.category === "model");
+}
+
+export function findCursorEffortOption(
+  opts: CursorConfigOption[],
+): CursorConfigOption | undefined {
+  const candidates = opts.filter(
+    (o) => o.type === "select" && idOrNameMatches(o, "effort", "reasoning"),
+  );
+  return (
+    candidates.find((o) => configOptionCategory(o) === "model_option") ??
+    candidates.find((o) => o.id.trim().toLowerCase() === "effort") ??
+    candidates.find((o) => configOptionCategory(o) === "thought_level") ??
+    candidates[0]
+  );
+}
+
+export function findCursorFastOption(
+  opts: CursorConfigOption[],
+): CursorConfigOption | undefined {
+  return opts.find(
+    (o) =>
+      o.category === "model_config" &&
+      (o.id.trim().toLowerCase() === "fast" ||
+        (o.name ?? "").trim().toLowerCase() === "fast" ||
+        (o.name ?? "").trim().toLowerCase().includes("fast mode")),
+  );
+}
+
+export function findCursorThinkingOption(
+  opts: CursorConfigOption[],
+): CursorConfigOption | undefined {
+  return opts.find(
+    (o) =>
+      o.category === "model_config" &&
+      (o.id.trim().toLowerCase() === "thinking" ||
+        (o.name ?? "").trim().toLowerCase().includes("thinking")),
+  );
+}
+
+/** Distinct, normalized effort levels advertised by a config-option set (UI order preserved). */
+export function extractCursorEffortLevels(
+  opts: CursorConfigOption[] | undefined,
+): CursorEffortLevel[] {
+  if (!opts || opts.length === 0) return [];
+  const opt = findCursorEffortOption(opts);
+  if (!opt) return [];
+  const seen = new Set<CursorEffortLevel>();
+  const out: CursorEffortLevel[] = [];
+  for (const c of flattenCursorSelectOptions(opt)) {
+    const lvl = normalizeCursorReasoning(c.value) ?? normalizeCursorReasoning(c.name);
+    if (lvl && !seen.has(lvl)) {
+      seen.add(lvl);
+      out.push(lvl);
+    }
+  }
+  return out;
+}
+
+/** Resolve the advertised `select` value for a requested effort level (or undefined). */
+export function resolveCursorEffortValue(
+  opt: CursorConfigOption,
+  requested: CursorEffortLevel,
+): string | undefined {
+  return flattenCursorSelectOptions(opt).find(
+    (c) =>
+      normalizeCursorReasoning(c.value) === requested ||
+      normalizeCursorReasoning(c.name) === requested,
+  )?.value;
+}
+
+/** Resolve the advertised value (select or native boolean) for a requested toggle. */
+export function resolveCursorBooleanValue(
+  opt: CursorConfigOption,
+  requested: boolean,
+): string | boolean | undefined {
+  if (opt.type === "boolean") return requested;
+  return flattenCursorSelectOptions(opt).find(
+    (c) => c.value.trim().toLowerCase() === String(requested),
+  )?.value;
+}
+
+/**
+ * Split a mains model spec into its base ACP model id and any encoded `fast`
+ * flag. mains' catalog encodes fast mode in the model string itself (e.g.
+ * `composer-2.5[fast=true]`), but the parameterized picker advertises the base
+ * id (`composer-2.5`) with `fast` as a separate config option — so we strip the
+ * `[...]` suffix before sending it and fold the encoded flag into the selection.
+ * Mirrors t3code's `resolveCursorAcpBaseModelId`.
+ */
+export function splitCursorModelSpec(model: string | null | undefined): {
+  baseId: string | undefined;
+  fast?: boolean;
+} {
+  const trimmed = typeof model === "string" ? model.trim() : "";
+  if (!trimmed) return { baseId: undefined };
+  const bracket = trimmed.indexOf("[");
+  if (bracket < 0) return { baseId: trimmed };
+  const baseId = trimmed.slice(0, bracket).trim() || undefined;
+  const suffix = trimmed.slice(bracket).toLowerCase();
+  if (/\bfast\s*=\s*true\b/.test(suffix)) return { baseId, fast: true };
+  if (/\bfast\s*=\s*false\b/.test(suffix)) return { baseId, fast: false };
+  return { baseId };
+}
+
+/**
+ * Per-model capabilities mined from that model's `configOptions`.
+ *
+ * IMPORTANT: cursor-agent only exposes the *active* model's effort/fast options,
+ * and effort availability is genuinely per-model (e.g. `composer-2.5` exposes
+ * `fast` but no reasoning effort; `claude-opus-4-8` exposes `effort`
+ * low/medium/high/xhigh/max; `gpt-5.5` exposes `reasoning` none/low/…/extra-high).
+ * So caps must be discovered by selecting each model — they cannot be inferred
+ * from a single response. This is the cache value the background probe fills.
+ */
+export interface CursorModelCaps {
+  effortLevels: CursorEffortLevel[];
+  hasFast: boolean;
+}
+
+/** Mine a single model's capabilities from its (post-selection) config options. */
+export function extractCursorModelCaps(
+  configOptions: CursorConfigOption[] | undefined,
+): CursorModelCaps {
+  return {
+    effortLevels: extractCursorEffortLevels(configOptions),
+    hasFast: configOptions ? !!findCursorFastOption(configOptions) : false,
+  };
+}
+
+/** Build a `ModelInfo` from a model id/name and its discovered capabilities. */
+export function buildCursorModelInfo(
+  id: string,
+  displayName: string,
+  isDefault: boolean,
+  caps: CursorModelCaps | undefined,
+): ModelInfo {
+  const effortLevels = caps?.effortLevels ?? [];
+  return {
+    id,
+    displayName: displayName || id,
+    isDefault,
+    ...(effortLevels.length > 0
+      ? { supportsEffort: true, supportedEffortLevels: effortLevels }
+      : {}),
+    ...(caps?.hasFast ? { supportsFastMode: true } : {}),
+  };
+}
+
+/** Merge per-run snapshot overrides over provider config into a resolved selection. */
+export function resolveCursorSelection(
+  overrides: Record<string, unknown>,
+  config: Pick<CursorAdapterConfig, "effortLevel" | "fastMode" | "thinking">,
+): CursorSelection {
+  const effort =
+    (typeof overrides.effortLevel === "string" && overrides.effortLevel) ||
+    (typeof overrides.reasoning === "string" && overrides.reasoning) ||
+    config.effortLevel ||
+    undefined;
+  const fastMode =
+    typeof overrides.fastMode === "boolean"
+      ? overrides.fastMode
+      : typeof config.fastMode === "boolean"
+        ? config.fastMode
+        : undefined;
+  const thinking =
+    typeof overrides.thinking === "boolean"
+      ? overrides.thinking
+      : typeof overrides.thinkingMode === "boolean"
+        ? overrides.thinkingMode
+        : typeof config.thinking === "boolean"
+          ? config.thinking
+          : undefined;
+  return { effort, fastMode, thinking };
+}
+
+// ─────────────────────────────────────────────────────────────
 // Driver factory
 // ─────────────────────────────────────────────────────────────
 
@@ -400,24 +678,20 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
 
   // Cross-run memos
   const sessionIdMap = new Map<string, string>(); // runId → cursor sessionId
-  const usageAccumulator = new Map<
-    string,
-    { inputTokens: number; outputTokens: number; numTurns: number; model: string }
-  >();
 
-  function flushUsage(runId: string): WorkRunUsage | undefined {
-    const acc = usageAccumulator.get(runId);
-    usageAccumulator.delete(runId);
-    if (!acc || (acc.inputTokens === 0 && acc.outputTokens === 0)) {
-      return undefined;
-    }
-    return {
-      inputTokens: acc.inputTokens,
-      outputTokens: acc.outputTokens,
-      numTurns: acc.numTurns,
-      model: acc.model || undefined,
-    };
-  }
+  // Per-model capability cache (modelId → caps). Effort/fast are per-model and
+  // cost a ~1.5s round-trip each to discover, so we cache them, persist across
+  // launches, and fill them in the background. `capsAttempted` prevents
+  // re-probing models that failed/returned nothing within a single session.
+  const modelCapsCache = new Map<string, CursorModelCaps>();
+  const capsAttempted = new Set<string>();
+  let capsCacheLoaded = false;
+  let enrichmentInFlight = false;
+  const CAPS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  // Slash commands, cached per cwd. Cursor streams them via the
+  // `available_commands_update` notification (not in the session/new response).
+  const commandCacheByCwd = new Map<string, CommandInfo[]>();
 
   function findCursorBinary(): string {
     if (config.binary) return config.binary;
@@ -445,13 +719,7 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
     return mcpServer;
   }
 
-  async function ensureServer(): Promise<CursorAcpServer> {
-    if (acpServer?.isRunning) return acpServer;
-
-    const binaryPath = findCursorBinary();
-    logInfo(`Starting ACP server: ${binaryPath} acp`);
-
-    const server = new CursorAcpServer();
+  function buildAcpEnv(binaryPath: string): Record<string, string> {
     const env: Record<string, string> = {};
     env.HOME = os.homedir();
 
@@ -468,21 +736,30 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
     } else if (process.env.CURSOR_API_KEY) {
       env.CURSOR_API_KEY = process.env.CURSOR_API_KEY;
     }
+    return env;
+  }
 
-    await server.start(binaryPath, env);
-    acpServer = server;
-
-    server.setOnClose(() => {
-      if (acpServer === server) {
-        acpServer = null;
-      }
-    });
+  /**
+   * Spawn an `agent acp` process and run the ACP handshake (initialize +
+   * authenticate), returning the ready server. Does NOT touch the shared
+   * `acpServer` field, so it's safe to use for isolated, throwaway probe
+   * processes as well as the long-lived run server.
+   */
+  async function startInitializedServer(): Promise<CursorAcpServer> {
+    const binaryPath = findCursorBinary();
+    const server = new CursorAcpServer();
+    await server.start(binaryPath, buildAcpEnv(binaryPath));
 
     // ACP handshake
     const initResult = (await server.sendRequest("initialize", {
       protocolVersion: 1,
       clientInfo: { name: "mains", title: "Mains Desktop", version: "1.0.0" },
       clientCapabilities: {
+        // Opt into the parameterized model picker so `session/new` and
+        // `session/set_config_option` return a `configOptions` array (model +
+        // reasoning effort + fast/thinking tunables). Drives effort discovery
+        // in listModels and effort application in configureSession.
+        _meta: { parameterizedModelPicker: true },
         cursorExtensions: {
           askQuestion: true,
           createPlan: true,
@@ -497,12 +774,153 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
     const authMethods = initResult?.authMethods as Array<{ id: string }> | undefined;
     if (authMethods && authMethods.length > 0) {
       const methodId = authMethods[0].id;
-      logInfo(`Authenticating with method: ${methodId}`);
       await server.sendRequest("authenticate", { methodId });
     }
+    return server;
+  }
+
+  async function ensureServer(): Promise<CursorAcpServer> {
+    if (acpServer?.isRunning) return acpServer;
+
+    logInfo("Starting ACP server: agent acp");
+    const server = await startInitializedServer();
+    acpServer = server;
+
+    server.setOnClose(() => {
+      if (acpServer === server) {
+        acpServer = null;
+      }
+    });
 
     logInfo("ACP server initialized and authenticated");
     return server;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Model capability discovery (background, isolated process)
+  // ─────────────────────────────────────────────────────────────
+
+  function capsCacheFile(): string {
+    try {
+      // Lazy require: keeps `electron` out of the module's load-time deps so the
+      // pure-function unit tests can import this file without an Electron runtime.
+      const { app } = require("electron") as typeof import("electron");
+      return path.join(app.getPath("userData"), "cursor-model-caps.json");
+    } catch {
+      return path.join(os.tmpdir(), "cursor-model-caps.json");
+    }
+  }
+
+  function loadCapsCache(): void {
+    if (capsCacheLoaded) return;
+    capsCacheLoaded = true;
+    try {
+      const raw = fs.readFileSync(capsCacheFile(), "utf8");
+      const data = JSON.parse(raw) as {
+        ts?: number;
+        models?: Record<string, CursorModelCaps>;
+      };
+      if (!data?.models) return;
+      if (data.ts && Date.now() - data.ts > CAPS_TTL_MS) return; // stale → re-probe
+      for (const [id, caps] of Object.entries(data.models)) {
+        if (caps && Array.isArray(caps.effortLevels)) {
+          modelCapsCache.set(id, { effortLevels: caps.effortLevels, hasFast: !!caps.hasFast });
+        }
+      }
+    } catch {
+      /* no cache yet — first run */
+    }
+  }
+
+  function saveCapsCache(): void {
+    try {
+      const models: Record<string, CursorModelCaps> = {};
+      for (const [id, caps] of modelCapsCache) models[id] = caps;
+      fs.writeFileSync(
+        capsCacheFile(),
+        JSON.stringify({ ts: Date.now(), models }),
+        "utf8",
+      );
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  function broadcastModelsUpdated(): void {
+    try {
+      const { BrowserWindow } = require("electron") as typeof import("electron");
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send(CHANNELS.providers.modelsUpdated, {
+            providerId: PROVIDER_IDS.cursor,
+          });
+        }
+      }
+    } catch {
+      /* main-process only; ignored in tests */
+    }
+  }
+
+  /**
+   * Probe each model's capabilities on a DEDICATED, throwaway `agent acp`
+   * process — never the shared run server. cursor-agent keeps a single global
+   * "current model" per process, so switching models on the run server would
+   * corrupt an in-flight run. Sequential within the probe (the agent serializes
+   * model state); results are cached, persisted, and broadcast on completion.
+   */
+  async function enrichModelCaps(modelConfigId: string, modelIds: string[]): Promise<void> {
+    if (enrichmentInFlight) return;
+    const todo = modelIds.filter((id) => !modelCapsCache.has(id) && !capsAttempted.has(id));
+    if (todo.length === 0) return;
+    enrichmentInFlight = true;
+    let probe: CursorAcpServer | null = null;
+    try {
+      probe = await startInitializedServer();
+      const sn = (await probe.sendRequest("session/new", {
+        cwd: os.homedir(),
+        mcpServers: [],
+      })) as Record<string, unknown>;
+      const sessionId = sn?.sessionId as string | undefined;
+      if (!sessionId) return;
+
+      let changed = false;
+      for (const id of todo) {
+        capsAttempted.add(id);
+        try {
+          const res = (await probe.sendRequest(
+            "session/set_config_option",
+            { sessionId, configId: modelConfigId, value: id },
+            15000,
+          )) as Record<string, unknown> | undefined;
+          const caps = extractCursorModelCaps(
+            res?.configOptions as CursorConfigOption[] | undefined,
+          );
+          modelCapsCache.set(id, caps);
+          changed = true;
+        } catch {
+          /* leave uncached; retried on a future launch */
+        }
+      }
+
+      if (changed) {
+        saveCapsCache();
+        broadcastModelsUpdated();
+        logInfo(`Enriched ${todo.length} cursor model capabilities`);
+      }
+    } catch (error) {
+      logWarn(
+        `Model capability enrichment failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      if (probe) {
+        try {
+          await probe.stop();
+        } catch {
+          /* ignore */
+        }
+      }
+      enrichmentInFlight = false;
+    }
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -1258,27 +1676,159 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
     return prompt;
   }
 
+  /**
+   * Reconstruct a compact transcript of a source run from mains' stored data —
+   * the original goal plus the assistant's persisted messages. Used to seed a
+   * forked session, since cursor-agent has no native server-side fork.
+   */
+  async function buildSourceTranscript(sourceRunId: string): Promise<string | null> {
+    try {
+      const [run, artifacts] = await Promise.all([
+        runsRepo.findRunById(sourceRunId),
+        runsRepo.findArtifactsByRun(sourceRunId),
+      ]);
+      const parts: string[] = [];
+      if (run?.goal?.trim()) parts.push(`## Original task\n${run.goal.trim()}`);
+
+      const assistantMessages = artifacts
+        .filter(
+          (a) =>
+            a.kind === "report" &&
+            (a.metadata as { source?: string } | null)?.source === "agent_message" &&
+            a.content?.trim(),
+        )
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .map((a) => (a.content ?? "").trim());
+
+      if (assistantMessages.length > 0) {
+        let joined = assistantMessages.join("\n\n");
+        const MAX = 6000;
+        if (joined.length > MAX) {
+          joined = `…(earlier output truncated)…\n\n${joined.slice(-MAX)}`;
+        }
+        parts.push(`## Previous assistant work\n${joined}`);
+      }
+      return parts.length > 0 ? parts.join("\n\n") : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function buildForkPrompt(request: WorkRunForkRequest): Promise<string> {
+    const transcript = await buildSourceTranscript(request.sourceRunId);
+    const preamble = transcript
+      ? "This run was forked from a previous Cursor conversation. Cursor has no native " +
+        "session fork, so the prior context is replayed below for continuity.\n\n" +
+        `${transcript}\n\n---\n\n`
+      : "";
+
+    let body = request.message;
+    if (request.context && request.context.length > 0) {
+      body = `Context:\n${formatContextSection(request.context)}\n\n---\n\n${request.message}`;
+    }
+
+    let prompt = `${preamble}${body}`;
+    if (request.attachments && request.attachments.length > 0) {
+      const { savedPaths, inlineTexts } = saveAttachments(request.attachments, request.runId);
+      if (inlineTexts.length > 0) {
+        prompt = `${prompt}\n\n---\n\nAttached documents:\n${inlineTexts.join("\n\n")}`;
+      }
+      if (savedPaths.length > 0) {
+        prompt = `${prompt}\n\n---\n\nAttached files:\n${savedPaths.map((p) => `- ${p}`).join("\n")}`;
+      }
+    }
+    return prompt;
+  }
+
   // ─────────────────────────────────────────────────────────────
   // Acquire a session — shared by createSession + resumeSession
   // ─────────────────────────────────────────────────────────────
+
+  async function setConfigOption(
+    server: CursorAcpServer,
+    sessionId: string,
+    configId: string,
+    value: string | boolean,
+  ): Promise<CursorConfigOption[] | undefined> {
+    const res = (await server.sendRequest("session/set_config_option", {
+      sessionId,
+      configId,
+      value,
+    })) as Record<string, unknown> | undefined;
+    const updated = res?.configOptions as CursorConfigOption[] | undefined;
+    return Array.isArray(updated) && updated.length > 0 ? updated : undefined;
+  }
 
   async function configureSession(
     server: CursorAcpServer,
     sessionId: string,
     model: string | undefined,
     mode: string | undefined,
+    sessionConfigOptions: CursorConfigOption[] | undefined,
+    selection: CursorSelection,
   ): Promise<void> {
-    if (model) {
+    // configOptions reflect the *active* model. Setting the model returns the
+    // freshly-parameterized set, which we then mine for the effort/fast options.
+    let configOptions = sessionConfigOptions ?? [];
+    const spec = splitCursorModelSpec(model);
+
+    if (spec.baseId) {
       try {
-        await server.sendRequest("session/set_config_option", {
+        const modelOption = findCursorModelOption(configOptions);
+        const updated = await setConfigOption(
+          server,
           sessionId,
-          configId: "model",
-          value: model,
-        });
+          modelOption?.id ?? "model",
+          spec.baseId,
+        );
+        if (updated) configOptions = updated;
       } catch {
-        logWarn(`Failed to set model to ${model}, using default`);
+        logWarn(`Failed to set model to ${spec.baseId}, using default`);
       }
     }
+
+    // Reasoning / effort
+    const effort = normalizeCursorReasoning(selection.effort);
+    if (effort) {
+      const opt = findCursorEffortOption(configOptions);
+      const value = opt ? resolveCursorEffortValue(opt, effort) : undefined;
+      if (opt && value !== undefined) {
+        try {
+          await setConfigOption(server, sessionId, opt.id, value);
+        } catch {
+          logWarn(`Failed to set reasoning effort to ${effort}`);
+        }
+      }
+    }
+
+    // Fast mode — explicit selection wins; otherwise honor a `[fast=…]` suffix
+    // encoded in the model spec (e.g. the catalog default `composer-2.5[fast=true]`).
+    const fastMode = typeof selection.fastMode === "boolean" ? selection.fastMode : spec.fast;
+    if (typeof fastMode === "boolean") {
+      const opt = findCursorFastOption(configOptions);
+      const value = opt ? resolveCursorBooleanValue(opt, fastMode) : undefined;
+      if (opt && value !== undefined) {
+        try {
+          await setConfigOption(server, sessionId, opt.id, value);
+        } catch {
+          logWarn("Failed to set fast mode");
+        }
+      }
+    }
+
+    // Thinking
+    if (typeof selection.thinking === "boolean") {
+      const opt = findCursorThinkingOption(configOptions);
+      const value = opt ? resolveCursorBooleanValue(opt, selection.thinking) : undefined;
+      if (opt && value !== undefined) {
+        try {
+          await setConfigOption(server, sessionId, opt.id, value);
+        } catch {
+          logWarn("Failed to set thinking");
+        }
+      }
+    }
+
     if (mode && mode !== "agent") {
       try {
         await server.sendRequest("session/set_mode", {
@@ -1291,6 +1841,47 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
     }
   }
 
+  /**
+   * Run `agent about`, preferring `--format json` and falling back to plain
+   * text when an older CLI doesn't recognize the flag/subcommand.
+   */
+  async function runAgentAbout(): Promise<{ stdout: string; stderr: string }> {
+    const binaryPath = findCursorBinary();
+    const env: Record<string, string | undefined> = {
+      ...process.env,
+      HOME: os.homedir(),
+      PATH: [
+        path.dirname(binaryPath),
+        path.join(os.homedir(), ".local", "bin"),
+        "/usr/local/bin",
+        "/opt/homebrew/bin",
+        process.env.PATH || "",
+      ].join(":"),
+    };
+    if (config.apiKey) env.CURSOR_API_KEY = config.apiKey;
+
+    const run = (args: string[]) =>
+      new Promise<{ stdout: string; stderr: string }>((resolve) => {
+        const child = spawn(binaryPath, args, {
+          env,
+          stdio: ["ignore", "pipe", "pipe"],
+          timeout: 8000,
+        });
+        let stdout = "";
+        let stderr = "";
+        child.stdout?.on("data", (d: Buffer) => (stdout += d.toString()));
+        child.stderr?.on("data", (d: Buffer) => (stderr += d.toString()));
+        child.on("close", () => resolve({ stdout, stderr }));
+        child.on("error", (err) => resolve({ stdout, stderr: String(err) }));
+      });
+
+    const json = await run(["about", "--format", "json"]);
+    if (parseCursorAbout(json.stdout, json.stderr).commandUnsupported) {
+      return run(["about"]);
+    }
+    return json;
+  }
+
   // ─────────────────────────────────────────────────────────────
   // ProviderDriver implementation
   // ─────────────────────────────────────────────────────────────
@@ -1299,9 +1890,11 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
     async createSession(request: WorkRunRequest): Promise<AcquiredSession> {
       const { runId } = request;
       const resolvedModel = request.model || config.defaultModel || undefined;
-      const overrideMode = ((request.configSnapshot ?? {}) as Record<string, unknown>).mode;
+      const overrides = (request.configSnapshot ?? {}) as Record<string, unknown>;
+      const overrideMode = overrides.mode;
       const effectiveMode =
         (typeof overrideMode === "string" && overrideMode) || config.mode;
+      const selection = resolveCursorSelection(overrides, config);
 
       const mainsCtx: MainsToolContext = {
         workspaceId: request.workspace.id,
@@ -1325,7 +1918,17 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
       }
       sessionIdMap.set(runId, sessionId);
 
-      await configureSession(server, sessionId, resolvedModel, effectiveMode);
+      const sessionConfigOptions = sessionResult?.configOptions as
+        | CursorConfigOption[]
+        | undefined;
+      await configureSession(
+        server,
+        sessionId,
+        resolvedModel,
+        effectiveMode,
+        sessionConfigOptions,
+        selection,
+      );
 
       const session: CursorSession = {
         runId,
@@ -1368,8 +1971,9 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         throw new Error(`No session found for run ${runId}. Cannot resume.`);
       }
 
+      let loadResult: Record<string, unknown> | undefined;
       try {
-        await server.sendRequest(
+        loadResult = (await server.sendRequest(
           "session/load",
           {
             sessionId,
@@ -1377,7 +1981,7 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
             mcpServers: mcpServersConfig,
           },
           30000,
-        );
+        )) as Record<string, unknown>;
       } catch (loadErr) {
         const errMsg = loadErr instanceof Error ? loadErr.message : String(loadErr);
         if (/not found|unknown|does not exist/i.test(errMsg)) {
@@ -1386,6 +1990,7 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
             cwd: request.workspace.rootPath,
             mcpServers: mcpServersConfig,
           })) as Record<string, unknown>;
+          loadResult = newResult;
           const newId = newResult?.sessionId as string | undefined;
           if (newId) {
             sessionId = newId;
@@ -1396,7 +2001,19 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         }
       }
 
-      await configureSession(server, sessionId, resolvedModel, config.mode);
+      // Continue requests carry no per-run snapshot, so selections come from
+      // the persisted provider config only.
+      const sessionConfigOptions = loadResult?.configOptions as
+        | CursorConfigOption[]
+        | undefined;
+      await configureSession(
+        server,
+        sessionId,
+        resolvedModel,
+        config.mode,
+        sessionConfigOptions,
+        resolveCursorSelection({}, config),
+      );
 
       const session: CursorSession = {
         runId,
@@ -1410,6 +2027,63 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
       return {
         session,
         prompt: buildContinuePrompt(request),
+        sessionId,
+      };
+    },
+
+    async forkSession(request: WorkRunForkRequest): Promise<AcquiredSession> {
+      const { runId, sourceRunId } = request;
+      const resolvedModel = request.model || config.defaultModel || undefined;
+
+      // Cursor ACP has no native fork (`session/fork` is unsupported), so we
+      // create a fresh session and seed it with the source run's transcript.
+      // The original session is never touched — no cross-run contamination.
+      logInfo(
+        `Forking run ${sourceRunId} → ${runId} (seeded new session; cursor has no native fork)`,
+      );
+
+      const mainsCtx: MainsToolContext = {
+        workspaceId: request.workspace.id,
+        rootPath: request.workspace.rootPath,
+        runId,
+      };
+      const mainsMcp = await ensureMcpServer(mainsCtx);
+      const server = await ensureServer();
+
+      const sessionResult = (await server.sendRequest("session/new", {
+        cwd: request.workspace.rootPath,
+        mcpServers: mainsMcp ? [mainsMcp.mcpConfig] : [],
+      })) as Record<string, unknown>;
+      const sessionId = sessionResult?.sessionId as string | undefined;
+      if (!sessionId) {
+        throw new Error("Cursor did not return a sessionId from session/new");
+      }
+      sessionIdMap.set(runId, sessionId);
+
+      const sessionConfigOptions = sessionResult?.configOptions as
+        | CursorConfigOption[]
+        | undefined;
+      await configureSession(
+        server,
+        sessionId,
+        resolvedModel,
+        config.mode,
+        sessionConfigOptions,
+        resolveCursorSelection({}, config),
+      );
+
+      const session: CursorSession = {
+        runId,
+        sessionId,
+        agentMessageBuffer: "",
+        agentThoughtBuffer: "",
+        toolCallCache: new Map(),
+        skippedToolCallIds: new Set(),
+      };
+
+      return {
+        session,
+        prompt: await buildForkPrompt(request),
         sessionId,
       };
     },
@@ -1488,9 +2162,8 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
           streamId: `cursor-think-${cs.runId}`,
         });
 
-        const usage = flushUsage(cs.runId);
         const { status, summary } = mapStopReasonToOutcome(stopReason);
-        return { status, summary, stopReason, usage };
+        return { status, summary, stopReason };
       } finally {
         signal.removeEventListener("abort", onAbort);
       }
@@ -1513,12 +2186,10 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
 
     async deleteSession(runId: string): Promise<void> {
       sessionIdMap.delete(runId);
-      usageAccumulator.delete(runId);
     },
 
     async shutdown(): Promise<void> {
       sessionIdMap.clear();
-      usageAccumulator.clear();
 
       if (mcpServer) {
         await mcpServer.stop().catch(() => {});
@@ -1535,37 +2206,194 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
 
     async listModels(): Promise<ModelInfo[]> {
       try {
+        loadCapsCache();
         const server = await ensureServer();
         const result = (await server.sendRequest("session/new", {
           cwd: os.homedir(),
           mcpServers: [],
         })) as Record<string, unknown>;
 
+        const configOptions = result?.configOptions as CursorConfigOption[] | undefined;
+        const modelOption = configOptions ? findCursorModelOption(configOptions) : undefined;
+        const modelConfigId = modelOption?.id ?? "model";
+
+        // Model choices: prefer the parameterized model option; fall back to the
+        // legacy flat `models.availableModels` list (older CLI / untrusted cwd).
+        let choices = flattenCursorSelectOptions(modelOption);
         const modelsObj = result?.models as Record<string, unknown> | undefined;
-        const availableModels = modelsObj?.availableModels as
+        const legacyModels = modelsObj?.availableModels as
           | Array<Record<string, unknown>>
           | undefined;
-        const currentModelId = modelsObj?.currentModelId as string | undefined;
+        if (choices.length === 0 && Array.isArray(legacyModels)) {
+          choices = legacyModels
+            .map((m) => ({
+              value: String(m.modelId ?? m.id ?? ""),
+              name: String(m.name ?? m.modelId ?? ""),
+            }))
+            .filter((c) => c.value);
+        }
+        if (choices.length === 0) return [];
 
-        if (!availableModels || !Array.isArray(availableModels)) {
-          return [];
+        const currentModelId =
+          (typeof modelOption?.currentValue === "string"
+            ? modelOption.currentValue.trim()
+            : undefined) ?? (modelsObj?.currentModelId as string | undefined);
+
+        // The current model's options are already in this response — cache for free.
+        if (currentModelId && configOptions) {
+          modelCapsCache.set(currentModelId, extractCursorModelCaps(configOptions));
         }
 
-        return availableModels.map(
-          (m): ModelInfo => ({
-            id: m.modelId as string,
-            displayName: (m.name as string) || (m.modelId as string),
-            isDefault: (m.modelId as string) === (config.defaultModel ?? currentModelId),
-          }),
+        // Match the catalog default against the *base* id (defaults may carry a
+        // `[fast=true]` suffix the advertised model values don't have).
+        const defaultBase = config.defaultModel
+          ? splitCursorModelSpec(config.defaultModel).baseId
+          : currentModelId;
+
+        const seen = new Set<string>();
+        const deduped: Array<{ id: string; name: string }> = [];
+        for (const c of choices) {
+          const id = c.value.trim();
+          if (!id || seen.has(id)) continue;
+          seen.add(id);
+          deduped.push({ id, name: c.name });
+        }
+
+        const models = deduped.map((c) =>
+          buildCursorModelInfo(c.id, c.name, c.id === defaultBase, modelCapsCache.get(c.id)),
         );
+
+        // Discover the remaining models' capabilities in the background (isolated
+        // process). On completion it persists the cache and emits `modelsUpdated`,
+        // prompting the renderer to refetch with full effort/fast metadata.
+        const missing = deduped.map((c) => c.id).filter((id) => !modelCapsCache.has(id));
+        if (missing.length > 0) {
+          void enrichModelCaps(modelConfigId, missing);
+        }
+
+        return models;
       } catch (error) {
         logError("Failed to list models:", error);
         const msg = error instanceof Error ? error.message : String(error);
         if (/auth|login|unauthorized|token/i.test(msg)) {
-          throw new Error('Not authenticated. Run "cursor login" to sign in.');
+          throw new Error('Not authenticated. Run "agent login" to sign in.');
         }
         return [];
       }
+    },
+
+    async listCommands(workspacePath?: string): Promise<CommandInfo[]> {
+      const cwd = workspacePath || os.homedir();
+      const cached = commandCacheByCwd.get(cwd);
+      if (cached) return cached;
+
+      // Cursor streams commands via the `available_commands_update` notification
+      // shortly after `session/new`. Probe on a dedicated, throwaway process so
+      // we don't disturb the shared run server's notification routing.
+      let probe: CursorAcpServer | null = null;
+      try {
+        probe = await startInitializedServer();
+        const p = probe;
+        const commands = await new Promise<CommandInfo[]>((resolve) => {
+          let settled = false;
+          const finish = (cmds: CommandInfo[]) => {
+            if (settled) return;
+            settled = true;
+            resolve(cmds);
+          };
+          const timer = setTimeout(() => finish([]), 6000);
+          p.setNotificationHandler((method, params) => {
+            if (method !== "session/update") return;
+            const update = (params as Record<string, unknown>)?.update as
+              | Record<string, unknown>
+              | undefined;
+            if (update?.sessionUpdate === "available_commands_update") {
+              clearTimeout(timer);
+              finish(parseCursorCommands(update.availableCommands));
+            }
+          });
+          p.sendRequest("session/new", { cwd, mcpServers: [] }).catch(() => {
+            clearTimeout(timer);
+            finish([]);
+          });
+        });
+        if (commands.length > 0) commandCacheByCwd.set(cwd, commands);
+        return commands;
+      } catch (error) {
+        logWarn(
+          `listCommands failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return [];
+      } finally {
+        if (probe) {
+          try {
+            await probe.stop();
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    },
+
+    async getAccountInfo(): Promise<AccountInfo> {
+      try {
+        const { stdout, stderr } = await runAgentAbout();
+        const info = parseCursorAbout(stdout, stderr);
+        const cli = {
+          version: info.version,
+          channel: readCursorCliChannel(),
+          // Only flag genuinely-old CLIs (where `agent about` itself is
+          // unsupported); recent CLIs run the parameterized picker without `lab`.
+          outdated: info.commandUnsupported,
+        };
+        if (info.authenticated && info.email) {
+          return {
+            account: {
+              type: "cursor",
+              email: info.email,
+              planType: info.subscriptionTier ?? "",
+            },
+            requiresOpenaiAuth: false,
+            cli,
+          };
+        }
+        return { account: null, requiresOpenaiAuth: false, cli };
+      } catch (error) {
+        logWarn(
+          `getAccountInfo failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+      return { account: null, requiresOpenaiAuth: false };
+    },
+
+    async updateCli(): Promise<CliUpdateResult> {
+      const binaryPath = findCursorBinary();
+      const env: Record<string, string | undefined> = {
+        ...process.env,
+        HOME: os.homedir(),
+        PATH: [
+          path.dirname(binaryPath),
+          path.join(os.homedir(), ".local", "bin"),
+          "/usr/local/bin",
+          "/opt/homebrew/bin",
+          process.env.PATH || "",
+        ].join(":"),
+      };
+
+      return new Promise<CliUpdateResult>((resolve) => {
+        const child = spawn(binaryPath, ["update"], {
+          env,
+          stdio: ["ignore", "pipe", "pipe"],
+          timeout: 120000,
+        });
+        let out = "";
+        child.stdout?.on("data", (d: Buffer) => (out += d.toString()));
+        child.stderr?.on("data", (d: Buffer) => (out += d.toString()));
+        child.on("close", (code) => resolve({ success: code === 0, output: out.trim() }));
+        child.on("error", (err) =>
+          resolve({ success: false, output: String(err instanceof Error ? err.message : err) }),
+        );
+      });
     },
 
     async generateTitle(goal: string, context?: WorkRunContextItem[]): Promise<string> {
@@ -1664,6 +2492,32 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
 // Pure helpers exported for testing
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Map cursor's `available_commands_update` payload (`[{name, description}]`)
+ * to canonical `CommandInfo[]`, deduped by name.
+ */
+export function parseCursorCommands(raw: unknown): CommandInfo[] {
+  if (!Array.isArray(raw)) return [];
+  const out: CommandInfo[] = [];
+  const seen = new Set<string>();
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const name =
+      typeof (entry as { name?: unknown }).name === "string"
+        ? (entry as { name: string }).name.trim()
+        : "";
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    const rawDesc = (entry as { description?: unknown }).description;
+    out.push({
+      name,
+      description: typeof rawDesc === "string" ? rawDesc.trim() || undefined : undefined,
+      userFacing: true,
+    });
+  }
+  return out;
+}
+
 /** Map cursor's stopReason taxonomy to a DriverOutcome. */
 export function mapStopReasonToOutcome(stopReason: string | undefined): {
   status: DriverOutcome["status"];
@@ -1675,4 +2529,108 @@ export function mapStopReasonToOutcome(stopReason: string | undefined): {
   if (stopReason === "max_tokens")
     return { status: "succeeded", summary: "Response truncated (max tokens)" };
   return { status: "succeeded" };
+}
+
+// ─────────────────────────────────────────────────────────────
+// `agent about` parsing — auth / account / version probing
+//
+// `agent about [--format json]` reports the installed CLI version plus the
+// logged-in account (email + subscription tier). We use it for real auth
+// detection (vs. regex-on-error) and to surface account info in Settings.
+// Mirrors t3code's parseCursorAboutOutput (CursorProvider.ts).
+// ─────────────────────────────────────────────────────────────
+
+/** Parsed view of `agent about` output. `email` is null unless truly signed in. */
+export interface CursorAboutInfo {
+  version: string | null;
+  email: string | null;
+  subscriptionTier: string | null;
+  authenticated: boolean;
+  /** The CLI is too old to support `about` / `--format json`. */
+  commandUnsupported: boolean;
+}
+
+const CURSOR_NOT_LOGGED_IN_RE = /^not logged in$|login required|authentication required/i;
+
+function stripCursorAnsi(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/\x1b\[[0-9;]*[A-Za-z]|\x1b\].*?\x07/g, "");
+}
+
+/** Pull a value from `agent about` plain-text output: `CLI Version   2026.05.09`. */
+function extractCursorAboutField(plain: string, key: string): string | undefined {
+  return new RegExp(`^${key}\\s{2,}(.+)$`, "mi").exec(plain)?.[1]?.trim();
+}
+
+function normalizeCursorEmail(raw: string | undefined): string | null {
+  const email = (raw ?? "").trim();
+  return email && !CURSOR_NOT_LOGGED_IN_RE.test(email) ? email : null;
+}
+
+/** Best-effort read of the `channel` field from `~/.cursor/cli-config.json` (or null). */
+function readCursorCliChannel(): string | null {
+  try {
+    const raw = fs.readFileSync(path.join(os.homedir(), ".cursor", "cli-config.json"), "utf8");
+    const json = JSON.parse(raw) as { channel?: unknown };
+    return typeof json.channel === "string" && json.channel.trim() ? json.channel.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Parse `agent about` output (JSON form preferred, plain-text key/value fallback). */
+export function parseCursorAbout(stdout: string, stderr = ""): CursorAboutInfo {
+  const trimmed = (stdout ?? "").trim();
+
+  // Preferred: `--format json`
+  if (trimmed.startsWith("{")) {
+    try {
+      const j = JSON.parse(trimmed) as Record<string, unknown>;
+      const version = typeof j.cliVersion === "string" ? j.cliVersion.trim() : null;
+      const tier =
+        typeof j.subscriptionTier === "string" ? j.subscriptionTier.trim() || null : null;
+      const email = normalizeCursorEmail(
+        typeof j.userEmail === "string" ? j.userEmail : undefined,
+      );
+      return {
+        version,
+        subscriptionTier: tier,
+        email,
+        authenticated: !!email,
+        commandUnsupported: false,
+      };
+    } catch {
+      /* fall through to text parsing */
+    }
+  }
+
+  const combined = `${stdout ?? ""}\n${stderr ?? ""}`;
+  const lower = combined.toLowerCase();
+  if (
+    lower.includes("unknown command") ||
+    lower.includes("unrecognized command") ||
+    lower.includes("unexpected argument") ||
+    lower.includes("unknown option '--format'") ||
+    lower.includes("unrecognized option '--format'")
+  ) {
+    return {
+      version: null,
+      email: null,
+      subscriptionTier: null,
+      authenticated: false,
+      commandUnsupported: true,
+    };
+  }
+
+  const plain = stripCursorAnsi(combined);
+  const version = extractCursorAboutField(plain, "CLI Version") ?? null;
+  const tier = extractCursorAboutField(plain, "Subscription Tier") ?? null;
+  const email = normalizeCursorEmail(extractCursorAboutField(plain, "User Email"));
+  return {
+    version,
+    subscriptionTier: tier,
+    email,
+    authenticated: !!email,
+    commandUnsupported: false,
+  };
 }

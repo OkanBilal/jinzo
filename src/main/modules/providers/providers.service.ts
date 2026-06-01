@@ -8,7 +8,7 @@ import type {
   ServiceResponse,
   DetectedClisResponse,
 } from "./providers.dto";
-import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, getAccountInfoForProvider, listPluginsForProvider, readPluginForProvider, installPluginForProvider, uninstallPluginForProvider, getRateLimitsForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo, type PluginListResponse, type PluginDetail, type CodexAccountInfo } from "./adapters";
+import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, getAccountInfoForProvider, updateCliForProvider, listPluginsForProvider, readPluginForProvider, installPluginForProvider, uninstallPluginForProvider, getRateLimitsForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo, type PluginListResponse, type PluginDetail, type AccountInfo, type CliUpdateResult } from "./adapters";
 import type { RateLimitInfo } from "../../../shared/adapter.types";
 
 // ─────────────────────────────────────────────────────────────
@@ -207,7 +207,7 @@ export const providersService = {
     }
   },
 
-  async getAccountInfo(id: string): Promise<ServiceResponse<CodexAccountInfo>> {
+  async getAccountInfo(id: string): Promise<ServiceResponse<AccountInfo>> {
     try {
       const provider = await providersRepo.findById(id);
       if (!provider) return fail("Provider not found");
@@ -217,6 +217,19 @@ export const providersService = {
     } catch (error) {
       console.error(`[ProvidersService] Failed to get account info for ${id}:`, error);
       return fail(error instanceof Error ? error.message : "Failed to get account info");
+    }
+  },
+
+  async updateCli(id: string): Promise<ServiceResponse<CliUpdateResult>> {
+    try {
+      const provider = await providersRepo.findById(id);
+      if (!provider) return fail("Provider not found");
+      if (!provider.isEnabled) return fail("Provider is not enabled");
+      const result = await updateCliForProvider(provider);
+      return ok(result);
+    } catch (error) {
+      console.error(`[ProvidersService] Failed to update CLI for ${id}:`, error);
+      return fail(error instanceof Error ? error.message : "Failed to update CLI");
     }
   },
 

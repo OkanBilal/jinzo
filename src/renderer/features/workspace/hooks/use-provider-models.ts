@@ -8,7 +8,7 @@ import {
 } from "@/lib/redux/api/providersApi";
 import { setWorkspaceModel } from "@/lib/redux/slices/workspaceSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
-import { getModelPrettyName } from "@/lib/model-icons";
+import { dedupeModelsByPrettyName, getModelPrettyName } from "@/lib/model-icons";
 
 export function useProviderModels(
   activeProviderId: string,
@@ -162,9 +162,14 @@ export function useProviderModels(
     }
   }, [providerData, activeProviderId, updateProvider, variant]);
 
-  const modelDisplayNames = useMemo(
-    () => (providerModels ?? []).map((m) => getModelPrettyName(m, variant)),
+  const selectableModels = useMemo(
+    () => dedupeModelsByPrettyName(providerModels ?? [], variant),
     [providerModels, variant],
+  );
+
+  const modelDisplayNames = useMemo(
+    () => selectableModels.map((m) => getModelPrettyName(m, variant)),
+    [selectableModels, variant],
   );
 
   const selectedModel = externalSelectedModel ?? persistedModel ?? "";
@@ -199,6 +204,18 @@ export function useProviderModels(
     }
   }, [providerModels, selectedModel, setSelectedModel]);
 
+  // Background model-capability discovery (e.g. Cursor per-model effort levels)
+  // runs after the initial fast model list returns; refetch to pick up the
+  // enriched metadata when the main process signals it's ready.
+  useEffect(() => {
+    const off = window.api.providers.onModelsUpdated(({ providerId }) => {
+      if (providerId === activeProviderId) refetchModels();
+    });
+    return () => {
+      off();
+    };
+  }, [activeProviderId, refetchModels]);
+
   // Clamp effort level when switching to a model that doesn't support the current level
   useEffect(() => {
     if (!selectedModelInfo) return;
@@ -217,16 +234,14 @@ export function useProviderModels(
 
   const handleModelChange = useCallback(
     (prettyName: string) => {
-      if (providerModels) {
-        const model = providerModels.find((m) => getModelPrettyName(m, variant) === prettyName);
-        if (model) {
-          setSelectedModel(model.id);
-          return;
-        }
+      const model = selectableModels.find((m) => getModelPrettyName(m, variant) === prettyName);
+      if (model) {
+        setSelectedModel(model.id);
+        return;
       }
       setSelectedModel(prettyName);
     },
-    [providerModels, setSelectedModel, variant],
+    [selectableModels, setSelectedModel, variant],
   );
 
   return {

@@ -13,6 +13,7 @@ import {
 import {
   useGetProviderRateLimitsQuery,
   useGetProviderAccountInfoQuery,
+  useUpdateProviderCliMutation,
 } from "@/lib/redux/api";
 import { StructuredOutputsModal } from "./structured-outputs-modal";
 import type { CodexAdapterConfig } from "../../../../shared/adapter.types";
@@ -137,6 +138,20 @@ export default function CodexSettings(
     pollingInterval: 60000,
   });
   const { data: accountInfo, isLoading: isLoadingAccount } = useGetProviderAccountInfoQuery(PROVIDER_IDS.codex);
+  const cli = accountInfo?.cli;
+
+  const [updateCli, { isLoading: isUpdatingCli }] = useUpdateProviderCliMutation();
+  const [cliUpdateResult, setCliUpdateResult] = useState<string | null>(null);
+
+  const handleUpdateCli = async () => {
+    setCliUpdateResult(null);
+    try {
+      const res = await updateCli(PROVIDER_IDS.codex).unwrap();
+      setCliUpdateResult(res.success ? "Codex CLI updated." : res.output || "Update failed.");
+    } catch {
+      setCliUpdateResult("Update failed.");
+    }
+  };
 
   const [isStructuredOutputsModalOpen, setIsStructuredOutputsModalOpen] =
     useState(false);
@@ -200,6 +215,30 @@ export default function CodexSettings(
             <span className="text-xs text-primary-400 dark:text-primary-500">No account</span>
           </SettingsRow>
         )}
+      </SettingsSection>
+
+      {/* CLI version + self-update — `codex --version` / `codex update` */}
+      <SettingsSection title="CLI">
+        <SettingsRow
+          title="Codex CLI"
+          description={cli?.version ? `Version ${cli.version}` : "Version unknown"}
+        >
+          <div className="flex items-center gap-3">
+            {cliUpdateResult && (
+              <span className="text-xs text-primary-500 dark:text-primary-400">
+                {cliUpdateResult}
+              </span>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleUpdateCli}
+              disabled={isUpdatingCli}
+            >
+              {isUpdatingCli ? "Updating…" : "Update CLI"}
+            </Button>
+          </div>
+        </SettingsRow>
       </SettingsSection>
 
       <SettingsSection title="Configuration">

@@ -68,6 +68,10 @@ export function registerProvidersIpc(): void {
     return providersService.getAccountInfo(id);
   });
 
+  ipcMain.handle(CHANNELS.providers.updateCli, async (_, id: string) => {
+    return providersService.updateCli(id);
+  });
+
   ipcMain.handle(CHANNELS.providers.getPlugins, async (_, id: string) => {
     return providersService.getPlugins(id);
   });
@@ -105,6 +109,7 @@ export function unregisterProvidersIpc(): void {
     CHANNELS.providers.getSkills,
     CHANNELS.providers.getRateLimits,
     CHANNELS.providers.getAccountInfo,
+    CHANNELS.providers.updateCli,
     CHANNELS.providers.getPlugins,
     CHANNELS.providers.readPlugin,
     CHANNELS.providers.installPlugin,

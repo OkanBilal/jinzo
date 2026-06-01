@@ -24,10 +24,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { spawn } from "node:child_process";
 import type {
   AcquiredSession,
   AgentsConfig,
+  CliUpdateResult,
   ClaudeCodeAdapterConfig,
+  AccountInfo,
   CommandInfo,
   DriverOutcome,
   HookMatcher,
@@ -352,7 +355,13 @@ interface SDKQuery extends AsyncGenerator<SDKMessage, void> {
   supportedCommands(): Promise<SDKSlashCommand[]>;
   supportedModels(): Promise<SDKModelInfo[]>;
   mcpServerStatus(): Promise<unknown[]>;
-  accountInfo(): Promise<{ email?: string; organization?: string }>;
+  accountInfo(): Promise<{
+    email?: string;
+    organization?: string;
+    subscriptionType?: string;
+    apiKeySource?: string;
+    tokenSource?: string;
+  }>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1472,6 +1481,55 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
   }
 
   // ─────────────────────────────────────────────────────────────
+  // CLI helpers (version + self-update via the Claude Code CLI)
+  // ─────────────────────────────────────────────────────────────
+
+  function resolveClaudeBinary(): string | null {
+    if (config.binary) {
+      const resolved = resolveCandidate(config.binary);
+      if (resolved) return resolved;
+    }
+    return findClaudeBinary();
+  }
+
+  /** Run a one-shot `claude <args>` CLI command. */
+  function runClaudeCli(
+    args: string[],
+    timeoutMs: number,
+  ): Promise<{ stdout: string; stderr: string; code: number | null }> {
+    const binaryPath = resolveClaudeBinary();
+    if (!binaryPath) {
+      return Promise.resolve({ stdout: "", stderr: "Claude CLI not found", code: null });
+    }
+    return new Promise((resolve) => {
+      const child = spawn(binaryPath, args, {
+        env: { ...process.env, HOME: os.homedir() },
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: timeoutMs,
+      });
+      let stdout = "";
+      let stderr = "";
+      child.stdout?.on("data", (d: Buffer) => (stdout += d.toString()));
+      child.stderr?.on("data", (d: Buffer) => (stderr += d.toString()));
+      child.on("close", (code) => resolve({ stdout, stderr, code }));
+      child.on("error", (err) =>
+        resolve({ stdout, stderr: String(err instanceof Error ? err.message : err), code: null }),
+      );
+    });
+  }
+
+  /** Read the installed Claude Code version (e.g. "2.1.159" from "2.1.159 (Claude Code)"). */
+  async function getClaudeVersion(): Promise<string | null> {
+    try {
+      const { stdout } = await runClaudeCli(["--version"], 8000);
+      const match = stdout.trim().match(/(\d+\.\d+\.\d+[^\s]*)/);
+      return match ? match[1] : stdout.trim() || null;
+    } catch {
+      return null;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // ProviderDriver implementation
   // ─────────────────────────────────────────────────────────────
 
@@ -1906,6 +1964,49 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
 
     async listSkills(workspacePath?: string): Promise<SkillInfo[]> {
       return fetchDiskSkills(workspacePath);
+    },
+
+    async getAccountInfo(): Promise<AccountInfo> {
+      const cli = { version: await getClaudeVersion(), channel: null, outdated: false };
+
+      // Read the logged-in account via a lightweight control query (same pattern
+      // as listModels — prompt:"" never sends a turn). Falls back to no account.
+      let account: AccountInfo["account"] = null;
+      try {
+        await ensureSDK();
+        const binaryPath = resolveClaudeBinary();
+        if (queryFn && binaryPath) {
+          const tempQuery = queryFn({
+            prompt: "",
+            options: { pathToClaudeCodeExecutable: binaryPath },
+          });
+          try {
+            const info = await tempQuery.accountInfo();
+            if (info?.email) {
+              account = {
+                type: "claude",
+                email: info.email,
+                planType: info.subscriptionType ?? info.organization ?? "",
+              };
+            } else if (info?.apiKeySource || info?.tokenSource) {
+              account = { type: "apiKey" };
+            }
+          } finally {
+            await tempQuery.interrupt().catch(() => {});
+          }
+        }
+      } catch (error) {
+        logWarn(
+          `getAccountInfo: account read failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+
+      return { account, requiresOpenaiAuth: false, cli };
+    },
+
+    async updateCli(): Promise<CliUpdateResult> {
+      const { stdout, stderr, code } = await runClaudeCli(["update"], 120000);
+      return { success: code === 0, output: `${stdout}${stderr}`.trim() };
     },
 
     async generateTitle(goal: string, context?: WorkRunContextItem[]): Promise<string> {

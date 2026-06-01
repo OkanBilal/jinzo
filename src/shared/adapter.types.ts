@@ -479,7 +479,13 @@ export interface WorkRunAdapter {
   /**
    * Read account info from the provider.
    */
-  getAccountInfo?(): Promise<CodexAccountInfo>;
+  getAccountInfo?(): Promise<AccountInfo>;
+
+  /**
+   * Update the provider's CLI to the latest version (e.g. `agent update`).
+   * @returns success flag plus captured stdout/stderr for display.
+   */
+  updateCli?(): Promise<CliUpdateResult>;
 
   /**
    * List available plugins from the provider's marketplace.
@@ -588,7 +594,8 @@ export interface ProviderDriver {
   listSkills?(workspacePath?: string): Promise<SkillInfo[]>;
   generateTitle?(goal: string, context?: WorkRunContextItem[]): Promise<string>;
   getRateLimits?(): Promise<RateLimitInfo | null>;
-  getAccountInfo?(): Promise<CodexAccountInfo>;
+  getAccountInfo?(): Promise<AccountInfo>;
+  updateCli?(): Promise<CliUpdateResult>;
   listPlugins?(): Promise<PluginListResponse>;
   readPlugin?(pluginName: string, marketplacePath: string): Promise<PluginDetail>;
   installPlugin?(pluginId: string): Promise<void>;
@@ -798,10 +805,16 @@ export interface CursorAdapterConfig {
   timeout?: number;
   /** Agent mode: "agent" (default), "plan", or "ask" */
   mode?: "agent" | "plan" | "ask";
-  /** Enable sandbox for file/network isolation */
-  sandboxEnabled?: boolean;
-  /** Enable cloud execution */
-  cloudEnabled?: boolean;
+  /**
+   * Default reasoning effort, applied via the ACP parameterized model picker
+   * (`session/set_config_option`). Only honored by models that advertise a
+   * reasoning/effort option. Overridable per-run via `configSnapshot.effortLevel`.
+   */
+  effortLevel?: "low" | "medium" | "high" | "xhigh" | "max";
+  /** Enable fast mode via the parameterized model picker (model must advertise it). */
+  fastMode?: boolean;
+  /** Enable adaptive thinking via the parameterized model picker (model must advertise it). */
+  thinking?: boolean;
 }
 
 /**
@@ -1384,15 +1397,44 @@ export type HooksConfig = {
 
 // ── Account Types ──
 
-export interface CodexAccountInfo {
+// Shared "provider account" envelope returned by every adapter's
+// getAccountInfo() (named for its first consumer, Codex). The `cursor` variant
+// carries the Cursor account email + subscription tier from `agent about`.
+export interface AccountInfo {
   account: {
     type: "apiKey";
   } | {
     type: "chatgpt";
     email: string;
     planType: string;
+  } | {
+    type: "cursor";
+    email: string;
+    planType: string;
+  } | {
+    type: "claude";
+    email: string;
+    planType: string;
   } | null;
   requiresOpenaiAuth: boolean;
+  /**
+   * Optional CLI health/version metadata (Cursor). `outdated` is true only when
+   * the CLI is old enough that `agent about` / the parameterized model picker is
+   * unsupported — drives an "update CLI" hint in Settings. We deliberately do
+   * NOT gate on the `lab` channel: recent CLIs support effort controls without it.
+   */
+  cli?: {
+    version: string | null;
+    channel: string | null;
+    outdated: boolean;
+  };
+}
+
+/** Result of a provider CLI self-update (e.g. `agent update`). */
+export interface CliUpdateResult {
+  success: boolean;
+  /** Combined stdout/stderr from the update command, for display. */
+  output: string;
 }
 
 // ── Plugin Marketplace Types ──

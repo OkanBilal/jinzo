@@ -21,6 +21,7 @@ import Select from "@/components/ui/select";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import {
   getModelIcon,
+  dedupeModelsByPrettyName,
   getModelPrettyName,
   type ModelIconVariant,
 } from "@/lib/model-icons";
@@ -316,7 +317,6 @@ export function ModelPicker({
   const { data: models = [] } = useGetProviderModelsQuery(providerId, {
     skip: !providerId,
   });
-  const selected = models.find((m) => m.id === value);
   const variant: ModelIconVariant | undefined =
     providerId === PROVIDER_IDS.claude
       ? "claude"
@@ -327,6 +327,8 @@ export function ModelPicker({
           : providerId === PROVIDER_IDS.cursor
             ? "cursor"
             : undefined;
+  const selectableModels = dedupeModelsByPrettyName(models, variant);
+  const selected = models.find((m) => m.id === value);
   const selectedDisplay = selected
     ? getModelPrettyName(selected, variant)
     : undefined;
@@ -357,7 +359,7 @@ export function ModelPicker({
           </div>
         )}
         <div className="max-h-64 overflow-auto noscrollbar">
-          {models.map((m) => {
+          {selectableModels.map((m) => {
             const displayName = getModelPrettyName(m, variant);
             return (
               <Button

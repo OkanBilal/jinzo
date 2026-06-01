@@ -12,6 +12,7 @@ export default function CursorPage() {
         nextValue: "agent",
       }}
       enableSuggestions
+      enableForkRun
     />
   );
 }

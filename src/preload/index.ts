@@ -193,11 +193,19 @@ const api = {
     enable: (id: string) => ipcRenderer.invoke(CHANNELS.providers.enable, id),
     disable: (id: string) => ipcRenderer.invoke(CHANNELS.providers.disable, id),
     getModels: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getModels, id),
+    // Fired when async model-capability discovery enriches a provider's model
+    // list (e.g. Cursor per-model effort levels). Renderer refetches models.
+    onModelsUpdated: (callback: (data: { providerId: string }) => void) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on(CHANNELS.providers.modelsUpdated, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.providers.modelsUpdated, listener);
+    },
     getCommands: (id: string, workspacePath?: string) =>
       ipcRenderer.invoke(CHANNELS.providers.getCommands, id, workspacePath),
     getSkills: (id: string, workspacePath?: string) => ipcRenderer.invoke(CHANNELS.providers.getSkills, id, workspacePath),
     getRateLimits: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getRateLimits, id),
     getAccountInfo: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getAccountInfo, id),
+    updateCli: (id: string) => ipcRenderer.invoke(CHANNELS.providers.updateCli, id),
     getPlugins: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getPlugins, id),
     readPlugin: (id: string, pluginName: string, marketplacePath: string) => ipcRenderer.invoke(CHANNELS.providers.readPlugin, id, pluginName, marketplacePath),
     installPlugin: (id: string, pluginId: string) => ipcRenderer.invoke(CHANNELS.providers.installPlugin, id, pluginId),

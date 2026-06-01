@@ -21,6 +21,11 @@ export const markdownComponents: Components = {
       {children}
     </h3>
   ),
+  h4: ({ children }) => (
+    <h4 className="text-xs font-semibold mt-1 mb-0.5 font-sans text-primary-900 dark:text-primary transition-all duration-150 ease-out">
+      {children}
+    </h4>
+  ),
   p: ({ children }) => (
     <p className=" text-sm leading-relaxed font-sans text-primary-800 dark:text-primary transition-all duration-150 ease-out">
       {children}

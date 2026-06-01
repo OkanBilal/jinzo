@@ -563,7 +563,7 @@ export function WorkspaceInput({
         : typeof modelsError === "object" && "error" in modelsError
           ? String((modelsError as any).error)
           : null;
-    if (msg && /not authenticated|gh auth login|cursor login/i.test(msg)) return msg;
+    if (msg && /not authenticated|gh auth login|cursor login|agent login/i.test(msg)) return msg;
     return null;
   })();
 

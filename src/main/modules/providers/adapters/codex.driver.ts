@@ -27,7 +27,8 @@ import { shell } from "electron";
 import { findCodexBinaryPath } from "../providers.utils";
 import type {
   AcquiredSession,
-  CodexAccountInfo,
+  CliUpdateResult,
+  AccountInfo,
   CodexAdapterConfig,
   DriverOutcome,
   MarketplaceInfo,
@@ -928,24 +929,14 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // Ensure app-server is running
-  // ─────────────────────────────────────────────────────────────
-
-  async function ensureServer(cwd?: string): Promise<CodexAppServer> {
-    if (appServer?.isRunning) return appServer;
-
-    const binaryPath = findCodexBinary();
-    const spawnCwd = cwd ?? os.homedir();
-    logInfo(`Starting app-server: ${binaryPath} app-server (cwd: ${spawnCwd}, HOME=${process.env.HOME}, homedir=${os.homedir()})`);
-
-    const server = new CodexAppServer();
+  /**
+   * Build the spawn env: HOME, an extended PATH (nvm node bins + common dirs so
+   * the packaged app can find `codex`), and the OpenAI/Codex API key.
+   */
+  function buildCodexEnv(binaryPath: string): Record<string, string> {
     const env: Record<string, string> = {};
-
-    // Ensure HOME is set correctly for packaged app
     env.HOME = os.homedir();
 
-    // Extend PATH with nvm and common bin dirs for packaged app
     const homedir = os.homedir();
     const extraPaths = [
       path.dirname(binaryPath),
@@ -953,7 +944,6 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       "/usr/local/bin",
       "/opt/homebrew/bin",
     ];
-    // Find active node version bin dir
     try {
       const nvmDir = process.env.NVM_DIR || path.join(homedir, ".nvm");
       const nodeVersions = fs.readdirSync(path.join(nvmDir, "versions", "node"));
@@ -970,6 +960,57 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     } else if (process.env.CODEX_API_KEY) {
       env.CODEX_API_KEY = process.env.CODEX_API_KEY;
     }
+    return env;
+  }
+
+  /** Run a one-shot `codex <args>` CLI command (not the app-server). */
+  function runCodexCli(
+    args: string[],
+    timeoutMs: number,
+  ): Promise<{ stdout: string; stderr: string; code: number | null }> {
+    const binaryPath = findCodexBinary();
+    const env = { ...process.env, ...buildCodexEnv(binaryPath) };
+    return new Promise((resolve) => {
+      const child = spawn(binaryPath, args, {
+        env,
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: timeoutMs,
+      });
+      let stdout = "";
+      let stderr = "";
+      child.stdout?.on("data", (d: Buffer) => (stdout += d.toString()));
+      child.stderr?.on("data", (d: Buffer) => (stderr += d.toString()));
+      child.on("close", (code) => resolve({ stdout, stderr, code }));
+      child.on("error", (err) =>
+        resolve({ stdout, stderr: String(err instanceof Error ? err.message : err), code: null }),
+      );
+    });
+  }
+
+  /** Read the installed Codex CLI version (e.g. "0.135.0" from "codex-cli 0.135.0"). */
+  async function getCodexVersion(): Promise<string | null> {
+    try {
+      const { stdout } = await runCodexCli(["--version"], 8000);
+      const match = stdout.trim().match(/(\d+\.\d+\.\d+[^\s]*)/);
+      return match ? match[1] : stdout.trim() || null;
+    } catch {
+      return null;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Ensure app-server is running
+  // ─────────────────────────────────────────────────────────────
+
+  async function ensureServer(cwd?: string): Promise<CodexAppServer> {
+    if (appServer?.isRunning) return appServer;
+
+    const binaryPath = findCodexBinary();
+    const spawnCwd = cwd ?? os.homedir();
+    logInfo(`Starting app-server: ${binaryPath} app-server (cwd: ${spawnCwd}, HOME=${process.env.HOME}, homedir=${os.homedir()})`);
+
+    const server = new CodexAppServer();
+    const env = buildCodexEnv(binaryPath);
 
     await server.start(binaryPath, spawnCwd, env);
     appServer = server;
@@ -3516,18 +3557,25 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       }
     },
 
-    async getAccountInfo(): Promise<import("../../../../shared/adapter.types").CodexAccountInfo> {
+    async getAccountInfo(): Promise<AccountInfo> {
+      const cli = { version: await getCodexVersion(), channel: null, outdated: false };
       try {
         const server = await ensureServer();
         const result = await server.sendRequest("account/read", {}) as Record<string, unknown>;
         return {
-          account: result.account as CodexAccountInfo["account"],
+          account: result.account as AccountInfo["account"],
           requiresOpenaiAuth: (result.requiresOpenaiAuth as boolean) ?? false,
+          cli,
         };
       } catch (error) {
         logError("Failed to read account:", error);
-        return { account: null, requiresOpenaiAuth: true };
+        return { account: null, requiresOpenaiAuth: true, cli };
       }
+    },
+
+    async updateCli(): Promise<CliUpdateResult> {
+      const { stdout, stderr, code } = await runCodexCli(["update"], 120000);
+      return { success: code === 0, output: `${stdout}${stderr}`.trim() };
     },
 
     async getRateLimits(): Promise<import("../../../../shared/adapter.types").RateLimitInfo | null> {

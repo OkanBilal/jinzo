@@ -71,6 +71,22 @@ export function getModelPrettyName(
   return model.displayName;
 }
 
+/** Keep the first model when multiple entries share the same UI label. */
+export function dedupeModelsByPrettyName<T extends { displayName: string; description?: string }>(
+  models: T[],
+  variant?: ModelIconVariant,
+): T[] {
+  const seen = new Set<string>();
+  const result: T[] = [];
+  for (const model of models) {
+    const pretty = getModelPrettyName(model, variant);
+    if (seen.has(pretty)) continue;
+    seen.add(pretty);
+    result.push(model);
+  }
+  return result;
+}
+
 export function getModelIcon(modelName: string, variant?: ModelIconVariant) {
   const name = modelName.toLowerCase();
   if (name.includes("deepseek")) {

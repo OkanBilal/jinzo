@@ -112,7 +112,7 @@ export const VENDORS: VendorInfo[] = [
       getworkspacediff: "GetDiff",
       savereview: "SaveReview",
       savefinding: "SaveFinding",
-      savefindings: "SaveFinding",
+      savefindings: "SaveFindings",
       commitchanges: "Commit",
       createpr: "CreatePR",
       checkpackage: "CheckPackage",

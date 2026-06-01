@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { ProviderResponse } from "../providers.dto";
-import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, CursorAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, CodexAccountInfo } from "../../../../shared/adapter.types";
+import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, CursorAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, AccountInfo } from "../../../../shared/adapter.types";
 import { createClaudeDriver } from "./claude.driver";
 import { createCodexDriver } from "./codex.driver";
 import { createCopilotDriver } from "./copilot.driver";
@@ -298,12 +298,25 @@ export async function listSkillsForProvider(
 /**
  * Get rate limit info for a provider
  */
-export async function getAccountInfoForProvider(provider: ProviderResponse): Promise<CodexAccountInfo> {
+export async function getAccountInfoForProvider(provider: ProviderResponse): Promise<AccountInfo> {
   const adapter = createWorkAdapter(provider);
   if (!adapter.getAccountInfo) {
     return { account: null, requiresOpenaiAuth: false };
   }
   return adapter.getAccountInfo();
+}
+
+/**
+ * Update a provider's CLI to the latest version (e.g. `agent update`).
+ */
+export async function updateCliForProvider(
+  provider: ProviderResponse,
+): Promise<import("../../../../shared/adapter.types").CliUpdateResult> {
+  const adapter = createWorkAdapter(provider);
+  if (!adapter.updateCli) {
+    return { success: false, output: `Provider "${provider.displayName}" does not support CLI updates.` };
+  }
+  return adapter.updateCli();
 }
 
 export async function listPluginsForProvider(provider: ProviderResponse): Promise<PluginListResponse> {

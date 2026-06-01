@@ -36,6 +36,7 @@ function buildConfigSnapshot(
       break;
     case PROVIDER_IDS.cursor:
       snapshot.mode = "agent";
+      if (pulse.effortLevel) snapshot.effortLevel = pulse.effortLevel;
       break;
   }
 

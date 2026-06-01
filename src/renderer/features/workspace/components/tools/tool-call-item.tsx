@@ -175,6 +175,9 @@ const DISPATCH: Renderer[] = [
   byDisplayName<SaveFindingParams>("SaveFinding", (ctx, params) => (
     <SaveFindingDisplay params={params} isCompact={ctx.isCompact} />
   )),
+  byDisplayName<SaveFindingParams>("SaveFindings", (ctx, params) => (
+    <SaveFindingDisplay params={params} isCompact={ctx.isCompact} />
+  )),
   byDisplayName<CommitParams>("Commit", (ctx, params) => (
     <CommitDisplay params={params} isCompact={ctx.isCompact} />
   )),
