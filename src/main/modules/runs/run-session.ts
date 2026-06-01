@@ -132,6 +132,15 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
 
   // ─── Per-run state (was 8 module-scope Maps in runs.service.ts) ───
   let baseRef: string | null = null;
+  // Per-file diff hashes of the working tree as it stood at run start. Used at
+  // finalize to report only files THIS run touched, so pre-existing dirty files
+  // carried over from an earlier run aren't re-logged on every run.
+  // null = baseline not captured (git error / not yet snapshotted); an empty Map
+  // = captured a clean tree. persistFinalDiff treats these two cases differently.
+  let initialDiffHashes: Map<string, string> | null = null;
+  // Resolves when captureBaseRef finishes, so finalize can await the baseline
+  // instead of racing it on near-instant runs.
+  let baseRefCaptured: Promise<void> | null = null;
   let sleepBlockerId: number | null = null;
   let activeTurnId: number | null = null;
   let turnCounter: number = ctx.seedTurnIndex ?? -1;
@@ -204,6 +213,19 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
       const result = await gitService.getHeadSha(workspace.rootPath);
       if (result.success && result.data) {
         baseRef = result.data;
+        // Snapshot the working tree's pre-existing changes against baseRef so
+        // the final activity log reflects only what THIS run changed. Files
+        // already dirty at run start are excluded unless this run touches them.
+        const snapshot = await buildDiffSnapshot({
+          rootPath: workspace.rootPath,
+          baseRef,
+        });
+        // Leave initialDiffHashes null if the snapshot failed: an empty Map means
+        // "tree was clean at start" (every later change is ours), whereas null
+        // means "baseline unknown" — persistFinalDiff treats these differently.
+        if (snapshot) {
+          initialDiffHashes = buildPerFileDiffHashes(snapshot.diffText);
+        }
       }
     } catch {
       // Not a git repo or git error – ignore
@@ -402,6 +424,17 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   // ─── Final diff persistence at completion ───
   async function persistFinalDiff(): Promise<void> {
     clearLiveDiffSchedule();
+    // Make sure the run-start baseline finished capturing before we diff against
+    // it. Normally settled long ago; this only bites runs that finish almost
+    // immediately, where the fire-and-forget capture could still be in flight
+    // and leave initialDiffHashes transiently null.
+    if (baseRefCaptured) {
+      try {
+        await baseRefCaptured;
+      } catch {
+        // captureBaseRef swallows its own errors; guard anyway.
+      }
+    }
     const snapshot = await snapshotCurrentDiff();
     if (!snapshot) return;
     if (snapshot.files.length === 0) {
@@ -414,27 +447,26 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
     }
 
     try {
-      // Incremental file count vs a prior diff sharing the same baseRef (not our own
-      // live row): activity log reflects only what changed since the last snapshot.
-      const recentDiffs = await workspaceRepo.findDiffsByWorkspace(workspace.id, 10);
-      let incrementalFileCount = snapshot.files.length;
-      let incrementalFileNames: string[] = snapshot.files;
-      const prevDiffWithSameBase = recentDiffs.find(
-        (d) => d.baseRef === snapshot.baseRef && d.runId !== runId,
-      );
-      if (prevDiffWithSameBase) {
-        const prevPerFile = buildPerFileDiffHashes(prevDiffWithSameBase.diffText);
-        const currPerFile = buildPerFileDiffHashes(snapshot.diffText);
-        const changedFiles: string[] = [];
-        for (const [file, hash] of currPerFile) {
-          if (prevPerFile.get(file) !== hash) changedFiles.push(file);
-        }
-        incrementalFileCount = changedFiles.length;
-        incrementalFileNames = changedFiles;
-      }
-
       await upsertDiff(snapshot);
       broadcastDiffUpdated();
+
+      // No reliable run-start baseline: null means "baseline unknown" (the git
+      // snapshot at run start failed), distinct from an empty Map ("tree was
+      // clean at start"). Without a baseline we can't separate this run's edits
+      // from pre-existing dirt, so skip the activity entry rather than
+      // mis-attributing carry-over changes. The diff above is still persisted.
+      if (initialDiffHashes === null) return;
+
+      // Report only files THIS run changed: compare the final per-file diff
+      // hashes against the baseline captured at run start. Files already dirty
+      // at run start and untouched here hash identically and are skipped, so a
+      // no-op run over a pre-existing dirty tree logs nothing.
+      const baseline = initialDiffHashes;
+      const incrementalFileNames: string[] = [];
+      for (const [file, hash] of buildPerFileDiffHashes(snapshot.diffText)) {
+        if (baseline.get(file) !== hash) incrementalFileNames.push(file);
+      }
+      const incrementalFileCount = incrementalFileNames.length;
 
       if (incrementalFileCount > 0) {
         const summaryLines = incrementalFileNames.map((f) => f.split("/").pop() ?? f).join(", ");
@@ -683,7 +715,8 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   runSessionRegistry.register(runId, session);
 
   // Fire-and-forget initialization. Each helper handles its own errors.
-  void captureBaseRef();
+  // Keep the baseRef-capture promise so finalize can await it (see persistFinalDiff).
+  baseRefCaptured = captureBaseRef();
   void acquireSleepBlocker();
   void startNextTurn(ctx.initialPromptContent);
 
