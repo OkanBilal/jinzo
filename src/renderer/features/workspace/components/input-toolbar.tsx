@@ -49,6 +49,8 @@ interface InputToolbarProps {
     | "max"
     | "xhigh"
   )[];
+  // Ultracode (Claude only) — bottom entry of the effort dropdown
+  supportsUltracode?: boolean;
   // Stop run (active run is running)
   isRunning: boolean;
   onStop?: () => void;
@@ -80,6 +82,7 @@ export function InputToolbar({
   effortLevel,
   onEffortLevelChange,
   supportedEffortLevels,
+  supportsUltracode,
   isRunning,
   onStop,
   uploadedFiles,
@@ -206,6 +209,7 @@ export function InputToolbar({
                 onEffortLevelChange={onEffortLevelChange}
                 onThinkingModeToggle={onThinkingModeToggle}
                 supportedEffortLevels={supportedEffortLevels}
+                supportsUltracode={supportsUltracode}
                 isOpen={showThinkingDropdown}
                 onToggle={() => setShowThinkingDropdown(!showThinkingDropdown)}
                 dropdownRef={thinkingDropdownRef}

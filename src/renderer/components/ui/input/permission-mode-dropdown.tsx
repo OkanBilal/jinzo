@@ -32,6 +32,17 @@ const PERMISSION_MODES = [
   },
 ] as const;
 
+/** Bypass trigger — sunburst (orange → amber → yellow), no filled background. */
+const BYPASS_TRIGGER = {
+  trigger:
+    "font-medium bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 bg-clip-text text-transparent dark:from-orange-400 dark:via-amber-400 dark:to-yellow-400",
+  icon: "text-orange-500 dark:text-orange-400",
+} as const;
+
+function isBypassPermissionMode(mode: string): boolean {
+  return mode === "bypassPermissions" || mode === "danger-full-access";
+}
+
 const PERMISSION_MODE_LABELS: Record<string, string> = {
   default: "Ask",
   acceptEdits: "Edit",
@@ -145,19 +156,29 @@ export function PermissionModeDropdown({
         tooltip="Permission Mode"
         type="button"
         onClick={onToggle}
-        className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-sm transition-all cursor-pointer hover:bg-primary-200/30 animate-blur-reveal dark:hover:bg-primary-800  ${
-          permissionMode === "bypassPermissions" ||
-          permissionMode === "danger-full-access"
-            ? "dark:bg-yellow-300/10 hover:dark:bg-yellow-300/10 hover:bg-yellow-400/30  bg-yellow-400/30 text-yellow-600 dark:text-yellow-300"
-            : permissionMode !== "default"
-              ? " text-primary-700 dark:text-primary-300"
-              : "text-primary-700 dark:text-primary-300 "
-        }`}
+        className="flex items-center gap-1.5 px-2 py-1 rounded-full text-sm transition-all cursor-pointer hover:bg-primary-200/30 animate-blur-reveal dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
       >
-        <PermissionModeIcon mode={permissionMode} className="size-3.5" />
-        {modeLabels[permissionMode] ?? permissionMode}
+        <PermissionModeIcon
+          mode={permissionMode}
+          className={`size-3.5 ${
+            isBypassPermissionMode(permissionMode) ? BYPASS_TRIGGER.icon : ""
+          }`}
+        />
+        <span
+          className={
+            isBypassPermissionMode(permissionMode) ? BYPASS_TRIGGER.trigger : ""
+          }
+        >
+          {modeLabels[permissionMode] ?? permissionMode}
+        </span>
         {showPlanRow && planMode ? " + Plan" : ""}
-        <ArrowUp className="size-3.5 rotate-180" />
+        <ArrowUp
+          className={`size-3.5 rotate-180 ${
+            isBypassPermissionMode(permissionMode)
+              ? "text-yellow-500 dark:text-yellow-400"
+              : "text-primary-400 dark:text-primary-300"
+          }`}
+        />
       </Button>
       <DropdownWrapper
         isOpen={isOpen}

@@ -12,12 +12,21 @@ interface EffortLevelDropdownProps {
   onEffortLevelChange: (level: string) => void;
   onThinkingModeToggle: () => void;
   supportedEffortLevels?: EffortLevel[];
+  /** Claude-only: show an "Ultracode" entry at the bottom (model supports xhigh). */
+  supportsUltracode?: boolean;
   isOpen: boolean;
   onToggle: () => void;
   dropdownRef: RefObject<HTMLDivElement | null>;
 }
 
+/** Ultracode label — ocean (cyan → blue → indigo). */
+const ULTRACODE_GRADIENT = {
+  text: "bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent dark:from-cyan-400 dark:via-blue-400 dark:to-indigo-400",
+  icon: "text-blue-500 dark:text-blue-400",
+} as const;
+
 function formatEffortLabel(level: string): string {
+  if (level === "ultracode") return "Ultracode";
   return level === "xhigh" ? "Extra High" : level;
 }
 
@@ -28,6 +37,7 @@ export function EffortLevelDropdown({
   onEffortLevelChange,
   onThinkingModeToggle,
   supportedEffortLevels,
+  supportsUltracode,
   isOpen,
   onToggle,
   dropdownRef,
@@ -76,13 +86,23 @@ export function EffortLevelDropdown({
       >
         <span
           className={
-            thinkingMode ? "text-primary-700 dark:text-primary-300 capitalize tracking-tight" : ""
+            !thinkingMode
+              ? ""
+              : effortLevel === "ultracode"
+                ? `capitalize tracking-tight font-medium ${ULTRACODE_GRADIENT.text}`
+                : "text-primary-700 dark:text-primary-300 capitalize tracking-tight"
           }
         >
           {thinkingMode ? formatEffortLabel(effortLevel) || "On" : "Off"}
         </span>
         <ArrowUp
-          className={`size-3.5 ml-0.5 rotate-180 ${thinkingMode ? "text-primary-700 dark:text-primary-300" : "text-primary-400 dark:text-primary-300"}`}
+          className={`size-3.5 ml-0.5 rotate-180 ${
+            !thinkingMode
+              ? "text-primary-400 dark:text-primary-300"
+              : effortLevel === "ultracode"
+                ? ULTRACODE_GRADIENT.icon
+                : "text-primary-700 dark:text-primary-300"
+          }`}
         />
       </Button>
       <DropdownWrapper
@@ -124,6 +144,37 @@ export function EffortLevelDropdown({
             {formatEffortLabel(level)}
           </Button>
         ))}
+        {supportsUltracode && variant === "claude" && (
+          <Button
+            type="button"
+            onClick={() => {
+              onEffortLevelChange("ultracode");
+              onToggle();
+            }}
+            className={`w-full flex items-center gap-1.5 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors capitalize last:rounded-b-xl ${
+              thinkingMode && effortLevel === "ultracode"
+                ? "bg-primary-200/60 dark:bg-primary-200/10"
+                : "hover:bg-primary-200/30 dark:hover:bg-primary-800"
+            }`}
+          >
+            <Brain
+              className={`size-3 shrink-0 ${
+                thinkingMode && effortLevel === "ultracode"
+                  ? ULTRACODE_GRADIENT.icon
+                  : "text-primary-500 dark:text-primary-400"
+              }`}
+            />
+            <span
+              className={
+                thinkingMode && effortLevel === "ultracode"
+                  ? `font-medium ${ULTRACODE_GRADIENT.text}`
+                  : "text-primary-700 dark:text-primary-300"
+              }
+            >
+              {formatEffortLabel("ultracode")}
+            </span>
+          </Button>
+        )}
       </DropdownWrapper>
     </div>
   );
