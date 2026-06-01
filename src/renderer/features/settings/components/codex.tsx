@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Toggle,
   Button,
@@ -15,6 +15,9 @@ import {
   useGetProviderAccountInfoQuery,
   useUpdateProviderCliMutation,
 } from "@/lib/redux/api";
+import { providersApi } from "@/lib/redux/api/providersApi";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import type { RateLimitInfo } from "../../../../shared/adapter.types";
 import { StructuredOutputsModal } from "./structured-outputs-modal";
 import type { CodexAdapterConfig } from "../../../../shared/adapter.types";
 
@@ -137,6 +140,26 @@ export default function CodexSettings(
   const { data: rateLimits, isLoading: isLoadingRateLimits } = useGetProviderRateLimitsQuery(PROVIDER_IDS.codex, {
     pollingInterval: 60000,
   });
+
+  // Codex streams `account/rateLimits/updated` while a run is active; patch the
+  // query cache so this panel reflects the fresh snapshot instead of waiting
+  // for the 60s poll.
+  const dispatch = useAppDispatch();
+  useEffect(() => {
+    const off = window.api.providers.onRateLimitsUpdated(({ providerId, rateLimits: next }) => {
+      if (providerId !== PROVIDER_IDS.codex || !next) return;
+      dispatch(
+        providersApi.util.updateQueryData(
+          "getProviderRateLimits",
+          PROVIDER_IDS.codex,
+          () => next as RateLimitInfo,
+        ),
+      );
+    });
+    return () => {
+      off();
+    };
+  }, [dispatch]);
   const { data: accountInfo, isLoading: isLoadingAccount } = useGetProviderAccountInfoQuery(PROVIDER_IDS.codex);
   const cli = accountInfo?.cli;
 

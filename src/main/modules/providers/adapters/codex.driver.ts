@@ -23,8 +23,10 @@ import { type Interface as ReadlineInterface } from "node:readline";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { shell } from "electron";
+import { shell, BrowserWindow } from "electron";
 import { findCodexBinaryPath } from "../providers.utils";
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
+import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 import type {
   AcquiredSession,
   CliUpdateResult,
@@ -37,6 +39,7 @@ import type {
   PluginInfo,
   PluginListResponse,
   ProviderDriver,
+  RateLimitInfo,
   WorkRunContextItem,
   WorkRunContinueRequest,
   WorkRunEvent,
@@ -405,6 +408,50 @@ const noopServerRequestHandler = (id: number | string, _method: string, _params:
 };
 
 const { info: logInfo, error: logError, warn: logWarn } = createLogger("[CodexDriver]");
+
+// ─────────────────────────────────────────────────────────────
+// Rate-limit snapshot mapping + live push
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Map a Codex `RateLimitSnapshot` (from `account/rateLimits/read` or the
+ * `account/rateLimits/updated` notification — identical wire shape) into mains'
+ * `RateLimitInfo`. Shared by the pull path (`getRateLimits`) and the live push.
+ */
+export function mapRateLimitSnapshot(rl: Record<string, unknown> | undefined): RateLimitInfo | null {
+  if (!rl) return null;
+  const primary = rl.primary as Record<string, unknown> | undefined;
+  const secondary = rl.secondary as Record<string, unknown> | undefined;
+  const credits = rl.credits as Record<string, unknown> | undefined;
+  return {
+    planType: rl.planType as string | undefined,
+    primary: primary ? {
+      usedPercent: primary.usedPercent as number,
+      windowDurationMins: primary.windowDurationMins as number | undefined,
+      resetsAt: primary.resetsAt as number | undefined,
+    } : undefined,
+    secondary: secondary ? {
+      usedPercent: secondary.usedPercent as number,
+      windowDurationMins: secondary.windowDurationMins as number | undefined,
+      resetsAt: secondary.resetsAt as number | undefined,
+    } : undefined,
+    credits: credits ? {
+      hasCredits: credits.hasCredits as boolean,
+      balance: credits.balance as string | undefined,
+      unlimited: credits.unlimited as boolean,
+    } : undefined,
+  };
+}
+
+/** Push a fresh rate-limit snapshot to every live renderer window. */
+function broadcastRateLimits(providerId: string, rateLimits: RateLimitInfo | null): void {
+  if (!rateLimits) return;
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send(CHANNELS.providers.rateLimitsUpdated, { providerId, rateLimits });
+    }
+  }
+}
 
 // ─────────────────────────────────────────────────────────────
 // App Server Process Manager
@@ -1053,6 +1100,17 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
           }
         }
       }
+
+      // Live rate-limit snapshot — push to the renderer so the Codex settings
+      // panel (and any future indicator) refreshes immediately instead of
+      // waiting for its 60s poll. Account-scoped, so it lives in the background
+      // handler and fires regardless of run lifecycle.
+      if (method === "account/rateLimits/updated") {
+        const rl = (params as Record<string, unknown> | undefined)?.rateLimits as
+          | Record<string, unknown>
+          | undefined;
+        broadcastRateLimits(PROVIDER_IDS.codex, mapRateLimitSnapshot(rl));
+      }
     });
 
     logInfo("App-server initialized successfully")
@@ -1530,12 +1588,57 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       }
 
       case "account/rateLimits/updated":
-        // Rate limit info — internal, no UI event
+        // Pushed to the renderer from the background handler (window broadcast,
+        // not a per-run WorkRunEvent) — nothing to emit into the run timeline.
         break;
 
-      case "thread/tokenUsage/updated":
-        // Usage tracked via turn/completed, ignore this
+      case "thread/tokenUsage/updated": {
+        // Live context-window indicator. Codex reports the context currently
+        // occupied as the last turn's total_tokens
+        // (codex-rs/tui/src/token_usage.rs::tokens_in_context_window), and
+        // `modelContextWindow` as the window size. Emit the same renderer-only
+        // ephemeral `context_usage` event the Claude driver uses so the
+        // ContextUsageRing lights up for Codex runs too.
+        // Payload: ThreadTokenUsageUpdatedNotification
+        //   { threadId, turnId, tokenUsage: { total, last, modelContextWindow } }
+        const tuThreadId = (p?.threadId ?? p?.thread_id) as string | undefined;
+        const parentForTu = activeRuns.get(runId);
+        if (
+          tuThreadId !== undefined &&
+          parentForTu?.threadId != null &&
+          tuThreadId !== parentForTu.threadId
+        ) {
+          // Sub-agent thread — don't clobber the parent's indicator.
+          break;
+        }
+        // Tolerate both serializations: the app-server wrapper keys come over
+        // camelCase, but the inner per-turn `TokenUsage` is the core type and
+        // serializes snake_case (same object `trackUsage` reads as
+        // `input_tokens`/`output_tokens`/`cached_input_tokens`). Accept either.
+        const tokenUsage = (p?.tokenUsage ?? p?.token_usage) as
+          | {
+              last?: { totalTokens?: number; total_tokens?: number };
+              modelContextWindow?: number | null;
+              model_context_window?: number | null;
+            }
+          | undefined;
+        const rawMax = tokenUsage?.modelContextWindow ?? tokenUsage?.model_context_window;
+        const maxTokens = typeof rawMax === "number" ? rawMax : 0;
+        const rawOccupied = tokenUsage?.last?.totalTokens ?? tokenUsage?.last?.total_tokens;
+        const occupied = typeof rawOccupied === "number" ? rawOccupied : 0;
+        if (maxTokens > 0 && occupied > 0) {
+          const total = Math.min(occupied, maxTokens);
+          events.push({
+            type: "context_usage",
+            totalTokens: total,
+            maxTokens,
+            percentage: (total / maxTokens) * 100,
+            model: model ?? undefined,
+            ts,
+          });
+        }
         break;
+      }
 
       case "thread/status/changed":
       case "thread/name/updated": {
@@ -3582,31 +3685,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       try {
         if (!appServer?.isRunning) return null;
         const result = await appServer.sendRequest("account/rateLimits/read", {}) as Record<string, unknown>;
-        const rl = result?.rateLimits as Record<string, unknown> | undefined;
-        if (!rl) return null;
-
-        const primary = rl.primary as Record<string, unknown> | undefined;
-        const secondary = rl.secondary as Record<string, unknown> | undefined;
-        const credits = rl.credits as Record<string, unknown> | undefined;
-
-        return {
-          planType: rl.planType as string | undefined,
-          primary: primary ? {
-            usedPercent: primary.usedPercent as number,
-            windowDurationMins: primary.windowDurationMins as number | undefined,
-            resetsAt: primary.resetsAt as number | undefined,
-          } : undefined,
-          secondary: secondary ? {
-            usedPercent: secondary.usedPercent as number,
-            windowDurationMins: secondary.windowDurationMins as number | undefined,
-            resetsAt: secondary.resetsAt as number | undefined,
-          } : undefined,
-          credits: credits ? {
-            hasCredits: credits.hasCredits as boolean,
-            balance: credits.balance as string | undefined,
-            unlimited: credits.unlimited as boolean,
-          } : undefined,
-        };
+        return mapRateLimitSnapshot(result?.rateLimits as Record<string, unknown> | undefined);
       } catch (error) {
         logError("Failed to get rate limits:", error);
         return null;

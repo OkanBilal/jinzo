@@ -10,6 +10,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildCollaborationMode,
+  mapRateLimitSnapshot,
   mapSandboxMode,
   parseCodexReviewFindings,
 } from "./codex.driver";
@@ -26,6 +27,46 @@ describe("codex.driver / mapSandboxMode", () => {
     expect(mapSandboxMode("")).toBe("workspace-write");
     expect(mapSandboxMode("invalid")).toBe("workspace-write");
     expect(mapSandboxMode("READ-ONLY")).toBe("workspace-write"); // case-sensitive
+  });
+});
+
+describe("codex.driver / mapRateLimitSnapshot", () => {
+  it("returns null for a missing snapshot", () => {
+    expect(mapRateLimitSnapshot(undefined)).toBeNull();
+  });
+
+  it("maps the RateLimitSnapshot wire shape into RateLimitInfo", () => {
+    // Mirrors the Codex `account/rateLimits/{read,updated}` payload
+    // (RateLimitSnapshot — identical for the pull and push paths).
+    const snapshot = {
+      limitId: "codex",
+      limitName: "Codex",
+      planType: "pro",
+      primary: { usedPercent: 42, windowDurationMins: 300, resetsAt: 1717200000 },
+      secondary: { usedPercent: 8, windowDurationMins: 10080, resetsAt: 1717800000 },
+      credits: { hasCredits: true, balance: "12.50", unlimited: false },
+      rateLimitReachedType: null,
+    };
+
+    expect(mapRateLimitSnapshot(snapshot)).toEqual({
+      planType: "pro",
+      primary: { usedPercent: 42, windowDurationMins: 300, resetsAt: 1717200000 },
+      secondary: { usedPercent: 8, windowDurationMins: 10080, resetsAt: 1717800000 },
+      credits: { hasCredits: true, balance: "12.50", unlimited: false },
+    });
+  });
+
+  it("omits absent window/credit sub-objects", () => {
+    const result = mapRateLimitSnapshot({
+      planType: "free",
+      primary: { usedPercent: 5 },
+    });
+    expect(result).toEqual({
+      planType: "free",
+      primary: { usedPercent: 5, windowDurationMins: undefined, resetsAt: undefined },
+      secondary: undefined,
+      credits: undefined,
+    });
   });
 });
 

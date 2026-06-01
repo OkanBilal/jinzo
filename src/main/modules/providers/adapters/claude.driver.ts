@@ -1659,6 +1659,12 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       });
 
       try {
+        // Single-request context snapshot for the context meter. result.modelUsage
+        // is *cumulative* across every API round-trip in the turn, so cache-read
+        // tokens balloon with each tool call and the meter pins to 100%. The latest
+        // top-level assistant message instead reflects one request — its
+        // prompt+response size ≈ what currently occupies the window (matches `/context`).
+        let lastReqContextTokens = 0;
         const streamPromise = (async () => {
           for await (const msg of query) {
             if (signal.aborted || timedOut) break;
@@ -1668,6 +1674,20 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
               const aMsg = msg as SDKAssistantMessage;
               if (aMsg.message?.content?.some((b: any) => b.type === "text" && b.text)) {
                 cs.state.hasAssistantContent = true;
+              }
+              // Skip subagent (e.g. haiku) messages so they don't clobber the
+              // main conversation's snapshot. The Anthropic message carries a
+              // per-request `usage` at runtime even though our local type omits it.
+              const u = (aMsg.message as any)?.usage as
+                | { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number }
+                | undefined;
+              if (u && !aMsg.parent_tool_use_id) {
+                const snapshot =
+                  (u.input_tokens ?? 0) +
+                  (u.cache_read_input_tokens ?? 0) +
+                  (u.cache_creation_input_tokens ?? 0) +
+                  (u.output_tokens ?? 0);
+                if (snapshot > 0) lastReqContextTokens = snapshot;
               }
             }
 
@@ -1695,8 +1715,13 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
               // Context meter: track the model entry with the largest window (the
               // main conversation model, not haiku subagents) to estimate fill.
               let ctxModel: string | undefined;
-              let ctxTokens = 0;
               let ctxWindow = 0;
+              // Cumulative fallback for the largest-window model, used only when
+              // the per-request snapshot above is unavailable (older SDK builds
+              // may not surface `message.usage` on assistant messages). It runs
+              // hot (cache-read balloons across tool calls), so it's a worse
+              // estimate than the snapshot — hence fallback-only.
+              let ctxFallbackTokens = 0;
               if (resultMsg.modelUsage) {
                 for (const [modelName, usage] of Object.entries(resultMsg.modelUsage)) {
                   inputTokens += usage.inputTokens;
@@ -1704,13 +1729,14 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
                   cacheRead += usage.cacheReadInputTokens;
                   cacheWrite += usage.cacheCreationInputTokens;
                   if (!primaryModel) primaryModel = modelName;
+                  // Pick the entry with the largest window as the main
+                  // conversation model (not haiku subagents). Occupancy comes
+                  // from the per-request snapshot above, not this cumulative sum.
                   const window = usage.contextWindow ?? 0;
                   if (window > ctxWindow) {
                     ctxWindow = window;
                     ctxModel = modelName;
-                    // Occupied context ≈ everything that fed the final request plus
-                    // the response just generated (which carries into the next turn).
-                    ctxTokens =
+                    ctxFallbackTokens =
                       (usage.inputTokens ?? 0) +
                       (usage.cacheReadInputTokens ?? 0) +
                       (usage.cacheCreationInputTokens ?? 0) +
@@ -1734,6 +1760,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
               // Derive the context-window snapshot from usage data rather than the
               // SDK's getContextUsage() control request — the latter races the
               // query teardown in single-prompt mode ("Query closed before response").
+              const ctxTokens = lastReqContextTokens || ctxFallbackTokens;
               if (ctxWindow > 0 && ctxTokens > 0) {
                 const total = Math.min(ctxTokens, ctxWindow);
                 await onEvent({
