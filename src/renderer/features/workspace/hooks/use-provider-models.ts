@@ -63,9 +63,15 @@ export function useProviderModels(
   const fastMode = variant === "codex"
     ? ["fast", "priority"].includes(((providerData?.config as any)?.serviceTier as string) ?? "")
     : !!(providerData?.config as any)?.fastMode;
+  // ultracode is a Claude-only boolean flag (xhigh + dynamic-workflow
+  // orchestration). It's the single source of truth; the displayed effort
+  // level is folded to "ultracode" so the dropdown shows it as selected.
+  const ultracode = variant === "claude" && !!(providerData?.config as any)?.ultracode;
   const effortLevel: string = variant === "codex" || variant === "copilot"
     ? (providerData?.config as any)?.modelReasoningEffort || ""
-    : (providerData?.config as any)?.effortLevel || "";
+    : ultracode
+      ? "ultracode"
+      : (providerData?.config as any)?.effortLevel || "";
   const planMode: boolean = variant === "codex"
     ? !!(providerData?.config as any)?.planMode
     : false;
@@ -146,8 +152,24 @@ export function useProviderModels(
           },
         },
       });
+    } else if (level === "ultracode") {
+      // ultracode is stored as a boolean. It implies xhigh + workflow
+      // orchestration, so clear effortLevel and let the driver send it via
+      // settings.ultracode instead of options.effort.
+      await updateProvider({
+        id: activeProviderId,
+        payload: {
+          config: {
+            ...currentConfig,
+            thinkingMode: true,
+            ultracode: true,
+            effortLevel: undefined,
+          },
+        },
+      });
     } else {
-      // Claude uses thinkingMode + effortLevel
+      // Claude uses thinkingMode + effortLevel. Any non-ultracode selection
+      // (including "Off") turns ultracode back off.
       const enableThinking = !!level;
       await updateProvider({
         id: activeProviderId,
@@ -156,6 +178,7 @@ export function useProviderModels(
             ...currentConfig,
             thinkingMode: enableThinking,
             effortLevel: level || undefined,
+            ultracode: false,
           },
         },
       });
@@ -220,6 +243,22 @@ export function useProviderModels(
   useEffect(() => {
     if (!selectedModelInfo) return;
     const supported = selectedModelInfo.supportedEffortLevels;
+    const supportsXhigh = !!supported?.includes("xhigh" as any);
+
+    // ultracode is on but the newly-selected model can't do xhigh — disable it
+    // and fall back to the highest supported level (or Off if none). This is
+    // what enforces "ultracode must not work on unsupported models".
+    if (ultracode && !supportsXhigh) {
+      handleEffortLevelChange(
+        supported && supported.length > 0 ? supported[supported.length - 1] : "",
+      );
+      return;
+    }
+    // ultracode is on and the model still supports xhigh — leave it alone.
+    // (Must return before the clamp branches below, otherwise the folded
+    // "ultracode" string gets clamped away on every render.)
+    if (ultracode) return;
+
     if (!supported || supported.length === 0) {
       // Model has no effort levels — clear it
       if (effortLevel) handleEffortLevelChange("");
@@ -230,7 +269,7 @@ export function useProviderModels(
       // Pick the highest supported level as fallback
       handleEffortLevelChange(supported[supported.length - 1]);
     }
-  }, [selectedModelInfo, effortLevel, thinkingMode, handleEffortLevelChange]);
+  }, [selectedModelInfo, effortLevel, thinkingMode, ultracode, handleEffortLevelChange]);
 
   const handleModelChange = useCallback(
     (prettyName: string) => {
@@ -265,6 +304,9 @@ export function useProviderModels(
     handleFastModeToggle,
     effortLevel,
     handleEffortLevelChange,
+    supportsUltracode:
+      variant === "claude" &&
+      !!selectedModelInfo?.supportedEffortLevels?.includes("xhigh" as any),
     selectedModelInfo,
     planMode,
     handlePlanModeToggle,

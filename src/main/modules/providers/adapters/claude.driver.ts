@@ -944,7 +944,16 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     } else {
       options.thinking = { type: "disabled" };
     }
-    if (config.thinkingMode && config.effortLevel) {
+    if (config.ultracode) {
+      // ultracode = xhigh effort + automatic dynamic-workflow orchestration.
+      // The CLI applies xhigh itself, so we must NOT also send a conflicting
+      // options.effort ("ultracode" is not a valid EffortLevel). Delivered via
+      // the same settings passthrough fastMode uses below.
+      options.settings = {
+        ...((options.settings as Record<string, unknown>) || {}),
+        ultracode: true,
+      };
+    } else if (config.thinkingMode && config.effortLevel) {
       options.effort = config.effortLevel;
     }
 

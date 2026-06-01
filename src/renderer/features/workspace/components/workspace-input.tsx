@@ -178,6 +178,7 @@ export function WorkspaceInput({
     handleFastModeToggle,
     effortLevel,
     handleEffortLevelChange,
+    supportsUltracode,
     selectedModelInfo,
     planMode,
     handlePlanModeToggle,
@@ -679,6 +680,7 @@ export function WorkspaceInput({
         effortLevel={effortLevel}
         onEffortLevelChange={handleEffortLevelChange}
         supportedEffortLevels={selectedModelInfo?.supportedEffortLevels}
+        supportsUltracode={supportsUltracode}
         isRunning={activeRun?.status === "running"}
         onStop={onStop}
         uploadedFiles={uploadedFiles}

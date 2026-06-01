@@ -789,6 +789,12 @@ export interface ClaudeCodeAdapterConfig {
   fastMode?: boolean;
   /** Effort level for thinking depth (requires thinkingMode) */
   effortLevel?: "low" | "medium" | "high" | "xhigh" | "max";
+  /**
+   * When true, enables ultracode: xhigh effort plus automatic dynamic-workflow
+   * orchestration. Forwarded to the SDK via `settings.ultracode` (not `effort`).
+   * Only meaningful on a model whose supportedEffortLevels includes "xhigh".
+   */
+  ultracode?: boolean;
 }
 
 /**
