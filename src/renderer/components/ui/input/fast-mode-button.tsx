@@ -16,7 +16,7 @@ const FAST_VIOLET_STYLE = {
     "dark:from-violet-400 dark:via-purple-400 dark:to-fuchsia-400",
     "dark:bg-[length:140%_100%] dark:bg-left",
   ].join(" "),
-  icon: "text-fuchsia-500 dark:text-fuchsia-400",
+  icon: "text-violet-500 dark:text-violet-400",
 } as const;
 
 export function FastModeButton({ fastMode, onToggle }: FastModeButtonProps) {
@@ -32,7 +32,7 @@ export function FastModeButton({ fastMode, onToggle }: FastModeButtonProps) {
       tooltip="Toggle Fast Mode"
       type="button"
       onClick={onToggle}
-      className={`flex items-center pl-2 pr-2.5 py-1 -ml-px rounded-full text-sm transition-all animate-blur-reveal cursor-pointer hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300 ${
+      className={`flex items-center pl-2 pr-2.5 py-1 -ml-1.5 rounded-full text-sm transition-all animate-blur-reveal cursor-pointer hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300 ${
         fastMode ? "gap-1" : ""
       }`}
       title={

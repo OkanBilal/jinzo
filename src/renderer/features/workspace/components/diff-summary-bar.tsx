@@ -94,7 +94,7 @@ export function DiffSummaryBar({
     return null;
 
   return (
-    <div className="w-200 mx-auto mb-1">
+    <div className="w-full max-w-200 mx-auto mb-1">
       <div className="rounded-2xl glass-morphism  overflow-hidden">
         {/* Header row */}
         <div className="flex items-center gap-2 px-4 py-2">

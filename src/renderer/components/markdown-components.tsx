@@ -27,22 +27,22 @@ export const markdownComponents: Components = {
     </h4>
   ),
   p: ({ children }) => (
-    <p className=" text-sm leading-relaxed font-sans text-primary-800 dark:text-primary transition-all duration-150 ease-out">
+    <p className=" text-sm leading-relaxed font-sans text-primary-900 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </p>
   ),
   ul: ({ children }) => (
-    <ul className="list-disc list-outside pl-4 text-sm font-sans mb-2 space-y-1 text-primary-800 dark:text-primary transition-all duration-150 ease-out">
+    <ul className="list-disc list-outside pl-4 text-sm font-sans mb-2 space-y-1 text-primary-900 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </ul>
   ),
   ol: ({ children }) => (
-    <ol className="list-decimal list-outside pl-4 text-sm font-sans mb-2 space-y-1 text-primary-800 dark:text-primary transition-all duration-150 ease-out">
+    <ol className="list-decimal list-outside pl-4 text-sm font-sans mb-2 space-y-1 text-primary-900 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </ol>
   ),
   li: ({ children }) => (
-    <li className="font-sans text-sm text-primary-800 dark:text-primary transition-all duration-150 ease-out [&>p]:my-0 [&>p:not(:last-child)]:mb-1">
+    <li className="font-sans text-sm text-primary-900 dark:text-primary transition-all duration-150 ease-out [&>p]:my-0 [&>p:not(:last-child)]:mb-1">
       {children}
     </li>
   ),
@@ -68,7 +68,7 @@ export const markdownComponents: Components = {
     </th>
   ),
   td: ({ children }) => (
-    <td className="px-4 py-3 text-sm font-sans text-primary-800 dark:text-primary border-r border-primary-200 dark:border-primary-700 last:border-r-0 transition-all duration-150 ease-out">
+    <td className="px-4 py-3 text-sm font-sans text-primary-900 dark:text-primary border-r border-primary-200 dark:border-primary-700 last:border-r-0 transition-all duration-150 ease-out">
       {children}
     </td>
   ),
@@ -114,7 +114,7 @@ export const markdownComponents: Components = {
     </strong>
   ),
   em: ({ children }) => (
-    <em className="italic text-primary-800 dark:text-primary transition-all duration-150 ease-out">
+    <em className="italic text-primary-900 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </em>
   ),

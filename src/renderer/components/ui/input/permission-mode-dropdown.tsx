@@ -37,6 +37,7 @@ const BYPASS_TRIGGER = {
   trigger:
     "font-medium bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 bg-clip-text text-transparent dark:from-orange-400 dark:via-amber-400 dark:to-yellow-400",
   icon: "text-orange-500 dark:text-orange-400",
+  chevron: "text-yellow-500 dark:text-yellow-400",
 } as const;
 
 function isBypassPermissionMode(mode: string): boolean {
@@ -150,6 +151,12 @@ export function PermissionModeDropdown({
       : isCodex
         ? CODEX_SANDBOX_LABELS
         : PERMISSION_MODE_LABELS);
+  const showPlanSuffix = showPlanRow && planMode;
+  const isBypass = isBypassPermissionMode(permissionMode);
+  const triggerIconClass = isBypass ? BYPASS_TRIGGER.icon : "";
+  const triggerChevronClass = isBypass
+    ? BYPASS_TRIGGER.chevron
+    : "text-primary-400 dark:text-primary-300";
   return (
     <div className="relative mx-0.5" ref={dropdownRef}>
       <Button
@@ -160,24 +167,14 @@ export function PermissionModeDropdown({
       >
         <PermissionModeIcon
           mode={permissionMode}
-          className={`size-3.5 ${
-            isBypassPermissionMode(permissionMode) ? BYPASS_TRIGGER.icon : ""
-          }`}
+          className={`size-3.5 ${triggerIconClass}`}
         />
-        <span
-          className={
-            isBypassPermissionMode(permissionMode) ? BYPASS_TRIGGER.trigger : ""
-          }
-        >
+        <span className={isBypass ? BYPASS_TRIGGER.trigger : ""}>
           {modeLabels[permissionMode] ?? permissionMode}
+          {showPlanSuffix ? " + Plan" : ""}
         </span>
-        {showPlanRow && planMode ? " + Plan" : ""}
         <ArrowUp
-          className={`size-3.5 rotate-180 ${
-            isBypassPermissionMode(permissionMode)
-              ? "text-yellow-500 dark:text-yellow-400"
-              : "text-primary-400 dark:text-primary-300"
-          }`}
+          className={`size-3.5 rotate-180 ${triggerChevronClass}`}
         />
       </Button>
       <DropdownWrapper

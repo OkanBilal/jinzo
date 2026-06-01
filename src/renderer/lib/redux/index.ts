@@ -15,6 +15,9 @@ const appSettingsPersistConfig = {
     "browserPanelOpen",
     "onboardingCompleted",
     "showSuggestions",
+    "sidebarWidth",
+    "rightPanelWidth",
+    "browserPanelWidth",
   ],
 };
 

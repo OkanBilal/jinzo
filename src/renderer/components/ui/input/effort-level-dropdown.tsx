@@ -100,7 +100,7 @@ export function EffortLevelDropdown({
             !thinkingMode
               ? "text-primary-400 dark:text-primary-300"
               : effortLevel === "ultracode"
-                ? ULTRACODE_GRADIENT.icon
+                ? "text-indigo-500 dark:text-indigo-400"
                 : "text-primary-700 dark:text-primary-300"
           }`}
         />

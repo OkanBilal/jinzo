@@ -30,14 +30,14 @@ export default function HelpMenu({ isOpen, position, onClose }: HelpMenuProps) {
           onClick={() => handleOpenExternal("https://github.com/OkanBilal/mains/issues")}
         >
           <Bug className="size-4 shrink-0" />
-          <Body className="flex-1 text-left">Report an Issue</Body>
+          <Body className="flex-1 text-left text-s">Report an Issue</Body>
           <External className="size-3 text-primary-900 dark:text-primary-100" />
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => handleOpenExternal("https://docs.mains.dev")}
         >
           <BookOpen className="size-4 shrink-0" />
-          <Body className="flex-1 text-left">Docs</Body>
+          <Body className="flex-1 text-left text-s">Docs</Body>
           <External className="size-3 text-primary-900 dark:text-primary-100" />
         </DropdownMenuItem>
 
@@ -49,7 +49,7 @@ export default function HelpMenu({ isOpen, position, onClose }: HelpMenuProps) {
           }
         >
           <Feed className="size-4 shrink-0" />
-          <Body className="flex-1 text-left">Changelog</Body>
+          <Body className="flex-1 text-left text-s">Changelog</Body>
           <External className="size-3 text-primary-900 dark:text-primary-100" />
         </DropdownMenuItem>
       </div>

@@ -55,7 +55,7 @@ export default function EditSpaceModal({
   space,
   onClose,
   onSuccess,
-  sidebarWidth = "18rem",
+  sidebarWidth = "var(--sidebar-width)",
 }: EditSpaceModalProps) {
   const [state, updateState] = useReducer(mergeState, {
     name: "",
