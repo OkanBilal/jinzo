@@ -204,6 +204,14 @@ const api = {
       ipcRenderer.invoke(CHANNELS.providers.getCommands, id, workspacePath),
     getSkills: (id: string, workspacePath?: string) => ipcRenderer.invoke(CHANNELS.providers.getSkills, id, workspacePath),
     getRateLimits: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getRateLimits, id),
+    // Fired when the provider streams a fresh rate-limit snapshot during a run
+    // (Codex `account/rateLimits/updated`). Carries the mapped snapshot so the
+    // renderer can patch its cache without a round-trip.
+    onRateLimitsUpdated: (callback: (data: { providerId: string; rateLimits: unknown }) => void) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on(CHANNELS.providers.rateLimitsUpdated, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.providers.rateLimitsUpdated, listener);
+    },
     getAccountInfo: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getAccountInfo, id),
     updateCli: (id: string) => ipcRenderer.invoke(CHANNELS.providers.updateCli, id),
     getPlugins: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getPlugins, id),

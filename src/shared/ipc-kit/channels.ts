@@ -157,6 +157,8 @@ export const CHANNELS = {
     modelsUpdated: "providers:modelsUpdated",
     getPlugins: "providers:getPlugins",
     getRateLimits: "providers:getRateLimits",
+    /** Push: emitted when the provider streams a fresh rate-limit snapshot mid-run. */
+    rateLimitsUpdated: "providers:rateLimitsUpdated",
     getSkills: "providers:getSkills",
     installPlugin: "providers:installPlugin",
     readPlugin: "providers:readPlugin",
