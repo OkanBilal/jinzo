@@ -54,16 +54,16 @@ export function EffortLevelDropdown({
         onClick={onThinkingModeToggle}
         className={`flex items-center gap-1 px-2 py-1 -ml-px rounded-full text-sm  transition-all cursor-pointer animate-blur-reveal ${
           thinkingMode
-            ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
+            ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-950 dark:text-primary"
             : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
         }`}
       >
         <Brain
-          className={`size-4 ${thinkingMode ? "text-primary-700 dark:text-primary-100" : "text-primary-400 dark:text-primary-300"}`}
+          className={`size-4 ${thinkingMode ? "text-primary-950 dark:text-primary" : "text-primary-400 dark:text-primary-300"}`}
         />
         <span
           className={
-            thinkingMode ? "text-primary-700 dark:text-primary-100" : "text-primary-400 dark:text-primary-300"
+            thinkingMode ? "text-primary-950 dark:text-primary" : "text-primary-400 dark:text-primary-300"
           }
         >
           {thinkingMode ? "On" : "Off"}
@@ -80,7 +80,7 @@ export function EffortLevelDropdown({
         onClick={onToggle}
         className={`flex items-center hover:bg-primary-200/30 dark:hover:bg-primary-800 px-2 py-1 -ml-px rounded-full text-sm  transition-all cursor-pointer ${
           thinkingMode
-            ? "gap-1 text-primary-400 dark:text-primary-300"
+            ? "gap-1 text-primary-950 dark:text-primary"
             : "text-primary-400 dark:text-primary-300 hover:bg-primary/10"
         }`}
       >
@@ -90,7 +90,7 @@ export function EffortLevelDropdown({
               ? ""
               : effortLevel === "ultracode"
                 ? `capitalize tracking-tight font-medium ${ULTRACODE_GRADIENT.text}`
-                : "text-primary-700 dark:text-primary-300 capitalize tracking-tight"
+                : "text-primary-950 dark:text-primary capitalize tracking-tight"
           }
         >
           {thinkingMode ? formatEffortLabel(effortLevel) || "On" : "Off"}
@@ -101,7 +101,7 @@ export function EffortLevelDropdown({
               ? "text-primary-400 dark:text-primary-300"
               : effortLevel === "ultracode"
                 ? "text-indigo-500 dark:text-indigo-400"
-                : "text-primary-700 dark:text-primary-300"
+                : "text-primary-950 dark:text-primary"
           }`}
         />
       </Button>
@@ -136,7 +136,7 @@ export function EffortLevelDropdown({
             }}
             className={`w-full flex items-center gap-1.5 text-left px-2.5 py-1.5 text-sm cursor-pointer transition-colors capitalize last:rounded-b-xl ${
               thinkingMode && effortLevel === level
-                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-700 dark:text-primary-100"
+                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-950 dark:text-primary"
                 : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
             }`}
           >
@@ -160,8 +160,8 @@ export function EffortLevelDropdown({
             <Brain
               className={`size-3 shrink-0 ${
                 thinkingMode && effortLevel === "ultracode"
-                  ? ULTRACODE_GRADIENT.icon
-                  : "text-primary-500 dark:text-primary-400"
+                  ? "text-cyan-500 dark:text-cyan-400"
+                  : "text-primary-700 dark:text-primary-300"
               }`}
             />
             <span

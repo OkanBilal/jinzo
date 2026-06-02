@@ -14,7 +14,7 @@ export function ToolInputPreview({ toolName, toolInput }: ToolInputPreviewProps)
     ?? RENDERERS[toolName.charAt(0).toUpperCase() + toolName.slice(1)]
     ?? (toolName.startsWith("[permission:") ? renderPermissionFallback : renderFallback);
   const canonName = RENDERERS[toolName] ? toolName : toolName.charAt(0).toUpperCase() + toolName.slice(1);
-  const noBg = canonName === "Edit" || canonName === "Write" || toolName === "[permission:write]";
+  const noBg = canonName === "Edit" || canonName === "Write" || canonName === "Create" || toolName === "[permission:write]";
   return (
     <div className={`text-xs rounded-lg overflow-x-auto max-h-48 space-y-2 ${noBg ? "" : "bg-primary-50 dark:bg-primary/5"}`}>
       {renderer(input)}
@@ -166,6 +166,26 @@ const RENDERERS: Record<string, Renderer> = {
       )}
     </>
   ),
+
+  // Copilot CLI file-creation tool: input is { file_text, path }. Show the
+  // filename + the new content as an all-added diff (mirrors Write) instead of
+  // dumping the entire file_text as a raw param value.
+  Create: (input) => {
+    const content = input.file_text ?? input.content;
+    return (
+      <>
+        <div className="px-1 pb-1">
+          <Label>file</Label>{" "}
+          <Mono>{basenameDisplay(filePath(input))}</Mono>
+        </div>
+        {!!content && (
+          <div className="bg-primary-50 dark:bg-primary/5 rounded-lg">
+            <DiffView newStr={str(content, 600)} />
+          </div>
+        )}
+      </>
+    );
+  },
 
   Edit: (input) => (
     <>

@@ -84,7 +84,7 @@ export function WorkspaceEmptyState({
           aria-pressed={isCustomizing}
         >
           <Mains
-            className="h-16 w-auto shrink-0 text-primary-200 dark:text-primary-800 hover:text-primary-600 dark:hover:text-primary-300 hover:scale-105 transition-all duration-300"
+            className="h-16 w-auto shrink-0 text-primary-200 dark:text-primary-700 hover:text-primary-600 dark:hover:text-primary-300 hover:scale-102 transition-all duration-300"
             aria-hidden
           />
         </Button>

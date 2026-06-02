@@ -32,7 +32,7 @@ export function SendButton({ loading, onSubmit, onStop, disabled = false }: Send
       onClick={() => {
         if (!isDisabled) onSubmit();
       }}
-      className={` p-1 bg-primary-500 dark:bg-primary-300 rounded-full relative ${
+      className={` p-1 bg-primary-600 dark:bg-primary-100 rounded-full relative ${
         isDisabled ? "opacity-70 cursor-not-allowed" : ""
       }`}
       aria-label={loading ? "Submitting..." : "Send prompt"}

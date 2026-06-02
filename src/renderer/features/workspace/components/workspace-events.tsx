@@ -18,8 +18,6 @@ import type { IssueWithEntity, SignalWithEntity, RunTurn, ModelUsageEntry } from
 const EMPTY_TURNS: RunTurn[] = [];
 import { isIssueTab, getIssueEntityId, isSignalTab, getSignalEntityId, isNoteTab, getNoteId, isNewRunTab } from "../utils/repo-utils";
 import { AsciiLoader } from "./ascii-loader";
-import type { ToolApprovalRequest } from "../hooks/use-tool-approval";
-import { ToolApprovalDialog } from "./tools/tool-approval-dialog";
 import { Clipboard, Check, Branch, ArrowUp } from "@/components/ui/icons";
 import { useGetAppSettingsQuery } from "@/lib/redux/api";
 import { Button, Tooltip } from "@/components/ui";
@@ -667,8 +665,6 @@ interface WorkspaceEventsProps {
   signalTabs?: SignalWithEntity[];
   turns?: RunTurn[];
   variant?: "copilot" | "claude" | "codex" | "cursor";
-  pendingApproval?: ToolApprovalRequest;
-  onApprovalRespond?: (requestId: string, approved: boolean, answer?: string) => void;
   onForkRun?: (sourceRunId: string, message: string) => Promise<string | null>;
   onSuggestionSelect?: (suggestion: string) => void;
   onApplyPlan?: () => void;
@@ -684,8 +680,6 @@ export function WorkspaceEvents({
   signalTabs = [],
   turns = EMPTY_TURNS,
   variant = "copilot",
-  pendingApproval,
-  onApprovalRespond,
   onForkRun,
   onSuggestionSelect,
   onApplyPlan,
@@ -930,13 +924,6 @@ export function WorkspaceEvents({
                 );
               })}
               {isRunning && <AsciiLoader thinkingText={latestThinking} />}
-              {isRunning && pendingApproval && onApprovalRespond && (
-                <ToolApprovalDialog
-                  request={pendingApproval}
-                  onRespond={onApprovalRespond}
-                  variant={variant}
-                />
-              )}
               <div ref={eventsEndRef} />
             </div>
           </div>

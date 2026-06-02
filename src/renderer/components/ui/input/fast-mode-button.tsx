@@ -10,7 +10,7 @@ interface FastModeButtonProps {
 /** Fast mode on — violet (violet → purple → fuchsia), no filled background. */
 const FAST_VIOLET_STYLE = {
   text: [
-    "font-semibold tracking-tight bg-clip-text text-transparent",
+    "font-medium tracking-tight bg-clip-text text-transparent",
     "bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500",
     "bg-[length:140%_100%] bg-left",
     "dark:from-violet-400 dark:via-purple-400 dark:to-fuchsia-400",

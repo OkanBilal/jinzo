@@ -26,6 +26,7 @@ import {
   Trash,
   Web,
 } from "@/components/ui/icons";
+import { FolderIcon } from "@/components/ui/icons/file-icons";
 
 export interface VerbInfo {
   /** Past-tense label used in display, e.g. "listed" → "Linear listed issues". */
@@ -322,6 +323,16 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     category: "File",
     icon: <Edit className="size-3.5" />,
     aliases: ["write", "writeifempty", "create_file", "write_file"],
+  },
+  // Copilot CLI's file-creation tool. Distinct alias (`create`) so it isn't
+  // confused with `create_file`/CreatePR; rendered like Write (path + content
+  // diff) via the `Create` renderers in tool-input-preview / write-display.
+  {
+    displayName: "Create",
+    groupKey: "create",
+    category: "File",
+    icon: <FolderIcon className="size-4" />,
+    aliases: ["create"],
   },
   {
     displayName: "Delete",

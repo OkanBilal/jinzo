@@ -1,5 +1,7 @@
+import { createPortal } from "react-dom";
 import { Body, Label } from "./text";
 import { Button } from "@/components/ui/button";
+import { useSuppressBrowserView } from "@/hooks/use-suppress-browser-view";
 
 interface AlertProps {
   isOpen: boolean;
@@ -23,11 +25,14 @@ export default function Alert({
   onSecondary,
   isPrimaryLoading = false,
 }: AlertProps) {
+  // Hide the native browser view while open so this alert isn't trapped behind it.
+  useSuppressBrowserView(isOpen);
+
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-(--z-overlay) flex items-center justify-center bg-primary-950/50 "
+      className="fixed inset-0 z-(--z-modal-critical) flex items-center justify-center bg-primary-950/50 "
       role="presentation"
       onClick={onSecondary}
     >
@@ -62,6 +67,7 @@ export default function Alert({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

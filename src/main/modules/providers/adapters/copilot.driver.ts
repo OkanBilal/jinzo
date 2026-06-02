@@ -223,6 +223,12 @@ const { info: logInfo, warn: logWarn, error: logError } = createLogger("[Copilot
 const COPILOT_EXTRA_ALLOWED = new Set([
   "bash", "read", "glob", "grep", "report_intent", "view",
   "permission:read", "web_fetch", "permission:url",
+  // `ask_user` is a user-interaction tool, not a permission gate: the SDK
+  // routes it to `onUserInputRequest` (→ buildUserInputHandler) which renders
+  // the real select-option dialog. Without this, the PreToolUse hook would
+  // first surface a redundant "Allow ask_user?" approval dialog before the
+  // question dialog appears.
+  "ask_user",
 ]);
 
 function isCopilotToolAllowed(toolName: string): boolean {

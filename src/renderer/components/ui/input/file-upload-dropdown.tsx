@@ -135,7 +135,7 @@ function ImageGroupChip({
             </div>
           ))}
         </div>
-        <span className="max-w-24 truncate pr-0.5 text-xs text-primary-700 dark:text-primary-200">
+        <span className="max-w-24 truncate pr-0.5 text-xs text-primary-950 dark:text-primary">
           {count} images
         </span>
       </Button>
@@ -165,7 +165,7 @@ function ImageGroupChip({
                     className="h-full w-full object-cover"
                   />
                 </div>
-                <span className="min-w-0 flex-1 truncate text-left text-xs text-primary-700 dark:text-primary-200">
+                <span className="min-w-0 flex-1 truncate text-left text-xs text-primary-950 dark:text-primary">
                   {uploadedFile.file.name}
                 </span>
                 <Button
@@ -248,11 +248,11 @@ function DocumentGroupChip({
                 stackIdx > 0 && "-ml-2",
               )}
             >
-              <Document className="size-3 text-primary-700 dark:text-primary-200" />
+              <Document className="size-3 text-primary-950 dark:text-primary" />
             </div>
           ))}
         </div>
-        <span className="max-w-24 truncate pr-0.5 text-xs text-primary-700 dark:text-primary-200">
+        <span className="max-w-24 truncate pr-0.5 text-xs text-primary-950 dark:text-primary">
           {count} documents
         </span>
       </Button>
@@ -276,9 +276,9 @@ function DocumentGroupChip({
                 role="menuitem"
               >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-primary-200/40 ring-2 ring-primary-200 dark:bg-primary-700/50 dark:ring-primary-700/60">
-                  <Document className="size-4 text-primary-700 dark:text-primary-200" />
+                  <Document className="size-4 text-primary-950 dark:text-primary" />
                 </div>
-                <span className="min-w-0 flex-1 truncate text-left text-xs text-primary-700 dark:text-primary-200">
+                <span className="min-w-0 flex-1 truncate text-left text-xs text-primary-950 dark:text-primary">
                   {uploadedFile.file.name}
                 </span>
                 <Button
@@ -331,14 +331,14 @@ export function FileUploadDropdown({
               aria-label="Remove document"
             >
               <Close className="h-4 w-4 text-primary-600 dark:text-primary-300" />
-              <span className="max-w-25 truncate text-xs text-primary-700 dark:text-primary-200">
+              <span className="max-w-25 truncate text-xs text-primary-950 dark:text-primary">
                 {uploadedFile.file.name}
               </span>
             </Button>
           ) : (
             <>
-              <Document className="h-4 w-4 text-primary-700 dark:text-primary-200" />
-              <span className="max-w-25 truncate text-xs text-primary-700 dark:text-primary-200">
+              <Document className="h-4 w-4 text-primary-950 dark:text-primary" />
+              <span className="max-w-25 truncate text-xs text-primary-950 dark:text-primary">
                 {uploadedFile.file.name}
               </span>
             </>
@@ -376,7 +376,7 @@ export function FileUploadDropdown({
               </Button>
             )}
           </div>
-          <span className="max-w-25 truncate text-xs text-primary-700 dark:text-primary-200">
+          <span className="max-w-25 truncate text-xs text-primary-950 dark:text-primary">
             {uploadedFile.file.name}
           </span>
         </div>
@@ -407,7 +407,7 @@ export function FileUploadDropdown({
               <Close className="h-4 w-4 text-primary-600 dark:text-primary-300" />
             </Button>
           </div>
-          <span className="max-w-25 truncate text-xs text-primary-700 dark:text-primary-200">
+          <span className="max-w-25 truncate text-xs text-primary-950 dark:text-primary">
             {uploadedFile.file.name}
           </span>
         </div>
@@ -465,7 +465,7 @@ export function FileUploadDropdown({
           className="shrink-0 rounded-full p-1.5 transition-colors hover:bg-primary-200/30 dark:hover:bg-primary-300/20 cursor-pointer"
           aria-label="Upload image"
         >
-          <Picture className="size-4 text-primary-700 dark:text-primary-300" />
+          <Picture className="size-4 text-primary-950 dark:text-primary" />
         </Button>
         <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-x-auto">
           {segments.flatMap((segment) => {
@@ -493,7 +493,7 @@ export function FileUploadDropdown({
         aria-label="Upload file"
         aria-expanded={isOpen}
       >
-        <Attach className="text-primary-700 dark:text-primary-300" />
+        <Attach className="text-primary-950 dark:text-primary" />
       </Button>
 
       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-x-auto">
