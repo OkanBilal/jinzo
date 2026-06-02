@@ -16,7 +16,7 @@ export function IntroStep() {
         <span className="text-xxs uppercase tracking-[0.18em] font-medium text-primary-500 dark:text-primary-400">
           v{__APP_VERSION__ ?? "0.2.1"}
         </span>
-        <Heading1>
+        <Heading1 className="font-mono tracking-tight">
           Welcome to Mains
         </Heading1>
         <Body className="max-w-md">
@@ -30,9 +30,9 @@ export function IntroStep() {
 
 
         <Button
-          variant="submit"
+          variant="secondary"
           onClick={goNext}
-          className="inline-flex items-center gap-1 px-4 py-2 text-sm font-medium"
+          className="inline-flex items-center gap-1 px-4 py-2 text-sm "
         >
           Get Started
           <ChevronUp className="w-4 h-4 rotate-90" />

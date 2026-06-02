@@ -554,16 +554,16 @@ export const RichInputForm = forwardRef<RichInputFormHandle, RichInputFormProps>
           onInput={fireChange}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          className="rounded-2xl w-full pl-5 pr-20 pt-4 pb-1 text-sm outline-none whitespace-pre-wrap wrap-break-word
+          className="rounded-2xl w-full pl-5 pr-24 pt-4 pb-1 text-sm outline-none whitespace-pre-wrap wrap-break-word
             min-h-12 max-h-80 overflow-y-auto noscrollbar
             dark:text-primary-200 text-primary-700"
         />
         {isEmpty && placeholder && (
-          <div className="pointer-events-none absolute left-5 top-4 text-sm text-primary-500 dark:text-primary-500">
+          <div className="pointer-events-none absolute left-5 top-4 text-sm text-primary-600 dark:text-primary-400">
             {placeholder}
           </div>
         )}
-        <kbd className="absolute cursor-default right-4 top-4 px-1.5 py-0.5 text-xxs font-sans text-primary-400 dark:text-primary-300">
+        <kbd className="absolute cursor-default right-3 top-3 px-1.5 py-0.5 text-xxs font-sans text-primary-700 dark:text-primary-200">
           ⌘ P to focus
         </kbd>
       </div>

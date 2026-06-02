@@ -9,6 +9,7 @@ import { Close, Web } from "@/components/ui/icons";
 import { ProviderIcon } from "./provider-icon";
 import { Button } from "@/components/ui";
 import { Body } from "@/components/ui/text";
+import { useSuppressBrowserView } from "@/hooks/use-suppress-browser-view";
 
 interface ContextChipsProps {
   contextIssues: ContextIssue[];
@@ -38,6 +39,10 @@ function BrowserSelectionPreview({
   onClose: () => void;
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  // The browser panel is a native view that paints above the DOM — hide it while
+  // this preview is open so it doesn't render behind the browser.
+  useSuppressBrowserView(true);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -74,7 +79,7 @@ function BrowserSelectionPreview({
               </Body>
               <Body className="text-xs opacity-60">
                 {hostname(sel.url)}
-                {sel.selector && <Body className="text-xs opacity-60"> · {sel.selector}</Body>}
+                {/* {sel.selector && <Body className="text-xs opacity-60"> · {sel.selector}</Body>} */}
               </Body>
             </div>
           </div>

@@ -138,7 +138,7 @@ const DISPATCH: Renderer[] = [
 
   // WriteDisplay is the odd one — accepts `output` but not `isCompact`.
   (ctx) => {
-    if (!["write", "writeifempty", "create_file"].includes(ctx.toolNameLower)) return null;
+    if (!["write", "writeifempty", "create_file", "create"].includes(ctx.toolNameLower)) return null;
     const params = pickParams<WriteParams>(ctx, { file_path: ctx.summary });
     return <WriteDisplay params={params} output={ctx.event.metadata?.output} />;
   },

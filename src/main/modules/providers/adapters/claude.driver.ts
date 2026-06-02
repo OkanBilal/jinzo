@@ -495,7 +495,11 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     };
   }
 
-  function buildToolApprovalHook(runId: string, allowedTools: Set<string>): SDKHookMatcher {
+  function buildToolApprovalHook(
+    runId: string,
+    allowedTools: Set<string>,
+    bypassMode: boolean,
+  ): SDKHookMatcher {
     return {
       hooks: [
         async (
@@ -505,6 +509,17 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         ): Promise<Record<string, unknown>> => {
           const toolName = (input.tool_name as string) || "unknown";
           const toolInput = (input.tool_input as Record<string, unknown>) || {};
+          const isAskUser = toolName === "AskUserQuestion";
+
+          // In bypassPermissions mode every tool is auto-allowed EXCEPT
+          // AskUserQuestion: that's a user-interaction tool, not a permission
+          // gate, so it must still surface the interactive dialog (and have the
+          // user's answer injected below) rather than run answerless.
+          if (bypassMode && !isAskUser) {
+            return {
+              hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow" },
+            };
+          }
 
           if (allowedTools.has(toolName)) {
             return {
@@ -518,7 +533,6 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
             };
           }
 
-          const isAskUser = toolName === "AskUserQuestion";
           const requestId = `${runId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
           const req: ToolApprovalRequest = {
@@ -967,8 +981,12 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     options.promptSuggestions = true;
     options.includePartialMessages = true;
 
-    if (permissionMode !== "bypassPermissions" && runId) {
-      const approvalHook = buildToolApprovalHook(runId, ALLOWED_TOOLS_SET);
+    if (runId) {
+      const approvalHook = buildToolApprovalHook(
+        runId,
+        ALLOWED_TOOLS_SET,
+        permissionMode === "bypassPermissions",
+      );
       if (!options.hooks) options.hooks = {};
       if (!options.hooks.PreToolUse) options.hooks.PreToolUse = [];
       options.hooks.PreToolUse.push(approvalHook);

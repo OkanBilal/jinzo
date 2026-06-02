@@ -10,6 +10,8 @@ export interface WriteParams {
   file_path?: string;
   path?: string;
   content?: string;
+  /** Copilot CLI's `create` tool sends the new file body under `file_text`. */
+  file_text?: string;
 }
 
 interface StructuredHunk {
@@ -144,7 +146,7 @@ export function WriteDisplay({
 
   const filePath =
     params.file_path ?? params.path ?? parsedPatch?.outputFilePath ?? "";
-  const content = params.content ?? extractDetailedContent(output) ?? "";
+  const content = params.content ?? params.file_text ?? extractDetailedContent(output) ?? "";
   const fileName = filePath.split("/").pop() || filePath || "file";
   const fileExt = (() => {
     const dotIdx = fileName.lastIndexOf(".");

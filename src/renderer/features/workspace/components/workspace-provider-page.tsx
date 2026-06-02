@@ -10,6 +10,7 @@ import {
   TodoSummaryBar,
 } from "@/features/workspace/components";
 import { SpaceSuggestions } from "@/features/workspace/components/space-suggestions";
+import { ToolApprovalDialog } from "@/features/workspace/components/tools/tool-approval-dialog";
 import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
 import { isFirstWorkspaceTabActive } from "@/features/workspace/utils/is-first-workspace-tab-active";
 import {
@@ -58,7 +59,9 @@ export function WorkspaceProviderPage({
   const [updateProvider] = useUpdateProviderMutation();
   const bottomTerminal = useBottomTerminal();
 
-  const { pendingApprovals, respond: respondToolApproval } = useToolApproval(ws.runs);
+  const { pendingApprovals, respond: respondToolApproval } = useToolApproval(
+    ws.runs,
+  );
 
   const useCenteredPromptLayout =
     (ws.showEmptyState && onboardingCompleted) || ws.showNewRunTab;
@@ -86,7 +89,10 @@ export function WorkspaceProviderPage({
   const handleApplyPlan = useCallback(async () => {
     if (providerData && planExitConfig) {
       const currentConfig = providerData.config ?? {};
-      if ((currentConfig as Record<string, unknown>)[planExitConfig.key] === planExitConfig.planValue) {
+      if (
+        (currentConfig as Record<string, unknown>)[planExitConfig.key] ===
+        planExitConfig.planValue
+      ) {
         await updateProvider({
           id: providerId,
           payload: {
@@ -174,7 +180,9 @@ export function WorkspaceProviderPage({
   const routeTopRounding = useWorkspaceRouteTopRounding();
 
   return (
-    <div className={`flex flex-col h-full dark:bg-primary-950 ${routeTopRounding} overflow-hidden`}>
+    <div
+      className={`flex flex-col h-full dark:bg-primary-950 ${routeTopRounding} overflow-hidden`}
+    >
       <div className="flex-1 overflow-hidden noscrollbar min-h-0">
         {useCenteredPromptLayout ? (
           <div className="flex h-full min-h-0 flex-col items-center justify-center-safe gap-8 overflow-y-auto px-4 py-10 noscrollbar">
@@ -203,7 +211,9 @@ export function WorkspaceProviderPage({
                   contextSignals={ws.contextSignals}
                   onRemoveContextSignal={ws.handleRemoveContextSignal}
                   contextBrowserSelections={ws.contextBrowserSelections}
-                  onRemoveContextBrowserSelection={ws.handleRemoveContextBrowserSelection}
+                  onRemoveContextBrowserSelection={
+                    ws.handleRemoveContextBrowserSelection
+                  }
                   workspacePath={ws.currentWorkspace?.rootPath}
                   projectId={ws.currentWorkspace?.projectId ?? undefined}
                   uploadedFiles={ws.uploadedFiles}
@@ -236,16 +246,31 @@ export function WorkspaceProviderPage({
             signalTabs={ws.openSignalTabs}
             turns={ws.currentTurns}
             variant={variant}
-            pendingApproval={currentApproval}
-            onApprovalRespond={respondToolApproval}
             onForkRun={enableForkRun ? ws.handleForkRun : undefined}
-            onSuggestionSelect={enableSuggestions ? handleSuggestionSelect : undefined}
+            onSuggestionSelect={
+              enableSuggestions ? handleSuggestionSelect : undefined
+            }
             onApplyPlan={handleApplyPlan}
           />
         )}
       </div>
+
+      {/* Pinned just above the input rather than inline in the transcript:
+          the transcript fills all remaining height, so an inline dialog left a
+          large empty gap below it (short runs) or floated mid-scroll (long
+          runs). Anchoring it here keeps it directly above the input and always
+          reachable regardless of scroll position or conversation length. */}
+      {currentApproval && !ws.showEmptyState && !ws.showNewRunTab && (
+        <div className="w-full max-w-200 mx-auto max-h-[55vh] overflow-y-auto noscrollbar">
+          <ToolApprovalDialog
+            request={currentApproval}
+            onRespond={respondToolApproval}
+            variant={variant}
+          />
+        </div>
+      )}
       {ws.showEmptyState || ws.showNewRunTab || !ws.isLoading ? null : (
-      <TodoSummaryBar events={ws.currentEvents} />
+        <TodoSummaryBar events={ws.currentEvents} />
       )}
 
       {ws.currentWorkspace && !ws.showEmptyState && !ws.showNewRunTab && (
@@ -253,7 +278,9 @@ export function WorkspaceProviderPage({
           workspaceId={ws.currentWorkspace.id}
           rootPath={ws.currentWorkspace.rootPath}
           isRunning={ws.isLoading}
-          lastCompletedRunId={ws.activeRun?.status !== "running" ? ws.activeRunId : null}
+          lastCompletedRunId={
+            ws.activeRun?.status !== "running" ? ws.activeRunId : null
+          }
         />
       )}
 
@@ -275,7 +302,9 @@ export function WorkspaceProviderPage({
           contextSignals={ws.contextSignals}
           onRemoveContextSignal={ws.handleRemoveContextSignal}
           contextBrowserSelections={ws.contextBrowserSelections}
-          onRemoveContextBrowserSelection={ws.handleRemoveContextBrowserSelection}
+          onRemoveContextBrowserSelection={
+            ws.handleRemoveContextBrowserSelection
+          }
           workspacePath={ws.currentWorkspace?.rootPath}
           projectId={ws.currentWorkspace?.projectId ?? undefined}
           uploadedFiles={ws.uploadedFiles}

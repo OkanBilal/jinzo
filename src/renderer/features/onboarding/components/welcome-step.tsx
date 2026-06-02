@@ -101,7 +101,7 @@ export function WelcomeStep() {
   return (
     <div className="space-y-4 -mt-8">
       <div className="space-y-1 ">
-        <Heading3>
+        <Heading3 className="font-mono tracking-tight">
           Welcome to Mains
         </Heading3>
         <Caption className="leading-relaxed">
@@ -180,9 +180,9 @@ export function WelcomeStep() {
 
       <div className="flex justify-end pt-2">
         <Button
-          variant="bare"
+          variant="secondary"
           onClick={goNext}
-          className="inline-flex items-center gap-1 text-sm font-medium text-primary-900 dark:text-primary-100 hover:opacity-70 transition-opacity"
+          className="inline-flex items-center gap-1 px-4 py-2 text-sm"
         >
           Continue
           <ChevronUp className="w-4 h-4 rotate-90" />

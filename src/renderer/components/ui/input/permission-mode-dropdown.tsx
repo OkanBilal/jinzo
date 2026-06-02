@@ -100,7 +100,7 @@ function PlanToggleSwitch({ checked }: { checked: boolean }) {
       }`}
     >
       <span
-        className={`inline-block size-3 rounded-full bg-white shadow-sm transition-transform ${
+        className={`inline-block size-3 rounded-full bg-primary shadow-sm transition-transform ${
           checked ? "translate-x-3.5" : "translate-x-0.5"
         }`}
       />
@@ -163,7 +163,7 @@ export function PermissionModeDropdown({
         tooltip="Permission Mode"
         type="button"
         onClick={onToggle}
-        className="flex items-center gap-1.5 px-2 py-1 rounded-full text-sm transition-all cursor-pointer hover:bg-primary-200/30 animate-blur-reveal dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
+        className="flex items-center gap-1.5 px-2 py-1 rounded-full text-sm transition-all cursor-pointer hover:bg-primary-200/30 animate-blur-reveal dark:hover:bg-primary-800 text-primary-950 dark:text-primary"
       >
         <PermissionModeIcon
           mode={permissionMode}
@@ -194,7 +194,7 @@ export function PermissionModeDropdown({
               !showPlanRow ? "last:rounded-b-xl" : ""
             } ${
               permissionMode === mode.value
-                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-500 dark:text-primary-100"
+                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-950 dark:text-primary"
                 : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
             }`}
           >
@@ -223,7 +223,7 @@ export function PermissionModeDropdown({
             }}
             className={`w-full text-left px-2.5 py-1.5 cursor-pointer transition-colors flex items-center gap-2.5 last:rounded-b-xl border-t border-primary-200/40 dark:border-primary/5 ${
               planMode
-                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-500 dark:text-primary-100"
+                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-950 dark:text-primary"
                 : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
             }`}
           >
