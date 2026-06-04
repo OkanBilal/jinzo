@@ -64,6 +64,19 @@ export interface UpdateWorkspacePayload {
   status?: WorkspaceStatus;
 }
 
+// Workspace intake — one operation creates a project + workspace from a repo.
+// The worktree-vs-direct branching and project find-or-create live in the
+// main process (workspaceService.createFromSource). See CONTEXT.md.
+export type WorkspaceIntakeSource =
+  | { kind: "folder"; path: string }
+  | { kind: "clone"; url: string; targetPath: string }
+  | { kind: "init"; name: string };
+
+export interface WorkspaceIntakePayload {
+  accountId: string;
+  source: WorkspaceIntakeSource;
+}
+
 // ─────────────────────────────────────────────────────────────
 // ── Activity ──
 // ─────────────────────────────────────────────────────────────
@@ -248,6 +261,18 @@ export const workspaceApi = baseApi.injectEndpoints({
       transformResponse: (response: ServiceResponse<string>) =>
         unwrap(response),
       invalidatesTags: ["Workspaces"],
+    }),
+
+    // Create a project + workspace from a repo (picked folder / clone / init).
+    // Returns the created workspace so callers can navigate to it.
+    createWorkspaceFromSource: builder.mutation<Workspace, WorkspaceIntakePayload>({
+      query: (payload) => ({
+        handler: CHANNELS.workspace.createFromSource,
+        args: [payload],
+      }),
+      transformResponse: (response: ServiceResponse<Workspace>) =>
+        unwrap(response),
+      invalidatesTags: ["Workspaces", "Projects"],
     }),
 
     updateWorkspace: builder.mutation<
@@ -543,6 +568,7 @@ export const {
   useGetWorkspaceByRootPathQuery,
   useLazyGetWorkspaceByRootPathQuery,
   useCreateWorkspaceMutation,
+  useCreateWorkspaceFromSourceMutation,
   useUpdateWorkspaceMutation,
   useDeleteWorkspaceMutation,
   useArchiveWorkspaceMutation,

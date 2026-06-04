@@ -20,6 +20,11 @@ export interface WorktreeMetadata {
   branch: string;
 }
 
+/** Stored on workspaces that live in their repo directly (no worktree). */
+export interface NoWorktreeMetadata {
+  enabled: false;
+}
+
 export interface OriginMetadata {
   url: string | null;
 }
@@ -29,7 +34,7 @@ export interface WorkspaceMetadata {
   tracking?: string | null;
   ahead?: number;
   behind?: number;
-  worktree?: WorktreeMetadata;
+  worktree?: WorktreeMetadata | NoWorktreeMetadata;
   origin?: OriginMetadata;
   baseBranch?: string;
   language?: string;
@@ -66,6 +71,23 @@ export interface UpdateWorkspacePayload {
   metadata?: WorkspaceMetadata;
   status?: WorkspaceStatus;
   projectId?: string;
+}
+
+// ─────────────────────────────────────────────────────────────
+// ── Workspace intake ──
+// The single input to `workspaceService.createFromSource`. Three acquisition
+// sources feed the shared intake tail (import → project → workspace).
+// See CONTEXT.md "Workspace intake".
+// ─────────────────────────────────────────────────────────────
+
+export type WorkspaceIntakeSource =
+  | { kind: "folder"; path: string }
+  | { kind: "clone"; url: string; targetPath: string }
+  | { kind: "init"; name: string };
+
+export interface WorkspaceIntakePayload {
+  accountId: string;
+  source: WorkspaceIntakeSource;
 }
 
 export interface WorkspaceResponse {

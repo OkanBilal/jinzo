@@ -4,6 +4,7 @@ import { workspaceService } from "./workspace.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import type {
   CreateWorkspacePayload,
+  WorkspaceIntakePayload,
   UpdateWorkspacePayload,
   CreateActivityPayload,
   CreateReviewPayload,
@@ -38,6 +39,12 @@ export function registerWorkspaceIpc(): void {
     CHANNELS.workspace.create,
     async (_, payload: CreateWorkspacePayload) =>
       workspaceService.create(payload),
+  );
+
+  ipcMain.handle(
+    CHANNELS.workspace.createFromSource,
+    async (_, payload: WorkspaceIntakePayload) =>
+      workspaceService.createFromSource(payload),
   );
 
   ipcMain.handle(

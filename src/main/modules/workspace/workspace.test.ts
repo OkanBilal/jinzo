@@ -76,12 +76,32 @@ vi.mock("fs", async (importOriginal) => {
   return { ...actual, existsSync: vi.fn(() => true) };
 });
 
+// Workspace intake collaborators — stubbed so the intake can be exercised
+// end-to-end against the test db without touching real git or settings.
+vi.mock("../git/git.service", () => ({
+  gitService: {
+    initRepo: vi.fn(),
+    cloneRepo: vi.fn(),
+    importLocalRepo: vi.fn(),
+    importLocalRepoDirect: vi.fn(),
+    getRemotes: vi.fn(),
+    getCurrentBranch: vi.fn(),
+    getHeadSha: vi.fn(),
+  },
+}));
+
+vi.mock("../appSettings/appSettings.service", () => ({
+  appSettingsService: { ensureSettings: vi.fn() },
+}));
+
 import {
   workspaceService,
   workspaceRepo,
   logWorkspaceActivity,
 } from "./index";
 import { projectsRepo } from "../projects/projects.repo";
+import { gitService } from "../git/git.service";
+import { appSettingsService } from "../appSettings/appSettings.service";
 import { BrowserWindow } from "electron";
 import { execFile } from "child_process";
 
@@ -2594,5 +2614,224 @@ describe("workspaceService — findings", () => {
       assertFail(result);
       expect(result.error).toBe("Failed to delete review finding");
     });
+  });
+});
+
+// ════════════════════════════════════════════════════════════════
+// 6. Workspace intake (createFromSource)
+//
+// The intake's collaborators (git, settings) are stubbed; projects + the
+// workspace row are real against the test db. This is the locality win: the
+// worktree-vs-direct ordering, project dedup, and error mapping that used to
+// live (untestable) in the sidebar hook are now exercised through one seam.
+// ════════════════════════════════════════════════════════════════
+
+describe("workspaceService — createFromSource (workspace intake)", () => {
+  const gitMock = vi.mocked(gitService);
+  const settingsMock = vi.mocked(appSettingsService);
+
+  function setWorktrees(enabled: boolean) {
+    settingsMock.ensureSettings.mockResolvedValue({
+      enableWorktrees: enabled,
+    } as any);
+  }
+
+  beforeEach(() => {
+    ({ db, sqlite: _sqlite, cleanup } = createTestDb());
+    createAccount(db, { id: "default" });
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("folder + worktree: creates the project before the import, lands a worktree workspace", async () => {
+    setWorktrees(true);
+    gitMock.getRemotes.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          name: "origin",
+          fetchUrl: "https://github.com/foo/bar.git",
+          pushUrl: undefined,
+        },
+      ],
+    });
+    gitMock.getCurrentBranch.mockResolvedValue({ success: true, data: "main" });
+    gitMock.importLocalRepo.mockResolvedValue({
+      success: true,
+      data: {
+        branchName: "feature/x",
+        worktreePath: "/work/worktrees/bar/apple",
+        worktreeName: "apple",
+        baseBranch: "main",
+        tracking: null,
+        ahead: 0,
+        behind: 0,
+        originUrl: "https://github.com/foo/bar.git",
+      },
+    });
+
+    const result = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "folder", path: "/repos/bar" },
+    });
+
+    assertOk(result);
+    // Ordering: project resolved first, so the worktree could be named after it.
+    expect(gitMock.importLocalRepo).toHaveBeenCalledWith("/repos/bar", "bar");
+    const projects = await projectsRepo.findAll();
+    expect(projects).toHaveLength(1);
+    expect(projects[0].workspacesPath).toBe("/work/worktrees/bar");
+    expect(result.data.rootPath).toBe("/work/worktrees/bar/apple");
+    expect(result.data.projectId).toBe(projects[0].id);
+    expect(result.data.metadata?.worktree).toEqual({
+      enabled: true,
+      name: "apple",
+      path: "/work/worktrees/bar/apple",
+      sourcePath: "/repos/bar",
+      branch: "feature/x",
+    });
+  });
+
+  it("folder + direct: imports in place, no worktree, no workspacesPath", async () => {
+    setWorktrees(false);
+    gitMock.importLocalRepoDirect.mockResolvedValue({
+      success: true,
+      data: {
+        branchName: "main",
+        sourcePath: "/repos/baz",
+        baseBranch: "main",
+        tracking: "origin/main",
+        ahead: 1,
+        behind: 0,
+        originUrl: "https://github.com/foo/baz.git",
+      },
+    });
+
+    const result = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "folder", path: "/repos/baz" },
+    });
+
+    assertOk(result);
+    expect(gitMock.importLocalRepo).not.toHaveBeenCalled();
+    expect(result.data.rootPath).toBe("/repos/baz");
+    expect(result.data.metadata?.worktree).toEqual({ enabled: false });
+    const projects = await projectsRepo.findAll();
+    expect(projects[0].workspacesPath).toBeNull();
+  });
+
+  it("clone + direct: clones first, then imports the cloned path", async () => {
+    setWorktrees(false);
+    gitMock.cloneRepo.mockResolvedValue({
+      success: true,
+      data: {
+        clonedPath: "/clones/qux",
+        defaultBranch: "main",
+        originUrl: "https://github.com/foo/qux.git",
+      },
+    });
+    gitMock.importLocalRepoDirect.mockResolvedValue({
+      success: true,
+      data: {
+        branchName: "main",
+        sourcePath: "/clones/qux",
+        baseBranch: "main",
+        tracking: null,
+        ahead: 0,
+        behind: 0,
+        originUrl: "https://github.com/foo/qux.git",
+      },
+    });
+
+    const result = await workspaceService.createFromSource({
+      accountId: "default",
+      source: {
+        kind: "clone",
+        url: "https://github.com/foo/qux.git",
+        targetPath: "/clones",
+      },
+    });
+
+    assertOk(result);
+    expect(gitMock.cloneRepo).toHaveBeenCalledWith(
+      "https://github.com/foo/qux.git",
+      "/clones",
+    );
+    expect(gitMock.importLocalRepoDirect).toHaveBeenCalledWith("/clones/qux");
+    expect(result.data.name).toBe("qux");
+    expect(result.data.rootPath).toBe("/clones/qux");
+  });
+
+  it("init: fresh repo — always direct, no import, no origin", async () => {
+    setWorktrees(true); // ignored for init
+    gitMock.initRepo.mockResolvedValue({
+      success: true,
+      data: { rootPath: "/desktop/newproj", defaultBranch: "main" },
+    });
+
+    const result = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "init", name: "newproj" },
+    });
+
+    assertOk(result);
+    expect(gitMock.importLocalRepo).not.toHaveBeenCalled();
+    expect(gitMock.importLocalRepoDirect).not.toHaveBeenCalled();
+    expect(result.data.rootPath).toBe("/desktop/newproj");
+    expect(result.data.defaultBranch).toBe("main");
+    expect(result.data.metadata?.worktree).toEqual({ enabled: false });
+    expect(result.data.metadata?.origin).toBeUndefined();
+    const projects = await projectsRepo.findAll();
+    expect(projects[0].branches).toEqual(["main"]);
+  });
+
+  it("dedups the project by normalized origin across two intakes", async () => {
+    setWorktrees(false);
+    gitMock.importLocalRepoDirect.mockResolvedValue({
+      success: true,
+      data: {
+        branchName: "main",
+        sourcePath: "/repos/dup",
+        baseBranch: "main",
+        tracking: null,
+        ahead: 0,
+        behind: 0,
+        originUrl: "git@github.com:foo/dup.git",
+      },
+    });
+
+    const a = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "folder", path: "/repos/dup" },
+    });
+    const b = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "folder", path: "/repos/dup-2" },
+    });
+
+    assertOk(a);
+    assertOk(b);
+    const projects = await projectsRepo.findAll();
+    expect(projects).toHaveLength(1); // same normalized origin → one project
+    expect(a.data.projectId).toBe(b.data.projectId);
+  });
+
+  it("surfaces the git error message when the import fails", async () => {
+    setWorktrees(false);
+    gitMock.importLocalRepoDirect.mockResolvedValue({
+      success: false,
+      error: "Not a git repository",
+    });
+
+    const result = await workspaceService.createFromSource({
+      accountId: "default",
+      source: { kind: "folder", path: "/repos/nope" },
+    });
+
+    assertFail(result);
+    expect(result.error).toBe("Not a git repository");
   });
 });
