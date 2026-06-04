@@ -253,6 +253,8 @@ const api = {
       ),
     create: (payload: unknown) =>
       ipcRenderer.invoke(CHANNELS.workspace.create, payload),
+    createFromSource: (payload: unknown) =>
+      ipcRenderer.invoke(CHANNELS.workspace.createFromSource, payload),
     update: (id: string, payload: unknown) =>
       ipcRenderer.invoke(CHANNELS.workspace.update, id, payload),
     delete: (id: string) =>

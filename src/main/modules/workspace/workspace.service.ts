@@ -7,11 +7,16 @@ import { BrowserWindow } from "electron";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import { workspaceRepo } from "./workspace.repo";
 import { projectsRepo } from "../projects/projects.repo";
+import { normalizeRemoteOrigin } from "../projects/projects.utils";
 import { gitService } from "../git/git.service";
+import { appSettingsService } from "../appSettings/appSettings.service";
 import { buildDiffSnapshot } from "./workspace-diff-snapshot";
+import type { CreateProjectPayload, ProjectResponse } from "../projects/projects.dto";
 import type {
   CreateWorkspacePayload,
   UpdateWorkspacePayload,
+  WorkspaceMetadata,
+  WorkspaceIntakePayload,
   WorkspaceResponse,
   WorkspaceStatus,
   ScriptCompleteEvent,
@@ -99,6 +104,108 @@ export function emitFindingsChanged(workspaceId: string | undefined): void {
   for (const win of BrowserWindow.getAllWindows()) {
     win.webContents.send(CHANNELS.workspace.findingsChanged, { workspaceId });
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Workspace intake helpers
+//
+// Shared internals of `workspaceService.createFromSource`. See CONTEXT.md
+// "Workspace intake". Kept against `gitService` / `projectsRepo` (not
+// `projectsService`) so the workspace → projects edge stays acyclic —
+// projects.service imports the workspace barrel.
+// ─────────────────────────────────────────────────────────────
+
+/** Unwrap a git `ServiceResponse`, or throw with a caller-friendly message. */
+function expectOk<T>(res: ServiceResponse<T>, fallback: string): T {
+  if (res.success && res.data != null) return res.data;
+  throw new Error(!res.success ? res.error : fallback);
+}
+
+/** Last path segment, e.g. `/a/b/my-repo` → `my-repo`. */
+function basename(p: string): string {
+  return p.split("/").pop() || "Untitled";
+}
+
+/** Honor the global worktree preference (defaults on). */
+async function preferWorktrees(): Promise<boolean> {
+  const settings = await appSettingsService.ensureSettings();
+  return settings.enableWorktrees ?? true;
+}
+
+/** Read the `origin` fetch URL of a repo, or null when there's no remote. */
+async function readOriginUrl(rootPath: string): Promise<string | null> {
+  const res = await gitService.getRemotes(rootPath);
+  if (!res.success || !res.data) return null;
+  return res.data.find((r) => r.name === "origin")?.fetchUrl ?? null;
+}
+
+/** Read the checked-out branch of a repo, falling back to `main`. */
+async function readCurrentBranch(rootPath: string): Promise<string> {
+  const res = await gitService.getCurrentBranch(rootPath);
+  return res.success && res.data ? res.data : "main";
+}
+
+/** A project's worktree dir is the parent of its first worktree. */
+function deriveWorkspacesPath(worktreePath: string): string {
+  return worktreePath.substring(0, worktreePath.lastIndexOf("/"));
+}
+
+/**
+ * Find-or-create a project, deduped by normalized remote origin (or by
+ * rootPath when origin-less). Mirrors `projectsService.findOrCreate`, kept
+ * here against `projectsRepo` to avoid a workspace ↔ projects service cycle.
+ */
+async function findOrCreateProject(
+  payload: CreateProjectPayload,
+): Promise<ProjectResponse> {
+  const normalized = payload.remoteOrigin
+    ? normalizeRemoteOrigin(payload.remoteOrigin)
+    : null;
+
+  const existing = normalized
+    ? await projectsRepo.findByRemoteOrigin(payload.accountId, normalized)
+    : await projectsRepo.findByAccountAndRootPath(
+        payload.accountId,
+        payload.rootPath,
+      );
+  if (existing) return existing;
+
+  const id = randomUUID();
+  await projectsRepo.insert({ ...payload, id, remoteOrigin: normalized });
+  const project = await projectsRepo.findById(id);
+  if (!project) throw new Error("Failed to retrieve created project");
+  return project;
+}
+
+interface MetadataParts {
+  tracking: string | null;
+  ahead: number;
+  behind: number;
+  baseBranch: string;
+  branchName: string;
+  originUrl: string | null;
+  worktree: { name: string; path: string; sourcePath: string } | null;
+}
+
+/** Assemble the `WorkspaceMetadata` blob stored on the workspace row. */
+function buildMetadata(parts: MetadataParts): WorkspaceMetadata {
+  return {
+    isGitRepo: true,
+    tracking: parts.tracking,
+    ahead: parts.ahead,
+    behind: parts.behind,
+    worktree: parts.worktree
+      ? {
+          enabled: true,
+          name: parts.worktree.name,
+          path: parts.worktree.path,
+          sourcePath: parts.worktree.sourcePath,
+          branch: parts.branchName,
+        }
+      : { enabled: false },
+    origin: parts.originUrl ? { url: parts.originUrl } : undefined,
+    baseBranch: parts.baseBranch,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -220,6 +327,142 @@ export const workspaceService = {
     } catch (error) {
       console.error("[WorkspaceService] Failed to create workspace:", error);
       return fail("Failed to create workspace");
+    }
+  },
+
+  /**
+   * Turn a git repo into a project + workspace pair. The three sources
+   * (picked `folder`, `clone` of a URL, fresh `init`) each yield a local repo
+   * path; the shared tail imports it (worktree or direct), finds-or-creates
+   * the project, and creates the workspace. The worktree-vs-direct ordering
+   * difference lives here, not at call sites. See CONTEXT.md "Workspace intake".
+   */
+  async createFromSource(
+    payload: WorkspaceIntakePayload,
+  ): Promise<ServiceResponse<WorkspaceResponse>> {
+    try {
+      const { accountId, source } = payload;
+
+      // ── init: brand-new empty repo. Always direct, no remote. ──
+      if (source.kind === "init") {
+        const init = expectOk(
+          await gitService.initRepo(source.name),
+          "Failed to create project",
+        );
+        const project = await findOrCreateProject({
+          accountId,
+          name: source.name,
+          rootPath: init.rootPath,
+          defaultBranch: "main",
+          branches: ["main"],
+        });
+        return this.create({
+          accountId,
+          name: source.name,
+          rootPath: init.rootPath,
+          defaultBranch: "main",
+          metadata: buildMetadata({
+            tracking: null,
+            ahead: 0,
+            behind: 0,
+            baseBranch: "main",
+            branchName: "main",
+            originUrl: null,
+            worktree: null,
+          }),
+          projectId: project.id,
+        });
+      }
+
+      // ── folder / clone: obtain a local repo path, then import it. ──
+      const sourcePath =
+        source.kind === "clone"
+          ? expectOk(
+              await gitService.cloneRepo(source.url, source.targetPath),
+              "Failed to clone repository",
+            ).clonedPath
+          : source.path;
+      const name = basename(sourcePath);
+
+      if (await preferWorktrees()) {
+        // Worktree lands under worktrees/{projectName}, so the project must
+        // exist before the import — source origin/baseBranch up front.
+        const originUrl = await readOriginUrl(sourcePath);
+        const baseBranch = await readCurrentBranch(sourcePath);
+        const project = await findOrCreateProject({
+          accountId,
+          name,
+          rootPath: sourcePath,
+          remoteOrigin: originUrl ?? undefined,
+          defaultBranch: baseBranch,
+        });
+        const imported = expectOk(
+          await gitService.importLocalRepo(sourcePath, project.name),
+          "Not a git repository",
+        );
+        if (!project.workspacesPath) {
+          await projectsRepo.update(project.id, {
+            workspacesPath: deriveWorkspacesPath(imported.worktreePath),
+          });
+        }
+        return this.create({
+          accountId,
+          name,
+          rootPath: imported.worktreePath,
+          repoUrl: originUrl ?? undefined,
+          defaultBranch: imported.branchName,
+          metadata: buildMetadata({
+            tracking: imported.tracking,
+            ahead: imported.ahead,
+            behind: imported.behind,
+            baseBranch,
+            branchName: imported.branchName,
+            originUrl,
+            worktree: {
+              name: imported.worktreeName,
+              path: imported.worktreePath,
+              sourcePath,
+            },
+          }),
+          projectId: project.id,
+        });
+      }
+
+      // Direct: import in place, then create the project from the result.
+      const imported = expectOk(
+        await gitService.importLocalRepoDirect(sourcePath),
+        "Not a git repository",
+      );
+      const project = await findOrCreateProject({
+        accountId,
+        name,
+        rootPath: sourcePath,
+        remoteOrigin: imported.originUrl ?? undefined,
+        branches: [imported.branchName],
+        defaultBranch: imported.baseBranch,
+      });
+      return this.create({
+        accountId,
+        name,
+        rootPath: sourcePath,
+        repoUrl: imported.originUrl ?? undefined,
+        defaultBranch: imported.branchName,
+        metadata: buildMetadata({
+          tracking: imported.tracking,
+          ahead: imported.ahead,
+          behind: imported.behind,
+          baseBranch: imported.baseBranch,
+          branchName: imported.branchName,
+          originUrl: imported.originUrl,
+          worktree: null,
+        }),
+        projectId: project.id,
+      });
+    } catch (error) {
+      console.error("[WorkspaceService] Workspace intake failed:", error);
+      return fail(
+        error instanceof Error ? error.message : "Failed to create workspace",
+      );
     }
   },
 

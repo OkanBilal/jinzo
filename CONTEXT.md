@@ -66,6 +66,15 @@ IPC channels live under one namespace: `projects:list`, `projects:get`, `project
 The cross-aggregate query `projects:listIssues` (issues linked to a project via `project_resources` → `connection_resources` → `entities`) is orchestrated at the service layer, not joined at the repo: `projects.service.listIssues()` calls `projects.repo.listLinkedResourceIds(projectId)` and then `getIssuesByResourceIds(resourceIds)` from the `entities/` barrel. Each repo stays scoped to its own tables — same shape as the `getConnectionWithSecrets` seam in **connections**. The `LINKABLE_KINDS` allowlist lives in `projects.utils.ts`.
 _Avoid_: re-splitting into `projects` + `projectResources` (or re-introducing `workspaceResources/`). Avoid `projects.repo` importing the `entities` or `issues` schema directly — call `getIssuesByResourceIds` from the entities barrel.
 
+## Operations
+
+### Workspace intake
+
+The main-process operation that turns a git repo into a **project** + **workspace** pair. It has two seams. *Acquisition* — how a local repo path is obtained: `folder` (an existing path the user picked), `clone` (cloned from a URL via `gitService.cloneRepo`), or `init` (a fresh empty repo via `gitService.initRepo`). *Intake* — the uniform tail run on that path: worktree-or-direct git import (`importLocalRepo` / `importLocalRepoDirect`) → `findOrCreateProject` → derive the project's `workspacesPath` → assemble the workspace `metadata` → `createWorkspace`. The **intake** is the deep, shared core; the three acquisitions are thin front-ends that feed it a path.
+
+Owned by `workspace.service`, which calls `gitService` and `projectsService` (same cross-service shape as `projects.service.listIssues` reaching the `entities` barrel). The worktree-vs-direct ordering difference lives entirely behind the intake seam: the worktree path lands under `worktrees/{projectName}/`, so it must `findOrCreateProject` *before* the import; the direct path imports first and reads `originUrl`/`baseBranch` off the result. `init` stays direct-only (a brand-new repo lives at its real path); `folder` and `clone` honor `appSettings.enableWorktrees`. The renderer keeps only the picker invocation, navigation, toast, and modal state.
+_Avoid_: re-inlining the find-or-create-project / `metadata` / `createWorkspace` tail at call sites (it was duplicated 5× across `use-sidebar-actions.ts`), orchestrating the git → projects → workspace sequence from the renderer, or string-deriving `workspacesPath` outside the intake.
+
 ## Flagged ambiguities
 
 - "ServiceResponse" was historically defined ~27 times across `src/main/modules/*/dto.ts` in two structurally incompatible shapes (discriminated union vs optional-fields object). Resolved: the discriminated union is canonical; every module now re-exports the canonical type (no remaining bespoke envelopes).

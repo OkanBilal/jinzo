@@ -286,6 +286,7 @@ export const CHANNELS = {
     // ── lifecycle ──
     archive: "workspace:archive",
     create: "workspace:create",
+    createFromSource: "workspace:createFromSource",
     delete: "workspace:delete",
     get: "workspace:get",
     getByRootPath: "workspace:getByRootPath",

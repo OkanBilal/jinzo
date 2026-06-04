@@ -9,10 +9,13 @@ export type {
   // workspace
   WorkspaceMetadata,
   WorktreeMetadata,
+  NoWorktreeMetadata,
   OriginMetadata,
   WorkspaceStatus,
   CreateWorkspacePayload,
   UpdateWorkspacePayload,
+  WorkspaceIntakeSource,
+  WorkspaceIntakePayload,
   WorkspaceResponse,
   WorkspaceListResponse,
   ScriptCompleteEvent,
