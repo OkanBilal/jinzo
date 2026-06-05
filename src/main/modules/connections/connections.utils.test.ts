@@ -1,12 +1,18 @@
 import { describe, it, expect, vi } from "vitest";
 import { assertOk, assertFail } from "../../../shared/ipc-kit/service-response";
 
-vi.mock("electron", () => ({
-  safeStorage: {
-    isEncryptionAvailable: () => false,
+const { safeStorageMock } = vi.hoisted(() => ({
+  safeStorageMock: {
+    // Default to available (matches a healthy macOS / Keychain install).
+    // Individual tests flip this to false to exercise the fail-closed path (B3).
+    isEncryptionAvailable: vi.fn(() => true),
     encryptString: (s: string) => Buffer.from(s),
     decryptString: (b: Buffer) => b.toString(),
   },
+}));
+
+vi.mock("electron", () => ({
+  safeStorage: safeStorageMock,
   app: {
     getPath: () => "/tmp",
     getName: () => "mains",
@@ -99,6 +105,11 @@ describe("encryptSecrets / decryptSecrets", () => {
     const secrets = {};
     const result = decryptSecrets(encryptSecrets(secrets));
     expect(result).toEqual(secrets);
+  });
+
+  it("fails closed when secure storage is unavailable (B3)", () => {
+    safeStorageMock.isEncryptionAvailable.mockReturnValueOnce(false);
+    expect(() => encryptSecrets({ token: "x" })).toThrow(/unavailable/i);
   });
 });
 

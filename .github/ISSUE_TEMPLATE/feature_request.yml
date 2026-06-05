@@ -2,7 +2,7 @@ name: Feature Request
 description: Suggest a new feature or improvement
 labels: ["enhancement"]
 body:
-  - type: description
+  - type: markdown
     attributes:
       value: |
         Have an idea for Mains? We'd love to hear it.
@@ -36,7 +36,7 @@ body:
       label: Area
       description: Which part of the app does this relate to?
       options:
-        - AI Agents (Copilot / Claude)
+        - AI Agents (Copilot / Claude / Codex / Cursor)
         - Workspaces & Projects
         - Integrations (GitHub, Linear, Jira, etc.)
         - Terminal / File Explorer

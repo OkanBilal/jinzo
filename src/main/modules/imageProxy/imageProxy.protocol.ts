@@ -1,7 +1,7 @@
-import { app, protocol, net } from "electron";
+import { app, protocol } from "electron";
 import * as fs from "fs";
 import * as path from "path";
-import { imageProxyService } from "./imageProxy.service";
+import { imageProxyService, SsrfBlockedError } from "./imageProxy.service";
 import { verifySignedPath } from "./imageProxy.signing";
 
 //TODO: imageproxy service limitations check
@@ -254,11 +254,11 @@ export function registerImageProxyHandler() {
         return new Response("Only HTTP(S) URLs are supported", { status: 400 });
       }
 
-      // GitHub: authenticated fetch
+      // GitHub: authenticated fetch (SSRF-guarded, auth dropped on redirect)
       if (imageProxyService.matchUrlToGithub(originalUrl)) {
         const headers = await imageProxyService.buildGithubAuthHeaders();
         if (headers) {
-          const response = await imageProxyService.fetchWithAuth(
+          const response = await imageProxyService.safeImageFetch(
             originalUrl,
             headers
           );
@@ -281,8 +281,8 @@ export function registerImageProxyHandler() {
         }
       }
 
-      // Everything else — passthrough with net.fetch
-      const response = await net.fetch(originalUrl);
+      // Everything else — SSRF-guarded passthrough (no auth)
+      const response = await imageProxyService.safeImageFetch(originalUrl, null);
       const tooLarge = checkContentLength(response);
       if (tooLarge) return tooLarge;
 
@@ -295,6 +295,11 @@ export function registerImageProxyHandler() {
         },
       });
     } catch (error) {
+      if (error instanceof SsrfBlockedError) {
+        // Target resolved to a private/loopback/link-local address (or wasn't
+        // a valid http(s) URL). Refuse rather than fetch internal endpoints.
+        return new Response("Forbidden", { status: 403 });
+      }
       console.error("[imageProxy] Protocol handler error:", error);
       return new Response("Image proxy error", { status: 500 });
     }

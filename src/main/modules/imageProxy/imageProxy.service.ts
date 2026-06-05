@@ -1,5 +1,6 @@
 import * as os from "os";
 import * as path from "path";
+import * as dns from "dns";
 import { getConnectionWithSecrets } from "../connections";
 import { signLocalImagePath } from "./imageProxy.signing";
 
@@ -14,6 +15,81 @@ function expandTilde(p: string): string {
   if (p === "~") return os.homedir();
   if (p.startsWith("~/")) return path.join(os.homedir(), p.slice(2));
   return p;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SSRF Guard
+// ─────────────────────────────────────────────────────────────
+/** Thrown when a proxied URL targets a non-public (private/loopback/etc.) address. */
+export class SsrfBlockedError extends Error {}
+
+const MAX_REDIRECTS = 5;
+
+function isBlockedIpv4(ip: string): boolean {
+  const parts = ip.split(".").map((n) => parseInt(n, 10));
+  if (
+    parts.length !== 4 ||
+    parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)
+  ) {
+    return true; // unparseable → fail closed
+  }
+  const [a, b, c] = parts;
+  if (a === 0) return true; // 0.0.0.0/8 "this host"
+  if (a === 10) return true; // 10.0.0.0/8 private
+  if (a === 127) return true; // 127.0.0.0/8 loopback
+  if (a === 169 && b === 254) return true; // 169.254.0.0/16 link-local (cloud metadata)
+  if (a === 172 && b >= 16 && b <= 31) return true; // 172.16.0.0/12 private
+  if (a === 192 && b === 168) return true; // 192.168.0.0/16 private
+  if (a === 100 && b >= 64 && b <= 127) return true; // 100.64.0.0/10 CGNAT
+  if (a === 192 && b === 0 && c === 0) return true; // 192.0.0.0/24
+  if (a === 198 && (b === 18 || b === 19)) return true; // 198.18.0.0/15 benchmark
+  if (a >= 224) return true; // 224.0.0.0/4 multicast + 240.0.0.0/4 reserved
+  return false;
+}
+
+function isBlockedIpv6(ip: string): boolean {
+  const lower = ip.toLowerCase();
+  if (lower === "::1" || lower === "::") return true; // loopback / unspecified
+  if (/^f[cd][0-9a-f]{2}:/.test(lower)) return true; // fc00::/7 unique-local
+  if (/^fe[89ab][0-9a-f]:/.test(lower)) return true; // fe80::/10 link-local
+  return false;
+}
+
+export function isBlockedIp(ip: string): boolean {
+  const v4mapped = ip.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i);
+  if (v4mapped) return isBlockedIpv4(v4mapped[1]);
+  return ip.includes(":") ? isBlockedIpv6(ip) : isBlockedIpv4(ip);
+}
+
+/**
+ * Reject anything that isn't a public http(s) destination. Resolves the host
+ * and checks every returned address, so a domain that resolves to a private IP
+ * is blocked too. NOTE: a small resolve-then-fetch TOCTOU (DNS-rebinding)
+ * window remains — acceptable for this single-user desktop threat model.
+ */
+async function assertUrlAllowed(urlStr: string): Promise<void> {
+  let u: URL;
+  try {
+    u = new URL(urlStr);
+  } catch {
+    throw new SsrfBlockedError("invalid url");
+  }
+  if (u.protocol !== "http:" && u.protocol !== "https:") {
+    throw new SsrfBlockedError("only http(s) urls are allowed");
+  }
+  const host = u.hostname.replace(/^\[|\]$/g, ""); // strip IPv6 brackets
+  let addrs: { address: string }[];
+  try {
+    addrs = await dns.promises.lookup(host, { all: true });
+  } catch {
+    throw new SsrfBlockedError(`dns resolution failed for ${host}`);
+  }
+  if (addrs.length === 0) throw new SsrfBlockedError(`no addresses for ${host}`);
+  for (const { address } of addrs) {
+    if (isBlockedIp(address)) {
+      throw new SsrfBlockedError(`blocked address ${address}`);
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -40,8 +116,13 @@ export const imageProxyService = {
 
   matchUrlToGithub(url: string): boolean {
     try {
-      const hostname = new URL(url).hostname;
-      return GITHUB_DOMAINS.some((d) => hostname.endsWith(d));
+      const hostname = new URL(url).hostname.toLowerCase();
+      // Exact host or a dot-bounded subdomain only — never a lookalike like
+      // "evilgithub.com" that merely *ends with* "github.com" (which would
+      // leak the user's GitHub token to an attacker-controlled host).
+      return GITHUB_DOMAINS.some(
+        (d) => hostname === d || hostname.endsWith("." + d),
+      );
     } catch {
       return false;
     }
@@ -53,32 +134,38 @@ export const imageProxyService = {
     return { Authorization: `token ${conn.secrets.token}` };
   },
 
-  async fetchWithAuth(
-    url: string,
-    headers: Record<string, string>
+  /**
+   * Fetch a remote image with SSRF protection. Validates the target host
+   * against private/loopback/link-local ranges on EVERY hop (including
+   * redirects), and never forwards auth headers past the first hop. Pass
+   * `authHeaders` for the GitHub path, or `null` for an unauthenticated
+   * passthrough. Throws `SsrfBlockedError` if any hop resolves to a blocked
+   * address.
+   */
+  async safeImageFetch(
+    initialUrl: string,
+    authHeaders: Record<string, string> | null,
   ): Promise<Response> {
-    // First request with auth, manual redirect to prevent header leakage
-    let response = await fetch(url, {
-      headers,
-      redirect: "manual",
-    });
+    let url = initialUrl;
+    let headers: Record<string, string> | undefined = authHeaders ?? undefined;
 
-    // Follow redirects without auth headers (prevent token leakage to CDNs)
-    let redirectCount = 0;
-    const MAX_REDIRECTS = 5;
-    while (
-      redirectCount < MAX_REDIRECTS &&
-      response.status >= 300 &&
-      response.status < 400
-    ) {
-      const location = response.headers.get("location");
-      if (!location) break;
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      await assertUrlAllowed(url);
+      // Manual redirect: undici (Node's global fetch) exposes the Location
+      // header — unlike a browser's opaqueredirect — so we re-validate each
+      // hop instead of letting the network stack follow redirects blindly
+      // into a private address.
+      const response = await fetch(url, { headers, redirect: "manual" });
 
-      const redirectUrl = new URL(location, url).toString();
-      response = await fetch(redirectUrl, { redirect: "manual" });
-      redirectCount++;
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        if (!location) return response;
+        url = new URL(location, url).toString();
+        headers = undefined; // drop auth before following a redirect
+        continue;
+      }
+      return response;
     }
-
-    return response;
+    throw new SsrfBlockedError("too many redirects");
   },
 };

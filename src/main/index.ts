@@ -767,7 +767,7 @@ async function initializeApp() {
           },
           {
             label: "Report an Issue",
-            click: () => shell.openExternal("https://github.com/OkanBilal/mains/issues"),
+            click: () => shell.openExternal("https://github.com/mainsdotdev/mains/issues"),
           },
         ],
       },

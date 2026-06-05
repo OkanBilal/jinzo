@@ -1,6 +1,6 @@
 <div align="center">
   <br />
-  <a href="https://github.com/OkanBilal/mains">
+  <a href="https://github.com/mainsdotdev/mains">
     <img src="src/renderer/public/icon.png" width="100" alt="Mains" />
   </a>
   <br />
@@ -18,7 +18,7 @@
   <p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Electron](https://img.shields.io/badge/Electron-40-47848F.svg?logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![Electron](https://img.shields.io/badge/Electron-41-47848F.svg?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&logoColor=white)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![SQLite](https://img.shields.io/badge/SQLite-Drizzle_ORM-003B57.svg?logo=sqlite&logoColor=white)](https://orm.drizzle.team/)
@@ -28,7 +28,7 @@
 
 ---
 
-Mains is a desktop app for running AI coding agents in managed workspaces. It wraps the **GitHub Copilot** and **Claude Code** SDKs and the **OpenAI Codex** app server, tracks every run with full observability, and syncs issues from the tools you already use — all from one place.
+Mains is a desktop app for running AI coding agents in managed workspaces. It wraps the **GitHub Copilot**, **Claude Code**, and **Cursor** SDKs and the **OpenAI Codex** app server, tracks every run with full observability, and syncs issues from the tools you already use — all from one place.
 
 ```
 npm install
@@ -39,7 +39,7 @@ npm start
 
 ### Agents
 
-- **Multi-Agent** - Run GitHub Copilot, Claude Code, and OpenAI Codex side by side
+- **Multi-Agent** - Run GitHub Copilot, Claude Code, OpenAI Codex, and Cursor side by side
 - **Session Management** - Resume, continue, and fork agent sessions across runs
 - **Tool Approval** - Interactive approve/deny flow for agent tool calls with pre-approved tool lists
 - **Structured Output** - Define JSON schemas to constrain Claude agent output format
@@ -73,19 +73,21 @@ npm start
 **Prerequisites:** [Node.js](https://nodejs.org/) 18+, Git
 
 ```bash
-git clone https://github.com/OkanBilal/mains.git
+git clone https://github.com/mainsdotdev/mains.git
 cd mains
 npm install
 npm start
 ```
 
-1. Open **Settings** and configure a provider (Copilot, Claude, or Codex)
+1. Open **Settings** and configure a provider (Copilot, Claude, Codex, or Cursor)
 2. Add a local git repository as a workspace
-3. Open the Copilot, Claude, or Codex view and start an agent run
+3. Open the Copilot, Claude, Codex, or Cursor view and start an agent run
 
 For Copilot, you'll need [GitHub CLI](https://cli.github.com/) authenticated (`gh auth login`).
 For Claude, you'll need [Claude Code](https://docs.anthropic.com/en/docs/claude-code) authenticated (`claude login`).
 For Codex, you'll need [Codex CLI](https://github.com/openai/codex) authenticated (`codex auth login`).
+For Cursor, you'll need the [Cursor Agent CLI](https://cursor.com/cli) installed (`curl https://cursor.com/install -fsS | bash`) and authenticated (`cursor-agent login`).
+
 ## Development
 
 ```bash

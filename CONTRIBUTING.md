@@ -5,7 +5,7 @@ Thanks for your interest in contributing! This guide will help you get started.
 ## Development Setup
 
 ```bash
-git clone https://github.com/OkanBilal/mains.git
+git clone https://github.com/mainsdotdev/mains.git
 cd mains
 npm install
 npm run db:push
@@ -24,13 +24,13 @@ src/
 ```
 
 Each domain module in `src/main/modules/` follows the pattern:
-**IPC → Controller → Service → Repository → DTO**
+**IPC → Service → Repository → DTO**
 
 All layers are plain object literals — no classes, no dependency injection.
 
 ## Workflow
 
-1. Fork the repo and create a branch from `master`
+1. Fork the repo and create a branch from `main`
 2. Make your changes
 3. Run checks before committing:
 
@@ -78,9 +78,8 @@ Create files in `src/main/modules/{name}/`:
 
 | File | Role |
 |------|------|
-| `{name}.ipc.ts` | IPC handlers (`ipcMain.handle`) |
-| `{name}.controller.ts` | Request validation, delegates to service |
-| `{name}.service.ts` | Business logic |
+| `{name}.ipc.ts` | IPC handlers (`ipcMain.handle`) — call the service directly |
+| `{name}.service.ts` | Business logic, returns `Promise<ServiceResponse<T>>` |
 | `{name}.repo.ts` | Database queries (Drizzle) |
 | `{name}.dto.ts` | Types and formatters |
 | `{name}.validation.ts` | Input validation (hand-rolled, no zod) |
@@ -104,7 +103,7 @@ Channel format: `"domain:action"` (e.g. `"entities:getAll"`). Must stay in sync 
 
 ## Reporting Issues
 
-Use the [issue templates](https://github.com/OkanBilal/mains/issues/new/choose) for bug reports and feature requests.
+Use the [issue templates](https://github.com/mainsdotdev/mains/issues/new/choose) for bug reports and feature requests.
 
 ## License
 

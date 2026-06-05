@@ -27,7 +27,7 @@ export default function HelpMenu({ isOpen, position, onClose }: HelpMenuProps) {
     >
       <div className="">
         <DropdownMenuItem
-          onClick={() => handleOpenExternal("https://github.com/OkanBilal/mains/issues")}
+          onClick={() => handleOpenExternal("https://github.com/mainsdotdev/mains/issues")}
         >
           <Bug className="size-4 shrink-0" />
           <Body className="flex-1 text-left text-s">Report an Issue</Body>
