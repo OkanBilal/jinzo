@@ -1,6 +1,6 @@
 # Copilot Instructions — Mains
 
-Mains is an Electron 40 desktop app (React 19 renderer, SQLite + Drizzle ORM, sqlite-vec for vector search). CommonJS package with ESM Vite configs (`.mjs`).
+Mains is an Electron 41 desktop app (React 19 renderer, SQLite + Drizzle ORM). CommonJS package with ESM Vite configs (`.mjs`). macOS only (Apple Silicon and Intel).
 
 ## Build & Test
 
@@ -33,9 +33,8 @@ Every backend domain uses this exact structure (see `src/main/modules/account/` 
 
 | File | Role |
 |------|------|
-| `{name}.ipc.ts` | `registerXxxIpc()` / `unregisterXxxIpc()` using `ipcMain.handle` |
-| `{name}.controller.ts` | Object literal, returns `Promise<ServiceResponse<T>>` |
-| `{name}.service.ts` | Object literal with business logic, uses `this` for sibling calls |
+| `{name}.ipc.ts` | `registerXxxIpc()` / `unregisterXxxIpc()` using `ipcMain.handle` — calls the service directly (no controller layer) |
+| `{name}.service.ts` | Object literal with business logic, uses `this` for sibling calls; returns `Promise<ServiceResponse<T>>` |
 | `{name}.repo.ts` | Object literal, calls `getDb()` per method, Drizzle queries |
 | `{name}.dto.ts` | Types via `typeof table.$inferSelect`, formatter functions |
 | `{name}.validation.ts` | Hand-rolled allowlist validation (no zod/yup) |
@@ -43,17 +42,17 @@ Every backend domain uses this exact structure (see `src/main/modules/account/` 
 
 **Critical**: All layers are **plain object literals**, never classes. No DI — repos call `getDb()` inline.
 
-All modules: `account`, `appSettings`, `connectionStates`, `connectionCredentials`, `connections`, `entities`, `feedback`, `fileExplorer`, `git`, `imageProxy`, `projects`, `providers`, `reviewFindings`, `reviews`, `runs`, `seed`, `space`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspaceActivity`, `workspaceDiffs`, `workspaceResources`, `workspaces`
+All modules: `account`, `appSettings`, `automations`, `browser`, `connections`, `entities`, `fileExplorer`, `git`, `guards`, `imageProxy`, `projects`, `providers`, `pulse`, `runs`, `skillsMarketplace`, `space`, `stats`, `sync`, `terminal`, `tools`, `updates`, `workspace`
 
 ## IPC Convention
 
-Channel format: `"domain:action"` (e.g. `"runs:start"`, `"entities:getAll"`). Channels must stay in sync across three files — there is no shared registry:
+Channel format: `"domain:action"` (e.g. `"runs:start"`, `"entities:getAll"`). All channels are defined once in `src/shared/ipc-kit/channels.ts` as a typed map (`CHANNELS.entities.getAll`) — never type the channel string literally. Referenced from three sites:
 
-1. `src/preload/index.ts` — `ipcRenderer.invoke("domain:action")`
-2. `src/main/modules/{name}/{name}.ipc.ts` — `ipcMain.handle("domain:action")`
-3. `src/renderer/lib/redux/api/{name}Api.ts` — `{ handler: "domain:action" }`
+1. `src/preload/index.ts` — `ipcRenderer.invoke(CHANNELS.entities.getAll, ...)`
+2. `src/main/modules/{name}/{name}.ipc.ts` — `ipcMain.handle(CHANNELS.entities.getAll, ...)`
+3. `src/renderer/lib/redux/api/{name}Api.ts` — `{ handler: CHANNELS.entities.getAll }`
 
-All IPC responses use `ServiceResponse<T>` envelope: `{ success: true, data }` or `{ success: false, error }`.
+All IPC responses use the `ServiceResponse<T>` envelope, constructed via `ok(data)` → `{ success: true, data }` or `fail(msg)` → `{ success: false, error }` (from `src/shared/ipc-kit/service-response`).
 
 ## Database (`src/main/db/schema.ts`)
 
@@ -68,7 +67,7 @@ All IPC responses use `ServiceResponse<T>` envelope: `{ success: true, data }` o
 - **Redux**: RTK Query with custom `ipcBaseQuery` (no HTTP), `baseApi.injectEndpoints()` per domain
 - **Hooks**: `use-kebab-case.ts` filenames, `useCamelCase` export names
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`
-- **Routing**: HashRouter — routes at `/`, `/copilot`, `/copilot/:workspaceId`, `/claude`, `/claude/:workspaceId`, `/settings`
+- **Routing**: HashRouter — routes at `/`, `/settings`, `/copilot[/:workspaceId]`, `/claude[/:workspaceId]`, `/codex[/:workspaceId]`, `/cursor[/:workspaceId]`, `/plugins`, `/pulse`, `/relay`
 - **Styling**: Tailwind CSS v4 (PostCSS-based)
 
 ## Code Style
@@ -82,5 +81,4 @@ All IPC responses use `ServiceResponse<T>` envelope: `{ success: true, data }` o
 
 - Preload changes require full dev server restart
 - Dual DB paths: `.data/mains.db` (dev) vs `~/Library/Application Support/mains/mains.db` (packaged)
-- sqlite-vec native extension loaded at runtime for vector search
 - Migration `.sql` files are copied into the build via Vite plugin and bundled as `extraResource`

@@ -7,7 +7,7 @@
   "main": ".vite/build/main.js",
   "publish": {
     "provider": "github",
-    "owner": "OkanBilal",
+    "owner": "mainsdotdev",
     "repo": "mains"
   },
   "scripts": {
@@ -51,11 +51,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/OkanBilal/mains.git"
+    "url": "https://github.com/mainsdotdev/mains.git"
   },
-  "homepage": "https://github.com/OkanBilal/mains#readme",
+  "homepage": "https://github.com/mainsdotdev/mains#readme",
   "bugs": {
-    "url": "https://github.com/OkanBilal/mains/issues"
+    "url": "https://github.com/mainsdotdev/mains/issues"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -63,7 +63,7 @@
   "build": {
     "publish": {
       "provider": "github",
-      "owner": "OkanBilal",
+      "owner": "mainsdotdev",
       "repo": "mains"
     }
   },
@@ -126,6 +126,7 @@
     "react-router-dom": "^7.15.0",
     "redux-persist": "^6.0.0",
     "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "simple-git": "^3.33.0",
     "tailwind-merge": "^3.5.0",

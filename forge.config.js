@@ -168,7 +168,7 @@ module.exports = {
       // Repo must be public for ElectronPublicUpdateService to read it.
       name: '@electron-forge/publisher-github',
       config: {
-        repository: { owner: 'OkanBilal', name: 'mains' },
+        repository: { owner: 'mainsdotdev', name: 'mains' },
         prerelease: false,
         draft: true,
       },

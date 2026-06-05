@@ -49,7 +49,11 @@ export function parseResourceMetadata(
 }
 
 // ─────────────────────────────────────────────────────────────
-// AES-256-GCM Fallback (when safeStorage is unavailable)
+// AES-256-GCM Fallback — LEGACY, DECRYPT-ONLY
+// Retained solely to read credentials written by older versions. New writes
+// always go through safeStorage (see `encryptToken`, which now fails closed).
+// The key was derived from public machine identifiers, so it must never be
+// used to encrypt new secrets.
 // ─────────────────────────────────────────────────────────────
 const FALLBACK_SALT = Buffer.from("mains-credential-encryption-salt");
 const FALLBACK_IV_LENGTH = 16;
@@ -62,14 +66,6 @@ function getFallbackKey(): Buffer {
   const machineId = [os.hostname(), os.homedir(), os.userInfo().username].join(":");
   _fallbackKey = crypto.pbkdf2Sync(machineId, FALLBACK_SALT, 100_000, 32, "sha512");
   return _fallbackKey;
-}
-
-function fallbackEncrypt(plaintext: string): Buffer {
-  const iv = crypto.randomBytes(FALLBACK_IV_LENGTH);
-  const cipher = crypto.createCipheriv("aes-256-gcm", getFallbackKey(), iv);
-  const encrypted = Buffer.concat([cipher.update(plaintext, "utf-8"), cipher.final()]);
-  const authTag = cipher.getAuthTag();
-  return Buffer.concat([iv, authTag, encrypted]);
 }
 
 function fallbackDecrypt(buffer: Buffer): string {
@@ -85,11 +81,19 @@ function fallbackDecrypt(buffer: Buffer): string {
 // Encryption Helpers
 // ─────────────────────────────────────────────────────────────
 function encryptToken(token: string): Buffer {
-  if (safeStorage.isEncryptionAvailable()) {
-    return safeStorage.encryptString(token);
+  // Fail closed: only ever persist secrets under the OS keychain (safeStorage,
+  // Keychain-backed on macOS). The legacy AES fallback derived its key from
+  // public machine identifiers (hostname/homedir/username) — decryptable by
+  // anyone who can read the DB file — so we refuse to write under it rather
+  // than provide a false sense of at-rest encryption. On a healthy macOS
+  // install safeStorage is always available, so this never trips in practice;
+  // callers (e.g. saveCredentials) surface the thrown error as a failed save.
+  if (!safeStorage.isEncryptionAvailable()) {
+    throw new Error(
+      "Secure credential storage is unavailable (OS keychain/safeStorage not ready); refusing to store credentials.",
+    );
   }
-  console.warn("[Credentials] safeStorage unavailable, using AES-256-GCM fallback");
-  return fallbackEncrypt(token);
+  return safeStorage.encryptString(token);
 }
 
 function decryptToken(buffer: Buffer): string {
