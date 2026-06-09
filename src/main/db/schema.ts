@@ -430,7 +430,17 @@ export const runArtifacts = sqliteTable(
       .references(() => runs.id, { onDelete: "cascade" }),
 
     kind: text("kind", {
-      enum: ["patch", "file", "log", "report", "command_result", "result", "prompt_suggestion"],
+      enum: [
+        "patch",
+        "file",
+        "log",
+        "report",
+        "command_result",
+        "result",
+        "prompt_suggestion",
+        "image",
+        "document",
+      ],
     }).notNull(),
 
     // for files/patches

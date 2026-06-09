@@ -728,13 +728,16 @@ export const workspaceService = {
 
       const existing = await workspaceRepo.findLatestDiffByWorkspace(workspaceId);
 
-      let baseRef = existing?.baseRef ?? null;
-      if (!baseRef) {
-        const headResult = await gitService.getHeadSha(workspace.rootPath);
-        if (headResult.success && headResult.data) {
-          baseRef = headResult.data;
-        }
-      }
+      // Re-anchor to the current HEAD rather than the stored baseRef (captured
+      // at run start). Otherwise work committed externally — e.g. via the CLI —
+      // stays in the `baseRef..workingTree` range and keeps showing up even
+      // though the tree is clean. This mirrors the in-process commit tool, which
+      // advances baseRef to the post-commit HEAD (see mains-tools.core.ts).
+      const headResult = await gitService.getHeadSha(workspace.rootPath);
+      const baseRef =
+        headResult.success && headResult.data
+          ? headResult.data
+          : (existing?.baseRef ?? null);
 
       // No baseRef means it's not a git repo (or git failed). Drop any stale
       // row defensively, then bail.

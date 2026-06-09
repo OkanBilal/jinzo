@@ -24,6 +24,8 @@ import {
 } from "@/components/ui";
 import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
 import { useLocalImageUrl } from "@/hooks/use-local-image-url";
+import { DocumentArtifact } from "@/features/workspace/components/tools/document-artifact";
+import { classifyDocType, type DocType } from "@/lib/document-viewer";
 
 const IMAGE_PATH_REGEX = /([~/]?[\w./-]+\.(?:png|jpe?g|webp|gif))\b/gi;
 
@@ -488,6 +490,23 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
             onClose={() => setPreviewAtt(null)}
           />
         )}
+      </div>
+    );
+  }
+
+  if (event.type === "artifact" && event.metadata?.kind === "document") {
+    const absPath = (event.metadata?.path as string | undefined) ?? "";
+    if (!absPath) return null;
+    const fileName =
+      (event.metadata?.fileName as string | undefined) ??
+      absPath.split("/").pop() ??
+      "document";
+    const docType =
+      (event.metadata?.docType as DocType | undefined) ?? classifyDocType(fileName);
+    if (!docType) return null;
+    return (
+      <div className="overflow-hidden">
+        <DocumentArtifact absPath={absPath} fileName={fileName} docType={docType} />
       </div>
     );
   }

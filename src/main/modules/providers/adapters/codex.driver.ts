@@ -374,6 +374,11 @@ const activeRuns = new Map<string, {
   commandOutputBuffers: Map<string, string>;
   /** Absolute image paths already emitted as artifacts during this run (deduped) */
   emittedImagePaths: Set<string>;
+  /** Absolute Office document paths already emitted as artifacts this run (deduped) */
+  emittedDocPaths: Set<string>;
+  /** ms epoch when this run/turn began — used to surface only docs created this
+   * run, not pre-existing files the agent merely listed (e.g. `ls outputs/`). */
+  runStartedAt: number;
   /**
    * Accumulated plan text per plan itemId. Codex streams plan content via
    * `item/plan/delta` (experimental); we concatenate deltas keyed by itemId
@@ -827,6 +832,132 @@ function emitImageArtifacts(
       metadata: { kind: "image", path: resolved, fileName: path.basename(resolved) },
       ts,
     });
+  }
+}
+
+// Office document path scanning — mirror of the image scanner above. Surfaces
+// generated .pptx/.docx/.xlsx files as artifact cards even when the agent only
+// references them in prose. Reuses the same workspace allowlist + symlink guard.
+function docTypeFromPath(p: string): "pptx" | "docx" | "xlsx" | null {
+  const ext = path.extname(p).toLowerCase();
+  if (ext === ".pptx") return "pptx";
+  if (ext === ".docx") return "docx";
+  if (ext === ".xlsx") return "xlsx";
+  return null;
+}
+
+/** Collect every string value in an arbitrary object/array tree (bounded depth). */
+function collectStrings(value: unknown, out: string[], depth: number): void {
+  if (value == null || depth > 6) return;
+  if (typeof value === "string") {
+    out.push(value);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const v of value) collectStrings(v, out, depth + 1);
+    return;
+  }
+  if (typeof value === "object") {
+    for (const v of Object.values(value as Record<string, unknown>)) {
+      collectStrings(v, out, depth + 1);
+    }
+  }
+}
+
+/** Clock-skew slack so a doc written moments before the run's recorded start
+ * still counts as "created this run". */
+const DOC_MTIME_SKEW_MS = 10_000;
+
+/** Emit a `document` artifact for one resolved absolute path, applying the
+ * workspace allowlist + symlink/existence guards, a "created this run" mtime
+ * gate, and per-run dedup. */
+function emitDocAtResolvedPath(
+  events: WorkRunEvent[],
+  rs: { emittedDocPaths: Set<string>; mainsCtx: MainsToolContext; runStartedAt: number },
+  resolved: string,
+  ts: number,
+): void {
+  if (rs.emittedDocPaths.has(resolved)) return;
+  if (!isAllowedImagePath(resolved, rs.mainsCtx.rootPath)) return;
+  const docType = docTypeFromPath(resolved);
+  if (!docType) return;
+  try {
+    const stat = fs.lstatSync(resolved);
+    if (stat.isSymbolicLink() || !stat.isFile()) return;
+    // Only surface docs created/modified during this run — not pre-existing
+    // files the agent merely referenced (e.g. an `ls outputs/documents`).
+    if (stat.mtimeMs < rs.runStartedAt - DOC_MTIME_SKEW_MS) return;
+  } catch {
+    return;
+  }
+  rs.emittedDocPaths.add(resolved);
+  events.push({
+    type: "artifact",
+    kind: "document",
+    content: "",
+    metadata: {
+      kind: "document",
+      path: resolved,
+      fileName: path.basename(resolved),
+      docType,
+    },
+    ts,
+  });
+}
+
+function emitDocumentArtifacts(
+  events: WorkRunEvent[],
+  runId: string | undefined,
+  source: unknown,
+  ts: number,
+): void {
+  // Flatten the item tree to its strings and run the permissive, workspace-
+  // root-resolving scan over them — this catches both absolute paths in tool
+  // output and bare/relative names mentioned in item fields.
+  const strings: string[] = [];
+  collectStrings(source, strings, 0);
+  if (strings.length === 0) return;
+  emitDocumentArtifactsFromText(events, runId, strings.join("\n"), ts);
+}
+
+/**
+ * Scan free text (e.g. the agent's final "Done: report.docx" message) for
+ * document references, resolving bare/relative names against the workspace
+ * root. More permissive than the item scanner — the existence + allowlist
+ * checks in {@link emitDocAtResolvedPath} keep prose false-positives out. This
+ * is the reliable path when the rendered .png previews live in
+ * ~/.codex/generated_images while the real document sits in the workspace.
+ */
+// No spaces in the name portion so prose ("the report.docx") splits on the
+// word boundary and yields just "report.docx" rather than swallowing the
+// preceding word. (Paths with spaces are rare for generated docs.)
+const DOC_NAME_SCAN_REGEX = /([~/]?[\w.\-/]*[\w-]\.(?:pptx|docx|xlsx))/gi;
+
+function emitDocumentArtifactsFromText(
+  events: WorkRunEvent[],
+  runId: string | undefined,
+  text: string | undefined | null,
+  ts: number,
+): void {
+  if (!runId || !text) return;
+  const rs = activeRuns.get(runId);
+  if (!rs) return;
+  const root = rs.mainsCtx.rootPath ? path.resolve(rs.mainsCtx.rootPath) : null;
+  const seen = new Set<string>();
+  for (const m of text.matchAll(DOC_NAME_SCAN_REGEX)) {
+    const raw = m[1]?.trim();
+    if (!raw || raw.includes("://") || seen.has(raw)) continue;
+    seen.add(raw);
+    const expanded = expandHomeTilde(raw);
+    let resolved: string;
+    if (path.isAbsolute(expanded)) {
+      resolved = path.resolve(expanded);
+    } else if (root) {
+      resolved = path.resolve(root, expanded);
+    } else {
+      continue;
+    }
+    emitDocAtResolvedPath(events, rs, resolved, ts);
   }
 }
 
@@ -1332,12 +1463,18 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
           // Emit remaining buffer
           if (runState.agentMessageBuffer.trim()) {
+            const messageText = runState.agentMessageBuffer.trim();
             events.push({
               type: "artifact",
               kind: "report",
-              content: runState.agentMessageBuffer.trim(),
+              content: messageText,
               metadata: { source: "agent_message", itemId: runState.currentMessageItemId },
             });
+            // The agent's closing summary is the most reliable reference to a
+            // generated document (e.g. "Done: report.docx") — surface it as a
+            // document artifact card even when the .png previews it produced
+            // live elsewhere.
+            emitDocumentArtifactsFromText(events, runId, messageText, Date.now());
             runState.agentMessageBuffer = "";
             runState.currentMessageItemId = null;
           }
@@ -2003,12 +2140,17 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         if (phase === "complete" && runId) {
           const rs = activeRuns.get(runId);
           if (rs && rs.currentMessageItemId === item.id && rs.agentMessageBuffer.trim()) {
+            const messageText = rs.agentMessageBuffer.trim();
             events.push({
               type: "artifact",
               kind: "report",
-              content: rs.agentMessageBuffer.trim(),
+              content: messageText,
               metadata: { source: "agent_message", itemId: rs.currentMessageItemId },
             });
+            // The agent's closing summary is the most reliable reference to a
+            // generated document (e.g. "Done: report.docx") — surface it as a
+            // document artifact card.
+            emitDocumentArtifactsFromText(events, runId, messageText, ts);
             rs.agentMessageBuffer = "";
             rs.currentMessageItemId = null;
           }
@@ -2570,6 +2712,10 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
     if (phase === "complete") {
       emitImageArtifacts(events, runId, item, ts);
     }
+    // Document scan runs on every phase (start/update/complete): a command like
+    // `qlmanage … report.docx` references a doc that already exists at start,
+    // and the existence + dedup guards make repeat scans harmless.
+    emitDocumentArtifacts(events, runId, item, ts);
 
     return events;
   }
@@ -3196,7 +3342,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       if (threadId) sessionIdMap.set(runId, threadId);
 
       const mainsCtx: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-      activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), planBuffers: new Map(), subAgents: new Map() });
+      activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), emittedDocPaths: new Set(), runStartedAt: Date.now(), planBuffers: new Map(), subAgents: new Map() });
 
       const turnInput = buildTurnInput(request);
       const effort = overrideEffort ?? config.modelReasoningEffort;
@@ -3281,7 +3427,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       }
 
       const mainsCtxContinue: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-      activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxContinue, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), planBuffers: new Map(), subAgents: new Map() });
+      activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxContinue, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), emittedDocPaths: new Set(), runStartedAt: Date.now(), planBuffers: new Map(), subAgents: new Map() });
 
       const currentThreadId = sessionIdMap.get(runId) ?? threadId;
       const turnInput = buildContinueTurnInput(message, request);
@@ -3368,6 +3514,8 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
         fileChangeItems: new Map(),
         commandOutputBuffers: new Map(),
         emittedImagePaths: new Set(),
+        emittedDocPaths: new Set(),
+        runStartedAt: Date.now(),
         planBuffers: new Map(),
         subAgents: new Map(),
       });
@@ -3433,7 +3581,7 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       if (threadId) sessionIdMap.set(runId, threadId);
 
       const mainsCtxReview: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
-      activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxReview, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), planBuffers: new Map(), subAgents: new Map() });
+      activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxReview, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), emittedDocPaths: new Set(), runStartedAt: Date.now(), planBuffers: new Map(), subAgents: new Map() });
 
       const target: Record<string, unknown> = { type: request.target.type };
       if (request.target.type === "baseBranch" && request.target.branch) {

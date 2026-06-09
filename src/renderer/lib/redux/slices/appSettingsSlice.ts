@@ -3,7 +3,16 @@ import {
   SIDEBAR_WIDTH_DEFAULT,
   PANEL_WIDTH_DEFAULT,
   BROWSER_PANEL_WIDTH_DEFAULT,
+  DOC_VIEWER_PANEL_WIDTH_DEFAULT,
 } from "@/lib/layout";
+import type { DocType } from "@/lib/document-viewer";
+
+/** The document currently shown in the document viewer panel. */
+export interface DocumentViewerDoc {
+  path: string;
+  fileName: string;
+  docType: DocType;
+}
 
 export interface AppSettingsState {
   sidebarCollapsed: boolean;
@@ -17,6 +26,12 @@ export interface AppSettingsState {
   rightPanelWidth: number;
   /** Embedded browser panel width in pixels. Mirrored onto `--browser-panel-width`. */
   browserPanelWidth: number;
+  /** Whether the in-app document viewer panel is open. */
+  documentViewerOpen: boolean;
+  /** Document viewer panel width in pixels. Mirrored onto `--doc-viewer-panel-width`. */
+  documentViewerWidth: number;
+  /** The document currently loaded in the viewer (not persisted — avoids stale auto-reopen). */
+  documentViewerDoc: DocumentViewerDoc | null;
 }
 
 const initialState: AppSettingsState = {
@@ -28,6 +43,9 @@ const initialState: AppSettingsState = {
   sidebarWidth: SIDEBAR_WIDTH_DEFAULT,
   rightPanelWidth: PANEL_WIDTH_DEFAULT,
   browserPanelWidth: BROWSER_PANEL_WIDTH_DEFAULT,
+  documentViewerOpen: false,
+  documentViewerWidth: DOC_VIEWER_PANEL_WIDTH_DEFAULT,
+  documentViewerDoc: null,
 };
 
 const appSettingsSlice = createSlice({
@@ -58,6 +76,18 @@ const appSettingsSlice = createSlice({
     setBrowserPanelWidth: (state, action: PayloadAction<number>) => {
       state.browserPanelWidth = action.payload;
     },
+    setDocumentViewerOpen: (state, action: PayloadAction<boolean>) => {
+      state.documentViewerOpen = action.payload;
+    },
+    setDocumentViewerPanelWidth: (state, action: PayloadAction<number>) => {
+      state.documentViewerWidth = action.payload;
+    },
+    setDocumentViewerDoc: (
+      state,
+      action: PayloadAction<DocumentViewerDoc | null>,
+    ) => {
+      state.documentViewerDoc = action.payload;
+    },
   },
 });
 
@@ -70,5 +100,8 @@ export const {
   setSidebarWidth,
   setRightPanelWidth,
   setBrowserPanelWidth,
+  setDocumentViewerOpen,
+  setDocumentViewerPanelWidth,
+  setDocumentViewerDoc,
 } = appSettingsSlice.actions;
 export default appSettingsSlice.reducer;

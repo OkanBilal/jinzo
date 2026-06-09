@@ -7,6 +7,7 @@ import { verifySignedPath } from "./imageProxy.signing";
 //TODO: imageproxy service limitations check
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_DOCUMENT_SIZE = 25 * 1024 * 1024; // 25 MB
 
 function checkContentLength(response: Response): Response | null {
   const length = response.headers.get("content-length");
@@ -107,6 +108,15 @@ export function registerImageProxyScheme() {
         corsEnabled: true,
       },
     },
+    {
+      scheme: "mains-localdoc",
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        corsEnabled: true,
+      },
+    },
   ]);
 }
 
@@ -117,6 +127,12 @@ const LOCALIMG_EXT_MIME: Record<string, string> = {
   ".webp": "image/webp",
   ".gif": "image/gif",
   ".svg": "image/svg+xml",
+};
+
+const LOCALDOC_EXT_MIME: Record<string, string> = {
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 };
 
 async function serveLocalImage(requestUrl: URL): Promise<Response> {
@@ -158,6 +174,52 @@ async function serveLocalImage(requestUrl: URL): Promise<Response> {
     headers: {
       "Content-Type": mime,
       "Cache-Control": "private, max-age=60",
+    },
+  });
+}
+
+async function serveLocalDocument(requestUrl: URL): Promise<Response> {
+  const rawPath = requestUrl.searchParams.get("path");
+  const rawExp = requestUrl.searchParams.get("exp");
+  const rawSig = requestUrl.searchParams.get("sig");
+
+  const verified = verifySignedPath(rawPath, rawExp, rawSig);
+  if (!verified.ok) {
+    return new Response(`Forbidden (${verified.reason})`, { status: 403 });
+  }
+
+  const resolved = path.resolve(verified.path);
+  if (resolved.includes("\0")) return new Response("Invalid path", { status: 400 });
+
+  const ext = path.extname(resolved).toLowerCase();
+  const mime = LOCALDOC_EXT_MIME[ext];
+  if (!mime) return new Response("Unsupported file type", { status: 400 });
+
+  let stat: fs.Stats;
+  try {
+    stat = fs.lstatSync(resolved);
+  } catch {
+    return new Response("Not found", { status: 404 });
+  }
+  if (stat.isSymbolicLink()) {
+    return new Response("Symlinks not allowed", { status: 403 });
+  }
+  if (!stat.isFile()) {
+    return new Response("Not a file", { status: 404 });
+  }
+  if (stat.size > MAX_DOCUMENT_SIZE) {
+    return new Response("Document too large", { status: 413 });
+  }
+
+  const data = fs.readFileSync(resolved);
+  return new Response(data, {
+    status: 200,
+    headers: {
+      "Content-Type": mime,
+      "Cache-Control": "private, max-age=60",
+      // The renderer pulls these bytes via fetch() (cross-origin to the
+      // mains-localdoc scheme), so it needs an explicit CORS allow.
+      "Access-Control-Allow-Origin": "*",
     },
   });
 }
@@ -229,6 +291,16 @@ export function registerImageProxyHandler() {
     } catch (error) {
       console.error("[mains-localimg] handler error:", error);
       return new Response("Local image proxy error", { status: 500 });
+    }
+  });
+
+  protocol.handle("mains-localdoc", async (request) => {
+    try {
+      const requestUrl = new URL(request.url);
+      return await serveLocalDocument(requestUrl);
+    } catch (error) {
+      console.error("[mains-localdoc] handler error:", error);
+      return new Response("Local document proxy error", { status: 500 });
     }
   });
 

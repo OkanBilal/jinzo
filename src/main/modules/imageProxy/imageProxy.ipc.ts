@@ -11,8 +11,17 @@ export function registerImageProxyIpc() {
     }
     return ok(url);
   });
+
+  ipcMain.handle(CHANNELS.documents.sign, (_, rawPath: string) => {
+    const url = imageProxyService.signLocalDocumentUrl(rawPath);
+    if (!url) {
+      return fail("Invalid path");
+    }
+    return ok(url);
+  });
 }
 
 export function unregisterImageProxyIpc() {
   ipcMain.removeHandler(CHANNELS.imageProxy.sign);
+  ipcMain.removeHandler(CHANNELS.documents.sign);
 }
