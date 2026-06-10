@@ -1399,7 +1399,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     let prompt = request.goal;
     if (request.context && request.context.length > 0) {
       const contextParts = formatContextSection(request.context);
-      prompt = `Context:\n${contextParts}\n\n---\n\nGoal: ${request.goal}`;
+      prompt = `Context:\n${contextParts}\n\n---\n\n ${request.goal}`;
     }
     prompt = appendPromptSections(prompt, {
       contextIssues: request.contextIssues,
@@ -1423,7 +1423,6 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       contextFiles: request.contextFiles,
       attachments: request.attachments,
       runId: request.runId,
-      includeIssueBody: false,
     });
     return prependPinnedSkillsToPrompt(prompt, request.skills);
   }

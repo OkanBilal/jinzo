@@ -180,11 +180,11 @@ function buildAttachmentPrompt(
     ].includes(ext);
     if (isImage) {
       parts.push(
-        `I've attached an image: ${filePath}\nUse the Read tool to view it.`,
+        `I've attached an image: ${filePath}`,
       );
     } else {
       parts.push(
-        `I've attached a file: ${filePath}\nUse the Read tool to read its contents.`,
+        `I've attached a file: ${filePath}`,
       );
     }
   }
@@ -375,7 +375,7 @@ export function appendPromptSections(
       options.contextSignals,
       options.includeIssueBody ?? true,
     );
-    result = `${result}\n\n---\n\nContext signals (error reports):\n${signalsList}`;
+    result = `${result}\n\n---\n\nContext signals:\n${signalsList}`;
   }
 
   // Context files are no longer appended as a block — every file the user attaches arrives in

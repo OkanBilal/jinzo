@@ -891,9 +891,9 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
 
     if (request.context && request.context.length > 0) {
       const contextParts = formatContextSection(request.context);
-      prompt = `${workspaceInfo}\n\nContext:\n${contextParts}\n\n---\n\nGoal: ${request.goal}`;
+      prompt = `${workspaceInfo}\n\nContext:\n${contextParts}\n\n---\n\n ${request.goal}`;
     } else {
-      prompt = `${workspaceInfo}\n\nGoal: ${request.goal}`;
+      prompt = `${workspaceInfo}\n\n ${request.goal}`;
     }
 
     return appendPromptSections(prompt, {
@@ -919,7 +919,6 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       contextFiles: request.contextFiles,
       attachments: request.attachments,
       runId: request.runId,
-      includeIssueBody: false,
     });
   }
 

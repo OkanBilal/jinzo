@@ -2737,9 +2737,9 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
 
     if (request.context && request.context.length > 0) {
       const contextParts = formatContextSection(request.context);
-      prompt = `Context:\n${contextParts}\n\n---\n\n${MAINS_TOOL_INSTRUCTION}\n\nGoal: ${request.goal}`;
+      prompt = `Context:\n${contextParts}\n\n---\n\n${MAINS_TOOL_INSTRUCTION}\n\n ${request.goal}`;
     } else {
-      prompt = `${MAINS_TOOL_INSTRUCTION}\n\nGoal: ${request.goal}`;
+      prompt = `${MAINS_TOOL_INSTRUCTION}\n\n ${request.goal}`;
     }
 
     prompt = appendPromptSections(prompt, {

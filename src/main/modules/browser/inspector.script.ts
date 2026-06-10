@@ -244,7 +244,6 @@ export function buildInspectorScript(enable: boolean): string {
 
     var rect = el.getBoundingClientRect();
     var meta = findMeta(el);
-    var outer = el.outerHTML ? trim(el.outerHTML, 4000) : "";
     var text = trim((el.innerText || el.textContent || "").replace(/\\s+/g, " ").trim(), 600);
 
     placeMarker(el, rect);
@@ -256,7 +255,6 @@ export function buildInspectorScript(enable: boolean): string {
       selector: buildSelector(el),
       tagName: el.nodeName.toLowerCase(),
       text: text,
-      outerHTML: outer,
       styles: pickStyles(el),
       rect: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
       pageRect: { x: rect.left + window.scrollX, y: rect.top + window.scrollY, width: rect.width, height: rect.height },

@@ -31,8 +31,6 @@ const SURROUND_PADDING = 80;
 const VIEW_BORDER_RADIUS_PX = 0;
 /** Max bytes kept in the browser-captures cache directory before LRU eviction kicks in. */
 const CAPTURE_CACHE_MAX_BYTES = 100 * 1024 * 1024;
-/** Trim outerHTML payloads at this size — anything longer is not useful as context. */
-const OUTER_HTML_MAX_CHARS = 2048;
 /** Idle time before the hidden WebContentsView is parked at about:blank to free page memory. */
 const IDLE_PARK_MS = 2 * 60 * 1000;
 
@@ -114,11 +112,6 @@ function safeUnlink(filePath: string) {
   }
 }
 
-function truncate(str: string | undefined, max: number): string | undefined {
-  if (typeof str !== "string") return str;
-  if (str.length <= max) return str;
-  return str.slice(0, max);
-}
 
 function captureBasename(filePath: string | undefined): string | undefined {
   if (!filePath) return undefined;
@@ -262,7 +255,6 @@ export const browserService = {
       selector: payload.selector,
       tagName: payload.tagName,
       text: payload.text,
-      outerHTML: truncate(payload.outerHTML, OUTER_HTML_MAX_CHARS) ?? "",
       styles: payload.styles,
       rect: payload.rect,
       pageRect: payload.pageRect,
