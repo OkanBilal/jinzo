@@ -2,7 +2,7 @@ import * as os from "os";
 import * as path from "path";
 import * as dns from "dns";
 import { getConnectionWithSecrets } from "../connections";
-import { signLocalImagePath } from "./imageProxy.signing";
+import { signLocalImagePath, signLocalDocumentPath } from "./imageProxy.signing";
 
 // ─────────────────────────────────────────────────────────────
 // Domain Map
@@ -10,6 +10,8 @@ import { signLocalImagePath } from "./imageProxy.signing";
 const GITHUB_DOMAINS = ["githubusercontent.com", "github.com"];
 
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"]);
+
+const DOCUMENT_EXTENSIONS = new Set([".docx", ".xlsx", ".pptx"]);
 
 function expandTilde(p: string): string {
   if (p === "~") return os.homedir();
@@ -112,6 +114,23 @@ export const imageProxyService = {
     const ext = path.extname(resolved).toLowerCase();
     if (!IMAGE_EXTENSIONS.has(ext)) return null;
     return signLocalImagePath(resolved, ttlMs);
+  },
+
+  /**
+   * Returns a signed `mains-localdoc://` URL the renderer can `fetch()` to get
+   * the raw bytes of an Office document. Mirrors {@link signLocalImageUrl} but
+   * with an Office-extension allowlist. The HMAC signature authorizes the path;
+   * the protocol handler re-stats the file (symlink/size/mime guards).
+   */
+  signLocalDocumentUrl(rawPath: string, ttlMs?: number): string | null {
+    if (typeof rawPath !== "string" || rawPath.length === 0) return null;
+    const expanded = expandTilde(rawPath);
+    if (!path.isAbsolute(expanded)) return null;
+    const resolved = path.resolve(expanded);
+    if (resolved.includes("\0")) return null;
+    const ext = path.extname(resolved).toLowerCase();
+    if (!DOCUMENT_EXTENSIONS.has(ext)) return null;
+    return signLocalDocumentPath(resolved, ttlMs);
   },
 
   matchUrlToGithub(url: string): boolean {

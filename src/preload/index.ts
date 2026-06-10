@@ -672,6 +672,9 @@ const api = {
   imageProxy: {
     sign: (absPath: string) => ipcRenderer.invoke(CHANNELS.imageProxy.sign, absPath),
   },
+  documents: {
+    sign: (absPath: string) => ipcRenderer.invoke(CHANNELS.documents.sign, absPath),
+  },
   shell: {
     openExternal: (url: string) => ipcRenderer.invoke(CHANNELS.shell.openExternal, url),
     openPath: (path: string) => ipcRenderer.invoke(CHANNELS.shell.openPath, path),

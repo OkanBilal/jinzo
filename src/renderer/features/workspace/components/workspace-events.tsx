@@ -20,6 +20,7 @@ import { isIssueTab, getIssueEntityId, isSignalTab, getSignalEntityId, isNoteTab
 import { AsciiLoader } from "./ascii-loader";
 import { Clipboard, Check, Branch, ArrowUp } from "@/components/ui/icons";
 import { useGetAppSettingsQuery } from "@/lib/redux/api";
+import { isDocumentRenderImage } from "@/lib/document-viewer";
 import { Button, Tooltip } from "@/components/ui";
 import { PromptSuggestionChips } from "./prompt-suggestion-chips";
 
@@ -444,16 +445,18 @@ type TurnRenderRow =
       previousSegments: number[][];
       /** Plan tool groups — pulled out of `previousSegments` so they stay outside the collapsed bucket. */
       planBreakoutIndices: number[];
-      /** Groups containing image artifacts — kept visible so generated images aren't hidden behind the accordion. */
+      /** Groups containing image/document artifacts — kept visible so generated media aren't hidden behind the accordion. */
       messageBreakoutIndices: number[];
       lastSegment: number[];
       previousMessageCount: number;
       previousToolSummary: string;
     };
 
-function groupHasImageArtifact(g: EventGroup): boolean {
+function groupHasMediaArtifact(g: EventGroup): boolean {
   return g.events.some(
-    (e) => e.type === "artifact" && e.metadata?.kind === "image",
+    (e) =>
+      e.type === "artifact" &&
+      (e.metadata?.kind === "image" || e.metadata?.kind === "document"),
   );
 }
 
@@ -498,7 +501,7 @@ function buildTurnRenderRows(groups: EventGroup[]): TurnRenderRow[] {
     }
 
     // Plan (PlanDisplay) must stay out of the collapsed region so Apply / Dismiss stay usable.
-    // Image artifacts also stay outside — generated images shouldn't be hidden behind the accordion.
+    // Image/document artifacts also stay outside — generated media shouldn't be hidden behind the accordion.
     const planBreakout: number[] = [];
     const messageBreakout: number[] = [];
     for (const range of prevRanges) {
@@ -506,7 +509,7 @@ function buildTurnRenderRows(groups: EventGroup[]): TurnRenderRow[] {
         const g = groups[gIdx]!;
         if (isPlanToolCallGroup(g)) {
           planBreakout.push(gIdx);
-        } else if (groupHasImageArtifact(g)) {
+        } else if (groupHasMediaArtifact(g)) {
           messageBreakout.push(gIdx);
         }
       }
@@ -713,10 +716,29 @@ export function WorkspaceEvents({
   const { data: appSettings } = useGetAppSettingsQuery();
   const showToolCalls = appSettings?.showToolCalls !== false;
 
+  // Drop document-render preview images (e.g. the per-page PNGs emitted while
+  // generating a .docx/.pptx) so a document run doesn't spam image cards. Only
+  // applies when the run actually produced a document — pure image runs are
+  // untouched.
+  const displayEvents = useMemo(() => {
+    const docPaths = currentEvents
+      .filter((e) => e.type === "artifact" && e.metadata?.kind === "document")
+      .map((e) => (e.metadata?.path as string | undefined) ?? "")
+      .filter(Boolean);
+    if (docPaths.length === 0) return currentEvents;
+    return currentEvents.filter((e) => {
+      if (e.type === "artifact" && e.metadata?.kind === "image") {
+        const imgPath = (e.metadata?.path as string | undefined) ?? "";
+        if (isDocumentRenderImage(imgPath, docPaths)) return false;
+      }
+      return true;
+    });
+  }, [currentEvents]);
+
   // Group events for CLI-style display
   const allEventGroups = useMemo(
-    () => groupEvents(currentEvents),
-    [currentEvents],
+    () => groupEvents(displayEvents),
+    [displayEvents],
   );
 
   // Filter out tool_calls groups when setting is off — except plan groups, which stay visible

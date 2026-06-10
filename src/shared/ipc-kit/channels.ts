@@ -66,6 +66,9 @@ export const CHANNELS = {
     saveResources: "connections:saveResources",
     updateState: "connections:updateState",
   },
+  documents: {
+    sign: "documents:sign",
+  },
   entities: {
     create: "entities:create",
     delete: "entities:delete",

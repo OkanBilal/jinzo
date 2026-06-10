@@ -18,6 +18,10 @@ const appSettingsPersistConfig = {
     "sidebarWidth",
     "rightPanelWidth",
     "browserPanelWidth",
+    // Persist the panel width but NOT `documentViewerOpen`/`documentViewerDoc`:
+    // the loaded document isn't persisted, so reopening to an empty panel on
+    // restart would be confusing — start closed instead.
+    "documentViewerWidth",
   ],
 };
 

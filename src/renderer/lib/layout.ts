@@ -28,6 +28,11 @@ export const BROWSER_PANEL_WIDTH_DEFAULT = 608; // 38rem
 export const BROWSER_PANEL_WIDTH_MIN = 420;
 export const BROWSER_PANEL_WIDTH_MAX = 960;
 
+export const DOC_VIEWER_PANEL_WIDTH_VAR = "--doc-viewer-panel-width";
+export const DOC_VIEWER_PANEL_WIDTH_DEFAULT = 720; // 45rem
+export const DOC_VIEWER_PANEL_WIDTH_MIN = 480;
+export const DOC_VIEWER_PANEL_WIDTH_MAX = 1100;
+
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }

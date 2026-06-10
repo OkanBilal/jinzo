@@ -4,7 +4,7 @@
 
 export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "canceled";
 export type RunContextKind = "file" | "selection" | "diff" | "git" | "terminal" | "env" | "note";
-export type RunArtifactKind = "patch" | "file" | "log" | "report" | "command_result" | "result" | "prompt_suggestion";
+export type RunArtifactKind = "patch" | "file" | "log" | "report" | "command_result" | "result" | "prompt_suggestion" | "image" | "document";
 export type ToolCallStatus = "queued" | "running" | "done" | "error" | "canceled";
 
 // ─────────────────────────────────────────────────────────────

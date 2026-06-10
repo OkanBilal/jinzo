@@ -4,6 +4,7 @@ import {
   SIDEBAR_WIDTH_VAR,
   PANEL_WIDTH_VAR,
   BROWSER_PANEL_WIDTH_VAR,
+  DOC_VIEWER_PANEL_WIDTH_VAR,
 } from "@/lib/layout";
 
 /** Imperatively write a layout width var on `:root` (used for live drag preview). */
@@ -22,6 +23,7 @@ export function useLayoutWidthVars() {
   const sidebarWidth = useAppSelector((s) => s.appSettings.sidebarWidth);
   const rightPanelWidth = useAppSelector((s) => s.appSettings.rightPanelWidth);
   const browserPanelWidth = useAppSelector((s) => s.appSettings.browserPanelWidth);
+  const documentViewerWidth = useAppSelector((s) => s.appSettings.documentViewerWidth);
 
   useLayoutEffect(() => {
     setLayoutWidthVar(SIDEBAR_WIDTH_VAR, sidebarWidth);
@@ -34,4 +36,8 @@ export function useLayoutWidthVars() {
   useLayoutEffect(() => {
     setLayoutWidthVar(BROWSER_PANEL_WIDTH_VAR, browserPanelWidth);
   }, [browserPanelWidth]);
+
+  useLayoutEffect(() => {
+    setLayoutWidthVar(DOC_VIEWER_PANEL_WIDTH_VAR, documentViewerWidth);
+  }, [documentViewerWidth]);
 }

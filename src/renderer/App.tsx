@@ -11,6 +11,8 @@ import { shouldHideRightPanel } from "./lib/layout";
 import { useBottomTerminal, BottomTerminalProvider } from "./hooks/use-bottom-terminal";
 import { useBrowserPanel, BrowserPanelProvider } from "./hooks/use-browser-panel";
 import { BrowserPanel } from "./features/workspace/components/browser-panel";
+import { useDocumentViewer, DocumentViewerProvider } from "./hooks/use-document-viewer";
+import { DocumentViewerPanel } from "./features/workspace/components/document-viewer-panel";
 import { useWorkspaceVariant } from "./hooks/use-workspace-variant";
 import { ReduxProvider } from "./providers/redux-provider";
 import { Toaster } from "./components/ui/toast/Toaster";
@@ -26,6 +28,7 @@ import { useLayoutWidthVars } from "./hooks/use-layout-width-vars";
 const SIDEBAR_WIDTH = "var(--sidebar-width)";
 const RIGHT_PANEL_WIDTH = "var(--panel-width)";
 const BROWSER_PANEL_WIDTH = "var(--browser-panel-width)";
+const DOC_VIEWER_PANEL_WIDTH = "var(--doc-viewer-panel-width)";
 
 function useDropdownAnimationPrewarm() {
   useEffect(() => {
@@ -50,6 +53,7 @@ function AppContent() {
   const variant = useWorkspaceVariant();
   const bottomTerminal = useBottomTerminal();
   const browserPanel = useBrowserPanel();
+  const docViewer = useDocumentViewer();
   const showTerminalToggle = variant !== "default";
   const showBrowserToggle = variant !== "default";
   const dispatch = useAppDispatch();
@@ -74,14 +78,18 @@ function AppContent() {
         <MainContent
           marginLeft={sidebarCollapsed ? "0.375rem" : SIDEBAR_WIDTH}
           marginRight={
-            browserPanel.isOpen
-              ? BROWSER_PANEL_WIDTH
-              : !hideRightPanel && isRightPanelOpen
-                ? RIGHT_PANEL_WIDTH
-                : "0.375rem"
+            docViewer.isOpen
+              ? DOC_VIEWER_PANEL_WIDTH
+              : browserPanel.isOpen
+                ? BROWSER_PANEL_WIDTH
+                : !hideRightPanel && isRightPanelOpen
+                  ? RIGHT_PANEL_WIDTH
+                  : "0.375rem"
           }
-          hasRightPanel={!hideRightPanel && !isRightPanelOpen && !browserPanel.isOpen}
-          browserOpen={browserPanel.isOpen}
+          hasRightPanel={
+            !hideRightPanel && !isRightPanelOpen && !browserPanel.isOpen && !docViewer.isOpen
+          }
+          browserOpen={browserPanel.isOpen || docViewer.isOpen}
           sidebarCollapsed={sidebarCollapsed}
         >
           <ErrorBoundary level="route">
@@ -92,7 +100,10 @@ function AppContent() {
           <RightPanel
             isOpen={isRightPanelOpen}
             onToggle={(open) => {
-              if (open) browserPanel.close();
+              if (open) {
+                browserPanel.close();
+                docViewer.close();
+              }
               dispatch(setRightPanelOpen(open));
             }}
             width={RIGHT_PANEL_WIDTH}
@@ -100,12 +111,16 @@ function AppContent() {
             onTerminalToggle={showTerminalToggle ? bottomTerminal.toggle : undefined}
             browserOpen={showBrowserToggle ? browserPanel.isOpen : undefined}
             onBrowserToggle={showBrowserToggle ? () => {
-              if (!browserPanel.isOpen) dispatch(setRightPanelOpen(false));
+              if (!browserPanel.isOpen) {
+                dispatch(setRightPanelOpen(false));
+                docViewer.close();
+              }
               browserPanel.toggle();
             } : undefined}
           />
         )}
         <BrowserPanel />
+        <DocumentViewerPanel />
       </MainLayout>
     </>
   );
@@ -119,7 +134,9 @@ export default function App() {
           <MainHeaderProvider>
             <BottomTerminalProvider>
               <BrowserPanelProvider>
-                <AppContent />
+                <DocumentViewerProvider>
+                  <AppContent />
+                </DocumentViewerProvider>
               </BrowserPanelProvider>
             </BottomTerminalProvider>
           </MainHeaderProvider>
