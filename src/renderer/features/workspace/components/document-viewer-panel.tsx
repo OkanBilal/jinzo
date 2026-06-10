@@ -2,6 +2,7 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Button } from "@/components/ui";
 import { Close, Document } from "@/components/ui/icons";
+import { DOC_TYPE_ICONS } from "./document-viewer/doc-type-icons";
 import { useDocumentViewer } from "@/hooks/use-document-viewer";
 import { useAppSelector } from "@/lib/redux/hooks";
 import { setDocumentViewerPanelWidth } from "@/lib/redux/slices/appSettingsSlice";
@@ -67,6 +68,8 @@ export function DocumentViewerPanel() {
   const zoomOut = () => setZoom((z) => clamp(+(z - ZOOM_STEP).toFixed(2), ZOOM_MIN, ZOOM_MAX));
   const zoomIn = () => setZoom((z) => clamp(+(z + ZOOM_STEP).toFixed(2), ZOOM_MIN, ZOOM_MAX));
 
+  const DocIcon = currentDoc ? DOC_TYPE_ICONS[currentDoc.docType] : Document;
+
   return (
     <div
       className="fixed top-1.25 bottom-1.25 right-1.25 dark:bg-primary-950 bg-primary rounded-tr-xl z-9999 flex flex-col border-l border-primary-200/70 dark:border-primary-800/50 transition-[transform,opacity] duration-300 ease-out overflow-hidden"
@@ -92,7 +95,7 @@ export function DocumentViewerPanel() {
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-2.5 py-1.5 border-b border-primary-200/60 dark:border-primary-800/50">
-        <Document className="size-4 shrink-0 text-primary-500 dark:text-primary-400" />
+        <DocIcon className="size-4 shrink-0 " />
         <div className="flex-1 min-w-0">
           <div className="text-xs font-medium text-primary-900 dark:text-primary-100 truncate">
             {currentDoc?.fileName ?? "Document"}

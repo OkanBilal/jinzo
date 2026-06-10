@@ -1,10 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Toggle,
-  Button,
-  toast,
-  Select,
-} from "@/components/ui";
+import { Toggle, Button, toast, Select, AsciiSpinner } from "@/components/ui";
 import {
   SettingsSection,
   SettingsRow,
@@ -128,49 +123,50 @@ const SANDBOX_OPTIONS = CODEX_SANDBOX_MODES.map((m) => ({
   description: m.description,
 }));
 
-export default function CodexSettings(
-) {
-  const {
-    provider,
-    isLoading,
-    error,
-    config,
-    updateConfig,
-  } = useProviderSettings<CodexAdapterConfig>(PROVIDER_IDS.codex, "codex");
-  const { data: rateLimits, isLoading: isLoadingRateLimits } = useGetProviderRateLimitsQuery(PROVIDER_IDS.codex, {
-    pollingInterval: 60000,
-  });
+export default function CodexSettings() {
+  const { provider, isLoading, error, config, updateConfig } =
+    useProviderSettings<CodexAdapterConfig>(PROVIDER_IDS.codex, "codex");
+  const { data: rateLimits, isLoading: isLoadingRateLimits } =
+    useGetProviderRateLimitsQuery(PROVIDER_IDS.codex, {
+      pollingInterval: 60000,
+    });
 
   // Codex streams `account/rateLimits/updated` while a run is active; patch the
   // query cache so this panel reflects the fresh snapshot instead of waiting
   // for the 60s poll.
   const dispatch = useAppDispatch();
   useEffect(() => {
-    const off = window.api.providers.onRateLimitsUpdated(({ providerId, rateLimits: next }) => {
-      if (providerId !== PROVIDER_IDS.codex || !next) return;
-      dispatch(
-        providersApi.util.updateQueryData(
-          "getProviderRateLimits",
-          PROVIDER_IDS.codex,
-          () => next as RateLimitInfo,
-        ),
-      );
-    });
+    const off = window.api.providers.onRateLimitsUpdated(
+      ({ providerId, rateLimits: next }) => {
+        if (providerId !== PROVIDER_IDS.codex || !next) return;
+        dispatch(
+          providersApi.util.updateQueryData(
+            "getProviderRateLimits",
+            PROVIDER_IDS.codex,
+            () => next as RateLimitInfo,
+          ),
+        );
+      },
+    );
     return () => {
       off();
     };
   }, [dispatch]);
-  const { data: accountInfo, isLoading: isLoadingAccount } = useGetProviderAccountInfoQuery(PROVIDER_IDS.codex);
+  const { data: accountInfo, isLoading: isLoadingAccount } =
+    useGetProviderAccountInfoQuery(PROVIDER_IDS.codex);
   const cli = accountInfo?.cli;
 
-  const [updateCli, { isLoading: isUpdatingCli }] = useUpdateProviderCliMutation();
+  const [updateCli, { isLoading: isUpdatingCli }] =
+    useUpdateProviderCliMutation();
   const [cliUpdateResult, setCliUpdateResult] = useState<string | null>(null);
 
   const handleUpdateCli = async () => {
     setCliUpdateResult(null);
     try {
       const res = await updateCli(PROVIDER_IDS.codex).unwrap();
-      setCliUpdateResult(res.success ? "Codex CLI updated." : res.output || "Update failed.");
+      setCliUpdateResult(
+        res.success ? "Codex CLI updated." : res.output || "Update failed.",
+      );
     } catch {
       setCliUpdateResult("Update failed.");
     }
@@ -187,7 +183,8 @@ export default function CodexSettings(
   const personality = config.personality ?? "none";
 
   const structuredOutputs = config.structuredOutputs ?? {};
-  const structuredOutputsSelectedId = config.structuredOutputsSelectedId ?? null;
+  const structuredOutputsSelectedId =
+    config.structuredOutputsSelectedId ?? null;
   const selectedSchemaName = structuredOutputsSelectedId
     ? (structuredOutputs[structuredOutputsSelectedId]?.name ?? "Off")
     : "Off";
@@ -234,8 +231,13 @@ export default function CodexSettings(
             </span>
           </SettingsRow>
         ) : (
-          <SettingsRow title="Not signed in" description="Sign in to Codex to view account details">
-            <span className="text-xs text-primary-400 dark:text-primary-500">No account</span>
+          <SettingsRow
+            title="Not signed in"
+            description="Sign in to Codex to view account details"
+          >
+            <span className="text-xs text-primary-400 dark:text-primary-500">
+              No account
+            </span>
           </SettingsRow>
         )}
       </SettingsSection>
@@ -244,7 +246,9 @@ export default function CodexSettings(
       <SettingsSection title="CLI">
         <SettingsRow
           title="Codex CLI"
-          description={cli?.version ? `Version ${cli.version}` : "Version unknown"}
+          description={
+            cli?.version ? `Version ${cli.version}` : "Version unknown"
+          }
         >
           <div className="flex items-center gap-3">
             {cliUpdateResult && (
@@ -257,7 +261,9 @@ export default function CodexSettings(
               size="sm"
               onClick={handleUpdateCli}
               disabled={isUpdatingCli}
+              className="gap-1 flex items-center"
             >
+              {isUpdatingCli ? <AsciiSpinner variant="null" /> : null}
               {isUpdatingCli ? "Updating…" : "Update CLI"}
             </Button>
           </div>
@@ -311,7 +317,7 @@ export default function CodexSettings(
             }}
           />
         </SettingsRow>
-                <SettingsDivider />
+        <SettingsDivider />
         <SettingsRow
           title="Personality"
           description="Controls the agent's conversational style"
@@ -322,7 +328,8 @@ export default function CodexSettings(
             onChange={(value) => {
               updateConfig({ personality: value });
               const label =
-                PERSONALITY_OPTIONS.find((o) => o.value === value)?.label ?? value;
+                PERSONALITY_OPTIONS.find((o) => o.value === value)?.label ??
+                value;
               toast.success(`Personality: ${label}`);
             }}
           />
@@ -412,7 +419,9 @@ export default function CodexSettings(
           </div>
         ) : (
           <div className="px-4 py-3">
-            <span className="text-sm text-primary-400 dark:text-primary-500">No usage data available</span>
+            <span className="text-sm text-primary-400 dark:text-primary-500">
+              No usage data available
+            </span>
           </div>
         )}
       </SettingsSection>

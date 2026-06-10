@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Select } from "@/components/ui";
+import { AsciiSpinner, Button, Select } from "@/components/ui";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import {
   ProviderSettingsLayout,
@@ -134,7 +134,9 @@ export default function ClaudeSettings(
               size="sm"
               onClick={handleUpdateCli}
               disabled={isUpdatingCli}
+              className="gap-1 flex items-center"
             >
+              {isUpdatingCli ? <AsciiSpinner variant="null" /> : null}
               {isUpdatingCli ? "Updating…" : "Update CLI"}
             </Button>
           </div>
