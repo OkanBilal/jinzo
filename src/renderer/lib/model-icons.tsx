@@ -103,6 +103,7 @@ export function getModelIcon(modelName: string, variant?: ModelIconVariant) {
     name.includes("sonnet") ||
     name.includes("haiku") ||
     name.includes("claude") ||
+    name.includes("fable") ||
     name === "default" ||
     name.startsWith("default ")
   ) {

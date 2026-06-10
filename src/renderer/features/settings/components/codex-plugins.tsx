@@ -672,10 +672,10 @@ export default function CodexPlugins() {
     <div className="mb-12">
       {/* Category filter + search */}
       <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex gap-1">
+        <div className="flex gap-1 min-w-0 flex-1 overflow-x-auto noscrollbar">
           <Button
             onClick={() => setCategoryFilter(null)}
-            className={`px-2.5 py-1 text-sm rounded-xl transition-colors cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap px-2.5 py-1 text-sm rounded-xl transition-colors cursor-pointer ${
               !categoryFilter
                 ? "bg-primary-200/80 dark:bg-primary-800/60 text-primary-900 dark:text-primary-100"
                 : "text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 hover:bg-primary-100/50 dark:hover:bg-primary-800/30"
@@ -689,7 +689,7 @@ export default function CodexPlugins() {
               onClick={() =>
                 setCategoryFilter(cat === categoryFilter ? null : cat)
               }
-              className={`px-2.5 py-1 text-sm rounded-xl transition-colors cursor-pointer ${
+              className={`shrink-0 whitespace-nowrap px-2.5 py-1 text-sm rounded-xl transition-colors cursor-pointer ${
                 categoryFilter === cat
                   ? "bg-primary-200/80 dark:bg-primary-800/60 text-primary-900 dark:text-primary-100"
                   : "text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 hover:bg-primary-100/50 dark:hover:bg-primary-800/30"
@@ -699,7 +699,7 @@ export default function CodexPlugins() {
             </Button>
           ))}
         </div>
-        <div className="relative w-56">
+        <div className="relative w-56 shrink-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-primary-400 dark:text-primary-500 pointer-events-none" />
           <input
             type="text"

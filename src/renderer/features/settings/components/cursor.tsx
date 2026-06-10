@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Select } from "@/components/ui";
+import { AsciiSpinner, Button, Select } from "@/components/ui";
 import { SettingsSection, SettingsRow } from "./settings-layout";
 import {
   ProviderSettingsLayout,
@@ -98,7 +98,9 @@ export default function CursorSettings(
               size="sm"
               onClick={handleUpdateCli}
               disabled={isUpdating}
+              className="gap-1 flex items-center"
             >
+              {isUpdating ? <AsciiSpinner variant="null" /> : null}
               {isUpdating ? "Updating…" : "Update CLI"}
             </Button>
           </div>

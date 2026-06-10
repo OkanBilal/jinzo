@@ -128,3 +128,6 @@ export { default as Project } from "./project";
 export { default as Relay } from "./relay";
 export { default as Sun } from "./sun";
 export { default as BoltFill } from "./bolt-fill";
+export { default as Excel } from "./excel";
+export { default as Word } from "./word";
+export { default as Powerpoint } from "./powerpoint";

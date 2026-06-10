@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
-import { Document, ArrowUp } from "@/components/ui/icons";
+import { ArrowUp } from "@/components/ui/icons";
 import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
 import { useDocumentViewer } from "@/hooks/use-document-viewer";
 import { DOC_VIEWER_LABELS, type DocType } from "@/lib/document-viewer";
+import { DOC_TYPE_ICONS } from "../document-viewer/doc-type-icons";
 
 /** Artifact card for a generated Office document. Mirrors `ImageArtifact` but
  * opens in the in-app document viewer panel instead of an image preview modal. */
@@ -23,6 +24,7 @@ export function DocumentArtifact({
   const [fetchApps, { data: handlerApps = [], isFetching }] = useLazyGetAppsForFileQuery();
 
   const ext = fileName.includes(".") ? (fileName.split(".").pop() ?? "").toUpperCase() : "";
+  const DocIcon = DOC_TYPE_ICONS[docType];
 
   useEffect(() => {
     if (menuOpen) void fetchApps(absPath);
@@ -59,8 +61,8 @@ export function DocumentArtifact({
         className="shrink-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary-400 overflow-hidden"
         aria-label={`Open ${fileName} in Mains`}
       >
-        <div className="size-10 rounded-lg border border-primary-700/40 dark:border-primary-600/30 bg-primary-900 dark:bg-primary-950/80 flex items-center justify-center">
-          <Document className="size-5 text-primary-100 dark:text-primary-200" />
+        <div className="size-10 rounded-lg border border-primary-200/60 dark:border-primary-700/20 bg-primary-100/60 dark:bg-primary-900/60 flex items-center justify-center">
+          <DocIcon className="size-6" />
         </div>
       </Button>
       <Button
