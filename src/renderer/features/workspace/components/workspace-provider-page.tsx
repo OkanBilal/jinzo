@@ -11,7 +11,11 @@ import {
 } from "@/features/workspace/components";
 import { SpaceSuggestions } from "@/features/workspace/components/space-suggestions";
 import { ToolApprovalDialog } from "@/features/workspace/components/tools/tool-approval-dialog";
-import { useWorkspacePage, useToolApproval } from "@/features/workspace/hooks";
+import {
+  useWorkspacePage,
+  useToolApproval,
+  PluginLogoProvider,
+} from "@/features/workspace/hooks";
 import { isFirstWorkspaceTabActive } from "@/features/workspace/utils/is-first-workspace-tab-active";
 import {
   useAbortRunMutation,
@@ -180,6 +184,7 @@ export function WorkspaceProviderPage({
   const routeTopRounding = useWorkspaceRouteTopRounding();
 
   return (
+    <PluginLogoProvider providerId={providerId}>
     <div
       className={`flex flex-col h-full dark:bg-primary-950 ${routeTopRounding} overflow-hidden`}
     >
@@ -323,5 +328,6 @@ export function WorkspaceProviderPage({
         />
       )}
     </div>
+    </PluginLogoProvider>
   );
 }

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { RunEvent } from "../../types";
 import { parseToolContent, type ParsedToolContent } from "../../utils/parse-tool-content";
 import { resolveTool } from "../../utils/resolve-tool";
+import { usePluginLogoMap, renderPluginIcon, normalizeSlug } from "../../hooks";
 import { TaskDisplay, type TaskParams } from "./task-display";
 import { PlanDisplay } from "./plan-display";
 import { WriteDisplay, type WriteParams } from "./write-display";
@@ -35,7 +36,10 @@ interface ToolCallItemProps {
 interface Ctx {
   toolNameLower: string;
   displayName: string;
+  /** Tool icon, already swapped for the codex plugin logo when one matched. */
   icon: ReactNode;
+  /** Plugin logo override for the Skill renderer; undefined → Sparkles fallback. */
+  skillIcon: ReactNode | undefined;
   resolved: ReturnType<typeof resolveTool>;
   metadataInput: Record<string, unknown> | undefined;
   params: Record<string, unknown> | null;
@@ -151,7 +155,11 @@ const DISPATCH: Renderer[] = [
   withOutput<ViewParams>(["view"], ViewDisplay, summaryAs("path")),
   noOutput<IntentParams>(["report_intent"], IntentDisplay, summaryAs("intent")),
   withOutput<ToolSearchParams>(["toolsearch"], ToolSearchDisplay, summaryAs("query")),
-  noOutput<SkillParams>(["skill"], SkillDisplay, summaryAs("skill")),
+  (ctx) => {
+    if (ctx.toolNameLower !== "skill") return null;
+    const params = pickParams<SkillParams>(ctx, { skill: ctx.summary });
+    return <SkillDisplay params={params} icon={ctx.skillIcon} isCompact={ctx.isCompact} />;
+  },
   withOutput<AskUserQuestionParams>(
     ["askuserquestion", "ask_user", "askuser"],
     AskUserQuestionDisplay,
@@ -216,6 +224,27 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     | undefined;
   const resolved = resolveTool(event.content);
 
+  // Codex plugin tools/skills don't ship a curated brand glyph — swap the
+  // generic MCP / Sparkles icon for the plugin's real logo when we can match it
+  // by slug (`mcp__<slug>__…` tools, `<slug>:<skill>` skills). The plugin logo
+  // wins whenever a match exists; otherwise the static icon stays. Off codex the
+  // map is empty, so everything falls back to its original icon.
+  const pluginLogos = usePluginLogoMap();
+  const toolPlugin = resolved.vendorId
+    ? pluginLogos.get(normalizeSlug(resolved.vendorId))
+    : undefined;
+  const toolIcon = renderPluginIcon(toolPlugin) ?? resolved.icon;
+
+  const skillRaw =
+    toolName.toLowerCase() === "skill"
+      ? (typeof params?.skill === "string" ? params.skill : summary) || ""
+      : "";
+  const skillSlug = skillRaw.includes(":") ? skillRaw.split(":")[0] : undefined;
+  const skillIcon =
+    renderPluginIcon(
+      skillSlug ? pluginLogos.get(normalizeSlug(skillSlug)) : undefined,
+    ) ?? undefined;
+
   const hasParamsOrInput =
     (params !== null && Object.keys(params).length > 0) ||
     (metadataInput !== undefined && Object.keys(metadataInput).length > 0);
@@ -235,7 +264,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
       <div className=" ">
         <div className="flex items-center gap-1 text-s font-sans">
           <span className="text-primary-500/60 group-hover:text-primary-900 group-hover:dark:text-primary-200">
-            {resolved.icon}
+            {toolIcon}
           </span>
           <span className="text-primary-500/60 group-hover:text-primary-900 group-hover:dark:text-primary-200 font-medium">
             {resolved.displayName}
@@ -249,7 +278,8 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   const ctx: Ctx = {
     toolNameLower: toolName.toLowerCase(),
     displayName: resolved.displayName,
-    icon: resolved.icon,
+    icon: toolIcon,
+    skillIcon,
     resolved,
     metadataInput,
     params,
@@ -275,7 +305,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
     <div className="py-0.5 text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary  rounded">
       <div className="flex items-center gap-2 text-s font-sans">
         <span className="">
-          {resolved.icon}
+          {toolIcon}
         </span>
         <span className=" font-medium">
           {resolved.displayName}

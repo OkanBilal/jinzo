@@ -7,3 +7,10 @@ export { useDeleteWorkspace, useArchiveWorkspace } from "./use-workspace-actions
 export { useFileContentLoader } from "./use-file-content-loader";
 export { useWorkspacePage } from "./use-workspace-page";
 export { useProviderModels } from "./use-provider-models";
+export {
+  PluginLogoProvider,
+  usePluginLogoMap,
+  renderPluginIcon,
+  normalizeSlug,
+  type PluginLogo,
+} from "./use-plugin-logos";
