@@ -49,8 +49,6 @@ export interface ContextBrowserSelection {
   selector: string;
   tagName: string;
   text: string;
-  /** Truncated by main (~2KB) — full HTML is intentionally not kept in memory. */
-  outerHTML: string;
   styles: Record<string, string>;
   rect: { x: number; y: number; width: number; height: number };
   pageRect: { x: number; y: number; width: number; height: number };

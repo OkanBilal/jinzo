@@ -27,7 +27,6 @@ export interface BrowserSelectionPayload {
   selector: string;
   tagName: string;
   text: string;
-  outerHTML: string;
   styles: Record<string, string>;
   rect: { x: number; y: number; width: number; height: number };
   pageRect: { x: number; y: number; width: number; height: number };

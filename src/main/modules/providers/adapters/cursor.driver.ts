@@ -1626,9 +1626,9 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
 
     if (request.context && request.context.length > 0) {
       const contextParts = formatContextSection(request.context);
-      prompt = `${workspaceInfo}\n\nContext:\n${contextParts}\n\n---\n\nGoal: ${request.goal}`;
+      prompt = `${workspaceInfo}\n\nContext:\n${contextParts}\n\n---\n\n ${request.goal}`;
     } else {
-      prompt = `${workspaceInfo}\n\nGoal: ${request.goal}`;
+      prompt = `${workspaceInfo}\n\n ${request.goal}`;
     }
 
     prompt = appendPromptSections(prompt, {

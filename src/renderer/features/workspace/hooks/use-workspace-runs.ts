@@ -35,7 +35,6 @@ type BrowserContextSelection = {
   selector: string;
   tagName: string;
   text: string;
-  outerHTML: string;
   styles: Record<string, string>;
   rect: { x: number; y: number; width: number; height: number };
   pageRect: { x: number; y: number; width: number; height: number };
@@ -94,7 +93,6 @@ function browserSelectionsToPayload(
       `Selector: ${sel.selector}`,
       sel.sourceFile ? `Source file: ${sel.sourceFile}` : null,
       sel.text ? `Visible text: ${sel.text}` : null,
-      sel.outerHTML ? `HTML: ${sel.outerHTML}` : null,
     ]
       .filter(Boolean)
       .join("\n");

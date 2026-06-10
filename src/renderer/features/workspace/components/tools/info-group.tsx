@@ -377,7 +377,7 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                 {issues.map((issue) => (
                   <div
                     key={`${issue.provider}-${issue.number ?? issue.title}`}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-primary-200/40 dark:bg-primary-200/20 text-primary-800 dark:text-primary-100`}
+                    className={`flex items-center gap-1.5 px-2 py-2 rounded-xl text-xs bg-primary-200/40 dark:bg-primary-200/20 text-primary-800 dark:text-primary-100`}
                   >
                     <ProviderIcon
                       provider={issue.provider}
@@ -393,7 +393,7 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                 {signals.map((signal) => (
                   <div
                     key={`${signal.source}-${signal.title}`}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-100"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-xl text-xs bg-primary-200 dark:bg-primary-400 text-primary-600 dark:text-primary-100"
                   >
                     <ProviderIcon
                       provider={signal.source}
@@ -406,7 +406,7 @@ export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
                 {externalFiles.map((file) => (
                   <div
                     key={file.fullPath}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-100"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-primary-200/40 dark:bg-primary-200/20 text-xs text-primary-800 dark:text-primary-100"
                     title={file.fullPath}
                   >
                     <Code className="size-3 dark:text-primary-200 text-primary-700" />
@@ -693,7 +693,7 @@ function InlineMarkdownImage({
       <img
         src={url}
         alt={name}
-        className="w-full max-h-[480px] object-contain"
+        className="w-full max-h-120 object-contain"
         loading="lazy"
         onError={onError}
       />
