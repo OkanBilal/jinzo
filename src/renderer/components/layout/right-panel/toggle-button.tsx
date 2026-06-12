@@ -6,6 +6,7 @@ import { GitActionsDropdown } from "./git-actions-dropdown";
 interface ToggleButtonProps {
   isOpen: boolean;
   onClick: () => void;
+  providerId?: string;
   terminalOpen?: boolean;
   onTerminalToggle?: () => void;
   browserOpen?: boolean;
@@ -15,6 +16,7 @@ interface ToggleButtonProps {
 export function ToggleButton({
   isOpen,
   onClick,
+  providerId,
   terminalOpen,
   onTerminalToggle,
   browserOpen,
@@ -31,7 +33,7 @@ export function ToggleButton({
           : "0.8125rem",
       }}
     >
-      <GitActionsDropdown />
+      <GitActionsDropdown providerId={providerId} />
       <div className="h-4 w-px bg-primary-700/40 dark:bg-primary-700/40" />
       {onBrowserToggle && (
         <Button

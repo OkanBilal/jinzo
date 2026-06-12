@@ -303,6 +303,22 @@ export type {
 } from "./workspaceApi";
 
 export {
+  gitFlowApi,
+  useGetGitFlowStatusQuery,
+  useCommitGitFlowMutation,
+  usePushGitFlowMutation,
+  useCreatePrGitFlowMutation,
+  useGenerateCommitMessageGitFlowMutation,
+  useGeneratePrBodyGitFlowMutation,
+} from "./gitFlowApi";
+export type {
+  GitFlowStatus,
+  CommitResult,
+  CommitGitFlowPayload,
+  CreatePrGitFlowPayload,
+} from "./gitFlowApi";
+
+export {
   runsApi,
   useGetRunsQuery,
   useLazyGetRunsQuery,

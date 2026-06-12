@@ -30,7 +30,7 @@ Thumbs.db
 *.swp
 *.swo
 *~
-/docs
+/docs*
 
 # Coverage
 coverage/

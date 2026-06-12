@@ -650,6 +650,47 @@ const api = {
     resetHard: (rootPath: string, ref: string) =>
       ipcRenderer.invoke(CHANNELS.git.resetHard, rootPath, ref),
   },
+  // Deterministic commit / push / PR flow (no chat agent)
+  gitFlow: {
+    /** Live branch + ahead/behind + pending +/- stats for the commit panel */
+    getStatus: (workspaceId: string) =>
+      ipcRenderer.invoke(CHANNELS.gitFlow.getStatus, workspaceId),
+    /** Stage (+ optionally generate message) + commit, optionally pushing */
+    commit: (payload: {
+      workspaceId: string;
+      message?: string;
+      includeUnstaged?: boolean;
+      providerId?: string;
+      model?: string;
+      push?: boolean;
+    }) => ipcRenderer.invoke(CHANNELS.gitFlow.commit, payload),
+    /** Push the current branch (standalone Push action) */
+    push: (workspaceId: string) =>
+      ipcRenderer.invoke(CHANNELS.gitFlow.push, workspaceId),
+    /** Push (idempotent) then create a PR via gh, generating title/body if blank */
+    createPr: (payload: {
+      workspaceId: string;
+      title?: string;
+      body?: string;
+      base?: string;
+      draft?: boolean;
+      providerId?: string;
+      model?: string;
+    }) => ipcRenderer.invoke(CHANNELS.gitFlow.createPr, payload),
+    /** Headless one-shot commit-message generation */
+    generateCommitMessage: (payload: {
+      workspaceId: string;
+      providerId: string;
+      model?: string;
+      includeUnstaged?: boolean;
+    }) => ipcRenderer.invoke(CHANNELS.gitFlow.generateCommitMessage, payload),
+    /** Headless one-shot PR title/body generation */
+    generatePrBody: (payload: {
+      workspaceId: string;
+      providerId: string;
+      model?: string;
+    }) => ipcRenderer.invoke(CHANNELS.gitFlow.generatePrBody, payload),
+  },
   // Terminal operations
   terminal: {
     create: (payload: { id: string; cwd: string }) =>

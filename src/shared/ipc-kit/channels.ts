@@ -106,6 +106,14 @@ export const CHANNELS = {
     renameBranch: "git:renameBranch",
     resetHard: "git:resetHard",
   },
+  gitFlow: {
+    getStatus: "gitFlow:getStatus",
+    commit: "gitFlow:commit",
+    push: "gitFlow:push",
+    createPr: "gitFlow:createPr",
+    generateCommitMessage: "gitFlow:generateCommitMessage",
+    generatePrBody: "gitFlow:generatePrBody",
+  },
   guards: {
     checkPackage: "guards:checkPackage",
     checkPackages: "guards:checkPackages",
