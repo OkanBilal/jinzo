@@ -21,7 +21,7 @@ export default {
   // Generated SQL migrations (bundled into app resources on build)
   out: "./src/main/db/migrations",
 
-  // CLI-only database (never shipped to users)
+  // CLI-only database (never shipped to production users)
   dbCredentials: {
     url: isCI ? ":memory:" : "./.data/mains.db",
   },

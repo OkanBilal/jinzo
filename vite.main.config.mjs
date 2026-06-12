@@ -1,3 +1,4 @@
+// Vite Main Process configuration
 import { defineConfig } from 'vite';
 import path from 'path';
 import { copyFileSync, mkdirSync, readdirSync, existsSync, cpSync } from 'fs';
@@ -8,6 +9,7 @@ export default defineConfig(() => {
   resolve: {
     // Some libs that can run in both Web and Node.js environments are shipped with both ESM and CJS, and make use of Node.js compatible modules.
     // In order to handle these modules, Electron needs to tell Vite to build for Node.js environments.
+    // This is a workaround to avoid issues with modules that are shipped with both ESM and CJS.
     browserField: false,
     conditions: ['node'],
     mainFields: ['module', 'jsnext:main', 'jsnext'],
@@ -92,15 +94,15 @@ export default defineConfig(() => {
       closeBundle() {
         const srcDir = 'src/main/db/migrations';
         const destDir = '.vite/build/db/migrations';
-        
+
         if (existsSync(srcDir)) {
           mkdirSync(destDir, { recursive: true });
           const items = readdirSync(srcDir, { withFileTypes: true });
-          
+
           items.forEach(item => {
             const srcPath = path.join(srcDir, item.name);
             const destPath = path.join(destDir, item.name);
-            
+
             if (item.isDirectory()) {
               // Copy meta directory
               mkdirSync(destPath, { recursive: true });

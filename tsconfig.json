@@ -1,3 +1,4 @@
+// TypeScript configuration
 {
   "compilerOptions": {
     "target": "ES2020",
