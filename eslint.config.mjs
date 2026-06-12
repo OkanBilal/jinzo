@@ -21,10 +21,10 @@ export default tseslint.config(
   // Base JS config
   js.configs.recommended,
 
-  // TypeScript config
+  // TS config
   ...tseslint.configs.recommended,
 
-  // React config for renderer files
+  // React config for Renderer files
   {
     files: ['src/renderer/**/*.{ts,tsx}'],
     plugins: {
@@ -54,7 +54,7 @@ export default tseslint.config(
     },
   },
 
-  // Main process config
+  // Main Process config
   {
     files: ['src/main/**/*.{ts,tsx}'],
     languageOptions: {
@@ -64,7 +64,7 @@ export default tseslint.config(
     },
   },
 
-  // Preload scripts config
+  // Preload Scripts config
   {
     files: ['src/preload/**/*.{ts,tsx}'],
     languageOptions: {
@@ -75,7 +75,7 @@ export default tseslint.config(
     },
   },
 
-  // Common TypeScript rules
+  // Common TS rules
   {
     files: ['**/*.{ts,tsx}'],
     rules: {

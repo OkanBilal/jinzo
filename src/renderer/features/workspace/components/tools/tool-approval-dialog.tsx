@@ -5,6 +5,12 @@ import type { ToolApprovalRequest } from "../../hooks";
 import { ToolInputPreview } from "./tool-input-preview";
 import { resolveTool } from "../../utils/resolve-tool";
 import { VENDORS } from "../../utils/tool-registry";
+import {
+  usePluginLogoMap,
+  renderPluginIcon,
+  normalizeSlug,
+  type PluginLogo,
+} from "../../hooks";
 
 const VISIBLE_PARAMS_INITIAL = 4;
 
@@ -146,6 +152,39 @@ function resolveHeader(
   return { label: fallback.displayName, icon: fallback.icon };
 }
 
+/**
+ * Find the codex plugin logo for this approval so the header can show the
+ * plugin's real brand glyph instead of the generic MCP icon — mirroring
+ * `tool-call-item.tsx`. Unlike a tool-call event (full `mcp__<slug>__…` name),
+ * an approval carries the connector/server name (`"Netlify"`) plus optional
+ * `_meta.connector_name`, so we try several slug spellings, all normalized so
+ * separator mismatches still resolve. Returns undefined off codex (empty map)
+ * or when nothing matches, letting the caller keep the static icon.
+ */
+function findPluginLogo(
+  pluginLogos: ReadonlyMap<string, PluginLogo>,
+  toolName: string,
+  toolInput: Record<string, unknown> | undefined,
+  vendorId: string | undefined,
+): PluginLogo | undefined {
+  if (pluginLogos.size === 0) return undefined;
+  const meta = isPlainObject(toolInput?._meta) ? toolInput._meta : null;
+  const candidates: string[] = [];
+  if (typeof meta?.connector_name === "string") candidates.push(meta.connector_name);
+  if (vendorId) candidates.push(vendorId);
+  if (toolName) {
+    candidates.push(toolName);
+    // Bridge tool names arrive as `<slug>_<tool>` — index the leading slug too.
+    const firstToken = toolName.split(/[\s._-]+/)[0];
+    if (firstToken) candidates.push(firstToken);
+  }
+  for (const c of candidates) {
+    const hit = pluginLogos.get(normalizeSlug(c));
+    if (hit) return hit;
+  }
+  return undefined;
+}
+
 const RISK_LEVEL_STYLES: Record<string, string> = {
   high: "bg-red-500/15 text-red-700 dark:text-red-300",
   medium: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
@@ -159,6 +198,7 @@ export function ToolApprovalDialog({
 }: ToolApprovalDialogProps) {
   const isCursor = variant === "cursor";
   const isCodex = variant === "codex";
+  const pluginLogos = usePluginLogoMap();
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [freeText, setFreeText] = useState("");
   const [allowForSession, setAllowForSession] = useState(false);
@@ -208,7 +248,7 @@ export function ToolApprovalDialog({
 
   if (request.kind === "ask_user") {
     return (
-      <div className="mx-auto mb-4 max-w-210 ">
+      <div className="mx-auto mb-1 max-w-210 ">
         <div className="overflow-hidden rounded-2xl  glass-morphism">
           <div className="flex gap-3 px-3.5 pb-2 pt-3.5 sm:px-4 sm:pt-4">
             <Question className="mt-0.5 size-4 shrink-0 text-primary-600 dark:text-primary-400" />
@@ -327,6 +367,15 @@ export function ToolApprovalDialog({
   // unknown tools fall back to a generic key-value table.
   const resolved = resolveTool(request.toolName);
   const header = resolveHeader(request.toolName, request.toolInput);
+  // Swap the generic header glyph for the codex plugin's real logo when one
+  // matches (same treatment tool-call-item gives plugin tool calls).
+  const pluginLogo = findPluginLogo(
+    pluginLogos,
+    request.toolName,
+    request.toolInput,
+    resolved.vendorId,
+  );
+  const headerIcon = renderPluginIcon(pluginLogo) ?? header.icon;
   const meta = isPlainObject(request.toolInput?._meta)
     ? request.toolInput._meta
     : null;
@@ -349,11 +398,11 @@ export function ToolApprovalDialog({
   const hasBody = showRichPreview || paramEntries.length > 0;
 
   return (
-    <div className="mr-auto mb-4 max-w-210">
+    <div className="mr-auto mb-1 max-w-210">
       <div className="overflow-hidden rounded-2xl glass-morphism">
         <div className="flex items-center gap-2 px-4 pb-1 pt-3.5">
           <span className="text-primary-500 dark:text-primary-400">
-            {header.icon}
+            {headerIcon}
           </span>
           <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
             {header.label}

@@ -8,8 +8,8 @@ import { join } from "path";
  */
 
 // macOS: ~/Library/Application Support/mains/mains.db
-// Linux: ~/.config/mains/mains.db
-// Windows: %APPDATA%/mains/mains.db
+// Linux: ~/.config/mains/mains.db (not implemented yet)
+// Windows: %APPDATA%/mains/mains.db (not implemented yet)
 const getRuntimeDbPath = () => {
   const platform = process.platform;
   const home = homedir();
