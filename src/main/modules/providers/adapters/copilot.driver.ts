@@ -1291,6 +1291,37 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       }
     },
 
+    async generateText(
+      prompt: string,
+      opts?: { system?: string; model?: string },
+    ): Promise<string> {
+      const copilotClient = await ensureClient();
+
+      const session = await copilotClient.createSession({
+        systemMessage: {
+          content:
+            opts?.system ??
+            "You are a helpful assistant. Follow the user's instructions exactly and output only what is requested. Never use tools, never write code.",
+        },
+        ...(opts?.model ? { model: opts.model } : {}),
+        onPermissionRequest: approveAllPermissions,
+      });
+
+      try {
+        const result = await session.sendAndWait({ prompt }, 30000);
+        const text = String(
+          (result as any)?.content ?? (result as any)?.data?.content ?? "",
+        );
+        return text.trim();
+      } finally {
+        try {
+          await session.disconnect();
+        } catch {
+          /* ignore */
+        }
+      }
+    },
+
     async listModels(): Promise<ModelInfo[]> {
       try {
         const copilotClient = await ensureClient();

@@ -56,7 +56,8 @@ Mains is an Electron 41 desktop app (React 19 renderer, SQLite + Drizzle ORM). C
 
 **Preload** (`src/preload/index.ts`)
 - Exposes `window.api` object with typed IPC methods
-- Namespaced by domain: `api.entities`, `api.tasks`, `api.issues`, `api.signals`, `api.account`, `api.connectionStates`, `api.sync`, `api.connectionCredentials`, `api.connections`, `api.guards`, `api.projects`, `api.seed`, `api.space`, `api.appSettings`, `api.providers`, `api.skillsMarketplace`, `api.toolCalls`, `api.workspaces`, `api.runs`, `api.reviews`, `api.reviewFindings`, `api.workspaceDiffs`, `api.workspaceActivity`, `api.runContext`, `api.runArtifacts`, `api.runTurns`, `api.fileExplorer`, `api.git`, `api.terminal`, `api.platform`, `api.imageProxy`, `api.shell`, `api.stats`, `api.app`, `api.updates`, `api.browser`, `api.automations`, `api.pulse`
+- Namespaced by domain: `api.account`, `api.app`, `api.appSettings`, `api.automations`, `api.browser`, `api.connections`, `api.documents`, `api.entities`, `api.fileExplorer`, `api.git`, `api.guards`, `api.imageProxy`, `api.issues`, `api.platform`, `api.projects`, `api.providers`, `api.pulse`, `api.runs`, `api.runArtifacts`, `api.runContext`, `api.runTurns`, `api.shell`, `api.signals`, `api.space`, `api.stats`, `api.sync`, `api.tasks`, `api.terminal`, `api.toolCalls`, `api.updates`, `api.workspace`
+- The `workspace` namespace is an aggregate — it covers workspace lifecycle plus reviews, review findings, diffs, and activity (these are no longer separate namespaces). Connection credentials/states are folded into `api.connections`.
 - After modifying preload, restart dev server to pick up changes
 
 **Renderer** (`src/renderer/`)
@@ -118,15 +119,18 @@ Conventions:
 Core tables:
 - `accounts` - User profiles (display name, email, bio, avatar)
 - `appSettings` - App-level config (activeSpaceId, enableWorktrees)
-- `providers` - Agent runtimes (copilot_cli, claude_code)
+- `providers` - Agent runtimes (copilot_cli, claude_code, codex, cursor)
 - `projects` - Groups workspaces by shared remote origin (rootPath, branches, scripts)
 - `workspaces` - Local repos with status tracking (backlog → todo → in_progress → in_review → done → canceled → duplicate)
 - `entities` - Unified canonical content (tasks, issues, etc.)
-- `connections` / `connectionResources` / `connectionTokens` / `connectionSyncState` - External service connections, encrypted tokens, sync cursors
-- `connectionStates` - Connection integration states (GitHub, GitLab, Linear, Jira, Asana, Trello, Notion — tracks isConnected, features, config)
+- `signals` - Lightweight notification/event records surfaced in the UI
+- `connections` / `connectionResources` / `connectionTokens` - External service connections, linked resources, encrypted token blobs
+- `connectionStates` - Connection integration states (GitHub, GitLab, Linear, Jira, Asana, Trello, Notion, Sentry — tracks isConnected, features, config)
 - `spaces` - User-defined UI/prompt configurations with theme/UI config JSON
 - `runs` / `runContext` / `runArtifacts` / `runTurns` - Terminal/code-writing flow (agent runs with session resumption via sessionId, turn tracking)
-- `tools` / `toolCalls` - Tool registry (local, provider_builtin) and invocation tracking with nested tool call support (parentToolCallId)
+- `toolCalls` - Tool invocation tracking with nested tool call support (parentToolCallId). (There is no `tools` table — the registry is in-code; see the tools module.)
+- `automations` / `automationRuns` - Scheduled/triggered automation definitions and their execution records
+- `pulses` - Aggregated activity-feed records backing the `/pulse` route
 - `workspaceActivity` - Workspace activity log (types: diff, review, finding, commit, pr — with title, summary, metadata JSON, refId)
 - `workspaceDiffs` - Git diffs captured per workspace/run (base ref, diff text, files, stats)
 - `reviews` - Workspace-level review notes (status: open, in_review, approved, rejected)
@@ -141,7 +145,7 @@ Domain-specific views on entities:
 
 **Sync System** (`src/main/modules/sync/`)
 - `sync.service.ts` - Orchestrates fetching from all connections
-- `connections/` - Provider-specific fetchers (GitHub, GitLab, Linear, Jira, Asana, Trello, Notion)
+- `connections/` - Provider-specific fetchers (GitHub, GitLab, Linear, Jira, Asana, Trello, Notion, Sentry)
 - Produces `EntityInput[]` which gets persisted to `entities` table
 
 **Workspace/Runs System** (`src/main/modules/workspaces/`, `src/main/modules/runs/`)
@@ -160,12 +164,14 @@ Domain-specific views on entities:
 
 **Provider Adapters** (`src/main/modules/providers/adapters/`)
 - Unified `WorkRunAdapter` interface for different agent runtimes
-- `adapter.factory.ts` — Factory creates the correct adapter by provider type
-- `claude.adapter.ts` — Claude Code CLI via `@anthropic-ai/claude-agent-sdk`
-- `copilot.adapter.ts` — GitHub Copilot CLI via `@github/copilot-sdk`
-- `codex.adapter.ts` — OpenAI Codex CLI
-- `cursor.adapter.ts` — Cursor agent via `@cursor/sdk`
-- `adapter.shared.ts` — common helpers used by every adapter (covered by `adapter.shared.test.ts`)
+- `adapter.factory.ts` — Factory creates the correct driver by provider type
+- `claude.driver.ts` — Claude Code CLI via `@anthropic-ai/claude-agent-sdk`
+- `copilot.driver.ts` — GitHub Copilot CLI via `@github/copilot-sdk`
+- `codex.driver.ts` — OpenAI Codex CLI
+- `cursor.driver.ts` — Cursor agent via `@cursor/sdk`
+- `fake.driver.ts` — in-memory driver used by tests
+- `work-run-core.ts` — shared run loop / event plumbing used by every driver (covered by `work-run-core.test.ts`)
+- `adapter.shared.ts` — common helpers used by every driver (covered by `adapter.shared.test.ts`)
 - `mains-mcp-server.ts` / `mains-tools.core.ts` — in-process MCP server and tool definitions exposed to agents
 - Event-driven architecture with typed events (log, tool_call, command, artifact, status)
 - Hook system for pre/post tool execution, subagent/teammate coordination
@@ -207,12 +213,13 @@ Domain-specific views on entities:
 - Registry for local and provider-builtin tools
 - Tool call tracking with nested call support (parentToolCallId)
 
-**Seed Module** (`src/main/modules/seed/`)
-- Database seeding for initial setup (connectionStates, connections, providers, spaces, accounts)
+**Database Seeding** (`src/main/db/seeds/`)
+- Database seeding for initial setup (connectionStates, connections, providers, spaces, accounts). Seed data lives in `src/main/db/data/`. This is wired into DB init in `src/main/db/`, not a domain module.
 
 **Image Proxy** (`src/main/modules/imageProxy/`)
 - Custom protocol handler that fetches and serves remote images to the renderer (avoids CSP / mixed-content issues)
 - Pairs with `src/renderer/lib/proxied-image-src.ts` + `local-image-url.ts` and the `useLocalImageUrl` hook — use these when rendering remote URLs in the renderer rather than `<img src={remoteUrl}>` directly
+- Also backs the `api.documents` namespace (`documents:sign`) for serving local document files to the renderer
 
 **Guards Module** (`src/main/modules/guards/`)
 - Pluggable package-safety adapters (`adapters/`) that score npm/PyPI/etc. packages and scan a workspace's manifests for risky dependencies. No DB tables — results stream back to the renderer per call.
@@ -245,7 +252,7 @@ Domain-specific views on entities:
 ### Frontend Conventions
 
 - **Redux**: RTK Query with custom `ipcBaseQuery`, `baseApi.injectEndpoints()` per domain
-- **Redux API files** (`src/renderer/lib/redux/api/`): `accountApi`, `appSettingsApi`, `automationsApi`, `connectionsApi`, `entitiesApi`, `guardsApi`, `projectsApi`, `providersApi`, `pulseApi`, `runsApi`, `shellApi`, `signalsApi`, `skillsMarketplaceApi`, `spaceApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceApi`. The `projectsApi` is an aggregate covering project lifecycle + project resources + issues linked via those resources.
+- **Redux API files** (`src/renderer/lib/redux/api/`): `accountApi`, `appSettingsApi`, `automationsApi`, `connectionsApi`, `entitiesApi`, `guardsApi`, `projectsApi`, `providersApi`, `pulseApi`, `runsApi`, `shellApi`, `signalsApi`, `spaceApi`, `statsApi`, `syncApi`, `toolsApi`, `updatesApi`, `workspaceApi` (all built on `baseApi.ts`, re-exported via `index.ts`). The `projectsApi` is an aggregate covering project lifecycle + project resources + issues linked via those resources.
 - **Redux slices**: `appSettingsSlice`, `workspaceSlice` (in `src/renderer/lib/redux/slices/`)
 - **Hooks**: `use-kebab-case.ts` filenames, `useCamelCase` export names
 - **Components**: `kebab-case.tsx` filenames in feature dirs under `src/renderer/features/{name}/components/`
@@ -304,28 +311,30 @@ Each connection type has:
 - Fetcher in `src/main/modules/sync/connections/`
 - IPC handlers for credentials and resource management
 
-Supported: GitHub, GitLab, Linear, Jira, Asana, Trello, Notion
+Supported: GitHub, GitLab, Linear, Jira, Asana, Trello, Notion, Sentry
 
 **Credential Storage (Encrypted JSON Blob)**
 
-All provider secrets are stored as a single encrypted JSON blob in `connectionTokens.accessTokenEnc`. Each provider defines its secret fields in `PROVIDER_SECRET_FIELDS` (`connectionCredentials.utils.ts`):
+All provider secrets are stored as a single encrypted JSON blob in `connectionTokens.accessTokenEnc`. Each provider declares its secret fields in `PROVIDER_SECRET_FIELDS` (`connections.utils.ts`), shaped as `{ required: string[]; optional?: string[] }`:
 
-| Provider | Secret fields | Non-secret metadata |
-|----------|--------------|---------------------|
-| GitHub   | `{ token }` | — |
-| Linear   | `{ apiKey }` | — |
-| Jira     | `{ apiToken }` | `domain`, `email` |
-| GitLab   | `{ token }` | `domain` |
-| Asana    | `{ accessToken }` | — |
-| Trello   | `{ token, apiKey }` | — |
+| Provider  | Secret fields | Non-secret metadata |
+|-----------|--------------|---------------------|
+| GitHub    | `token` | — |
+| Linear    | `apiKey` | — |
+| Jira      | `apiToken` | `domain`, `email` |
+| GitLab    | `token` | `domain` |
+| Asana     | `accessToken` | — |
+| Trello    | `token`, `apiKey` | — |
+| Sentry    | `token` | — |
+| Socket.dev | `apiToken` | — |
 
-Key functions:
+Key functions (in `connections.utils.ts` unless noted):
 - `encryptSecrets(secrets)` / `decryptSecrets(buffer)` — encrypt/decrypt the JSON blob
 - `parseProviderCredentials(provider, credentials)` — validates and extracts secrets per provider config
-- `getConnectionWithSecrets(provider)` — returns `{ id, secrets: Record<string, string>, metadata }` for sync fetchers
-- `getConnectionAndSecrets(connectionId)` — same pattern for `connections.service.ts`
+- `getConnectionWithSecrets(provider)` (in `connections.service.ts`) — returns `{ id, secrets: Record<string, string>, metadata }` for sync fetchers
+- `getConnectionAndSecrets(connectionId)` (in `connections.service.ts`) — same pattern for connection operations
 
-To add a new provider's secrets: add an entry to `PROVIDER_SECRET_FIELDS`. Non-secret fields (domain, email) go in `PROVIDER_METADATA_FIELDS` in `connectionCredentials.service.ts`.
+To add a new provider's secrets: add an entry to `PROVIDER_SECRET_FIELDS`. Non-secret fields (domain, email) go in `PROVIDER_METADATA_FIELDS` in `connections.service.ts`.
 
 ### Troubleshooting
 

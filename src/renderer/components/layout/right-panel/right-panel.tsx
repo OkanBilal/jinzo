@@ -10,6 +10,7 @@ interface RightPanelProps {
   isOpen: boolean;
   onToggle: (open: boolean) => void;
   width?: string;
+  providerId?: string;
   terminalOpen?: boolean;
   onTerminalToggle?: () => void;
   browserOpen?: boolean;
@@ -20,6 +21,7 @@ export default function RightPanel({
   isOpen,
   onToggle,
   width = "0rem",
+  providerId,
   terminalOpen,
   onTerminalToggle,
   browserOpen,
@@ -69,6 +71,7 @@ export default function RightPanel({
         onTerminalToggle={onTerminalToggle}
         browserOpen={browserOpen}
         onBrowserToggle={onBrowserToggle}
+        providerId={providerId}
       />
       <Panel
         isVisible={isVisible}

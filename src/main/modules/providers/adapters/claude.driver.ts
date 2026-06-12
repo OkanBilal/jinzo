@@ -2127,6 +2127,51 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       if (!title) throw new Error("Empty title generated");
       return title.slice(0, 50);
     },
+
+    async generateText(
+      prompt: string,
+      opts?: { system?: string; model?: string },
+    ): Promise<string> {
+      await ensureSDK();
+      if (!queryFn) throw new Error("Claude SDK not properly initialized");
+
+      const options = await buildOptions({
+        model: opts?.model ?? "claude-haiku-4-5-20251001",
+      });
+      // One-shot text generation. Strip the MCP servers buildOptions injects so
+      // the model is never tempted to call a tool — with no tools available it
+      // just answers. maxTurns gets a little slack (not 1) so a stray
+      // first-message hiccup can't trip "error_max_turns" before the final
+      // text lands; without tools it still finishes in a single turn normally.
+      options.maxTurns = 6;
+      options.allowedTools = [];
+      options.disallowedTools = ["*"];
+      options.mcpServers = {};
+      options.systemPrompt =
+        opts?.system ??
+        "You are a helpful assistant. Follow the user's instructions exactly and output only what is requested.";
+
+      let text = "";
+      try {
+        const query = queryFn({ prompt, options });
+        for await (const msg of query) {
+          if (msg.type === "assistant") {
+            const assistantMsg = msg as {
+              message?: { content?: Array<{ type: string; text?: string }> };
+            };
+            for (const block of assistantMsg.message?.content ?? []) {
+              if (block.type === "text" && block.text) text += block.text;
+            }
+          }
+        }
+      } catch (err) {
+        // The SDK throws on error results (e.g. max turns). If the model already
+        // produced text before that, use it; otherwise surface the failure.
+        if (!text.trim()) throw err;
+      }
+
+      return text.trim();
+    },
   };
 }
 

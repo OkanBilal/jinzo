@@ -2485,6 +2485,63 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
         return goal.slice(0, 50);
       }
     },
+
+    async generateText(
+      prompt: string,
+      opts?: { system?: string; model?: string },
+    ): Promise<string> {
+      const binaryPath = findCursorBinary();
+      const fullPrompt = opts?.system ? `${opts.system}\n\n${prompt}` : prompt;
+
+      return await new Promise<string>((resolve, reject) => {
+        const env: Record<string, string | undefined> = {
+          ...process.env,
+          HOME: os.homedir(),
+          PATH: [
+            path.dirname(binaryPath),
+            path.join(os.homedir(), ".local", "bin"),
+            "/usr/local/bin",
+            "/opt/homebrew/bin",
+            process.env.PATH || "",
+          ].join(":"),
+        };
+        if (config.apiKey) env.CURSOR_API_KEY = config.apiKey;
+
+        const cursorArgs = [
+          "--print",
+          "--mode",
+          "ask",
+          "--trust",
+          "--output-format",
+          "text",
+          ...(opts?.model ? ["--model", opts.model] : []),
+          fullPrompt,
+        ];
+
+        const child = spawn(binaryPath, cursorArgs, {
+          env,
+          stdio: ["ignore", "pipe", "pipe"],
+          timeout: 30000,
+        });
+
+        let stdout = "";
+        let stderr = "";
+        child.stdout?.on("data", (d: Buffer) => {
+          stdout += d.toString();
+        });
+        child.stderr?.on("data", (d: Buffer) => {
+          stderr += d.toString();
+        });
+        child.on("close", (code) => {
+          if (code === 0 && stdout.trim()) {
+            resolve(stdout.trim());
+          } else {
+            reject(new Error(stderr.trim() || `Exit code ${code}`));
+          }
+        });
+        child.on("error", reject);
+      });
+    },
   };
 }
 

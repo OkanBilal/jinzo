@@ -209,6 +209,8 @@ export function createWorkRunAdapter(driver: ProviderDriver): WorkRunAdapter {
   if (driver.listSkills) adapter.listSkills = driver.listSkills.bind(driver);
   if (driver.generateTitle)
     adapter.generateTitle = driver.generateTitle.bind(driver);
+  if (driver.generateText)
+    adapter.generateText = driver.generateText.bind(driver);
   if (driver.getRateLimits)
     adapter.getRateLimits = driver.getRateLimits.bind(driver);
   if (driver.getAccountInfo)

@@ -4027,6 +4027,113 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       }
     },
 
+    async generateText(
+      prompt: string,
+      opts?: { system?: string; model?: string },
+    ): Promise<string> {
+      const binaryPath = findCodexBinary();
+      const fullPrompt = opts?.system
+        ? `${opts.system}\n\n${prompt}`
+        : prompt;
+
+      return await new Promise<string>((resolve, reject) => {
+        const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "mains-codex-gen-"));
+        const outputPath = path.join(tmpDir, "out.txt");
+        let settled = false;
+        let stdout = "";
+        let stderr = "";
+
+        const cleanup = () => {
+          try {
+            fs.rmSync(tmpDir, { recursive: true, force: true });
+          } catch {
+            // Ignore temp cleanup failures.
+          }
+        };
+
+        const env: Record<string, string | undefined> = {
+          ...process.env,
+          HOME: os.homedir(),
+          PATH: [
+            path.dirname(binaryPath),
+            path.join(os.homedir(), ".nvm", "versions", "node"),
+            "/usr/local/bin",
+            "/opt/homebrew/bin",
+            process.env.PATH || "",
+          ].join(":"),
+        };
+        if (config.apiKey) {
+          env.OPENAI_API_KEY = config.apiKey;
+        } else if (process.env.OPENAI_API_KEY) {
+          env.OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+        } else if (process.env.CODEX_API_KEY) {
+          env.CODEX_API_KEY = process.env.CODEX_API_KEY;
+        }
+
+        const args = [
+          "exec",
+          "--ephemeral",
+          "--skip-git-repo-check",
+          "--ignore-rules",
+          "--sandbox", "read-only",
+          "--color", "never",
+          "--output-last-message", outputPath,
+          "--model", opts?.model ?? titleGenerationModel,
+          "-",
+        ];
+
+        const child = spawn(binaryPath, args, {
+          cwd: os.homedir(),
+          env,
+          stdio: ["pipe", "pipe", "pipe"],
+        });
+
+        const timer = setTimeout(() => {
+          try { child.kill("SIGKILL"); } catch { /* already exited */ }
+          finish(() => {
+            cleanup();
+            reject(new Error("Codex text generation timed out"));
+          });
+        }, 30000);
+
+        function finish(fn: () => void) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          fn();
+        }
+
+        child.stdout?.on("data", (d: Buffer) => { stdout += d.toString(); });
+        child.stderr?.on("data", (d: Buffer) => { stderr += d.toString(); });
+        child.on("error", (err) => {
+          finish(() => {
+            cleanup();
+            reject(err);
+          });
+        });
+        child.on("close", (code) => {
+          finish(() => {
+            try {
+              const output = fs.existsSync(outputPath)
+                ? fs.readFileSync(outputPath, "utf-8").trim()
+                : stdout.trim();
+              cleanup();
+              if (code === 0 && output) {
+                resolve(output);
+              } else {
+                reject(new Error(stderr.trim() || `Exit code ${code}`));
+              }
+            } catch (err) {
+              cleanup();
+              reject(err);
+            }
+          });
+        });
+
+        child.stdin?.end(fullPrompt);
+      });
+    },
+
     async listPlugins(): Promise<PluginListResponse> {
       try {
         const server = await ensureServer();

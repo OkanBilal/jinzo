@@ -233,6 +233,75 @@ class GitService {
   }
 
   /**
+   * Diff of the current branch against `baseRef`, three-dot style
+   * (`git diff base...HEAD`) — i.e. only the changes the branch introduced
+   * since it diverged from the base, which is exactly what a PR would show.
+   * Independent of the working tree, so it works after the branch is committed
+   * and clean.
+   */
+  async getBranchDiff(
+    rootPath: string,
+    baseRef: string,
+  ): Promise<ServiceResponse<string>> {
+    try {
+      const git = this.getGit(rootPath);
+      const diff = await git.diff([`${baseRef}...HEAD`]);
+      return ok(diff);
+    } catch (error) {
+      return fail(
+        error instanceof Error ? error.message : "Failed to get branch diff",
+      );
+    }
+  }
+
+  /**
+   * Commit subject lines unique to the current branch (`git log base..HEAD`),
+   * i.e. excluding the base branch's own history. Used to summarize a PR.
+   */
+  async getBranchLog(
+    rootPath: string,
+    baseRef: string,
+    limit = 20,
+  ): Promise<ServiceResponse<string[]>> {
+    try {
+      const git = this.getGit(rootPath);
+      const raw = await git.raw([
+        "log",
+        `${baseRef}..HEAD`,
+        "--pretty=%s",
+        "-n",
+        String(limit),
+      ]);
+      const messages = raw
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      return ok(messages);
+    } catch (error) {
+      return fail(
+        error instanceof Error ? error.message : "Failed to get branch log",
+      );
+    }
+  }
+
+  /**
+   * Get the staged (index) diff — i.e. `git diff --cached`. This is exactly
+   * what the next commit will record, so it's the input we feed the model when
+   * generating a commit message.
+   */
+  async getStagedDiff(rootPath: string): Promise<ServiceResponse<string>> {
+    try {
+      const git = this.getGit(rootPath);
+      const diff = await git.diff(["--cached"]);
+      return ok(diff);
+    } catch (error) {
+      return fail(
+        error instanceof Error ? error.message : "Failed to get staged diff",
+      );
+    }
+  }
+
+  /**
    * Get HEAD commit sha
    */
   async getHeadSha(rootPath: string): Promise<ServiceResponse<string>> {
@@ -647,6 +716,42 @@ class GitService {
       hash: result.commit || "",
       summary: `${result.summary.changes} changed, ${result.summary.insertions} insertions, ${result.summary.deletions} deletions`,
     };
+  }
+
+  /**
+   * Push the current branch to a remote. When the branch has no upstream yet
+   * (common in fresh worktrees, even after the first commit), pushes with
+   * `--set-upstream` so subsequent pushes work without arguments.
+   */
+  async push(
+    rootPath: string,
+    options?: { setUpstream?: boolean; remote?: string; branch?: string },
+  ): Promise<ServiceResponse<{ branch: string; remote: string }>> {
+    try {
+      const git = this.getGit(rootPath);
+      const remote = options?.remote ?? "origin";
+      const branch =
+        options?.branch ??
+        (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+
+      // Set upstream when explicitly asked, or when the branch isn't tracking
+      // a remote yet — otherwise a bare `git push` would error.
+      let setUpstream = options?.setUpstream ?? false;
+      if (!setUpstream) {
+        const status = await git.status();
+        if (!status.tracking) setUpstream = true;
+      }
+
+      const args = setUpstream
+        ? ["--set-upstream", remote, branch]
+        : [remote, branch];
+      await git.push(args);
+      return ok({ branch, remote });
+    } catch (error) {
+      return fail(
+        error instanceof Error ? error.message : "Failed to push",
+      );
+    }
   }
 
   /**

@@ -471,6 +471,19 @@ export interface WorkRunAdapter {
   generateTitle?(goal: string, context?: WorkRunContextItem[]): Promise<string>;
 
   /**
+   * Generate freeform text from a one-shot, headless prompt (single turn, no
+   * tools). Used for deterministic flows that need a model-written string —
+   * e.g. a commit message or PR body — without spinning up an interactive run.
+   * @param prompt - The user prompt to complete.
+   * @param opts - Optional system instruction and model override.
+   * @returns Promise resolving to the trimmed assistant text.
+   */
+  generateText?(
+    prompt: string,
+    opts?: { system?: string; model?: string },
+  ): Promise<string>;
+
+  /**
    * Get current rate limit information from the provider.
    * @returns Promise resolving to rate limit data, or null if not supported
    */
@@ -593,6 +606,10 @@ export interface ProviderDriver {
   listCommands?(workspacePath?: string): Promise<CommandInfo[]>;
   listSkills?(workspacePath?: string): Promise<SkillInfo[]>;
   generateTitle?(goal: string, context?: WorkRunContextItem[]): Promise<string>;
+  generateText?(
+    prompt: string,
+    opts?: { system?: string; model?: string },
+  ): Promise<string>;
   getRateLimits?(): Promise<RateLimitInfo | null>;
   getAccountInfo?(): Promise<AccountInfo>;
   updateCli?(): Promise<CliUpdateResult>;

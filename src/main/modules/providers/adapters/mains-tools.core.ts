@@ -6,20 +6,12 @@
 // each adapter wraps them into its SDK-specific format.
 // ─────────────────────────────────────────────────────────────
 
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import {
   workspaceRepo,
   logWorkspaceActivity,
   emitFindingsChanged,
 } from "../../workspace";
-import { runSessionRegistry } from "../../runs/run-session-registry";
-import { gitService } from "../../git/git.service";
-import { projectsRepo } from "../../projects/projects.repo";
-import { appSettingsRepo } from "../../appSettings/appSettings.repo";
-import { SETTINGS_ID } from "../../appSettings/appSettings.constants";
-
-const execFileAsync = promisify(execFile);
+import { gitFlowService } from "../../gitFlow";
 
 /**
  * Context values captured at run start and threaded through every handler.
@@ -236,19 +228,12 @@ export async function handleCommitChanges(
   }
 
   try {
-    // Fetch commit instructions (project-level > app-level)
-    let commitInstructions: string | null = null;
-    if (ctx.workspaceId) {
-      const workspace = await workspaceRepo.findById(ctx.workspaceId);
-      if (workspace?.projectId) {
-        const project = await projectsRepo.findById(workspace.projectId);
-        commitInstructions = project?.commitInstructions ?? null;
-      }
-    }
-    if (!commitInstructions) {
-      const settings = await appSettingsRepo.findById(SETTINGS_ID);
-      commitInstructions = settings?.commitInstructions ?? null;
-    }
+    // Instructions-first handshake: on the first call (no message yet) hand the
+    // agent the project/app commit instructions so it crafts the message before
+    // the real commit. The deterministic shared logic lives in gitFlowService.
+    const commitInstructions = ctx.workspaceId
+      ? await gitFlowService.getCommitInstructions(ctx.workspaceId)
+      : null;
 
     if (commitInstructions && !args.message) {
       return {
@@ -273,62 +258,14 @@ export async function handleCommitChanges(
       };
     }
 
-    await gitService.stageFiles(ctx.rootPath, args.files);
-    const result = await gitService.commit(ctx.rootPath, args.message);
-
-    // Recapture diff from the new HEAD so the Changes tab
-    // reflects the post-commit state (clean working tree).
-    const headResult = await gitService.getHeadSha(ctx.rootPath);
-    const newHead = headResult.success ? headResult.data : null;
-
-    if (ctx.workspaceId && newHead) {
-      const [statusResult, untrackedResult] = await Promise.all([
-        gitService.getDiffSince(ctx.rootPath, newHead),
-        gitService.getUntrackedFiles(ctx.rootPath),
-      ]);
-      const diffText = statusResult.success
-        ? (statusResult.data ?? "")
-        : "";
-      const untrackedFiles = untrackedResult.success
-        ? (untrackedResult.data ?? [])
-        : [];
-
-      await workspaceRepo.deleteDiffsByWorkspace(ctx.workspaceId);
-      if (untrackedFiles.length > 0 || diffText) {
-        await workspaceRepo.insertDiff({
-          id: crypto.randomUUID(),
-          workspaceId: ctx.workspaceId,
-          runId: ctx.runId ?? undefined,
-          baseRef: newHead,
-          diffText,
-          filesJson: JSON.stringify(untrackedFiles),
-          statsJson: JSON.stringify({
-            shortstat: "",
-            files: untrackedFiles.length,
-            newFiles: untrackedFiles.length,
-          }),
-        });
-      }
-    }
-
-    if (ctx.runId && newHead) {
-      runSessionRegistry.get(ctx.runId)?.updateBaseRef(newHead);
-    }
-
-    // Clear review findings for this workspace — committed code is accepted
-    if (ctx.workspaceId) {
-      await workspaceRepo.deleteFindingsByWorkspace(ctx.workspaceId);
-    }
-
-    if (ctx.workspaceId) {
-      logWorkspaceActivity({
-        workspaceId: ctx.workspaceId,
-        type: "commit",
-        title: args.message,
-        refId: newHead ?? undefined,
-        metadata: { files: args.files?.length },
-      });
-    }
+    const result = await gitFlowService.performCommit({
+      workspaceId: ctx.workspaceId,
+      rootPath: ctx.rootPath,
+      runId: ctx.runId,
+      message: args.message,
+      // Match the previous behavior: stage the named files, else everything.
+      stage: args.files && args.files.length > 0 ? args.files : "all",
+    });
 
     return {
       content: [
@@ -368,39 +305,11 @@ export async function handleCreatePR(
   }
 
   try {
-    // Fetch project and verify remote origin
-    let prInstructions: string | null = null;
-    if (ctx.workspaceId) {
-      const workspace = await workspaceRepo.findById(ctx.workspaceId);
-      if (workspace?.projectId) {
-        const project = await projectsRepo.findById(workspace.projectId);
-        prInstructions = project?.prInstructions ?? null;
-
-        // Verify the working directory's remote matches the project's expected remote
-        if (project?.remoteOrigin) {
-          const remotesResult = await gitService.getRemotes(ctx.rootPath);
-          if (remotesResult.success && remotesResult.data) {
-            const origin = remotesResult.data.find((r) => r.name === "origin");
-            const currentRemote = origin?.fetchUrl || origin?.pushUrl;
-            if (currentRemote && normalizeGitUrl(currentRemote) !== normalizeGitUrl(project.remoteOrigin)) {
-              return {
-                content: [
-                  {
-                    type: "text" as const,
-                    text: `Error: Remote origin mismatch. Expected "${project.remoteOrigin}" but found "${currentRemote}". Aborting to prevent creating a PR in the wrong repository.`,
-                  },
-                ],
-                isError: true,
-              };
-            }
-          }
-        }
-      }
-    }
-    if (!prInstructions) {
-      const settings = await appSettingsRepo.findById(SETTINGS_ID);
-      prInstructions = settings?.prInstructions ?? null;
-    }
+    // Instructions-first handshake, mirroring CommitChanges. The remote-origin
+    // guard + `gh pr create` live in gitFlowService.performCreatePR.
+    const prInstructions = ctx.workspaceId
+      ? await gitFlowService.getPrInstructions(ctx.workspaceId)
+      : null;
 
     if (prInstructions && !args.body) {
       return {
@@ -416,70 +325,30 @@ export async function handleCreatePR(
       };
     }
 
-    // Detect current branch to pass --head explicitly.
-    // In worktrees, upstream tracking may not be set even after push,
-    // so gh can't infer the head branch automatically.
-    const branchResult = await gitService.getCurrentBranch(ctx.rootPath);
-    const currentBranch = branchResult.success ? branchResult.data : null;
-
-    const ghArgs = ["pr", "create", "--title", args.title];
-
-    if (currentBranch) {
-      ghArgs.push("--head", currentBranch);
-    }
-    if (args.body) {
-      ghArgs.push("--body", args.body);
-    }
-    if (args.base) {
-      ghArgs.push("--base", args.base);
-    }
-    if (args.draft) {
-      ghArgs.push("--draft");
-    }
-    if (args.labels && args.labels.length > 0) {
-      for (const label of args.labels) {
-        ghArgs.push("--label", label);
-      }
-    }
-
-    const { stdout, stderr } = await execFileAsync("gh", ghArgs, {
-      cwd: ctx.rootPath,
-      timeout: 30_000,
+    const result = await gitFlowService.performCreatePR({
+      workspaceId: ctx.workspaceId,
+      rootPath: ctx.rootPath,
+      title: args.title,
+      body: args.body,
+      base: args.base,
+      draft: args.draft,
+      labels: args.labels,
     });
-
-    const output = stdout.trim();
-    const prUrl = output.match(/https:\/\/github\.com\/[^\s]+/)?.[0];
-
-    if (ctx.workspaceId) {
-      logWorkspaceActivity({
-        workspaceId: ctx.workspaceId,
-        type: "pr",
-        title: args.title,
-        summary: args.body,
-        refId: prUrl ?? undefined,
-        metadata: {
-          base: args.base,
-          draft: args.draft,
-          labels: args.labels,
-        },
-      });
-    }
 
     return {
       content: [
         {
           type: "text" as const,
           text: JSON.stringify({
-            url: prUrl ?? output,
-            stdout: output,
-            stderr: stderr?.trim() || undefined,
+            url: result.url,
+            stdout: result.stdout,
+            stderr: result.stderr,
           }),
         },
       ],
     };
   } catch (error) {
-    const msg =
-      error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? error.message : String(error);
     const stderr = (error as any)?.stderr?.trim?.();
     return {
       content: [
@@ -491,20 +360,6 @@ export async function handleCreatePR(
       isError: true,
     };
   }
-}
-
-/**
- * Normalize a git remote URL so SSH and HTTPS variants match.
- * e.g. "git@github.com:user/repo.git" and "https://github.com/user/repo.git"
- * both become "github.com/user/repo".
- */
-function normalizeGitUrl(url: string): string {
-  return url
-    .replace(/^(https?:\/\/|git@|ssh:\/\/git@)/, "")
-    .replace(/:(\d+\/)?/, "/")
-    .replace(/\.git$/, "")
-    .replace(/\/$/, "")
-    .toLowerCase();
 }
 
 // ─────────────────────────────────────────────────────────────
