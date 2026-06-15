@@ -8,7 +8,7 @@ export const seedProviders: CreateProviderPayload[] = [
     kind: "agent_runtime",
     displayName: "GitHub Copilot (CLI/SDK)",
     isEnabled: true,
-    defaultModel: "claude-opus-4-6",
+    defaultModel: "claude-sonnet-4-6",
     config: {
       transport: "stdio" as const,
       timeout: 3_600_000,
@@ -29,7 +29,7 @@ export const seedProviders: CreateProviderPayload[] = [
     kind: "agent_runtime",
     displayName: "Claude Code (Local Agent)",
     isEnabled: true,
-    defaultModel: "claude-opus-4-6",
+    defaultModel: "claude-opus-4-8",
     config: {
       timeout: 3_600_000,
       apiKey: process.env.ANTHROPIC_API_KEY,

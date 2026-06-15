@@ -58,7 +58,7 @@
     "url": "https://github.com/mainsdotdev/mains/issues"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.19.0"
   },
   "build": {
     "publish": {
@@ -98,10 +98,9 @@
     "vitest": "^4.1.1"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.3.159",
+    "@anthropic-ai/claude-agent-sdk": "^0.3.175",
     "@anthropic-ai/sdk": "^0.97.1",
-    "@cursor/sdk": "^1.0.12",
-    "@github/copilot-sdk": "^0.3.0",
+    "@github/copilot-sdk": "^1.0.1",
     "@linear/sdk": "^83.0.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@number-flow/react": "^0.6.0",
@@ -116,7 +115,9 @@
     "docx-preview": "^0.3.7",
     "drizzle-orm": "^0.45.1",
     "electron-squirrel-startup": "^1.0.1",
+    "exceljs": "^4.4.0",
     "frimousse": "^0.3.0",
+    "jszip": "^3.10.1",
     "motion": "^12.38.0",
     "nanoid": "^5.1.7",
     "node-pty": "^1.1.0",
@@ -133,12 +134,23 @@
     "simple-git": "^3.33.0",
     "tailwind-merge": "^3.5.0",
     "update-electron-app": "^3.1.2",
-    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "overrides": {
     "tar": "^7.5.6",
     "esbuild": "^0.25.0",
-    "tmp": "^0.2.5"
+    "tmp": "^0.2.7",
+    "@tootallnate/once": "^2.0.1",
+    "@github/copilot": "^1.0.61",
+    "@typescript-eslint/typescript-estree": {
+      "brace-expansion": "^5.0.6"
+    },
+    "express-rate-limit": "^8.5.2",
+    "fast-uri": "^3.1.2",
+    "hono": "^4.12.25",
+    "ip-address": "^10.2.0",
+    "picomatch": "^4.0.4",
+    "qs": "^6.15.2",
+    "uuid": "^11.1.1"
   }
 }

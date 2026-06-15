@@ -60,12 +60,12 @@ import { guardsService } from "../../guards/guards.service";
 // ─────────────────────────────────────────────────────────────
 
 interface CopilotClientOptions {
-  cliPath?: string;
+  /** How the SDK reaches the CLI — the only field it reads to resolve the CLI
+   *  binary. Built via `RuntimeConnection.forStdio/forTcp/forUri`. */
+  connection?: unknown;
+  /** Working directory for the spawned CLI. */
+  workingDirectory?: string;
   cliArgs?: string[];
-  cliUrl?: string;
-  cwd?: string;
-  port?: number;
-  useStdio?: boolean;
   isChildProcess?: boolean;
   logLevel?: "none" | "error" | "warning" | "info" | "debug" | "all";
   autoStart?: boolean;
@@ -634,24 +634,35 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
           );
         }
 
+        const { RuntimeConnection } = CopilotSDK as any;
+
         const options: CopilotClientOptions = {
           autoStart: true,
           logLevel: config.logLevel ?? "info",
         };
 
-        if (config.binary) options.cliPath = config.binary;
-
+        // The SDK resolves the CLI *only* from `connection`. With no explicit
+        // path it falls back to `getBundledCliPath()`, which returns
+        // `@github/copilot/index.js` and is spawned via `process.execPath`. In a
+        // packaged app that execPath is the Electron binary (runAsNode fuse
+        // disabled) and the .js lives inside app.asar, so the child exits 0
+        // immediately → "CLI server exited unexpectedly with code 0". Handing the
+        // SDK the unpacked native binary (`config.binary`) avoids all of that.
         if (config.cliUrl) {
-          options.cliUrl = config.cliUrl;
+          options.connection = RuntimeConnection.forUri(config.cliUrl);
         } else if (config.useStdio === false && config.port) {
-          options.port = config.port;
-          options.useStdio = false;
+          options.connection = RuntimeConnection.forTcp({
+            port: config.port,
+            ...(config.binary ? { path: config.binary } : {}),
+          });
         } else {
-          options.useStdio = true;
+          options.connection = RuntimeConnection.forStdio(
+            config.binary ? { path: config.binary } : {},
+          );
         }
 
         if (workspaceCwd) {
-          options.cwd = workspaceCwd;
+          options.workingDirectory = workspaceCwd;
           currentClientCwd = workspaceCwd;
           logInfo(`Setting client cwd to: ${workspaceCwd}`);
         }
@@ -664,15 +675,15 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
           const errorMessage = error instanceof Error ? error.message : String(error);
           if (errorMessage.includes("ENOENT")) {
             throw new Error(
-              `Copilot CLI binary not found. Please ensure GitHub Copilot CLI is installed and the path is correct. Current path: ${options.cliPath || "default"}`,
+              `Copilot CLI binary not found. Please ensure GitHub Copilot CLI is installed and the path is correct. Current path: ${config.binary || "bundled"}`,
             );
           } else if (errorMessage.includes("ECONNREFUSED")) {
             throw new Error(
-              `Could not connect to Copilot CLI server. The server may not be running or the port may be blocked. Port: ${options.port || "stdio"}`,
+              `Could not connect to Copilot CLI server. The server may not be running or the port may be blocked. Port: ${config.port || "stdio"}`,
             );
           } else if (errorMessage.includes("EACCES")) {
             throw new Error(
-              `Permission denied when trying to start Copilot CLI. Please check file permissions. Binary path: ${options.cliPath || "default"}`,
+              `Permission denied when trying to start Copilot CLI. Please check file permissions. Binary path: ${config.binary || "bundled"}`,
             );
           } else if (errorMessage.includes("ETIMEDOUT")) {
             throw new Error("Connection timed out while starting Copilot CLI. The service may be unresponsive.");

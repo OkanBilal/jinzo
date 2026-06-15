@@ -459,7 +459,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
   }
 
   function getModel(requestModel?: string | null): string {
-    return requestModel || config.defaultModel || "claude-opus-4-6";
+    return requestModel || config.defaultModel || "claude-opus-4-8";
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -2367,6 +2367,16 @@ function isValidMcpServerConfig(cfg: unknown): boolean {
 
 function getDefaultModels(defaultModel?: string): ModelInfo[] {
   return [
+    {
+      id: "fable",
+      displayName: "Claude Fable 5",
+      isDefault: defaultModel === "fable",
+      capabilities: { streaming: true, vision: true, functionCalling: true, reasoning: true },
+      contextWindow: 200000,
+      supportsFastMode: false,
+      supportsEffort: true,
+      supportedEffortLevels: ["low", "medium", "high", "xhigh", "max"],
+    },
     {
       id: "sonnet",
       displayName: "Claude Sonnet 4.6",

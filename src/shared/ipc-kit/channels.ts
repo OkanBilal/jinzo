@@ -239,6 +239,7 @@ export const CHANNELS = {
     openFileWithBundle: "shell:openFileWithBundle",
     openInApp: "shell:openInApp",
     openPath: "shell:openPath",
+    showItemInFolder: "shell:showItemInFolder",
   },
   signals: {
     create: "signals:create",

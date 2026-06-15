@@ -3,7 +3,6 @@ import { Button } from "../button";
 import DropdownWrapper from "../dropdown-wrapper";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { formatModelDisplayName, getModelIcon } from "@/lib/model-icons";
-import { ModelLoader } from "./model-loader";
 import { ArrowUp } from "../icons";
 
 interface ModelSelectDropdownProps {
@@ -61,7 +60,9 @@ export function ModelSelectDropdown({
           disabled={noModels || (isLoading && !displayModel)}
         >
           {isLoading && !displayModel ? (
-            <ModelLoader />
+            <span className="inline-flex items-center gap-1.5">
+              <span className="shine-text text-sm">Loading models...</span>
+            </span>
           ) : noModels ? (
             <span>No models found</span>
           ) : (

@@ -323,7 +323,7 @@ export function GitActionsDropdown({ providerId }: GitActionsDropdownProps) {
                 placeholder="Description (optional, leave blank to generate)…"
                 className="w-full resize-none rounded-lg bg-primary-100/40 px-3 py-2 text-xs text-primary-950 placeholder:text-primary-500 focus:outline-none dark:bg-primary-800/40 dark:text-primary-100 dark:placeholder:text-primary-500"
               />
-              <label className="mb-1 flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
+              <label className="mb-3 -mt-1 flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
                 <Checkbox
                   checked={prDraft}
                   onChange={() => setPrDraft((v) => !v)}
@@ -341,7 +341,7 @@ export function GitActionsDropdown({ providerId }: GitActionsDropdownProps) {
                 loading={pending === "pr"}
               />
               <PanelAction
-                icon={<ArrowUp className="size-4 -rotate-90" />}
+                icon={<ArrowUp className="size-4 -rotate-90 -ml-1" />}
                 label="Back"
                 onClick={() => setView("commit")}
                 disabled={busy}
@@ -373,7 +373,7 @@ function PanelAction({
     <Button
       onClick={onClick}
       disabled={disabled}
-      className="flex w-full items-center gap-2.5 px-3.5 py-1.5 text-left text-s text-primary-700 transition-colors hover:bg-primary-100/60 disabled:cursor-not-allowed disabled:opacity-40 dark:text-primary-200 dark:hover:bg-primary/10"
+      className="flex w-full items-center gap-2 px-3.5 py-1.5 text-left text-s text-primary-700 transition-colors hover:bg-primary-100/60 disabled:cursor-not-allowed disabled:opacity-40 dark:text-primary-200 dark:hover:bg-primary/10"
     >
       <span className="shrink-0 text-primary-500 dark:text-primary-400">
         {loading ? <Refresh className="size-4 animate-spin" /> : icon}

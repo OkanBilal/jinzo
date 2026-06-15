@@ -56,6 +56,7 @@ export { default as Connect } from "./connect";
 export { default as Github } from "./github";
 export { default as Linear } from "./linear";
 export { default as External } from "./external";
+export { default as Finder } from "./finder";
 export { default as Branch } from "./branch";
 export { default as Jira } from "./jira";
 export { default as Asana } from "./asana";

@@ -719,6 +719,7 @@ const api = {
   shell: {
     openExternal: (url: string) => ipcRenderer.invoke(CHANNELS.shell.openExternal, url),
     openPath: (path: string) => ipcRenderer.invoke(CHANNELS.shell.openPath, path),
+    showItemInFolder: (path: string) => ipcRenderer.invoke(CHANNELS.shell.showItemInFolder, path),
     openInApp: (appId: string, path: string) => ipcRenderer.invoke(CHANNELS.shell.openInApp, appId, path),
     getInstalledApps: () => ipcRenderer.invoke(CHANNELS.shell.getInstalledApps),
     getAppsForFile: (filePath: string) =>
