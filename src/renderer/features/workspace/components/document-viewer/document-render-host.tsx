@@ -17,9 +17,30 @@ const BASE_SHADOW_CSS = `
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   transform-origin: top left;
 }
-table { border-collapse: collapse; font-size: 13px; background: #fff; }
-td, th { border: 1px solid #d4d4d4; padding: 3px 8px; white-space: nowrap; }
-th { background: #f3f4f6; font-weight: 600; }
+.xlsx-sheet {
+  background: #fff;
+  min-width: 100%;
+  overflow: visible;
+}
+.xlsx-sheet-table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: max-content;
+  min-width: 100%;
+  font-size: 13px;
+  background: #fff;
+}
+.xlsx-sheet-table td {
+  border: 1px solid #d4d4d4;
+  box-sizing: border-box;
+  min-width: 40px;
+  min-height: 22px;
+  padding: 3px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.xlsx-sheet-table a { color: #2563eb; text-decoration: underline; }
 `;
 
 export function DocumentRenderHost({

@@ -550,6 +550,41 @@ body[data-resizing] iframe {
   animation: rotate3dY 1.8s cubic-bezier(0.37, 0, 0.63, 1) infinite;
 }
 
+/*
+ * Tool status loader — a 4×4 grid of squares. Each square carries two
+ * overlapping pulses (::before / ::after) that peak once per cycle. Their
+ * per-cell delays are set inline so the lit squares sweep diagonally: the
+ * ::before layer rides the top-left → bottom-right anti-diagonal during the
+ * first half of the cycle, the ::after layer rides the bottom-left → top-right
+ * diagonal during the second half. The two passes give the smooth, faintly
+ * random "squares sliding across" feel. Color is inherited via currentColor.
+ */
+@keyframes toolSquarePulse {
+  0%, 100% { opacity: 0; transform: scale(0.02); }
+  24%      { opacity: 1;   transform: scale(1); }
+  48%      { opacity: 0; transform: scale(0.02); }
+}
+
+.tool-square {
+  position: relative;
+}
+
+.tool-square::before,
+.tool-square::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0;
+  /* ease-in-out-sine: zero velocity at the peak and at the dim landings, so the
+     brighten/dim fades stay silky with no hard corners. */
+  animation: toolSquarePulse 2s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+}
+
+.tool-square::before { animation-delay: var(--tsq-d1, 0ms); }
+.tool-square::after  { animation-delay: var(--tsq-d2, 0ms); }
+
 @keyframes wizardModalIn {
   0% {
     opacity: 0;

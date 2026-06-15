@@ -594,6 +594,12 @@ async function initializeApp() {
       if (normalized !== filePath) return;
       await shell.openPath(filePath);
     });
+    ipcMain.handle(CHANNELS.shell.showItemInFolder, (_, filePath: string) => {
+      if (typeof filePath !== "string" || !path.isAbsolute(filePath)) return;
+      const normalized = path.normalize(filePath);
+      if (normalized !== filePath) return;
+      shell.showItemInFolder(filePath);
+    });
     ipcMain.handle(
       CHANNELS.shell.openInApp,
       async (_, appId: string, filePath: string) => {
@@ -866,6 +872,7 @@ async function cleanupApp() {
     unregisterBrowserIpc();
     ipcMain.removeHandler(CHANNELS.shell.openExternal);
     ipcMain.removeHandler(CHANNELS.shell.openPath);
+    ipcMain.removeHandler(CHANNELS.shell.showItemInFolder);
     ipcMain.removeHandler(CHANNELS.shell.openInApp);
     ipcMain.removeHandler(CHANNELS.shell.getInstalledApps);
     ipcMain.removeHandler(CHANNELS.shell.getAppsForFile);

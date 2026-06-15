@@ -27,6 +27,7 @@ import { ToolSearchDisplay, type ToolSearchParams } from "./tool-search-display"
 import { SkillDisplay, type SkillParams } from "./skill-display";
 import { AskUserQuestionDisplay, type AskUserQuestionParams } from "./ask-user-question-display";
 import { WebFetchDisplay, type WebFetchParams } from "./web-fetch-display";
+import { ToolStatusProvider, eventToolStatus } from "./_shared";
 
 interface ToolCallItemProps {
   event: RunEvent;
@@ -252,15 +253,22 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
   const isEmptyTool =
     !hasParamsOrInput && !hasSummary && !hasMeaningfulOutput(event.metadata?.output);
 
+  // Lifecycle status (queued/running/done/error/canceled) flows down to every
+  // ToolHeader via context, so the per-tool displays stay status-agnostic.
+  const status = eventToolStatus(event);
+  const wrap = (node: ReactNode) => (
+    <ToolStatusProvider value={status}>{node}</ToolStatusProvider>
+  );
+
   if (isEmptyTool) {
     if (isCompact) {
-      return (
+      return wrap(
         <div className="flex items-center gap-1 px-1 text-s font-sans">
           <span className="text-primary-500/60 shrink-0" />
-        </div>
+        </div>,
       );
     }
-    return (
+    return wrap(
       <div className=" ">
         <div className="flex items-center gap-1 text-s font-sans">
           <span className="text-primary-500/60 group-hover:text-primary-900 group-hover:dark:text-primary-200">
@@ -271,7 +279,7 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
           </span>
           <span className="text-primary-500/60 italic truncate" />
         </div>
-      </div>
+      </div>,
     );
   }
 
@@ -290,18 +298,18 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
 
   for (const renderer of DISPATCH) {
     const node = renderer(ctx);
-    if (node !== null) return node;
+    if (node !== null) return wrap(node);
   }
 
   if (isCompact) {
-    return (
+    return wrap(
       <div className="flex items-center gap-2 py-0.5 ml-5 px-2 hover:bg-primary-50 dark:hover:bg-primary/5 rounded text-s font-sans">
         <span className="text-primary-500 truncate">{summary}</span>
-      </div>
+      </div>,
     );
   }
 
-  return (
+  return wrap(
     <div className="py-0.5 text-primary-500 group-hover:text-primary-950 group-hover:dark:text-primary  rounded">
       <div className="flex items-center gap-2 text-s font-sans">
         <span className="">
@@ -312,6 +320,6 @@ export function ToolCallItem({ event, isCompact = true }: ToolCallItemProps) {
         </span>
         <span className=" truncate">{summary}</span>
       </div>
-    </div>
+    </div>,
   );
 }

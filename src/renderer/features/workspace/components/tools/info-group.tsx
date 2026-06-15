@@ -12,6 +12,8 @@ import {
   Sparkles,
   External,
   ArrowUp,
+  Finder,
+  Mains,
 } from "@/components/ui/icons";
 import { ProviderIcon } from "../provider-icon";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
@@ -586,6 +588,11 @@ function ImageArtifact({
     void window.api.shell.openFileWithBundle(absPath, bundleId);
   };
 
+  const showInFinder = () => {
+    setMenuOpen(false);
+    void window.api.shell.showItemInFolder(absPath);
+  };
+
   return (
     <div
       className="relative flex items-center gap-3 w-full max-w-xl rounded-2xl bg-primary-50 dark:bg-primary-900/85 px-3 py-2.5 shadow-sm"
@@ -640,7 +647,14 @@ function ImageArtifact({
         minWidth={240}
         origin="top-right"
       >
-        <DropdownMenuItem onClick={openInMains}>Show Image</DropdownMenuItem>
+        <DropdownMenuItem onClick={openInMains}>
+          <Mains className="size-4 shrink-0" />
+          Show Image
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={showInFinder}>
+          <Finder className="size-4 shrink-0" />
+          Show in Finder
+        </DropdownMenuItem>
         {isFetching ? (
           <div className="px-3 py-2 text-xs text-primary-500 dark:text-primary-400">
             Loading applications…

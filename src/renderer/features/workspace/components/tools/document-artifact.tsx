@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
-import { ArrowUp } from "@/components/ui/icons";
+import { ArrowUp, Finder, Mains } from "@/components/ui/icons";
 import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
 import { useDocumentViewer } from "@/hooks/use-document-viewer";
 import { DOC_VIEWER_LABELS, type DocType } from "@/lib/document-viewer";
@@ -50,6 +50,11 @@ export function DocumentArtifact({
     void window.api.shell.openFileWithBundle(absPath, bundleId);
   };
 
+  const showInFinder = () => {
+    setMenuOpen(false);
+    void window.api.shell.showItemInFolder(absPath);
+  };
+
   return (
     <div
       className="relative flex items-center gap-3 w-full max-w-xl rounded-2xl bg-primary-50 dark:bg-primary-900/85 px-3 py-2.5 shadow-sm"
@@ -94,7 +99,14 @@ export function DocumentArtifact({
         minWidth={240}
         origin="top-right"
       >
-        <DropdownMenuItem onClick={openInMains}>Open in Mains</DropdownMenuItem>
+        <DropdownMenuItem onClick={openInMains}>
+          <Mains className="size-4 shrink-0" />
+          Open in Mains
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={showInFinder}>
+          <Finder className="size-4 shrink-0" />
+          Show in Finder
+        </DropdownMenuItem>
         {isFetching ? (
           <div className="px-3 py-2 text-xs text-primary-500 dark:text-primary-400">
             Loading applications…
