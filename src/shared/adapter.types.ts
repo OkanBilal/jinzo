@@ -489,6 +489,14 @@ export interface WorkRunAdapter {
    */
   getRateLimits?(): Promise<RateLimitInfo | null>;
 
+  // ── Thread goal controls (Codex `thread/goal/*`) ──
+  /** Set/update the goal for a run's thread. Partial — omitted fields unchanged. */
+  setGoal?(runId: string, params: GoalSetParams): Promise<GoalInfo | null>;
+  /** Read the current goal for a run's thread (null if none). */
+  getGoal?(runId: string): Promise<GoalInfo | null>;
+  /** Clear the goal on a run's thread. Returns true if cleared. */
+  clearGoal?(runId: string): Promise<boolean>;
+
   /**
    * Read account info from the provider.
    */
@@ -617,6 +625,37 @@ export interface ProviderDriver {
   readPlugin?(pluginName: string, marketplacePath: string): Promise<PluginDetail>;
   installPlugin?(pluginId: string): Promise<void>;
   uninstallPlugin?(pluginId: string): Promise<void>;
+
+  // ── Thread goal controls (Codex `thread/goal/*`) ──
+  /** Set/update the goal for a run's thread. Partial — omitted fields unchanged. */
+  setGoal?(runId: string, params: GoalSetParams): Promise<GoalInfo | null>;
+  /** Read the current goal for a run's thread (null if none). */
+  getGoal?(runId: string): Promise<GoalInfo | null>;
+  /** Clear the goal on a run's thread. Returns true if cleared. */
+  clearGoal?(runId: string): Promise<boolean>;
+}
+
+/**
+ * A thread goal as tracked by Codex (`thread/goal/*`). Tracks progress
+ * (token/time usage) against an objective for the lifetime of a thread.
+ */
+export interface GoalInfo {
+  threadId: string;
+  objective: string;
+  /** active | blocked | budgetLimited | usageLimited */
+  status: string;
+  tokenBudget?: number;
+  tokensUsed?: number;
+  timeUsedSeconds?: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+/** Params for {@link ProviderDriver.setGoal}. All fields optional (partial update). */
+export interface GoalSetParams {
+  objective?: string;
+  status?: string;
+  tokenBudget?: number;
 }
 
 /**
@@ -676,6 +715,13 @@ export interface CodexAdapterConfig {
    * Independent of `sandboxMode` — both can be active.
    */
   planMode?: boolean;
+  /**
+   * When true, the run's prompt is registered as the thread's goal via
+   * `thread/goal/set` (objective = prompt) right after `thread/start`. Codex
+   * then tracks token/time usage against the goal and reports "Goal achieved".
+   * Per-run config snapshot can override.
+   */
+  goalMode?: boolean;
   /** Additional directories the agent can access */
   additionalDirectories?: string[];
   /** Base URL override for OpenAI API */

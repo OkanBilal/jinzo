@@ -17,5 +17,6 @@ export { WorkspaceInput } from "./workspace-input";
 export { WorkspaceQuickActions } from "./workspace-quick-actions";
 export { TerminalSection } from "./terminal-section";
 export { DiffSummaryBar } from "./diff-summary-bar";
+export { GoalSummaryBar } from "./goal-summary-bar";
 export { TodoSummaryBar } from "./todo-summary-bar";
 export { BrowserPanel } from "./browser-panel";

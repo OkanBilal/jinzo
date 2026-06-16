@@ -179,7 +179,7 @@ export function ToolHeader({
     <Button
       type="button"
       onClick={() => hasDetails && onToggle()}
-      className={`group w-full min-w-0 flex items-center gap-1 py-1 text-s font-sans ${
+      className={`group w-full min-w-0 flex items-center gap-1.5 py-1 text-s font-sans ${
         hasDetails ? "cursor-pointer" : "cursor-default"
       }`}
     >

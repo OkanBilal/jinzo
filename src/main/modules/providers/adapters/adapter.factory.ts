@@ -358,3 +358,34 @@ export async function getRateLimitsForProvider(
   if (!adapter.getRateLimits) return null;
   return adapter.getRateLimits();
 }
+
+type GoalInfo = import("../../../../shared/adapter.types").GoalInfo;
+type GoalSetParams = import("../../../../shared/adapter.types").GoalSetParams;
+
+export async function setGoalForProvider(
+  provider: ProviderResponse,
+  runId: string,
+  params: GoalSetParams,
+): Promise<GoalInfo | null> {
+  const adapter = createWorkAdapter(provider);
+  if (!adapter.setGoal) return null;
+  return adapter.setGoal(runId, params);
+}
+
+export async function getGoalForProvider(
+  provider: ProviderResponse,
+  runId: string,
+): Promise<GoalInfo | null> {
+  const adapter = createWorkAdapter(provider);
+  if (!adapter.getGoal) return null;
+  return adapter.getGoal(runId);
+}
+
+export async function clearGoalForProvider(
+  provider: ProviderResponse,
+  runId: string,
+): Promise<boolean> {
+  const adapter = createWorkAdapter(provider);
+  if (!adapter.clearGoal) return false;
+  return adapter.clearGoal(runId);
+}

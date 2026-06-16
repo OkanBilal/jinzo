@@ -7,6 +7,7 @@ import {
   WorkspaceTabs,
   TerminalSection,
   DiffSummaryBar,
+  GoalSummaryBar,
   TodoSummaryBar,
 } from "@/features/workspace/components";
 import { SpaceSuggestions } from "@/features/workspace/components/space-suggestions";
@@ -286,6 +287,16 @@ export function WorkspaceProviderPage({
           lastCompletedRunId={
             ws.activeRun?.status !== "running" ? ws.activeRunId : null
           }
+        />
+      )}
+
+      {ws.currentWorkspace && !ws.showEmptyState && !ws.showNewRunTab && (
+        <GoalSummaryBar
+          providerId={providerId}
+          runId={ws.activeRun?.id}
+          isRunning={ws.activeRun?.status === "running"}
+          enabled={variant === "codex"}
+          rootPath={ws.currentWorkspace.rootPath}
         />
       )}
 

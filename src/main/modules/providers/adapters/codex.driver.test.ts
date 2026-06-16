@@ -13,7 +13,33 @@ import {
   mapRateLimitSnapshot,
   mapSandboxMode,
   parseCodexReviewFindings,
+  relativizeGoalMentions,
 } from "./codex.driver";
+
+describe("codex.driver / relativizeGoalMentions", () => {
+  const root = "/Users/me/Library/Application Support/mains/worktrees/x/coconut";
+
+  it("rewrites an @<abs path> mention under the root as relative", () => {
+    expect(
+      relativizeGoalMentions(`refactor @${root}/src/renderer/hooks/use-dark-mode.ts`, root),
+    ).toBe("refactor @src/renderer/hooks/use-dark-mode.ts");
+  });
+
+  it("leaves mentions outside the workspace root untouched", () => {
+    expect(relativizeGoalMentions("see @/etc/hosts now", root)).toBe("see @/etc/hosts now");
+  });
+
+  it("handles a trailing-slash root and multiple mentions", () => {
+    expect(
+      relativizeGoalMentions(`@${root}/a.ts and @${root}/b/c.ts`, root + "/"),
+    ).toBe("@a.ts and @b/c.ts");
+  });
+
+  it("is a no-op without a root or goal", () => {
+    expect(relativizeGoalMentions("@/abs/x.ts", undefined)).toBe("@/abs/x.ts");
+    expect(relativizeGoalMentions("", root)).toBe("");
+  });
+});
 
 describe("codex.driver / mapSandboxMode", () => {
   it("preserves valid sandbox modes", () => {

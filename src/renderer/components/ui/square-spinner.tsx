@@ -36,7 +36,7 @@ const TEMPLATE = `repeat(${GRID}, minmax(0, 1fr))`;
  * (`.tool-square` / `toolSquarePulse`); color is inherited from the surrounding
  * text via `currentColor`, and size comes from `className` (default `size-3`).
  */
-export function SquareSpinner({ className = "size-3" }: { className?: string }) {
+export function SquareSpinner({ className = "size-2.75" }: { className?: string }) {
   return (
     <span
       aria-hidden

@@ -212,6 +212,17 @@ const api = {
       ipcRenderer.on(CHANNELS.providers.rateLimitsUpdated, listener);
       return () => ipcRenderer.removeListener(CHANNELS.providers.rateLimitsUpdated, listener);
     },
+    // Thread goal controls (Codex `thread/goal/*`), keyed by runId.
+    setGoal: (id: string, runId: string, params: { objective?: string; status?: string; tokenBudget?: number }) =>
+      ipcRenderer.invoke(CHANNELS.providers.setGoal, id, runId, params),
+    getGoal: (id: string, runId: string) => ipcRenderer.invoke(CHANNELS.providers.getGoal, id, runId),
+    clearGoal: (id: string, runId: string) => ipcRenderer.invoke(CHANNELS.providers.clearGoal, id, runId),
+    // Fired when a thread goal changes (set/updated/cleared); goal === null on clear.
+    onGoalUpdated: (callback: (data: { providerId: string; runId: string | null; goal: unknown }) => void) => {
+      const listener = (_: any, data: any) => callback(data);
+      ipcRenderer.on(CHANNELS.providers.goalUpdated, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.providers.goalUpdated, listener);
+    },
     getAccountInfo: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getAccountInfo, id),
     updateCli: (id: string) => ipcRenderer.invoke(CHANNELS.providers.updateCli, id),
     getPlugins: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getPlugins, id),

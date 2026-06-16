@@ -89,6 +89,9 @@ export {
   installPluginForProvider,
   uninstallPluginForProvider,
   getRateLimitsForProvider,
+  setGoalForProvider,
+  getGoalForProvider,
+  clearGoalForProvider,
   SUPPORTED_WORK_PROVIDERS,
   type SupportedWorkProvider,
 } from "./adapter.factory";
