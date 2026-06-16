@@ -15,6 +15,24 @@ export interface RateLimitInfo {
   credits?: { hasCredits: boolean; balance?: string; unlimited: boolean };
 }
 
+/** A Codex thread goal (mirrors `GoalInfo` in shared/adapter.types). */
+export interface GoalInfo {
+  threadId: string;
+  objective: string;
+  status: string;
+  tokenBudget?: number;
+  tokensUsed?: number;
+  timeUsedSeconds?: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export interface GoalSetParams {
+  objective?: string;
+  status?: string;
+  tokenBudget?: number;
+}
+
 export type ProviderKind = "llm_runtime" | "agent_runtime";
 
 export interface ProviderConfig {
@@ -427,6 +445,36 @@ export const providersApi = baseApi.injectEndpoints({
         response.success ? response.data : null,
     }),
 
+    getProviderGoal: builder.query<GoalInfo | null, { providerId: string; runId: string }>({
+      query: ({ providerId, runId }) => ({
+        handler: CHANNELS.providers.getGoal,
+        args: [providerId, runId],
+      }),
+      transformResponse: (response: ServiceResponse<GoalInfo | null>) =>
+        response.success ? response.data : null,
+    }),
+
+    setProviderGoal: builder.mutation<
+      GoalInfo | null,
+      { providerId: string; runId: string; params: GoalSetParams }
+    >({
+      query: ({ providerId, runId, params }) => ({
+        handler: CHANNELS.providers.setGoal,
+        args: [providerId, runId, params],
+      }),
+      transformResponse: (response: ServiceResponse<GoalInfo | null>) =>
+        response.success ? response.data : null,
+    }),
+
+    clearProviderGoal: builder.mutation<boolean, { providerId: string; runId: string }>({
+      query: ({ providerId, runId }) => ({
+        handler: CHANNELS.providers.clearGoal,
+        args: [providerId, runId],
+      }),
+      transformResponse: (response: ServiceResponse<boolean>) =>
+        response.success ? response.data : false,
+    }),
+
     detectInstalledClis: builder.query<DetectedClis, void>({
       query: () => ({
         handler: CHANNELS.providers.detectInstalled,
@@ -466,5 +514,9 @@ export const {
   useInstallProviderPluginMutation,
   useUninstallProviderPluginMutation,
   useGetProviderRateLimitsQuery,
+  useGetProviderGoalQuery,
+  useLazyGetProviderGoalQuery,
+  useSetProviderGoalMutation,
+  useClearProviderGoalMutation,
   useDetectInstalledClisQuery,
 } = providersApi;

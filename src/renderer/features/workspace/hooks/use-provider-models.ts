@@ -75,6 +75,9 @@ export function useProviderModels(
   const planMode: boolean = variant === "codex"
     ? !!(providerData?.config as any)?.planMode
     : false;
+  const goalMode: boolean = variant === "codex"
+    ? !!(providerData?.config as any)?.goalMode
+    : false;
 
   const handlePermissionModeChange = useCallback(async (mode: string) => {
     if (!providerData) return;
@@ -104,6 +107,23 @@ export function useProviderModels(
       },
     });
   }, [providerData, planMode, activeProviderId, updateProvider]);
+
+  const handleGoalModeToggle = useCallback(async () => {
+    if (!providerData) return;
+    const currentConfig = providerData.config ?? {};
+    const enabling = !goalMode;
+    await updateProvider({
+      id: activeProviderId,
+      payload: {
+        config: {
+          ...currentConfig,
+          goalMode: !goalMode,
+          // Goal and plan modes are mutually exclusive — turning goal on clears plan.
+          ...(enabling ? { planMode: false } : {}),
+        },
+      },
+    });
+  }, [providerData, goalMode, activeProviderId, updateProvider]);
 
   const handleThinkingModeToggle = useCallback(async () => {
     if (!providerData) return;
@@ -310,5 +330,7 @@ export function useProviderModels(
     selectedModelInfo,
     planMode,
     handlePlanModeToggle,
+    goalMode,
+    handleGoalModeToggle,
   };
 }

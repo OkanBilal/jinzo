@@ -2,6 +2,7 @@ import { RefObject } from "react";
 import { Plan, Lock, Edit, DontAsk, Danger, ArrowUp, Infinite } from "../icons";
 import DropdownWrapper from "../dropdown-wrapper";
 import { Button } from "../button";
+import Tooltip from "../tooltip";
 import { Body, Caption } from "../text";
 import {
   CURSOR_MODES as CURSOR_MODE_DEFS,
@@ -120,6 +121,8 @@ interface PermissionModeDropdownProps {
   /** Codex-only: plan mode runs alongside the sandbox mode. */
   planMode?: boolean;
   onPlanModeToggle?: () => void;
+  /** Codex-only: when goal mode is on, plan mode is mutually exclusive and shown disabled. */
+  goalMode?: boolean;
 }
 
 export function PermissionModeDropdown({
@@ -133,10 +136,14 @@ export function PermissionModeDropdown({
   modeLabels: modeLabelsProp,
   planMode = false,
   onPlanModeToggle,
+  goalMode = false,
 }: PermissionModeDropdownProps) {
   const isCursor = variant === "cursor";
   const isCodex = variant === "codex";
   const showPlanRow = isCodex && !!onPlanModeToggle;
+  // Goal mode and plan mode are mutually exclusive — when goal is on, the plan
+  // row is shown disabled with a tooltip pointing the user at the goal toggle.
+  const planDisabled = goalMode;
   const modes =
     modesProp ??
     (isCursor
@@ -151,7 +158,7 @@ export function PermissionModeDropdown({
       : isCodex
         ? CODEX_SANDBOX_LABELS
         : PERMISSION_MODE_LABELS);
-  const showPlanSuffix = showPlanRow && planMode;
+  const showPlanSuffix = showPlanRow && planMode && !planDisabled;
   const isBypass = isBypassPermissionMode(permissionMode);
   const triggerIconClass = isBypass ? BYPASS_TRIGGER.icon : "";
   const triggerChevronClass = isBypass
@@ -211,31 +218,43 @@ export function PermissionModeDropdown({
           </Button>
         ))}
         {showPlanRow && (
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => onPlanModeToggle?.()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onPlanModeToggle?.();
-              }
-            }}
-            className={`w-full text-left px-2.5 py-1.5 cursor-pointer transition-colors flex items-center gap-2.5 last:rounded-b-xl border-t border-primary-200/40 dark:border-primary/5 ${
-              planMode
-                ? "bg-primary-200/60 dark:bg-primary-200/10 text-primary-950 dark:text-primary"
-                : "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
-            }`}
+          <Tooltip
+            content="Disable goal mode to use plan mode"
+            position="top"
+            disabled={!planDisabled}
           >
-            <Plan className="size-3.5 shrink-0" />
-            <div className="flex flex-col flex-1 min-w-0">
-              <Body className="mb-0.5">Plan Mode</Body>
-              <Caption>
-                Plan before changes
-              </Caption>
+            <div
+              role="button"
+              tabIndex={planDisabled ? -1 : 0}
+              aria-disabled={planDisabled}
+              onClick={() => {
+                if (!planDisabled) onPlanModeToggle?.();
+              }}
+              onKeyDown={(e) => {
+                if (planDisabled) return;
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onPlanModeToggle?.();
+                }
+              }}
+              className={`w-full text-left px-2.5 py-1.5 transition-colors flex items-center gap-2.5 last:rounded-b-xl border-t border-primary-200/40 dark:border-primary/5 ${
+                planDisabled
+                  ? "cursor-not-allowed opacity-50 text-primary-500 dark:text-primary-500"
+                  : planMode
+                    ? "cursor-pointer bg-primary-200/60 dark:bg-primary-200/10 text-primary-950 dark:text-primary"
+                    : "cursor-pointer hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300"
+              }`}
+            >
+              <Plan className="size-3.5 shrink-0" />
+              <div className="flex flex-col flex-1 min-w-0">
+                <Body className="mb-0.5">Plan Mode</Body>
+                <Caption>
+                  Plan before changes
+                </Caption>
+              </div>
+              <PlanToggleSwitch checked={planMode && !planDisabled} />
             </div>
-            <PlanToggleSwitch checked={planMode} />
-          </div>
+          </Tooltip>
         )}
       </DropdownWrapper>
     </div>

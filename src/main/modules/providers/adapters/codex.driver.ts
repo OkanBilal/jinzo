@@ -33,6 +33,8 @@ import type {
   AccountInfo,
   CodexAdapterConfig,
   DriverOutcome,
+  GoalInfo,
+  GoalSetParams,
   MarketplaceInfo,
   ModelInfo,
   PluginDetail,
@@ -456,6 +458,99 @@ function broadcastRateLimits(providerId: string, rateLimits: RateLimitInfo | nul
       win.webContents.send(CHANNELS.providers.rateLimitsUpdated, { providerId, rateLimits });
     }
   }
+}
+
+/**
+ * Map a raw Codex goal object (from `thread/goal/*` results or the
+ * `thread/goal/updated` notification — identical wire shape) into `GoalInfo`.
+ */
+function mapGoalSnapshot(raw: Record<string, unknown> | null | undefined): GoalInfo | null {
+  if (!raw || typeof raw !== "object") return null;
+  const threadId = raw.threadId as string | undefined;
+  if (!threadId) return null;
+  return {
+    threadId,
+    objective: (raw.objective as string) ?? "",
+    status: (raw.status as string) ?? "active",
+    tokenBudget: raw.tokenBudget as number | undefined,
+    tokensUsed: raw.tokensUsed as number | undefined,
+    timeUsedSeconds: raw.timeUsedSeconds as number | undefined,
+    createdAt: raw.createdAt as number | undefined,
+    updatedAt: raw.updatedAt as number | undefined,
+  };
+}
+
+/**
+ * Push a goal change to every live renderer window. `goal === null` signals the
+ * goal was cleared. Carries `runId` so the renderer can match it to the active
+ * run's card. Mirrors {@link broadcastRateLimits}.
+ */
+function broadcastGoal(providerId: string, runId: string | null, goal: GoalInfo | null): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send(CHANNELS.providers.goalUpdated, { providerId, runId, goal });
+    }
+  }
+}
+
+/**
+ * Make `@<absolute path>` file mentions in a goal objective relative to the
+ * workspace root, so the goal reads `@src/foo.ts` instead of the long worktree
+ * prefix (e.g. ~/Library/Application Support/mains/worktrees/…). Relative paths
+ * are also more useful to the agent, which runs with cwd = rootPath. Mentions
+ * pointing outside the workspace are left untouched.
+ */
+export function relativizeGoalMentions(goal: string, rootPath: string | undefined): string {
+  if (!rootPath || !goal) return goal;
+  // Literal replace (not regex) so roots containing spaces — e.g. macOS
+  // "Application Support" in the worktree path — are matched correctly.
+  const root = rootPath.endsWith("/") ? rootPath : rootPath + "/";
+  return goal.split("@" + root).join("@");
+}
+
+/**
+ * Register a run's prompt as the thread's goal when goal mode is on.
+ *
+ * - New threads (`createSession`) pass `overwrite=true` — the first prompt IS
+ *   the goal, set it unconditionally.
+ * - Continue / fork pass `overwrite=false` — a goal is thread-scoped and meant
+ *   to persist across turns, so we must NOT clobber an in-progress goal with
+ *   every follow-up. We only (re)set when there's no goal yet or the previous
+ *   one already completed; an active/paused/blocked goal is left as-is for the
+ *   new turn to keep pursuing.
+ */
+async function maybeSetThreadGoal(
+  server: { sendRequest: (method: string, params?: unknown) => Promise<unknown> },
+  threadId: string | undefined,
+  goalMode: boolean,
+  rawObjective: string | undefined,
+  rootPath: string | undefined,
+  overwrite: boolean,
+): Promise<void> {
+  if (!goalMode || !threadId || !rawObjective?.trim()) return;
+  if (!overwrite) {
+    try {
+      const existing = (await server.sendRequest("thread/goal/get", { threadId })) as
+        | { goal?: { status?: string } | null }
+        | undefined;
+      if (existing?.goal && existing.goal.status !== "complete") return;
+    } catch {
+      /* no goal / get failed — fall through and set */
+    }
+  }
+  const objective = relativizeGoalMentions(rawObjective, rootPath);
+  await server
+    .sendRequest("thread/goal/set", { threadId, objective })
+    .catch((err) => logWarn("thread/goal/set failed:", err instanceof Error ? err.message : err));
+}
+
+/** Reverse-lookup the runId that owns a Codex threadId (for goal notifications). */
+function runIdForThread(threadId: string | undefined): string | null {
+  if (!threadId) return null;
+  for (const [runId, tid] of sessionIdMap) {
+    if (tid === threadId) return runId;
+  }
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1241,6 +1336,21 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
           | Record<string, unknown>
           | undefined;
         broadcastRateLimits(PROVIDER_IDS.codex, mapRateLimitSnapshot(rl));
+      }
+
+      // Live goal updates — push to the renderer so the goal card above the
+      // input reflects status/usage as Codex tracks the objective. Thread-
+      // scoped, so we reverse-map threadId → runId for the card to match.
+      if (method === "thread/goal/updated") {
+        const p = params as Record<string, unknown> | undefined;
+        const goal = mapGoalSnapshot(p?.goal as Record<string, unknown> | undefined);
+        const threadId = (p?.threadId ?? goal?.threadId) as string | undefined;
+        broadcastGoal(PROVIDER_IDS.codex, runIdForThread(threadId), goal);
+      }
+      if (method === "thread/goal/cleared") {
+        const p = params as Record<string, unknown> | undefined;
+        const threadId = p?.threadId as string | undefined;
+        broadcastGoal(PROVIDER_IDS.codex, runIdForThread(threadId), null);
       }
     });
 
@@ -3320,6 +3430,9 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       const overridePlanMode = typeof overrides.planMode === "boolean"
         ? (overrides.planMode as boolean)
         : undefined;
+      const overrideGoalMode = typeof overrides.goalMode === "boolean"
+        ? (overrides.goalMode as boolean)
+        : undefined;
       const sandbox = mapSandboxMode(overrideSandboxMode ?? config.sandboxMode);
       const personality = config.personality ?? "none";
 
@@ -3340,6 +3453,13 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       const threadId = (thread?.id ?? threadResult?.threadId) as string | undefined;
 
       if (threadId) sessionIdMap.set(runId, threadId);
+
+      // Goal mode: register the prompt as the thread's goal so Codex tracks
+      // token/time usage against it and reports completion ("Goal achieved").
+      // Best-effort — older Codex builds without `thread/goal/*` shouldn't fail
+      // the run. The goal stays active across follow-up turns until cleared.
+      const goalMode = overrideGoalMode ?? config.goalMode ?? false;
+      await maybeSetThreadGoal(server, threadId, goalMode, request.goal, request.workspace.rootPath, /*overwrite*/ true);
 
       const mainsCtx: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
       activeRuns.set(runId, { threadId: threadId ?? null, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), emittedDocPaths: new Set(), runStartedAt: Date.now(), planBuffers: new Map(), subAgents: new Map() });
@@ -3430,6 +3550,11 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       activeRuns.set(runId, { threadId, turnId: null, aborted: false, currentMessageItemId: null, agentMessageBuffer: "", pendingFlush: [], mainsCtx: mainsCtxContinue, fileChangeBuffers: new Map(), fileChangeItems: new Map(), commandOutputBuffers: new Map(), emittedImagePaths: new Set(), emittedDocPaths: new Set(), runStartedAt: Date.now(), planBuffers: new Map(), subAgents: new Map() });
 
       const currentThreadId = sessionIdMap.get(runId) ?? threadId;
+
+      // Goal mode on a continue: only establish a goal if the thread doesn't
+      // already have an in-progress one (don't reset a multi-turn goal).
+      await maybeSetThreadGoal(server, currentThreadId, config.goalMode ?? false, message, request.workspace.rootPath, /*overwrite*/ false);
+
       const turnInput = buildContinueTurnInput(message, request);
 
       const continueOutputSchema = resolveOutputSchema(config);
@@ -3500,6 +3625,10 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       }
 
       sessionIdMap.set(runId, forkedThreadId);
+
+      // Goal mode on a fork: the fork inherits the source thread's goal, so
+      // only set one if there's none in progress (mirrors continue).
+      await maybeSetThreadGoal(server, forkedThreadId, config.goalMode ?? false, message, request.workspace.rootPath, /*overwrite*/ false);
 
       const mainsCtxFork: MainsToolContext = { workspaceId: request.workspace.id, rootPath: request.workspace.rootPath, runId };
       activeRuns.set(runId, {
@@ -3837,6 +3966,62 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       } catch (error) {
         logError("Failed to get rate limits:", error);
         return null;
+      }
+    },
+
+    // ── Thread goal controls (Codex `thread/goal/*`) ──
+    // threadId is resolved from the in-memory sessionIdMap, falling back to the
+    // run's persisted sessionId (survives an app restart). We also broadcast the
+    // result directly so the caller's card converges even if the matching
+    // `thread/goal/updated` notification races or is missed.
+
+    async setGoal(runId: string, params: GoalSetParams): Promise<GoalInfo | null> {
+      try {
+        const threadId = sessionIdMap.get(runId) ?? (await runsRepo.findRunById(runId))?.sessionId ?? undefined;
+        if (!threadId) {
+          logWarn(`setGoal: no thread for run ${runId}`);
+          return null;
+        }
+        const server = await ensureServer();
+        const result = await server.sendRequest("thread/goal/set", {
+          threadId,
+          ...(params.objective !== undefined ? { objective: params.objective } : {}),
+          ...(params.status !== undefined ? { status: params.status } : {}),
+          ...(params.tokenBudget !== undefined ? { tokenBudget: params.tokenBudget } : {}),
+        }) as Record<string, unknown>;
+        const goal = mapGoalSnapshot(result?.goal as Record<string, unknown> | undefined);
+        broadcastGoal(PROVIDER_IDS.codex, runId, goal);
+        return goal;
+      } catch (error) {
+        logError("setGoal failed:", error);
+        return null;
+      }
+    },
+
+    async getGoal(runId: string): Promise<GoalInfo | null> {
+      try {
+        const threadId = sessionIdMap.get(runId) ?? (await runsRepo.findRunById(runId))?.sessionId ?? undefined;
+        if (!threadId || !appServer?.isRunning) return null;
+        const result = await appServer.sendRequest("thread/goal/get", { threadId }) as Record<string, unknown>;
+        return mapGoalSnapshot(result?.goal as Record<string, unknown> | undefined);
+      } catch (error) {
+        logError("getGoal failed:", error);
+        return null;
+      }
+    },
+
+    async clearGoal(runId: string): Promise<boolean> {
+      try {
+        const threadId = sessionIdMap.get(runId) ?? (await runsRepo.findRunById(runId))?.sessionId ?? undefined;
+        if (!threadId) return false;
+        const server = await ensureServer();
+        const result = await server.sendRequest("thread/goal/clear", { threadId }) as Record<string, unknown>;
+        const cleared = result?.cleared === true;
+        if (cleared) broadcastGoal(PROVIDER_IDS.codex, runId, null);
+        return cleared;
+      } catch (error) {
+        logError("clearGoal failed:", error);
+        return false;
       }
     },
 

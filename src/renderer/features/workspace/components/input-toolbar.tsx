@@ -7,6 +7,7 @@ import {
   FileUploadDropdown,
   EffortLevelDropdown,
   FastModeButton,
+  GoalButton,
   PermissionModeDropdown,
   FILE_TYPES,
   type UploadedFile,
@@ -31,6 +32,9 @@ interface InputToolbarProps {
   // Plan mode (Codex only) — runs alongside the sandbox mode
   planMode?: boolean;
   onPlanModeToggle?: () => void;
+  // Goal mode (Codex only) — registers the prompt as the thread's tracked goal
+  goalMode?: boolean;
+  onGoalModeToggle?: () => void;
   // Thinking mode (Claude only)
   thinkingMode: boolean;
   onThinkingModeToggle: () => void;
@@ -74,6 +78,8 @@ export function InputToolbar({
   onPermissionModeChange,
   planMode,
   onPlanModeToggle,
+  goalMode,
+  onGoalModeToggle,
   thinkingMode,
   onThinkingModeToggle,
   fastMode,
@@ -224,12 +230,16 @@ export function InputToolbar({
                   variant={variant}
                   planMode={planMode}
                   onPlanModeToggle={onPlanModeToggle}
+                  goalMode={goalMode}
                 />
               )}
             </>
           )}
           {supportsFastMode && (
             <FastModeButton fastMode={fastMode} onToggle={onFastModeToggle} />
+          )}
+          {variant === "codex" && onGoalModeToggle && (
+            <GoalButton goalMode={!!goalMode} onToggle={onGoalModeToggle} />
           )}
         </div>
         <div className="flex items-center ">

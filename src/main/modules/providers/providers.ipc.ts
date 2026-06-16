@@ -64,6 +64,18 @@ export function registerProvidersIpc(): void {
     return providersService.getRateLimits(id);
   });
 
+  ipcMain.handle(CHANNELS.providers.setGoal, async (_, id: string, runId: string, params: import("../../../shared/adapter.types").GoalSetParams) => {
+    return providersService.setGoal(id, runId, params);
+  });
+
+  ipcMain.handle(CHANNELS.providers.getGoal, async (_, id: string, runId: string) => {
+    return providersService.getGoal(id, runId);
+  });
+
+  ipcMain.handle(CHANNELS.providers.clearGoal, async (_, id: string, runId: string) => {
+    return providersService.clearGoal(id, runId);
+  });
+
   ipcMain.handle(CHANNELS.providers.getAccountInfo, async (_, id: string) => {
     return providersService.getAccountInfo(id);
   });
@@ -108,6 +120,9 @@ export function unregisterProvidersIpc(): void {
     CHANNELS.providers.getCommands,
     CHANNELS.providers.getSkills,
     CHANNELS.providers.getRateLimits,
+    CHANNELS.providers.setGoal,
+    CHANNELS.providers.getGoal,
+    CHANNELS.providers.clearGoal,
     CHANNELS.providers.getAccountInfo,
     CHANNELS.providers.updateCli,
     CHANNELS.providers.getPlugins,

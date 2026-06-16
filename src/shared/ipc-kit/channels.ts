@@ -170,6 +170,11 @@ export const CHANNELS = {
     getRateLimits: "providers:getRateLimits",
     /** Push: emitted when the provider streams a fresh rate-limit snapshot mid-run. */
     rateLimitsUpdated: "providers:rateLimitsUpdated",
+    setGoal: "providers:setGoal",
+    getGoal: "providers:getGoal",
+    clearGoal: "providers:clearGoal",
+    /** Push: emitted when a thread goal changes (set/updated/cleared). null goal = cleared. */
+    goalUpdated: "providers:goalUpdated",
     getSkills: "providers:getSkills",
     installPlugin: "providers:installPlugin",
     readPlugin: "providers:readPlugin",

@@ -8,8 +8,8 @@ import type {
   ServiceResponse,
   DetectedClisResponse,
 } from "./providers.dto";
-import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, getAccountInfoForProvider, updateCliForProvider, listPluginsForProvider, readPluginForProvider, installPluginForProvider, uninstallPluginForProvider, getRateLimitsForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo, type PluginListResponse, type PluginDetail, type AccountInfo, type CliUpdateResult } from "./adapters";
-import type { RateLimitInfo } from "../../../shared/adapter.types";
+import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, getAccountInfoForProvider, updateCliForProvider, listPluginsForProvider, readPluginForProvider, installPluginForProvider, uninstallPluginForProvider, getRateLimitsForProvider, setGoalForProvider, getGoalForProvider, clearGoalForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo, type PluginListResponse, type PluginDetail, type AccountInfo, type CliUpdateResult } from "./adapters";
+import type { RateLimitInfo, GoalInfo, GoalSetParams } from "../../../shared/adapter.types";
 
 // ─────────────────────────────────────────────────────────────
 // Providers Service
@@ -204,6 +204,45 @@ export const providersService = {
         success: false,
         error: error instanceof Error ? error.message : "Failed to get rate limits",
       };
+    }
+  },
+
+  async setGoal(id: string, runId: string, params: GoalSetParams): Promise<ServiceResponse<GoalInfo | null>> {
+    try {
+      const provider = await providersRepo.findById(id);
+      if (!provider) return fail("Provider not found");
+      if (!provider.isEnabled) return fail("Provider is not enabled");
+      const goal = await setGoalForProvider(provider, runId, params);
+      return ok(goal);
+    } catch (error) {
+      console.error(`[ProvidersService] Failed to set goal for provider ${id}:`, error);
+      return fail(error instanceof Error ? error.message : "Failed to set goal");
+    }
+  },
+
+  async getGoal(id: string, runId: string): Promise<ServiceResponse<GoalInfo | null>> {
+    try {
+      const provider = await providersRepo.findById(id);
+      if (!provider) return fail("Provider not found");
+      if (!provider.isEnabled) return fail("Provider is not enabled");
+      const goal = await getGoalForProvider(provider, runId);
+      return ok(goal);
+    } catch (error) {
+      console.error(`[ProvidersService] Failed to get goal for provider ${id}:`, error);
+      return fail(error instanceof Error ? error.message : "Failed to get goal");
+    }
+  },
+
+  async clearGoal(id: string, runId: string): Promise<ServiceResponse<boolean>> {
+    try {
+      const provider = await providersRepo.findById(id);
+      if (!provider) return fail("Provider not found");
+      if (!provider.isEnabled) return fail("Provider is not enabled");
+      const cleared = await clearGoalForProvider(provider, runId);
+      return ok(cleared);
+    } catch (error) {
+      console.error(`[ProvidersService] Failed to clear goal for provider ${id}:`, error);
+      return fail(error instanceof Error ? error.message : "Failed to clear goal");
     }
   },
 

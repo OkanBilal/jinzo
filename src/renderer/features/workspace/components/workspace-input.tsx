@@ -182,6 +182,8 @@ export function WorkspaceInput({
     selectedModelInfo,
     planMode,
     handlePlanModeToggle,
+    goalMode,
+    handleGoalModeToggle,
   } = useProviderModels(
     activeProviderId,
     providerVariant,
@@ -672,6 +674,8 @@ export function WorkspaceInput({
         onPermissionModeChange={handlePermissionModeChange}
         planMode={planMode}
         onPlanModeToggle={handlePlanModeToggle}
+        goalMode={goalMode}
+        onGoalModeToggle={handleGoalModeToggle}
         thinkingMode={thinkingMode}
         onThinkingModeToggle={handleThinkingModeToggle}
         fastMode={fastMode}
