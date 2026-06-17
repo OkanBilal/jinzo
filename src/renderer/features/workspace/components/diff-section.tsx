@@ -12,7 +12,6 @@ import { useRouteType } from "@/hooks/use-route-type";
 import { FileIconComponent } from "./file-explorer/components/file-icon";
 import {
   Diff,
-  Commit,
   CircleDot,
   Chat,
   Codex,
@@ -172,11 +171,6 @@ export function DiffSection({
     }
   };
 
-  const handleCommitChanges = () => {
-    dispatch(setPendingGoal("Commit changes in this workspace."));
-    dispatch(setPendingAutoExecute(true));
-  };
-
   if (isFetching) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -210,13 +204,6 @@ export function DiffSection({
         >
           {routeType === "codex" ? <Codex className="w-3.5 h-3.5" /> : <Chat className="w-3.5 h-3.5" />}
           Review Changes
-        </Button>
-        <Button
-          onClick={handleCommitChanges}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/50 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200 transition-colors"
-        >
-          <Commit className="w-3.5 h-3.5" />
-          Commit (chat-driven)
         </Button>
       </div>
 

@@ -189,7 +189,7 @@ export function DropdownMenuSub({
         onMouseEnter={handleTriggerEnter}
         onMouseLeave={handleTriggerLeave}
         className={cn(
-          "w-full flex items-center gap-2 px-3 py-1.75 text-s cursor-pointer",
+          "w-full flex items-center gap-3 px-3 py-2 text-s cursor-pointer",
           "text-primary-700 dark:text-primary-100 hover:text-primary-900 dark:hover:text-primary-50",
           "hover:bg-primary-200/40 dark:hover:bg-primary/5 transition-colors",
           className,
@@ -246,7 +246,7 @@ export function DropdownMenuItem({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "w-full flex items-center gap-2 px-3 py-1.75 text-s",
+        "w-full flex items-center gap-3 px-3 py-2 text-s",
         "hover:bg-primary-200/40 dark:hover:bg-primary/5 transition-colors",
         disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
         variantClasses[variant],

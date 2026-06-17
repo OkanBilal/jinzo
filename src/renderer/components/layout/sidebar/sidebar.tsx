@@ -235,7 +235,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                         {
                           label: "Create new project",
                           icon: (
-                            <Edit className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
+                            <Project className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
                           ),
                           shortcut: "n",
                           shortcutLabel: "\u2318\u21e7N",

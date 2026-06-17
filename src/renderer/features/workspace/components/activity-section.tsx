@@ -1,13 +1,8 @@
 import { useState } from "react";
 import { useDispatch } from "react-redux";
-import {
-  useListWorkspaceActivityQuery,
-  useGetAppSettingsQuery,
-  useGetWorkspaceQuery,
-  useGetProjectQuery,
-} from "@/lib/redux/api";
+import { useListWorkspaceActivityQuery } from "@/lib/redux/api";
 import type { WorkspaceActivity } from "@/lib/redux/api";
-import { openNoteTab, setPendingGoal, setPendingAutoExecute } from "@/lib/redux/slices/workspaceSlice";
+import { openNoteTab } from "@/lib/redux/slices/workspaceSlice";
 import { Note, PullRequest, Diff, Commit, CircleDot, ArrowUp } from "@/components/ui/icons";
 import { Button, Caption } from "@/components/ui";
 import { formatDate } from "@/lib/format-date";
@@ -56,14 +51,6 @@ function activityDetail(activity: WorkspaceActivity): string | null {
 export function ActivitySection({ workspaceId }: ActivitySectionProps) {
   const dispatch = useDispatch();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const { data: appSettings } = useGetAppSettingsQuery();
-  const { data: workspace } = useGetWorkspaceQuery(workspaceId, {
-    skip: !workspaceId,
-  });
-  const projectId = workspace?.projectId;
-  const { data: project } = useGetProjectQuery(projectId ?? "", {
-    skip: !projectId,
-  });
   const { data: activities = [], isLoading } = useListWorkspaceActivityQuery(
     { workspaceId },
     { pollingInterval: 15000, refetchOnFocus: true },
@@ -101,23 +88,6 @@ export function ActivitySection({ workspaceId }: ActivitySectionProps) {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 px-3">
-      {/* Create PR button */}
-      <Button
-        onClick={() => {
-          const instructions =
-            project?.prInstructions || appSettings?.prInstructions;
-          const goal = instructions
-            ? instructions + "\n\nCreate a pull request."
-            : "Create a pull request.";
-          dispatch(setPendingGoal(goal));
-          dispatch(setPendingAutoExecute(true));
-        }}
-        className="shrink-0 flex items-center justify-center gap-1.5 mb-2 py-2 px-3 text-xs font-medium rounded-xl bg-primary-100/50 dark:bg-primary/5 hover:bg-primary-100 dark:hover:bg-primary/10 text-primary-900 dark:text-primary-200"
-      >
-        <PullRequest className="w-3.5 h-3.5" />
-        Create PR (chat-driven)
-      </Button>
-
       {/* Activity timeline */}
       <div className="flex-1 overflow-y-auto noscrollbar">
         {activities.map((activity, index) => {

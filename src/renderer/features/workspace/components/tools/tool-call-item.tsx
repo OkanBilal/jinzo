@@ -21,6 +21,7 @@ import { GlobDisplay, type GlobParams } from "./glob-display";
 import { ReadDisplay, type ReadParams } from "./read-display";
 import { GrepDisplay, type GrepParams } from "./grep-display";
 import { EditDisplay, type EditParams } from "./edit-display";
+import { ApplyPatchDisplay } from "./apply-patch-display";
 import { DeleteDisplay, type DeleteParams } from "./delete-display";
 import { ViewDisplay, type ViewParams } from "./view-display";
 import { ToolSearchDisplay, type ToolSearchParams } from "./tool-search-display";
@@ -141,6 +142,30 @@ const DISPATCH: Renderer[] = [
 
   withOutput<EditParams>(["edit", "replace"], EditDisplay, summaryAs("file_path")),
 
+  // Copilot CLI's apply_patch — the input is a raw `*** Begin Patch …` envelope
+  // string (no params object). `metadata.input` is dropped upstream (a bare
+  // string fails the JSON re-parse) and `summary` is truncated to 60 chars, so
+  // recover the envelope from the event content (the file path sits in its
+  // first ~200 chars). The output is the authoritative diff/path source.
+  (ctx) => {
+    if (ctx.toolNameLower !== "apply_patch") return null;
+    const rawInput: unknown = ctx.metadataInput;
+    const begin = ctx.event.content.indexOf("*** Begin Patch");
+    const patch =
+      typeof rawInput === "string"
+        ? rawInput
+        : begin >= 0
+          ? ctx.event.content.slice(begin)
+          : ctx.summary;
+    return (
+      <ApplyPatchDisplay
+        patch={patch}
+        output={ctx.event.metadata?.output}
+        isCompact={ctx.isCompact}
+      />
+    );
+  },
+
   // WriteDisplay is the odd one — accepts `output` but not `isCompact`.
   (ctx) => {
     if (!["write", "writeifempty", "create_file", "create"].includes(ctx.toolNameLower)) return null;
@@ -150,7 +175,7 @@ const DISPATCH: Renderer[] = [
 
   withOutput<BashParams>(["bash", "shell"], BashDisplay, summaryAs("command")),
   withOutput<GlobParams>(["glob", "find"], GlobDisplay, summaryAs("pattern")),
-  withOutput<GrepParams>(["grep", "search"], GrepDisplay, summaryAs("pattern")),
+  withOutput<GrepParams>(["grep", "search", "rg"], GrepDisplay, summaryAs("pattern")),
   withOutput<ReadParams>(["read"], ReadDisplay, summaryAs("file_path")),
   withOutput<DeleteParams>(["delete"], DeleteDisplay, summaryAs("file_path")),
   withOutput<ViewParams>(["view"], ViewDisplay, summaryAs("path")),

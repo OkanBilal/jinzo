@@ -38,6 +38,51 @@ export function eventToolStatus(event: RunEvent): ToolStatus {
 }
 
 /**
+ * Demote "stale" in-flight tool calls to `done` for display.
+ *
+ * A tool call spins while its persisted status is `running`/`queued`. Providers
+ * don't all emit a per-tool completion event — some only resolve tool status in
+ * a run-end sweep (see `closeRunningToolCallsInDb` in `run-session.ts`), and
+ * Cursor/ACP in particular depends on a terminal `tool_call_update` that may
+ * arrive late or never — so a finished tool can keep spinning for the rest of
+ * the run. Heuristic: once the agent has produced any *later* output that isn't
+ * itself an in-flight tool call (assistant text, a completed tool, …), every
+ * in-flight tool call before that point has effectively finished and is shown
+ * as `done`. The trailing block of in-flight tool calls (a parallel batch with
+ * nothing after it) keeps spinning. Only `running`/`queued` are rewritten —
+ * `error`, `canceled`, and real `done` pass through untouched. Returns the same
+ * array reference when nothing changes so memoized consumers don't re-render.
+ */
+export function demoteStaleRunningTools(events: RunEvent[]): RunEvent[] {
+  const isInflightTool = (e: RunEvent): boolean => {
+    if (e.type !== "tool_call") return false;
+    const s = e.metadata?.status;
+    return s === "running" || s === "queued";
+  };
+
+  // Index of the last event that is NOT an in-flight tool call. Everything
+  // after it is the trailing in-flight block and is left spinning.
+  let cut = -1;
+  for (let i = events.length - 1; i >= 0; i--) {
+    if (!isInflightTool(events[i])) {
+      cut = i;
+      break;
+    }
+  }
+  if (cut <= 0) return events;
+
+  let changed = false;
+  const next = events.map((e, i) => {
+    if (i < cut && isInflightTool(e)) {
+      changed = true;
+      return { ...e, metadata: { ...e.metadata, status: "done" } };
+    }
+    return e;
+  });
+  return changed ? next : events;
+}
+
+/**
  * Roll several tool calls up into one status for a group header. Severity order:
  * error > running > done > canceled. A group with any failure reads as failed;
  * any in-flight call reads as running; everything else settles to done.
