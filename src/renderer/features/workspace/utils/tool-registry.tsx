@@ -7,6 +7,7 @@ import {
   ExitPlan,
   Glob,
   Grep,
+  Layers,
   Mains,
   Plus,
   Question,
@@ -138,6 +139,17 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     category: "Todo",
     icon: <Check className="size-4" />,
     aliases: ["taskupdate"],
+    isSpecialGroup: true,
+  },
+  // Copilot's full-snapshot todo writes (synthesized from session.todos_changed).
+  // Shares the `task-plan` groupKey so `stripTaskPlanEvents` removes the raw
+  // cards from the timeline and the TodoSummaryBar renders the latest snapshot.
+  {
+    displayName: "UpdateTodos",
+    groupKey: "task-plan",
+    category: "Todo",
+    icon: <Check className="size-4" />,
+    aliases: ["updatetodos"],
     isSpecialGroup: true,
   },
   {
@@ -277,6 +289,17 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     icon: <Trash className="size-3.5" />,
     aliases: ["delete", "delete_file"],
   },
+  // Copilot CLI's patch tool — input is a raw `*** Begin Patch …` envelope.
+  // Rendered as a diff by ApplyPatchDisplay (timeline) / the Apply_patch
+  // renderer (approval); registering it here gives the approval header a
+  // proper Edit glyph + "Apply Patch" label instead of the generic MCP icon.
+  {
+    displayName: "Apply Patch",
+    groupKey: "apply_patch",
+    category: "File",
+    icon: <Edit className="size-3.5" />,
+    aliases: ["apply_patch"],
+  },
   {
     displayName: "Bash",
     groupKey: "bash",
@@ -304,6 +327,25 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     category: "Search",
     icon: <Grep className="size-3.5" />,
     aliases: ["grep"],
+  },
+  // Copilot CLI's ripgrep tool. Shares the grep groupKey so consecutive
+  // content searches collapse together; rendered by GrepDisplay (timeline) and
+  // the Rg renderer (approval).
+  {
+    displayName: "Search",
+    groupKey: "grep",
+    category: "Search",
+    icon: <Grep className="size-3.5" />,
+    aliases: ["rg"],
+  },
+  // Copilot CLI's `sql` tool — runs queries against its session-state todo DB
+  // (plan/todo bookkeeping). Input is { description, query }.
+  {
+    displayName: "SQL",
+    groupKey: "sql",
+    category: "Database",
+    icon: <Layers className="size-4" />,
+    aliases: ["sql"],
   },
   {
     displayName: "Search",

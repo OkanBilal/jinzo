@@ -20,6 +20,7 @@ import { BashDisplay, type BashParams } from "./bash-display";
 import { GlobDisplay, type GlobParams } from "./glob-display";
 import { ReadDisplay, type ReadParams } from "./read-display";
 import { GrepDisplay, type GrepParams } from "./grep-display";
+import { SqlDisplay, type SqlParams } from "./sql-display";
 import { EditDisplay, type EditParams } from "./edit-display";
 import { ApplyPatchDisplay } from "./apply-patch-display";
 import { DeleteDisplay, type DeleteParams } from "./delete-display";
@@ -176,6 +177,7 @@ const DISPATCH: Renderer[] = [
   withOutput<BashParams>(["bash", "shell"], BashDisplay, summaryAs("command")),
   withOutput<GlobParams>(["glob", "find"], GlobDisplay, summaryAs("pattern")),
   withOutput<GrepParams>(["grep", "search", "rg"], GrepDisplay, summaryAs("pattern")),
+  noOutput<SqlParams>(["sql"], SqlDisplay, summaryAs("query")),
   withOutput<ReadParams>(["read"], ReadDisplay, summaryAs("file_path")),
   withOutput<DeleteParams>(["delete"], DeleteDisplay, summaryAs("file_path")),
   withOutput<ViewParams>(["view"], ViewDisplay, summaryAs("path")),

@@ -6,6 +6,11 @@ export interface RateLimitWindow {
   usedPercent: number;
   windowDurationMins?: number;
   resetsAt?: number;
+  /** Optional human label for the window (e.g. Copilot quota type). */
+  label?: string;
+  /** Optional raw counts (e.g. Copilot requests used / entitlement). */
+  used?: number;
+  total?: number;
 }
 
 export interface RateLimitInfo {

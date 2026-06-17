@@ -78,19 +78,65 @@ function buildTaskSnapshot(events: RunEvent[]): TodoItem[] | null {
   return todos.length > 0 ? todos : null;
 }
 
+function normalizeStatus(status: unknown): TodoItem["status"] {
+  const s = String(status ?? "").toLowerCase();
+  if (s === "completed" || s === "done" || s === "complete" || s === "closed") return "completed";
+  if (s === "in_progress" || s === "in-progress" || s === "running" || s === "active") return "in_progress";
+  return "pending";
+}
+
+/**
+ * Use the latest full-snapshot todo write (e.g. Copilot's `UpdateTodos`,
+ * synthesized from `session.todos_changed`). Each event carries the complete
+ * todo list under `input.todos`, so the most recent non-empty one wins — no
+ * incremental accumulation like TaskCreate/TaskUpdate.
+ */
+function buildSnapshotTodos(events: RunEvent[]): TodoItem[] | null {
+  let latest: TodoItem[] | null = null;
+
+  for (const event of events) {
+    if (event.type !== "tool_call") continue;
+    if (resolveTool(event.content).displayName !== "UpdateTodos") continue;
+
+    const input = parseEventInput(event);
+    const rawTodos = input?.todos;
+    if (!Array.isArray(rawTodos)) continue;
+
+    const mapped = rawTodos
+      .map((t) => {
+        const item = (t ?? {}) as Record<string, unknown>;
+        return {
+          content: String(item.content ?? item.title ?? "").trim(),
+          status: normalizeStatus(item.status),
+        };
+      })
+      .filter((t) => t.content.length > 0);
+
+    if (mapped.length > 0) latest = mapped;
+  }
+
+  return latest;
+}
+
 /**
  * Sticky widget rendered above the input that shows "X out of Y tasks
  * completed". Replaces the per-call TaskCreate/TaskUpdate cards in the message
  * timeline (those are filtered out by `groupConsecutiveToolCalls`) so users
  * see one continuously-updated plan instead of repeating snapshots.
  *
- * Lifecycle: the parent only mounts this bar while the active run is running.
- * When the run finishes, the bar unmounts on its own — no dismiss state needed.
+ * Lifecycle: the parent mounts this only while the active run's status is
+ * "running" (so it disappears when the run finishes). It also returns null on
+ * its own when the current events carry no todos.
  */
 export function TodoSummaryBar({ events }: TodoSummaryBarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const todos = useMemo(() => buildTaskSnapshot(events), [events]);
+  // Prefer a full-snapshot source (Copilot UpdateTodos); fall back to the
+  // incremental TaskCreate/TaskUpdate aggregation (Claude/Codex).
+  const todos = useMemo(
+    () => buildSnapshotTodos(events) ?? buildTaskSnapshot(events),
+    [events],
+  );
 
   if (!todos || todos.length === 0) return null;
 

@@ -220,7 +220,7 @@ export function InputToolbar({
                 onToggle={() => setShowThinkingDropdown(!showThinkingDropdown)}
                 dropdownRef={thinkingDropdownRef}
               />
-                            {(variant === "claude" || variant === "cursor" || variant === "codex") && (
+                            {(variant === "claude" || variant === "cursor" || variant === "codex" || variant === "copilot") && (
                 <PermissionModeDropdown
                   permissionMode={permissionMode}
                   onPermissionModeChange={onPermissionModeChange}
