@@ -266,6 +266,8 @@ export function WorkspaceProviderPage({
           large empty gap below it (short runs) or floated mid-scroll (long
           runs). Anchoring it here keeps it directly above the input and always
           reachable regardless of scroll position or conversation length. */}
+
+      <div className="px-4">
       {currentApproval && !ws.showEmptyState && !ws.showNewRunTab && (
         <div className="w-full max-w-200 mx-auto max-h-[55vh] overflow-y-auto noscrollbar">
           <ToolApprovalDialog
@@ -329,6 +331,7 @@ export function WorkspaceProviderPage({
           isNewRunTabActive={ws.showNewRunTab}
         />
       ) : null}
+      </div>
 
       {ws.currentWorkspace && (
         <TerminalSection

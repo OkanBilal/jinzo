@@ -14,7 +14,7 @@ export function ToolInputPreview({ toolName, toolInput }: ToolInputPreviewProps)
     ?? RENDERERS[toolName.charAt(0).toUpperCase() + toolName.slice(1)]
     ?? (toolName.startsWith("[permission:") ? renderPermissionFallback : renderFallback);
   const canonName = RENDERERS[toolName] ? toolName : toolName.charAt(0).toUpperCase() + toolName.slice(1);
-  const noBg = canonName === "Edit" || canonName === "Write" || canonName === "Create" || toolName === "[permission:write]";
+  const noBg = canonName === "Edit" || canonName === "Write" || canonName === "Create" || canonName === "Apply_patch" || toolName === "[permission:write]";
   return (
     <div className={`text-xs rounded-lg overflow-x-auto max-h-48 space-y-2 ${noBg ? "" : "bg-primary-50 dark:bg-primary/5"}`}>
       {renderer(input)}
@@ -37,6 +37,31 @@ function normalizeInput(input: Record<string, unknown>): Record<string, unknown>
 
 function filePath(input: Record<string, unknown>): string {
   return str(input.fileName ?? input.filePath ?? input.file_path ?? input.path ?? input.file ?? "");
+}
+
+/**
+ * Copilot's apply_patch passes the whole `*** Begin Patch …` envelope as a
+ * string (usually under `args`). Pull the target file out of the
+ * `*** Update File:` header and reduce the envelope to a +/-/context diff body
+ * that DiffView understands (drop the `*** …` markers and `@@` hunk lines).
+ */
+function parseApplyPatchEnvelope(input: Record<string, unknown>): {
+  file: string;
+  body: string;
+} {
+  const isEnv = (v: unknown): v is string =>
+    typeof v === "string" && v.includes("*** Begin Patch");
+  const patch =
+    [input.args, input.patch, input.input, input.content].find(isEnv) ??
+    Object.values(input).find(isEnv) ??
+    "";
+  if (!patch) return { file: "", body: "" };
+  const fileMatch = patch.match(/\*\*\* (?:Update|Add|Delete|Move to) File: (.+)/);
+  const body = patch
+    .split("\n")
+    .filter((l) => !l.startsWith("*** ") && !l.startsWith("@@"))
+    .join("\n");
+  return { file: fileMatch ? fileMatch[1].trim() : "", body };
 }
 
 /** Approval / tool preview: show only the filename, not the full absolute path */
@@ -124,13 +149,13 @@ const RENDERERS: Record<string, Renderer> = {
   Bash: (input) => (
     <>
       {!!input.description && (
-        <div className="text-primary-400 dark:text-primary-500">
-          {str(input.description)}
+        <div className="px-3 pt-2 text-primary-500 dark:text-primary-400 leading-relaxed whitespace-pre-wrap wrap-break-word">
+          {str(input.description, 500)}
         </div>
       )}
       <CodeBlock>{str(input.command, 1200)}</CodeBlock>
       {!!input.timeout && (
-        <div className="text-primary-500 text-xxs">
+        <div className="px-3 pb-2 text-primary-500 text-xxs">
           timeout: {String(input.timeout)}ms
         </div>
       )}
@@ -204,6 +229,23 @@ const RENDERERS: Record<string, Renderer> = {
     </>
   ),
 
+  Apply_patch: (input) => {
+    const { file, body } = parseApplyPatchEnvelope(input);
+    return (
+      <>
+        <div className="px-1 pb-1">
+          <Label>file</Label>{" "}
+          <Mono>{basenameDisplay(file)}</Mono>
+        </div>
+        {!!body && (
+          <div className="bg-primary-50 dark:bg-primary/5 rounded-lg">
+            <DiffView diff={body} />
+          </div>
+        )}
+      </>
+    );
+  },
+
   Grep: (input) => (
     <>
       <div>
@@ -222,6 +264,39 @@ const RENDERERS: Record<string, Renderer> = {
       )}
     </>
   ),
+
+  // Copilot CLI's ripgrep tool: { pattern, paths: string[], output_mode }.
+  Rg: (input) => {
+    const paths = Array.isArray(input.paths)
+      ? input.paths.map((p) => String(p))
+      : input.path
+        ? [String(input.path)]
+        : [];
+    return (
+      <>
+        <div>
+          <Label>pattern</Label>{" "}
+          <Mono>{str(input.pattern ?? input.query ?? input.regex ?? "")}</Mono>
+        </div>
+        {paths.length > 0 && (
+          <div>
+            <Label>path</Label>{" "}
+            <Mono>{paths.map(basenameDisplay).join(", ")}</Mono>
+          </div>
+        )}
+        {!!input.glob && (
+          <div>
+            <Label>glob</Label> <Mono>{str(input.glob)}</Mono>
+          </div>
+        )}
+        {!!input.output_mode && (
+          <div className="text-primary-500 text-xxs">
+            {str(input.output_mode)}
+          </div>
+        )}
+      </>
+    );
+  },
 
   Glob: (input) => (
     <>

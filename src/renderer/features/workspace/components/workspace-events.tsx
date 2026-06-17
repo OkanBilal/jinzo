@@ -7,6 +7,7 @@ import {
   type EventGroup,
 } from "./tools/tool-call-group";
 import { PlanDisplay } from "./tools/plan-display";
+import { demoteStaleRunningTools } from "./tools/_shared";
 import { EditorContent } from "./editor-content";
 import { IssueTabContent } from "./issue-tab-content";
 import { SignalTabContent } from "./signal-tab-content";
@@ -725,14 +726,20 @@ export function WorkspaceEvents({
       .filter((e) => e.type === "artifact" && e.metadata?.kind === "document")
       .map((e) => (e.metadata?.path as string | undefined) ?? "")
       .filter(Boolean);
-    if (docPaths.length === 0) return currentEvents;
-    return currentEvents.filter((e) => {
-      if (e.type === "artifact" && e.metadata?.kind === "image") {
-        const imgPath = (e.metadata?.path as string | undefined) ?? "";
-        if (isDocumentRenderImage(imgPath, docPaths)) return false;
-      }
-      return true;
-    });
+    const filtered =
+      docPaths.length === 0
+        ? currentEvents
+        : currentEvents.filter((e) => {
+            if (e.type === "artifact" && e.metadata?.kind === "image") {
+              const imgPath = (e.metadata?.path as string | undefined) ?? "";
+              if (isDocumentRenderImage(imgPath, docPaths)) return false;
+            }
+            return true;
+          });
+    // Stop finished tools from spinning until the run-end sweep resolves their
+    // status (providers don't all emit per-tool completions). Runs on the
+    // display-ordered list so "later event" matches what the user actually sees.
+    return demoteStaleRunningTools(filtered);
   }, [currentEvents]);
 
   // Group events for CLI-style display

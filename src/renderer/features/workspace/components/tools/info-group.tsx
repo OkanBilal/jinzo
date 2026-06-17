@@ -235,8 +235,8 @@ function ImagePreviewModal({
         if (e.target === overlayRef.current) onClose();
       }}
     >
-      <div className="relative flex flex-col glass-morphism rounded-xl shadow-2xl max-w-xl w-full mx-4 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary-200 dark:border-primary-800">
+      <div className="relative flex flex-col glass-morphism rounded-xl shadow-2xl w-[92vw] max-w-6xl max-h-[92vh] mx-4 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary-200 dark:border-primary-800 shrink-0">
           <span className="text-xs font-mono text-primary-600 dark:text-primary-400 truncate">
             {name}
           </span>
@@ -247,11 +247,11 @@ function ImagePreviewModal({
             <Close className="w-3.5 h-3.5 text-primary-500" />
           </Button>
         </div>
-        <div className="bg-primary-100 dark:bg-primary-900 flex items-center justify-center p-2">
+        <div className="flex-1 min-h-0 bg-primary-100 dark:bg-primary-900 flex items-center justify-center p-3 overflow-auto">
           <img
             src={dataUrl}
             alt={name}
-            className="max-h-[70vh] max-w-full object-contain rounded"
+            className="max-h-full max-w-full object-contain rounded"
           />
         </div>
       </div>

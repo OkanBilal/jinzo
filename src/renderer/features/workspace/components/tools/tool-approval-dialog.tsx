@@ -388,7 +388,13 @@ export function ToolApprovalDialog({
   const message =
     (request.toolInput?.message as string | undefined) ??
     `Allow ${header.label}?`;
-  const showRichPreview = resolved.isBuiltin && !!request.toolInput;
+  // apply_patch / rg aren't in the builtin registry but ToolInputPreview knows
+  // how to render them (a diff / a grep-style query), so route them through the
+  // rich preview instead of dumping raw args in the generic param table.
+  const showRichPreview =
+    (resolved.isBuiltin ||
+      ["apply_patch", "rg"].includes(request.toolName.toLowerCase())) &&
+    !!request.toolInput;
   const paramEntries = !showRichPreview
     ? buildParamEntries(request.toolInput)
     : [];
