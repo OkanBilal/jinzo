@@ -246,6 +246,18 @@ const RENDERERS: Record<string, Renderer> = {
     );
   },
 
+  // Copilot CLI's sql tool: { description, query } (session-state todo DB).
+  Sql: (input) => (
+    <>
+      {!!input.description && (
+        <div className="px-3 pt-2 text-primary-500 dark:text-primary-400 leading-relaxed whitespace-pre-wrap wrap-break-word">
+          {str(input.description, 300)}
+        </div>
+      )}
+      <CodeBlock>{str(input.query, 1200)}</CodeBlock>
+    </>
+  ),
+
   Grep: (input) => (
     <>
       <div>
@@ -265,13 +277,16 @@ const RENDERERS: Record<string, Renderer> = {
     </>
   ),
 
-  // Copilot CLI's ripgrep tool: { pattern, paths: string[], output_mode }.
+  // Copilot CLI's ripgrep tool: { pattern, paths, output_mode } where `paths`
+  // is usually a single path string (sometimes an array).
   Rg: (input) => {
     const paths = Array.isArray(input.paths)
       ? input.paths.map((p) => String(p))
-      : input.path
-        ? [String(input.path)]
-        : [];
+      : typeof input.paths === "string" && input.paths
+        ? [input.paths]
+        : input.path
+          ? [String(input.path)]
+          : [];
     return (
       <>
         <div>

@@ -19,10 +19,13 @@ import path from "node:path";
 import os from "node:os";
 import type {
   AcquiredSession,
+  CommandInfo,
   CopilotAdapterConfig,
   DriverOutcome,
   ModelInfo,
   ProviderDriver,
+  RateLimitInfo,
+  RateLimitWindow,
   WorkRunContextItem,
   WorkRunContinueRequest,
   WorkRunEvent,
@@ -37,7 +40,6 @@ import type { ToolApprovalRequest } from "../../runs/runs.dto";
 import {
   createLogger,
   ALLOWED_TOOLS_SET,
-  safeJson,
   extractArtifactsFromToolOutput,
   formatContextSection,
   appendPromptSections,
@@ -95,6 +97,9 @@ interface CopilotTool {
 
 type ReasoningEffort = "low" | "medium" | "high" | "xhigh";
 
+/** The UI mode the agent runs in for a given turn (passed to `send`/`sendAndWait`). */
+type AgentMode = "interactive" | "plan" | "autopilot" | "shell";
+
 interface MCPServerConfig {
   type?: "stdio" | "http" | "sse";
   command?: string;
@@ -132,6 +137,18 @@ interface SessionConfig {
     request: { question: string; choices?: string[]; allowFreeform?: boolean },
     invocation: { sessionId: string },
   ) => Promise<{ answer: string; wasFreeform: boolean }> | { answer: string; wasFreeform: boolean };
+  /**
+   * Invoked when the agent finishes planning (in plan mode) and asks to exit
+   * plan mode. We resolve it with `exit_only` so the agent stops without
+   * implementing — the plan is surfaced in the timeline with an "Apply Plan"
+   * button that runs it as a follow-up turn (mirrors the Claude plan-mode UX).
+   */
+  onExitPlanModeRequest?: (
+    request: { summary?: string; planContent?: string; actions?: string[]; recommendedAction?: string },
+    invocation: { sessionId: string },
+  ) =>
+    | Promise<{ approved: boolean; selectedAction?: string; feedback?: string }>
+    | { approved: boolean; selectedAction?: string; feedback?: string };
   hooks?: {
     onPreToolUse?: (
       input: { toolName: string; toolArgs: unknown; timestamp: number; cwd: string },
@@ -156,12 +173,43 @@ interface SessionEvent {
 }
 
 interface CopilotSdkSession {
-  send(options: { prompt: string }): Promise<string>;
-  sendAndWait(options: { prompt: string }, timeout?: number): Promise<SessionEvent | undefined>;
+  send(options: { prompt: string; agentMode?: AgentMode }): Promise<string>;
+  sendAndWait(options: { prompt: string; agentMode?: AgentMode }, timeout?: number): Promise<SessionEvent | undefined>;
   on(handler: (event: SessionEvent) => void): () => void;
   abort(): Promise<void>;
   disconnect(): Promise<void>;
   setModel(model: string, options?: { reasoningEffort?: ReasoningEffort }): Promise<void>;
+  /**
+   * Lazily-created typed RPC surface for low-level session APIs. `mode.set` is
+   * the authoritative way to put the session into "plan"/"autopilot" — the
+   * per-message `agentMode` on `send` only annotates the turn and defaults to
+   * the session's current mode, so it does not switch the mode on its own.
+   */
+  rpc?: {
+    mode?: {
+      set?: (params: { mode: AgentMode }) => Promise<void>;
+      get?: () => Promise<string>;
+    };
+    plan?: {
+      // `readSqlTodos` ships in copilot-sdk v1.0.1+; the newer
+      // `readSqlTodosWithDependencies` isn't always present. We only need the
+      // rows, so call the widely-available one.
+      readSqlTodos?: () => Promise<{
+        rows?: Array<{ id?: string; title?: string; description?: string; status?: string }>;
+      }>;
+    };
+    commands?: {
+      list?: (params?: Record<string, unknown>) => Promise<{
+        commands?: Array<{
+          name: string;
+          description?: string;
+          input?: { hint?: string; required?: boolean };
+          experimental?: boolean;
+          allowDuringAgentExecution?: boolean;
+        }>;
+      }>;
+    };
+  };
 }
 
 interface CopilotModelInfo {
@@ -201,6 +249,23 @@ interface CopilotClientInterface {
   getAuthStatus(): Promise<unknown>;
   getState(): ConnectionState;
   getLastSessionId(): Promise<string | undefined>;
+  /** Client-scoped typed RPC surface (e.g. account quota). */
+  rpc?: {
+    account?: {
+      getQuota?: (params?: { gitHubToken?: string }) => Promise<{
+        quotaSnapshots?: Record<string, CopilotQuotaSnapshot | undefined>;
+      }>;
+    };
+  };
+}
+
+interface CopilotQuotaSnapshot {
+  isUnlimitedEntitlement?: boolean;
+  entitlementRequests?: number;
+  usedRequests?: number;
+  remainingPercentage?: number;
+  overage?: number;
+  resetDate?: string;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -210,6 +275,8 @@ interface CopilotClientInterface {
 interface CopilotSession {
   runId: string;
   sdkSession: CopilotSdkSession;
+  /** UI mode for this run's turns (e.g. "plan" when permissionMode === "plan"). */
+  agentMode?: AgentMode;
   /** Captured during executePrompt for use by error-path tool-call interruption emission. */
   unsubscribe?: () => void;
 }
@@ -222,7 +289,17 @@ const { info: logInfo, warn: logWarn, error: logError } = createLogger("[Copilot
 
 const COPILOT_EXTRA_ALLOWED = new Set([
   "bash", "read", "glob", "grep", "report_intent", "view",
-  "permission:read", "web_fetch", "permission:url",
+  "permission:read", "web_fetch", "permission:url", "rg",
+  // `exit_plan_mode` ends plan mode — auto-allow it so it never prompts. Its
+  // raw tool call is also dropped in mapSessionEvent (see SUPPRESSED_TOOLS):
+  // the richer ExitPlanMode plan card we synthesize from onExitPlanModeRequest
+  // (full plan + "Apply Plan" button) already covers it, so rendering both
+  // would duplicate the plan as a summary-only second entry.
+  "exit_plan_mode",
+  // `sql` operates only on Copilot's session-state todo DB (plan/todo
+  // bookkeeping), not the user's workspace — auto-allow it so the frequent
+  // todo writes don't each surface an approval.
+  "sql",
   // `ask_user` is a user-interaction tool, not a permission gate: the SDK
   // routes it to `onUserInputRequest` (→ buildUserInputHandler) which renders
   // the real select-option dialog. Without this, the PreToolUse hook would
@@ -233,6 +310,43 @@ const COPILOT_EXTRA_ALLOWED = new Set([
 
 function isCopilotToolAllowed(toolName: string): boolean {
   return ALLOWED_TOOLS_SET.has(toolName) || COPILOT_EXTRA_ALLOWED.has(toolName);
+}
+
+// Tool calls whose raw timeline events are dropped in mapSessionEvent.
+// `exit_plan_mode` is redundant with the richer ExitPlanMode plan card we
+// synthesize from the onExitPlanModeRequest callback (full plan content +
+// "Apply Plan" button); rendering both would show the plan twice.
+const SUPPRESSED_TOOLS = new Set(["exit_plan_mode"]);
+
+/**
+ * True when a `sql` tool call is just todo bookkeeping (touches the `todos` /
+ * `todo_deps` tables). Those are redundant with the TodoSummaryBar, so we hide
+ * them from the timeline; non-todo SQL stays visible.
+ */
+export function isTodoBookkeepingSql(toolName: string, input: unknown): boolean {
+  if (toolName !== "sql") return false;
+  const obj = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
+  const query =
+    typeof obj.query === "string" ? obj.query : typeof obj.args === "string" ? obj.args : "";
+  return /\btodos\b|\btodo_deps\b/i.test(query);
+}
+
+/** Whether a tool call's raw timeline event should be dropped in mapSessionEvent. */
+function isSuppressedToolCall(toolName: string, input: unknown): boolean {
+  return SUPPRESSED_TOOLS.has(toolName) || isTodoBookkeepingSql(toolName, input);
+}
+
+// File-creating/modifying tools (lowercased). In "acceptEdits" mode these are
+// auto-approved so the agent edits freely, while any other unrecognized tool
+// still prompts. Deletion is intentionally excluded — it stays gated.
+const FILE_EDIT_TOOLS = new Set([
+  "apply_patch", "write", "write_file", "edit", "edit_file",
+  "create", "create_file", "str_replace", "str_replace_editor",
+  "multiedit", "notebookedit",
+]);
+
+export function isFileEditTool(toolName: string): boolean {
+  return FILE_EDIT_TOOLS.has(toolName.toLowerCase());
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -251,6 +365,20 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
     string,
     { toolName: string; input?: unknown; startedAt?: number }
   >();
+
+  // Per-run event sink, populated for the duration of executePrompt. Lets
+  // session-config callbacks (e.g. the exit-plan-mode handler, registered at
+  // session-creation time before onEvent exists) emit WorkRunEvents.
+  const onEventByRun = new Map<string, WorkRunEventHandler>();
+
+  // Per-run last-emitted todo snapshot (JSON), so repeated reads (every sql
+  // call) only emit an UpdateTodos event when the todos actually changed.
+  const lastTodosByRun = new Map<string, string>();
+
+  // Slash-command listing cache (keyed by workspace path). Listing spins up a
+  // throwaway session, so cache it for a short window.
+  const COMMANDS_CACHE_TTL_MS = 60_000;
+  const commandsCache = new Map<string, { commands: CommandInfo[]; timestamp: number }>();
 
   // Per-run usage accumulator.
   const usageAccumulator = new Map<
@@ -374,7 +502,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
     };
   }
 
-  function buildPreToolUseHook(runId: string) {
+  function buildPreToolUseHook(runId: string, permissionMode: string) {
     return async (
       input: { toolName: string; toolArgs: unknown; timestamp: number; cwd: string },
     ): Promise<{ permissionDecision?: "allow" | "deny" | "ask"; permissionDecisionReason?: string; modifiedArgs?: unknown } | void> => {
@@ -391,6 +519,12 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       }
 
       if (input.toolName.startsWith("mcp__")) {
+        return { permissionDecision: "allow" };
+      }
+
+      // "Auto accept edits": approve file-creating/modifying tools without
+      // prompting (still gating everything else, e.g. unknown/destructive tools).
+      if (permissionMode === "acceptEdits" && isFileEditTool(input.toolName)) {
         return { permissionDecision: "allow" };
       }
 
@@ -430,6 +564,58 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
 
       const response = await requestToolApproval(req);
       return { answer: response.answer || "", wasFreeform: true };
+    };
+  }
+
+  /**
+   * Exit-plan-mode handler (plan mode only). When the agent finishes planning
+   * it asks to exit plan mode; we surface the proposed plan as an `ExitPlanMode`
+   * tool call (so the renderer shows it with an "Apply Plan" button) and resolve
+   * with `exit_only` so the agent stops without implementing. The user then
+   * applies the plan, which runs it as a follow-up turn. This mirrors the Claude
+   * plan-mode UX exactly.
+   *
+   * The plan tool call is emitted as a start→complete pair sharing one
+   * toolCallId, awaited in order: a lone "complete" with no matching "start" is
+   * dropped by the run-session projector, and onEvent is consumed fire-and-forget
+   * upstream, so we must await the start's persistence before emitting complete.
+   */
+  function buildExitPlanModeHandler(runId: string) {
+    return async (request: {
+      summary?: string;
+      planContent?: string;
+      actions?: string[];
+      recommendedAction?: string;
+    }): Promise<{ approved: boolean; selectedAction?: string }> => {
+      const planContent = String(request.planContent ?? request.summary ?? "").trim();
+      const onEvent = onEventByRun.get(runId);
+
+      if (onEvent && planContent) {
+        const ts = Date.now();
+        const toolCallId = `exitplan-${runId}-${ts}`;
+        const input = { plan: planContent };
+        try {
+          await onEvent({
+            type: "tool_call",
+            toolName: "ExitPlanMode",
+            input,
+            startedAt: ts,
+            metadata: { phase: "start", toolCallId },
+          });
+          await onEvent({
+            type: "tool_call",
+            toolName: "ExitPlanMode",
+            input,
+            startedAt: ts,
+            endedAt: ts,
+            metadata: { phase: "complete", toolCallId },
+          });
+        } catch (err) {
+          logError("Error emitting ExitPlanMode tool call:", err);
+        }
+      }
+
+      return resolveExitPlanDecision();
     };
   }
 
@@ -731,8 +917,12 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
     };
 
     if (permissionMode !== "bypassPermissions" && permissionMode !== "allow") {
-      base.hooks = { onPreToolUse: buildPreToolUseHook(runId) };
+      base.hooks = { onPreToolUse: buildPreToolUseHook(runId, permissionMode) };
       base.onUserInputRequest = buildUserInputHandler(runId);
+    }
+
+    if (permissionMode === "plan") {
+      base.onExitPlanModeRequest = buildExitPlanModeHandler(runId);
     }
 
     return base;
@@ -753,14 +943,26 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
   function mapSessionEvent(event: SessionEvent, runId: string): WorkRunEvent | null {
     const ts = Date.now();
 
-    if (event.type !== "assistant.usage" && isEphemeral(event)) return null;
+    if (
+      event.type !== "assistant.usage" &&
+      event.type !== "session.usage_info" &&
+      isEphemeral(event)
+    )
+      return null;
 
     const payload = getPayload(event);
 
     switch (event.type) {
       case "pending_messages.modified":
       case "assistant.turn_start":
-      case "session.usage_info":
+      case "exit_plan_mode.requested":
+      case "exit_plan_mode.completed":
+      case "session.plan_changed":
+      case "session.todos_changed":
+        // Plan/todo lifecycle events. The plan is surfaced as an ExitPlanMode
+        // tool call (onExitPlanModeRequest) and todos as an UpdateTodos snapshot
+        // (wireSessionListener → emitTodosSnapshot), so these raw events would
+        // only add log noise here.
         return null;
 
       case "assistant.turn_end": {
@@ -774,6 +976,25 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
           accumulateUsage(runId, payload as Record<string, unknown>);
         }
         return null;
+      }
+
+      // Live context-window snapshot (ephemeral, renderer-only) for the
+      // ContextUsageRing above the input.
+      case "session.usage_info": {
+        const p = payload as Record<string, unknown>;
+        const currentTokens = typeof p.currentTokens === "number" ? p.currentTokens : 0;
+        const tokenLimit = typeof p.tokenLimit === "number" ? p.tokenLimit : 0;
+        if (tokenLimit <= 0 || currentTokens <= 0) return null;
+        const total = Math.min(currentTokens, tokenLimit);
+        const model = usageAccumulator.get(runId)?.model || config.defaultModel || undefined;
+        return {
+          type: "context_usage",
+          totalTokens: total,
+          maxTokens: tokenLimit,
+          percentage: (total / tokenLimit) * 100,
+          model,
+          ts,
+        };
       }
 
       case "assistant.message": {
@@ -816,6 +1037,10 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
         if (toolCallId) {
           toolCallIndex.set(toolCallId, { toolName, input, startedAt: ts });
         }
+
+        // Suppressed (exit_plan_mode, todo-bookkeeping sql): keep the index
+        // entry so the completion resolves the tool name, but don't render it.
+        if (isSuppressedToolCall(toolName, input)) return null;
 
         return {
           type: "tool_call",
@@ -862,6 +1087,8 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
 
         if (toolCallId) toolCallIndex.delete(toolCallId);
 
+        if (isSuppressedToolCall(toolName, input)) return null;
+
         return {
           type: "tool_call",
           toolName,
@@ -883,12 +1110,11 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
         return null;
 
       default:
-        return {
-          type: "log",
-          message: `[event] ${event.type}: ${safeJson(payload)}`,
-          level: "info",
-          ts,
-        };
+        // Unmapped events are internal lifecycle noise (hook.start/end,
+        // command.*, extension_context, …). Dropping them keeps run_artifacts
+        // from bloating with raw "[event] …" dumps. Add an explicit case above
+        // when a new event needs surfacing.
+        return null;
     }
   }
 
@@ -934,6 +1160,67 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
   }
 
   // ─────────────────────────────────────────────────────────────
+  // Todo snapshots (plan/progress tracking)
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Read Copilot's session SQL todos and emit them as an `UpdateTodos` snapshot
+   * tool call. Triggered after each `sql` tool completes (the agent manages its
+   * todos via raw SQL; the SDK's `session.todos_changed` event is absent in
+   * copilot-sdk v1.0.1, so we can't rely on it) and, when available, on
+   * `session.todos_changed`. The renderer strips these from the timeline
+   * (groupKey "task-plan") and renders the latest snapshot in the sticky
+   * TodoSummaryBar. start→complete are awaited in order (a lone "complete" is
+   * dropped by the run-session projector — see buildExitPlanModeHandler).
+   */
+  async function emitTodosSnapshot(
+    sdkSession: CopilotSdkSession,
+    runId: string,
+    onEvent: WorkRunEventHandler,
+  ): Promise<void> {
+    let result: { rows?: Array<{ id?: string; title?: string; description?: string; status?: string }> } | undefined;
+    try {
+      result = await sdkSession.rpc?.plan?.readSqlTodos?.();
+    } catch (err) {
+      logWarn("Failed to read session todos:", err);
+      return;
+    }
+
+    const todos = mapCopilotTodos(result?.rows);
+    if (todos.length === 0) return;
+
+    // Dedupe: only emit when the snapshot actually changed (we read on every
+    // sql call, including no-op SELECTs and unchanged updates).
+    const todosJson = JSON.stringify(todos);
+    if (lastTodosByRun.get(runId) === todosJson) return;
+    lastTodosByRun.set(runId, todosJson);
+
+    const ts = Date.now();
+    const toolCallId = `copilot-todos-${runId}-${ts}`;
+    logInfo(`Emitting todos snapshot for run ${runId} (${todos.length} items)`);
+    const input = { todos };
+    try {
+      await onEvent({
+        type: "tool_call",
+        toolName: "UpdateTodos",
+        input,
+        startedAt: ts,
+        metadata: { phase: "start", toolCallId, todoItems: todos },
+      });
+      await onEvent({
+        type: "tool_call",
+        toolName: "UpdateTodos",
+        input,
+        startedAt: ts,
+        endedAt: ts,
+        metadata: { phase: "complete", toolCallId, todoItems: todos },
+      });
+    } catch (err) {
+      logError("Error emitting UpdateTodos snapshot:", err);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // Wire SDK session.on() to push WorkRunEvents through onEvent
   // ─────────────────────────────────────────────────────────────
 
@@ -945,8 +1232,41 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
   ): () => void {
     return sdkSession.on((event: SessionEvent) => {
       if (signal.aborted) return;
-      if (event.type !== "assistant.usage" && event.type !== "assistant.turn_end" && isEphemeral(event)) {
+
+      // Todos changed (ephemeral signal): read the session SQL todos and emit a
+      // fresh UpdateTodos snapshot. Handled before the ephemeral early-return.
+      if (event.type === "session.todos_changed") {
+        void emitTodosSnapshot(sdkSession, runId, onEvent);
         return;
+      }
+
+      // Capture a completing tool's name before mapSessionEvent clears the
+      // index (used for the sql → todos refresh below).
+      const completedToolName =
+        event.type === "tool.execution_end" || event.type === "tool.execution_complete"
+          ? (() => {
+              const p = getPayload(event);
+              const tcId = String((p as any)?.toolCallId ?? (event as any)?.id ?? "");
+              return String(
+                (p as any)?.toolName ?? (tcId ? toolCallIndex.get(tcId)?.toolName : "") ?? "",
+              );
+            })()
+          : "";
+
+      if (
+        event.type !== "assistant.usage" &&
+        event.type !== "assistant.turn_end" &&
+        event.type !== "session.usage_info" &&
+        isEphemeral(event)
+      ) {
+        return;
+      }
+
+      // The agent manages todos via the raw `sql` tool (session.todos_changed
+      // does not fire for those writes), so refresh the todo snapshot after each
+      // sql call completes.
+      if (completedToolName === "sql") {
+        void emitTodosSnapshot(sdkSession, runId, onEvent);
       }
 
       const mapped = mapSessionEvent(event, runId);
@@ -1103,9 +1423,16 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       };
 
       const sdkSession = await copilotClient.createSession(sessionConfig);
-      logInfo(`Created Copilot session for run ${runId} (model: ${sessionConfig.model || "default"})`);
+      const agentMode = agentModeForPermission(permissionMode);
+      logInfo(
+        `Created Copilot session for run ${runId} (model: ${sessionConfig.model || "default"}, permissionMode: ${permissionMode}, agentMode: ${agentMode ?? "(default)"})`,
+      );
 
-      const session: CopilotSession = { runId, sdkSession };
+      const session: CopilotSession = {
+        runId,
+        sdkSession,
+        agentMode,
+      };
       return { session, prompt: buildStartPrompt(request) };
     },
 
@@ -1130,7 +1457,11 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       const sdkSession = await copilotClient.resumeSession(runId, resumeConfig);
       logInfo(`Resumed Copilot session for run ${runId}`);
 
-      const session: CopilotSession = { runId, sdkSession };
+      const session: CopilotSession = {
+        runId,
+        sdkSession,
+        agentMode: agentModeForPermission(permissionMode),
+      };
       return { session, prompt: buildContinuePrompt(request) };
     },
 
@@ -1152,8 +1483,28 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       // Wire SDK event stream
       cs.unsubscribe = wireSessionListener(cs.sdkSession, cs.runId, onEvent, signal);
 
+      // Expose onEvent to session-config callbacks (e.g. the exit-plan-mode
+      // handler) for the duration of this turn.
+      onEventByRun.set(cs.runId, onEvent);
+
+      // Plan mode is driven by the *persistent* session mode — the per-message
+      // agentMode below only annotates the turn (it defaults to the session's
+      // current mode), so we must switch the session into plan mode explicitly
+      // or the agent just runs interactively and implements straight away.
+      if (cs.agentMode === "plan") {
+        try {
+          await cs.sdkSession.rpc?.mode?.set?.({ mode: "plan" });
+          logInfo(`Set session mode to "plan" for run ${cs.runId}`);
+        } catch (err) {
+          logWarn("Failed to set session mode to plan:", err);
+        }
+      }
+
       try {
-        const result = await cs.sdkSession.sendAndWait({ prompt }, timeout);
+        const result = await cs.sdkSession.sendAndWait(
+          cs.agentMode ? { prompt, agentMode: cs.agentMode } : { prompt },
+          timeout,
+        );
 
         if (!result) {
           await onEvent({
@@ -1169,6 +1520,8 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
         await emitPendingToolInterruptions(onEvent);
         return buildErrorOutcome(error, cs.runId, timeout, signal);
       } finally {
+        onEventByRun.delete(cs.runId);
+        lastTodosByRun.delete(cs.runId);
         signal.removeEventListener("abort", onAbort);
         try {
           cs.unsubscribe?.();
@@ -1211,6 +1564,9 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
     async shutdown(): Promise<void> {
       toolCallIndex.clear();
       usageAccumulator.clear();
+      onEventByRun.clear();
+      lastTodosByRun.clear();
+      commandsCache.clear();
 
       if (client) {
         try {
@@ -1333,6 +1689,64 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       }
     },
 
+    async getRateLimits(): Promise<RateLimitInfo | null> {
+      try {
+        const copilotClient = await ensureClient();
+        const result = await copilotClient.rpc?.account?.getQuota?.({});
+        return mapCopilotQuota(result?.quotaSnapshots, Date.now());
+      } catch (err) {
+        logError("Failed to get quota:", err);
+        return null;
+      }
+    },
+
+    async listCommands(workspacePath?: string): Promise<CommandInfo[]> {
+      const now = Date.now();
+      const cacheKey = workspacePath ?? "__global__";
+      const cached = commandsCache.get(cacheKey);
+      if (cached && now - cached.timestamp < COMMANDS_CACHE_TTL_MS) {
+        return cached.commands;
+      }
+
+      // Slash commands are session-scoped, so list them on a throwaway session
+      // (commands depend on cwd; set it on the session, not the shared client,
+      // to avoid tearing down an in-flight run's client).
+      let session: CopilotSdkSession | null = null;
+      try {
+        const copilotClient = await ensureClient();
+        session = await copilotClient.createSession({
+          ...(workspacePath ? { cwd: workspacePath, workingDirectory: workspacePath } : {}),
+          onPermissionRequest: approveAllPermissions,
+        });
+
+        const result = await session.rpc?.commands?.list?.();
+        const raw = Array.isArray(result?.commands) ? result.commands : [];
+        const commands: CommandInfo[] = raw
+          .filter((c) => c && typeof c.name === "string" && c.name.length > 0)
+          .map((c) => ({
+            name: c.name,
+            description: typeof c.description === "string" ? c.description : undefined,
+            argumentHint: c.input?.hint,
+            userFacing: true,
+          }));
+
+        commandsCache.set(cacheKey, { commands, timestamp: now });
+        logInfo(`Listed ${commands.length} Copilot slash commands`);
+        return commands;
+      } catch (err) {
+        logError("Failed to list commands:", err);
+        return [];
+      } finally {
+        if (session) {
+          try {
+            await session.disconnect();
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    },
+
     async listModels(): Promise<ModelInfo[]> {
       try {
         const copilotClient = await ensureClient();
@@ -1369,6 +1783,125 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
 // ─────────────────────────────────────────────────────────────
 // Pure helpers exported for testing
 // ─────────────────────────────────────────────────────────────
+
+/**
+ * Map a permission mode to the SDK `agentMode` for a turn. Only "plan" needs an
+ * explicit mode; every other mode leaves the session at its default
+ * ("interactive"). Pure, exposed for tests.
+ */
+export function agentModeForPermission(
+  permissionMode: string | undefined,
+): AgentMode | undefined {
+  return permissionMode === "plan" ? "plan" : undefined;
+}
+
+/**
+ * Decide how to resolve an exit-plan-mode request. We always exit plan mode
+ * without auto-implementing (`exit_only`): the plan is rendered with an "Apply
+ * Plan" button that runs it as a follow-up turn. Pure, exposed for tests.
+ */
+export function resolveExitPlanDecision(): { approved: boolean; selectedAction: string } {
+  return { approved: true, selectedAction: "exit_only" };
+}
+
+/** Map a Copilot SQL todo status to the renderer's TodoSummaryBar status. */
+function mapTodoStatus(
+  status: string | undefined,
+): "completed" | "in_progress" | "pending" {
+  const s = String(status ?? "").toLowerCase();
+  if (s === "done" || s === "completed" || s === "complete" || s === "closed") {
+    return "completed";
+  }
+  if (s === "in_progress" || s === "in-progress" || s === "running" || s === "active") {
+    return "in_progress";
+  }
+  return "pending";
+}
+
+/**
+ * Map Copilot's session SQL todo rows to the {content, status} snapshot the
+ * renderer's TodoSummaryBar consumes. Drops rows with no usable label. Pure,
+ * exposed for tests.
+ */
+export function mapCopilotTodos(
+  rows: Array<{ id?: string; title?: string; description?: string; status?: string }> | undefined,
+): Array<{ content: string; status: "completed" | "in_progress" | "pending" }> {
+  return (rows ?? [])
+    .map((r) => ({
+      content: String(r.title ?? r.description ?? r.id ?? "").trim(),
+      status: mapTodoStatus(r.status),
+    }))
+    .filter((t) => t.content.length > 0);
+}
+
+const QUOTA_LABELS: Record<string, string> = {
+  premium_interactions: "Premium requests",
+  chat: "Chat",
+  completions: "Completions",
+};
+// Known quota types first (headline premium requests), then any others.
+const QUOTA_ORDER = ["premium_interactions", "chat", "completions"];
+
+function humanizeKey(key: string): string {
+  return key.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Resolve a quota reset to a Unix-seconds timestamp. The v1.0.1 runtime reports
+ * the *snapshot* fetch time in `resetDate` (not the real reset), so only trust
+ * it when it's clearly in the future; otherwise fall back to the 1st of next
+ * month — Copilot premium requests reset on the monthly billing boundary
+ * (matches what VS Code shows).
+ */
+function resolveResetSec(resetDate: string | undefined, nowMs: number): number {
+  const parsed = resetDate ? Date.parse(resetDate) : NaN;
+  if (Number.isFinite(parsed) && parsed > nowMs + 60 * 60 * 1000) {
+    return Math.floor(parsed / 1000);
+  }
+  const d = new Date(nowMs);
+  return Math.floor(new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime() / 1000);
+}
+
+/**
+ * Map Copilot's `account.getQuota` snapshots to a RateLimitInfo. Unlimited
+ * entitlements are skipped; the first two metered quotas become primary /
+ * secondary windows (usedPercent = 100 − remaining, reset via resolveResetSec).
+ * Pure given `nowMs`, exposed for tests.
+ */
+export function mapCopilotQuota(
+  snapshots: Record<string, CopilotQuotaSnapshot | undefined> | undefined,
+  nowMs: number,
+): RateLimitInfo | null {
+  if (!snapshots || typeof snapshots !== "object") return null;
+
+  const keys = [
+    ...QUOTA_ORDER.filter((k) => k in snapshots),
+    ...Object.keys(snapshots).filter((k) => !QUOTA_ORDER.includes(k)),
+  ];
+
+  const windows: RateLimitWindow[] = [];
+  for (const key of keys) {
+    const s = snapshots[key];
+    if (!s || s.isUnlimitedEntitlement) continue;
+    const remaining = typeof s.remainingPercentage === "number" ? s.remainingPercentage : 0;
+    const usedPercent = Math.max(0, Math.min(100, Math.round(100 - remaining)));
+    const used = typeof s.usedRequests === "number" ? s.usedRequests : undefined;
+    const total =
+      typeof s.entitlementRequests === "number" && s.entitlementRequests > 0
+        ? s.entitlementRequests
+        : undefined;
+    windows.push({
+      usedPercent,
+      resetsAt: resolveResetSec(s.resetDate, nowMs),
+      label: QUOTA_LABELS[key] ?? humanizeKey(key),
+      used,
+      total,
+    });
+  }
+
+  if (windows.length === 0) return null;
+  return { primary: windows[0], secondary: windows[1] };
+}
 
 /**
  * Translate copilot's error/result into a DriverOutcome. Pure: no SDK access,

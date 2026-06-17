@@ -277,7 +277,11 @@ export function WorkspaceProviderPage({
           />
         </div>
       )}
-      {ws.showEmptyState || ws.showNewRunTab || !ws.isLoading ? null : (
+      {/* Shown only while the active run is running, so it disappears on
+          completion. Gated on the run's status (which stays "running" for the
+          whole run) rather than `isLoading` (which only tracks the brief
+          start/continue IPC call, making the bar flash and vanish mid-run). */}
+      {ws.showEmptyState || ws.showNewRunTab || ws.activeRun?.status !== "running" ? null : (
         <TodoSummaryBar events={ws.currentEvents} />
       )}
 
