@@ -34,6 +34,7 @@ export interface ToolCall {
   startedAt?: Date;
   endedAt?: Date;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface RunArtifact {

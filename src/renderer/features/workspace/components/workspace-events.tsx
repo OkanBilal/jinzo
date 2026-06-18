@@ -1,8 +1,9 @@
-import { Fragment, type ReactNode, RefObject, useMemo, useState, useCallback, useEffect } from "react";
+import { Fragment, type ReactNode, RefObject, useMemo, useRef, useState, useCallback, useEffect } from "react";
 import {
   ToolCallGroup,
   InfoGroup,
   groupEvents,
+  reconcileEventGroups,
   isPlanToolCallGroup,
   type EventGroup,
 } from "./tools/tool-call-group";
@@ -554,6 +555,28 @@ function buildTurnRenderRows(groups: EventGroup[]): TurnRenderRow[] {
   return rows;
 }
 
+/**
+ * Group `displayEvents` and reconcile against the previous result, so unchanged
+ * groups keep referential identity across streamed tokens (see
+ * `reconcileEventGroups`). The output is fully determined by `displayEvents`, so
+ * the render-phase ref here is an idempotent memoization cell — the React-blessed
+ * use of refs during render for caching. The lint rule is conservative about ref
+ * reads in render, hence the scoped disable.
+ */
+/* eslint-disable react-hooks/refs */
+function useReconciledGroups(displayEvents: RunEvent[]): EventGroup[] {
+  const prevGroupsRef = useRef<EventGroup[] | null>(null);
+  return useMemo(() => {
+    const reconciled = reconcileEventGroups(
+      prevGroupsRef.current,
+      groupEvents(displayEvents),
+    );
+    prevGroupsRef.current = reconciled;
+    return reconciled;
+  }, [displayEvents]);
+}
+/* eslint-enable react-hooks/refs */
+
 /** `isRunInProgress`: true only when this row is the last render row while the run is active (see map). */
 function AgentTurnMessagesAccordion({
   previousSegments,
@@ -742,11 +765,11 @@ export function WorkspaceEvents({
     return demoteStaleRunningTools(filtered);
   }, [currentEvents]);
 
-  // Group events for CLI-style display
-  const allEventGroups = useMemo(
-    () => groupEvents(displayEvents),
-    [displayEvents],
-  );
+  // Group events for CLI-style display, reconciled so unchanged groups keep
+  // their object identity across streamed tokens — that's what lets the memoized
+  // InfoGroup / ToolCallGroup rows skip re-rendering while only the live
+  // (changing) group updates.
+  const allEventGroups = useReconciledGroups(displayEvents);
 
   // Filter out tool_calls groups when setting is off — except plan groups, which stay visible
   // so Apply / Dismiss remain accessible regardless of the toggle.
@@ -925,31 +948,47 @@ export function WorkspaceEvents({
           >
             <div className="min-h-75 max-w-210 mx-auto space-y-4 pt-12 pb-24 px-4">
               {turnRenderRows.map((row, rowIndex) => {
+                const isLastRow = rowIndex === turnRenderRows.length - 1;
+                let rowKey: string;
+                let content: ReactNode;
                 if (row.kind === "flat") {
                   const first = row.indices[0];
                   const lastIdx = row.indices[row.indices.length - 1];
-                  return (
-                    <Fragment key={`row-flat-${first}-${lastIdx}`}>
-                      {row.indices.map((index) => renderGroupAt(index))}
-                    </Fragment>
+                  rowKey = `row-flat-${first}-${lastIdx}`;
+                  content = row.indices.map((index) => renderGroupAt(index));
+                } else {
+                  const isLiveTurnAccordion =
+                    isRunning && !suppressLiveAccordionForStaleEvents && isLastRow;
+                  rowKey = `row-acc-${row.previousSegments[0]?.[0] ?? 0}-${row.planBreakoutIndices.join("-") || "x"}-${row.lastSegment[0] ?? 0}`;
+                  content = (
+                    <AgentTurnMessagesAccordion
+                      previousSegments={row.previousSegments}
+                      planBreakoutIndices={row.planBreakoutIndices}
+                      messageBreakoutIndices={row.messageBreakoutIndices}
+                      lastSegment={row.lastSegment}
+                      previousMessageCount={row.previousMessageCount}
+                      previousToolSummary={row.previousToolSummary}
+                      renderGroup={renderGroupAt}
+                      isRunInProgress={isLiveTurnAccordion}
+                    />
                   );
                 }
-                const isLiveTurnAccordion =
-                  isRunning &&
-                  !suppressLiveAccordionForStaleEvents &&
-                  rowIndex === turnRenderRows.length - 1;
+                // Skip layout/paint of off-screen historical rows. `contain-intrinsic-size:
+                // auto …` lets the browser remember each row's real height once it has been
+                // rendered, so scrolling back up doesn't jump. The live (last) row is always
+                // on-screen via auto-scroll and is left uncontained, so the streaming/grow +
+                // scroll-to-bottom path never interacts with containment.
                 return (
-                  <AgentTurnMessagesAccordion
-                    key={`row-acc-${row.previousSegments[0]?.[0] ?? 0}-${row.planBreakoutIndices.join("-") || "x"}-${row.lastSegment[0] ?? 0}`}
-                    previousSegments={row.previousSegments}
-                    planBreakoutIndices={row.planBreakoutIndices}
-                    messageBreakoutIndices={row.messageBreakoutIndices}
-                    lastSegment={row.lastSegment}
-                    previousMessageCount={row.previousMessageCount}
-                    previousToolSummary={row.previousToolSummary}
-                    renderGroup={renderGroupAt}
-                    isRunInProgress={isLiveTurnAccordion}
-                  />
+                  <div
+                    key={rowKey}
+                    className={
+                      isLastRow
+                        ? "space-y-4"
+                        : "space-y-4 [content-visibility:auto] [contain-intrinsic-size:auto_240px]"
+                    }
+                  >
+                    {content}
+                  </div>
                 );
               })}
               {isRunning && <AsciiLoader thinkingText={latestThinking} />}

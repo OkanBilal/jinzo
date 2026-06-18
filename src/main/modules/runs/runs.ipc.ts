@@ -121,9 +121,12 @@ export function registerRunsIpc(): void {
   });
 
   // Run Artifacts
-  ipcMain.handle(CHANNELS.runArtifacts.getByRun, async (_, runId: string) => {
-    return runsService.getArtifactsByRun(runId);
-  });
+  ipcMain.handle(
+    CHANNELS.runArtifacts.getByRun,
+    async (_, runId: string, sinceId?: number) => {
+      return runsService.getArtifactsByRun(runId, sinceId);
+    },
+  );
 
   ipcMain.handle(CHANNELS.runArtifacts.add, async (_, payload: CreateRunArtifactPayload) => {
     return runsService.addArtifact(payload);
@@ -135,9 +138,12 @@ export function registerRunsIpc(): void {
 
 
   // Tool Calls
-  ipcMain.handle(CHANNELS.runToolCalls.getByRun, async (_, runId: string) => {
-    return runsService.getToolCallsByRun(runId);
-  });
+  ipcMain.handle(
+    CHANNELS.runToolCalls.getByRun,
+    async (_, runId: string, sinceUpdatedAt?: Date) => {
+      return runsService.getToolCallsByRun(runId, sinceUpdatedAt);
+    },
+  );
 
   // Run Turns
   ipcMain.handle(CHANNELS.runTurns.getByRun, async (_, runId: string) => {

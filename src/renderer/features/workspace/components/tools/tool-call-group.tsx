@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { ArrowUp } from "@/components/ui/icons";
 import { groupConsecutiveToolCalls } from "../../utils/group-tool-calls";
 import { ToolSubGroupAccordion } from "./tool-sub-group-accordion";
@@ -11,7 +11,7 @@ interface ToolCallGroupProps {
   variant?: "copilot" | "claude" | "codex" | "cursor";
 }
 
-export function ToolCallGroup({
+function ToolCallGroupImpl({
   group,
   defaultExpanded = false,
 }: ToolCallGroupProps) {
@@ -75,6 +75,18 @@ export function ToolCallGroup({
   );
 }
 
+/**
+ * Memoized so a streamed token re-renders only the live tool group, not every
+ * historical one. Relies on `reconcileEventGroups` keeping `group` referentially
+ * stable for unchanged groups (see `group-events.ts`).
+ */
+export const ToolCallGroup = memo(ToolCallGroupImpl);
+
 // Re-export for backwards compatibility
 export { InfoGroup } from "./info-group";
-export { groupEvents, isPlanToolCallGroup, type EventGroup } from "../../utils/group-events";
+export {
+  groupEvents,
+  reconcileEventGroups,
+  isPlanToolCallGroup,
+  type EventGroup,
+} from "../../utils/group-events";

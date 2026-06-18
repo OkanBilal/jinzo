@@ -672,6 +672,12 @@ export const toolCalls = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
+
+    // Bumped on every update (status/output/etc.). Lets the renderer fetch only
+    // rows changed since its last sync instead of re-reading the whole run.
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
   },
   (t) => [
     index("idx_tool_calls_account_created").on(t.accountId, t.createdAt),
@@ -681,6 +687,9 @@ export const toolCalls = sqliteTable(
 
     // ✅ NEW: fast lookup for end event updates
     index("idx_tool_calls_run_toolcallid").on(t.runId, t.toolCallId),
+
+    // Incremental sync cursor: changed-since-timestamp lookups per run.
+    index("idx_tool_calls_run_updated").on(t.runId, t.updatedAt),
 
     check(
       "check_tool_calls_input_json",

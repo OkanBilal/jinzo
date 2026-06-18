@@ -526,13 +526,15 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
       const metadataToolCallId = (event.metadata as Record<string, unknown> | undefined)?.toolCallId;
       let callKey: string | undefined;
       if (metadataToolCallId) {
+        // Stable id present → match ONLY by exact id. The name-prefix fallback
+        // below closes the wrong call when many same-named tools run in parallel
+        // (e.g. a subagent reading 10 files), and a completion for an
+        // already-resolved id (duplicate from hook + tool_result block) must be
+        // a no-op rather than closing an unrelated pending call.
         callKey = String(metadataToolCallId);
-        if (!pendingToolCalls.has(callKey)) {
-          callKey = Array.from(pendingToolCalls.keys()).find((k) =>
-            k.startsWith(`${event.toolName}-`),
-          );
-        }
       } else {
+        // No id (legacy/partial providers): best-effort match the oldest pending
+        // call with the same tool name.
         callKey = Array.from(pendingToolCalls.keys()).find((k) =>
           k.startsWith(`${event.toolName}-`),
         );

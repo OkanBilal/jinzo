@@ -1,4 +1,5 @@
 import type { RunEvent } from "../types";
+import { eventsValueEqual } from "./run-event-mappers";
 
 export interface EventGroup {
   id: string;
@@ -188,4 +189,56 @@ export function groupEvents(events: RunEvent[]): EventGroup[] {
   }
 
   return groups;
+}
+
+function eventGroupsEqual(a: EventGroup, b: EventGroup): boolean {
+  if (a === b) return true;
+  if (
+    a.id !== b.id ||
+    a.type !== b.type ||
+    a.isRunning !== b.isRunning ||
+    a.events.length !== b.events.length ||
+    a.endTime.getTime() !== b.endTime.getTime()
+  ) {
+    return false;
+  }
+  for (let i = 0; i < a.events.length; i++) {
+    // `eventsValueEqual` compares rebuilt object metadata by value, so a tool
+    // event re-mapped from an unchanged row still reads equal (and the group is
+    // reused) instead of forcing a spurious re-render.
+    if (!eventsValueEqual(a.events[i], b.events[i])) return false;
+  }
+  return true;
+}
+
+/**
+ * Structural sharing for grouped events. `groupEvents` rebuilds every group
+ * object on each call, so a single streamed token would otherwise hand every
+ * row a brand-new `group` prop and defeat `React.memo`. This reuses the prior
+ * call's group objects (matched by stable `id`) wherever the content is
+ * unchanged, so only the groups that actually changed get a fresh reference —
+ * and the whole array reference is preserved when nothing changed at all.
+ */
+export function reconcileEventGroups(
+  prev: EventGroup[] | null,
+  next: EventGroup[],
+): EventGroup[] {
+  if (!prev || prev.length === 0) return next;
+  const prevById = new Map<string, EventGroup>();
+  for (const g of prev) prevById.set(g.id, g);
+
+  let changed = prev.length !== next.length;
+  const out: EventGroup[] = new Array(next.length);
+  for (let i = 0; i < next.length; i++) {
+    const g = next[i];
+    const p = prevById.get(g.id);
+    if (p && eventGroupsEqual(p, g)) {
+      out[i] = p; // reuse the stable reference
+      if (p !== prev[i]) changed = true; // same content but order shifted
+    } else {
+      out[i] = g;
+      changed = true;
+    }
+  }
+  return changed ? out : prev;
 }

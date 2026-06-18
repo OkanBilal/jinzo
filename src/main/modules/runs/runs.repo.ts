@@ -1,4 +1,4 @@
-import { eq, desc, and, sql, asc } from "drizzle-orm";
+import { eq, desc, and, sql, asc, gt, gte } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import { safeJsonParse } from "../../db/utils";
 import { runs, runContext, runArtifacts, toolCalls, runTurns } from "../../db/schema";
@@ -182,9 +182,24 @@ export const runsRepo = {
   // ─────────────────────────────────────────────────────────────
   // Run Artifact Operations
   // ─────────────────────────────────────────────────────────────
-  async findArtifactsByRun(runId: string): Promise<RunArtifactResponse[]> {
+  /**
+   * Artifacts are insert-only, so `sinceId` (exclusive) yields just the rows
+   * appended since the caller's last sync. Ordered by id (= insertion order).
+   */
+  async findArtifactsByRun(
+    runId: string,
+    sinceId?: number,
+  ): Promise<RunArtifactResponse[]> {
     const db = getDb();
-    const rows = await db.select().from(runArtifacts).where(eq(runArtifacts.runId, runId));
+    const where =
+      sinceId != null
+        ? and(eq(runArtifacts.runId, runId), gt(runArtifacts.id, sinceId))
+        : eq(runArtifacts.runId, runId);
+    const rows = await db
+      .select()
+      .from(runArtifacts)
+      .where(where)
+      .orderBy(asc(runArtifacts.id));
     return rows.map(mapArtifactRowToResponse);
   },
 
@@ -215,13 +230,30 @@ export const runsRepo = {
   // ─────────────────────────────────────────────────────────────
   // Tool Call Operations
   // ─────────────────────────────────────────────────────────────
-  async findToolCallsByRun(runId: string): Promise<ToolCallResponse[]> {
+  /**
+   * Tool calls are updated in place (status/output), so the incremental cursor
+   * is `updatedAt` not `id`. `>=` (not `>`) because `updated_at` is second-grained:
+   * a row updated in the same second as the cursor must still be returned, or an
+   * in-place update landing in that second would be lost. The cost is that the
+   * boundary second is re-fetched each poll; the renderer absorbs it for free —
+   * `mergeRunEvents` keeps the existing object when a re-fetched row is
+   * value-identical and returns the same array reference when nothing changed,
+   * so the overlap causes no re-render (see run-event-mappers.ts).
+   */
+  async findToolCallsByRun(
+    runId: string,
+    sinceUpdatedAt?: Date,
+  ): Promise<ToolCallResponse[]> {
     const db = getDb();
+    const where =
+      sinceUpdatedAt != null
+        ? and(eq(toolCalls.runId, runId), gte(toolCalls.updatedAt, sinceUpdatedAt))
+        : eq(toolCalls.runId, runId);
     const rows = await db
       .select()
       .from(toolCalls)
-      .where(eq(toolCalls.runId, runId))
-      .orderBy(toolCalls.createdAt);
+      .where(where)
+      .orderBy(asc(toolCalls.id));
     return rows.map(mapToolCallRowToResponse);
   },
 
@@ -238,6 +270,7 @@ export const runsRepo = {
         status: payload.status ?? "queued",
         input: payload.input ? JSON.stringify(payload.input) : null,
         startedAt: payload.startedAt,
+        updatedAt: sql`(unixepoch())`,
       })
       .returning({ id: toolCalls.id });
     return result[0]?.id ?? 0;
@@ -256,6 +289,7 @@ export const runsRepo = {
     if (payload.latencyMs !== undefined) updateData.latencyMs = payload.latencyMs;
     if (payload.costMicros !== undefined) updateData.costMicros = payload.costMicros;
     if (payload.metadata !== undefined) updateData.metadata = JSON.stringify(payload.metadata);
+    updateData.updatedAt = sql`(unixepoch())`;
 
     await db.update(toolCalls).set(updateData).where(eq(toolCalls.id, id));
   },
@@ -433,5 +467,6 @@ function mapToolCallRowToResponse(row: typeof toolCalls.$inferSelect): ToolCallR
     costMicros: row.costMicros,
     metadata: safeJsonParse(row.metadata),
     createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }
