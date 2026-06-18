@@ -16,6 +16,7 @@
     "test:coverage": "npm rebuild better-sqlite3 && vitest run --coverage",
     "start": "ulimit -n 65536 && electron-forge start",
     "serve": "ulimit -n 65536 && MAINS_SERVE=1 electron-forge start",
+    "build:web": "vite build --config vite.renderer.config.mjs --outDir ../../dist-web --emptyOutDir --sourcemap",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",

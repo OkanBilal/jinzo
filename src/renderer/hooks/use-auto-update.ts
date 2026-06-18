@@ -42,21 +42,21 @@ export function useAutoUpdate() {
   useEffect(() => {
     // Fetch current state from main process on mount
     window.api.updates.getStatus().then((result: any) => {
-      if (result?.success) {
+      if (result?.success && result.data) {
         setState(result.data);
       }
     });
 
     // Listen for state changes pushed from main process
     const unsubscribe = window.api.updates.onStatusChange((data: UpdateState) => {
-      setState(data);
+      if (data) setState(data);
     });
     return () => { unsubscribe(); };
   }, []);
 
   const check = useCallback(async () => {
     const result = await window.api.updates.checkForUpdates();
-    if (result?.success) {
+    if (result?.success && result.data) {
       setState(result.data);
     }
   }, []);

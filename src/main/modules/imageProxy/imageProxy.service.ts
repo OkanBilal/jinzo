@@ -187,4 +187,35 @@ export const imageProxyService = {
     }
     throw new SsrfBlockedError("too many redirects");
   },
+
+  /**
+   * Proxy a remote http(s) image — GitHub-authenticated when applicable, else an
+   * SSRF-guarded passthrough — returning a `Response`. Shared by the web HTTP
+   * image endpoint (`/__img`) so browsers can load remote images the same way the
+   * Electron `mains-img://` protocol does. Throws `SsrfBlockedError` for blocked
+   * targets.
+   */
+  async proxyImage(originalUrl: string): Promise<Response> {
+    let parsed: URL;
+    try {
+      parsed = new URL(originalUrl);
+    } catch {
+      return new Response("Invalid url", { status: 400 });
+    }
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return new Response("Only HTTP(S) URLs are supported", { status: 400 });
+    }
+    const headers = this.matchUrlToGithub(originalUrl)
+      ? await this.buildGithubAuthHeaders()
+      : null;
+    const response = await this.safeImageFetch(originalUrl, headers);
+    return new Response(response.body, {
+      status: response.status,
+      headers: {
+        "Content-Type":
+          response.headers.get("content-type") ?? "application/octet-stream",
+        "Cache-Control": "private, max-age=3600",
+      },
+    });
+  },
 };

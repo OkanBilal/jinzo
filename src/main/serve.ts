@@ -1,3 +1,6 @@
+import { app } from "electron";
+import path from "node:path";
+import { existsSync } from "node:fs";
 import { initializeDatabase } from "./db/client";
 import { startWsHost, type WsHost } from "./ipc-kit/ws-server-host";
 import { generateToken, isLoopbackHost } from "./ipc-kit/ws-auth";
@@ -29,6 +32,7 @@ import {
 } from "./modules/automations";
 import { registerPulseIpc, pulseService } from "./modules/pulse";
 import { registerGuardsIpc } from "./modules/guards";
+import { imageProxyService } from "./modules/imageProxy/imageProxy.service";
 
 export interface ServeOptions {
   /** Port to listen on. Default 8787. */
@@ -41,6 +45,11 @@ export interface ServeOptions {
    * the port is never left open). On loopback, no token means no auth.
    */
   token?: string | null;
+  /**
+   * Directory of the built renderer to serve over HTTP (web UI). Defaults to
+   * `.vite/renderer`; web serving is skipped if it doesn't exist.
+   */
+  webRoot?: string | null;
 }
 
 const DEFAULT_PORT = 8787;
@@ -99,10 +108,14 @@ export async function startBackendServer(
     token = generateToken();
   }
 
+  const webRoot = resolveWebRoot(options.webRoot);
+
   const wsHost = await startWsHost({
     port: options.port ?? DEFAULT_PORT,
     host,
     token,
+    webRoot,
+    fetchProxiedImage: (url) => imageProxyService.proxyImage(url),
   });
   console.log(`[serve] mains backend listening on ws://${host}:${wsHost.port}`);
   if (token) {
@@ -110,5 +123,34 @@ export async function startBackendServer(
   } else {
     console.log("[serve] no pairing token (loopback only — pair via SSH tunnel)");
   }
+  if (webRoot) {
+    console.log(
+      `[serve] web UI: open http://${host}:${wsHost.port}/${token ? `?token=${token}` : ""} (serving ${webRoot})`,
+    );
+  } else {
+    console.log(
+      "[serve] web UI disabled — no renderer build found. Run `npm run build:web` first.",
+    );
+  }
   return wsHost;
+}
+
+/**
+ * Locate the built renderer. In dev, `app.getAppPath()` points at `.vite/build`
+ * (the bundled main), not the project root, so try `process.cwd()` first.
+ */
+function resolveWebRoot(explicit?: string | null): string | null {
+  const candidates = explicit
+    ? [explicit]
+    : [
+        // `npm run build:web` output — a dedicated dir forge's `.vite` cleaning
+        // never touches, so it survives `npm run serve`.
+        path.join(process.cwd(), "dist-web"),
+        path.join(app.getAppPath(), "dist-web"),
+        path.join(process.cwd(), ".vite", "renderer"),
+        path.join(app.getAppPath(), ".vite", "renderer"),
+      ];
+  return (
+    candidates.find((dir) => existsSync(path.join(dir, "index.html"))) ?? null
+  );
 }

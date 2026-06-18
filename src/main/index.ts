@@ -539,6 +539,7 @@ function parseServeOptions(): {
   port?: number;
   host?: string;
   token?: string;
+  webRoot?: string;
 } {
   const argv = process.argv;
   const serve = argv.includes("--serve") || process.env.MAINS_SERVE === "1";
@@ -554,6 +555,7 @@ function parseServeOptions(): {
     port: port !== undefined && Number.isFinite(port) ? port : undefined,
     host: readArg("--host=") ?? process.env.MAINS_SERVE_HOST,
     token: readArg("--token=") ?? process.env.MAINS_SERVE_TOKEN,
+    webRoot: readArg("--web-root=") ?? process.env.MAINS_SERVE_WEB_ROOT,
   };
 }
 
@@ -577,6 +579,7 @@ async function initializeApp() {
         port: SERVE.port,
         host: SERVE.host,
         token: SERVE.token,
+        webRoot: SERVE.webRoot,
       });
       console.log("Running in headless --serve mode (no window).");
       return;
