@@ -1104,6 +1104,34 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         if (typeof content === "string") {
           userContent = content;
         } else if (Array.isArray(content)) {
+          // Tool results arrive as `tool_result` content blocks inside user
+          // messages. This is the ONLY completion signal for subagent tool
+          // calls — they never trigger the PostToolUse hook — so without this
+          // they stay `running` in the DB until the run-end sweep. Emit a
+          // `complete` event per block so the status flips running → done.
+          const isFromSubagent = !!(userMsg as any).parent_tool_use_id;
+          for (const block of content as any[]) {
+            if (block?.type !== "tool_result") continue;
+            const toolUseId: string = block.tool_use_id || "";
+            const prev = toolUseId ? cs.toolCallIndex.get(toolUseId) : undefined;
+            const output = block.content;
+            const error = block.is_error ? safeJson(output) : undefined;
+            if (toolUseId) cs.toolCallIndex.delete(toolUseId);
+            events.push({
+              type: "tool_call",
+              toolName: prev?.toolName || "unknown",
+              input: prev?.input as Record<string, unknown> | undefined,
+              output,
+              error,
+              endedAt: ts,
+              metadata: {
+                phase: "complete",
+                toolCallId: toolUseId || undefined,
+                rawType: msg.type,
+                isFromSubagent,
+              },
+            });
+          }
           userContent = content.map((c) => c.text || "").filter(Boolean).join("\n");
         }
 

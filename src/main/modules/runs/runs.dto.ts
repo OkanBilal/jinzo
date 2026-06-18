@@ -158,6 +158,7 @@ export interface ToolCallResponse {
   costMicros: number | null;
   metadata: Record<string, unknown> | null;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef, type MouseEvent } from "react";
+import { memo, useMemo, useState, useEffect, useRef, type MouseEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/components/markdown-components";
@@ -264,7 +264,7 @@ interface InfoGroupProps {
   workspaceRootPath?: string;
 }
 
-export function InfoGroup({ group, workspaceRootPath }: InfoGroupProps) {
+function InfoGroupImpl({ group, workspaceRootPath }: InfoGroupProps) {
   const event = group.events[0];
   const [previewAtt, setPreviewAtt] = useState<{
     name: string;
@@ -794,3 +794,10 @@ function ArtifactBody({
     </div>
   );
 }
+
+/**
+ * Memoized so a streamed token re-renders only the changed message, not every
+ * historical one. Relies on `reconcileEventGroups` keeping `group` referentially
+ * stable for unchanged groups (see `group-events.ts`).
+ */
+export const InfoGroup = memo(InfoGroupImpl);

@@ -1,4 +1,4 @@
-import { eq, desc, and, isNull } from "drizzle-orm";
+import { eq, desc, and, isNull, sql } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import { safeJsonParse } from "../../db/utils";
 import { toolCalls } from "../../db/schema";
@@ -53,6 +53,7 @@ export const toolsRepo = {
         status: payload.status ?? "queued",
         metadata: payload.metadata ? JSON.stringify(payload.metadata) : null,
         input: payload.input ? JSON.stringify(payload.input) : null,
+        updatedAt: sql`(unixepoch())`,
       })
       .returning({ id: toolCalls.id });
     return result[0]?.id ?? 0;
@@ -78,6 +79,7 @@ export const toolsRepo = {
       updateData.costMicros = payload.costMicros;
     if (payload.metadata !== undefined)
       updateData.metadata = JSON.stringify(payload.metadata);
+    updateData.updatedAt = sql`(unixepoch())`;
 
     await db.update(toolCalls).set(updateData).where(eq(toolCalls.id, id));
   },

@@ -397,8 +397,8 @@ const api = {
       contextSkills?: Array<{ name: string; path?: string; displayName?: string; description?: string; shortDescription?: string; iconSmall?: string; iconLarge?: string; brandColor?: string; scope?: string }>;
     }) => ipcRenderer.invoke(CHANNELS.runs.execute, payload),
     abort: (runId: string) => ipcRenderer.invoke(CHANNELS.runs.abort, runId),
-    getToolCalls: (runId: string) =>
-      ipcRenderer.invoke(CHANNELS.runToolCalls.getByRun, runId),
+    getToolCalls: (runId: string, sinceUpdatedAt?: Date) =>
+      ipcRenderer.invoke(CHANNELS.runToolCalls.getByRun, runId, sinceUpdatedAt),
     // Session resume methods
     continue: (payload: {
       runId: string;
@@ -520,8 +520,8 @@ const api = {
   },
   // Run artifacts operations
   runArtifacts: {
-    getByRun: (runId: string) =>
-      ipcRenderer.invoke(CHANNELS.runArtifacts.getByRun, runId),
+    getByRun: (runId: string, sinceId?: number) =>
+      ipcRenderer.invoke(CHANNELS.runArtifacts.getByRun, runId, sinceId),
     add: (payload: unknown) => ipcRenderer.invoke(CHANNELS.runArtifacts.add, payload),
     remove: (id: number) => ipcRenderer.invoke(CHANNELS.runArtifacts.remove, id),
   },

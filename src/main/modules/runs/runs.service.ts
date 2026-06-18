@@ -306,9 +306,12 @@ export const runsService = {
   },
 
   // ─── Run Artifact Operations ───
-  async getArtifactsByRun(runId: string): Promise<ServiceResponse<RunArtifactResponse[]>> {
+  async getArtifactsByRun(
+    runId: string,
+    sinceId?: number,
+  ): Promise<ServiceResponse<RunArtifactResponse[]>> {
     try {
-      const artifacts = await runsRepo.findArtifactsByRun(runId);
+      const artifacts = await runsRepo.findArtifactsByRun(runId, sinceId);
       return ok(artifacts);
     } catch (error) {
       console.error(`[RunsService] Failed to get artifacts for run ${runId}:`, error);
@@ -337,9 +340,12 @@ export const runsService = {
   },
 
   // ─── Tool Call Operations ───
-  async getToolCallsByRun(runId: string): Promise<ServiceResponse<ToolCallResponse[]>> {
+  async getToolCallsByRun(
+    runId: string,
+    sinceUpdatedAt?: Date,
+  ): Promise<ServiceResponse<ToolCallResponse[]>> {
     try {
-      const toolCalls = await runsRepo.findToolCallsByRun(runId);
+      const toolCalls = await runsRepo.findToolCallsByRun(runId, sinceUpdatedAt);
       return ok(toolCalls);
     } catch (error) {
       console.error(`[RunsService] Failed to get tool calls for run ${runId}:`, error);

@@ -326,6 +326,73 @@ describe("RunSession", () => {
       expect(calls[0].status).toBe("done");
     });
 
+    it("closes the right call by exact id when same-named tools run in parallel", async () => {
+      const session = makeSession();
+      await flushBackground();
+
+      // Two Reads in flight at once (e.g. a subagent reading two files).
+      await session.project({
+        type: "tool_call",
+        toolName: "Read",
+        metadata: { phase: "start", toolCallId: "tc-a" },
+      } as any);
+      await session.project({
+        type: "tool_call",
+        toolName: "Read",
+        metadata: { phase: "start", toolCallId: "tc-b" },
+      } as any);
+
+      // Complete only the second one.
+      await session.project({
+        type: "tool_call",
+        toolName: "Read",
+        metadata: { phase: "complete", toolCallId: "tc-b" },
+      } as any);
+
+      // Ordered by insertion: [0] = tc-a (still running), [1] = tc-b (done).
+      const calls = await runsRepo.findToolCallsByRun("r1");
+      expect(calls).toHaveLength(2);
+      expect(calls[0].status).toBe("running");
+      expect(calls[1].status).toBe("done");
+    });
+
+    it("ignores a duplicate completion for a resolved id (no sibling close)", async () => {
+      // A subagent tool can be completed twice — once via the PostToolUse hook,
+      // once via the tool_result content block. The duplicate must be a no-op,
+      // never fall back to name matching and wrongly close a parallel sibling.
+      const session = makeSession();
+      await flushBackground();
+
+      await session.project({
+        type: "tool_call",
+        toolName: "Read",
+        metadata: { phase: "start", toolCallId: "tc-a" },
+      } as any);
+      await session.project({
+        type: "tool_call",
+        toolName: "Read",
+        metadata: { phase: "start", toolCallId: "tc-b" },
+      } as any);
+
+      // Resolve tc-a, then a duplicate completion for tc-a.
+      await session.project({
+        type: "tool_call",
+        toolName: "Read",
+        metadata: { phase: "complete", toolCallId: "tc-a" },
+      } as any);
+      await session.project({
+        type: "tool_call",
+        toolName: "Read",
+        metadata: { phase: "complete", toolCallId: "tc-a" },
+      } as any);
+
+      // tc-b must remain running — the duplicate must not have closed it.
+      const calls = await runsRepo.findToolCallsByRun("r1");
+      expect(calls).toHaveLength(2);
+      expect(calls[0].status).toBe("done"); // tc-a
+      expect(calls[1].status).toBe("running"); // tc-b untouched
+    });
+
     it("schedules a live diff when end is for a file-modifying tool", async () => {
       vi.mocked(couldModifyFiles).mockReturnValue(true);
       vi.mocked(gitService.getHeadSha).mockResolvedValue({
