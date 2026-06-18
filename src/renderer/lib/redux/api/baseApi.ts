@@ -1,6 +1,12 @@
 import { createApi, BaseQueryFn } from '@reduxjs/toolkit/query/react';
 import type { ServiceResponse } from '../../../../shared/ipc-kit/service-response';
+import { getTransport } from '../../transport';
 
+// `handler` is a "domain:action" channel (from CHANNELS); `args` are the
+// positional arguments. The call is routed through the active transport
+// (local Electron IPC by default), not `window.api` directly, so the same
+// endpoints can target a remote backend by swapping the transport.
+// See docs/design/remote-backend.md.
 const ipcBaseQuery = (): BaseQueryFn<
   {
     handler: string;
@@ -10,14 +16,7 @@ const ipcBaseQuery = (): BaseQueryFn<
   unknown
 > => async ({ handler, args = [] }) => {
   try {
-    const [namespace, method] = handler.split(':');
-    const apiNamespace = (window.api as any)[namespace];
-
-    if (!apiNamespace || typeof apiNamespace[method] !== 'function') {
-      throw new Error(`Handler ${handler} not found`);
-    }
-
-    const result: ServiceResponse<unknown> = await apiNamespace[method](...args);
+    const result = await getTransport().invoke(handler, args);
 
     if (!result.success) {
       return { error: result.error };

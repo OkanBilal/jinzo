@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../../ipc-kit/ipc-main";
 import { providersService } from "./providers.service";
 import type { CreateProviderPayload, UpdateProviderPayload, ProviderKind } from "./providers.dto";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";

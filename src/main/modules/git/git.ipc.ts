@@ -1,5 +1,5 @@
 import { ok } from "../../../shared/ipc-kit/service-response";
-import { ipcMain } from "electron";
+import { ipcMain } from "../../ipc-kit/ipc-main";
 import { gitService } from "./git.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 

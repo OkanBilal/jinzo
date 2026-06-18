@@ -5,6 +5,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
+import { appApi } from "@/lib/transport";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { Button } from "@/components/ui";
@@ -215,7 +216,7 @@ export default function WorkspacesList({
 
   const handleCreateWorktreeForProject = async (project: Project) => {
     try {
-      const importResult = await window.api.git.importLocalRepo(
+      const importResult = await appApi.git.importLocalRepo(
         project.rootPath,
         project.name,
       );
@@ -294,7 +295,7 @@ export default function WorkspacesList({
       : workspace.rootPath;
 
     try {
-      const result = await window.api.git.renameBranch(gitPath, oldBranch, newBranchName);
+      const result = await appApi.git.renameBranch(gitPath, oldBranch, newBranchName);
       if (!result.success) {
         toast.error(result.error || "Failed to rename branch");
         return;

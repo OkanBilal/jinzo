@@ -2,7 +2,7 @@
 // Git Flow IPC Handlers
 // ─────────────────────────────────────────────────────────────
 
-import { ipcMain } from "electron";
+import { ipcMain } from "../../ipc-kit/ipc-main";
 import { gitFlowService } from "./gitFlow.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 

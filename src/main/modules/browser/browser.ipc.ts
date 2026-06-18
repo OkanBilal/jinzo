@@ -1,5 +1,5 @@
 import { fail } from "../../../shared/ipc-kit/service-response";
-import { ipcMain } from "electron";
+import { ipcMain } from "../../ipc-kit/ipc-main";
 import { browserService } from "./browser.service";
 import type { BrowserBounds } from "./browser.dto";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";

@@ -121,6 +121,16 @@ export const CHANNELS = {
     getPackageScore: "guards:getPackageScore",
     scanWorkspace: "guards:scanWorkspace",
   },
+  ssh: {
+    discoverHosts: "ssh:discoverHosts",
+    openTunnel: "ssh:openTunnel",
+    closeTunnel: "ssh:closeTunnel",
+  },
+  backendAuth: {
+    setToken: "backendAuth:setToken",
+    getToken: "backendAuth:getToken",
+    deleteToken: "backendAuth:deleteToken",
+  },
   imageProxy: {
     sign: "imageProxy:sign",
   },

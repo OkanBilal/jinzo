@@ -6,6 +6,7 @@
 // Reviews, ReviewFindings) so UI sections refresh independently.
 
 import { unwrap, type ServiceResponse } from "../../../../shared/ipc-kit/service-response";
+import { appApi } from "@/lib/transport";
 import { baseApi } from "./baseApi";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
@@ -366,7 +367,7 @@ export const workspaceApi = baseApi.injectEndpoints({
     // null on error (diffs are often legitimately absent — no error UI needed).
     getLatestWorkspaceDiff: builder.query<WorkspaceDiff | null, string>({
       queryFn: async (workspaceId) => {
-        const result = await window.api.workspace.getLatestDiff(workspaceId);
+        const result = await appApi.workspace.getLatestDiff(workspaceId);
         return { data: result.success ? (result.data ?? null) : null };
       },
       // Diff text can be huge; drop it quickly when no subscribers remain.
@@ -382,7 +383,7 @@ export const workspaceApi = baseApi.injectEndpoints({
     >({
       queryFn: async (workspaceId) => {
         const result =
-          await window.api.workspace.getLatestDiffSummary(workspaceId);
+          await appApi.workspace.getLatestDiffSummary(workspaceId);
         return { data: result.success ? (result.data ?? null) : null };
       },
       keepUnusedDataFor: 60,

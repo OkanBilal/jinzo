@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { appApi } from "@/lib/transport";
 import { useDispatch } from "react-redux";
 import {
   useGetLatestWorkspaceDiffQuery,
@@ -155,7 +156,7 @@ export function DiffSection({
     if (lines.length === 0) return;
 
     try {
-      const result = await window.api.fileExplorer.readFileText({
+      const result = await appApi.fileExplorer.readFileText({
         filePath: `${workspace.rootPath}/${filePath}`,
       });
       if (!result.success || !result.data || result.data.isBinary) return;

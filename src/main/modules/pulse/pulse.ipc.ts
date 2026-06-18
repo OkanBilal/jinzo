@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../../ipc-kit/ipc-main";
 import { pulseService } from "./pulse.service";
 import type { CreatePulseInput, UpdatePulseInput } from "./pulse.dto";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";

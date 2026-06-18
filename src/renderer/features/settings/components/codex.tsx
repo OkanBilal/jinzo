@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { appEvents } from "@/lib/transport";
 import { Toggle, Button, toast, Select, AsciiSpinner } from "@/components/ui";
 import {
   SettingsSection,
@@ -136,7 +137,7 @@ export default function CodexSettings() {
   // for the 60s poll.
   const dispatch = useAppDispatch();
   useEffect(() => {
-    const off = window.api.providers.onRateLimitsUpdated(
+    const off = appEvents.providers.onRateLimitsUpdated(
       ({ providerId, rateLimits: next }) => {
         if (providerId !== PROVIDER_IDS.codex || !next) return;
         dispatch(

@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../../ipc-kit/ipc-main";
 import { ok } from "../../../shared/ipc-kit/service-response";
 import { runsService } from "./runs.service";
 import type {

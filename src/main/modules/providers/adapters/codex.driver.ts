@@ -23,9 +23,10 @@ import { type Interface as ReadlineInterface } from "node:readline";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { shell, BrowserWindow } from "electron";
+import { shell } from "electron";
 import { findCodexBinaryPath } from "../providers.utils";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
+import { emit } from "../../../ipc-kit";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 import type {
   AcquiredSession,
@@ -450,14 +451,10 @@ export function mapRateLimitSnapshot(rl: Record<string, unknown> | undefined): R
   };
 }
 
-/** Push a fresh rate-limit snapshot to every live renderer window. */
+/** Push a fresh rate-limit snapshot to every client via the event bus. */
 function broadcastRateLimits(providerId: string, rateLimits: RateLimitInfo | null): void {
   if (!rateLimits) return;
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) {
-      win.webContents.send(CHANNELS.providers.rateLimitsUpdated, { providerId, rateLimits });
-    }
-  }
+  emit(CHANNELS.providers.rateLimitsUpdated, { providerId, rateLimits });
 }
 
 /**
@@ -486,11 +483,7 @@ function mapGoalSnapshot(raw: Record<string, unknown> | null | undefined): GoalI
  * run's card. Mirrors {@link broadcastRateLimits}.
  */
 function broadcastGoal(providerId: string, runId: string | null, goal: GoalInfo | null): void {
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) {
-      win.webContents.send(CHANNELS.providers.goalUpdated, { providerId, runId, goal });
-    }
-  }
+  emit(CHANNELS.providers.goalUpdated, { providerId, runId, goal }, runId ? { runId } : undefined);
 }
 
 /**

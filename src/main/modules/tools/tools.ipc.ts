@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../../ipc-kit/ipc-main";
 import { toolsService } from "./tools.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import type {

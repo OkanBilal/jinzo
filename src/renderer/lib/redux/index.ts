@@ -5,6 +5,8 @@ import storage from "redux-persist/lib/storage";
 import { baseApi } from "./api/baseApi";
 import appSettingsReducer from "./slices/appSettingsSlice";
 import workspaceReducer from "./slices/workspaceSlice";
+import backendsReducer from "./slices/backendsSlice";
+import { onTransportChange } from "../transport";
 
 const appSettingsPersistConfig = {
   key: "appSettings",
@@ -45,11 +47,24 @@ const persistedWorkspaceReducer = persistReducer(
   workspaceReducer,
 );
 
+// Persist only the saved backend list; `activeBackendId` is intentionally left
+// out so the app always starts on the local backend and the user reconnects.
+const backendsPersistConfig = {
+  key: "backends",
+  storage,
+  whitelist: ["saved"],
+};
+const persistedBackendsReducer = persistReducer(
+  backendsPersistConfig,
+  backendsReducer,
+);
+
 export const store = configureStore({
   reducer: {
     [baseApi.reducerPath]: baseApi.reducer,
     appSettings: persistedAppSettingsReducer,
     workspace: persistedWorkspaceReducer,
+    backends: persistedBackendsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -66,6 +81,12 @@ export const store = configureStore({
       },
     }).concat(baseApi.middleware),
   devTools: process.env.NODE_ENV !== "production",
+});
+
+// When the active backend transport changes (local ↔ remote), clear cached
+// query data so the UI refetches everything from the newly-active backend.
+onTransportChange(() => {
+  store.dispatch(baseApi.util.resetApiState());
 });
 
 export const persistor = persistStore(store);

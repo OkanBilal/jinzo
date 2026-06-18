@@ -1,0 +1,398 @@
+import { useEffect, useState } from "react";
+import { Button, Input, Body, Caption, Muted, toast } from "@/components/ui";
+import { SettingsPageShell, SettingsSection, SettingsDivider } from "./settings-layout";
+import { useBackendConnection } from "@/hooks/use-backend-connection";
+import type {
+  BackendSshConfig,
+  KnownBackend,
+} from "@/lib/redux/slices/backendsSlice";
+import type { TransportStatus } from "@/lib/transport";
+
+const WS_URL_RE = /^wss?:\/\/.+/i;
+const DEFAULT_REMOTE_PORT = 8787;
+
+const STATUS_LABEL: Record<TransportStatus, string> = {
+  connected: "Connected",
+  connecting: "Connecting…",
+  reconnecting: "Reconnecting…",
+  offline: "Offline",
+};
+
+function StatusDot({ status }: { status: TransportStatus }) {
+  const color =
+    status === "connected"
+      ? "bg-green-500"
+      : status === "connecting" || status === "reconnecting"
+        ? "bg-yellow-500"
+        : "bg-red-500";
+  return (
+    <span
+      className={`inline-block w-2 h-2 rounded-full ${color}`}
+      aria-label={STATUS_LABEL[status]}
+    />
+  );
+}
+
+type AddInput = {
+  label: string;
+  wsUrl?: string;
+  ssh?: BackendSshConfig;
+  token?: string;
+};
+
+function AddBackendForm({
+  onAdd,
+}: {
+  onAdd: (input: AddInput) => void | Promise<void>;
+}) {
+  const [mode, setMode] = useState<"direct" | "ssh">("direct");
+  const [label, setLabel] = useState("");
+  const [wsUrl, setWsUrl] = useState("");
+  const [host, setHost] = useState("");
+  const [remotePort, setRemotePort] = useState(String(DEFAULT_REMOTE_PORT));
+  const [remoteCommand, setRemoteCommand] = useState("");
+  const [token, setToken] = useState("");
+  const [detected, setDetected] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    window.api.ssh
+      .discoverHosts()
+      .then((res: { success: boolean; data?: { alias: string }[] }) => {
+        if (!cancelled && res.success && res.data) {
+          setDetected(res.data.map((h) => h.alias));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const reset = () => {
+    setLabel("");
+    setWsUrl("");
+    setHost("");
+    setRemotePort(String(DEFAULT_REMOTE_PORT));
+    setRemoteCommand("");
+    setToken("");
+  };
+
+  const submit = async () => {
+    const trimmedLabel = label.trim();
+    if (!trimmedLabel) {
+      toast.error("Enter a name for the backend.");
+      return;
+    }
+    const tokenValue = token.trim() || undefined;
+    let input: AddInput;
+    if (mode === "direct") {
+      const url = wsUrl.trim();
+      if (!WS_URL_RE.test(url)) {
+        toast.error("Enter a valid WebSocket URL (ws:// or wss://).");
+        return;
+      }
+      input = { label: trimmedLabel, wsUrl: url, token: tokenValue };
+    } else {
+      const trimmedHost = host.trim();
+      const port = Number(remotePort);
+      if (!trimmedHost) {
+        toast.error("Enter an SSH host.");
+        return;
+      }
+      if (!Number.isInteger(port) || port <= 0) {
+        toast.error("Enter a valid remote port.");
+        return;
+      }
+      input = {
+        label: trimmedLabel,
+        ssh: {
+          host: trimmedHost,
+          remotePort: port,
+          remoteCommand: remoteCommand.trim() || undefined,
+        },
+        token: tokenValue,
+      };
+    }
+    try {
+      await onAdd(input);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to add backend.",
+      );
+      return;
+    }
+    reset();
+    toast.success(`Added "${trimmedLabel}".`);
+  };
+
+  return (
+    <div className="py-3 space-y-2">
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          variant={mode === "direct" ? "secondary" : "ghost"}
+          onClick={() => setMode("direct")}
+        >
+          Direct URL
+        </Button>
+        <Button
+          type="button"
+          variant={mode === "ssh" ? "secondary" : "ghost"}
+          onClick={() => setMode("ssh")}
+        >
+          SSH tunnel
+        </Button>
+      </div>
+
+      <Input
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        placeholder="Name (e.g. Dev box)"
+      />
+
+      {mode === "direct" ? (
+        <Input
+          value={wsUrl}
+          onChange={(e) => setWsUrl(e.target.value)}
+          placeholder="ws://127.0.0.1:8787"
+        />
+      ) : (
+        <div className="space-y-2">
+          {detected.length > 0 && (
+            <select
+              className="w-full rounded-xl glass-morphism px-3 py-2 text-sm bg-transparent"
+              value=""
+              onChange={(e) => e.target.value && setHost(e.target.value)}
+            >
+              <option value="">Detected hosts…</option>
+              {detected.map((alias) => (
+                <option key={alias} value={alias}>
+                  {alias}
+                </option>
+              ))}
+            </select>
+          )}
+          <Input
+            value={host}
+            onChange={(e) => setHost(e.target.value)}
+            placeholder="SSH host (alias or user@host)"
+          />
+          <Input
+            value={remotePort}
+            onChange={(e) => setRemotePort(e.target.value)}
+            placeholder="Remote port (e.g. 8787)"
+          />
+          <Input
+            value={remoteCommand}
+            onChange={(e) => setRemoteCommand(e.target.value)}
+            placeholder="Optional launch command (e.g. cd ~/mains && npm run serve -- --port=8787)"
+          />
+        </div>
+      )}
+
+      <Input
+        value={token}
+        onChange={(e) => setToken(e.target.value)}
+        placeholder="Pairing token (optional)"
+      />
+      <Caption>
+        {mode === "ssh"
+          ? "Leave blank when a launch command is set — a token is generated automatically."
+          : "Required if the backend was started with a token (printed by `mains serve`)."}
+      </Caption>
+
+      <div className="flex justify-end">
+        <Button type="button" variant="ghost" onClick={() => void submit()}>
+          Add backend
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function backendSubtitle(backend: KnownBackend): string {
+  if (backend.ssh) {
+    return `ssh · ${backend.ssh.host}:${backend.ssh.remotePort}`;
+  }
+  return backend.wsUrl ?? "";
+}
+
+function BackendRow({
+  backend,
+  isActive,
+  status,
+  busy,
+  onConnect,
+  onDisconnect,
+  onRename,
+  onRemove,
+}: {
+  backend: KnownBackend;
+  isActive: boolean;
+  status: TransportStatus;
+  busy: boolean;
+  onConnect: () => void;
+  onDisconnect: () => void;
+  onRename: (label: string) => void;
+  onRemove: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(backend.label);
+
+  const commitRename = () => {
+    const next = draft.trim();
+    if (next && next !== backend.label) onRename(next);
+    setEditing(false);
+  };
+
+  return (
+    <div className="flex items-center justify-between py-3 gap-4">
+      <div className="min-w-0 flex-1">
+        {editing ? (
+          <Input
+            value={draft}
+            autoFocus
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitRename();
+              if (e.key === "Escape") {
+                setDraft(backend.label);
+                setEditing(false);
+              }
+            }}
+            className="w-48"
+          />
+        ) : (
+          <div className="flex items-center gap-2">
+            {isActive && <StatusDot status={status} />}
+            <Body className="truncate">{backend.label}</Body>
+            {isActive && (
+              <Caption className="shrink-0">{STATUS_LABEL[status]}</Caption>
+            )}
+          </div>
+        )}
+        <Caption className="truncate block">{backendSubtitle(backend)}</Caption>
+      </div>
+      <div className="shrink-0 flex items-center gap-1">
+        {isActive ? (
+          <Button type="button" variant="ghost" onClick={onDisconnect} disabled={busy}>
+            Disconnect
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onConnect}
+            disabled={busy}
+            isLoading={busy}
+          >
+            Connect
+          </Button>
+        )}
+        <Button type="button" variant="ghost" onClick={() => setEditing(true)}>
+          Rename
+        </Button>
+        <Button type="button" variant="ghost" onClick={onRemove}>
+          Remove
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export default function BackendsSettings() {
+  const {
+    saved,
+    activeBackendId,
+    status,
+    isRemote,
+    connect,
+    disconnect,
+    add,
+    remove,
+    rename,
+  } = useBackendConnection();
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const handleConnect = async (id: string) => {
+    setBusyId(id);
+    try {
+      await connect(id);
+      toast.success("Connected to remote backend.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to connect.",
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    setBusyId("__local__");
+    try {
+      await disconnect();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <SettingsPageShell title="Remote Backends">
+      <Muted>
+        Control a mains backend running on another machine over WebSocket. Start
+        one there with <code>npm run serve</code> (or <code>--serve</code>), then
+        add it below — by direct URL, or over an SSH tunnel (recommended: the
+        backend stays on loopback and traffic is encrypted by SSH). Connecting
+        routes the whole app — runs, files, git, terminal — to that backend.
+      </Muted>
+
+      <SettingsSection title="Backend">
+        <div className="flex items-center justify-between py-3 gap-4">
+          <div className="min-w-0 flex-1 flex items-center gap-2">
+            {!isRemote && <StatusDot status="connected" />}
+            <Body>Local (this machine)</Body>
+          </div>
+          <div className="shrink-0">
+            {isRemote ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleDisconnect}
+                disabled={busyId === "__local__"}
+              >
+                Use local
+              </Button>
+            ) : (
+              <Caption>Active</Caption>
+            )}
+          </div>
+        </div>
+
+        {saved.length > 0 && <SettingsDivider />}
+
+        {saved.map((backend, i) => (
+          <div key={backend.id}>
+            {i > 0 && <SettingsDivider />}
+            <BackendRow
+              backend={backend}
+              isActive={backend.id === activeBackendId}
+              status={status}
+              busy={busyId === backend.id}
+              onConnect={() => handleConnect(backend.id)}
+              onDisconnect={handleDisconnect}
+              onRename={(label) => rename(backend.id, label)}
+              onRemove={() => remove(backend.id)}
+            />
+          </div>
+        ))}
+      </SettingsSection>
+
+      <SettingsSection title="Add a backend">
+        <AddBackendForm onAdd={add} />
+      </SettingsSection>
+    </SettingsPageShell>
+  );
+}

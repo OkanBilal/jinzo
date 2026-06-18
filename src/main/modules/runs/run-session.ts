@@ -17,6 +17,7 @@ import {
 } from "../workspace/workspace-diff-snapshot";
 import { createWorkAdapter } from "../providers/adapters";
 import { runSessionRegistry } from "./run-session-registry";
+import { emit } from "../../ipc-kit";
 
 // ─────────────────────────────────────────────────────────────
 // Constants
@@ -57,11 +58,10 @@ function buildPerFileDiffHashes(diffText: string): Map<string, string> {
   return result;
 }
 
-// Local broadcast helper. Extracted to runs.broadcasts.ts in a follow-up PR.
+// Push a run event to all clients via the outbound event bus. The bus fans out
+// to the local renderer today and to remote clients under `mains serve`.
 function broadcastToWindows(channel: string, payload: unknown): void {
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) win.webContents.send(channel, payload);
-  }
+  emit(channel, payload);
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { appApi } from "@/lib/transport";
 import { Textarea, Button, toast } from "@/components/ui";
 import { SettingsSection, SettingsRow, SettingsDivider } from "../settings-layout";
 
@@ -23,7 +24,7 @@ export function ProjectInstructionsSection({ commitInstructions, prInstructions,
         `${rootPath}/pull_request_template.md`,
       ];
       for (const path of paths) {
-        const result = await window.api.fileExplorer.readFile(path);
+        const result = await appApi.fileExplorer.readFile(path);
         if (result?.success && result.data) {
           onFieldChange("prInstructions", result.data);
           toast.success("PR template imported");

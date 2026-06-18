@@ -29,6 +29,8 @@ import {
 } from "../../../test/factories";
 import type { DatabaseInstance } from "../../db/types";
 import type Database from "better-sqlite3";
+import { clearEventSinks } from "../../ipc-kit";
+import { registerBrowserWindowSink } from "../../ipc-kit/browser-window-sink";
 
 let db: DatabaseInstance;
 let _sqlite: Database.Database;
@@ -303,9 +305,13 @@ describe("workspaceService — workspace lifecycle", () => {
   beforeEach(() => {
     ({ db, sqlite: _sqlite, cleanup } = createTestDb());
     createAccount(db, { id: "default" });
+    // Script-complete / findings broadcasts go through the event bus; wire the
+    // BrowserWindow sink so the mocked windows receive them.
+    registerBrowserWindowSink();
   });
 
   afterEach(() => {
+    clearEventSinks();
     cleanup();
   });
 
@@ -616,7 +622,7 @@ describe("workspaceService — workspace lifecycle", () => {
     it("notifies renderer on successful setup script", async () => {
       const mockSend = vi.fn();
       vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([
-        { webContents: { send: mockSend } } as any,
+        { isDestroyed: () => false, webContents: { send: mockSend } } as any,
       ]);
 
       const project = createProject(db, {
@@ -647,7 +653,7 @@ describe("workspaceService — workspace lifecycle", () => {
     it("notifies renderer on failed setup script", async () => {
       const mockSend = vi.fn();
       vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([
-        { webContents: { send: mockSend } } as any,
+        { isDestroyed: () => false, webContents: { send: mockSend } } as any,
       ]);
 
       vi.mocked(execFile).mockImplementationOnce(
@@ -721,7 +727,7 @@ describe("workspaceService — workspace lifecycle", () => {
     it("notifies renderer on successful archive script", async () => {
       const mockSend = vi.fn();
       vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([
-        { webContents: { send: mockSend } } as any,
+        { isDestroyed: () => false, webContents: { send: mockSend } } as any,
       ]);
 
       const project = createProject(db, {
@@ -747,7 +753,7 @@ describe("workspaceService — workspace lifecycle", () => {
     it("notifies renderer on failed archive script", async () => {
       const mockSend = vi.fn();
       vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([
-        { webContents: { send: mockSend } } as any,
+        { isDestroyed: () => false, webContents: { send: mockSend } } as any,
       ]);
 
       vi.mocked(execFile).mockImplementationOnce(
@@ -799,8 +805,8 @@ describe("workspaceService — workspace lifecycle", () => {
       const mockSend1 = vi.fn();
       const mockSend2 = vi.fn();
       vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([
-        { webContents: { send: mockSend1 } } as any,
-        { webContents: { send: mockSend2 } } as any,
+        { isDestroyed: () => false, webContents: { send: mockSend1 } } as any,
+        { isDestroyed: () => false, webContents: { send: mockSend2 } } as any,
       ]);
 
       const project = createProject(db, {

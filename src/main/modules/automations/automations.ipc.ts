@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../../ipc-kit/ipc-main";
 import { automationsService } from "./automations.service";
 import type { CreateAutomationInput, UpdateAutomationInput } from "./automations.dto";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";

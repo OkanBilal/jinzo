@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { appApi } from "@/lib/transport";
 import { useDispatch } from "react-redux";
 import {
   setSelectedFileContent,
@@ -42,7 +43,7 @@ export function useFileContentLoader(
 
       try {
         const result: ServiceResponse<FileContentResponse> =
-          await window.api.fileExplorer.readFileText({
+          await appApi.fileExplorer.readFileText({
             filePath,
           });
 

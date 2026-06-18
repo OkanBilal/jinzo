@@ -2,7 +2,7 @@
 // Guards IPC Handlers
 // ─────────────────────────────────────────────────────────────
 
-import { ipcMain } from "electron";
+import { ipcMain } from "../../ipc-kit/ipc-main";
 import type { PackageIdentifier } from "./adapters/adapter.types";
 import { guardsService } from "./guards.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
