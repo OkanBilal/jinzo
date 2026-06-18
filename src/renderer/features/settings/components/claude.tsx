@@ -130,13 +130,15 @@ export default function ClaudeSettings(
               </span>
             )}
             <Button
-              variant="secondary"
+              variant="primary"
               size="sm"
               onClick={handleUpdateCli}
               disabled={isUpdatingCli}
               className="gap-1 flex items-center"
             >
-              {isUpdatingCli ? <AsciiSpinner variant="null" /> : null}
+              {isUpdatingCli ? (
+                <AsciiSpinner variant="null" kind="download" />
+              ) : null}
               {isUpdatingCli ? "Updating…" : "Update CLI"}
             </Button>
           </div>

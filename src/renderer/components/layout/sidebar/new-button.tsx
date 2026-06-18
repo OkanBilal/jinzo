@@ -76,7 +76,7 @@ export default function NewButton({
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         {icon}
-        <Body className="text-s font-medium">
+        <Body className="text-s font-normal">
           {actionPrefix} {title}
         </Body>
         <Caption className="ml-auto">

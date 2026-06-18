@@ -1,10 +1,15 @@
-import { Toggle, Button, toast } from "@/components/ui";
+import { useState } from "react";
+import { Button, AsciiSpinner } from "@/components/ui";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
 import {
   ProviderSettingsLayout,
   useProviderSettings,
 } from "./provider-settings-shared";
-import { useGetProviderRateLimitsQuery } from "@/lib/redux/api";
+import {
+  useGetProviderRateLimitsQuery,
+  useGetProviderAccountInfoQuery,
+  useUpdateProviderCliMutation,
+} from "@/lib/redux/api";
 import type { CopilotAdapterConfig } from "../../../../shared/adapter.types";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
@@ -64,41 +69,42 @@ function RateLimitRow({
 
 export default function CopilotSettings(
 ) {
-  const {
-    provider,
-    isLoading,
-    error,
-    updating,
-    config,
-    updateConfig,
-  } = useProviderSettings<CopilotAdapterConfig>(PROVIDER_IDS.copilot, "copilot");
-  const permissionMode = config.permissionMode ?? "default";
-  const isBypassing = permissionMode === "bypassPermissions";
+  const { provider, isLoading, error } = useProviderSettings<CopilotAdapterConfig>(
+    PROVIDER_IDS.copilot,
+    "copilot",
+  );
 
   const { data: rateLimits, isLoading: isLoadingRateLimits } =
     useGetProviderRateLimitsQuery(PROVIDER_IDS.copilot, {
       pollingInterval: 60000,
     });
 
+  const { data: accountInfo } = useGetProviderAccountInfoQuery(
+    PROVIDER_IDS.copilot,
+  );
+  const cli = accountInfo?.cli;
+
+  const [updateCli, { isLoading: isUpdatingCli }] =
+    useUpdateProviderCliMutation();
+  const [cliUpdateResult, setCliUpdateResult] = useState<string | null>(null);
+
+  const handleUpdateCli = async () => {
+    setCliUpdateResult(null);
+    try {
+      const res = await updateCli(PROVIDER_IDS.copilot).unwrap();
+      setCliUpdateResult(
+        res.success ? "Copilot CLI updated." : res.output || "Update failed.",
+      );
+    } catch {
+      setCliUpdateResult("Update failed.");
+    }
+  };
+
   const openPath = (targetPath: string) => {
     window.api.shell.openPath(targetPath);
   };
 
   const homedir = window.api.platform.homedir;
-
-  const handlePermissionToggle = async (enabled: boolean) => {
-    if (!provider || updating) return;
-
-    const newMode = enabled ? "bypassPermissions" : "default";
-
-    if (await updateConfig({ permissionMode: newMode })) {
-      toast.success(
-        enabled
-          ? "Permission bypass enabled"
-          : "Permission bypass disabled — tools will require approval",
-      );
-    }
-  };
 
   return (
     <ProviderSettingsLayout
@@ -107,19 +113,33 @@ export default function CopilotSettings(
       isLoading={isLoading}
       error={error}
     >
-      <SettingsSection  title="Configuration">
+      {/* CLI version + self-update — `copilot --version` / `copilot update` */}
+      <SettingsSection title="CLI">
         <SettingsRow
-          title="Bypass Permissions"
+          title="GitHub Copilot CLI"
           description={
-            <>
-              <span className="text-amber-700 dark:text-amber-600 font-medium ">
-                Enabling this gives the agent full control over file operations
-                and terminal commands.
-              </span>
-            </>
+            cli?.version ? `Version ${cli.version}` : "Version unknown"
           }
         >
-          <Toggle enabled={isBypassing} onChange={handlePermissionToggle} />
+          <div className="flex items-center gap-3">
+            {cliUpdateResult && (
+              <span className="text-xs text-primary-500 dark:text-primary-400">
+                {cliUpdateResult}
+              </span>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleUpdateCli}
+              disabled={isUpdatingCli}
+              className="gap-1 flex items-center"
+            >
+              {isUpdatingCli ? (
+                <AsciiSpinner variant="null" kind="download" />
+              ) : null}
+              {isUpdatingCli ? "Updating…" : "Update CLI"}
+            </Button>
+          </div>
         </SettingsRow>
       </SettingsSection>
 

@@ -70,8 +70,9 @@ export { AnimatedTitle } from "./animated-title";
 
 // Loading
 export { AsciiSpinner } from "./ascii-spinner";
-export type { AsciiSpinnerVariant } from "./ascii-spinner";
+export type { AsciiSpinnerVariant, AsciiSpinnerKind } from "./ascii-spinner";
 export { SquareSpinner } from "./square-spinner";
+export { DownloadSpinner } from "./download-spinner";
 
 // Error Boundary
 export { ErrorBoundary } from "./error-boundary";

@@ -267,7 +267,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   }`}
                 />
                 <Body
-                  className={`text-s font-medium ${
+                  className={`text-s font-normal ${
                     isPulseRoute
                       ? "text-primary-950 dark:text-primary"
                       : "text-primary-900 dark:text-primary-100"
@@ -304,7 +304,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                         }`}
                       />
                       <Body
-                        className={`text-s flex-1 font-medium text-left ${
+                        className={`text-s flex-1 font-normal text-left ${
                           isPluginsRoute
                             ? "text-primary-950 dark:text-primary"
                             : "text-primary-900 dark:text-primary-100"
@@ -342,7 +342,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                     }`}
                   />
                   <Body
-                    className={`text-s font-medium flex-1 text-left ${
+                    className={`text-s font-normal flex-1 text-left ${
                       isPluginsRoute
                         ? "text-primary-950 dark:text-primary"
                         : "text-primary-900 dark:text-primary-100"

@@ -28,6 +28,35 @@ function extractMcpContentTexts(value: unknown): string[] {
   return out;
 }
 
+/**
+ * Collect every renderable segment from an MCP result. Newer codex builds put a
+ * generic ack ("Action completed.") in `content[].text` and the *real* payload
+ * in `structuredContent` — which is either a nested MCP envelope
+ * (`{ content: [{ type:"text", text:"<json>" }] }`) or a plain data object. We
+ * surface both, ack first, so the expanded row shows the ack and the details
+ * together instead of dropping the data.
+ */
+function extractMcpOutputSegments(value: unknown): string[] {
+  if (!value || typeof value !== "object") return [];
+  const obj = value as Record<string, unknown>;
+  const segments = [...extractMcpContentTexts(obj)];
+
+  const structured = obj.structuredContent;
+  if (structured && typeof structured === "object") {
+    const nested = extractMcpContentTexts(structured);
+    if (nested.length > 0) {
+      segments.push(...nested);
+    } else {
+      try {
+        segments.push(JSON.stringify(structured, null, 2));
+      } catch {
+        /* non-serializable structured payload → skip */
+      }
+    }
+  }
+  return segments;
+}
+
 function formatCodePayload(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return raw;
@@ -39,19 +68,17 @@ function formatCodePayload(raw: string): string {
   }
 }
 
-/** Renders MCP `content[].text` segments inside a monospace/code block shell. */
-function McpOutputCodeBlocks({ rawTexts }: { rawTexts: string[] }) {
+/**
+ * Renders every output segment in a SINGLE monospace block (ack + structured
+ * details together), separated by blank lines — one container, not a separate
+ * card per segment.
+ */
+function McpOutput({ segments }: { segments: string[] }) {
+  const body = segments.map(formatCodePayload).join("\n\n");
   return (
-    <div className="space-y-1.5">
-      {rawTexts.map((text, i) => (
-        <pre
-          key={i}
-          className="noscrollbar text-xs text-primary-950 dark:text-primary whitespace-pre-wrap font-mono bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-64 overflow-y-auto "
-        >
-          <code>{formatCodePayload(text)}</code>
-        </pre>
-      ))}
-    </div>
+    <pre className="noscrollbar text-xs text-primary-950 dark:text-primary whitespace-pre-wrap font-mono bg-primary-50 dark:bg-primary/5 rounded-md p-2 max-h-64 overflow-y-auto">
+      <code>{body}</code>
+    </pre>
   );
 }
 
@@ -85,9 +112,9 @@ export function McpDisplay({ displayName, icon, output, isCompact = false }: Mcp
   const [isExpanded, setIsExpanded] = useState(false);
   const resolvedIcon = icon ?? resolveTool(displayName).icon;
 
-  const outputTexts = extractMcpContentTexts(output);
+  const outputSegments = extractMcpOutputSegments(output);
   //const inputSummary = summarizeInput(params);
-  const hasOutput = outputTexts.length > 0;
+  const hasOutput = outputSegments.length > 0;
 
   return (
     <div>
@@ -105,7 +132,7 @@ export function McpDisplay({ displayName, icon, output, isCompact = false }: Mcp
       {hasOutput && (
         <ToolCollapse isExpanded={isExpanded}>
           <div className="pt-1">
-            <McpOutputCodeBlocks rawTexts={outputTexts} />
+            <McpOutput segments={outputSegments} />
           </div>
         </ToolCollapse>
       )}

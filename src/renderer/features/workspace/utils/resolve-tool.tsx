@@ -157,25 +157,38 @@ function resolveUnknownMcp(lower: string): ResolvedTool {
   const server = sepIdx > 0 ? afterMcp.slice(0, sepIdx) : afterMcp;
   const toolName = sepIdx > 0 ? afterMcp.slice(sepIdx + 2) : "";
 
-  // Detect sub-provider for bridge servers: split toolName on first `_`.
-  // If the prefix is NOT a known verb, treat it as the actual provider name
-  // (e.g. `gmail` in `gmail_search_emails`).
+  // Detect the sub-provider for bridge servers (`codex_apps` routes many
+  // upstream MCPs through one server, prefixing each tool with the inner app).
+  // Newer codex builds delimit the app with a DOT — `gmail.get_profile`,
+  // `google_calendar.list_events` (the app slug may itself contain
+  // underscores); older builds used a plain underscore — `gmail_search_emails`.
+  // Prefer the dot boundary when present (unambiguous), else fall back to the
+  // first-underscore heuristic (treat the leading token as the app unless it's
+  // a known verb). The resolved `providerSlug` is what the plugin-logo lookup
+  // keys on, so getting the app boundary right is what restores its icon.
   let providerLabel = titleCase(snakeToWords(server));
   let providerSlug = server;
   let verbAndEntity = toolName;
 
-  const firstUnderscore = toolName.indexOf("_");
-  if (firstUnderscore > 0) {
-    const candidate = toolName.slice(0, firstUnderscore);
-    const rest = toolName.slice(firstUnderscore + 1);
-    if (!DEFAULT_VERBS[candidate]) {
-      providerLabel = titleCase(candidate);
-      providerSlug = candidate;
-      verbAndEntity = rest;
+  const dotIdx = toolName.indexOf(".");
+  if (dotIdx > 0) {
+    providerSlug = toolName.slice(0, dotIdx);
+    providerLabel = titleCase(snakeToWords(providerSlug));
+    verbAndEntity = toolName.slice(dotIdx + 1);
+  } else {
+    const firstUnderscore = toolName.indexOf("_");
+    if (firstUnderscore > 0) {
+      const candidate = toolName.slice(0, firstUnderscore);
+      const rest = toolName.slice(firstUnderscore + 1);
+      if (!DEFAULT_VERBS[candidate]) {
+        providerLabel = titleCase(candidate);
+        providerSlug = candidate;
+        verbAndEntity = rest;
+      }
     }
+    // If toolName has no separator (e.g. `authenticate`), keep the server as
+    // the provider label and treat the whole tool name as the entity.
   }
-  // If toolName has no underscore (e.g. `authenticate`), keep the server as
-  // the provider label and treat the whole tool name as the entity.
 
   const ueIdx = verbAndEntity.indexOf("_");
   const rawVerb = ueIdx > 0 ? verbAndEntity.slice(0, ueIdx) : verbAndEntity;

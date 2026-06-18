@@ -27,7 +27,7 @@ export function SettingsPageShell({
     </div>
   ) : (
     <div className="mb-4">
-      <Heading3>{title} settings</Heading3>
+      <Heading3>{title}</Heading3>
     </div>
   );
 
@@ -68,7 +68,7 @@ export function SettingsSection({
   return (
     <div className="mb-8">
       {title && (
-        <Body className="font-medium mb-3">
+        <Body className=" mb-3">
           {title}
         </Body>
       )}
@@ -93,8 +93,8 @@ export function SettingsRow({
   if (variant === "detail") {
     return (
       <div className="flex items-start justify-between py-5 gap-8">
-        <div className="shrink-0 w-80">
-          <Body className="font-medium mb-1">
+        <div className="shrink-0 w-120">
+          <Body className=" mb-1">
             {title}
           </Body>
           {description && (
@@ -111,7 +111,7 @@ export function SettingsRow({
   return (
     <div className="flex items-center justify-between py-3">
       <div className="flex-1 pr-8">
-        <Body className="font-medium mb-1">
+        <Body className=" mb-1">
           {title}
         </Body>
         {description && (

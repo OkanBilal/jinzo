@@ -7,7 +7,7 @@ import HourHeatmap from "./hour-heatmap";
 import CostByModelChart from "./cost-by-model-chart";
 import ToolUsageChart from "./tool-usage-chart";
 import RecentSessionsList from "./recent-sessions-list";
-import { Caption, Heading2, SegmentedTabs } from "@/components/ui";
+import { Caption, Heading3, SegmentedTabs } from "@/components/ui";
 import SuccessRateChart from "./success-rate-chart";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
@@ -50,7 +50,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-4 pb-16">
       <div className="flex items-center justify-between mb-8">
-        <Heading2>Dashboard</Heading2>
+        <Heading3>Dashboard</Heading3>
         <SegmentedTabs
           value={filter}
           onChange={setFilter}

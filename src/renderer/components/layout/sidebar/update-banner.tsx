@@ -28,7 +28,7 @@ export function UpdateBanner() {
             {(state.status === "available" ||
               state.status === "downloading") && (
               <>
-                <AsciiSpinner variant="null" />
+                <AsciiSpinner variant="null" kind="download" />
                 {` Downloading update${state.info?.version ? ` ${state.info.version}` : ""}`}
               </>
             )}

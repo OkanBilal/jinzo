@@ -94,13 +94,15 @@ export default function CursorSettings(
               </span>
             )}
             <Button
-              variant="secondary"
+              variant="primary"
               size="sm"
               onClick={handleUpdateCli}
               disabled={isUpdating}
               className="gap-1 flex items-center"
             >
-              {isUpdating ? <AsciiSpinner variant="null" /> : null}
+              {isUpdating ? (
+                <AsciiSpinner variant="null" kind="download" />
+              ) : null}
               {isUpdating ? "Updating…" : "Update CLI"}
             </Button>
           </div>

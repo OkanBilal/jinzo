@@ -37,12 +37,12 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
       }}
     >
       <div className="flex flex-col items-start pt-12 pb-1 px-4">
-        <Body className="text-left font-medium">
+        <Body className="text-left ">
           Settings
         </Body>
       </div>
 
-      <div className="flex-1 px-3 mb-1 overflow-y-auto noscrollbar">
+      <div className="flex-1 px-3 mb-1 mt-2 overflow-y-auto noscrollbar">
         <nav className="space-y-0.5">
           {SETTINGS_MAIN_NAV_ITEMS.map((item) => {
             const IconComponent = item.icon;
@@ -51,7 +51,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
               <Button
                 key={item.id}
                 onClick={() => handleSectionClick(item.id)}
-                className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl  text-sm tracking-tight transition-all flex items-center gap-2
+                className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm tracking-tight transition-all flex items-center gap-2.5
                   ${
                     isActive
                       ? "bg-primary/80 dark:bg-primary/5 text-primary-950 dark:text-primary-100"
@@ -60,11 +60,11 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                   `}
               >
                 {IconComponent ? (
-                  <IconComponent className={`size-3.75 `} />
+                  <IconComponent className={`size-3.5 `} />
                 ) : (
                   <div className="size-4 rounded bg-primary-300 dark:bg-primary-700" />
                 )}
-                <span className="font-medium">{item.label}</span>
+                <span className="">{item.label}</span>
               </Button>
             );
           })}
@@ -74,7 +74,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
         {projects.length > 0 && (
           <div className="mt-2">
             <div className="px-3 mb-1">
-              <span className="text-xs font-medium text-primary-900 dark:text-primary-200">
+              <span className="text-xs  text-primary-900 dark:text-primary-200">
                 Projects
               </span>
             </div>
@@ -105,7 +105,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                     onClick={() =>
                       navigate(`/settings?section=projects&id=${project.id}`)
                     }
-                    className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm tracking-tight transition-all flex items-center gap-2
+                    className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm tracking-tight transition-all flex items-center gap-2.5
                       ${
                         isActive
                           ? "bg-primary/80 dark:bg-primary/5 text-primary-900 dark:text-primary-100"
@@ -114,12 +114,12 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                       `}
                   >
                     <div
-                      className={`size-4.5 rounded-md flex items-center justify-center text-t font-medium text-primary-950 dark:text-primary-200
+                      className={`size-4 rounded-md flex items-center justify-center text-t  text-primary-950 dark:text-primary-200
                         shrink-0 ${!parsed ? "border border-primary-950/50 dark:border-primary/10" : ""}`}
                     >
                       {iconContent}
                     </div>
-                    <span className="truncate font-medium">{project.name}</span>
+                    <span className="truncate ">{project.name}</span>
                   </Button>
                 );
               })}
@@ -145,8 +145,8 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
           <ChevronUp className="size-4 rotate-270 text-primary-900 dark:text-primary-200" />
-          <Body className="font-medium">
-            Return
+          <Body className="font-normal">
+            Back
           </Body>
         </Button>
       </div>

@@ -48,7 +48,7 @@ function UpdateButton({
           disabled
           className="flex items-center gap-1"
         >
-          <AsciiSpinner variant="null" />
+          <AsciiSpinner variant="null" kind="download" />
           Downloading...
         </Button>
       );

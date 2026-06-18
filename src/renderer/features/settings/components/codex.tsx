@@ -263,7 +263,9 @@ export default function CodexSettings() {
               disabled={isUpdatingCli}
               className="gap-1 flex items-center"
             >
-              {isUpdatingCli ? <AsciiSpinner variant="null" /> : null}
+              {isUpdatingCli ? (
+                <AsciiSpinner variant="null" kind="download" />
+              ) : null}
               {isUpdatingCli ? "Updating…" : "Update CLI"}
             </Button>
           </div>

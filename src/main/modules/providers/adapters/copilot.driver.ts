@@ -17,8 +17,13 @@
 
 import path from "node:path";
 import os from "node:os";
+import { spawn, execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { findCopilotBinaryPath } from "../providers.utils";
 import type {
+  AccountInfo,
   AcquiredSession,
+  CliUpdateResult,
   CommandInfo,
   CopilotAdapterConfig,
   DriverOutcome,
@@ -471,8 +476,15 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
   // Permission & tool approval handlers (per-run closures)
   // ─────────────────────────────────────────────────────────────
 
+  // Mirrors the SDK's exported `approveAll` (`() => ({ kind: "approve-once" })`).
+  // The CLI honors "approve-once" as an execution grant; a bare "approved" is an
+  // acknowledgment kind the permission system does not treat as a grant, which
+  // left bypass-mode file reads denied ("permission issue accessing the file
+  // system"). Primary bypass approval flows through the PreToolUse hook's
+  // `permissionDecision: "allow"`; this is the fallback for permission requests
+  // the CLI raises outside the hook.
   function approveAllPermissions(): { kind: string } {
-    return { kind: "approved" };
+    return { kind: "approve-once" };
   }
 
   function buildPermissionHandler(runId: string) {
@@ -503,9 +515,19 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
   }
 
   function buildPreToolUseHook(runId: string, permissionMode: string) {
+    const bypass = permissionMode === "bypassPermissions" || permissionMode === "allow";
     return async (
       input: { toolName: string; toolArgs: unknown; timestamp: number; cwd: string },
     ): Promise<{ permissionDecision?: "allow" | "deny" | "ask"; permissionDecisionReason?: string; modifiedArgs?: unknown } | void> => {
+      // Bypass mode: auto-allow every tool (matches the Claude driver's bypass
+      // path). `ask_user` needs no exemption — allowing it here simply lets the
+      // SDK route it to onUserInputRequest, which surfaces the real dialog. We
+      // short-circuit before the guard hook to preserve the historical bypass
+      // behavior (which installed no PreToolUse hook at all, so guards never ran).
+      if (bypass) {
+        return { permissionDecision: "allow" };
+      }
+
       const guardHook = await guardsService.buildCopilotGuardHook();
       if (guardHook) {
         const guardResult = await guardHook(input);
@@ -916,10 +938,15 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
       ],
     };
 
-    if (permissionMode !== "bypassPermissions" && permissionMode !== "allow") {
-      base.hooks = { onPreToolUse: buildPreToolUseHook(runId, permissionMode) };
-      base.onUserInputRequest = buildUserInputHandler(runId);
-    }
+    // Install the PreToolUse hook + user-input handler in every mode, including
+    // bypass. Bypass auto-allows inside the hook (see buildPreToolUseHook), so
+    // tool grants flow through the hook's `permissionDecision: "allow"` — the
+    // same path that grants tools in every other mode. Previously bypass skipped
+    // the hook and leaned solely on onPermissionRequest, which left filesystem
+    // reads ungranted. Keeping onUserInputRequest installed also lets `ask_user`
+    // work in bypass (it otherwise threw "no handler registered").
+    base.hooks = { onPreToolUse: buildPreToolUseHook(runId, permissionMode) };
+    base.onUserInputRequest = buildUserInputHandler(runId);
 
     if (permissionMode === "plan") {
       base.onExitPlanModeRequest = buildExitPlanModeHandler(runId);
@@ -1777,7 +1804,75 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
         return [];
       }
     },
+
+    // CLI health/version + self-update. The GitHub Copilot CLI is npm-distributed
+    // (`@github/copilot`) but ships its own `copilot update` subcommand and
+    // `--version`, so we drive it exactly like the other providers. We probe the
+    // user's on-PATH `copilot` first (what `update` actually mutates), falling
+    // back to the SDK's resolved binary, then a bare `copilot` on PATH.
+    async getAccountInfo(): Promise<AccountInfo> {
+      const binaryPath = findCopilotBinaryPath() ?? config.binary ?? "copilot";
+      const version = await readCopilotCliVersion(binaryPath);
+      return {
+        account: null,
+        requiresOpenaiAuth: false,
+        cli: { version, channel: null, outdated: false },
+      };
+    },
+
+    async updateCli(): Promise<CliUpdateResult> {
+      const binaryPath = findCopilotBinaryPath() ?? config.binary ?? "copilot";
+      const env: Record<string, string | undefined> = {
+        ...process.env,
+        HOME: os.homedir(),
+        PATH: [
+          path.dirname(binaryPath),
+          path.join(os.homedir(), ".local", "bin"),
+          "/usr/local/bin",
+          "/opt/homebrew/bin",
+          process.env.PATH || "",
+        ].join(":"),
+      };
+
+      return new Promise<CliUpdateResult>((resolve) => {
+        const child = spawn(binaryPath, ["update"], {
+          env,
+          stdio: ["ignore", "pipe", "pipe"],
+          timeout: 120000,
+        });
+        let out = "";
+        child.stdout?.on("data", (d: Buffer) => (out += d.toString()));
+        child.stderr?.on("data", (d: Buffer) => (out += d.toString()));
+        child.on("close", (code) =>
+          resolve({ success: code === 0, output: out.trim() }),
+        );
+        child.on("error", (err) =>
+          resolve({
+            success: false,
+            output: String(err instanceof Error ? err.message : err),
+          }),
+        );
+      });
+    },
   };
+}
+
+const execFileAsync = promisify(execFile);
+
+/**
+ * Read the Copilot CLI version via `copilot --version` (output looks like
+ * "GitHub Copilot CLI 1.0.61."). Returns the bare semver or null on any failure.
+ */
+async function readCopilotCliVersion(binaryPath: string): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync(binaryPath, ["--version"], {
+      timeout: 8000,
+    });
+    const match = String(stdout).match(/(\d+\.\d+\.\d+)/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────

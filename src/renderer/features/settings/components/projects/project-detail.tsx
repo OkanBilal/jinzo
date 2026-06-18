@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useReducer, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Heading2, Muted, Button, toast, Alert } from "@/components/ui";
+import { Heading2, Muted, Button, toast, Alert, Heading3 } from "@/components/ui";
 import {
   useGetProjectQuery,
   useUpdateProjectMutation,
@@ -154,7 +154,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   return (
     <div className="bg-primary dark:bg-primary-950 pb-16">
       <div className="mb-8">
-        <Heading2>{project.name}</Heading2>
+        <Heading3>{project.name}</Heading3>
       </div>
 
       <SettingsSection>
