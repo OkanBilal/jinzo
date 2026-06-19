@@ -33,6 +33,11 @@ import {
 import { registerPulseIpc, pulseService } from "./modules/pulse";
 import { registerGuardsIpc } from "./modules/guards";
 import { imageProxyService } from "./modules/imageProxy/imageProxy.service";
+import {
+  registerImageProxyIpc,
+  serveLocalImage,
+  serveLocalDocument,
+} from "./modules/imageProxy";
 
 export interface ServeOptions {
   /** Port to listen on. Default 8787. */
@@ -98,6 +103,10 @@ export async function startBackendServer(
   registerAutomationsIpc();
   registerPulseIpc();
   registerGuardsIpc();
+  // sign-only: the HMAC signing IPC (imageProxy:sign / documents:sign). The
+  // Electron custom-protocol handler isn't registered here — web mode serves the
+  // signed paths over HTTP (/__localimg, /__localdoc) instead.
+  registerImageProxyIpc();
 
   automationsService.start();
   pulseService.start();
@@ -116,6 +125,8 @@ export async function startBackendServer(
     token,
     webRoot,
     fetchProxiedImage: (url) => imageProxyService.proxyImage(url),
+    serveLocalImage: (url) => serveLocalImage(url),
+    serveLocalDocument: (url) => serveLocalDocument(url),
   });
   console.log(`[serve] mains backend listening on ws://${host}:${wsHost.port}`);
   if (token) {

@@ -46,9 +46,41 @@ export interface WsHostOptions {
    * `mains-img://` protocol does. Injected to keep this module domain-agnostic.
    */
   fetchProxiedImage?: (url: string) => Promise<Response>;
+  /**
+   * Signed local-image server for web mode — `GET /__localimg?path&exp&sig` mirrors
+   * the Electron `mains-localimg://` protocol (HMAC-signed, same secret/process).
+   * Injected to keep this module domain-agnostic.
+   */
+  serveLocalImage?: (url: URL) => Promise<Response>;
+  /** Signed local-document server — `GET /__localdoc?…`; mirrors `mains-localdoc://`. */
+  serveLocalDocument?: (url: URL) => Promise<Response>;
 }
 
 const MAX_PROXY_IMAGE_BYTES = 10 * 1024 * 1024;
+
+/** Pipe a Web `Response` (from the signed local-file servers) to the Node res. */
+async function handleLocalFile(
+  req: IncomingMessage,
+  res: ServerResponse,
+  serve: (url: URL) => Promise<Response>,
+): Promise<void> {
+  try {
+    const url = new URL(req.url ?? "/", "http://localhost");
+    const response = await serve(url);
+    const body = Buffer.from(await response.arrayBuffer());
+    const headers: Record<string, string> = {
+      "Content-Type":
+        response.headers.get("content-type") ?? "application/octet-stream",
+    };
+    const cache = response.headers.get("cache-control");
+    if (cache) headers["Cache-Control"] = cache;
+    res.writeHead(response.status, headers);
+    res.end(body);
+  } catch {
+    res.writeHead(500);
+    res.end("Local file error");
+  }
+}
 
 async function handleImageProxy(
   req: IncomingMessage,
@@ -161,8 +193,13 @@ export function startWsHost(options: WsHostOptions): Promise<WsHost> {
   const staticHandler = webRoot ? createStaticHandler(webRoot) : null;
 
   const httpServer: Server = createServer((req, res) => {
-    if (options.fetchProxiedImage && (req.url ?? "").startsWith("/__img")) {
+    const url = req.url ?? "";
+    if (options.fetchProxiedImage && url.startsWith("/__img")) {
       void handleImageProxy(req, res, options.fetchProxiedImage);
+    } else if (options.serveLocalImage && url.startsWith("/__localimg")) {
+      void handleLocalFile(req, res, options.serveLocalImage);
+    } else if (options.serveLocalDocument && url.startsWith("/__localdoc")) {
+      void handleLocalFile(req, res, options.serveLocalDocument);
     } else if (staticHandler) {
       void staticHandler(req, res);
     } else {

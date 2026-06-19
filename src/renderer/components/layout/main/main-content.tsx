@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useMainHeader } from "@/hooks/use-main-header";
+import { useCapabilities } from "@/lib/platform";
 
 interface MainContentProps {
   children: ReactNode;
@@ -19,13 +20,17 @@ export function MainContent({
   browserOpen,
 }: MainContentProps) {
   const { header, firstTabActive } = useMainHeader();
+  const { windowChrome } = useCapabilities();
   const [isFullscreen, setIsFullscreen] = useState(false);
   useEffect(() => {
     return window.api.app.onFullscreenChange(setIsFullscreen);
   }, []);
 
+  // Reserve space for the macOS traffic lights only when there's native window
+  // chrome and we're not fullscreen. In web (no chrome) keep the tight inset.
+  const reserveTrafficLights = windowChrome && !isFullscreen;
   const headerPaddingLeft =
-    sidebarCollapsed ? (isFullscreen ? "1.5rem" : "7rem") : undefined;
+    sidebarCollapsed ? (reserveTrafficLights ? "7rem" : "1.5rem") : undefined;
 
   // When header exists and the first tab is active, the content's top-left corner
   // must be sharp so it connects seamlessly with the active tab above it.

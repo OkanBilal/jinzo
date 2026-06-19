@@ -10,6 +10,7 @@ import PresetSpacesView from "./preset-spaces-view";
 import SettingsView from "./settings-view";
 import CreateSpaceMenu from "./create-space-menu";
 import HelpMenu from "./help-menu";
+import { useCapabilities } from "@/lib/platform";
 import SpaceContextMenu from "./space-context-menu";
 import EditSpaceModal from "./edit-space-modal";
 import DeleteSpaceModal from "./delete-space-modal";
@@ -123,6 +124,9 @@ export default function Sidebar({ collapsed }: SidebarProps) {
 
   const { account, workspaces, isLoadingWorkspaces, handleRefreshConnections } =
     useSidebarData({ searchQuery, sidebarConfig });
+  // Picking a local folder uses a native dialog, which can't run from the web
+  // client (it would open on the headless backend). Hide the folder-picker entry.
+  const { nativeDialogs } = useCapabilities();
 
   const {
     handleSpaceChange,
@@ -214,15 +218,19 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 dropdownItems={
                   sidebarConfig.itemType === "workspace"
                     ? [
-                        {
-                          label: "Add from local",
-                          icon: (
-                            <Plus className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
-                          ),
-                          shortcut: "o",
-                          shortcutLabel: "\u2318\u21e7O",
-                          onClick: handleAddProject,
-                        },
+                        ...(nativeDialogs
+                          ? [
+                              {
+                                label: "Add from local",
+                                icon: (
+                                  <Plus className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
+                                ),
+                                shortcut: "o",
+                                shortcutLabel: "\u2318\u21e7O",
+                                onClick: handleAddProject,
+                              },
+                            ]
+                          : []),
                         {
                           label: "Clone from URL",
                           icon: (

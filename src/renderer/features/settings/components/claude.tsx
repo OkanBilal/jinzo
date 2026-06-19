@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AsciiSpinner, Button, Select } from "@/components/ui";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
+import { useCapabilities } from "@/lib/platform";
 import {
   ProviderSettingsLayout,
   useProviderSettings,
@@ -79,6 +80,7 @@ export default function ClaudeSettings(
   };
 
   const homedir = window.api.platform.homedir;
+  const { revealInFolder } = useCapabilities();
 
   return (
     <ProviderSettingsLayout
@@ -189,7 +191,8 @@ export default function ClaudeSettings(
       </SettingsSection>
 
 
-      <SettingsSection title="Capabilities">
+      {revealInFolder && (
+        <SettingsSection title="Capabilities">
         <SettingsRow
           title="MCP Servers"
           description={
@@ -293,7 +296,8 @@ export default function ClaudeSettings(
             Open Folder
           </Button>
         </SettingsRow>
-      </SettingsSection>
+        </SettingsSection>
+      )}
 
       <StructuredOutputsModal
         isOpen={isStructuredOutputsModalOpen}

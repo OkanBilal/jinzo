@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useTheme } from "@/hooks/use-theme";
+import { useCapabilities } from "@/lib/platform";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -28,6 +29,10 @@ export function MainLayout({ children }: MainLayoutProps) {
 }
 
 function DragRegion() {
+  const { windowChrome } = useCapabilities();
+  // No window to drag in a browser; the strip would only intercept top-edge
+  // clicks (WebkitAppRegion is ignored there anyway).
+  if (!windowChrome) return null;
   return (
     <div
       className="fixed top-0 left-0 right-0 z-(--z-overlay)"

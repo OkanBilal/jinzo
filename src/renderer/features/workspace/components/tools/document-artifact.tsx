@@ -3,6 +3,7 @@ import { Button, DropdownMenu, DropdownMenuItem } from "@/components/ui";
 import { ArrowUp, Finder, Mains } from "@/components/ui/icons";
 import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
 import { useDocumentViewer } from "@/hooks/use-document-viewer";
+import { useCapabilities } from "@/lib/platform";
 import { DOC_VIEWER_LABELS, type DocType } from "@/lib/document-viewer";
 import { DOC_TYPE_ICONS } from "../document-viewer/doc-type-icons";
 
@@ -22,6 +23,7 @@ export function DocumentArtifact({
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
   const openBtnRef = useRef<HTMLButtonElement>(null);
   const [fetchApps, { data: handlerApps = [], isFetching }] = useLazyGetAppsForFileQuery();
+  const { revealInFolder } = useCapabilities();
 
   const ext = fileName.includes(".") ? (fileName.split(".").pop() ?? "").toUpperCase() : "";
   const DocIcon = DOC_TYPE_ICONS[docType];
@@ -103,10 +105,12 @@ export function DocumentArtifact({
           <Mains className="size-4 shrink-0" />
           Open in Mains
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={showInFinder}>
-          <Finder className="size-4 shrink-0" />
-          Show in Finder
-        </DropdownMenuItem>
+        {revealInFolder && (
+          <DropdownMenuItem onClick={showInFinder}>
+            <Finder className="size-4 shrink-0" />
+            Show in Finder
+          </DropdownMenuItem>
+        )}
         {isFetching ? (
           <div className="px-3 py-2 text-xs text-primary-500 dark:text-primary-400">
             Loading applications…

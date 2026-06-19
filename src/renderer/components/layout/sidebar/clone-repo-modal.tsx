@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Caption, Button, Body } from "@/components/ui";
+import { useCapabilities } from "@/lib/platform";
 
 interface CloneRepoModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export default function CloneRepoModal({
   onClone,
   onClose,
 }: CloneRepoModalProps) {
+  const { nativeDialogs } = useCapabilities();
   const [url, setUrl] = useState("");
   const [clonePath, setClonePath] = useState("");
 
@@ -22,7 +24,10 @@ export default function CloneRepoModal({
   if (isOpen && !prevIsOpen) {
     setPrevIsOpen(true);
     setUrl("");
-    setClonePath(`${window.api.platform.homedir}/Desktop`);
+    // On web there's no local homedir; let the user type a backend path.
+    setClonePath(
+      nativeDialogs ? `${window.api.platform.homedir}/Desktop` : "",
+    );
   }
   if (!isOpen && prevIsOpen) {
     setPrevIsOpen(false);
@@ -106,6 +111,8 @@ export default function CloneRepoModal({
                 variant="secondary"
                 size="sm"
                 onClick={handleBrowse}
+                disabled={!nativeDialogs}
+                tooltip={nativeDialogs ? undefined : "Type a path on the backend"}
                 className="shrink-0 rounded-xl"
               >
                 Browse

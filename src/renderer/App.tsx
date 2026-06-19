@@ -17,6 +17,7 @@ import { useWorkspaceVariant } from "./hooks/use-workspace-variant";
 import { ReduxProvider } from "./providers/redux-provider";
 import { Toaster } from "./components/ui/toast/Toaster";
 import { useAppSelector, useAppDispatch } from "./lib/redux/hooks";
+import { isWeb } from "./lib/platform";
 import { setSidebarCollapsed, setRightPanelOpen } from "./lib/redux/slices/appSettingsSlice";
 import { SidebarToggleButton } from "./components/layout/sidebar/sidebar-toggle-button";
 import { OnboardingModal } from "./features/onboarding/components/onboarding-modal";
@@ -85,7 +86,8 @@ function AppContent() {
   return (
     <>
       <Toaster />
-      {!onboardingCompleted && <OnboardingModal open={true} />}
+      {/* Onboarding sets up local CLIs; in web those live on the backend, so skip it. */}
+      {!onboardingCompleted && !isWeb && <OnboardingModal open={true} />}
       <MainLayout>
         <SidebarToggleButton
           isOpen={!sidebarCollapsed}

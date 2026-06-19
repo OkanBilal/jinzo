@@ -1,6 +1,7 @@
 import { Toggle, ToggleClose } from "@/components/ui/icons";
 import { Button } from "@/components/ui";
 import { useState, useEffect } from "react";
+import { useCapabilities } from "@/lib/platform";
 
 interface SidebarToggleButtonProps {
   isOpen: boolean;
@@ -8,16 +9,20 @@ interface SidebarToggleButtonProps {
 }
 
 export function SidebarToggleButton({ isOpen, onClick }: SidebarToggleButtonProps) {
+  const { windowChrome } = useCapabilities();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     return window.api.app.onFullscreenChange(setIsFullscreen);
   }, []);
 
+  // Clear the macOS traffic lights only with native chrome and not fullscreen.
+  const reserveTrafficLights = windowChrome && !isFullscreen;
+
   return (
     <div
       className="fixed z-(--z-panel-toggle) top-2.75 flex items-center gap-2 transition-all duration-300 ease-out"
-      style={{ left: isFullscreen  ? "0.75rem" : "5.5rem" }}
+      style={{ left: reserveTrafficLights ? "5.5rem" : "0.75rem" }}
     >
       {/* {isFullscreen  && (
         <Mains className="size-3.5 text-primary-500 dark:text-primary-500" />

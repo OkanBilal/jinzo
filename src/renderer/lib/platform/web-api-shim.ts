@@ -1,4 +1,4 @@
-import { getTransport } from "./registry";
+import { getTransport } from "../transport";
 import type { ServiceResponse } from "../../../shared/ipc-kit/service-response";
 
 /**

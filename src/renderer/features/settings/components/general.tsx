@@ -15,6 +15,7 @@ import {
 } from "./settings-layout";
 import { ThemePicker } from "./theme-picker";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
+import { useCapabilities } from "@/lib/platform";
 import { Refresh } from "@/components/ui/icons";
 import { AsciiSpinner } from "@/components/ui/ascii-spinner";
 import {
@@ -212,6 +213,7 @@ export default function GeneralSettings() {
     check: checkUpdate,
     install: installUpdate,
   } = useAutoUpdate();
+  const caps = useCapabilities();
 
   return (
     <SettingsPageShell title="General">
@@ -222,13 +224,17 @@ export default function GeneralSettings() {
         >
           <RunDetailSelect />
         </SettingsRow>
-        <SettingsDivider />
-        <SettingsRow
-          title="Prevent Sleep"
-          description="Keep your computer awake while a run is active"
-        >
-          <PreventSleepToggle />
-        </SettingsRow>
+        {caps.preventSleep && (
+          <>
+            <SettingsDivider />
+            <SettingsRow
+              title="Prevent Sleep"
+              description="Keep your computer awake while a run is active"
+            >
+              <PreventSleepToggle />
+            </SettingsRow>
+          </>
+        )}
       </SettingsSection>
 
       <SettingsSection title="Appearance">
@@ -254,43 +260,49 @@ export default function GeneralSettings() {
         </SettingsRow>
       </SettingsSection>
 
-      <SettingsSection title="Menu Bar">
-        <SettingsRow
-          title="Menu Bar Icon"
-          description="Show the Mains icon in the system menu bar"
-        >
-          <MenuBarIconToggle />
-        </SettingsRow>
-      </SettingsSection>
+      {caps.windowChrome && (
+        <SettingsSection title="Menu Bar">
+          <SettingsRow
+            title="Menu Bar Icon"
+            description="Show the Mains icon in the system menu bar"
+          >
+            <MenuBarIconToggle />
+          </SettingsRow>
+        </SettingsSection>
+      )}
 
-      <SettingsSection title="Notifications">
-        <SettingsRow
-          title="Run Complete"
-          description="Get notified when a run finishes"
-        >
-          <NotifyRunCompleteToggle />
-        </SettingsRow>
-        <SettingsDivider />
-        <SettingsRow
-          title="Tool Approval"
-          description="Get notified when a tool needs your approval"
-        >
-          <NotifyToolApprovalToggle />
-        </SettingsRow>
-      </SettingsSection>
+      {caps.nativeNotifications && (
+        <SettingsSection title="Notifications">
+          <SettingsRow
+            title="Run Complete"
+            description="Get notified when a run finishes"
+          >
+            <NotifyRunCompleteToggle />
+          </SettingsRow>
+          <SettingsDivider />
+          <SettingsRow
+            title="Tool Approval"
+            description="Get notified when a tool needs your approval"
+          >
+            <NotifyToolApprovalToggle />
+          </SettingsRow>
+        </SettingsSection>
+      )}
 
-      <SettingsSection title="Software Updates">
-        <SettingsRow
-          title="Version"
-          description={`Current version: v${__APP_VERSION__ ?? "1.0.0"}`}
-        >
-          <UpdateButton
-            state={updateState}
-            onCheck={checkUpdate}
-            onInstall={installUpdate}
-          />
-        </SettingsRow>
-      </SettingsSection>
+      {caps.autoUpdate && (
+        <SettingsSection title="Software Updates">
+          <SettingsRow
+            title="Version"
+            description={`Current version: v${__APP_VERSION__ ?? "1.0.0"}`}
+          >
+            <UpdateButton
+              state={updateState}
+              onCheck={checkUpdate}
+              onInstall={installUpdate}
+            />
+          </SettingsRow>
+        </SettingsSection>
+      )}
     </SettingsPageShell>
   );
 }

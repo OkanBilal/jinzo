@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button, AsciiSpinner } from "@/components/ui";
 import { SettingsSection, SettingsRow, SettingsDivider } from "./settings-layout";
+import { useCapabilities } from "@/lib/platform";
 import {
   ProviderSettingsLayout,
   useProviderSettings,
@@ -105,6 +106,7 @@ export default function CopilotSettings(
   };
 
   const homedir = window.api.platform.homedir;
+  const { revealInFolder } = useCapabilities();
 
   return (
     <ProviderSettingsLayout
@@ -143,7 +145,8 @@ export default function CopilotSettings(
         </SettingsRow>
       </SettingsSection>
 
-      <SettingsSection title="Capabilities">
+      {revealInFolder && (
+        <SettingsSection title="Capabilities">
         <SettingsRow
           title="Agents"
           description={
@@ -180,7 +183,8 @@ export default function CopilotSettings(
             Open Folder
           </Button>
         </SettingsRow>
-      </SettingsSection>
+        </SettingsSection>
+      )}
 
       <SettingsSection title="Usage">
         {isLoadingRateLimits ? (

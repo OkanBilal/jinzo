@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Input, Body, Caption, Muted, toast } from "@/components/ui";
 import { SettingsPageShell, SettingsSection, SettingsDivider } from "./settings-layout";
 import { useBackendConnection } from "@/hooks/use-backend-connection";
+import { isWeb } from "@/lib/platform";
 import type {
   BackendSshConfig,
   KnownBackend,
@@ -338,6 +339,20 @@ export default function BackendsSettings() {
       setBusyId(null);
     }
   };
+
+  // In the web client you're already connected to the backend that served this
+  // page; adding/switching backends is a desktop-app concern.
+  if (isWeb) {
+    return (
+      <SettingsPageShell title="Remote Backends">
+        <Muted>
+          Web client — connected over WebSocket to the backend that served this
+          page (<code>{window.location.host}</code>). Adding or switching backends
+          is managed from the desktop app.
+        </Muted>
+      </SettingsPageShell>
+    );
+  }
 
   return (
     <SettingsPageShell title="Remote Backends">
