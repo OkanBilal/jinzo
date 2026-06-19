@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useIsMobile } from "@/lib/platform";
+import { CompactComposerControls } from "@/components/ui/input/compact-composer-controls";
 import {
   SendButton,
   DictationButton,
@@ -95,6 +97,7 @@ export function InputToolbar({
   onUploadedFilesChange,
   disabled,
 }: InputToolbarProps) {
+  const isMobile = useIsMobile();
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [showFileDropdown, setShowFileDropdown] = useState(false);
   const [showThinkingDropdown, setShowThinkingDropdown] = useState(false);
@@ -175,7 +178,11 @@ export function InputToolbar({
   return (
     <div className="flex items-start space-x-2 px-3 pt-6">
       <div className="flex items-center justify-between w-full">
-        <div className="relative ml-1 flex min-w-0 flex-1 items-center gap-0.5 pr-2">
+        <div
+          className={`relative ml-1 flex min-w-0 flex-1 items-center gap-0.5 pr-2 ${
+            isMobile ? "flex-wrap gap-y-1.5" : ""
+          }`}
+        >
           <FileUploadDropdown
               isOpen={showFileDropdown}
               onToggle={() => setShowFileDropdown(!showFileDropdown)}
@@ -194,20 +201,37 @@ export function InputToolbar({
             multiple
             onChange={handleFileChange}
           />
-          <ModelSelectDropdown
-            model={selectedModelDisplayName}
-            models={modelDisplayNames}
-            onModelChange={onModelChange}
-            isOpen={showModelDropdown}
-            onToggle={() => setShowModelDropdown(!showModelDropdown)}
-            onClose={() => setShowModelDropdown(false)}
-            dropdownRef={modelDropdownRef}
-            openUpward={true}
-            isLoading={isLoadingModels}
-            variant={variant}
-          />
-          {(variant === "claude" || variant === "copilot" || variant === "codex" || variant === "cursor") && (
+          {isMobile ? (
+            <CompactComposerControls
+              variant={variant}
+              model={selectedModelDisplayName}
+              models={modelDisplayNames}
+              onModelChange={onModelChange}
+              isLoadingModels={isLoadingModels}
+              thinkingMode={thinkingMode}
+              effortLevel={effortLevel}
+              onEffortLevelChange={onEffortLevelChange}
+              onThinkingModeToggle={onThinkingModeToggle}
+              supportedEffortLevels={supportedEffortLevels}
+              supportsUltracode={supportsUltracode}
+              fastMode={fastMode}
+              onFastModeToggle={onFastModeToggle}
+              supportsFastMode={supportsFastMode}
+            />
+          ) : (
             <>
+              <ModelSelectDropdown
+                model={selectedModelDisplayName}
+                models={modelDisplayNames}
+                onModelChange={onModelChange}
+                isOpen={showModelDropdown}
+                onToggle={() => setShowModelDropdown(!showModelDropdown)}
+                onClose={() => setShowModelDropdown(false)}
+                dropdownRef={modelDropdownRef}
+                openUpward={true}
+                isLoading={isLoadingModels}
+                variant={variant}
+              />
               <EffortLevelDropdown
                 variant={variant}
                 thinkingMode={thinkingMode}
@@ -220,24 +244,22 @@ export function InputToolbar({
                 onToggle={() => setShowThinkingDropdown(!showThinkingDropdown)}
                 dropdownRef={thinkingDropdownRef}
               />
-                            {(variant === "claude" || variant === "cursor" || variant === "codex" || variant === "copilot") && (
-                <PermissionModeDropdown
-                  permissionMode={permissionMode}
-                  onPermissionModeChange={onPermissionModeChange}
-                  isOpen={showPermissionDropdown}
-                  onToggle={() => setShowPermissionDropdown(!showPermissionDropdown)}
-                  dropdownRef={permissionDropdownRef}
-                  variant={variant}
-                  planMode={planMode}
-                  onPlanModeToggle={onPlanModeToggle}
-                  goalMode={goalMode}
-                />
+              {supportsFastMode && (
+                <FastModeButton fastMode={fastMode} onToggle={onFastModeToggle} />
               )}
             </>
           )}
-          {supportsFastMode && (
-            <FastModeButton fastMode={fastMode} onToggle={onFastModeToggle} />
-          )}
+          <PermissionModeDropdown
+            permissionMode={permissionMode}
+            onPermissionModeChange={onPermissionModeChange}
+            isOpen={showPermissionDropdown}
+            onToggle={() => setShowPermissionDropdown(!showPermissionDropdown)}
+            dropdownRef={permissionDropdownRef}
+            variant={variant}
+            planMode={planMode}
+            onPlanModeToggle={onPlanModeToggle}
+            goalMode={goalMode}
+          />
           {variant === "codex" && onGoalModeToggle && (
             <GoalButton goalMode={!!goalMode} onToggle={onGoalModeToggle} />
           )}

@@ -17,6 +17,8 @@ import {
   openIssueTab,
   openSignalTab,
 } from "@/lib/redux/slices/workspaceSlice";
+import { setRightPanelOpen } from "@/lib/redux/slices/appSettingsSlice";
+import { useIsMobile } from "@/lib/platform";
 import type { RootState } from "@/lib/redux";
 import { FolderIcon } from "@/components/ui/icons/file-icons";
 import { TrackerSection } from "@/features/workspace/components/tracker-section";
@@ -34,6 +36,9 @@ type SidebarTab = "files" | "changes" | "reviews";
 
 export function WorkspaceSidebar() {
   const dispatch = useDispatch();
+  // On mobile the panel is a full-screen overlay; opening a file/issue/signal
+  // closes it so the resulting tab (in the main area) is visible.
+  const isMobile = useIsMobile();
   const { activeSpaceId } = useActiveSpace();
   const workspaceId = useSelector(
     (state: RootState) => state.workspace.activeWorkspaceId,
@@ -63,8 +68,9 @@ export function WorkspaceSidebar() {
       dispatch(setSelectedFile(node));
       // Switch to Editor tab when a file is selected
       dispatch(setActiveTab("editor"));
+      if (isMobile) dispatch(setRightPanelOpen(false));
     },
-    [dispatch],
+    [dispatch, isMobile],
   );
 
   const handleAddToContext = useCallback(
@@ -78,14 +84,16 @@ export function WorkspaceSidebar() {
   const handleSelectIssue = useCallback(
     (issue: ProjectIssue) => {
       dispatch(openIssueTab(issue));
+      if (isMobile) dispatch(setRightPanelOpen(false));
     },
-    [dispatch],
+    [dispatch, isMobile],
   );
   const handleSelectSignal = useCallback(
     (signal: SignalWithEntity) => {
       dispatch(openSignalTab(signal));
+      if (isMobile) dispatch(setRightPanelOpen(false));
     },
-    [dispatch],
+    [dispatch, isMobile],
   );
   const handleAddIssueToContext = useCallback(
     (issue: ProjectIssue) => {
@@ -141,8 +149,9 @@ export function WorkspaceSidebar() {
         }),
       );
       dispatch(setActiveTab("editor"));
+      if (isMobile) dispatch(setRightPanelOpen(false));
     },
-    [dispatch],
+    [dispatch, isMobile],
   );
 
   const activeTab = useSelector(

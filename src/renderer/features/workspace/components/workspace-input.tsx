@@ -7,6 +7,7 @@ import type { ContextIssue, ContextSignal, ContextSkill, ContextBrowserSelection
 import { addContextFile, addContextIssue, addContextSkill, removeContextSkill } from "@/lib/redux/slices/workspaceSlice";
 import type { UploadedFile, RichInputFormHandle, RichSkillChipData, RichFileChipData } from "@/components/ui";
 import { useWorkspaceVariant } from "@/hooks/use-workspace-variant";
+import { useIsMobile } from "@/lib/platform";
 import { Button, RichInputForm } from "@/components/ui";
 import {
   UnifiedContextDropdown,
@@ -528,13 +529,17 @@ export function WorkspaceInput({
     [uploadedFiles, onUploadedFilesChange],
   );
 
+  const isMobile = useIsMobile();
   const inputPlaceholder = useMemo(() => {
     if (isFileDragOver) {
       return "Drop images or documents here";
     }
-    const baseHint = canResume
-      ? "Ask a follow-up, use @ or / for commands, files, skills and issues"
-      : "Ask to edit, use @ or / for commands, files, skills and issues";
+    // Short, calm placeholder on mobile — the long hint wraps to 2–3 lines on a phone.
+    const baseHint = isMobile
+      ? "Do anything"
+      : canResume
+        ? "Ask a follow-up, use @ or / for commands, files, skills and issues"
+        : "Ask to edit, use @ or / for commands, files, skills and issues";
 
 
     if (uploadedFiles.length === 0) {
@@ -555,7 +560,7 @@ export function WorkspaceInput({
     return uploadedFiles.length === 1
       ? "Ask about this document — drop more files here anytime"
       : "Ask about these documents — drop more files here anytime";
-  }, [isFileDragOver, uploadedFiles, canResume]);
+  }, [isFileDragOver, uploadedFiles, canResume, isMobile]);
 
   //Copilot related TODO:
   const authErrorMessage = (() => {

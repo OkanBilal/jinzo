@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useReducer } from "react";
 import { useLayoutConfig } from "@/hooks/use-layout-config";
+import { useIsMobile } from "@/lib/platform";
+import { useAppSelector } from "@/lib/redux/hooks";
 import { ToggleButton } from "./toggle-button";
 import { Panel } from "./panel";
 
@@ -40,6 +42,11 @@ export default function RightPanel({
     isOpen ? "open" : ("closed" as AnimationState),
   );
   const { rightPanelComponent } = useLayoutConfig();
+  const isMobile = useIsMobile();
+  const sidebarCollapsed = useAppSelector((s) => s.appSettings.sidebarCollapsed);
+  // On mobile the sidebar is a full-width drawer; hide the right toggle cluster
+  // (Git / terminal / panel) while it's open so it sits behind the drawer.
+  const hideToggleCluster = isMobile && !sidebarCollapsed;
 
   const handleToggle = () => onToggle(!isOpen);
 
@@ -64,15 +71,17 @@ export default function RightPanel({
 
   return (
     <>
-      <ToggleButton
-        isOpen={isOpen}
-        onClick={handleToggle}
-        terminalOpen={terminalOpen}
-        onTerminalToggle={onTerminalToggle}
-        browserOpen={browserOpen}
-        onBrowserToggle={onBrowserToggle}
-        providerId={providerId}
-      />
+      {!hideToggleCluster && (
+        <ToggleButton
+          isOpen={isOpen}
+          onClick={handleToggle}
+          terminalOpen={terminalOpen}
+          onTerminalToggle={onTerminalToggle}
+          browserOpen={browserOpen}
+          onBrowserToggle={onBrowserToggle}
+          providerId={providerId}
+        />
+      )}
       <Panel
         isVisible={isVisible}
         isAnimatedIn={isAnimatedIn}

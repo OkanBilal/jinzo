@@ -10,7 +10,7 @@ import PresetSpacesView from "./preset-spaces-view";
 import SettingsView from "./settings-view";
 import CreateSpaceMenu from "./create-space-menu";
 import HelpMenu from "./help-menu";
-import { useCapabilities } from "@/lib/platform";
+import { useCapabilities, useIsMobile } from "@/lib/platform";
 import SpaceContextMenu from "./space-context-menu";
 import EditSpaceModal from "./edit-space-modal";
 import DeleteSpaceModal from "./delete-space-modal";
@@ -127,6 +127,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   // Picking a local folder uses a native dialog, which can't run from the web
   // client (it would open on the headless backend). Hide the folder-picker entry.
   const { nativeDialogs } = useCapabilities();
+  const isMobile = useIsMobile();
 
   const {
     handleSpaceChange,
@@ -174,9 +175,11 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     <>
       <aside
         ref={swipeRef}
-        className="fixed top-0 bottom-0 left-0 z-(--z-sidebar) transition-all duration-300"
+        className={`fixed top-0 bottom-0 left-0 z-(--z-sidebar) transition-all duration-300 ${
+          isMobile ? "bg-primary dark:bg-primary-950 shadow-2xl" : ""
+        }`}
         style={{
-          width: "var(--sidebar-width)",
+          width: isMobile ? "100%" : "var(--sidebar-width)",
           transform: collapsed ? "translateX(-100%)" : "translateX(0)",
           opacity: collapsed ? 0 : 1,
         }}

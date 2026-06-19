@@ -28,8 +28,9 @@ export function ToggleButton({
   return (
     <div
       data-layout-toggle
-      className="fixed z-(--z-panel-toggle) flex items-center gap-1.5 top-2.75 transition-[right] duration-300 ease-out"
+      className="fixed z-(--z-panel-toggle) flex items-center gap-1.5 transition-[right] duration-300 ease-out"
       style={{
+        top: "calc(0.6875rem + env(safe-area-inset-top))",
         right: browserOpen
           ? "calc(var(--browser-panel-width) + 0.75rem)"
           : "0.8125rem",

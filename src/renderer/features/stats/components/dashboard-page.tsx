@@ -7,8 +7,9 @@ import HourHeatmap from "./hour-heatmap";
 import CostByModelChart from "./cost-by-model-chart";
 import ToolUsageChart from "./tool-usage-chart";
 import RecentSessionsList from "./recent-sessions-list";
-import { Caption, Heading3, SegmentedTabs } from "@/components/ui";
+import { Caption, Heading3, SegmentedTabs, Select } from "@/components/ui";
 import SuccessRateChart from "./success-rate-chart";
+import { useIsMobile } from "@/lib/platform";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
 const TABS: { id: ProviderFilter; label: string }[] = [
@@ -19,8 +20,11 @@ const TABS: { id: ProviderFilter; label: string }[] = [
   { id: PROVIDER_IDS.cursor, label: "Cursor" },
 ];
 
+const OPTIONS = TABS.map((t) => ({ value: t.id, label: t.label }));
+
 export default function DashboardPage() {
   const [filter, setFilter] = useState<ProviderFilter>("all");
+  const isMobile = useIsMobile();
   const { data, isLoading, isError } = useGetDashboardQuery(filter);
 
   if (isLoading) {
@@ -49,13 +53,13 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 pb-16">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 gap-3">
         <Heading3>Dashboard</Heading3>
-        <SegmentedTabs
-          value={filter}
-          onChange={setFilter}
-          options={TABS.map((t) => ({ value: t.id, label: t.label }))}
-        />
+        {isMobile ? (
+          <Select value={filter} options={OPTIONS} onChange={setFilter} />
+        ) : (
+          <SegmentedTabs value={filter} onChange={setFilter} options={OPTIONS} />
+        )}
       </div>
 
       <SummaryCards summary={data.summary} />

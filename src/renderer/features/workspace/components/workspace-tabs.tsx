@@ -1,4 +1,4 @@
-import { Plus, CopilotStatic, Codex, Cursor } from "@/components/ui/icons";
+import { Plus, CopilotStatic, Codex, Cursor, Note, Document } from "@/components/ui/icons";
 import { RunTab, getTabTitle } from "./run-tab";
 import { EditorTab } from "./editor-tab";
 import { IssueTab } from "./issue-tab";
@@ -12,6 +12,9 @@ import { useRef } from "react";
 import { Button } from "@/components/ui";
 import { Claude } from "@/components/ui/icons/space";
 import { useAppSelector } from "@/lib/redux/hooks";
+import { useIsMobile } from "@/lib/platform";
+import { ProviderIcon } from "./provider-icon";
+import { MobileTabSwitcher, type MobileTab } from "./mobile-tab-switcher";
 
 const EMPTY_NOTE_TABS: ReviewTabType[] = [];
 
@@ -68,6 +71,92 @@ export function WorkspaceTabs({
 }: WorkspaceTabsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sidebarCollapsed = useAppSelector((state) => state.appSettings.sidebarCollapsed);
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    const providerIcon =
+      variant === "claude" ? (
+        <Claude className="size-4 text-claude" />
+      ) : variant === "copilot" ? (
+        <CopilotStatic className="size-4" />
+      ) : variant === "cursor" ? (
+        <Cursor className="size-4" />
+      ) : (
+        <Codex className="size-4" />
+      );
+    const mobileTabs: MobileTab[] = [];
+    if (hasSelectedFile) {
+      mobileTabs.push({
+        id: "editor",
+        label: fileName || "Editor",
+        icon: <Document className="size-4" />,
+        group: "Editor",
+        onSelect: onSelectEditorTab,
+        onClose: onCloseEditorTab,
+      });
+    }
+    issueTabs.forEach((it) => {
+      const label =
+        it.issue.number != null
+          ? `#${it.issue.number} ${it.entity.title || ""}`
+          : it.entity.title || "Issue";
+      mobileTabs.push({
+        id: `issue:${it.issue.entityId}`,
+        label,
+        icon: <ProviderIcon provider={it.issue.provider} />,
+        group: "Issues",
+        onSelect: () => onSelectIssueTab(it.issue.entityId),
+        onClose: (e) => onCloseIssueTab(it.issue.entityId, e),
+      });
+    });
+    signalTabs.forEach((s) => {
+      mobileTabs.push({
+        id: `signal:${s.signal.entityId}`,
+        label: s.entity.title || "Signal",
+        icon: <ProviderIcon provider={s.signal.source} />,
+        group: "Signals",
+        onSelect: () => onSelectSignalTab?.(s.signal.entityId),
+        onClose: (e) => onCloseSignalTab?.(s.signal.entityId, e),
+      });
+    });
+    noteTabs.forEach((n) => {
+      mobileTabs.push({
+        id: `note:${n.id}`,
+        label: n.title,
+        icon: <Note className="size-4" />,
+        group: "Notes",
+        onSelect: () => onSelectNoteTab?.(n.id),
+        onClose: (e) => onCloseNoteTab?.(n.id, e),
+      });
+    });
+    runs.slice(0, 8).forEach((r) => {
+      mobileTabs.push({
+        id: r.id,
+        label: getTabTitle(r),
+        icon: providerIcon,
+        group: "Runs",
+        onSelect: () => onSelectRunTab(r.id),
+        onClose: () => onCloseTab(r.id),
+      });
+    });
+    if (showNewRunTab) {
+      mobileTabs.push({
+        id: "new-run",
+        label: "New Run",
+        icon: providerIcon,
+        group: "Runs",
+        onSelect: () => onSelectNewRunTab?.(),
+        onClose: (e) => onCloseNewRunTab?.(e),
+      });
+    }
+    return (
+      <MobileTabSwitcher
+        tabs={mobileTabs}
+        activeTab={activeTab}
+        onNewRun={onNewRun}
+      />
+    );
+  }
 
   return (
     <div className="flex items-end">

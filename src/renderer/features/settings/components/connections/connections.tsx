@@ -119,7 +119,7 @@ export default function ConnectionsSettings() {
           <Body className="font-medium mb-3">
             Connected
           </Body>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {connectedFiltered.map((connection) => (
               <ConnectionCard
                 key={connection.id}
@@ -138,7 +138,7 @@ export default function ConnectionsSettings() {
           <Body className="font-medium mb-3">
             Available
           </Body>
-          <div className="grid grid-cols-2 gap-6 pb-12">
+          <div className="grid grid-cols-1 gap-6 pb-12 md:grid-cols-2">
             {notConnectedFiltered.map((connection) => (
               <ConnectionCard
                 key={connection.id}

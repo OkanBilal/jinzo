@@ -13,9 +13,9 @@ import {
   SettingsRow,
   SettingsDivider,
 } from "./settings-layout";
-import { ThemePicker } from "./theme-picker";
+import { ThemePicker, ThemeSelect, type ThemeValue } from "./theme-picker";
 import { useAutoUpdate } from "@/hooks/use-auto-update";
-import { useCapabilities } from "@/lib/platform";
+import { useCapabilities, useIsMobile } from "@/lib/platform";
 import { Refresh } from "@/components/ui/icons";
 import { AsciiSpinner } from "@/components/ui/ascii-spinner";
 import {
@@ -175,7 +175,7 @@ function AgentsSection() {
   });
 
   return (
-    <div className="flex gap-3">
+    <div className="flex flex-col gap-3 md:flex-row">
       {AGENT_CHOICES.map(({ slug, label, Icon }) => {
         const space = spacesBySlug.get(slug);
         const isSelected = !!space && !space.isArchived;
@@ -214,6 +214,12 @@ export default function GeneralSettings() {
     install: installUpdate,
   } = useAutoUpdate();
   const caps = useCapabilities();
+  const isMobile = useIsMobile();
+
+  const handleThemeChange = (value: ThemeValue) => {
+    const labelMap = { light: "Light", system: "Auto", dark: "Dark" };
+    toast.success(`Theme changed to ${labelMap[value]}`);
+  };
 
   return (
     <SettingsPageShell title="General">
@@ -242,12 +248,11 @@ export default function GeneralSettings() {
           title="Theme"
           description="Choose your preferred color mode"
         >
-          <ThemePicker
-            onChange={(value) => {
-              const labelMap = { light: "Light", system: "Auto", dark: "Dark" };
-              toast.success(`Theme changed to ${labelMap[value]}`);
-            }}
-          />
+          {isMobile ? (
+            <ThemeSelect onChange={handleThemeChange} />
+          ) : (
+            <ThemePicker onChange={handleThemeChange} />
+          )}
         </SettingsRow>
       </SettingsSection>
 

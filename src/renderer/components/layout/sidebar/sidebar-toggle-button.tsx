@@ -21,8 +21,11 @@ export function SidebarToggleButton({ isOpen, onClick }: SidebarToggleButtonProp
 
   return (
     <div
-      className="fixed z-(--z-panel-toggle) top-2.75 flex items-center gap-2 transition-all duration-300 ease-out"
-      style={{ left: reserveTrafficLights ? "5.5rem" : "0.75rem" }}
+      className="fixed z-(--z-panel-toggle) flex items-center gap-2 transition-all duration-300 ease-out"
+      style={{
+        top: "calc(0.6875rem + env(safe-area-inset-top))",
+        left: reserveTrafficLights ? "5.5rem" : "0.75rem",
+      }}
     >
       {/* {isFullscreen  && (
         <Mains className="size-3.5 text-primary-500 dark:text-primary-500" />
@@ -31,7 +34,7 @@ export function SidebarToggleButton({ isOpen, onClick }: SidebarToggleButtonProp
         tooltip={isOpen ? "Close sidebar" : "Open sidebar"}
         tooltipPosition="right"
         onClick={onClick}
-        className="rounded-lg cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 p-1 text-primary-700 dark:text-primary-500 transition-all duration-300 ease-out"
+        className="rounded-lg cursor-pointer hover:bg-primary-100/80 dark:hover:bg-primary/10 px-1 py-1.5 text-primary-700 dark:text-primary-500 transition-all duration-300 ease-out"
         aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
       >
         {isOpen ? (

@@ -72,6 +72,22 @@ describe("ws-protocol", () => {
     expect(decoded.result.data.nested[0]).toBeInstanceOf(Date);
   });
 
+  it("preserves undefined invoke args (so optional-arg defaults still fire, unlike raw JSON→null)", () => {
+    const decoded = decodeWsMessage(
+      encodeWsMessage({
+        kind: "invoke",
+        id: 3,
+        channel: "workspace:listActivity",
+        args: ["ws-1", undefined],
+      }),
+    ) as { args: unknown[] };
+    expect(decoded.args[0]).toBe("ws-1");
+    expect(decoded.args[1]).toBeUndefined();
+    // Raw JSON.stringify would have coerced the undefined element to null,
+    // which skips the backend parameter default (e.g. `.limit(limit ?? 50)`).
+    expect(decoded.args[1]).not.toBeNull();
+  });
+
   it("does not revive a plain object that merely has a $date-like field among others", () => {
     const decoded = decodeWsMessage(
       encodeWsMessage({

@@ -4,6 +4,7 @@ import DropdownWrapper from "../dropdown-wrapper";
 import { Button } from "../button";
 import Tooltip from "../tooltip";
 import { Body, Caption } from "../text";
+import { useIsMobile } from "@/lib/platform";
 import {
   CURSOR_MODES as CURSOR_MODE_DEFS,
   CODEX_SANDBOX_MODES as CODEX_SANDBOX_MODE_DEFS,
@@ -160,6 +161,7 @@ export function PermissionModeDropdown({
         : PERMISSION_MODE_LABELS);
   const showPlanSuffix = showPlanRow && planMode && !planDisabled;
   const isBypass = isBypassPermissionMode(permissionMode);
+  const isMobile = useIsMobile();
   const triggerIconClass = isBypass ? BYPASS_TRIGGER.icon : "";
   const triggerChevronClass = isBypass
     ? BYPASS_TRIGGER.chevron
@@ -176,10 +178,12 @@ export function PermissionModeDropdown({
           mode={permissionMode}
           className={`size-3.5 ${triggerIconClass}`}
         />
-        <span className={isBypass ? BYPASS_TRIGGER.trigger : ""}>
-          {modeLabels[permissionMode] ?? permissionMode}
-          {showPlanSuffix ? " + Plan" : ""}
-        </span>
+        {!isMobile && (
+          <span className={isBypass ? BYPASS_TRIGGER.trigger : ""}>
+            {modeLabels[permissionMode] ?? permissionMode}
+            {showPlanSuffix ? " + Plan" : ""}
+          </span>
+        )}
         <ArrowUp
           className={`size-3.5 rotate-180 ${triggerChevronClass}`}
         />
@@ -187,7 +191,7 @@ export function PermissionModeDropdown({
       <DropdownWrapper
         isOpen={isOpen}
         openUpward={true}
-        minWidth="min-w-64"
+        minWidth={!isMobile ? "min-w-64" : "min-w-52"}
       >
         {modes.map((mode) => (
           <Button

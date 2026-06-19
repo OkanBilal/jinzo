@@ -83,10 +83,16 @@ export function parseProtocolHeader(header: string | undefined): string[] {
 // in args / result / payload. (Binary file reads cross the boundary as strings,
 // so Buffer/Uint8Array handling is intentionally omitted.)
 const DATE_TAG = "$date";
+// JSON.stringify turns `undefined` array elements into `null`, so an optional
+// trailing IPC arg passed as `undefined` would arrive as `null` on the backend
+// and skip its parameter default (which only fires for `undefined`). Electron's
+// structured clone preserves `undefined`; tag it so WS behaves the same.
+const UNDEFINED_TAG = "$undefined";
 
 function dateReplacer(this: Record<string, unknown>, key: string, value: unknown): unknown {
   // `this[key]` is the original value before Date.prototype.toJSON ran on `value`.
   const raw = this[key];
+  if (raw === undefined) return { [UNDEFINED_TAG]: true };
   if (raw instanceof Date) return { [DATE_TAG]: raw.toISOString() };
   return value;
 }
@@ -97,6 +103,9 @@ function dateReviver(_key: string, value: unknown): unknown {
     const keys = Object.keys(obj);
     if (keys.length === 1 && keys[0] === DATE_TAG && typeof obj[DATE_TAG] === "string") {
       return new Date(obj[DATE_TAG] as string);
+    }
+    if (keys.length === 1 && keys[0] === UNDEFINED_TAG && obj[UNDEFINED_TAG] === true) {
+      return undefined;
     }
   }
   return value;
