@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { toast, type UploadedFile } from "@/components/ui";
-import { useSelector, useDispatch } from "react-redux";
+import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks";
 import {
   setWorkspaceModel,
   setActiveTab,
@@ -24,7 +24,6 @@ import {
   clearPendingReviewTarget,
 } from "@/lib/redux/slices/workspaceSlice";
 import { isRunTab, isNewRunTab } from "@/features/workspace/utils/repo-utils";
-import type { RootState } from "@/lib/redux";
 import { useWorkspaceData } from "./use-workspace-data";
 import { useWorkspaceRuns } from "./use-workspace-runs";
 import { useFileContentLoader } from "./use-file-content-loader";
@@ -32,50 +31,50 @@ import { useTabHandlers } from "./use-tab-handlers";
 import { serializeAttachments } from "@/features/workspace/utils/run-helpers";
 
 export function useWorkspacePage(providerId: string) {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
-  const selectedModel = useSelector(
-    (state: RootState) =>
+  const selectedModel = useAppSelector(
+    (state) =>
       state.workspace.selectedModelByProvider[providerId] || "",
   );
-  const activeTab = useSelector(
-    (state: RootState) => state.workspace.activeTab,
+  const activeTab = useAppSelector(
+    (state) => state.workspace.activeTab,
   );
-  const selectedFile = useSelector(
-    (state: RootState) => state.workspace.selectedFile,
+  const selectedFile = useAppSelector(
+    (state) => state.workspace.selectedFile,
   );
-  const contextFiles = useSelector(
-    (state: RootState) => state.workspace.contextFiles,
+  const contextFiles = useAppSelector(
+    (state) => state.workspace.contextFiles,
   );
-  const contextIssues = useSelector(
-    (state: RootState) => state.workspace.contextIssues,
+  const contextIssues = useAppSelector(
+    (state) => state.workspace.contextIssues,
   );
-  const contextSignals = useSelector(
-    (state: RootState) => state.workspace.contextSignals,
+  const contextSignals = useAppSelector(
+    (state) => state.workspace.contextSignals,
   );
-  const contextSkills = useSelector(
-    (state: RootState) => state.workspace.contextSkills,
+  const contextSkills = useAppSelector(
+    (state) => state.workspace.contextSkills,
   );
-  const contextBrowserSelections = useSelector(
-    (state: RootState) => state.workspace.contextBrowserSelections,
+  const contextBrowserSelections = useAppSelector(
+    (state) => state.workspace.contextBrowserSelections,
   );
-  const openIssueTabs = useSelector(
-    (state: RootState) => state.workspace.openIssueTabs,
+  const openIssueTabs = useAppSelector(
+    (state) => state.workspace.openIssueTabs,
   );
-  const openSignalTabs = useSelector(
-    (state: RootState) => state.workspace.openSignalTabs,
+  const openSignalTabs = useAppSelector(
+    (state) => state.workspace.openSignalTabs,
   );
-  const openNoteTabs = useSelector(
-    (state: RootState) => state.workspace.openNoteTabs,
+  const openNoteTabs = useAppSelector(
+    (state) => state.workspace.openNoteTabs,
   );
-  const pendingGoal = useSelector(
-    (state: RootState) => state.workspace.pendingGoal,
+  const pendingGoal = useAppSelector(
+    (state) => state.workspace.pendingGoal,
   );
-  const pendingAutoExecute = useSelector(
-    (state: RootState) => state.workspace.pendingAutoExecute,
+  const pendingAutoExecute = useAppSelector(
+    (state) => state.workspace.pendingAutoExecute,
   );
-  const pendingReviewTarget = useSelector(
-    (state: RootState) => state.workspace.pendingReviewTarget,
+  const pendingReviewTarget = useAppSelector(
+    (state) => state.workspace.pendingReviewTarget,
   );
 
   const [goal, setGoal] = useState("");

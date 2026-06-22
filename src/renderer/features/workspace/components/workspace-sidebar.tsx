@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { FileExplorer } from "@/features/workspace/components/file-explorer";
 import type { FileNode } from "@/features/workspace/types/file-explorer";
 import {
@@ -19,7 +19,6 @@ import {
 } from "@/lib/redux/slices/workspaceSlice";
 import { setRightPanelOpen } from "@/lib/redux/slices/appSettingsSlice";
 import { useIsMobile } from "@/lib/platform";
-import type { RootState } from "@/lib/redux";
 import { FolderIcon } from "@/components/ui/icons/file-icons";
 import { TrackerSection } from "@/features/workspace/components/tracker-section";
 
@@ -35,13 +34,13 @@ import { ActivitySection } from "./activity-section";
 type SidebarTab = "files" | "changes" | "reviews";
 
 export function WorkspaceSidebar() {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   // On mobile the panel is a full-screen overlay; opening a file/issue/signal
   // closes it so the resulting tab (in the main area) is visible.
   const isMobile = useIsMobile();
   const { activeSpaceId } = useActiveSpace();
-  const workspaceId = useSelector(
-    (state: RootState) => state.workspace.activeWorkspaceId,
+  const workspaceId = useAppSelector(
+    (state) => state.workspace.activeWorkspaceId,
   );
 
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
@@ -154,8 +153,8 @@ export function WorkspaceSidebar() {
     [dispatch, isMobile],
   );
 
-  const activeTab = useSelector(
-    (state: RootState) => state.workspace.activeTab,
+  const activeTab = useAppSelector(
+    (state) => state.workspace.activeTab,
   );
   const activeIssueEntityId = isIssueTab(activeTab)
     ? getIssueEntityId(activeTab)

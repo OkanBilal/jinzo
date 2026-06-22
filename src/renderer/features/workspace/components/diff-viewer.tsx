@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { useDispatch } from "react-redux";
+import { useAppDispatch } from "@/lib/redux/hooks";
 import { PatchDiff, type DiffLineAnnotation } from "@pierre/diffs/react";
 import {
   useListReviewFindingsByWorkspaceQuery,
@@ -191,7 +191,7 @@ export function DiffViewer({
   filePath,
 }: DiffViewerProps) {
   const isDarkMode = document.documentElement.classList.contains("dark");
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const [updateFinding] = useUpdateReviewFindingMutation();
 
   const { data: allFindings } = useListReviewFindingsByWorkspaceQuery(

@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { appApi } from "@/lib/transport";
-import { useDispatch } from "react-redux";
+import { useAppDispatch } from "@/lib/redux/hooks";
 import NumberFlow from "@number-flow/react";
 import {
   useGetLatestWorkspaceDiffQuery,
@@ -43,7 +43,7 @@ export function DiffSummaryBar({
   isRunning,
   lastCompletedRunId,
 }: DiffSummaryBarProps) {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isUndoing, setIsUndoing] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);

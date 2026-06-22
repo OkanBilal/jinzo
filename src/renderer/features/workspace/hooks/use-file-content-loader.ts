@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { appApi } from "@/lib/transport";
-import { useDispatch } from "react-redux";
+import { useAppDispatch } from "@/lib/redux/hooks";
 import {
   setSelectedFileContent,
   setFileContentLoading,
@@ -22,7 +22,7 @@ export function useFileContentLoader(
   selectedFile: SelectedFile | null,
   rootPath: string | undefined,
 ) {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     if (

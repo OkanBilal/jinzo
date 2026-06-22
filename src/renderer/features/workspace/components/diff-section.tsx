@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { appApi } from "@/lib/transport";
-import { useDispatch } from "react-redux";
+import { useAppDispatch } from "@/lib/redux/hooks";
 import {
   useGetLatestWorkspaceDiffQuery,
   useListReviewFindingsByWorkspaceQuery,
@@ -78,7 +78,7 @@ export function DiffSection({
   workspaceId,
   onSelectDiffFile,
 }: DiffSectionProps) {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const routeType = useRouteType();
   const [selectedDiffFile, setSelectedDiffFile] = useState<string | null>(null);
 

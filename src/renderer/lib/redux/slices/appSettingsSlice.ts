@@ -19,8 +19,6 @@ export interface AppSettingsState {
   rightPanelOpen: boolean;
   browserPanelOpen: boolean;
   onboardingCompleted: boolean;
-  showSuggestions: boolean;
-  /** Sidebar width in pixels. Mirrored onto `--sidebar-width`. */
   sidebarWidth: number;
   /** Right panel width in pixels. Mirrored onto `--panel-width`. */
   rightPanelWidth: number;
@@ -39,7 +37,6 @@ const initialState: AppSettingsState = {
   rightPanelOpen: false,
   browserPanelOpen: false,
   onboardingCompleted: false,
-  showSuggestions: false,
   sidebarWidth: SIDEBAR_WIDTH_DEFAULT,
   rightPanelWidth: PANEL_WIDTH_DEFAULT,
   browserPanelWidth: BROWSER_PANEL_WIDTH_DEFAULT,
@@ -63,9 +60,6 @@ const appSettingsSlice = createSlice({
     },
     setOnboardingCompleted: (state, action: PayloadAction<boolean>) => {
       state.onboardingCompleted = action.payload;
-    },
-    setShowSuggestions: (state, action: PayloadAction<boolean>) => {
-      state.showSuggestions = action.payload;
     },
     setSidebarWidth: (state, action: PayloadAction<number>) => {
       state.sidebarWidth = action.payload;
@@ -96,7 +90,6 @@ export const {
   setBrowserPanelOpen,
   setRightPanelOpen,
   setOnboardingCompleted,
-  setShowSuggestions,
   setSidebarWidth,
   setRightPanelWidth,
   setBrowserPanelWidth,

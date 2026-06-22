@@ -1,10 +1,9 @@
 import { useEffect, useReducer, useRef, useState } from "react";
-import { useDispatch } from "react-redux";
 import { Button } from "@/components/ui";
 import { Close, Document } from "@/components/ui/icons";
 import { DOC_TYPE_ICONS } from "./document-viewer/doc-type-icons";
 import { useDocumentViewer } from "@/hooks/use-document-viewer";
-import { useAppSelector } from "@/lib/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { setDocumentViewerPanelWidth } from "@/lib/redux/slices/appSettingsSlice";
 import { setLayoutWidthVar } from "@/hooks/use-layout-width-vars";
 import { ResizeHandle } from "@/components/layout/resize-handle";
@@ -26,7 +25,7 @@ const ZOOM_STEP = 0.1;
 
 export function DocumentViewerPanel() {
   const { isOpen, currentDoc, close } = useDocumentViewer();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const documentViewerWidth = useAppSelector((s) => s.appSettings.documentViewerWidth);
   const [zoom, setZoom] = useState(1);
 

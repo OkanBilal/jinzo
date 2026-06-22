@@ -1,20 +1,19 @@
 import { useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useAppSelector } from "@/lib/redux/hooks";
 import {
   useListWorkspacesQuery,
   useGetWorkspaceQuery,
 } from "@/lib/redux/api/workspaceApi";
 import { useGetProvidersByKindQuery } from "@/lib/redux/api/providersApi";
-import type { RootState } from "@/lib/redux";
 
 const EMPTY_PROVIDERS: never[] = [];
 
 export function useWorkspaceData(providerId?: string) {
   const { workspaceId } = useParams<{ workspaceId?: string }>();
 
-  const savedWorkspaceIdByProvider = useSelector(
-    (state: RootState) => state.workspace.activeWorkspaceIdByProvider,
+  const savedWorkspaceIdByProvider = useAppSelector(
+    (state) => state.workspace.activeWorkspaceIdByProvider,
   );
 
   const [userSelectedProvider, setSelectedProvider] =

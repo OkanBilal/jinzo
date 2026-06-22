@@ -1,5 +1,5 @@
 import { useReducer, useRef, useEffect, useCallback, useState, useMemo } from "react";
-import { useDispatch } from "react-redux";
+import { useAppDispatch } from "@/lib/redux/hooks";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
 import type { FileNode } from "@/features/workspace/types/file-explorer";
@@ -145,7 +145,7 @@ export function WorkspaceInput({
   const unifiedContextDropdownRef = useRef<HTMLDivElement>(null);
   const issueMentionDropdownRef = useRef<HTMLDivElement>(null);
   const skillMentionDropdownRef = useRef<HTMLDivElement>(null);
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   const variant = useWorkspaceVariant();
   const providerVariant: "claude" | "copilot" | "codex" | "cursor" =
