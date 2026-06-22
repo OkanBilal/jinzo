@@ -1,6 +1,3 @@
-import { app } from "electron";
-import path from "node:path";
-import { existsSync } from "node:fs";
 import { initializeDatabase } from "./db/client";
 import { startWsHost, type WsHost } from "./ipc-kit/ws-server-host";
 import { generateToken, isLoopbackHost } from "./ipc-kit/ws-auth";
@@ -38,6 +35,8 @@ import {
   serveLocalImage,
   serveLocalDocument,
 } from "./modules/imageProxy";
+import { tailscaleService } from "./modules/tailscale";
+import { resolveWebRoot } from "./web-root";
 
 export interface ServeOptions {
   /** Port to listen on. Default 8787. */
@@ -55,6 +54,15 @@ export interface ServeOptions {
    * `.vite/renderer`; web serving is skipped if it doesn't exist.
    */
   webRoot?: string | null;
+  /**
+   * Expose the backend over the tailnet's HTTPS endpoint via `tailscale serve`
+   * (auto TLS, no port-forward). The backend still binds loopback; Tailscale
+   * proxies tailnet → 127.0.0.1. Implies a pairing token (tailnet peers can reach
+   * it). Requires the `tailscale` CLI installed + logged in + HTTPS enabled.
+   */
+  tailscaleServe?: boolean;
+  /** HTTPS port for `tailscale serve`. Default 443. */
+  tailscaleServePort?: number;
 }
 
 const DEFAULT_PORT = 8787;
@@ -113,7 +121,9 @@ export async function startBackendServer(
 
   const host = options.host ?? DEFAULT_HOST;
   let token = options.token ?? process.env.MAINS_SERVE_TOKEN ?? null;
-  if (!token && !isLoopbackHost(host)) {
+  // Generate a token for any exposure beyond pure loopback: a non-loopback bind,
+  // or `tailscale serve` (which proxies the loopback port to tailnet peers).
+  if (!token && (!isLoopbackHost(host) || options.tailscaleServe)) {
     token = generateToken();
   }
 
@@ -143,25 +153,35 @@ export async function startBackendServer(
       "[serve] web UI disabled — no renderer build found. Run `npm run build:web` first.",
     );
   }
-  return wsHost;
-}
 
-/**
- * Locate the built renderer. In dev, `app.getAppPath()` points at `.vite/build`
- * (the bundled main), not the project root, so try `process.cwd()` first.
- */
-function resolveWebRoot(explicit?: string | null): string | null {
-  const candidates = explicit
-    ? [explicit]
-    : [
-        // `npm run build:web` output — a dedicated dir forge's `.vite` cleaning
-        // never touches, so it survives `npm run serve`.
-        path.join(process.cwd(), "dist-web"),
-        path.join(app.getAppPath(), "dist-web"),
-        path.join(process.cwd(), ".vite", "renderer"),
-        path.join(app.getAppPath(), ".vite", "renderer"),
-      ];
-  return (
-    candidates.find((dir) => existsSync(path.join(dir, "index.html"))) ?? null
-  );
+  if (options.tailscaleServe) {
+    const httpsPort = options.tailscaleServePort ?? 443;
+    try {
+      await tailscaleService.startServe(wsHost.port, httpsPort);
+      const status = await tailscaleService.readStatus();
+      if (status.magicDnsName) {
+        const httpsUrl = tailscaleService.resolveHttpsUrl(
+          status.magicDnsName,
+          httpsPort,
+        );
+        const q = token ? `?token=${token}` : "";
+        console.log(`[serve] Tailscale HTTPS web UI: ${httpsUrl}/${q}`);
+        console.log(
+          `[serve] Tailscale connect (WS): ${httpsUrl.replace(/^https:/, "wss:")}`,
+        );
+      } else {
+        console.log(
+          "[serve] Tailscale serve started, but no MagicDNS name found (is Tailscale up / HTTPS enabled?).",
+        );
+      }
+    } catch (error) {
+      console.error(
+        `[serve] Tailscale serve failed: ${
+          error instanceof Error ? error.message : error
+        }. Is the \`tailscale\` CLI installed, logged in, and HTTPS enabled for the tailnet?`,
+      );
+    }
+  }
+
+  return wsHost;
 }

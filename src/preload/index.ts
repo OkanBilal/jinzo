@@ -142,6 +142,20 @@ const api = {
     deleteToken: (id: string) =>
       ipcRenderer.invoke(CHANNELS.backendAuth.deleteToken, id),
   },
+  // Expose THIS desktop app as a backend (network / SSH / tailnet) — local-only control
+  localBackend: {
+    getStatus: () => ipcRenderer.invoke(CHANNELS.localBackend.getStatus),
+    setRemoteAccess: (enabled: boolean, port?: number) =>
+      ipcRenderer.invoke(CHANNELS.localBackend.setRemoteAccess, enabled, port),
+    setLanAccess: (enabled: boolean) =>
+      ipcRenderer.invoke(CHANNELS.localBackend.setLanAccess, enabled),
+    setTailscaleHttps: (enabled: boolean, httpsPort?: number) =>
+      ipcRenderer.invoke(
+        CHANNELS.localBackend.setTailscaleHttps,
+        enabled,
+        httpsPort,
+      ),
+  },
   // Projects operations (incl. project_resources + linked-issue queries)
   projects: {
     // ── lifecycle ──

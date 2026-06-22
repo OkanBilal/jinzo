@@ -7,7 +7,7 @@ import {
   CopilotStatic,
   Cursor,
   General,
-  Web,
+  Relay,
 } from "@/components/ui/icons";
 import { Claude } from "@/components/ui/icons/space";
 import GeneralSettings from "./components/general";
@@ -72,7 +72,8 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { id: "general", label: "General", icon: General, showInNav: true, Component: GeneralSettings },
   { id: "git", label: "Git", icon: Branch, showInNav: true, Component: GitSettings },
   { id: "connections", label: "Connections", icon: Connect, showInNav: true, Component: ConnectionsSettings },
-  { id: "backends", label: "Remote Backends", icon: Web, showInNav: true, Component: BackendsSettings },
+  // Hidden from the Settings nav — surfaced as the top-level "Relay" route instead.
+  { id: "backends", label: "Relay", icon: Relay, Component: BackendsSettings },
   { id: "dashboard", label: "Dashboard", icon: Chart, showInNav: true, Component: DashboardPage },
 
   { id: "claude", label: "Claude", icon: Claude, Component: ClaudeSettings },

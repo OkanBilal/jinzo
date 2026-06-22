@@ -110,6 +110,12 @@ import {
   browserService,
 } from "./modules/browser";
 import { registerSshIpc, unregisterSshIpc, sshService } from "./modules/ssh";
+import { tailscaleService } from "./modules/tailscale";
+import {
+  registerLocalBackendIpc,
+  unregisterLocalBackendIpc,
+  localBackendService,
+} from "./modules/localBackend";
 import {
   registerBackendAuthIpc,
   unregisterBackendAuthIpc,
@@ -540,6 +546,8 @@ function parseServeOptions(): {
   host?: string;
   token?: string;
   webRoot?: string;
+  tailscaleServe?: boolean;
+  tailscaleServePort?: number;
 } {
   const argv = process.argv;
   const serve = argv.includes("--serve") || process.env.MAINS_SERVE === "1";
@@ -550,12 +558,21 @@ function parseServeOptions(): {
   };
   const portRaw = readArg("--port=") ?? process.env.MAINS_SERVE_PORT;
   const port = portRaw !== undefined ? Number(portRaw) : undefined;
+  const tsPortRaw =
+    readArg("--tailscale-serve-port=") ??
+    process.env.MAINS_TAILSCALE_SERVE_PORT;
+  const tsPort = tsPortRaw !== undefined ? Number(tsPortRaw) : undefined;
   return {
     serve: true,
     port: port !== undefined && Number.isFinite(port) ? port : undefined,
     host: readArg("--host=") ?? process.env.MAINS_SERVE_HOST,
     token: readArg("--token=") ?? process.env.MAINS_SERVE_TOKEN,
     webRoot: readArg("--web-root=") ?? process.env.MAINS_SERVE_WEB_ROOT,
+    tailscaleServe:
+      argv.includes("--tailscale-serve") ||
+      process.env.MAINS_TAILSCALE_SERVE === "1",
+    tailscaleServePort:
+      tsPort !== undefined && Number.isFinite(tsPort) ? tsPort : undefined,
   };
 }
 
@@ -580,6 +597,8 @@ async function initializeApp() {
         host: SERVE.host,
         token: SERVE.token,
         webRoot: SERVE.webRoot,
+        tailscaleServe: SERVE.tailscaleServe,
+        tailscaleServePort: SERVE.tailscaleServePort,
       });
       console.log("Running in headless --serve mode (no window).");
       return;
@@ -626,6 +645,9 @@ async function initializeApp() {
     registerBrowserIpc();
     registerSshIpc();
     registerBackendAuthIpc();
+    registerLocalBackendIpc();
+    // Re-apply any persisted "This machine" exposure (survives app restarts).
+    void localBackendService.restore();
     automationsService.start();
     pulseService.start();
 
@@ -898,6 +920,11 @@ async function cleanupApp() {
     // Tear down any open SSH tunnels
     sshService.closeAllTunnels();
 
+    // Tear down the in-app exposure (WS host + tailscale serve), if any
+    await localBackendService.shutdown();
+    // Stop `tailscale serve` if this process started it (no-op otherwise)
+    await tailscaleService.stopServeIfActive();
+
     // Shutdown work adapters (Copilot, Claude Code, etc.)
     await shutdownAllWorkAdapters();
 
@@ -934,6 +961,7 @@ async function cleanupApp() {
     unregisterBrowserIpc();
     unregisterSshIpc();
     unregisterBackendAuthIpc();
+    unregisterLocalBackendIpc();
     ipcMain.removeHandler(CHANNELS.shell.openExternal);
     ipcMain.removeHandler(CHANNELS.shell.openPath);
     ipcMain.removeHandler(CHANNELS.shell.showItemInFolder);

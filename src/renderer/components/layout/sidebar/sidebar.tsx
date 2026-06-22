@@ -22,6 +22,7 @@ import {
   Project,
   Sun,
   External,
+  Relay,
 } from "@/components/ui/icons";
 import CloneRepoModal from "./clone-repo-modal";
 import CreateProjectModal from "./create-project-modal";
@@ -162,9 +163,9 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     location.pathname.startsWith("/plugins/");
   const isPulseRoute =
     location.pathname === "/pulse" || location.pathname.startsWith("/pulse/");
-  // const isRelayRoute =
-  //   location.pathname === "/relay" ||
-  //   location.pathname.startsWith("/relay/");
+  const isRelayRoute =
+    location.pathname === "/relay" ||
+    location.pathname.startsWith("/relay/");
   /** From `app_settings.active_space_id` → `spaces.slug` (not current route). */
   const pluginsUseClaudeExternalUrl = activeSpaceAgentSlug === "claude";
   const isPluginsDisabledForAgent =
@@ -288,7 +289,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 </Body>
               </Button>
             </div>
-            <div className="px-3 mb-2">
+            <div className="px-3 mb-0.25">
               {isPluginsDisabledForAgent ? (
                 <Tooltip
                   content="Not available for this agent yet."
@@ -375,7 +376,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               )}
             </div>
 
-            {/* <div className="px-3 mb-2">
+            <div className="px-3 mb-2">
               <Button
                 variant="subtle"
                 tooltip="Relay"
@@ -388,7 +389,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 onClick={() => navigate("/relay")}
                 aria-current={isRelayRoute ? "page" : undefined}
               >
-                <RelayIcon
+                <Relay
                   className={`w-4 h-4 -ml-1 shrink-0 ${
                     isRelayRoute
                       ? "text-primary-950 dark:text-primary"
@@ -405,7 +406,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   Relay
                 </Body>
                 <span
-                  className={`shrink-0 text-[10px] uppercase px-1.5 py-px rounded-md ${
+                  className={`shrink-0 text-[10px] -mr-1 uppercase px-1.5 py-px rounded-md ${
                     isRelayRoute
                       ? "bg-primary-400/20 text-primary-800 dark:bg-primary/5 dark:text-primary"
                       : "bg-primary-400/20 text-primary-600 dark:bg-primary/5 dark:text-primary-200"
@@ -414,7 +415,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   Beta
                 </span>
               </Button>
-            </div> */}
+            </div>
             <SidebarContent
               workspaces={workspaces}
               isLoadingWorkspaces={isLoadingWorkspaces}

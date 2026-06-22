@@ -73,6 +73,17 @@ export const appSettings = sqliteTable("app_settings", {
     .notNull()
     .default(true),
 
+  // "This machine" backend exposure — persisted so it survives an app restart.
+  backendRemoteAccess: integer("backend_remote_access", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  backendLanAccess: integer("backend_lan_access", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  backendTailscaleHttps: integer("backend_tailscale_https", { mode: "boolean" })
+    .notNull()
+    .default(false),
+
   commitInstructions: text("commit_instructions").notNull().default(""),
   prInstructions: text("pr_instructions").notNull().default(""),
 

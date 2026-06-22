@@ -131,6 +131,12 @@ export const CHANNELS = {
     getToken: "backendAuth:getToken",
     deleteToken: "backendAuth:deleteToken",
   },
+  localBackend: {
+    getStatus: "localBackend:getStatus",
+    setRemoteAccess: "localBackend:setRemoteAccess",
+    setLanAccess: "localBackend:setLanAccess",
+    setTailscaleHttps: "localBackend:setTailscaleHttps",
+  },
   imageProxy: {
     sign: "imageProxy:sign",
   },

@@ -17,6 +17,9 @@ export type AppSettingsPatch = Partial<{
   notifyOnRunComplete: boolean;
   notifyOnToolApproval: boolean;
   showMenuBarIcon: boolean;
+  backendRemoteAccess: boolean;
+  backendLanAccess: boolean;
+  backendTailscaleHttps: boolean;
   commitInstructions: string;
   prInstructions: string;
 }>;

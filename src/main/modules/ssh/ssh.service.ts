@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from "child_process";
-import { createServer, connect as netConnect } from "net";
+import { createServer } from "net";
+import { request as httpRequest } from "http";
 import { readFile } from "fs/promises";
 import { homedir } from "os";
 import path from "path";
@@ -126,6 +127,50 @@ export function buildSshArgs(input: {
   return args;
 }
 
+/**
+ * Hosts seen in ~/.ssh/known_hosts (so the picker isn't limited to aliases in
+ * the config). Hashed entries (`|1|…`, from HashKnownHosts) can't be reversed,
+ * so they're skipped. Pure + best-effort.
+ */
+export function parseKnownHosts(text: string): string[] {
+  const hosts = new Set<string>();
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#") || line.startsWith("|")) continue;
+    const first = line.split(/\s+/)[0];
+    if (!first) continue;
+    for (const entry of first.split(",")) {
+      let h = entry.trim();
+      const bracket = h.match(/^\[(.+)\]:\d+$/); // [host]:port
+      if (bracket) h = bracket[1];
+      else h = h.replace(/:\d+$/, "");
+      if (h && !h.includes("*") && !h.includes("?")) hosts.add(h);
+    }
+  }
+  return [...hosts];
+}
+
+// `ssh host "<cmd>"` runs a NON-interactive, non-login shell where node version
+// managers (volta/nvm/mise/fnm/asdf) aren't sourced — so `npm`/`node` are often
+// missing and a bare `npm run serve` fails. Source them so the launch Just Works.
+const NODE_LAUNCH_PREAMBLE = [
+  `export PATH="$HOME/.local/bin:$HOME/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"`,
+  `[ -d "$HOME/.volta/bin" ] && export PATH="$HOME/.volta/bin:$PATH"`,
+  `[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" >/dev/null 2>&1`,
+  `command -v fnm >/dev/null 2>&1 && eval "$(fnm env 2>/dev/null)" >/dev/null 2>&1`,
+  `command -v mise >/dev/null 2>&1 && eval "$(mise activate bash 2>/dev/null)" >/dev/null 2>&1`,
+  `[ -s "$HOME/.asdf/asdf.sh" ] && . "$HOME/.asdf/asdf.sh" >/dev/null 2>&1`,
+].join("\n");
+
+/**
+ * Wrap a user-provided launch command with the node-discovery preamble and the
+ * ephemeral pairing token, so the remote `mains serve` starts even from a bare
+ * non-interactive SSH shell. Pure + testable.
+ */
+export function wrapRemoteLaunch(userCommand: string, token: string): string {
+  return `${NODE_LAUNCH_PREAMBLE}\nexport MAINS_SERVE_TOKEN='${token}'\n${userCommand.trim()}`;
+}
+
 function getFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const server = createServer();
@@ -139,8 +184,13 @@ function getFreePort(): Promise<number> {
   });
 }
 
-/** Resolve once the local forwarded port accepts a connection, else reject. */
-function waitForLocalPort(
+/**
+ * Resolve once the backend actually responds with HTTP through the tunnel — any
+ * status (even 426/401) means it's up — not merely once the SSH forward is
+ * listening. Catches the just-launched-but-not-yet-ready window. Rejects if ssh
+ * exits or the backend never responds before the timeout.
+ */
+function probeHttpReady(
   port: number,
   child: ChildProcess,
   timeoutMs: number,
@@ -156,28 +206,37 @@ function waitForLocalPort(
   });
 
   return new Promise<void>((resolve, reject) => {
+    const retry = () => {
+      if (Date.now() > deadline) {
+        reject(
+          new Error(
+            `backend not ready after ${Math.round(timeoutMs / 1000)}s${
+              stderr.trim() ? `: ${stderr.trim()}` : ""
+            }`,
+          ),
+        );
+      } else {
+        setTimeout(attempt, 500);
+      }
+    };
     const attempt = () => {
       if (exited) {
         reject(new Error(`ssh exited: ${stderr.trim() || "unknown error"}`));
         return;
       }
-      const socket = netConnect({ port, host: "127.0.0.1" });
-      socket.once("connect", () => {
-        socket.destroy();
-        resolve();
+      const req = httpRequest(
+        { host: "127.0.0.1", port, path: "/", method: "GET", timeout: 3000 },
+        (res) => {
+          res.resume(); // drain; any HTTP response means the backend is up
+          resolve();
+        },
+      );
+      req.on("error", retry);
+      req.on("timeout", () => {
+        req.destroy();
+        retry();
       });
-      socket.once("error", () => {
-        socket.destroy();
-        if (Date.now() > deadline) {
-          reject(
-            new Error(
-              `tunnel not ready after ${timeoutMs}ms${stderr.trim() ? `: ${stderr.trim()}` : ""}`,
-            ),
-          );
-        } else {
-          setTimeout(attempt, 300);
-        }
-      });
+      req.end();
     };
     attempt();
   });
@@ -187,12 +246,20 @@ const tunnels = new Map<string, ChildProcess>();
 let tunnelCounter = 0;
 
 export const sshService = {
-  /** List concrete hosts from ~/.ssh/config (best-effort; empty if none). */
+  /** Hosts from ~/.ssh/config + ~/.ssh/known_hosts (best-effort; deduped). */
   async discoverHosts(): Promise<ServiceResponse<SshHost[]>> {
     try {
-      const configPath = path.join(homedir(), ".ssh", "config");
-      const text = await readFile(configPath, "utf-8").catch(() => "");
-      return ok(parseSshConfig(text));
+      const sshDir = path.join(homedir(), ".ssh");
+      const [configText, knownText] = await Promise.all([
+        readFile(path.join(sshDir, "config"), "utf-8").catch(() => ""),
+        readFile(path.join(sshDir, "known_hosts"), "utf-8").catch(() => ""),
+      ]);
+      const configHosts = parseSshConfig(configText);
+      const seen = new Set(configHosts.map((h) => h.alias));
+      const knownHosts: SshHost[] = parseKnownHosts(knownText)
+        .filter((h) => !seen.has(h))
+        .map((h) => ({ alias: h, hostName: h, user: null, port: null }));
+      return ok([...configHosts, ...knownHosts]);
     } catch (error) {
       return fail(
         error instanceof Error ? error.message : "Failed to read SSH config",
@@ -215,13 +282,15 @@ export const sshService = {
       const localPort = await getFreePort();
 
       // When we launch the backend ourselves, generate an ephemeral token and
-      // hand it to the remote serve via the environment, then present the same
+      // hand it to the remote serve via the environment (plus a node-discovery
+      // preamble so npm is found in the bare SSH shell), then present the same
       // token on the (tunneled) WS connection. Nothing is persisted.
+      const userCommand = input.remoteCommand?.trim() || undefined;
       let token: string | undefined;
-      let remoteCommand = input.remoteCommand?.trim() || undefined;
-      if (remoteCommand) {
+      let remoteCommand = userCommand;
+      if (userCommand) {
         token = generateToken();
-        remoteCommand = `export MAINS_SERVE_TOKEN=${token}; ${remoteCommand}`;
+        remoteCommand = wrapRemoteLaunch(userCommand, token);
       }
 
       const args = buildSshArgs({
@@ -235,7 +304,9 @@ export const sshService = {
       tunnels.set(id, child);
       child.on("exit", () => tunnels.delete(id));
 
-      await waitForLocalPort(localPort, child, 15_000);
+      // Launching the backend (Electron boot) takes longer than attaching to one
+      // that's already running.
+      await probeHttpReady(localPort, child, userCommand ? 45_000 : 15_000);
       return ok({
         id,
         localPort,

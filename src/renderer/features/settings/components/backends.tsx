@@ -3,6 +3,7 @@ import { Button, Input, Body, Caption, Muted, toast } from "@/components/ui";
 import { SettingsPageShell, SettingsSection, SettingsDivider } from "./settings-layout";
 import { useBackendConnection } from "@/hooks/use-backend-connection";
 import { isWeb } from "@/lib/platform";
+import { LocalBackendShare } from "./local-backend-share";
 import type {
   BackendSshConfig,
   KnownBackend,
@@ -160,20 +161,6 @@ function AddBackendForm({
         />
       ) : (
         <div className="space-y-2">
-          {detected.length > 0 && (
-            <select
-              className="w-full rounded-xl glass-morphism px-3 py-2 text-sm bg-transparent"
-              value=""
-              onChange={(e) => e.target.value && setHost(e.target.value)}
-            >
-              <option value="">Detected hosts…</option>
-              {detected.map((alias) => (
-                <option key={alias} value={alias}>
-                  {alias}
-                </option>
-              ))}
-            </select>
-          )}
           <Input
             value={host}
             onChange={(e) => setHost(e.target.value)}
@@ -189,6 +176,33 @@ function AddBackendForm({
             onChange={(e) => setRemoteCommand(e.target.value)}
             placeholder="Optional launch command (e.g. cd ~/mains && npm run serve -- --port=8787)"
           />
+          {detected.length > 0 && (
+            <div className="pt-1">
+              <Caption className="mb-1.5 block">
+                Detected hosts (SSH config + known hosts)
+              </Caption>
+              <div className="max-h-44 overflow-auto noscrollbar rounded-xl border border-primary-200/60 dark:border-primary-800/30 divide-y divide-primary-200/40 dark:divide-primary-800/20">
+                {detected.map((alias) => (
+                  <div
+                    key={alias}
+                    className="flex items-center justify-between gap-2 px-3 py-1.5"
+                  >
+                    <span className="truncate text-sm text-primary-900 dark:text-primary-100">
+                      {alias}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="shrink-0"
+                      onClick={() => setHost(alias)}
+                    >
+                      Add host
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -204,8 +218,8 @@ function AddBackendForm({
       </Caption>
 
       <div className="flex justify-end">
-        <Button type="button" variant="ghost" onClick={() => void submit()}>
-          Add backend
+        <Button type="button" variant="submit" onClick={() => void submit()}>
+          Add
         </Button>
       </div>
     </div>
@@ -355,16 +369,15 @@ export default function BackendsSettings() {
   }
 
   return (
-    <SettingsPageShell title="Remote Backends">
-      <Muted>
-        Control a mains backend running on another machine over WebSocket. Start
-        one there with <code>npm run serve</code> (or <code>--serve</code>), then
-        add it below — by direct URL, or over an SSH tunnel (recommended: the
-        backend stays on loopback and traffic is encrypted by SSH). Connecting
-        routes the whole app — runs, files, git, terminal — to that backend.
+    <SettingsPageShell title="Relay">
+      <Muted className="mb-6 block">
+        Control a mains on another machine, or expose this one for another
+        device to drive.
       </Muted>
 
-      <SettingsSection title="Backend">
+      <LocalBackendShare />
+
+      <SettingsSection title="Clients">
         <div className="flex items-center justify-between py-3 gap-4">
           <div className="min-w-0 flex-1 flex items-center gap-2">
             {!isRemote && <StatusDot status="connected" />}
@@ -405,7 +418,7 @@ export default function BackendsSettings() {
         ))}
       </SettingsSection>
 
-      <SettingsSection title="Add a backend">
+      <SettingsSection title="Add">
         <AddBackendForm onAdd={add} />
       </SettingsSection>
     </SettingsPageShell>

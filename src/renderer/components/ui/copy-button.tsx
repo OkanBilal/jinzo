@@ -15,7 +15,7 @@ export function CopyButton({ text }: CopyButtonProps) {
       onClick={() => copy(text)}
       className="shrink-0"
     >
-      {isCopied ? <Check className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+      {isCopied ? <Check className="size-4" /> : <Clipboard className="size-4" />}
     </Button>
   );
 }

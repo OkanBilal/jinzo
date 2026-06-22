@@ -244,7 +244,15 @@ export function startWsHost(options: WsHostOptions): Promise<WsHost> {
         close: () =>
           new Promise<void>((res) => {
             unregisterSink();
-            wss.close(() => httpServer.close(() => res()));
+            // Force live connections closed first. httpServer.close() waits for
+            // active sockets to drain, and wss.close() does NOT terminate its
+            // clients — so a single connected WS client (the normal case for an
+            // exposed backend) would otherwise hang every rebind/teardown/shutdown.
+            for (const client of wss.clients) client.terminate();
+            wss.close(() => {
+              httpServer.close(() => res());
+              httpServer.closeAllConnections?.();
+            });
           }),
       });
     });

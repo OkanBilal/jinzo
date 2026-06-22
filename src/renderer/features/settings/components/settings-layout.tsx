@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Body, Caption, Heading2, Heading3, Muted } from "@/components/ui";
+import { Body, Caption, Heading3, Muted } from "@/components/ui";
 
 export function SettingsPageShell({
   title,
@@ -22,7 +22,7 @@ export function SettingsPageShell({
 }) {
   const header = headerActions ? (
     <div className="flex items-center justify-between mb-8">
-      <Heading2>{title}</Heading2>
+      <Heading3>{title}</Heading3>
       {headerActions}
     </div>
   ) : (

@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { buildSshArgs, parseSshConfig } from "./ssh.service";
+import {
+  buildSshArgs,
+  parseSshConfig,
+  parseKnownHosts,
+  wrapRemoteLaunch,
+} from "./ssh.service";
 
 describe("parseSshConfig", () => {
   it("parses host blocks with hostname/user/port", () => {
@@ -63,5 +68,38 @@ describe("buildSshArgs", () => {
     expect(args).toContain("-L");
     expect(args).not.toContain("-N");
     expect(args.slice(-2)).toEqual(["dev", "npm run serve"]);
+  });
+});
+
+describe("parseKnownHosts", () => {
+  it("extracts plaintext hostnames, stripping ports/brackets, skipping hashed", () => {
+    const hosts = parseKnownHosts(
+      [
+        "github.com,140.82.112.3 ssh-ed25519 AAAA",
+        "[example.com]:2222 ssh-rsa BBBB",
+        "|1|abc=|def= ssh-ed25519 CCCC", // hashed — skipped
+        "# comment",
+        "dev.local ssh-rsa DDDD",
+      ].join("\n"),
+    );
+    expect(hosts).toContain("github.com");
+    expect(hosts).toContain("140.82.112.3");
+    expect(hosts).toContain("example.com");
+    expect(hosts).toContain("dev.local");
+    expect(hosts.some((h) => h.startsWith("|"))).toBe(false);
+  });
+
+  it("returns an empty list for empty input", () => {
+    expect(parseKnownHosts("")).toEqual([]);
+  });
+});
+
+describe("wrapRemoteLaunch", () => {
+  it("prepends node discovery + the token, then the user command", () => {
+    const wrapped = wrapRemoteLaunch("cd ~/mains && npm run serve", "tok123");
+    expect(wrapped).toContain(".nvm/nvm.sh"); // node-discovery preamble present
+    expect(wrapped).toContain(".volta/bin");
+    expect(wrapped).toContain("export MAINS_SERVE_TOKEN='tok123'");
+    expect(wrapped.trimEnd().endsWith("cd ~/mains && npm run serve")).toBe(true);
   });
 });
