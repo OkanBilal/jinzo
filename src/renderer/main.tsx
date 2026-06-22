@@ -1,3 +1,7 @@
+// Must be first: in a browser (no Electron preload) this installs the window.api
+// shim and points the transport at the backend over WebSocket, before any app
+// module loads. No-op under Electron. See docs/design/remote-backend.md.
+import "./lib/platform/web-bootstrap";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";

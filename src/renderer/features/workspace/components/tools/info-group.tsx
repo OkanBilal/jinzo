@@ -26,6 +26,7 @@ import {
 } from "@/components/ui";
 import { useLazyGetAppsForFileQuery } from "@/lib/redux/api";
 import { useLocalImageUrl } from "@/hooks/use-local-image-url";
+import { useCapabilities } from "@/lib/platform";
 import { DocumentArtifact } from "@/features/workspace/components/tools/document-artifact";
 import { classifyDocType, type DocType } from "@/lib/document-viewer";
 
@@ -547,6 +548,7 @@ function ImageArtifact({
   onPreview: (att: { name: string; dataUrl: string }) => void;
 }) {
   const url = useLocalImageUrl(absPath);
+  const { revealInFolder } = useCapabilities();
   const [thumbFailed, setThumbFailed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
@@ -651,10 +653,12 @@ function ImageArtifact({
           <Mains className="size-4 shrink-0" />
           Show Image
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={showInFinder}>
-          <Finder className="size-4 shrink-0" />
-          Show in Finder
-        </DropdownMenuItem>
+        {revealInFolder && (
+          <DropdownMenuItem onClick={showInFinder}>
+            <Finder className="size-4 shrink-0" />
+            Show in Finder
+          </DropdownMenuItem>
+        )}
         {isFetching ? (
           <div className="px-3 py-2 text-xs text-primary-500 dark:text-primary-400">
             Loading applications…

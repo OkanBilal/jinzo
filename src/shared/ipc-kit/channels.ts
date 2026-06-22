@@ -121,6 +121,22 @@ export const CHANNELS = {
     getPackageScore: "guards:getPackageScore",
     scanWorkspace: "guards:scanWorkspace",
   },
+  ssh: {
+    discoverHosts: "ssh:discoverHosts",
+    openTunnel: "ssh:openTunnel",
+    closeTunnel: "ssh:closeTunnel",
+  },
+  backendAuth: {
+    setToken: "backendAuth:setToken",
+    getToken: "backendAuth:getToken",
+    deleteToken: "backendAuth:deleteToken",
+  },
+  localBackend: {
+    getStatus: "localBackend:getStatus",
+    setRemoteAccess: "localBackend:setRemoteAccess",
+    setLanAccess: "localBackend:setLanAccess",
+    setTailscaleHttps: "localBackend:setTailscaleHttps",
+  },
   imageProxy: {
     sign: "imageProxy:sign",
   },

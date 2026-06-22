@@ -17,7 +17,12 @@ import { useWorkspaceVariant } from "./hooks/use-workspace-variant";
 import { ReduxProvider } from "./providers/redux-provider";
 import { Toaster } from "./components/ui/toast/Toaster";
 import { useAppSelector, useAppDispatch } from "./lib/redux/hooks";
-import { setSidebarCollapsed, setRightPanelOpen } from "./lib/redux/slices/appSettingsSlice";
+import { isWeb, useIsMobile } from "./lib/platform";
+import {
+  setSidebarCollapsed,
+  setRightPanelOpen,
+  setOnboardingCompleted,
+} from "./lib/redux/slices/appSettingsSlice";
 import { SidebarToggleButton } from "./components/layout/sidebar/sidebar-toggle-button";
 import { OnboardingModal } from "./features/onboarding/components/onboarding-modal";
 import { ErrorBoundary } from "./components/ui/error-boundary";
@@ -81,27 +86,69 @@ function AppContent() {
   const onboardingCompleted = useAppSelector(
     (state) => state.appSettings.onboardingCompleted,
   );
+  const isMobile = useIsMobile();
+
+  // Mobile: the sidebar is an overlay drawer — auto-close on navigation (and on
+  // entering mobile) so the selected content is visible. Local UI state only.
+  useEffect(() => {
+    if (isMobile) dispatch(setSidebarCollapsed(true));
+  }, [isMobile, location.pathname, dispatch]);
+
+  // Web skips onboarding (CLI setup is a backend concern), but onboardingCompleted
+  // is a per-browser persisted flag that gates the space selector + composer.
+  // Mark it complete so those render. Local-only; no backend write.
+  useEffect(() => {
+    if (isWeb && !onboardingCompleted) dispatch(setOnboardingCompleted(true));
+  }, [onboardingCompleted, dispatch]);
 
   return (
     <>
       <Toaster />
-      {!onboardingCompleted && <OnboardingModal open={true} />}
+      {/* Onboarding sets up local CLIs; in web those live on the backend, so skip it. */}
+      {!onboardingCompleted && !isWeb && <OnboardingModal open={true} />}
       <MainLayout>
-        <SidebarToggleButton
-          isOpen={!sidebarCollapsed}
-          onClick={() => dispatch(setSidebarCollapsed(!sidebarCollapsed))}
-        />
+        {/* Mobile drawer scrims — tap to dismiss. Each sits just below its panel
+            (sidebar z-30, right panel z-50) and above the full-width content. */}
+        {isMobile && !sidebarCollapsed && (
+          <div
+            className="fixed inset-0 bg-primary-950/40"
+            style={{ zIndex: 20 }}
+            onClick={() => dispatch(setSidebarCollapsed(true))}
+            aria-hidden
+          />
+        )}
+        {isMobile && !hideRightPanel && isRightPanelOpen && (
+          <div
+            className="fixed inset-0 bg-primary-950/40"
+            style={{ zIndex: 45 }}
+            onClick={() => dispatch(setRightPanelOpen(false))}
+            aria-hidden
+          />
+        )}
+        {!(
+          isMobile &&
+          ((!hideRightPanel && isRightPanelOpen) ||
+            browserPanel.isOpen ||
+            docViewer.isOpen)
+        ) && (
+          <SidebarToggleButton
+            isOpen={!sidebarCollapsed}
+            onClick={() => dispatch(setSidebarCollapsed(!sidebarCollapsed))}
+          />
+        )}
         <Sidebar collapsed={sidebarCollapsed} />
         <MainContent
-          marginLeft={sidebarCollapsed ? "0.375rem" : SIDEBAR_WIDTH}
+          marginLeft={isMobile || sidebarCollapsed ? "0.375rem" : SIDEBAR_WIDTH}
           marginRight={
-            docViewer.isOpen
-              ? DOC_VIEWER_PANEL_WIDTH
-              : browserPanel.isOpen
-                ? BROWSER_PANEL_WIDTH
-                : !hideRightPanel && isRightPanelOpen
-                  ? RIGHT_PANEL_WIDTH
-                  : "0.375rem"
+            isMobile
+              ? "0.375rem"
+              : docViewer.isOpen
+                ? DOC_VIEWER_PANEL_WIDTH
+                : browserPanel.isOpen
+                  ? BROWSER_PANEL_WIDTH
+                  : !hideRightPanel && isRightPanelOpen
+                    ? RIGHT_PANEL_WIDTH
+                    : "0.375rem"
           }
           hasRightPanel={
             !hideRightPanel && !isRightPanelOpen && !browserPanel.isOpen && !docViewer.isOpen

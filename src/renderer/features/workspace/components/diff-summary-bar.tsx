@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, lazy, Suspense } from "react";
-import { useDispatch } from "react-redux";
+import { appApi } from "@/lib/transport";
+import { useAppDispatch } from "@/lib/redux/hooks";
 import NumberFlow from "@number-flow/react";
 import {
   useGetLatestWorkspaceDiffQuery,
@@ -42,7 +43,7 @@ export function DiffSummaryBar({
   isRunning,
   lastCompletedRunId,
 }: DiffSummaryBarProps) {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isUndoing, setIsUndoing] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -76,9 +77,9 @@ export function DiffSummaryBar({
     if (!diff?.baseRef || !rootPath) return;
     setIsUndoing(true);
     try {
-      const result = await window.api.git.resetHard(rootPath, diff.baseRef);
+      const result = await appApi.git.resetHard(rootPath, diff.baseRef);
       if (result.success) {
-        await window.api.workspace.deleteLatestDiff(workspaceId);
+        await appApi.workspace.deleteLatestDiff(workspaceId);
         dispatch(workspaceApi.util.invalidateTags(["WorkspaceDiffs"]));
         toast.success("Changes reverted successfully");
       }

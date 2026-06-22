@@ -1,5 +1,5 @@
 import { ok, fail } from "../../../shared/ipc-kit/service-response";
-import { ipcMain } from "electron";
+import { ipcMain } from "../../ipc-kit/ipc-main";
 import { imageProxyService } from "./imageProxy.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 

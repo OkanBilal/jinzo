@@ -1,4 +1,5 @@
 import { useResizable } from "@/hooks/use-resizable";
+import { useIsMobile } from "@/lib/platform";
 import { clamp } from "@/lib/layout";
 
 interface ResizeHandleProps {
@@ -38,6 +39,7 @@ export function ResizeHandle({
   onDragEnd,
   ariaLabel,
 }: ResizeHandleProps) {
+  const isMobile = useIsMobile();
   const handlers = useResizable({
     min,
     max,
@@ -47,6 +49,9 @@ export function ResizeHandle({
     onStart: onDragStart,
     onEnd: onDragEnd,
   });
+
+  // Drag-to-resize is pointless on touch, and panels are full-width overlays there.
+  if (isMobile) return null;
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;

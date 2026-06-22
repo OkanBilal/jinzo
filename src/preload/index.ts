@@ -122,6 +122,40 @@ const api = {
     scanWorkspace: (workspaceId: string, rootPath: string) =>
       ipcRenderer.invoke(CHANNELS.guards.scanWorkspace, workspaceId, rootPath),
   },
+  // SSH tunneling for remote backends (runs the local ssh client; not served remotely)
+  ssh: {
+    discoverHosts: () => ipcRenderer.invoke(CHANNELS.ssh.discoverHosts),
+    openTunnel: (input: {
+      host: string;
+      remotePort: number;
+      remoteCommand?: string | null;
+    }) => ipcRenderer.invoke(CHANNELS.ssh.openTunnel, input),
+    closeTunnel: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.ssh.closeTunnel, id),
+  },
+  // Encrypted at-rest storage for direct-mode backend pairing tokens (local-only)
+  backendAuth: {
+    setToken: (id: string, token: string) =>
+      ipcRenderer.invoke(CHANNELS.backendAuth.setToken, id, token),
+    getToken: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.backendAuth.getToken, id),
+    deleteToken: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.backendAuth.deleteToken, id),
+  },
+  // Expose THIS desktop app as a backend (network / SSH / tailnet) — local-only control
+  localBackend: {
+    getStatus: () => ipcRenderer.invoke(CHANNELS.localBackend.getStatus),
+    setRemoteAccess: (enabled: boolean, port?: number) =>
+      ipcRenderer.invoke(CHANNELS.localBackend.setRemoteAccess, enabled, port),
+    setLanAccess: (enabled: boolean) =>
+      ipcRenderer.invoke(CHANNELS.localBackend.setLanAccess, enabled),
+    setTailscaleHttps: (enabled: boolean, httpsPort?: number) =>
+      ipcRenderer.invoke(
+        CHANNELS.localBackend.setTailscaleHttps,
+        enabled,
+        httpsPort,
+      ),
+  },
   // Projects operations (incl. project_resources + linked-issue queries)
   projects: {
     // ── lifecycle ──
@@ -852,4 +886,23 @@ const api = {
 // to use ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld("api", api);
 
+// Generic, channel-based transport bridge. The renderer's Transport abstraction
+// (src/renderer/lib/transport) routes every request/response (`invoke`) and push
+// subscription (`subscribe`) through this, so the same call sites can later be
+// pointed at a remote backend over WebSocket instead of Electron IPC by swapping
+// the active transport. This is purely additive — the namespaced `window.api`
+// above is unchanged. See docs/design/remote-backend.md.
+const mainTransport = {
+  invoke: (channel: string, args: unknown[] = []) =>
+    ipcRenderer.invoke(channel, ...args),
+  subscribe: (channel: string, listener: (payload: unknown) => void) => {
+    const handler = (_event: unknown, payload: unknown) => listener(payload);
+    ipcRenderer.on(channel, handler as never);
+    return () => ipcRenderer.removeListener(channel, handler as never);
+  },
+};
+
+contextBridge.exposeInMainWorld("mainTransport", mainTransport);
+
 export type ApiType = typeof api;
+export type MainTransport = typeof mainTransport;

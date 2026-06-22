@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { appEvents } from "@/lib/transport";
 import {
   useLazyGetProviderGoalQuery,
   useSetProviderGoalMutation,
@@ -47,7 +48,7 @@ export function useCodexGoal(
   // Live updates (set / status / usage / cleared).
   useEffect(() => {
     if (!enabled || !runId) return;
-    const off = window.api.providers.onGoalUpdated(({ providerId: pid, runId: rid, goal: g }) => {
+    const off = appEvents.providers.onGoalUpdated(({ providerId: pid, runId: rid, goal: g }) => {
       if (pid !== providerId) return;
       // null runId on the event = couldn't reverse-map thread; accept it.
       if (rid && rid !== runId) return;

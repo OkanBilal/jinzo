@@ -454,7 +454,7 @@ export function FileUploadDropdown({
   if (variant === "codex") {
     return (
       <div
-        className="relative flex min-w-0 max-w-[min(100%,28rem)] animate-blur-reveal items-center gap-2"
+        className="relative flex min-w-0 max-w-[min(100%,28rem)] animate-blur-reveal items-center "
         ref={dropdownRef}
       >
         <Button
@@ -481,7 +481,7 @@ export function FileUploadDropdown({
 
   return (
     <div
-      className="relative flex min-w-0 max-w-[min(100%,28rem)] animate-blur-reveal items-center gap-2"
+      className="relative flex min-w-0 max-w-[min(100%,28rem)] animate-blur-reveal items-center"
       ref={dropdownRef}
     >
       <Button

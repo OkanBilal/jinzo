@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../../ipc-kit/ipc-main";
 import { syncService } from "./sync.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 

@@ -1,6 +1,7 @@
 import { ok, fail } from "../../../shared/ipc-kit/service-response";
-import { app, autoUpdater, BrowserWindow } from "electron";
+import { app, autoUpdater } from "electron";
 import { updateElectronApp, UpdateSourceType } from "update-electron-app";
+import { emit } from "../../ipc-kit";
 import type {
   UpdateState,
   ServiceResponse,
@@ -111,11 +112,6 @@ export const updatesService = {
 
   _updateState(newState: UpdateState) {
     this._state = newState;
-
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed()) {
-        win.webContents.send("updates:status", newState);
-      }
-    }
+    emit("updates:status", newState);
   },
 };

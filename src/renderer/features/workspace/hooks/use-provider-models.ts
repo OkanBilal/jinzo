@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useCallback } from "react";
+import { appEvents } from "@/lib/transport";
 import {
   useGetProviderModelsQuery,
   useGetProviderCommandsQuery,
@@ -251,7 +252,7 @@ export function useProviderModels(
   // runs after the initial fast model list returns; refetch to pick up the
   // enriched metadata when the main process signals it's ready.
   useEffect(() => {
-    const off = window.api.providers.onModelsUpdated(({ providerId }) => {
+    const off = appEvents.providers.onModelsUpdated(({ providerId }) => {
       if (providerId === activeProviderId) refetchModels();
     });
     return () => {

@@ -1,5 +1,4 @@
 import { ok, fail } from "../../../shared/ipc-kit/service-response";
-import { BrowserWindow } from "electron";
 import { createHash } from "crypto";
 
 import { runsRepo } from "./runs.repo";
@@ -13,6 +12,7 @@ import {
 } from "../providers/adapters";
 import type { WorkRunResult } from "../../../shared/adapter.types";
 import { createRunSession, type RunSession, type RunSessionResult } from "./run-session";
+import { emit } from "../../ipc-kit";
 import { runSessionRegistry } from "./run-session-registry";
 import type {
   CreateRunPayload,
@@ -85,11 +85,7 @@ async function generateRunTitle(
 
 /** Broadcast statusChanged for runs that fail before a session is created. */
 function broadcastStatusChangedPreSession(runId: string, status: string): void {
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) {
-      win.webContents.send("runs:statusChanged", { runId, status, ts: Date.now() });
-    }
-  }
+  emit("runs:statusChanged", { runId, status, ts: Date.now() });
 }
 
 /** Wire an adapter run promise to session.finalize. Idempotent on both sides. */

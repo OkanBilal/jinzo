@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Body, Caption, Heading2, Heading3, Muted } from "@/components/ui";
+import { Body, Caption, Heading3, Muted } from "@/components/ui";
 
 export function SettingsPageShell({
   title,
@@ -22,7 +22,7 @@ export function SettingsPageShell({
 }) {
   const header = headerActions ? (
     <div className="flex items-center justify-between mb-8">
-      <Heading2>{title}</Heading2>
+      <Heading3>{title}</Heading3>
       {headerActions}
     </div>
   ) : (
@@ -91,9 +91,11 @@ export function SettingsRow({
   variant?: "default" | "detail";
 }) {
   if (variant === "detail") {
+    // Stack on mobile — the fixed w-120 (480px) title block overflows narrow
+    // screens; side-by-side only from md up.
     return (
-      <div className="flex items-start justify-between py-5 gap-8">
-        <div className="shrink-0 w-120">
+      <div className="flex flex-col gap-3 py-5 md:flex-row md:items-start md:justify-between md:gap-8">
+        <div className="md:w-120 md:shrink-0">
           <Body className=" mb-1">
             {title}
           </Body>
@@ -103,14 +105,14 @@ export function SettingsRow({
             </Caption>
           )}
         </div>
-        <div className="flex-1 text-right flex justify-end">{children}</div>
+        <div className="flex md:flex-1 md:justify-end md:text-right">{children}</div>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-between py-3">
-      <div className="flex-1 pr-8">
+    <div className="flex flex-col gap-2 py-3 md:flex-row md:items-center md:justify-between">
+      <div className="md:flex-1 md:pr-8">
         <Body className=" mb-1">
           {title}
         </Body>
@@ -120,7 +122,7 @@ export function SettingsRow({
           </Caption>
         )}
       </div>
-      <div className="shrink-0">{children}</div>
+      <div className="md:shrink-0">{children}</div>
     </div>
   );
 }

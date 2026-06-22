@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useDispatch } from "react-redux";
+import { useAppDispatch } from "@/lib/redux/hooks";
 import { useListWorkspaceActivityQuery } from "@/lib/redux/api";
 import type { WorkspaceActivity } from "@/lib/redux/api";
 import { openNoteTab } from "@/lib/redux/slices/workspaceSlice";
@@ -49,7 +49,7 @@ function activityDetail(activity: WorkspaceActivity): string | null {
 }
 
 export function ActivitySection({ workspaceId }: ActivitySectionProps) {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const { data: activities = [], isLoading } = useListWorkspaceActivityQuery(
     { workspaceId },

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import { appEvents } from "@/lib/transport";
 
 export interface StreamingEvent {
   id: string;
@@ -60,7 +61,7 @@ export function useStreamingEvents(activeRunId: string | null) {
       return;
     }
 
-    const cleanup = window.api.runs.onStreamingEvent((data) => {
+    const cleanup = appEvents.runs.onStreamingEvent((data) => {
       if (data.runId !== activeRunId) return;
 
       const { event, ts } = data;

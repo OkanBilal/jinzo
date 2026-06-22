@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Button } from "@/components/ui";
+import { Button, Select } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { defaultTheme } from "@/lib/theme";
 import { useActiveSpace } from "@/hooks/use-active-space";
@@ -177,6 +177,31 @@ export function useSpaceThemeBackgrounds() {
       };
     }
   }, [activeSpaceThemeConfig]);
+}
+
+const THEME_OPTIONS: { value: ThemeValue; label: string }[] = [
+  { value: "light", label: "Light" },
+  { value: "system", label: "Auto" },
+  { value: "dark", label: "Dark" },
+];
+
+/** Compact dropdown alternative to {@link ThemePicker} for narrow layouts. */
+export function ThemeSelect({
+  onChange,
+}: {
+  onChange?: (theme: ThemeValue) => void;
+}) {
+  const { theme, setTheme } = useDarkMode();
+  return (
+    <Select
+      value={theme}
+      options={THEME_OPTIONS}
+      onChange={(value) => {
+        setTheme(value);
+        onChange?.(value);
+      }}
+    />
+  );
 }
 
 interface ThemePickerProps {

@@ -5,7 +5,20 @@
 // raw bytes (the protocol handler re-stats the file and enforces symlink/size/
 // mime guards).
 
-const PASS_THROUGH = /^(mains-localdoc:|https?:|data:|blob:)/;
+import { isWeb } from "./platform/platform";
+
+const PASS_THROUGH = /^(mains-localdoc:|https?:|data:|blob:|\/__localdoc)/;
+
+// Web mode: the `mains-localdoc://` protocol doesn't exist in a browser; the
+// backend serves the same signed path over HTTP at `/__localdoc`. Rewrite the
+// scheme to that same-origin endpoint, keeping the HMAC-signed query intact.
+function toWebLocalDocUrl(signed: string): string {
+  try {
+    return `/__localdoc${new URL(signed).search}`;
+  } catch {
+    return signed;
+  }
+}
 
 const urlCache = new Map<string, string>();
 const inflight = new Map<string, Promise<string | null>>();
@@ -30,8 +43,9 @@ export async function signLocalDocument(absPath: string): Promise<string | null>
     .sign(absPath)
     .then((res: { success: true; data: string } | { success: false; error: string }) => {
       if (!res.success) return null;
-      urlCache.set(absPath, res.data);
-      return res.data;
+      const url = isWeb ? toWebLocalDocUrl(res.data) : res.data;
+      urlCache.set(absPath, url);
+      return url;
     })
     .catch(() => null)
     .finally(() => {

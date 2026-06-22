@@ -1,0 +1,215 @@
+import { useRef, useState } from "react";
+import DropdownWrapper from "../dropdown-wrapper";
+import { Button } from "../button";
+import { ArrowUp, Brain, BoltFill, Check } from "../icons";
+import { Bolt } from "../icons/space";
+import { useClickOutside } from "@/hooks/use-click-outside";
+import { formatModelDisplayName, getModelIcon } from "@/lib/model-icons";
+
+type Variant = "claude" | "copilot" | "codex" | "cursor";
+type EffortLevel = "minimal" | "low" | "medium" | "high" | "max" | "xhigh";
+
+interface CompactComposerControlsProps {
+  variant: Variant;
+  model: string;
+  models: string[];
+  onModelChange: (model: string) => void;
+  isLoadingModels: boolean;
+  thinkingMode: boolean;
+  effortLevel: string;
+  onEffortLevelChange: (level: string) => void;
+  onThinkingModeToggle: () => void;
+  supportedEffortLevels?: EffortLevel[];
+  supportsUltracode?: boolean;
+  fastMode: boolean;
+  onFastModeToggle: () => void;
+  supportsFastMode: boolean;
+}
+
+function formatEffortLabel(level: string): string {
+  if (level === "ultracode") return "Ultracode";
+  return level === "xhigh" ? "Extra High" : level;
+}
+
+const SECTION =
+  "px-2.5 pt-2.5 pb-1 text-xxs uppercase tracking-wide text-primary-400 dark:text-primary-500";
+const ROW =
+  "w-full flex items-center gap-2 text-left px-2.5 py-2 text-sm cursor-pointer transition-colors";
+const ROW_ACTIVE =
+  "bg-primary-200/60 dark:bg-primary-200/10 text-primary-950 dark:text-primary";
+const ROW_IDLE =
+  "hover:bg-primary-200/30 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300";
+
+/**
+ * Mobile-only: merges model + reasoning effort + fast (speed) into a single flat
+ * dropdown so the composer toolbar doesn't overflow with separate chips. Flat
+ * sections (not hover flyouts) because the shared {@link DropdownMenuSub} opens on
+ * hover and flies out sideways — neither works on touch / narrow screens.
+ * Desktop keeps the individual chips.
+ */
+export function CompactComposerControls({
+  variant,
+  model,
+  models,
+  onModelChange,
+  isLoadingModels,
+  thinkingMode,
+  effortLevel,
+  onEffortLevelChange,
+  onThinkingModeToggle,
+  supportedEffortLevels,
+  supportsUltracode,
+  fastMode,
+  onFastModeToggle,
+  supportsFastMode,
+}: CompactComposerControlsProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  useClickOutside(containerRef, () => setIsOpen(false));
+
+  const modelList = (Array.isArray(models) ? models : []).filter(
+    (m) => !(variant === "cursor" && m.toLowerCase() === "default"),
+  );
+  const displayModel = formatModelDisplayName(model, variant);
+  const hasEffortLevels =
+    !!supportedEffortLevels && supportedEffortLevels.length > 0;
+
+  return (
+    <div className="relative animate-blur-reveal" ref={containerRef}>
+      <Button
+        type="button"
+        tooltip="Model & thinking"
+        onClick={() => setIsOpen((o) => !o)}
+        className="flex items-center gap-1 px-2 py-1 rounded-full text-sm cursor-pointer text-primary-950 dark:text-primary hover:bg-primary-200/30 dark:hover:bg-primary-800 transition-colors"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+      >
+        {getModelIcon(displayModel, variant)}
+        <span className="max-w-24 truncate">
+          {isLoadingModels && !displayModel ? "…" : displayModel}
+        </span>
+        <ArrowUp className="size-3.5 rotate-180" />
+      </Button>
+
+      <DropdownWrapper isOpen={isOpen} openUpward minWidth="min-w-52">
+        <div className="max-h-[60vh] overflow-auto noscrollbar py-1">
+          {modelList.length > 0 && (
+            <>
+              <div className={SECTION}>Model</div>
+              {modelList.map((m) => {
+                const name = formatModelDisplayName(m, variant);
+                const active = model === m;
+                return (
+                  <Button
+                    key={m}
+                    type="button"
+                    onClick={() => {
+                      onModelChange(m);
+                      setIsOpen(false);
+                    }}
+                    className={`${ROW} ${active ? ROW_ACTIVE : ROW_IDLE}`}
+                  >
+                    {getModelIcon(name, variant)}
+                    <span className="flex-1 truncate">{name}</span>
+                    {active && <Check className="size-3.5 shrink-0" />}
+                  </Button>
+                );
+              })}
+            </>
+          )}
+
+          {hasEffortLevels ? (
+            <>
+              <div className={SECTION}>Reasoning</div>
+              {variant !== "codex" && (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    onEffortLevelChange("");
+                    setIsOpen(false);
+                  }}
+                  className={`${ROW} ${!thinkingMode ? ROW_ACTIVE : ROW_IDLE}`}
+                >
+                  <span className="flex-1">Off</span>
+                  {!thinkingMode && <Check className="size-3.5 shrink-0" />}
+                </Button>
+              )}
+              {supportedEffortLevels!.map((level) => {
+                const active = thinkingMode && effortLevel === level;
+                return (
+                  <Button
+                    key={level}
+                    type="button"
+                    onClick={() => {
+                      onEffortLevelChange(level);
+                      setIsOpen(false);
+                    }}
+                    className={`${ROW} capitalize ${active ? ROW_ACTIVE : ROW_IDLE}`}
+                  >
+                    <Brain className="size-3.5 shrink-0" />
+                    <span className="flex-1">{formatEffortLabel(level)}</span>
+                    {active && <Check className="size-3.5 shrink-0" />}
+                  </Button>
+                );
+              })}
+              {supportsUltracode && variant === "claude" && (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    onEffortLevelChange("ultracode");
+                    setIsOpen(false);
+                  }}
+                  className={`${ROW} ${thinkingMode && effortLevel === "ultracode" ? ROW_ACTIVE : ROW_IDLE}`}
+                >
+                  <Brain className="size-3.5 shrink-0" />
+                  <span className="flex-1">Ultracode</span>
+                  {thinkingMode && effortLevel === "ultracode" && (
+                    <Check className="size-3.5 shrink-0" />
+                  )}
+                </Button>
+              )}
+            </>
+          ) : variant === "claude" ? (
+            <>
+              <div className={SECTION}>Thinking</div>
+              <Button
+                type="button"
+                onClick={() => {
+                  onThinkingModeToggle();
+                  setIsOpen(false);
+                }}
+                className={`${ROW} ${thinkingMode ? ROW_ACTIVE : ROW_IDLE}`}
+              >
+                <Brain className="size-3.5 shrink-0" />
+                <span className="flex-1">{thinkingMode ? "On" : "Off"}</span>
+                {thinkingMode && <Check className="size-3.5 shrink-0" />}
+              </Button>
+            </>
+          ) : null}
+
+          {supportsFastMode && (
+            <>
+              <div className={SECTION}>Speed</div>
+              <Button
+                type="button"
+                onClick={() => {
+                  onFastModeToggle();
+                  setIsOpen(false);
+                }}
+                className={`${ROW} ${fastMode ? ROW_ACTIVE : ROW_IDLE}`}
+              >
+                {fastMode ? (
+                  <BoltFill className="size-4 shrink-0 text-violet-500 dark:text-violet-400" />
+                ) : (
+                  <Bolt className="size-4 shrink-0" />
+                )}
+                <span className="flex-1">Fast</span>
+                {fastMode && <Check className="size-3.5 shrink-0" />}
+              </Button>
+            </>
+          )}
+        </div>
+      </DropdownWrapper>
+    </div>
+  );
+}

@@ -1,4 +1,5 @@
 import { memo, useState, useCallback, useEffect, useReducer } from "react";
+import { appApi } from "@/lib/transport";
 import type { FileNode, DirEntry, ServiceResponse } from "@/features/workspace/types/file-explorer";
 import { FileTreeNode } from "./file-tree-node";
 import { Caption } from "@/components/ui";
@@ -74,7 +75,7 @@ export const FileExplorer = memo(function FileExplorer({
 
       try {
         const result: ServiceResponse<DirEntry[]> =
-          await window.api.fileExplorer.listDir({
+          await appApi.fileExplorer.listDir({
             dirPath: rootPath,
             includeHidden,
             excludePatterns,
@@ -141,7 +142,7 @@ export const FileExplorer = memo(function FileExplorer({
     async (node: FileNode): Promise<FileNode[] | undefined> => {
       try {
         const result: ServiceResponse<DirEntry[]> =
-          await window.api.fileExplorer.listDir({
+          await appApi.fileExplorer.listDir({
             dirPath: node.fullPath,
             includeHidden,
             excludePatterns,

@@ -10,6 +10,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { FileIconComponent } from "@/features/workspace/components/file-explorer/components/file-icon";
 import { Sparkles } from "@/components/ui/icons";
 import { applySignedSrc } from "@/lib/local-image-url";
+import { useIsMobile, isWeb } from "@/lib/platform";
 
 const sparklesIconMarkup = renderToStaticMarkup(<Sparkles className="w-3 h-3 shrink-0" />);
 
@@ -370,6 +371,9 @@ export const RichInputForm = forwardRef<RichInputFormHandle, RichInputFormProps>
   ) {
     const editorRef = useRef<HTMLDivElement | null>(null);
     const [isEmpty, setIsEmpty] = useState(query.length === 0);
+    // The ⌘P focus hint is keyboard-only — useless (and overlaps the placeholder)
+    // on touch/mobile and in the browser.
+    const showFocusHint = !useIsMobile() && !isWeb;
     // Sentinel that no real query string can equal — forces an initial DOM rebuild on mount.
     const lastSerializedRef = useRef<string>(" __rif_init__");
     const lastChipsRef = useRef<string>("");
@@ -563,9 +567,11 @@ export const RichInputForm = forwardRef<RichInputFormHandle, RichInputFormProps>
             {placeholder}
           </div>
         )}
-        <kbd className="absolute cursor-default right-3 top-3 px-1.5 py-0.5 text-xxs font-sans text-primary-700 dark:text-primary-200">
-          ⌘ P to focus
-        </kbd>
+        {showFocusHint && (
+          <kbd className="absolute cursor-default right-3 top-3 px-1.5 py-0.5 text-xxs font-sans text-primary-700 dark:text-primary-200">
+            ⌘ P to focus
+          </kbd>
+        )}
       </div>
     );
   },

@@ -10,6 +10,7 @@ import PresetSpacesView from "./preset-spaces-view";
 import SettingsView from "./settings-view";
 import CreateSpaceMenu from "./create-space-menu";
 import HelpMenu from "./help-menu";
+import { useCapabilities, useIsMobile } from "@/lib/platform";
 import SpaceContextMenu from "./space-context-menu";
 import EditSpaceModal from "./edit-space-modal";
 import DeleteSpaceModal from "./delete-space-modal";
@@ -21,6 +22,7 @@ import {
   Project,
   Sun,
   External,
+  Relay,
 } from "@/components/ui/icons";
 import CloneRepoModal from "./clone-repo-modal";
 import CreateProjectModal from "./create-project-modal";
@@ -123,6 +125,10 @@ export default function Sidebar({ collapsed }: SidebarProps) {
 
   const { account, workspaces, isLoadingWorkspaces, handleRefreshConnections } =
     useSidebarData({ searchQuery, sidebarConfig });
+  // Picking a local folder uses a native dialog, which can't run from the web
+  // client (it would open on the headless backend). Hide the folder-picker entry.
+  const { nativeDialogs } = useCapabilities();
+  const isMobile = useIsMobile();
 
   const {
     handleSpaceChange,
@@ -157,9 +163,9 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     location.pathname.startsWith("/plugins/");
   const isPulseRoute =
     location.pathname === "/pulse" || location.pathname.startsWith("/pulse/");
-  // const isRelayRoute =
-  //   location.pathname === "/relay" ||
-  //   location.pathname.startsWith("/relay/");
+  const isRelayRoute =
+    location.pathname === "/relay" ||
+    location.pathname.startsWith("/relay/");
   /** From `app_settings.active_space_id` → `spaces.slug` (not current route). */
   const pluginsUseClaudeExternalUrl = activeSpaceAgentSlug === "claude";
   const isPluginsDisabledForAgent =
@@ -170,9 +176,11 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     <>
       <aside
         ref={swipeRef}
-        className="fixed top-0 bottom-0 left-0 z-(--z-sidebar) transition-all duration-300"
+        className={`fixed top-0 bottom-0 left-0 z-(--z-sidebar) transition-all duration-300 ${
+          isMobile ? "bg-primary dark:bg-primary-950 shadow-2xl" : ""
+        }`}
         style={{
-          width: "var(--sidebar-width)",
+          width: isMobile ? "100%" : "var(--sidebar-width)",
           transform: collapsed ? "translateX(-100%)" : "translateX(0)",
           opacity: collapsed ? 0 : 1,
         }}
@@ -214,15 +222,19 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 dropdownItems={
                   sidebarConfig.itemType === "workspace"
                     ? [
-                        {
-                          label: "Add from local",
-                          icon: (
-                            <Plus className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
-                          ),
-                          shortcut: "o",
-                          shortcutLabel: "\u2318\u21e7O",
-                          onClick: handleAddProject,
-                        },
+                        ...(nativeDialogs
+                          ? [
+                              {
+                                label: "Add from local",
+                                icon: (
+                                  <Plus className="w-3.5 h-3.5 text-primary-800 dark:text-primary-200" />
+                                ),
+                                shortcut: "o",
+                                shortcutLabel: "\u2318\u21e7O",
+                                onClick: handleAddProject,
+                              },
+                            ]
+                          : []),
                         {
                           label: "Clone from URL",
                           icon: (
@@ -277,7 +289,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 </Body>
               </Button>
             </div>
-            <div className="px-3 mb-2">
+            <div className="px-3 mb-0.25">
               {isPluginsDisabledForAgent ? (
                 <Tooltip
                   content="Not available for this agent yet."
@@ -364,7 +376,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               )}
             </div>
 
-            {/* <div className="px-3 mb-2">
+            <div className="px-3 mb-2">
               <Button
                 variant="subtle"
                 tooltip="Relay"
@@ -377,7 +389,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 onClick={() => navigate("/relay")}
                 aria-current={isRelayRoute ? "page" : undefined}
               >
-                <RelayIcon
+                <Relay
                   className={`w-4 h-4 -ml-1 shrink-0 ${
                     isRelayRoute
                       ? "text-primary-950 dark:text-primary"
@@ -394,7 +406,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   Relay
                 </Body>
                 <span
-                  className={`shrink-0 text-[10px] uppercase px-1.5 py-px rounded-md ${
+                  className={`shrink-0 text-[10px] -mr-1 uppercase px-1.5 py-px rounded-md ${
                     isRelayRoute
                       ? "bg-primary-400/20 text-primary-800 dark:bg-primary/5 dark:text-primary"
                       : "bg-primary-400/20 text-primary-600 dark:bg-primary/5 dark:text-primary-200"
@@ -403,7 +415,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   Beta
                 </span>
               </Button>
-            </div> */}
+            </div>
             <SidebarContent
               workspaces={workspaces}
               isLoadingWorkspaces={isLoadingWorkspaces}

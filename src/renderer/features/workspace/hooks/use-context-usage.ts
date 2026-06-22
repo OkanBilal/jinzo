@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { appEvents } from "@/lib/transport";
 
 export interface ContextUsageSnapshot {
   totalTokens: number;
@@ -26,7 +27,7 @@ export function useContextUsage(activeRunId: string | null): ContextUsageSnapsho
   useEffect(() => {
     if (!activeRunId) return;
 
-    const cleanup = window.api.runs.onContextUsage((data) => {
+    const cleanup = appEvents.runs.onContextUsage((data) => {
       if (data.runId !== activeRunId) return;
       const { event } = data;
       setUsageByRun({

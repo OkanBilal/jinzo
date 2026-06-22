@@ -1,5 +1,6 @@
 import { ok } from "../../../shared/ipc-kit/service-response";
-import { ipcMain, dialog, BrowserWindow } from "electron";
+import { dialog, BrowserWindow } from "electron";
+import { ipcMain } from "../../ipc-kit/ipc-main";
 import { workspaceService } from "./workspace.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import type {

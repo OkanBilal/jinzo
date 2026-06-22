@@ -1,20 +1,25 @@
 import { ok, fail } from "../../../shared/ipc-kit/service-response";
-import { ipcMain, BrowserWindow } from "electron";
+import { ipcMain } from "../../ipc-kit/ipc-main";
+import { emit } from "../../ipc-kit";
 import { terminalService } from "./terminal.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 export function registerTerminalIpc(): void {
   ipcMain.handle(
     CHANNELS.terminal.create,
-    async (event, payload: { id: string; cwd: string }) => {
+    async (ctx: { clientId?: string }, payload: { id: string; cwd: string }) => {
       try {
-        const webContents = event.sender;
-        const window = BrowserWindow.fromWebContents(webContents);
-
+        // On the WS path `ctx.clientId` is the connection that created the
+        // terminal, so its output is scoped to that client. On the local path it
+        // is undefined and the event broadcasts (the renderer filters
+        // `terminal:data` by terminal id, so other windows ignore it).
+        const clientId = ctx?.clientId;
         terminalService.create(payload.id, payload.cwd, (id, data) => {
-          if (window && !window.isDestroyed()) {
-            webContents.send(CHANNELS.terminal.data, { id, data });
-          }
+          emit(
+            CHANNELS.terminal.data,
+            { id, data },
+            clientId ? { clientId } : undefined,
+          );
         });
 
         return ok(undefined);

@@ -25,6 +25,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
+import { emit } from "../../../ipc-kit";
 import { findCursorBinaryPath } from "../providers.utils";
 import type {
   AcquiredSession,
@@ -848,14 +849,9 @@ export function createCursorDriver(config: CursorAdapterConfig): ProviderDriver 
 
   function broadcastModelsUpdated(): void {
     try {
-      const { BrowserWindow } = require("electron") as typeof import("electron");
-      for (const win of BrowserWindow.getAllWindows()) {
-        if (!win.isDestroyed()) {
-          win.webContents.send(CHANNELS.providers.modelsUpdated, {
-            providerId: PROVIDER_IDS.cursor,
-          });
-        }
-      }
+      emit(CHANNELS.providers.modelsUpdated, {
+        providerId: PROVIDER_IDS.cursor,
+      });
     } catch {
       /* main-process only; ignored in tests */
     }

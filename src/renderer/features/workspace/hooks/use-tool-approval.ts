@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { appEvents, appApi } from "@/lib/transport";
 
 export interface ToolApprovalRequest {
   requestId: string;
@@ -31,7 +32,7 @@ export function useToolApproval(runs?: readonly RunStatusLike[]) {
   const [rawApprovals, setRawApprovals] = useState<ToolApprovalRequest[]>([]);
 
   useEffect(() => {
-    const cleanup = window.api.runs.onToolApprovalRequest(
+    const cleanup = appEvents.runs.onToolApprovalRequest(
       (request: ToolApprovalRequest) => {
         setRawApprovals((prev) => [...prev, request]);
       },
@@ -75,7 +76,7 @@ export function useToolApproval(runs?: readonly RunStatusLike[]) {
 
   const respond = useCallback(
     (requestId: string, approved: boolean, answer?: string) => {
-      window.api.runs.respondToolApproval({ requestId, approved, answer });
+      appApi.runs.respondToolApproval({ requestId, approved, answer });
       setRawApprovals((prev) =>
         prev.filter((r) => r.requestId !== requestId),
       );

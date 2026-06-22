@@ -5,8 +5,9 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
+import { appApi } from "@/lib/transport";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useAppSelector } from "@/lib/redux/hooks";
 import { Button } from "@/components/ui";
 import { ArrowUp, Plus } from "@/components/ui/icons";
 import WorkspaceItem from "./workspace-item";
@@ -14,7 +15,6 @@ import type { Workspace as WorkspaceResponse } from "@/lib/redux/api/workspaceAp
 import { LinkResourcesModal } from "@/features/workspace/components/link-resources-modal";
 import { useSidebarConfig } from "@/hooks/use-sidebar-config";
 import { getWorkspaceListBasePath } from "@/lib/route-utils";
-import type { RootState } from "@/lib/redux";
 import { getWorkspaceStatusConfig } from "@/lib/workspace-status";
 import WorkspaceStatusIcon from "@/components/ui/icons/workspace-status-icon";
 import type { WorkspaceStatus } from "@/lib/redux/api/workspaceApi";
@@ -148,8 +148,8 @@ export default function WorkspacesList({
   const [createWorkspace] = useCreateWorkspaceMutation();
   const [updateProject] = useUpdateProjectMutation();
   const { data: account } = useGetAccountQuery();
-  const activeWorkspaceId = useSelector(
-    (state: RootState) => state.workspace.activeWorkspaceId,
+  const activeWorkspaceId = useAppSelector(
+    (state) => state.workspace.activeWorkspaceId,
   );
 
   // Grouping state
@@ -215,7 +215,7 @@ export default function WorkspacesList({
 
   const handleCreateWorktreeForProject = async (project: Project) => {
     try {
-      const importResult = await window.api.git.importLocalRepo(
+      const importResult = await appApi.git.importLocalRepo(
         project.rootPath,
         project.name,
       );
@@ -294,7 +294,7 @@ export default function WorkspacesList({
       : workspace.rootPath;
 
     try {
-      const result = await window.api.git.renameBranch(gitPath, oldBranch, newBranchName);
+      const result = await appApi.git.renameBranch(gitPath, oldBranch, newBranchName);
       if (!result.success) {
         toast.error(result.error || "Failed to rename branch");
         return;

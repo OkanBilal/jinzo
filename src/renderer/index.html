@@ -2,11 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: mains-img: mains-capture: mains-appicon: mains-localimg: mains-localdoc:; font-src 'self' data:; connect-src 'self' ws://localhost:* http://localhost:* https://cdn.jsdelivr.net mains-localdoc:; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none';"    />
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: mains-img: mains-capture: mains-appicon: mains-localimg: mains-localdoc:; font-src 'self' data:; connect-src 'self' ws: wss: http://localhost:* https://cdn.jsdelivr.net mains-localdoc:; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none';"    />
     <title>Mains</title>
+    <link rel="icon" type="image/png" href="/icon.png" />
+    <link rel="apple-touch-icon" href="/icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0c0c0c" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Mains" />
     <style>
       html, body, #root {
         background: transparent !important;

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useMemo } from "react";
+import { appApi, appEvents } from "@/lib/transport";
 import { Terminal, ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { useDarkMode } from "@/hooks/use-dark-mode";
@@ -108,10 +109,10 @@ export function XtermTerminal({ id, rootPath, variant }: XtermTerminalProps) {
     });
 
     // Create the PTY backend
-    window.api.terminal.create({ id, cwd: rootPath });
+    appApi.terminal.create({ id, cwd: rootPath });
 
     // PTY output → xterm
-    const removeDataListener = window.api.terminal.onData(
+    const removeDataListener = appEvents.terminal.onData(
       (payload: { id: string; data: string }) => {
         if (payload.id === id) {
           term.write(payload.data);
@@ -121,7 +122,7 @@ export function XtermTerminal({ id, rootPath, variant }: XtermTerminalProps) {
 
     // xterm input → PTY
     const onDataDisposable = term.onData((data) => {
-      window.api.terminal.write(id, data);
+      appApi.terminal.write(id, data);
     });
 
     // Auto-fit on resize
@@ -131,7 +132,7 @@ export function XtermTerminal({ id, rootPath, variant }: XtermTerminalProps) {
           fitAddonRef.current.fit();
           const dims = fitAddonRef.current.proposeDimensions();
           if (dims) {
-            window.api.terminal.resize(id, dims.cols, dims.rows);
+            appApi.terminal.resize(id, dims.cols, dims.rows);
           }
         }
       });
@@ -143,7 +144,7 @@ export function XtermTerminal({ id, rootPath, variant }: XtermTerminalProps) {
       onDataDisposable.dispose();
       removeDataListener();
       term.dispose();
-      window.api.terminal.destroy(id);
+      appApi.terminal.destroy(id);
     };
 
     return () => {

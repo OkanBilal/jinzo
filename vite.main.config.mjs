@@ -25,6 +25,12 @@ export default defineConfig(() => {
         'electron',
         'better-sqlite3',
         'node-pty',
+        // `ws` conditionally require()s its optional native deps (bufferutil,
+        // utf-8-validate). Externalize so rollup doesn't try to resolve them at
+        // build time; ws falls back to pure JS when they're absent at runtime.
+        'ws',
+        'bufferutil',
+        'utf-8-validate',
         '@anthropic-ai/claude-agent-sdk',
         '@github/copilot-sdk',
         '@github/copilot',
@@ -52,6 +58,7 @@ export default defineConfig(() => {
           'node-pty',
           'vscode-jsonrpc',
           'zod',
+          'ws',
         ];
 
         // Scoped packages need their parent @scope directory created

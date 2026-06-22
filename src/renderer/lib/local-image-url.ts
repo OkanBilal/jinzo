@@ -7,7 +7,20 @@
 // now has to await (or use `useLocalImageUrl` which renders without a src
 // until the signing call resolves).
 
-const PASS_THROUGH = /^(data:|blob:|https?:|mains-localimg:|mains-capture:|mains-img:|mains-appicon:)/;
+import { isWeb } from "./platform/platform";
+
+const PASS_THROUGH = /^(data:|blob:|https?:|mains-localimg:|mains-capture:|mains-img:|mains-appicon:|\/__localimg)/;
+
+// In web mode the `mains-localimg://` custom protocol doesn't exist; the backend
+// serves the same signed path over HTTP at `/__localimg`. Rewrite the scheme to
+// that same-origin endpoint, keeping the (HMAC-signed) query intact.
+function toWebLocalImageUrl(signed: string): string {
+  try {
+    return `/__localimg${new URL(signed).search}`;
+  } catch {
+    return signed;
+  }
+}
 
 const urlCache = new Map<string, string>();
 const inflight = new Map<string, Promise<string | null>>();
@@ -32,8 +45,9 @@ export async function signLocalImage(absPath: string): Promise<string | null> {
     .sign(absPath)
     .then((res: { success: true; data: string } | { success: false; error: string }) => {
       if (!res.success) return null;
-      urlCache.set(absPath, res.data);
-      return res.data;
+      const url = isWeb ? toWebLocalImageUrl(res.data) : res.data;
+      urlCache.set(absPath, url);
+      return url;
     })
     .catch(() => null)
     .finally(() => {

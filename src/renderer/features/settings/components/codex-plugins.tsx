@@ -671,7 +671,7 @@ export default function CodexPlugins() {
   return (
     <div className="mb-12">
       {/* Category filter + search */}
-      <div className="flex items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:justify-between md:gap-4">
         <div className="flex gap-1 min-w-0 flex-1 overflow-x-auto noscrollbar">
           <Button
             onClick={() => setCategoryFilter(null)}
@@ -699,7 +699,7 @@ export default function CodexPlugins() {
             </Button>
           ))}
         </div>
-        <div className="relative w-56 shrink-0">
+        <div className="relative w-full md:w-56 md:shrink-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-primary-400 dark:text-primary-500 pointer-events-none" />
           <input
             type="text"
@@ -717,7 +717,7 @@ export default function CodexPlugins() {
           <Body className=" font-medium mb-3">
             Featured
           </Body>
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-8">
             {featured.map((p) => (
               <PluginCard
                 key={p.id}
@@ -740,7 +740,7 @@ export default function CodexPlugins() {
           <Body className=" font-medium mb-3">
             {category}
           </Body>
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-8">
             {plugins.map((p) => (
               <PluginCard
                 key={p.id}

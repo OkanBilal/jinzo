@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../../ipc-kit/ipc-main";
 import { connectionsService } from "./connections.service";
 import type {
   SaveResourcesPayload,

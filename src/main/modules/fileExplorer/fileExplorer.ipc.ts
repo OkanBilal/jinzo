@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain } from "../../ipc-kit/ipc-main";
 import { fileExplorerService } from "./fileExplorer.service";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 import type {

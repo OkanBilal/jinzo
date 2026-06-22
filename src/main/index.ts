@@ -29,6 +29,8 @@ import { promisify } from "util";
 import * as fs from "fs";
 import * as path from "path";
 import { initializeDatabase, closeDatabase } from "./db/client";
+import { registerBrowserWindowSink } from "./ipc-kit/browser-window-sink";
+import { startBackendServer } from "./serve";
 import { registerAccountIpc, unregisterAccountIpc } from "./modules/account";
 import { registerSyncIpc, unregisterSyncIpc } from "./modules/sync";
 import {
@@ -107,6 +109,17 @@ import {
   unregisterBrowserIpc,
   browserService,
 } from "./modules/browser";
+import { registerSshIpc, unregisterSshIpc, sshService } from "./modules/ssh";
+import { tailscaleService } from "./modules/tailscale";
+import {
+  registerLocalBackendIpc,
+  unregisterLocalBackendIpc,
+  localBackendService,
+} from "./modules/localBackend";
+import {
+  registerBackendAuthIpc,
+  unregisterBackendAuthIpc,
+} from "./modules/backendAuth";
 import { CHANNELS } from "../shared/ipc-kit/channels";
 
 // ─────────────────────────────────────────────────────────────
@@ -523,6 +536,49 @@ function createTray() {
 }
 
 /**
+ * Headless backend mode. Enabled with `--serve` (or MAINS_SERVE=1); optional
+ * `--port=<n>` / `--host=<h>` (or MAINS_SERVE_PORT / MAINS_SERVE_HOST). When on,
+ * the app boots the WebSocket backend and creates no window.
+ */
+function parseServeOptions(): {
+  serve: boolean;
+  port?: number;
+  host?: string;
+  token?: string;
+  webRoot?: string;
+  tailscaleServe?: boolean;
+  tailscaleServePort?: number;
+} {
+  const argv = process.argv;
+  const serve = argv.includes("--serve") || process.env.MAINS_SERVE === "1";
+  if (!serve) return { serve: false };
+  const readArg = (prefix: string): string | undefined => {
+    const hit = argv.find((a) => a.startsWith(prefix));
+    return hit ? hit.slice(prefix.length) : undefined;
+  };
+  const portRaw = readArg("--port=") ?? process.env.MAINS_SERVE_PORT;
+  const port = portRaw !== undefined ? Number(portRaw) : undefined;
+  const tsPortRaw =
+    readArg("--tailscale-serve-port=") ??
+    process.env.MAINS_TAILSCALE_SERVE_PORT;
+  const tsPort = tsPortRaw !== undefined ? Number(tsPortRaw) : undefined;
+  return {
+    serve: true,
+    port: port !== undefined && Number.isFinite(port) ? port : undefined,
+    host: readArg("--host=") ?? process.env.MAINS_SERVE_HOST,
+    token: readArg("--token=") ?? process.env.MAINS_SERVE_TOKEN,
+    webRoot: readArg("--web-root=") ?? process.env.MAINS_SERVE_WEB_ROOT,
+    tailscaleServe:
+      argv.includes("--tailscale-serve") ||
+      process.env.MAINS_TAILSCALE_SERVE === "1",
+    tailscaleServePort:
+      tsPort !== undefined && Number.isFinite(tsPort) ? tsPort : undefined,
+  };
+}
+
+const SERVE = parseServeOptions();
+
+/**
  * Initialize the application
  */
 async function initializeApp() {
@@ -531,6 +587,22 @@ async function initializeApp() {
 
     // Augment PATH early so provider binaries are discoverable in packaged app
     augmentPathForPackagedApp();
+
+    // Headless backend mode (`--serve`): boot the WebSocket backend and create no
+    // window. startBackendServer handles DB init, module registration, and the WS
+    // host (which registers the WebSocket event sink). See docs/design/remote-backend.md.
+    if (SERVE.serve) {
+      await startBackendServer({
+        port: SERVE.port,
+        host: SERVE.host,
+        token: SERVE.token,
+        webRoot: SERVE.webRoot,
+        tailscaleServe: SERVE.tailscaleServe,
+        tailscaleServePort: SERVE.tailscaleServePort,
+      });
+      console.log("Running in headless --serve mode (no window).");
+      return;
+    }
 
     // Show splash screen immediately
     createSplashWindow();
@@ -541,6 +613,10 @@ async function initializeApp() {
       enableWAL: true,
       busyTimeout: 5000,
     });
+
+    // Wire the outbound event bus to the local renderer before any module can
+    // emit. A headless `mains serve` would register a WebSocket sink instead.
+    registerBrowserWindowSink();
 
     // Register IPC handlers
     registerAccountIpc();
@@ -567,6 +643,11 @@ async function initializeApp() {
     registerPulseIpc();
     registerGuardsIpc();
     registerBrowserIpc();
+    registerSshIpc();
+    registerBackendAuthIpc();
+    registerLocalBackendIpc();
+    // Re-apply any persisted "This machine" exposure (survives app restarts).
+    void localBackendService.restore();
     automationsService.start();
     pulseService.start();
 
@@ -836,6 +917,14 @@ async function cleanupApp() {
     // Destroy all terminal PTY instances
     destroyAllTerminals();
 
+    // Tear down any open SSH tunnels
+    sshService.closeAllTunnels();
+
+    // Tear down the in-app exposure (WS host + tailscale serve), if any
+    await localBackendService.shutdown();
+    // Stop `tailscale serve` if this process started it (no-op otherwise)
+    await tailscaleService.stopServeIfActive();
+
     // Shutdown work adapters (Copilot, Claude Code, etc.)
     await shutdownAllWorkAdapters();
 
@@ -870,6 +959,9 @@ async function cleanupApp() {
     await shutdownAllGuardAdapters();
     try { browserService.destroy(); } catch { /* ignore */ }
     unregisterBrowserIpc();
+    unregisterSshIpc();
+    unregisterBackendAuthIpc();
+    unregisterLocalBackendIpc();
     ipcMain.removeHandler(CHANNELS.shell.openExternal);
     ipcMain.removeHandler(CHANNELS.shell.openPath);
     ipcMain.removeHandler(CHANNELS.shell.showItemInFolder);
@@ -890,21 +982,25 @@ async function cleanupApp() {
 }
 
 // Single instance lock — prevent multiple app instances
-const gotTheLock = app.requestSingleInstanceLock();
+// Skip the single-instance lock in headless --serve mode so a backend can run
+// alongside a local GUI instance (e.g. for testing).
+if (!SERVE.serve) {
+  const gotTheLock = app.requestSingleInstanceLock();
 
-if (!gotTheLock) {
-  // Another instance is already running, quit this one
-  app.quit();
-} else {
-  app.on("second-instance", () => {
-    // Someone tried to open a second instance — focus the existing window
-    const allWindows = BrowserWindow.getAllWindows();
-    if (allWindows.length > 0) {
-      const win = allWindows[0];
-      if (win.isMinimized()) win.restore();
-      win.focus();
-    }
-  });
+  if (!gotTheLock) {
+    // Another instance is already running, quit this one
+    app.quit();
+  } else {
+    app.on("second-instance", () => {
+      // Someone tried to open a second instance — focus the existing window
+      const allWindows = BrowserWindow.getAllWindows();
+      if (allWindows.length > 0) {
+        const win = allWindows[0];
+        if (win.isMinimized()) win.restore();
+        win.focus();
+      }
+    });
+  }
 }
 
 // Ensure app name is "mains" even in dev (Electron Forge defaults to "Electron")
@@ -927,6 +1023,7 @@ registerImageProxyScheme();
 app.whenReady().then(initializeApp);
 
 app.on("activate", () => {
+  if (SERVE.serve) return; // headless backend has no window to re-create
   // On macOS it's common to re-create a window when dock icon is clicked
   const allWindows = BrowserWindow.getAllWindows();
   if (allWindows.length === 0) {
@@ -940,6 +1037,7 @@ app.on("activate", () => {
 });
 
 app.on("window-all-closed", () => {
+  if (SERVE.serve) return; // headless backend stays alive without windows
   // On macOS, applications stay active until user quits explicitly
   if (process.platform !== "darwin") {
     app.quit();

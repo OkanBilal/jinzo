@@ -1,6 +1,7 @@
 import { BrowserWindow, Notification } from "electron";
 import type { ToolApprovalRequest, ToolApprovalResponse } from "./runs.dto";
 import { appSettingsRepo } from "../appSettings/appSettings.repo";
+import { emit } from "../../ipc-kit";
 
 /**
  * Singleton broker that manages pending tool-approval requests.
@@ -46,12 +47,8 @@ export function requestToolApproval(
       timer,
     });
 
-    // Broadcast to all open windows
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed()) {
-        win.webContents.send(PUSH_CHANNEL, req);
-      }
-    }
+    // Push to all clients via the event bus (local renderer and/or remote).
+    emit(PUSH_CHANNEL, req, { runId: req.runId });
 
     // Send desktop notification if enabled
     appSettingsRepo.findById("default").then((settings) => {

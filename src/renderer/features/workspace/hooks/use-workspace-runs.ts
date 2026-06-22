@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { appEvents, appApi } from "@/lib/transport";
 import type { Run, RunEvent, RunArtifact, ToolCall } from "../types";
 import type { RunTurn } from "@/lib/redux/api";
 import { toast } from "@/components/ui";
@@ -236,7 +237,7 @@ export function useWorkspaceRuns(
     setIsLoading(true);
     setError(null);
     try {
-      const accountRes = await window.api.account.get();
+      const accountRes = await appApi.account.get();
       if (!accountRes.success || !accountRes.data) {
         throw new Error("No account found");
       }
@@ -253,7 +254,7 @@ export function useWorkspaceRuns(
 
   /** Fetch a newly created run, add it to state, and return its ID */
   const registerNewRun = useCallback(async (runId: string): Promise<string | null> => {
-    const runResult = await window.api.runs.getById(runId);
+    const runResult = await appApi.runs.getById(runId);
     if (runResult.success && runResult.data) {
       const newId = runResult.data.id;
       setRuns((prev) => [runResult.data, ...prev]);
@@ -283,12 +284,12 @@ export function useWorkspaceRuns(
       const toolSinceMs = isIncremental ? toolCursorRef.current[runId] : undefined;
 
       const [artifactsRes, toolCallsRes, turnsRes] = await Promise.all([
-        window.api.runArtifacts.getByRun(runId, artifactSince),
-        window.api.runs.getToolCalls(
+        appApi.runArtifacts.getByRun(runId, artifactSince),
+        appApi.runs.getToolCalls(
           runId,
           toolSinceMs != null ? new Date(toolSinceMs) : undefined,
         ),
-        window.api.runTurns.getByRun(runId),
+        appApi.runTurns.getByRun(runId),
       ]);
 
       const artifactDeltas: RunArtifact[] =
@@ -381,7 +382,7 @@ export function useWorkspaceRuns(
   const loadWorkspaceRuns = useCallback(
     async (wsId: string) => {
       try {
-        const result = await window.api.runs.getByWorkspace(wsId, 50);
+        const result = await appApi.runs.getByWorkspace(wsId, 50);
         if (result.success && result.data) {
           const filteredRuns = providerId
             ? result.data.filter((run: Run) => run.providerId === providerId)
@@ -428,7 +429,7 @@ export function useWorkspaceRuns(
       const lastError = run.lastError || "Run failed";
       let isAuthError = /not logged in|not authenticated|gh auth login/i.test(lastError);
       if (!isAuthError && /exited with code/i.test(lastError)) {
-        const artRes = await window.api.runArtifacts.getByRun(run.id);
+        const artRes = await appApi.runArtifacts.getByRun(run.id);
         if (artRes.success && artRes.data) {
           isAuthError = artRes.data.some(
             (a: { content: any }) =>
@@ -473,13 +474,13 @@ export function useWorkspaceRuns(
       }, 250);
     };
 
-    const offEvent = window.api.runs.onEventPersisted(({ runId }) => {
+    const offEvent = appEvents.runs.onEventPersisted(({ runId }) => {
       if (runId === activeRunId) scheduleRefetch();
     });
 
-    const offStatus = window.api.runs.onStatusChanged(async ({ runId }) => {
+    const offStatus = appEvents.runs.onStatusChanged(async ({ runId }) => {
       if (runId !== activeRunId) return;
-      const result = await window.api.runs.getById(activeRunId);
+      const result = await appApi.runs.getById(activeRunId);
       if (result.success && result.data) {
         setRuns((prev) => prev.map((r) => (r.id === activeRunId ? result.data : r)));
         await finalizeRun(result.data);
@@ -489,7 +490,7 @@ export function useWorkspaceRuns(
 
     // Live workspace diff: invalidate cached diff queries on each
     // incremental recomputation so the UI re-renders with fresh changes.
-    const offDiff = window.api.runs.onDiffUpdated(({ runId, workspaceId }) => {
+    const offDiff = appEvents.runs.onDiffUpdated(({ runId, workspaceId }) => {
       if (runId !== activeRunId) return;
       dispatch(
         workspaceApi.util.invalidateTags([
@@ -523,7 +524,7 @@ export function useWorkspaceRuns(
         if (!activeRunId) return;
         loadRunDetails(activeRunId);
 
-        const result = await window.api.runs.getById(activeRunId);
+        const result = await appApi.runs.getById(activeRunId);
         if (!result.success || !result.data) return;
 
         setRuns((prev) =>
@@ -625,7 +626,7 @@ export function useWorkspaceRuns(
           : undefined;
 
       return runOperation(async (accountId) => {
-        const result = await window.api.runs.execute({
+        const result = await appApi.runs.execute({
           accountId,
           workspaceId: selectedWorkspace,
           providerId: selectedProvider,
@@ -682,7 +683,7 @@ export function useWorkspaceRuns(
         : undefined;
 
     return runOperation(async (accountId) => {
-      const result = await window.api.runs.continue({
+      const result = await appApi.runs.continue({
         runId,
         accountId,
         message: message.trim(),
@@ -709,7 +710,7 @@ export function useWorkspaceRuns(
         throw new Error(result.error || "Failed to continue run");
       }
 
-      const runResult = await window.api.runs.getById(runId);
+      const runResult = await appApi.runs.getById(runId);
       if (runResult.success && runResult.data) {
         setRuns((prev) =>
           prev.map((r) => (r.id === runId ? runResult.data : r)),
@@ -731,7 +732,7 @@ export function useWorkspaceRuns(
       }
 
       return runOperation(async (accountId) => {
-        const result = await window.api.runs.fork({
+        const result = await appApi.runs.fork({
           sourceRunId,
           accountId,
           message: message.trim(),
@@ -766,7 +767,7 @@ export function useWorkspaceRuns(
       }
 
       return runOperation(async (accountId) => {
-        const result = await window.api.runs.executeReview({
+        const result = await appApi.runs.executeReview({
           accountId,
           workspaceId: selectedWorkspace,
           providerId: selectedProvider,
@@ -787,7 +788,7 @@ export function useWorkspaceRuns(
   const checkCanResume = useCallback(
     async (runId: string): Promise<boolean> => {
       try {
-        const result = await window.api.runs.canResume(runId);
+        const result = await appApi.runs.canResume(runId);
         return result.success && result.data === true;
       } catch {
         return false;
@@ -799,7 +800,7 @@ export function useWorkspaceRuns(
   const closeTab = useCallback(
     async (runId: string) => {
       try {
-        await window.api.runs.archive(runId);
+        await appApi.runs.archive(runId);
       } catch (error) {
         console.error("[useWorkspaceRuns] Failed to archive run:", error);
       }

@@ -5,6 +5,7 @@ node_modules/
 .vite/
 out/
 dist/
+dist-web/
 
 # Database
 .data/

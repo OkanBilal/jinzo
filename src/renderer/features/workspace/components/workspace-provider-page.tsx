@@ -10,7 +10,6 @@ import {
   GoalSummaryBar,
   TodoSummaryBar,
 } from "@/features/workspace/components";
-import { SpaceSuggestions } from "@/features/workspace/components/space-suggestions";
 import { ToolApprovalDialog } from "@/features/workspace/components/tools/tool-approval-dialog";
 import {
   useWorkspacePage,
@@ -53,9 +52,6 @@ export function WorkspaceProviderPage({
 }: WorkspaceProviderPageProps) {
   const onboardingCompleted = useAppSelector(
     (state) => state.appSettings.onboardingCompleted,
-  );
-  const showSuggestions = useAppSelector(
-    (state) => state.appSettings.showSuggestions,
   );
   const ws = useWorkspacePage(providerId);
   const [customizeRequested, setCustomizeRequested] = useState(false);
@@ -228,14 +224,6 @@ export function WorkspaceProviderPage({
                   isNewRunTabActive={ws.showNewRunTab}
                   layout="centered"
                 />
-                {showSuggestions ? (
-                  <div className="w-200 max-w-full">
-                    <SpaceSuggestions
-                      variant={variant}
-                      onSelectPrompt={ws.setGoal}
-                    />
-                  </div>
-                ) : null}
               </div>
             )}
           </div>

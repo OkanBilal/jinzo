@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { useDispatch } from "react-redux";
+import { appApi } from "@/lib/transport";
+import { useAppDispatch } from "@/lib/redux/hooks";
 import {
   setSelectedFileContent,
   setFileContentLoading,
@@ -21,7 +22,7 @@ export function useFileContentLoader(
   selectedFile: SelectedFile | null,
   rootPath: string | undefined,
 ) {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     if (
@@ -42,7 +43,7 @@ export function useFileContentLoader(
 
       try {
         const result: ServiceResponse<FileContentResponse> =
-          await window.api.fileExplorer.readFileText({
+          await appApi.fileExplorer.readFileText({
             filePath,
           });
 

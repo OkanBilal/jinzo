@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { appEvents } from "@/lib/transport";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { workspaceApi } from "@/lib/redux/api/workspaceApi";
 import { toast } from "@/components/ui";
@@ -11,7 +12,7 @@ export function useScriptNotifications(): void {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    const unsubscribeScript = window.api.workspace.onScriptComplete((data) => {
+    const unsubscribeScript = appEvents.workspace.onScriptComplete((data) => {
       dispatch(workspaceApi.util.invalidateTags(["Workspaces"]));
 
       if (!data.success) {
@@ -19,7 +20,7 @@ export function useScriptNotifications(): void {
       }
     });
 
-    const unsubscribeFindings = window.api.workspace.onFindingsChanged(() => {
+    const unsubscribeFindings = appEvents.workspace.onFindingsChanged(() => {
       dispatch(
         workspaceApi.util.invalidateTags([
           "ReviewFindings",

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useDispatch } from "react-redux";
+import { appApi } from "@/lib/transport";
+import { useAppDispatch } from "@/lib/redux/hooks";
 import {
   useGetLatestWorkspaceDiffQuery,
   useListReviewFindingsByWorkspaceQuery,
@@ -77,7 +78,7 @@ export function DiffSection({
   workspaceId,
   onSelectDiffFile,
 }: DiffSectionProps) {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const routeType = useRouteType();
   const [selectedDiffFile, setSelectedDiffFile] = useState<string | null>(null);
 
@@ -155,7 +156,7 @@ export function DiffSection({
     if (lines.length === 0) return;
 
     try {
-      const result = await window.api.fileExplorer.readFileText({
+      const result = await appApi.fileExplorer.readFileText({
         filePath: `${workspace.rootPath}/${filePath}`,
       });
       if (!result.success || !result.data || result.data.isBinary) return;

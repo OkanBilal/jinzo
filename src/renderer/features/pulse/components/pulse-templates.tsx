@@ -16,7 +16,7 @@ export function PulseTemplates({
             <Body className=" font-medium mb-3">
               {cat.label}
             </Body>
-            <div className="grid grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-8">
               {items.map((tpl) => (
                 <div
                   key={tpl.id}

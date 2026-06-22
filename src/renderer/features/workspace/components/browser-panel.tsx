@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { useDispatch } from "react-redux";
 import {
   addContextBrowserSelection,
   type ContextBrowserSelection,
@@ -19,7 +18,7 @@ import {
   Crop,
 } from "@/components/ui/icons";
 import { useBrowserPanel } from "@/hooks/use-browser-panel";
-import { useAppSelector } from "@/lib/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { setBrowserPanelWidth } from "@/lib/redux/slices/appSettingsSlice";
 import { setLayoutWidthVar } from "@/hooks/use-layout-width-vars";
 import { ResizeHandle } from "@/components/layout/resize-handle";
@@ -89,7 +88,7 @@ function getBrowserApi(): BrowserApi | null {
 
 export function BrowserPanel() {
   const { isOpen, close } = useBrowserPanel();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const viewportRef = useRef<HTMLDivElement>(null);
   const [nav, setNav] = useState<NavState>(INITIAL_NAV);
   const [urlInput, setUrlInput] = useState("");

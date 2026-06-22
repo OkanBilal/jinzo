@@ -3,8 +3,8 @@ import { randomUUID } from "crypto";
 import { execFile } from "child_process";
 import { existsSync } from "fs";
 import path from "path";
-import { BrowserWindow } from "electron";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
+import { emit } from "../../ipc-kit";
 import { workspaceRepo } from "./workspace.repo";
 import { projectsRepo } from "../projects/projects.repo";
 import { normalizeRemoteOrigin } from "../projects/projects.utils";
@@ -75,9 +75,7 @@ function executeScript(
 }
 
 function emitScriptComplete(event: ScriptCompleteEvent): void {
-  for (const win of BrowserWindow.getAllWindows()) {
-    win.webContents.send(CHANNELS.workspace.scriptComplete, event);
-  }
+  emit(CHANNELS.workspace.scriptComplete, event);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -101,9 +99,7 @@ export function logWorkspaceActivity(payload: CreateActivityPayload): void {
  */
 export function emitFindingsChanged(workspaceId: string | undefined): void {
   if (!workspaceId) return;
-  for (const win of BrowserWindow.getAllWindows()) {
-    win.webContents.send(CHANNELS.workspace.findingsChanged, { workspaceId });
-  }
+  emit(CHANNELS.workspace.findingsChanged, { workspaceId });
 }
 
 // ─────────────────────────────────────────────────────────────

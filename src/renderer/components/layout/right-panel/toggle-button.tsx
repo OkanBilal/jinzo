@@ -1,6 +1,7 @@
 import { Toggle, Terminal, TerminalOpen, ToggleClose, Web } from "@/components/ui/icons";
 import { Button, toast } from "@/components/ui";
 import { useAppSelector } from "@/lib/redux/hooks";
+import { useCapabilities } from "@/lib/platform";
 import { GitActionsDropdown } from "./git-actions-dropdown";
 
 interface ToggleButtonProps {
@@ -23,11 +24,13 @@ export function ToggleButton({
   onBrowserToggle,
 }: ToggleButtonProps) {
   const activeWorkspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId);
+  const { embeddedBrowser } = useCapabilities();
   return (
     <div
       data-layout-toggle
-      className="fixed z-(--z-panel-toggle) flex items-center gap-1.5 top-2.75 transition-[right] duration-300 ease-out"
+      className="fixed z-(--z-panel-toggle) flex items-center gap-1.5 transition-[right] duration-300 ease-out"
       style={{
+        top: "calc(0.6875rem + env(safe-area-inset-top))",
         right: browserOpen
           ? "calc(var(--browser-panel-width) + 0.75rem)"
           : "0.8125rem",
@@ -35,7 +38,7 @@ export function ToggleButton({
     >
       <GitActionsDropdown providerId={providerId} />
       <div className="h-4 w-px bg-primary-700/40 dark:bg-primary-700/40" />
-      {onBrowserToggle && (
+      {onBrowserToggle && embeddedBrowser && (
         <Button
           tooltip={browserOpen ? "Close browser" : "Open browser"}
           tooltipPosition="left"

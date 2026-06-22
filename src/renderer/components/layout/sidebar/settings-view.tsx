@@ -2,6 +2,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Body, Button } from "@/components/ui";
 import { ChevronUp } from "@/components/ui/icons";
 import { useListProjectsQuery } from "@/lib/redux/api";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import { setSidebarCollapsed } from "@/lib/redux/slices/appSettingsSlice";
+import { useIsMobile } from "@/lib/platform";
 import { parseIcon, type IconComponent } from "@/lib/icon-registry";
 import {
   getSettingsRouteId,
@@ -17,6 +20,15 @@ interface SettingsViewProps {
 export default function SettingsView({ onClose }: SettingsViewProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useAppDispatch();
+  const isMobile = useIsMobile();
+
+  // The settings nav lives in the sidebar; on mobile that's an overlay drawer, so
+  // close it after picking a section/project to reveal the content underneath.
+  const goTo = (url: string) => {
+    navigate(url);
+    if (isMobile) dispatch(setSidebarCollapsed(true));
+  };
 
   const isOnSettingsPage = location.pathname === "/settings";
   const searchParams = new URLSearchParams(location.search);
@@ -26,7 +38,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
   const { data: projects = [] } = useListProjectsQuery();
 
   const handleSectionClick = (sectionId: SettingsRouteId) => {
-    navigate(`/settings?section=${sectionId}`);
+    goTo(`/settings?section=${sectionId}`);
   };
 
   return (
@@ -103,7 +115,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                   <Button
                     key={project.id}
                     onClick={() =>
-                      navigate(`/settings?section=projects&id=${project.id}`)
+                      goTo(`/settings?section=projects&id=${project.id}`)
                     }
                     className={`w-full cursor-pointer text-left px-3 py-1.5 rounded-xl text-sm tracking-tight transition-all flex items-center gap-2.5
                       ${
