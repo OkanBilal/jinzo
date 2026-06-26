@@ -8,7 +8,12 @@
 // ─────────────────────────────────────────────────────────────
 
 import { describe, it, expect } from "vitest";
-import { classifyOutcome, mapClaudePluginList, mapClaudePluginDetail } from "./claude.driver";
+import {
+  classifyOutcome,
+  mapClaudePluginList,
+  mapClaudePluginDetail,
+  cleanGeneratedTitle,
+} from "./claude.driver";
 
 const DEFAULT_TIMEOUT = 6_000_000;
 
@@ -201,6 +206,41 @@ describe("claude.driver / classifyOutcome", () => {
         usage,
       });
     });
+  });
+});
+
+describe("claude.driver / cleanGeneratedTitle", () => {
+  it("returns a clean title unchanged", () => {
+    expect(cleanGeneratedTitle("Fix Login Redirect", "goal")).toBe("Fix Login Redirect");
+  });
+
+  it("strips surrounding quotes and backticks", () => {
+    expect(cleanGeneratedTitle('"Add Dark Mode"', "g")).toBe("Add Dark Mode");
+    expect(cleanGeneratedTitle("`Update Icons`", "g")).toBe("Update Icons");
+  });
+
+  it('strips a leading "Title:" prefix (case-insensitive)', () => {
+    expect(cleanGeneratedTitle("Title: Update Icons", "g")).toBe("Update Icons");
+    expect(cleanGeneratedTitle("title:   Refactor Header", "g")).toBe("Refactor Header");
+  });
+
+  it("strips trailing sentence punctuation", () => {
+    expect(cleanGeneratedTitle("Refactor Header!", "g")).toBe("Refactor Header");
+    expect(cleanGeneratedTitle("Why Is This Broken?", "g")).toBe("Why Is This Broken");
+  });
+
+  it("keeps only the first line", () => {
+    expect(cleanGeneratedTitle("Best Title\nignored explanation here", "g")).toBe("Best Title");
+  });
+
+  it("falls back to the goal when the model output is empty or whitespace", () => {
+    expect(cleanGeneratedTitle("", "My Goal Here")).toBe("My Goal Here");
+    expect(cleanGeneratedTitle("   ", "Fallback Goal")).toBe("Fallback Goal");
+  });
+
+  it("caps the result at 50 characters", () => {
+    const long = "A".repeat(120);
+    expect(cleanGeneratedTitle(long, "goal").length).toBe(50);
   });
 });
 
