@@ -23,7 +23,9 @@ const ConnectionsSettings = lazy(
 const ClaudeSettings = lazy(() => import("./components/claude"));
 const CopilotSettings = lazy(() => import("./components/copilot"));
 const CodexSettings = lazy(() => import("./components/codex"));
-const CodexPlugins = lazy(() => import("./components/codex-plugins"));
+// The Codex settings section renders the shared ProviderPlugins component with
+// its default (codex) provider.
+const CodexPlugins = lazy(() => import("./components/provider-plugins"));
 const CursorSettings = lazy(() => import("./components/cursor"));
 const ProjectsSettings = lazy(() => import("./components/projects"));
 const BackendsSettings = lazy(() => import("./components/backends"));

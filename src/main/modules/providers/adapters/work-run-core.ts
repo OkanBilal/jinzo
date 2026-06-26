@@ -225,6 +225,10 @@ export function createWorkRunAdapter(driver: ProviderDriver): WorkRunAdapter {
     adapter.installPlugin = driver.installPlugin.bind(driver);
   if (driver.uninstallPlugin)
     adapter.uninstallPlugin = driver.uninstallPlugin.bind(driver);
+  if (driver.setPluginEnabled)
+    adapter.setPluginEnabled = driver.setPluginEnabled.bind(driver);
+  if (driver.updatePlugin)
+    adapter.updatePlugin = driver.updatePlugin.bind(driver);
 
   return adapter;
 }

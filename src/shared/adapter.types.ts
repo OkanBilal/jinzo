@@ -522,14 +522,25 @@ export interface WorkRunAdapter {
   /**
    * Install a plugin by ID.
    * @param pluginId - The plugin ID to install
+   * @param scope - Installation scope (user/project/local). Defaults to "user".
    */
-  installPlugin?(pluginId: string): Promise<void>;
+  installPlugin?(pluginId: string, scope?: PluginScope): Promise<void>;
 
   /**
    * Uninstall a plugin by ID.
    * @param pluginId - The plugin ID to uninstall
    */
   uninstallPlugin?(pluginId: string): Promise<void>;
+
+  /**
+   * Enable or disable an installed plugin without uninstalling it.
+   */
+  setPluginEnabled?(pluginId: string, enabled: boolean): Promise<void>;
+
+  /**
+   * Update an installed plugin to the latest version.
+   */
+  updatePlugin?(pluginId: string): Promise<void>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -623,8 +634,10 @@ export interface ProviderDriver {
   updateCli?(): Promise<CliUpdateResult>;
   listPlugins?(): Promise<PluginListResponse>;
   readPlugin?(pluginName: string, marketplacePath: string): Promise<PluginDetail>;
-  installPlugin?(pluginId: string): Promise<void>;
+  installPlugin?(pluginId: string, scope?: PluginScope): Promise<void>;
   uninstallPlugin?(pluginId: string): Promise<void>;
+  setPluginEnabled?(pluginId: string, enabled: boolean): Promise<void>;
+  updatePlugin?(pluginId: string): Promise<void>;
 
   // ── Thread goal controls (Codex `thread/goal/*`) ──
   /** Set/update the goal for a run's thread. Partial — omitted fields unchanged. */
@@ -863,6 +876,12 @@ export interface ClaudeCodeAdapterConfig {
    * Only meaningful on a model whose supportedEffortLevels includes "xhigh".
    */
   ultracode?: boolean;
+  /**
+   * Local plugins to load for each run. Each plugin directory can contribute
+   * commands, agents, skills, hooks, and (unless skipMcpDiscovery) MCP servers.
+   * Forwarded to the SDK as `options.plugins` ({ type: "local", path }).
+   */
+  plugins?: Array<{ path: string; skipMcpDiscovery?: boolean }>;
 }
 
 /**
@@ -1530,6 +1549,9 @@ export interface PluginInterface {
   termsOfServiceUrl?: string;
 }
 
+/** Where a plugin is installed (maps to the CLI `--scope` flag). */
+export type PluginScope = "user" | "project" | "local";
+
 export interface PluginInfo {
   id: string;
   name: string;
@@ -1539,6 +1561,10 @@ export interface PluginInfo {
   installPolicy: "NOT_AVAILABLE" | "AVAILABLE" | "INSTALLED_BY_DEFAULT";
   authPolicy: "ON_INSTALL" | "ON_USE";
   interface: PluginInterface | null;
+  /** Marketplace install count (popularity signal), when known. */
+  installs?: number;
+  /** True when an installed plugin has a newer version available. */
+  updateAvailable?: boolean;
 }
 
 export interface MarketplaceInfo {

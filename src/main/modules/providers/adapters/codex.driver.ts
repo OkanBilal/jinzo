@@ -4445,7 +4445,8 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       };
     },
 
-    async installPlugin(pluginId: string): Promise<void> {
+    async installPlugin(pluginId: string, _scope?: "user" | "project" | "local"): Promise<void> {
+      // Codex has no install-scope concept; _scope exists only for interface parity.
       const server = await ensureServer();
       // pluginId format: "name@marketplace" e.g. "github@openai-curated"
       const atIdx = pluginId.lastIndexOf("@");
@@ -4481,6 +4482,16 @@ export function createCodexDriver(config: CodexAdapterConfig): ProviderDriver {
       }
       await server.sendRequest("plugin/uninstall", { pluginId, marketplacePath });
       logInfo(`Plugin uninstalled: ${pluginId}`);
+    },
+
+    async setPluginEnabled(pluginId: string, enabled: boolean): Promise<void> {
+      const server = await ensureServer();
+      await server.sendRequest("config/value/write", {
+        keyPath: `plugins.${pluginId}.enabled`,
+        value: enabled,
+        mergeStrategy: "replace",
+      });
+      logInfo(`Plugin ${enabled ? "enabled" : "disabled"}: ${pluginId}`);
     },
   };
 }

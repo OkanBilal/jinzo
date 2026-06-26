@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { describe, it, expect } from "vitest";
-import { classifyOutcome } from "./claude.driver";
+import { classifyOutcome, mapClaudePluginList, mapClaudePluginDetail } from "./claude.driver";
 
 const DEFAULT_TIMEOUT = 6_000_000;
 
@@ -201,5 +201,225 @@ describe("claude.driver / classifyOutcome", () => {
         usage,
       });
     });
+  });
+});
+
+describe("claude.driver / mapClaudePluginList", () => {
+  it("returns an empty response for null inputs", () => {
+    expect(mapClaudePluginList(null, null)).toEqual({
+      marketplaces: [],
+      marketplaceLoadErrors: [],
+      remoteSyncError: null,
+      featuredPluginIds: [],
+    });
+  });
+
+  it("groups available plugins under their marketplace and overlays installed state", () => {
+    const list = {
+      installed: [
+        { id: "frontend-design@official", enabled: true, installPath: "/p/fd", scope: "user" },
+      ],
+      available: [
+        {
+          pluginId: "frontend-design@official",
+          name: "frontend-design",
+          description: "UI design helper",
+          marketplaceName: "official",
+          source: { source: "git-subdir", url: "https://github.com/x/y.git", path: "plugins/fd" },
+        },
+        {
+          pluginId: "api-security@official",
+          name: "api-security",
+          description: "API scanner",
+          marketplaceName: "official",
+          source: { source: "git-subdir", url: "https://github.com/a/b.git" },
+        },
+      ],
+    };
+    const marketplaces = [
+      { name: "official", source: "github", repo: "anthropics/official", installLocation: "/m/official" },
+    ];
+
+    const res = mapClaudePluginList(list, marketplaces);
+    expect(res.marketplaces).toHaveLength(1);
+    const mp = res.marketplaces[0];
+    expect(mp).toMatchObject({ name: "official", path: "/m/official", interface: null });
+    expect(mp.plugins).toHaveLength(2);
+
+    const fd = mp.plugins.find((p) => p.id === "frontend-design@official")!;
+    expect(fd).toMatchObject({
+      name: "frontend-design",
+      installed: true,
+      enabled: true,
+      installPolicy: "AVAILABLE",
+      authPolicy: "ON_INSTALL",
+      source: { type: "git-subdir", path: "https://github.com/x/y.git" },
+    });
+    expect(fd.interface).toMatchObject({ shortDescription: "UI design helper", capabilities: [], screenshots: [] });
+
+    const api = mp.plugins.find((p) => p.id === "api-security@official")!;
+    expect(api).toMatchObject({ installed: false, enabled: false });
+  });
+
+  it("enriches plugin interface with category/developer/homepage from the catalog", () => {
+    const list = {
+      available: [
+        { pluginId: "fd@official", name: "fd", marketplaceName: "official", source: {} },
+      ],
+    };
+    const catalog = {
+      "fd@official": {
+        marketplace_entry: {
+          displayName: "Front End",
+          description: "Catalog description",
+          category: "development",
+          author: { name: "Anthropic" },
+          homepage: "https://example.com",
+        },
+      },
+    };
+    const res = mapClaudePluginList(list, [], catalog);
+    const p = res.marketplaces[0].plugins[0];
+    expect(p.interface).toMatchObject({
+      displayName: "Front End",
+      category: "development",
+      developerName: "Anthropic",
+      websiteUrl: "https://example.com",
+      shortDescription: "Catalog description",
+    });
+  });
+
+  it("leaves displayName undefined when the catalog has none (UI humanizes the slug)", () => {
+    const res = mapClaudePluginList(
+      { available: [{ pluginId: "agent-sdk-dev@official", name: "agent-sdk-dev", source: {} }] },
+      [],
+    );
+    expect(res.marketplaces[0].plugins[0].interface?.displayName).toBeUndefined();
+  });
+
+  it("derives the marketplace from the id when none is configured", () => {
+    const res = mapClaudePluginList(
+      { available: [{ pluginId: "foo@bar", name: "foo", source: {} }] },
+      null,
+    );
+    expect(res.marketplaces.map((m) => m.name)).toContain("bar");
+    expect(res.marketplaces[0].plugins[0]).toMatchObject({
+      id: "foo@bar",
+      source: { type: "git", path: "" },
+      interface: null,
+    });
+  });
+
+  it("surfaces installed plugins absent from the catalog under their id-derived marketplace", () => {
+    const res = mapClaudePluginList(
+      { installed: [{ id: "local-thing@mine", enabled: false, installPath: "/x" }], available: [] },
+      [],
+    );
+    const mp = res.marketplaces.find((m) => m.name === "mine")!;
+    expect(mp.plugins[0]).toMatchObject({
+      id: "local-thing@mine",
+      name: "local-thing",
+      installed: true,
+      enabled: false,
+      source: { type: "local", path: "/x" },
+    });
+  });
+
+  it("populates installs and flags updateAvailable from catalog sha vs installed sha", () => {
+    const list = {
+      installed: [{ id: "p@m", enabled: true }],
+      available: [
+        { pluginId: "p@m", name: "p", marketplaceName: "m", source: {}, installCount: 2293 },
+        { pluginId: "q@m", name: "q", marketplaceName: "m", source: {} },
+      ],
+    };
+    const catalog = { "p@m": { sha: "NEWSHA", unique_installs: 9999 } };
+    const res = mapClaudePluginList(list, [], catalog, { "p@m": "OLDSHA" });
+    const plugins = res.marketplaces[0].plugins;
+    const p = plugins.find((x) => x.id === "p@m")!;
+    const q = plugins.find((x) => x.id === "q@m")!;
+    expect(p.installs).toBe(2293); // installCount preferred over catalog unique_installs
+    expect(p.updateAvailable).toBe(true);
+    expect(q.installs).toBeUndefined();
+    expect(q.updateAvailable).toBe(false); // not installed
+  });
+
+  it("does not flag updateAvailable when the catalog lacks a concrete sha", () => {
+    const res = mapClaudePluginList(
+      { installed: [{ id: "p@m", enabled: true }], available: [{ pluginId: "p@m", name: "p", source: {} }] },
+      [],
+      { "p@m": { source_sha: "DIFFERS" } }, // sha absent → unreliable, don't flag
+      { "p@m": "INSTALLED" },
+    );
+    expect(res.marketplaces[0].plugins[0].updateAvailable).toBe(false);
+  });
+});
+
+describe("claude.driver / mapClaudePluginDetail", () => {
+  const catalog = {
+    "frontend-design@claude-plugins-official": {
+      plugin: "frontend-design",
+      components: {
+        commands: [],
+        agents: [],
+        skills: [{ name: "frontend-design", chars: { always_on: 236 } }],
+        hooks: [],
+        mcpServers: [{ name: "design-mcp" }],
+      },
+      marketplace_entry: {
+        name: "frontend-design",
+        description: "Create distinctive frontend interfaces.",
+        author: { name: "Anthropic" },
+        category: "development",
+        homepage: "https://github.com/anthropics/x",
+        source: "./plugins/frontend-design",
+      },
+    },
+  };
+
+  it("maps a catalog entry into a PluginDetail with components and installed state", () => {
+    const detail = mapClaudePluginDetail(
+      catalog,
+      { "frontend-design@claude-plugins-official": true },
+      "frontend-design",
+      "/Users/me/.claude/plugins/marketplaces/claude-plugins-official",
+    );
+
+    expect(detail.marketplaceName).toBe("claude-plugins-official");
+    expect(detail.description).toBe("Create distinctive frontend interfaces.");
+    expect(detail.skills).toEqual([{ name: "frontend-design", enabled: true }]);
+    expect(detail.mcpServers).toEqual(["design-mcp"]);
+    expect(detail.apps).toEqual([]);
+    expect(detail.summary).toMatchObject({
+      id: "frontend-design@claude-plugins-official",
+      name: "frontend-design",
+      installed: true,
+      enabled: true,
+      installPolicy: "AVAILABLE",
+    });
+    expect(detail.summary.interface).toMatchObject({
+      displayName: "frontend-design",
+      developerName: "Anthropic",
+      category: "development",
+      websiteUrl: "https://github.com/anthropics/x",
+    });
+  });
+
+  it("marks not-installed plugins and resolves the id by name fallback", () => {
+    const detail = mapClaudePluginDetail(catalog, {}, "frontend-design", "");
+    expect(detail.summary).toMatchObject({
+      id: "frontend-design@claude-plugins-official",
+      installed: false,
+      enabled: false,
+    });
+  });
+
+  it("degrades to a minimal detail when the catalog is empty", () => {
+    const detail = mapClaudePluginDetail({}, {}, "ghost", "/m/some-market");
+    expect(detail.summary.id).toBe("ghost@some-market");
+    expect(detail.description).toBeNull();
+    expect(detail.skills).toEqual([]);
+    expect(detail.mcpServers).toEqual([]);
+    expect(detail.summary.interface?.displayName).toBe("ghost");
   });
 });

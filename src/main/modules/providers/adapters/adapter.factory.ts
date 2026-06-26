@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { ProviderResponse } from "../providers.dto";
-import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, CursorAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, AccountInfo } from "../../../../shared/adapter.types";
+import type { WorkRunAdapter, CopilotAdapterConfig, ClaudeCodeAdapterConfig, CodexAdapterConfig, CursorAdapterConfig, ModelInfo, CommandInfo, SkillInfo, PluginListResponse, PluginDetail, PluginScope, AccountInfo } from "../../../../shared/adapter.types";
 import { createClaudeDriver } from "./claude.driver";
 import { createCodexDriver } from "./codex.driver";
 import { createCopilotDriver } from "./copilot.driver";
@@ -335,12 +335,12 @@ export async function readPluginForProvider(provider: ProviderResponse, pluginNa
   return adapter.readPlugin(pluginName, marketplacePath);
 }
 
-export async function installPluginForProvider(provider: ProviderResponse, pluginId: string): Promise<void> {
+export async function installPluginForProvider(provider: ProviderResponse, pluginId: string, scope?: PluginScope): Promise<void> {
   const adapter = createWorkAdapter(provider);
   if (!adapter.installPlugin) {
     throw new Error(`Provider "${provider.displayName}" does not support plugin installation.`);
   }
-  return adapter.installPlugin(pluginId);
+  return adapter.installPlugin(pluginId, scope);
 }
 
 export async function uninstallPluginForProvider(provider: ProviderResponse, pluginId: string): Promise<void> {
@@ -349,6 +349,22 @@ export async function uninstallPluginForProvider(provider: ProviderResponse, plu
     throw new Error(`Provider "${provider.displayName}" does not support plugin uninstallation.`);
   }
   return adapter.uninstallPlugin(pluginId);
+}
+
+export async function setPluginEnabledForProvider(provider: ProviderResponse, pluginId: string, enabled: boolean): Promise<void> {
+  const adapter = createWorkAdapter(provider);
+  if (!adapter.setPluginEnabled) {
+    throw new Error(`Provider "${provider.displayName}" does not support enabling/disabling plugins.`);
+  }
+  return adapter.setPluginEnabled(pluginId, enabled);
+}
+
+export async function updatePluginForProvider(provider: ProviderResponse, pluginId: string): Promise<void> {
+  const adapter = createWorkAdapter(provider);
+  if (!adapter.updatePlugin) {
+    throw new Error(`Provider "${provider.displayName}" does not support updating plugins.`);
+  }
+  return adapter.updatePlugin(pluginId);
 }
 
 export async function getRateLimitsForProvider(

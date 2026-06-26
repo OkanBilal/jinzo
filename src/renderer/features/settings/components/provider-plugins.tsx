@@ -7,14 +7,17 @@ import {
   Button,
   toast,
   AsciiSpinner,
+  Select,
 } from "@/components/ui";
 import {
   useGetProviderPluginsQuery,
   useReadProviderPluginQuery,
   useInstallProviderPluginMutation,
   useUninstallProviderPluginMutation,
+  useSetProviderPluginEnabledMutation,
+  useUpdateProviderPluginMutation,
 } from "@/lib/redux/api";
-import type { PluginInfo } from "@/lib/redux/api";
+import type { PluginInfo, PluginScope } from "@/lib/redux/api";
 import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 import { extractErrorMessage } from "@/lib/extract-error-message";
 import {
@@ -55,6 +58,53 @@ function formatIncludeName(raw: string): string {
     .join(" ");
 }
 
+/** Common acronyms to upper-case when humanizing slug-style plugin names. */
+const PLUGIN_NAME_ACRONYMS = new Set([
+  "ai", "api", "aws", "cli", "css", "db", "etl", "gcp", "html", "http", "id",
+  "io", "js", "json", "jwt", "k8s", "llm", "mcp", "ml", "pdf", "sdk", "sql",
+  "ssh", "ui", "ux", "url", "s3", "gpu", "cpu", "sso", "crm", "orm",
+]);
+
+/** "agent-sdk-dev" → "Agent SDK Dev". Used when a plugin has no displayName
+ *  (Claude marketplace plugins are slug-named). Codex plugins keep their own
+ *  displayName, so this only ever runs on the raw-name fallback. */
+function humanizePluginName(raw: string): string {
+  const words = raw
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((w) => {
+      const lower = w.toLowerCase();
+      if (PLUGIN_NAME_ACRONYMS.has(lower)) return lower.toUpperCase();
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    });
+  return words.length ? words.join(" ") : raw;
+}
+
+/** "database" → "Database", "machine-learning" → "Machine Learning". */
+function formatCategory(cat: string): string {
+  return cat
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/** Compact install-count label: 940 → "940", 2293 → "2.3k", 948012 → "948k". */
+function formatInstalls(n: number): string {
+  if (n < 1000) return String(n);
+  if (n < 1_000_000) return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`;
+  return `${(n / 1_000_000).toFixed(1)}M`;
+}
+
+/** Deterministic avatar background for plugins without a brand color (e.g.
+ *  Claude marketplace plugins, which publish no logo/brandColor). Same key →
+ *  same hue, so the grid is colorful but stable. Dark enough for white text. */
+function pluginAvatarColor(key: string): string {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return `hsl(${h % 360} 50% 45%)`;
+}
+
 function PluginLogo({
   plugin,
   size = "md",
@@ -64,12 +114,15 @@ function PluginLogo({
 }) {
   const sizeClass =
     size === "lg" ? "size-14" : size === "md" ? "size-8" : "size-8";
-  const roundedClass = size === "lg" ? "rounded-2xl" : "rounded-lg";
+  const roundedClass = size === "lg" ? "rounded-2xl" : "rounded-xl";
   const textSize =
     size === "lg" ? "text-xl" : size === "md" ? "text-sm" : "text-xs";
   const brandColor = plugin.interface?.brandColor;
   const logo = plugin.interface?.logo;
-  const name = plugin.interface?.displayName || plugin.name;
+  const name = plugin.interface?.displayName || humanizePluginName(plugin.name);
+  // No brand color (Claude plugins) → derive a stable color from the id so each
+  // plugin gets a distinct avatar instead of an identical grey one.
+  const generatedColor = brandColor ? null : pluginAvatarColor(plugin.id || plugin.name);
 
   if (logo) {
     return (
@@ -86,8 +139,10 @@ function PluginLogo({
 
   return (
     <div
-      className={`${sizeClass} ${roundedClass} flex items-center justify-center font-semibold ${textSize} text-primary shrink-0`}
-      style={{ backgroundColor: brandColor || "var(--color-primary-500)" }}
+      className={`${sizeClass} ${roundedClass} flex items-center justify-center font-semibold ${textSize} ${
+        generatedColor ? "text-white" : "text-primary"
+      } shrink-0`}
+      style={{ backgroundColor: brandColor || generatedColor || "var(--color-primary-500)" }}
     >
       {name.charAt(0).toUpperCase()}
     </div>
@@ -109,7 +164,7 @@ function PluginCard({
   onUninstall: () => void;
   isInstalling: boolean;
 }) {
-  const name = plugin.interface?.displayName || plugin.name;
+  const name = plugin.interface?.displayName || humanizePluginName(plugin.name);
   const description = plugin.interface?.shortDescription || "";
 
   return (
@@ -124,11 +179,28 @@ function PluginCard({
     >
       <PluginLogo plugin={plugin} size="md" />
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-primary-900 dark:text-primary-100 truncate mb-1">
-          {name}
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-sm font-medium text-primary-900 dark:text-primary-100 truncate">
+            {name}
+          </span>
+          {plugin.installed && !plugin.enabled && (
+            <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-primary-200/60 dark:bg-primary-800/40 text-primary-500 dark:text-primary-400">
+              Disabled
+            </span>
+          )}
+          {plugin.updateAvailable && (
+            <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+              Update
+            </span>
+          )}
         </div>
-        <div className="text-xs text-primary-500 dark:text-primary-400 truncate">
-          {description}
+        <div className="flex items-center gap-2 text-xs text-primary-500 dark:text-primary-400 min-w-0">
+          <span className="truncate">{description}</span>
+          {typeof plugin.installs === "number" && plugin.installs > 0 && (
+            <span className="shrink-0 tabular-nums opacity-70">
+              {formatInstalls(plugin.installs)} installs
+            </span>
+          )}
         </div>
       </div>
       <Button
@@ -166,25 +238,41 @@ function PluginCard({
 
 function PluginDetail({
   plugin,
+  providerId,
   marketplacePath,
   onBack,
   onInstall,
   onUninstall,
+  onToggleEnabled,
+  onUpdate,
+  installScope,
+  onScopeChange,
   isInstalling,
+  isToggling,
+  isUpdating,
 }: {
   plugin: PluginInfo;
+  providerId: string;
   marketplacePath: string;
   onBack: () => void;
   onInstall: () => void;
   onUninstall: () => void;
+  onToggleEnabled: () => void;
+  onUpdate: () => void;
+  installScope: PluginScope;
+  onScopeChange: (scope: PluginScope) => void;
   isInstalling: boolean;
+  isToggling: boolean;
+  isUpdating: boolean;
 }) {
   const iface = plugin.interface;
-  const name = iface?.displayName || plugin.name;
+  const name = iface?.displayName || humanizePluginName(plugin.name);
   const pluginName = plugin.name || plugin.id.split("@")[0];
+  // Scope only applies to Claude's CLI install; Codex has no scope concept.
+  const supportsScope = providerId === PROVIDER_IDS.claude;
 
   const { data: detail } = useReadProviderPluginQuery(
-    { providerId: PROVIDER_IDS.codex, pluginName, marketplacePath },
+    { providerId, pluginName, marketplacePath },
     { skip: !marketplacePath },
   );
   const hasIncludes =
@@ -208,29 +296,73 @@ function PluginDetail({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-4">
             <Heading2>{name}</Heading2>
-            <Button
-              onClick={plugin.installed ? onUninstall : onInstall}
-              disabled={
-                isInstalling || plugin.installPolicy === "NOT_AVAILABLE"
-              }
-              variant={plugin.installed ? "secondary" : "primary"}
-              size="sm"
-              className=""
-            >
-              {isInstalling ? (
-                <div className=" px-1.5">
-                  <AsciiSpinner variant="null" />
-                </div>
-              ) : plugin.installed ? (
-                "Uninstall"
+            <div className="flex items-center gap-2 shrink-0">
+              {!plugin.installed ? (
+                <>
+                  {supportsScope && (
+                    <Select<PluginScope>
+                      value={installScope}
+                      onChange={onScopeChange}
+                      title="Select Scope"
+                      options={[
+                        { value: "user", label: "User", description: "Global (all projects)" },
+                        { value: "project", label: "Project", description: "This project (shared)" },
+                        { value: "local", label: "Local", description: "This project (private)" },
+                      ]}
+                    />
+                  )}
+                  <Button
+                    onClick={onInstall}
+                    disabled={isInstalling || plugin.installPolicy === "NOT_AVAILABLE"}
+                    variant="primary"
+                    size="sm"
+                  >
+                    {isInstalling ? (
+                      <div className="px-1.5">
+                        <AsciiSpinner variant="null" />
+                      </div>
+                    ) : (
+                      "Add"
+                    )}
+                  </Button>
+                </>
               ) : (
-                "Add"
+                <>
+                  {plugin.updateAvailable && (
+                    <Button onClick={onUpdate} disabled={isUpdating} variant="primary" size="sm">
+                      {isUpdating ? (
+                        <div className="px-1.5">
+                          <AsciiSpinner variant="null" />
+                        </div>
+                      ) : (
+                        "Update"
+                      )}
+                    </Button>
+                  )}
+                  <Button onClick={onToggleEnabled} disabled={isToggling} variant="secondary" size="sm">
+                    {isToggling ? (
+                      <div className="px-1.5">
+                        <AsciiSpinner variant="null" />
+                      </div>
+                    ) : plugin.enabled ? (
+                      "Disable"
+                    ) : (
+                      "Enable"
+                    )}
+                  </Button>
+                  <Button onClick={onUninstall} disabled={isInstalling} variant="secondary" size="sm">
+                    {isInstalling ? (
+                      <div className="px-1.5">
+                        <AsciiSpinner variant="null" />
+                      </div>
+                    ) : (
+                      "Uninstall"
+                    )}
+                  </Button>
+                </>
               )}
-            </Button>
+            </div>
           </div>
-          {iface?.shortDescription && (
-            <Muted className="mt-1">{iface.shortDescription}</Muted>
-          )}
         </div>
       </div>
 
@@ -509,20 +641,29 @@ const FEATURED_PLUGIN_NAMES = [
 
 // ── Main Component ──
 
-export default function CodexPlugins() {
+export default function ProviderPlugins({
+  providerId = PROVIDER_IDS.codex,
+}: {
+  providerId?: string;
+} = {}) {
   const {
     data: pluginData,
     isLoading,
     error,
-  } = useGetProviderPluginsQuery(PROVIDER_IDS.codex);
+  } = useGetProviderPluginsQuery(providerId);
   const [installPlugin, { isLoading: isInstalling }] =
     useInstallProviderPluginMutation();
   const [uninstallPlugin, { isLoading: isUninstalling }] =
     useUninstallProviderPluginMutation();
+  const [setPluginEnabled, { isLoading: isToggling }] =
+    useSetProviderPluginEnabledMutation();
+  const [updatePlugin, { isLoading: isUpdating }] =
+    useUpdateProviderPluginMutation();
 
   const [selectedPluginId, setSelectedPluginId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [installScope, setInstallScope] = useState<PluginScope>("user");
 
   // Flatten all plugins from all marketplaces (only OpenAI plugins for now)
   const allPlugins = useMemo(() => {
@@ -570,23 +711,35 @@ export default function CodexPlugins() {
     return result;
   }, [allPlugins, search, categoryFilter]);
 
-  // Group by category
+  // Highlight row: curated "Featured" when the marketplace provides it, else
+  // fall back to the most-installed plugins ("Popular") — useful for Claude,
+  // which has no featured list but does report install counts.
   const featured = useMemo(
     () => filteredPlugins.filter((p) => featuredIds.has(p.id)),
     [filteredPlugins, featuredIds],
   );
+  const popular = useMemo(() => {
+    if (featuredIds.size > 0) return [];
+    return [...filteredPlugins]
+      .filter((p) => (p.installs ?? 0) > 0)
+      .sort((a, b) => (b.installs ?? 0) - (a.installs ?? 0))
+      .slice(0, 6);
+  }, [filteredPlugins, featuredIds]);
+  const highlight = featured.length ? featured : popular;
+  const highlightLabel = featured.length ? "Featured" : "Popular";
+  const highlightIds = useMemo(() => new Set(highlight.map((p) => p.id)), [highlight]);
 
   const grouped = useMemo(() => {
     const groups = new Map<string, PluginInfo[]>();
     for (const p of filteredPlugins) {
-      if (featuredIds.has(p.id) && !categoryFilter) continue;
+      if (highlightIds.has(p.id) && !categoryFilter) continue;
       const cat = p.interface?.category || "Other";
       const list = groups.get(cat) ?? [];
       list.push(p);
       groups.set(cat, list);
     }
     return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [filteredPlugins, featuredIds, categoryFilter]);
+  }, [filteredPlugins, highlightIds, categoryFilter]);
 
   const selectedPlugin = useMemo(
     () => allPlugins.find((p) => p.id === selectedPluginId) ?? null,
@@ -608,7 +761,7 @@ export default function CodexPlugins() {
     async (pluginId: string) => {
       setActionInFlight(pluginId);
       try {
-        await installPlugin({ providerId: PROVIDER_IDS.codex, pluginId }).unwrap();
+        await installPlugin({ providerId, pluginId, scope: installScope }).unwrap();
         toast.success("Plugin installed");
       } catch (err: any) {
         toast.error(extractErrorMessage(err, "Failed to install plugin"));
@@ -616,14 +769,14 @@ export default function CodexPlugins() {
         setActionInFlight(null);
       }
     },
-    [installPlugin],
+    [installPlugin, providerId, installScope],
   );
 
   const handleUninstall = useCallback(
     async (pluginId: string) => {
       setActionInFlight(pluginId);
       try {
-        await uninstallPlugin({ providerId: PROVIDER_IDS.codex, pluginId }).unwrap();
+        await uninstallPlugin({ providerId, pluginId }).unwrap();
         toast.success("Plugin uninstalled");
       } catch (err: any) {
         toast.error(extractErrorMessage(err, "Failed to uninstall plugin"));
@@ -631,7 +784,37 @@ export default function CodexPlugins() {
         setActionInFlight(null);
       }
     },
-    [uninstallPlugin],
+    [uninstallPlugin, providerId],
+  );
+
+  const handleToggleEnabled = useCallback(
+    async (pluginId: string, enabled: boolean) => {
+      setActionInFlight(pluginId);
+      try {
+        await setPluginEnabled({ providerId, pluginId, enabled }).unwrap();
+        toast.success(enabled ? "Plugin enabled" : "Plugin disabled");
+      } catch (err: any) {
+        toast.error(extractErrorMessage(err, "Failed to update plugin"));
+      } finally {
+        setActionInFlight(null);
+      }
+    },
+    [setPluginEnabled, providerId],
+  );
+
+  const handleUpdate = useCallback(
+    async (pluginId: string) => {
+      setActionInFlight(pluginId);
+      try {
+        await updatePlugin({ providerId, pluginId }).unwrap();
+        toast.success("Plugin updated");
+      } catch (err: any) {
+        toast.error(extractErrorMessage(err, "Failed to update plugin"));
+      } finally {
+        setActionInFlight(null);
+      }
+    },
+    [updatePlugin, providerId],
   );
 
   if (isLoading) {
@@ -655,14 +838,21 @@ export default function CodexPlugins() {
     return (
       <PluginDetail
         plugin={selectedPlugin}
+        providerId={providerId}
         marketplacePath={selectedPluginMarketplacePath}
         onBack={() => setSelectedPluginId(null)}
         onInstall={() => handleInstall(selectedPlugin.id)}
         onUninstall={() => handleUninstall(selectedPlugin.id)}
+        onToggleEnabled={() => handleToggleEnabled(selectedPlugin.id, !selectedPlugin.enabled)}
+        onUpdate={() => handleUpdate(selectedPlugin.id)}
+        installScope={installScope}
+        onScopeChange={setInstallScope}
         isInstalling={
           (isInstalling || isUninstalling) &&
           actionInFlight === selectedPlugin.id
         }
+        isToggling={isToggling && actionInFlight === selectedPlugin.id}
+        isUpdating={isUpdating && actionInFlight === selectedPlugin.id}
       />
     );
   }
@@ -695,7 +885,7 @@ export default function CodexPlugins() {
                   : "text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-200 hover:bg-primary-100/50 dark:hover:bg-primary-800/30"
               }`}
             >
-              {cat}
+              {formatCategory(cat)}
             </Button>
           ))}
         </div>
@@ -711,14 +901,14 @@ export default function CodexPlugins() {
         </div>
       </div>
 
-      {/* Featured */}
-      {featured.length > 0 && !categoryFilter && (
+      {/* Featured / Popular */}
+      {highlight.length > 0 && !categoryFilter && (
         <div className="mb-6">
           <Body className=" font-medium mb-3">
-            Featured
+            {highlightLabel}
           </Body>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-8">
-            {featured.map((p) => (
+            {highlight.map((p) => (
               <PluginCard
                 key={p.id}
                 plugin={p}
@@ -738,7 +928,7 @@ export default function CodexPlugins() {
       {grouped.map(([category, plugins]) => (
         <div key={category} className="mb-6">
           <Body className=" font-medium mb-3">
-            {category}
+            {formatCategory(category)}
           </Body>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-8">
             {plugins.map((p) => (

@@ -195,6 +195,8 @@ export const CHANNELS = {
     installPlugin: "providers:installPlugin",
     readPlugin: "providers:readPlugin",
     uninstallPlugin: "providers:uninstallPlugin",
+    setPluginEnabled: "providers:setPluginEnabled",
+    updatePlugin: "providers:updatePlugin",
     update: "providers:update",
     updateCli: "providers:updateCli",
   },

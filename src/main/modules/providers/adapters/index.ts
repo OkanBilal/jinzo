@@ -88,6 +88,8 @@ export {
   readPluginForProvider,
   installPluginForProvider,
   uninstallPluginForProvider,
+  setPluginEnabledForProvider,
+  updatePluginForProvider,
   getRateLimitsForProvider,
   setGoalForProvider,
   getGoalForProvider,

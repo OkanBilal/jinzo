@@ -8,7 +8,8 @@ import type {
   ServiceResponse,
   DetectedClisResponse,
 } from "./providers.dto";
-import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, getAccountInfoForProvider, updateCliForProvider, listPluginsForProvider, readPluginForProvider, installPluginForProvider, uninstallPluginForProvider, getRateLimitsForProvider, setGoalForProvider, getGoalForProvider, clearGoalForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo, type PluginListResponse, type PluginDetail, type AccountInfo, type CliUpdateResult } from "./adapters";
+import { listModelsForProvider, listCommandsForProvider, listSkillsForProvider, getAccountInfoForProvider, updateCliForProvider, listPluginsForProvider, readPluginForProvider, installPluginForProvider, uninstallPluginForProvider, setPluginEnabledForProvider, updatePluginForProvider, getRateLimitsForProvider, setGoalForProvider, getGoalForProvider, clearGoalForProvider, invalidateWorkAdapter, type ModelInfo, type CommandInfo, type SkillInfo, type PluginListResponse, type PluginDetail, type AccountInfo, type CliUpdateResult } from "./adapters";
+import type { PluginScope } from "../../../shared/adapter.types";
 import type { RateLimitInfo, GoalInfo, GoalSetParams } from "../../../shared/adapter.types";
 
 // ─────────────────────────────────────────────────────────────
@@ -298,12 +299,12 @@ export const providersService = {
     }
   },
 
-  async installPlugin(id: string, pluginId: string): Promise<ServiceResponse<void>> {
+  async installPlugin(id: string, pluginId: string, scope?: PluginScope): Promise<ServiceResponse<void>> {
     try {
       const provider = await providersRepo.findById(id);
       if (!provider) return fail("Provider not found");
       if (!provider.isEnabled) return fail("Provider is not enabled");
-      await installPluginForProvider(provider, pluginId);
+      await installPluginForProvider(provider, pluginId, scope);
       return ok(undefined);
     } catch (error) {
       console.error(`[ProvidersService] Failed to install plugin ${pluginId}:`, error);
@@ -321,6 +322,32 @@ export const providersService = {
     } catch (error) {
       console.error(`[ProvidersService] Failed to uninstall plugin ${pluginId}:`, error);
       return fail(error instanceof Error ? error.message : "Failed to uninstall plugin");
+    }
+  },
+
+  async setPluginEnabled(id: string, pluginId: string, enabled: boolean): Promise<ServiceResponse<void>> {
+    try {
+      const provider = await providersRepo.findById(id);
+      if (!provider) return fail("Provider not found");
+      if (!provider.isEnabled) return fail("Provider is not enabled");
+      await setPluginEnabledForProvider(provider, pluginId, enabled);
+      return ok(undefined);
+    } catch (error) {
+      console.error(`[ProvidersService] Failed to toggle plugin ${pluginId}:`, error);
+      return fail(error instanceof Error ? error.message : "Failed to toggle plugin");
+    }
+  },
+
+  async updatePlugin(id: string, pluginId: string): Promise<ServiceResponse<void>> {
+    try {
+      const provider = await providersRepo.findById(id);
+      if (!provider) return fail("Provider not found");
+      if (!provider.isEnabled) return fail("Provider is not enabled");
+      await updatePluginForProvider(provider, pluginId);
+      return ok(undefined);
+    } catch (error) {
+      console.error(`[ProvidersService] Failed to update plugin ${pluginId}:`, error);
+      return fail(error instanceof Error ? error.message : "Failed to update plugin");
     }
   },
 
