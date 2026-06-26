@@ -165,7 +165,14 @@ export interface PluginInfo {
   installPolicy: "NOT_AVAILABLE" | "AVAILABLE" | "INSTALLED_BY_DEFAULT";
   authPolicy: "ON_INSTALL" | "ON_USE";
   interface: PluginInterfaceInfo | null;
+  /** Marketplace install count (popularity), when known. */
+  installs?: number;
+  /** True when an installed plugin has a newer version available. */
+  updateAvailable?: boolean;
 }
+
+/** Plugin install scope (maps to the CLI `--scope` flag). */
+export type PluginScope = "user" | "project" | "local";
 
 export interface MarketplaceInfo {
   name: string;
@@ -413,10 +420,13 @@ export const providersApi = baseApi.injectEndpoints({
       transformResponse: (response: ServiceResponse<PluginDetailResponse>) => unwrap(response),
     }),
 
-    installProviderPlugin: builder.mutation<void, { providerId: string; pluginId: string }>({
-      query: ({ providerId, pluginId }) => ({
+    installProviderPlugin: builder.mutation<
+      void,
+      { providerId: string; pluginId: string; scope?: PluginScope }
+    >({
+      query: ({ providerId, pluginId, scope }) => ({
         handler: CHANNELS.providers.installPlugin,
-        args: [providerId, pluginId],
+        args: [providerId, pluginId, scope],
       }),
       transformResponse: (response: ServiceResponse<unknown>) => {
         unwrap(response);
@@ -430,6 +440,37 @@ export const providersApi = baseApi.injectEndpoints({
     uninstallProviderPlugin: builder.mutation<void, { providerId: string; pluginId: string }>({
       query: ({ providerId, pluginId }) => ({
         handler: CHANNELS.providers.uninstallPlugin,
+        args: [providerId, pluginId],
+      }),
+      transformResponse: (response: ServiceResponse<unknown>) => {
+        unwrap(response);
+      },
+      invalidatesTags: (_r, _e, { providerId }) => [
+        { type: "ProviderPlugins", id: providerId },
+        "ProviderSkills",
+      ],
+    }),
+
+    setProviderPluginEnabled: builder.mutation<
+      void,
+      { providerId: string; pluginId: string; enabled: boolean }
+    >({
+      query: ({ providerId, pluginId, enabled }) => ({
+        handler: CHANNELS.providers.setPluginEnabled,
+        args: [providerId, pluginId, enabled],
+      }),
+      transformResponse: (response: ServiceResponse<unknown>) => {
+        unwrap(response);
+      },
+      invalidatesTags: (_r, _e, { providerId }) => [
+        { type: "ProviderPlugins", id: providerId },
+        "ProviderSkills",
+      ],
+    }),
+
+    updateProviderPlugin: builder.mutation<void, { providerId: string; pluginId: string }>({
+      query: ({ providerId, pluginId }) => ({
+        handler: CHANNELS.providers.updatePlugin,
         args: [providerId, pluginId],
       }),
       transformResponse: (response: ServiceResponse<unknown>) => {
@@ -518,6 +559,8 @@ export const {
   useReadProviderPluginQuery,
   useInstallProviderPluginMutation,
   useUninstallProviderPluginMutation,
+  useSetProviderPluginEnabledMutation,
+  useUpdateProviderPluginMutation,
   useGetProviderRateLimitsQuery,
   useGetProviderGoalQuery,
   useLazyGetProviderGoalQuery,

@@ -36,9 +36,11 @@ import type {
   HookMatcher,
   HooksConfig,
   ModelInfo,
+  PluginDetail,
+  PluginListResponse,
+  MarketplaceInfo,
   ProviderDriver,
   SkillInfo,
-  WorkRunContextItem,
   WorkRunContinueRequest,
   WorkRunEvent,
   WorkRunEventHandler,
@@ -162,6 +164,7 @@ interface SDKOptions {
   settings?: Record<string, unknown>;
   promptSuggestions?: boolean;
   includePartialMessages?: boolean;
+  plugins?: Array<{ type: "local"; path: string; skipMcpDiscovery?: boolean }>;
 }
 
 interface SDKMessageContent {
@@ -244,7 +247,7 @@ type SDKResultMessage = SDKResultSuccess | SDKResultError;
 
 interface SDKSystemMessage {
   type: "system";
-  subtype: "init" | "compact_boundary" | "api_retry" | "status";
+  subtype: "init" | "compact_boundary" | "api_retry" | "status" | "plugin_install";
   uuid: string;
   session_id: string;
   model?: string;
@@ -259,6 +262,8 @@ interface SDKSystemMessage {
   slash_commands?: string[];
   output_style?: string;
   skills?: string[];
+  // subtype: "init"
+  plugins?: { name: string; path: string }[];
   // subtype: "compact_boundary"
   compact_metadata?: {
     trigger: "manual" | "auto";
@@ -271,6 +276,10 @@ interface SDKSystemMessage {
   max_retries?: number;
   retry_delay_ms?: number;
   error_status?: number | null;
+  // subtype: "plugin_install"
+  status?: "started" | "installed" | "failed" | "completed";
+  name?: string;
+  error?: string;
 }
 
 interface SDKRateLimitInfo {
@@ -345,6 +354,17 @@ interface SDKInitializationResult {
   account: { email?: string; organization?: string };
 }
 
+/** Subset of the SDK's SDKSessionInfo we read for the auto-title. */
+interface SDKSessionInfoLite {
+  sessionId: string;
+  /** Display title: customTitle || aiTitle || lastPrompt || firstPrompt. */
+  summary: string;
+  /** User-set title via /rename. */
+  customTitle?: string;
+  /** First meaningful user prompt — used to detect "no AI title yet". */
+  firstPrompt?: string;
+}
+
 interface SDKQuery extends AsyncGenerator<SDKMessage, void> {
   interrupt(): Promise<void>;
   rewindFiles(userMessageUuid: string, options?: { dryRun?: boolean }): Promise<unknown>;
@@ -387,6 +407,8 @@ interface ClaudeSession {
   partialThinkingBuffers: Map<string, string>;
   /** SDK query — created lazily in executePrompt because the prompt is supplied there. */
   query?: SDKQuery;
+  /** True for start/fork (a fresh run that owns its title), false for continue. */
+  isInitial: boolean;
 }
 
 const { info: logInfo, warn: logWarn, error: logError } = createLogger("[ClaudeDriver]");
@@ -402,6 +424,11 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
   let queryFn: ((options: { prompt: string; options?: SDKOptions }) => SDKQuery) | null = null;
   let createSdkMcpServerFn: ((...args: any[]) => any) | null = null;
   let toolFn: ((...args: any[]) => any) | null = null;
+  // Standalone SDK fn that reads a persisted session's info (incl. the CLI's
+  // auto-generated aiTitle) from the JSONL transcript. Used for run titling.
+  let getSessionInfoFn:
+    | ((sessionId: string, options?: { dir?: string }) => Promise<SDKSessionInfoLite | undefined>)
+    | null = null;
 
   // Cross-run TTL caches
   let cachedModels: ModelInfo[] | null = null;
@@ -416,6 +443,21 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
 
   const skillsCache = new Map<string, { skills: SkillInfo[]; timestamp: number }>();
   const SKILLS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+  // Plugins are fetched via the `claude plugin` CLI subcommands; `--available`
+  // can trigger a remote marketplace sync, so cache the result.
+  let cachedPlugins: PluginListResponse | null = null;
+  let cachedPluginsTimestamp = 0;
+  const PLUGINS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+  // A plugin change adds/removes commands, skills, and agents — so installing or
+  // uninstalling one must invalidate those caches too, not just the plugin list.
+  function invalidatePluginCaches(): void {
+    cachedPlugins = null;
+    cachedPluginsTimestamp = 0;
+    commandsCache.clear();
+    skillsCache.clear();
+  }
 
   // Cross-run sessionId memo (resume lookup avoids hitting the DB every time)
   const sessionIdMemo = new Map<string, string>();
@@ -449,6 +491,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       queryFn = query;
       createSdkMcpServerFn = (ClaudeSDK as any).createSdkMcpServer ?? null;
       toolFn = (ClaudeSDK as any).tool ?? null;
+      getSessionInfoFn = (ClaudeSDK as any).getSessionInfo ?? null;
       sdkLoaded = true;
       logInfo("SDK loaded successfully");
     } catch (error) {
@@ -936,6 +979,15 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       options.agents = convertAgentsConfig(mergedAgents);
     }
 
+    if (config.plugins && config.plugins.length > 0) {
+      options.plugins = config.plugins.map((p) => ({
+        type: "local" as const,
+        path: p.path,
+        ...(p.skipMcpDiscovery !== undefined ? { skipMcpDiscovery: p.skipMcpDiscovery } : {}),
+      }));
+      logInfo(`Loading ${options.plugins.length} local plugin(s)`);
+    }
+
     const mergedHooks = mergeHooksConfig(config.hooks, runHooks);
     if (mergedHooks && Object.keys(mergedHooks).length > 0) {
       options.hooks = convertHooksConfig(mergedHooks);
@@ -1159,11 +1211,16 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       case "system": {
         const systemMsg = msg as SDKSystemMessage;
         if (systemMsg.subtype === "init") {
+          const plugins = systemMsg.plugins ?? [];
+          const pluginPart = plugins.length
+            ? ` · ${plugins.length} plugin${plugins.length === 1 ? "" : "s"}: ${plugins.map((p) => p.name).join(", ")}`
+            : "";
           events.push({
             type: "log",
-            message: `[system] Session initialized with model: ${systemMsg.model || "unknown"}`,
+            message: `[system] Session initialized with model: ${systemMsg.model || "unknown"}${pluginPart}`,
             level: "start",
             ts,
+            ...(plugins.length ? { metadata: { source: "init", plugins } } : {}),
           });
         } else if (systemMsg.subtype === "compact_boundary") {
           const meta = systemMsg.compact_metadata;
@@ -1204,6 +1261,23 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
               maxRetries,
               retryDelayMs: delayMs,
               errorStatus: systemMsg.error_status,
+            },
+          });
+        } else if (systemMsg.subtype === "plugin_install") {
+          const status = systemMsg.status;
+          const namePart = systemMsg.name ? ` ${systemMsg.name}` : "";
+          const errorPart = systemMsg.error ? `: ${systemMsg.error}` : "";
+          // started/completed bracket the whole sync; installed/failed are per-plugin.
+          events.push({
+            type: "log",
+            message: `[plugin] ${status ?? "install"}${namePart}${errorPart}`,
+            level: status === "failed" ? "error" : "info",
+            ts,
+            metadata: {
+              source: "plugin_install",
+              status,
+              name: systemMsg.name,
+              error: systemMsg.error,
             },
           });
         }
@@ -1507,16 +1581,48 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
   // Acquisition helpers
   // ─────────────────────────────────────────────────────────────
 
-  function newSession(runId: string, options: SDKOptions, abortController: AbortController): ClaudeSession {
+  function newSession(
+    runId: string,
+    options: SDKOptions,
+    abortController: AbortController,
+    isInitial: boolean,
+  ): ClaudeSession {
     return {
       runId,
       options,
       abortController,
+      isInitial,
       state: { hasAssistantContent: false },
       toolCallIndex: new Map(),
       partialTextBuffers: new Map(),
       partialThinkingBuffers: new Map(),
     };
+  }
+
+  /**
+   * Read the CLI's auto-generated session title (aiTitle) from the persisted
+   * transcript. The CLI writes aiTitle asynchronously right after the first
+   * turn, so this retries briefly. Returns null when only the first prompt is
+   * available (no AI/custom title yet) — callers keep the provisional title.
+   */
+  async function readAutoTitle(sessionId: string, dir?: string): Promise<string | null> {
+    if (!getSessionInfoFn) return null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const info = await getSessionInfoFn(sessionId, dir ? { dir } : undefined);
+        if (info?.summary && info.summary !== info.firstPrompt) {
+          const title = info.summary.trim();
+          if (title) return title.length > 80 ? title.slice(0, 80) : title;
+        }
+      } catch (err) {
+        logWarn(
+          `readAutoTitle attempt ${attempt + 1} failed:`,
+          err instanceof Error ? err.message : String(err),
+        );
+      }
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 800));
+    }
+    return null;
   }
 
   async function lookupSessionId(runId: string): Promise<string | undefined> {
@@ -1550,6 +1656,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
   function runClaudeCli(
     args: string[],
     timeoutMs: number,
+    cwd?: string,
   ): Promise<{ stdout: string; stderr: string; code: number | null }> {
     const binaryPath = resolveClaudeBinary();
     if (!binaryPath) {
@@ -1560,6 +1667,9 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         env: { ...process.env, HOME: os.homedir() },
         stdio: ["ignore", "pipe", "pipe"],
         timeout: timeoutMs,
+        // project/local scope ops resolve the scope relative to cwd; run them in
+        // the directory the plugin was installed from.
+        ...(cwd ? { cwd } : {}),
       });
       let stdout = "";
       let stderr = "";
@@ -1610,7 +1720,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         (options as { permissionMode?: string }).permissionMode = overridePermissionMode;
       }
 
-      const session = newSession(request.runId, options, abortController);
+      const session = newSession(request.runId, options, abortController, true);
       return { session, prompt: buildStartPrompt(request) };
     },
 
@@ -1637,7 +1747,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         workspaceId: request.workspace.id,
       });
 
-      const session = newSession(request.runId, options, abortController);
+      const session = newSession(request.runId, options, abortController, false);
       // Prime sessionId so executePrompt's "first session_id" persistence is a no-op for resume;
       // the SDK keeps the same id when resuming.
       session.state.sessionId = sessionId;
@@ -1668,7 +1778,7 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
         forkSession: true,
       });
 
-      const session = newSession(request.runId, options, abortController);
+      const session = newSession(request.runId, options, abortController, true);
       // Don't prime sessionId — fork creates a NEW session id which will arrive in the stream.
       return { session, prompt: buildForkPrompt(request) };
     },
@@ -1847,6 +1957,22 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
 
         await Promise.race([streamPromise, timeoutPromise]);
 
+        // Replace the provisional goal-derived title with the CLI's
+        // auto-generated aiTitle, once, for the initial run only. Fire-and-forget:
+        // getSessionInfo reads the persisted transcript independently of the
+        // (now-finished) query, so this must not delay the run outcome.
+        if (cs.isInitial && cs.state.sessionId) {
+          const sessionId = cs.state.sessionId;
+          const dir = cs.options.cwd;
+          void readAutoTitle(sessionId, dir).then((title) => {
+            if (title) {
+              runsRepo
+                .updateRun(cs.runId, { title })
+                .catch((err) => logError("Failed to persist auto title:", err));
+            }
+          });
+        }
+
         return classifyOutcome({
           stopReason: cs.state.lastStopReason ?? null,
           usage: cs.state.lastUsage,
@@ -1914,8 +2040,11 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       sdkLoaded = false;
       loadError = null;
       queryFn = null;
+      getSessionInfoFn = null;
       cachedModels = null;
       cachedModelsTimestamp = 0;
+      cachedPlugins = null;
+      cachedPluginsTimestamp = 0;
       commandsCache.clear();
       skillsCache.clear();
       logInfo("Shutdown complete");
@@ -2047,6 +2176,138 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       return fetchDiskSkills(workspacePath);
     },
 
+    async listPlugins(): Promise<PluginListResponse> {
+      const now = Date.now();
+      if (cachedPlugins && now - cachedPluginsTimestamp < PLUGINS_CACHE_TTL_MS) {
+        return cachedPlugins;
+      }
+
+      const empty = (remoteSyncError: string | null): PluginListResponse => ({
+        marketplaces: [],
+        marketplaceLoadErrors: [],
+        remoteSyncError,
+        featuredPluginIds: [],
+      });
+
+      try {
+        if (!resolveClaudeBinary()) return empty("Claude CLI not found");
+
+        // `--available` includes the marketplace catalog (and may sync remotely);
+        // marketplace list supplies the install locations / ordering.
+        const [listRes, mpRes] = await Promise.all([
+          runClaudeCli(["plugin", "list", "--json", "--available"], 30000),
+          runClaudeCli(["plugin", "marketplace", "list", "--json"], 15000),
+        ]);
+
+        const parse = <T>(stdout: string, label: string): T | null => {
+          const trimmed = stdout.trim();
+          if (!trimmed) return null;
+          try {
+            return JSON.parse(trimmed) as T;
+          } catch (err) {
+            logWarn(`Failed to parse ${label} JSON:`, err instanceof Error ? err.message : String(err));
+            return null;
+          }
+        };
+
+        const listJson = parse<{ installed?: unknown[]; available?: unknown[] }>(
+          listRes.stdout,
+          "plugin list",
+        );
+        const mpJson = parse<unknown[]>(mpRes.stdout, "marketplace list");
+
+        if (!listJson && !mpJson) {
+          const msg = (listRes.stderr || mpRes.stderr || "").trim();
+          return empty(msg || null);
+        }
+
+        const result = mapClaudePluginList(
+          listJson,
+          mpJson,
+          readPluginCatalogPlugins(),
+          readInstalledShaById(),
+        );
+        cachedPlugins = result;
+        cachedPluginsTimestamp = now;
+        return result;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        logError("Failed to list plugins:", msg);
+        return empty(msg);
+      }
+    },
+
+    async readPlugin(pluginName: string, marketplacePath: string): Promise<PluginDetail> {
+      // Detail comes from the local catalog cache (written by `plugin list
+      // --available`), which carries components + cost for installed AND
+      // not-installed plugins — the `plugin details` CLI command has no JSON
+      // output, so disk is the robust source. installed/enabled is overlaid
+      // from the cached list when available, else from installed_plugins.json.
+      const catalogPlugins = readPluginCatalogPlugins();
+      const installedEnabled: Record<string, boolean> = {};
+      if (cachedPlugins) {
+        for (const mp of cachedPlugins.marketplaces) {
+          for (const p of mp.plugins) {
+            if (p.installed) installedEnabled[p.id] = p.enabled;
+          }
+        }
+      } else {
+        for (const id of readInstalledPluginIds()) installedEnabled[id] = true;
+      }
+      return mapClaudePluginDetail(catalogPlugins, installedEnabled, pluginName, marketplacePath);
+    },
+
+    async installPlugin(pluginId: string, scope?: "user" | "project" | "local"): Promise<void> {
+      // pluginId is "name@marketplace"; the CLI accepts it directly. Default
+      // scope is "user" (global); install also enables by default.
+      const args = ["plugin", "install", pluginId];
+      if (scope) args.push("--scope", scope);
+      const { stdout, stderr, code } = await runClaudeCli(args, 120000);
+      if (code !== 0) {
+        throw new Error(`Plugin install failed: ${(stderr || stdout).trim() || `exit code ${code}`}`);
+      }
+      invalidatePluginCaches();
+    },
+
+    async uninstallPlugin(pluginId: string): Promise<void> {
+      // Match the scope the plugin was installed at (defaults to "user"); -y
+      // skips the prune confirmation prompt in the non-TTY subprocess. local/
+      // project scope resolves relative to cwd → run in the install dir.
+      const loc = getInstalledPluginLocation(pluginId);
+      const cwd = resolveScopeCwd(loc);
+      const args = ["plugin", "uninstall", pluginId, "-y"];
+      if (loc?.scope) args.push("--scope", loc.scope);
+      const { stdout, stderr, code } = await runClaudeCli(args, 120000, cwd);
+      if (code !== 0) {
+        throw new Error(`Plugin uninstall failed: ${(stderr || stdout).trim() || `exit code ${code}`}`);
+      }
+      invalidatePluginCaches();
+    },
+
+    async setPluginEnabled(pluginId: string, enabled: boolean): Promise<void> {
+      // `claude plugin enable|disable <id> [--scope]`. Match the installed scope
+      // and run local/project ops in the dir the plugin was installed from.
+      const loc = getInstalledPluginLocation(pluginId);
+      const cwd = resolveScopeCwd(loc);
+      const args = ["plugin", enabled ? "enable" : "disable", pluginId];
+      if (loc?.scope) args.push("--scope", loc.scope);
+      const { stdout, stderr, code } = await runClaudeCli(args, 60000, cwd);
+      if (code !== 0) {
+        throw new Error(
+          `Plugin ${enabled ? "enable" : "disable"} failed: ${(stderr || stdout).trim() || `exit code ${code}`}`,
+        );
+      }
+      invalidatePluginCaches();
+    },
+
+    async updatePlugin(pluginId: string): Promise<void> {
+      const { stdout, stderr, code } = await runClaudeCli(["plugin", "update", pluginId], 120000);
+      if (code !== 0) {
+        throw new Error(`Plugin update failed: ${(stderr || stdout).trim() || `exit code ${code}`}`);
+      }
+      invalidatePluginCaches();
+    },
+
     async getAccountInfo(): Promise<AccountInfo> {
       const cli = { version: await getClaudeVersion(), channel: null, outdated: false };
 
@@ -2090,71 +2351,11 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       return { success: code === 0, output: `${stdout}${stderr}`.trim() };
     },
 
-    async generateTitle(goal: string, context?: WorkRunContextItem[]): Promise<string> {
-      await ensureSDK();
-      if (!queryFn) throw new Error("Claude SDK not properly initialized");
-
-      let contextSnippet = "";
-      if (context && context.length > 0) {
-        contextSnippet = context
-          .map((ctx) => {
-            const header = ctx.ref ? `[${ctx.kind}: ${ctx.ref}]` : `[${ctx.kind}]`;
-            return `${header} ${(ctx.content || "").substring(0, 200)}`;
-          })
-          .join("\n")
-          .substring(0, 500);
-      }
-
-      const titlePrompt = [
-        "Generate a concise title (2-5 words) that summarizes what the user wants.",
-        "Rules:",
-        "- Reply with ONLY the title text, nothing else",
-        '- Use title case: capitalize the first letter of each word (e.g. "Fix Login Redirect", "Add Dark Mode", "Greeting Message")',
-        '- Do NOT use generic descriptions of the request type (e.g. NOT "Greeting Title Generation")',
-        '- Instead, describe the actual topic or intent (e.g. "Hello Greeting" for a hello message)',
-        "- No quotes, no punctuation at the end, no prefixes",
-        "",
-        `User message: ${goal}`,
-        contextSnippet ? `\nContext:\n${contextSnippet}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-      const options = await buildOptions({
-        model: "claude-haiku-4-5-20251001",
-      });
-      options.maxTurns = 1;
-      options.allowedTools = [];
-      options.disallowedTools = ["*"];
-      options.systemPrompt =
-        "You generate short titles. Output ONLY the title (2-5 words, title case). Describe the topic, not the action of generating a title.";
-
-      const query = queryFn({ prompt: titlePrompt, options });
-
-      let titleText = "";
-      for await (const msg of query) {
-        if (msg.type === "assistant") {
-          const assistantMsg = msg as { message?: { content?: Array<{ type: string; text?: string }> } };
-          if (assistantMsg.message?.content) {
-            for (const block of assistantMsg.message.content) {
-              if (block.type === "text" && block.text) titleText += block.text;
-            }
-          }
-        }
-      }
-
-      const title = titleText
-        .trim()
-        .split("\n")[0]
-        .trim()
-        .replace(/^(title:\s*)/i, "")
-        .replace(/^["'`]|["'`]$/g, "")
-        .replace(/[.!?]$/, "")
-        .trim();
-
-      if (!title) throw new Error("Empty title generated");
-      return title.slice(0, 50);
-    },
+    // Note: no generateTitle(). Instead of spawning a separate haiku query per
+    // run, the driver reads the CLI's own auto-generated aiTitle from the
+    // session transcript after the initial run completes (see executePrompt →
+    // readAutoTitle). runs.service falls back to a goal-derived provisional
+    // title in the meantime.
 
     async generateText(
       prompt: string,
@@ -2381,6 +2582,85 @@ function readMcpServersFromFile(
   }
 }
 
+// ─────────────────────────────────────────────────────────────
+// Plugin disk readers (read the Claude CLI's local plugin metadata files)
+// ─────────────────────────────────────────────────────────────
+
+function readJsonFileSafe(filePath: string): any | null {
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
+function pluginsDir(): string {
+  return path.join(os.homedir(), ".claude", "plugins");
+}
+
+/** `catalog.plugins` from plugin-catalog-cache.json ({} when unavailable). */
+function readPluginCatalogPlugins(): Record<string, unknown> {
+  const data = readJsonFileSafe(path.join(pluginsDir(), "plugin-catalog-cache.json"));
+  const plugins = data?.catalog?.plugins;
+  return plugins && typeof plugins === "object" ? plugins : {};
+}
+
+/** Installed plugin ids (keys of installed_plugins.json). */
+function readInstalledPluginIds(): string[] {
+  const data = readJsonFileSafe(path.join(pluginsDir(), "installed_plugins.json"));
+  const plugins = data?.plugins;
+  return plugins && typeof plugins === "object" ? Object.keys(plugins) : [];
+}
+
+/** pluginId → installed git commit sha (first entry), for update detection. */
+function readInstalledShaById(): Record<string, string> {
+  const data = readJsonFileSafe(path.join(pluginsDir(), "installed_plugins.json"));
+  const plugins = data?.plugins;
+  const out: Record<string, string> = {};
+  if (plugins && typeof plugins === "object") {
+    for (const [id, entries] of Object.entries(plugins)) {
+      const sha = Array.isArray(entries) ? entries[0]?.gitCommitSha : undefined;
+      if (typeof sha === "string") out[id] = sha;
+    }
+  }
+  return out;
+}
+
+/** Scope + project dir the plugin was installed at (first entry), or null.
+ *  projectPath is set for project/local scope and is needed as the CLI cwd so
+ *  enable/disable/uninstall resolve the scope against the right directory. */
+function getInstalledPluginLocation(
+  pluginId: string,
+): { scope: string; projectPath?: string } | null {
+  const data = readJsonFileSafe(path.join(pluginsDir(), "installed_plugins.json"));
+  const entries = data?.plugins?.[pluginId];
+  const e = Array.isArray(entries) ? entries[0] : undefined;
+  if (e?.scope) {
+    return {
+      scope: String(e.scope),
+      projectPath: typeof e.projectPath === "string" ? e.projectPath : undefined,
+    };
+  }
+  return null;
+}
+
+/**
+ * cwd to run a scope-sensitive plugin op (enable/disable/uninstall) in.
+ * - user scope: undefined (global, cwd-independent).
+ * - project/local scope: the install dir, which must still exist — the CLI
+ *   resolves the scope against cwd and spawn() ENOENTs on a missing dir.
+ * Throws a clear error when the install dir is gone (orphaned plugin).
+ */
+function resolveScopeCwd(loc: { scope: string; projectPath?: string } | null): string | undefined {
+  if (!loc || loc.scope === "user") return undefined;
+  if (loc.projectPath && fs.existsSync(loc.projectPath)) return loc.projectPath;
+  throw new Error(
+    `This plugin was installed in "${loc.projectPath ?? "an unknown directory"}" (${loc.scope} scope), ` +
+      `which no longer exists. Re-create that directory to manage it, or remove the plugin manually.`,
+  );
+}
+
 function isValidMcpServerConfig(cfg: unknown): boolean {
   if (!cfg || typeof cfg !== "object") return false;
   const c = cfg as Record<string, unknown>;
@@ -2441,6 +2721,220 @@ function getDefaultModels(defaultModel?: string): ModelInfo[] {
 // ─────────────────────────────────────────────────────────────
 // Pure helpers exported for testing
 // ─────────────────────────────────────────────────────────────
+
+/**
+ * Map the `claude plugin list --json --available` payload plus
+ * `claude plugin marketplace list --json` into the app's marketplace-centric
+ * PluginListResponse. Pure: no SDK/CLI access, exposed for tests.
+ *
+ * The CLI shapes:
+ *   list:        { installed: [{ id, enabled, installPath, scope, ... }],
+ *                  available: [{ pluginId, name, description, marketplaceName,
+ *                               source: { source, url, path, ... } }] }
+ *   marketplaces: [{ name, source, repo, installLocation }]
+ */
+export function mapClaudePluginList(
+  list: { installed?: unknown[]; available?: unknown[] } | null,
+  marketplaces: unknown[] | null,
+  catalogPlugins: Record<string, unknown> = {},
+  installedShaById: Record<string, string> = {},
+): PluginListResponse {
+  // Index installed plugins by id for installed/enabled lookup.
+  const installedById = new Map<string, { enabled: boolean; installPath?: string }>();
+  for (const raw of list?.installed ?? []) {
+    const p = raw as Record<string, unknown>;
+    if (p && typeof p.id === "string") {
+      installedById.set(p.id, {
+        enabled: p.enabled === true,
+        installPath: typeof p.installPath === "string" ? p.installPath : undefined,
+      });
+    }
+  }
+
+  // Marketplace skeletons (preserve CLI order); lazily created for ids that
+  // reference a marketplace not in the configured list.
+  const marketplaceByName = new Map<string, MarketplaceInfo>();
+  for (const raw of marketplaces ?? []) {
+    const mp = raw as Record<string, unknown>;
+    if (!mp || typeof mp.name !== "string") continue;
+    marketplaceByName.set(mp.name, {
+      name: mp.name,
+      path: typeof mp.installLocation === "string" ? mp.installLocation : "",
+      interface: null,
+      plugins: [],
+    });
+  }
+  const ensureMarketplace = (name: string): MarketplaceInfo => {
+    let mp = marketplaceByName.get(name);
+    if (!mp) {
+      mp = { name, path: "", interface: null, plugins: [] };
+      marketplaceByName.set(name, mp);
+    }
+    return mp;
+  };
+
+  const covered = new Set<string>();
+
+  for (const raw of list?.available ?? []) {
+    const a = raw as Record<string, unknown>;
+    if (!a || typeof a.pluginId !== "string") continue;
+    const id = a.pluginId;
+    const marketplaceName =
+      (typeof a.marketplaceName === "string" && a.marketplaceName) || id.split("@")[1] || "unknown";
+    const inst = installedById.get(id);
+    const src = (a.source as Record<string, unknown>) ?? {};
+    const name = typeof a.name === "string" ? a.name : id.split("@")[0];
+    // Enrich category/developer/homepage from the catalog cache (the
+    // `--available` payload omits them) so the UI can group by category.
+    const catEntry = catalogPlugins[id] as Record<string, any> | undefined;
+    const me = (catEntry?.marketplace_entry as Record<string, any>) ?? {};
+    const desc =
+      (typeof a.description === "string" && a.description) ||
+      (typeof me.description === "string" ? me.description : undefined);
+    const category = typeof me.category === "string" ? me.category : undefined;
+    const developerName = typeof me.author?.name === "string" ? me.author.name : undefined;
+    const websiteUrl = typeof me.homepage === "string" ? me.homepage : undefined;
+    const displayName = typeof me.displayName === "string" ? me.displayName : undefined;
+    const installs =
+      typeof a.installCount === "number"
+        ? a.installCount
+        : typeof catEntry?.unique_installs === "number"
+          ? (catEntry.unique_installs as number)
+          : undefined;
+    // Only flag updates when the catalog reports a concrete latest sha that
+    // differs from what's installed — `source_sha` alone is unreliable.
+    const catSha = typeof catEntry?.sha === "string" ? (catEntry.sha as string) : undefined;
+    const installedSha = installedShaById[id];
+    const updateAvailable = !!inst && !!catSha && !!installedSha && catSha !== installedSha;
+    ensureMarketplace(marketplaceName).plugins.push({
+      id,
+      name,
+      source: {
+        type: (src.source as string) ?? "git",
+        path: (src.url as string) ?? (src.path as string) ?? "",
+      },
+      installed: !!inst,
+      enabled: inst?.enabled ?? false,
+      installPolicy: "AVAILABLE",
+      authPolicy: "ON_INSTALL",
+      installs,
+      updateAvailable,
+      // Most Claude plugins are slug-named with no displayName, so the UI
+      // humanizes the raw `name` ("agent-sdk-dev" → "Agent SDK Dev"); a real
+      // marketplace displayName (rare) is preferred when present. No icon/logo
+      // data exists in Claude's plugin metadata — the UI falls back to a letter
+      // avatar.
+      interface:
+        displayName || desc || category || developerName
+          ? {
+              displayName,
+              shortDescription: desc,
+              longDescription: desc,
+              category,
+              developerName,
+              websiteUrl,
+              capabilities: [],
+              screenshots: [],
+            }
+          : null,
+    });
+    covered.add(id);
+  }
+
+  // Installed plugins absent from the catalog (local-only, or marketplace
+  // removed) — surface under their id-derived marketplace so they're visible.
+  for (const [id, inst] of installedById) {
+    if (covered.has(id)) continue;
+    const marketplaceName = id.split("@")[1] || "local";
+    ensureMarketplace(marketplaceName).plugins.push({
+      id,
+      name: id.split("@")[0],
+      source: { type: "local", path: inst.installPath ?? "" },
+      installed: true,
+      enabled: inst.enabled,
+      installPolicy: "AVAILABLE",
+      authPolicy: "ON_INSTALL",
+      interface: null,
+    });
+  }
+
+  return {
+    marketplaces: Array.from(marketplaceByName.values()),
+    marketplaceLoadErrors: [],
+    remoteSyncError: null,
+    featuredPluginIds: [],
+  };
+}
+
+/**
+ * Build a PluginDetail from the local plugin catalog cache. Pure: takes the
+ * already-read `catalog.plugins` map and an installed→enabled overlay, resolves
+ * the plugin id from (name, marketplacePath), and maps components. Exposed for
+ * tests.
+ */
+export function mapClaudePluginDetail(
+  catalogPlugins: Record<string, unknown>,
+  installedEnabled: Record<string, boolean>,
+  pluginName: string,
+  marketplacePath: string,
+): PluginDetail {
+  const marketplaceName = marketplacePath ? path.basename(marketplacePath) : "";
+  let pluginId = marketplaceName ? `${pluginName}@${marketplaceName}` : "";
+  let entry = pluginId ? (catalogPlugins[pluginId] as Record<string, any> | undefined) : undefined;
+  if (!entry) {
+    // Fallback: match by plugin name across marketplaces.
+    const key = Object.keys(catalogPlugins).find((k) => k.split("@")[0] === pluginName);
+    if (key) {
+      pluginId = key;
+      entry = catalogPlugins[key] as Record<string, any>;
+    }
+  }
+  if (!pluginId) pluginId = `${pluginName}@${marketplaceName || "unknown"}`;
+
+  const me = (entry?.marketplace_entry as Record<string, any>) ?? {};
+  const comps = (entry?.components as Record<string, any>) ?? {};
+  const author = (me.author as Record<string, any>) ?? {};
+  const description = typeof me.description === "string" ? me.description : null;
+  const installed = pluginId in installedEnabled;
+  const enabled = installedEnabled[pluginId] ?? false;
+  const resolvedMarketplace = marketplaceName || pluginId.split("@")[1] || "";
+
+  const skills = (Array.isArray(comps.skills) ? comps.skills : [])
+    .map((s: any) => ({ name: (typeof s === "string" ? s : (s?.name as string)) ?? "", enabled: true }))
+    .filter((s: { name: string }) => s.name.length > 0);
+
+  const mcpServers = (Array.isArray(comps.mcpServers) ? comps.mcpServers : [])
+    .map((m: any) => (typeof m === "string" ? m : (m?.name as string)))
+    .filter(Boolean) as string[];
+
+  return {
+    marketplaceName: resolvedMarketplace,
+    marketplacePath,
+    summary: {
+      id: pluginId,
+      name: pluginName,
+      source: { type: "git", path: (me.homepage as string) ?? (me.source as string) ?? "" },
+      installed,
+      enabled,
+      installPolicy: "AVAILABLE",
+      authPolicy: "ON_INSTALL",
+      interface: {
+        displayName: (me.name as string) ?? pluginName,
+        shortDescription: description ?? undefined,
+        longDescription: description ?? undefined,
+        developerName: (author.name as string) ?? undefined,
+        category: (me.category as string) ?? undefined,
+        capabilities: [],
+        websiteUrl: (me.homepage as string) ?? undefined,
+        screenshots: [],
+      },
+    },
+    description,
+    skills,
+    apps: [],
+    mcpServers,
+  };
+}
 
 /**
  * Translate the streaming outcome (stop reason / abort flags / error / timeout)

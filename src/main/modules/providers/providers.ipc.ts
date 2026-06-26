@@ -1,6 +1,7 @@
 import { ipcMain } from "../../ipc-kit/ipc-main";
 import { providersService } from "./providers.service";
 import type { CreateProviderPayload, UpdateProviderPayload, ProviderKind } from "./providers.dto";
+import type { PluginScope } from "../../../shared/adapter.types";
 import { CHANNELS } from "../../../shared/ipc-kit/channels";
 
 // ─────────────────────────────────────────────────────────────
@@ -92,12 +93,26 @@ export function registerProvidersIpc(): void {
     return providersService.readPlugin(id, pluginName, marketplacePath);
   });
 
-  ipcMain.handle(CHANNELS.providers.installPlugin, async (_, id: string, pluginId: string) => {
-    return providersService.installPlugin(id, pluginId);
-  });
+  ipcMain.handle(
+    CHANNELS.providers.installPlugin,
+    async (_, id: string, pluginId: string, scope?: PluginScope) => {
+      return providersService.installPlugin(id, pluginId, scope);
+    },
+  );
 
   ipcMain.handle(CHANNELS.providers.uninstallPlugin, async (_, id: string, pluginId: string) => {
     return providersService.uninstallPlugin(id, pluginId);
+  });
+
+  ipcMain.handle(
+    CHANNELS.providers.setPluginEnabled,
+    async (_, id: string, pluginId: string, enabled: boolean) => {
+      return providersService.setPluginEnabled(id, pluginId, enabled);
+    },
+  );
+
+  ipcMain.handle(CHANNELS.providers.updatePlugin, async (_, id: string, pluginId: string) => {
+    return providersService.updatePlugin(id, pluginId);
   });
 
   ipcMain.handle(CHANNELS.providers.detectInstalled, async () => {
@@ -129,6 +144,8 @@ export function unregisterProvidersIpc(): void {
     CHANNELS.providers.readPlugin,
     CHANNELS.providers.installPlugin,
     CHANNELS.providers.uninstallPlugin,
+    CHANNELS.providers.setPluginEnabled,
+    CHANNELS.providers.updatePlugin,
     CHANNELS.providers.detectInstalled,
   ].forEach((channel) => ipcMain.removeHandler(channel));
 }

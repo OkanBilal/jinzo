@@ -21,7 +21,6 @@ import {
   Apps,
   Project,
   Sun,
-  External,
   Relay,
 } from "@/components/ui/icons";
 import CloneRepoModal from "./clone-repo-modal";
@@ -51,8 +50,6 @@ import {
   SIDEBAR_WIDTH_MAX,
   SIDEBAR_WIDTH_DEFAULT,
 } from "@/lib/layout";
-
-const CLAUDE_PLUGINS_URL = "https://claude.com/plugins#plugins";
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -166,8 +163,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   const isRelayRoute =
     location.pathname === "/relay" ||
     location.pathname.startsWith("/relay/");
-  /** From `app_settings.active_space_id` → `spaces.slug` (not current route). */
-  const pluginsUseClaudeExternalUrl = activeSpaceAgentSlug === "claude";
+  /** Copilot/Cursor drivers don't implement the plugin API yet. */
   const isPluginsDisabledForAgent =
     activeSpaceAgentSlug === "copilot" ||
     activeSpaceAgentSlug === "cursor";
@@ -205,7 +201,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               onSearchChange={setSearchQuery}
               onSearchClear={handleSearchClear}
             />
-            <div className="px-3 py-0.25">
+            <div className="px-3 py-px">
               <NewButton
                 onClick={handleNewClick}
                 icon={
@@ -258,7 +254,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 }
               />
             </div>
-            <div className="px-3 mb-0.25">
+            <div className="px-3 mb-px">
               <Button
                 variant="subtle"
                 tooltip="View your pulse"
@@ -289,7 +285,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 </Body>
               </Button>
             </div>
-            <div className="px-3 mb-0.25">
+            <div className="px-3 mb-px">
               {isPluginsDisabledForAgent ? (
                 <Tooltip
                   content="Not available for this agent yet."
@@ -338,10 +334,6 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                       : ""
                   }`}
                   onClick={() => {
-                    if (pluginsUseClaudeExternalUrl) {
-                      void window.api.shell.openExternal(CLAUDE_PLUGINS_URL);
-                      return;
-                    }
                     navigate("/plugins");
                   }}
                   aria-current={isPluginsRoute ? "page" : undefined}
@@ -362,16 +354,6 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   >
                     Plugins
                   </Body>
-                  {pluginsUseClaudeExternalUrl ? (
-                    <External
-                      className={`w-3.5 h-3.5 -mr-1 shrink-0 ${
-                        isPluginsRoute
-                          ? "text-primary-950 dark:text-primary"
-                          : "text-primary-900 dark:text-primary-200"
-                      }`}
-                      aria-hidden
-                    />
-                  ) : null}
                 </Button>
               )}
             </div>
@@ -397,7 +379,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   }`}
                 />
                 <Body
-                  className={`text-s font-medium flex-1 text-left ${
+                  className={`text-s font-normal flex-1 text-left ${
                     isRelayRoute
                       ? "text-primary-950 dark:text-primary"
                       : "text-primary-900 dark:text-primary-100"

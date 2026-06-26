@@ -261,8 +261,10 @@ const api = {
     updateCli: (id: string) => ipcRenderer.invoke(CHANNELS.providers.updateCli, id),
     getPlugins: (id: string) => ipcRenderer.invoke(CHANNELS.providers.getPlugins, id),
     readPlugin: (id: string, pluginName: string, marketplacePath: string) => ipcRenderer.invoke(CHANNELS.providers.readPlugin, id, pluginName, marketplacePath),
-    installPlugin: (id: string, pluginId: string) => ipcRenderer.invoke(CHANNELS.providers.installPlugin, id, pluginId),
+    installPlugin: (id: string, pluginId: string, scope?: string) => ipcRenderer.invoke(CHANNELS.providers.installPlugin, id, pluginId, scope),
     uninstallPlugin: (id: string, pluginId: string) => ipcRenderer.invoke(CHANNELS.providers.uninstallPlugin, id, pluginId),
+    setPluginEnabled: (id: string, pluginId: string, enabled: boolean) => ipcRenderer.invoke(CHANNELS.providers.setPluginEnabled, id, pluginId, enabled),
+    updatePlugin: (id: string, pluginId: string) => ipcRenderer.invoke(CHANNELS.providers.updatePlugin, id, pluginId),
     detectInstalled: () => ipcRenderer.invoke(CHANNELS.providers.detectInstalled),
   },
   // Tool calls operations
