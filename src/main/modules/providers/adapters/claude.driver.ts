@@ -41,6 +41,7 @@ import type {
   MarketplaceInfo,
   ProviderDriver,
   SkillInfo,
+  WorkRunContextItem,
   WorkRunContinueRequest,
   WorkRunEvent,
   WorkRunEventHandler,
@@ -1693,6 +1694,55 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     }
   }
 
+  /**
+   * One-shot, tool-free text generation via a cheap model. Shared by the
+   * generateText() and generateTitle() driver methods.
+   */
+  async function generateOneShotText(
+    prompt: string,
+    opts?: { system?: string; model?: string },
+  ): Promise<string> {
+    await ensureSDK();
+    if (!queryFn) throw new Error("Claude SDK not properly initialized");
+
+    const options = await buildOptions({
+      model: opts?.model ?? "claude-haiku-4-5-20251001",
+    });
+    // Strip the MCP servers buildOptions injects so the model is never tempted
+    // to call a tool — with no tools available it just answers. maxTurns gets a
+    // little slack (not 1) so a stray first-message hiccup can't trip
+    // "error_max_turns" before the final text lands; without tools it still
+    // finishes in a single turn normally.
+    options.maxTurns = 6;
+    options.allowedTools = [];
+    options.disallowedTools = ["*"];
+    options.mcpServers = {};
+    options.systemPrompt =
+      opts?.system ??
+      "You are a helpful assistant. Follow the user's instructions exactly and output only what is requested.";
+
+    let text = "";
+    try {
+      const query = queryFn({ prompt, options });
+      for await (const msg of query) {
+        if (msg.type === "assistant") {
+          const assistantMsg = msg as {
+            message?: { content?: Array<{ type: string; text?: string }> };
+          };
+          for (const block of assistantMsg.message?.content ?? []) {
+            if (block.type === "text" && block.text) text += block.text;
+          }
+        }
+      }
+    } catch (err) {
+      // The SDK throws on error results (e.g. max turns). If the model already
+      // produced text before that, use it; otherwise surface the failure.
+      if (!text.trim()) throw err;
+    }
+
+    return text.trim();
+  }
+
   // ─────────────────────────────────────────────────────────────
   // ProviderDriver implementation
   // ─────────────────────────────────────────────────────────────
@@ -2351,55 +2401,55 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
       return { success: code === 0, output: `${stdout}${stderr}`.trim() };
     },
 
-    // Note: no generateTitle(). Instead of spawning a separate haiku query per
-    // run, the driver reads the CLI's own auto-generated aiTitle from the
-    // session transcript after the initial run completes (see executePrompt →
-    // readAutoTitle). runs.service falls back to a goal-derived provisional
-    // title in the meantime.
+    // The Claude Code CLI only writes its own auto-title (aiTitle) into the
+    // transcript in *interactive* mode — headless SDK query() runs never do, so
+    // reading it back (see executePrompt → readAutoTitle) returns nothing for
+    // app runs. Generate the title ourselves with a cheap one-shot model call,
+    // mirroring the codex driver. runs.service calls this at run start;
+    // readAutoTitle stays as a best-effort upgrade if a real aiTitle ever lands.
+    async generateTitle(goal: string, context?: WorkRunContextItem[]): Promise<string> {
+      try {
+        let contextSnippet = "";
+        if (context && context.length > 0) {
+          contextSnippet = context
+            .map((ctx) => {
+              const header = ctx.ref ? `[${ctx.kind}: ${ctx.ref}]` : `[${ctx.kind}]`;
+              return `${header} ${(ctx.content || "").substring(0, 200)}`;
+            })
+            .join("\n")
+            .substring(0, 500);
+        }
+
+        const titlePrompt = [
+          "Generate a concise title (2-5 words) that summarizes what the user wants.",
+          "Rules:",
+          "- Reply with ONLY the title text, nothing else",
+          '- Use title case: capitalize the first letter of each word, e.g. "Fix Login Redirect", "Add Dark Mode", "Hello Greeting"',
+          '- Do NOT use generic descriptions of the request type, e.g. NOT "Title Generation"',
+          "- No quotes, no punctuation at the end, no prefixes",
+          "",
+          `User message: ${goal}`,
+          contextSnippet ? `\nContext:\n${contextSnippet}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        const raw = await generateOneShotText(titlePrompt, {
+          system:
+            "You write short, descriptive titles. Output only the title text, nothing else.",
+        });
+        return cleanGeneratedTitle(raw, goal);
+      } catch (err) {
+        logWarn("Title generation failed, using fallback:", err);
+        return goal.slice(0, 50);
+      }
+    },
 
     async generateText(
       prompt: string,
       opts?: { system?: string; model?: string },
     ): Promise<string> {
-      await ensureSDK();
-      if (!queryFn) throw new Error("Claude SDK not properly initialized");
-
-      const options = await buildOptions({
-        model: opts?.model ?? "claude-haiku-4-5-20251001",
-      });
-      // One-shot text generation. Strip the MCP servers buildOptions injects so
-      // the model is never tempted to call a tool — with no tools available it
-      // just answers. maxTurns gets a little slack (not 1) so a stray
-      // first-message hiccup can't trip "error_max_turns" before the final
-      // text lands; without tools it still finishes in a single turn normally.
-      options.maxTurns = 6;
-      options.allowedTools = [];
-      options.disallowedTools = ["*"];
-      options.mcpServers = {};
-      options.systemPrompt =
-        opts?.system ??
-        "You are a helpful assistant. Follow the user's instructions exactly and output only what is requested.";
-
-      let text = "";
-      try {
-        const query = queryFn({ prompt, options });
-        for await (const msg of query) {
-          if (msg.type === "assistant") {
-            const assistantMsg = msg as {
-              message?: { content?: Array<{ type: string; text?: string }> };
-            };
-            for (const block of assistantMsg.message?.content ?? []) {
-              if (block.type === "text" && block.text) text += block.text;
-            }
-          }
-        }
-      } catch (err) {
-        // The SDK throws on error results (e.g. max turns). If the model already
-        // produced text before that, use it; otherwise surface the failure.
-        if (!text.trim()) throw err;
-      }
-
-      return text.trim();
+      return generateOneShotText(prompt, opts);
     },
   };
 }
@@ -2940,6 +2990,23 @@ export function mapClaudePluginDetail(
  * Translate the streaming outcome (stop reason / abort flags / error / timeout)
  * into a DriverOutcome. Pure: no SDK access, exposed for tests.
  */
+/**
+ * Normalize a model-generated run title: keep the first line, strip a leading
+ * "title:" label, surrounding quotes/backticks, and trailing sentence
+ * punctuation, then cap at 50 chars. Falls back to the goal text when the model
+ * returns nothing usable. Mirrors the codex driver's title cleanup.
+ */
+export function cleanGeneratedTitle(raw: string, fallbackGoal: string): string {
+  const cleaned = (raw || "")
+    .split("\n")[0]
+    .trim()
+    .replace(/^title:\s*/i, "")
+    .replace(/^["'`]|["'`]$/g, "")
+    .replace(/[.!?]$/, "")
+    .trim();
+  return (cleaned || fallbackGoal.trim()).slice(0, 50);
+}
+
 export function classifyOutcome(args: {
   stopReason: string | null;
   usage?: WorkRunUsage;
