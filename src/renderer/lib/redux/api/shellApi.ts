@@ -1,4 +1,5 @@
 import { baseApi } from './baseApi';
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export interface InstalledApp {
   id: string;
@@ -20,7 +21,7 @@ export const shellApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getInstalledApps: builder.query<InstalledApp[], void>({
       query: () => ({
-        handler: 'shell:getInstalledApps',
+        handler: CHANNELS.shell.getInstalledApps,
       }),
       transformResponse: (response: any) => response.success ? response.data : [],
       providesTags: ['InstalledApps'],
@@ -28,7 +29,7 @@ export const shellApi = baseApi.injectEndpoints({
     }),
     getAppsForFile: builder.query<FileHandlerApp[], string>({
       query: (filePath) => ({
-        handler: 'shell:getAppsForFile',
+        handler: CHANNELS.shell.getAppsForFile,
         args: [filePath],
       }),
       transformResponse: (response: any) =>

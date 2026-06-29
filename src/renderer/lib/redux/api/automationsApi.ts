@@ -1,4 +1,5 @@
 import { baseApi } from './baseApi';
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export interface Automation {
   id: string;
@@ -38,7 +39,7 @@ export interface UpdateAutomationInput {
 export const automationsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAutomations: builder.query<Automation[], void>({
-      query: () => ({ handler: 'automations:getAll' }),
+      query: () => ({ handler: CHANNELS.automations.getAll }),
       transformResponse: (response: any) =>
         response.success ? response.data : [],
       providesTags: ['Automations'],
@@ -49,7 +50,7 @@ export const automationsApi = baseApi.injectEndpoints({
       { accountId: string; input: CreateAutomationInput }
     >({
       query: ({ accountId, input }) => ({
-        handler: 'automations:create',
+        handler: CHANNELS.automations.create,
         args: [accountId, input],
       }),
       transformResponse: (response: any) =>
@@ -62,7 +63,7 @@ export const automationsApi = baseApi.injectEndpoints({
       { id: string; input: UpdateAutomationInput }
     >({
       query: ({ id, input }) => ({
-        handler: 'automations:update',
+        handler: CHANNELS.automations.update,
         args: [id, input],
       }),
       transformResponse: (response: any) =>
@@ -72,7 +73,7 @@ export const automationsApi = baseApi.injectEndpoints({
 
     deleteAutomation: builder.mutation<void, string>({
       query: (id) => ({
-        handler: 'automations:delete',
+        handler: CHANNELS.automations.delete,
         args: [id],
       }),
       invalidatesTags: ['Automations'],
