@@ -1,4 +1,5 @@
 import { baseApi } from './baseApi';
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 import { syncApi } from './syncApi';
 import { toast } from '@/components/ui';
 
@@ -211,7 +212,7 @@ export const connectionsApi = baseApi.injectEndpoints({
     // ── integration-state list (Settings page) ──
     getConnectionStates: builder.query<ConnectionState[], void>({
       query: () => ({
-        handler: 'connections:listStates',
+        handler: CHANNELS.connections.listStates,
       }),
       transformResponse: (response: any) => response.success ? response.data : [],
       providesTags: ['ConnectionState'],
@@ -222,7 +223,7 @@ export const connectionsApi = baseApi.injectEndpoints({
       { id: string } & UpdateConnectionStatePayload
     >({
       query: ({ id, ...body }) => ({
-        handler: 'connections:updateState',
+        handler: CHANNELS.connections.updateState,
         args: [id, body],
       }),
       invalidatesTags: ['ConnectionState'],
@@ -231,7 +232,7 @@ export const connectionsApi = baseApi.injectEndpoints({
     // ── identity ──
     getConnection: builder.query<{ success: boolean; connection: Connection }, string>({
       query: (provider) => ({
-        handler: 'connections:getByProvider',
+        handler: CHANNELS.connections.getByProvider,
         args: [provider],
       }),
       transformResponse: (response: any) => response.success ? { success: true, connection: response.data.connection } : { success: false, connection: null as any },
@@ -240,7 +241,7 @@ export const connectionsApi = baseApi.injectEndpoints({
 
     saveCredentials: builder.mutation<{ success: boolean }, SaveCredentialsPayload>({
       query: (body) => ({
-        handler: 'connections:saveCredentials',
+        handler: CHANNELS.connections.saveCredentials,
         args: [body],
       }),
       transformResponse: (response: any) => ({ success: response.success }),
@@ -251,7 +252,7 @@ export const connectionsApi = baseApi.injectEndpoints({
 
     revokeConnection: builder.mutation<{ success: boolean }, string>({
       query: (provider) => ({
-        handler: 'connections:revoke',
+        handler: CHANNELS.connections.revoke,
         args: [provider],
       }),
       transformResponse: (response: any) => ({ success: response.success }),
@@ -261,7 +262,7 @@ export const connectionsApi = baseApi.injectEndpoints({
     // ── per-provider resource discovery ──
     getGitHubRepos: builder.query<{ success: boolean; repos: GitHubRepo[] }, string>({
       query: (connectionId) => ({
-        handler: 'connections:getGithubRepos',
+        handler: CHANNELS.connections.getGithubRepos,
         args: [connectionId],
       }),
       transformResponse: (response: any) => response.success ? { success: true, repos: response.data.repos } : { success: false, repos: [] },
@@ -269,7 +270,7 @@ export const connectionsApi = baseApi.injectEndpoints({
 
     getLinearTeams: builder.query<{ success: boolean; teams: LinearTeam[] }, string>({
       query: (connectionId) => ({
-        handler: 'connections:getLinearTeams',
+        handler: CHANNELS.connections.getLinearTeams,
         args: [connectionId],
       }),
       transformResponse: (response: any) => response.success ? { success: true, teams: response.data.teams } : { success: false, teams: [] },
@@ -277,7 +278,7 @@ export const connectionsApi = baseApi.injectEndpoints({
 
     getJiraProjects: builder.query<{ success: boolean; projects: JiraProject[] }, string>({
       query: (connectionId) => ({
-        handler: 'connections:getJiraProjects',
+        handler: CHANNELS.connections.getJiraProjects,
         args: [connectionId],
       }),
       transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
@@ -285,7 +286,7 @@ export const connectionsApi = baseApi.injectEndpoints({
 
     getAsanaProjects: builder.query<{ success: boolean; projects: AsanaProject[] }, string>({
       query: (connectionId) => ({
-        handler: 'connections:getAsanaProjects',
+        handler: CHANNELS.connections.getAsanaProjects,
         args: [connectionId],
       }),
       transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
@@ -293,7 +294,7 @@ export const connectionsApi = baseApi.injectEndpoints({
 
     getGitLabProjects: builder.query<{ success: boolean; projects: GitLabProject[] }, string>({
       query: (connectionId) => ({
-        handler: 'connections:getGitlabProjects',
+        handler: CHANNELS.connections.getGitlabProjects,
         args: [connectionId],
       }),
       transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
@@ -301,7 +302,7 @@ export const connectionsApi = baseApi.injectEndpoints({
 
     getTrelloBoards: builder.query<{ success: boolean; boards: TrelloBoard[] }, string>({
       query: (connectionId) => ({
-        handler: 'connections:getTrelloBoards',
+        handler: CHANNELS.connections.getTrelloBoards,
         args: [connectionId],
       }),
       transformResponse: (response: any) => response.success ? { success: true, boards: response.data.boards } : { success: false, boards: [] },
@@ -309,7 +310,7 @@ export const connectionsApi = baseApi.injectEndpoints({
 
     getSentryProjects: builder.query<{ success: boolean; projects: SentryProject[] }, string>({
       query: (connectionId) => ({
-        handler: 'connections:getSentryProjects',
+        handler: CHANNELS.connections.getSentryProjects,
         args: [connectionId],
       }),
       transformResponse: (response: any) => response.success ? { success: true, projects: response.data.projects } : { success: false, projects: [] },
@@ -317,7 +318,7 @@ export const connectionsApi = baseApi.injectEndpoints({
 
     getSocketDevOrganizations: builder.query<{ success: boolean; organizations: SocketDevOrganization[] }, string>({
       query: (connectionId) => ({
-        handler: 'connections:getSocketDevOrganizations',
+        handler: CHANNELS.connections.getSocketDevOrganizations,
         args: [connectionId],
       }),
       transformResponse: (response: any) => response.success ? { success: true, organizations: response.data.organizations } : { success: false, organizations: [] },
@@ -334,7 +335,7 @@ export const connectionsApi = baseApi.injectEndpoints({
       string
     >({
       query: (provider) => ({
-        handler: 'connections:getSelectedResources',
+        handler: CHANNELS.connections.getSelectedResources,
         args: [provider],
       }),
       transformResponse: (response: any) => {
@@ -348,7 +349,7 @@ export const connectionsApi = baseApi.injectEndpoints({
 
     saveResources: builder.mutation<{ success: boolean }, SaveResourcesPayload>({
       query: (body) => ({
-        handler: 'connections:saveResources',
+        handler: CHANNELS.connections.saveResources,
         args: [body],
       }),
       transformResponse: (response: any) => ({ success: response.success }),
@@ -370,7 +371,7 @@ export const connectionsApi = baseApi.injectEndpoints({
 
     deleteResource: builder.mutation<{ success: boolean }, string>({
       query: (resourceId) => ({
-        handler: 'connections:deleteResource',
+        handler: CHANNELS.connections.deleteResource,
         args: [resourceId],
       }),
       transformResponse: (response: any) => ({ success: response.success }),

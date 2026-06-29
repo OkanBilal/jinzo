@@ -1,4 +1,5 @@
 import { baseApi } from './baseApi';
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export interface Account {
   id: string;
@@ -31,7 +32,7 @@ export const accountApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAccount: builder.query<Account, void>({
       query: () => ({
-        handler: 'account:get',
+        handler: CHANNELS.account.get,
       }),
       transformResponse: (response: any) => response.success ? response.data : null,
       providesTags: ['Account'],
@@ -42,7 +43,7 @@ export const accountApi = baseApi.injectEndpoints({
       UpdateAccountPayload
     >({
       query: (body) => ({
-        handler: 'account:update',
+        handler: CHANNELS.account.update,
         args: [body],
       }),
       invalidatesTags: ['Account'],

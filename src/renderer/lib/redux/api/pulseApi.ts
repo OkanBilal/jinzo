@@ -1,4 +1,5 @@
 import { baseApi } from './baseApi';
+import { CHANNELS } from "../../../../shared/ipc-kit/channels";
 
 export type PulseFrequency = 'hourly' | 'daily' | 'weekdays' | 'weekly';
 
@@ -52,14 +53,14 @@ export type UpdatePulseInput = Partial<
 export const pulseApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getPulses: builder.query<Pulse[], void>({
-      query: () => ({ handler: 'pulse:getAll' }),
+      query: () => ({ handler: CHANNELS.pulse.getAll }),
       transformResponse: (response: any) =>
         response?.success ? response.data : [],
       providesTags: ['Pulse'],
     }),
 
     getPulseById: builder.query<Pulse | null, string>({
-      query: (id) => ({ handler: 'pulse:getById', args: [id] }),
+      query: (id) => ({ handler: CHANNELS.pulse.getById, args: [id] }),
       transformResponse: (response: any) =>
         response?.success ? response.data : null,
       providesTags: (_res, _err, id) => [{ type: 'Pulse', id }],
@@ -70,7 +71,7 @@ export const pulseApi = baseApi.injectEndpoints({
       { accountId: string; input: CreatePulseInput }
     >({
       query: ({ accountId, input }) => ({
-        handler: 'pulse:create',
+        handler: CHANNELS.pulse.create,
         args: [accountId, input],
       }),
       transformResponse: (response: any) =>
@@ -83,7 +84,7 @@ export const pulseApi = baseApi.injectEndpoints({
       { id: string; input: UpdatePulseInput }
     >({
       query: ({ id, input }) => ({
-        handler: 'pulse:update',
+        handler: CHANNELS.pulse.update,
         args: [id, input],
       }),
       transformResponse: (response: any) =>
@@ -92,7 +93,7 @@ export const pulseApi = baseApi.injectEndpoints({
     }),
 
     deletePulse: builder.mutation<void, string>({
-      query: (id) => ({ handler: 'pulse:delete', args: [id] }),
+      query: (id) => ({ handler: CHANNELS.pulse.delete, args: [id] }),
       invalidatesTags: ['Pulse'],
     }),
 
@@ -101,7 +102,7 @@ export const pulseApi = baseApi.injectEndpoints({
       { id: string; isActive: boolean }
     >({
       query: ({ id, isActive }) => ({
-        handler: 'pulse:toggle',
+        handler: CHANNELS.pulse.toggle,
         args: [id, isActive],
       }),
       transformResponse: (response: any) =>
@@ -110,7 +111,7 @@ export const pulseApi = baseApi.injectEndpoints({
     }),
 
     runPulseNow: builder.mutation<Pulse, string>({
-      query: (id) => ({ handler: 'pulse:runNow', args: [id] }),
+      query: (id) => ({ handler: CHANNELS.pulse.runNow, args: [id] }),
       transformResponse: (response: any) =>
         response?.success ? response.data : null,
       invalidatesTags: ['Pulse', 'Runs'],
