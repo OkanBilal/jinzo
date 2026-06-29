@@ -12,6 +12,7 @@ import {
   Checkbox,
   DropdownMenu,
   Text,
+  Textarea,
   toast,
 } from "@/components/ui";
 import { useAppSelector } from "@/lib/redux/hooks";
@@ -254,7 +255,7 @@ export function GitActionsDropdown({ providerId }: GitActionsDropdownProps) {
         {view === "commit" ? (
           <>
             <div className="px-3.5">
-              <textarea
+              <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyDown={(e) => {
@@ -265,7 +266,7 @@ export function GitActionsDropdown({ providerId }: GitActionsDropdownProps) {
                 }}
                 rows={3}
                 placeholder="Commit message (leave blank to generate)…"
-                className="w-full resize-none rounded-lg bg-primary-100/40 px-3 py-2 text-xs text-primary-950 placeholder:text-primary-500 focus:outline-none dark:bg-primary-800/40 dark:text-primary-100 dark:placeholder:text-primary-500"
+                className="w-full resize-none text-xs "
               />
               <label className="mt-1 mb-2 flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
                 <Checkbox

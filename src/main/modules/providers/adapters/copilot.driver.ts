@@ -50,15 +50,7 @@ import {
   appendPromptSections,
 } from "./adapter.shared";
 import type { MainsToolContext } from "./mains-tools.core";
-import {
-  TOOL_DESCRIPTIONS,
-  handleGetWorkspaceDiff,
-  handleSaveReview,
-  handleSaveFinding,
-  handleSaveFindings,
-  handleCommitChanges,
-  handleCreatePR,
-} from "./mains-tools.core";
+import { toCopilotTools } from "./mains-tools.registry";
 import { guardsService } from "../../guards/guards.service";
 
 // ─────────────────────────────────────────────────────────────
@@ -647,130 +639,7 @@ export function createCopilotDriver(config: CopilotAdapterConfig): ProviderDrive
 
   function buildMainsTools(workspaceId: string | null, rootPath: string | null = null, runId: string | null = null): CopilotTool[] {
     const ctx: MainsToolContext = { workspaceId, rootPath, runId };
-
-    const unwrap = async (result: { content: Array<{ text: string }>; isError?: boolean }) => {
-      const text = result.content[0]?.text ?? "";
-      return result.isError ? text : text;
-    };
-
-    return [
-      {
-        name: "mcp__mains__GetWorkspaceDiff",
-        description: TOOL_DESCRIPTIONS.GetWorkspaceDiff,
-        parameters: {
-          type: "object",
-          properties: {
-            runId: { type: "string", description: "Run ID to get diff for a specific run" },
-          },
-        },
-        handler: async (args: { runId?: string }) => unwrap(await handleGetWorkspaceDiff(args, ctx)),
-      },
-      {
-        name: "mcp__mains__SaveReview",
-        description: TOOL_DESCRIPTIONS.SaveReview,
-        parameters: {
-          type: "object",
-          properties: {
-            title: { type: "string" },
-            summary: { type: "string" },
-            status: { type: "string", enum: ["open", "in_review", "approved", "rejected"] },
-            metadata: { type: "object" },
-          },
-          required: ["title"],
-        },
-        handler: async (args: { title: string; summary?: string; status?: string; metadata?: Record<string, unknown> }) =>
-          unwrap(await handleSaveReview(args, ctx)),
-      },
-      {
-        name: "mcp__mains__SaveFinding",
-        description: TOOL_DESCRIPTIONS.SaveFinding,
-        parameters: {
-          type: "object",
-          properties: {
-            reviewId: { type: "string" },
-            severity: { type: "string", enum: ["critical", "warning", "info"] },
-            file: { type: "string" },
-            lineStart: { type: "number" },
-            lineEnd: { type: "number" },
-            message: { type: "string" },
-            reason: { type: "string" },
-            suggestion: { type: "string" },
-            metadata: { type: "object" },
-          },
-          required: ["reviewId", "severity", "file", "message", "reason"],
-        },
-        handler: async (args: {
-          reviewId: string; severity: string; file: string;
-          lineStart?: number; lineEnd?: number; message: string;
-          reason: string; suggestion?: string; metadata?: Record<string, unknown>;
-        }) => unwrap(await handleSaveFinding(args, ctx)),
-      },
-      {
-        name: "mcp__mains__SaveFindings",
-        description: TOOL_DESCRIPTIONS.SaveFindings,
-        parameters: {
-          type: "object",
-          properties: {
-            reviewId: { type: "string" },
-            findings: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  severity: { type: "string", enum: ["critical", "warning", "info"] },
-                  file: { type: "string" },
-                  lineStart: { type: "number" },
-                  lineEnd: { type: "number" },
-                  message: { type: "string" },
-                  reason: { type: "string" },
-                  suggestion: { type: "string" },
-                  metadata: { type: "object" },
-                },
-                required: ["severity", "file", "message", "reason"],
-              },
-            },
-          },
-          required: ["reviewId", "findings"],
-        },
-        handler: async (args: {
-          reviewId: string;
-          findings: Array<{
-            severity: string; file: string; lineStart?: number; lineEnd?: number;
-            message: string; reason: string; suggestion?: string; metadata?: Record<string, unknown>;
-          }>;
-        }) => unwrap(await handleSaveFindings(args, ctx)),
-      },
-      {
-        name: "mcp__mains__CommitChanges",
-        description: TOOL_DESCRIPTIONS.CommitChanges,
-        parameters: {
-          type: "object",
-          properties: {
-            message: { type: "string" },
-            files: { type: "array", items: { type: "string" } },
-          },
-        },
-        handler: async (args: { message?: string; files?: string[] }) =>
-          unwrap(await handleCommitChanges(args, ctx)),
-      },
-      {
-        name: "mcp__mains__CreatePR",
-        description: TOOL_DESCRIPTIONS.CreatePR,
-        parameters: {
-          type: "object",
-          properties: {
-            title: { type: "string" },
-            body: { type: "string" },
-            base: { type: "string" },
-            draft: { type: "boolean" },
-            labels: { type: "array", items: { type: "string" } },
-          },
-          required: ["title"],
-        },
-        handler: async (args: { title: string; body?: string; base?: string; draft?: boolean; labels?: string[] }) =>
-          unwrap(await handleCreatePR(args, ctx)),
-      },
-    ];
+    return toCopilotTools(ctx);
   }
 
   // ─────────────────────────────────────────────────────────────

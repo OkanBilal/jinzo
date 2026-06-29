@@ -63,7 +63,7 @@ export function PRDisplay({
               </div>
             ) : null}
             {params.body && (
-              <Tiny className="whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2">
+              <Tiny as="div" className="whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2">
                 {params.body}
               </Tiny>
             )}

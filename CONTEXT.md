@@ -75,6 +75,24 @@ The main-process operation that turns a git repo into a **project** + **workspac
 Owned by `workspace.service`, which calls `gitService` and `projectsService` (same cross-service shape as `projects.service.listIssues` reaching the `entities` barrel). The worktree-vs-direct ordering difference lives entirely behind the intake seam: the worktree path lands under `worktrees/{projectName}/`, so it must `findOrCreateProject` *before* the import; the direct path imports first and reads `originUrl`/`baseBranch` off the result. `init` stays direct-only (a brand-new repo lives at its real path); `folder` and `clone` honor `appSettings.enableWorktrees`. The renderer keeps only the picker invocation, navigation, toast, and modal state.
 _Avoid_: re-inlining the find-or-create-project / `metadata` / `createWorkspace` tail at call sites (it was duplicated 5× across `use-sidebar-actions.ts`), orchestrating the git → projects → workspace sequence from the renderer, or string-deriving `workspacesPath` outside the intake.
 
+## Provider adapters
+
+Vocabulary for the `providers/adapters/` subsystem, where one unified `WorkRunAdapter` interface fronts four agent SDKs (Claude, Copilot, Codex, Cursor).
+
+**mains tool**:
+An in-house tool exposed to coding agents across the drivers — `GetWorkspaceDiff`, `SaveReview`, `SaveFinding`, `SaveFindings`, `CommitChanges`, `CreatePR`, `CheckPackage`. The handler logic lives once in `mains-tools.core.ts`; the parameter schema lives once in `mains-tools.schemas.ts` as a Zod object (the single source of truth — `z.infer` types the handler's args, `z.toJSONSchema` feeds the SDKs that want JSON Schema). The human descriptions are the existing `TOOL_DESCRIPTIONS` map.
+_Avoid_: re-declaring a mains tool's parameter schema, required-fields list, or description inside a driver.
+
+**tool registry**:
+The deep module (`mains-tools.registry.ts`) that assembles each **mains tool** into one entry — `{ name, description, schema, handler, providers }`. `name` is bare (`GetWorkspaceDiff`); namespacing/prefixing is a **tool renderer** concern. `providers` is an explicit allowlist of which drivers expose the tool. Dispatch is a registry lookup (`registry[name].handler(args, ctx)`), not a per-driver `switch`. The leaf `mains-tools.schemas.ts` has no dependencies, so the flow `schemas ← core ← registry ← driver` stays acyclic.
+_Avoid_: a per-driver hand-maintained tool list, or a `switch` keyed by tool name (look up the registry instead).
+
+**tool renderer**:
+The per-SDK adapter at the **tool registry**'s seam. `toClaudeTools` yields Zod raw shapes for the in-process MCP server; `toCopilotTools` yields JSON Schema with the `mcp__mains__` name prefix and a `{content}`→string return; `toMcpToolDefs` yields JSON-Schema `inputSchema` defs embedded in the Cursor stdio script; `toCodexDynamicTools` yields Codex's dynamic-tools shape. Each renderer filters the registry by each tool's `providers` allowlist, so per-driver differences (naming, return shape, availability) live only here. Two formats already vary across this seam (Zod + JSON Schema), so it is a real seam, not a hypothetical one.
+_Avoid_: hand-writing a tool definition inside a driver instead of rendering it from the registry.
+
+`CheckPackage` is intentionally **absent** from Claude and Copilot: those drivers enforce package safety through a PreToolUse Bash hook that intercepts install commands, so they need no explicit tool. Codex and Cursor cannot hook that path, so they expose `CheckPackage` as a callable tool. This asymmetry is encoded in the tool's `providers` allowlist and is deliberate — not drift to be "fixed."
+
 ## Flagged ambiguities
 
 - "ServiceResponse" was historically defined ~27 times across `src/main/modules/*/dto.ts` in two structurally incompatible shapes (discriminated union vs optional-fields object). Resolved: the discriminated union is canonical; every module now re-exports the canonical type (no remaining bespoke envelopes).

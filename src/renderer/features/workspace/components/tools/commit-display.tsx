@@ -52,7 +52,7 @@ export function CommitDisplay({
               </div>
             )}
             {params.message && (
-              <Tiny className="whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2">
+              <Tiny as="div" className="whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2">
                 {params.message}
               </Tiny>
             )}
