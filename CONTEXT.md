@@ -111,6 +111,12 @@ _Avoid_: re-deriving a variant's icon, provider id, config key, or capability wi
 The pure (React-free) layout plan for the run transcript, in `features/workspace/lib/transcript-rows.ts`. Two public functions consumed by `workspace-events.tsx`: `buildTurnRenderRows(groups)` decides how grouped events collapse into `flat` rows vs an `accordion` (with plan tool groups and image/document artifacts broken out so they stay visible), and `matchTurnsToGroups(groups, turns, …)` decides which group index each session-time bar attaches to. Everything else in the module (`partitionAgentTurn`, `collectResponseContent`, `computeSessionTimesFromEvents`, …) is an internal seam — used by the module and its tests, not exported. The module is the test surface for transcript layout, which previously could only be exercised by rendering.
 _Avoid_: re-introducing turn-grouping / accordion / session-bar math inside `workspace-events.tsx` (it is presentation over `buildTurnRenderRows` / `matchTurnsToGroups`).
 
+## Run cache
+
+**run cache**:
+The framework-free bookkeeping state machine behind `use-workspace-runs.ts`, in `features/workspace/lib/run-cache.ts` (`createRunCache()` factory — no class, matching the repo's object-literal lean). It owns the LRU of retained runs (`MAX_RETAINED_RUNS`), the incremental-sync cursors (`artifact` id + `tool` updatedAt), the "loaded once" set, the finalized set, and the in-flight/pending-reload dedup. The hook holds one instance in a ref and keeps all data-fetching + `setState`; the cache only tracks indices and enforces their invariants. Load invariant folded into `touch(runId)`: a run evicted from the LRU also loses its cursors + loaded flag, so re-opening it re-fetches full history rather than a truncated delta. In-flight dedup is `tryAcquireLoad` / `clearPending` / `hasPending` / `releaseLoad` (the `await` loop stays in the hook). `pruneRunMap` (evict a `Record` to an allowed set) lives here too.
+_Avoid_: re-scattering LRU / cursor / dedup refs back into the hook; advancing a cursor without `Math.max` (cursors are monotonic); forgetting that `touch` already prunes evicted runs' cursors.
+
 ## Flagged ambiguities
 
 - "ServiceResponse" was historically defined ~27 times across `src/main/modules/*/dto.ts` in two structurally incompatible shapes (discriminated union vs optional-fields object). Resolved: the discriminated union is canonical; every module now re-exports the canonical type (no remaining bespoke envelopes).

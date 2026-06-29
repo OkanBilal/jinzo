@@ -6,6 +6,7 @@ import { toast } from "@/components/ui";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { runsApi, workspaceApi } from "@/lib/redux/api";
 import { mergeRunEvents } from "../utils/run-event-mappers";
+import { createRunCache, pruneRunMap } from "../lib/run-cache";
 import { useStreamingEvents } from "./use-streaming-events";
 
 type Attachments = Array<{
@@ -122,38 +123,11 @@ function browserSelectionsToPayload(
 }
 
 /**
- * Keep events/turns in memory only for the N most recently viewed runs.
- * Older run payloads are dropped from local state — they'll be re-fetched
- * from the DB the next time the user opens that tab.
- */
-const MAX_RETAINED_RUNS = 4;
-
-/**
  * Hard cap on the per-run event list. A runaway agent can easily emit tens of
  * thousands of artifacts; we only need enough history to render, so we drop
  * the oldest entries once we exceed this threshold.
  */
 const MAX_EVENTS_PER_RUN = 5000;
-
-/**
- * Evict entries in `map` so that only the `allowedIds` remain. Returns a new
- * object only if something changed so React can skip re-renders.
- */
-function pruneRunMap<T>(
-  map: Record<string, T>,
-  allowedIds: Set<string>,
-): Record<string, T> {
-  let changed = false;
-  const next: Record<string, T> = {};
-  for (const [key, value] of Object.entries(map)) {
-    if (allowedIds.has(key)) {
-      next[key] = value;
-    } else {
-      changed = true;
-    }
-  }
-  return changed ? next : map;
-}
 
 export function useWorkspaceRuns(
   workspaceId: string | undefined,
@@ -170,49 +144,9 @@ export function useWorkspaceRuns(
 
   const eventsEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
-  // Prevents double-toast when push and polling both observe the terminal transition.
-  const finalizedRunIdsRef = useRef<Set<string>>(new Set());
-  /** LRU of recently-viewed run IDs (most recent last). */
-  const recentRunIdsRef = useRef<string[]>([]);
-  // Incremental-sync cursors per run, kept in lockstep with the runEvents cache.
-  // `loadedRunIdsRef` marks runs we've fully loaded at least once: a run absent
-  // here (never loaded, or evicted) triggers a full fetch instead of a delta.
-  const loadedRunIdsRef = useRef<Set<string>>(new Set());
-  const artifactCursorRef = useRef<Record<string, number>>({}); // max artifact id seen
-  const toolCursorRef = useRef<Record<string, number>>({}); // max toolcall updatedAt (ms) seen
-  // Serialize loadRunDetails per run. Overlapping calls (a push racing the 10s
-  // poll) each read the cursor at entry, then commit their delta against a base
-  // the other call may not have written yet — dropping the un-committed rows.
-  // `inFlightLoadsRef` admits one load per run; a request that lands mid-load
-  // sets `pendingReloadRef`, so exactly one trailing refresh runs afterward.
-  const inFlightLoadsRef = useRef<Set<string>>(new Set());
-  const pendingReloadRef = useRef<Set<string>>(new Set());
-
-  /** Drop incremental bookkeeping for runs no longer in the events cache, so a
-   *  re-opened (evicted) run re-fetches its full history rather than a partial delta.
-   *  Iterate `loadedRunIdsRef` (the superset of tracked runs) rather than the
-   *  artifact-cursor keys: a run with tool calls but no artifacts has no artifact
-   *  cursor, so keying off that map would leave its tool cursor + loaded flag
-   *  behind on eviction and reload it as a truncated delta. */
-  const pruneCursors = useCallback((allowed: Set<string>) => {
-    for (const id of Array.from(loadedRunIdsRef.current)) {
-      if (!allowed.has(id)) {
-        delete artifactCursorRef.current[id];
-        delete toolCursorRef.current[id];
-        loadedRunIdsRef.current.delete(id);
-      }
-    }
-  }, []);
-
-  /** Mark `runId` as recently used and return the updated whitelist (size ≤ MAX). */
-  const touchRun = useCallback((runId: string): Set<string> => {
-    const list = recentRunIdsRef.current;
-    const existing = list.indexOf(runId);
-    if (existing !== -1) list.splice(existing, 1);
-    list.push(runId);
-    while (list.length > MAX_RETAINED_RUNS) list.shift();
-    return new Set(list);
-  }, []);
+  // All run bookkeeping — LRU, incremental cursors, in-flight dedup, finalized
+  // set — lives in this framework-free state machine (see lib/run-cache.ts).
+  const cacheRef = useRef(createRunCache());
 
   // --- Internal helpers ---
 
@@ -221,11 +155,7 @@ export function useWorkspaceRuns(
     setActiveRunId(null);
     setRunEvents({});
     setRunTurns({});
-    recentRunIdsRef.current = [];
-    finalizedRunIdsRef.current.clear();
-    loadedRunIdsRef.current.clear();
-    artifactCursorRef.current = {};
-    toolCursorRef.current = {};
+    cacheRef.current.clear();
   }, []);
 
   /** Wraps async run operations with loading state, account fetch, and error handling */
@@ -260,8 +190,7 @@ export function useWorkspaceRuns(
       setRuns((prev) => [runResult.data, ...prev]);
       setActiveRunId(newId);
       dispatch(workspaceApi.util.invalidateTags(["Workspaces"]));
-      const allowed = touchRun(newId);
-      pruneCursors(allowed);
+      const allowed = cacheRef.current.touch(newId);
       setRunEvents((prev) =>
         pruneRunMap({ ...prev, [newId]: [] }, allowed),
       );
@@ -269,7 +198,7 @@ export function useWorkspaceRuns(
       return newId;
     }
     return null;
-  }, [dispatch, touchRun, pruneCursors]);
+  }, [dispatch]);
 
   // --- Data loading ---
 
@@ -279,9 +208,8 @@ export function useWorkspaceRuns(
       // delta fetches afterwards. Artifacts are insert-only (cursor = max id);
       // tool calls update in place (cursor = max updatedAt). Turns are few, so
       // they stay a full fetch — always correct, no staleness.
-      const isIncremental = loadedRunIdsRef.current.has(runId);
-      const artifactSince = isIncremental ? artifactCursorRef.current[runId] : undefined;
-      const toolSinceMs = isIncremental ? toolCursorRef.current[runId] : undefined;
+      const { isIncremental, artifactSince, toolSinceMs } =
+        cacheRef.current.getDeltaCursors(runId);
 
       const [artifactsRes, toolCallsRes, turnsRes] = await Promise.all([
         appApi.runArtifacts.getByRun(runId, artifactSince),
@@ -300,22 +228,16 @@ export function useWorkspaceRuns(
       // Advance cursors from whatever we just fetched.
       if (artifactDeltas.length > 0) {
         const maxId = artifactDeltas.reduce((m, a) => (a.id > m ? a.id : m), 0);
-        artifactCursorRef.current[runId] = Math.max(
-          artifactCursorRef.current[runId] ?? 0,
-          maxId,
-        );
+        cacheRef.current.advanceCursors(runId, { artifactMaxId: maxId });
       }
       if (toolDeltas.length > 0) {
         const maxUpdated = toolDeltas.reduce((m, tc) => {
           const t = new Date(tc.updatedAt).getTime();
           return t > m ? t : m;
         }, 0);
-        toolCursorRef.current[runId] = Math.max(
-          toolCursorRef.current[runId] ?? 0,
-          maxUpdated,
-        );
+        cacheRef.current.advanceCursors(runId, { toolMaxMs: maxUpdated });
       }
-      loadedRunIdsRef.current.add(runId);
+      cacheRef.current.markLoaded(runId);
 
       // A finished CommitChanges tool means new committed changes — refresh diffs.
       if (
@@ -326,8 +248,7 @@ export function useWorkspaceRuns(
         dispatch(workspaceApi.util.invalidateTags(["WorkspaceDiffs"]));
       }
 
-      const allowed = touchRun(runId);
-      pruneCursors(allowed);
+      const allowed = cacheRef.current.touch(runId);
 
       setRunEvents((prev) => {
         const existing = isIncremental ? prev[runId] ?? [] : [];
@@ -353,7 +274,7 @@ export function useWorkspaceRuns(
     } catch (err) {
       console.error("Failed to load run details:", err);
     }
-  }, [dispatch, touchRun, pruneCursors]);
+  }, [dispatch]);
 
   /** Public entry point: runs at most one `loadRunDetailsOnce` per run at a time,
    *  with a single trailing refresh if another request arrived while it ran. This
@@ -361,19 +282,15 @@ export function useWorkspaceRuns(
    *  concurrent loads can no longer interleave into a partial history. */
   const loadRunDetails = useCallback(
     async (runId: string) => {
-      if (inFlightLoadsRef.current.has(runId)) {
-        pendingReloadRef.current.add(runId); // coalesce; refresh once the in-flight load finishes
-        return;
-      }
-      inFlightLoadsRef.current.add(runId);
+      // Admit one load per run; a request mid-load queues a single trailing reload.
+      if (!cacheRef.current.tryAcquireLoad(runId)) return;
       try {
         do {
-          pendingReloadRef.current.delete(runId);
+          cacheRef.current.clearPending(runId);
           await loadRunDetailsOnce(runId);
-        } while (pendingReloadRef.current.has(runId));
+        } while (cacheRef.current.hasPending(runId));
       } finally {
-        inFlightLoadsRef.current.delete(runId);
-        pendingReloadRef.current.delete(runId);
+        cacheRef.current.releaseLoad(runId);
       }
     },
     [loadRunDetailsOnce],
@@ -422,8 +339,8 @@ export function useWorkspaceRuns(
 
   const finalizeRun = useCallback(async (run: Run) => {
     if (run.status === "running" || run.status === "queued") return;
-    if (finalizedRunIdsRef.current.has(run.id)) return;
-    finalizedRunIdsRef.current.add(run.id);
+    if (cacheRef.current.isFinalized(run.id)) return;
+    cacheRef.current.markFinalized(run.id);
 
     if (run.status === "failed") {
       const lastError = run.lastError || "Run failed";
@@ -815,14 +732,8 @@ export function useWorkspaceRuns(
         }
         return newRuns;
       });
-      // Drop from LRU so the eviction whitelist no longer protects this run.
-      recentRunIdsRef.current = recentRunIdsRef.current.filter(
-        (id) => id !== runId,
-      );
-      // Drop incremental bookkeeping too, so reopening this run re-fetches fresh.
-      delete artifactCursorRef.current[runId];
-      delete toolCursorRef.current[runId];
-      loadedRunIdsRef.current.delete(runId);
+      // Drop from the LRU + incremental bookkeeping so reopening re-fetches fresh.
+      cacheRef.current.forget(runId);
       setRunEvents((prev) => {
         if (!(runId in prev)) return prev;
         const next = { ...prev };
@@ -847,13 +758,12 @@ export function useWorkspaceRuns(
       } else {
         // Already in memory — bump its LRU position and re-prune in case
         // another tab push crowded the whitelist since.
-        const allowed = touchRun(runId);
-        pruneCursors(allowed);
+        const allowed = cacheRef.current.touch(runId);
         setRunEvents((prev) => pruneRunMap(prev, allowed));
         setRunTurns((prev) => pruneRunMap(prev, allowed));
       }
     },
-    [runEvents, loadRunDetails, touchRun, pruneCursors],
+    [runEvents, loadRunDetails],
   );
 
   const activeRun = runs.find((r) => r.id === activeRunId);
