@@ -105,6 +105,12 @@ _Avoid_: re-declaring the `"claude" | "copilot" | "codex" | "cursor"` union inli
 The single renderer-side table — `features/workspace/lib/provider-variants.ts`, keyed by **provider variant** — holding each variant's `providerId`, `icon`/`accentClassName`, and capability/config facts: `permissionKey`, `permissionDefault`, `effortKey`, `thinkingCoupledToEffort`, `fastMode` (`boolean` vs Codex's `serviceTier`), and `supportsUltracode` / `supportsPlanMode` / `supportsGoalMode` / `supportsSkills`. Components and `use-provider-models` read fields from it instead of branching on `variant === "..."`. The config-key fields mirror what the main-process drivers read (codex → `sandboxMode`, `modelReasoningEffort`, `serviceTier`; cursor → `mode`; claude/copilot → `permissionMode`) — a contract shared across the process boundary even though only the renderer branches (each driver hard-codes its own keys).
 _Avoid_: re-deriving a variant's icon, provider id, config key, or capability with an inline `variant === "..."` ternary; duplicating the variant↔providerId mapping (use `getProviderVariant(variant).providerId`).
 
+## Transcript rows
+
+**transcript rows**:
+The pure (React-free) layout plan for the run transcript, in `features/workspace/lib/transcript-rows.ts`. Two public functions consumed by `workspace-events.tsx`: `buildTurnRenderRows(groups)` decides how grouped events collapse into `flat` rows vs an `accordion` (with plan tool groups and image/document artifacts broken out so they stay visible), and `matchTurnsToGroups(groups, turns, …)` decides which group index each session-time bar attaches to. Everything else in the module (`partitionAgentTurn`, `collectResponseContent`, `computeSessionTimesFromEvents`, …) is an internal seam — used by the module and its tests, not exported. The module is the test surface for transcript layout, which previously could only be exercised by rendering.
+_Avoid_: re-introducing turn-grouping / accordion / session-bar math inside `workspace-events.tsx` (it is presentation over `buildTurnRenderRows` / `matchTurnsToGroups`).
+
 ## Flagged ambiguities
 
 - "ServiceResponse" was historically defined ~27 times across `src/main/modules/*/dto.ts` in two structurally incompatible shapes (discriminated union vs optional-fields object). Resolved: the discriminated union is canonical; every module now re-exports the canonical type (no remaining bespoke envelopes).
