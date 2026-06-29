@@ -68,11 +68,9 @@ import {
 } from "./adapter.shared";
 import type { MainsToolContext } from "./mains-tools.core";
 import {
-  TOOL_DESCRIPTIONS,
-  handleCommitChanges,
-  handleCreatePR,
-  handleCheckPackage,
-} from "./mains-tools.core";
+  toCodexDynamicTools,
+  dispatchMainsTool,
+} from "./mains-tools.registry";
 import { guardsService } from "../../guards/guards.service";
 
 // ─────────────────────────────────────────────────────────────
@@ -273,79 +271,7 @@ export function parseCodexReviewFindings(reviewText: string): ParsedReviewFindin
 // Mains Dynamic Tools (registered per-thread via dynamicTools)
 // ─────────────────────────────────────────────────────────────
 
-const MAINS_DYNAMIC_TOOLS = [
-  {
-    name: "CommitChanges",
-    description: TOOL_DESCRIPTIONS.CommitChanges,
-    inputSchema: {
-      type: "object",
-      properties: {
-        message: { type: "string", description: "The commit message" },
-        files: { type: "array", items: { type: "string" }, description: "Specific files to stage. If omitted, stages all changes (git add -A)" },
-      },
-      required: ["message"],
-    },
-  },
-  {
-    name: "CreatePR",
-    description: TOOL_DESCRIPTIONS.CreatePR,
-    inputSchema: {
-      type: "object",
-      properties: {
-        title: { type: "string", description: "The pull request title" },
-        body: { type: "string", description: "The pull request body/description" },
-        base: { type: "string", description: "The base branch to merge into (defaults to the repo default branch)" },
-        draft: { type: "boolean", description: "Create as a draft pull request" },
-        labels: { type: "array", items: { type: "string" }, description: "Labels to add to the pull request" },
-      },
-      required: ["title"],
-    },
-  },
-  {
-    name: "CheckPackage",
-    description: TOOL_DESCRIPTIONS.CheckPackage,
-    inputSchema: {
-      type: "object",
-      properties: {
-        packages: {
-          type: "array",
-          description: "Packages to check",
-          items: {
-            type: "object",
-            properties: {
-              name: { type: "string", description: "Package name (e.g. 'axios', '@types/node')" },
-              version: { type: "string", description: "Optional version" },
-              ecosystem: { type: "string", enum: ["npm", "pypi", "cargo", "go", "maven", "rubygems"], description: "Package ecosystem (defaults to npm)" },
-            },
-            required: ["name"],
-          },
-        },
-      },
-      required: ["packages"],
-    },
-  },
-];
-
-/**
- * Dispatch a dynamic tool call to the appropriate mains handler.
- * Returns the MCP-style result ({ content, isError? }).
- */
-async function dispatchMainsTool(
-  toolName: string,
-  args: Record<string, unknown>,
-  ctx: MainsToolContext,
-): Promise<{ content: Array<{ type: "text"; text: string }>; isError?: boolean }> {
-  switch (toolName) {
-    case "CommitChanges":
-      return handleCommitChanges(args as any, ctx);
-    case "CreatePR":
-      return handleCreatePR(args as any, ctx);
-    case "CheckPackage":
-      return handleCheckPackage(args as any, ctx);
-    default:
-      return { content: [{ type: "text", text: `Unknown mains tool: ${toolName}` }], isError: true };
-  }
-}
+const MAINS_DYNAMIC_TOOLS = toCodexDynamicTools();
 
 const MAINS_TOOL_NAMES = new Set(MAINS_DYNAMIC_TOOLS.map((t) => t.name));
 

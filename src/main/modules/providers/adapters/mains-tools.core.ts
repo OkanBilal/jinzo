@@ -12,6 +12,15 @@ import {
   emitFindingsChanged,
 } from "../../workspace";
 import { gitFlowService } from "../../gitFlow";
+import type {
+  GetWorkspaceDiffArgs,
+  SaveReviewArgs,
+  SaveFindingArgs,
+  SaveFindingsArgs,
+  CommitChangesArgs,
+  CreatePRArgs,
+  CheckPackageArgs,
+} from "./mains-tools.schemas";
 
 /**
  * Context values captured at run start and threaded through every handler.
@@ -48,7 +57,7 @@ export const TOOL_DESCRIPTIONS = {
 // ─────────────────────────────────────────────────────────────
 
 export async function handleGetWorkspaceDiff(
-  args: { runId?: string },
+  args: GetWorkspaceDiffArgs,
   ctx: MainsToolContext,
 ) {
   if (!ctx.workspaceId && !args.runId) {
@@ -77,12 +86,7 @@ export async function handleGetWorkspaceDiff(
 }
 
 export async function handleSaveReview(
-  args: {
-    title: string;
-    summary?: string;
-    status?: string;
-    metadata?: Record<string, unknown>;
-  },
+  args: SaveReviewArgs,
   ctx: MainsToolContext,
 ) {
   const reviewId = await workspaceRepo.insertReview({
@@ -110,17 +114,7 @@ export async function handleSaveReview(
 }
 
 export async function handleSaveFinding(
-  args: {
-    reviewId: string;
-    severity: string;
-    file: string;
-    lineStart?: number;
-    lineEnd?: number;
-    message: string;
-    reason: string;
-    suggestion?: string;
-    metadata?: Record<string, unknown>;
-  },
+  args: SaveFindingArgs,
   ctx: MainsToolContext,
 ) {
   const findingId = await workspaceRepo.insertFinding({
@@ -160,19 +154,7 @@ export async function handleSaveFinding(
 }
 
 export async function handleSaveFindings(
-  args: {
-    reviewId: string;
-    findings: Array<{
-      severity: string;
-      file: string;
-      lineStart?: number;
-      lineEnd?: number;
-      message: string;
-      reason: string;
-      suggestion?: string;
-      metadata?: Record<string, unknown>;
-    }>;
-  },
+  args: SaveFindingsArgs,
   ctx: MainsToolContext,
 ) {
   const findingIds = await workspaceRepo.insertManyFindings(
@@ -215,7 +197,7 @@ export async function handleSaveFindings(
 }
 
 export async function handleCommitChanges(
-  args: { message?: string; files?: string[] },
+  args: CommitChangesArgs,
   ctx: MainsToolContext,
 ) {
   if (!ctx.rootPath) {
@@ -286,13 +268,7 @@ export async function handleCommitChanges(
 }
 
 export async function handleCreatePR(
-  args: {
-    title: string;
-    body?: string;
-    base?: string;
-    draft?: boolean;
-    labels?: string[];
-  },
+  args: CreatePRArgs,
   ctx: MainsToolContext,
 ) {
   if (!ctx.rootPath) {
@@ -367,9 +343,7 @@ export async function handleCreatePR(
 // ─────────────────────────────────────────────────────────────
 
 export async function handleCheckPackage(
-  args: {
-    packages: Array<{ name: string; version?: string; ecosystem?: string }>;
-  },
+  args: CheckPackageArgs,
   _ctx: MainsToolContext,
 ) {
   const { guardsService } = await import("../../guards/guards.service");

@@ -27,149 +27,16 @@ import { execSync } from "node:child_process";
 import type { MainsToolContext } from "./mains-tools.core";
 import type { WorkRunEventHandler } from "../../../../shared/adapter.types";
 import {
-  TOOL_DESCRIPTIONS,
-  handleGetWorkspaceDiff,
-  handleSaveReview,
-  handleSaveFinding,
-  handleSaveFindings,
-  handleCommitChanges,
-  handleCreatePR,
-  handleCheckPackage,
-} from "./mains-tools.core";
-
-// ─────────────────────────────────────────────────────────────
-// Tool definitions (JSON Schema format for the MCP script)
-// ─────────────────────────────────────────────────────────────
-
-const TOOL_DEFINITIONS = [
-  {
-    name: "GetWorkspaceDiff",
-    description: TOOL_DESCRIPTIONS.GetWorkspaceDiff,
-    inputSchema: {
-      type: "object",
-      properties: {
-        runId: { type: "string", description: "Run ID to get diff for a specific run" },
-      },
-    },
-  },
-  {
-    name: "SaveReview",
-    description: TOOL_DESCRIPTIONS.SaveReview,
-    inputSchema: {
-      type: "object",
-      properties: {
-        title: { type: "string", description: "Review title" },
-        summary: { type: "string", description: "Review summary" },
-        status: { type: "string", enum: ["open", "in_review", "approved", "rejected"], description: "Review status" },
-        metadata: { type: "object", description: "Additional metadata as JSON" },
-      },
-      required: ["title"],
-    },
-  },
-  {
-    name: "SaveFinding",
-    description: TOOL_DESCRIPTIONS.SaveFinding,
-    inputSchema: {
-      type: "object",
-      properties: {
-        reviewId: { type: "string", description: "ID of the parent review" },
-        severity: { type: "string", enum: ["critical", "warning", "info"], description: "Finding severity level" },
-        file: { type: "string", description: "File path where the finding was detected" },
-        lineStart: { type: "number", description: "Start line number" },
-        lineEnd: { type: "number", description: "End line number" },
-        message: { type: "string", description: "Description of the finding" },
-        reason: { type: "string", description: "Why this was flagged" },
-        suggestion: { type: "string", description: "Suggested fix" },
-        metadata: { type: "object", description: "Additional metadata as JSON" },
-      },
-      required: ["reviewId", "severity", "file", "message", "reason"],
-    },
-  },
-  {
-    name: "SaveFindings",
-    description: TOOL_DESCRIPTIONS.SaveFindings,
-    inputSchema: {
-      type: "object",
-      properties: {
-        reviewId: { type: "string", description: "ID of the parent review" },
-        findings: {
-          type: "array",
-          description: "Array of findings to save",
-          items: {
-            type: "object",
-            properties: {
-              severity: { type: "string", enum: ["critical", "warning", "info"] },
-              file: { type: "string" },
-              lineStart: { type: "number" },
-              lineEnd: { type: "number" },
-              message: { type: "string" },
-              reason: { type: "string" },
-              suggestion: { type: "string" },
-              metadata: { type: "object" },
-            },
-            required: ["severity", "file", "message", "reason"],
-          },
-        },
-      },
-      required: ["reviewId", "findings"],
-    },
-  },
-  {
-    name: "CommitChanges",
-    description: TOOL_DESCRIPTIONS.CommitChanges,
-    inputSchema: {
-      type: "object",
-      properties: {
-        message: { type: "string", description: "The commit message. Omit on first call to retrieve commitInstructions if configured." },
-        files: { type: "array", items: { type: "string" }, description: "Specific files to stage. If omitted, stages all changes (git add -A)" },
-      },
-    },
-  },
-  {
-    name: "CreatePR",
-    description: TOOL_DESCRIPTIONS.CreatePR,
-    inputSchema: {
-      type: "object",
-      properties: {
-        title: { type: "string", description: "The pull request title" },
-        body: { type: "string", description: "The pull request body/description" },
-        base: { type: "string", description: "The base branch to merge into (defaults to the repo default branch)" },
-        draft: { type: "boolean", description: "Create as a draft pull request" },
-        labels: { type: "array", items: { type: "string" }, description: "Labels to add to the pull request" },
-      },
-      required: ["title"],
-    },
-  },
-  {
-    name: "CheckPackage",
-    description: TOOL_DESCRIPTIONS.CheckPackage,
-    inputSchema: {
-      type: "object",
-      properties: {
-        packages: {
-          type: "array",
-          description: "Packages to check",
-          items: {
-            type: "object",
-            properties: {
-              name: { type: "string", description: "Package name" },
-              version: { type: "string", description: "Optional version" },
-              ecosystem: { type: "string", enum: ["npm", "pypi", "cargo", "go", "maven", "rubygems"], description: "Package ecosystem (defaults to npm)" },
-            },
-            required: ["name"],
-          },
-        },
-      },
-      required: ["packages"],
-    },
-  },
-];
+  toMcpToolDefs,
+  dispatchMainsTool,
+  type McpToolDef,
+} from "./mains-tools.registry";
 
 // ─────────────────────────────────────────────────────────────
 // Standalone MCP stdio script (written to a temp file at runtime)
 // ─────────────────────────────────────────────────────────────
 
-function buildMcpScript(toolDefs: typeof TOOL_DEFINITIONS): string {
+function buildMcpScript(toolDefs: McpToolDef[]): string {
   return `"use strict";
 const net = require("net");
 const SOCKET_PATH = process.env.MAINS_IPC_SOCKET;
@@ -272,35 +139,6 @@ async function handleMessage(raw) {
 
 process.stderr.write("[mains-mcp] Server started, socket: " + SOCKET_PATH + "\\n");
 `;
-}
-
-// ─────────────────────────────────────────────────────────────
-// Dispatch tool calls to mains-tools.core handlers
-// ─────────────────────────────────────────────────────────────
-
-async function dispatchTool(
-  toolName: string,
-  args: Record<string, unknown>,
-  ctx: MainsToolContext,
-): Promise<{ content: Array<{ type: "text"; text: string }>; isError?: boolean }> {
-  switch (toolName) {
-    case "GetWorkspaceDiff":
-      return handleGetWorkspaceDiff(args as any, ctx);
-    case "SaveReview":
-      return handleSaveReview(args as any, ctx);
-    case "SaveFinding":
-      return handleSaveFinding(args as any, ctx);
-    case "SaveFindings":
-      return handleSaveFindings(args as any, ctx);
-    case "CommitChanges":
-      return handleCommitChanges(args as any, ctx);
-    case "CreatePR":
-      return handleCreatePR(args as any, ctx);
-    case "CheckPackage":
-      return handleCheckPackage(args as any, ctx);
-    default:
-      return { content: [{ type: "text", text: `Unknown tool: ${toolName}` }], isError: true };
-  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -412,7 +250,7 @@ export class MainsMcpStdioServer {
 
   async start(): Promise<void> {
     // 1. Write the MCP script to a temp file
-    const script = buildMcpScript(TOOL_DEFINITIONS);
+    const script = buildMcpScript(toMcpToolDefs());
     fs.writeFileSync(this.scriptPath, script, "utf8");
 
     // 2. Start the Unix socket bridge
@@ -445,7 +283,7 @@ export class MainsMcpStdioServer {
           metadata: { phase: "start", source: "mains-mcp" },
         });
 
-        dispatchTool(req.tool, req.args, ctx)
+        dispatchMainsTool(req.tool, req.args, ctx)
           .then((result) => {
             const outputText = result.content.map((c) => c.text).join("\n");
             // Emit tool_call complete event

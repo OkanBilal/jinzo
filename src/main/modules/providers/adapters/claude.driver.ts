@@ -53,7 +53,6 @@ import { findClaudeBinary, resolveCandidate } from "../providers.utils";
 import { requestToolApproval } from "../../runs/user-input-broker";
 import type { ToolApprovalRequest } from "../../runs/runs.dto";
 import { runsRepo } from "../../runs/runs.repo";
-import { z } from "zod";
 import {
   createLogger,
   ALLOWED_TOOLS_SET,
@@ -63,15 +62,7 @@ import {
   appendPromptSections,
 } from "./adapter.shared";
 import type { MainsToolContext } from "./mains-tools.core";
-import {
-  TOOL_DESCRIPTIONS,
-  handleGetWorkspaceDiff,
-  handleSaveReview,
-  handleSaveFinding,
-  handleSaveFindings,
-  handleCommitChanges,
-  handleCreatePR,
-} from "./mains-tools.core";
+import { toClaudeTools } from "./mains-tools.registry";
 import { guardsService } from "../../guards/guards.service";
 
 // ─────────────────────────────────────────────────────────────
@@ -758,112 +749,9 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
     return createSdkMcpServerFn!({
       name: "mains",
       version: "1.0.0",
-      tools: [
-        toolFn!(
-          "GetWorkspaceDiff",
-          TOOL_DESCRIPTIONS.GetWorkspaceDiff,
-          { runId: z.string().optional().describe("Run ID to get diff for a specific run") },
-          (args: { runId?: string }) => handleGetWorkspaceDiff(args, ctx),
-        ),
-        toolFn!(
-          "SaveReview",
-          TOOL_DESCRIPTIONS.SaveReview,
-          {
-            title: z.string().describe("Review title"),
-            summary: z.string().optional().describe("Review summary"),
-            status: z
-              .enum(["open", "in_review", "approved", "rejected"])
-              .optional()
-              .default("open")
-              .describe("Review status"),
-            metadata: z.record(z.string(), z.unknown()).optional().describe("Additional metadata as JSON"),
-          },
-          (args: { title: string; summary?: string; status?: string; metadata?: Record<string, unknown> }) =>
-            handleSaveReview(args, ctx),
-        ),
-        toolFn!(
-          "SaveFinding",
-          TOOL_DESCRIPTIONS.SaveFinding,
-          {
-            reviewId: z.string().describe("ID of the parent review"),
-            severity: z.enum(["critical", "warning", "info"]).describe("Finding severity level"),
-            file: z.string().describe("File path where the finding was detected"),
-            lineStart: z.number().optional().describe("Start line number"),
-            lineEnd: z.number().optional().describe("End line number"),
-            message: z.string().describe("Description of the finding"),
-            reason: z.string().describe("Why this was flagged"),
-            suggestion: z.string().optional().describe("Suggested fix"),
-            metadata: z.record(z.string(), z.unknown()).optional().describe("Additional metadata as JSON"),
-          },
-          (args: {
-            reviewId: string;
-            severity: string;
-            file: string;
-            lineStart?: number;
-            lineEnd?: number;
-            message: string;
-            reason: string;
-            suggestion?: string;
-            metadata?: Record<string, unknown>;
-          }) => handleSaveFinding(args, ctx),
-        ),
-        toolFn!(
-          "SaveFindings",
-          TOOL_DESCRIPTIONS.SaveFindings,
-          {
-            reviewId: z.string().describe("ID of the parent review"),
-            findings: z
-              .array(
-                z.object({
-                  severity: z.enum(["critical", "warning", "info"]),
-                  file: z.string(),
-                  lineStart: z.number().optional(),
-                  lineEnd: z.number().optional(),
-                  message: z.string(),
-                  reason: z.string(),
-                  suggestion: z.string().optional(),
-                  metadata: z.record(z.string(), z.unknown()).optional(),
-                }),
-              )
-              .describe("Array of findings to save"),
-          },
-          (args: {
-            reviewId: string;
-            findings: Array<{
-              severity: string;
-              file: string;
-              lineStart?: number;
-              lineEnd?: number;
-              message: string;
-              reason: string;
-              suggestion?: string;
-              metadata?: Record<string, unknown>;
-            }>;
-          }) => handleSaveFindings(args, ctx),
-        ),
-        toolFn!(
-          "CommitChanges",
-          TOOL_DESCRIPTIONS.CommitChanges,
-          {
-            message: z.string().optional().describe("The commit message"),
-            files: z.array(z.string()).optional().describe("Specific files to stage"),
-          },
-          (args: { message?: string; files?: string[] }) => handleCommitChanges(args, ctx),
-        ),
-        toolFn!(
-          "CreatePR",
-          TOOL_DESCRIPTIONS.CreatePR,
-          {
-            title: z.string().describe("The pull request title"),
-            body: z.string().optional().describe("The pull request body"),
-            base: z.string().optional().describe("The base branch"),
-            draft: z.boolean().optional().describe("Create as a draft"),
-            labels: z.array(z.string()).optional().describe("Labels to add"),
-          },
-          (args: { title: string; body?: string; base?: string; draft?: boolean; labels?: string[] }) =>
-            handleCreatePR(args, ctx),
-        ),
-      ],
+      tools: toClaudeTools(ctx).map((t) =>
+        toolFn!(t.name, t.description, t.shape, t.handler),
+      ),
     });
   }
 

@@ -97,7 +97,7 @@ export function SaveFindingDisplay({
                   )}
                 </div>
                 {f.message && (
-                  <Tiny className="whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2">{f.message}</Tiny>
+                  <Tiny as="div" className="whitespace-pre-wrap bg-primary-50 dark:bg-primary/5 rounded-md p-2">{f.message}</Tiny>
                 )}
                 {f.suggestion && (
                   <Text className="text-xs text-green-600 dark:text-green-400">{f.suggestion}</Text>
