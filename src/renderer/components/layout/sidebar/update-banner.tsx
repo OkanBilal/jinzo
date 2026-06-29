@@ -47,7 +47,7 @@ export function UpdateBanner() {
         </div>
 
         {state.status === "downloaded" && (
-          <Button variant="secondary" size="xs" fullWidth onClick={install}>
+          <Button variant="secondary" fullWidth onClick={install}>
             Restart & Update
           </Button>
         )}

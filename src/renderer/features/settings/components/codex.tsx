@@ -259,7 +259,6 @@ export default function CodexSettings() {
             )}
             <Button
               variant="secondary"
-              size="sm"
               onClick={handleUpdateCli}
               disabled={isUpdatingCli}
               className="gap-1 flex items-center"
@@ -378,7 +377,6 @@ export default function CodexSettings() {
             </span>
             <Button
               variant="primary"
-              size="sm"
               onClick={() => setIsStructuredOutputsModalOpen(true)}
             >
               Edit

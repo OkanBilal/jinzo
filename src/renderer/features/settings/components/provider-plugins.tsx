@@ -315,7 +315,6 @@ function PluginDetail({
                     onClick={onInstall}
                     disabled={isInstalling || plugin.installPolicy === "NOT_AVAILABLE"}
                     variant="primary"
-                    size="sm"
                   >
                     {isInstalling ? (
                       <div className="px-1.5">
@@ -329,7 +328,7 @@ function PluginDetail({
               ) : (
                 <>
                   {plugin.updateAvailable && (
-                    <Button onClick={onUpdate} disabled={isUpdating} variant="primary" size="sm">
+                    <Button onClick={onUpdate} disabled={isUpdating} variant="primary">
                       {isUpdating ? (
                         <div className="px-1.5">
                           <AsciiSpinner variant="null" />
@@ -339,7 +338,7 @@ function PluginDetail({
                       )}
                     </Button>
                   )}
-                  <Button onClick={onToggleEnabled} disabled={isToggling} variant="secondary" size="sm">
+                  <Button onClick={onToggleEnabled} disabled={isToggling} variant="secondary">
                     {isToggling ? (
                       <div className="px-1.5">
                         <AsciiSpinner variant="null" />
@@ -350,7 +349,7 @@ function PluginDetail({
                       "Enable"
                     )}
                   </Button>
-                  <Button onClick={onUninstall} disabled={isInstalling} variant="secondary" size="sm">
+                  <Button onClick={onUninstall} disabled={isInstalling} variant="secondary">
                     {isInstalling ? (
                       <div className="px-1.5">
                         <AsciiSpinner variant="null" />
@@ -422,7 +421,6 @@ function PluginDetail({
                   </span>
                 ) : app.installUrl ? (
                   <Button
-                    size="sm"
                     variant="icon"
                     className="shrink-0 rounded-lg"
                     onClick={() =>

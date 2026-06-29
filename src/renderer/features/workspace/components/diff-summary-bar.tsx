@@ -135,7 +135,6 @@ export function DiffSummaryBar({
           <div className="flex items-center gap-1.5 shrink-0">
             <Button
               variant="primary"
-              size="xs"
               onClick={() => {
                 setIsExpanded((v) => {
                   if (v) setSelectedFile(null);
@@ -147,7 +146,6 @@ export function DiffSummaryBar({
             </Button>
             <Button
               variant="secondary"
-              size="xs"
               onClick={handleUndo}
               disabled={isUndoing || !diff.baseRef}
             >

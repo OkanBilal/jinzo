@@ -105,7 +105,7 @@ export function MobileTabSwitcher({
                       <span className="flex-1 truncate">{t.label}</span>
                       {isActive && <Check className="size-3.5 shrink-0" />}
                       {t.onClose && (
-                        <button
+                        <Button
                           type="button"
                           aria-label="Close tab"
                           onClick={(e) => {
@@ -115,7 +115,7 @@ export function MobileTabSwitcher({
                           className="shrink-0 rounded p-0.5 hover:bg-primary-300/40 dark:hover:bg-primary-700/40"
                         >
                           <Close className="size-3" />
-                        </button>
+                        </Button>
                       )}
                     </div>
                   );

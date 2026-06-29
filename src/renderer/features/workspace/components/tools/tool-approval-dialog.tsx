@@ -339,7 +339,6 @@ export function ToolApprovalDialog({
               <div className="flex shrink-0 items-center justify-end gap-2 sm:pb-px">
                 <Button
                   variant="primary"
-                  size="xs"
                   className="min-w-18  text-primary-700 hover:bg-primary-200/40  dark:text-primary-300 dark:hover:bg-primary-800/50"
                   onClick={handleDeny}
                 >
@@ -347,7 +346,6 @@ export function ToolApprovalDialog({
                 </Button>
                 <Button
                   variant="submit"
-                  size="xs"
                   className="min-w-18 font-semibold shadow-sm disabled:opacity-45"
                   onClick={handleSubmitAnswer}
                   disabled={!canSubmit}
@@ -515,10 +513,10 @@ export function ToolApprovalDialog({
             <span />
           )}
           <div className="flex items-center gap-2 mb-2">
-            <Button variant="secondary" size="xs" onClick={handleDeny}>
+            <Button variant="secondary" onClick={handleDeny}>
               Cancel
             </Button>
-            <Button variant="submit" size="xs" onClick={handleAllow}>
+            <Button variant="submit" onClick={handleAllow}>
               Allow
             </Button>
           </div>

@@ -62,11 +62,11 @@ export function CliSetupStep({
 
       <div className={`flex ${showBack ? "justify-between" : "justify-end"} pt-2`}>
         {showBack && (
-          <Button variant="ghost" size="sm" onClick={goBack}>
+          <Button variant="ghost" onClick={goBack}>
             Back
           </Button>
         )}
-        <Button variant="submit" size="sm" onClick={goNext}>
+        <Button variant="submit" onClick={goNext}>
           Next
         </Button>
       </div>

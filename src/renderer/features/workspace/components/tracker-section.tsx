@@ -112,7 +112,6 @@ export function TrackerSection({
       {/* Header */}
       <Button
         variant="subtle"
-        size="xs"
         onClick={() =>
           setState((prev) => ({ ...prev, expanded: !prev.expanded }))
         }

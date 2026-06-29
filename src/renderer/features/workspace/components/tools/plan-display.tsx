@@ -106,14 +106,12 @@ export function PlanDisplay({ event, onApplyPlan }: PlanDisplayProps) {
             <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-primary-500/10 dark:border-primary-400/10 shrink-0">
               <Button
                 variant="submit"
-                size="xs"
                 onClick={handleApply}
               >
                 Apply Plan
               </Button>
               <Button
                 variant="secondary"
-                size="xs"
                 onClick={handleDismiss}
               >
                 Dismiss

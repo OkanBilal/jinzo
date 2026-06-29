@@ -37,18 +37,18 @@ export default function Alert({
       onClick={onSecondary}
     >
       <div
-        className="rounded-4xl px-6 pt-5 pb-6 glass-morphism max-w-80 w-full animate-dropdown-in origin-center"
+        className="rounded-4xl p-6 glass-morphism max-w-84 w-full animate-dropdown-in origin-center"
         role="dialog"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
-        <Body className="mb-3 font-medium">
+        <Body className="mb-2 font-medium">
           {title}
         </Body>
-        <Label>
+        <Label className="font-normal text-s ">
           {description}
         </Label>
-        <div className="flex gap-3 mt-4">
+        <div className="flex gap-3 mt-6">
           <Button
             className="flex-1 rounded-full font-semibold"
             variant="danger"

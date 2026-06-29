@@ -133,7 +133,6 @@ export default function ClaudeSettings(
             )}
             <Button
               variant="primary"
-              size="sm"
               onClick={handleUpdateCli}
               disabled={isUpdatingCli}
               className="gap-1 flex items-center"
@@ -181,7 +180,6 @@ export default function ClaudeSettings(
             </span>
             <Button
               variant="primary"
-              size="sm"
               onClick={() => setIsStructuredOutputsModalOpen(true)}
             >
               Edit
@@ -213,7 +211,6 @@ export default function ClaudeSettings(
         >
           <Button
             variant="primary"
-            size="sm"
             onClick={() => openPath(`${homedir}/.claude.json`)}
           >
             Open Config
@@ -239,7 +236,6 @@ export default function ClaudeSettings(
         >
           <Button
             variant="primary"
-            size="sm"
             onClick={() => openPath(`${homedir}/.claude/skills`)}
           >
             Open Folder
@@ -264,7 +260,6 @@ export default function ClaudeSettings(
         >
           <Button
             variant="primary"
-            size="sm"
             onClick={() => openPath(`${homedir}/.claude/agents`)}
           >
             Open Folder
@@ -290,7 +285,6 @@ export default function ClaudeSettings(
         >
           <Button
             variant="primary"
-            size="sm"
             onClick={() => openPath(`${homedir}/.claude/commands`)}
           >
             Open Folder

@@ -109,7 +109,6 @@ export default function CloneRepoModal({
               />
               <Button
                 variant="secondary"
-                size="sm"
                 onClick={handleBrowse}
                 disabled={!nativeDialogs}
                 tooltip={nativeDialogs ? undefined : "Type a path on the backend"}

@@ -131,7 +131,6 @@ export default function CopilotSettings(
             )}
             <Button
               variant="secondary"
-              size="sm"
               onClick={handleUpdateCli}
               disabled={isUpdatingCli}
               className="gap-1 flex items-center"
@@ -158,7 +157,6 @@ export default function CopilotSettings(
         >
           <Button
             variant="primary"
-            size="sm"
             onClick={() => openPath(`${homedir}/.copilot/agents`)}
           >
             Open Folder
@@ -177,7 +175,6 @@ export default function CopilotSettings(
         >
           <Button
             variant="primary"
-            size="sm"
             onClick={() => openPath(`${homedir}/.copilot/skills`)}
           >
             Open Folder

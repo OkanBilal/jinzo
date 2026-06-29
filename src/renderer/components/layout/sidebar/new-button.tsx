@@ -69,7 +69,6 @@ export default function NewButton({
         tooltip={`${actionPrefix} ${title}`}
         variant="subtle"
         tooltipShortcut="⌘N"
-        size="xs"
         onClick={handleClick}
         fullWidth
         className="justify-start cursor-pointer transition-transform duration-200 px-2 rounded-xl"

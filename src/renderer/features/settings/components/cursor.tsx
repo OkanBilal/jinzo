@@ -95,7 +95,6 @@ export default function CursorSettings(
             )}
             <Button
               variant="primary"
-              size="sm"
               onClick={handleUpdateCli}
               disabled={isUpdating}
               className="gap-1 flex items-center"

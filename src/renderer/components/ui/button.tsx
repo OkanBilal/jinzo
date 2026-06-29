@@ -19,11 +19,9 @@ export type ButtonVariant =
   | "frosted"
   | "bare";
 
-export type ButtonSize = "xxs" | "xs" | "sm" | "md" | "lg";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
-  size?: ButtonSize;
   isLoading?: boolean;
   fullWidth?: boolean;
   leftIcon?: React.ReactNode;
@@ -60,16 +58,9 @@ const variantStyles: Record<ButtonVariant, string> = {
   bare: "cursor-pointer",
 };
 
-const sizeStyles: Record<ButtonSize, string> = {
-  xxs: "px-0 py-1 text-xs",
-  xs: "px-3 py-1.5 text-xs rounded-lg",
-  sm: "px-3 py-1.75 text-s rounded-lg",
-  md: "px-3 py-1.75 text-s rounded-xl",
-  lg: "px-3 py-2.5 text-base rounded-xl",
-};
 
 const baseStyles =
-  " items-center duration-200 transition-[color,background-color,border-color,box-shadow,transform] justify-center font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
+  "px-3 py-1.5 text-s rounded-xl items-center duration-200 transition-[color,background-color,border-color,box-shadow,transform] justify-center font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
@@ -79,7 +70,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       // Callers that genuinely need submit pass `type="submit"` explicitly.
       type = "button",
       variant = "bare",
-      size = "md",
       isLoading = false,
       fullWidth = false,
       leftIcon,
@@ -95,8 +85,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const variantClass = variantStyles[variant];
-    const sizeClass =
-      variant !== "icon" && variant !== "bare" ? sizeStyles[size] : "";
     const widthClass = fullWidth ? "w-full" : "";
 
     const baseClass =
@@ -113,7 +101,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(
           baseClass,
           variantClass,
-          sizeClass,
           widthClass,
           className,
         )}

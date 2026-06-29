@@ -150,7 +150,6 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
           tooltip={"Close settings"}
           variant="bare"
           tooltipPosition="top-right"
-          size="lg"
           onClick={onClose}
           fullWidth
           className="justify-start flex items-center cursor-pointer px-2 pb-2 gap-1 bg-transparent dark:bg-transparent transition-transform duration-200"

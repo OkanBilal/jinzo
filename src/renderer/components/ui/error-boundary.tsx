@@ -35,11 +35,11 @@ function ErrorFallback({ error, resetError, level }: ErrorFallbackProps) {
       </details>
 
       <div className="flex gap-3">
-        <Button variant="primary" size="sm" onClick={resetError}>
+        <Button variant="primary" onClick={resetError}>
           Try again
         </Button>
         {level === "app" && (
-          <Button variant="secondary" size="sm" onClick={handleReload}>
+          <Button variant="secondary" onClick={handleReload}>
             Reload app
           </Button>
         )}

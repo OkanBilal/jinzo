@@ -72,7 +72,6 @@ export function ProjectInstructionsSection({ commitInstructions, prInstructions,
             <Button
               type="button"
               variant="ghost"
-              size="sm"
               disabled={importing}
               isLoading={importing}
               onClick={handleImportPrTemplate}

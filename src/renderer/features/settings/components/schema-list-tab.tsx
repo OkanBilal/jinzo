@@ -138,7 +138,7 @@ export function SchemaListTab({
       </div>
 
       <div className="flex items-center justify-end gap-3 p-4 border-t border-primary-950/5 dark:border-primary/10">
-        <Button variant="primary" size="sm" onClick={onOpenNewEditor}>
+        <Button variant="primary" onClick={onOpenNewEditor}>
           New schema
         </Button>
       </div>

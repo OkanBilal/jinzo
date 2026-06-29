@@ -79,7 +79,6 @@ export function ManageResourcesStep({
                 variant="secondary"
                 onClick={() => onRemove(resource.id)}
                 disabled={loading}
-                size="xs"
               >
                 Remove
               </Button>

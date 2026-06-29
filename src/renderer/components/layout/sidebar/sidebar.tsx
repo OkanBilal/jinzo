@@ -258,7 +258,6 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               <Button
                 variant="subtle"
                 tooltip="View your pulse"
-                size="xs"
                 className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
                   isPulseRoute
                     ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
@@ -294,7 +293,6 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                   <span className="block w-full">
                     <Button
                       variant="subtle"
-                      size="xs"
                       tooltip={`${isPluginsDisabledForAgent ? "Not available for this agent yet.": "View plugins"}`}
                       disabled
                       className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors pointer-events-none opacity-50 ${
@@ -327,7 +325,6 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 <Button
                   variant="subtle"
                   tooltip="View plugins"
-                  size="xs"
                   className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
                     isPluginsRoute
                       ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
@@ -362,7 +359,6 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               <Button
                 variant="subtle"
                 tooltip="Relay"
-                size="xs"
                 className={`justify-start flex items-center gap-2 w-full rounded-xl transition-colors ${
                   isRelayRoute
                     ? "bg-primary/50 dark:bg-primary/5 hover:bg-primary/90 dark:hover:bg-primary/10"
