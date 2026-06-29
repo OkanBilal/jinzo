@@ -59,7 +59,7 @@ export function BaseTab({
       <InvertedCorner side="right" visible={isActive} />
 
       {/* Content */}
-      <span className={`relative flex items-center justify-center size-4.5 shrink-0 transition-colors duration-150 ${
+      <span className={`relative flex items-center justify-center size-4 shrink-0 transition-colors duration-150 ${
         isActive ? "text-primary-900 dark:text-primary-200" : "text-primary-900 dark:text-primary-200 hover:text-primary-900 dark:hover:text-primary-200"
       }`}>
         {icon}

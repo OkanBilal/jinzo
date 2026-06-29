@@ -1,4 +1,4 @@
-import { Plus, CopilotStatic, Codex, Cursor, Note, Document } from "@/components/ui/icons";
+import { Plus, Note, Document } from "@/components/ui/icons";
 import { RunTab, getTabTitle } from "./run-tab";
 import { EditorTab } from "./editor-tab";
 import { IssueTab } from "./issue-tab";
@@ -10,7 +10,8 @@ import type { IssueWithEntity, SignalWithEntity } from "@/lib/redux/api";
 import type { ReviewTab as ReviewTabType } from "@/lib/redux/slices/workspaceSlice";
 import { useRef } from "react";
 import { Button } from "@/components/ui";
-import { Claude } from "@/components/ui/icons/space";
+import { cn } from "@/lib/cn";
+import { getProviderVariant } from "../lib/provider-variants";
 import { useAppSelector } from "@/lib/redux/hooks";
 import { useIsMobile } from "@/lib/platform";
 import { ProviderIcon } from "./provider-icon";
@@ -74,16 +75,11 @@ export function WorkspaceTabs({
   const isMobile = useIsMobile();
 
   if (isMobile) {
-    const providerIcon =
-      variant === "claude" ? (
-        <Claude className="size-4 text-claude" />
-      ) : variant === "copilot" ? (
-        <CopilotStatic className="size-4" />
-      ) : variant === "cursor" ? (
-        <Cursor className="size-4" />
-      ) : (
-        <Codex className="size-4" />
-      );
+    // Mirrors the previous ternary's final fallback (undefined → Codex).
+    const { icon: MobileProviderIcon, accentClassName } = getProviderVariant(variant ?? "codex");
+    const providerIcon = (
+      <MobileProviderIcon className={cn("size-4", accentClassName)} />
+    );
     const mobileTabs: MobileTab[] = [];
     if (hasSelectedFile) {
       mobileTabs.push({
@@ -273,28 +269,14 @@ function NewRunTab({
   onClick: () => void;
   onClose: (e: React.MouseEvent) => void;
 }) {
-  const className = `size-4 ${
-    isActive
-      ? "text-primary-900 dark:text-primary-200"
-      : "text-primary-900 dark:text-primary-200 group-hover:text-primary-900 dark:group-hover:text-primary-200"
-  }`;
+  const { icon: ProviderIcon, accentClassName } = getProviderVariant(variant);
 
   return (
     <BaseTab
       isActive={isActive}
       onClick={onClick}
       onClose={onClose}
-      icon={
-        variant === "claude" ? (
-          <Claude className="text-claude" />
-        ) : variant === "copilot" ? (
-          <CopilotStatic className={className} />
-        ) : variant === "cursor" ? (
-          <Cursor className={className} />
-        ) : (
-          <Codex className={className} />
-        )
-      }
+      icon={<ProviderIcon className={cn( "size-4", accentClassName)} />}
       label="New Run"
     />
   );

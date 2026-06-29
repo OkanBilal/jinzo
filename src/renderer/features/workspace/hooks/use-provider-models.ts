@@ -10,15 +10,17 @@ import {
 import { setWorkspaceModel } from "@/lib/redux/slices/workspaceSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { dedupeModelsByPrettyName, getModelPrettyName } from "@/lib/model-icons";
+import { getProviderVariant, type ProviderVariant } from "../lib/provider-variants";
 
 export function useProviderModels(
   activeProviderId: string,
-  variant: "claude" | "copilot" | "codex" | "cursor",
+  variant: ProviderVariant,
   externalSelectedModel?: string,
   externalOnModelChange?: (model: string) => void,
   workspacePath?: string,
 ) {
   const dispatch = useAppDispatch();
+  const caps = getProviderVariant(variant);
 
   const persistedModel = useAppSelector(
     (state) =>
@@ -42,48 +44,40 @@ export function useProviderModels(
   const { data: providerSkills = [], isLoading: isLoadingSkills } =
     useGetProviderSkillsQuery(
       { id: activeProviderId, workspacePath },
-      { skip: !activeProviderId || (variant !== "claude" && variant !== "codex") },
+      { skip: !activeProviderId || !caps.supportsSkills },
     );
 
   const { data: providerData } = useGetProviderByIdQuery(activeProviderId, {
     skip: variant !== "claude" && variant !== "codex" && variant !== "copilot" && variant !== "cursor",
   });
   const [updateProvider] = useUpdateProviderMutation();
-  const permissionMode: string = variant === "cursor"
-    ? (providerData?.config as any)?.mode ?? "agent"
-    : variant === "codex"
-      ? (providerData?.config as any)?.sandboxMode ?? "workspace-write"
-      : (providerData?.config as any)?.permissionMode ?? "default";
-  const thinkingMode = variant === "codex" || variant === "copilot"
-    ? !!(providerData?.config as any)?.modelReasoningEffort
-    : !!(providerData?.config as any)?.thinkingMode;
+  const config = (providerData?.config ?? {}) as Record<string, any>;
+
+  const permissionMode: string = config[caps.permissionKey] ?? caps.permissionDefault;
+  const thinkingMode = caps.thinkingCoupledToEffort
+    ? !!config.modelReasoningEffort
+    : !!config.thinkingMode;
   // Codex maps "fast mode" to its "fast" service tier (canonical id from
   // model/list; Codex's request_value forwards it to OpenAI as "priority").
   // Accept both ids so it stays consistent with whatever the Settings dropdown
   // persists, and so legacy installs that stored "priority" still register.
-  const fastMode = variant === "codex"
-    ? ["fast", "priority"].includes(((providerData?.config as any)?.serviceTier as string) ?? "")
-    : !!(providerData?.config as any)?.fastMode;
+  const fastMode = caps.fastMode.kind === "serviceTier"
+    ? caps.fastMode.match.includes((config[caps.fastMode.key] as string) ?? "")
+    : !!config[caps.fastMode.key];
   // ultracode is a Claude-only boolean flag (xhigh + dynamic-workflow
   // orchestration). It's the single source of truth; the displayed effort
   // level is folded to "ultracode" so the dropdown shows it as selected.
-  const ultracode = variant === "claude" && !!(providerData?.config as any)?.ultracode;
-  const effortLevel: string = variant === "codex" || variant === "copilot"
-    ? (providerData?.config as any)?.modelReasoningEffort || ""
-    : ultracode
-      ? "ultracode"
-      : (providerData?.config as any)?.effortLevel || "";
-  const planMode: boolean = variant === "codex"
-    ? !!(providerData?.config as any)?.planMode
-    : false;
-  const goalMode: boolean = variant === "codex"
-    ? !!(providerData?.config as any)?.goalMode
-    : false;
+  const ultracode = caps.supportsUltracode && !!config.ultracode;
+  const effortLevel: string = !caps.thinkingCoupledToEffort && ultracode
+    ? "ultracode"
+    : config[caps.effortKey] || "";
+  const planMode: boolean = caps.supportsPlanMode && !!config.planMode;
+  const goalMode: boolean = caps.supportsGoalMode && !!config.goalMode;
 
   const handlePermissionModeChange = useCallback(async (mode: string) => {
     if (!providerData) return;
     const currentConfig = providerData.config ?? {};
-    const configKey = variant === "cursor" ? "mode" : variant === "codex" ? "sandboxMode" : "permissionMode";
+    const configKey = caps.permissionKey;
     await updateProvider({
       id: activeProviderId,
       payload: {
@@ -93,7 +87,7 @@ export function useProviderModels(
         },
       },
     });
-  }, [providerData, activeProviderId, variant, updateProvider]);
+  }, [providerData, activeProviderId, caps, updateProvider]);
 
   const handlePlanModeToggle = useCallback(async () => {
     if (!providerData) return;
@@ -143,11 +137,11 @@ export function useProviderModels(
   const handleFastModeToggle = useCallback(async () => {
     if (!providerData) return;
     const currentConfig = providerData.config ?? {};
-    // For codex, toggle the "fast" service tier on/off (matches the dropdown's
-    // canonical id from model/list); non-codex variants keep the simple boolean.
-    const patch: Record<string, unknown> = variant === "codex"
-      ? { serviceTier: fastMode ? undefined : "fast" }
-      : { fastMode: !fastMode };
+    // Codex toggles the "fast" service tier on/off (canonical id from
+    // model/list); other variants keep the simple boolean.
+    const patch: Record<string, unknown> = caps.fastMode.kind === "serviceTier"
+      ? { [caps.fastMode.key]: fastMode ? undefined : caps.fastMode.on }
+      : { [caps.fastMode.key]: !fastMode };
     await updateProvider({
       id: activeProviderId,
       payload: {
@@ -157,54 +151,30 @@ export function useProviderModels(
         },
       },
     });
-  }, [providerData, fastMode, activeProviderId, updateProvider, variant]);
+  }, [providerData, fastMode, activeProviderId, updateProvider, caps]);
 
   const handleEffortLevelChange = useCallback(async (level: string) => {
     if (!providerData) return;
     const currentConfig = providerData.config ?? {};
-    if (variant === "codex" || variant === "copilot") {
-      // Codex/Copilot use modelReasoningEffort in their config
-      await updateProvider({
-        id: activeProviderId,
-        payload: {
-          config: {
-            ...currentConfig,
-            modelReasoningEffort: level || undefined,
-          },
-        },
-      });
-    } else if (level === "ultracode") {
+    let patch: Record<string, unknown>;
+    if (caps.thinkingCoupledToEffort) {
+      // Codex/Copilot store the effort directly; thinking is inferred from it.
+      patch = { [caps.effortKey]: level || undefined };
+    } else if (caps.supportsUltracode && level === "ultracode") {
       // ultracode is stored as a boolean. It implies xhigh + workflow
       // orchestration, so clear effortLevel and let the driver send it via
       // settings.ultracode instead of options.effort.
-      await updateProvider({
-        id: activeProviderId,
-        payload: {
-          config: {
-            ...currentConfig,
-            thinkingMode: true,
-            ultracode: true,
-            effortLevel: undefined,
-          },
-        },
-      });
+      patch = { thinkingMode: true, ultracode: true, effortLevel: undefined };
     } else {
-      // Claude uses thinkingMode + effortLevel. Any non-ultracode selection
-      // (including "Off") turns ultracode back off.
-      const enableThinking = !!level;
-      await updateProvider({
-        id: activeProviderId,
-        payload: {
-          config: {
-            ...currentConfig,
-            thinkingMode: enableThinking,
-            effortLevel: level || undefined,
-            ultracode: false,
-          },
-        },
-      });
+      // Claude/Cursor use thinkingMode + effortLevel. Any non-ultracode
+      // selection (including "Off") turns ultracode back off.
+      patch = { thinkingMode: !!level, effortLevel: level || undefined, ultracode: false };
     }
-  }, [providerData, activeProviderId, updateProvider, variant]);
+    await updateProvider({
+      id: activeProviderId,
+      payload: { config: { ...currentConfig, ...patch } },
+    });
+  }, [providerData, activeProviderId, updateProvider, caps]);
 
   const selectableModels = useMemo(
     () => dedupeModelsByPrettyName(providerModels ?? [], variant),
@@ -326,7 +296,7 @@ export function useProviderModels(
     effortLevel,
     handleEffortLevelChange,
     supportsUltracode:
-      variant === "claude" &&
+      caps.supportsUltracode &&
       !!selectedModelInfo?.supportedEffortLevels?.includes("xhigh" as any),
     selectedModelInfo,
     planMode,

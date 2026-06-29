@@ -1,6 +1,7 @@
-import { Archive, CopilotStatic, Option, Edit, Codex, Cursor } from "@/components/ui/icons";
+import { Archive, Option, Edit } from "@/components/ui/icons";
 import type { Run } from "../types";
-import { Claude } from "@/components/ui/icons/space";
+import { cn } from "@/lib/cn";
+import { PROVIDER_VARIANTS, type ProviderVariant } from "../lib/provider-variants";
 import { AnimatedTitle } from "@/components/ui";
 import { BaseTab } from "./base-tab";
 import { AsciiSpinner } from "@/components/ui/ascii-spinner";
@@ -18,24 +19,19 @@ interface RunTabProps {
   variant?: "copilot" | "claude" | "codex" | "cursor";
 }
 
-function VariantIcon({ variant, isActive }: { variant: string; isActive: boolean }) {
-  const className = `size-4 ${
-    isActive
-      ? "text-primary-900 dark:text-primary-200"
-      : "text-primary-900 dark:text-primary-200 group-hover:text-primary-900 dark:group-hover:text-primary-200"
-  }`;
+function VariantIcon({ variant }: { variant: string; isActive: boolean }) {
 
-  if (variant === "claude") return <Claude className="text-claude" />;
-  if (variant === "copilot") return <CopilotStatic className={className} />;
-  if (variant === "codex") return <Codex className={className} />;
-  if (variant === "cursor") return <Cursor className={className} />;
-  return null;
+
+  const descriptor = PROVIDER_VARIANTS[variant as ProviderVariant];
+  if (!descriptor) return null;
+  const Icon = descriptor.icon;
+  return <Icon className={cn("size-4", descriptor.accentClassName)} />;
 }
 
 function TabIcon({ run, variant, isActive }: { run: Run; variant: string; isActive: boolean }) {
   const isRunning = run.status === "running" || run.status === "queued";
   return (
-    <span className="flex items-center justify-center size-3.5 shrink-0">
+    <span className="flex items-center justify-center size-4 shrink-0">
       {isRunning ? (
         <AsciiSpinner variant={variant as "claude" | "copilot" | "codex" | "cursor"} />
       ) : (

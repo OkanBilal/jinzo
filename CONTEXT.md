@@ -93,6 +93,18 @@ _Avoid_: hand-writing a tool definition inside a driver instead of rendering it 
 
 `CheckPackage` is intentionally **absent** from Claude and Copilot: those drivers enforce package safety through a PreToolUse Bash hook that intercepts install commands, so they need no explicit tool. Codex and Cursor cannot hook that path, so they expose `CheckPackage` as a callable tool. This asymmetry is encoded in the tool's `providers` allowlist and is deliberate — not drift to be "fixed."
 
+## Provider variants
+
+Renderer-side vocabulary for the workspace UI shared across the four agent pages.
+
+**provider variant**:
+The renderer's short identifier for one of the four agent UIs — `claude | copilot | codex | cursor`. Distinct from the **ProviderId** DB key (`claude_code`, `copilot_cli`, …); the **variant descriptor** maps between them. The route-level `WorkspaceVariant` additionally includes `default`, which callers narrow to a variant before use.
+_Avoid_: re-declaring the `"claude" | "copilot" | "codex" | "cursor"` union inline — import `ProviderVariant`.
+
+**variant descriptor**:
+The single renderer-side table — `features/workspace/lib/provider-variants.ts`, keyed by **provider variant** — holding each variant's `providerId`, `icon`/`accentClassName`, and capability/config facts: `permissionKey`, `permissionDefault`, `effortKey`, `thinkingCoupledToEffort`, `fastMode` (`boolean` vs Codex's `serviceTier`), and `supportsUltracode` / `supportsPlanMode` / `supportsGoalMode` / `supportsSkills`. Components and `use-provider-models` read fields from it instead of branching on `variant === "..."`. The config-key fields mirror what the main-process drivers read (codex → `sandboxMode`, `modelReasoningEffort`, `serviceTier`; cursor → `mode`; claude/copilot → `permissionMode`) — a contract shared across the process boundary even though only the renderer branches (each driver hard-codes its own keys).
+_Avoid_: re-deriving a variant's icon, provider id, config key, or capability with an inline `variant === "..."` ternary; duplicating the variant↔providerId mapping (use `getProviderVariant(variant).providerId`).
+
 ## Flagged ambiguities
 
 - "ServiceResponse" was historically defined ~27 times across `src/main/modules/*/dto.ts` in two structurally incompatible shapes (discriminated union vs optional-fields object). Resolved: the discriminated union is canonical; every module now re-exports the canonical type (no remaining bespoke envelopes).
