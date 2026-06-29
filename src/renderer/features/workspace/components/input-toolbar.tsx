@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useRef, useCallback, useEffect } from "react";
+import { getProviderVariant } from "../lib/provider-variants";
 import { useIsMobile } from "@/lib/platform";
 import { CompactComposerControls } from "@/components/ui/input/compact-composer-controls";
 import {
@@ -260,7 +261,7 @@ export function InputToolbar({
             onPlanModeToggle={onPlanModeToggle}
             goalMode={goalMode}
           />
-          {variant === "codex" && onGoalModeToggle && (
+          {getProviderVariant(variant).supportsGoalMode && onGoalModeToggle && (
             <GoalButton goalMode={!!goalMode} onToggle={onGoalModeToggle} />
           )}
         </div>

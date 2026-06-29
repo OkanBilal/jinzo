@@ -1,4 +1,5 @@
 import { useReducer, useRef, useEffect, useCallback, useState, useMemo } from "react";
+import { getProviderVariant } from "../lib/provider-variants";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import type { CommandInfo, SkillInfo } from "@/lib/redux/api/providersApi";
 import type { Run } from "../types";
@@ -21,7 +22,6 @@ import { InputToolbar } from "./input-toolbar";
 import { ContextUsageRing } from "./context-usage-meter";
 import { useContextUsage } from "../hooks/use-context-usage";
 import { useProviderModels } from "../hooks/use-provider-models";
-import { PROVIDER_IDS } from "../../../../shared/provider-ids";
 
 const EMPTY_CONTEXT_FILES: FileNode[] = [];
 const EMPTY_CONTEXT_ISSUES: ContextIssue[] = [];
@@ -150,14 +150,7 @@ export function WorkspaceInput({
   const variant = useWorkspaceVariant();
   const providerVariant: "claude" | "copilot" | "codex" | "cursor" =
     variant === "claude" ? "claude" : variant === "codex" ? "codex" : variant === "cursor" ? "cursor" : "copilot";
-  const defaultProviderId =
-    providerVariant === "claude"
-      ? PROVIDER_IDS.claude
-      : providerVariant === "codex"
-        ? PROVIDER_IDS.codex
-        : providerVariant === "cursor"
-          ? PROVIDER_IDS.cursor
-          : PROVIDER_IDS.copilot;
+  const defaultProviderId = getProviderVariant(providerVariant).providerId;
   const activeProviderId = providerId ?? defaultProviderId;
 
   const {

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { getProviderVariant } from "../lib/provider-variants";
 import type { RefObject } from "react";
 import {
   WorkspaceEmptyState,
@@ -289,7 +290,7 @@ export function WorkspaceProviderPage({
           providerId={providerId}
           runId={ws.activeRun?.id}
           isRunning={ws.activeRun?.status === "running"}
-          enabled={variant === "codex"}
+          enabled={getProviderVariant(variant).supportsGoalMode}
           rootPath={ws.currentWorkspace.rootPath}
         />
       )}
