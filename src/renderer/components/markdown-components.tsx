@@ -27,22 +27,22 @@ export const markdownComponents: Components = {
     </h4>
   ),
   p: ({ children }) => (
-    <p className=" text-sm leading-relaxed font-sans text-primary-900 dark:text-primary transition-all duration-150 ease-out">
+    <p className=" text-sm leading-7 font-sans text-primary-900 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </p>
   ),
   ul: ({ children }) => (
-    <ul className="list-disc list-outside pl-4 text-sm font-sans mb-2 space-y-1 text-primary-900 dark:text-primary transition-all duration-150 ease-out">
+    <ul className="list-disc list-outside  pl-4 text-sm  font-sans mb-2 space-y-1 text-primary-900 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </ul>
   ),
   ol: ({ children }) => (
-    <ol className="list-decimal list-outside pl-4 text-sm font-sans mb-2 space-y-1 text-primary-900 dark:text-primary transition-all duration-150 ease-out">
+    <ol className="list-decimal  list-outside pl-4 text-sm font-sans mb-2 space-y-1 text-primary-900 dark:text-primary transition-all duration-150 ease-out">
       {children}
     </ol>
   ),
   li: ({ children }) => (
-    <li className="font-sans text-sm text-primary-900 dark:text-primary transition-all duration-150 ease-out [&>p]:my-0 [&>p:not(:last-child)]:mb-1">
+    <li className="font-sans text-sm leading-7 text-primary-900 dark:text-primary transition-all duration-150 ease-out [&>p]:my-0 [&>p:not(:last-child)]:mb-1">
       {children}
     </li>
   ),

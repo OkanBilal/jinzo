@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Body, Button } from "@/components/ui";
-import { ChevronUp } from "@/components/ui/icons";
+import { ChevronUp, ProjectFolder } from "@/components/ui/icons";
 import { useListProjectsQuery } from "@/lib/redux/api";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { setSidebarCollapsed } from "@/lib/redux/slices/appSettingsSlice";
@@ -97,7 +97,6 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                   activeSection === "projects" &&
                   activeId === project.id;
                 const parsed = project.icon ? parseIcon(project.icon) : null;
-                const initial = (project.name?.[0] ?? "P").toUpperCase();
                 let iconContent: React.ReactNode;
                 if (parsed && parsed.type === "icon") {
                   const IconComp = parsed.value as IconComponent;
@@ -109,7 +108,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                     </span>
                   );
                 } else {
-                  iconContent = initial;
+                  iconContent = <ProjectFolder className="size-3.5" />;
                 }
                 return (
                   <Button
@@ -125,10 +124,7 @@ export default function SettingsView({ onClose }: SettingsViewProps) {
                       }
                       `}
                   >
-                    <div
-                      className={`size-4 rounded-md flex items-center justify-center text-t  text-primary-950 dark:text-primary-200
-                        shrink-0 ${!parsed ? "border border-primary-950/50 dark:border-primary/10" : ""}`}
-                    >
+                    <div className="size-4 rounded-md flex items-center justify-center text-t text-primary-950 dark:text-primary-200 shrink-0">
                       {iconContent}
                     </div>
                     <span className="truncate ">{project.name}</span>

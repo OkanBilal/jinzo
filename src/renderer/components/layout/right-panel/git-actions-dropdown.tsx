@@ -5,12 +5,15 @@ import {
   ArrowUp,
   Branch,
   Refresh,
+  Github,
+  Lock,
 } from "@/components/ui/icons";
 import {
   Button,
   Caption,
   Checkbox,
   DropdownMenu,
+  Input,
   Text,
   Textarea,
   toast,
@@ -22,10 +25,13 @@ import {
   usePushGitFlowMutation,
   useCreatePrGitFlowMutation,
   useResyncWorkspaceDiffMutation,
+  useGetPublishPreflightQuery,
+  usePublishRepoMutation,
 } from "@/lib/redux/api";
+import { extractErrorMessage } from "@/lib/extract-error-message";
 
-type PendingAction = "commit" | "commitPush" | "push" | "pr" | null;
-type PanelView = "commit" | "pr";
+type PendingAction = "commit" | "commitPush" | "push" | "pr" | "publish" | null;
+type PanelView = "commit" | "pr" | "publish";
 
 interface GitActionsDropdownProps {
   providerId?: string;
@@ -51,6 +57,12 @@ export function GitActionsDropdown({ providerId }: GitActionsDropdownProps) {
   const [prBody, setPrBody] = useState("");
   const [prDraft, setPrDraft] = useState(false);
   const [pending, setPending] = useState<PendingAction>(null);
+  // Publish view (shown in-place when the repo has no remote).
+  const [publishOwnerRepo, setPublishOwnerRepo] = useState("");
+  const [publishPrivate, setPublishPrivate] = useState(true);
+  const [publishSsh, setPublishSsh] = useState(false);
+  const [publishRemote, setPublishRemote] = useState("origin");
+  const [publishAdvanced, setPublishAdvanced] = useState(false);
 
   const {
     data: status,
@@ -64,9 +76,16 @@ export function GitActionsDropdown({ providerId }: GitActionsDropdownProps) {
     refetchOnMountOrArgChange: true,
   });
 
+  // gh auth + default owner/name, fetched only while the publish view is open.
+  const { data: preflight, isFetching: preflightFetching } =
+    useGetPublishPreflightQuery(activeWorkspaceId!, {
+      skip: !activeWorkspaceId || view !== "publish",
+    });
+
   const [commitGitFlow] = useCommitGitFlowMutation();
   const [pushGitFlow] = usePushGitFlowMutation();
   const [createPrGitFlow] = useCreatePrGitFlowMutation();
+  const [publishRepo] = usePublishRepoMutation();
   // Recomputes + persists the canonical workspace diff and invalidates the
   // WorkspaceDiffs cache, so the sidebar workspace item (which reads that
   // stored diff) reflects the same numbers the panel shows live.
@@ -77,11 +96,23 @@ export function GitActionsDropdown({ providerId }: GitActionsDropdownProps) {
   const changedFiles = status?.changedFiles ?? 0;
   const ahead = status?.ahead ?? 0;
   const hasChanges = changedFiles > 0;
+  // Default to "has remote" until status loads so we don't flash the Publish
+  // action for normal repos. Only a loaded status with hasRemote:false swaps in
+  // the Publish flow (push/PR are impossible without a remote).
+  const hasRemote = status?.hasRemote ?? true;
   const canPush = ahead > 0 || (status ? !status.hasUpstream : false);
   // On the default branch a PR can't be opened (default → default), so the
   // action is disabled. No prompt to branch — opening a PR is a deliberate
   // choice the user would have made via a worktree.
   const isDefaultBranch = status?.isDefaultBranch ?? false;
+
+  // Default publish target from the gh preflight (authed login + repo name).
+  // The input falls back to this until the user types, so no prefill effect
+  // (and no cascading-render setState) is needed.
+  const defaultOwnerRepo =
+    preflight?.ghReady && preflight.login
+      ? `${preflight.login}/${preflight.suggestedName}`
+      : "";
 
   // Closing also resets transient form state so the next open starts clean
   // (done here rather than in an effect to avoid cascading-render lint).
@@ -93,6 +124,11 @@ export function GitActionsDropdown({ providerId }: GitActionsDropdownProps) {
     setPrBody("");
     setPrDraft(false);
     setPending(null);
+    setPublishOwnerRepo("");
+    setPublishPrivate(true);
+    setPublishSsh(false);
+    setPublishRemote("origin");
+    setPublishAdvanced(false);
   }, []);
 
   const handleToggle = useCallback(() => {
@@ -204,6 +240,47 @@ export function GitActionsDropdown({ providerId }: GitActionsDropdownProps) {
     close,
   ]);
 
+  const handlePublish = useCallback(async () => {
+    if (!activeWorkspaceId || pending) return;
+    const ownerRepo = (publishOwnerRepo || defaultOwnerRepo).trim();
+    if (!ownerRepo.includes("/") || ownerRepo.split("/").some((s) => !s.trim())) {
+      toast.error("Enter the repository as owner/name.");
+      return;
+    }
+    setPending("publish");
+    try {
+      const result = await publishRepo({
+        workspaceId: activeWorkspaceId,
+        ownerRepo,
+        visibility: publishPrivate ? "private" : "public",
+        remoteName: publishRemote.trim() || "origin",
+        protocol: publishSsh ? "ssh" : "https",
+      }).unwrap();
+      toast.success(`Published ${result.owner}/${result.repo}`);
+      if (result.url) window.api.shell.openExternal(result.url);
+      // Repo now has a remote — return to the commit view (Push/PR reappear) and
+      // refresh the live status.
+      setView("commit");
+      setPublishOwnerRepo("");
+      setPublishAdvanced(false);
+      refetch();
+    } catch (err) {
+      toast.error(extractErrorMessage(err, "Failed to publish repository."));
+    } finally {
+      setPending(null);
+    }
+  }, [
+    activeWorkspaceId,
+    pending,
+    publishRepo,
+    publishOwnerRepo,
+    defaultOwnerRepo,
+    publishPrivate,
+    publishRemote,
+    publishSsh,
+    refetch,
+  ]);
+
   if (!activeWorkspaceId) return null;
 
   const busy = pending !== null;
@@ -225,6 +302,10 @@ export function GitActionsDropdown({ providerId }: GitActionsDropdownProps) {
         position={position}
         onClose={close}
         minWidth={384}
+        // Pin a fixed width so every view (commit / PR / publish) is identical.
+        // Without this the menu shrink-wraps to each view's widest content, so
+        // the views render at slightly different widths.
+        className="w-96"
         origin="top-right"
       >
         {/* Header: branch + live +/- stats */}
@@ -268,7 +349,7 @@ export function GitActionsDropdown({ providerId }: GitActionsDropdownProps) {
                 placeholder="Commit message (leave blank to generate)…"
                 className="w-full resize-none text-xs "
               />
-              <label className="mt-1 mb-2 flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
+              <label className="mt-1 mb-3 flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
                 <Checkbox
                   checked={includeUnstaged}
                   onChange={() => setIncludeUnstaged((v) => !v)}
@@ -277,7 +358,7 @@ export function GitActionsDropdown({ providerId }: GitActionsDropdownProps) {
               </label>
             </div>
 
-            <div className="mt-1 border-t border-primary-200/40 pt-1 dark:border-primary-700/25">
+            <div className="mt-1 border-t border-primary-200/40  dark:border-primary-700/25">
               <PanelAction
                 icon={<Commit className="size-4" />}
                 label="Commit"
@@ -285,46 +366,189 @@ export function GitActionsDropdown({ providerId }: GitActionsDropdownProps) {
                 disabled={!hasChanges || busy}
                 loading={pending === "commit"}
               />
+              {hasRemote ? (
+                <>
+                  <PanelAction
+                    icon={<ArrowUp className="size-4" />}
+                    label="Commit and push"
+                    onClick={() => handleCommit(true)}
+                    disabled={!hasChanges || busy}
+                    loading={pending === "commitPush"}
+                  />
+                  <PanelAction
+                    icon={<ArrowUp className="size-4" />}
+                    label="Push"
+                    onClick={handlePush}
+                    disabled={!canPush || busy}
+                    loading={pending === "push"}
+                  />
+                  <PanelAction
+                    icon={<PullRequest className="size-4" />}
+                    label="Create pull request…"
+                    onClick={() => setView("pr")}
+                    disabled={busy || isDefaultBranch}
+                  />
+                </>
+              ) : (
+                // No remote yet — push/PR are impossible. Offer Publish instead,
+                // which creates the GitHub repo and wires up origin.
+                <PanelAction
+                  icon={<Github className="size-4" />}
+                  label="Publish repository…"
+                  onClick={() => setView("publish")}
+                  disabled={busy}
+                />
+              )}
+            </div>
+          </>
+        ) : view === "publish" ? (
+          <>
+            <div className="space-y-2 px-3.5 pb-1">
+              {!preflightFetching && preflight && !preflight.ghReady && (
+                <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">
+                  {preflight.notReadyReason ??
+                    "Sign in with the GitHub CLI first."}
+                </div>
+              )}
+
+              <div>
+                <Caption className="mb-1 block text-xs text-primary-500">
+                  Repository
+                </Caption>
+                <div className="flex items-center gap-1.5 rounded-lg bg-primary-100/40 px-2.5 dark:bg-primary-800/40">
+                  <Github className="size-3.5 shrink-0 text-primary-500" />
+                  <span className="shrink-0 text-xs text-primary-500">
+                    github.com/
+                  </span>
+                  <input
+                    type="text"
+                    value={publishOwnerRepo || defaultOwnerRepo}
+                    onChange={(e) => setPublishOwnerRepo(e.target.value)}
+                    placeholder="owner/repo"
+                    spellCheck={false}
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    className="min-w-0 flex-1 bg-transparent py-2 font-mono text-xs text-primary-950 placeholder:text-primary-500 focus:outline-none dark:text-primary-100"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Caption className="mb-1 block text-xs text-primary-500">
+                  Visibility
+                </Caption>
+                <div className="flex items-center gap-4">
+                  <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
+                    <Checkbox
+                      checked={publishPrivate}
+                      onChange={() => setPublishPrivate(true)}
+                    />
+                    <Lock className="size-3.5 text-primary-500" />
+                    Private
+                  </label>
+                  <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
+                    <Checkbox
+                      checked={!publishPrivate}
+                      onChange={() => setPublishPrivate(false)}
+                    />
+                    Public
+                  </label>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                onClick={() => setPublishAdvanced((v) => !v)}
+                className="flex items-center gap-1 text-s text-primary-500 hover:text-primary-700 dark:hover:text-primary-200 pt-2"
+              >
+                <ArrowUp
+                  className={`size-3 transition-transform duration-200 ${publishAdvanced ? "rotate-180" : "rotate-90"}`}
+                />
+                Advanced
+              </Button>
+
+              {/* Smoothly expands/collapses via grid-rows 0fr↔1fr. */}
+              <div
+                className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+                  publishAdvanced
+                    ? "grid-rows-[1fr] opacity-100"
+                    : "grid-rows-[0fr] opacity-0"
+                }`}
+              >
+                <div className="min-h-0 overflow-hidden">
+                  <div className="space-y-2 pt-1">
+                    <div>
+                      <Caption className="mb-1 block text-xs text-primary-500">
+                        Remote
+                      </Caption>
+                      <Input
+                        value={publishRemote}
+                        onChange={(e) => setPublishRemote(e.target.value)}
+                        placeholder="origin"
+                        spellCheck={false}
+                        className="min-w-0 py-2 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <Caption className="mb-1 block text-xs text-primary-500">
+                        Protocol
+                      </Caption>
+                      <div className="flex items-center gap-4">
+                        <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
+                          <Checkbox
+                            checked={publishSsh}
+                            onChange={() => setPublishSsh(true)}
+                          />
+                          SSH
+                        </label>
+                        <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
+                          <Checkbox
+                            checked={!publishSsh}
+                            onChange={() => setPublishSsh(false)}
+                          />
+                          HTTPS
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-1 border-t border-primary-200/40  dark:border-primary-700/25">
               <PanelAction
-                icon={<ArrowUp className="size-4" />}
-                label="Commit and push"
-                onClick={() => handleCommit(true)}
-                disabled={!hasChanges || busy}
-                loading={pending === "commitPush"}
+                icon={<Github className="size-4" />}
+                label="Publish repository"
+                onClick={handlePublish}
+                disabled={busy || !preflight?.ghReady}
+                loading={pending === "publish"}
               />
               <PanelAction
-                icon={<ArrowUp className="size-4" />}
-                label="Push"
-                onClick={handlePush}
-                disabled={!canPush || busy}
-                loading={pending === "push"}
-              />
-              <PanelAction
-                icon={<PullRequest className="size-4" />}
-                label="Create pull request…"
-                onClick={() => setView("pr")}
-                disabled={busy || isDefaultBranch}
+                icon={<ArrowUp className="size-4 -rotate-90 -ml-1" />}
+                label="Back"
+                onClick={() => setView("commit")}
+                disabled={busy}
               />
             </div>
           </>
         ) : (
           <>
             <div className="space-y-2 px-3.5">
-              <input
+              <Input
                 type="text"
                 value={prTitle}
                 onChange={(e) => setPrTitle(e.target.value)}
                 placeholder="PR title (leave blank to generate)…"
-                className="w-full rounded-lg bg-primary-100/40 px-3 py-2 text-xs text-primary-950 placeholder:text-primary-500 focus:outline-none dark:bg-primary-800/40 dark:text-primary-100 dark:placeholder:text-primary-500"
+                className="w-full text-xs "
               />
-              <textarea
+              <Textarea
                 value={prBody}
                 onChange={(e) => setPrBody(e.target.value)}
                 rows={4}
                 placeholder="Description (optional, leave blank to generate)…"
-                className="w-full resize-none rounded-lg bg-primary-100/40 px-3 py-2 text-xs text-primary-950 placeholder:text-primary-500 focus:outline-none dark:bg-primary-800/40 dark:text-primary-100 dark:placeholder:text-primary-500"
+                className="w-full text-xs"
               />
-              <label className="mb-3 -mt-1 flex cursor-pointer select-none items-center gap-2 text-xs text-primary-600 dark:text-primary-300">
+              <label className="mb-2 -mt-1 flex cursor-pointer select-none items-center gap-2 text-s text-primary-600 dark:text-primary-300">
                 <Checkbox
                   checked={prDraft}
                   onChange={() => setPrDraft((v) => !v)}
@@ -333,7 +557,7 @@ export function GitActionsDropdown({ providerId }: GitActionsDropdownProps) {
               </label>
             </div>
 
-            <div className="mt-1 border-t border-primary-200/40 pt-1 dark:border-primary-700/25">
+            <div className=" border-t border-primary-200/40 dark:border-primary-700/25">
               <PanelAction
                 icon={<PullRequest className="size-4" />}
                 label="Create pull request"

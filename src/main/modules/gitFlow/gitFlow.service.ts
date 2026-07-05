@@ -13,6 +13,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { execFile } from "node:child_process";
+import { basename } from "node:path";
 import { promisify } from "node:util";
 import {
   ok,
@@ -45,12 +46,38 @@ export interface GitFlowStatus {
   ahead: number;
   behind: number;
   hasUpstream: boolean;
+  /** True when the repo has an `origin` remote. When false, push/PR can't work
+   * and the panel offers "Publish repository" instead. */
+  hasRemote: boolean;
   additions: number;
   deletions: number;
   changedFiles: number;
   /** True when the current branch is the repo's default — PR creation is
    * disabled here (you can't open a PR from the default branch to itself). */
   isDefaultBranch: boolean;
+}
+
+/** Preflight the Publish wizard reads to gate its Provider step + prefill. */
+export interface PublishPreflight {
+  /** The `gh` CLI is installed and authenticated (GitHub is publish-ready). */
+  ghReady: boolean;
+  /** Authenticated GitHub login, used as the default repo owner. */
+  login: string | null;
+  /** Sanitized default repository name (from the project/workspace). */
+  suggestedName: string;
+  /** The branch that will be published (current HEAD). */
+  branch: string;
+  /** True when an `origin` remote already exists (publish would be a no-op). */
+  hasRemote: boolean;
+  /** Human-readable reason GitHub isn't ready (e.g. gh not installed / not authed). */
+  notReadyReason?: string;
+}
+
+export interface PublishResult {
+  url: string;
+  branch: string;
+  owner: string;
+  repo: string;
 }
 
 export interface CommitResult {
@@ -76,6 +103,20 @@ function readBaseBranchFromMetadata(
  * e.g. "git@github.com:user/repo.git" and "https://github.com/user/repo.git"
  * both become "github.com/user/repo".
  */
+/**
+ * Coerce an arbitrary project/workspace name into a valid GitHub repo name:
+ * GitHub allows [A-Za-z0-9._-]; everything else (spaces included) becomes a
+ * hyphen, with runs collapsed and edges trimmed.
+ */
+function sanitizeRepoName(name: string): string {
+  return name
+    .trim()
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[-.]+|[-.]+$/g, "")
+    .slice(0, 100);
+}
+
 function normalizeGitUrl(url: string): string {
   return url
     .replace(/^(https?:\/\/|git@|ssh:\/\/git@)/, "")
@@ -539,14 +580,19 @@ export const gitFlowService = {
     if (!workspace.rootPath) return fail("Workspace has no root path");
     const rootPath = workspace.rootPath;
 
-    const [branchResult, statusResult, headResult] = await Promise.all([
-      gitService.getCurrentBranch(rootPath),
-      gitService.getStatus(rootPath),
-      gitService.getHeadSha(rootPath),
-    ]);
+    const [branchResult, statusResult, headResult, remotesResult] =
+      await Promise.all([
+        gitService.getCurrentBranch(rootPath),
+        gitService.getStatus(rootPath),
+        gitService.getHeadSha(rootPath),
+        gitService.getRemotes(rootPath),
+      ]);
 
     if (!statusResult.success) return statusResult;
     const status = statusResult.data;
+    const hasRemote =
+      remotesResult.success &&
+      (remotesResult.data ?? []).some((r) => r.name === "origin");
     const branch = branchResult.success
       ? branchResult.data
       : status.current ?? "";
@@ -589,6 +635,7 @@ export const gitFlowService = {
       ahead: status.ahead,
       behind: status.behind,
       hasUpstream: !!status.tracking,
+      hasRemote,
       additions,
       deletions,
       changedFiles,
@@ -667,6 +714,165 @@ export const gitFlowService = {
     const pushResult = await gitService.push(root.data.rootPath);
     if (!pushResult.success) return pushResult;
     return ok({ hash: "", summary: "Pushed", pushed: true });
+  },
+
+  // ───────────────────────────────────────────────────────────
+  // Publish (create the GitHub repo for a repo with no remote)
+  // ───────────────────────────────────────────────────────────
+
+  /**
+   * Preflight for the Publish wizard: is `gh` installed + authenticated, what's
+   * the authed login (default owner), a sanitized default repo name, and the
+   * branch we'd publish. Never throws — surfaces readiness via `ghReady`.
+   */
+  async getPublishPreflight(
+    workspaceId: string,
+  ): Promise<ServiceResponse<PublishPreflight>> {
+    const root = await this.resolveRoot(workspaceId);
+    if (!root.success) return root;
+    const { rootPath, projectId } = root.data;
+
+    const [branchResult, remotesResult] = await Promise.all([
+      gitService.getCurrentBranch(rootPath),
+      gitService.getRemotes(rootPath),
+    ]);
+    const branch = branchResult.success ? branchResult.data : "main";
+    const hasRemote =
+      remotesResult.success &&
+      (remotesResult.data ?? []).some((r) => r.name === "origin");
+
+    // Default repo name from the project, then the workspace, then the folder.
+    let name = "";
+    const workspace = await workspaceRepo.findById(workspaceId);
+    if (projectId) {
+      const project = await projectsRepo.findById(projectId);
+      name = project?.name || "";
+    }
+    if (!name) name = workspace?.name || basename(rootPath);
+    const suggestedName = sanitizeRepoName(name);
+
+    // `gh api user` succeeds only when gh is installed AND authenticated.
+    let ghReady = false;
+    let login: string | null = null;
+    let notReadyReason: string | undefined;
+    try {
+      const { stdout } = await execFileAsync(
+        "gh",
+        ["api", "user", "--jq", ".login"],
+        { timeout: 15_000 },
+      );
+      login = stdout.trim() || null;
+      ghReady = !!login;
+      if (!ghReady) notReadyReason = "Could not read your GitHub login.";
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException)?.code;
+      if (code === "ENOENT") {
+        notReadyReason =
+          "The GitHub CLI (gh) isn't installed. Install it, then run `gh auth login`.";
+      } else {
+        notReadyReason =
+          "You're not signed in to the GitHub CLI. Run `gh auth login` in your terminal.";
+      }
+    }
+
+    return ok({
+      ghReady,
+      login,
+      suggestedName,
+      branch,
+      hasRemote,
+      notReadyReason,
+    });
+  },
+
+  /**
+   * Publish a local repo to GitHub: create the remote repo with `gh`, wire up
+   * the `origin` remote using the chosen protocol, push the current branch, and
+   * record the origin on the project so subsequent push/PR checks pass.
+   */
+  async publish(params: {
+    workspaceId: string;
+    /** "owner/name" — owner is a GitHub user or org the account can create in. */
+    ownerRepo: string;
+    visibility: "private" | "public";
+    remoteName?: string;
+    protocol: "ssh" | "https";
+  }): Promise<ServiceResponse<PublishResult>> {
+    try {
+      const root = await this.resolveRoot(params.workspaceId);
+      if (!root.success) return root;
+      const { rootPath, projectId } = root.data;
+      const remoteName = params.remoteName?.trim() || "origin";
+
+      const [owner, rawName] = params.ownerRepo.split("/").map((s) => s.trim());
+      const name = sanitizeRepoName(rawName || "");
+      if (!owner || !name) {
+        return fail("Enter a repository as owner/name (e.g. octocat/my-repo).");
+      }
+
+      // Don't clobber an existing remote of the same name.
+      const remotesResult = await gitService.getRemotes(rootPath);
+      if (
+        remotesResult.success &&
+        (remotesResult.data ?? []).some((r) => r.name === remoteName)
+      ) {
+        return fail(`A remote named "${remoteName}" already exists.`);
+      }
+
+      // Create the empty repo on GitHub (no --source/--push: we wire the remote
+      // ourselves so the SSH/HTTPS choice is honored).
+      const ghArgs = [
+        "repo",
+        "create",
+        `${owner}/${name}`,
+        params.visibility === "private" ? "--private" : "--public",
+      ];
+      let htmlUrl = `https://github.com/${owner}/${name}`;
+      try {
+        const { stdout } = await execFileAsync("gh", ghArgs, {
+          cwd: rootPath,
+          timeout: 30_000,
+        });
+        htmlUrl = stdout.match(/https:\/\/github\.com\/[^\s]+/)?.[0] ?? htmlUrl;
+      } catch (error) {
+        const stderr = (error as any)?.stderr?.trim?.();
+        return fail(stderr || "Failed to create the GitHub repository.");
+      }
+
+      // Wire the remote with the chosen protocol, then push + set upstream.
+      const remoteUrl =
+        params.protocol === "ssh"
+          ? `git@github.com:${owner}/${name}.git`
+          : `https://github.com/${owner}/${name}.git`;
+
+      const branchResult = await gitService.getCurrentBranch(rootPath);
+      const branch = branchResult.success ? branchResult.data : "main";
+
+      const added = await gitService.addRemote(rootPath, remoteName, remoteUrl);
+      if (!added.success) return added;
+
+      const pushResult = await gitService.push(rootPath, {
+        setUpstream: true,
+        remote: remoteName,
+        branch,
+      });
+      if (!pushResult.success) return pushResult;
+
+      // Record the origin + default branch on the project so assertRemoteMatches
+      // and future push/PR flows treat this as a normal remote-backed repo.
+      if (projectId) {
+        await projectsRepo.update(projectId, {
+          remoteOrigin: htmlUrl,
+          defaultBranch: branch,
+        });
+      }
+
+      return ok({ url: htmlUrl, branch, owner, repo: name });
+    } catch (error) {
+      return fail(
+        error instanceof Error ? error.message : "Failed to publish repository",
+      );
+    }
   },
 
   /**

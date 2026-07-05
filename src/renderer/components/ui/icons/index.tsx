@@ -134,3 +134,4 @@ export { default as Excel } from "./excel";
 export { default as Word } from "./word";
 export { default as Powerpoint } from "./powerpoint";
 export { default as Goal } from "./goal";
+export { default as ProjectFolder } from "./project-folder";

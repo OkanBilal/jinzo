@@ -74,6 +74,29 @@ export function registerGitFlowIpc(): void {
       return gitFlowService.generatePrBody(payload);
     },
   );
+
+  ipcMain.handle(
+    CHANNELS.gitFlow.getPublishPreflight,
+    async (_, workspaceId: string) => {
+      return gitFlowService.getPublishPreflight(workspaceId);
+    },
+  );
+
+  ipcMain.handle(
+    CHANNELS.gitFlow.publish,
+    async (
+      _,
+      payload: {
+        workspaceId: string;
+        ownerRepo: string;
+        visibility: "private" | "public";
+        remoteName?: string;
+        protocol: "ssh" | "https";
+      },
+    ) => {
+      return gitFlowService.publish(payload);
+    },
+  );
 }
 
 export function unregisterGitFlowIpc(): void {
@@ -84,5 +107,7 @@ export function unregisterGitFlowIpc(): void {
     CHANNELS.gitFlow.createPr,
     CHANNELS.gitFlow.generateCommitMessage,
     CHANNELS.gitFlow.generatePrBody,
+    CHANNELS.gitFlow.getPublishPreflight,
+    CHANNELS.gitFlow.publish,
   ].forEach((channel) => ipcMain.removeHandler(channel));
 }

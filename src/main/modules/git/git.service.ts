@@ -755,6 +755,27 @@ class GitService {
   }
 
   /**
+   * Add a new remote to the repository (e.g. `origin` when publishing a repo
+   * that was created locally with no remote). Fails if the remote name already
+   * exists, so callers should check `getRemotes` first when that matters.
+   */
+  async addRemote(
+    rootPath: string,
+    name: string,
+    url: string,
+  ): Promise<ServiceResponse<void>> {
+    try {
+      const git = this.getGit(rootPath);
+      await git.addRemote(name, url);
+      return ok(undefined);
+    } catch (error) {
+      return fail(
+        error instanceof Error ? error.message : "Failed to add remote",
+      );
+    }
+  }
+
+  /**
    * Rename a local branch
    */
   async renameBranch(
