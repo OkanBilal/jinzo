@@ -80,7 +80,7 @@ function WorkspaceGroupSection({
             setExpanded((v) => !v);
           }
         }}
-        className="group/section w-full flex items-center gap-1.5 px-2 py-1 mb-0.5 rounded-lg cursor-pointer hover:bg-primary/50 dark:hover:bg-primary/5 transition-colors"
+        className="group/section w-full flex items-center gap-1.5 px-2 py-1.5 mb-px rounded-lg cursor-pointer hover:bg-primary/50 dark:hover:bg-primary/5 transition-colors"
       >
         {group.icon && <span className="shrink-0 text-xs">{group.icon}</span>}
         <span className="text-xs font-medium text-primary-900 dark:text-primary-200 truncate">
@@ -473,7 +473,7 @@ export default function WorkspacesList({
             {sortedWorkspaces.map(renderWorkspaceItem)}
           </div>
         ) : (
-          <div className="flex flex-col ">
+          <div className={`flex flex-col ${grouping === "project" ? "gap-1" : ""}`}>
             {groups.map((group) => (
               <WorkspaceGroupSection
                 key={group.key}

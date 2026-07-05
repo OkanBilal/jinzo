@@ -313,12 +313,17 @@ export {
   useCreatePrGitFlowMutation,
   useGenerateCommitMessageGitFlowMutation,
   useGeneratePrBodyGitFlowMutation,
+  useGetPublishPreflightQuery,
+  usePublishRepoMutation,
 } from "./gitFlowApi";
 export type {
   GitFlowStatus,
   CommitResult,
   CommitGitFlowPayload,
   CreatePrGitFlowPayload,
+  PublishPreflight,
+  PublishResult,
+  PublishRepoPayload,
 } from "./gitFlowApi";
 
 export {

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { parseIcon, type IconComponent } from "@/lib/icon-registry";
+import { ProjectFolder } from "@/components/ui/icons";
 
 export function ProjectIcon({
   icon,
@@ -22,10 +23,6 @@ export function ProjectIcon({
       );
     }
   }
-  const initial = (projectName?.[0] ?? "P").toUpperCase();
-  return (
-    <div className="size-4 rounded-md flex items-center font-mono justify-center text-t font-medium text-primary-950 dark:text-primary-200 border border-primary-950/50 dark:border-primary/10">
-      {initial}
-    </div>
-  );
+  void projectName;
+  return <ProjectFolder className="size-3.5 text-primary-900 dark:text-primary-200" />;
 }

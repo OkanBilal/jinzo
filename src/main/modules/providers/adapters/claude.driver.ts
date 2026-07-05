@@ -2023,7 +2023,16 @@ export function createClaudeDriver(config: ClaudeCodeAdapterConfig): ProviderDri
           return getDefaultModels(config.defaultModel);
         }
 
-        const models: ModelInfo[] = sdkModels.map((sdkModel, index) => {
+        // Drop the SDK's synthetic "default" entry ("Use the default model
+        // (currently …)"). It's redundant with the concrete model it resolves
+        // to (Opus 4.8) and just duplicates a row in the picker. Guard against
+        // an account whose only offering is "default" so the list never empties.
+        const selectableSdkModels =
+          sdkModels.length > 1
+            ? sdkModels.filter((m) => m.value !== "default")
+            : sdkModels;
+
+        const models: ModelInfo[] = selectableSdkModels.map((sdkModel, index) => {
           // SDK's .d.ts declares supportsFastMode but the runtime payload doesn't include it.
           // Fast mode is currently meaningful only on opus; this fallback lights it up
           // automatically when the SDK starts surfacing the field.

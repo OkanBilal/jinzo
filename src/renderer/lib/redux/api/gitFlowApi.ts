@@ -11,10 +11,35 @@ export interface GitFlowStatus {
   ahead: number;
   behind: number;
   hasUpstream: boolean;
+  hasRemote: boolean;
   additions: number;
   deletions: number;
   changedFiles: number;
   isDefaultBranch: boolean;
+}
+
+export interface PublishPreflight {
+  ghReady: boolean;
+  login: string | null;
+  suggestedName: string;
+  branch: string;
+  hasRemote: boolean;
+  notReadyReason?: string;
+}
+
+export interface PublishResult {
+  url: string;
+  branch: string;
+  owner: string;
+  repo: string;
+}
+
+export interface PublishRepoPayload {
+  workspaceId: string;
+  ownerRepo: string;
+  visibility: "private" | "public";
+  remoteName?: string;
+  protocol: "ssh" | "https";
 }
 
 export interface CommitResult {
@@ -120,6 +145,31 @@ export const gitFlowApi = baseApi.injectEndpoints({
         response: ServiceResponse<{ title: string; body: string }>,
       ) => unwrap(response),
     }),
+
+    getPublishPreflight: builder.query<PublishPreflight, string>({
+      query: (workspaceId) => ({
+        handler: CHANNELS.gitFlow.getPublishPreflight,
+        args: [workspaceId],
+      }),
+      transformResponse: (response: ServiceResponse<PublishPreflight>) =>
+        unwrap(response),
+      keepUnusedDataFor: 0,
+    }),
+
+    publishRepo: builder.mutation<PublishResult, PublishRepoPayload>({
+      query: (payload) => ({
+        handler: CHANNELS.gitFlow.publish,
+        args: [payload],
+      }),
+      transformResponse: (response: ServiceResponse<PublishResult>) =>
+        unwrap(response),
+      // A published repo now has a remote — refresh the workspace diff (sidebar)
+      // and projects cache. The panel refetches its own gitFlow status directly.
+      invalidatesTags: (_result, _error, { workspaceId }) => [
+        { type: "WorkspaceDiffs", id: workspaceId },
+        "Projects",
+      ],
+    }),
   }),
 });
 
@@ -130,4 +180,6 @@ export const {
   useCreatePrGitFlowMutation,
   useGenerateCommitMessageGitFlowMutation,
   useGeneratePrBodyGitFlowMutation,
+  useGetPublishPreflightQuery,
+  usePublishRepoMutation,
 } = gitFlowApi;

@@ -113,6 +113,8 @@ export const CHANNELS = {
     createPr: "gitFlow:createPr",
     generateCommitMessage: "gitFlow:generateCommitMessage",
     generatePrBody: "gitFlow:generatePrBody",
+    getPublishPreflight: "gitFlow:getPublishPreflight",
+    publish: "gitFlow:publish",
   },
   guards: {
     checkPackage: "guards:checkPackage",
