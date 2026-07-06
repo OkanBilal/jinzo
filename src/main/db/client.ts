@@ -232,7 +232,13 @@ class DatabaseClient {
       // This happens when db:push was used to create tables without tracking.
       this.backfillMigrationTracker(migrationsFolder);
 
-      const backupPath = this.backupDatabase();
+      // The pre-migration backup copies the whole DB file (plus WAL/SHM) —
+      // a per-boot disk cost that grows with the database and lands right as
+      // the renderer is loading. Only pay it when migrate() will actually
+      // apply something; on any doubt, hasPendingMigrations returns true.
+      const backupPath = this.hasPendingMigrations(migrationsFolder)
+        ? this.backupDatabase()
+        : null;
 
       try {
         console.log("Running migrations...");
@@ -250,6 +256,40 @@ class DatabaseClient {
       }
     } else {
       console.log("No migrations folder found, skipping migrations");
+    }
+  }
+
+  /**
+   * Whether migrate() would apply anything. Mirrors drizzle's own check
+   * (sqlite-core dialect.migrate): an entry is pending iff its journal
+   * `when` (folderMillis) is greater than max(created_at) in
+   * `__drizzle_migrations`. Returns true when this can't be determined
+   * (fresh DB, missing tracker table, unreadable journal) so the caller
+   * keeps the pre-migration backup for exactly the risky cases.
+   */
+  private hasPendingMigrations(migrationsFolder: string): boolean {
+    if (!this.sqlite) return true;
+
+    try {
+      const journalPath = path.join(migrationsFolder, "meta", "_journal.json");
+      if (!fs.existsSync(journalPath)) return false;
+
+      const journal = JSON.parse(fs.readFileSync(journalPath, "utf-8")) as {
+        entries?: Array<{ when: number }>;
+      };
+      const entries = journal.entries ?? [];
+      if (entries.length === 0) return false;
+
+      const newest = Math.max(...entries.map((entry) => entry.when));
+      const row = this.sqlite
+        .prepare(
+          `SELECT max(created_at) as latest FROM "__drizzle_migrations"`,
+        )
+        .get() as { latest: number | null } | undefined;
+
+      return row?.latest == null || Number(row.latest) < newest;
+    } catch {
+      return true;
     }
   }
 

@@ -7,6 +7,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useClickOutside } from "@/hooks/use-click-outside";
+import { isAppReady } from "@/lib/app-ready";
 import { Button } from "./button";
 import { Caption } from "./text";
 import { SelectOption } from "./icons";
@@ -46,10 +47,13 @@ export default function Select<T extends string = string>({
 
   // Reset enter animation when the menu closes or opens so the double-RAF ramp
   // always starts from prewarm (avoids sync setState in an effect).
+  // Pre-`app-ready` the ramp is skipped entirely: animations are globally
+  // forced to 0s and the startup-loaded main thread would starve the two rAFs,
+  // holding the menu invisible — latch straight to the (instant) final state.
   if (isOpen !== prevIsOpen) {
     setPrevIsOpen(isOpen);
     if (!isOpen || (isOpen && !prevIsOpen)) {
-      setAnimateIn(false);
+      setAnimateIn(isOpen && !isAppReady());
     }
   }
 
@@ -88,6 +92,7 @@ export default function Select<T extends string = string>({
 
   // Defer animation by two frames so React commit + first paint of children
   // happen before the GPU starts the keyframe — prevents first-open jank.
+  // (No-op pre-`app-ready`: the latch above already set animateIn.)
   useEffect(() => {
     if (!isOpen) return;
     let raf2 = 0;
