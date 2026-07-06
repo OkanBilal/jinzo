@@ -17,6 +17,7 @@ import { useWorkspaceVariant } from "./hooks/use-workspace-variant";
 import { ReduxProvider } from "./providers/redux-provider";
 import { Toaster } from "./components/ui/toast/Toaster";
 import { useAppSelector, useAppDispatch } from "./lib/redux/hooks";
+import { onAppReady } from "./lib/app-ready";
 import { isWeb, useIsMobile } from "./lib/platform";
 import {
   setSidebarCollapsed,
@@ -53,15 +54,27 @@ function providerIdForVariant(variant: ReturnType<typeof useWorkspaceVariant>): 
 
 function useDropdownAnimationPrewarm() {
   useEffect(() => {
-    const el = document.createElement("div");
-    el.className = "animate-dropdown-in";
-    el.style.cssText =
-      "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;pointer-events:none;";
-    document.body.appendChild(el);
-    const id = window.setTimeout(() => el.remove(), 400);
+    let el: HTMLDivElement | null = null;
+    let timeoutId = 0;
+    // Must run AFTER `.app-ready`: before it, the index.css gate forces
+    // animation-duration to 0s, so the keyframe would "finish" instantly and
+    // compile nothing. Runs in-viewport (offscreen layers can be culled from
+    // raster) at an imperceptible opacity, on a realistically sized replica of
+    // the menu surface, so the compositor rasterizes the gradient/border/shadow
+    // and runs the scale+opacity keyframe before a real dropdown first opens.
+    const unsubscribe = onAppReady(() => {
+      el = document.createElement("div");
+      el.style.cssText =
+        "position:fixed;bottom:0;right:0;opacity:0.001;pointer-events:none;";
+      el.innerHTML =
+        '<div class="animate-dropdown-in glass-morphism rounded-2xl" style="width:240px;height:280px;padding:12px;font-size:13px;">prewarm</div>';
+      document.body.appendChild(el);
+      timeoutId = window.setTimeout(() => el?.remove(), 600);
+    });
     return () => {
-      window.clearTimeout(id);
-      el.remove();
+      unsubscribe();
+      window.clearTimeout(timeoutId);
+      el?.remove();
     };
   }, []);
 }

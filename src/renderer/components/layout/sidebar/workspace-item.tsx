@@ -83,10 +83,15 @@ export default function WorkspaceItem({
   onStatusChange,
   onRenameBranch,
 }: WorkspaceItemProps) {
-  const { data: installedApps = [] } = useGetInstalledAppsQuery();
   const { data: latestDiff } = useGetLatestWorkspaceDiffSummaryQuery(id);
   const statusConfig = getWorkspaceStatusConfig(status);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  // Detecting installed apps spawns a `defaults read` per candidate app in the
+  // main process on every launch — too heavy for a menu that may never open.
+  // Fetch on first open instead; main-process + RTKQ caches make reopens instant.
+  const { data: installedApps = [] } = useGetInstalledAppsQuery(undefined, {
+    skip: !isDropdownOpen,
+  });
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
   const [isRenamingBranch, setIsRenamingBranch] = useState(false);
   const [renameBranchValue, setRenameBranchValue] = useState(branch || "");

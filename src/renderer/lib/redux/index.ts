@@ -68,6 +68,13 @@ export const store = configureStore({
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
+      // Dev-only deep-state checks walk the whole store on every dispatch; the
+      // RTK Query cache (`api`) is by far the largest subtree and RTKQ already
+      // enforces immutability internally. Excluding it keeps the startup
+      // dispatch storm from monopolizing the main thread in dev.
+      immutableCheck: {
+        ignoredPaths: ["api"],
+      },
       serializableCheck: {
         ignoredActions: [
           "api/executeQuery/pending",

@@ -164,9 +164,11 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Suppress all animations/transitions until the app signals readiness.
-   The .app-ready class is added to <html> after first paint so the GPU
-   process has time to warm up and shader compilation is done. */
+/* Suppress all animations/transitions until the app signals readiness, so
+   opens/closes during the launch churn are instant instead of stuttery.
+   `.app-ready` is added to <html> by main.tsx once fonts are loaded and the
+   main thread has gone idle after the startup mount/query storm (time-bounded
+   to ~2.5s) — see markAppReady() in lib/app-ready.ts. */
 html:not(.app-ready) *,
 html:not(.app-ready) *::before,
 html:not(.app-ready) *::after {
