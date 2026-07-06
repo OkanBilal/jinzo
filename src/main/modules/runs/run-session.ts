@@ -8,13 +8,13 @@ import type { WorkRunUsage, StopReason } from "../../../shared/adapter.types";
 import { runsRepo } from "./runs.repo";
 import { providersRepo } from "../providers/providers.repo";
 import { appSettingsRepo } from "../appSettings/appSettings.repo";
-import { gitService } from "../git/git.service";
-import { workspaceService, workspaceRepo, logWorkspaceActivity } from "../workspace";
 import {
-  buildDiffSnapshot,
+  gitService,
   hashContent,
+  buildPerFileDiffHashes,
   type DiffSnapshot,
-} from "../workspace/workspace-diff-snapshot";
+} from "../git";
+import { workspaceService, workspaceRepo, logWorkspaceActivity } from "../workspace";
 import { createWorkAdapter } from "../providers/adapters";
 import { runSessionRegistry } from "./run-session-registry";
 import { emit } from "../../ipc-kit";
@@ -36,26 +36,6 @@ function generateUuid(): string {
     const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
-}
-
-/**
- * Split a unified diff into per-file chunks and return filename → content hash.
- * Used to detect which files actually changed between two cumulative diffs
- * that share the same baseRef.
- */
-function buildPerFileDiffHashes(diffText: string): Map<string, string> {
-  const result = new Map<string, string>();
-  if (!diffText) return result;
-  const chunks = diffText.split(/^(?=diff --git )/m);
-  for (const chunk of chunks) {
-    if (!chunk.trim()) continue;
-    const match = chunk.match(/^diff --git a\/(.+?) b\/(.+)/);
-    if (match) {
-      const fileName = match[2];
-      result.set(fileName, hashContent(chunk));
-    }
-  }
-  return result;
 }
 
 // Push a run event to all clients via the outbound event bus. The bus fans out
@@ -210,25 +190,25 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   // ─── Base ref capture ───
   async function captureBaseRef(): Promise<void> {
     try {
-      const result = await gitService.getHeadSha(workspace.rootPath);
-      if (result.success && result.data) {
-        baseRef = result.data;
-        // Snapshot the working tree's pre-existing changes against baseRef so
-        // the final activity log reflects only what THIS run changed. Files
-        // already dirty at run start are excluded unless this run touches them.
-        const snapshot = await buildDiffSnapshot({
-          rootPath: workspace.rootPath,
-          baseRef,
-        });
-        // Leave initialDiffHashes null if the snapshot failed: an empty Map means
-        // "tree was clean at start" (every later change is ours), whereas null
-        // means "baseline unknown" — persistFinalDiff treats these differently.
-        if (snapshot) {
-          initialDiffHashes = buildPerFileDiffHashes(snapshot.diffText);
-        }
-      }
+      baseRef = await gitService.getHeadSha(workspace.rootPath);
     } catch {
       // Not a git repo or git error – ignore
+      return;
+    }
+    // Snapshot the working tree's pre-existing changes against baseRef so
+    // the final activity log reflects only what THIS run changed. Files
+    // already dirty at run start are excluded unless this run touches them.
+    try {
+      const snapshot = await gitService.captureDiffSnapshot(
+        workspace.rootPath,
+        baseRef,
+      );
+      initialDiffHashes = buildPerFileDiffHashes(snapshot.diffText);
+    } catch {
+      // Leave initialDiffHashes null when the snapshot failed: an empty Map
+      // means "tree was clean at start" (every later change is ours), whereas
+      // null means "baseline unknown" — persistFinalDiff treats these
+      // differently.
     }
   }
 
@@ -318,7 +298,9 @@ export function createRunSession(ctx: RunSessionContext): RunSession {
   // ─── Diff snapshotting ───
   async function snapshotCurrentDiff(): Promise<DiffSnapshot | null> {
     if (!baseRef) return null;
-    return buildDiffSnapshot({ rootPath: workspace.rootPath, baseRef });
+    return gitService
+      .captureDiffSnapshot(workspace.rootPath, baseRef)
+      .catch(() => null);
   }
 
   async function upsertDiff(snapshot: DiffSnapshot): Promise<void> {

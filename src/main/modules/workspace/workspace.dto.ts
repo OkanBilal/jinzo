@@ -75,7 +75,7 @@ export interface UpdateWorkspacePayload {
 
 // ─────────────────────────────────────────────────────────────
 // ── Workspace intake ──
-// The single input to `workspaceService.createFromSource`. Three acquisition
+// The single input to `workspaceService.createFromSource`. Four acquisition
 // sources feed the shared intake tail (import → project → workspace).
 // See CONTEXT.md "Workspace intake".
 // ─────────────────────────────────────────────────────────────
@@ -83,7 +83,8 @@ export interface UpdateWorkspacePayload {
 export type WorkspaceIntakeSource =
   | { kind: "folder"; path: string }
   | { kind: "clone"; url: string; targetPath: string }
-  | { kind: "init"; name: string };
+  | { kind: "init"; name: string }
+  | { kind: "worktree"; projectId: string };
 
 export interface WorkspaceIntakePayload {
   accountId: string;

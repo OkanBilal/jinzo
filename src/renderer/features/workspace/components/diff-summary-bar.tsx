@@ -1,10 +1,8 @@
 import { useState, useMemo, useCallback, lazy, Suspense } from "react";
-import { appApi } from "@/lib/transport";
-import { useAppDispatch } from "@/lib/redux/hooks";
 import NumberFlow from "@number-flow/react";
 import {
   useGetLatestWorkspaceDiffQuery,
-  workspaceApi,
+  useDiscardWorkspaceChangesMutation,
   type WorkspaceDiff,
 } from "@/lib/redux/api";
 import { ArrowUp, Close } from "@/components/ui/icons";
@@ -43,7 +41,7 @@ export function DiffSummaryBar({
   isRunning,
   lastCompletedRunId,
 }: DiffSummaryBarProps) {
-  const dispatch = useAppDispatch();
+  const [discardChanges] = useDiscardWorkspaceChangesMutation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isUndoing, setIsUndoing] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -77,16 +75,16 @@ export function DiffSummaryBar({
     if (!diff?.baseRef || !rootPath) return;
     setIsUndoing(true);
     try {
-      const result = await appApi.git.resetHard(rootPath, diff.baseRef);
-      if (result.success) {
-        await appApi.workspace.deleteLatestDiff(workspaceId);
-        dispatch(workspaceApi.util.invalidateTags(["WorkspaceDiffs"]));
-        toast.success("Changes reverted successfully");
-      }
+      // One workspace operation: reset to the diff's baseRef + drop the diff
+      // row. See CONTEXT.md "Workspace git operations".
+      await discardChanges(workspaceId).unwrap();
+      toast.success("Changes reverted successfully");
+    } catch {
+      toast.error("Failed to revert changes");
     } finally {
       setIsUndoing(false);
     }
-  }, [diff, rootPath, workspaceId, dispatch]);
+  }, [diff, rootPath, workspaceId, discardChanges]);
 
   // Don't show while running, when no diff, or when dismissed
   if (isRunning || !diff || !stats || stats.files === 0) return null;

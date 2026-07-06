@@ -26,9 +26,8 @@ import {
   emitFindingsChanged,
   type WorkspaceMetadata,
 } from "../workspace";
-import { buildDiffSnapshot } from "../workspace/workspace-diff-snapshot";
 import { runSessionRegistry } from "../runs/run-session-registry";
-import { gitService } from "../git/git.service";
+import { gitService } from "../git";
 import { projectsRepo } from "../projects/projects.repo";
 import { appSettingsRepo } from "../appSettings/appSettings.repo";
 import { SETTINGS_ID } from "../appSettings/appSettings.constants";
@@ -214,9 +213,9 @@ export const gitFlowService = {
     if (!workspace?.projectId) return;
     const project = await projectsRepo.findById(workspace.projectId);
     if (!project?.remoteOrigin) return;
-    const remotesResult = await gitService.getRemotes(rootPath);
-    if (!remotesResult.success || !remotesResult.data) return;
-    const origin = remotesResult.data.find((r) => r.name === "origin");
+    const remotes = await gitService.getRemotes(rootPath).catch(() => null);
+    if (!remotes) return;
+    const origin = remotes.find((r) => r.name === "origin");
     const currentRemote = origin?.fetchUrl || origin?.pushUrl;
     if (
       currentRemote &&
@@ -269,34 +268,34 @@ export const gitFlowService = {
 
     // Recapture diff from the new HEAD so the Changes tab reflects the
     // post-commit state (clean working tree).
-    const headResult = await gitService.getHeadSha(rootPath);
-    const newHead = headResult.success ? headResult.data : null;
+    const newHead = await gitService.getHeadSha(rootPath).catch(() => null);
 
     if (workspaceId && newHead) {
-      const [statusResult, untrackedResult] = await Promise.all([
-        gitService.getDiffSince(rootPath, newHead),
-        gitService.getUntrackedFiles(rootPath),
-      ]);
-      const diffText = statusResult.success ? (statusResult.data ?? "") : "";
-      const untrackedFiles = untrackedResult.success
-        ? (untrackedResult.data ?? [])
-        : [];
-
       await workspaceRepo.deleteDiffsByWorkspace(workspaceId);
-      if (untrackedFiles.length > 0 || diffText) {
-        await workspaceRepo.insertDiff({
-          id: crypto.randomUUID(),
-          workspaceId,
-          runId: runId ?? undefined,
-          baseRef: newHead,
-          diffText,
-          filesJson: JSON.stringify(untrackedFiles),
-          statsJson: JSON.stringify({
-            shortstat: "",
-            files: untrackedFiles.length,
-            newFiles: untrackedFiles.length,
-          }),
-        });
+      try {
+        const snapshot = await gitService.captureDiffSnapshot(
+          rootPath,
+          newHead,
+        );
+        if (snapshot.files.length > 0) {
+          await workspaceRepo.insertDiff({
+            id: crypto.randomUUID(),
+            workspaceId,
+            runId: runId ?? undefined,
+            baseRef: newHead,
+            diffText: snapshot.diffText,
+            filesJson: JSON.stringify(snapshot.files),
+            statsJson: JSON.stringify({
+              shortstat: snapshot.shortstat,
+              files: snapshot.files.length,
+              newFiles: snapshot.untrackedFiles.length,
+            }),
+          });
+        }
+      } catch (err) {
+        // Best-effort: the commit itself succeeded; the stale pre-commit diff
+        // row is already gone, which is the important part.
+        console.error("[GitFlow] Post-commit diff recapture failed:", err);
       }
     }
 
@@ -339,8 +338,9 @@ export const gitFlowService = {
 
     // Pass --head explicitly: in worktrees upstream tracking may be unset even
     // after push, so gh can't infer the head branch.
-    const branchResult = await gitService.getCurrentBranch(rootPath);
-    const currentBranch = branchResult.success ? branchResult.data : null;
+    const currentBranch = await gitService
+      .getCurrentBranch(rootPath)
+      .catch(() => null);
 
     const ghArgs = ["pr", "create", "--title", params.title];
     if (currentBranch) ghArgs.push("--head", currentBranch);
@@ -410,9 +410,7 @@ export const gitFlowService = {
           rootPath,
           params.includeUnstaged === false ? "none" : "all",
         );
-        const staged = await gitService.getStagedDiff(rootPath);
-        if (!staged.success) return staged;
-        diff = staged.data;
+        diff = await gitService.getStagedDiff(rootPath);
       }
       if (!diff.trim()) return fail("No staged changes to summarize");
 
@@ -479,23 +477,20 @@ export const gitFlowService = {
       let baseRef: string | null = null;
       if (baseBranch) {
         for (const ref of [`origin/${baseBranch}`, baseBranch]) {
-          const r = await gitService.getBranchDiff(rootPath, ref);
-          if (r.success && r.data.trim()) {
-            diff = r.data;
+          const r = await gitService
+            .getBranchDiff(rootPath, ref)
+            .catch(() => "");
+          if (r.trim()) {
+            diff = r;
             baseRef = ref;
             break;
           }
         }
       }
       if (!diff.trim()) {
-        const stagedResult = await gitService.getStagedDiff(rootPath);
-        const diffResult = await gitService.getDiff(rootPath);
-        diff = [
-          stagedResult.success ? stagedResult.data : "",
-          diffResult.success ? diffResult.data : "",
-        ]
-          .filter(Boolean)
-          .join("\n");
+        const staged = await gitService.getStagedDiff(rootPath).catch(() => "");
+        const working = await gitService.getDiff(rootPath).catch(() => "");
+        diff = [staged, working].filter(Boolean).join("\n");
       }
 
       const provider = await providersRepo.findById(params.providerId);
@@ -525,15 +520,13 @@ export const gitFlowService = {
       // fall back to recent repo commits only when there's no base ref.
       let commits = "";
       if (baseRef) {
-        const branchLog = await gitService.getBranchLog(rootPath, baseRef, 20);
-        if (branchLog.success) {
-          commits = branchLog.data.map((m) => `- ${m}`).join("\n");
-        }
+        const messages = await gitService
+          .getBranchLog(rootPath, baseRef, 20)
+          .catch(() => [] as string[]);
+        commits = messages.map((m) => `- ${m}`).join("\n");
       } else {
-        const logResult = await gitService.getLog(rootPath, 20);
-        if (logResult.success) {
-          commits = logResult.data.map((c) => `- ${c.message}`).join("\n");
-        }
+        const log = await gitService.getLog(rootPath, 20).catch(() => []);
+        commits = log.map((c) => `- ${c.message}`).join("\n");
       }
 
       const prompt = [
@@ -580,22 +573,16 @@ export const gitFlowService = {
     if (!workspace.rootPath) return fail("Workspace has no root path");
     const rootPath = workspace.rootPath;
 
-    const [branchResult, statusResult, headResult, remotesResult] =
-      await Promise.all([
-        gitService.getCurrentBranch(rootPath),
-        gitService.getStatus(rootPath),
-        gitService.getHeadSha(rootPath),
-        gitService.getRemotes(rootPath),
-      ]);
+    const [branchName, status, headSha, remotes] = await Promise.all([
+      gitService.getCurrentBranch(rootPath).catch(() => null),
+      gitService.getStatus(rootPath).catch(() => null),
+      gitService.getHeadSha(rootPath).catch(() => null),
+      gitService.getRemotes(rootPath).catch(() => []),
+    ]);
 
-    if (!statusResult.success) return statusResult;
-    const status = statusResult.data;
-    const hasRemote =
-      remotesResult.success &&
-      (remotesResult.data ?? []).some((r) => r.name === "origin");
-    const branch = branchResult.success
-      ? branchResult.data
-      : status.current ?? "";
+    if (!status) return fail("Failed to get git status");
+    const hasRemote = remotes.some((r) => r.name === "origin");
+    const branch = branchName ?? status.current ?? "";
 
     // Worktree workspaces store their working branch in defaultBranch for
     // historical reasons; metadata.baseBranch is the PR base/default branch.
@@ -610,18 +597,17 @@ export const gitFlowService = {
       : branch === "main" || branch === "master";
 
     // Use the exact same computation the sidebar / Changes tab rely on
-    // (buildDiffSnapshot), anchored to the current HEAD like resyncDiff — so
+    // (captureDiffSnapshot), anchored to the current HEAD like resyncDiff — so
     // the panel's +/- matches the workspace item. Crucially this counts every
     // line of each untracked file as an insertion, which a plain `git diff
     // HEAD` omits.
     let additions = 0;
     let deletions = 0;
     let changedFiles = 0;
-    if (headResult.success && headResult.data) {
-      const snapshot = await buildDiffSnapshot({
-        rootPath,
-        baseRef: headResult.data,
-      });
+    if (headSha) {
+      const snapshot = await gitService
+        .captureDiffSnapshot(rootPath, headSha)
+        .catch(() => null);
       if (snapshot) {
         changedFiles = snapshot.files.length;
         const parsed = parseShortstat(snapshot.shortstat);
@@ -665,8 +651,7 @@ export const gitFlowService = {
       await this.stage(rootPath, stageMode);
 
       const staged = await gitService.getStagedDiff(rootPath);
-      if (!staged.success) return staged;
-      if (!staged.data.trim()) return fail("No staged changes to commit");
+      if (!staged.trim()) return fail("No staged changes to commit");
 
       let message = params.message?.trim() || "";
       if (!message) {
@@ -678,7 +663,7 @@ export const gitFlowService = {
           rootPath,
           providerId: params.providerId,
           model: params.model,
-          stagedDiff: staged.data,
+          stagedDiff: staged,
         });
         if (!gen.success) return gen;
         message = gen.data;
@@ -694,8 +679,7 @@ export const gitFlowService = {
 
       let pushed = false;
       if (params.push) {
-        const pushResult = await gitService.push(rootPath);
-        if (!pushResult.success) return pushResult;
+        await gitService.push(rootPath);
         pushed = true;
       }
 
@@ -711,9 +695,12 @@ export const gitFlowService = {
   async push(workspaceId: string): Promise<ServiceResponse<CommitResult>> {
     const root = await this.resolveRoot(workspaceId);
     if (!root.success) return root;
-    const pushResult = await gitService.push(root.data.rootPath);
-    if (!pushResult.success) return pushResult;
-    return ok({ hash: "", summary: "Pushed", pushed: true });
+    try {
+      await gitService.push(root.data.rootPath);
+      return ok({ hash: "", summary: "Pushed", pushed: true });
+    } catch (error) {
+      return fail(error instanceof Error ? error.message : "Failed to push");
+    }
   },
 
   // ───────────────────────────────────────────────────────────
@@ -732,14 +719,11 @@ export const gitFlowService = {
     if (!root.success) return root;
     const { rootPath, projectId } = root.data;
 
-    const [branchResult, remotesResult] = await Promise.all([
-      gitService.getCurrentBranch(rootPath),
-      gitService.getRemotes(rootPath),
+    const [branch, remotes] = await Promise.all([
+      gitService.getCurrentBranch(rootPath).catch(() => "main"),
+      gitService.getRemotes(rootPath).catch(() => []),
     ]);
-    const branch = branchResult.success ? branchResult.data : "main";
-    const hasRemote =
-      remotesResult.success &&
-      (remotesResult.data ?? []).some((r) => r.name === "origin");
+    const hasRemote = remotes.some((r) => r.name === "origin");
 
     // Default repo name from the project, then the workspace, then the folder.
     let name = "";
@@ -811,11 +795,8 @@ export const gitFlowService = {
       }
 
       // Don't clobber an existing remote of the same name.
-      const remotesResult = await gitService.getRemotes(rootPath);
-      if (
-        remotesResult.success &&
-        (remotesResult.data ?? []).some((r) => r.name === remoteName)
-      ) {
+      const remotes = await gitService.getRemotes(rootPath).catch(() => []);
+      if (remotes.some((r) => r.name === remoteName)) {
         return fail(`A remote named "${remoteName}" already exists.`);
       }
 
@@ -845,18 +826,16 @@ export const gitFlowService = {
           ? `git@github.com:${owner}/${name}.git`
           : `https://github.com/${owner}/${name}.git`;
 
-      const branchResult = await gitService.getCurrentBranch(rootPath);
-      const branch = branchResult.success ? branchResult.data : "main";
+      const branch = await gitService
+        .getCurrentBranch(rootPath)
+        .catch(() => "main");
 
-      const added = await gitService.addRemote(rootPath, remoteName, remoteUrl);
-      if (!added.success) return added;
-
-      const pushResult = await gitService.push(rootPath, {
+      await gitService.addRemote(rootPath, remoteName, remoteUrl);
+      await gitService.push(rootPath, {
         setUpstream: true,
         remote: remoteName,
         branch,
       });
-      if (!pushResult.success) return pushResult;
 
       // Record the origin + default branch on the project so assertRemoteMatches
       // and future push/PR flows treat this as a normal remote-backed repo.
@@ -920,8 +899,7 @@ export const gitFlowService = {
         undefined;
 
       // Branch must exist on the remote before `gh pr create`.
-      const pushResult = await gitService.push(rootPath);
-      if (!pushResult.success) return pushResult;
+      await gitService.push(rootPath);
 
       const result = await this.performCreatePR({
         workspaceId: params.workspaceId,

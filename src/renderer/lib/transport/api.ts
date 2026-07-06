@@ -82,15 +82,6 @@ export const appApi = {
       CHANNELS.fileExplorer.listDir,
     ),
   },
-  git: {
-    importLocalRepo: method<typeof window.api.git.importLocalRepo>(
-      CHANNELS.git.importLocalRepo,
-    ),
-    renameBranch: method<typeof window.api.git.renameBranch>(
-      CHANNELS.git.renameBranch,
-    ),
-    resetHard: method<typeof window.api.git.resetHard>(CHANNELS.git.resetHard),
-  },
   workspace: {
     getLatestDiff: method<typeof window.api.workspace.getLatestDiff>(
       CHANNELS.workspace.getLatestDiff,

@@ -5,7 +5,6 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { appApi } from "@/lib/transport";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppSelector } from "@/lib/redux/hooks";
 import { Button } from "@/components/ui";
@@ -21,8 +20,8 @@ import type { WorkspaceStatus } from "@/lib/redux/api/workspaceApi";
 import {
   useListProjectsQuery,
   useUpdateWorkspaceMutation,
-  useCreateWorkspaceMutation,
-  useUpdateProjectMutation,
+  useCreateWorkspaceFromSourceMutation,
+  useRenameWorkspaceBranchMutation,
   useGetAccountQuery,
 } from "@/lib/redux/api";
 import type { Project } from "@/lib/redux/api/projectsApi";
@@ -38,6 +37,21 @@ type WorkspaceGroup = {
   workspaces: WorkspaceResponse[];
   project?: Project;
 };
+
+/** Pull a human message out of an RTK/IPC rejection (string | {error} | Error). */
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === "string") return error;
+  if (error instanceof Error) return error.message;
+  if (
+    error &&
+    typeof error === "object" &&
+    "error" in error &&
+    typeof (error as { error: unknown }).error === "string"
+  ) {
+    return (error as { error: string }).error;
+  }
+  return fallback;
+}
 
 const STATUS_ORDER: WorkspaceStatus[] = [
   "backlog",
@@ -145,8 +159,8 @@ export default function WorkspacesList({
   const location = useLocation();
   const { defaultRoute: spaceDefaultRoute } = useSidebarConfig();
   const [updateWorkspace] = useUpdateWorkspaceMutation();
-  const [createWorkspace] = useCreateWorkspaceMutation();
-  const [updateProject] = useUpdateProjectMutation();
+  const [createWorkspaceFromSource] = useCreateWorkspaceFromSourceMutation();
+  const [renameWorkspaceBranch] = useRenameWorkspaceBranchMutation();
   const { data: account } = useGetAccountQuery();
   const activeWorkspaceId = useAppSelector(
     (state) => state.workspace.activeWorkspaceId,
@@ -213,108 +227,32 @@ export default function WorkspacesList({
     });
   };
 
+  // Both are single workspace operations — the git + metadata orchestration
+  // lives in workspace.service. See CONTEXT.md "Workspace git operations".
   const handleCreateWorktreeForProject = async (project: Project) => {
     try {
-      const importResult = await appApi.git.importLocalRepo(
-        project.rootPath,
-        project.name,
-      );
-
-      if (!importResult.success || !importResult.data) {
-        throw new Error(importResult.error || "Failed to create worktree");
-      }
-
-      const {
-        branchName,
-        worktreePath,
-        worktreeName,
-        baseBranch,
-        tracking,
-        ahead,
-        behind,
-      } = importResult.data;
-
-      if (!project.workspacesPath) {
-        const workspacesPath = worktreePath.substring(
-          0,
-          worktreePath.lastIndexOf("/"),
-        );
-        await updateProject({
-          id: project.id,
-          payload: { workspacesPath },
-        });
-      }
-
-      const workspaceId = crypto.randomUUID();
-      const metadata = {
-        isGitRepo: true,
-        tracking,
-        ahead,
-        behind,
-        worktree: {
-          enabled: true as const,
-          name: worktreeName,
-          path: worktreePath,
-          sourcePath: project.rootPath,
-          branch: branchName,
-        },
-        origin: project.remoteOrigin ? { url: project.remoteOrigin } : undefined,
-        baseBranch,
-      };
-
-      await createWorkspace({
-        id: workspaceId,
+      const workspace = await createWorkspaceFromSource({
         accountId: account?.id || "default",
-        name: project.name,
-        rootPath: worktreePath,
-        repoUrl: project.remoteOrigin || undefined,
-        defaultBranch: branchName,
-        metadata,
-        projectId: project.id,
+        source: { kind: "worktree", projectId: project.id },
       }).unwrap();
-
       toast.success("Worktree created");
-      navigate(`${basePath}/${workspaceId}`);
+      navigate(`${basePath}/${workspace.id}`);
     } catch (error) {
       console.error("Failed to create worktree:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create worktree",
-      );
+      toast.error(getErrorMessage(error, "Failed to create worktree"));
     }
   };
 
   const handleRenameBranch = async (workspace: WorkspaceResponse, newBranchName: string) => {
-    const oldBranch = workspace.defaultBranch;
-    if (!oldBranch || !workspace.rootPath) return;
-
-    // For worktree workspaces, use the source repo path; otherwise use rootPath
-    const worktreeMeta = workspace.metadata?.worktree as Record<string, unknown> | undefined;
-    const gitPath = (worktreeMeta?.enabled && worktreeMeta?.sourcePath)
-      ? String(worktreeMeta.sourcePath)
-      : workspace.rootPath;
-
     try {
-      const result = await appApi.git.renameBranch(gitPath, oldBranch, newBranchName);
-      if (!result.success) {
-        toast.error(result.error || "Failed to rename branch");
-        return;
-      }
-
-      // Update workspace defaultBranch and metadata (deep copy worktree to avoid frozen object)
-      const metadata = workspace.metadata ? { ...workspace.metadata } : {};
-      if (metadata.worktree && typeof metadata.worktree === "object") {
-        metadata.worktree = { ...(metadata.worktree as Record<string, unknown>), branch: newBranchName };
-      }
-
-      await updateWorkspace({
+      await renameWorkspaceBranch({
         id: workspace.id,
-        payload: { defaultBranch: newBranchName, metadata },
-      });
-
+        newBranchName,
+      }).unwrap();
       toast.success(`Branch renamed to ${newBranchName}`);
     } catch (error) {
       console.error("Failed to rename branch:", error);
-      toast.error("Failed to rename branch");
+      toast.error(getErrorMessage(error, "Failed to rename branch"));
     }
   };
 

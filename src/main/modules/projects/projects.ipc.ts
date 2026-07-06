@@ -1,4 +1,5 @@
 import { ipcMain } from "../../ipc-kit/ipc-main";
+import { handle } from "../../ipc-kit/handle";
 import { projectsService } from "./projects.service";
 import type {
   AddResourcePayload,
@@ -52,6 +53,11 @@ export function registerProjectsIpc(): void {
     return projectsService.delete(id);
   });
 
+  ipcMain.handle(
+    CHANNELS.projects.listBranches,
+    handle((id: string) => projectsService.listBranchNames(id)),
+  );
+
   ipcMain.handle(CHANNELS.projects.archive, async (_, id: string) => {
     return projectsService.archive(id);
   });
@@ -90,6 +96,7 @@ export function unregisterProjectsIpc(): void {
     CHANNELS.projects.update,
     CHANNELS.projects.remove,
     CHANNELS.projects.delete,
+    CHANNELS.projects.listBranches,
     CHANNELS.projects.archive,
     CHANNELS.projects.listResources,
     CHANNELS.projects.listAvailableResources,

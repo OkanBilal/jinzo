@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Heading2, Muted, Button, toast, Alert, Heading3 } from "@/components/ui";
 import {
   useGetProjectQuery,
+  useListProjectBranchesQuery,
   useUpdateProjectMutation,
   useRemoveProjectMutation,
 } from "@/lib/redux/api";
@@ -36,27 +37,15 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     dispatch({ type: "SYNC_PROJECT", project });
   }
 
-  // Fetch live branches (local + remote) from git
+  // Live branch names (local + remote, deduped in projectsService).
+  const { data: branchNames } = useListProjectBranchesQuery(id, {
+    skip: !project?.rootPath,
+  });
   useEffect(() => {
-    if (!project?.rootPath) return;
-    window.api.git
-      .getBranches(project.rootPath)
-      .then((result: any) => {
-        if (result?.success && result.data?.all) {
-          const seen = new Set<string>();
-          const names: string[] = [];
-          for (const raw of result.data.all as string[]) {
-            const name = raw.replace(/^remotes\/[^/]+\//, "");
-            if (!seen.has(name)) {
-              seen.add(name);
-              names.push(name);
-            }
-          }
-          dispatch({ type: "SET_BRANCHES", branches: names });
-        }
-      })
-      .catch(() => {});
-  }, [project?.rootPath]);
+    if (branchNames) {
+      dispatch({ type: "SET_BRANCHES", branches: branchNames });
+    }
+  }, [branchNames]);
 
   const handleSave = useCallback(async () => {
     if (saving || !project) return;

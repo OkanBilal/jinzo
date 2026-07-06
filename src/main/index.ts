@@ -65,7 +65,6 @@ import {
   registerFileExplorerIpc,
   unregisterFileExplorerIpc,
 } from "./modules/fileExplorer";
-import { registerGitIpc, unregisterGitIpc } from "./modules/git";
 import { registerGitFlowIpc, unregisterGitFlowIpc } from "./modules/gitFlow";
 import {
   registerTerminalIpc,
@@ -631,7 +630,6 @@ async function initializeApp() {
     registerProjectsIpc();
     registerRunsIpc();
     registerFileExplorerIpc();
-    registerGitIpc();
     registerGitFlowIpc();
     registerTerminalIpc();
     registerImageProxyHandler();
@@ -945,7 +943,6 @@ async function cleanupApp() {
     unregisterProjectsIpc();
     unregisterRunsIpc();
     unregisterFileExplorerIpc();
-    unregisterGitIpc();
     unregisterGitFlowIpc();
     unregisterTerminalIpc();
     unregisterImageProxyIpc();

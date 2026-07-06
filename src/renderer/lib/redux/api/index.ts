@@ -207,6 +207,7 @@ export {
   useLazyListProjectsQuery,
   useGetProjectQuery,
   useLazyGetProjectQuery,
+  useListProjectBranchesQuery,
   useListProjectsByAccountQuery,
   useLazyListProjectsByAccountQuery,
   useFindProjectByRemoteOriginQuery,
@@ -255,6 +256,8 @@ export {
   useDeleteWorkspaceMutation,
   useArchiveWorkspaceMutation,
   useSelectWorkspaceDirectoryMutation,
+  useRenameWorkspaceBranchMutation,
+  useDiscardWorkspaceChangesMutation,
   // activity
   useListWorkspaceActivityQuery,
   useCreateWorkspaceActivityMutation,

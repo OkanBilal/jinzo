@@ -111,6 +111,17 @@ export const projectsApi = baseApi.injectEndpoints({
       providesTags: (_result, _error, id) => [{ type: "Projects", id }],
     }),
 
+    // Live branch names of the project's repo (local + remote, deduped).
+    listProjectBranches: builder.query<string[], string>({
+      query: (id) => ({
+        handler: CHANNELS.projects.listBranches,
+        args: [id],
+      }),
+      transformResponse: (response: ServiceResponse<string[]>) =>
+        unwrap(response),
+      providesTags: (_result, _error, id) => [{ type: "Projects", id }],
+    }),
+
     listProjectsByAccount: builder.query<Project[], string>({
       query: (accountId) => ({
         handler: CHANNELS.projects.listByAccount,
@@ -265,6 +276,7 @@ export const {
   useLazyListProjectsQuery,
   useGetProjectQuery,
   useLazyGetProjectQuery,
+  useListProjectBranchesQuery,
   useListProjectsByAccountQuery,
   useLazyListProjectsByAccountQuery,
   useFindProjectByRemoteOriginQuery,

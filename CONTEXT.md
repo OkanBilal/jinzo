@@ -70,10 +70,32 @@ _Avoid_: re-splitting into `projects` + `projectResources` (or re-introducing `w
 
 ### Workspace intake
 
-The main-process operation that turns a git repo into a **project** + **workspace** pair. It has two seams. *Acquisition* — how a local repo path is obtained: `folder` (an existing path the user picked), `clone` (cloned from a URL via `gitService.cloneRepo`), or `init` (a fresh empty repo via `gitService.initRepo`). *Intake* — the uniform tail run on that path: worktree-or-direct git import (`importLocalRepo` / `importLocalRepoDirect`) → `findOrCreateProject` → derive the project's `workspacesPath` → assemble the workspace `metadata` → `createWorkspace`. The **intake** is the deep, shared core; the three acquisitions are thin front-ends that feed it a path.
+The main-process operation that turns a git repo into a **project** + **workspace** pair. It has two seams. *Acquisition* — how a local repo path is obtained: `folder` (an existing path the user picked), `clone` (cloned from a URL via `gitService.cloneRepo`), `init` (a fresh empty repo via `gitService.initRepo`), or `worktree` (an additional worktree workspace for an *existing* project, fed by `project.rootPath` — the project already exists, so the find-or-create step is a lookup). *Intake* — the uniform tail run on that path: worktree-or-direct git import (`importLocalRepo` / `importLocalRepoDirect`) → `findOrCreateProject` → derive the project's `workspacesPath` → assemble the workspace `metadata` → `createWorkspace`. The **intake** is the deep, shared core; the four acquisitions are thin front-ends that feed it a path. All four enter through the single `workspace:createFromSource` channel as source kinds.
 
 Owned by `workspace.service`, which calls `gitService` and `projectsService` (same cross-service shape as `projects.service.listIssues` reaching the `entities` barrel). The worktree-vs-direct ordering difference lives entirely behind the intake seam: the worktree path lands under `worktrees/{projectName}/`, so it must `findOrCreateProject` *before* the import; the direct path imports first and reads `originUrl`/`baseBranch` off the result. `init` stays direct-only (a brand-new repo lives at its real path); `folder` and `clone` honor `appSettings.enableWorktrees`. The renderer keeps only the picker invocation, navigation, toast, and modal state.
-_Avoid_: re-inlining the find-or-create-project / `metadata` / `createWorkspace` tail at call sites (it was duplicated 5× across `use-sidebar-actions.ts`), orchestrating the git → projects → workspace sequence from the renderer, or string-deriving `workspacesPath` outside the intake.
+_Avoid_: re-inlining the find-or-create-project / `metadata` / `createWorkspace` tail at call sites (it was duplicated 5× across `use-sidebar-actions.ts`, and survived a 6th time in `workspace-list.tsx`'s create-worktree flow before the `worktree` acquisition absorbed it), orchestrating the git → projects → workspace sequence from the renderer, or string-deriving `workspacesPath` outside the intake.
+
+### Workspace git operations
+
+Renderer-triggered git effects that also touch workspace state are **workspace operations**, not git channels: `workspace:renameBranch` (renames the branch — against the worktree's source repo when applicable — then updates `defaultBranch` + `metadata.worktree.branch` in one place) and `workspace:discardChanges` (hard-reset to the recorded diff's `baseRef` + delete the workspace's latest diff). Both were previously orchestrated inside components (`workspace-list.tsx`, `diff-summary-bar.tsx`) via `api.git.*` calls, with the renderer holding git semantics like the worktree `sourcePath`-vs-`rootPath` distinction.
+_Avoid_: orchestrating multi-step git + workspace-state sequences in the renderer; deciding worktree source-vs-root paths outside `workspace.service`.
+
+## git module
+
+The `git` module is **main-process-internal**: no IPC channels, no preload namespace, no renderer caller. The renderer reaches git effects only through operations owned by domain modules (**workspace intake**, **workspace git operations**, `gitFlow`, and `projects:listBranches` — the settings branch dropdown reads branch names via `projectsService.listBranchNames`, which owns the `remotes/…`-prefix dedup). The former `git:*` namespace (18 channels, only 4 ever called from the renderer) was deleted; the live flows moved behind workspace/projects seams.
+_Avoid_: re-adding `git:*` IPC channels or a preload `api.git` namespace.
+
+**throw-style**:
+`gitService` methods return plain `T` and throw on failure — no **ServiceResponse** inside the service. The envelope is constructed only at the IPC seam by the shared `handle()` wrapper in `src/main/ipc-kit/` (catches, logs, normalizes the message, returns `fail(...)`; wraps the return in `ok(...)`). git pilots this convention; other modules still build envelopes in their services and migrate later. Internal callers (`gitFlow`, `workspace`, `runs`, `projects`) consume plain values — no `.success` unwrapping.
+_Avoid_: returning ServiceResponse from `gitService` methods; hand-rolled unwrap helpers over git results (`expectOk`, `readOriginUrl`-style wrappers).
+
+**DiffSnapshot / captureDiffSnapshot**:
+The deep diff-capture operation, `gitService.captureDiffSnapshot(rootPath, baseRef)` → `{ baseRef, diffText, files, untrackedFiles, shortstat }`: unified diff since `baseRef` including synthetic hunks for untracked files (small text inlined, large/binary stubbed) and an untracked-aware shortstat. **All-or-throw**: a partial git failure throws instead of silently degrading fields to `""`/`[]`, so an empty `diffText` always means "clean tree" (callers like run-session map a thrown snapshot to "baseline unknown"). The four diff primitives it composes (diff-since, changed-files-since, shortstat-since, untracked-files) are an **internal seam** — used by the module and its tests, not exported from the barrel. Formerly `workspace/workspace-diff-snapshot.ts` (`buildDiffSnapshot`), which lived in the wrong module, was imported by `runs` and `gitFlow` from the file path rather than a barrel, and had a degraded hand-rolled copy in `gitFlow.performCommit` (no synthetic hunks, empty shortstat).
+_Avoid_: exporting the diff primitives from the git barrel; hand-composing diff + untracked + shortstat outside `captureDiffSnapshot`; treating a snapshot failure as an empty diff.
+
+**git test surface**:
+Semantics-bearing methods (`captureDiffSnapshot`, `importLocalRepo`/`importLocalRepoDirect`, `initRepo`, `push` auto-upstream, `getBranchDiff` three-dot, `resetHard`, `renameBranch`) are tested against **real temporary git repos** (tmpdir fixture helper), not a mocked simple-git — the old mock-forwarding tests verified argument passing, not git behavior. Pure pass-through methods need no tests.
+_Avoid_: re-introducing wholesale `vi.mock("simple-git")` tests for semantic methods.
 
 ## Provider adapters
 
